@@ -677,6 +677,29 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   freno, lo cierra el perímetro. Detalle en HISTORIAL.md, "Registro
   confirmado por mail".
 
+- **Un campo de Trámites tiene INGRESO y VALIDACIÓN, por separado**
+  (2026-10-18, definición de SDN). El **ingreso** dice de dónde sale el
+  valor: lo carga el afiliado, se **extrae** de un dato (`Extraer`: la edad,
+  el número de credencial, una columna de lista) o se **calcula** con una
+  fórmula (`Calcular`). El único chequeo del ingreso es el intrínseco: no se
+  cargó, o no se pudo extraer. La **validación** es aparte y opcional
+  (`Validar …`): contra un valor fijo, un rango, otro campo del formulario,
+  un dato del afiliado o una lista, o una fórmula; bloquea o avisa. Un campo
+  sin validación es declarativo: se toma como está. Los requisitos para
+  iniciar son «Validar antes de abrir». En lo guardado NO cambió nada: un
+  extraído o calculado sigue siendo `tipo_dato = "calculado"` y su ingreso
+  es la función marcada `ingreso` (`validaciones_tramite.ingreso_de`); lo
+  demás de su lista son validaciones comunes. **Lo propuesto se muestra y
+  el afiliado puede corregirlo**: al tocarlo la app le avisa que el dato
+  está registrado; si es un dato PROPIO de la persona (`DATOS_PROPIOS`:
+  fecha de nacimiento, provincia, localidad) el cambio se actualiza en su
+  perfil (`db.actualizar_dato_personal`); si es del sindicato o un cálculo,
+  queda anotado en las advertencias del trámite para quien lo evalúa, y el
+  trámite sigue. Los datos del sistema se nombran por familia,
+  **`sistema.afiliado.<dato>`** (`sistema.<dato>` sigue valiendo en lo ya
+  guardado; mayúsculas indistintas). Detalle en HISTORIAL.md, "Ingreso y
+  validación".
+
 ## Estado actual (actualizado 2026-10-17)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
@@ -1577,9 +1600,9 @@ plan `PLAN_ASISTENTE_TRAMITES.md`):
 - **"Los datos" son tarjetas, no una tabla** (2026-10-18, pedido de SDN
   con la skill `emil-design-eng`): la pregunta grande, abajo tipo /
   control / opciones / obligatorio con rótulo, y un renglón plegado
-  «Aclaración y control» que resume en chips lo escrito (aclaración,
-  regla, fórmula, función nueva) y abierto muestra los cuatro campos con
-  su rótulo. Nada se perdió, solo se plegó. El catálogo de datos y
+  «Aclaración y validación» que resume en chips lo escrito (aclaración,
+  validar, validar con fórmula, función a desarrollar) y abierto muestra
+  los cuatro campos con su rótulo. Nada se perdió, solo se plegó. El catálogo de datos y
   funciones (con qué devuelve cada uno y ejemplo) se abre debajo, con
   buscador. Se anima opacity, translate y el chevrón; nunca el alto.
 - **El catálogo se compara contra el código** (D4): `test_asistente_tramites.py`
@@ -1775,9 +1798,15 @@ prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`
 `PLAN_LISTAS_VALIDACIONES.md` bloque 3; detalle en HISTORIAL, "Validaciones
 por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes:
 
+- **Ingreso y validación, por separado** (2026-10-18): ver la decisión en
+  "Decisiones tomadas". En el constructor cada campo tiene el bloque
+  INGRESO (Lo carga el afiliado / Extraer un dato / Calcular con una
+  fórmula) y el bloque VALIDACIÓN («+ Validar…»: un valor, un rango, otro
+  campo, un dato del afiliado o una lista, una fórmula); «Validar antes de
+  abrir» son los requisitos. Lo guardado no cambió.
 - **Fuente `funcion`** (`origen` lista o sistema): busca una fila de una
   lista del sindicato o un dato del padrón y compara, o evalúa una fórmula
-  escrita como las Reglas (`campo.*`, `lista.*`, `sistema.*`, `y`/`o`/`no`,
+  escrita como las Reglas (`campo.*`, `lista.*`, `sistema.afiliado.*`, `y`/`o`/`no`,
   nueve funciones cerradas; evaluador `ast` propio en
   `validaciones_tramite`, sin `eval`). **El CUIL de la sesión es siempre la
   primera clave de la búsqueda**; la segunda es un campo del formulario por
@@ -1789,8 +1818,11 @@ por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes
   segunda clave, siempre bloqueantes, evaluadas al enviar y **al abrir**
   (`GET /api/tramite/requisitos/{id}`: si no se cumplen, la app muestra los
   mensajes en vez de los campos, y trae los calculados que no dependen de
-  otro campo). **Campo `calculado`**: su única validación es la fórmula; lo
-  calcula el servidor en `/api/tramite` y lo que mande el navegador se ignora.
+  otro campo). **Campo extraído o calculado** (`tipo_dato = "calculado"`):
+  su ingreso es la función marcada `ingreso`; el servidor lo propone
+  (`calculados`), el afiliado puede corregirlo y, si lo hace, vale lo suyo
+  con aviso al operador (`corregidos`); puede tener validaciones como
+  cualquier campo (una fija infiere el tipo del límite).
 - `sistema.tramites_de_este_tipo` / `tramites_abiertos_de_este_tipo` cuentan
   los pedidos del afiliado de ESE formulario: «una sola vez» es un requisito
   (`== 0`), no una brecha. **Desde 2026-10-18, once datos más**

@@ -4710,8 +4710,16 @@ def api_tipos_tramite(request: Request):
     # Los formularios GLOBALES más los de SU seccional (decisión N7). El
     # recorte va en la consulta: si se hiciera en el cliente, los
     # formularios de otras delegaciones viajarían igual en el JSON.
-    return {"tipos": db.tipos_tramite_del_sindicato(
-        sid, solo_activos=True, seccional_id=db.seccional_de_trabajador(cuil, sid))}
+    tipos = db.tipos_tramite_del_sindicato(
+        sid, solo_activos=True, seccional_id=db.seccional_de_trabajador(cuil, sid))
+    # Cada campo extraído o calculado dice de dónde sale y si es un dato
+    # propio de la persona: la app avisa qué pasa si lo corrige.
+    for t in tipos:
+        for c in t.get("campos") or []:
+            desc = validaciones_tramite.descripcion_ingreso(c)
+            if desc:
+                c["ingreso"] = desc
+    return {"tipos": tipos}
 
 
 @app.get("/api/tramites/mios")
@@ -5014,11 +5022,17 @@ async def api_enviar_tramite(request: Request):
 
     errores = []
     respuestas = []
+    valores_calculados = {}
     for campo in tipo["campos"]:
         if campo["tipo_dato"] == "separador":
             continue  # raya visual, no junta respuesta
         if campo["tipo_dato"] == validaciones_tramite.TIPO_CALCULADO:
-            continue  # lo calcula el servidor más abajo; lo que mande el cliente se ignora
+            # Extraído o calculado: el servidor lo propone y el afiliado puede
+            # corregirlo (SDN, 2026-10-18). Lo que mande el cliente entra a
+            # `valores_calculados` y evaluar_envio decide (queda anotado para
+            # quien evalúa; un dato propio se actualiza en su perfil).
+            valores_calculados[campo["id"]] = str(form.get(f'campo_{campo["id"]}') or "").strip()[:500]
+            continue
         if campo["tipo_dato"] == "booleano":
             # Un checkbox desmarcado ni siquiera viaja en el form -- "No" es
             # una respuesta válida en sí misma, no aplica el chequeo de
@@ -5090,10 +5104,12 @@ async def api_enviar_tramite(request: Request):
     # -- esto es lo que decide qué se persiste. "avisa" no frena: queda como
     # advertencia para el operador en el detalle del trámite. Las de fuente
     # `funcion` y los requisitos miran el padrón y las listas con el CUIL de
-    # la SESIÓN (db.contexto_validaciones); un campo `calculado` se guarda
-    # con lo que calculó el servidor, nunca con lo que mande el cliente.
+    # la SESIÓN (db.contexto_validaciones); un campo extraído o calculado se
+    # guarda con lo que propuso el servidor, salvo que el afiliado lo haya
+    # corregido (queda anotado en las advertencias del trámite).
     valores = {r["campo_tramite_id"]: r.get("valor_texto", "")
                for r in respuestas if "valor_texto" in r}
+    valores.update(valores_calculados)
     contexto = db.contexto_validaciones(sid, cuil, tipo, valores)
     veredicto = validaciones_tramite.evaluar_envio(
         tipo["campos"], tipo.get("reglas_consistencia"), valores,
@@ -5105,6 +5121,12 @@ async def api_enviar_tramite(request: Request):
             "errores": errores, "errores_campos": veredicto["errores_campos"]})
     for cid, texto in veredicto["calculados"].items():
         respuestas.append({"campo_tramite_id": cid, "valor_texto": texto})
+    # Un dato PROPIO de la persona (fecha de nacimiento, provincia,
+    # localidad) que corrigió en el formulario se actualiza en su perfil: la
+    # app se lo avisó antes de dejarla cambiarlo.
+    for c in veredicto.get("corregidos") or []:
+        if c.get("propio") and c.get("dato"):
+            db.actualizar_dato_personal(cuil, c["dato"], c["escrito"])
     _intentos_en_vivo.pop((cuil, tipo_tramite_id), None)
 
     # Trámite encadenado: si el formulario se abrió desde el CHAT de otro

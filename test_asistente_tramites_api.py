@@ -216,7 +216,7 @@ def test_el_prompt_de_la_ia_lleva_el_catalogo_de_funciones():
     """La IA solo puede proponer fórmulas con lo que existe: el catálogo va
     en el prompt de sistema, sacado del código, y la herramienta pide por
     campo la regla, la fórmula y la función nueva."""
-    assert "sistema.credencial_vigente" in ia.PROMPT_SISTEMA and "lista.fecha_nacimiento" in ia.PROMPT_SISTEMA
+    assert "sistema.afiliado.credencial_vigente" in ia.PROMPT_SISTEMA and "lista.fecha_nacimiento" in ia.PROMPT_SISTEMA
     assert "anios_entre" in ia.PROMPT_SISTEMA
     props = ia.herramienta()["input_schema"]["properties"]["campos"]["items"]["properties"]
     assert {"aclaracion", "regla", "formula", "funcion_nueva"} <= set(props)

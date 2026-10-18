@@ -3724,6 +3724,30 @@ def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
         return True
 
 
+def actualizar_dato_personal(cuil: str, dato: str, valor: str) -> bool:
+    """Un dato PROPIO de la persona (validaciones_tramite.DATOS_PROPIOS) que
+    el afiliado corrigió en un campo extraído de un trámite (2026-10-18):
+    `fecha_nacimiento` (ya ISO) o `provincia` / `localidad`. El domicilio se
+    escribe como un bloque (regla de 2026-09-22): se toma el que hay, se
+    cambia ese dato y, como la localidad cambió, el globo del mapa deja de
+    valer (`sin_geo`)."""
+    valor = str(valor or "").strip()
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not c or not valor:
+            return False
+        if dato == "fecha_nacimiento":
+            guardar_datos_personales(s, cuil, fecha_nacimiento=valor[:10])
+        elif dato in ("provincia", "localidad"):
+            bloque = {k: getattr(c, k, "") or "" for k in ("calle", "numero", "piso_depto", "localidad", "provincia", "codigo_postal")}
+            bloque[dato] = valor
+            guardar_datos_personales(s, cuil, domicilio=geo.campos_para_guardar(bloque, "sin_geo"))
+        else:
+            return False
+        s.commit()
+        return True
+
+
 def foto_trabajador(cuil: str) -> Optional[dict]:
     """Foto de perfil (una por CUIL, no por sindicato -- ver CuentaTrabajador)."""
     with Session(engine) as s:

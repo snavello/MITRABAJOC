@@ -114,7 +114,7 @@ def test_los_datos_se_editan_en_tarjetas_con_todo_el_detalle():
     app = _sin_comentarios((CARPETA / "app.js").read_text(encoding="utf-8"))
     css = _sin_comentarios((CARPETA / "asistente.css").read_text(encoding="utf-8"))
     assert "campo-extra" not in app and "campo-extra" not in css
-    for rotulo in ("Aclaración", "Regla", "Fórmula", "Función nueva"):
+    for rotulo in ("Aclaración", "Validar", "Validar con fórmula", "Función a desarrollar"):
         assert f'"{rotulo}"' in app, rotulo
     assert 'class="cp-det-cab" aria-expanded=' in app and 'class="cp-chip"' in app
     assert "function Catalogo" in app and "d.ejemplo" in app and "f.ejemplo" in app and "cat.comparar" in app
