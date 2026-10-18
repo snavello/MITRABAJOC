@@ -7637,7 +7637,7 @@ vuelta de empresa (D7).
 
 
 
-## El asistente de trámites, más ágil, y once datos nuevos del sistema (2026-10-18, Admin 0.55.02, Plataforma 0.50.01)
+## El asistente de trámites, más ágil, y once datos nuevos del sistema (2026-10-18, Admin 0.60.03, Plataforma 0.51.01)
 
 Pedido de SDN probando el asistente: "hace demasiadas preguntas y en las
 opciones pone opciones ridículas; siempre debe recomendar una y permitir
