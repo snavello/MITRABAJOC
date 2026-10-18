@@ -8213,3 +8213,24 @@ en `CuentaTrabajador`). Tests: `test_validaciones_funcion.py` (16, con
 `test_tramites.py`, `test_tramites_en_vivo.py`, `test_asistente_tramites*.py`,
 `test_alcance_seccional_pantalla.py`, `test_modales.py` y el robot e2e del
 asistente.
+
+## El banco de pruebas no inventa correcciones, y cada campo es una tarjeta (2026-10-18, Admin 0.62.02)
+
+Dos observaciones de SDN al probar el constructor nuevo:
+
+- **"El afiliado corrigió el dato" cuando el que cambió las condiciones fue
+  el admin.** El banco de pruebas dejaba en el input de un extraído el valor
+  del "Probar" anterior y lo mandaba como corrección en el siguiente. Ahora
+  lo propuesto se guarda aparte (`propuestosPruebaTramite`, `data-propuesto`
+  en el input) y solo viaja lo que el admin escribe ENCIMA de eso; cambiar
+  el ingreso del campo (`cambiarIngresoTramite`, cualquier cambio en la fila
+  de ingreso) olvida lo probado. Robot: tres pruebas seguidas cambiando el
+  dato dan cero avisos; escribir 999 encima da uno.
+- **Delimitar y marcar.** Cada campo pasó a ser una tarjeta con filo de 5px
+  del primario de la marca, fondo blanco y sombra corta (se fue el lomo
+  punteado y el lavado alternado); adentro, los bloques INGRESO (filo
+  violeta, rótulo sólido violeta) y VALIDACIÓN (filo y rótulo del primario)
+  con fondo propio; «Validar antes de abrir» con el mismo marco; el menú
+  «+ Validar…» en el primario con borde punteado. Todas las ayudas del
+  constructor (`.ct-fn-ayuda`, los `muted` de la sub-pestaña, los vacíos)
+  van en 11px itálica gris, con el código derecho.
