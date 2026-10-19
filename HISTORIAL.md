@@ -8405,3 +8405,49 @@ la tira queda en 47 px de alto contra 60; el acento vuelve a ser solo de las
 acciones. En teléfono sigue siendo una fila deslizable. Las sub-pestañas no
 cambiaron: ya eran pastillas redondas con la activa en el color de apoyo,
 como en el mockup.
+
+## Noticias, Beneficios y Notificaciones como hoja de trabajo (2026-10-19, Admin 0.65.01)
+
+Tercer bloque de la revisión de diseño: SDN pidió "el formato completo" de
+la hoja de trabajo A también en las tres pantallas de publicación, que el
+lienzo ya mostraba en su segunda fila. Las tres comparten ahora el mismo
+cromo que el constructor de Trámites, con las MISMAS clases (`.ct-layout`,
+`.ct-riel`, `.ct-area`, `.ct-pasog`, `.ct-guardar`, `.ct-ancho`): nada se
+duplicó en CSS.
+
+- **Tres pasos por pantalla**, con lo obligatorio y lo opcional separado:
+  Noticias = La noticia (título, bajada, texto) / Cuándo y a quién
+  (vigencia, destino) / Imágenes y formulario; Beneficios = El beneficio
+  (rubro, descripción, link) / Cuándo y a quién / Imagen y formulario;
+  Notificaciones = El mensaje (remitente, texto) / A quién le llega
+  (criterio y valores) / Adjunto y formulario. Los campos son los de antes,
+  reagrupados; las explicaciones que estaban como `muted` a la vista pasaron
+  al «?» de cada paso (regla del 2026-10-18).
+- **El riel** (`pintarRiel` + `rielNoticia` / `rielBeneficio` /
+  `rielNotificacion`) resume lo cargado en cada paso (título, "20/10 al
+  31/10/2026 · todas las seccionales", "Por CUIL · 3", "con adjunto · sin
+  formulario"), marca hecho / actual, y dice el estado: Nueva o Editando
+  (con la fecha de carga) y "sin guardar" desde que se toca algo. En
+  Notificaciones el riel lleva "Vista previa" y la aclaración de que se
+  envía al confirmar y no se edita después; el recuadro de la vista previa
+  y "Confirmar y enviar" quedaron en la barra de guardado de la hoja.
+- **El riel va sobre la franja de marca**, así que se separa por luz: hoja
+  blanca con la misma sombra que la hoja central (antes el texto del primer
+  paso quedaba en tinta sobre el degradé oscuro). El rótulo "Vista del
+  afiliado" pasa a blanco arriba de 760 px por lo mismo. Vale también para
+  el constructor de Trámites.
+- **Las tablas de cargadas dicen el estado**: vigente / próxima / vencida
+  para noticias y beneficios, calculado en la plantilla contra `hoy`
+  (`fechas.hoy_texto()`, nuevo en el contexto de `/admin`). En teléfono las
+  tablas de todos los paneles se desplazan de costado en vez de ensanchar
+  la página.
+- Lo que el lienzo dibujaba y NO se construyó, a propósito: "Guardar como
+  borrador" en las tres (necesita una columna y migración por tabla, y SDN
+  lo pidió solo para el constructor) y el conteo de a cuántos afiliados les
+  llega una notificación antes de la vista previa (sigue en la vista
+  previa). La vista del afiliado de la derecha es la de siempre.
+
+Verificado con `test_noticias.py`, `test_beneficios.py`,
+`test_notificaciones.py`, `test_alcance_seccional_pantalla.py` y
+`test_modales.py`, y con un robot en el navegador sobre las tres pantallas
+(riel que sigue al formulario, edición desde la tabla, 1400 y 390 px).
