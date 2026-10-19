@@ -259,8 +259,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   prohíbe el kicker y los números de sección, que acá se quedan), y los
   colores son SIEMPRE los cuatro de marca del sindicato. **La revisión de
   diseño arrancó el 2026-10-19** con el constructor de Trámites (dirección
-  A, "hoja de trabajo") y la tira de pestañas de los dos paneles (pastillas
-  de texto, activa en blanco); los mockups viven en el lienzo
+  A, "hoja de trabajo"), la tira de pestañas de los dos paneles (pastillas
+  de texto, activa en blanco) y las pantallas de Noticias, Beneficios y
+  Notificaciones con la misma hoja (las clases `.ct-layout/.ct-riel/
+  .ct-area/.ct-pasog/.ct-guardar/.ct-ancho` son el patrón para cualquier
+  pantalla de alta del panel); los mockups viven en el lienzo
   https://claude.ai/artifact/39fiNwNrpcyDXpGaQHqNnn.
 - **FLUJO.md** — el ciclo de un cambio en una página: de tu PC a Pruebas y de
   Pruebas a la demo, con los comandos y las tres reglas.

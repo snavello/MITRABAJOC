@@ -1611,6 +1611,7 @@ def admin(request: Request):
     ) if administra else []
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
+        "hoy": fechas.hoy_texto(),   # estado vigente / vencida de noticias y beneficios
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,

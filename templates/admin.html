@@ -223,7 +223,14 @@
   @media (max-width:1000px) { .ct-ancho { width:auto; margin-left:0; } }
   .ct-layout { display:grid; grid-template-columns:176px minmax(0,1fr) 300px; gap:18px; align-items:start; }
   @media (max-width:1000px) { .ct-layout { grid-template-columns:minmax(0,1fr); } }
-  .ct-riel { position:sticky; top:12px; display:flex; flex-direction:column; gap:3px; }
+  /* El riel va sobre la franja de marca: se separa por LUZ (hoja blanca
+     con la misma sombra que la hoja central), no por contraste de color. */
+  .ct-riel { position:sticky; top:12px; display:flex; flex-direction:column; gap:3px; padding:8px;
+    background:#fff; border-radius:12px; box-shadow:0 1px 2px rgba(15,27,45,.06), 0 10px 28px -14px rgba(15,27,45,.28); }
+  .ct-riel-paso.actual { background:var(--papel); }
+  .ct-der > .ct-secc { color:#fff; }
+  .ct-der > .ct-secc::after { background:rgba(255,255,255,.35); }
+  @media (max-width:760px) { .ct-der > .ct-secc { color:var(--tinta); } .ct-der > .ct-secc::after { background:var(--linea); } }
   @media (max-width:1000px) { .ct-riel { position:static; } }
   .ct-riel-paso { display:grid; grid-template-columns:24px minmax(0,1fr); gap:9px; align-items:start; padding:8px 8px 8px 7px;
     border-radius:9px; color:var(--tinta); text-decoration:none; transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
@@ -231,13 +238,16 @@
     font:700 12px var(--fuente-num); background:#fff; border:1.5px solid #c8d0db; color:var(--gris); }
   .ct-riel-paso.hecho .num { background:#0d7a5f; border-color:#0d7a5f; color:#fff; font-size:0; }
   .ct-riel-paso.hecho .num::before { content:""; width:10px; height:5px; border-left:2.5px solid #fff; border-bottom:2.5px solid #fff; rotate:-45deg; margin-top:-3px; }
-  .ct-riel-paso.actual { background:#fff; box-shadow:0 1px 2px rgba(15,27,45,.06), 0 10px 28px -14px rgba(15,27,45,.28); }
+  .ct-riel-paso.actual { background:var(--papel); box-shadow:inset 0 0 0 1px var(--linea); }
   .ct-riel-paso.actual .num { background:var(--marca-primario); border-color:var(--marca-primario); color:#fff; }
   .ct-riel-paso b { display:block; font-family:var(--fuente-display); font-size:15px; letter-spacing:.5px; text-transform:uppercase; line-height:1.1; }
   .ct-riel-paso small { display:block; font-size:11.5px; color:var(--gris); margin-top:2px; }
   .ct-riel-estado { margin-top:12px; padding:12px 8px 0; border-top:1px solid #d6dce5; font-size:12px; color:var(--gris); display:flex; flex-direction:column; gap:8px; }
   .ct-riel-estado b { color:var(--tinta); }
   .ct-riel-estado button { width:100%; margin:0; }
+  .ct-riel-estado .ct-estado { font-size:11.5px; line-height:1.4; }
+  .ct-pasog .grid2 .campo.full { grid-column:1 / -1; }
+  .ct-pasog .campo textarea { font:inherit; font-size:13.5px; }
   .ct-area { background:repeating-linear-gradient(0deg, color-mix(in srgb, var(--marca-primario) 6%, transparent) 0 1px, transparent 1px 24px),
     repeating-linear-gradient(90deg, color-mix(in srgb, var(--marca-primario) 6%, transparent) 0 1px, transparent 1px 24px);
     border:1px solid #d6dce5; border-radius:12px; padding:16px; min-width:0; }
@@ -276,6 +286,9 @@
   .ct-editor .ct-paso-cuerpo .ct-tipo { flex:0 1 150px; }
   .ct-editor .ct-radios { flex-basis:100%; }
   @media (max-width:760px) {
+    /* Las tablas de "cargadas" se desplazan de costado en vez de ensanchar
+       la página (antes desbordaban en teléfono). */
+    .panel > table, .tramite-subpanel > table { display:block; overflow-x:auto; max-width:100%; }
     .ct-fila { grid-template-columns:14px 28px minmax(0,1fr) 62px; }
     .ct-fila .ct-c4, .ct-fila .ct-c5, .ct-fila .ct-c6 { display:none; }
     .ct-editor { padding-left:12px; grid-template-columns:minmax(0,1fr); }
@@ -1548,52 +1561,77 @@
   <div class="panel" data-mov-vista id="panel-noticias">
   <!-- ============ NOTICIAS ============ -->
   <h2 id="noticias-titulo" class="titulo-pagina ct-secc">Dar de alta una noticia</h2>
-  <div class="card">
+  {# Hoja de trabajo (SDN, 2026-10-19, dirección A de Impeccable, misma que
+     el constructor de Trámites): riel de pasos con estado, la hoja sobre el
+     área cuadriculada y la vista del afiliado fija a la derecha. #}
+  <div class="card ct-card ct-ancho">
     <form method="post" action="/admin/noticia" enctype="multipart/form-data" id="form-noticia">
       <input type="hidden" name="id" id="not-id">
-      <div class="ct-layout"><div class="ct-izq">
-      <div class="grid2">
-        <div class="campo full"><label>Título *</label><input name="titulo" id="not-titulo" required></div>
-        <div class="campo full"><label>Bajada</label><input name="bajada" id="not-bajada" placeholder="Resumen corto, se ve en la portada y el listado"></div>
-        <div class="campo full"><label>Texto completo</label>
-          <textarea name="texto_completo" id="not-texto" rows="5" placeholder="Puede incluir URLs, se muestran como link"></textarea>
-        </div>
-        <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="not-desde" type="date" required></div>
-        <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="not-hasta" type="date" required></div>
-        <div class="campo"><label>Imagen 1 (opcional)</label><input name="imagen1" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
-        <div class="campo"><label>Imagen 2 (opcional)</label><input name="imagen2" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
-        {% if 'tramites' in modulos and tipos_tramite %}
-        <div class="campo full">
-          <label>Formulario para iniciar (opcional)</label>
-          <select name="formulario_id" id="not-formulario">
-            <option value="">Sin formulario</option>
-            {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
-          </select>
-          <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario — escribí en el texto algo como "completá los datos haciendo click acá".</span>
-        </div>
-        {% endif %}
-        {# La pantalla no ofrece lo que el servidor va a descartar: quien está
-           acotado ve solo las seccionales de su alcance, y con una sola no hay
-           nada que elegir (el servidor fuerza el destino). #}
-        {% if seccionales_visibles %}
-        <div class="campo full">
-          <label>Destino</label>
-          {% if alcance_propio is not none and seccionales_visibles|length == 1 %}
-          <div class="muted" id="not-destino-fijo" style="font-size:13px;">Va a tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
-          {% else %}
-          <div class="check-seccionales" id="not-destino">
-            {% for sec in seccionales_visibles %}
-            <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
-            {% endfor %}
+      <div class="ct-layout">
+      <aside class="ct-riel" id="not-riel">
+  <a class="ct-riel-paso" href="#not-paso-1" data-paso="1"><span class="num">1</span><span><b>La noticia</b><small>título, bajada y texto</small></span></a>
+  <a class="ct-riel-paso" href="#not-paso-2" data-paso="2"><span class="num">2</span><span><b>Cuándo y a quién</b><small>vigencia y destino</small></span></a>
+  <a class="ct-riel-paso" href="#not-paso-3" data-paso="3"><span class="num">3</span><span><b>Imágenes y formulario</b><small>opcional</small></span></a>
+  <div class="ct-riel-estado"><div id="not-estado">Nueva · <b>sin guardar</b></div><button type="submit" class="pri-riel">Guardar noticia</button><button type="button" class="sec" onclick="document.getElementById('pn-titulo').scrollIntoView({behavior:'smooth', block:'center'})">Ver como el afiliado</button></div>
+</aside>
+      <div class="ct-area"><div class="ct-izq ct-guia">
+      <section class="ct-pasog" id="not-paso-1">
+        <div class="ct-pasog-cab"><b>1</b><h3>La noticia</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El <b>título</b> y la <b>bajada</b> se ven en la portada y en Novedades; el <b>texto completo</b> se abre al tocar la noticia. Las URLs se muestran como link."></button></div>
+        <div class="grid2">
+          <div class="campo full"><label>Título *</label><input name="titulo" id="not-titulo" required></div>
+          <div class="campo full"><label>Bajada</label><input name="bajada" id="not-bajada" placeholder="Resumen corto, se ve en la portada y el listado"></div>
+          <div class="campo full"><label>Texto completo</label>
+            <textarea name="texto_completo" id="not-texto" rows="5" placeholder="Puede incluir URLs, se muestran como link"></textarea>
           </div>
-          <span class="muted" style="font-size:11.5px;">{% if alcance_propio is none %}Sin marcar ninguna = todas las seccionales (default).{% else %}Sin marcar ninguna = todas las de tu alcance.{% endif %}</span>
+        </div>
+      </section>
+      <section class="ct-pasog" id="not-paso-2">
+        <div class="ct-pasog-cab"><b>2</b><h3>Cuándo y a quién</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Fuera de la <b>vigencia</b> la noticia desaparece de la app (el día de Buenos Aires). El <b>destino</b> recorta a qué seccionales les llega: sin marcar ninguna, a todas."></button></div>
+        <div class="grid2">
+          <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="not-desde" type="date" required></div>
+          <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="not-hasta" type="date" required></div>
+          {# La pantalla no ofrece lo que el servidor va a descartar: quien está
+             acotado ve solo las seccionales de su alcance, y con una sola no hay
+             nada que elegir (el servidor fuerza el destino). #}
+          {% if seccionales_visibles %}
+          <div class="campo full">
+            <label>Destino</label>
+            {% if alcance_propio is not none and seccionales_visibles|length == 1 %}
+            <div class="muted" id="not-destino-fijo" style="font-size:13px;">Va a tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
+            {% else %}
+            <div class="check-seccionales" id="not-destino">
+              {% for sec in seccionales_visibles %}
+              <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
+              {% endfor %}
+            </div>
+            <span class="muted" style="font-size:11.5px;">{% if alcance_propio is none %}Sin marcar ninguna = todas las seccionales.{% else %}Sin marcar ninguna = todas las de tu alcance.{% endif %}</span>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
-        {% endif %}
+      </section>
+      <section class="ct-pasog" id="not-paso-3">
+        <div class="ct-pasog-cab"><b>3</b><h3>Imágenes y formulario</h3><i class="op">opcional</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Hasta dos <b>imágenes</b> (la primera es la foto de la portada). El <b>formulario</b> le pone a la noticia un ícono que abre ese trámite: escribí en el texto algo como «completá los datos acá»."></button></div>
+        <div class="grid2">
+          <div class="campo"><label>Imagen 1</label><input name="imagen1" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+          <div class="campo"><label>Imagen 2</label><input name="imagen2" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+          {% if 'tramites' in modulos and tipos_tramite %}
+          <div class="campo full">
+            <label>Formulario para iniciar</label>
+            <select name="formulario_id" id="not-formulario">
+              <option value="">Sin formulario</option>
+              {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      <div class="ct-guardar">
+        <button type="submit">Guardar noticia</button>
+        <button type="button" class="sec oculto" id="not-cancel" onclick="cancelarNoticia()">Cancelar edición</button>
+        <span class="ct-estado" id="not-guardar-nota"></span>
       </div>
-      <button type="submit">Guardar noticia</button>
-      <button type="button" class="sec oculto" id="not-cancel" onclick="cancelarNoticia()">Cancelar edición</button>
-      </div>
+      </div></div>
       <div class="ct-der">
         <h3 class="ct-secc">Vista del afiliado</h3>
         <div class="ttp-marco"><div class="ttp-pant">
@@ -1615,11 +1653,12 @@
 
   <h2 class="ct-secc">Noticias cargadas ({{ noticias|length }})</h2>
   <table>
-    <tr><th>Título</th><th>Vigencia</th><th>Destino</th><th>Cargada</th><th></th></tr>
+    <tr><th>Título</th><th>Vigencia</th><th>Estado</th><th>Destino</th><th>Cargada</th><th></th></tr>
     {% for n in noticias %}
     <tr>
       <td>{{ n.titulo }}{% if n.bajada %}<br><span class="muted">{{ n.bajada }}</span>{% endif %}</td>
-      <td>{{ n.fecha_desde }} → {{ n.fecha_hasta }}</td>
+      <td class="muted" style="white-space:nowrap;">{{ n.fecha_desde }} → {{ n.fecha_hasta }}</td>
+      <td>{% if n.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#888;">vencida</span>{% elif n.fecha_desde > hoy %}<span class="tag tag-pend">próxima</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
       <td class="muted">{% if n.destino_seccionales %}{% for sid in n.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ n.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
@@ -1636,7 +1675,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted">Todavía no cargaste ninguna noticia.</td></tr>
+    <tr><td colspan="6" class="muted">Todavía no cargaste ninguna noticia.</td></tr>
     {% endfor %}
   </table>
   </div>
@@ -1648,51 +1687,70 @@
   <div class="panel" data-mov-vista id="panel-beneficios">
   <!-- ============ BENEFICIOS ============ -->
   <h2 id="beneficios-titulo" class="titulo-pagina ct-secc">Dar de alta un beneficio</h2>
-  <div class="card">
+  <div class="card ct-card ct-ancho">
     <form method="post" action="/admin/beneficio" enctype="multipart/form-data" id="form-beneficio">
       <input type="hidden" name="id" id="ben-id">
-      <div class="ct-layout"><div class="ct-izq">
-      <div class="grid2">
-        <div class="campo full"><label>Rubro *</label><input name="rubro" id="ben-rubro" required placeholder="Ej: Indumentaria, Salud, Turismo"></div>
-        <div class="campo full"><label>Descripción</label>
-          <textarea name="descripcion" id="ben-descripcion" rows="5" placeholder="Detalle del beneficio, puede incluir URLs"></textarea>
-        </div>
-        <div class="campo full"><label>Link (opcional)</label><input name="link" id="ben-link" placeholder="https://..."></div>
-        <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="ben-desde" type="date" required></div>
-        <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="ben-hasta" type="date" required></div>
-        <div class="campo"><label>Imagen (se muestra en el carrusel)</label><input name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
-        {% if 'tramites' in modulos and tipos_tramite %}
-        <div class="campo full">
-          <label>Formulario para iniciar (opcional)</label>
-          <select name="formulario_id" id="ben-formulario">
-            <option value="">Sin formulario</option>
-            {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
-          </select>
-          <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario (ej.: la reserva del beneficio).</span>
-        </div>
-        {% endif %}
-        {# La pantalla no ofrece lo que el servidor va a descartar: quien está
-           acotado ve solo las seccionales de su alcance, y con una sola no hay
-           nada que elegir (el servidor fuerza el destino). #}
-        {% if seccionales_visibles %}
-        <div class="campo full">
-          <label>Destino</label>
-          {% if alcance_propio is not none and seccionales_visibles|length == 1 %}
-          <div class="muted" id="ben-destino-fijo" style="font-size:13px;">Va a tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
-          {% else %}
-          <div class="check-seccionales" id="ben-destino">
-            {% for sec in seccionales_visibles %}
-            <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
-            {% endfor %}
+      <div class="ct-layout">
+      <aside class="ct-riel" id="ben-riel">
+  <a class="ct-riel-paso" href="#ben-paso-1" data-paso="1"><span class="num">1</span><span><b>El beneficio</b><small>rubro, descripción y link</small></span></a>
+  <a class="ct-riel-paso" href="#ben-paso-2" data-paso="2"><span class="num">2</span><span><b>Cuándo y a quién</b><small>vigencia y destino</small></span></a>
+  <a class="ct-riel-paso" href="#ben-paso-3" data-paso="3"><span class="num">3</span><span><b>Imagen y formulario</b><small>opcional</small></span></a>
+  <div class="ct-riel-estado"><div id="ben-estado">Nuevo · <b>sin guardar</b></div><button type="submit" class="pri-riel">Guardar beneficio</button><button type="button" class="sec" onclick="document.getElementById('pb-rubro').scrollIntoView({behavior:'smooth', block:'center'})">Ver como el afiliado</button></div>
+</aside>
+      <div class="ct-area"><div class="ct-izq ct-guia">
+      <section class="ct-pasog" id="ben-paso-1">
+        <div class="ct-pasog-cab"><b>1</b><h3>El beneficio</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El <b>rubro</b> es el chip del carrusel (Turismo, Salud, Indumentaria); la <b>descripción</b> se abre al tocar y puede llevar URLs; el <b>link</b> es el botón de ir al comercio."></button></div>
+        <div class="grid2">
+          <div class="campo full"><label>Rubro *</label><input name="rubro" id="ben-rubro" required placeholder="Ej: Indumentaria, Salud, Turismo"></div>
+          <div class="campo full"><label>Descripción</label>
+            <textarea name="descripcion" id="ben-descripcion" rows="5" placeholder="Detalle del beneficio, puede incluir URLs"></textarea>
           </div>
-          <span class="muted" style="font-size:11.5px;">{% if alcance_propio is none %}Sin marcar ninguna = todas las seccionales (default).{% else %}Sin marcar ninguna = todas las de tu alcance.{% endif %}</span>
+          <div class="campo full"><label>Link</label><input name="link" id="ben-link" placeholder="https://..."></div>
+        </div>
+      </section>
+      <section class="ct-pasog" id="ben-paso-2">
+        <div class="ct-pasog-cab"><b>2</b><h3>Cuándo y a quién</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Fuera de la <b>vigencia</b> el beneficio sale del carrusel. El <b>destino</b> recorta a qué seccionales les llega: sin marcar ninguna, a todas."></button></div>
+        <div class="grid2">
+          <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="ben-desde" type="date" required></div>
+          <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="ben-hasta" type="date" required></div>
+          {% if seccionales_visibles %}
+          <div class="campo full">
+            <label>Destino</label>
+            {% if alcance_propio is not none and seccionales_visibles|length == 1 %}
+            <div class="muted" id="ben-destino-fijo" style="font-size:13px;">Va a tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
+            {% else %}
+            <div class="check-seccionales" id="ben-destino">
+              {% for sec in seccionales_visibles %}
+              <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
+              {% endfor %}
+            </div>
+            <span class="muted" style="font-size:11.5px;">{% if alcance_propio is none %}Sin marcar ninguna = todas las seccionales.{% else %}Sin marcar ninguna = todas las de tu alcance.{% endif %}</span>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
-        {% endif %}
+      </section>
+      <section class="ct-pasog" id="ben-paso-3">
+        <div class="ct-pasog-cab"><b>3</b><h3>Imagen y formulario</h3><i class="op">opcional</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="La <b>imagen</b> es la del carrusel de la portada. El <b>formulario</b> le pone al beneficio un ícono que abre ese trámite (por ejemplo, la reserva)."></button></div>
+        <div class="grid2">
+          <div class="campo full"><label>Imagen del carrusel</label><input name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+          {% if 'tramites' in modulos and tipos_tramite %}
+          <div class="campo full">
+            <label>Formulario para iniciar</label>
+            <select name="formulario_id" id="ben-formulario">
+              <option value="">Sin formulario</option>
+              {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      <div class="ct-guardar">
+        <button type="submit">Guardar beneficio</button>
+        <button type="button" class="sec oculto" id="ben-cancel" onclick="cancelarBeneficio()">Cancelar edición</button>
+        <span class="ct-estado" id="ben-guardar-nota"></span>
       </div>
-      <button type="submit">Guardar beneficio</button>
-      <button type="button" class="sec oculto" id="ben-cancel" onclick="cancelarBeneficio()">Cancelar edición</button>
-      </div>
+      </div></div>
       <div class="ct-der">
         <h3 class="ct-secc">Vista del afiliado</h3>
         <div class="ttp-marco"><div class="ttp-pant">
@@ -1714,11 +1772,12 @@
 
   <h2 class="ct-secc">Beneficios cargados ({{ beneficios|length }})</h2>
   <table>
-    <tr><th>Rubro</th><th>Vigencia</th><th>Destino</th><th>Cargado</th><th></th></tr>
+    <tr><th>Rubro</th><th>Vigencia</th><th>Estado</th><th>Destino</th><th>Cargado</th><th></th></tr>
     {% for b in beneficios %}
     <tr>
       <td>{{ b.rubro }}</td>
-      <td>{{ b.fecha_desde }} → {{ b.fecha_hasta }}</td>
+      <td class="muted" style="white-space:nowrap;">{{ b.fecha_desde }} → {{ b.fecha_hasta }}</td>
+      <td>{% if b.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#888;">vencido</span>{% elif b.fecha_desde > hoy %}<span class="tag tag-pend">próximo</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
       <td class="muted">{% if b.destino_seccionales %}{% for sid in b.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ b.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
@@ -1732,7 +1791,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted">Todavía no cargaste ningún beneficio.</td></tr>
+    <tr><td colspan="6" class="muted">Todavía no cargaste ningún beneficio.</td></tr>
     {% endfor %}
   </table>
   </div>
@@ -1745,14 +1804,28 @@
   <div class="panel" data-mov-vista id="panel-notificaciones">
   <!-- ============ NOTIFICACIONES ============ -->
   <h2 class="titulo-pagina ct-secc">Nueva notificación</h2>
-  <div class="card">
+  <div class="card ct-card ct-ancho">
     <form method="post" action="/admin/notificacion" enctype="multipart/form-data" id="form-notificacion">
-      <div class="ct-layout"><div class="ct-izq">
-      <div class="grid2">
-        <div class="campo full"><label>Remitente</label><input name="remitente" id="notif-remitente" placeholder="Ej: Comisión Directiva"></div>
-        <div class="campo full"><label>Mensaje *</label>
-          <textarea name="texto" id="notif-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
+      <div class="ct-layout">
+      <aside class="ct-riel" id="notif-riel">
+  <a class="ct-riel-paso" href="#notif-paso-1" data-paso="1"><span class="num">1</span><span><b>El mensaje</b><small>remitente y texto</small></span></a>
+  <a class="ct-riel-paso" href="#notif-paso-2" data-paso="2"><span class="num">2</span><span><b>A quién le llega</b><small>un criterio por notificación</small></span></a>
+  <a class="ct-riel-paso" href="#notif-paso-3" data-paso="3"><span class="num">3</span><span><b>Adjunto y formulario</b><small>opcional</small></span></a>
+  <div class="ct-riel-estado"><div id="notif-estado">Nueva · <b>sin enviar</b></div><button type="button" class="pri-riel" onclick="previsualizarNotificacion()">Vista previa</button><span class="ct-estado">Se envía al confirmar la vista previa. No se puede editar después.</span></div>
+</aside>
+      <div class="ct-area"><div class="ct-izq ct-guia">
+      <section class="ct-pasog" id="notif-paso-1">
+        <div class="ct-pasog-cab"><b>1</b><h3>El mensaje</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El <b>remitente</b> es lo que el afiliado ve arriba del mensaje (sin remitente, el nombre del sindicato). El <b>mensaje</b> puede llevar URLs, que se muestran como link."></button></div>
+        <div class="grid2">
+          <div class="campo full"><label>Remitente</label><input name="remitente" id="notif-remitente" placeholder="Ej: Comisión Directiva"></div>
+          <div class="campo full"><label>Mensaje *</label>
+            <textarea name="texto" id="notif-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
+          </div>
         </div>
+      </section>
+      <section class="ct-pasog" id="notif-paso-2">
+        <div class="ct-pasog-cab"><b>2</b><h3>A quién le llega</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Un <b>criterio</b> por notificación: CUIL a CUIL, por la empresa del recibo, por seccional o por provincia del domicilio. La vista previa dice a cuántos afiliados les llega antes de enviar."></button></div>
+        <div class="grid2">
         {# Acotado a UNA seccional: "a toda tu seccional" es el criterio normal y
            va primero (no hay criterio "todos"); su casilla viaja tildada y oculta. #}
         {% set notif_sec_unica = alcance_propio is not none and seccionales_visibles|length == 1 %}
@@ -1799,25 +1872,35 @@
             {% endfor %}
           </div>
         </div>
-        <div class="campo full"><label>Adjunto (opcional, imagen/PDF/Word, hasta 5 MB)</label>
-          <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
         </div>
-        {% if 'tramites' in modulos and tipos_tramite %}
-        <div class="campo full">
-          <label>Formulario para iniciar (opcional)</label>
-          <select name="formulario_id" id="notif-formulario">
-            <option value="">Sin formulario</option>
-            {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
-          </select>
-          <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario — escribí en el mensaje "completá los datos haciendo click acá".</span>
+      </section>
+      <section class="ct-pasog" id="notif-paso-3">
+        <div class="ct-pasog-cab"><b>3</b><h3>Adjunto y formulario</h3><i class="op">opcional</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Un <b>adjunto</b> (imagen, PDF o Word, hasta 5 MB) que el afiliado abre desde la notificación. El <b>formulario</b> le pone un ícono que abre ese trámite: escribí en el mensaje «completá los datos acá»."></button></div>
+        <div class="grid2">
+          <div class="campo full"><label>Adjunto (imagen, PDF o Word, hasta 5 MB)</label>
+            <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
+          </div>
+          {% if 'tramites' in modulos and tipos_tramite %}
+          <div class="campo full">
+            <label>Formulario para iniciar</label>
+            <select name="formulario_id" id="notif-formulario">
+              <option value="">Sin formulario</option>
+              {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
-      </div>
+      </section>
       <div id="notif-valores-hidden"></div>
-      <div id="notif-preview-box" class="oculto" style="margin:12px 0; padding:11px 14px; background:#f4f2ec; border-radius:8px; font-size:13.5px;"></div>
-      <button type="button" id="notif-btn-preview" onclick="previsualizarNotificacion()">Vista previa</button>
-      <button type="submit" id="notif-btn-enviar" class="oculto" style="margin-left:8px;">Confirmar y enviar</button>
+      <div class="ct-guardar" style="flex-direction:column; align-items:stretch;">
+        <div id="notif-preview-box" class="oculto" style="padding:11px 14px; background:#fff; border:1px solid var(--linea); border-radius:8px; font-size:13.5px;"></div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button type="button" id="notif-btn-preview" onclick="previsualizarNotificacion()">Vista previa</button>
+          <button type="submit" id="notif-btn-enviar" class="oculto">Confirmar y enviar</button>
+          <span class="ct-estado" id="notif-guardar-nota">Se envía una sola vez: no se puede editar después.</span>
+        </div>
       </div>
+      </div></div>
       <div class="ct-der">
         <h3 class="ct-secc">Vista del afiliado</h3>
         <div class="ttp-marco"><div class="ttp-pant">
@@ -6238,6 +6321,94 @@ function actualizarPreviewNotificacion() {
   }
 })();
 
+// ---------- El riel de la hoja de trabajo, para las pantallas de alta
+// (Noticias, Beneficios, Notificaciones; 2026-10-19): cada paso dice si
+// ya tiene lo obligatorio y un resumen de lo cargado; el estado, si el
+// formulario es nuevo o edita, y si se tocó desde el último guardado.
+function pintarRiel(pref, pasos, estadoHtml, nota) {
+  const riel = document.getElementById(pref + '-riel');
+  if (!riel) return;
+  let actual = false;
+  riel.querySelectorAll('.ct-riel-paso').forEach((a, i) => {
+    const p = pasos[i] || {};
+    a.querySelector('small').textContent = p.texto || '';
+    a.classList.toggle('hecho', !!p.hecho);
+    const esActual = !p.hecho && !actual && !p.opcional;
+    if (esActual) actual = true;
+    a.classList.toggle('actual', esActual);
+  });
+  const est = document.getElementById(pref + '-estado');
+  if (est) est.innerHTML = estadoHtml;
+  const n = document.getElementById(pref + '-guardar-nota');
+  if (n && nota !== undefined) n.textContent = nota;
+}
+const hojaTocada = { not: false, ben: false, notif: false };
+const hojaEditando = { not: null, ben: null };
+function _vigenciaCorta(desde, hasta) {
+  if (!desde || !hasta) return '';
+  const d = desde.split('-'), h = hasta.split('-');
+  return `${d[2]}/${d[1]} al ${h[2]}/${h[1]}/${h[0]}`;
+}
+function _destinoTexto(idChecks) {
+  const cont = document.getElementById(idChecks);
+  if (!cont) return 'tu seccional';
+  const marcadas = Array.from(cont.querySelectorAll('input:checked')).map(c => c.parentElement.textContent.trim());
+  return marcadas.length ? marcadas.join(', ') : 'todas las seccionales';
+}
+function rielNoticia() {
+  const g = id => document.getElementById(id);
+  if (!g('not-riel')) return;
+  const titulo = g('not-titulo').value.trim(), desde = g('not-desde').value, hasta = g('not-hasta').value;
+  const imgs = ['imagen1', 'imagen2'].filter(n => { const i = document.querySelector(`#form-noticia input[name=${n}]`); return i && i.files && i.files.length; }).length;
+  const form = g('not-formulario') && g('not-formulario').value ? g('not-formulario').selectedOptions[0].textContent.trim() : '';
+  const edit = hojaEditando.not;
+  pintarRiel('not', [
+    { hecho: !!titulo, texto: titulo || 'título, bajada y texto' },
+    { hecho: !!(desde && hasta), texto: desde && hasta ? `${_vigenciaCorta(desde, hasta)} · ${_destinoTexto('not-destino')}` : 'vigencia y destino' },
+    { hecho: imgs > 0 || !!form, opcional: true, texto: `${imgs ? imgs + (imgs === 1 ? ' imagen' : ' imágenes') : 'sin imágenes'} · ${form ? 'con formulario' : 'sin formulario'}` },
+  ], (edit ? 'Editando' : 'Nueva') + (hojaTocada.not ? ' · <b>sin guardar</b>' : (edit ? ' · guardada ' + escHtml(edit.creada || '') : ' · <b>sin guardar</b>')),
+  desde && hasta ? `Vigente ${_vigenciaCorta(desde, hasta)} · ${_destinoTexto('not-destino')}` : '');
+}
+function rielBeneficio() {
+  const g = id => document.getElementById(id);
+  if (!g('ben-riel')) return;
+  const rubro = g('ben-rubro').value.trim(), desde = g('ben-desde').value, hasta = g('ben-hasta').value;
+  const img = document.querySelector('#form-beneficio input[name=imagen]');
+  const conImg = !!(img && img.files && img.files.length);
+  const form = g('ben-formulario') && g('ben-formulario').value ? g('ben-formulario').selectedOptions[0].textContent.trim() : '';
+  const edit = hojaEditando.ben;
+  pintarRiel('ben', [
+    { hecho: !!rubro, texto: rubro || 'rubro, descripción y link' },
+    { hecho: !!(desde && hasta), texto: desde && hasta ? `${_vigenciaCorta(desde, hasta)} · ${_destinoTexto('ben-destino')}` : 'vigencia y destino' },
+    { hecho: conImg || !!form, opcional: true, texto: `${conImg ? 'con imagen' : 'sin imagen'} · ${form ? 'con formulario' : 'sin formulario'}` },
+  ], (edit ? 'Editando' : 'Nuevo') + (hojaTocada.ben ? ' · <b>sin guardar</b>' : (edit ? ' · guardado ' + escHtml(edit.creada || '') : ' · <b>sin guardar</b>')),
+  desde && hasta ? `Vigente ${_vigenciaCorta(desde, hasta)} · ${_destinoTexto('ben-destino')}` : '');
+}
+function rielNotificacion() {
+  const g = id => document.getElementById(id);
+  if (!g('notif-riel')) return;
+  const texto = g('notif-texto').value.trim(), rem = g('notif-remitente').value.trim();
+  const crit = g('notif-criterio'); const critTexto = crit ? crit.selectedOptions[0].textContent.trim() : '';
+  const valores = typeof valoresNotifActuales === 'function' ? valoresNotifActuales() : [];
+  const adj = document.querySelector('#form-notificacion input[name=adjunto]');
+  const conAdj = !!(adj && adj.files && adj.files.length);
+  const form = g('notif-formulario') && g('notif-formulario').value;
+  pintarRiel('notif', [
+    { hecho: !!texto, texto: texto ? `${rem || 'Sin remitente'} · ${texto.length} caracteres` : 'remitente y texto' },
+    { hecho: valores.length > 0, texto: valores.length ? `${critTexto} · ${valores.length}` : critTexto || 'un criterio por notificación' },
+    { hecho: conAdj || !!form, opcional: true, texto: `${conAdj ? 'con adjunto' : 'sin adjunto'} · ${form ? 'con formulario' : 'sin formulario'}` },
+  ], 'Nueva · <b>sin enviar</b>');
+}
+(function initRieles() {
+  [['form-noticia', 'not', rielNoticia], ['form-beneficio', 'ben', rielBeneficio], ['form-notificacion', 'notif', rielNotificacion]].forEach(([fid, pref, fn]) => {
+    const f = document.getElementById(fid);
+    if (!f || !document.getElementById(pref + '-riel')) return;
+    f.addEventListener('input', () => { hojaTocada[pref] = true; fn(); });
+    f.addEventListener('change', () => { hojaTocada[pref] = true; fn(); });
+    fn();
+  });
+})();
+
 function editarNoticia(n) {
   document.getElementById('not-id').value = n.id;
   document.getElementById('not-titulo').value = n.titulo || '';
@@ -6249,19 +6420,21 @@ function editarNoticia(n) {
   const notForm = document.getElementById('not-formulario');
   if (notForm) notForm.value = n.formulario_id || '';
   document.getElementById('noticias-titulo').textContent = 'Editar noticia: ' + n.titulo;
-  document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.querySelectorAll('#form-noticia button[type=submit]').forEach(b => b.textContent = 'Guardar cambios');
   document.getElementById('not-cancel').classList.remove('oculto');
   actualizarPreviewNoticia();
+  hojaEditando.not = n; hojaTocada.not = false; rielNoticia();
   document.getElementById('form-noticia').scrollIntoView({behavior:'smooth', block:'center'});
 }
 function cancelarNoticia() {
   document.getElementById('form-noticia').reset();
   document.getElementById('not-id').value = '';
   document.getElementById('noticias-titulo').textContent = 'Dar de alta una noticia';
-  document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar noticia';
+  document.querySelectorAll('#form-noticia button[type=submit]').forEach(b => b.textContent = 'Guardar noticia');
   document.getElementById('not-cancel').classList.add('oculto');
   actualizarPreviewNoticia();
   document.getElementById('pn-img')?.classList.add('oculto');
+  hojaEditando.not = null; hojaTocada.not = false; rielNoticia();
 }
 
 function editarBeneficio(b) {
@@ -6275,20 +6448,22 @@ function editarBeneficio(b) {
   const benForm = document.getElementById('ben-formulario');
   if (benForm) benForm.value = b.formulario_id || '';
   document.getElementById('beneficios-titulo').textContent = 'Editar beneficio: ' + b.rubro;
-  document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.querySelectorAll('#form-beneficio button[type=submit]').forEach(b => b.textContent = 'Guardar cambios');
   document.getElementById('ben-cancel').classList.remove('oculto');
   actualizarPreviewBeneficio();
+  hojaEditando.ben = b; hojaTocada.ben = false; rielBeneficio();
   document.getElementById('form-beneficio').scrollIntoView({behavior:'smooth', block:'center'});
 }
 function cancelarBeneficio() {
   document.getElementById('form-beneficio').reset();
   document.getElementById('ben-id').value = '';
   document.getElementById('beneficios-titulo').textContent = 'Dar de alta un beneficio';
-  document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar beneficio';
+  document.querySelectorAll('#form-beneficio button[type=submit]').forEach(b => b.textContent = 'Guardar beneficio');
   document.getElementById('ben-cancel').classList.add('oculto');
   actualizarPreviewBeneficio();
   const pbImg = document.getElementById('pb-img');
   if (pbImg) pbImg.style.backgroundImage = '';
+  hojaEditando.ben = null; hojaTocada.ben = false; rielBeneficio();
 }
 
 // ---------- Seccionales: asistente de 3 pasos con mapa ----------
