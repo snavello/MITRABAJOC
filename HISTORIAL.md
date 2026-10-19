@@ -8340,3 +8340,54 @@ fuentes "con carácter": es la de la skill del proyecto.
 contexto del producto y el sistema visual, no se escribieron: son el primer
 paso de la revisión (`/impeccable init` entrevista; `/impeccable document`
 lee el sistema del código), no de la instalación.
+
+## El constructor como hoja de trabajo, con borrador (2026-10-19, Admin 0.64.01)
+
+Primer bloque de la revisión de diseño con Impeccable. Se armaron tres
+direcciones para el constructor de formularios de Trámites en un lienzo de
+diseño (https://claude.ai/artifact/39fiNwNrpcyDXpGaQHqNnn): A «Hoja de
+trabajo» (densa, riel de pasos + filas de campos + vista fija), B «Guía de a
+un paso» (un paso por pantalla) y C «El formulario como lo ve el afiliado»
+(el lienzo es el formulario, inspector al costado). SDN eligió la **A**, "la
+más clara aunque sea densa", con el fondo cuadriculado suave de la C detrás
+del área de construcción, y pidió poder **guardar un borrador**.
+
+Lo construido sobre `templates/admin.html` (sección `tramite-sub-tipos`):
+
+- **Tres columnas**: el riel (`#tt-riel`, `.ct-riel-paso`) con los cuatro
+  pasos y su estado, que `actualizarRielTramite()` recalcula con cada
+  cambio del formulario (hecho en verde cuando el paso tiene lo
+  obligatorio, actual en blanco el primero que falta, y debajo el estado
+  "Nuevo / Borrador / Publicado · sin guardar"); el **área de construcción**
+  (`.ct-area`, retícula de 24 px con el primario al 6%) con la hoja blanca
+  adentro; y la vista del afiliado de siempre, fija. La hoja se sale del
+  ancho del panel (`.ct-ancho`: `min(1232px, 100vw - 44px)` centrado),
+  porque tres columnas no entran en los 956 px del `.wrap`; en teléfono
+  vuelve a una columna y el riel deja de ser fijo.
+- **Los campos como filas de una tabla** (`.ct-tabla`, `.ct-fila`): orden,
+  etiqueta, tipo, ingreso y validación como chips, subir y quitar. **Un solo
+  campo abierto a la vez** (`campoAbiertoTramite`): al tocar una fila se
+  despliega debajo el editor (`.ct-editor`) con los tres pasos de siempre
+  (El dato, Ingreso, Validación) como rótulo a la izquierda y controles a la
+  derecha; el contenido de cada paso es el mismo código de antes
+  (`editorDe`), solo cambió el marco. Agregar un campo lo abre y pone el
+  foco en la etiqueta; escribir la etiqueta actualiza la fila sin
+  re-dibujar (se perdería el foco); mover, quitar y arrastrar conservan
+  cuál está abierto.
+- **Borrador** (`TipoTramite.borrador`, migración `c7e9a1d3f5b2`): el botón
+  "Guardar borrador" del riel manda `accion=borrador` y el servidor guarda
+  sin exigir campos ni área, **conserva los campos sin etiqueta**
+  (`_campos_tramite_validos(..., borrador=True)`) y deja el tipo inactivo
+  con la marca. Es una marca aparte de `activo`: un formulario publicado y
+  apagado a propósito no es un borrador. La tabla lo lista como
+  **borrador** (ámbar); "Editar" abre "Terminar el borrador" con el botón
+  primario "Publicar", que exige todo como el alta de siempre y saca la
+  marca. El afiliado nunca lo ve (`solo_activos`). Volver a guardar como
+  borrador uno publicado lo saca de la vista. `required` del área se
+  suspende solo para ese botón. Tests: `test_tramites_borrador.py` (6).
+
+Lo que quedó pendiente a propósito: las tablas "Mapa por seccional" y
+"Tipos cargados" desbordan en teléfono como antes (no son de este bloque);
+y los mockups de Noticias, Notificaciones y Beneficios con la misma hoja de
+trabajo (segunda fila del lienzo) esperan la decisión de SDN para
+construirse.

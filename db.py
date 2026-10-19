@@ -1226,6 +1226,12 @@ class TipoTramite(SQLModel, table=True):
     # los vería en ninguna bandeja (decisión N6, "destino por defecto").
     area_destino_default_id: Optional[int] = Field(
         default=None, foreign_key="area.id", index=True)
+    # BORRADOR (SDN, 2026-10-19): un formulario guardado a medias, para
+    # seguirlo otro día. Nace inactivo y sin exigir campos ni área; el
+    # afiliado nunca lo ve. Publicarlo es guardarlo sin esta marca, y ahí
+    # rigen todas las exigencias del alta. Aparte de `activo`, porque un
+    # formulario publicado y apagado a propósito no es un borrador.
+    borrador: bool = False
 
 
 class PaseTipoTramite(SQLModel, table=True):
@@ -5205,16 +5211,17 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
 def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
                         reglas: list = None, area_destino_default_id: int = None,
                         seccional_id: int = None, permite_pase: bool = False,
-                        requisitos: list = None) -> int:
+                        requisitos: list = None, borrador: bool = False) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
     dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
     son las reglas de consistencia ya saneadas
-    (validaciones_tramite.reglas_saneadas)."""
+    (validaciones_tramite.reglas_saneadas). Un `borrador` nace inactivo."""
     with Session(engine) as s:
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
                          reglas_consistencia=reglas or [], requisitos=requisitos or [],
                          area_destino_default_id=area_destino_default_id,
                          seccional_id=seccional_id, permite_pase=permite_pase,
+                         borrador=borrador, activo=not borrador,
                          creado=fechas.ahora_texto())
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -5234,7 +5241,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
                          activo: bool, campos: list, reglas: list = None,
                          area_destino_default_id: int = None,
                          permite_pase: Optional[bool] = None,
-                         requisitos: Optional[list] = None) -> bool:
+                         requisitos: Optional[list] = None,
+                         borrador: Optional[bool] = None) -> bool:
     """Actualiza título/código/activo y SINCRONIZA los campos por id: el
     constructor sigue siendo "lo que ves es lo que queda", pero borrar y
     recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
@@ -5249,6 +5257,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         if not t or t.sindicato_id != sindicato_id:
             return False
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        if borrador is not None:
+            t.borrador = borrador
         # La SECCIONAL de un formulario no se edita: cambiarla le sacaría
         # el trámite de la vista a los trabajadores que ya lo tenían
         # disponible. El destino, en cambio, sí -- es la configuración
@@ -5350,6 +5360,7 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
                             .order_by(CampoTramite.orden)).all()
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
+                "borrador": t.borrador,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
                 "reglas_consistencia": t.reglas_consistencia or [],
                 "requisitos": t.requisitos or [],
@@ -5457,7 +5468,8 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
                         .order_by(CampoTramite.orden)).all()
         return {
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
-            "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+            "activo": t.activo, "borrador": t.borrador, "creado": t.creado,
+            "campos": [_campo_tramite_a_dict(c) for c in campos],
             "reglas_consistencia": t.reglas_consistencia or [],
             "requisitos": t.requisitos or [],
             "seccional_id": t.seccional_id,

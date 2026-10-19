@@ -216,8 +216,73 @@
      drag), sellos BLOQUEA/AVISA, y a la derecha el teléfono del afiliado
      con banco de pruebas integrado. Compartido por los dos constructores
      (mismas clases; el estado JS sigue en namespaces separados). */
-  .ct-layout { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:24px; align-items:start; }
-  @media (max-width:1000px) { .ct-layout { grid-template-columns:1fr; } }
+  /* ---- La hoja de trabajo (SDN, 2026-10-19; dirección A de los mockups
+     de Impeccable): riel | área cuadriculada con la hoja | vista. ---- */
+  .card.ct-card { background:transparent; border:none; padding:0; box-shadow:none; }
+  .ct-ancho { width:min(1232px, calc(100vw - 44px)); margin-left:calc((100% - min(1232px, calc(100vw - 44px))) / 2); }
+  @media (max-width:1000px) { .ct-ancho { width:auto; margin-left:0; } }
+  .ct-layout { display:grid; grid-template-columns:176px minmax(0,1fr) 300px; gap:18px; align-items:start; }
+  @media (max-width:1000px) { .ct-layout { grid-template-columns:minmax(0,1fr); } }
+  .ct-riel { position:sticky; top:12px; display:flex; flex-direction:column; gap:3px; }
+  @media (max-width:1000px) { .ct-riel { position:static; } }
+  .ct-riel-paso { display:grid; grid-template-columns:24px minmax(0,1fr); gap:9px; align-items:start; padding:8px 8px 8px 7px;
+    border-radius:9px; color:var(--tinta); text-decoration:none; transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .ct-riel-paso .num { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    font:700 12px var(--fuente-num); background:#fff; border:1.5px solid #c8d0db; color:var(--gris); }
+  .ct-riel-paso.hecho .num { background:#0d7a5f; border-color:#0d7a5f; color:#fff; font-size:0; }
+  .ct-riel-paso.hecho .num::before { content:""; width:10px; height:5px; border-left:2.5px solid #fff; border-bottom:2.5px solid #fff; rotate:-45deg; margin-top:-3px; }
+  .ct-riel-paso.actual { background:#fff; box-shadow:0 1px 2px rgba(15,27,45,.06), 0 10px 28px -14px rgba(15,27,45,.28); }
+  .ct-riel-paso.actual .num { background:var(--marca-primario); border-color:var(--marca-primario); color:#fff; }
+  .ct-riel-paso b { display:block; font-family:var(--fuente-display); font-size:15px; letter-spacing:.5px; text-transform:uppercase; line-height:1.1; }
+  .ct-riel-paso small { display:block; font-size:11.5px; color:var(--gris); margin-top:2px; }
+  .ct-riel-estado { margin-top:12px; padding:12px 8px 0; border-top:1px solid #d6dce5; font-size:12px; color:var(--gris); display:flex; flex-direction:column; gap:8px; }
+  .ct-riel-estado b { color:var(--tinta); }
+  .ct-riel-estado button { width:100%; margin:0; }
+  .ct-area { background:repeating-linear-gradient(0deg, color-mix(in srgb, var(--marca-primario) 6%, transparent) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--marca-primario) 6%, transparent) 0 1px, transparent 1px 24px);
+    border:1px solid #d6dce5; border-radius:12px; padding:16px; min-width:0; }
+  .ct-area > .ct-izq { background:#fff; border-radius:12px; box-shadow:0 1px 2px rgba(15,27,45,.06), 0 10px 28px -14px rgba(15,27,45,.28); padding:16px 18px 0; }
+  .ct-guardar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:4px -18px 0; padding:14px 18px; border-top:1px solid var(--linea); background:var(--papel); border-radius:0 0 12px 12px; }
+  .ct-guardar button { margin:0; }
+  /* Los campos como filas de una tabla; uno solo abierto a la vez. */
+  .ct-tabla { border:1px solid var(--linea); border-radius:10px; overflow:hidden; background:#fff; }
+  .ct-tabla:empty { display:none; }
+  .ct-fila { display:grid; grid-template-columns:14px 28px minmax(0,1fr) 86px 136px 84px 62px; align-items:center; gap:8px;
+    padding:8px 10px; border-top:1px solid var(--linea); font-size:13px; cursor:pointer; min-width:0; }
+  .ct-fila:first-child { border-top:none; }
+  .ct-fila.cab { background:var(--papel); font:700 10.5px var(--fuente-num); letter-spacing:.6px; text-transform:uppercase; color:#4b5567; padding:6px 10px; cursor:default; }
+  .ct-fila:not(.cab):hover { background:#fbfcfe; }
+  .ct-fila.abierta { background:#fbfcfe; border-top-color:var(--marca-primario); }
+  .ct-fila .ct-grip { width:12px; height:14px; background:radial-gradient(circle, #9fb0c8 1.3px, transparent 1.6px) 0 0/6px 6px; cursor:grab; }
+  .ct-fila .ct-orden { width:auto; text-align:left; font-weight:700; color:var(--marca-primario); cursor:inherit; }
+  .ct-fila .ct-eti { font-weight:600; color:var(--tinta); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ct-fila .ct-eti em { font-style:italic; font-weight:500; color:#a0281e; }
+  .ct-fila.separador .ct-eti { color:var(--gris); font-weight:500; }
+  .ct-chip { display:inline-flex; align-items:center; font-size:11px; padding:2px 8px; border-radius:20px; background:#eef1f5; color:#3a465b; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+  .ct-chip.calc { background:#e4ecf7; color:#163560; }
+  .ct-chip.vacio { background:transparent; color:#8a93a6; padding:0; }
+  .ct-fila .ct-campo-acc { justify-content:flex-end; }
+  .ct-fila .ct-campo-acc button { width:26px; height:26px; padding:0; font-size:12px; line-height:1; }
+  .ct-fila.arrastrando { opacity:.5; }
+  .ct-fila.sobre-drop { box-shadow:inset 0 2px 0 var(--marca-primario); }
+  .ct-editor { grid-column:1 / -1; border-top:1px solid var(--linea); background:#fbfcfe; padding:14px 12px 16px 50px;
+    display:grid; grid-template-columns:118px minmax(0,1fr); gap:12px 14px; align-items:start; }
+  .ct-editor .ct-k { font:700 10.5px var(--fuente-num); letter-spacing:.7px; text-transform:uppercase; color:#3a465b;
+    padding-top:9px; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .ct-editor .ct-k i { font-style:normal; font-size:9px; font-weight:700; letter-spacing:.7px; padding:2px 5px; border-radius:3px; }
+  .ct-editor .ct-k i.ob { background:#fbe5e2; color:#a0281e; }
+  .ct-editor .ct-k i.op { background:#eef1f5; color:var(--gris); }
+  .ct-editor .ct-paso-cuerpo .ct-etiqueta { flex:1 1 240px; }
+  .ct-editor .ct-paso-cuerpo .ct-tipo { flex:0 1 150px; }
+  .ct-editor .ct-radios { flex-basis:100%; }
+  @media (max-width:760px) {
+    .ct-fila { grid-template-columns:14px 28px minmax(0,1fr) 62px; }
+    .ct-fila .ct-c4, .ct-fila .ct-c5, .ct-fila .ct-c6 { display:none; }
+    .ct-editor { padding-left:12px; grid-template-columns:minmax(0,1fr); }
+    .ct-area { padding:8px; }
+    .ct-area > .ct-izq { padding:12px 12px 0; }
+    .ct-guardar { margin:4px -12px 0; padding:12px; }
+  }
   .ct-secc { margin-top:18px; font-size:15px; color:var(--tinta);
     font-family:var(--fuente-display); text-transform:uppercase; letter-spacing:.8px;
     display:flex; align-items:center; gap:10px; }
@@ -1847,7 +1912,9 @@
   {% if 'tramites_formularios' in permisos %}
   <div class="tramite-subpanel {% if 'tramites_recibidos' not in permisos %}activo{% endif %}" data-mov-vista id="tramite-sub-tipos">
     <h2 class="titulo-pagina" id="tt-h2">Nuevo tipo de trámite</h2>
-    <div class="card">
+    {# La hoja de trabajo se sale del ancho del panel (ct-ancho): tres
+       columnas no entran en los 956px del `.wrap`. #}
+    <div class="card ct-card ct-ancho">
       <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
         <input type="hidden" name="id" id="tt-id">
         <input type="hidden" name="campos_json" id="tt-campos-json">
@@ -1857,10 +1924,27 @@
         {# El formulario guía (SDN, 2026-10-18): cuatro pasos, solo los datos
            necesarios a la vista; cada explicación vive en un «?» (globo al
            pasar el mouse, fijo al hacer clic). #}
+        {# La HOJA DE TRABAJO (SDN, 2026-10-19, dirección A de las tres
+           propuestas de Impeccable): riel de pasos a la izquierda con el
+           estado de cada uno, la hoja al centro sobre un área cuadriculada
+           (el área de construcción) y la vista del afiliado fija a la
+           derecha. El riel lo mantiene al día actualizarRielTramite(). #}
         <div class="ct-layout">
+          <aside class="ct-riel" id="tt-riel">
+            <a class="ct-riel-paso" href="#tt-paso-1" data-paso="1"><span class="num">1</span><span><b>El trámite</b><small>título y código</small></span></a>
+            <a class="ct-riel-paso" href="#tt-paso-2" data-paso="2"><span class="num">2</span><span><b>Quién lo recibe</b><small>área y seccional</small></span></a>
+            <a class="ct-riel-paso" href="#tt-paso-3" data-paso="3"><span class="num">3</span><span><b>Los campos</b><small>sin campos</small></span></a>
+            <a class="ct-riel-paso" href="#tt-paso-4" data-paso="4"><span class="num">4</span><span><b>Validar antes de abrir</b><small>sin requisitos</small></span></a>
+            <div class="ct-riel-estado">
+              <div id="tt-estado">Nuevo · <b>sin guardar</b></div>
+              <button type="submit" class="sec" name="accion" value="borrador" id="tt-borrador" title="Guarda lo que hay, aunque falten campos o el área. El afiliado no lo ve hasta que lo publiques.">Guardar borrador</button>
+              <button type="button" class="sec" onclick="document.getElementById('tt-cuil-prueba').focus()">Probar con un CUIL</button>
+            </div>
+          </aside>
+          <div class="ct-area">
           <div class="ct-izq ct-guia">
 
-            <section class="ct-pasog">
+            <section class="ct-pasog" id="tt-paso-1">
               <div class="ct-pasog-cab"><b>1</b><h3>El trámite</h3><i class="ob">obligatorio</i>
                 <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El <b>título</b> es lo que el afiliado ve en su lista de trámites; el <b>código</b> es corto, único en el sindicato, y arma el número de expediente (<code>KIT-2026-000123</code>)."></button></div>
               <div class="grid2">
@@ -1873,7 +1957,7 @@
             </section>
 
             {# ---------- Ruteo (decisiones N6 y N7) ---------- #}
-            <section class="ct-pasog">
+            <section class="ct-pasog" id="tt-paso-2">
               <div class="ct-pasog-cab"><b>2</b><h3>Quién lo recibe</h3><i class="ob">obligatorio</i>
                 <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El trámite cae en un <b>área</b> del sindicato, que lo atiende por el chat. Las seccionales que no mapees abajo caen en el área por defecto, así una seccional nueva funciona desde el día uno."></button></div>
               <div class="grid2">
@@ -1929,12 +2013,12 @@
               </details>
             </section>
 
-            <section class="ct-pasog">
+            <section class="ct-pasog" id="tt-paso-3">
               <div class="ct-pasog-cab"><b>3</b><h3>Los campos</h3><i class="ob">obligatorio</i>
                 <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Lo que el afiliado completa. Cada campo tiene tres pasos: <b>el dato</b> (cómo se ve), el <b>ingreso</b> (lo carga el afiliado, se extrae de sus datos o se calcula) y la <b>validación</b> (opcional). Arrastrá para reordenar; el teléfono de la derecha muestra el resultado y lo prueba contra un afiliado real."></button></div>
               <div class="campos-tramite-cabecera oculto" id="campos-tramite-cabecera"></div>
-              <div class="ct-ficha" id="tt-campos-lista"></div>
-              <div class="ct-pasog-pie"><button type="button" class="sec mini" onclick="agregarCampoTramite()">+ Agregar campo</button></div>
+              <div class="ct-tabla" id="tt-campos-lista"></div>
+              <div class="ct-pasog-pie"><button type="button" class="sec mini" onclick="agregarCampoTramite()">+ Agregar campo</button><button type="button" class="sec mini" onclick="agregarCampoTramite('separador')">+ Agregar separador</button><span class="ct-estado">Tocá un campo para editarlo · arrastrá para reordenar</span></div>
               {# Las validaciones "contra otro campo" (reglas de consistencia)
                  viven adentro de cada campo; el contenedor queda vacío para
                  el código que lo referencia. #}
@@ -1945,7 +2029,7 @@
                PLAN_LISTAS_VALIDACIONES.md bloque 3): validaciones sobre el
                padrón o las listas, todas bloqueantes, que se controlan antes
                de mostrar el formulario y otra vez al enviar. #}
-            <section class="ct-pasog">
+            <section class="ct-pasog" id="tt-paso-4">
               <div class="ct-pasog-cab"><b>4</b><h3>Validar antes de abrir</h3><i class="op">opcional</i>
                 <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Lo que el afiliado tiene que cumplir para <b>iniciar</b> este trámite (tener credencial vigente, seis meses de afiliación, no tener otro pedido abierto). Se controla contra sus datos y las listas del sindicato antes de mostrar el formulario, y otra vez al enviar. Todo frena."></button></div>
               <div id="tt-requisitos-lista"></div>
@@ -1956,10 +2040,12 @@
               <datalist id="tt-nombres-datalist"></datalist>
             </section>
 
-            <div style="margin-top:4px;">
-              <button type="submit" id="tt-submit">Crear tipo de trámite</button>
+            <div class="ct-guardar">
+              <button type="submit" id="tt-submit" name="accion" value="publicar">Crear tipo de trámite</button>
               <button type="button" class="sec oculto" id="tt-cancel" onclick="cancelarTramiteTipo()">Cancelar edición</button>
+              <span class="ct-estado" id="tt-guardar-nota"></span>
             </div>
+          </div>
           </div>
           <div class="ct-der">
             <h3 class="ct-secc">Vista del afiliado</h3>
@@ -1992,7 +2078,7 @@
         <td>{{ t.titulo }}</td>
         <td><code>{{ t.codigo }}</code></td>
         <td class="muted">{{ t.campos|length }}</td>
-        <td>{% if t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td>{% if t.borrador %}<span class="tag tag-pend">borrador</span>{% elif t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
         <td class="muted">{{ t.creado }}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick="copiarLinkFormulario({{ t.id }}, this)" title="Link directo al formulario, para pegar en una notificación o noticia">Link</button>
@@ -2623,7 +2709,7 @@
           <td>{{ t.titulo }}</td>
           <td><code>{{ t.codigo }}</code></td>
           <td class="muted">{{ t.campos|length }}</td>
-          <td>{% if t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+          <td>{% if t.borrador %}<span class="tag tag-pend">borrador</span>{% elif t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
           <td class="muted">{{ t.creado }}</td>
           <td style="white-space:nowrap; text-align:right;">
             <button type="button" class="mini" onclick='editarTramiteTipoEmpresa({{ t | tojson }})'>Editar</button>
@@ -4071,25 +4157,29 @@ const TIPOS_CON_FUNCION = ['texto', 'numero', 'fecha', 'seleccion', 'opcion_unic
 const TIPOS_DATO_TRAMITE_EMP = Object.fromEntries(Object.entries(TIPOS_DATO_TRAMITE_LABEL).filter(([v]) => v !== 'calculado'));
 const TIENE_OPCIONES_TRAMITE = new Set(['seleccion', 'opcion_unica', 'multiple']);
 
+// Un solo campo abierto a la vez (SDN, 2026-10-19, hoja de trabajo A):
+// las filas son una tabla compacta (orden, etiqueta, tipo, ingreso,
+// validación) y el editor de tres pasos se despliega debajo del abierto.
+let campoAbiertoTramite = null;
+function abrirCampoTramite(i) {
+  campoAbiertoTramite = campoAbiertoTramite === i ? null : i;
+  renderCamposTramite();
+}
 function renderCamposTramite() {
-  // Cada campo es UNA tarjeta con tres pasos, como un onboarding (SDN,
-  // 2026-10-18): 1 El dato (obligatorio), 2 Ingreso (obligatorio), 3
-  // Validación (opcional). Cada paso lleva su aclaración al costado, chica
-  // y en itálica; los controles que no aplican al tipo no se dibujan.
   const cont = document.getElementById('tt-campos-lista');
   const cabecera = document.getElementById('campos-tramite-cabecera');
   if (cabecera) cabecera.classList.add('oculto');
   if (!camposTramiteActuales.length) {
-    cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ningún campo.</p>';
+    cont.innerHTML = '';
     renderVistaPreviaTramite();
+    actualizarRielTramite();
     return;
   }
-  const paso = (n, titulo, obligatorio, cuerpo, nota, extra) => `
-    <div class="ct-paso ${extra || ''}">
-      <div class="ct-paso-cab"><b>${n}</b><span>${titulo}</span><i class="${obligatorio ? 'ob' : 'op'}">${obligatorio ? 'obligatorio' : 'opcional'}</i>${helpBtn(nota)}</div>
-      <div class="ct-paso-cuerpo">${cuerpo}</div>
-    </div>`;
-  cont.innerHTML = camposTramiteActuales.map((c, i) => {
+  if (campoAbiertoTramite !== null && campoAbiertoTramite >= camposTramiteActuales.length) campoAbiertoTramite = null;
+  const paso = (titulo, obligatorio, cuerpo, nota) => `
+    <div class="ct-k">${titulo}${helpBtn(nota)}<i class="${obligatorio ? 'ob' : 'op'}">${obligatorio ? 'oblig.' : 'opc.'}</i></div>
+    <div class="ct-paso-cuerpo">${cuerpo}</div>`;
+  const editorDe = (c, i) => {
     const sep = c.tipo_dato === 'separador';
     const calc = c.tipo_dato === 'calculado';
     const n = String(i + 1).padStart(2, '0');
@@ -4135,29 +4225,93 @@ function renderCamposTramite() {
     // ---- paso 3: validación
     const piezas = sep ? null : htmlValidacionesPiezas(c, i, 'Tramite');
     const notaValid = !piezas ? '' : 'Opcional. Sin validación, el dato se toma como está. Cada una controla el valor contra un valor fijo, un rango, otro campo, un dato del afiliado o una fórmula, y <b>Bloquea</b> el envío o solo <b>Avisa</b> al operador. El mensaje es lo que lee el afiliado si no pasa.';
+    return `<div class="ct-editor" onclick="event.stopPropagation()">
+      ${paso('El dato', true, dato, notaDato)}
+      ${ingreso ? paso('Ingreso', true, ingreso, notaIngreso) : ''}
+      ${piezas ? paso('Validación', false, piezas.menu + piezas.filas, notaValid) : ''}
+    </div>`;
+  };
+  const ingresoTexto = (c) => {
+    if (c.tipo_dato === 'separador' || ['archivo', 'booleano', 'multiple'].includes(c.tipo_dato)) return '';
+    const m = modoIngreso(c);
+    if (c.tipo_dato === 'calculado' && m === 'manual') return 'Falta decir de dónde sale';
+    return m === 'calcular' ? 'Calcular con fórmula' : m === 'extraer' ? 'Extraer un dato' : 'Lo carga el afiliado';
+  };
+  const validTexto = (c) => {
+    if (c.tipo_dato === 'separador') return '';
+    const ing = ingresoDe(c);
+    const n = (c.validaciones || []).filter(v => v !== ing).length + reglasTramiteActuales.filter(r => r.a === c).length;
+    if (!n) return '';
+    const bloquea = (c.validaciones || []).some(v => v !== ing && v.bloquea !== false) || reglasTramiteActuales.some(r => r.a === c && r.bloquea !== false);
+    return n + ' · ' + (bloquea ? 'bloquea' : 'avisa');
+  };
+  cont.innerHTML = `<div class="ct-fila cab"><span></span><span>N.º</span><span>Etiqueta</span><span class="ct-c4">Tipo</span><span class="ct-c5">Ingreso</span><span class="ct-c6">Validación</span><span></span></div>` +
+    camposTramiteActuales.map((c, i) => {
+    const sep = c.tipo_dato === 'separador';
+    const calc = c.tipo_dato === 'calculado';
+    const abierto = campoAbiertoTramite === i;
+    const n = String(i + 1).padStart(2, '0');
+    const tipoTexto = calc ? (modoIngreso(c) === 'extraer' ? 'Extraído' : 'Calculado') : (TIPOS_DATO_TRAMITE_LABEL[c.tipo_dato] || c.tipo_dato);
+    const ing = ingresoTexto(c), val = validTexto(c);
     return `
-    <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
+    <div class="ct-fila ${abierto ? 'abierta' : ''} ${sep ? 'separador' : ''}" draggable="true" data-idx="${i}" onclick="abrirCampoTramite(${i})"
          ondragstart="dragCampoTramiteStart(event, ${i})" ondragover="dragCampoTramiteOver(event, ${i})"
          ondrop="dragCampoTramiteDrop(event, ${i})" ondragend="dragCampoTramiteEnd(event)">
-      <div class="ct-campo-cab">
-        <span class="ct-orden" title="Arrastrá para reordenar">${n}</span>
-        <span class="ct-campo-tit">${escHtml(c.etiqueta) || '<em>sin etiqueta</em>'}</span>
-        <span class="ct-campo-tipo">${escHtml(tipoTexto)}</span>
-        <span class="ct-campo-acc">
-          <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
-          <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
-          <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar">✕</button>
-        </span>
-      </div>
-      ${paso(1, 'El dato', true, dato, notaDato)}
-      ${ingreso ? paso(2, 'Ingreso', true, ingreso, notaIngreso) : ''}
-      ${piezas ? paso(3, 'Validación', false, piezas.menu + piezas.filas, notaValid, 'valid') : ''}
-    </div>`;
+      <span class="ct-grip" title="Arrastrá para reordenar"></span>
+      <span class="ct-orden">${n}</span>
+      <span class="ct-eti">${sep ? (escHtml(c.etiqueta) || 'Separador') : (escHtml(c.etiqueta) || '<em>Sin etiqueta</em>')}</span>
+      <span class="ct-c4">${sep ? '' : `<span class="ct-chip ${calc ? 'calc' : ''}">${escHtml(tipoTexto)}</span>`}</span>
+      <span class="ct-c5">${ing ? `<span class="ct-chip ${calc ? 'calc' : ''}">${ing}</span>` : ''}</span>
+      <span class="ct-c6">${val ? `<span class="ct-chip">${val}</span>` : (sep ? '' : '<span class="ct-chip vacio">—</span>')}</span>
+      <span class="ct-campo-acc" onclick="event.stopPropagation()">
+        <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir" aria-label="Subir">↑</button>
+        <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar" aria-label="Quitar">✕</button>
+      </span>
+    </div>${abierto ? editorDe(c, i) : ''}`;
   }).join('');
   podarReglasTramite();
   renderRequisitosTramite();
   refrescarNombresTramite();
   renderVistaPreviaTramite();
+  actualizarRielTramite();
+}
+// El riel de la izquierda dice en qué está cada paso: hecho (verde) si ya
+// tiene lo obligatorio, actual (blanco) el primero que falta, y el estado
+// del formulario (nuevo, borrador, publicado; sin guardar si se tocó).
+let tramiteTipoTocado = false;
+let tramiteTipoCargado = null;   // {borrador, creado} del tipo en edición
+function actualizarRielTramite() {
+  const riel = document.getElementById('tt-riel');
+  if (!riel) return;
+  const titulo = (document.getElementById('tt-titulo').value || '').trim();
+  const codigo = (document.getElementById('tt-codigo').value || '').trim();
+  const area = document.getElementById('tt-area-default').value;
+  const sinEti = camposTramiteActuales.filter(c => c.tipo_dato !== 'separador' && !(c.etiqueta || '').trim()).length;
+  const n = camposTramiteActuales.length;
+  const hechos = {
+    1: !!(titulo && codigo), 2: !!area, 3: n > 0 && sinEti === 0,
+    4: requisitosTramiteActuales.length > 0,
+  };
+  const textos = {
+    1: titulo ? `${titulo}${codigo ? ' · ' + codigo : ''}` : 'título y código',
+    2: area ? (document.getElementById('tt-area-default').selectedOptions[0]?.textContent || '').trim() : 'área y seccional',
+    3: n ? `${n} campo${n === 1 ? '' : 's'}${sinEti ? ` · ${sinEti} sin etiqueta` : ''}` : 'sin campos',
+    4: requisitosTramiteActuales.length ? `${requisitosTramiteActuales.length} requisito${requisitosTramiteActuales.length === 1 ? '' : 's'}` : 'opcional',
+  };
+  let actualMarcado = false;
+  riel.querySelectorAll('.ct-riel-paso').forEach(a => {
+    const p = a.dataset.paso;
+    a.querySelector('small').textContent = textos[p];
+    a.classList.toggle('hecho', !!hechos[p]);
+    const esActual = !hechos[p] && !actualMarcado && p !== '4';
+    if (esActual) actualMarcado = true;
+    a.classList.toggle('actual', esActual);
+  });
+  const est = document.getElementById('tt-estado');
+  const base = !tramiteTipoCargado ? 'Nuevo' : tramiteTipoCargado.borrador ? 'Borrador' : 'Publicado';
+  est.innerHTML = tramiteTipoTocado ? `${base} · <b>sin guardar</b>` : (tramiteTipoCargado ? `${base} · guardado ${escHtml(tramiteTipoCargado.creado || '')}` : `${base} · <b>sin guardar</b>`);
+  const nota = document.getElementById('tt-guardar-nota');
+  if (nota) nota.textContent = sinEti ? `${sinEti} campo${sinEti === 1 ? '' : 's'} sin etiqueta: se puede guardar como borrador, no publicar.` : (!n ? 'Sin campos: se puede guardar como borrador.' : '');
 }
 
 // ---------- Validaciones por campo (capa de la Fase 1: fuente "fija") ----------
@@ -4671,14 +4825,25 @@ function serializarReglasTramite() {
     bloquea: r.bloquea !== false,
   }));
 }
-function agregarCampoTramite() {
-  camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null,
+function agregarCampoTramite(tipo) {
+  camposTramiteActuales.push({etiqueta:'', tipo_dato:tipo || 'texto', longitud_maxima:null, longitud_exacta:null,
     decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true,
     validaciones:[]});
+  campoAbiertoTramite = camposTramiteActuales.length - 1;
+  tramiteTipoTocado = true;
   renderCamposTramite();
+  const eti = document.querySelector('#tt-campos-lista .ct-editor .ct-etiqueta');
+  if (eti) eti.focus();
 }
 function actualizarCampoTramite(i, campo, valor) {
   camposTramiteActuales[i][campo] = valor;
+  tramiteTipoTocado = true;
+  if (campo === 'etiqueta') {
+    // la fila de arriba sigue a la etiqueta sin re-dibujar (se perdería el foco)
+    const eti = document.querySelector(`#tt-campos-lista .ct-fila[data-idx="${i}"] .ct-eti`);
+    if (eti) eti.innerHTML = (valor || '').trim() ? escHtml(valor) : '<em>Sin etiqueta</em>';
+    actualizarRielTramite();
+  }
   if (campo === 'tipo_dato') {
     const c = camposTramiteActuales[i];
     if (valor === 'separador') c.ancho = 'completo';
@@ -4697,10 +4862,15 @@ function moverCampoTramite(i, delta) {
   const j = i + delta;
   if (j < 0 || j >= camposTramiteActuales.length) return;
   [camposTramiteActuales[i], camposTramiteActuales[j]] = [camposTramiteActuales[j], camposTramiteActuales[i]];
+  if (campoAbiertoTramite === i) campoAbiertoTramite = j; else if (campoAbiertoTramite === j) campoAbiertoTramite = i;
+  tramiteTipoTocado = true;
   renderCamposTramite();
 }
 function quitarCampoTramite(i) {
   camposTramiteActuales.splice(i, 1);
+  if (campoAbiertoTramite === i) campoAbiertoTramite = null;
+  else if (campoAbiertoTramite !== null && campoAbiertoTramite > i) campoAbiertoTramite -= 1;
+  tramiteTipoTocado = true;
   renderCamposTramite();
 }
 
@@ -4713,20 +4883,23 @@ function dragCampoTramiteStart(ev, i) {
 }
 function dragCampoTramiteOver(ev, i) {
   ev.preventDefault();
-  document.querySelectorAll('.campo-tramite-fila.sobre-drop').forEach(el => el.classList.remove('sobre-drop'));
+  document.querySelectorAll('#tt-campos-lista .ct-fila.sobre-drop').forEach(el => el.classList.remove('sobre-drop'));
   if (i !== dragCampoTramiteOrigen) ev.currentTarget.classList.add('sobre-drop');
 }
 function dragCampoTramiteDrop(ev, i) {
   ev.preventDefault();
   if (dragCampoTramiteOrigen === null || i === dragCampoTramiteOrigen) return;
+  const abierto = campoAbiertoTramite === null ? null : camposTramiteActuales[campoAbiertoTramite];
   const [movido] = camposTramiteActuales.splice(dragCampoTramiteOrigen, 1);
   camposTramiteActuales.splice(i, 0, movido);
+  campoAbiertoTramite = abierto ? camposTramiteActuales.indexOf(abierto) : null;
   dragCampoTramiteOrigen = null;
+  tramiteTipoTocado = true;
   renderCamposTramite();
 }
 function dragCampoTramiteEnd() {
   dragCampoTramiteOrigen = null;
-  document.querySelectorAll('.campo-tramite-fila.arrastrando, .campo-tramite-fila.sobre-drop')
+  document.querySelectorAll('#tt-campos-lista .ct-fila.arrastrando, #tt-campos-lista .ct-fila.sobre-drop')
     .forEach(el => el.classList.remove('arrastrando', 'sobre-drop'));
 }
 
@@ -4900,6 +5073,17 @@ if (formTramiteTipo) {
   // la carátula del teléfono sigue en vivo al título y al código
   document.getElementById('tt-titulo').addEventListener('input', renderVistaPreviaTramite);
   document.getElementById('tt-codigo').addEventListener('input', renderVistaPreviaTramite);
+  // y el riel sigue al formulario: cualquier cambio lo marca "sin guardar"
+  formTramiteTipo.addEventListener('input', () => { tramiteTipoTocado = true; actualizarRielTramite(); });
+  formTramiteTipo.addEventListener('change', () => { tramiteTipoTocado = true; actualizarRielTramite(); });
+  // un borrador no exige ni campos ni área: el `required` del área se
+  // suspende solo para ese botón
+  document.getElementById('tt-borrador').addEventListener('click', () => {
+    document.getElementById('tt-area-default').required = false;
+  });
+  document.getElementById('tt-submit').addEventListener('click', () => {
+    document.getElementById('tt-area-default').required = true;
+  });
 }
 
 // Link directo a un formulario en la app del trabajador
@@ -4927,8 +5111,11 @@ function editarTramiteTipo(t) {
   document.getElementById('tt-id').value = t.id;
   document.getElementById('tt-titulo').value = t.titulo;
   document.getElementById('tt-codigo').value = t.codigo;
-  document.getElementById('tt-activo-campo').classList.remove('oculto');
+  document.getElementById('tt-activo-campo').classList.toggle('oculto', !!t.borrador);
   document.getElementById('tt-activo').checked = t.activo;
+  tramiteTipoCargado = { borrador: !!t.borrador, creado: t.creado || '' };
+  tramiteTipoTocado = false;
+  campoAbiertoTramite = null;
   // copia profunda: las validaciones son arrays anidados y editarlas no
   // tiene que tocar el objeto original de la tabla
   camposTramiteActuales = (t.campos || []).map(c => ({ ...c, validaciones: (c.validaciones || []).map(v => ({ ...v })) }));
@@ -4957,9 +5144,10 @@ function editarTramiteTipo(t) {
   document.querySelectorAll('.tt-destino').forEach(sel => {
     sel.value = destinos[sel.dataset.seccional] || '';
   });
-  document.getElementById('tt-h2').textContent = 'Editar tipo de trámite';
-  document.getElementById('tt-submit').textContent = 'Guardar cambios';
+  document.getElementById('tt-h2').textContent = t.borrador ? 'Terminar el borrador' : 'Editar tipo de trámite';
+  document.getElementById('tt-submit').textContent = t.borrador ? 'Publicar' : 'Guardar cambios';
   document.getElementById('tt-cancel').classList.remove('oculto');
+  actualizarRielTramite();
   cambiarSubTramite('tipos');
   window.scrollTo(0, document.getElementById('panel-tramites').offsetTop);
 }
@@ -4972,6 +5160,9 @@ function cancelarTramiteTipo() {
   camposTramiteActuales = [];
   reglasTramiteActuales = [];
   requisitosTramiteActuales = [];
+  campoAbiertoTramite = null;
+  tramiteTipoCargado = null;
+  tramiteTipoTocado = false;
   renderCamposTramite();
   document.getElementById('tt-h2').textContent = 'Nuevo tipo de trámite';
   document.getElementById('tt-submit').textContent = 'Crear tipo de trámite';
