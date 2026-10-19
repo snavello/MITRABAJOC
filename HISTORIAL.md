@@ -8391,3 +8391,17 @@ Lo que quedó pendiente a propósito: las tablas "Mapa por seccional" y
 y los mockups de Noticias, Notificaciones y Beneficios con la misma hoja de
 trabajo (segunda fila del lienzo) esperan la decisión de SDN para
 construirse.
+
+## La tira de pestañas como en la hoja de trabajo (2026-10-19, Admin 0.64.02, Plataforma 0.52.03)
+
+SDN vio el constructor nuevo y pidió adoptar también **el menú superior tal
+como lo dibujó el mockup A**: pastillas de texto solo, en una fila, sin
+íconos, con la activa en blanco sobre la barra oscura. Hasta ahora cada
+pestaña era una baldosa de ícono más texto chico (10,5 px) con la activa en
+acento. Cambio solo de CSS en `templates/admin.html` (`.tab-btn`) y en
+`templates/plataforma.html` (`.ptab`), que comparten el mismo cromo: los SVG
+de los íconos siguen en el HTML (`display:none`) porque la portada los usa;
+la tira queda en 47 px de alto contra 60; el acento vuelve a ser solo de las
+acciones. En teléfono sigue siendo una fila deslizable. Las sub-pestañas no
+cambiaron: ya eran pastillas redondas con la activa en el color de apoyo,
+como en el mockup.

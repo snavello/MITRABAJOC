@@ -761,11 +761,19 @@
   .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
     mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .marca-barra > * { position:relative; z-index:1; }
-  .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:9px 14px; }
-  .tab-btn { background:transparent; border-color:rgba(255,255,255,.16); color:rgba(255,255,255,.72);
-    font-family:var(--fuente-display); font-weight:700; font-size:12.5px; letter-spacing:.8px; text-transform:uppercase; }
-  .tab-btn:hover { background:rgba(255,255,255,.08); }
-  .tab-btn.activa { background:var(--marca-acento); color:var(--marca-base); border-color:var(--marca-acento); }
+  /* La tira de pestañas como en la hoja de trabajo de Impeccable (SDN,
+     2026-10-19): pastillas de texto solo, en una fila, sin íconos (los
+     SVG quedan en el HTML para la portada, acá no se dibujan), la activa
+     en blanco sobre la barra oscura. El acento queda para las acciones. */
+  .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:0 14px 12px; gap:6px; }
+  .tab-btn { flex-direction:row; gap:6px; padding:8px 12px; border-radius:9px;
+    background:color-mix(in srgb, var(--marca-base) 82%, #fff); border-color:rgba(255,255,255,.14); color:#c9d3e3;
+    font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px; text-transform:uppercase;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .tab-btn svg { display:none; }
+  .tab-btn:hover { background:color-mix(in srgb, var(--marca-base) 70%, #fff); color:#fff; }
+  .tab-btn:active { scale:.97; }
+  .tab-btn.activa { background:#fff; color:var(--marca-base); border-color:#fff; }
   h2 { font-family:var(--fuente-display); font-weight:700; font-size:22px; letter-spacing:.4px; text-transform:uppercase;
     line-height:1.05; border-bottom:none; padding-bottom:0; display:flex; align-items:center; gap:12px; color:var(--tinta); }
   h2::after { content:""; flex:1; height:1px; background:var(--linea); }
