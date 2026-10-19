@@ -1809,11 +1809,18 @@ prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`
 por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes:
 
 - **Ingreso y validación, por separado** (2026-10-18): ver la decisión en
-  "Decisiones tomadas". El constructor es un **formulario guía de cuatro
-  pasos** (El trámite, Quién lo recibe, Los campos, Validar antes de abrir),
-  cada campo una tarjeta con tres pasos (El dato, Ingreso: Lo carga el
-  afiliado / Extraer / Calcular, Validación: «+ Validar…»), cada paso con
-  obligatorio / opcional. **Ninguna explicación a la vista**: viven en un
+  "Decisiones tomadas". El constructor es una **hoja de trabajo**
+  (2026-10-19, dirección A de los mockups de Impeccable, elegida por SDN):
+  riel de pasos a la izquierda con el estado de cada uno (El trámite, Quién
+  lo recibe, Los campos, Validar antes de abrir), la hoja al centro sobre un
+  área cuadriculada y la vista del afiliado fija a la derecha; se sale del
+  ancho del panel (`.ct-ancho`). Los campos son **filas de una tabla con un
+  solo campo abierto a la vez**: el editor con sus tres pasos (El dato,
+  Ingreso: Lo carga el afiliado / Extraer / Calcular, Validación:
+  «+ Validar…») se despliega debajo de la fila tocada. **Borrador**
+  (`TipoTramite.borrador`, `accion=borrador`): se guarda sin exigir campos
+  ni área y conservando los campos sin etiqueta, inactivo y marcado; el
+  afiliado no lo ve; "Publicar" exige todo. Es una marca aparte de `activo`. **Ninguna explicación a la vista**: viven en un
   «?» (`.ct-help`, `data-ayuda`) que abre un globo al pasar el mouse y queda
   fijo con un clic (`#ct-tip`, delegado en `document`). Un texto de ayuda
   nuevo en esta pantalla va ahí, nunca en un `muted` siempre visible. Lo

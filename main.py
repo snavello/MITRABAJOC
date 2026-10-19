@@ -3997,7 +3997,7 @@ TIPOS_DATO_TRAMITE = ("texto", "numero", "fecha", "archivo", "seleccion",
 ANCHOS_CAMPO_TRAMITE = ("completo", "mitad", "tercio")
 
 
-def _campos_tramite_validos(campos_crudos: list) -> list:
+def _campos_tramite_validos(campos_crudos: list, borrador: bool = False) -> list:
     """Normaliza y descarta campos mal formados que pudieran llegar de un
     request armado a mano -- misma lógica de saneo defensivo que ya usan
     _destinos_validos/_modulos_de para otros datos que vienen del cliente.
@@ -4007,14 +4007,17 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
     Dos pasadas: primero los campos, después sus validaciones, porque una de
     fuente `funcion` nombra a OTROS campos del formulario (la segunda clave
     por orden, `campo.<nombre>` en la fórmula) y hay que tener la lista
-    entera para sanearla."""
+    entera para sanearla.
+
+    En un `borrador` un campo sin etiqueta se conserva (es trabajo a medias
+    que se va a terminar otro día); al publicar, se descarta como siempre."""
     validos = []
     for c in campos_crudos:
         if not isinstance(c, dict):
             continue
         if c.get("tipo_dato") not in TIPOS_DATO_TRAMITE:
             continue
-        if c.get("tipo_dato") != "separador" and not str(c.get("etiqueta") or "").strip():
+        if c.get("tipo_dato") != "separador" and not str(c.get("etiqueta") or "").strip() and not borrador:
             continue
 
         def _entero(v):
@@ -4057,12 +4060,19 @@ async def abm_tramite_tipo(
     area_destino_default_id: str = Form(""), seccional_id: str = Form(""),
     destinos_json: str = Form("{}"),
     permite_pase: str = Form(""), areas_pase: list[str] = Form(default=[]),
+    accion: str = Form(""),
 ):
     """El formulario declara su RUTEO además de sus campos (decisiones N6 y
     N7): a qué área cae por defecto, el mapa seccional -> área, y si es
-    global o de una seccional."""
+    global o de una seccional.
+
+    `accion=borrador` (SDN, 2026-10-19) guarda el trabajo a medias: no exige
+    campos ni área, conserva los campos sin etiqueta y deja el tipo inactivo
+    con la marca `borrador`. Cualquier otra acción PUBLICA: exige todo y saca
+    la marca."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
+    borrador = accion == "borrador"
     import json
     try:
         campos_crudos = json.loads(campos_json)
@@ -4075,8 +4085,8 @@ async def abm_tramite_tipo(
         assert isinstance(destinos_crudos, dict)
     except Exception:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
-    campos = _campos_tramite_validos(campos_crudos)
-    if not campos:
+    campos = _campos_tramite_validos(campos_crudos, borrador=borrador)
+    if not campos and not borrador:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
     requisitos = validaciones_tramite.requisitos_saneados(requisitos_crudos, campos)
@@ -4085,7 +4095,7 @@ async def abm_tramite_tipo(
         del_seccional = _id_propio(s, Seccional, seccional_id, sid)
     # El destino por defecto es OBLIGATORIO: sin él, una seccional que nadie
     # mapeó dejaría trámites sin dueño y nadie los vería en ninguna bandeja.
-    if not destino_default:
+    if not destino_default and not borrador:
         return RedirectResponse("/admin?error=sindestino#tramites", status_code=303)
     # Un admin local solo arma formularios DE su seccional (vacía = la suya;
     # un global lo arma solo el alcance total), y su destino y su mapa
@@ -4104,9 +4114,10 @@ async def abm_tramite_tipo(
         # La seccional de un formulario no se edita (ver editar_tipo_tramite).
         # Un global (None) lo edita solo el alcance total: fail-closed.
         _exigir_alcance_seccional(request, tipo.get("seccional_id"))
-        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
-                               area_destino_default_id=destino_default,
-                               permite_pase=bool(permite_pase), requisitos=requisitos)
+        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si" and not borrador,
+                               campos, reglas, area_destino_default_id=destino_default,
+                               permite_pase=bool(permite_pase), requisitos=requisitos,
+                               borrador=borrador)
         db.set_destinos_tipo_tramite(int(id), mapa, sid)
         db.set_areas_de_pase(int(id), _ids_int(areas_pase), sid)
     else:
@@ -4114,7 +4125,7 @@ async def abm_tramite_tipo(
                                          area_destino_default_id=destino_default,
                                          seccional_id=del_seccional,
                                          permite_pase=bool(permite_pase),
-                                         requisitos=requisitos)
+                                         requisitos=requisitos, borrador=borrador)
         db.set_destinos_tipo_tramite(nuevo_id, mapa, sid)
         db.set_areas_de_pase(nuevo_id, _ids_int(areas_pase), sid)
     return RedirectResponse("/admin#tramites", status_code=303)
