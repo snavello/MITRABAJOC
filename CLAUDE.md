@@ -247,7 +247,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general;
   .claude/skills/emil-design-eng/ — skill de Emil Kowalski sobre animación y pulido de
   interfaz, copia textual fijada a un commit (`ORIGEN.md`): es referencia, y ante un
-  choque manda `diseno-mi-trabajo`.
+  choque manda `diseno-mi-trabajo`;
+  .claude/skills/impeccable/ (+ `.claude/agents/impeccable-*.md`) — skill
+  **Impeccable** de Paul Bakaus (impeccable.style, Apache 2.0, instalada el
+  2026-10-19 para la revisión de diseño pantalla por pantalla): 24 comandos
+  (`/impeccable critique|audit|polish|typeset|layout|colorize|animate|
+  clarify|distill|quieter ...`), copia textual fijada a un commit
+  (`ORIGEN.md`, con qué NO se instaló: ni los hooks del detector, que
+  necesitan un binario bajado, ni el modo `live`, que pide abrir la CSP).
+  Mismo orden: ante un choque manda `diseno-mi-trabajo` (su `craft-floor`
+  prohíbe el kicker y los números de sección, que acá se quedan), y los
+  colores son SIEMPRE los cuatro de marca del sindicato.
 - **FLUJO.md** — el ciclo de un cambio en una página: de tu PC a Pruebas y de
   Pruebas a la demo, con los comandos y las tres reglas.
 - **HISTORIAL.md** — changelog técnico detallado, no se carga automático.

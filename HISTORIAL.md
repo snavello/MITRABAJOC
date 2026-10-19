@@ -8300,3 +8300,43 @@ Emil Kowalski". Lo que cambió en `templates/admin.html`:
 Robots: el del constructor completo más uno del globo (oculto por default,
 hover lo muestra y lo esconde, clic lo fija, Escape lo cierra; cero textos
 `muted` de ayuda visibles salvo los dos estados vacíos).
+
+## La skill Impeccable, instalada para la revisión de diseño (2026-10-19)
+
+SDN pidió "la skill de diseño impecable" disponible para todo el proyecto,
+porque desde el 2026-10-20 se revisa y mejora el diseño de toda la plataforma
+paso a paso, respetando los colores de marca. Es **Impeccable** de Paul Bakaus
+(https://github.com/pbakaus/impeccable, impeccable.style, Apache 2.0, v4.6.0):
+nació de la `frontend-design` de Anthropic y suma 24 comandos con un
+vocabulario compartido (`critique`, `audit`, `polish`, `typeset`, `layout`,
+`colorize`, `animate`, `clarify`, `distill`, `bolder`, `quieter`, `harden`,
+`onboard`, `adapt`, `optimize`...), cuatro subagentes y un detector de 61
+reglas de anti-patrones (Inter para todo, degradés violeta-azul, tarjetas
+dentro de tarjetas, texto gris sobre color).
+
+Se instaló como las otras dos skills de terceros: copia textual de lo que el
+repo distribuye para Claude Code (`.claude/skills/impeccable/` y
+`.claude/agents/impeccable-*.md`), fijada al commit `0665bd8` con SHA-256 en
+`ORIGEN.md`, leída antes de instalarla (SKILL.md, los cuatro subagentes y
+`craft-floor.md` enteros; las 42 referencias recorridas buscando cualquier
+instrucción que no fuera de diseño: no hay). Lo que se dejó afuera, con el
+porqué en la ficha: los **hooks del detector** (corren un binario que el
+lanzador baja de GitHub Releases en el primer uso; en la nube no persiste y
+no siempre se puede ejecutar, y la skill prevé seguir sin él), y el **modo
+`live`** (servidor local más CSP ensanchada: la CSP es una decisión de XSK y
+no se abre para una herramienta de diseño). Quien quiera el detector en su PC
+lo prende con `/impeccable hooks on`, que escribe en `settings.local.json`,
+ahora en `.gitignore` junto con lo que dejan el detector y el modo live.
+
+El orden entre las tres skills de diseño queda escrito en `ORIGEN.md` y en
+CLAUDE.md: manda `diseno-mi-trabajo`. Dos choques conocidos desde el primer
+día, porque el `craft-floor` de Impeccable los lista entre lo que "rechaza":
+el kicker arriba del título (el esquema "Hilo" lo lleva en acento) y los
+números de sección (el formulario guía del constructor numera sus pasos).
+Los dos se quedan. Y la tipografía no se cambia por sindicato ni se buscan
+fuentes "con carácter": es la de la skill del proyecto.
+
+`PRODUCT.md` y `DESIGN.md`, los dos archivos con los que Impeccable guarda el
+contexto del producto y el sistema visual, no se escribieron: son el primer
+paso de la revisión (`/impeccable init` entrevista; `/impeccable document`
+lee el sistema del código), no de la instalación.
