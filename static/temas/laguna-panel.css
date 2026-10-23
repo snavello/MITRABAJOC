@@ -701,3 +701,30 @@ html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) { background: #f
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
 html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--lg-mal); left: 16px; }
 html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--lg-mal-t); }
+
+/* ============================================================
+   Con los colores del sindicato, la marca manda (SDN, 2026-10-23):
+   el encabezado y el riel en el color base del gremio y la sección
+   activa en su acento. Con los colores de Colm3na sigue blanco.
+   ============================================================ */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
+  background: var(--marca-base-relleno, var(--marca-base)); color: #fff;
+  box-shadow: inset 0 3px 0 var(--marca-acento); border-bottom-color: transparent;
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-nombre { color: #fff; }
+/* Sobre el color base va el Colm3na para fondo oscuro, el de siempre. */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { display: block; }
+html[data-tema="laguna"][data-paleta="sindicato"] .enc-c3-claro { display: none; }
+html[data-tema="laguna"][data-paleta="sindicato"] .nav-strip {
+  background: var(--marca-base-relleno, var(--marca-base)); border-right-color: transparent; border-bottom-color: transparent;
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn { color: rgba(255, 255, 255, .8); }
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn:hover { background: rgba(255, 255, 255, .09); color: #fff; }
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn.activa {
+  background: var(--marca-acento); color: var(--marca-tinta-acento, var(--marca-base));
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .45);
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn svg.tab-ext { stroke: rgba(255, 255, 255, .7); }
+html[data-tema="laguna"][data-paleta="sindicato"] a.tab-btn[href="/admin/dashboard"]::after { background: rgba(255, 255, 255, .14); }
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn .badge-noleidas,
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn.activa .badge-noleidas { box-shadow: 0 0 0 2px var(--marca-base-relleno, var(--marca-base)); }

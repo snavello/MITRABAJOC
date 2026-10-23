@@ -131,3 +131,16 @@ def test_las_hojas_usan_los_corregidos_con_la_paleta_del_sindicato():
             "-primario-relleno, var(--gremio-primario))", "")) is None, hoja.name
         if hoja.name.startswith("noticiero"):
             assert "-base-tinta" in cuerpo, hoja.name
+
+
+def test_con_la_paleta_del_sindicato_la_marca_manda_en_encabezado_y_riel():
+    """SDN, 2026-10-23: con «Colores del sindicato» el encabezado y el riel
+    del panel van en el color base del gremio y la sección activa en su
+    acento; en la app del afiliado, el encabezado."""
+    for modelo in ("laguna", "noticiero"):
+        panel = Path(f"static/temas/{modelo}-panel.css").read_text(encoding="utf-8")
+        pre = f'html[data-tema="{modelo}"][data-paleta="sindicato"]'
+        assert f"{pre} .marca-barra" in panel and f"{pre} .nav-strip" in panel and f"{pre} .tab-btn.activa" in panel
+        assert "var(--marca-base-relleno" in panel and "var(--marca-tinta-acento" in panel
+        app = Path(f"static/temas/{modelo}-app.css").read_text(encoding="utf-8")
+        assert f"{pre} .marca-barra" in app and "var(--gremio-base-relleno" in app

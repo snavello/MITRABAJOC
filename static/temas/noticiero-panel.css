@@ -858,3 +858,33 @@ html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) { background:
   box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
 html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--nt-mal); left: 16px; top: 14px; }
 html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--nt-mal); }
+
+/* ============================================================
+   Con los colores del sindicato, la marca manda (SDN, 2026-10-23):
+   la cabecera y el índice en el color base del gremio, la sección
+   activa en su acento. Con los colores de Colm3na sigue el papel.
+   ============================================================ */
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-barra {
+  background: var(--marca-base-relleno, var(--marca-base)); color: #fff; border-bottom-color: transparent;
+  box-shadow: inset 5px 0 0 var(--marca-acento), 0 10px 18px -16px rgba(0, 0, 0, .5);
+}
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-nombre { color: #fff; border-right-color: var(--marca-acento); }
+/* Sobre el color base va el Colm3na para fondo oscuro, el de siempre. */
+html[data-tema="noticiero"][data-paleta="sindicato"] img.marca-colmena[src="/logo-plataforma-oscuro"] { content: normal; }
+html[data-tema="noticiero"][data-paleta="sindicato"] .nav-strip {
+  background: var(--marca-base-relleno, var(--marca-base)); border-right-color: transparent; border-bottom-color: transparent;
+}
+html[data-tema="noticiero"][data-paleta="sindicato"] .nav-strip::before { color: rgba(255, 255, 255, .72); border-bottom-color: rgba(255, 255, 255, .55); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn { color: rgba(255, 255, 255, .82); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn + .tab-btn { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn::before { color: rgba(255, 255, 255, .55); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn.activa {
+  background: var(--marca-acento); color: var(--marca-tinta-acento, var(--marca-base)); box-shadow: 0 8px 16px -10px rgba(0, 0, 0, .5);
+}
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn.activa::before { color: var(--marca-tinta-acento, var(--marca-base)); }
+html[data-tema="noticiero"][data-paleta="sindicato"] a.tab-btn[href="/admin/dashboard"] { color: #fff; }
+html[data-tema="noticiero"][data-paleta="sindicato"] a.tab-btn[href="/admin/dashboard"]::after { background: rgba(255, 255, 255, .14); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn svg.tab-ext { stroke: var(--marca-acento-txt, var(--marca-acento)); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn .badge-noleidas,
+html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn.activa .badge-noleidas { box-shadow: 0 0 0 2px var(--marca-base-relleno, var(--marca-base)); }

@@ -185,7 +185,7 @@ html[data-tema="noticiero"] .pt-media:not(:has(img)) ~ .pad .fila-hola { padding
 html[data-tema="noticiero"] .fila-hola > div:first-child { animation: nt-adm-sube var(--mov-entrada) var(--ease-entrada) backwards; }
 html[data-tema="noticiero"] .hola,
 html[data-tema="noticiero"] body.claro .hola {
-  margin: 0; font-family: var(--nt-f-tit); font-weight: 400; font-size: 64px; line-height: .92;
+  margin: 0; font-family: var(--nt-f-tit); font-weight: 400; font-size: 52px; line-height: .92;
   letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta);
 }
 /* El nombre, marcado con el resaltador: una banda baja, como a mano. */
@@ -473,4 +473,20 @@ html[data-tema="noticiero"] .tm-op.activa {
   html[data-tema="noticiero"] .tm-op { transition: none; }
   html[data-tema="noticiero"] .pt-hero:active .pt-hero-cta,
   html[data-tema="noticiero"] .pt-fila:hover .pt-fila-f { transform: none; }
+}
+
+/* ---------- Los grupos de accesos (SDN, 2026-10-23): secciones del diario ---------- */
+html[data-tema="noticiero"] .pt-grupo + .pt-grupo { margin-top: 34px; }
+html[data-tema="noticiero"] .pt-grupo-tit { margin: 0; padding-bottom: 10px; border-bottom: 2px solid var(--nt-tinta);
+  font-family: var(--nt-f-tit); font-weight: 400; font-size: 26px; line-height: 1; letter-spacing: .2px; color: var(--nt-tinta); }
+/* Dentro de un grupo son cuatro columnas: los filetes y el ancho de Áreas
+   y Usuarios siguen esa cuenta, no la de tres. */
+html[data-tema="noticiero"] .pt-grupo .pt-filas > a[href="/admin#administradores"] { grid-column: auto; }
+@media (min-width: 1040px) {
+  html[data-tema="noticiero"] .pt-grupo .pt-filas > * { border-left: 1px solid var(--nt-linea); }
+  html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(4n+1) { border-left: 0; }
+  html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(3n+1).pt-fila,
+  html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(3n+1) > .pt-fila { padding-left: 20px; }
+  html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(4n+1).pt-fila,
+  html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(4n+1) > .pt-fila { padding-left: 4px; }
 }

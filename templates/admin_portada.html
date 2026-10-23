@@ -73,6 +73,11 @@
   .pt-salir svg { width: 17px; height: 17px; stroke: var(--marca-acento); stroke-width: 1.8; fill: none;
     stroke-linecap: round; }
   .pt-salir:hover { opacity: .88; }
+  /* Los accesos en cuatro grupos con título: cuatro columnas en escritorio
+     para que cada grupo quede en una fila. */
+  .pt-grupo + .pt-grupo { margin-top: 30px; }
+  .pt-grupo-tit { margin: 0 0 12px; font-size: 12.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  @media (min-width: 1040px) { .pt-grupo .pt-filas.pt-tres { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 </style>
 {# La hoja del modelo (static/temas/<modelo>-panel-portada.css), después de
    los estilos de la plantilla. Solo si el archivo existe: el sello sale
@@ -135,7 +140,10 @@
 </section>
 
 <div class="pad pt-accesos">
-  <div class="pt-filas pt-tres">
+  {# Las secciones en cuatro grupos con su título (SDN, 2026-10-23): catorce
+     tarjetas iguales en una sola grilla no dejaban ver por dónde empezar.
+     Un grupo sin ninguna sección para esta persona no se dibuja. #}
+  {% set _g0 %}
       {% if 'recibos' in modulos and 'reportes' in permisos %}
       <a class="pt-fila pt-vid" href="/admin#reportes">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg></span>
@@ -160,14 +168,6 @@
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
-      {% if 'trabajadores' in permisos %}
-      <a class="pt-fila pt-vid" href="/admin#trabajadores">
-        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg></span>
-        <span class="pt-fila-txt"><span class="pt-fila-t">Trabajadores</span>
-          <span class="pt-fila-e">Alta, baja y datos de afiliados</span></span>
-        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-      </a>
-      {% endif %}
       {% if 'recibos' in modulos and 'aprendizaje' in permisos %}
       <a class="pt-fila pt-vid" href="/admin#aprendizaje">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg></span>
@@ -176,6 +176,62 @@
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
+  {% endset %}
+  {% if _g0|trim %}
+  <section class="pt-grupo" aria-labelledby="pt-g0">
+    <h2 class="pt-grupo-tit" id="pt-g0">Recibos</h2>
+    <div class="pt-filas pt-tres">
+{{ _g0 }}    </div>
+  </section>
+  {% endif %}
+  {% set _g1 %}
+      {% if 'trabajadores' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#trabajadores">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Trabajadores</span>
+          <span class="pt-fila-e">Alta, baja y datos de afiliados</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}
+      <div class="acceso-badge-wrap">
+        <a class="pt-fila pt-vid" href="/admin#tramites">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+            <span class="pt-fila-e">Formularios y seguimiento</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
+      </div>
+      {% endif %}
+      {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}
+      <div class="acceso-badge-wrap">
+        <a class="pt-fila pt-vid" href="/admin#empleadores">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Empleadores</span>
+            <span class="pt-fila-e">Empresas, notificaciones y trámites</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
+      </div>
+      {% endif %}
+      {% if 'listas' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#listas">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-listas"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Listas</span>
+          <span class="pt-fila-e">Planillas que consultan los trámites</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+  {% endset %}
+  {% if _g1|trim %}
+  <section class="pt-grupo" aria-labelledby="pt-g1">
+    <h2 class="pt-grupo-tit" id="pt-g1">Afiliados</h2>
+    <div class="pt-filas pt-tres">
+{{ _g1 }}    </div>
+  </section>
+  {% endif %}
+  {% set _g2 %}
       {% if 'noticias' in modulos and 'noticias' in permisos %}
       <a class="pt-fila pt-vid" href="/admin#noticias">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg></span>
@@ -208,28 +264,15 @@
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
-      {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}
-      <div class="acceso-badge-wrap">
-        <a class="pt-fila pt-vid" href="/admin#tramites">
-          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
-          <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
-            <span class="pt-fila-e">Formularios y seguimiento</span></span>
-          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-        </a>
-        {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
-      </div>
-      {% endif %}
-      {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}
-      <div class="acceso-badge-wrap">
-        <a class="pt-fila pt-vid" href="/admin#empleadores">
-          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg></span>
-          <span class="pt-fila-txt"><span class="pt-fila-t">Empleadores</span>
-            <span class="pt-fila-e">Empresas, notificaciones y trámites</span></span>
-          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-        </a>
-        {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
-      </div>
-      {% endif %}
+  {% endset %}
+  {% if _g2|trim %}
+  <section class="pt-grupo" aria-labelledby="pt-g2">
+    <h2 class="pt-grupo-tit" id="pt-g2">Comunicación</h2>
+    <div class="pt-filas pt-tres">
+{{ _g2 }}    </div>
+  </section>
+  {% endif %}
+  {% set _g3 %}
       {% if 'convenio' in modulos and 'convenio' in permisos %}
       <a class="pt-fila pt-vid" href="/admin#convenio">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-convenio"/></svg></span>
@@ -246,14 +289,6 @@
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
-      {% if 'listas' in permisos %}
-      <a class="pt-fila pt-vid" href="/admin#listas">
-        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-listas"/></svg></span>
-        <span class="pt-fila-txt"><span class="pt-fila-t">Listas</span>
-          <span class="pt-fila-e">Planillas que consultan los trámites</span></span>
-        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-      </a>
-      {% endif %}
       {% if es_super_admin %}
       <a class="pt-fila pt-vid" href="/admin#administradores">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg></span>
@@ -262,7 +297,14 @@
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
-  </div>
+  {% endset %}
+  {% if _g3|trim %}
+  <section class="pt-grupo" aria-labelledby="pt-g3">
+    <h2 class="pt-grupo-tit" id="pt-g3">El gremio</h2>
+    <div class="pt-filas pt-tres">
+{{ _g3 }}    </div>
+  </section>
+  {% endif %}
 </div>
 
 <footer class="pt-pie">

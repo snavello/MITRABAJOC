@@ -1097,3 +1097,12 @@ html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) { background:
   box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
 html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--nt-mal); left: 16px; top: 14px; }
 html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--nt-mal); }
+
+/* Con los colores del sindicato, la cabecera va en el color base del
+   gremio con el filete en su acento (SDN, 2026-10-23). */
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-barra {
+  background: var(--gremio-base-relleno, var(--gremio-base)); color: #fff; border-bottom-color: transparent;
+  box-shadow: inset 0 -3px 0 var(--gremio-acento);
+}
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-nombre { color: #fff; border-right-color: var(--gremio-acento); }
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-colmena { content: normal; }

@@ -920,3 +920,13 @@ html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) { background: #f
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
 html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--lg-mal); left: 16px; }
 html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--lg-mal-t); }
+
+/* Con los colores del sindicato, el encabezado va en el color base del
+   gremio con el filete en su acento (SDN, 2026-10-23). */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
+  background: var(--gremio-base-relleno, var(--gremio-base)); color: #fff;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: inset 0 3px 0 var(--gremio-acento);
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-nombre { color: #fff; border-right-color: var(--gremio-acento); }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { content: normal; }
