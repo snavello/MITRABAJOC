@@ -15,7 +15,7 @@
     {% else %}<span class="tag tag-pend" title="Solo acreditó que su CUIL está en el padrón (el CUIL es un dato público).">1 · CUIL</span>{% endif %}
   {% endmacro -%}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

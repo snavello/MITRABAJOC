@@ -266,6 +266,14 @@ class Sindicato(SQLModel, table=True):
     # registro a quien no tiene mail cargado mata la adopción. Lo edita
     # plataforma, como la cláusula de confidencialidad.
     acepta_mail_declarado: bool = Field(default=True)
+    # ---- Apariencia (PLAN_TEMAS.md, D3) ----
+    # El modelo de diseño con el que arrancan sus afiliados y sus operadores
+    # (cada persona puede cambiarlo a gusto: CuentaTrabajador/CuentaPanel.tema)
+    # y la paleta: "colm3na" (la del modelo) o "sindicato" (sus colores de
+    # marca). La paleta no la elige cada persona: es identidad del gremio.
+    tema_afiliados: str = "laguna"
+    tema_panel: str = "laguna"
+    paleta_tema: str = "colm3na"
 
 
 class Seccional(SQLModel, table=True):
@@ -460,6 +468,9 @@ class CuentaPanel(SQLModel, table=True):
     clave_hash: str = ""
     # La clave la puso otra persona (el alta o un reseteo de plataforma).
     debe_cambiar_clave: bool = True
+    # El modelo de diseño que eligió para el panel (PLAN_TEMAS.md, D2).
+    # "" = no eligió: vale el de su sindicato (Sindicato.tema_panel).
+    tema: str = ""
 
 
 @event.listens_for(UsuarioSindicato, "before_insert")
@@ -643,6 +654,10 @@ class CuentaTrabajador(SQLModel, table=True):
     # ---- Foto de perfil (bytes en la base, mismo patrón que el logo del sindicato)
     foto_datos: Optional[bytes] = Field(default=None)
     foto_mime: str = ""
+    # El modelo de diseño que eligió para la app (PLAN_TEMAS.md, D2). Vive en
+    # la cuenta y no en el navegador para que se respete en cualquier aparato.
+    # "" = no eligió: vale el de su sindicato (Sindicato.tema_afiliados).
+    tema: str = ""
     # ---- Registro confirmado y niveles de fiabilidad (PLAN_REGISTRO.md) ----
     # Nivel 1 a 4 (R2). SUBE y no baja: `subir_nivel` es la única escritura.
     nivel_fiabilidad: int = Field(default=1)
@@ -3123,6 +3138,75 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "firma": sind.firma,
             "direccion": sind.direccion, "telefonos": sind.telefonos,
         }
+
+
+def apariencia_de(sindicato_id, cuil: str = "", rol: str = "afiliado", uid=None) -> dict:
+    """El modelo de diseño y la paleta con que se pinta una página
+    (PLAN_TEMAS.md). `rol` es "afiliado" o "panel": cada uno tiene su propia
+    elección guardada y su propio default en el sindicato. Abre su sesión: la
+    llaman las rutas de página, que no tienen una abierta."""
+    import temas
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id) if sindicato_id else None
+        defecto = (sind.tema_panel if rol == "panel" else sind.tema_afiliados) if sind else None
+        propio = ""
+        if not cuil and uid:
+            usuario = s.get(UsuarioSindicato, uid)
+            cuil = usuario.cuil if usuario else ""
+        if cuil:
+            modelo = CuentaPanel if rol == "panel" else CuentaTrabajador
+            cuenta = s.exec(select(modelo).where(modelo.cuil == cuil)).first()
+            propio = cuenta.tema if cuenta else ""
+        return {
+            "tema": temas.resolver_tema(propio, defecto),
+            "paleta": temas.resolver_paleta(sind.paleta_tema if sind else None),
+            "elegido": temas.tema_valido(propio) or "",
+            "defecto": temas.resolver_tema(None, defecto),
+        }
+
+
+def guardar_tema_persona(cuil: str, tema: str, rol: str = "afiliado") -> bool:
+    """Guarda en la CUENTA el modelo que eligió la persona (D2). "" vuelve al
+    del sindicato. False si el modelo no existe o la persona no tiene cuenta:
+    nunca se guarda un valor fuera del catálogo."""
+    import temas
+    valor = "" if tema in ("", None) else temas.tema_valido(tema)
+    if valor is None:
+        return False
+    modelo = CuentaPanel if rol == "panel" else CuentaTrabajador
+    with Session(engine) as s:
+        cuenta = s.exec(select(modelo).where(modelo.cuil == cuil)).first()
+        if not cuenta:
+            return False
+        cuenta.tema = valor
+        s.add(cuenta)
+        s.commit()
+        return True
+
+
+def set_apariencia_sindicato(sindicato_id: int, tema_afiliados=None, tema_panel=None, paleta=None) -> bool:
+    """Los defaults de apariencia del sindicato (D3). Solo cambia lo que viene
+    y valida contra el catálogo: un valor desconocido no se guarda."""
+    import temas
+    cambios = {}
+    for campo, valor, validar in (("tema_afiliados", tema_afiliados, temas.tema_valido),
+                                  ("tema_panel", tema_panel, temas.tema_valido),
+                                  ("paleta_tema", paleta, temas.paleta_valida)):
+        if valor is None:
+            continue
+        v = validar(valor)
+        if v is None:
+            return False
+        cambios[campo] = v
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return False
+        for campo, v in cambios.items():
+            setattr(sind, campo, v)
+        s.add(sind)
+        s.commit()
+        return True
 
 
 def modulos_habilitados(sindicato_id: int) -> list:

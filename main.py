@@ -57,6 +57,7 @@ import telegram
 import precios_ia
 import resultados_encuesta
 import fechas
+import temas
 import geo
 import secrets
 import db
@@ -1371,7 +1372,10 @@ PERMISOS_RUTAS = {
 # datos a los mismos endpoints gateados.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
                            "/admin/dashboard", "/admin/dashboard-v2",
-                           "/admin/elegir", "/admin/cambiar-sindicato"}
+                           "/admin/elegir", "/admin/cambiar-sindicato",
+                           # Cada operador elige SU modelo de diseño: es una
+                           # preferencia de la persona, no una sección del panel.
+                           "/admin/apariencia/mia"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -1611,6 +1615,7 @@ def admin(request: Request):
     ) if administra else []
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
+        "apariencia": db.apariencia_de(sid, rol="panel", uid=ses.get("uid", 0)),
         "hoy": fechas.hoy_texto(),   # estado vigente / vencida de noticias y beneficios
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
@@ -1841,6 +1846,7 @@ def admin_inicio(request: Request):
                 break
     return templates.TemplateResponse("admin_portada.html", {
         "permisos": permisos, "es_super_admin": es_super_admin,
+        "apariencia": db.apariencia_de(sid, cuil_admin, rol="panel"),
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
@@ -7987,6 +7993,7 @@ def app_trabajador(request: Request):
             "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
             "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
+            "apariencia": db.apariencia_de(sid_activo, cuil),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -8029,6 +8036,7 @@ def app_portada(request: Request):
         seccional_id = db.seccional_de_trabajador(cuil, sid_activo)
         return templates.TemplateResponse("portada.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "apariencia": db.apariencia_de(sid_activo, cuil),
             "marca_plataforma": db.marca_plataforma(),
             "cuil": cuil, "nombre_trab": nombre_trab,
             "primer_nombre": (nombre_trab or "").split(" ")[0] or "Trabajador",
@@ -8199,6 +8207,34 @@ def confirmar_mail(request: Request, token: str = Form(""), codigo: str = Form("
         nivel = cuenta.nivel_fiabilidad
     _login_ok(request, _intentos_registro)
     return {"ok": True, "nivel": nivel}
+
+
+@app.post("/api/apariencia")
+def api_apariencia(request: Request, tema: str = Form("")):
+    """El afiliado elige su modelo de diseño (PLAN_TEMAS.md, D2). Se guarda en
+    su CUENTA, así lo ve igual en cualquier aparato; vacío vuelve al que eligió
+    su sindicato. Un modelo que no existe no se guarda."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if not db.guardar_tema_persona(cuil, tema, "afiliado"):
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"ok": True, "tema": temas.tema_valido(tema) or ""}
+
+
+@app.post("/admin/apariencia/mia")
+def admin_apariencia_mia(request: Request, tema: str = Form("")):
+    """El operador del panel elige su modelo de diseño, para todos los
+    sindicatos donde trabaja: vive en su CuentaPanel (una por persona)."""
+    exigir_sindicato(request)
+    ses = sesion_actual(request, "sindicato")
+    with db.get_session() as s:
+        usuario = s.get(UsuarioSindicato, ses.get("uid", 0))
+        cuil = usuario.cuil if usuario else ""
+    if not cuil or not db.guardar_tema_persona(cuil, tema, "panel"):
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"ok": True, "tema": temas.tema_valido(tema) or ""}
 
 
 @app.post("/api/perfil")
