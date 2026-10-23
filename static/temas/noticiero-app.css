@@ -1,0 +1,1087 @@
+/* ============================================================
+   Modelo NOTICIERO (el 147, la alternativa) — app del afiliado (/app)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md, bloque 4. Fuente de verdad visual: el mockup p147-movil
+   (figuras T2, T2b, T3, T4, T5, T5b y T5c). La portada tiene su hoja aparte
+   (noticiero-portada.css).
+
+   La idea del modelo, en una línea: un diario. Papel marfil, tinta índigo
+   y UN coral. Los titulares en Anton y en mayúsculas, subrayados por un
+   filete de tinta; el texto en Archivo; las fechas y los rótulos chicos en
+   la condensada. Lo que se tiene que destacar (la carátula del recibo,
+   "Necesita tu atención", la carátula de un trámite, la cabecera de la
+   credencial) va en índigo lleno con el filete coral abajo. Los listados,
+   siempre sobre papel o "carta" clara, nunca sobre oscuro.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="noticiero"]: la plantilla la
+     carga solo con este modelo, y aun cargada por error no pisaría al otro.
+   - No toca contenido ni estructura: viste las clases que ya tiene
+     trabajador.html (y las que arma su JS). Nada de lo que hoy se ve se
+     esconde.
+   - La paleta del modelo va en variables --nt-*; con la paleta del
+     sindicato esas mismas funciones se derivan de --gremio-* (los cuatro
+     colores crudos del gremio, que la plantilla copia y nunca se pisan),
+     copiando la tabla de correspondencias del mockup (.p147m.pg).
+   - Las variables de la plantilla (--tinta, --gris, --linea, --marca-*…)
+     se redefinen con los roles del modelo: así lo que esta hoja no viste
+     una por una igual habla el idioma del diario.
+   - El coral es relleno (con tinta encima), resaltador o filete: NUNCA
+     texto sobre el papel. Lo que en la plantilla era "texto en acento" acá
+     va en tinta o, si es una alerta, en el rojo de estado.
+   - Los colores de estado (verde, ámbar, rojo) y los del semáforo de ARCA
+     son fijos: nunca de marca.
+   - Ninguna selección se marca con una barra de color a un costado: la
+     opción elegida va rellena.
+   - Tipografías vendoreadas (la CSP no deja CDN): Anton para titulares,
+     Archivo (variable: peso 100–900, ancho 62–125%) para el texto, y la
+     Barlow Condensed que ya declara la plantilla para fechas y rótulos.
+   ============================================================ */
+
+@font-face {
+  font-family: "Anton";
+  src: url("/static/fonts/anton.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Archivo";
+  src: url("/static/fonts/archivo.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- LA PALETA (mockup: .p147m) ---------- */
+html[data-tema="noticiero"] {
+  --nt-f-tit: "Anton", "Bebas Neue", "Arial Narrow", sans-serif;
+  --nt-f-cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --nt-f-txt: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --nt-f-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --nt-curva: cubic-bezier(.33, 1, .68, 1);
+  /* papeles crudos del modelo (con la paleta del sindicato se tiñen con la base) */
+  --nt-m-fondo: #f5efe3; --nt-m-hoja: #ece4d4; --nt-m-hoja-2: #efe8db; --nt-m-carta: #fffcf6;
+  --nt-m-linea: #dcd2c0; --nt-m-linea-2: #b8ac96;
+  --nt-fondo: var(--nt-m-fondo); --nt-hoja: var(--nt-m-hoja); --nt-hoja-2: var(--nt-m-hoja-2);
+  --nt-carta: var(--nt-m-carta); --nt-linea: var(--nt-m-linea); --nt-linea-2: var(--nt-m-linea-2);
+  --nt-tinta: #1b1e4b; --nt-tinta-1: #34386b; --nt-tinta-2: #4d5180; --nt-tinta-3: #5c5f88;
+  --nt-indigo: #1b1e4b; --nt-indigo-2: #2a2e66; --nt-indigo-3: #10122e;
+  --nt-marfil: var(--nt-m-fondo); --nt-marfil-1: #e4e0f0; --nt-marfil-2: #d9d4e8;
+  --nt-coral: #ff6a4d; --nt-coral-suave: #ffd9cf;
+  --nt-resalta: var(--nt-coral);            /* resaltador (texto en tinta encima) */
+  --nt-sobre-coral: var(--nt-indigo);       /* texto o ícono sobre un relleno coral */
+  --nt-coral-ind: var(--nt-coral);          /* coral como ícono o punto sobre índigo */
+  --nt-coral-txt-ind: var(--nt-coral-suave);/* coral como TEXTO sobre índigo */
+  /* estados: fijos con cualquier paleta */
+  --nt-ok: #1d6b47; --nt-ok-fondo: #dcebdf; --nt-amb: #8a5300; --nt-amb-fondo: #f6e6c4;
+  --nt-mal: #9e1b32; --nt-mal-fondo: #f5dcdc; --nt-vio: #5b3d8a; --nt-vio-fondo: #e8def5;
+  --nt-globo: #c42b3a; --nt-globo-suave: #f8dfe0;
+  /* semáforo de ARCA: fijo, nunca de marca */
+  --nt-sem-v: #2fa88f; --nt-sem-a: #e8b84b; --nt-sem-r: #d9685c; --nt-sem-g: #eceae3;
+  --nt-sombra: color-mix(in oklab, var(--nt-indigo) 28%, transparent);
+
+  /* Las variables de la plantilla, con los roles del modelo */
+  --fuente: var(--nt-f-txt);
+  --fuente-display: var(--nt-f-tit);
+  --fuente-num: var(--nt-f-mono);
+  --tinta: var(--nt-tinta);
+  --gris: var(--nt-tinta-2);
+  --linea: var(--nt-linea);
+  --papel: var(--nt-hoja-2);
+  --card: var(--nt-carta);
+  --agua: var(--nt-ok);
+  --alerta: var(--nt-mal);
+  --ok: var(--nt-ok);
+  --error: var(--nt-mal);
+  --aviso: var(--nt-amb);
+  --marca-base: var(--nt-indigo);
+  --marca-primario: var(--nt-indigo-2);
+  --marca-acento: var(--nt-coral);
+  --marca-apoyo: var(--nt-indigo-2);
+}
+
+/* ---------- con los colores del sindicato (mockup: .p147m.pg) ----------
+   Tinta índigo → base del gremio; coral → su acento; papel teñido 3–6% con
+   la base. Texto sobre un relleno de acento: --gremio-tinta-acento (blanco
+   o la base, lo calcula la plantilla); acento como ícono o texto sobre la
+   base: --gremio-acento-txt (aclarado si el acento es oscuro). */
+html[data-tema="noticiero"][data-paleta="sindicato"] {
+  --nt-fondo: color-mix(in oklab, var(--gremio-base) 5%, var(--nt-m-fondo));
+  --nt-hoja: color-mix(in oklab, var(--gremio-base) 6%, var(--nt-m-hoja));
+  --nt-hoja-2: color-mix(in oklab, var(--gremio-base) 5%, var(--nt-m-hoja-2));
+  --nt-carta: color-mix(in oklab, var(--gremio-base) 3%, var(--nt-m-carta));
+  --nt-linea: color-mix(in oklab, var(--gremio-base) 10%, var(--nt-m-linea));
+  --nt-linea-2: color-mix(in oklab, var(--gremio-base) 14%, var(--nt-m-linea-2));
+  --nt-tinta: var(--gremio-base);
+  --nt-tinta-1: color-mix(in oklab, var(--gremio-base) 86%, var(--nt-fondo));
+  --nt-tinta-2: color-mix(in oklab, var(--gremio-base) 74%, var(--nt-fondo));
+  --nt-tinta-3: color-mix(in oklab, var(--gremio-base) 66%, var(--nt-fondo));
+  --nt-indigo: var(--gremio-base);
+  --nt-indigo-2: var(--gremio-primario);
+  --nt-indigo-3: color-mix(in oklab, var(--gremio-base) 70%, black);
+  --nt-marfil: color-mix(in oklab, var(--gremio-base) 4%, var(--nt-m-fondo));
+  --nt-marfil-1: color-mix(in oklab, var(--nt-marfil) 90%, var(--gremio-primario));
+  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--gremio-primario));
+  --nt-coral: var(--gremio-acento);
+  --nt-coral-suave: color-mix(in oklab, var(--gremio-acento) 22%, var(--nt-carta));
+  --nt-resalta: color-mix(in oklab, var(--gremio-acento) 58%, white);
+  --nt-sobre-coral: var(--gremio-tinta-acento);
+  --nt-coral-ind: var(--gremio-acento-txt);
+  --nt-coral-txt-ind: var(--gremio-acento-txt);
+}
+
+/* ---------- la página: papel marfil ---------- */
+html[data-tema="noticiero"] body {
+  font-family: var(--nt-f-txt);
+  color: var(--nt-tinta);
+  background: var(--nt-fondo);
+  -webkit-font-smoothing: antialiased;
+}
+/* Sin mesa ni franja: el diario es papel liso. */
+html[data-tema="noticiero"] body.mesa { background: var(--nt-fondo); }
+html[data-tema="noticiero"] body.mesa::before,
+html[data-tema="noticiero"] body.mesa.franja::after { display: none; }
+html[data-tema="noticiero"] :is(a, button, input, select, textarea, label):focus-visible {
+  outline: 2px solid var(--nt-indigo); outline-offset: 3px;
+}
+html[data-tema="noticiero"] .cont { padding: 24px 16px 40px; padding-bottom: 150px; }
+
+/* ---------- encabezado: papel, con el filete fino abajo ---------- */
+html[data-tema="noticiero"] .marca-enc.fija { z-index: 20; }
+html[data-tema="noticiero"] .marca-barra {
+  background: var(--nt-fondo); color: var(--nt-tinta);
+  border-bottom: 1px solid var(--nt-linea);
+  box-shadow: 0 8px 18px -16px var(--nt-sombra);
+  padding: 9px 16px; padding-top: calc(9px + env(safe-area-inset-top));
+}
+html[data-tema="noticiero"] .marca-logo { height: 46px; max-width: 120px; }
+html[data-tema="noticiero"] .marca-nombre {
+  color: var(--nt-tinta); font-family: var(--nt-f-tit); font-weight: 400; font-size: 21px;
+  letter-spacing: .2px; text-transform: uppercase; border-right-color: var(--nt-coral);
+}
+/* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
+   existe; si no, queda la de siempre). */
+html[data-tema="noticiero"] .marca-colmena { height: 19px; content: var(--logo-colmena-claro, normal); }
+
+/* La identidad: nombre a la izquierda, CUIL en condensada a la derecha. */
+html[data-tema="noticiero"] .ident { justify-content: space-between; align-items: baseline;
+  padding: 10px 16px 9px; background: var(--nt-carta); border-bottom: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .ident-nombre { font-size: 15px; font-weight: 700; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .ident-cuil { font-family: var(--nt-f-cond); font-size: 14px; font-weight: 700;
+  letter-spacing: .6px; color: var(--nt-tinta-2); font-variant-numeric: tabular-nums; }
+
+/* ---------- titulares y textos ---------- */
+html[data-tema="noticiero"] h1,
+html[data-tema="noticiero"] .titulo-pagina,
+html[data-tema="noticiero"] body.mesa .titulo-pagina,
+html[data-tema="noticiero"] #tp-tramites h1 {
+  font-family: var(--nt-f-tit); font-size: 31px; font-weight: 400; line-height: .98;
+  letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta);
+}
+/* El titular de cada pantalla va subrayado por el filete de tinta. */
+html[data-tema="noticiero"] .titulo-pagina { padding-bottom: 10px; border-bottom: 2px solid var(--nt-tinta); }
+/* Sin franja oscura detrás: el título y su bajada en tinta también en escritorio. */
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina { color: var(--nt-tinta); }
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + p,
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + .sub,
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + .muted { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .sub { font-size: 14.5px; color: var(--nt-tinta-1); line-height: 1.45; margin-top: 10px; }
+html[data-tema="noticiero"] .muted { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .nota { display: flex; gap: 8px; margin: 18px 4px 0; padding-top: 14px; border-top: 1px solid var(--nt-linea);
+  font-size: 12.5px; line-height: 1.5; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] #tp-credencial .nota { display: block; border-top: 0; padding-top: 0; text-align: center;
+  font-size: 13px; margin: 14px 18px 0; }
+
+/* ---------- botones: rectos, en mayúsculas ---------- */
+html[data-tema="noticiero"] .btn,
+html[data-tema="noticiero"] .rc-btn {
+  display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+  min-height: 48px; height: auto; padding: 10px 20px; border: 0; border-radius: 2px; text-align: center;
+  background: var(--nt-coral); color: var(--nt-sobre-coral);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 22%, transparent);
+  font-family: var(--nt-f-txt); font-stretch: 108%; font-size: 13.5px; font-weight: 700; line-height: 1.2;
+  letter-spacing: 1.1px; text-transform: uppercase; text-decoration: none; cursor: pointer;
+  transition: transform .15s var(--nt-curva), filter .2s var(--nt-curva), box-shadow .2s var(--nt-curva);
+}
+html[data-tema="noticiero"] .btn:hover,
+html[data-tema="noticiero"] .rc-btn:hover { filter: brightness(1.05) saturate(1.05); }
+html[data-tema="noticiero"] .btn:active,
+html[data-tema="noticiero"] .rc-btn:active { transform: scale(.97); }
+html[data-tema="noticiero"] .btn.sec,
+html[data-tema="noticiero"] .rc-btn.sec,
+html[data-tema="noticiero"] .rc-acc .btn.sec {
+  background: transparent; color: var(--nt-tinta); border: 0; box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
+}
+html[data-tema="noticiero"] .btn.sec:hover,
+html[data-tema="noticiero"] .rc-btn.sec:hover { filter: none; box-shadow: inset 0 0 0 1.5px var(--nt-tinta); }
+html[data-tema="noticiero"] .btn.alerta { background: var(--nt-mal); color: #fff; }
+html[data-tema="noticiero"] .btn[disabled],
+html[data-tema="noticiero"] .rc-btn[disabled] { opacity: .62; cursor: default; }
+html[data-tema="noticiero"] .rc-btn svg { width: 18px; height: 18px; }
+html[data-tema="noticiero"] .rc-acc { margin-top: 14px; }
+html[data-tema="noticiero"] .rc-acc .btn,
+html[data-tema="noticiero"] .rc-acc .rc-btn { margin-top: 0; }
+html[data-tema="noticiero"] .rc-acc > :is(.btn, .rc-btn) + :is(.btn, .rc-btn) { margin-top: 10px; }
+
+/* ---------- campos ---------- */
+html[data-tema="noticiero"] .tram-input,
+html[data-tema="noticiero"] .enq-input,
+html[data-tema="noticiero"] .tram-msg-responder textarea {
+  min-height: 46px; border: 0; border-radius: 2px; background: var(--nt-carta);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2);
+  padding: 11px 12px; font-family: inherit; font-size: 15px; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] textarea.tram-input { line-height: 1.45; }
+html[data-tema="noticiero"] select.tram-input { -webkit-appearance: none; appearance: none; padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--nt-tinta-1) 50%), linear-gradient(135deg, var(--nt-tinta-1) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+html[data-tema="noticiero"] .tram-input::placeholder,
+html[data-tema="noticiero"] .enq-input::placeholder,
+html[data-tema="noticiero"] .tram-msg-responder textarea::placeholder { color: var(--nt-tinta-3); }
+html[data-tema="noticiero"] .tram-input:focus,
+html[data-tema="noticiero"] .enq-input:focus,
+html[data-tema="noticiero"] .tram-msg-responder textarea:focus {
+  outline: none; box-shadow: inset 0 0 0 2px var(--nt-indigo), 0 0 0 3px var(--nt-coral-suave);
+}
+html[data-tema="noticiero"] .campo-tram { margin-bottom: 16px; }
+html[data-tema="noticiero"] .campo-tram label:not(.campo-tram-opcion):not(.campo-tram-bool):not(.btn) {
+  font-stretch: 108%; font-size: 11px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .campo-tram.ok .tram-input { box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .campo-tram.mal .tram-input { box-shadow: inset 0 0 0 2px var(--nt-mal); }
+html[data-tema="noticiero"] .campo-tram .tram-tick {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; right: 10px; top: 35px;
+  font-size: 11px; background: var(--nt-ok-fondo); color: var(--nt-ok); box-shadow: inset 0 0 0 1.5px var(--nt-ok);
+}
+html[data-tema="noticiero"] .campo-tram.mal .tram-tick { background: var(--nt-mal); color: #fff; box-shadow: none; }
+html[data-tema="noticiero"] .campo-tram .tram-err { font-size: 12.5px; font-weight: 600; color: var(--nt-mal); }
+html[data-tema="noticiero"] .campo-tram .tram-err.avs { color: var(--nt-amb); }
+/* el dato que se completa solo: teñido, con borde punteado (sin filete lateral);
+   tocado, borde ámbar entero */
+html[data-tema="noticiero"] .tram-input.tram-calculado {
+  background: color-mix(in oklab, var(--nt-indigo) 5%, var(--nt-hoja-2)); color: var(--nt-tinta);
+  box-shadow: none; border: 1px dashed var(--nt-tinta-3); border-radius: 6px;
+}
+html[data-tema="noticiero"] .campo-tram.ingreso-tocado .tram-input.tram-calculado { background: var(--nt-amb-fondo); border: 2px solid var(--nt-amb); }
+html[data-tema="noticiero"] .campo-tram .tram-nota-ingreso { font-size: 12px; line-height: 1.4; color: var(--nt-amb);
+  background: var(--nt-amb-fondo); border-left: 0; border-radius: 0; padding: 7px 8px; font-weight: 600; }
+html[data-tema="noticiero"] .campo-tram-opcion,
+html[data-tema="noticiero"] .campo-tram-bool { font-size: 14.5px; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .campo-tram-bool { display: flex; align-items: flex-start; gap: 10px; }
+html[data-tema="noticiero"] .campo-tram-opcion {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; margin-bottom: 6px; background: var(--nt-carta);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); cursor: pointer;
+}
+html[data-tema="noticiero"] .campo-tram-opcion:has(input:checked) {
+  background: color-mix(in oklab, var(--nt-coral-suave) 65%, var(--nt-carta));
+  box-shadow: inset 0 0 0 1.5px var(--nt-indigo); font-weight: 700;
+}
+html[data-tema="noticiero"] .campo-tram-opcion input,
+html[data-tema="noticiero"] .campo-tram-bool input,
+html[data-tema="noticiero"] .enq-opcion input { accent-color: var(--nt-indigo); }
+html[data-tema="noticiero"] .campo-tram-separador { border-top: 2px solid var(--nt-tinta); margin: 4px 0 16px; }
+html[data-tema="noticiero"] .archivo-nombre { font-family: var(--nt-f-mono); font-size: 12.5px; color: var(--nt-tinta-1); }
+
+/* ---------- carteles: fondo teñido + borde fino entero (sin franja lateral) ---------- */
+html[data-tema="noticiero"] .banner { border-radius: 8px; padding: 12px 13px; font-size: 13.5px; font-weight: 500;
+  line-height: 1.45; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .banner.ok { background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-ok) 38%, transparent); }
+html[data-tema="noticiero"] .banner.mal { background: var(--nt-mal-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
+html[data-tema="noticiero"] .cod-error { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); opacity: 1; }
+/* .disc es una nota con su color en un filo a la izquierda (inline): rojo
+   por defecto, ámbar para la base aproximada, verde para "Enviar a mi
+   sindicato". Acá el color va de relleno con el borde entero y el filo se va. */
+html[data-tema="noticiero"] .disc { border-left: 0 !important; border-radius: 8px; color: var(--nt-tinta);
+  background: var(--nt-mal-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
+html[data-tema="noticiero"] .disc[style*="#d9a441"] { background: var(--nt-amb-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-amb) 38%, transparent); }
+html[data-tema="noticiero"] .disc[style*="--agua"] { background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-ok) 38%, transparent); }
+html[data-tema="noticiero"] .rc-hoja > .disc { margin: 12px 14px; }
+html[data-tema="noticiero"] .disc .btn.sec { margin-top: 0; background: var(--nt-carta); }
+html[data-tema="noticiero"] .alerta-legal { border-left: 0; border-radius: 8px; background: var(--nt-amb-fondo); color: var(--nt-tinta);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-amb) 38%, transparent); }
+html[data-tema="noticiero"] .rc-hoja > .alerta-legal { margin: 14px; }
+/* las etiquetas chicas: rótulo en mayúsculas con borde entero */
+html[data-tema="noticiero"] .badge-reforma,
+html[data-tema="noticiero"] .badge-auto {
+  display: inline-flex; align-items: center; border-radius: 0; padding: 3px 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; white-space: normal;
+}
+html[data-tema="noticiero"] .badge-reforma { background: var(--nt-vio-fondo); color: var(--nt-vio); box-shadow: inset 0 0 0 1px var(--nt-vio); }
+html[data-tema="noticiero"] .rc-hoja > .badge-reforma { margin: 12px 14px 0; }
+html[data-tema="noticiero"] .badge-auto { margin: 5px 0 0; background: transparent; color: var(--nt-tinta-2); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .spin { border-color: var(--nt-linea); border-top-color: var(--nt-indigo); }
+
+/* ============================================================
+   T2 · TU RECIBO
+   ============================================================ */
+/* El marco: una hoja de diario, con el filete índigo arriba. */
+html[data-tema="noticiero"] .rc-panel {
+  border-radius: 0; padding: 18px 14px 16px; color: var(--nt-tinta);
+  background: var(--nt-hoja); border-left: 0;
+  box-shadow: inset 0 4px 0 var(--nt-indigo), inset 0 0 0 1px var(--nt-linea);
+}
+html[data-tema="noticiero"] .rc-panel::before { display: none; }
+/* el antetítulo, con el guion coral delante */
+html[data-tema="noticiero"] .rc-kicker,
+html[data-tema="noticiero"] .rc-panel .rc-kicker {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--nt-f-txt); font-stretch: 112%; font-size: 11.5px; font-weight: 700; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .rc-panel > .rc-kicker::before { content: ""; width: 18px; height: 2px; background: var(--nt-coral); flex: none; }
+html[data-tema="noticiero"] .rc-h1,
+html[data-tema="noticiero"] .rc-panel .rc-h1 {
+  font-family: var(--nt-f-tit); font-size: 31px; font-weight: 400; line-height: .98;
+  letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta); margin: 8px 0 0;
+}
+html[data-tema="noticiero"] .rc-panel .rc-sub { margin-top: 7px; font-size: 14px; color: var(--nt-tinta-1); line-height: 1.45; }
+
+/* los tres pasos: un filete arriba de cada uno; el actual, una pastilla índigo entera */
+html[data-tema="noticiero"] .rc-pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0 0; }
+html[data-tema="noticiero"] .rc-paso {
+  display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; align-items: center; align-content: center;
+  padding-top: 8px; text-align: left; border-top: 2px solid var(--nt-linea-2); min-width: 0;
+}
+html[data-tema="noticiero"] .rc-paso::before,
+html[data-tema="noticiero"] .rc-paso:first-child::before,
+html[data-tema="noticiero"] .rc-paso:last-child::before { display: none; }
+html[data-tema="noticiero"] .rc-paso i {
+  position: static; transform: none; grid-row: span 2; width: 22px; height: 22px; border-radius: 50%; border: 0;
+  box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); background: transparent; color: var(--nt-tinta-2);
+  font-family: var(--nt-f-cond); font-size: 13px; font-weight: 700;
+}
+html[data-tema="noticiero"] .rc-paso i svg { width: 12px; height: 12px; stroke-width: 2.8; }
+html[data-tema="noticiero"] .rc-paso b {
+  font-family: var(--nt-f-txt); font-size: 12.5px; font-weight: 700; letter-spacing: 0; line-height: 1.15;
+  text-transform: none; color: var(--nt-tinta-1);
+}
+html[data-tema="noticiero"] .rc-paso small { font-size: 11px; line-height: 1.2; color: var(--nt-tinta-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-tema="noticiero"] .rc-paso.hecho { border-top-color: var(--nt-tinta-3); }
+html[data-tema="noticiero"] .rc-paso.hecho b { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .rc-paso.hecho i { background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
+html[data-tema="noticiero"] .rc-paso.on {
+  border-top: 0; padding: 5px 8px 5px 5px; margin-top: -3px; border-radius: 99px;
+  background: var(--nt-indigo); box-shadow: 0 8px 16px -10px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .rc-paso.on i { background: var(--nt-coral); color: var(--nt-sobre-coral); box-shadow: none; animation: none; }
+html[data-tema="noticiero"] .rc-paso.on b { color: var(--nt-marfil); }
+html[data-tema="noticiero"] .rc-paso.on small { color: var(--nt-marfil-1); }
+/* en curso: el número en un aro que gira */
+html[data-tema="noticiero"] .rc-paso.curso i {
+  position: relative; left: auto; top: auto; background: transparent; color: var(--nt-marfil);
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--nt-marfil) 35%, transparent);
+}
+html[data-tema="noticiero"] .rc-paso.curso i::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent;
+  border-top-color: var(--nt-coral-ind); border-right-color: var(--nt-coral-ind); animation: nt-gira 1.1s linear infinite;
+}
+
+/* la hoja: carta clara, adentro del marco */
+html[data-tema="noticiero"] .rc-hoja {
+  margin-top: 16px; background: var(--nt-carta); border-radius: 0; color: var(--nt-tinta);
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 16px 26px -20px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .rc-hoja > * + * { border-top-color: var(--nt-linea); }
+
+/* paso 1: archivo elegido, consejos, "ver mis recibos" */
+html[data-tema="noticiero"] .rc-arch { margin: 14px 14px 0; padding: 12px; border-radius: 10px;
+  background: color-mix(in oklab, var(--nt-coral-suave) 60%, var(--nt-carta)); box-shadow: inset 0 0 0 1.5px var(--nt-coral); }
+html[data-tema="noticiero"] .rc-hoja > .rc-arch + .rc-tips { border-top: 0; }
+html[data-tema="noticiero"] .rc-arch .ic { width: 40px; height: 40px; border-radius: 8px; background: var(--nt-indigo); color: var(--nt-marfil); }
+html[data-tema="noticiero"] .rc-arch .nb { font-size: 14px; font-weight: 700; }
+html[data-tema="noticiero"] .rc-arch .mt { font-family: var(--nt-f-txt); font-size: 12.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .rc-tips { margin-top: 0; padding: 14px 14px 4px; }
+html[data-tema="noticiero"] .rc-tips-tit,
+html[data-tema="noticiero"] .rc-card h2,
+html[data-tema="noticiero"] .card h2,
+html[data-tema="noticiero"] .nuevos h2 {
+  display: flex; align-items: center; gap: 8px; padding: 0 0 8px; border-bottom: 0;
+  font-family: var(--nt-f-tit); font-size: 20px; font-weight: 400; line-height: 1; letter-spacing: .2px;
+  text-transform: uppercase; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] .rc-tips-tit svg { stroke: var(--nt-ok); width: 19px; height: 19px; }
+/* los titulares de cada bloque leído, subrayados por el filete de tinta (el
+   de los consejos del paso 1, no: es una lista corta, no una sección) */
+html[data-tema="noticiero"] .rc-card > .rc-tips-tit,
+html[data-tema="noticiero"] .card h2,
+html[data-tema="noticiero"] .nuevos h2 { margin-bottom: 4px; border-bottom: 2px solid var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-card > .rc-tips-tit svg { stroke: var(--nt-indigo-2); width: 18px; height: 18px; }
+html[data-tema="noticiero"] .rc-card { border: 0; border-radius: 0; background: transparent; }
+html[data-tema="noticiero"] .rc-tip { display: grid; grid-template-columns: 38px 1fr; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .rc-tip:last-child { border-bottom: 0; }
+html[data-tema="noticiero"] .rc-tip .rc-ico { width: 38px; height: 38px; display: grid; place-items: center; margin-top: 0;
+  background: var(--nt-hoja); box-shadow: inset 0 0 0 1px var(--nt-linea-2); color: var(--nt-indigo-2); }
+html[data-tema="noticiero"] .rc-tip .rc-ico svg { width: 19px; height: 19px; }
+html[data-tema="noticiero"] .rc-tip b { font-size: 14.5px; font-weight: 700; }
+html[data-tema="noticiero"] .rc-tip small { display: block; font-size: 12.5px; color: var(--nt-tinta-2); margin-top: 2px; line-height: 1.4; }
+html[data-tema="noticiero"] .rc-pie,
+html[data-tema="noticiero"] .rc-panel .rc-pie {
+  display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center;
+  margin-top: 14px; padding: 13px 12px; border: 0; border-radius: 0; background: var(--nt-carta);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); color: var(--nt-tinta); font-size: 14px; font-weight: 600;
+}
+html[data-tema="noticiero"] .rc-pie svg { stroke: var(--nt-tinta); width: 20px; height: 20px; }
+html[data-tema="noticiero"] .rc-pie span {
+  margin: 0; color: var(--nt-tinta-2); font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; box-shadow: inset 0 0 0 1px var(--nt-linea-2); padding: 3px 7px; white-space: nowrap;
+}
+
+/* la espera: el aro a la izquierda y las fases al lado */
+html[data-tema="noticiero"] .rc-hoja .ia-cron { display: flex; align-items: center; gap: 20px; padding: 16px 14px; text-align: left; }
+html[data-tema="noticiero"] .ia-aro { width: 112px; height: 112px; margin: 0; flex: none; }
+html[data-tema="noticiero"] .ia-aro .pista { stroke: var(--nt-linea); stroke-width: 9; }
+html[data-tema="noticiero"] .ia-aro .avance { stroke: var(--nt-coral); stroke-width: 9; }
+html[data-tema="noticiero"] .ia-aro .centro .n { font-family: var(--nt-f-mono); font-size: 22px; font-weight: 600;
+  color: var(--nt-tinta); letter-spacing: 0; }
+html[data-tema="noticiero"] .ia-aro .centro .et { font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .ia-fases,
+html[data-tema="noticiero"] .rc-hoja .ia-fases { flex: 1; display: grid; gap: 10px; background: none; border: 0; border-radius: 0;
+  margin-top: 0; padding: 0; }
+html[data-tema="noticiero"] .ia-fase { background: none; padding: 0; gap: 9px; font-size: 13.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .ia-fase .pt { width: 10px; height: 10px; background: transparent; box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); }
+html[data-tema="noticiero"] .ia-fase.hecha { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .ia-fase.hecha .pt { background: var(--nt-indigo); box-shadow: none; }
+html[data-tema="noticiero"] .ia-fase.activa { color: var(--nt-tinta); font-weight: 700; }
+html[data-tema="noticiero"] .ia-fase.activa .pt { background: var(--nt-coral); box-shadow: 0 0 0 4px var(--nt-coral-suave);
+  animation: nt-late 1.2s ease-in-out infinite; }
+
+/* paso 2: la carátula (índigo con el filete coral), la grilla de datos y
+   los conceptos leídos */
+html[data-tema="noticiero"] .rc-caratula {
+  margin: 14px; padding: 14px 13px; border-left: 0; border-radius: 0;
+  background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: inset 0 -3px 0 var(--nt-coral);
+}
+html[data-tema="noticiero"] .rc-hoja > .rc-caratula + * { border-top: 0; }
+html[data-tema="noticiero"] .rc-caratula .rc-kicker { color: var(--nt-marfil-2); }
+html[data-tema="noticiero"] .rc-caratula .per { font-family: var(--nt-f-tit); font-size: 26px; font-weight: 400; line-height: 1;
+  text-transform: uppercase; color: var(--nt-marfil); margin-top: 6px; }
+html[data-tema="noticiero"] .rc-caratula .emp { font-size: 14px; color: var(--nt-marfil); margin-top: 4px; }
+html[data-tema="noticiero"] .rc-caratula .linea { margin-top: 10px; padding-top: 9px;
+  border-top: 1px solid color-mix(in oklab, var(--nt-marfil) 22%, transparent); }
+html[data-tema="noticiero"] .rc-caratula .linea span:first-child { font-size: 13.5px; letter-spacing: 0; text-transform: none; color: var(--nt-marfil-1); }
+html[data-tema="noticiero"] .rc-caratula .linea .imp { font-family: var(--nt-f-txt); font-size: 17px; font-weight: 700; color: var(--nt-marfil); }
+html[data-tema="noticiero"] .rc-hoja > .rc-card { padding: 14px 14px 4px; }
+html[data-tema="noticiero"] .rc-datos { margin-top: 10px; gap: 1px; border: 0; background: var(--nt-linea); box-shadow: 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .rc-hoja > .rc-card > .rc-datos { margin-bottom: 10px; }
+html[data-tema="noticiero"] .rc-datos > div { padding: 10px; background: var(--nt-carta); }
+html[data-tema="noticiero"] .rc-datos .k { font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .rc-datos .v { display: block; margin-top: 3px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+html[data-tema="noticiero"] .rc-datos .v.falta { color: var(--nt-amb); font-style: italic; font-weight: 500; }
+html[data-tema="noticiero"] .card { border: 0; border-radius: 0; background: var(--nt-carta); box-shadow: 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .rc-hoja .card { box-shadow: none; padding: 14px 14px 4px; }
+html[data-tema="noticiero"] .card > .sub { margin: 0 0 6px; font-size: 13px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .fila { padding: 9px 0; border-top: 0; border-bottom: 1px solid var(--nt-linea); font-size: 14px; }
+html[data-tema="noticiero"] .card > .fila:last-child,
+html[data-tema="noticiero"] .rc-card > .fila:last-child { border-bottom: 0; }
+html[data-tema="noticiero"] .fila .imp { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+html[data-tema="noticiero"] .fila .imp.neg { color: var(--nt-mal); }
+html[data-tema="noticiero"] .dato { border-bottom-color: var(--nt-linea); }
+html[data-tema="noticiero"] .dato .k { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .dato .v.vacio { color: var(--nt-amb); }
+/* conceptos nuevos detectados */
+html[data-tema="noticiero"] .nuevos { background: transparent; border: 0; border-radius: 0; padding: 14px; }
+html[data-tema="noticiero"] .nuevos p { font-size: 12.5px; color: var(--nt-tinta-2); line-height: 1.45; }
+html[data-tema="noticiero"] .chip { align-items: center; padding: 12px 0 0; font-size: 14px; border-top: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .chip-descuento { background: transparent; border-top-color: var(--nt-linea); }
+html[data-tema="noticiero"] .chip-desc { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; font-weight: 600;
+  background: var(--nt-hoja); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .chip .tag { border-radius: 0; padding: 3px 7px; margin-left: 8px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; background: transparent; color: var(--nt-tinta-2); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .chip .imp { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+html[data-tema="noticiero"] .chip .imp.neg { color: var(--nt-mal); }
+html[data-tema="noticiero"] .remun { padding: 9px 0 12px; border-bottom: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .remun-lbl { font-size: 13px; font-weight: 600; color: var(--nt-tinta-1); }
+/* el Sí / No: un segmentado con borde de tinta; el elegido, índigo lleno */
+html[data-tema="noticiero"] .toggle { display: inline-flex; border: 0; border-radius: 0; background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--nt-tinta); overflow: visible; }
+html[data-tema="noticiero"] .toggle button { min-width: 52px; min-height: 34px; padding: 0 12px; border-radius: 0; background: transparent;
+  color: var(--nt-tinta); font-weight: 700; font-size: 13px; }
+html[data-tema="noticiero"] .toggle button.activo { background: var(--nt-indigo); color: var(--nt-marfil); }
+
+/* paso 3: el veredicto, lo chequeado y los totales */
+html[data-tema="noticiero"] .rc-hoja > .rc-veredicto { margin: 14px; }
+html[data-tema="noticiero"] .rc-veredicto { border: 0; border-radius: 10px; padding: 14px 13px;
+  background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .rc-veredicto.mal { background: var(--nt-mal-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
+html[data-tema="noticiero"] .rc-veredicto.ok { background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-ok) 38%, transparent); }
+html[data-tema="noticiero"] .rc-vcab { align-items: center; gap: 10px; }
+html[data-tema="noticiero"] .rc-vico { width: 28px; height: 28px; border-radius: 50%; }
+html[data-tema="noticiero"] .rc-vico svg { width: 16px; height: 16px; }
+html[data-tema="noticiero"] .rc-veredicto.mal .rc-vico { background: var(--nt-mal); color: #fff; }
+html[data-tema="noticiero"] .rc-veredicto.ok .rc-vico { background: var(--nt-ok); color: #fff; }
+html[data-tema="noticiero"] .rc-veredicto .tit { font-family: var(--nt-f-tit); font-size: 22px; font-weight: 400; line-height: 1.02;
+  text-transform: uppercase; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-vsub { font-size: 13px; color: var(--nt-tinta-2); }
+/* "Chequeamos N conceptos": el encabezado del veredicto, como en el mockup */
+html[data-tema="noticiero"] .rc-veredicto .rc-vcab .rc-vsub { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--nt-tinta); }
+/* cada diferencia, un renglón con un rombo rojo; las alertas, en ámbar */
+html[data-tema="noticiero"] .rc-hallazgo { display: grid; grid-template-columns: 14px 1fr; gap: 8px; margin-top: 8px; padding: 0;
+  border: 0; border-radius: 0; background: transparent; font-size: 13.5px; line-height: 1.45; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-veredicto .rc-vcab + .rc-hallazgo { margin-top: 10px; }
+html[data-tema="noticiero"] .rc-hallazgo::before { content: ""; width: 7px; height: 7px; margin-top: 7px; background: var(--nt-mal); transform: rotate(45deg); }
+html[data-tema="noticiero"] .rc-hallazgo.aviso { padding: 8px 10px 8px 8px; border-radius: 6px; background: var(--nt-amb-fondo);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-amb) 40%, transparent); }
+html[data-tema="noticiero"] .rc-hallazgo.aviso::before { background: var(--nt-amb); }
+html[data-tema="noticiero"] .rc-veredicto.ok .rc-hallazgo::before { background: var(--nt-ok); }
+/* "Lo que chequeamos": titular con su filete, y cada control en su renglón */
+html[data-tema="noticiero"] .rc-chequeos > .rc-tips-tit { margin-bottom: 0; padding-bottom: 8px; border-bottom: 2px solid var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-chequeos > .rc-tips-tit svg { stroke: var(--nt-indigo-2); width: 18px; height: 18px; }
+html[data-tema="noticiero"] .rc-hoja > .rc-chequeos { padding: 8px 14px 0; }
+html[data-tema="noticiero"] .rc-chq { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 12px 0;
+  border-bottom: 1px solid var(--nt-linea); font-size: 14.5px; animation: nt-sube .7s var(--nt-curva) both; }
+html[data-tema="noticiero"] .rc-chq .ic { width: 24px; height: 24px; border-radius: 50%; color: var(--nt-ok);
+  background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1.5px var(--nt-ok); }
+html[data-tema="noticiero"] .rc-chq .ic svg { width: 12px; height: 12px; stroke-width: 2.8; }
+html[data-tema="noticiero"] .rc-chq.mal { background: transparent; }
+html[data-tema="noticiero"] .rc-chq.mal .ic { color: #fff; background: var(--nt-mal); box-shadow: none; }
+html[data-tema="noticiero"] .rc-chq .tx { font-weight: 600; line-height: 1.3; }
+html[data-tema="noticiero"] .rc-chq .imp { font-family: var(--nt-f-txt); font-size: 15px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+html[data-tema="noticiero"] .rc-chq.mal .imp { color: var(--nt-mal); }
+html[data-tema="noticiero"] .rc-totales { margin: 0; padding: 6px 0 12px; border-radius: 0; background: transparent; }
+html[data-tema="noticiero"] .rc-hoja > .rc-totales { border-top: 0; padding-inline: 14px; }
+html[data-tema="noticiero"] .rc-totales .t { padding: 7px 0; border-bottom: 0; font-size: 14px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .rc-totales .t .imp { font-family: var(--nt-f-txt); font-size: 15px; font-weight: 600; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-totales .t .imp.neg { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-totales .neto { margin-top: 6px; padding-top: 11px; background: none; border-top: 1px solid var(--nt-tinta); color: var(--nt-tinta); }
+html[data-tema="noticiero"] .rc-totales .neto span:first-child,
+html[data-tema="noticiero"] .rc-totales .neto .imp { font-family: var(--nt-f-tit); font-size: 20px; font-weight: 400; line-height: 1;
+  letter-spacing: .3px; text-transform: uppercase; }
+html[data-tema="noticiero"] .check-circulo,
+html[data-tema="noticiero"] .check-marca { stroke: var(--nt-ok); }
+html[data-tema="noticiero"] .check-enviado span { color: var(--nt-ok); font-weight: 700; }
+
+/* historial: una sola lista sobre carta, con divisiones */
+html[data-tema="noticiero"] #historial-contenido { margin-top: 16px; background: var(--nt-carta); box-shadow: 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] #historial-contenido:empty { box-shadow: none; }
+html[data-tema="noticiero"] #historial-contenido > .th-r { margin: 0; border: 0; border-radius: 0; border-bottom: 1px solid var(--nt-linea); padding: 13px; }
+html[data-tema="noticiero"] #historial-contenido > .th-r:last-child { border-bottom: 0; }
+html[data-tema="noticiero"] #historial-contenido > .th-r .tit { font-size: 14.5px; font-weight: 600; }
+
+/* ============================================================
+   modales: hoja de papel con la cabecera índigo y el filete coral
+   ============================================================ */
+html[data-tema="noticiero"] .overlay,
+html[data-tema="noticiero"] .modal-recibo-overlay { background: color-mix(in oklab, var(--nt-indigo) 58%, transparent); }
+html[data-tema="noticiero"] .modal-articulo,
+html[data-tema="noticiero"] .modal-recibo { background: var(--nt-fondo); border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--nt-linea-2), 0 22px 40px -22px var(--nt-sombra); }
+html[data-tema="noticiero"] .modal-articulo-enc,
+html[data-tema="noticiero"] .modal-recibo-enc {
+  position: sticky; padding: 16px 16px 14px; border-left: 0; border-radius: 14px 14px 0 0;
+  background: var(--nt-indigo); background-image: none; color: var(--nt-marfil);
+  box-shadow: inset 0 -3px 0 var(--nt-coral); align-items: center;
+}
+html[data-tema="noticiero"] .modal-articulo-enc::before { display: none; }
+html[data-tema="noticiero"] .modal-articulo-enc .modal-k { color: var(--nt-marfil-2); font-stretch: 112%; font-size: 11.5px;
+  font-weight: 700; letter-spacing: 1.8px; }
+html[data-tema="noticiero"] .modal-articulo-enc h3,
+html[data-tema="noticiero"] .modal-recibo-enc h3 { font-family: var(--nt-f-tit); font-weight: 400; font-size: 25px; line-height: 1;
+  text-transform: uppercase; color: var(--nt-marfil); margin-top: 5px; }
+html[data-tema="noticiero"] .modal-recibo-enc h3 { font-size: 22px; margin-top: 0; }
+html[data-tema="noticiero"] .modal-cerrar-clara,
+html[data-tema="noticiero"] .modal-recibo-cerrar {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; padding: 0; flex: none;
+  background: color-mix(in oklab, var(--nt-marfil) 12%, transparent); color: var(--nt-marfil); opacity: 1;
+}
+html[data-tema="noticiero"] .modal-recibo-cerrar svg,
+html[data-tema="noticiero"] .modal-cerrar-clara svg { stroke: var(--nt-marfil); width: 18px; height: 18px; }
+html[data-tema="noticiero"] .modal-articulo-bajada { font-size: 15px; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .modal-articulo-ant { font-family: var(--nt-f-cond); font-size: 14px; font-weight: 700; letter-spacing: .6px;
+  color: var(--nt-tinta-2); opacity: 1; }
+html[data-tema="noticiero"] .modal-articulo-texto { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .modal-articulo-texto a,
+html[data-tema="noticiero"] .tram-msg-adjunto { color: var(--nt-tinta); font-weight: 600; text-underline-offset: 3px; }
+html[data-tema="noticiero"] .modal-articulo-figuras img { border-radius: 0; }
+/* el detalle de un recibo del historial: los renglones como fichas que se
+   acomodan en filas, los totales y lo encontrado debajo, a todo el ancho */
+html[data-tema="noticiero"] .modal-recibo-body { padding: 18px 16px 22px; }
+html[data-tema="noticiero"] .modal-recibo-card { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; background: transparent; border-radius: 0; }
+html[data-tema="noticiero"] .modal-recibo-card > .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 0;
+  background: var(--nt-hoja-2); box-shadow: inset 0 0 0 1px var(--nt-linea); font-size: 12.5px; }
+html[data-tema="noticiero"] .modal-recibo-card > .chip .chip-desc { min-height: 0; padding: 0; background: none; box-shadow: none; font-weight: 400; }
+html[data-tema="noticiero"] .modal-recibo-card > .chip .imp { font-weight: 700; }
+html[data-tema="noticiero"] .modal-recibo-card > :not(.chip) { flex-basis: 100%; }
+html[data-tema="noticiero"] .modal-recibo-card > .rc-totales { margin-top: 10px; }
+html[data-tema="noticiero"] .modal-recibo-card > :is(.disc, .alerta-legal) { margin-top: 0; }
+html[data-tema="noticiero"] .cta-form { background: var(--nt-coral); color: var(--nt-sobre-coral); box-shadow: 0 10px 18px -12px var(--nt-sombra); }
+
+/* ============================================================
+   T3 · CREDENCIAL
+   ============================================================ */
+html[data-tema="noticiero"] .cred {
+  margin-top: 18px; border: 0; border-radius: 0; background: #fff; isolation: isolate;
+  box-shadow: 0 0 0 1px var(--nt-linea-2), 0 26px 40px -24px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .cred-head {
+  background: var(--nt-indigo); background-image: none; border-left: 0; padding: 13px 14px; gap: 12px;
+  box-shadow: inset 0 -3px 0 var(--nt-coral);
+}
+html[data-tema="noticiero"] .cred-head::before { display: none; }
+html[data-tema="noticiero"] .cred-logo { max-height: 46px; max-width: 90px; }
+html[data-tema="noticiero"] .cred-head .cred-k { color: var(--nt-marfil-2); font-stretch: 112%; font-size: 11.5px; font-weight: 700; letter-spacing: 1.8px; }
+html[data-tema="noticiero"] .cred-sind { font-family: var(--nt-f-tit); font-size: 19px; font-weight: 400; letter-spacing: .2px;
+  text-transform: uppercase; line-height: 1.05; margin-top: 3px; color: var(--nt-marfil); }
+/* el retrato, tenue y en gris: cualquier foto subida queda integrada a la tarjeta */
+html[data-tema="noticiero"] .cred-retrato img { opacity: .28; filter: grayscale(1) contrast(1.15) brightness(1.05); }
+html[data-tema="noticiero"] .cred-body { padding: 16px 16px 6px; }
+html[data-tema="noticiero"] .cred-top { display: block; }
+html[data-tema="noticiero"] .cred-nro { text-align: left; margin-top: 12px; }
+html[data-tema="noticiero"] .cred-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .cred-nombre { font-family: var(--nt-f-tit); font-size: 28px; font-weight: 400; line-height: 1;
+  text-transform: uppercase; color: var(--nt-tinta); margin: 2px 0 0; }
+html[data-tema="noticiero"] .cred-nro .cred-val { display: block; font-family: var(--nt-f-mono); font-size: 16px; font-weight: 600;
+  letter-spacing: 1.5px; color: var(--nt-tinta); margin-top: 2px; }
+html[data-tema="noticiero"] .cred-datos { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; margin-top: 12px; }
+html[data-tema="noticiero"] .cred-datos .cred-val { font-size: 14px; font-weight: 600; margin-top: 2px; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .cred-inferior { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end;
+  margin-top: 12px; padding-bottom: 10px; }
+html[data-tema="noticiero"] .cred-firma { text-align: left; }
+html[data-tema="noticiero"] .cred-firma img { margin: 0 0 -4px; }
+html[data-tema="noticiero"] .cred-linea { margin: 2px 0 5px; max-width: none; border-top-color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .cred-autoridad { font-size: 13.5px; font-weight: 700; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .cred-cargo { font-size: 12px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .cred-qr { text-align: center; }
+html[data-tema="noticiero"] .cred-qr svg { padding: 4px; background: #fff; box-shadow: inset 0 0 0 1px var(--nt-linea); box-sizing: content-box; }
+html[data-tema="noticiero"] .cred-vence { margin-top: 5px; font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .cred-vence.vencido { color: var(--nt-mal); font-family: var(--nt-f-txt); font-weight: 700; }
+html[data-tema="noticiero"] .cred-pie { padding: 10px 16px; background: var(--nt-hoja); border-top-color: var(--nt-linea);
+  font-size: 12.5px; color: var(--nt-tinta-1); text-align: left; }
+
+/* ============================================================
+   T4 · MIS APORTES (y la cabecera de Capacitación, que es la misma)
+   ============================================================ */
+html[data-tema="noticiero"] .sem-card,
+html[data-tema="noticiero"] .cap-card {
+  margin-top: 18px; border: 0; border-radius: 0; background: var(--nt-carta); overflow: hidden;
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 16px 26px -20px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .th-head {
+  padding: 14px 14px 12px; color: var(--nt-tinta); background: transparent; background-image: none; border-left: 0;
+  border-bottom: 2px solid var(--nt-tinta);
+}
+html[data-tema="noticiero"] .th-head::before { display: none; }
+html[data-tema="noticiero"] .th-head .k { color: var(--nt-tinta-2); font-stretch: 112%; font-size: 11.5px; font-weight: 700; letter-spacing: 1.8px; }
+html[data-tema="noticiero"] .th-head .tit { font-family: var(--nt-f-tit); font-size: 23px; font-weight: 400; letter-spacing: .2px;
+  text-transform: uppercase; line-height: 1.02; margin-top: 5px; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .th-head .sub { font-size: 13px; color: var(--nt-tinta-2); margin-top: 5px; }
+
+/* el semáforo: luces llenas con su aro, celdas altas; colores de estado fijos */
+html[data-tema="noticiero"] .sem-global { margin: 0 14px; padding: 14px 0; gap: 14px; border-bottom: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .sem-luz { width: 58px; height: 58px; font-family: var(--nt-f-tit); font-size: 30px; line-height: 1;
+  color: var(--nt-indigo); box-shadow: 0 0 0 5px var(--nt-carta), 0 0 0 6px var(--nt-linea-2); }
+html[data-tema="noticiero"] .sem-luz.rojo { background: var(--nt-sem-r); color: #1b1e4b; }
+html[data-tema="noticiero"] .sem-luz.amarillo { background: var(--nt-sem-a); color: #1b1e4b; }
+html[data-tema="noticiero"] .sem-luz.verde { background: var(--nt-sem-v); color: #1b1e4b; }
+html[data-tema="noticiero"] .sem-luz.gris { background: var(--nt-sem-g); color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .sem-titulo,
+html[data-tema="noticiero"] .sem-global.verde .sem-titulo,
+html[data-tema="noticiero"] .sem-global.amarillo .sem-titulo,
+html[data-tema="noticiero"] .sem-global.rojo .sem-titulo { font-family: var(--nt-f-tit); font-size: 22px; font-weight: 400; line-height: 1.02;
+  text-transform: uppercase; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .sem-desc { margin-top: 4px; font-size: 13.5px; color: var(--nt-tinta-1); line-height: 1.4; }
+html[data-tema="noticiero"] .sem-rubros { padding: 0 14px 4px; }
+html[data-tema="noticiero"] .sem-rubro { margin-top: 14px; }
+html[data-tema="noticiero"] .sem-rubro-lbl { align-items: baseline; margin-bottom: 8px; }
+html[data-tema="noticiero"] .sem-rubro-lbl .n { font-size: 15px; font-weight: 700; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .sem-rubro-lbl > :last-child { font-family: var(--nt-f-mono); font-size: 12.5px; font-weight: 600; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .sem-barra { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; }
+html[data-tema="noticiero"] .sem-celda { min-width: 0; overflow: hidden; height: 42px; border-radius: 0; background: var(--nt-sem-g);
+  font-family: var(--nt-f-cond); font-size: 13px; font-weight: 700; color: #1b1e4b; font-variant-numeric: tabular-nums; }
+html[data-tema="noticiero"] .sem-celda:not(.pagado):not(.parcial):not(.impago):not(.no_presentada):not(.no_declarado) { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .sem-celda.pagado { background: var(--nt-sem-v); }
+html[data-tema="noticiero"] .sem-celda.parcial { background: var(--nt-sem-a); }
+html[data-tema="noticiero"] .sem-celda.impago,
+html[data-tema="noticiero"] .sem-celda.no_presentada,
+html[data-tema="noticiero"] .sem-celda.no_declarado { background: var(--nt-sem-r); }
+html[data-tema="noticiero"] .sem-leyenda { padding: 14px 14px 0; font-size: 12.5px; line-height: 1.8; color: var(--nt-tinta-1); border-top: 0; }
+html[data-tema="noticiero"] .sem-dot { width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
+html[data-tema="noticiero"] .sem-fuente { padding: 10px 14px 14px; font-size: 12px; font-style: normal; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .sem-card .btn.sec { margin-top: 0; }
+html[data-tema="noticiero"] .sem-acciones { padding: 14px; }
+html[data-tema="noticiero"] .sem-card > #sem-cuerpo > .alerta-legal { margin: 14px 14px 0 !important; }
+html[data-tema="noticiero"] .sem-paso { margin-bottom: 12px; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+  background: color-mix(in oklab, var(--nt-indigo) 5%, var(--nt-hoja-2)); color: var(--nt-tinta-1);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-indigo) 22%, transparent); }
+html[data-tema="noticiero"] .sem-paso b { color: var(--nt-tinta); }
+
+/* Capacitación: el cuerpo de la guía, como una nota de diario */
+html[data-tema="noticiero"] .cap-body { padding: 4px 14px 18px; }
+html[data-tema="noticiero"] .cap-body h3 { font-family: var(--nt-f-tit); font-size: 19px; font-weight: 400; letter-spacing: .2px; line-height: 1.05;
+  color: var(--nt-tinta); margin: 22px 0 8px; }
+html[data-tema="noticiero"] .cap-body h3::after { height: 2px; background: var(--nt-tinta); }
+html[data-tema="noticiero"] .cap-body .fila { padding: 10px 0; border-bottom-color: var(--nt-linea); font-size: 14.5px; }
+html[data-tema="noticiero"] .cap-body p { font-size: 14.5px; line-height: 1.55; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .cap-body p b { color: var(--nt-tinta); }
+
+/* ============================================================
+   T5 · TRÁMITES
+   ============================================================ */
+/* "Necesita tu atención": índigo lleno, trama de puntos y un filo coral */
+html[data-tema="noticiero"] .th-aten {
+  margin-top: 18px; border-radius: 12px; padding: 16px 14px 14px; border-left: 0; color: var(--nt-marfil);
+  background: var(--nt-indigo); background-image: none;
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--nt-coral-ind) 75%, transparent), 0 18px 30px -18px color-mix(in oklab, var(--nt-indigo) 60%, transparent);
+}
+html[data-tema="noticiero"] .th-aten::before {
+  opacity: .14; mix-blend-mode: normal;
+  background-image: radial-gradient(color-mix(in oklab, var(--nt-marfil) 60%, transparent) 1px, transparent 1px); background-size: 4px 4px;
+}
+html[data-tema="noticiero"] .th-aten .k { font-stretch: 112%; font-size: 11.5px; font-weight: 700; letter-spacing: 1.8px; color: var(--nt-coral-txt-ind); gap: 7px; }
+html[data-tema="noticiero"] .th-punto { background: var(--nt-coral-ind); animation: nt-late 1.6s ease-in-out infinite; }
+html[data-tema="noticiero"] .th-aten .tit { font-family: var(--nt-f-tit); font-size: 25px; font-weight: 400; line-height: 1;
+  text-transform: uppercase; letter-spacing: .2px; margin-top: 7px; color: var(--nt-marfil); }
+html[data-tema="noticiero"] .th-aten .exp { margin-top: 5px; font-family: var(--nt-f-cond); font-size: 14px; font-weight: 700;
+  letter-spacing: .3px; color: var(--nt-marfil-1); }
+html[data-tema="noticiero"] .th-aten .msg { display: grid; grid-template-columns: 34px 1fr; gap: 10px; margin-top: 12px; padding: 11px;
+  border: 0; border-radius: 0; background: color-mix(in oklab, var(--nt-marfil) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-marfil) 20%, transparent); font-size: 14px; }
+html[data-tema="noticiero"] .th-aten .msg .av { width: 34px; height: 34px; background: var(--nt-marfil); }
+html[data-tema="noticiero"] .th-aten .msg .av svg { stroke: var(--nt-indigo); }
+html[data-tema="noticiero"] .th-aten .msg b { font-size: 12px; font-weight: 400; color: var(--nt-marfil-2); }
+html[data-tema="noticiero"] .th-aten .msg span { color: var(--nt-marfil); margin-top: 2px; }
+html[data-tema="noticiero"] .th-aten .bts { gap: 8px; margin-top: 12px; }
+html[data-tema="noticiero"] .th-aten .bts button,
+html[data-tema="noticiero"] .th-aten .bts label {
+  flex: 1; min-height: 44px; padding: 0 10px; border-radius: 2px; border: 0;
+  font-family: var(--nt-f-txt); font-stretch: 108%; font-size: 12px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase;
+  background: transparent; color: var(--nt-marfil); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--nt-marfil) 60%, transparent);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+html[data-tema="noticiero"] .th-aten .bts button.cta,
+html[data-tema="noticiero"] .th-aten .bts label { background: var(--nt-coral); color: var(--nt-sobre-coral);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 22%, transparent); }
+html[data-tema="noticiero"] .th-aten :is(button, label, a):focus-visible { outline-color: var(--nt-coral-txt-ind); }
+
+/* los dos accesos: uno debajo del otro; "Iniciar" en coral, "Buscar" en carta */
+html[data-tema="noticiero"] .th-acc { grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
+html[data-tema="noticiero"] .th-tile {
+  position: relative; display: grid; grid-template-columns: 42px 1fr; column-gap: 12px; row-gap: 3px; align-items: center;
+  padding: 14px 38px 14px 14px; min-height: 0; border: 0; border-radius: 0; background: var(--nt-carta);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); color: var(--nt-tinta);
+  transition: transform .15s var(--nt-curva), box-shadow .2s var(--nt-curva);
+}
+html[data-tema="noticiero"] .th-tile:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); }
+/* el ícono va en su recuadro: el fondo se pinta en el mismo <svg> */
+html[data-tema="noticiero"] .th-tile svg,
+html[data-tema="noticiero"] .th-tile:not(.cta) svg {
+  grid-row: span 2; width: 42px; height: 42px; padding: 11px; box-sizing: border-box;
+  background: var(--nt-hoja); stroke: var(--nt-indigo-2); stroke-width: 1.7;
+}
+html[data-tema="noticiero"] .th-tile b { font-family: var(--nt-f-tit); font-size: 19px; font-weight: 400; letter-spacing: .2px;
+  text-transform: uppercase; line-height: 1.05; align-self: end; }
+html[data-tema="noticiero"] .th-tile small { font-size: 12.5px; color: var(--nt-tinta-2); line-height: 1.3; align-self: start; }
+html[data-tema="noticiero"] .th-tile b:last-child { grid-row: span 2; align-self: center; }
+/* la flecha: un chevrón dibujado con dos bordes */
+html[data-tema="noticiero"] .th-tile::after {
+  content: ""; position: absolute; right: 18px; top: 50%; width: 7px; height: 7px; margin-top: -4px;
+  border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); opacity: .7;
+}
+html[data-tema="noticiero"] .th-tile.cta { background: var(--nt-coral); color: var(--nt-sobre-coral);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 22%, transparent); }
+html[data-tema="noticiero"] .th-tile.cta:hover { filter: brightness(1.05) saturate(1.05); }
+html[data-tema="noticiero"] .th-tile.cta svg { background: var(--nt-indigo); stroke: var(--nt-marfil); }
+html[data-tema="noticiero"] .th-tile.cta small { color: var(--nt-sobre-coral); }
+html[data-tema="noticiero"] .th-buscar { margin-top: 10px; padding: 0; border: 0; border-radius: 0; background: none; }
+html[data-tema="noticiero"] #tram-buscar-btn { min-height: 46px; background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
+html[data-tema="noticiero"] #tram-buscar-error { color: var(--nt-mal) !important; }
+
+/* filtros por estado: pastillas; la elegida, índigo lleno (nunca una barra al costado) */
+html[data-tema="noticiero"] .th-fil { gap: 6px; margin-top: 20px; flex-wrap: nowrap; overflow-x: auto; padding: 1px 1px 3px; }
+html[data-tema="noticiero"] .th-fil button {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border: 0; border-radius: 99px;
+  background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); font-size: 13px; font-weight: 600; color: var(--nt-tinta);
+  white-space: nowrap;
+}
+html[data-tema="noticiero"] .th-fil button i { font-family: var(--nt-f-mono); font-size: 12px; opacity: 1; margin-left: 0; }
+html[data-tema="noticiero"] .th-fil button.activo { background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
+
+/* la bandeja: una sola lista sobre carta, con divisiones */
+html[data-tema="noticiero"] #tram-lista:has(> .th-r) { margin-top: 12px; background: var(--nt-carta); box-shadow: 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .th-r { padding: 13px 13px 12px; background: var(--nt-carta); border: 1px solid var(--nt-linea); border-radius: 0;
+  transition: background-color .2s var(--nt-curva); }
+html[data-tema="noticiero"] .tram-item { background: var(--nt-carta) !important; }
+html[data-tema="noticiero"] .tram-item:hover,
+html[data-tema="noticiero"] .th-r:hover { box-shadow: none; background: var(--nt-hoja-2) !important; }
+html[data-tema="noticiero"] #tram-lista > .th-r { margin: 0; border: 0; border-bottom: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] #tram-lista > .th-r:last-child { border-bottom: 0; }
+html[data-tema="noticiero"] .th-r .fila-t { align-items: flex-start; gap: 10px; }
+html[data-tema="noticiero"] .th-r .tit { font-size: 15px; font-weight: 700; line-height: 1.25; }
+html[data-tema="noticiero"] .th-r .exp { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .th-tag { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+html[data-tema="noticiero"] .th-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 10px; }
+html[data-tema="noticiero"] .th-prog i { height: 5px; border-radius: 0; background: var(--nt-linea); }
+html[data-tema="noticiero"] .th-prog i.on { background: var(--nt-indigo); }
+html[data-tema="noticiero"] .th-prog i.cur { background: var(--nt-coral); }
+html[data-tema="noticiero"] .th-prog i.al { background: var(--nt-mal); }
+html[data-tema="noticiero"] .th-r .pie { margin-top: 9px; font-size: 12.5px; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .th-r .pie > span:last-child { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .th-r .pie b { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .th-r .pie b.nov,
+html[data-tema="noticiero"] .th-r .pie b.esp { color: var(--nt-mal); font-weight: 700; }
+html[data-tema="noticiero"] .tram-item .punto-novedad { width: 8px; height: 8px; background: var(--nt-globo); box-shadow: 0 0 0 3px var(--nt-globo-suave); margin-right: 8px; }
+
+/* T5b · las cajas (elegir el tipo, el detalle): carta, con el titular subrayado */
+html[data-tema="noticiero"] .tram-box { margin-top: 18px; border: 0; border-radius: 0; background: var(--nt-carta);
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 16px 26px -20px var(--nt-sombra); }
+html[data-tema="noticiero"] .tram-box-enc { padding: 14px 14px 12px; background: transparent; background-image: none;
+  border-bottom: 2px solid var(--nt-tinta); }
+html[data-tema="noticiero"] .tram-box-enc::before { display: none; }
+html[data-tema="noticiero"] .tram-box-enc .tit { font-family: var(--nt-f-tit); font-size: 23px; font-weight: 400; line-height: 1.02;
+  letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta); }
+html[data-tema="noticiero"] #tram-det-expediente { font-family: var(--nt-f-mono); font-size: 19px; font-weight: 700; letter-spacing: .4px; text-transform: none; }
+html[data-tema="noticiero"] .tram-box-enc .sub { margin-top: 4px; font-size: 13.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .tram-box-body { padding: 14px; }
+html[data-tema="noticiero"] #tram-tipos .tram-box-body { padding: 0 14px; }
+/* Los tipos llegan como botones con estilos en línea (cargarTiposTramite):
+   acá pasan a ser renglones con el código en monoespaciada y la flecha. */
+html[data-tema="noticiero"] #tram-tipos-lista > .tram-item {
+  position: relative; display: block; margin: 0 !important; border: 0 !important; border-radius: 0 !important;
+  border-bottom: 1px solid var(--nt-linea) !important; padding: 13px 30px 13px 0 !important;
+  background: transparent !important; box-shadow: none; color: var(--nt-tinta); font-size: 15px;
+}
+html[data-tema="noticiero"] #tram-tipos-lista > .tram-item:last-child { border-bottom: 0 !important; }
+html[data-tema="noticiero"] #tram-tipos-lista > .tram-item:hover { background: var(--nt-hoja-2) !important; }
+html[data-tema="noticiero"] #tram-tipos-lista > .tram-item b { font-weight: 700; }
+html[data-tema="noticiero"] #tram-tipos-lista > .tram-item .muted {
+  display: inline-block; margin-top: 2px; font-family: var(--nt-f-mono); font-size: 11.5px !important; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] #tram-tipos-lista > .tram-item::after {
+  content: ""; position: absolute; right: 8px; top: 50%; width: 7px; height: 7px; margin-top: -4px;
+  border-top: 2px solid var(--nt-tinta-3); border-right: 2px solid var(--nt-tinta-3); transform: rotate(45deg);
+}
+
+/* T5b · la carátula del formulario: índigo con el filete coral */
+html[data-tema="noticiero"] .tram-caratula { padding: 16px 14px 14px; background: var(--nt-indigo); background-image: none;
+  box-shadow: inset 0 -4px 0 var(--nt-coral); }
+html[data-tema="noticiero"] .tram-caratula::before { display: none; }
+html[data-tema="noticiero"] .tram-caratula .tit { font-family: var(--nt-f-tit); font-size: 27px; font-weight: 400; line-height: 1;
+  letter-spacing: .2px; text-transform: uppercase; color: var(--nt-marfil); }
+html[data-tema="noticiero"] .tram-caratula .meta { gap: 8px; margin-top: 10px; }
+html[data-tema="noticiero"] .tram-caratula .cod,
+html[data-tema="noticiero"] .tram-caratula .exp {
+  font-family: var(--nt-f-mono); font-size: 11.5px; letter-spacing: 0; padding: 4px 8px; border: 0; border-radius: 0;
+  color: var(--nt-marfil); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-marfil) 45%, transparent);
+}
+html[data-tema="noticiero"] .tram-caratula .cod:empty { display: none; }
+html[data-tema="noticiero"] .tram-prog { gap: 12px; margin-bottom: 16px; }
+html[data-tema="noticiero"] .tram-prog span { font-size: 13.5px; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .tram-prog span b { font-family: var(--nt-f-txt); color: var(--nt-tinta); }
+html[data-tema="noticiero"] .tram-prog-bar { height: 6px; border-radius: 0; background: var(--nt-linea); }
+html[data-tema="noticiero"] .tram-prog-bar i { border-radius: 0; background: var(--nt-indigo); }
+html[data-tema="noticiero"] #tram-form-error { margin: 0 0 14px; }
+html[data-tema="noticiero"] .tram-requisitos { border: 0; border-radius: 8px; padding: 12px 13px; background: var(--nt-amb-fondo); color: var(--nt-tinta);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-amb) 38%, transparent); font-size: 13.5px; }
+html[data-tema="noticiero"] .tram-requisitos.espera { background: var(--nt-hoja-2); color: var(--nt-tinta-2); box-shadow: inset 0 0 0 1px var(--nt-linea); }
+/* el sello "ENVIADO", de doble filete */
+html[data-tema="noticiero"] .tram-sello { border: 4px double var(--nt-ok); border-radius: 0; color: var(--nt-ok);
+  background: color-mix(in oklab, var(--nt-carta) 90%, transparent); text-align: center;
+  font-family: var(--nt-f-tit); font-weight: 400; font-size: 34px; letter-spacing: 1px; }
+html[data-tema="noticiero"] .tram-sello small { font-family: var(--nt-f-mono); margin-top: 5px; }
+
+/* T5c · el detalle y el chat del trámite */
+html[data-tema="noticiero"] #tram-det-contenido > .fila:first-child { align-items: center; padding: 0 0 12px !important;
+  border-bottom: 1px solid var(--nt-linea) !important; font-size: 13.5px; font-weight: 600; }
+html[data-tema="noticiero"] #tram-det-contenido > .fila:first-child .muted { color: var(--nt-tinta); }
+html[data-tema="noticiero"] #tram-det-contenido > .fila:first-child .tag { display: inline-block; white-space: normal; text-align: right;
+  padding: 4px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 700; line-height: 1.3; }
+html[data-tema="noticiero"] #tram-det-contenido > h2 {
+  font-family: var(--nt-f-txt) !important; font-stretch: 108%; font-size: 11px !important; font-weight: 700 !important;
+  letter-spacing: 1.6px !important; color: var(--nt-tinta-2) !important; border-top: 0 !important; margin-top: 16px;
+}
+html[data-tema="noticiero"] #tram-det-contenido .fila { display: grid; grid-template-columns: 1fr 1.1fr; gap: 10px; font-size: 13.5px; }
+html[data-tema="noticiero"] #tram-det-contenido .fila > :last-child { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+html[data-tema="noticiero"] #tram-det-contenido a { color: var(--nt-tinta); font-weight: 600; text-underline-offset: 3px; }
+html[data-tema="noticiero"] .tram-chat { gap: 12px; margin-top: 12px; padding: 12px 10px; background: var(--nt-hoja-2); box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .tram-chat-sistema { padding: 6px 11px; border: 0; border-radius: 0; background: var(--nt-carta);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); font-size: 12px; line-height: 1.4; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .tram-chat-burbuja { padding: 9px 11px 7px; }
+html[data-tema="noticiero"] .tram-chat-fila.ajeno .tram-chat-burbuja { background: var(--nt-carta); border: 0; border-radius: 2px 12px 12px 12px;
+  box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .tram-chat-fila.propio .tram-chat-burbuja { background: var(--nt-indigo); border-radius: 12px 2px 12px 12px; }
+html[data-tema="noticiero"] .tram-chat-remitente { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .tram-chat-fila.propio .tram-chat-remitente { color: var(--nt-marfil-2); }
+html[data-tema="noticiero"] .tram-chat-texto { font-size: 14px; line-height: 1.4; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .tram-chat-fila.propio .tram-chat-texto { color: var(--nt-marfil); }
+html[data-tema="noticiero"] .tram-chat-meta { font-family: var(--nt-f-mono); font-size: 11px; color: var(--nt-tinta-2); justify-content: flex-end; }
+html[data-tema="noticiero"] .tram-chat-meta svg { stroke: currentColor; }
+html[data-tema="noticiero"] .tram-chat-fila.propio .tram-chat-meta { color: var(--nt-marfil-2); }
+html[data-tema="noticiero"] .tram-chat-estado { padding: 3px 8px; font-size: 11.5px; letter-spacing: 0; text-transform: none;
+  background: var(--nt-hoja); color: var(--nt-tinta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .tram-chat-avatar { width: 30px; height: 30px; border: 0; box-shadow: inset 0 0 0 1px var(--nt-linea-2); background: var(--nt-carta); }
+html[data-tema="noticiero"] .tram-chat-avatar-fallback { width: 30px; height: 30px; background: var(--nt-indigo); border: 0; }
+html[data-tema="noticiero"] .tram-chat-avatar-fallback svg { stroke: var(--nt-marfil); }
+html[data-tema="noticiero"] .tram-chat-form { margin-top: 8px; padding: 10px; border: 0; border-radius: 8px;
+  background: color-mix(in oklab, var(--nt-coral-suave) 55%, var(--nt-carta)); color: var(--nt-tinta);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-coral) 50%, transparent); font-size: 14px; }
+html[data-tema="noticiero"] .tram-chat-fila.propio .tram-chat-form { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .tram-chat-form .tcf-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .tram-chat-form .tcf-btn { min-height: 36px; margin-top: 8px; border-radius: 2px; background: var(--nt-coral);
+  color: var(--nt-sobre-coral); font-stretch: 108%; font-size: 11.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; }
+html[data-tema="noticiero"] .tram-chat-form.inactivo { background: var(--nt-hoja); color: var(--nt-tinta-2); box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .tram-chat-form.vinculo { background: color-mix(in oklab, var(--nt-indigo) 6%, var(--nt-carta));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--nt-indigo) 45%, transparent); }
+html[data-tema="noticiero"] .tram-chat-vacio { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .tram-chat-responder { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 14px;
+  border: 0; border-radius: 0; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-tinta); font-size: 14px; color: var(--nt-tinta-2); }
+
+/* ============================================================
+   NOVEDADES (sin figura propia en el mockup: el hilo, en el idioma del
+   diario — fecha en condensada, titular en negrita, carta clara)
+   ============================================================ */
+html[data-tema="noticiero"] .nv-hilo::before { background: var(--nt-linea-2); }
+html[data-tema="noticiero"] .nv-hito i svg { fill: var(--nt-fondo); stroke: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .nv-hito span { font-family: var(--nt-f-cond); font-size: 15px; font-weight: 700; letter-spacing: 1.4px; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .nv-av { background: var(--nt-indigo); box-shadow: 0 0 0 3px var(--nt-fondo); }
+html[data-tema="noticiero"] .nv-av img { filter: grayscale(.3); }
+html[data-tema="noticiero"] .nv-av svg { stroke: var(--nt-marfil); }
+html[data-tema="noticiero"] .nv-bur { border: 0; border-radius: 2px 12px 12px 12px; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea); padding: 10px 12px 11px; }
+html[data-tema="noticiero"] .nv-m:hover .nv-bur { box-shadow: inset 0 0 0 1px var(--nt-linea-2), 0 10px 22px -18px var(--nt-sombra); }
+html[data-tema="noticiero"] .nv-tit { font-size: 15px; font-weight: 700; }
+html[data-tema="noticiero"] .nv-h { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .nv-baj { font-size: 13.5px; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .proximamente { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .proximamente .ic-grande svg { stroke: var(--nt-indigo-2); opacity: .7; }
+html[data-tema="noticiero"] .proximamente h2 { font-family: var(--nt-f-tit); font-size: 23px; font-weight: 400; text-transform: uppercase; color: var(--nt-tinta); }
+
+/* ============================================================
+   ENCUESTAS (sin figura propia: tarjetas de carta; la ÚNICA a todo color
+   sigue siendo la abierta sin responder, ahora en índigo con el filete coral)
+   ============================================================ */
+html[data-tema="noticiero"] .enq-card { border: 0; border-radius: 0; background: var(--nt-carta);
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 16px 26px -20px var(--nt-sombra); }
+html[data-tema="noticiero"] .enq-card h3 { font-family: var(--nt-f-tit); font-size: 21px; font-weight: 400; line-height: 1.05; text-transform: uppercase; }
+html[data-tema="noticiero"] .enq-meta { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .enq-banda { background: transparent; color: var(--nt-tinta); border-bottom: 2px solid var(--nt-tinta); }
+html[data-tema="noticiero"] .enq-card.urge .enq-banda { color: var(--nt-marfil); background: var(--nt-indigo); border-bottom: 0;
+  box-shadow: inset 0 -3px 0 var(--nt-coral); }
+html[data-tema="noticiero"] .enq-chip { border-radius: 0; padding: 3px 7px; font-size: 10.5px; font-weight: 700; letter-spacing: 1px; }
+html[data-tema="noticiero"] .enq-card.urge .enq-chip { background: var(--nt-coral); color: var(--nt-sobre-coral); }
+html[data-tema="noticiero"] .enq-chip.abierta { background: var(--nt-ok-fondo); color: var(--nt-ok); }
+html[data-tema="noticiero"] .enq-dato { border: 0; border-radius: 99px; background: var(--nt-carta); color: var(--nt-tinta-1);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .enq-dato.anon { background: color-mix(in oklab, var(--nt-indigo) 6%, var(--nt-carta)); color: var(--nt-tinta);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-indigo) 30%, transparent); }
+html[data-tema="noticiero"] .enq-plazo-barra { height: 6px; border-radius: 0; background: var(--nt-linea); }
+html[data-tema="noticiero"] .enq-plazo-barra > i { border-radius: 0; background: var(--nt-indigo); }
+html[data-tema="noticiero"] .enq-plazo-txt { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .enq-marco { border: 0; border-radius: 0; background: var(--nt-carta); box-shadow: 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .enq-cab { background: var(--nt-indigo); background-image: none; color: var(--nt-marfil); box-shadow: inset 0 -4px 0 var(--nt-coral); }
+html[data-tema="noticiero"] .enq-cab .tit { font-family: var(--nt-f-tit); font-size: 25px; font-weight: 400; line-height: 1.02; text-transform: uppercase; }
+html[data-tema="noticiero"] .enq-avance { border-radius: 0; background: color-mix(in oklab, var(--nt-marfil) 25%, transparent); }
+html[data-tema="noticiero"] .enq-avance > i { border-radius: 0; background: var(--nt-coral-ind); }
+html[data-tema="noticiero"] .enq-preg .ob { color: var(--nt-mal); }
+html[data-tema="noticiero"] .enq-preg .opc,
+html[data-tema="noticiero"] .enq-ayuda,
+html[data-tema="noticiero"] .enq-escala-pies { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .enq-bloque { border-bottom-color: var(--nt-linea); }
+html[data-tema="noticiero"] .enq-opcion { border: 0; border-radius: 0; min-height: 44px; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .enq-opcion:hover { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .enq-opcion:has(input:checked) { background: color-mix(in oklab, var(--nt-coral-suave) 65%, var(--nt-carta));
+  box-shadow: inset 0 0 0 1.5px var(--nt-indigo); font-weight: 700; }
+html[data-tema="noticiero"] .enq-escala .n { border: 0; border-radius: 0; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2);
+  font-family: var(--nt-f-cond); font-size: 17px; font-weight: 700; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .enq-escala .n.elegido { background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
+html[data-tema="noticiero"] .enq-rank { border: 0; border-radius: 0; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .enq-rank.sobre-drop { border-top: 3px solid var(--nt-indigo); }
+html[data-tema="noticiero"] .enq-rank .n,
+html[data-tema="noticiero"] .enq-rank-res .pos { background: var(--nt-indigo); color: var(--nt-marfil); font-family: var(--nt-f-cond); }
+html[data-tema="noticiero"] .enq-disc { border-left: 0; border-radius: 8px; background: color-mix(in oklab, var(--nt-indigo) 5%, var(--nt-hoja-2));
+  color: var(--nt-tinta-1); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-indigo) 22%, transparent); }
+html[data-tema="noticiero"] .enq-pie { background: var(--nt-hoja-2); border-top-color: var(--nt-linea); }
+html[data-tema="noticiero"] .enq-error { border-radius: 8px; background: var(--nt-mal-fondo); color: var(--nt-tinta);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
+html[data-tema="noticiero"] .enq-hecha { color: var(--nt-ok); }
+html[data-tema="noticiero"] .enq-revision dd { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .enq-barra .via { border-radius: 0; background: var(--nt-linea); }
+html[data-tema="noticiero"] .enq-barra .via i { border-radius: 0; background: var(--nt-indigo); }
+html[data-tema="noticiero"] .enq-barra .pct,
+html[data-tema="noticiero"] .enq-res .cuantos,
+html[data-tema="noticiero"] .enq-prom { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .enq-prom b { font-family: var(--nt-f-tit); font-weight: 400; color: var(--nt-tinta); }
+html[data-tema="noticiero"] .enq-res-bloque { border-bottom-color: var(--nt-linea); }
+
+/* ============================================================
+   la tira de pestañas + Inicio y Salir flotando sobre ella
+   ============================================================ */
+html[data-tema="noticiero"] .tabbar {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); padding: 6px 2px calc(10px + env(safe-area-inset-bottom));
+  background: var(--nt-carta); border-top: 1px solid var(--nt-tinta);
+}
+html[data-tema="noticiero"] .tabbar button {
+  position: relative; padding: 0 1px; gap: 3px; color: var(--nt-tinta-2);
+  font-family: var(--nt-f-cond); font-size: 11px; font-weight: 700; letter-spacing: 0; line-height: 1.1; text-align: center;
+  white-space: nowrap; min-width: 0;
+}
+html[data-tema="noticiero"] .tabbar button .picon { width: 42px; height: 28px; border-radius: 99px; transition: background-color .25s var(--nt-curva); }
+html[data-tema="noticiero"] .tabbar button svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; }
+html[data-tema="noticiero"] .tabbar button.activa { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .tabbar button.activa .picon { background: var(--nt-coral); box-shadow: 0 6px 12px -8px var(--nt-sombra); }
+html[data-tema="noticiero"] .tabbar button.activa svg { stroke: var(--nt-sobre-coral); }
+html[data-tema="noticiero"] .tab-badge-tram {
+  top: -4px; right: auto; left: 50%; margin-left: 6px; min-width: 21px; height: 21px; padding: 0 5px;
+  background: var(--nt-globo); color: #fff; font-family: var(--nt-f-txt); font-size: 12.5px; font-weight: 700;
+  box-shadow: 0 0 0 2px var(--nt-carta); font-variant-numeric: tabular-nums;
+}
+html[data-tema="noticiero"] .flota-sal {
+  bottom: calc(80px + env(safe-area-inset-bottom)); gap: 1px; padding: 0; height: 44px; border: 0; overflow: hidden;
+  /* el separador entre Inicio y Salir es el fondo que asoma por el hueco de 1px */
+  background: color-mix(in oklab, var(--nt-marfil) 25%, var(--nt-indigo));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-carta) 18%, transparent), 0 14px 26px -12px color-mix(in oklab, var(--nt-indigo) 60%, transparent);
+}
+html[data-tema="noticiero"] .flota-sal a {
+  height: 44px; padding: 0 16px; gap: 8px; border-radius: 0; background: var(--nt-indigo); color: var(--nt-marfil);
+  font-family: var(--nt-f-txt); font-stretch: 108%; font-size: 12.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  transition: background-color .25s var(--nt-curva);
+}
+html[data-tema="noticiero"] .flota-sal a:hover { background: color-mix(in oklab, var(--nt-marfil) 10%, var(--nt-indigo)); }
+html[data-tema="noticiero"] .flota-sal a + a { box-shadow: none; }
+html[data-tema="noticiero"] .flota-sal .flota-ini svg { stroke: var(--nt-coral-ind); }
+html[data-tema="noticiero"] .flota-sal a:focus-visible { outline: 2px solid var(--nt-coral-ind); outline-offset: -3px; }
+/* "Instalar app" (static/pwa.js lo arma con estilos en línea): la pastilla
+   de carta con borde de tinta, a la izquierda de la misma fila; y el aviso,
+   una tarjeta de carta con el filete coral arriba. */
+html[data-tema="noticiero"] #pwa-link-fijo {
+  bottom: calc(83px + env(safe-area-inset-bottom)) !important; height: 38px; padding: 0 13px !important;
+  background: var(--nt-carta) !important; color: var(--nt-tinta) !important; opacity: 1 !important; border-radius: 99px !important;
+  font-family: var(--nt-f-txt) !important; font-size: 12.5px !important; font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1.5px var(--nt-tinta), 0 10px 20px -12px var(--nt-sombra) !important;
+}
+html[data-tema="noticiero"] #pwa-banner {
+  bottom: calc(134px + env(safe-area-inset-bottom)) !important; left: 10px !important; right: 10px !important;
+  background: var(--nt-carta) !important; color: var(--nt-tinta) !important; border-radius: 0 !important; font-family: var(--nt-f-txt) !important;
+  box-shadow: inset 0 3px 0 var(--nt-coral), inset 0 0 0 1px var(--nt-linea-2), 0 16px 30px -16px var(--nt-sombra) !important;
+}
+html[data-tema="noticiero"] #pwa-banner #pwa-btn-instalar { background: var(--nt-coral) !important; color: var(--nt-sobre-coral) !important;
+  border-radius: 2px !important; font-weight: 700 !important; letter-spacing: 1px; text-transform: uppercase; font-size: 12px !important; }
+html[data-tema="noticiero"] #pwa-banner #pwa-btn-cerrar { color: var(--nt-tinta-2) !important; opacity: 1 !important; }
+
+/* escritorio: la columna sigue siendo la del teléfono, un poco más ancha;
+   la tira se agrupa al centro y la pastilla de Inicio/Salir se apoya en el
+   borde de la columna */
+@media (min-width: 761px) {
+  html[data-tema="noticiero"] .cont { max-width: 540px; }
+  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - 270px)); }
+  html[data-tema="noticiero"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 96px)); justify-content: center; gap: 4px; }
+  html[data-tema="noticiero"] .tabbar button { font-size: 12.5px; }
+  html[data-tema="noticiero"] .flota-sal { right: max(14px, calc(50% - 310px)); }
+}
+
+/* ---------- movimiento ---------- */
+@keyframes nt-gira { to { transform: rotate(360deg); } }
+@keyframes nt-late { 50% { opacity: .3; } }
+@keyframes nt-sube { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="noticiero"] .ia-fase.activa .pt,
+  html[data-tema="noticiero"] .th-punto,
+  html[data-tema="noticiero"] .rc-chq { animation: none; }
+  html[data-tema="noticiero"] .rc-paso.curso i::after { animation-duration: 3s; }
+  html[data-tema="noticiero"] :is(.btn, .rc-btn, .th-tile, .th-r, .flota-sal a, .tabbar .picon) { transition: none; }
+}
+
+/* El distintivo de entorno (_entorno.html, estilos en línea): arriba de la
+   fila de Inicio/Salir, a la izquierda, para que no tape la tira. */
+html[data-tema="noticiero"] #distintivo-entorno { bottom: calc(130px + env(safe-area-inset-bottom)) !important; left: 14px !important; }

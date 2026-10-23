@@ -1256,8 +1256,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Inicio, importes en formato argentino (`peso()` de /app), y el panel con
     **riel lateral** (la misma `nav.nav-strip`, solo CSS). Tipografías nuevas
     vendoreadas: Manrope, Anton y Archivo (`static/fonts/licencias/`). Tests
-    `test_tema_laguna_*.py`. Siguen: el modelo Noticiero y la paleta del
-    sindicato con control de contraste.
+    `test_tema_laguna_*.py`. **Modelo Noticiero en las cuatro pantallas
+    HECHO** (Trabajador 0.50.01, Admin 0.68.01): `noticiero-portada.css`,
+    `noticiero-app.css`, `noticiero-panel-portada.css` y `noticiero-panel.css`;
+    las plantillas cargan `temas/<modelo>-<pantalla>.css` genérico, solo si el
+    archivo existe. Tests `test_tema_noticiero_*.py`. **Prueba de lectura en
+    la ficha del sindicato de `/plataforma`** (Plataforma 0.54.01,
+    `GET /plataforma/prueba-lectura`, misma `temas.prueba_de_lectura`): los
+    tres gremios de la demo tienen avisos. Riesgos conocidos: en Noticiero el
+    logo de Colm3na se cambia con `content:url()` (en Firefox puede quedar el
+    de fondo oscuro), y varias reglas pisan con `!important` estilos en línea
+    del JS. Narrativa en HISTORIAL.md, "Dos modelos de diseño". Sigue: el
+    bloque 7 (control de contraste en el alta del sindicato) y mirarlo con
+    datos reales de trámites y recibos.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
