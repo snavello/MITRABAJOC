@@ -6271,6 +6271,16 @@ def plataforma_usuarios(request: Request):
     })
 
 
+@app.get("/plataforma/prueba-lectura")
+def plataforma_prueba_lectura(request: Request, base: str = Query(""), primario: str = Query(""),
+                              acento: str = Query(""), apoyo: str = Query("")):
+    """La prueba de lectura de los colores de un sindicato (PLAN_TEMAS.md, D4),
+    para la ficha del sindicato en plataforma: la misma que ve el Super Admin
+    en la pestaña Apariencia."""
+    exigir_plataforma(request)
+    return {"avisos": temas.prueba_de_lectura(base, primario, acento, apoyo)}
+
+
 @app.get("/plataforma/fotos-tema")
 def plataforma_fotos_tema(request: Request, tema: str = Query(temas.TEMA_DEFECTO)):
     """La biblioteca de fotos de un modelo, sin los bytes."""
