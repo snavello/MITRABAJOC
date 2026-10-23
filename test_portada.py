@@ -157,7 +157,9 @@ def test_tarjeta_principal_dice_numeros_reales():
     r = _sesion("20111111119").get("/app/inicio")
     assert r.status_code == 200
     assert "recibos verificados este año" in r.text
-    assert "con diferencias para revisar" in r.text
+    # La portada ya no dice cómo salió el último (PLAN_TEMAS.md, pauta de
+    # SDN): las diferencias se ven adentro, en Tu Recibo.
+    assert "con diferencias para revisar" not in r.text
     print("OK  test_tarjeta_principal_dice_numeros_reales")
 
 

@@ -1,0 +1,908 @@
+/* ============================================================
+   Modelo LAGUNA (el 162 · "Eléctrico laguna") — app del afiliado (/app)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md, bloque 4. Fuente de verdad visual: el mockup p162-movil
+   (figuras T2, T2b, T3, T4, T5, T5b y T5c). La portada tiene su hoja aparte
+   (laguna-portada.css).
+
+   La idea del modelo, en una línea: la laguna (azul profundo → turquesa →
+   verde agua) y UN solo flúor viven en la portada; acá adentro todo es
+   liviano y blanco, con el turquesa solo en el botón principal, el paso
+   activo y el filete de arriba de cada tarjeta. Los bloques que tienen que
+   destacarse (la carátula del recibo, "Necesita tu atención", la carátula de
+   un trámite, la cabecera de la credencial) son la laguna oscura con el
+   flúor como único brillo.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="laguna"]: la plantilla la
+     carga solo con este modelo, y aun cargada por error no pisaría al otro.
+   - No toca contenido ni estructura: viste las clases que ya tiene
+     trabajador.html (y las que arma su JS). Nada de lo que hoy se ve se
+     esconde.
+   - La paleta del modelo va en variables --lg-*; con la paleta del
+     sindicato esas mismas funciones se derivan de --gremio-* (los cuatro
+     colores crudos del gremio, que la plantilla copia y nunca se pisan),
+     copiando la tabla de correspondencias del mockup (.p162m.pg).
+   - Las variables de la plantilla (--tinta, --gris, --linea, --marca-*…)
+     se redefinen con los roles del modelo: así lo que esta hoja no viste
+     una por una igual habla el idioma de la laguna.
+   - Los colores de estado (verde, ámbar, rojo) y los del semáforo de ARCA
+     son fijos: nunca de marca.
+   - Tipografía: Manrope, vendoreada en static/fonts/manrope.woff2
+     (variable, 300 a 800, SIL OFL), con la sans del sistema de respaldo. La
+     condensada (Barlow Condensed) NO va: Laguna escribe sus títulos en sans,
+     de peso medio y sin mayúsculas.
+   ============================================================ */
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- LA PALETA ---------- */
+html[data-tema="laguna"] {
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --lg-curva: cubic-bezier(.22, .61, .36, 1);
+  /* neutros */
+  --lg-negro: #171a20; --lg-tinta: #171a20; --lg-gris: #393c41; --lg-gris2: #5c5e62;
+  --lg-claro: #f4f4f4; --lg-claro-h: #e6e6e6; --lg-claro2: #eeeeee;
+  --lg-linea: #e3e4e5; --lg-linea2: #d0d1d2;
+  /* la laguna */
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-noche: #0a1a2b;
+  --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-m: #e6f8f3; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7;
+  --lg-sobre-osc: #d3f2f0;
+  /* el único flúor: relleno (--lg-fluor, con --lg-sobre-fluor encima) y texto sobre oscuro (--lg-fluor-txt) */
+  --lg-fluor: #46f0d2; --lg-fluor-h: #6af4dc; --lg-fluor-txt: var(--lg-fluor); --lg-sobre-fluor: var(--lg-azul);
+  /* estados: fijos, nunca de marca */
+  --lg-ok: #367519; --lg-ok-f: #eef5e7; --lg-ok-t: #24520f;
+  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3; --lg-amb-t: #6a3f06;
+  --lg-mal: #b3261e; --lg-mal-f: #fbeceb; --lg-mal-t: #8c1d17; --lg-mal-t2: #5e1612;
+  --lg-vio: #5b3d8a; --lg-vio-f: #efe8f8;
+  /* semáforo de ARCA: fijo, nunca de marca */
+  --lg-s-ok: #2fa88f; --lg-s-par: #e8b84b; --lg-s-mal: #d9685c; --lg-s-nada: #eceae3;
+
+  /* Las variables de la plantilla, con los roles del modelo */
+  --fuente: var(--lg-fuente);
+  --fuente-display: var(--lg-fuente);
+  --fuente-num: var(--lg-mono);
+  --tinta: var(--lg-tinta);
+  --gris: var(--lg-gris2);
+  --linea: var(--lg-linea);
+  --papel: var(--lg-claro);
+  --card: #fff;
+  --agua: var(--lg-ok);
+  --alerta: var(--lg-mal);
+  --ok: var(--lg-ok);
+  --error: var(--lg-mal);
+  --aviso: var(--lg-amb);
+  --marca-base: var(--lg-azul);
+  --marca-primario: var(--lg-turq-osc);
+  --marca-acento: var(--lg-turq);
+  --marca-apoyo: var(--lg-turq-osc);
+}
+
+/* ---------- con los colores del sindicato ----------
+   Mismo diseño: la laguna pasa a ser base → primario → apoyo del gremio y el
+   flúor pasa a ser su acento. Texto sobre claro: tintes oscurecidos; texto
+   sobre oscuro: --gremio-acento-txt; texto sobre un relleno de acento:
+   --gremio-tinta-acento (blanco o la base; los calcula la plantilla). */
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--gremio-base);
+  --lg-azul2: color-mix(in oklab, var(--gremio-base) 45%, var(--gremio-primario));
+  --lg-noche: color-mix(in oklab, var(--gremio-base) 78%, black);
+  --lg-turq: var(--gremio-primario);
+  --lg-turq-h: color-mix(in oklab, var(--gremio-primario) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--gremio-primario) 80%, black);
+  --lg-lag: var(--gremio-apoyo);
+  --lg-agua: color-mix(in oklab, var(--gremio-apoyo) 45%, white);
+  --lg-agua-m: color-mix(in oklab, var(--gremio-apoyo) 11%, white);
+  --lg-agua-f: color-mix(in oklab, var(--gremio-apoyo) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--gremio-apoyo) 7%, white);
+  --lg-sobre-osc: color-mix(in oklab, var(--gremio-apoyo) 16%, white);
+  --lg-fluor: var(--gremio-acento);
+  --lg-fluor-h: color-mix(in oklab, var(--gremio-acento) 86%, white);
+  --lg-fluor-txt: var(--gremio-acento-txt);
+  --lg-sobre-fluor: var(--gremio-tinta-acento);
+}
+
+/* ---------- la página ---------- */
+html[data-tema="laguna"] body {
+  font-family: var(--lg-fuente);
+  color: var(--lg-tinta);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .005em;
+}
+/* Sin mesa ni franja: en Laguna el interior es blanco y liso. */
+html[data-tema="laguna"] body.mesa { background: #fff; }
+html[data-tema="laguna"] body.mesa::before,
+html[data-tema="laguna"] body.mesa.franja::after { display: none; }
+html[data-tema="laguna"] :is(a, button, input, select, textarea, label):focus-visible {
+  outline: 2px solid var(--lg-negro); outline-offset: 2px;
+}
+html[data-tema="laguna"] .cont { padding: 24px 20px 40px; padding-bottom: 150px; }
+
+/* ---------- encabezado: blanco, con el filete turquesa arriba ---------- */
+html[data-tema="laguna"] .marca-enc.fija { z-index: 20; }
+html[data-tema="laguna"] .marca-barra {
+  background: rgba(255, 255, 255, .95);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  color: var(--lg-tinta);
+  border-bottom: 0;
+  box-shadow: inset 0 3px 0 var(--lg-turq), 0 1px 0 var(--lg-linea);
+  padding: 13px 16px 10px; padding-top: calc(13px + env(safe-area-inset-top));
+}
+html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 150px; }
+html[data-tema="laguna"] .marca-nombre { color: var(--lg-tinta); font-family: var(--lg-fuente);
+  font-weight: 700; font-size: 18px; text-transform: none; letter-spacing: 0;
+  border-right-color: var(--lg-turq); }
+/* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
+   existe; si no, queda la de siempre). */
+html[data-tema="laguna"] .marca-colmena { height: 19px; content: var(--logo-colmena-claro, normal); }
+
+/* La identidad: nombre a la izquierda, CUIL a la derecha. */
+html[data-tema="laguna"] .ident { justify-content: space-between; align-items: baseline;
+  padding: 11px 20px; background: #fff; border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .ident-nombre { font-size: 14.5px; font-weight: 600; color: var(--lg-tinta); }
+html[data-tema="laguna"] .ident-cuil { font-size: 12.5px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
+
+/* ---------- títulos y textos ---------- */
+html[data-tema="laguna"] h1,
+html[data-tema="laguna"] .titulo-pagina,
+html[data-tema="laguna"] body.mesa .titulo-pagina,
+html[data-tema="laguna"] #tp-tramites h1 {
+  font-family: var(--lg-fuente); font-size: 30px; font-weight: 500; line-height: 1.1;
+  letter-spacing: -.005em; text-transform: none; color: var(--lg-tinta);
+}
+/* Sin franja oscura detrás: el título y su bajada vuelven a la tinta también
+   en escritorio. */
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina { color: var(--lg-tinta); }
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + p,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .sub,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .muted { color: var(--lg-gris); }
+html[data-tema="laguna"] .sub { font-size: 14px; color: var(--lg-gris); line-height: 1.5; margin-top: 8px; }
+html[data-tema="laguna"] .muted { color: var(--lg-gris2); }
+html[data-tema="laguna"] .nota { margin: 18px 4px 0; font-size: 12px; line-height: 1.5; color: var(--lg-gris2); text-align: center; }
+
+/* ---------- pastillas (botones) ---------- */
+html[data-tema="laguna"] .btn,
+html[data-tema="laguna"] .rc-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  min-height: 44px; height: auto; padding: 11px 24px; border-radius: 999px; border: 0;
+  background: var(--lg-turq); color: #fff;
+  font-family: var(--lg-fuente); font-size: 14px; font-weight: 600; line-height: 1.2;
+  letter-spacing: .02em; text-transform: none; cursor: pointer;
+  transition: background-color .33s var(--lg-curva), color .33s var(--lg-curva), transform .2s var(--lg-curva);
+}
+html[data-tema="laguna"] .btn:hover,
+html[data-tema="laguna"] .rc-btn:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .btn:active,
+html[data-tema="laguna"] .rc-btn:active { transform: scale(.98); }
+html[data-tema="laguna"] .btn.sec,
+html[data-tema="laguna"] .rc-btn.sec,
+html[data-tema="laguna"] .rc-acc .btn.sec {
+  background: #fff; color: var(--lg-tinta); border: 0; box-shadow: inset 0 0 0 1px var(--lg-linea2);
+}
+html[data-tema="laguna"] .btn.sec:hover,
+html[data-tema="laguna"] .rc-btn.sec:hover { background: var(--lg-claro); }
+html[data-tema="laguna"] .btn.alerta { background: var(--lg-mal); color: #fff; }
+html[data-tema="laguna"] .btn[disabled],
+html[data-tema="laguna"] .rc-btn[disabled] { opacity: .6; cursor: default; }
+html[data-tema="laguna"] .rc-btn svg { width: 18px; height: 18px; }
+html[data-tema="laguna"] .rc-acc { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+html[data-tema="laguna"] .rc-acc .btn,
+html[data-tema="laguna"] .rc-acc .rc-btn { margin-top: 0; }
+
+/* ---------- campos ---------- */
+html[data-tema="laguna"] .tram-input,
+html[data-tema="laguna"] .enq-input,
+html[data-tema="laguna"] .tram-msg-responder textarea {
+  min-height: 44px; border: 1px solid transparent; border-radius: 4px; background: var(--lg-claro);
+  padding: 11px 14px; font-family: inherit; font-size: 14px; color: var(--lg-tinta);
+  transition: border-color .3s var(--lg-curva), background-color .3s var(--lg-curva);
+}
+html[data-tema="laguna"] textarea.tram-input { line-height: 1.5; }
+html[data-tema="laguna"] .tram-input::placeholder,
+html[data-tema="laguna"] .enq-input::placeholder { color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-input:focus,
+html[data-tema="laguna"] .enq-input:focus,
+html[data-tema="laguna"] .tram-msg-responder textarea:focus { background: #fff; border-color: var(--lg-negro); outline: none; }
+html[data-tema="laguna"] .campo-tram label { font-size: 12.5px; font-weight: 600; color: var(--lg-gris); }
+html[data-tema="laguna"] .campo-tram.ok .tram-input { background: #fff; border-color: var(--lg-linea2); }
+html[data-tema="laguna"] .campo-tram.mal .tram-input { background: #fff; border-color: var(--lg-mal); box-shadow: inset 0 0 0 1px var(--lg-mal); }
+html[data-tema="laguna"] .campo-tram .tram-tick { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 11px; top: 32px; background: var(--lg-ok-f); color: var(--lg-ok); }
+html[data-tema="laguna"] .campo-tram.mal .tram-tick { background: var(--lg-mal-f); color: var(--lg-mal); }
+html[data-tema="laguna"] .campo-tram .tram-err { font-size: 12.5px; color: var(--lg-mal); }
+html[data-tema="laguna"] .campo-tram .tram-err.avs { color: var(--lg-amb); }
+html[data-tema="laguna"] .tram-input.tram-calculado { background: var(--lg-agua-f2); border-color: color-mix(in oklab, var(--lg-turq) 25%, transparent); color: var(--lg-tinta); }
+html[data-tema="laguna"] .campo-tram .tram-nota-ingreso { font-size: 12px; color: var(--lg-turq-osc); background: var(--lg-agua-f2);
+  border-left: 0; border-radius: 4px; }
+html[data-tema="laguna"] .campo-tram-opcion,
+html[data-tema="laguna"] .campo-tram-bool { font-size: 14px; }
+html[data-tema="laguna"] .campo-tram-opcion input,
+html[data-tema="laguna"] .campo-tram-bool input,
+html[data-tema="laguna"] .enq-opcion input { accent-color: var(--lg-turq); }
+html[data-tema="laguna"] .campo-tram-separador { border-top-color: var(--lg-linea2); }
+html[data-tema="laguna"] .archivo-nombre { font-size: 12.5px; color: var(--lg-gris); }
+
+/* ---------- carteles ---------- */
+html[data-tema="laguna"] .banner { border-radius: 6px; padding: 13px 14px; font-size: 13.5px; font-weight: 500; line-height: 1.5; }
+html[data-tema="laguna"] .banner.ok { background: var(--lg-ok-f); color: var(--lg-ok-t); }
+html[data-tema="laguna"] .banner.mal { background: var(--lg-mal-f); color: var(--lg-mal-t); }
+html[data-tema="laguna"] .cod-error { font-family: var(--lg-mono); font-size: 11.5px; }
+/* .disc es una nota con su color en un filo a la izquierda (inline): rojo
+   por defecto, ámbar para la base aproximada, verde para "Enviar a mi
+   sindicato". En Laguna el color va de relleno y el filo se va. */
+html[data-tema="laguna"] .disc { border-left: 0; border-radius: 6px; background: var(--lg-mal-f); color: var(--lg-mal-t); }
+html[data-tema="laguna"] .disc[style*="#d9a441"] { background: var(--lg-amb-f); color: var(--lg-amb-t); }
+html[data-tema="laguna"] .disc[style*="--agua"] { background: var(--lg-ok-f); color: var(--lg-ok-t); }
+html[data-tema="laguna"] .rc-hoja > .disc { margin: 12px; }
+html[data-tema="laguna"] .disc .btn.sec { margin-top: 0; }
+html[data-tema="laguna"] .alerta-legal { border-left: 0; border-radius: 6px; background: var(--lg-amb-f); color: var(--lg-amb-t); }
+html[data-tema="laguna"] .badge-reforma { background: var(--lg-vio-f); color: var(--lg-vio); }
+html[data-tema="laguna"] .badge-auto { background: var(--lg-amb-f); color: var(--lg-amb); }
+html[data-tema="laguna"] .spin { border-color: var(--lg-linea); border-top-color: var(--lg-turq); }
+
+/* ============================================================
+   T2 · TU RECIBO
+   ============================================================ */
+/* El marco: verde agua apenas, con el filete turquesa arriba. */
+html[data-tema="laguna"] .rc-panel {
+  border-radius: 10px; padding: 20px 16px 16px; color: var(--lg-tinta);
+  background: var(--lg-agua-f2); border-left: 0;
+  box-shadow: inset 0 3px 0 var(--lg-turq), 0 0 0 1px color-mix(in oklab, var(--lg-turq) 14%, transparent);
+}
+html[data-tema="laguna"] .rc-panel::before { display: none; }
+html[data-tema="laguna"] .rc-kicker,
+html[data-tema="laguna"] .rc-panel .rc-kicker {
+  font-family: var(--lg-fuente); font-size: 11.5px; font-weight: 600; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--lg-gris2);
+}
+html[data-tema="laguna"] .rc-h1,
+html[data-tema="laguna"] .rc-panel .rc-h1 {
+  font-family: var(--lg-fuente); font-size: 28px; font-weight: 500; line-height: 1.1;
+  letter-spacing: -.005em; text-transform: none; color: var(--lg-tinta); margin: 6px 0 0;
+}
+html[data-tema="laguna"] .rc-panel .rc-sub { margin-top: 8px; font-size: 14px; color: var(--lg-gris); line-height: 1.5; }
+
+/* los tres pasos: una raya arriba de cada uno, el número a la izquierda */
+html[data-tema="laguna"] .rc-pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 0; }
+html[data-tema="laguna"] .rc-paso {
+  display: grid; grid-template-columns: 24px 1fr; column-gap: 7px; align-content: start;
+  padding-top: 10px; text-align: left; font-size: 11.5px; line-height: 1.3; color: var(--lg-gris2);
+}
+html[data-tema="laguna"] .rc-paso::before,
+html[data-tema="laguna"] .rc-paso:first-child::before,
+html[data-tema="laguna"] .rc-paso:last-child::before {
+  top: 0; left: 0; right: 0; height: 2px; border-radius: 2px; background: var(--lg-linea2);
+}
+html[data-tema="laguna"] .rc-paso i {
+  position: static; transform: none; grid-row: span 2; width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--lg-linea2); background: #fff; color: var(--lg-gris);
+  font-family: var(--lg-fuente); font-size: 11.5px; font-weight: 700;
+}
+html[data-tema="laguna"] .rc-paso i svg { width: 13px; height: 13px; stroke-width: 2.4; }
+html[data-tema="laguna"] .rc-paso b {
+  font-family: var(--lg-fuente); font-size: 12.5px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: var(--lg-gris);
+}
+html[data-tema="laguna"] .rc-paso small { font-size: 11.5px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .rc-paso.on small { color: var(--lg-gris2); }
+html[data-tema="laguna"] .rc-paso.on b,
+html[data-tema="laguna"] .rc-paso.hecho b { color: var(--lg-tinta); }
+html[data-tema="laguna"] .rc-paso.hecho::before { background: var(--lg-negro); }
+html[data-tema="laguna"] .rc-paso.hecho i { background: var(--lg-negro); border-color: var(--lg-negro); color: #fff; }
+html[data-tema="laguna"] .rc-paso.on i { background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; animation: none; }
+html[data-tema="laguna"] .rc-paso.on::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; border-radius: 2px;
+  background: var(--lg-turq); transform-origin: left; animation: lg-llena 1.1s .2s var(--lg-curva) both;
+}
+/* en curso: el aro que gira en vez del número, y la raya que corre */
+html[data-tema="laguna"] .rc-paso.curso i {
+  background: #fff; border-color: var(--lg-turq); border-top-color: transparent; color: transparent;
+  animation: lg-gira 1s linear infinite;
+}
+html[data-tema="laguna"] .rc-paso.curso::after { animation: lg-corre 1.6s ease-in-out infinite; }
+
+/* la hoja: blanca, adentro del marco */
+html[data-tema="laguna"] .rc-hoja {
+  margin-top: 18px; background: #fff; border-radius: 8px; color: var(--lg-tinta);
+  box-shadow: 0 0 0 1px var(--lg-linea), 0 12px 26px -22px color-mix(in oklab, var(--lg-azul) 50%, transparent);
+}
+html[data-tema="laguna"] .rc-hoja > * + * { border-top-color: var(--lg-linea); }
+
+/* paso 1: archivo elegido, consejos, "ver mis recibos" */
+html[data-tema="laguna"] .rc-arch { margin: 12px; padding: 12px; border-radius: 6px; background: var(--lg-agua-f2);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 25%, transparent); }
+html[data-tema="laguna"] .rc-arch .ic { width: 40px; height: 40px; border-radius: 6px; background: #fff; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .rc-arch .nb { font-weight: 700; }
+html[data-tema="laguna"] .rc-arch .mt { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris); }
+html[data-tema="laguna"] .rc-tips { margin-top: 0; padding: 16px; }
+html[data-tema="laguna"] .rc-tips-tit {
+  padding: 0 0 4px; border-bottom: 0; font-family: var(--lg-fuente); font-size: 14.5px; font-weight: 700;
+  letter-spacing: 0; text-transform: none; color: var(--lg-tinta);
+}
+html[data-tema="laguna"] .rc-tips-tit svg { stroke: var(--lg-turq-osc); width: 18px; height: 18px; }
+html[data-tema="laguna"] .rc-tip { display: grid; grid-template-columns: 36px 1fr; gap: 12px; padding: 12px 0 0; border-bottom: 0; }
+html[data-tema="laguna"] .rc-tip .rc-ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--lg-agua-f); color: var(--lg-turq-osc); margin-top: 0; }
+html[data-tema="laguna"] .rc-tip .rc-ico svg { width: 18px; height: 18px; }
+html[data-tema="laguna"] .rc-tip b { font-size: 14px; font-weight: 700; }
+html[data-tema="laguna"] .rc-tip small { display: block; font-size: 12.5px; color: var(--lg-gris); margin-top: 2px; line-height: 1.45; }
+html[data-tema="laguna"] .rc-pie,
+html[data-tema="laguna"] .rc-panel .rc-pie {
+  margin-top: 14px; padding: 14px; border-radius: 8px; border: 0; background: #fff;
+  box-shadow: 0 0 0 1px var(--lg-linea); color: var(--lg-tinta); font-size: 14px; font-weight: 600;
+}
+html[data-tema="laguna"] .rc-pie svg { stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .rc-pie span {
+  margin-left: auto; color: var(--lg-gris2); font-size: 10.5px; font-weight: 400; letter-spacing: .12em;
+  text-transform: uppercase; border: 1px solid var(--lg-linea2); border-radius: 999px; padding: 3px 8px; white-space: nowrap;
+}
+
+/* la espera: el aro y las fases */
+html[data-tema="laguna"] .rc-hoja .ia-cron { padding: 20px 16px 4px; }
+html[data-tema="laguna"] .ia-aro { width: 132px; height: 132px; }
+html[data-tema="laguna"] .ia-aro .pista { stroke: var(--lg-linea); stroke-width: 5; }
+html[data-tema="laguna"] .ia-aro .avance { stroke: var(--lg-turq); stroke-width: 5; }
+html[data-tema="laguna"] .ia-aro .centro .n { font-family: var(--lg-fuente); font-size: 26px; font-weight: 600;
+  color: var(--lg-tinta); letter-spacing: 0; }
+html[data-tema="laguna"] .ia-aro .centro .et { font-size: 11px; letter-spacing: .16em; color: var(--lg-gris2); }
+html[data-tema="laguna"] .ia-fases,
+html[data-tema="laguna"] .rc-hoja .ia-fases { display: grid; gap: 10px; background: none; border: 0; border-radius: 0; margin-top: 18px; padding: 0 0 12px; }
+html[data-tema="laguna"] .ia-fase { background: none; padding: 0; font-size: 13.5px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .ia-fase .pt { width: 14px; height: 14px; border-radius: 50%; background: none;
+  border: 1.5px solid var(--lg-linea2); display: grid; place-items: center; }
+html[data-tema="laguna"] .ia-fase.hecha { color: var(--lg-tinta); }
+html[data-tema="laguna"] .ia-fase.hecha .pt { background: var(--lg-negro); border-color: var(--lg-negro); }
+html[data-tema="laguna"] .ia-fase.hecha .pt::after { content: ""; width: 6px; height: 3px; border: 1.5px solid #fff;
+  border-top: 0; border-right: 0; transform: rotate(-45deg) translate(.5px, -.5px); }
+html[data-tema="laguna"] .ia-fase.activa { color: var(--lg-tinta); font-weight: 700; }
+html[data-tema="laguna"] .ia-fase.activa .pt { background: var(--lg-turq); border-color: var(--lg-turq);
+  box-shadow: none; animation: lg-late 1.4s ease-in-out infinite; }
+
+/* paso 2: la carátula (la laguna oscura con un brillo flúor), la grilla de
+   datos y los conceptos leídos */
+html[data-tema="laguna"] .rc-caratula {
+  position: relative; overflow: hidden; margin: 12px; padding: 16px; border-radius: 8px; border-left: 0;
+  background: var(--lg-azul); color: #fff;
+}
+html[data-tema="laguna"] .rc-caratula::after {
+  content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--lg-fluor) 28%, transparent), color-mix(in oklab, var(--lg-fluor) 0%, transparent));
+}
+html[data-tema="laguna"] .rc-hoja > .rc-caratula + * { border-top: 0; }
+html[data-tema="laguna"] .rc-caratula .rc-kicker { position: relative; color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .rc-caratula .per { position: relative; font-family: var(--lg-fuente); font-size: 22px; font-weight: 500;
+  text-transform: none; color: #fff; }
+html[data-tema="laguna"] .rc-caratula .emp { position: relative; font-size: 13.5px; color: var(--lg-sobre-osc); margin-top: 2px; }
+html[data-tema="laguna"] .rc-caratula .linea { position: relative; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .18); }
+html[data-tema="laguna"] .rc-caratula .linea span:first-child { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .rc-caratula .linea .imp { font-family: var(--lg-fuente); font-size: 16px; font-weight: 700; color: #fff; }
+html[data-tema="laguna"] .rc-datos { margin: 0 12px 12px; border: 0; border-radius: 6px; overflow: hidden; background: var(--lg-linea);
+  box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .rc-hoja > .rc-datos { border-top: 0; }
+html[data-tema="laguna"] .rc-datos > div { padding: 10px 12px; background: #fff; }
+html[data-tema="laguna"] .rc-datos .k { font-size: 11.5px; letter-spacing: 0; text-transform: none; color: var(--lg-gris2); }
+html[data-tema="laguna"] .rc-datos .v { display: block; font-size: 13.5px; font-weight: 600; margin-top: 2px; }
+html[data-tema="laguna"] .rc-datos .v.falta { color: var(--lg-mal); font-style: italic; font-weight: 500; }
+html[data-tema="laguna"] .rc-card > .rc-tips-tit { padding: 16px 16px 10px; }
+html[data-tema="laguna"] .chip .imp { white-space: nowrap; font-weight: 600; }
+html[data-tema="laguna"] .rc-card h2,
+html[data-tema="laguna"] .card h2 {
+  display: flex; align-items: center; gap: 8px; padding: 16px 16px 10px; font-family: var(--lg-fuente);
+  font-size: 14.5px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--lg-tinta);
+}
+html[data-tema="laguna"] .card { border-color: var(--lg-linea); border-radius: 8px; }
+html[data-tema="laguna"] .fila { padding: 9px 16px; border-top-color: var(--lg-linea); font-size: 13.5px; }
+html[data-tema="laguna"] .fila .imp { font-size: 15px; font-weight: 600; white-space: nowrap; }
+html[data-tema="laguna"] .fila .imp.neg { color: var(--lg-mal); }
+html[data-tema="laguna"] .dato { border-bottom-color: var(--lg-linea); }
+html[data-tema="laguna"] .dato .v.vacio { color: var(--lg-mal); }
+/* conceptos nuevos detectados */
+html[data-tema="laguna"] .nuevos { background: var(--lg-claro); border: 0; border-radius: 6px; }
+html[data-tema="laguna"] .rc-hoja .nuevos { margin: 12px; }
+html[data-tema="laguna"] .nuevos h2 { font-family: var(--lg-fuente); font-size: 14.5px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: var(--lg-tinta); }
+html[data-tema="laguna"] .nuevos p { font-size: 12.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .chip { border-top-color: var(--lg-linea2); }
+html[data-tema="laguna"] .chip-descuento { background: var(--lg-mal-f); border-top-color: var(--lg-linea2); }
+html[data-tema="laguna"] .chip .tag { background: var(--lg-agua-f); color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .remun { border-bottom-color: var(--lg-linea2); }
+html[data-tema="laguna"] .remun-lbl { font-size: 13px; font-weight: 600; color: var(--lg-gris); }
+/* el Sí / No de cada concepto nuevo: un segmentado claro, la opción elegida en blanco */
+html[data-tema="laguna"] .toggle { display: inline-flex; padding: 3px; gap: 2px; border: 0; border-radius: 999px; background: #fff;
+  box-shadow: inset 0 0 0 1px var(--lg-linea2); overflow: visible; }
+html[data-tema="laguna"] .toggle button { min-height: 30px; padding: 0 14px; border-radius: 999px; background: transparent;
+  color: var(--lg-gris); font-weight: 600; }
+html[data-tema="laguna"] .toggle button.activo { background: var(--lg-turq); color: #fff; }
+
+/* paso 3: el veredicto, lo chequeado y los totales */
+html[data-tema="laguna"] .rc-hoja > .rc-veredicto { margin: 12px; }
+html[data-tema="laguna"] .rc-veredicto { border: 0; border-radius: 10px; padding: 14px;
+  background: var(--lg-claro); box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .rc-veredicto.mal { background: var(--lg-mal-f); box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 26%, transparent); }
+html[data-tema="laguna"] .rc-veredicto.ok { background: var(--lg-ok-f); box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-ok) 26%, transparent); }
+html[data-tema="laguna"] .rc-vcab { align-items: center; gap: 10px; }
+html[data-tema="laguna"] .rc-vico { width: 30px; height: 30px; border-radius: 50%; }
+html[data-tema="laguna"] .rc-vico svg { width: 18px; height: 18px; }
+html[data-tema="laguna"] .rc-veredicto.mal .rc-vico { background: var(--lg-mal); color: #fff; }
+html[data-tema="laguna"] .rc-veredicto.ok .rc-vico { background: var(--lg-ok); color: #fff; }
+html[data-tema="laguna"] .rc-veredicto .tit { font-family: var(--lg-fuente); font-size: 14.5px; font-weight: 700;
+  text-transform: none; line-height: 1.35; margin-top: 0; }
+html[data-tema="laguna"] .rc-veredicto.mal .tit { color: var(--lg-mal-t); }
+html[data-tema="laguna"] .rc-veredicto.ok .tit { color: var(--lg-ok-t); }
+html[data-tema="laguna"] .rc-vsub { font-size: 13px; color: var(--lg-gris); }
+/* "Chequeamos N conceptos": es el encabezado del veredicto, como en el mockup */
+html[data-tema="laguna"] .rc-veredicto .rc-vcab .rc-vsub { font-size: 14.5px; font-weight: 700; line-height: 1.35; }
+html[data-tema="laguna"] .rc-veredicto.mal .rc-vcab .rc-vsub { color: var(--lg-mal-t); }
+html[data-tema="laguna"] .rc-veredicto.ok .rc-vcab .rc-vsub { color: var(--lg-ok-t); }
+html[data-tema="laguna"] .rc-hallazgo { border: 0; border-radius: 5px; padding: 9px 10px; margin-top: 7px;
+  font-size: 13px; line-height: 1.5; background: rgba(255, 255, 255, .7); color: var(--lg-mal-t2); }
+html[data-tema="laguna"] .rc-veredicto.ok .rc-hallazgo { color: var(--lg-ok-t); }
+html[data-tema="laguna"] .rc-hallazgo.aviso { background: var(--lg-amb-f); color: var(--lg-amb-t);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-amb) 20%, transparent); }
+html[data-tema="laguna"] .rc-chq { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; padding: 12px 16px;
+  border-bottom-color: var(--lg-linea); font-size: 14px; animation: lg-sube .7s var(--lg-curva) both; }
+html[data-tema="laguna"] .rc-chq .ic { color: var(--lg-ok); }
+html[data-tema="laguna"] .rc-chq .ic svg { width: 18px; height: 18px; stroke-width: 2; }
+html[data-tema="laguna"] .rc-chq.mal { background: var(--lg-mal-f); }
+html[data-tema="laguna"] .rc-chq.mal .ic { color: var(--lg-mal); }
+html[data-tema="laguna"] .rc-chq .tx { font-weight: 600; }
+html[data-tema="laguna"] .rc-chq .imp { font-family: var(--lg-fuente); font-size: 15px; font-weight: 600; text-align: right; }
+html[data-tema="laguna"] .rc-totales { margin: 14px 12px 12px; border-radius: 6px; background: var(--lg-claro); padding: 4px 0; }
+html[data-tema="laguna"] .rc-hoja > .rc-totales { border-top: 0; }
+html[data-tema="laguna"] .rc-totales .t { padding: 6px 16px; border-bottom: 0; font-size: 13.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .rc-totales .t .imp { font-family: var(--lg-fuente); font-size: 15px; font-weight: 500; color: var(--lg-tinta); }
+html[data-tema="laguna"] .rc-totales .t .imp.neg { color: var(--lg-tinta); }
+html[data-tema="laguna"] .rc-totales .neto { margin: 4px 16px 4px; padding: 10px 0 6px; background: none;
+  border-top: 1px solid var(--lg-linea2); color: var(--lg-tinta); font-weight: 700; }
+html[data-tema="laguna"] .rc-totales .neto .imp { font-size: 16px; font-weight: 700; }
+html[data-tema="laguna"] .check-circulo, html[data-tema="laguna"] .check-marca { stroke: var(--lg-ok); }
+html[data-tema="laguna"] .check-enviado span { color: var(--lg-ok); font-weight: 700; }
+
+/* historial: una sola lista blanca con divisiones */
+html[data-tema="laguna"] #historial-contenido { margin-top: 16px; background: #fff; border-radius: 8px; box-shadow: 0 0 0 1px var(--lg-linea); overflow: hidden; }
+html[data-tema="laguna"] #historial-contenido:empty { box-shadow: none; }
+html[data-tema="laguna"] #historial-contenido > .th-r { margin: 0; border: 0; border-radius: 0; border-bottom: 1px solid var(--lg-linea); padding: 13px 14px; }
+html[data-tema="laguna"] #historial-contenido > .th-r:last-child { border-bottom: 0; }
+
+/* ============================================================
+   modales: hoja blanca con su cabecera clara y la X en un círculo gris
+   ============================================================ */
+html[data-tema="laguna"] .modal-articulo,
+html[data-tema="laguna"] .modal-recibo { border-radius: 14px; box-shadow: 0 30px 60px -20px rgba(10, 26, 43, .45); }
+html[data-tema="laguna"] .modal-articulo-enc,
+html[data-tema="laguna"] .modal-recibo-enc {
+  background: #fff; background-image: none; color: var(--lg-tinta); border-left: 0;
+  box-shadow: inset 0 3px 0 var(--lg-turq), 0 1px 0 var(--lg-linea);
+  align-items: center;
+}
+html[data-tema="laguna"] .modal-articulo-enc::before { display: none; }
+html[data-tema="laguna"] .modal-articulo-enc .modal-k { color: var(--lg-gris2); font-size: 11.5px; font-weight: 600; letter-spacing: .2em; }
+html[data-tema="laguna"] .modal-articulo-enc h3 { font-family: var(--lg-fuente); font-size: 19px; font-weight: 600; color: var(--lg-tinta); text-transform: none; line-height: 1.25; }
+html[data-tema="laguna"] .modal-recibo-enc h3 { font-size: 17px; font-weight: 600; color: var(--lg-tinta); }
+html[data-tema="laguna"] .modal-cerrar-clara,
+html[data-tema="laguna"] .modal-recibo-cerrar {
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  background: var(--lg-claro); color: var(--lg-gris); opacity: 1;
+}
+html[data-tema="laguna"] .modal-recibo-cerrar svg,
+html[data-tema="laguna"] .modal-cerrar-clara svg { stroke: var(--lg-gris); width: 17px; height: 17px; }
+html[data-tema="laguna"] .modal-articulo-texto a,
+html[data-tema="laguna"] .tram-msg-adjunto { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .modal-recibo-card { background: var(--lg-claro); border-radius: 8px; }
+
+/* ============================================================
+   T3 · CREDENCIAL
+   ============================================================ */
+html[data-tema="laguna"] .cred {
+  margin-top: 18px; border: 0; border-radius: 14px; isolation: isolate;
+  box-shadow: 0 0 0 1px var(--lg-linea), 0 26px 40px -26px color-mix(in oklab, var(--lg-azul) 60%, transparent);
+}
+html[data-tema="laguna"] .cred-head {
+  background: var(--lg-azul); background-image: none; border-left: 0; padding: 14px 16px;
+  box-shadow: inset 0 -3px 0 var(--lg-fluor);
+}
+html[data-tema="laguna"] .cred-head::before { display: none; }
+html[data-tema="laguna"] .cred-logo { max-height: 46px; max-width: 90px; }
+html[data-tema="laguna"] .cred-head .cred-k { color: var(--lg-agua); font-size: 10.5px; font-weight: 600; letter-spacing: .2em; }
+html[data-tema="laguna"] .cred-sind { font-family: var(--lg-fuente); font-size: 15px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; line-height: 1.25; margin-top: 2px; }
+/* El retrato en duotono de la laguna, como en el mockup */
+html[data-tema="laguna"] .cred-retrato img { opacity: .2; filter: grayscale(1) contrast(1.05) brightness(1.04); }
+html[data-tema="laguna"] .cred-body { padding: 18px 18px 6px; }
+html[data-tema="laguna"] .cred-top { display: block; }
+html[data-tema="laguna"] .cred-nro { text-align: left; }
+html[data-tema="laguna"] .cred-lbl { font-size: 10.5px; letter-spacing: .16em; color: var(--lg-gris2); font-weight: 700; }
+html[data-tema="laguna"] .cred-nombre { font-size: 20px; font-weight: 600; margin: 3px 0 14px; }
+html[data-tema="laguna"] .cred-nro .cred-val { display: block; font-family: var(--lg-mono); font-size: 18px; letter-spacing: .06em;
+  color: var(--lg-turq-osc); margin: 3px 0 14px; }
+html[data-tema="laguna"] .cred-datos { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; padding: 10px 0 4px;
+  border-top: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .cred-datos .cred-val { font-size: 13.5px; font-weight: 600; margin-top: 2px; }
+html[data-tema="laguna"] .cred-inferior { justify-content: flex-start; align-items: flex-end; margin-top: 14px; padding-bottom: 10px; }
+html[data-tema="laguna"] .cred-firma { text-align: left; }
+html[data-tema="laguna"] .cred-firma img { margin: 0 0 -4px; }
+html[data-tema="laguna"] .cred-linea { margin: 2px 0 6px; max-width: none; border-top-color: var(--lg-gris2); }
+html[data-tema="laguna"] .cred-autoridad { font-size: 13px; font-weight: 700; }
+html[data-tema="laguna"] .cred-cargo { font-size: 12px; color: var(--lg-gris); }
+html[data-tema="laguna"] .cred-qr svg { padding: 6px; background: #fff; border-radius: 6px; box-shadow: 0 0 0 1px var(--lg-linea); box-sizing: content-box; }
+html[data-tema="laguna"] .cred-vence { margin-top: 6px; font-size: 11.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .cred-vence.vencido { color: var(--lg-mal); font-weight: 700; }
+html[data-tema="laguna"] .cred-pie { padding: 10px 18px; background: var(--lg-agua-f2); font-size: 12.5px; color: var(--lg-gris);
+  border-top-color: var(--lg-linea); }
+html[data-tema="laguna"] #tp-credencial .nota { font-size: 12.5px; color: var(--lg-gris); line-height: 1.55; margin: 16px 6px 0; }
+
+/* ============================================================
+   T4 · MIS APORTES (y la cabecera de Capacitación, que es la misma)
+   ============================================================ */
+html[data-tema="laguna"] .sem-card,
+html[data-tema="laguna"] .cap-card {
+  margin-top: 18px; border: 0; border-radius: 10px; background: #fff; overflow: hidden;
+  box-shadow: 0 0 0 1px var(--lg-linea), 0 14px 30px -24px color-mix(in oklab, var(--lg-azul) 50%, transparent);
+}
+html[data-tema="laguna"] .th-head {
+  padding: 16px 16px 14px; color: var(--lg-tinta); background: #fff; background-image: none; border-left: 0;
+  border-bottom: 1px solid var(--lg-linea); box-shadow: inset 0 3px 0 var(--lg-turq);
+}
+html[data-tema="laguna"] .th-head::before { display: none; }
+html[data-tema="laguna"] .th-head .k { color: var(--lg-gris2); font-size: 11.5px; font-weight: 600; letter-spacing: .2em; }
+html[data-tema="laguna"] .th-head .tit { font-family: var(--lg-fuente); font-size: 19px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; line-height: 1.25; margin-top: 4px; color: var(--lg-tinta); }
+html[data-tema="laguna"] .th-head .sub { font-size: 12.5px; color: var(--lg-gris2); margin-top: 3px; }
+
+/* el semáforo: luces llenas con su halo, celdas altas, colores de estado fijos */
+html[data-tema="laguna"] .sem-global { gap: 14px; padding: 16px; }
+html[data-tema="laguna"] .sem-luz { width: 56px; height: 56px; font-size: 24px; font-weight: 700; color: var(--lg-negro); }
+html[data-tema="laguna"] .sem-luz.rojo { background: var(--lg-s-mal); box-shadow: 0 0 0 6px color-mix(in oklab, var(--lg-s-mal) 18%, transparent); }
+html[data-tema="laguna"] .sem-luz.amarillo { background: var(--lg-s-par); box-shadow: 0 0 0 6px color-mix(in oklab, var(--lg-s-par) 20%, transparent); }
+html[data-tema="laguna"] .sem-luz.verde { background: var(--lg-s-ok); box-shadow: 0 0 0 6px color-mix(in oklab, var(--lg-s-ok) 18%, transparent); }
+html[data-tema="laguna"] .sem-luz.gris { background: var(--lg-s-nada); color: var(--lg-gris); }
+html[data-tema="laguna"] .sem-titulo,
+html[data-tema="laguna"] .sem-global.verde .sem-titulo,
+html[data-tema="laguna"] .sem-global.amarillo .sem-titulo,
+html[data-tema="laguna"] .sem-global.rojo .sem-titulo { font-size: 17px; font-weight: 700; color: var(--lg-tinta); }
+html[data-tema="laguna"] .sem-desc { font-size: 13px; color: var(--lg-gris); line-height: 1.45; }
+html[data-tema="laguna"] .sem-rubros { padding: 0 16px 14px; }
+html[data-tema="laguna"] .sem-rubro { margin-top: 18px; }
+html[data-tema="laguna"] .sem-rubro-lbl { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+html[data-tema="laguna"] .sem-rubro-lbl .n { font-weight: 700; color: var(--lg-tinta); }
+html[data-tema="laguna"] .sem-rubro-lbl > :last-child { font-size: 12.5px; font-weight: 600; color: var(--lg-gris); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .sem-barra { gap: 3px; }
+html[data-tema="laguna"] .sem-celda { min-width: 0; overflow: hidden; height: 30px; font-size: 10.5px; font-weight: 700; color: var(--lg-negro); background: var(--lg-s-nada);
+  font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .sem-celda.pagado { background: var(--lg-s-ok); }
+html[data-tema="laguna"] .sem-celda.parcial { background: var(--lg-s-par); }
+html[data-tema="laguna"] .sem-celda.impago,
+html[data-tema="laguna"] .sem-celda.no_presentada,
+html[data-tema="laguna"] .sem-celda.no_declarado { background: var(--lg-s-mal); }
+html[data-tema="laguna"] .sem-leyenda { padding: 14px 16px; font-size: 12.5px; color: var(--lg-gris); border-top-color: var(--lg-linea); }
+html[data-tema="laguna"] .sem-dot { width: 10px; height: 10px; border-radius: 50%; }
+html[data-tema="laguna"] .sem-fuente { padding: 0 16px 14px; font-size: 12px; font-style: normal; color: var(--lg-gris2); }
+html[data-tema="laguna"] .sem-acciones { padding: 2px 16px 16px; }
+html[data-tema="laguna"] .sem-paso { background: var(--lg-agua-f2); color: var(--lg-gris); border-radius: 6px; font-size: 12.5px; }
+html[data-tema="laguna"] .sem-paso b { color: var(--lg-tinta); }
+
+/* Capacitación: el cuerpo de la guía, liviano */
+html[data-tema="laguna"] .cap-body { padding: 6px 16px 18px; }
+html[data-tema="laguna"] .cap-body h3 { font-family: var(--lg-fuente); font-size: 11px; font-weight: 700; letter-spacing: .18em; color: var(--lg-gris2); }
+html[data-tema="laguna"] .cap-body h3::after { background: var(--lg-linea); }
+html[data-tema="laguna"] .cap-body .fila { padding: 10px 0; border-bottom-color: var(--lg-linea); font-size: 14px; }
+html[data-tema="laguna"] .cap-body p { font-size: 14px; color: var(--lg-gris); }
+html[data-tema="laguna"] .cap-body p b { color: var(--lg-tinta); }
+
+/* ============================================================
+   T5 · TRÁMITES
+   ============================================================ */
+/* "Necesita tu atención": la laguna oscura, con trama de puntos y un halo */
+html[data-tema="laguna"] .th-aten {
+  margin-top: 18px; border-radius: 10px; padding: 16px; border-left: 0; color: #fff;
+  background: var(--lg-azul); background-image: none;
+}
+html[data-tema="laguna"] .th-aten::before {
+  opacity: .22; mix-blend-mode: normal;
+  background-image: radial-gradient(rgba(255, 255, 255, .35) 1px, transparent 1.2px); background-size: 4px 4px;
+}
+html[data-tema="laguna"] .th-aten::after {
+  content: ""; position: absolute; right: -50px; bottom: -60px; width: 180px; height: 180px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--lg-lag) 50%, transparent), color-mix(in oklab, var(--lg-lag) 0%, transparent));
+}
+html[data-tema="laguna"] .th-aten .k { font-size: 11.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-fluor-txt); gap: 8px; }
+html[data-tema="laguna"] .th-punto { background: var(--lg-fluor); animation: lg-late 1.6s ease-in-out infinite; }
+html[data-tema="laguna"] .th-aten .tit { font-family: var(--lg-fuente); font-size: 20px; font-weight: 600; text-transform: none;
+  letter-spacing: 0; line-height: 1.25; margin-top: 8px; }
+html[data-tema="laguna"] .th-aten .exp { font-family: var(--lg-fuente); font-size: 12.5px; color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .th-aten .msg { gap: 10px; margin-top: 14px; padding: 12px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, .1); font-size: 14px; }
+html[data-tema="laguna"] .th-aten .msg .av { width: 34px; height: 34px; background: var(--lg-fluor); }
+html[data-tema="laguna"] .th-aten .msg .av svg { stroke: var(--lg-sobre-fluor); }
+html[data-tema="laguna"] .th-aten .msg b { font-size: 12px; font-weight: 400; color: var(--lg-agua); }
+html[data-tema="laguna"] .th-aten .msg span { color: #fff; margin-top: 2px; }
+html[data-tema="laguna"] .th-aten .bts { gap: 8px; margin-top: 14px; }
+html[data-tema="laguna"] .th-aten .bts button,
+html[data-tema="laguna"] .th-aten .bts label {
+  flex: 0 1 auto; height: 38px; padding: 0 18px; border-radius: 999px; border: 0;
+  font-family: var(--lg-fuente); font-size: 13.5px; font-weight: 600; letter-spacing: .02em; text-transform: none;
+  background: rgba(255, 255, 255, .12); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+}
+html[data-tema="laguna"] .th-aten .bts button.cta,
+html[data-tema="laguna"] .th-aten .bts label { background: var(--lg-fluor); color: var(--lg-sobre-fluor); }
+html[data-tema="laguna"] .th-aten .bts button.cta:hover,
+html[data-tema="laguna"] .th-aten .bts label:hover { background: var(--lg-fluor-h); }
+html[data-tema="laguna"] .th-aten :is(button, label, a):focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* los dos accesos: el principal en turquesa, el otro blanco */
+html[data-tema="laguna"] .th-acc { gap: 10px; margin-top: 14px; }
+html[data-tema="laguna"] .th-tile {
+  gap: 6px; padding: 14px; min-height: 104px; border: 0; border-radius: 8px; background: #fff;
+  box-shadow: 0 0 0 1px var(--lg-linea2); color: var(--lg-tinta);
+  transition: background-color .3s var(--lg-curva), transform .2s var(--lg-curva);
+}
+html[data-tema="laguna"] .th-tile svg,
+html[data-tema="laguna"] .th-tile:not(.cta) svg { stroke: var(--lg-turq-osc); stroke-width: 1.5; }
+html[data-tema="laguna"] .th-tile b { font-family: var(--lg-fuente); font-size: 14.5px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; line-height: 1.3; }
+html[data-tema="laguna"] .th-tile small { font-size: 12.5px; color: var(--lg-gris2); line-height: 1.35; }
+html[data-tema="laguna"] .th-tile.cta { background: var(--lg-turq); color: #fff; box-shadow: none; }
+html[data-tema="laguna"] .th-tile.cta:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .th-tile.cta svg,
+html[data-tema="laguna"] .th-tile.cta small { stroke: #fff; color: #fff; }
+html[data-tema="laguna"] .sem-acciones .th-tile { min-height: 0; }
+html[data-tema="laguna"] .sem-acciones .th-tile b { font-size: 14.5px; }
+html[data-tema="laguna"] .th-buscar { margin-top: 12px; padding: 0; border: 0; background: none; }
+html[data-tema="laguna"] #tram-buscar-btn { height: 44px; min-height: 44px; }
+
+/* filtros por estado: pastillas, la elegida rellena (nunca una barra al costado) */
+html[data-tema="laguna"] .th-fil { gap: 8px; margin-top: 20px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+html[data-tema="laguna"] .th-fil button {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--lg-linea2); background: #fff; font-size: 13px; font-weight: 600; color: var(--lg-gris); white-space: nowrap;
+}
+html[data-tema="laguna"] .th-fil button i { font-family: var(--lg-fuente); font-size: 12px; opacity: .85; margin-left: 0; font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .th-fil button.activo { background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; font-weight: 700; }
+
+/* la bandeja: una sola lista blanca, con divisiones */
+html[data-tema="laguna"] #tram-lista:has(> .th-r) { margin-top: 12px; background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px var(--lg-linea); overflow: hidden; }
+html[data-tema="laguna"] .th-r { padding: 14px 14px 12px; border: 1px solid var(--lg-linea); border-radius: 10px; transition: background-color .2s var(--lg-curva); }
+html[data-tema="laguna"] .tram-item { background: #fff !important; }
+html[data-tema="laguna"] .tram-item:hover { background: var(--lg-agua-f2) !important; }
+html[data-tema="laguna"] #tram-lista > .th-r { margin: 0; border: 0; border-radius: 0; border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] #tram-lista > .th-r:last-child { border-bottom: 0; }
+html[data-tema="laguna"] .th-r:hover { box-shadow: none; background: var(--lg-agua-f2); }
+html[data-tema="laguna"] .th-r .tit { font-size: 14.5px; font-weight: 700; }
+html[data-tema="laguna"] .th-r .exp { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .th-tag { height: 24px; display: inline-flex; align-items: center; padding: 0 9px; font-size: 11.5px; }
+html[data-tema="laguna"] .th-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 11px; }
+html[data-tema="laguna"] .th-prog i { height: 4px; background: var(--lg-linea); }
+html[data-tema="laguna"] .th-prog i.on { background: var(--lg-turq); }
+html[data-tema="laguna"] .th-prog i.cur { background: linear-gradient(90deg, var(--lg-turq) 50%, var(--lg-linea) 50%); }
+html[data-tema="laguna"] .th-prog i.al { background: var(--lg-mal); }
+html[data-tema="laguna"] .th-r .pie { margin-top: 9px; font-size: 12.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .th-r .pie b { color: var(--lg-tinta); }
+html[data-tema="laguna"] .th-r .pie b.nov,
+html[data-tema="laguna"] .th-r .pie b.esp { color: var(--lg-mal); }
+html[data-tema="laguna"] .tram-item .punto-novedad { background: var(--lg-mal); }
+
+/* T5b · las cajas (elegir el tipo, el detalle): blancas, con el filete turquesa */
+html[data-tema="laguna"] .tram-box { margin-top: 18px; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .tram-box-enc { padding: 16px; background: #fff; background-image: none;
+  border-bottom: 1px solid var(--lg-linea); box-shadow: inset 0 3px 0 var(--lg-turq); }
+html[data-tema="laguna"] .tram-box-enc::before { display: none; }
+html[data-tema="laguna"] .tram-box-enc .tit { font-family: var(--lg-fuente); font-size: 19px; font-weight: 600; color: var(--lg-tinta); letter-spacing: 0; }
+html[data-tema="laguna"] #tram-det-expediente { font-family: var(--lg-mono); font-weight: 600; letter-spacing: .02em; }
+html[data-tema="laguna"] .tram-box-enc .sub { font-size: 13px; color: var(--lg-gris); }
+html[data-tema="laguna"] .tram-box-body { padding: 16px; }
+html[data-tema="laguna"] #tram-tipos .tram-box-body { padding: 0; }
+/* Los tipos llegan como botones con estilos en línea (cargarTiposTramite):
+   acá pasan a ser las filas del mockup, con el ícono en verde agua a la
+   izquierda, el código en monoespaciada y la flecha a la derecha. */
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item {
+  position: relative; display: block; margin: 0 !important; border: 0 !important; border-radius: 0;
+  border-bottom: 1px solid var(--lg-linea) !important; padding: 14px 40px 14px 64px !important;
+  background: #fff !important; color: var(--lg-tinta); font-size: 14.5px;
+}
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item:last-child { border-bottom: 0 !important; }
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item:hover { background: var(--lg-agua-f2) !important; }
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item::before {
+  content: ""; position: absolute; left: 16px; top: 50%; width: 36px; height: 36px; margin-top: -18px; border-radius: 8px;
+  background: var(--lg-agua-f);
+}
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item::after {
+  content: ""; position: absolute; left: 24px; top: 50%; width: 20px; height: 20px; margin-top: -10px;
+  background: var(--lg-turq-osc);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h4'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item b { font-weight: 700; }
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item .muted {
+  display: inline-block; margin-top: 1px; font-family: var(--lg-mono); font-size: 11.5px !important; letter-spacing: .1em; color: var(--lg-gris2);
+}
+/* la flecha: un chevrón dibujado con dos bordes, en el texto del botón no hay lugar para un ícono */
+html[data-tema="laguna"] #tram-tipos-lista > .tram-item b::after {
+  content: ""; position: absolute; right: 18px; top: 50%; width: 7px; height: 7px; margin-top: -4px;
+  border-top: 1.5px solid var(--lg-gris2); border-right: 1.5px solid var(--lg-gris2); transform: rotate(45deg);
+}
+
+/* T5b · la carátula del formulario: la laguna oscura con el brillo flúor */
+html[data-tema="laguna"] .tram-caratula { padding: 16px; background: var(--lg-azul); background-image: none; border-radius: 10px 10px 0 0; }
+html[data-tema="laguna"] .tram-caratula::before { display: none; }
+html[data-tema="laguna"] .tram-caratula::after {
+  content: ""; position: absolute; right: -30px; top: -30px; width: 130px; height: 130px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--lg-fluor) 30%, transparent), color-mix(in oklab, var(--lg-fluor) 0%, transparent));
+}
+html[data-tema="laguna"] .tram-caratula .tit { font-family: var(--lg-fuente); font-size: 21px; font-weight: 600; line-height: 1.2;
+  letter-spacing: 0; text-transform: none; }
+html[data-tema="laguna"] .tram-caratula .meta { gap: 8px; margin-top: 10px; }
+html[data-tema="laguna"] .tram-caratula .cod,
+html[data-tema="laguna"] .tram-caratula .exp {
+  font-family: var(--lg-mono); font-size: 12px; font-weight: 700; letter-spacing: .06em; padding: 4px 9px;
+  border: 0; border-radius: 999px; background: rgba(255, 255, 255, .12); color: #fff;
+}
+html[data-tema="laguna"] .tram-caratula .cod { background: var(--lg-fluor); color: var(--lg-sobre-fluor); }
+html[data-tema="laguna"] .tram-caratula .cod:empty { display: none; }
+html[data-tema="laguna"] .tram-prog span { font-size: 13px; color: var(--lg-gris); }
+html[data-tema="laguna"] .tram-prog span b { font-family: var(--lg-fuente); color: var(--lg-tinta); }
+html[data-tema="laguna"] .tram-prog-bar { height: 6px; background: var(--lg-linea); }
+html[data-tema="laguna"] .tram-prog-bar i { background: var(--lg-turq); }
+html[data-tema="laguna"] .tram-requisitos { border: 0; border-radius: 10px; padding: 16px; background: var(--lg-amb-f); color: var(--lg-amb-t);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-amb) 26%, transparent); }
+html[data-tema="laguna"] .tram-requisitos.espera { background: var(--lg-claro); color: var(--lg-gris); box-shadow: 0 0 0 1px var(--lg-linea); }
+/* el sello "ENVIADO" */
+html[data-tema="laguna"] .tram-sello { border: 3px solid var(--lg-turq-osc); color: var(--lg-turq-osc); font-family: var(--lg-fuente);
+  font-weight: 800; font-size: 24px; letter-spacing: .2em; }
+html[data-tema="laguna"] .tram-sello small { font-family: var(--lg-mono); }
+
+/* T5c · el chat del trámite */
+html[data-tema="laguna"] .tram-chat { margin: 6px -16px 12px; padding: 12px 12px 14px; background: var(--lg-claro); }
+html[data-tema="laguna"] .tram-chat-sistema { font-size: 12px; color: var(--lg-gris); background: #fff; border: 0; box-shadow: 0 0 0 1px var(--lg-linea);
+  border-radius: 999px; padding: 6px 12px; line-height: 1.4; }
+html[data-tema="laguna"] .tram-chat-fila.ajeno .tram-chat-burbuja { background: #fff; border: 0; border-radius: 12px 12px 12px 3px; box-shadow: 0 1px 0 rgba(0, 0, 0, .05); }
+html[data-tema="laguna"] .tram-chat-fila.propio .tram-chat-burbuja { background: var(--lg-agua-f); border-radius: 12px 12px 3px 12px; }
+html[data-tema="laguna"] .tram-chat-remitente { font-size: 11.5px; font-weight: 700; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-fila.propio .tram-chat-remitente { color: var(--lg-azul); }
+html[data-tema="laguna"] .tram-chat-texto { font-size: 13.5px; line-height: 1.45; }
+html[data-tema="laguna"] .tram-chat-meta { font-size: 11px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-chat-estado { font-size: 11.5px; letter-spacing: 0; text-transform: none; padding: 3px 8px;
+  background: var(--lg-agua-f); color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-avatar { border: 0; box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .tram-chat-avatar-fallback { background: #fff; border: 0; box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .tram-chat-avatar-fallback svg { stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-form { border: 0; border-radius: 8px; background: var(--lg-agua-f2);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 25%, transparent); }
+html[data-tema="laguna"] .tram-chat-form .tcf-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-form .tcf-btn { height: 32px; border-radius: 999px; background: var(--lg-turq); color: #fff; font-weight: 600; }
+html[data-tema="laguna"] .tram-chat-form.inactivo { box-shadow: inset 0 0 0 1px var(--lg-linea); background: #fff; color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-chat-responder { height: 48px; padding: 0 16px; border-radius: 999px; border: 0; background: #fff;
+  box-shadow: 0 0 0 1px var(--lg-linea2); font-size: 14px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .cta-form { background: var(--lg-turq); }
+
+/* ============================================================
+   NOVEDADES (sin figura propia en el mockup: el hilo, en el idioma de
+   la laguna — blanco, hairlines, el avatar en verde agua)
+   ============================================================ */
+html[data-tema="laguna"] .nv-hilo::before { background: var(--lg-linea); }
+html[data-tema="laguna"] .nv-hito i svg { fill: #fff; stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .nv-hito span { font-family: var(--lg-fuente); font-size: 11.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-gris2); }
+html[data-tema="laguna"] .nv-av { background: var(--lg-agua-f); box-shadow: 0 0 0 3px #fff; }
+html[data-tema="laguna"] .nv-av svg { stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .nv-bur { border: 0; border-radius: 4px 10px 10px 10px; box-shadow: 0 0 0 1px var(--lg-linea); padding: 10px 12px 11px; }
+html[data-tema="laguna"] .nv-m:hover .nv-bur { box-shadow: 0 0 0 1px var(--lg-linea2), 0 10px 22px -18px color-mix(in oklab, var(--lg-azul) 60%, transparent); }
+html[data-tema="laguna"] .nv-tit { font-size: 14.5px; font-weight: 700; }
+html[data-tema="laguna"] .nv-h { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .nv-baj { font-size: 13px; color: var(--lg-gris); }
+html[data-tema="laguna"] .proximamente .ic-grande svg { stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .proximamente h2 { font-size: 19px; font-weight: 600; }
+
+/* ============================================================
+   ENCUESTAS (sin figura propia: tarjetas blancas; la ÚNICA a todo color
+   sigue siendo la abierta sin responder, ahora en la laguna)
+   ============================================================ */
+html[data-tema="laguna"] .enq-card { border: 0; border-radius: 10px; box-shadow: 0 0 0 1px var(--lg-linea), 0 14px 30px -24px color-mix(in oklab, var(--lg-azul) 50%, transparent); }
+html[data-tema="laguna"] .enq-card h3 { font-size: 17px; font-weight: 600; }
+html[data-tema="laguna"] .enq-banda { background: #fff; border-bottom: 1px solid var(--lg-linea); box-shadow: inset 0 3px 0 var(--lg-linea2); }
+html[data-tema="laguna"] .enq-card.urge .enq-banda { color: #fff; background: linear-gradient(135deg, var(--lg-azul), var(--lg-azul2)); box-shadow: inset 0 3px 0 var(--lg-fluor); }
+html[data-tema="laguna"] .enq-card.urge .enq-chip { background: var(--lg-fluor); color: var(--lg-sobre-fluor); }
+html[data-tema="laguna"] .enq-dato { background: var(--lg-claro); border: 0; color: var(--lg-gris); }
+html[data-tema="laguna"] .enq-dato.anon { background: var(--lg-agua-f); color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .enq-plazo-barra { background: var(--lg-linea); }
+html[data-tema="laguna"] .enq-marco { border: 0; border-radius: 10px; box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .enq-cab { background: var(--lg-azul); background-image: none; box-shadow: inset 0 -3px 0 var(--lg-fluor); }
+html[data-tema="laguna"] .enq-cab .tit { font-weight: 600; }
+html[data-tema="laguna"] .enq-avance > i { background: var(--lg-fluor); }
+html[data-tema="laguna"] .enq-opcion { border-color: var(--lg-linea2); border-radius: 6px; }
+html[data-tema="laguna"] .enq-opcion:hover { background: var(--lg-agua-f2); }
+html[data-tema="laguna"] .enq-opcion:has(input:checked) { background: var(--lg-agua-f); border-color: var(--lg-turq); color: var(--lg-turq-osc); font-weight: 600; }
+html[data-tema="laguna"] .enq-escala .n { border-color: var(--lg-linea2); border-radius: 999px; font-weight: 700; }
+html[data-tema="laguna"] .enq-rank { border-color: var(--lg-linea2); border-radius: 6px; }
+html[data-tema="laguna"] .enq-disc { background: var(--lg-agua-f2); border-left: 0; border-radius: 6px; color: var(--lg-gris);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-turq) 18%, transparent); }
+html[data-tema="laguna"] .enq-pie { background: var(--lg-claro); border-top-color: var(--lg-linea); }
+html[data-tema="laguna"] .enq-error { background: var(--lg-mal-f); color: var(--lg-mal-t); }
+html[data-tema="laguna"] .enq-hecha { color: var(--lg-ok); }
+html[data-tema="laguna"] .enq-chip.abierta { background: var(--lg-ok-f); color: var(--lg-ok); }
+
+/* ============================================================
+   la tira de pestañas + Inicio y Salir flotando sobre ella
+   ============================================================ */
+html[data-tema="laguna"] .tabbar {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); padding: 6px 2px calc(12px + env(safe-area-inset-bottom));
+  background: #fff; border-top: 1px solid var(--lg-linea);
+  box-shadow: 0 -10px 24px -20px color-mix(in oklab, var(--lg-azul) 45%, transparent);
+}
+html[data-tema="laguna"] .tabbar button {
+  position: relative; padding: 0 1px; gap: 3px; color: var(--lg-gris2);
+  font-family: var(--lg-fuente); font-size: 10px; font-weight: 500; letter-spacing: .01em; line-height: 1.15; text-align: center;
+  hyphens: manual;
+}
+html[data-tema="laguna"] .tabbar button .picon { width: 42px; height: 28px; border-radius: 999px; transition: background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .tabbar button svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.5; }
+html[data-tema="laguna"] .tabbar button.activa { color: var(--lg-turq-osc); font-weight: 700; }
+html[data-tema="laguna"] .tabbar button.activa .picon { background: var(--lg-turq); }
+html[data-tema="laguna"] .tabbar button.activa svg { stroke: #fff; }
+html[data-tema="laguna"] .tab-badge-tram {
+  top: -5px; right: auto; left: 50%; margin-left: 7px; min-width: 19px; height: 19px; padding: 0 5px;
+  background: var(--lg-mal); border: 2px solid #fff; font-size: 11px; font-variant-numeric: tabular-nums;
+}
+html[data-tema="laguna"] .flota-sal {
+  bottom: calc(80px + env(safe-area-inset-bottom)); border: 0; background: var(--lg-azul);
+  box-shadow: 0 14px 28px -14px color-mix(in oklab, var(--lg-azul) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+html[data-tema="laguna"] .flota-sal a { font-family: var(--lg-fuente); transition: background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .flota-sal .flota-ini svg { stroke: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .flota-sal a:focus-visible { outline-color: var(--lg-fluor-txt); }
+/* "Instalar app" (static/pwa.js lo arma con estilos en línea): la pastilla
+   blanca del mockup, a la izquierda de la misma fila; y el aviso, una
+   tarjeta blanca con el filo verde agua. */
+html[data-tema="laguna"] #pwa-link-fijo {
+  bottom: calc(82px + env(safe-area-inset-bottom)) !important; height: 34px; padding: 0 13px !important;
+  background: #fff !important; color: var(--lg-tinta) !important; opacity: 1 !important; border-radius: 999px !important;
+  font-family: var(--lg-fuente) !important; font-size: 12.5px !important;
+  box-shadow: inset 0 0 0 1px var(--lg-linea2), 0 8px 18px -12px color-mix(in oklab, var(--lg-azul) 50%, transparent) !important;
+}
+html[data-tema="laguna"] #pwa-banner {
+  bottom: calc(132px + env(safe-area-inset-bottom)) !important; left: 10px !important; right: 10px !important;
+  background: #fff !important; color: var(--lg-tinta) !important; border-radius: 10px !important; font-family: var(--lg-fuente) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-lag) 45%, transparent), 0 14px 30px -18px color-mix(in oklab, var(--lg-azul) 55%, transparent) !important;
+}
+html[data-tema="laguna"] #pwa-banner #pwa-btn-instalar { background: var(--lg-turq) !important; color: #fff !important; border-radius: 999px !important; }
+html[data-tema="laguna"] #pwa-banner #pwa-btn-cerrar { color: var(--lg-gris) !important; opacity: 1 !important; }
+
+/* escritorio: la columna sigue siendo la del teléfono; la tira se agrupa al
+   centro y la pastilla de Inicio/Salir se apoya en el borde de la columna */
+@media (min-width: 761px) {
+  html[data-tema="laguna"] body { background: #fff; }
+  html[data-tema="laguna"] .cont { max-width: 520px; }
+  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 260px)); }
+  html[data-tema="laguna"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 96px)); justify-content: center; gap: 4px; }
+  html[data-tema="laguna"] .tabbar button { font-size: 11px; }
+  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 300px)); }
+}
+
+/* ---------- movimiento ---------- */
+@keyframes lg-llena { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes lg-corre { 0% { transform: scaleX(0); transform-origin: left; } 50% { transform: scaleX(1); transform-origin: left; }
+  51% { transform-origin: right; } 100% { transform: scaleX(0); transform-origin: right; } }
+@keyframes lg-gira { to { transform: rotate(360deg); } }
+@keyframes lg-late { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes lg-sube { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .rc-paso.on::after,
+  html[data-tema="laguna"] .rc-paso.curso::after,
+  html[data-tema="laguna"] .rc-paso.curso i,
+  html[data-tema="laguna"] .ia-fase.activa .pt,
+  html[data-tema="laguna"] .th-punto,
+  html[data-tema="laguna"] .rc-chq { animation: none; }
+  html[data-tema="laguna"] .rc-paso.curso i { color: var(--lg-turq); border-top-color: var(--lg-turq); }
+  html[data-tema="laguna"] :is(.btn, .rc-btn, .th-tile, .th-r, .flota-sal a) { transition: none; }
+}
+
+/* El distintivo de entorno (_entorno.html, estilos en línea): arriba de la
+   fila de Inicio/Salir, a la izquierda, para que no tape la tira. */
+html[data-tema="laguna"] #distintivo-entorno { bottom: calc(126px + env(safe-area-inset-bottom)) !important; left: 14px !important; }
+html[data-tema="laguna"] #tram-det-contenido a { color: var(--lg-turq-osc); text-decoration: none; border-bottom: 1px solid var(--lg-lag); }

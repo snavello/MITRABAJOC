@@ -39,7 +39,17 @@
     --marca-base: {{ marca.color_base if marca else '#0f1b2d' }};
     --marca-primario: {{ marca.color_primario if marca else '#152238' }};
     --marca-secundario: {{ marca.color_secundario if marca else '#1a7a6b' }};
-    --marca-acento: {{ marca.color_acento if marca else '#b23a2e' }}; }
+    --marca-acento: {{ marca.color_acento if marca else '#b23a2e' }};
+    /* Los nombres que usan los modelos de diseño (PLAN_TEMAS.md): el apoyo es
+       el color secundario, y el acento trae dos derivados que CSS no sabe
+       calcular solo -- el texto que va ENCIMA del acento (blanco si el acento
+       es oscuro, la base si es claro) y el acento usado COMO texto sobre
+       oscuro (aclarado si el acento es oscuro, como el de Gastronómica). */
+    --marca-apoyo: {{ marca.color_secundario if marca else '#1a7a6b' }};
+    {% set _ac = (marca.color_acento if marca and marca.color_acento else '#b23a2e') %}
+    {% set _ac_lum = ((_ac[1:3]|int(0, 16)) * 299 + (_ac[3:5]|int(0, 16)) * 587 + (_ac[5:7]|int(0, 16)) * 114) / 1000 if _ac|length == 7 else 255 %}
+    --marca-tinta-acento: {{ '#fff' if _ac_lum < 150 else 'var(--marca-base)' }};
+    --marca-acento-txt: {{ 'color-mix(in oklab, var(--marca-acento) 40%, white)' if _ac_lum < 150 else 'var(--marca-acento)' }}; }
   * { box-sizing:border-box; margin:0; }
   body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
   /* El header y la tira de pestañas se pegan juntos como un solo bloque --
@@ -47,16 +57,23 @@
      que calcular a mano la altura del header (que varía por breakpoint). */
   .app-bar-fija { position:sticky; top:0; z-index:21; }
   /* El encabezado (cinta + barra) vive entero en marca.css. */
-  .btn-cerrar, .btn-home, .btn-ayuda { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
+  /* Inicio y Salir flotan juntos abajo a la derecha, con su rótulo a la
+     vista (pauta común a los dos modelos, PLAN_TEMAS.md D7): un ícono solo
+     no dice qué hace. Los tres botones viven en un mismo contenedor fijo,
+     así el ancho de cada rótulo no obliga a calcular posiciones a mano. */
+  .flota-sesion { position:fixed; right:20px; bottom:20px; z-index:40; display:flex; align-items:center; gap:8px; }
+  .btn-cerrar, .btn-home, .btn-ayuda { position:static; width:44px; height:44px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; cursor:pointer; }
-  .btn-cerrar { right:20px; }
-  .btn-home { right:74px; }
+    box-shadow:0 2px 10px rgba(0,0,0,.25); cursor:pointer; }
+  .btn-cerrar, .btn-home { width:auto; gap:7px; padding:0 16px 0 13px; border-radius:999px;
+    color:#fff; font-size:13.5px; font-weight:600; }
   /* Solo aparece en las pantallas que tienen una ayuda larga -- no un botón
      fijo en todos lados, para no ensuciar el resto del panel. */
-  .btn-ayuda { right:128px; }
   .btn-ayuda.oculto { display:none; }
+  /* El logo de Colm3na para fondo CLARO: solo lo dibuja el modelo que pone
+     el encabezado en blanco (static/temas/laguna-panel.css). */
+  .enc-c3-claro { display:none; }
   .btn-cerrar svg, .btn-home svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
   .btn-home svg { stroke-width:2.2; }
   .btn-ayuda span { color:#fff; font-family:var(--fuente-display, inherit); font-weight:700; font-size:19px; line-height:1; }
@@ -1009,6 +1026,12 @@
   .ap-fotos .ap-op-t { font-size:12.5px; font-weight:600; }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño de quien mira (PLAN_TEMAS.md): una hoja por modelo,
+   cargada DESPUÉS de todo lo anterior. Solo la del modelo que ya tiene la
+   suya: mientras el otro no la tenga, se ve como hasta ahora. #}
+{% if apariencia and apariencia.tema == 'laguna' %}
+<link rel="stylesheet" href="/static/temas/laguna-panel.css?v={{ sello_static('temas/laguna-panel.css') }}">
+{% endif %}
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
@@ -1026,15 +1049,24 @@
 {# Encabezado normalizado. La pantalla de la derecha la escribe el JS de la
    tira de pestañas; el sticky lo da .app-bar-fija, no el parcial. #}
 {% include "_encabezado.html" %}
-<a class="btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-</a>
-<a class="btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
-</a>
+{% if apariencia and apariencia.tema == 'laguna' %}
+{# El modelo Laguna pone el encabezado en blanco: ahí va el logo de Colm3na
+   para fondo CLARO (el del parcial es el de fondo oscuro y se esconde). #}
+<img class="enc-c3-claro" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Colm3na">
+{% endif %}
+<div class="flota-sesion">
 <button type="button" class="btn-ayuda oculto" id="btn-ayuda" title="Ayuda" aria-label="Ayuda">
   <span>H</span>
 </button>
+<a class="btn-home" href="/admin/inicio" title="Inicio">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+  <span class="btn-rot">Inicio</span>
+</a>
+<a class="btn-cerrar" href="/admin/salir" title="Salir">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+  <span class="btn-rot">Salir</span>
+</a>
+</div>
 
 <!-- Overlay: ayuda contextual -- solo se usa en las pantallas que tienen
      una explicación larga, para no dejarla suelta en el medio del formulario. -->
@@ -1065,7 +1097,7 @@
 <nav class="nav-strip">
   {# El Panel Sindical es una página propia (no un panel de esta tira): la
      pestaña es un link. Va primera porque es la vista de conjunto. #}
-  {% if 'dashboard' in modulos and 'dashboard' in permisos %}<a class="tab-btn" style="text-decoration:none;" href="/admin/dashboard"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Panel Sindical</span></a>{% endif %}
+  {% if 'dashboard' in modulos and 'dashboard' in permisos %}<a class="tab-btn" style="text-decoration:none;" href="/admin/dashboard" title="Abre otra página"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Panel Sindical</span><svg class="tab-ext" viewBox="0 0 24 24" role="img" aria-label="abre otra página"><use href="#ic-ext"/></svg></a>{% endif %}
   {% if 'recibos' in modulos and 'reportes' in permisos %}<button class="tab-btn" data-panel="reportes"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Reportes</span></button>{% endif %}
   {% if 'recibos' in modulos and 'formulas' in permisos %}<button class="tab-btn" data-panel="formulas"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg><span>Reglas</span></button>{% endif %}
   {% if 'recibos' in modulos and 'conceptos' in permisos %}<button class="tab-btn" data-panel="conceptos"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Conceptos</span></button>{% endif %}
@@ -1104,6 +1136,7 @@
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
     <g id="ic-apariencia"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10" cy="7.3" r="1.1"/><circle cx="14.5" cy="7.3" r="1.1"/></g>
+    <g id="ic-ext"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M17 13.5V19H5V7h5.5"/></g>
     <g id="ic-clip"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></g>
   </defs>
 </svg>
@@ -3656,7 +3689,7 @@
   </div>
 </div>
 
-<div style="text-align:center; padding:0 0 20px;">
+<div class="acerca-pie" style="text-align:center; padding:0 0 20px;">
   <button type="button" onclick="document.getElementById('acerca-box').style.display='flex'" style="background:none; border:none; color:var(--gris); opacity:.45; font-size:10.5px; cursor:pointer; padding:6px;">Acerca de</button>
 </div>
 

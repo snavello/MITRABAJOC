@@ -1243,8 +1243,21 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     para cualquier operador, y la pestaña **Fotos** de `/plataforma` (subir,
     original → normalizada, punto de interés, publicar, para qué
     sindicatos). Tests: `test_apariencia_afiliado.py`,
-    `test_apariencia_panel.py`, `test_biblioteca_fotos_pantalla.py`. Siguen:
-    los dos modelos en cada pantalla (bloques 4 a 7).
+    `test_apariencia_panel.py`, `test_biblioteca_fotos_pantalla.py`.
+    **Modelo Laguna en las cuatro pantallas HECHO** (Trabajador 0.49.01, Admin
+    0.67.01): una hoja por pantalla en `static/temas/` (`laguna-portada.css`,
+    `laguna-app.css`, `laguna-panel-portada.css`, `laguna-panel.css`), todo
+    bajo `html[data-tema="laguna"]`, paleta del modelo y `[data-paleta=
+    "sindicato"]` derivada de `--marca-*`, cargada con sello solo para ese
+    modelo. Pautas comunes en las plantillas (valen para los dos modelos):
+    portada del afiliado sin diferencias ni faltantes, recibo con menos peso,
+    la última noticia como nota de tapa, accesos y tira de /app en el orden
+    acordado, Inicio fuera de las portadas y Salir flotando con rótulo junto a
+    Inicio, importes en formato argentino (`peso()` de /app), y el panel con
+    **riel lateral** (la misma `nav.nav-strip`, solo CSS). Tipografías nuevas
+    vendoreadas: Manrope, Anton y Archivo (`static/fonts/licencias/`). Tests
+    `test_tema_laguna_*.py`. Siguen: el modelo Noticiero y la paleta del
+    sindicato con control de contraste.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
