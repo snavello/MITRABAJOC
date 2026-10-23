@@ -52,11 +52,13 @@ def test_sin_logo_el_nombre_es_un_logotipo_del_mismo_tamano_en_las_cuatro():
         assert "-webkit-line-clamp: 2" in css, hoja
 
 
-def test_la_app_en_escritorio_no_es_la_columna_del_telefono():
-    for hoja in ("laguna-app", "noticiero-app"):
+def test_la_app_en_escritorio_sigue_en_la_columna_del_telefono():
+    """SDN, 2026-10-23: la columna de 680 px se veía peor distribuida que la
+    del teléfono; se volvió a 520 / 540 y Inicio/Salir quedó afuera."""
+    for hoja, ancho in (("laguna-app", 520), ("noticiero-app", 540)):
         css = _h(hoja)
-        assert ".cont { max-width: 680px; }" in css, hoja
-        assert "padding-inline: max(26px, calc(50% - 634px))" in css, hoja
+        assert f".cont {{ max-width: {ancho}px; }}" in css, hoja
+        assert "calc(50% - 634px)" not in css, hoja
 
 
 def test_la_pestana_encuestas_tiene_titulo_y_estado_vacio():
@@ -64,6 +66,19 @@ def test_la_pestana_encuestas_tiene_titulo_y_estado_vacio():
     bloque = html.split('id="tp-encuestas"', 1)[1][:400]
     assert '<h1 class="titulo-pagina">Encuestas</h1>' in bloque
     assert 'class="vacio-tab"' in html
+
+
+def test_colm3na_en_escritorio_a_30_px():
+    assert "height: 30px" in Path("static/encabezado.css").read_text(encoding="utf-8").split(".marca-colmena {", 1)[1][:120]
+    for hoja in ("laguna-app", "noticiero-app"):
+        assert '.marca-colmena { height: 30px;' in _h(hoja), hoja
+
+
+def test_los_grupos_del_panel_sin_titulo_a_la_vista():
+    html = _t("admin_portada")
+    assert "clip-path: inset(50%)" in html.split(".pt-grupo-tit {", 1)[1][:250]
+    for hoja in ("laguna-panel-portada", "noticiero-panel-portada"):
+        assert ".pt-grupo-tit {" not in _h(hoja), hoja
 
 
 def test_la_tira_del_panel_muestra_la_pestana_elegida():

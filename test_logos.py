@@ -52,9 +52,16 @@ def test_esquinas_distintas_no_se_recorta():
     assert logos.recortar(b.getvalue(), "image/png")[0] == b.getvalue()
 
 
-def test_lo_enorme_se_achica():
-    datos, _ = logos.recortar(_png((5000, 1500), (0, 0, 5000, 1500)), "image/png")
+def test_lo_grande_se_achica():
+    datos, _ = logos.recortar(_png((1500, 1000), (0, 0, 1500, 1000)), "image/png")
     assert max(_abrir(datos).size) == logos.LADO_MAXIMO
+
+
+def test_lo_enorme_ni_se_decodifica():
+    """El logo de Colm3na de Pruebas mide 8854×2559: decodificarlo y
+    recortarlo tumbaba el servidor (512 MB). Pasa tal cual."""
+    original = _png((5000, 1500), (0, 0, 5000, 1500))
+    assert logos.recortar(original, "image/png") == (original, "image/png")
 
 
 def test_svg_y_basura_pasan_tal_cual():

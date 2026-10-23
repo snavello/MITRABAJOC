@@ -24,7 +24,7 @@
    firma de quien opera la plataforma, no el logo principal. 24px de alto
    contra los 62 del gremio -- el gremio manda. Alto fijo y ancho libre,
    igual que el logo del sindicato. */
-.marca-colmena { margin-left: auto; height: 24px; width: auto; max-width: 140px;
+.marca-colmena { margin-left: auto; height: 30px; width: auto; max-width: 150px;
   object-fit: contain; }
 /* Dos margin-left:auto en la misma fila se REPARTEN el espacio libre, así
    que con la fecha o con "Volver" la colmena quedaría en el medio. */

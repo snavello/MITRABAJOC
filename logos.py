@@ -5,12 +5,14 @@ transparente (o de un color liso) alrededor del dibujo: un PNG de 219×148
 cuyo dibujo ocupa 42 px de alto se ve, en una caja de 64 px de alto, como un
 sello de 18 px. La caja no puede saberlo; el servidor sí. Así que `/logo/{id}`
 y los logos de la plataforma se sirven recortados al dibujo, con un margen
-chico y parejo, y acotados de tamaño. El archivo guardado NO se toca: si el
+chico y parejo, y acotados de tamaño (los enormes, de más de PIXELES_MAXIMOS, pasan tal
+cual: no se decodifican). El archivo guardado NO se toca: si el
 recorte se equivoca, se arregla acá y vuelve a salir bien para todos.
 
 Un SVG pasa tal cual (no es un mapa de píxeles), y lo que no se pueda leer
 también: nunca se deja de mostrar un logo por intentar mejorarlo.
 """
+import threading
 from collections import OrderedDict
 from io import BytesIO
 
@@ -18,11 +20,17 @@ from PIL import Image, ImageChops, UnidentifiedImageError
 
 MARGEN = 0.03           # del lado largo del dibujo, alrededor
 LADO_MAXIMO = 1200      # px: el logo más grande de la app mide 320 px de ancho
+# Arriba de esto no se toca: decodificar un PNG de 8854×2559 en RGBA son 90 MB,
+# y con las copias del recorte pasaba los 512 MB de Pruebas y tumbaba el
+# servidor (2026-10-23). El tamaño se lee de la cabecera, sin decodificar.
+PIXELES_MAXIMOS = 2_500_000
 ALFA_MINIMO = 12        # un píxel casi transparente (sombras, antialias suelto) no es dibujo
 TOLERANCIA_FONDO = 18   # diferencia por canal con la esquina para contar como fondo liso
 _CACHE_MAX = 64
 
 _cache: OrderedDict = OrderedDict()
+# De a uno por proceso: dos recortes a la vez duplican la memoria.
+_candado = threading.Lock()
 
 
 def _caja_del_dibujo(img: Image.Image):
@@ -54,7 +62,9 @@ def recortar(datos: bytes, mime: str) -> tuple[bytes, str]:
     if not datos or "svg" in (mime or "").lower():
         return datos, mime
     try:
-        img = Image.open(BytesIO(datos))
+        img = Image.open(BytesIO(datos))      # perezoso: todavía no decodifica
+        if img.width * img.height > PIXELES_MAXIMOS:
+            return datos, mime
         img.load()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError, ValueError):
         return datos, mime
@@ -87,7 +97,10 @@ def recortado(clave, datos: bytes, mime: str) -> tuple[bytes, str]:
     if k in _cache:
         _cache.move_to_end(k)
         return _cache[k]
-    r = recortar(datos, mime)
+    with _candado:
+        if k in _cache:
+            return _cache[k]
+        r = recortar(datos, mime)
     _cache[k] = r
     if len(_cache) > _CACHE_MAX:
         _cache.popitem(last=False)
