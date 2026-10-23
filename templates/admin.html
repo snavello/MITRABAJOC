@@ -1027,10 +1027,11 @@
 </style>
 {% include "_fondo_interior.html" %}
 {# El modelo de diseño de quien mira (PLAN_TEMAS.md): una hoja por modelo,
-   cargada DESPUÉS de todo lo anterior. Solo la del modelo que ya tiene la
-   suya: mientras el otro no la tenga, se ve como hasta ahora. #}
-{% if apariencia and apariencia.tema == 'laguna' %}
-<link rel="stylesheet" href="/static/temas/laguna-panel.css?v={{ sello_static('temas/laguna-panel.css') }}">
+   cargada DESPUÉS de todo lo anterior (static/temas/<modelo>-panel.css).
+   Solo si el archivo existe: el sello sale vacío cuando no está, y un
+   modelo sin hoja todavía se ve como antes. #}
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-panel.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
 {% endif %}
 </head>
 <body class="mesa franja">

@@ -1,0 +1,851 @@
+/* ============================================================
+   Modelo 147 · Noticiero — el panel del sindicato (/admin, todas sus pestañas)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md, bloque 6. Mockup: figuras E2, E2b, E3, E4, E4b, E5, E5b y
+   E6 de p147-escritorio.html. La portada es la tapa del diario; el panel
+   son las páginas de adentro: SERENAS, todo sobre papel marfil, tinta
+   índigo y UN coral (el botón principal, el número de la sección activa,
+   el filete del encabezado y de los modales).
+
+   La pieza central es el RIEL: la tira de pestañas (.nav-strip) pasa a una
+   columna fija a la izquierda, como el índice de un diario: «Índice del
+   panel» arriba, cada sección con su número (01, 02… contados con un
+   counter de CSS, así una sección que el sindicato no tiene no deja un
+   hueco), sus globos y el Panel Sindical con la flechita de "abre otra
+   página". Es una regla de layout: los mismos botones, los mismos
+   data-panel y el mismo JS. En teléfono vuelve a ser una tira deslizable.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="noticiero"]: la plantilla la
+     carga solo con este modelo, y aun así no pisa nada del otro.
+   - Todo color sale de las variables --nt-*, declaradas UNA vez. Con la
+     paleta del sindicato (data-paleta="sindicato") se redefinen desde los
+     cuatro colores de marca (--marca-*) con color-mix, con la misma
+     correspondencia que el .pg del mockup: tinta índigo -> base, coral ->
+     acento, papel teñido apenas con la base. Los estados (verde, ámbar,
+     rojo) no cambian nunca.
+   - Duraciones y curvas: los tokens de movimiento.css.
+   - La selección se pinta entera (pastilla índigo o tinte del coral con
+     borde índigo completo), nunca con una barra al costado (D6). Las
+     tarjetas y avisos que traían un filo de color a la izquierda pasan a
+     borde completo fino + fondo teñido. El filete coral del encabezado y
+     de la cabecera de los modales es la firma del modelo, no una selección.
+   - Tipografía: Anton para los titulares y Archivo para el texto, las del
+     mockup, vendoreadas en static/fonts (la CSP no deja cargar fuentes de
+     afuera); Barlow Condensed (ya declarada por encabezado.css) para el
+     riel, las sub-pestañas y los rótulos chicos.
+   ============================================================ */
+
+/* Anton (SIL OFL) y Archivo variable (SIL OFL), vendoreadas en static/fonts. */
+@font-face {
+  font-family: "Anton";
+  src: url("/static/fonts/anton.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Archivo";
+  src: url("/static/fonts/archivo.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Paleta del modelo (la de Colm3na) ---------- */
+html[data-tema="noticiero"] {
+  /* el papel, fijo: la paleta del sindicato lo tiñe, no lo reemplaza */
+  --nt-k-fondo: #f5efe3; --nt-k-hoja: #ece4d4; --nt-k-hoja-2: #efe8db; --nt-k-carta: #fffcf6;
+  --nt-k-linea: #dcd2c0; --nt-k-linea-2: #b8ac96; --nt-k-fijo: #eef0f3;
+  /* papel */
+  --nt-fondo: var(--nt-k-fondo); --nt-hoja: var(--nt-k-hoja); --nt-hoja-2: var(--nt-k-hoja-2);
+  --nt-carta: var(--nt-k-carta); --nt-linea: var(--nt-k-linea); --nt-linea-2: var(--nt-k-linea-2);
+  --nt-fijo: var(--nt-k-fijo);
+  /* tinta */
+  --nt-tinta: #1b1e4b; --nt-tinta-1: #34386b; --nt-tinta-2: #4d5180; --nt-tinta-3: #5c5f88;
+  /* superficies oscuras y lo que va encima */
+  --nt-indigo: #1b1e4b; --nt-indigo-2: #2a2e66; --nt-noche: #0a0c28;
+  --nt-marfil: #f5efe3; --nt-marfil-2: #d9d6ec;
+  /* el ÚNICO acento: relleno, texto encima, sobre oscuro, oscurecido, tinte */
+  --nt-coral: #ff6a4d; --nt-coral-suave: #ffd9cf; --nt-coral-tinta: #1b1e4b;
+  --nt-coral-osc: #ff6a4d; --nt-coral-claro: #ff6a4d; --nt-coral-luz: #ffd9cf;
+  /* la burbuja propia del chat */
+  --nt-burb-yo: #e4e3f0; --nt-burb-yo-l: #c9c7de;
+  /* estados: fijos, nunca toman la paleta */
+  --nt-ok: #1d6b47; --nt-ok-f: #dcebdf; --nt-ok-t: #173f2c;
+  --nt-amb: #8a5300; --nt-amb-f: #f6e6c4; --nt-amb-t: #4d2f00; --nt-amb-p: #c98a12;
+  --nt-mal: #9e1b32; --nt-mal-f: #f5dcdc; --nt-mal-t: #5b0f1d;
+  --nt-sombra: color-mix(in srgb, var(--nt-indigo) 28%, transparent);
+  --nt-f-tit: "Anton", "Bebas Neue", "Arial Narrow", sans-serif;
+  --nt-f-cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --nt-f-txt: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --nt-f-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --nt-curva: var(--ease-salida, cubic-bezier(.33, 1, .68, 1));
+  /* medidas del cromo */
+  --nt-riel: 212px;
+  --nt-top: 79px;
+  /* Los tokens de la plantilla también toman el modelo: así todo lo que ya
+     usaba --tinta, --linea, --gris o --papel pasa al papel y la tinta. */
+  --tinta: var(--nt-tinta); --linea: var(--nt-linea); --gris: var(--nt-tinta-2); --papel: var(--nt-hoja-2);
+  accent-color: var(--nt-indigo);
+  /* Al abrir /admin#seccion el navegador lleva el ancla arriba de todo: que
+     no quede escondida debajo del encabezado fijo. */
+  scroll-padding-top: calc(var(--nt-top) + 18px);
+}
+
+/* ---------- Paleta del sindicato ----------
+   La del .pg del mockup. El texto SOBRE el acento y el acento COMO texto
+   sobre oscuro los calcula la plantilla (--marca-tinta-acento,
+   --marca-acento-txt), porque dependen de qué tan oscuro es el acento de
+   cada gremio (el verde de Gastronómica no se lee sobre su base). */
+html[data-tema="noticiero"][data-paleta="sindicato"] {
+  --nt-fondo: color-mix(in oklab, var(--marca-base) 5%, var(--nt-k-fondo));
+  --nt-hoja: color-mix(in oklab, var(--marca-base) 5%, var(--nt-k-hoja));
+  --nt-hoja-2: color-mix(in oklab, var(--marca-base) 5%, var(--nt-k-hoja-2));
+  --nt-carta: color-mix(in oklab, var(--marca-base) 3%, var(--nt-k-carta));
+  --nt-linea: color-mix(in oklab, var(--marca-base) 8%, var(--nt-k-linea));
+  --nt-linea-2: color-mix(in oklab, var(--marca-base) 10%, var(--nt-k-linea-2));
+  --nt-fijo: color-mix(in oklab, var(--marca-base) 6%, var(--nt-k-fijo));
+  --nt-tinta: var(--marca-base);
+  --nt-tinta-1: color-mix(in oklab, var(--marca-base) 88%, var(--nt-fondo));
+  --nt-tinta-2: color-mix(in oklab, var(--marca-base) 80%, var(--nt-fondo));
+  --nt-tinta-3: color-mix(in oklab, var(--marca-base) 72%, var(--nt-fondo));
+  --nt-indigo: var(--marca-base);
+  --nt-indigo-2: var(--marca-primario);
+  --nt-noche: color-mix(in oklab, var(--marca-base) 70%, black);
+  --nt-marfil: color-mix(in oklab, var(--marca-base) 4%, var(--nt-k-fondo));
+  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--marca-primario));
+  --nt-coral: var(--marca-acento);
+  --nt-coral-suave: color-mix(in oklab, var(--marca-acento) 24%, var(--nt-carta));
+  --nt-coral-tinta: var(--marca-tinta-acento, var(--marca-base));
+  --nt-coral-osc: var(--marca-acento-txt, var(--marca-acento));
+  --nt-coral-claro: color-mix(in oklab, var(--marca-acento) 70%, black);
+  --nt-coral-luz: color-mix(in oklab, var(--marca-acento-txt, var(--marca-acento)) 60%, var(--nt-marfil));
+  --nt-burb-yo: color-mix(in oklab, var(--marca-primario) 12%, var(--nt-carta));
+  --nt-burb-yo-l: color-mix(in oklab, var(--marca-primario) 26%, var(--nt-carta));
+}
+
+/* ============================================================
+   1. La página: papel marfil, sin mesa ni franja de marca
+   ============================================================ */
+html[data-tema="noticiero"] body,
+html[data-tema="noticiero"] body.mesa {
+  background: var(--nt-fondo); color: var(--nt-tinta); font-family: var(--nt-f-txt);
+  font-size: 14.5px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+}
+html[data-tema="noticiero"] body.mesa::before,
+html[data-tema="noticiero"] body.mesa.franja::after { display: none; }
+
+/* ============================================================
+   2. Encabezado: papel, una línea, el filete coral a la izquierda
+   ============================================================ */
+html[data-tema="noticiero"] .app-bar-fija { background: var(--nt-fondo); }
+html[data-tema="noticiero"] .marca-enc { border-left: 0; }
+html[data-tema="noticiero"] .marca-barra {
+  box-sizing: border-box; height: var(--nt-top); padding: 0 40px; gap: 14px;
+  background: var(--nt-fondo); background-image: none; color: var(--nt-tinta);
+  border-bottom: 1px solid var(--nt-linea);
+  box-shadow: inset 5px 0 0 var(--nt-coral), 0 10px 18px -16px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .marca-barra::before { display: none; }
+html[data-tema="noticiero"] .marca-logo { height: 58px; max-width: 220px; }
+/* Sin logo, el nombre del gremio es el logotipo: en Anton y en tinta, con
+   el filete coral que ya tenía (igual que en la portada). */
+html[data-tema="noticiero"] .marca-nombre {
+  font-family: var(--nt-f-tit); font-weight: 400; font-size: 30px; letter-spacing: .3px; line-height: 1.3;
+  color: var(--nt-tinta); border-right-color: var(--nt-coral);
+}
+/* Colm3na sobre papel: la versión para fondo claro (el parcial trae la de
+   fondo oscuro, que en marfil no se lee). Solo cuando existen las dos. */
+html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] {
+  content: url("/logo-plataforma"); height: 22px;
+}
+
+/* ============================================================
+   3. El riel: el índice del diario (escritorio)
+   ============================================================ */
+@media (min-width: 761px) {
+  html[data-tema="noticiero"] .nav-strip {
+    position: fixed; top: var(--nt-top); left: 0; bottom: 0; z-index: 20;
+    width: var(--nt-riel); display: flex; flex-direction: column; gap: 0;
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    padding: 18px 0 96px; margin: 0; counter-reset: nt-sec;
+    background: var(--nt-hoja); border-bottom: 0; border-right: 1px solid var(--nt-linea-2);
+  }
+  /* «Índice del panel»: el rótulo de la columna, sobre una regla gruesa. */
+  html[data-tema="noticiero"] .nav-strip::before {
+    content: "Índice del panel"; display: block; flex: none; margin: 0 18px 8px 20px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--nt-tinta); font: 700 12px/1.2 var(--nt-f-cond);
+    letter-spacing: 2px; text-transform: uppercase; color: var(--nt-tinta-2);
+  }
+  html[data-tema="noticiero"] .tab-btn {
+    flex: none; width: 100%; min-height: 33px; height: auto; display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 6px;
+    padding: 0 14px 0 20px; margin: 0; border: 0; border-radius: 0; background: transparent;
+    color: var(--nt-tinta-2); font: 700 15px/1 var(--nt-f-cond); letter-spacing: .7px;
+    text-transform: uppercase; text-align: left; white-space: nowrap;
+    transition: background-color var(--mov-rapido, 180ms) var(--nt-curva), color var(--mov-rapido, 180ms) var(--nt-curva);
+  }
+  /* El filete fino entre una sección y la siguiente. */
+  html[data-tema="noticiero"] .tab-btn + .tab-btn { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--nt-indigo) 7%, transparent); }
+  html[data-tema="noticiero"] .tab-btn > span:not(.badge-noleidas) { overflow: hidden; text-overflow: ellipsis; }
+  html[data-tema="noticiero"] .tab-btn:hover { background: var(--nt-hoja-2); color: var(--nt-tinta); }
+  /* La sección activa: pastilla índigo entera, texto marfil, número coral. */
+  html[data-tema="noticiero"] .tab-btn.activa {
+    width: calc(100% - 20px); margin: 3px 10px; padding: 0 6px 0 10px; border-radius: 8px;
+    background: var(--nt-indigo); color: var(--nt-marfil);
+    box-shadow: 0 8px 16px -10px var(--nt-sombra);
+  }
+  html[data-tema="noticiero"] .tab-btn.activa + .tab-btn { box-shadow: none; }
+  /* El Panel Sindical abre otra página: va primero, en tinta, con su
+     flechita, y una regla lo aparta de las secciones de esta página. */
+  html[data-tema="noticiero"] a.tab-btn[href="/admin/dashboard"] { position: relative; color: var(--nt-tinta); overflow: visible; }
+  html[data-tema="noticiero"] a.tab-btn[href="/admin/dashboard"]::after {
+    content: ""; position: absolute; left: 20px; right: 14px; bottom: -1px; height: 1px; background: var(--nt-linea-2);
+  }
+  html[data-tema="noticiero"] a.tab-btn[href="/admin/dashboard"] + .tab-btn { box-shadow: none; }
+  html[data-tema="noticiero"] .wrap {
+    max-width: 1280px; margin: 0 0 0 var(--nt-riel); padding: 30px 40px 110px;
+  }
+  html[data-tema="noticiero"] .acerca-pie { margin-left: var(--nt-riel); }
+}
+/* El número de la sección: un contador, no un texto en la plantilla. */
+html[data-tema="noticiero"] .tab-btn { counter-increment: nt-sec; }
+html[data-tema="noticiero"] .tab-btn::before {
+  content: counter(nt-sec, decimal-leading-zero);
+  font: 600 10.5px/1 var(--nt-f-mono); letter-spacing: .3px; color: var(--nt-tinta-3);
+}
+html[data-tema="noticiero"] .tab-btn:hover::before { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .tab-btn.activa::before { color: var(--nt-coral-osc); }
+/* Íconos del riel: no se dibujan (como hasta hoy); solo la flechita. */
+html[data-tema="noticiero"] .tab-btn svg { display: none; }
+html[data-tema="noticiero"] .tab-btn svg.tab-ext {
+  display: block; justify-self: end; width: 13px; height: 13px; flex: none;
+  fill: none; stroke: var(--nt-coral-claro); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+/* Los globos: rojos (estado, no marca), al final de la fila. */
+html[data-tema="noticiero"] .tab-btn .badge-noleidas {
+  position: static; justify-self: end; display: inline-grid; place-items: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border: 0; border-radius: 9px;
+  background: var(--nt-mal); color: #fff; font: 700 11px/1 var(--nt-f-txt); letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+html[data-tema="noticiero"] .tab-btn.activa .badge-noleidas { box-shadow: 0 0 0 2px var(--nt-indigo); }
+
+/* ============================================================
+   4. Inicio + Salir: la barra índigo flotando abajo, con rótulo
+   ============================================================ */
+html[data-tema="noticiero"] .flota-sesion {
+  right: 22px; bottom: 14px; gap: 0; padding: 4px; border-radius: 99px; background: var(--nt-indigo);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nt-carta) 15%, transparent),
+              0 16px 30px -12px color-mix(in srgb, var(--nt-indigo) 55%, transparent);
+}
+html[data-tema="noticiero"] .btn-home,
+html[data-tema="noticiero"] .btn-cerrar {
+  height: 40px; padding: 0 16px; gap: 8px; border: 0; border-radius: 99px; box-shadow: none;
+  background: transparent; color: var(--nt-marfil);
+  font: 700 12.5px/1 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.2px; text-transform: uppercase;
+  transition: background-color var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] .btn-home:hover,
+html[data-tema="noticiero"] .btn-cerrar:hover { background: var(--nt-indigo-2); opacity: 1; }
+/* El filete fino entre Inicio y Salir. */
+html[data-tema="noticiero"] .btn-home + .btn-cerrar { box-shadow: inset 1px 0 0 color-mix(in srgb, var(--nt-marfil) 22%, transparent); }
+html[data-tema="noticiero"] .btn-home + .btn-cerrar:hover { box-shadow: none; }
+html[data-tema="noticiero"] .btn-home svg,
+html[data-tema="noticiero"] .btn-cerrar svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.8; }
+html[data-tema="noticiero"] .btn-cerrar svg { stroke: var(--nt-coral-osc); stroke-width: 2.1; }
+/* La ayuda: el círculo coral (solo en las pantallas que la tienen). */
+html[data-tema="noticiero"] .btn-ayuda {
+  width: 40px; height: 40px; margin-right: 4px; border: 0; border-radius: 99px; box-shadow: none;
+  background: var(--nt-coral);
+}
+html[data-tema="noticiero"] .btn-ayuda span { color: var(--nt-coral-tinta); font: 400 18px/1 var(--nt-f-tit); }
+html[data-tema="noticiero"] .btn-ayuda:hover { filter: brightness(1.05); opacity: 1; }
+
+/* ============================================================
+   5. Títulos y textos
+   ============================================================ */
+html[data-tema="noticiero"] body.mesa .titulo-pagina,
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina {
+  font-family: var(--nt-f-tit); font-size: 44px; font-weight: 400; line-height: .95;
+  letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta); margin-bottom: 10px;
+}
+html[data-tema="noticiero"] body.mesa .titulo-pagina::after { display: none; }
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + p,
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + .sub,
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + .muted { color: var(--nt-tinta-2); font-size: 14.5px; line-height: 1.5; }
+html[data-tema="noticiero"] h2:not(.titulo-pagina) {
+  font-family: var(--nt-f-tit); font-size: 24px; font-weight: 400; letter-spacing: .3px;
+  text-transform: uppercase; color: var(--nt-tinta); line-height: 1;
+}
+html[data-tema="noticiero"] h2:not(.titulo-pagina)::after { background: var(--nt-linea-2); }
+html[data-tema="noticiero"] .muted { color: var(--nt-tinta-3); font-size: 13.5px; line-height: 1.55; }
+html[data-tema="noticiero"] .panel > p.muted { color: var(--nt-tinta-2); max-width: 820px; }
+html[data-tema="noticiero"] b,
+html[data-tema="noticiero"] strong { color: inherit; }
+html[data-tema="noticiero"] .card h3,
+html[data-tema="noticiero"] .ct-secc {
+  font-family: var(--nt-f-tit); font-size: 19px; font-weight: 400; letter-spacing: .3px;
+  text-transform: uppercase; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] .card h3::after,
+html[data-tema="noticiero"] .ct-secc::after { background: var(--nt-linea-2); }
+html[data-tema="noticiero"] .rep-sub {
+  font: 700 12px/1.3 var(--nt-f-cond); letter-spacing: 1.5px; text-transform: uppercase; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] code,
+html[data-tema="noticiero"] .tvc-exp,
+html[data-tema="noticiero"] .mt-exp { font-family: var(--nt-f-mono); font-size: 12.5px; letter-spacing: .2px; }
+html[data-tema="noticiero"] code {
+  background: color-mix(in srgb, var(--nt-indigo) 7%, transparent); color: var(--nt-tinta); border-radius: 2px;
+}
+html[data-tema="noticiero"] a {
+  color: var(--nt-tinta); text-decoration-color: var(--nt-tinta-3); text-underline-offset: 4px; text-decoration-thickness: 1px;
+}
+html[data-tema="noticiero"] .wrap td a:not(.mini):not(.btn-mini) { font-weight: 600; }
+
+/* ============================================================
+   6. Botones: coral la acción principal, con borde los secundarios
+   ============================================================
+   La plantilla pinta TODO botón con una regla de quince :not(); esta la
+   repite con el prefijo del modelo, así le gana sin !important. Los botones
+   de cerrar de los modales salen de esa lista: llevan su propio círculo. */
+html[data-tema="noticiero"] button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas):not(.ct-help):not(.modal-recibo-cerrar):not(.overlay-ayuda-cerrar) {
+  font-family: var(--nt-f-txt); font-stretch: 108%; font-weight: 700; font-size: 13px; letter-spacing: 1.2px;
+  text-transform: uppercase; background: var(--nt-coral); color: var(--nt-coral-tinta); border: 0; border-radius: 2px;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--nt-indigo) 22%, transparent);
+  transition: filter var(--mov-rapido, 180ms) var(--nt-curva), transform var(--mov-presion, 120ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas):not(.ct-help):not(.modal-recibo-cerrar):not(.overlay-ayuda-cerrar):hover {
+  filter: brightness(1.05) saturate(1.05); opacity: 1;
+}
+html[data-tema="noticiero"] button:active { transform: scale(.97); }
+html[data-tema="noticiero"] button.sec {
+  margin-top: 0; font-family: var(--nt-f-txt); font-stretch: 108%; font-weight: 700; font-size: 12px;
+  letter-spacing: 1.2px; text-transform: uppercase; background: transparent; color: var(--nt-tinta);
+  border: 0; border-radius: 2px; box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
+  transition: box-shadow var(--mov-rapido, 180ms) var(--nt-curva), background-color var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] .card > button.sec { margin-top: 6px; }
+html[data-tema="noticiero"] button.sec:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); opacity: 1; }
+/* Las acciones de una fila: rectángulos chicos sobre papel, borde fino. */
+html[data-tema="noticiero"] button.mini,
+html[data-tema="noticiero"] a.mini,
+html[data-tema="noticiero"] a.btn-mini {
+  font: 600 12px/1.2 var(--nt-f-txt); letter-spacing: 0; text-transform: none;
+  background: var(--nt-carta); color: var(--nt-tinta-1); border: 0; border-radius: 2px; padding: 6px 9px;
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); text-decoration: none;
+  transition: box-shadow var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] button.mini:hover,
+html[data-tema="noticiero"] a.mini:hover,
+html[data-tema="noticiero"] a.btn-mini:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); opacity: 1; }
+html[data-tema="noticiero"] button.mini.borrar,
+html[data-tema="noticiero"] button.peligro {
+  color: var(--nt-mal); background: var(--nt-carta); border: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-mal) 45%, var(--nt-linea-2));
+}
+html[data-tema="noticiero"] button.peligro:hover,
+html[data-tema="noticiero"] button.mini.borrar:hover { background: var(--nt-mal-f); box-shadow: inset 0 0 0 1.5px var(--nt-mal); }
+html[data-tema="noticiero"] button:disabled {
+  background: var(--nt-hoja) !important; color: var(--nt-tinta-3) !important; box-shadow: none !important; filter: none !important; opacity: 1;
+}
+
+/* ============================================================
+   7. Sub-pestañas: pastillas con borde, la elegida rellena de índigo
+   ============================================================ */
+html[data-tema="noticiero"] .subtabs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; background: transparent; margin: 16px 0 18px;
+}
+html[data-tema="noticiero"] :is(.subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab) {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px;
+  border: 0; border-radius: 99px; background: transparent; color: var(--nt-tinta-1);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2);
+  font: 700 14px/1 var(--nt-f-cond); letter-spacing: 1.2px; text-transform: uppercase;
+  transition: background-color var(--mov-medio, 320ms) var(--nt-curva), color var(--mov-medio, 320ms) var(--nt-curva), box-shadow var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] :is(.subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab):hover {
+  color: var(--nt-tinta); box-shadow: inset 0 0 0 1.5px var(--nt-tinta);
+}
+html[data-tema="noticiero"] :is(.subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab).activa {
+  background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none;
+}
+html[data-tema="noticiero"] .subtabs .badge-noleidas {
+  position: static; display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border: 0; border-radius: 9px; background: var(--nt-mal); color: #fff; font: 700 11px/1 var(--nt-f-txt); letter-spacing: 0;
+}
+
+/* ============================================================
+   8. Formularios: campos de papel con borde fino, rótulos espaciados
+   ============================================================ */
+html[data-tema="noticiero"] .campo label,
+html[data-tema="noticiero"] .form-trab label {
+  font-size: 11px; font-weight: 700; font-stretch: 108%; letter-spacing: 1.4px; text-transform: uppercase; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input) {
+  border: 1px solid var(--nt-linea-2); border-radius: 2px; background-color: var(--nt-carta);
+  color: var(--nt-tinta); font-family: inherit; font-size: 14px;
+  transition: border-color var(--mov-rapido, 180ms) var(--nt-curva), box-shadow var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):hover { border-color: var(--nt-tinta-3); }
+html[data-tema="noticiero"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):focus {
+  border-color: var(--nt-indigo); outline: none;
+  box-shadow: inset 0 0 0 1px var(--nt-indigo), 0 0 0 3px var(--nt-coral-suave);
+}
+html[data-tema="noticiero"] .wrap :is(input, select, textarea)::placeholder { color: var(--nt-tinta-3); }
+/* El desplegable: la flecha dibujada con dos triángulos en tinta (toma la paleta). */
+html[data-tema="noticiero"] .wrap select:not([multiple]):not(.tram-input):not(.tramx-input) {
+  appearance: none; -webkit-appearance: none; padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--nt-tinta-1) 50%), linear-gradient(135deg, var(--nt-tinta-1) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px; background-repeat: no-repeat;
+}
+html[data-tema="noticiero"] #trab-cuil[readonly],
+html[data-tema="noticiero"] #emp-cuit[readonly] { background-color: var(--nt-fijo); color: var(--nt-tinta-1); border-color: var(--nt-linea-2); }
+/* Bloques de formulario sueltos (alta de concepto, de regla...): una hoja. */
+html[data-tema="noticiero"] form.linea {
+  background: var(--nt-carta); border: 0; border-radius: 0; padding: 14px 16px;
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 22px 40px -30px var(--nt-sombra);
+}
+/* Las casillas de seccional: la marcada, con tinte coral y borde índigo entero. */
+html[data-tema="noticiero"] .check-seccionales { gap: 8px; padding: 0; border: 0; background: transparent; }
+html[data-tema="noticiero"] .chk-seccional {
+  height: 40px; padding: 0 13px; gap: 9px; border: 0; border-radius: 2px; background: var(--nt-carta);
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); font-size: 13.5px; font-weight: 500; color: var(--nt-tinta-1);
+  transition: box-shadow var(--mov-rapido, 180ms) var(--nt-curva), background-color var(--mov-rapido, 180ms) var(--nt-curva);
+}
+/* Van adentro de un .campo: no toman el rótulo espaciado de los campos. */
+html[data-tema="noticiero"] .wrap label.chk-seccional { font-size: 13.5px; font-weight: 500; letter-spacing: 0; text-transform: none; font-stretch: 100%; }
+html[data-tema="noticiero"] .chk-seccional:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); color: var(--nt-tinta); }
+html[data-tema="noticiero"] .wrap label.chk-seccional:has(input:checked) {
+  border-radius: 8px; background: color-mix(in srgb, var(--nt-coral-suave) 50%, var(--nt-carta));
+  box-shadow: inset 0 0 0 1.5px var(--nt-indigo); color: var(--nt-tinta); font-weight: 700;
+}
+html[data-tema="noticiero"] .chk-seccional:has(input:focus-visible) { outline: 2px solid var(--nt-indigo); outline-offset: 2px; }
+html[data-tema="noticiero"] .drop {
+  border: 1.5px dashed var(--nt-linea-2); border-radius: 2px; background: var(--nt-carta); color: var(--nt-tinta-2); font-size: 13px;
+  transition: border-color var(--mov-medio, 320ms) var(--nt-curva), background-color var(--mov-medio, 320ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] .drop:hover { border-color: var(--nt-tinta-2); background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .wrap :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--nt-indigo); outline-offset: 3px; }
+
+/* ============================================================
+   9. Filtros arriba de un listado: una fila suelta sobre el papel
+   ============================================================ */
+html[data-tema="noticiero"] .filtros { gap: 10px; margin: 16px 0 14px; padding: 0; background: transparent; border: 0; }
+html[data-tema="noticiero"] .wrap .filtros :is(input, select):not([type=checkbox]):not([type=radio]) {
+  height: 42px; padding-top: 0; padding-bottom: 0; background-color: var(--nt-carta); border-radius: 2px; font-size: 14px;
+}
+html[data-tema="noticiero"] .wrap .filtros input[type=text] { min-width: 180px; }
+/* El contador: cifra en monoespaciada, en una caja de papel, a la derecha. */
+html[data-tema="noticiero"] .filtros .f-cant {
+  margin-left: auto; padding: 6px 10px; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea);
+  font: 600 13px var(--nt-f-mono); color: var(--nt-tinta); white-space: nowrap;
+}
+html[data-tema="noticiero"] .filtros .f-cant:empty { display: none; }
+/* «Limpiar» (sec + mini): el botón con borde, chico, como en el mockup. */
+html[data-tema="noticiero"] .filtros button.sec {
+  height: 38px; padding: 0 14px; background: transparent; color: var(--nt-tinta); border-radius: 2px;
+  font: 700 11.5px/1 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.2px; text-transform: uppercase;
+  box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
+}
+html[data-tema="noticiero"] .filtros button.sec:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); }
+/* Una casilla dentro de los filtros: caja de papel; marcada, con tinte. */
+html[data-tema="noticiero"] .filtros label:has(> input[type=checkbox]) {
+  display: inline-flex; align-items: center; gap: 9px; height: 42px; padding: 0 13px; border-radius: 2px;
+  background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); font-size: 13.5px; font-weight: 500;
+  color: var(--nt-tinta-1); cursor: pointer;
+  transition: box-shadow var(--mov-rapido, 180ms) var(--nt-curva), background-color var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] .filtros label:has(> input[type=checkbox]:checked) {
+  border-radius: 8px; background: color-mix(in srgb, var(--nt-coral-suave) 50%, var(--nt-carta));
+  box-shadow: inset 0 0 0 1.5px var(--nt-indigo); color: var(--nt-tinta); font-weight: 700;
+}
+html[data-tema="noticiero"] .wrap .filtros button { margin: 0; }
+
+/* ============================================================
+   10. Tablas: sobre papel, cabecera con regla de tinta, cebra suave
+   ============================================================ */
+html[data-tema="noticiero"] .wrap table { border: 0; border-radius: 0; background: transparent; font-size: 13.5px; }
+html[data-tema="noticiero"] .wrap th {
+  background: transparent; font: 700 10.5px/1.3 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.3px;
+  text-transform: uppercase; color: var(--nt-tinta-2); padding: 9px 8px;
+  border-bottom: 1.5px solid var(--nt-tinta); white-space: nowrap; vertical-align: bottom;
+}
+html[data-tema="noticiero"] .wrap td { padding: 11px 8px; border-bottom: 1px solid var(--nt-linea); color: var(--nt-tinta-1); vertical-align: top; }
+html[data-tema="noticiero"] .wrap tr:last-child td { border-bottom: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .wrap tbody tr { transition: background-color var(--mov-rapido, 180ms) var(--nt-curva); }
+html[data-tema="noticiero"] .wrap tbody tr:nth-child(even) > td,
+html[data-tema="noticiero"] .wrap tr.par > td { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .wrap tbody tr:hover > td { background: var(--nt-carta); }
+html[data-tema="noticiero"] .wrap tr.fila-concepto.es-ingreso > td { background: color-mix(in srgb, var(--nt-ok-f) 35%, var(--nt-carta)); }
+html[data-tema="noticiero"] .wrap tr.fila-concepto.es-descuento > td { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .wrap tr.fila-concepto.pend > td,
+html[data-tema="noticiero"] .wrap .pend { background: var(--nt-amb-f); }
+html[data-tema="noticiero"] .rep-anon { color: var(--nt-tinta-3); font-style: italic; opacity: 1; }
+/* La tilde de diferencias: círculo con borde verde, o rojo lleno. */
+html[data-tema="noticiero"] .rep-tilde { width: 24px; height: 24px; }
+html[data-tema="noticiero"] .rep-tilde.ok { background: var(--nt-ok-f); color: var(--nt-ok); box-shadow: inset 0 0 0 1.5px var(--nt-ok); }
+html[data-tema="noticiero"] .rep-tilde.dif { background: var(--nt-mal); color: #fff; }
+html[data-tema="noticiero"] .rep-paginas { color: var(--nt-tinta-2); }
+
+/* ============================================================
+   11. Estados (palabra + color fijo), avisos y hojas
+   ============================================================ */
+html[data-tema="noticiero"] .tag {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 99px;
+  font: 700 11.5px/1 var(--nt-f-txt); letter-spacing: .3px; white-space: nowrap; vertical-align: middle;
+}
+html[data-tema="noticiero"] .tag-si { color: var(--nt-ok); background: var(--nt-ok-f); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-ok) 40%, transparent); }
+html[data-tema="noticiero"] .tag-pend { color: var(--nt-amb); background: var(--nt-amb-f); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-amb) 40%, transparent); }
+html[data-tema="noticiero"] .tag-no { color: var(--nt-mal); background: var(--nt-mal-f); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-mal) 40%, transparent); }
+html[data-tema="noticiero"] .tag-reforma { color: var(--nt-marfil); background: var(--nt-indigo-2); }
+/* Los avisos: caja teñida con borde fino entero (sin zócalo lateral). */
+html[data-tema="noticiero"] .msg {
+  border-radius: 8px; padding: 12px 16px; font-size: 14px; line-height: 1.5;
+  background: var(--nt-carta); color: var(--nt-tinta-1); box-shadow: inset 0 0 0 1px var(--nt-linea-2);
+}
+html[data-tema="noticiero"] .msg.ok { background: var(--nt-ok-f); color: var(--nt-ok-t); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-ok) 35%, transparent); }
+html[data-tema="noticiero"] .aviso {
+  background: var(--nt-amb-f); border: 0; border-radius: 8px; color: var(--nt-amb-t); padding: 12px 16px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-amb) 35%, transparent);
+}
+html[data-tema="noticiero"] .card {
+  background: var(--nt-carta); border: 0; border-radius: 0; padding: 24px 26px;
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 22px 40px -30px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .card.ct-card { padding: 0; background: transparent; box-shadow: none; }
+html[data-tema="noticiero"] .prov-item { background: var(--nt-hoja-2); border: 1px solid var(--nt-linea); }
+html[data-tema="noticiero"] .geo-resumen { background: var(--nt-carta); border-color: var(--nt-linea); border-radius: 0; }
+html[data-tema="noticiero"] .geo-resumen b { color: var(--nt-tinta); }
+/* Los pasos de la georreferenciación: el actual en índigo, los hechos en verde. */
+html[data-tema="noticiero"] .geo-paso-n { background: var(--nt-carta); border-color: var(--nt-linea-2); color: var(--nt-tinta-2); border-radius: 50%; }
+html[data-tema="noticiero"] .geo-paso-n.activo { background: var(--nt-indigo); border-color: var(--nt-indigo); color: var(--nt-marfil); }
+html[data-tema="noticiero"] .geo-paso-n.hecho { background: var(--nt-ok-f); border-color: var(--nt-ok); color: var(--nt-ok); }
+html[data-tema="noticiero"] .geo-cand { border-color: var(--nt-linea); border-radius: 0; background: var(--nt-carta); }
+html[data-tema="noticiero"] .geo-cand.elegido { border-color: var(--nt-indigo); border-radius: 8px; background: var(--nt-indigo); color: var(--nt-marfil); }
+html[data-tema="noticiero"] .geo-barra { background: var(--nt-hoja); }
+html[data-tema="noticiero"] .geo-barra i { background: var(--nt-coral); }
+html[data-tema="noticiero"] .geo-mapa,
+html[data-tema="noticiero"] .geo-mapa-chico { border-color: var(--nt-linea-2); border-radius: 0; }
+
+/* Lo que traía un filo de color a la izquierda pasa a borde completo fino
+   y fondo teñido (CAMBIOS10b): el color se lee en todo el contorno. */
+html[data-tema="noticiero"] .enc-disc {
+  border: 1px solid var(--nt-linea-2); border-radius: 8px; background: var(--nt-carta); color: var(--nt-tinta-1);
+}
+html[data-tema="noticiero"] .vap-notif { border: 1px solid color-mix(in srgb, var(--nt-coral) 45%, var(--nt-linea)); }
+html[data-tema="noticiero"] .tram-chat-form { border: 1px solid var(--nt-linea-2); border-radius: 8px; background: var(--nt-fondo); }
+html[data-tema="noticiero"] .ct-ficha .campo-tramite-fila { border: 1px solid var(--nt-linea-2); border-radius: 0; background: var(--nt-carta); }
+html[data-tema="noticiero"] .ct-bloque {
+  border: 1px solid var(--nt-linea-2); background: var(--nt-hoja-2); border-radius: 8px;
+}
+html[data-tema="noticiero"] .ct-bloque.valid {
+  border-color: color-mix(in srgb, var(--nt-indigo) 30%, var(--nt-linea)); background: color-mix(in srgb, var(--nt-coral-suave) 30%, var(--nt-carta));
+}
+html[data-tema="noticiero"] #tt-requisitos-lista {
+  border: 1px solid color-mix(in srgb, var(--nt-indigo) 30%, var(--nt-linea)); border-radius: 8px;
+  background: color-mix(in srgb, var(--nt-coral-suave) 30%, var(--nt-carta));
+}
+html[data-tema="noticiero"] .ct-bloque.valid .ct-kicker { background: var(--nt-indigo); color: var(--nt-marfil); }
+
+/* ============================================================
+   12. La hoja de trabajo (Noticias, Beneficios, Notificaciones, Trámites)
+   ============================================================ */
+html[data-tema="noticiero"] .ct-ancho { width: auto; margin-left: 0; }
+html[data-tema="noticiero"] .ct-layout { gap: 22px; }
+/* El riel de pasos: lista con filetes; el paso actual, la fila entera en
+   índigo redondeada y su número en círculo coral. */
+html[data-tema="noticiero"] .ct-riel {
+  top: calc(var(--nt-top) + 14px); gap: 0; padding: 0; border-radius: 0; background: transparent; box-shadow: none;
+  border-top: 1px solid var(--nt-tinta);
+}
+html[data-tema="noticiero"] .ct-riel-paso {
+  grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 14px 0; border-radius: 0;
+  border-bottom: 1px solid var(--nt-linea); color: var(--nt-tinta-1);
+}
+html[data-tema="noticiero"] .ct-riel-paso:hover { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .ct-riel-paso b {
+  font-family: var(--nt-f-txt); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; line-height: 1.25; color: var(--nt-tinta-1);
+}
+html[data-tema="noticiero"] .ct-riel-paso small { color: var(--nt-tinta-3); font-size: 12px; line-height: 1.35; }
+html[data-tema="noticiero"] .ct-riel-paso .num {
+  width: 28px; height: 28px; background: transparent; border: 1px solid var(--nt-linea-2); color: var(--nt-tinta-2);
+  font: 400 15px/1 var(--nt-f-tit);
+}
+html[data-tema="noticiero"] .ct-riel-paso.hecho .num { background: var(--nt-ok-f); border: 1.5px solid var(--nt-ok); color: var(--nt-ok); font-size: 0; }
+html[data-tema="noticiero"] .ct-riel-paso.hecho .num::before { border-color: var(--nt-ok); }
+html[data-tema="noticiero"] .ct-riel-paso.actual {
+  margin: 0 -10px; padding: 12px 10px; border-radius: 8px; border-bottom-color: transparent;
+  background: var(--nt-indigo); box-shadow: none;
+}
+html[data-tema="noticiero"] .ct-riel-paso.actual b { color: var(--nt-marfil); font-weight: 700; }
+html[data-tema="noticiero"] .ct-riel-paso.actual small { color: var(--nt-marfil-2); }
+html[data-tema="noticiero"] .ct-riel-paso.actual .num { background: var(--nt-coral); border-color: var(--nt-coral); color: var(--nt-coral-tinta); }
+html[data-tema="noticiero"] .ct-riel-estado {
+  margin-top: 16px; padding: 14px; border-top: 0; color: var(--nt-tinta-1);
+  background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea);
+}
+html[data-tema="noticiero"] .ct-riel-estado b { color: var(--nt-amb); }
+html[data-tema="noticiero"] .ct-riel-estado button { font-size: 11.5px; padding: 10px 12px; line-height: 1.25; }
+/* El área cuadriculada (la mesa de armado) y la hoja encima. */
+html[data-tema="noticiero"] .ct-area {
+  border: 0; border-radius: 0; padding: 18px; background-color: var(--nt-hoja);
+  background-image: linear-gradient(color-mix(in srgb, var(--nt-indigo) 6%, transparent) 1px, transparent 1px),
+                    linear-gradient(90deg, color-mix(in srgb, var(--nt-indigo) 6%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+html[data-tema="noticiero"] .ct-area > .ct-izq {
+  background: var(--nt-carta); border-radius: 0; padding: 4px 24px 0;
+  box-shadow: 0 0 0 1px var(--nt-linea), 0 22px 40px -30px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .ct-guardar {
+  margin: 4px -24px 0; padding: 14px 24px; background: var(--nt-hoja-2); border-top-color: var(--nt-linea); border-radius: 0;
+}
+html[data-tema="noticiero"] .ct-pasog { padding-top: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--nt-tinta); }
+html[data-tema="noticiero"] .ct-pasog:last-child { border-bottom: 0; }
+html[data-tema="noticiero"] .ct-pasog::before { display: none; }
+html[data-tema="noticiero"] .ct-pasog-cab b {
+  width: 26px; height: 26px; background: var(--nt-indigo); color: var(--nt-marfil); border: 0; border-radius: 50%;
+  font: 400 14px/1 var(--nt-f-tit); box-shadow: none;
+}
+html[data-tema="noticiero"] .ct-pasog-cab h3 {
+  font-family: var(--nt-f-tit); font-size: 22px; font-weight: 400; letter-spacing: .3px; text-transform: uppercase; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] :is(.ct-paso-cab, .ct-pasog-cab) i {
+  font: 700 10.5px/1 var(--nt-f-txt); letter-spacing: 1.3px; text-transform: uppercase; padding: 3px 7px; border-radius: 0;
+}
+html[data-tema="noticiero"] :is(.ct-paso-cab, .ct-pasog-cab) i.op { background: transparent; color: var(--nt-tinta-2); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] :is(.ct-paso-cab, .ct-pasog-cab) i.ob { background: transparent; color: var(--nt-tinta); box-shadow: inset 0 0 0 1px var(--nt-tinta); }
+/* La vista del afiliado: rótulo con regla de tinta arriba. */
+html[data-tema="noticiero"] .ct-der { top: calc(var(--nt-top) + 14px); padding: 0; }
+html[data-tema="noticiero"] .ct-der > .ct-secc {
+  padding-top: 14px; border-top: 1px solid var(--nt-tinta); color: var(--nt-tinta-2);
+  font: 700 11.5px/1.2 var(--nt-f-txt); font-stretch: 112%; letter-spacing: 2px; text-transform: uppercase;
+}
+html[data-tema="noticiero"] .ct-der > .ct-secc::after { display: none; }
+html[data-tema="noticiero"] .ct-tabla { border-color: var(--nt-linea-2); border-radius: 0; background: var(--nt-carta); }
+html[data-tema="noticiero"] .ct-fila.cab {
+  background: transparent; color: var(--nt-tinta-2); font-family: var(--nt-f-txt); letter-spacing: 1.3px;
+  border-bottom: 1.5px solid var(--nt-tinta);
+}
+html[data-tema="noticiero"] .ct-fila:not(.cab):hover { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .ct-fila.abierta { background: color-mix(in srgb, var(--nt-coral-suave) 30%, var(--nt-carta)); border-top-color: var(--nt-indigo); }
+html[data-tema="noticiero"] .ct-fila .ct-orden,
+html[data-tema="noticiero"] .ct-campo-cab .ct-orden { color: var(--nt-tinta); font-family: var(--nt-f-tit); font-weight: 400; }
+html[data-tema="noticiero"] .ct-chip { background: var(--nt-hoja); color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .ct-chip.calc { background: var(--nt-coral-suave); color: var(--nt-tinta); }
+html[data-tema="noticiero"] .ct-chip.vacio { background: transparent; color: var(--nt-tinta-3); }
+html[data-tema="noticiero"] .ct-campo-cab { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .ct-campo-tit {
+  font-family: var(--nt-f-tit); font-weight: 400; font-size: 16px; letter-spacing: .3px; text-transform: uppercase; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] .ct-paso-cab b { background: var(--nt-indigo); color: var(--nt-marfil); }
+html[data-tema="noticiero"] .ct-editor { background: var(--nt-hoja-2); }
+html[data-tema="noticiero"] .ct-editor .ct-k { color: var(--nt-tinta-2); }
+/* El «?» de las ayudas y su globo índigo. */
+html[data-tema="noticiero"] .ct-help {
+  width: 20px; height: 20px; border: 0; background: transparent; color: var(--nt-tinta-2);
+  box-shadow: inset 0 0 0 1.3px var(--nt-linea-2); font: 700 11px/1 var(--nt-f-txt);
+}
+html[data-tema="noticiero"] .ct-help:hover,
+html[data-tema="noticiero"] .ct-help.fijo { background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
+html[data-tema="noticiero"] #ct-tip {
+  background: var(--nt-indigo); color: var(--nt-marfil); border-radius: 0; font-family: var(--nt-f-txt);
+  box-shadow: 0 18px 30px -14px var(--nt-sombra);
+}
+html[data-tema="noticiero"] #ct-tip .ct-fn-mas { color: var(--nt-coral-luz); }
+
+/* El teléfono de la vista previa: marco índigo doble, pantalla de papel. */
+html[data-tema="noticiero"] .ttp-marco {
+  background: var(--nt-indigo); border-radius: 30px; padding: 7px;
+  box-shadow: 0 0 0 1px var(--nt-indigo-2), 0 30px 50px -24px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .ttp-pant { border-radius: 23px; background: var(--nt-fondo); }
+html[data-tema="noticiero"] .vap-enc {
+  background: var(--nt-fondo); color: var(--nt-tinta); text-align: left; font: 400 17px/1 var(--nt-f-tit);
+  letter-spacing: .3px; text-transform: uppercase; padding: 13px 14px; box-shadow: none; border-bottom: 1px solid var(--nt-linea);
+}
+html[data-tema="noticiero"] .vap-card { border: 0; border-radius: 0; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .vap-form { background: var(--nt-coral); color: var(--nt-coral-tinta); box-shadow: none; }
+html[data-tema="noticiero"] .vap-remitente { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .ttp-caratula { background: var(--nt-indigo); background-image: linear-gradient(135deg, var(--nt-indigo) 0%, var(--nt-indigo-2) 100%); }
+html[data-tema="noticiero"] .ttp-caratula .tit { font-family: var(--nt-f-tit); font-weight: 400; font-size: 18px; text-transform: uppercase; letter-spacing: .3px; }
+html[data-tema="noticiero"] .ttp-probar {
+  background: var(--nt-coral); color: var(--nt-coral-tinta); border-radius: 2px;
+  font: 700 12px/1.2 var(--nt-f-txt); font-stretch: 108%; text-transform: uppercase; letter-spacing: 1.2px;
+}
+html[data-tema="noticiero"] .enc-cab { background: linear-gradient(135deg, var(--nt-indigo), var(--nt-indigo-2)); }
+
+/* ============================================================
+   13. Modales: cabecera índigo con el filete coral, cuerpo de papel
+   ============================================================ */
+html[data-tema="noticiero"] :is(.modal-recibo-overlay, .overlay-ayuda) {
+  background: color-mix(in srgb, var(--nt-indigo) 48%, transparent);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
+}
+html[data-tema="noticiero"] #acerca-box { background: color-mix(in srgb, var(--nt-indigo) 48%, transparent) !important; }
+html[data-tema="noticiero"] .modal-recibo {
+  border-radius: 0; background: var(--nt-fondo);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nt-indigo) 25%, transparent), 0 40px 70px -30px color-mix(in srgb, var(--nt-noche) 70%, transparent);
+}
+html[data-tema="noticiero"] .modal-recibo-enc {
+  background: var(--nt-indigo); background-image: linear-gradient(135deg, var(--nt-indigo) 0%, var(--nt-indigo-2) 100%);
+  border-left: 0; border-radius: 0; padding: 14px 18px; color: var(--nt-marfil);
+  box-shadow: inset 5px 0 0 var(--nt-coral);
+}
+html[data-tema="noticiero"] .modal-recibo-enc::before { display: none; }
+html[data-tema="noticiero"] .modal-recibo-enc h3 {
+  font: 700 20px/1.1 var(--nt-f-cond); letter-spacing: .8px; text-transform: uppercase; color: var(--nt-marfil);
+}
+html[data-tema="noticiero"] button.modal-recibo-cerrar {
+  width: 34px; height: 34px; padding: 0; border-radius: 50% !important; justify-content: center; align-items: center;
+  background: transparent !important; color: var(--nt-marfil) !important; opacity: 1; flex: none;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--nt-marfil) 45%, transparent);
+}
+html[data-tema="noticiero"] button.modal-recibo-cerrar:hover { background: color-mix(in srgb, var(--nt-marfil) 14%, transparent) !important; }
+html[data-tema="noticiero"] .modal-recibo-cerrar svg { width: 16px; height: 16px; stroke-width: 2; }
+html[data-tema="noticiero"] .modal-recibo-body { padding: 16px 20px 20px; }
+html[data-tema="noticiero"] .modal-recibo-card { background: var(--nt-fondo); padding: 0; border-radius: 0; }
+html[data-tema="noticiero"] .overlay-ayuda-caja {
+  border-radius: 0; background: var(--nt-fondo);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nt-indigo) 25%, transparent), 0 40px 70px -30px color-mix(in srgb, var(--nt-noche) 70%, transparent);
+}
+html[data-tema="noticiero"] .overlay-ayuda-caja h3 {
+  font: 400 22px/1 var(--nt-f-tit); letter-spacing: .3px; text-transform: uppercase; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] .overlay-ayuda-caja h4 {
+  font: 700 12px/1.3 var(--nt-f-cond); letter-spacing: 1.5px; text-transform: uppercase; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .overlay-ayuda-caja p { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] button.overlay-ayuda-cerrar { background: transparent !important; color: var(--nt-tinta-2) !important; }
+html[data-tema="noticiero"] .rep-k { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .linea-concepto.descuento { background: var(--nt-mal-f); }
+/* La conversación de un trámite. */
+html[data-tema="noticiero"] .tram-chat-sistema {
+  background: var(--nt-carta); border: 0; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--nt-linea); color: var(--nt-tinta-2); font-size: 12px;
+}
+html[data-tema="noticiero"] .tram-chat-fila.propio .tram-chat-burbuja {
+  background: var(--nt-burb-yo); box-shadow: inset 0 0 0 1px var(--nt-burb-yo-l); border-radius: 12px 12px 3px 12px;
+}
+html[data-tema="noticiero"] .tram-chat-fila.ajeno .tram-chat-burbuja {
+  background: var(--nt-carta); border: 0; box-shadow: inset 0 0 0 1px var(--nt-linea); border-radius: 12px 12px 12px 3px;
+}
+html[data-tema="noticiero"] .tram-chat-remitente {
+  color: var(--nt-tinta-2); font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+}
+html[data-tema="noticiero"] .tram-chat-estado { background: var(--nt-amb-f); color: var(--nt-amb); box-shadow: inset 0 0 0 1.5px var(--nt-amb); border-radius: 0; }
+html[data-tema="noticiero"] .tram-chat-avatar-fallback { background: var(--nt-indigo); border-color: var(--nt-indigo); }
+html[data-tema="noticiero"] .tram-chat-avatar-fallback svg { stroke: var(--nt-marfil); }
+html[data-tema="noticiero"] .tram-chat-form .tcf-btn { background: var(--nt-coral); color: var(--nt-coral-tinta); border-radius: 2px; }
+html[data-tema="noticiero"] .tram-chat-responder { border: 0; background: var(--nt-hoja-2); border-radius: 0; box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] .tram-msg-adjunto { color: var(--nt-tinta); font-weight: 600; }
+
+/* ============================================================
+   14. Apariencia (E6): la tarjeta elegida, con tinte coral y borde índigo
+   ============================================================ */
+html[data-tema="noticiero"] .ap-op {
+  border: 0; border-radius: 8px; background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2);
+  transition: box-shadow var(--mov-rapido, 180ms) var(--nt-curva), background-color var(--mov-rapido, 180ms) var(--nt-curva);
+}
+html[data-tema="noticiero"] .ap-op:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); }
+html[data-tema="noticiero"] .ap-op:has(input:checked) {
+  background: color-mix(in srgb, var(--nt-coral-suave) 50%, var(--nt-carta));
+  box-shadow: inset 0 0 0 2px var(--nt-indigo), 0 10px 20px -14px var(--nt-sombra);
+}
+html[data-tema="noticiero"] .ap-op-t {
+  font: 400 20px/1 var(--nt-f-tit); letter-spacing: .3px; text-transform: uppercase; color: var(--nt-tinta);
+}
+html[data-tema="noticiero"] .ap-op-d { color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .ap-op:has(input:checked) .ap-tilde { background: var(--nt-indigo); border-color: var(--nt-indigo); }
+html[data-tema="noticiero"] .ap-op:has(input:focus-visible) { outline-color: var(--nt-indigo); }
+html[data-tema="noticiero"] .ap-sub {
+  font: 700 11px/1.3 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.4px; text-transform: uppercase; color: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .ap-lectura.pasa { background: var(--nt-ok-f); color: var(--nt-ok-t); }
+html[data-tema="noticiero"] .ap-lectura.avisa { background: var(--nt-amb-f); color: var(--nt-amb-t); }
+
+/* ============================================================
+   15. Detalles que completan los listados y los formularios
+   ============================================================ */
+/* Las acciones de una fila del padrón se acomodan en renglones en vez de
+   empujar la tabla fuera de la pantalla. */
+html[data-tema="noticiero"] .fila-trabajador > td:last-child { white-space: normal !important; min-width: 230px; }
+html[data-tema="noticiero"] .fila-trabajador > td:last-child :is(button, a) { margin: 2px 0 2px 4px; }
+/* El archivo a subir: caja de papel y el botón como rectángulo con borde. */
+html[data-tema="noticiero"] .wrap input[type=file] {
+  border: 1px solid var(--nt-linea-2); border-radius: 2px; background: var(--nt-carta); padding: 8px;
+  color: var(--nt-tinta-2); font-size: 12.5px; max-width: 100%;
+}
+html[data-tema="noticiero"] .wrap input[type=file]::file-selector-button {
+  margin-right: 10px; border: 0; border-radius: 2px; padding: 8px 13px; cursor: pointer;
+  background: var(--nt-carta); color: var(--nt-tinta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
+  font: 700 11.5px/1 var(--nt-f-txt); letter-spacing: 1.2px; text-transform: uppercase;
+}
+html[data-tema="noticiero"] .wrap input[type=file]:hover::file-selector-button { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); }
+@media (max-width: 1000px) {
+  html[data-tema="noticiero"] .ct-riel { position: static; }
+}
+/* «Acerca de», al pie: un enlace subrayado en tinta suave (la plantilla lo
+   trae con estilo en línea y casi transparente). */
+html[data-tema="noticiero"] .acerca-pie button {
+  opacity: 1 !important; color: var(--nt-tinta-3) !important; background: none !important; box-shadow: none !important;
+  font: 600 12px/1 var(--nt-f-txt) !important; letter-spacing: 0 !important; text-transform: none !important;
+  text-decoration: underline; text-underline-offset: 4px;
+}
+
+/* ============================================================
+   16. Teléfono: el índice vuelve a ser una tira deslizable de papel
+   ============================================================ */
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] { --nt-top: 64px; scroll-padding-top: 130px; }
+  html[data-tema="noticiero"] .marca-barra { padding: 0 16px; }
+  html[data-tema="noticiero"] .marca-logo { height: 44px; max-width: 180px; }
+  html[data-tema="noticiero"] .marca-nombre { font-size: 22px; }
+  html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] { height: 18px; }
+  html[data-tema="noticiero"] .nav-strip {
+    background: var(--nt-hoja); border-bottom: 1px solid var(--nt-linea-2); padding: 8px 12px; gap: 4px; counter-reset: nt-sec;
+  }
+  html[data-tema="noticiero"] .tab-btn {
+    flex-direction: row; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0;
+    border-radius: 99px; background: transparent; color: var(--nt-tinta-2);
+    font: 700 14px/1 var(--nt-f-cond); letter-spacing: .7px; text-transform: uppercase;
+  }
+  html[data-tema="noticiero"] .tab-btn::before { font-size: 9.5px; }
+  html[data-tema="noticiero"] .tab-btn.activa { background: var(--nt-indigo); color: var(--nt-marfil); }
+  html[data-tema="noticiero"] .tab-btn .badge-noleidas { margin-left: 2px; }
+  html[data-tema="noticiero"] .tab-btn svg.tab-ext { margin-left: 2px; }
+  html[data-tema="noticiero"] .wrap { padding: 20px 16px 104px; }
+  html[data-tema="noticiero"] body.mesa .titulo-pagina { font-size: 30px; }
+  html[data-tema="noticiero"] h2:not(.titulo-pagina) { font-size: 20px; }
+  html[data-tema="noticiero"] .ct-riel-paso.actual { margin: 0; }
+  html[data-tema="noticiero"] .ct-area { padding: 8px; }
+  html[data-tema="noticiero"] .ct-area > .ct-izq { padding: 4px 12px 0; }
+  html[data-tema="noticiero"] .ct-guardar { margin: 4px -12px 0; padding: 12px; }
+  html[data-tema="noticiero"] .ct-der { padding: 16px 0 0; }
+  html[data-tema="noticiero"] .flota-sesion { right: 12px; bottom: 12px; }
+  html[data-tema="noticiero"] .btn-home,
+  html[data-tema="noticiero"] .btn-cerrar { padding: 0 14px; }
+  html[data-tema="noticiero"] .card { padding: 18px 16px; }
+  html[data-tema="noticiero"] .wrap .filtros input[type=text] { min-width: 0; flex: 1 1 140px; }
+  html[data-tema="noticiero"] .filtros .f-cant { margin-left: 0; }
+  html[data-tema="noticiero"] .modal-recibo-enc { padding: 13px 12px 13px 16px; }
+  html[data-tema="noticiero"] .modal-recibo-body { padding: 16px; }
+  /* Un listado ancho se desliza solo, nunca la página entera. */
+  html[data-tema="noticiero"] .wrap :is(.panel, .subpanel, .tramite-subpanel, .emp-subpanel, .emptram-subpanel, .enc-subpanel, .au-subpanel) > table {
+    display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ============================================================
+   17. Menos movimiento: sin transiciones ni escalas
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="noticiero"] :is(.tab-btn, button, a.btn-mini, a.mini, .chk-seccional, .drop, .btn-home, .btn-cerrar, .btn-ayuda,
+    .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab, .ct-riel-paso, tbody tr, input, select, textarea, .ap-op) {
+    transition: none !important;
+  }
+  html[data-tema="noticiero"] button:active { transform: none; }
+}
