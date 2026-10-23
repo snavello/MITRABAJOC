@@ -45,6 +45,7 @@ PUBLICAS = {
     ("GET", "/ingresar"): "login del trabajador",
     ("GET", "/ingresar-empresa"): "login de la empresa",
     ("GET", "/logo/{sindicato_id}"): "logo del gremio, va en los logins",
+    ("GET", "/foto-tema/{foto_id}"): "foto publicada de un modelo de diseño (decorado, como el logo); un borrador da 404 sin sesión de plataforma",
     ("GET", "/firma/{sindicato_id}"): "firma de la credencial, la muestra /v/",
     ("GET", "/logo-plataforma"): "logo de Colm3na",
     ("GET", "/logo-plataforma-oscuro"): "logo de Colm3na",

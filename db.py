@@ -274,6 +274,10 @@ class Sindicato(SQLModel, table=True):
     tema_afiliados: str = "laguna"
     tema_panel: str = "laguna"
     paleta_tema: str = "colm3na"
+    # La foto de portada que eligió de la biblioteca de cada modelo:
+    # {"laguna": id de FotoTema, "noticiero": id}. Sin elegir = la primera
+    # publicada que tenga disponible.
+    fotos_portada: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
 
 
 class Seccional(SQLModel, table=True):
@@ -1011,6 +1015,31 @@ class UsoIA(SQLModel, table=True):
     # estimado con los precios de hoy, y la pantalla lo dice.
     precio_entrada: float = 0.0
     precio_salida: float = 0.0
+
+
+class FotoTema(SQLModel, table=True):
+    """Una foto de la biblioteca de un modelo de diseño (PLAN_TEMAS.md, D5).
+
+    La carga plataforma y se guarda YA normalizada (`fotos_tema.normalizar`:
+    gris, niveles y brillo parejos, webp): el color lo pone el modelo al
+    mostrarla. Bytes en la base, como el logo. `foco_x`/`foco_y` (0 a 1) es
+    el punto de interés: el recorte de cada pantalla se centra ahí. Un
+    borrador no lo ve ningún sindicato; publicada, la ven todos o solo los de
+    `sindicatos`."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tema: str = Field(index=True)
+    datos: bytes
+    mime: str = "image/webp"
+    ancho: int = 0
+    alto: int = 0
+    foco_x: float = 0.5
+    foco_y: float = 0.5
+    descripcion: str = ""              # texto alternativo para lectores de pantalla
+    publicada: bool = False
+    todos_los_sindicatos: bool = True
+    sindicatos: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    creada: str = ""                   # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    subida_por: str = ""               # usuario de plataforma
 
 
 class ConfiguracionPlataforma(SQLModel, table=True):
@@ -3207,6 +3236,134 @@ def set_apariencia_sindicato(sindicato_id: int, tema_afiliados=None, tema_panel=
         s.add(sind)
         s.commit()
         return True
+
+
+def crear_foto_tema(tema: str, normalizada: dict, descripcion: str = "", subida_por: str = "",
+                    foco_x: float = 0.5, foco_y: float = 0.5) -> int:
+    """Guarda una foto YA normalizada como borrador del modelo. Devuelve el id."""
+    with Session(engine) as s:
+        f = FotoTema(tema=tema, datos=normalizada["datos"], mime=normalizada["mime"],
+                     ancho=normalizada["ancho"], alto=normalizada["alto"],
+                     foco_x=_entre_0_y_1(foco_x), foco_y=_entre_0_y_1(foco_y),
+                     descripcion=(descripcion or "").strip()[:300],
+                     creada=fechas.ahora_texto(), subida_por=subida_por)
+        s.add(f)
+        s.commit()
+        s.refresh(f)
+        return f.id
+
+
+def _entre_0_y_1(v) -> float:
+    try:
+        return min(1.0, max(0.0, float(v)))
+    except (TypeError, ValueError):
+        return 0.5
+
+
+def _foto_dict(f: "FotoTema") -> dict:
+    return {"id": f.id, "tema": f.tema, "ancho": f.ancho, "alto": f.alto,
+            "foco_x": f.foco_x, "foco_y": f.foco_y, "descripcion": f.descripcion,
+            "publicada": f.publicada, "todos_los_sindicatos": f.todos_los_sindicatos,
+            "sindicatos": list(f.sindicatos or []), "creada": f.creada,
+            "subida_por": f.subida_por, "v": len(f.datos or b"")}
+
+
+def fotos_de_tema(tema: str) -> list:
+    """Toda la biblioteca de un modelo, para plataforma (sin los bytes)."""
+    with Session(engine) as s:
+        return [_foto_dict(f) for f in s.exec(
+            select(FotoTema).where(FotoTema.tema == tema).order_by(FotoTema.id.desc())).all()]
+
+
+def fotos_disponibles(sindicato_id: int, tema: str) -> list:
+    """Las fotos publicadas de un modelo que puede usar un sindicato."""
+    return [f for f in fotos_de_tema(tema)
+            if f["publicada"] and (f["todos_los_sindicatos"] or sindicato_id in f["sindicatos"])]
+
+
+def foto_tema(foto_id: int):
+    """La fila completa (con los bytes) o None."""
+    with Session(engine) as s:
+        return s.get(FotoTema, foto_id)
+
+
+def editar_foto_tema(foto_id: int, **campos) -> bool:
+    """Cambia descripción, foco, publicación y disponibilidad. Los ids de
+    sindicatos que no existen se descartan."""
+    with Session(engine) as s:
+        f = s.get(FotoTema, foto_id)
+        if not f:
+            return False
+        if "descripcion" in campos:
+            f.descripcion = (campos["descripcion"] or "").strip()[:300]
+        for eje in ("foco_x", "foco_y"):
+            if eje in campos:
+                setattr(f, eje, _entre_0_y_1(campos[eje]))
+        if "publicada" in campos:
+            f.publicada = bool(campos["publicada"])
+        if "todos_los_sindicatos" in campos:
+            f.todos_los_sindicatos = bool(campos["todos_los_sindicatos"])
+        if "sindicatos" in campos:
+            pedidos = {int(x) for x in (campos["sindicatos"] or []) if str(x).isdigit()}
+            existentes = set(s.exec(select(Sindicato.id).where(Sindicato.id.in_(pedidos))).all()) if pedidos else set()
+            f.sindicatos = sorted(existentes)
+        s.add(f)
+        s.commit()
+        return True
+
+
+def borrar_foto_tema(foto_id: int) -> bool:
+    """Borra la foto y la saca de las portadas que la usaban."""
+    with Session(engine) as s:
+        f = s.get(FotoTema, foto_id)
+        if not f:
+            return False
+        for sind in s.exec(select(Sindicato)).all():
+            portadas = dict(sind.fotos_portada or {})
+            if foto_id in portadas.values():
+                sind.fotos_portada = {k: v for k, v in portadas.items() if v != foto_id}
+                s.add(sind)
+        s.delete(f)
+        s.commit()
+        return True
+
+
+def elegir_foto_portada(sindicato_id: int, tema: str, foto_id) -> bool:
+    """El sindicato elige su foto de portada para un modelo. None la saca.
+    Solo vale una foto publicada, de ese modelo y disponible para él."""
+    import temas
+    if temas.tema_valido(tema) is None:
+        return False
+    if foto_id is not None and foto_id not in {f["id"] for f in fotos_disponibles(sindicato_id, tema)}:
+        return False
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return False
+        portadas = dict(sind.fotos_portada or {})
+        if foto_id is None:
+            portadas.pop(tema, None)
+        else:
+            portadas[tema] = foto_id
+        sind.fotos_portada = portadas
+        s.add(sind)
+        s.commit()
+        return True
+
+
+def foto_portada_de(sindicato_id: int, tema: str):
+    """La foto de portada que se muestra: la elegida si sigue disponible; si
+    no, la más nueva publicada para ese sindicato; None si no hay ninguna."""
+    disponibles = fotos_disponibles(sindicato_id, tema)
+    if not disponibles:
+        return None
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        elegida = (sind.fotos_portada or {}).get(tema) if sind else None
+    for f in disponibles:
+        if f["id"] == elegida:
+            return f
+    return disponibles[0]
 
 
 def modulos_habilitados(sindicato_id: int) -> list:

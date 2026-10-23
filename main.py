@@ -58,6 +58,7 @@ import precios_ia
 import resultados_encuesta
 import fechas
 import temas
+import fotos_tema
 import geo
 import secrets
 import db
@@ -564,6 +565,18 @@ def servir_logo(sindicato_id: int):
             media_type=sind.logo_mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
+
+
+@app.get("/foto-tema/{foto_id}")
+def servir_foto_tema(foto_id: int, request: Request):
+    """Una foto de la biblioteca de un modelo (PLAN_TEMAS.md, D5). Las
+    publicadas son decorado de la app y se sirven a cualquiera, como el logo;
+    un borrador solo lo ve plataforma."""
+    f = db.foto_tema(foto_id)
+    if not f or (not f.publicada and not sesion_actual(request, "plataforma")):
+        raise HTTPException(404, "Sin foto")
+    return BinResponse(content=f.datos, media_type=f.mime or "image/webp",
+                       headers={"Cache-Control": "public, max-age=3600"})
 
 
 @app.get("/firma/{sindicato_id}")
@@ -6230,6 +6243,64 @@ def plataforma_usuarios(request: Request):
         "usuarios": db.listar_usuarios_plataforma(),
         "aviso": request.query_params.get("aviso", ""),
     })
+
+
+@app.get("/plataforma/fotos-tema")
+def plataforma_fotos_tema(request: Request, tema: str = Query(temas.TEMA_DEFECTO)):
+    """La biblioteca de fotos de un modelo, sin los bytes."""
+    exigir_plataforma(request)
+    if temas.tema_valido(tema) is None:
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"tema": tema, "fotos": db.fotos_de_tema(tema)}
+
+
+@app.post("/plataforma/fotos-tema")
+async def plataforma_fotos_tema_subir(request: Request, tema: str = Form(...),
+                                      archivo: UploadFile = File(...), descripcion: str = Form(""),
+                                      foco_x: float = Form(0.5), foco_y: float = Form(0.5)):
+    """Sube una foto a la biblioteca de un modelo: se normaliza acá (gris,
+    niveles y brillo parejos) y queda como borrador hasta publicarla."""
+    exigir_plataforma(request)
+    if temas.tema_valido(tema) is None:
+        raise HTTPException(400, "Ese modelo no existe.")
+    try:
+        normalizada = fotos_tema.normalizar(await archivo.read())
+    except fotos_tema.FotoInvalida as e:
+        raise HTTPException(400, str(e))
+    fid = db.crear_foto_tema(temas.tema_valido(tema), normalizada, descripcion,
+                             _quien_plataforma(request), foco_x, foco_y)
+    db.registrar_log_plataforma("foto_tema_alta", _quien_plataforma(request), objetivo=str(fid),
+                                ip=_ip_de(request), detalle=f"tema={tema}")
+    return {"ok": True, "id": fid, "ancho": normalizada["ancho"], "alto": normalizada["alto"]}
+
+
+@app.post("/plataforma/fotos-tema/{foto_id}")
+def plataforma_fotos_tema_editar(request: Request, foto_id: int, descripcion: str = Form(None),
+                                 foco_x: float = Form(None), foco_y: float = Form(None),
+                                 publicada: str = Form(None), todos_los_sindicatos: str = Form(None),
+                                 sindicatos: list[str] = Form(None)):
+    """Descripción, punto de interés, publicación y para qué sindicatos."""
+    exigir_plataforma(request)
+    campos = {k: v for k, v in {"descripcion": descripcion, "foco_x": foco_x, "foco_y": foco_y,
+                                "sindicatos": sindicatos}.items() if v is not None}
+    for k, v in (("publicada", publicada), ("todos_los_sindicatos", todos_los_sindicatos)):
+        if v is not None:
+            campos[k] = v in ("1", "true", "on", "si", "sí")
+    if not db.editar_foto_tema(foto_id, **campos):
+        raise HTTPException(404, "Sin foto")
+    db.registrar_log_plataforma("foto_tema_edicion", _quien_plataforma(request), objetivo=str(foto_id),
+                                ip=_ip_de(request), detalle=",".join(sorted(campos)))
+    return {"ok": True}
+
+
+@app.post("/plataforma/fotos-tema/{foto_id}/borrar")
+def plataforma_fotos_tema_borrar(request: Request, foto_id: int):
+    exigir_plataforma(request)
+    if not db.borrar_foto_tema(foto_id):
+        raise HTTPException(404, "Sin foto")
+    db.registrar_log_plataforma("foto_tema_baja", _quien_plataforma(request), objetivo=str(foto_id),
+                                ip=_ip_de(request))
+    return {"ok": True}
 
 
 @app.post("/plataforma/usuarios")

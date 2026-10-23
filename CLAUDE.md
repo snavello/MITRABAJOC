@@ -1220,8 +1220,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `tema_panel` / `paleta_tema`, migración `d4a8e2f6b1c3`,
     `db.apariencia_de`, `POST /api/apariencia` y `POST /admin/apariencia/mia`,
     y las cuatro páginas marcadas con `data-tema` / `data-paleta` (todavía sin
-    cambio visual). Tests: `test_temas.py`. Siguen: fotos por modelo,
-    pantallas de Apariencia y los dos modelos en cada pantalla.
+    cambio visual). Tests: `test_temas.py`. **Bloque 2 HECHO** (Plataforma
+    0.53.01): `fotos_tema.py` normaliza toda foto al subirla (gris, niveles
+    con 2% de recorte, brillo medio 0,46, lado largo 1.600 px, webp; rechaza
+    lo ilegible, lo de más de 8 MB y lo de menos de 600 px), tabla `FotoTema`
+    y `Sindicato.fotos_portada` (migración `e5b9f3a7c2d4`), rutas de
+    plataforma `/plataforma/fotos-tema` (listar, subir, editar, borrar) y
+    `GET /foto-tema/{id}` (pública si está publicada, como el logo). Tests:
+    `test_fotos_tema.py`. Siguen: pantallas de Apariencia y los dos modelos
+    en cada pantalla.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
