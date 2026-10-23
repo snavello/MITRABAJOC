@@ -52,13 +52,15 @@ html[data-tema="laguna"] {
    Sin soporte de color relativo quedan la base y el acento tal cual, que es
    lo que valía hasta hoy en toda la app. */
 html[data-tema="laguna"][data-paleta="sindicato"] {
-  --lg-tinta-acento: var(--marca-base);
-  --lg-acento-txt: var(--marca-acento);
+  /* Texto sobre el acento y acento como texto: ya corregidos por el
+     servidor (temas.paleta_legible, templates/_paleta_legible.html). */
+  --lg-tinta-acento: var(--marca-tinta-acento, var(--marca-base));
+  --lg-acento-txt: var(--marca-acento-txt, var(--marca-acento));
   --lg-azul: var(--marca-base);
-  --lg-azul2: color-mix(in oklab, var(--marca-primario) 70%, var(--marca-base));
-  --lg-turq: var(--marca-primario);
-  --lg-turq-h: color-mix(in oklab, var(--marca-primario) 82%, black);
-  --lg-turq-osc: color-mix(in oklab, var(--marca-primario) 75%, var(--marca-base));
+  --lg-azul2: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 70%, var(--marca-base));
+  --lg-turq: var(--marca-primario-relleno, var(--marca-primario));
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 82%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 75%, var(--marca-base));
   --lg-lag: var(--marca-apoyo);
   --lg-agua: color-mix(in oklab, var(--marca-apoyo) 50%, white);
   --lg-agua-f: color-mix(in oklab, var(--marca-apoyo) 14%, white);
@@ -70,12 +72,6 @@ html[data-tema="laguna"][data-paleta="sindicato"] {
   --lg-fluor-txt: var(--lg-acento-txt);
   --lg-agua-txt: color-mix(in oklab, var(--marca-apoyo) 16%, white);
   --lg-sombra: color-mix(in oklab, var(--marca-base) 55%, black);
-}
-@supports (color: oklch(from red l c h)) {
-  html[data-tema="laguna"][data-paleta="sindicato"] {
-    --lg-tinta-acento: oklch(from var(--marca-acento) clamp(0.12, (0.57 - l) * 1000, 1) 0 h);
-    --lg-acento-txt: oklch(from var(--marca-acento) max(l, 0.8) c h);
-  }
 }
 
 /* ---------- Página ---------- */

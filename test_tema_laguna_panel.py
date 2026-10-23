@@ -182,7 +182,7 @@ def test_la_paleta_del_sindicato_se_deriva_de_la_marca():
 def test_la_plantilla_da_el_texto_sobre_el_acento():
     html = _operador().get("/admin").text
     # acento claro (#e8b84b): el texto encima va en la base
-    assert "--marca-tinta-acento: var(--marca-base)" in html
+    assert "--marca-tinta-acento: #0f2240;" in html
     assert "--marca-apoyo: #2fa88f" in html
 
 

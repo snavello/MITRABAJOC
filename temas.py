@@ -53,6 +53,10 @@ def resolver_paleta(paleta_sindicato) -> str:
 CONTRASTE_MINIMO = 4.5          # texto común
 CONTRASTE_MINIMO_GRANDE = 3.0   # texto grande (saludo y títulos de la portada)
 _BLANCO = "#ffffff"
+# El papel más oscuro de los modelos y cuánto contraste tiene que tener la
+# tinta sobre él para que sus mezclas al 66% con el papel lleguen a 4,5:1.
+_PAPEL = "#e5ded3"
+CONTRASTE_TINTA = 12.0
 
 
 def _rgb(color):
@@ -84,6 +88,62 @@ def contraste(color_a, color_b) -> float:
     return round((claro + 0.05) / (oscuro + 0.05), 2)
 
 
+def _hex(rgb) -> str:
+    return "#" + "".join(f"{round(v):02x}" for v in rgb)
+
+
+def _hacia(color, destino, minimo, contra):
+    """`color` corrido hacia `destino` (blanco o negro) de a 4%, lo justo para
+    que su contraste con `contra` llegue a `minimo`. Si ya llega, igual."""
+    a, b = _rgb(color), _rgb(destino)
+    for paso in range(26):
+        t = paso * 0.04
+        c = _hex(a[i] + (b[i] - a[i]) * t for i in range(3))
+        if contraste(c, contra) >= minimo:
+            return c
+    return destino
+
+
+def paleta_legible(base, primario, acento, apoyo) -> dict:
+    """Los colores con los que los modelos escriben texto sobre (o con) la
+    marca del sindicato, corregidos para que se lean. Pura y única: la usan
+    las cuatro plantillas (como variables `--marca-*`, ver
+    `templates/_paleta_legible.html`) y la prueba de lectura, que muestra la
+    corrección. Un color que ya se lee sale tal cual; uno que no, se corre
+    hacia el blanco o el negro lo justo, conservando el tono.
+
+    - `tinta_acento`: el texto encima de un relleno de acento. La base del
+      gremio si se lee; si no, blanco o casi negro, el que más contraste dé
+      (siempre uno de los dos llega a 4,5:1).
+    - `acento_txt`: el acento como texto sobre la base oscura (aclarado).
+    - `acento_oscuro`: el acento como texto sobre fondo claro (oscurecido).
+    - `primario_relleno` / `base_relleno`: el primario y la base como fondo
+      de texto blanco (oscurecidos si hace falta; el primario, contra el
+      papel de Noticiero, que es más oscuro que el blanco). El contraste es
+      simétrico: sirven igual como texto sobre blanco.
+    - `base_tinta`: la base como tinta sobre papel, tan oscura que sus mezclas
+      más claras (los textos secundarios, que la mezclan con el papel) se
+      sigan leyendo. Hace falta con una base apenas oscura.
+    Colores ilegibles: se devuelven los de Colm3na para esa función."""
+    base = base if _rgb(base) else "#0f1b2d"
+    primario = primario if _rgb(primario) else "#152238"
+    acento = acento if _rgb(acento) else "#b23a2e"
+    if contraste(base, acento) >= CONTRASTE_MINIMO:
+        tinta = base
+    else:
+        tinta = max((_BLANCO, "#111111", "#000000"), key=lambda c: (contraste(c, acento) >= CONTRASTE_MINIMO, c != "#000000", contraste(c, acento)))
+    return {
+        "tinta_acento": tinta,
+        "acento_txt": _hacia(acento, _BLANCO, CONTRASTE_MINIMO, base),
+        "acento_oscuro": _hacia(acento, "#000000", CONTRASTE_MINIMO, _BLANCO),
+        # Contra el papel y no contra el blanco: Noticiero escribe en marfil
+        # sobre el primario (la barra de Salir), y el marfil es más oscuro.
+        "primario_relleno": _hacia(primario, "#000000", CONTRASTE_MINIMO, _PAPEL),
+        "base_relleno": _hacia(base, "#000000", CONTRASTE_MINIMO, _BLANCO),
+        "base_tinta": _hacia(base, "#000000", CONTRASTE_TINTA, _PAPEL),
+    }
+
+
 def prueba_de_lectura(base, primario, acento, apoyo) -> list[dict]:
     """Las combinaciones de texto que usan los modelos con la paleta del
     sindicato, y un aviso en castellano por cada una que no llega a su
@@ -103,11 +163,21 @@ def prueba_de_lectura(base, primario, acento, apoyo) -> list[dict]:
                           "revisalo en los datos del sindicato."} for n in ilegibles]
 
     avisos = []
+    # Cada aviso dice también con qué color lo corrigen los modelos
+    # (`paleta_legible`): la pantalla muestra el original y el corregido.
+    legible = paleta_legible(base, primario, acento, apoyo)
+    correccion = {"blanco_sobre_base": ("base", base, "base_relleno"),
+                  "blanco_sobre_primario": ("primario", primario, "primario_relleno"),
+                  "acento_sobre_claro": ("acento", acento, "acento_oscuro"),
+                  "acento_sobre_base": ("acento", acento, "acento_txt"),
+                  "texto_sobre_acento": ("texto", base, "tinta_acento")}
 
     def chequear(clave, combinacion, valor, aviso, minimo=CONTRASTE_MINIMO):
         if valor < minimo:
+            color, original, corregido = correccion[clave]
             avisos.append({"clave": clave, "combinacion": combinacion, "contraste": valor,
-                           "minimo": minimo, "aviso": aviso})
+                           "minimo": minimo, "aviso": aviso,
+                           "original": original, "corregido": legible[corregido]})
 
     chequear("blanco_sobre_base", "Texto blanco sobre el color base",
              contraste(_BLANCO, base),
@@ -132,6 +202,6 @@ def prueba_de_lectura(base, primario, acento, apoyo) -> list[dict]:
     sobre_acento = max(contraste(_BLANCO, acento), contraste(base, acento))
     chequear("texto_sobre_acento", "Texto sobre un botón del color acento",
              sobre_acento,
-             "Ni el blanco ni el color base se leen bien sobre el acento: los "
-             "botones van a llevar un acento corregido.")
+             "Ni el blanco ni el color base se leen bien sobre el acento: el "
+             "texto de los botones va a ir en casi negro.")
     return avisos

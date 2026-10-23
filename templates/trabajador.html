@@ -12,6 +12,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <title>Revisá tu recibo — {{ sindicato or 'Colm3na' }}</title>
 <link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
   /* La condensada y las variables de fuente viven en marca.css, que ESTA
      plantilla no carga (tiene su propio CSS). Se declaran acá para que los
@@ -41,19 +42,10 @@
     --gremio-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
     --gremio-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
     --gremio-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
-    {#- Texto SOBRE un relleno de acento (la base del gremio o blanco) y el
-        acento usado COMO texto sobre oscuro (aclarado si es muy oscuro). Se
-        calcula acá por luminancia relativa, igual que los mockups: el CSS
-        todavía no sabe elegir entre blanco y oscuro por contraste. #}
-    {%- set _ac = (marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e')) or '#b23a2e' %}
-    {%- set _h = _ac|trim|replace('#', '') %}
-    {%- if _h|length == 3 %}{% set _h = _h[0] ~ _h[0] ~ _h[1] ~ _h[1] ~ _h[2] ~ _h[2] %}{% endif %}
-    {%- set _c = [(_h[0:2]|int(0, 16)) / 255, (_h[2:4]|int(0, 16)) / 255, (_h[4:6]|int(0, 16)) / 255] %}
-    {%- set _l = [] %}
-    {%- for c in _c %}{% set _ = _l.append(((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92) %}{% endfor %}
-    {%- set _lum = 0.2126 * _l[0] + 0.7152 * _l[1] + 0.0722 * _l[2] %}
-    --gremio-tinta-acento: {{ 'var(--gremio-base)' if _lum > 0.35 else '#ffffff' }};
-    --gremio-acento-txt: {{ 'color-mix(in oklab, var(--gremio-acento) 45%, white)' if _lum < 0.25 else 'var(--gremio-acento)' }};
+    {#- Texto SOBRE un relleno de acento, el acento COMO texto y los demás
+        derivados que CSS no sabe calcular solo, ya corregidos para que se
+        lean (temas.paleta_legible, la misma que la prueba de lectura). #}
+    {{ variables_legibles('gremio', marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238'), marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238'), (marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e')) or '#b23a2e', marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b')) }}
     {#- El logo de Colm3na para fondo CLARO: el encabezado lo pone en su
         versión para fondo oscuro, y un modelo con encabezado blanco lo
         cambia por esta (content: var(--logo-colmena-claro)). #}

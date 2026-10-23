@@ -8603,3 +8603,33 @@ excluidas de `regularizar_cuit.py`, que no tienen CUIL adentro.
 `static/fonts/` con sus licencias OFL en `static/fonts/licencias/`. Barlow
 Condensed solo tiene vendoreado el peso 700, así que el riel de Noticiero sale
 en negrita.
+
+### Bloque 7: la paleta del sindicato, corregida en un solo lugar (2026-10-23)
+
+Hasta acá cada pantalla corregía los colores del gremio a su manera: el panel
+con una luminancia calculada en Jinja, la app del afiliado con otra, y las
+portadas con `oklch(from …)`, que un navegador sin color relativo ignora. Y
+ninguna garantizaba el contraste: solo elegía entre dos opciones. Ahora
+`temas.paleta_legible` corre cada color hacia el blanco o el negro, de a 4%,
+lo justo para llegar a 4,5:1 contra lo que tiene detrás, conservando el tono.
+Las plantillas lo vuelcan como variables `--marca-*` (o `--gremio-*` en la app
+del afiliado) y la prueba de lectura muestra el original y el corregido.
+
+**Cómo se midió.** Un auditor con Playwright recorre las cuatro pantallas y
+todas sus pestañas (52 vistas, unos 5.200 textos) y calcula el contraste de
+cada texto contra su fondo real, incluidas las paradas de los degradés. Con
+los gremios de la demo ya casi no había problemas (6 textos, un gris de la
+vista previa del panel que no dependía de la marca). Con una paleta adversaria
+(primario celeste claro, acento amarillo, base apenas oscura) había 98 textos
+ilegibles en Laguna (blanco sobre el primario) y 332 en Noticiero (las tintas
+secundarias, que mezclan la base con el papel). Después: 0 y 0. Dos cosas que
+aparecieron al medir: la base de Noticiero necesita ser más oscura que lo
+que pide el alta, porque sus textos secundarios la mezclan con el papel
+(`base_tinta`, 12:1 contra el papel), y el primario se mide contra el papel y
+no contra el blanco, porque Noticiero escribe en marfil sobre él.
+
+**El arreglo de paso.** En Plataforma 0.54.01 el código de la prueba de
+lectura quedó dentro de `<script src="modales.js">`, y el navegador ignora lo
+que va adentro de un script con `src`: `probarLectura()` no existía y
+"Editar" sindicato se cortaba antes de llenar el formulario. Un test recorre
+ahora todas las plantillas buscando ese error.

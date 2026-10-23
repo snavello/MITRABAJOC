@@ -49,11 +49,11 @@ html[data-tema="laguna"] {
    texto sobre oscuro: el acento levantado a una luz legible. */
 html[data-tema="laguna"][data-paleta="sindicato"] {
   --lg-azul: var(--marca-base);
-  --lg-azul2: color-mix(in oklab, var(--marca-base) 45%, var(--marca-primario));
+  --lg-azul2: color-mix(in oklab, var(--marca-base) 45%, var(--marca-primario-relleno, var(--marca-primario)));
   --lg-noche: color-mix(in oklab, var(--marca-base) 78%, black);
-  --lg-turq: var(--marca-primario);
-  --lg-turq-h: color-mix(in oklab, var(--marca-primario) 84%, black);
-  --lg-turq-osc: color-mix(in oklab, var(--marca-primario) 80%, black);
+  --lg-turq: var(--marca-primario-relleno, var(--marca-primario));
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 80%, black);
   --lg-lag: var(--marca-apoyo);
   --lg-agua: color-mix(in oklab, var(--marca-apoyo) 45%, white);
   --lg-agua-m: color-mix(in oklab, var(--marca-apoyo) 11%, white);
@@ -64,10 +64,9 @@ html[data-tema="laguna"][data-paleta="sindicato"] {
   --lg-sobre-osc: color-mix(in oklab, var(--marca-apoyo) 16%, white);
   --lg-fluor: var(--marca-acento);
   --lg-fluor-h: color-mix(in oklab, var(--marca-acento) 86%, white);
-  --lg-fluor-txt: color-mix(in oklab, var(--marca-acento) 55%, white);
-  --lg-fluor-txt: oklch(from var(--marca-acento) max(l, .82) c h);
-  --lg-sobre-fluor: var(--marca-base);
-  --lg-sobre-fluor: oklch(from var(--marca-acento) clamp(0, (.62 - l) * 1000, 1) 0 0);
+  /* Ya corregidos por el servidor (temas.paleta_legible). */
+  --lg-fluor-txt: var(--marca-acento-txt, var(--marca-acento));
+  --lg-sobre-fluor: var(--marca-tinta-acento, var(--marca-base));
 }
 
 /* ---------- La página: clara, sobre agua ---------- */

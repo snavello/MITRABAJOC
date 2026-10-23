@@ -151,9 +151,10 @@ def test_la_paleta_del_sindicato_se_deriva_de_la_marca():
     assert m, "falta la paleta del sindicato"
     cuerpo = m.group(1)
     # la correspondencia del .pg del mockup: tinta índigo -> base, coral -> acento
-    assert re.search(r"--nt-indigo:\s*var\(--marca-base\)", cuerpo)
-    assert re.search(r"--nt-tinta:\s*var\(--marca-base\)", cuerpo)
-    assert re.search(r"--nt-indigo-2:\s*var\(--marca-primario\)", cuerpo)
+    # (la base y el primario ya corregidos por el servidor, temas.paleta_legible)
+    assert re.search(r"--nt-indigo:\s*var\(--marca-base-tinta, var\(--marca-base\)\)", cuerpo)
+    assert re.search(r"--nt-tinta:\s*var\(--marca-base-tinta, var\(--marca-base\)\)", cuerpo)
+    assert re.search(r"--nt-indigo-2:\s*var\(--marca-primario-relleno, var\(--marca-primario\)\)", cuerpo)
     assert re.search(r"--nt-coral:\s*var\(--marca-acento\)", cuerpo)
     assert "var(--marca-tinta-acento" in cuerpo and "var(--marca-acento-txt" in cuerpo
     for var in ("--nt-fondo", "--nt-hoja", "--nt-carta", "--nt-linea", "--nt-coral-suave"):

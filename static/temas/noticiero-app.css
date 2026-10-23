@@ -108,22 +108,22 @@ html[data-tema="noticiero"] {
    o la base, lo calcula la plantilla); acento como ícono o texto sobre la
    base: --gremio-acento-txt (aclarado si el acento es oscuro). */
 html[data-tema="noticiero"][data-paleta="sindicato"] {
-  --nt-fondo: color-mix(in oklab, var(--gremio-base) 5%, var(--nt-m-fondo));
-  --nt-hoja: color-mix(in oklab, var(--gremio-base) 6%, var(--nt-m-hoja));
-  --nt-hoja-2: color-mix(in oklab, var(--gremio-base) 5%, var(--nt-m-hoja-2));
-  --nt-carta: color-mix(in oklab, var(--gremio-base) 3%, var(--nt-m-carta));
-  --nt-linea: color-mix(in oklab, var(--gremio-base) 10%, var(--nt-m-linea));
-  --nt-linea-2: color-mix(in oklab, var(--gremio-base) 14%, var(--nt-m-linea-2));
-  --nt-tinta: var(--gremio-base);
-  --nt-tinta-1: color-mix(in oklab, var(--gremio-base) 86%, var(--nt-fondo));
-  --nt-tinta-2: color-mix(in oklab, var(--gremio-base) 74%, var(--nt-fondo));
-  --nt-tinta-3: color-mix(in oklab, var(--gremio-base) 66%, var(--nt-fondo));
-  --nt-indigo: var(--gremio-base);
-  --nt-indigo-2: var(--gremio-primario);
-  --nt-indigo-3: color-mix(in oklab, var(--gremio-base) 70%, black);
-  --nt-marfil: color-mix(in oklab, var(--gremio-base) 4%, var(--nt-m-fondo));
-  --nt-marfil-1: color-mix(in oklab, var(--nt-marfil) 90%, var(--gremio-primario));
-  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--gremio-primario));
+  --nt-fondo: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 5%, var(--nt-m-fondo));
+  --nt-hoja: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 6%, var(--nt-m-hoja));
+  --nt-hoja-2: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 5%, var(--nt-m-hoja-2));
+  --nt-carta: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 3%, var(--nt-m-carta));
+  --nt-linea: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 10%, var(--nt-m-linea));
+  --nt-linea-2: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 14%, var(--nt-m-linea-2));
+  --nt-tinta: var(--gremio-base-tinta, var(--gremio-base));
+  --nt-tinta-1: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 86%, var(--nt-fondo));
+  --nt-tinta-2: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 74%, var(--nt-fondo));
+  --nt-tinta-3: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 66%, var(--nt-fondo));
+  --nt-indigo: var(--gremio-base-tinta, var(--gremio-base));
+  --nt-indigo-2: var(--gremio-primario-relleno, var(--gremio-primario));
+  --nt-indigo-3: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 70%, black);
+  --nt-marfil: color-mix(in oklab, var(--gremio-base-tinta, var(--gremio-base)) 4%, var(--nt-m-fondo));
+  --nt-marfil-1: color-mix(in oklab, var(--nt-marfil) 90%, var(--gremio-primario-relleno, var(--gremio-primario)));
+  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--gremio-primario-relleno, var(--gremio-primario)));
   --nt-coral: var(--gremio-acento);
   --nt-coral-suave: color-mix(in oklab, var(--gremio-acento) 22%, var(--nt-carta));
   --nt-resalta: color-mix(in oklab, var(--gremio-acento) 58%, white);

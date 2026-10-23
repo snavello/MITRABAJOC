@@ -65,29 +65,28 @@ html[data-tema="noticiero"] {
    del acento (oklch relativo; sin soporte, la base). Acento como ícono sobre
    la base: el acento levantado a una luz legible. */
 html[data-tema="noticiero"][data-paleta="sindicato"] {
-  --nt-fondo: color-mix(in oklab, var(--marca-base) 5%, #f5efe3);
-  --nt-hoja: color-mix(in oklab, var(--marca-base) 6%, #ece4d4);
-  --nt-hoja-2: color-mix(in oklab, var(--marca-base) 5%, #efe8db);
-  --nt-carta: color-mix(in oklab, var(--marca-base) 3%, #fffcf6);
-  --nt-linea: color-mix(in oklab, var(--marca-base) 10%, #dcd2c0);
-  --nt-linea-2: color-mix(in oklab, var(--marca-base) 14%, #b8ac96);
-  --nt-tinta: var(--marca-base);
-  --nt-tinta-1: color-mix(in oklab, var(--marca-base) 86%, var(--nt-fondo));
-  --nt-tinta-2: color-mix(in oklab, var(--marca-base) 74%, var(--nt-fondo));
-  --nt-tinta-3: color-mix(in oklab, var(--marca-base) 66%, var(--nt-fondo));
-  --nt-indigo: var(--marca-base);
-  --nt-indigo-2: var(--marca-primario);
-  --nt-indigo-3: color-mix(in oklab, var(--marca-base) 70%, black);
-  --nt-marfil: color-mix(in oklab, var(--marca-base) 4%, #f5efe3);
-  --nt-marfil-1: color-mix(in oklab, var(--nt-marfil) 90%, var(--marca-primario));
-  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--marca-primario));
+  --nt-fondo: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 5%, #f5efe3);
+  --nt-hoja: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 6%, #ece4d4);
+  --nt-hoja-2: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 5%, #efe8db);
+  --nt-carta: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 3%, #fffcf6);
+  --nt-linea: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 10%, #dcd2c0);
+  --nt-linea-2: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 14%, #b8ac96);
+  --nt-tinta: var(--marca-base-tinta, var(--marca-base));
+  --nt-tinta-1: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 86%, var(--nt-fondo));
+  --nt-tinta-2: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 74%, var(--nt-fondo));
+  --nt-tinta-3: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 66%, var(--nt-fondo));
+  --nt-indigo: var(--marca-base-tinta, var(--marca-base));
+  --nt-indigo-2: var(--marca-primario-relleno, var(--marca-primario));
+  --nt-indigo-3: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 70%, black);
+  --nt-marfil: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 4%, #f5efe3);
+  --nt-marfil-1: color-mix(in oklab, var(--nt-marfil) 90%, var(--marca-primario-relleno, var(--marca-primario)));
+  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--marca-primario-relleno, var(--marca-primario)));
   --nt-coral: var(--marca-acento);
   --nt-coral-suave: color-mix(in oklab, var(--marca-acento) 22%, var(--nt-carta));
   --nt-resalta: color-mix(in oklab, var(--marca-acento) 58%, white);
-  --nt-sobre-coral: var(--marca-base);
-  --nt-sobre-coral: oklch(from var(--marca-acento) clamp(0, (.62 - l) * 1000, 1) 0 0);
-  --nt-coral-ind: color-mix(in oklab, var(--marca-acento) 55%, white);
-  --nt-coral-ind: oklch(from var(--marca-acento) max(l, .78) c h);
+  /* Ya corregidos por el servidor (temas.paleta_legible). */
+  --nt-sobre-coral: var(--marca-tinta-acento, var(--marca-base-tinta, var(--marca-base)));
+  --nt-coral-ind: var(--marca-acento-txt, var(--marca-acento));
 }
 
 /* ---------- La página: papel marfil, tinta índigo ---------- */

@@ -49,3 +49,14 @@ def test_la_ficha_trae_el_recuadro_y_no_usa_innerhtml():
     assert 'id="prueba-lectura"' in html and "/plataforma/prueba-lectura" in html
     bloque = html[html.find("function probarLectura"):html.find("function probarLectura") + 2000]
     assert "innerHTML" not in bloque
+
+
+def test_ningun_script_con_src_trae_codigo_adentro():
+    """Un <script src> ignora lo que tenga adentro: así la prueba de lectura
+    quedó sin definir y "Editar" sindicato se cortaba (2026-10-23)."""
+    import glob
+    import re
+    for f in glob.glob("templates/*.html"):
+        s = open(f, encoding="utf-8").read()
+        for m in re.finditer(r"<script\b[^>]*\bsrc=[^>]*>(.*?)</script>", s, re.S):
+            assert not m.group(1).strip(), f"{f}: <script src> con código adentro"

@@ -696,6 +696,9 @@ def _sello_static(nombre: str) -> str:
 
 
 templates.env.globals["sello_static"] = _sello_static
+# Los colores de marca corregidos para que se lean (PLAN_TEMAS.md, bloque 7):
+# las plantillas los vuelcan como variables con templates/_paleta_legible.html.
+templates.env.globals["paleta_legible"] = temas.paleta_legible
 
 
 def _url_static(nombre: str) -> str:

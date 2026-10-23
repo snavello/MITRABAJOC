@@ -7,12 +7,15 @@
 <title>Panel de administración — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
 <link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
   :root {
     --marca-base: {{ marca.color_base }};
     --marca-primario: {{ marca.color_primario }};
     --marca-acento: {{ marca.color_acento }};
     --marca-apoyo: {{ marca.color_secundario }};
+    {#- Los derivados ya corregidos para que se lean (temas.paleta_legible). #}
+    {{ variables_legibles('marca', marca.color_base, marca.color_primario, marca.color_acento, marca.color_secundario) }}
   }
   body { min-height: 100vh; }
   body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }

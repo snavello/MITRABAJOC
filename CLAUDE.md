@@ -1268,7 +1268,18 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de fondo oscuro), y varias reglas pisan con `!important` estilos en línea
     del JS. Narrativa en HISTORIAL.md, "Dos modelos de diseño". Sigue: el
     bloque 7 (control de contraste en el alta del sindicato) y mirarlo con
-    datos reales de trámites y recibos.
+    datos reales de trámites y recibos. **Bloque 7 HECHO** (Trabajador 0.50.02,
+    Admin 0.68.02, Plataforma 0.55.01): `temas.paleta_legible` calcula una
+    sola vez los colores corregidos (texto sobre el acento, acento como texto,
+    primario y base como fondo, base como tinta) y las cuatro plantillas los
+    vuelcan con `templates/_paleta_legible.html`; las hojas dejaron de
+    corregir por su cuenta (`oklch(from…)`, luminancias en Jinja). La prueba
+    de lectura muestra el color original y el corregido. Medido con un
+    auditor de contraste sobre las 52 vistas: una paleta adversaria pasó de
+    98 (Laguna) y 332 (Noticiero) textos ilegibles a 0. Tests
+    `test_paleta_legible.py`. De paso: "Editar" sindicato en `/plataforma`
+    estaba roto desde Plataforma 0.54.01 (el código de la prueba de lectura
+    quedó dentro de un `<script src>`).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

@@ -253,6 +253,8 @@
 .prueba-lectura{margin-top:12px;padding:12px 14px;border:1px solid #e4c48a;background:#fdf6e8;border-radius:10px;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .prueba-lectura.ok{border-color:#9fd3b8;background:#eef8f2}
 .prueba-lectura ul{margin:4px 0 0;padding-left:18px}
+.prueba-lectura .pl-par{display:inline-flex;align-items:center;gap:4px;margin-left:6px;vertical-align:middle}
+.prueba-lectura .pl-par i{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.18);display:inline-block}
 </style>
 {% include "_fondo_interior.html" %}
 </head>
@@ -1993,7 +1995,8 @@ async function ftBorrar() {
   }
 })();
 </script>
-<script src="/static/modales.js?v={{ sello_static('modales.js') }}">
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script>
 // Prueba de lectura de los colores del sindicato: la calcula el servidor
 // (temas.prueba_de_lectura, una sola implementación) y acá solo se muestra.
 let _plTimer = null;
@@ -2012,12 +2015,20 @@ function probarLectura() {
       const d = await r.json();
       lista.replaceChildren();
       resumen.textContent = d.avisos.length
-        ? 'Si el sindicato elige ver la app con sus colores, los modelos van a corregir esto:'
+        ? 'Si el sindicato elige ver la app con sus colores, los modelos corrigen esto solos (original → corregido):'
         : 'Sus colores pasan la prueba de lectura.';
       document.getElementById('prueba-lectura').classList.toggle('ok', !d.avisos.length);
       d.avisos.forEach(a => {
         const li = document.createElement('li');
         li.textContent = a.aviso + (a.contraste ? ' (' + String(a.contraste).replace('.', ',') + ':1, mínimo ' + String(a.minimo).replace('.', ',') + ':1)' : '');
+        if (a.corregido && a.corregido !== a.original) {
+          // El color original y el corregido, uno al lado del otro.
+          const par = document.createElement('span'); par.className = 'pl-par';
+          par.title = 'Original ' + a.original + ' · corregido ' + a.corregido;
+          const o = document.createElement('i'); o.style.background = a.original;
+          const c = document.createElement('i'); c.style.background = a.corregido;
+          par.append(o, '→', c); li.appendChild(par);
+        }
         lista.appendChild(li);
       });
     } catch (e) {
