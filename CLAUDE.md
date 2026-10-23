@@ -369,6 +369,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   20900000015 / diag-code-2026 (Admin de Seccional) y 20900000023 /
   diag-code-2026 (usuario de área Secretaría General). Sirven para repetir
   cualquier verificación del alcance sin crear nada.
+- **Ojo (2026-10-23)**: desde que la demo es copia de Pruebas, valen las
+  claves de Pruebas. Verificado ese día en los dos entornos: entra La Bancaria
+  (20333444551 / bancaria-demo); UOM 20111111120 existe pero `uom-demo` ya no
+  es su clave, y el Admin de Rosario hoy es 20555555564, no 20555555556.
 - Todos estos números cumplen el módulo 11 desde 2026-10-10 (PLAN_CUIT_MOD11.md,
   etapa 3). Los de antes (`20111111110`, `20111111119`...) ya no sirven en una
   base cargada de cero; el mapa viejo → nuevo es `identificadores_demo.py`.
@@ -717,20 +721,27 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   guardado; mayúsculas indistintas). Detalle en HISTORIAL.md, "Ingreso y
   validación".
 
-## Estado actual (actualizado 2026-10-17)
+## Estado actual (actualizado 2026-10-23)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
 
-**La demo está al día desde el 2026-09-23** (tag `demo-2026-09-23-v0.40.01`):
-se promovieron de una vez los 241 commits acumulados desde el 2026-09-05 —
-Encuestas, Áreas V2, georreferenciación, Asistente del Panel, landing
-`/entornos`, costo de la IA, XSK y la Sala de mando—, con 18 migraciones
-ensayadas antes sobre una copia de la base real. Trabajador 0.40.01, Admin
-0.43.01, Plataforma 0.35.10. **En demo, `/entornos` y `/entornos/xsanders`
-responden 404 a propósito** (la landing interna solo existe donde hay
-distintivo de entorno), y el login genérico de plataforma quedó apagado: se
-entra con usuario nominal. Detalle del ensayo y del resultado en BITACORA.md.
+**La demo es idéntica a Pruebas desde el 2026-10-23, código Y datos** (PR #154,
+merge `261a261`; Trabajador 0.47.01, Admin 0.65.01, Plataforma 0.52.03). Esta
+vez no se migró la base de la demo: se la **reemplazó por una copia de la de
+Pruebas** (ya en head), con un Job de Render dentro del servicio de la demo
+(`pg_dump` del origen por la URL interna + `pg_restore --clean
+--single-transaction`), y después se promovió el código. Se vaciaron las tablas
+propias de Pruebas (`imagenenmascarado`, `suscripcionpush`, `planprogramado`,
+`cambioplan`, `codigoverificacion`, `testcarga`). **Respaldo de la demo
+anterior**: la base `mitrabajo_db_respaldo_20261023` en el mismo servidor
+(borrarla cuando ya no haga falta). Con eso la demo quedó además con los
+CUIL/CUIT regularizados (cierra H-0020 en la práctica). La demo lleva
+`ENMASCARADO=activo` como Pruebas. **En demo, `/entornos`, `/entornos/xsanders`
+y la v2 del Panel responden 404 a propósito** (solo existen donde hay
+distintivo de entorno), y el login genérico de plataforma está apagado: se
+entra con usuario nominal. Detalle en BITACORA.md y en HISTORIAL.md
+("La demo, copia de Pruebas").
 
 **SPRINT_REFORMA.md (adaptación a la Reforma Laboral, Dto 407/2026) —
 COMPLETO**, los 5 puntos de los dos sprints originales: extractor bi-formato
