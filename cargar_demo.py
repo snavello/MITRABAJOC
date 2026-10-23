@@ -28,7 +28,7 @@ import demo_encuestas
 from db import (Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador, Empleador,
                 Seccional, Area)
 from sqlmodel import SQLModel, select
-from sqlalchemy import delete as sa_delete, or_ as sa_or, select as sa_select
+from sqlalchemy import delete as sa_delete, select as sa_select
 import auth
 from modulos import MODULOS_INICIALES
 
@@ -264,21 +264,31 @@ def borrar_sindicato_completo(s, sindicato_id: int) -> None:
         if tabla.name == "sindicato":
             continue
         # Una fila cae si CUALQUIERA de sus FK apunta a algo ya condenado.
-        condiciones = [fk.parent.in_(condenados[fk.column.table.name])
-                       for fk in tabla.foreign_keys
-                       if condenados.get(fk.column.table.name)]
-        if not condiciones:
-            continue
         pk = list(tabla.primary_key.columns)[0]
-        filas = s.connection().execute(sa_select(pk).where(sa_or(*condiciones))).scalars().all()
+        filas = set()
+        for fk in tabla.foreign_keys:
+            padres = condenados.get(fk.column.table.name)
+            for tanda in _tandas(padres or ()):
+                filas.update(s.connection().execute(
+                    sa_select(pk).where(fk.parent.in_(tanda))).scalars().all())
         if filas:
-            condenados[tabla.name] = set(filas)
+            condenados[tabla.name] = filas
     for tabla in reversed(tablas):
         ids = condenados.get(tabla.name)
         if ids:
             pk = list(tabla.primary_key.columns)[0]
-            s.connection().execute(sa_delete(tabla).where(pk.in_(ids)))
+            for tanda in _tandas(ids):
+                s.connection().execute(sa_delete(tabla).where(pk.in_(tanda)))
     s.commit()
+
+
+def _tandas(ids, tamano=20000):
+    """De a `tamano`: un IN con más de 65.535 valores lo rechaza el protocolo
+    de Postgres. Pasó el 2026-10-23 al recargar la demo sobre la UOM de
+    Pruebas, con más de 65.535 filas en `accesolog`."""
+    ids = sorted(ids)
+    for i in range(0, len(ids), tamano):
+        yield ids[i:i + tamano]
 
 
 with db.get_session() as s:
