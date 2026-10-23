@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Asistente de trámites</title>
+{# Asistente de trámites (Herramientas de /entornos, PLAN_ASISTENTE_TRAMITES.md).
+   Del relato del sindicato al circuito, la instrucción, la vista previa y el
+   JSON importable. Preact sin build, como la Calculadora v2; la IA propone
+   desde el servidor y el motor puro decide. movimiento.css va ANTES que
+   asistente.css: la pantalla usa sus tokens, no define ninguno. #}
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+  }
+</style>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/asistente_tramites/asistente.css?v={{ sello_static('asistente_tramites/asistente.css') }}">
+{# Cada módulo se pide por nombre y el mapa lo traduce a su archivo CON su
+   sello ?v= (main._importmap_asistente_tramites). La precarga los baja juntos. #}
+<script type="importmap">{{ importmap | safe }}</script>
+{% for url in precarga %}<link rel="modulepreload" href="{{ url }}">
+{% endfor %}
+</head>
+<body>
+<div class="pagina">
+  <div class="cab">
+    <div>
+      <a class="volver" href="/entornos#herramientas">← Entornos · Herramientas</a>
+      <h1>Asistente de trámites</h1>
+      <p class="lede">Contá el trámite como te lo contó el sindicato. La IA propone, vos confirmás pregunta por pregunta, y el asistente arma el circuito por actor, quién hace qué, la instrucción y la vista previa del formulario, lo que hay que preparar antes y el JSON para importar. Lo que no nombre a Colm3na no existe: cada brecha queda señalada con su salida provisoria.</p>
+    </div>
+  </div>
+  {# Los datos que el JS necesita los dice el servidor: los estados de un caso
+     y el isotipo de Colm3na con su sello de versión. #}
+  <main id="asistente" data-estados='{{ estados }}'
+        data-isotipo="/static/icons/favicon-64.png?v={{ sello_static('icons/favicon-64.png') }}"></main>
+  <noscript><p>El asistente necesita JavaScript.</p></noscript>
+</div>
+<script type="module" src="/static/asistente_tramites/app.js?v={{ sello_static('asistente_tramites/app.js') }}"></script>
+</body>
+</html>

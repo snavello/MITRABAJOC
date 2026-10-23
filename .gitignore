@@ -30,3 +30,28 @@ carga/usuarios.csv
 carga/log/*/test1_lecturas.json
 carga/log/*/test2_recibos.json
 carga/log/*/*.ndjson
+
+# Modelos de OCR descargados para medir (PLAN_ENMASCARADO.md, bloque 2).
+modelos_ocr/
+
+# La medición guarda también las lecturas completas: pesadas y regenerables.
+medicion_enmascarado/RESULTADO.json
+
+# Mapa funcional generado por mapa_funcional.py: se rehace del código en
+# segundos, no se versiona (ver CLAUDE.md).
+mapa-funcional/
+
+# Regularización de CUIL/CUIT (PLAN_CUIT_MOD11.md): la planilla lleva nombres de personas
+# y el backup previo lleva la base entera. Ninguno de los dos se versiona.
+regularizacion_cuit_*.csv
+backup_regularizacion_*
+
+# Skill impeccable (.claude/skills/impeccable/ORIGEN.md): lo que deja el
+# detector y el modo live si alguien los prende en su PC. La configuración
+# compartida (.impeccable/config.json) y los briefs sí se versionan.
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/live/
+.impeccable/review/
+.impeccable/build/
+.claude/settings.local.json

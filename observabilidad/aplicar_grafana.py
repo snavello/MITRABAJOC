@@ -76,15 +76,51 @@ def payload_contact_point(cfg: dict) -> dict:
     }
 
 
+def telegram_disponible(cfg: dict) -> bool:
+    """Hay punto de contacto de Telegram si la config lo nombra Y el entorno
+    trae el bot y el chat (nunca están en el repo)."""
+    tg = cfg["alertas"].get("telegram") or {}
+    return bool(tg.get("contact_point")
+                and os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+                and os.getenv("TELEGRAM_CHAT_ID", "").strip())
+
+
+def payload_contact_point_telegram(cfg: dict) -> dict:
+    a = cfg["alertas"]
+    return {
+        "name": a["telegram"]["contact_point"],
+        "type": "telegram",
+        "settings": {"bottoken": os.getenv("TELEGRAM_BOT_TOKEN", "").strip(),
+                     "chatid": os.getenv("TELEGRAM_CHAT_ID", "").strip(),
+                     "disable_web_page_preview": True},
+        "disableResolveMessage": not a["avisar_al_resolverse"],
+    }
+
+
+def payloads_contact_points(cfg: dict) -> list:
+    """El mail siempre; Telegram solo si hay claves en el entorno."""
+    puntos = [payload_contact_point(cfg)]
+    if telegram_disponible(cfg):
+        puntos.append(payload_contact_point_telegram(cfg))
+    return puntos
+
+
 def payload_politica(cfg: dict) -> dict:
     a = cfg["alertas"]
+    rutas = []
+    if telegram_disponible(cfg):
+        # Las mismas alertas a los dos destinos: la ruta de Telegram sigue
+        # evaluando (continue) para que la del mail también reciba.
+        todas = [["alertname", "=~", ".+"]]
+        rutas = [{"receiver": a["telegram"]["contact_point"], "object_matchers": todas, "continue": True},
+                 {"receiver": a["contact_point"], "object_matchers": todas}]
     return {
         "receiver": a["contact_point"],
         "group_by": a["group_by"],
         "group_wait": a["group_wait"],
         "group_interval": a["group_interval"],
         "repeat_interval": a["repeat_interval"],
-        "routes": [],
+        "routes": rutas,
     }
 
 
@@ -144,7 +180,11 @@ def asegurar_carpeta(g: Grafana, cfg: dict, dry: bool) -> str:
 
 
 def asegurar_contact_point(g: Grafana, cfg: dict, dry: bool) -> str:
-    cuerpo = payload_contact_point(cfg)
+    """Todos los puntos de contacto (mail, y Telegram si hay claves), en una línea."""
+    return " · ".join(_asegurar_punto(g, cuerpo, dry) for cuerpo in payloads_contact_points(cfg))
+
+
+def _asegurar_punto(g: Grafana, cuerpo: dict, dry: bool) -> str:
     estado, actuales = g.pedir("GET", "/api/v1/provisioning/contact-points")
     if estado != 200:
         raise SystemExit(f"No se pudieron leer los puntos de contacto ({estado}): {actuales}")
@@ -161,7 +201,8 @@ def asegurar_contact_point(g: Grafana, cfg: dict, dry: bool) -> str:
         verbo = "creado"
     if estado not in (200, 201, 202):
         raise SystemExit(f"No se pudo guardar el punto de contacto ({estado}): {resp}")
-    return f"punto de contacto '{cuerpo['name']}' ({cfg['alertas']['email']}): {verbo}"
+    destino = cuerpo["settings"].get("addresses") or f"chat …{cuerpo['settings'].get('chatid', '')[-3:]}"
+    return f"punto de contacto '{cuerpo['name']}' ({destino}): {verbo}"
 
 
 def aplicar_politica(g: Grafana, cfg: dict, dry: bool) -> str:

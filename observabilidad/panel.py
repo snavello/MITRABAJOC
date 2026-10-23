@@ -73,6 +73,15 @@ def renovaciones(hoy: date = None) -> list:
     return sorted(salida, key=lambda x: x["dias"])
 
 
+def _estado_telegram() -> dict:
+    """Si los avisos por Telegram están configurados y a qué hora sale el resumen (telegram.py)."""
+    try:
+        import telegram
+        return telegram.estado()
+    except Exception:
+        return {"configurado": False, "chat_id_oculto": "", "hora_resumen": "", "freno_minutos": 10}
+
+
 def estado() -> dict:
     """Todo lo que la pestaña necesita, en una sola llamada. Cada parte que no
     se pudo leer queda en None con su motivo en `errores`: la pantalla muestra
@@ -89,6 +98,7 @@ def estado() -> dict:
         "intervalos": list(INTERVALOS),
         "alertas": None, "config": None, "errores": [],
         "renovaciones": renovaciones(),
+        "telegram": _estado_telegram(),
     }
     if not out["configurado"]:
         out["errores"].append("Falta GRAFANA_URL o GRAFANA_TOKEN_LECTURA en este servicio.")

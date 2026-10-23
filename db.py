@@ -27,6 +27,9 @@ alta desde /plataforma (`cargar_seed_si_vacio()` solo a pedido explícito).
 import os
 import csv
 import json
+import hashlib
+import hmac
+import secrets
 from pathlib import Path
 from typing import Optional
 from datetime import date, datetime, timedelta
@@ -34,7 +37,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_, bindparam
+from sqlalchemy import or_, bindparam, UniqueConstraint, Index, delete as sa_delete, event
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -61,7 +64,9 @@ from sqlalchemy.pool import NullPool
 # `test_migraciones.py` la marca.
 JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
+import cuit
 import encuestas
+import errores
 import fechas
 import precios_ia
 # geo.py importa db DENTRO de sus funciones, no en el encabezado, así que
@@ -237,6 +242,30 @@ class Sindicato(SQLModel, table=True):
     # trabajador -- un sindicato puede querer, por ejemplo, oscura para el
     # trabajador y clara para el admin. Mismo criterio visual, elegida aparte.
     admin_portada_clara: bool = Field(default=False)
+    # ---- Cláusula de confidencialidad (Reportes, 2026-09-24) ----
+    # Los recibos que el afiliado verificó pero NO envió le llegan al
+    # sindicato anonimizados (sin nombre, CUIL, legajo ni empresa) en la
+    # lista de Reportes y en el explorador del Panel. Aun anonimizados, solo
+    # le llegan si el sindicato aceptó por contrato la responsabilidad de
+    # tratarlos como confidenciales: sin la cláusula ve solo lo enviado. Lo
+    # marca SOLO plataforma, con quién y cuándo (hechos, no un tilde suelto).
+    # Los números agregados del Panel cuentan todo con o sin cláusula.
+    clausula_confidencialidad: bool = Field(default=False)
+    clausula_aceptada_en: str = ""     # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    clausula_aceptada_por: str = ""    # usuario de plataforma que la cargó
+    # El contrato/convenio firmado con el sindicato: bytes en la base, mismo
+    # patrón que el logo (no hay disco persistente en Render).
+    contrato_datos: Optional[bytes] = Field(default=None)
+    contrato_mime: str = ""
+    contrato_nombre: str = ""          # nombre del archivo tal como se subió
+    # ---- Política de registro (PLAN_REGISTRO.md, D5) ----
+    # True (default): quien no tiene mail en el padrón puede registrarse
+    # DECLARANDO uno y confirmándolo con un código. False: "solo mail del
+    # padrón" -- para gremios que cargaron los mails y no quieren que nadie
+    # entre con uno que se inventó. El default es True porque bloquear el
+    # registro a quien no tiene mail cargado mata la adopción. Lo edita
+    # plataforma, como la cláusula de confidencialidad.
+    acepta_mail_declarado: bool = Field(default=True)
 
 
 class Seccional(SQLModel, table=True):
@@ -387,8 +416,13 @@ class UsuarioSindicato(SQLModel, table=True):
     # es un caso real y no un error.
     trabajador_id: Optional[int] = Field(default=None, foreign_key="trabajador.id", index=True)
     nombre: str = ""
+    # La clave NO vive acá (2026-10-17): vive en `CuentaPanel`, una por CUIL.
+    # Estas dos columnas quedan solo como la puerta de entrada de un alta: lo
+    # que traiga `clave_hash` al insertar lo mueve a la cuenta el enganche
+    # `_mover_clave_a_la_cuenta` (si la persona todavía no tenía), y la fila
+    # queda SIEMPRE con la clave vacía. Ver CuentaPanel.
     clave_hash: str = ""
-    debe_cambiar_clave: bool = True             # la primera clave la pone el admin de plataforma
+    debe_cambiar_clave: bool = True
     activo: bool = True
     # Default False a propósito: si alguna alta se olvida de setearlo, el
     # usuario nace SIN poder, no con todo. Los tres lugares que crean Super
@@ -398,6 +432,61 @@ class UsuarioSindicato(SQLModel, table=True):
     es_admin_seccional: bool = False
     area_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+
+
+class CuentaPanel(SQLModel, table=True):
+    """**La credencial del operador**: una fila por CUIL para el panel de
+    TODOS los sindicatos (2026-10-17). Es a `UsuarioSindicato` lo que
+    `CuentaTrabajador` es a `Trabajador`: el usuario dice en qué sindicato
+    trabaja la persona y con qué rol; la cuenta dice con qué clave entra.
+
+    Hasta esta fecha la clave estaba en cada `UsuarioSindicato`, una por
+    sindicato, y el login buscaba el CUIL en todos y probaba la clave contra
+    la PRIMERA fila que encontraba: quien trabajaba en dos sindicatos solo
+    podía entrar a uno, y a cuál dependía del orden de la base.
+
+    Reglas:
+    - Una persona, una clave. Entra con ella y, si trabaja en más de un
+      sindicato, elige a cuál después del login (como el afiliado con
+      pluriempleo).
+    - La clave la fija el PRIMER sindicato que da de alta a la persona. Los
+      que la suman después no la pisan: si pudieran, el admin de un gremio
+      entraría al panel de otro con la clave que él mismo eligió.
+    - Es una credencial aparte de la del afiliado (`CuentaTrabajador`):
+      distinto rol, distinta cookie, distinto nivel de confianza.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuil: str = Field(index=True, unique=True)
+    clave_hash: str = ""
+    # La clave la puso otra persona (el alta o un reseteo de plataforma).
+    debe_cambiar_clave: bool = True
+
+
+@event.listens_for(UsuarioSindicato, "before_insert")
+def _mover_clave_a_la_cuenta(mapper, connection, target):
+    """La clave que trae un alta va a la CUENTA de la persona, nunca a la fila.
+
+    Vive en el modelo y no en las rutas a propósito: hay cinco lugares que
+    dan de alta usuarios del panel (el panel del sindicato, plataforma,
+    `cargar_demo`, `cargar_bancaria` y los robots) y todos escriben
+    `clave_hash` en la fila. Con esto ninguno puede crear una segunda clave
+    para el mismo CUIL, ni pisar la que la persona ya tiene: si la cuenta
+    existe, la clave del alta se descarta. La fila queda siempre vacía."""
+    # El login siempre fue el CUIL: si la fila no trae `cuil` y el usuario
+    # es uno, se toma de ahí. Un login que no es un CUIL no se copia (no
+    # puede entrar: el login normaliza a dígitos) y no tiene cuenta.
+    if not target.cuil and (target.usuario or "").isdigit() and len(target.usuario) == 11:
+        target.cuil = target.usuario
+    if target.clave_hash and target.cuil:
+        tabla = CuentaPanel.__table__
+        existe = connection.execute(
+            select(tabla.c.id).where(tabla.c.cuil == target.cuil)).first()
+        if not existe:
+            connection.execute(postgresql.insert(tabla).values(
+                cuil=target.cuil, clave_hash=target.clave_hash,
+                debe_cambiar_clave=bool(target.debe_cambiar_clave),
+            ).on_conflict_do_nothing(index_elements=["cuil"]))
+    target.clave_hash = ""
 
 
 class UsuarioPlataforma(SQLModel, table=True):
@@ -446,6 +535,33 @@ class LogPlataforma(SQLModel, table=True):
     detalle: str = ""
 
 
+class CambioIdentificador(SQLModel, table=True):
+    """Traza de la regularización de un CUIL/CUIT (PLAN_CUIT_MOD11.md, D5):
+    una fila por número que `regularizar_cuit.py aplicar --si` convirtió.
+
+    Existe porque la HISTORIA no se reescribe: las bitácoras (`logplataforma`,
+    `tramitelog`, ...), los textos libres y los archivos siguen diciendo el
+    número que tenían. Una entrada vieja de la bitácora con el número anterior
+    se sigue hasta la persona o la empresa buscándolo acá. Se guardan hechos,
+    no derivados: el número anterior y el nuevo, quién lo decidió y cuántas
+    filas de cada tabla se tocaron.
+
+    Los números van como DÍGITOS (11, sin guiones) aunque en alguna columna
+    estuvieran con guiones: es lo que se compara. `detalle` es el conteo de
+    filas por `tabla.columna`. Es de solo agregar: nada de la app la lee ni la
+    modifica, solo la herramienta la escribe."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    anterior: str = Field(index=True)
+    nuevo: str = Field(index=True)
+    tipo: str = ""                 # "persona" | "empresa"
+    origen: str = ""               # "manual" | "demo" | "lote" | ...
+    entorno: str = ""              # local | pruebas | demo | prod
+    fecha: str = ""                # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    quien: str = ""                # quien corrió la herramienta
+    filas: int = 0                 # total de filas tocadas
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+
+
 class CuentaTrabajador(SQLModel, table=True):
     """**La PERSONA**: una fila por CUIL en toda la plataforma, y la única
     dueña de sus datos personales -- nombre, domicilio, teléfono, mail y
@@ -469,6 +585,25 @@ class CuentaTrabajador(SQLModel, table=True):
     significa "todavía no eligió clave", no "no existe". Quien decide si una
     persona ya se registró sigue siendo `Trabajador.registrado`, que es por
     sindicato y alimenta el KPI del panel.
+
+    **Los TRES mails** (PLAN_REGISTRO.md, Q-6). Parecen uno y no lo son:
+
+    1. `mail` es el mail de CONTACTO de la persona. Lo escribe ella desde
+       `/api/perfil` y el admin desde el alta; es un dato personal como el
+       teléfono y se puede cambiar cuando quiera. NO prueba nada.
+    2. `mail_padron` es el mail que cargó EL SINDICATO (alta individual y
+       alta masiva del panel, nunca el perfil ni el registro). Que lo haya
+       puesto un tercero con acceso al padrón es lo que lo hace una prueba:
+       un código mandado ahí llega a quien el gremio conoce, no a quien
+       llegó primero con un CUIL público.
+    3. `mail_declarado` es el que dio la persona al registrarse, sin que el
+       sindicato lo conozca, y vale recién cuando `mail_declarado_confirmado`
+       tiene fecha (confirmó un código ahí).
+
+    Por eso los códigos de verificación solo van al 2.º o al 3.º confirmado:
+    si fueran al 1.º, quien se registra primero (el impostor) lo cambia desde
+    el perfil y recibe en su casilla el código para recuperar la cuenta de
+    otro. `mail_padron_de` lee el 2.º y nada más.
 
     El domicilio usa el MISMO bloque de campos que `Seccional` (ver
     `geo.CAMPOS_DOMICILIO`), con la misma carga guiada y la misma función de
@@ -494,10 +629,35 @@ class CuentaTrabajador(SQLModel, table=True):
     geo_actualizado: str = ""
     # ---- Contacto
     telefono: str = ""
-    mail: str = ""
+    mail: str = ""                         # CONTACTO: lo escribe la persona (ver "Los TRES mails")
+    # El mail que cargó EL SINDICATO (alta individual y masiva). Solo
+    # `guardar_datos_personales(mail_padron=...)` desde esas dos rutas lo
+    # escribe; ni el perfil ni el registro. Es al que van los códigos.
+    mail_padron: str = ""
+    # ---- Fecha de nacimiento (PLAN_LISTAS_VALIDACIONES.md, D4): de la
+    # PERSONA, la carga el afiliado en el registro o el perfil y el sindicato
+    # en Trabajadores. Texto ISO "AAAA-MM-DD" como todas las fechas del
+    # proyecto; NULL = no se cargó. Hechos, no derivados: la edad se calcula
+    # donde se necesita (una validación de trámite), nunca se guarda.
+    fecha_nacimiento: Optional[str] = Field(default=None)
     # ---- Foto de perfil (bytes en la base, mismo patrón que el logo del sindicato)
     foto_datos: Optional[bytes] = Field(default=None)
     foto_mime: str = ""
+    # ---- Registro confirmado y niveles de fiabilidad (PLAN_REGISTRO.md) ----
+    # Nivel 1 a 4 (R2). SUBE y no baja: `subir_nivel` es la única escritura.
+    nivel_fiabilidad: int = Field(default=1)
+    # Qué justificó el nivel actual: cuil_padron | mail_padron |
+    # mail_declarado | recibo_propio | presencial (ver ORIGENES_NIVEL).
+    nivel_origen: str = ""
+    nivel_actualizado: str = ""            # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    # El mail que dio la persona al registrarse. NUNCA pisa `mail_padron` (el
+    # que cargó el sindicato): si quien se registra es un impostor, el mail
+    # de la persona real tiene que quedar intacto.
+    mail_declarado: str = ""
+    mail_declarado_confirmado: str = ""    # cuándo se confirmó con un código; vacío = no
+    # La puso el admin del sindicato al restablecer la clave: el primer
+    # ingreso obliga a cambiarla.
+    clave_temporal: bool = Field(default=False)
 
 
 class Trabajador(SQLModel, table=True):
@@ -535,6 +695,12 @@ class Trabajador(SQLModel, table=True):
     # del trabajador. Fecha como string "AAAA-MM-DD" (formato de <input
     # type=date>), igual que se recibe del formulario.
     vigencia_credencial: Optional[str] = Field(default=None)
+    # Fecha de afiliación a ESTE sindicato (PLAN_LISTAS_VALIDACIONES.md, D4):
+    # es del empadronamiento, no de la persona (una misma persona se afilió a
+    # cada gremio en una fecha distinta), y la carga solo el sindicato (alta,
+    # edición y carga masiva). ISO "AAAA-MM-DD"; NULL = no se cargó. La
+    # antigüedad se calcula en la validación que la necesite, no se guarda.
+    fecha_afiliacion: Optional[str] = Field(default=None)
     # Seccional del sindicato a la que pertenece (opcional -- no todos los
     # sindicatos cargan seccionales, y un trabajador puede quedar sin asignar).
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
@@ -570,6 +736,21 @@ class CuentaEmpleador(SQLModel, table=True):
     clave_hash: str = ""
     foto_datos: Optional[bytes] = Field(default=None)
     foto_mime: str = ""
+    # ---- Registro confirmado y niveles de fiabilidad (PLAN_REGISTRO.md) ----
+    # Nivel 1 a 4 (R2), mismo criterio que CuentaTrabajador. SUBE y no baja: `subir_nivel` es la única escritura.
+    nivel_fiabilidad: int = Field(default=1)
+    # Qué justificó el nivel actual: cuil_padron | mail_padron |
+    # mail_declarado | recibo_propio | presencial (ver ORIGENES_NIVEL).
+    nivel_origen: str = ""
+    nivel_actualizado: str = ""            # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    # El mail que dio la persona al registrarse. NUNCA pisa
+    # `Empleador.mail_padron` (el que cargó el sindicato): si quien se registra
+    # es un impostor, el mail de la empresa real tiene que quedar intacto.
+    mail_declarado: str = ""
+    mail_declarado_confirmado: str = ""    # cuándo se confirmó con un código; vacío = no
+    # La puso el admin del sindicato al restablecer la clave: el primer
+    # ingreso obliga a cambiarla.
+    clave_temporal: bool = Field(default=False)
 
 
 class Empleador(SQLModel, table=True):
@@ -585,9 +766,69 @@ class Empleador(SQLModel, table=True):
     domicilio: str = ""
     telefono: str = ""
     provincia: str = ""
-    mail: str = ""
+    mail: str = ""                         # CONTACTO: lo edita la empresa desde su perfil
+    # El mail que cargó EL SINDICATO (solo `POST /admin/empleador`). Es al que
+    # van los códigos; `actualizar_perfil_empleador` NO lo toca. Por sindicato,
+    # como `mail` (el empleador no está unificado). Mismo criterio que
+    # `CuentaTrabajador.mail_padron`.
+    mail_padron: str = ""
     registrado: bool = False               # True cuando el CUIT ya creó su CuentaEmpleador
     activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
+
+
+# ---- Registro confirmado por mail (PLAN_REGISTRO.md) ----
+CODIGO_VIGENCIA_MINUTOS = 15      # D2: cuánto vive un código
+CODIGO_MAX_INTENTOS = 5           # D2: intentos erróneos antes de quedar agotado
+CODIGOS_POR_HORA = 3              # D2: cupo por persona y propósito, para no bombardear un mail
+CODIGOS_POR_HORA_DESTINO = 5       # QA-REG-03: cupo por MAIL de destino, sea de quien sea el CUIL
+# Niveles de fiabilidad de una cuenta (R2). Sube y no baja.
+NIVELES_FIABILIDAD = {1: "CUIL en el padrón", 2: "mail confirmado",
+                      3: "recibo propio verificado", 4: "confirmado por el sindicato"}
+# Qué nivel acredita cada origen (columna `nivel_origen` de las cuentas).
+ORIGENES_NIVEL = {"cuil_padron": 1, "mail_padron": 2, "mail_declarado": 2,
+                  "recibo_propio": 3, "presencial": 4}
+
+
+class CodigoVerificacion(SQLModel, table=True):
+    """Un código de 6 dígitos mandado por mail para confirmar un registro o
+    recuperar una clave (PLAN_REGISTRO.md, D2 y D6).
+
+    Existe porque el CUIL/CUIT es dato público: quien llega primero con el
+    número de un afiliado se queda con su cuenta (H-0017). Con el código, la
+    cuenta solo nace para quien controla el mail -- el que cargó el sindicato
+    en el padrón (`origen_destino = "padron"`) o uno que la persona declaró y
+    confirmó (`"declarado"`).
+
+    **Se guarda el hash, nunca el código**: HMAC-SHA256 con el secreto del
+    servidor (`auth.SECRETO`) sobre `codigo:identificador:creado`. Seis
+    dígitos son un millón de combinaciones; con un sha256 simple, quien leyera
+    la base las probaba todas en segundos, porque el resto de los datos está
+    en la misma fila. Con la clave del servidor el hash no sirve fuera de él.
+    Lo que frena la fuerza bruta DENTRO de la app son los 5 intentos y los 15
+    minutos de vigencia (`CODIGO_MAX_INTENTOS`, `CODIGO_VIGENCIA_MINUTOS`). Hay un solo código
+    vivo por persona y propósito: pedir otro vence el anterior.
+
+    **Un código usado o vencido NO se borra**: es la traza de quién pidió qué
+    y a qué mail (mismo criterio que `CambioIdentificador`). Sirve para
+    contar cuántos pidió una persona en la última hora y poner el cupo
+    (`CODIGOS_POR_HORA`), para que el registro no se use para bombardear el
+    mail de un afiliado.
+
+    `identificador` es un CUIL o un CUIT según `tipo`; entra al inventario de
+    `regularizar_cuit.py`. Los sellos de tiempo son texto "AAAA-MM-DD HH:MM"
+    en hora de Buenos Aires, como todo el proyecto."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo: str = ""                       # "trabajador" | "empleador"
+    identificador: str = Field(default="", index=True)   # CUIL o CUIT
+    proposito: str = ""                  # "registro" | "recuperacion"
+    destino: str = ""                    # el mail al que se mandó
+    origen_destino: str = ""             # "padron" | "declarado"
+    codigo_hash: str = ""
+    creado: str = ""
+    vence: str = ""
+    intentos: int = 0
+    usado_en: str = ""                   # vacío = no se usó
+    ip: str = ""
 
 
 class Concepto(SQLModel, table=True):
@@ -737,8 +978,8 @@ class UsoIA(SQLModel, table=True):
     sindicato y por tipo de llamada en el panel de plataforma."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
-    cuil: str = ""  # vacío en "aprendizaje" y "prueba": no son de un trabajador puntual
-    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje" | "prueba"
+    cuil: str = ""  # vacío en "aprendizaje", "prueba" y "herramienta": no son de un trabajador puntual
+    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje" | "prueba" | "herramienta"
     modelo: str = ""
     tokens_entrada: int = 0
     tokens_salida: int = 0
@@ -787,6 +1028,7 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     modelo_recibos: str = ""
     modelo_convenio: str = ""
     modelo_asistente: str = ""
+    modelo_asistente_tramites: str = ""   # Asistente de trámites (Herramientas de /entornos)
     # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
     # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
     # que Sindicato: logo en la base (Opción B), colores editables. Si no se
@@ -852,7 +1094,7 @@ class ReciboVerificado(SQLModel, table=True):
     # estaba ("dd/mm/AAAA HH:MM", NO ordenable) para no romper lo que la
     # muestra; `procesado_en` es la MISMA fecha en formato ordenable.
     procesado_en: Optional[str] = Field(default=None)   # "AAAA-MM-DD HH:MM"
-    cuit_empleador: str = ""                            # solo dígitos (validador._norm_cuil)
+    cuit_empleador: str = ""                            # solo dígitos (cuit.normalizar)
     categoria: str = ""                                 # texto libre leído del recibo (no hay catálogo CCT)
     formato: str = ""                                   # "clasico" | "nuevo" (Ley 27.802)
     bruto: Optional[float] = Field(default=None)        # resultado.totales.ingresos
@@ -965,6 +1207,11 @@ class TipoTramite(SQLModel, table=True):
     # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
     # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
     reglas_consistencia: list = Field(default=[], sa_column=Column(JSON_TIPO))
+    # Requisitos para INICIAR el trámite (PLAN_LISTAS_VALIDACIONES.md, bloque
+    # 3): validaciones de fuente `funcion`, todas bloqueantes, que se evalúan
+    # contra el padrón y las listas antes de mostrar el formulario y otra
+    # vez al enviar. Saneadas en validaciones_tramite.requisitos_saneados.
+    requisitos: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # NULL = formulario GLOBAL, lo ve todo el sindicato. Con seccional, solo
     # lo ven los trabajadores de esa seccional y solo su admin local lo
     # edita (decisión N7 de SPRINT_AREAS_V2.md).
@@ -979,6 +1226,12 @@ class TipoTramite(SQLModel, table=True):
     # los vería en ninguna bandeja (decisión N6, "destino por defecto").
     area_destino_default_id: Optional[int] = Field(
         default=None, foreign_key="area.id", index=True)
+    # BORRADOR (SDN, 2026-10-19): un formulario guardado a medias, para
+    # seguirlo otro día. Nace inactivo y sin exigir campos ni área; el
+    # afiliado nunca lo ve. Publicarlo es guardarlo sin esta marca, y ahí
+    # rigen todas las exigencias del alta. Aparte de `activo`, porque un
+    # formulario publicado y apagado a propósito no es un borrador.
+    borrador: bool = False
 
 
 class PaseTipoTramite(SQLModel, table=True):
@@ -2375,6 +2628,70 @@ def crear_conceptos_universales(sindicato_id: int) -> list:
 
 
 # ---------- Topes de base imponible (jubilación, INSSJP, obra social) ----------
+def secciones_vistas(s: Session, sindicato_id: int, ultimos: int = 500) -> dict:
+    """{(codigo, cuit_empleador): {"haberes": n, "no_remunerativos": n,
+    "descuentos": n}} -- en qué sección del recibo leyó la IA cada código,
+    contado sobre los últimos `ultimos` recibos verificados del sindicato.
+
+    Es lo que dice el recibo de cada concepto, para contrastarlo con su
+    rubro en el catálogo (validador.clasificacion_vista): una devolución de
+    Ganancias confirmada como haber se ve acá como "leído 4 veces entre los
+    descuentos". Recibe la sesión del request (una conexión por request) y
+    se acota a los últimos recibos: la evidencia que importa es la reciente,
+    y la consulta abre el JSON de cada uno. Los recibos leídos antes de que
+    el extractor dijera la sección (2026-10-11) no aportan nada.
+    """
+    from validador import seccion_de
+    filas = s.execute(text("""
+        WITH r AS (
+            SELECT cuit_empleador, detalle->'recibo'->'lineas' AS lineas
+            FROM reciboverificado
+            WHERE sindicato_id = :sid
+            ORDER BY id DESC
+            LIMIT :n
+        )
+        SELECT l->>'codigo' AS codigo, r.cuit_empleador, l->>'seccion' AS seccion,
+               count(*) AS veces
+        FROM r, jsonb_array_elements(
+                 CASE WHEN jsonb_typeof(r.lineas) = 'array' THEN r.lineas
+                      ELSE '[]'::jsonb END) AS l
+        WHERE jsonb_typeof(l) = 'object'
+          AND jsonb_typeof(l->'seccion') = 'string'
+          AND l->>'codigo' IS NOT NULL
+        GROUP BY 1, 2, 3
+    """), {"sid": sindicato_id, "n": ultimos}).all()
+    vistas: dict = {}
+    for codigo, cuit_empleador, seccion, veces in filas:
+        seccion = seccion_de({"seccion": seccion})
+        if seccion is None:
+            continue
+        clave = ((codigo or "").strip(), cuit_empleador or "")
+        conteo = vistas.setdefault(clave, {})
+        conteo[seccion] = conteo.get(seccion, 0) + veces
+    return vistas
+
+
+def secciones_del_concepto(vistas: dict, codigo: str, cuit_empleador: str | None,
+                           especificos: set) -> dict:
+    """Los conteos de secciones_vistas que le corresponden a UN concepto: el
+    de un empleador, solo los recibos de ese CUIT; uno genérico, los de todos
+    los empleadores salvo los que tienen su propio concepto con ese código
+    (esos recibos matchean contra el específico, no contra este)."""
+    codigo = (codigo or "").strip()
+    total: dict = {}
+    for (cod, cuit_r), conteo in vistas.items():
+        if cod != codigo:
+            continue
+        if cuit_empleador:
+            if cuit_r != cuit_empleador:
+                continue
+        elif (cod, cuit_r) in especificos:
+            continue
+        for seccion, n in conteo.items():
+            total[seccion] = total.get(seccion, 0) + n
+    return total
+
+
 def topes_como_dicts() -> list:
     """Todos los topes, en el formato que espera el validador (sin filtro
     de sindicato: es una tabla nacional)."""
@@ -2480,24 +2797,35 @@ def sindicatos_de_cuil(cuil: str) -> list:
         return resultado
 
 
-def importar_cuits_de_conceptos(sindicato_id: int) -> int:
+def importar_cuits_de_conceptos(sindicato_id: int, invalidos: Optional[list] = None) -> int:
     """CUITs distintos de Concepto.cuit_empleador de ESTE sindicato que
     todavía no tienen fila en Empleador -- crea una fila mínima (solo
     cuit) por cada uno, registrado=False, activo=True. Idempotente: se
     puede volver a correr cuando aparezcan CUITs nuevos en Conceptos
     (botón "Importar CUITs de conceptos" en el CRUD). Devuelve cuántos
-    se agregaron."""
+    se agregaron.
+
+    Acá NACE un empleador, así que su CUIT tiene que cumplir el módulo 11
+    (PLAN_CUIT_MOD11.md, D2): los de un concepto que no lo cumplen (un
+    dígito mal leído por la IA, casi siempre) no se importan, y si se pasa
+    `invalidos` se agregan ahí para que la pantalla los muestre. Se compara
+    normalizado: un concepto con '30-11122233-5' es el mismo empleador que
+    '30111222335'."""
     with Session(engine) as s:
         conceptos = s.exec(select(Concepto).where(
             Concepto.sindicato_id == sindicato_id)).all()
         cuits_concepto = {
-            c.cuit_empleador.strip() for c in conceptos if (c.cuit_empleador or "").strip()
+            cuit.normalizar(c.cuit_empleador) for c in conceptos
+            if cuit.normalizar(c.cuit_empleador)
         }
-        existentes = {e.cuit for e in s.exec(select(Empleador).where(
+        malos = sorted(n for n in cuits_concepto if not cuit.es_valido(n))
+        if invalidos is not None:
+            invalidos.extend(malos)
+        existentes = {cuit.normalizar(e.cuit) for e in s.exec(select(Empleador).where(
             Empleador.sindicato_id == sindicato_id)).all()}
-        nuevos = cuits_concepto - existentes
-        for cuit in nuevos:
-            s.add(Empleador(sindicato_id=sindicato_id, cuit=cuit))
+        nuevos = cuits_concepto - existentes - set(malos)
+        for numero in nuevos:     # no `cuit`: taparía al módulo en toda la función
+            s.add(Empleador(sindicato_id=sindicato_id, cuit=numero))
         s.commit()
         return len(nuevos)
 
@@ -2515,6 +2843,204 @@ def sindicatos_de_cuit_empleador(cuit: str) -> list:
             if sind and sind.activo:
                 resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
         return resultado
+
+
+# ---------- Registro confirmado por mail: niveles y códigos (PLAN_REGISTRO.md) ----------
+# Todos reciben la sesión y NO abren la suya (regla "una sesión por request").
+# Ninguno hace commit (lo hace quien los llama, junto con el resto del acto),
+# con UNA excepción con motivo: `verificar_codigo` (ver su docstring).
+def subir_nivel(s, cuenta, origen: str) -> bool:
+    """Sube la cuenta (CuentaTrabajador o CuentaEmpleador) al nivel que
+    acredita `origen`. Única escritura de `nivel_fiabilidad`: el nivel SUBE y
+    no baja, así que un recibo propio (3) posterior a la confirmación del
+    sindicato (4) no lo rebaja. Devuelve True si cambió algo, False si la
+    cuenta ya tenía ese nivel o más (y entonces no toca nada). Un origen que
+    no está en ORIGENES_NIVEL es un error de programación: ValueError.
+
+    Excepción (Q-5): si el nivel pedido es IGUAL al actual y la cuenta no
+    tiene `nivel_origen` (una cuenta nueva, que nace en 1 sin origen), se
+    registran el origen y la fecha y devuelve True. Así "nivel 1, CUIL en el
+    padrón" queda escrito también en las cuentas nuevas, por el mismo y único
+    camino, y no hace falta escribirlo a mano desde la ruta."""
+    if origen not in ORIGENES_NIVEL:
+        raise ValueError(f"origen de nivel desconocido: {origen!r}")
+    nivel = ORIGENES_NIVEL[origen]
+    actual = cuenta.nivel_fiabilidad or 1
+    if nivel < actual or (nivel == actual and (cuenta.nivel_origen or "")):
+        return False
+    cuenta.nivel_fiabilidad = nivel
+    cuenta.nivel_origen = origen
+    cuenta.nivel_actualizado = fechas.ahora_texto()
+    s.add(cuenta)
+    return True
+
+
+def mail_padron_de(s, cuil: str) -> str:
+    """El mail que el SINDICATO cargó para este CUIL ("" si no hay): lee
+    `mail_padron`, nunca `mail` (el de contacto, que la persona cambia desde
+    su perfil) ni `mail_declarado`. Ver "Los TRES mails" en CuentaTrabajador."""
+    c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+    return (c.mail_padron or "").strip() if c else ""
+
+
+def mail_padron_de_empresa(s, cuit: str) -> str:
+    """El mail del padrón de una empresa: el primer `Empleador.mail_padron` no
+    vacío entre sus altas, las activas primero (el empleador no está
+    unificado, el mail es por sindicato). "" si ninguna lo tiene. Lee
+    `mail_padron` (lo que cargó el sindicato), no `mail` (el contacto que
+    edita la empresa)."""
+    filas = s.exec(select(Empleador).where(Empleador.cuit == cuit)
+                   .order_by(Empleador.activo.desc(), Empleador.id)).all()
+    for e in filas:
+        if (e.mail_padron or "").strip():
+            return e.mail_padron.strip()
+    return ""
+
+
+def acepta_mail_declarado(s, cuil: str) -> bool:
+    """¿Puede este CUIL registrarse declarando un mail propio? Solo si TODOS
+    los sindicatos activos donde está empadronado lo aceptan: manda el más
+    estricto, porque basta un gremio que pida "solo mail del padrón" para que
+    el camino flojo no valga. Sin empadronamientos en un sindicato activo,
+    False (no hay política que lo habilite)."""
+    sindicatos = s.exec(select(Sindicato).join(
+        Trabajador, Trabajador.sindicato_id == Sindicato.id).where(
+        Trabajador.cuil == cuil, Sindicato.activo == True)).all()  # noqa: E712
+    return bool(sindicatos) and all(x.acepta_mail_declarado for x in sindicatos)
+
+
+def acepta_mail_declarado_empresa(s, cuit: str) -> bool:
+    """Lo mismo para un CUIT, sobre los sindicatos activos donde tiene un
+    alta de Empleador activa (el mismo criterio que
+    `sindicatos_de_cuit_empleador`)."""
+    sindicatos = s.exec(select(Sindicato).join(
+        Empleador, Empleador.sindicato_id == Sindicato.id).where(
+        Empleador.cuit == cuit, Empleador.activo == True,  # noqa: E712
+        Sindicato.activo == True)).all()  # noqa: E712
+    return bool(sindicatos) and all(x.acepta_mail_declarado for x in sindicatos)
+
+
+def codigos_recientes(s, tipo: str, identificador: str, proposito: str, horas: int = 1) -> int:
+    """Cuántos códigos se pidieron para esta persona y propósito en las
+    últimas `horas`, usados o no (el cupo cuenta pedidos, no aciertos)."""
+    desde = fechas.a_texto(fechas.ahora() - timedelta(hours=horas))
+    filas = s.exec(select(CodigoVerificacion.id).where(
+        CodigoVerificacion.tipo == tipo,
+        CodigoVerificacion.identificador == identificador,
+        CodigoVerificacion.proposito == proposito,
+        CodigoVerificacion.creado >= desde)).all()
+    return len(filas)
+
+
+def codigos_recientes_destino(s, destino: str, horas: int = 1) -> int:
+    """Cuántos códigos se mandaron a este mail en las últimas `horas`, de
+    cualquier persona, tipo o propósito (el cupo cuenta pedidos). El cupo por
+    persona no alcanza: quien conoce N CUIL sin mail en el padrón declara el
+    mismo mail ajeno en todos y le manda 3 códigos por CUIL, a nombre de
+    Colm3na y gastando los mails del mes. Se compara sin distinguir
+    mayúsculas: `A@x.com` y `a@x.com` son la misma casilla."""
+    from sqlalchemy import func
+    desde = fechas.a_texto(fechas.ahora() - timedelta(hours=horas))
+    filas = s.exec(select(CodigoVerificacion.id).where(
+        func.lower(CodigoVerificacion.destino) == (destino or "").strip().lower(),
+        CodigoVerificacion.creado >= desde)).all()
+    return len(filas)
+
+
+def _hash_codigo(codigo: str, identificador: str, creado: str) -> str:
+    """HMAC-SHA256 con `auth.SECRETO` como clave (Q-4): sin el secreto del
+    servidor el hash no se puede probar contra el millón de códigos posibles."""
+    import auth       # adentro de la función: así db no queda atado al orden de carga de auth
+    return hmac.new(auth.SECRETO.encode(), f"{codigo}:{identificador}:{creado}".encode(),
+                    hashlib.sha256).hexdigest()
+
+
+def crear_codigo(s, tipo: str, identificador: str, proposito: str, destino: str,
+                 origen_destino: str, ip: str):
+    """Genera un código de 6 dígitos (con `secrets`, con ceros a la
+    izquierda), guarda SOLO su hash y devuelve (fila, codigo_en_claro) para
+    mandarlo por mail. Antes vence los pendientes de la misma persona y
+    propósito: un solo código vivo a la vez, así el que se pidió primero no
+    queda abierto para adivinarlo mientras llega el segundo.
+
+    Aplica los cupos él mismo (Q-3): si ya hay `CODIGOS_POR_HORA` pedidos en
+    la última hora para esa persona y propósito, o `CODIGOS_POR_HORA_DESTINO`
+    para ese mail (QA-REG-03), levanta `ErrorApp("E-REGISTRO-03")` sin crear
+    nada. Las rutas NO lo chequean antes: lo resuelve acá, en un solo lugar,
+    así ninguna se olvida de ninguno de los dos cupos ni se puede ganar 5
+    intentos por código nuevo."""
+    if (codigos_recientes(s, tipo, identificador, proposito) >= CODIGOS_POR_HORA
+            or codigos_recientes_destino(s, destino) >= CODIGOS_POR_HORA_DESTINO):
+        raise errores.ErrorApp("E-REGISTRO-03")
+    ahora = fechas.ahora()
+    ahora_t = fechas.a_texto(ahora)
+    pendientes = s.exec(select(CodigoVerificacion).where(
+        CodigoVerificacion.tipo == tipo,
+        CodigoVerificacion.identificador == identificador,
+        CodigoVerificacion.proposito == proposito,
+        CodigoVerificacion.usado_en == "",
+        CodigoVerificacion.vence > ahora_t)).all()
+    for viejo in pendientes:
+        viejo.vence = ahora_t
+        s.add(viejo)
+    codigo = f"{secrets.randbelow(10 ** 6):06d}"
+    fila = CodigoVerificacion(
+        tipo=tipo, identificador=identificador, proposito=proposito,
+        destino=destino, origen_destino=origen_destino,
+        codigo_hash=_hash_codigo(codigo, identificador, ahora_t),
+        creado=ahora_t,
+        vence=fechas.a_texto(ahora + timedelta(minutes=CODIGO_VIGENCIA_MINUTOS)),
+        ip=ip)
+    s.add(fila)
+    s.flush()
+    return fila, codigo
+
+
+def verificar_codigo(s, codigo_id: int, codigo: str) -> str:
+    """Comprueba un código contra su fila. Devuelve "inexistente", "usado",
+    "vencido", "agotado" (ya gastó sus 5 intentos: ni el código correcto
+    sirve), "incorrecto" (suma un intento) u "ok" (lo marca usado). Se
+    consulta en ese orden, así que un código usado o vencido no gasta
+    intentos.
+
+    **EXCEPCIÓN con motivo a "ningún helper hace commit" (Q-1)**: acá SÍ se
+    hace commit, tras "incorrecto" y tras "ok" (y en las demás salidas, solo para
+    soltar el bloqueo de la fila). El idioma de las rutas es
+    `with db.get_session() as s:` + `raise ErrorApp(...)`, y al salir del with
+    sin commit la sesión hace rollback: el intento fallido se perdía y el tope
+    de 5 intentos no existía (el código se podía tantear durante los 15
+    minutos). Un contador de seguridad no puede depender de que cada ruta se
+    acuerde de confirmar. Efecto lateral aceptado: el commit confirma también
+    lo que la sesión llevara pendiente; las rutas llaman a esto primero.
+
+    **Lectura con bloqueo de fila (Q-2)**: `SELECT ... FOR UPDATE`, así dos
+    requests simultáneos con el mismo código se serializan: los dos intentos
+    erróneos cuentan dos (no uno) y un código correcto se consume UNA sola
+    vez. El bloqueo se suelta con ese mismo commit."""
+    fila = s.exec(select(CodigoVerificacion).where(
+        CodigoVerificacion.id == codigo_id).with_for_update()).first()
+    if not fila:
+        return "inexistente"
+    if fila.usado_en:
+        s.commit()            # suelta el bloqueo de la fila
+        return "usado"
+    ahora_t = fechas.ahora_texto()
+    if fila.vence <= ahora_t:
+        s.commit()
+        return "vencido"
+    if fila.intentos >= CODIGO_MAX_INTENTOS:
+        s.commit()
+        return "agotado"
+    esperado = _hash_codigo((codigo or "").strip(), fila.identificador, fila.creado)
+    if not hmac.compare_digest(esperado, fila.codigo_hash):
+        fila.intentos += 1
+        s.add(fila)
+        s.commit()
+        return "incorrecto"
+    fila.usado_en = ahora_t
+    s.add(fila)
+    s.commit()
+    return "ok"
 
 
 def perfil_empleador(cuit: str, sindicato_id: int) -> Optional[dict]:
@@ -2640,11 +3166,19 @@ def permisos_efectivos(usuario_id: int) -> set:
     Devuelve set() para un usuario inexistente o dado de baja -- sin
     excepción: quien llama decide si eso es un 403 o simplemente no mostrar
     nada."""
-    from permisos import calcular_efectivos, secciones_de_modulos
+    from permisos import calcular_efectivos, secciones_de_modulos, SECCIONES_EMPLEADORES
     with Session(engine) as s:
         u = s.get(UsuarioSindicato, usuario_id)
         if not u or not u.activo:
             return set()
+        # ¿Está ACOTADO a una seccional? (la misma regla que alcance_seccional,
+        # resuelta con esta sesión para no abrir otra.) Quien lo está no ve
+        # Empleadores: no tienen seccional (PLAN_ALCANCE_SECCIONAL.md, bloque 5).
+        sec = s.get(Seccional, u.seccional_id) if u.seccional_id else None
+        acotado = not u.es_super_admin and not (sec and sec.sindicato_id == u.sindicato_id
+                                                 and sec.ve_todas)
+        def _recortar(secciones: set) -> set:
+            return secciones - SECCIONES_EMPLEADORES if acotado else secciones
         # Los módulos se leen con ESTA sesión. Llamar a modulos_habilitados()
         # abría una segunda conexión con la primera todavía tomada, y como
         # esto corre en cada ruta /admin/* (vía exigir_sindicato), cada request
@@ -2662,7 +3196,7 @@ def permisos_efectivos(usuario_id: int) -> set:
         # las rutas que administran áreas y usuarios. Separar las dos cosas
         # es lo que hace que no haya dos catálogos que mantener.
         if u.es_super_admin or u.es_admin_seccional:
-            return set(secciones_de_modulos(mods))
+            return _recortar(set(secciones_de_modulos(mods)))
         del_area = []
         if u.area_id:
             area = s.get(Area, u.area_id)
@@ -2675,7 +3209,13 @@ def permisos_efectivos(usuario_id: int) -> set:
             PermisoUsuario.usuario_id == usuario_id)).all()
         agregados = [x.seccion for x in individuales if x.tipo == "agregar"]
         bloqueados = [x.seccion for x in individuales if x.tipo == "bloquear"]
-        return calcular_efectivos(del_area, agregados, bloqueados, mods)
+        return _recortar(calcular_efectivos(del_area, agregados, bloqueados, mods))
+
+
+def es_acotado(usuario_id: int) -> bool:
+    """¿Este usuario trabaja acotado a una seccional? (alcance_seccional
+    distinto de None.) Lo usan las reglas de solo lectura del catálogo."""
+    return alcance_seccional(usuario_id) is not None
 
 
 def tiene_permiso(usuario_id: int, seccion: str) -> bool:
@@ -2812,7 +3352,7 @@ def set_config_dashboard(verde_hasta: int, amarillo_hasta: int, bot_habilitado: 
 
 
 def modelos_ia() -> dict:
-    """{uso: modelo_id} para los tres usos de precios_ia.USOS, ya resuelto:
+    """{uso: modelo_id} para los usos de precios_ia.USOS, ya resuelto:
     lo que eligió plataforma o, si no eligió nada, el default del módulo.
     Quien llama nunca tiene que preguntarse si hay configuración."""
     with Session(engine) as s:
@@ -2821,6 +3361,7 @@ def modelos_ia() -> dict:
             "recibos": (cfg.modelo_recibos if cfg else "") or "",
             "convenio": (cfg.modelo_convenio if cfg else "") or "",
             "asistente": (cfg.modelo_asistente if cfg else "") or "",
+            "asistente_tramites": (cfg.modelo_asistente_tramites if cfg else "") or "",
         }
     return {uso: elegidos.get(uso) or precios_ia.default_de(uso) for uso in precios_ia.USOS}
 
@@ -2841,7 +3382,8 @@ def set_modelos_ia(elegidos: dict) -> None:
     with Session(engine) as s:
         cfg = s.get(ConfiguracionPlataforma, 1) or ConfiguracionPlataforma(id=1)
         for uso, columna in (("recibos", "modelo_recibos"), ("convenio", "modelo_convenio"),
-                             ("asistente", "modelo_asistente")):
+                             ("asistente", "modelo_asistente"),
+                             ("asistente_tramites", "modelo_asistente_tramites")):
             valor = (elegidos.get(uso) or "").strip()
             if valor and precios_ia.modelo_valido(valor):
                 setattr(cfg, columna, valor)
@@ -2941,7 +3483,9 @@ def asegurar_cuenta(s: Session, cuil: str) -> CuentaTrabajador:
 
 def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
                              domicilio: dict = None, telefono: str = None,
-                             mail: str = None) -> CuentaTrabajador:
+                             mail: str = None,
+                             mail_padron: str = None,
+                             fecha_nacimiento: str = None) -> CuentaTrabajador:
     """Escribe el bloque personal de un CUIL. Lo que llega en `None` no se
     toca -- así una pantalla que edita solo el domicilio no borra el teléfono
     que cargó otra.
@@ -2954,7 +3498,16 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
 
     Un `nombre` vacío tampoco pisa al que había: es el caso del alta masiva y
     del registro, donde el campo puede venir en blanco y el padrón ya tenía
-    el nombre bueno."""
+    el nombre bueno.
+
+    `mail` es el mail de CONTACTO de la persona; `mail_padron` es el que
+    cargó el SINDICATO (ver "Los TRES mails" en `CuentaTrabajador`). Solo el
+    alta individual y el alta masiva del panel pasan `mail_padron`; el perfil
+    y el registro NO (lo verifica `test_registro_modelo.py`). `None` = no
+    tocar, como los demás.
+
+    `fecha_nacimiento` llega ya normalizada a ISO (o "" para borrarla): quien
+    la recibe de un formulario la pasa antes por `listas.normalizar_fecha`."""
     c = asegurar_cuenta(s, cuil)
     if nombre is not None and nombre.strip():
         c.nombre = nombre.strip()[:200]
@@ -2965,11 +3518,37 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
         c.telefono = telefono.strip()[:40]
     if mail is not None:
         c.mail = mail.strip()[:200]
+    if mail_padron is not None:
+        c.mail_padron = mail_padron.strip()[:200]
+    if fecha_nacimiento is not None:
+        c.fecha_nacimiento = fecha_nacimiento.strip()[:10] or None
     s.add(c)
     return c
 
 
-def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
+def publicacion_en_alcance(destino_seccionales, alcance) -> bool:
+    """¿Quien tiene este alcance puede EDITAR o BORRAR una noticia o un
+    beneficio con estos destinos? Solo si TODOS sus destinos caen en el
+    alcance. Una publicación "a todas" (lista vacía) o dirigida a otra
+    seccional la toca solo quien tiene alcance total: fail-closed, como
+    `_en_alcance` (PLAN_ALCANCE_SECCIONAL.md, bloque 2)."""
+    if alcance is None:
+        return True
+    return bool(destino_seccionales) and all(d in alcance for d in destino_seccionales)
+
+
+def publicacion_visible(destino_seccionales, alcance) -> bool:
+    """¿Quien tiene este alcance VE la publicación en el panel? Si va "a
+    todas" o alguno de sus destinos cae en el alcance: la misma regla que el
+    historial de Notificaciones (ve lo que le llega a su gente)."""
+    if alcance is None:
+        return True
+    if not alcance:
+        return False
+    return not destino_seccionales or any(d in alcance for d in destino_seccionales)
+
+
+def padron_del_sindicato(s: Session, sindicato_id: int, alcance=None) -> list:
     """El padrón completo de un sindicato, con los datos personales de cada
     afiliado ya unidos por CUIL.
 
@@ -2982,16 +3561,24 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
     (seccional, credencial, empleador, estado) y la persona (nombre,
     domicilio, contacto). Que se arme acá y no en la plantilla es lo que
     permite que el resto de la app pida "el padrón" sin tener que acordarse
-    del JOIN."""
-    filas = s.exec(
-        select(Trabajador, CuentaTrabajador)
-        .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
-        .where(Trabajador.sindicato_id == sindicato_id)
-        .order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
+    del JOIN.
+
+    `alcance` (ver alcance_seccional) recorta EN LA CONSULTA: None = todo,
+    un set = solo esas seccionales (un afiliado sin seccional no lo alcanza
+    nadie acotado), set() = nada. Es la única lectura del padrón del panel,
+    así que lo que no entra acá no viaja a ninguna pantalla."""
+    if alcance is not None and not alcance:
+        return []
+    q = (select(Trabajador, CuentaTrabajador)
+         .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
+         .where(Trabajador.sindicato_id == sindicato_id))
+    if alcance is not None:
+        q = q.where(Trabajador.seccional_id.in_(list(alcance)))
+    filas = s.exec(q.order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
     salida = []
     vacios = {campo: "" for campo in ("nombre", *geo.CAMPOS_DOMICILIO)}
     vacios.update({"latitud": None, "longitud": None, "precision_geo": "sin_geo",
-                   "telefono": "", "mail": ""})
+                   "telefono": "", "mail": "", "fecha_nacimiento": None})
     for t, c in filas:
         # Un afiliado sin fila de persona no debería existir (la crea el
         # alta), pero si alguna vez pasara la pantalla tiene que mostrar la
@@ -3003,12 +3590,76 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
             "registrado": t.registrado, "activo": t.activo,
             "codigo_credencial": t.codigo_credencial,
             "vigencia_credencial": t.vigencia_credencial,
+            "fecha_afiliacion": t.fecha_afiliacion,
             "seccional_id": t.seccional_id,
             "es_empleado_sindicato": t.es_empleado_sindicato,
             "cuit_empleador": t.cuit_empleador,
+            # Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): solo tiene
+            # sentido si la persona ya eligió clave.
+            "tiene_cuenta": bool(c and c.clave_hash),
+            # ¿Este sindicato responde por esa cuenta? (ver `responde_por`).
+            # Si no, la pantalla no muestra su nivel ni sus botones.
+            "responde": responde_por(bool(c and c.clave_hash), t.registrado),
+            "nivel_fiabilidad": (c.nivel_fiabilidad or 1) if c else 1,
+            "nivel_origen": (c.nivel_origen or "") if c else "",
         })
         salida.append(fila)
     return salida
+
+
+# ---------- ¿Este sindicato responde por la cuenta de esta persona? ----------
+# Un admin puede cargar en SU padrón cualquier CUIL (es un dato público, y el
+# alta solo exige el dígito verificador). Sin esta regla, cargar el CUIL de
+# alguien que está en OTRO sindicato y apretar "Restablecer clave" le daría la
+# cuenta entera -- y con ella sus recibos y su identidad en todos los gremios.
+# La regla: un sindicato solo "responde" por una cuenta si la persona YA
+# estaba en su padrón cuando la creó. `Trabajador.registrado` / `Empleador.
+# registrado` se marcan en el registro sobre los empadronamientos que
+# EXISTÍAN en ese momento (y en el reset de plataforma de una cuenta sin
+# clave): un empadronamiento posterior a la cuenta queda en False.
+def responde_por(tiene_clave: bool, registrado: bool) -> bool:
+    """La regla, pura. Sin clave no hay cuenta que tomar (la persona todavía
+    no se registró y el padrón la mandó a elegir una); con clave, solo
+    responde el padrón que ya la tenía cargada al registrarse."""
+    return (not tiene_clave) or bool(registrado)
+
+
+def padron_responde_por(s, sindicato_id: int, cuil: str) -> bool:
+    """True si `sindicato_id` puede tocar la cuenta de `cuil` (restablecerle
+    la clave, confirmar su identidad, escribirle nombre o mails): la
+    CuentaTrabajador no existe o todavía no tiene clave, o el empadronamiento
+    de este sindicato es `registrado` (la persona ya estaba en este padrón
+    cuando creó la cuenta). Un CUIL que ni siquiera está en el padrón de este
+    sindicato con una cuenta ya hecha devuelve False: no hay de qué responder.
+    Recibe la sesión, no abre la suya."""
+    c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+    if c is None or not c.clave_hash:
+        return True
+    t = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sindicato_id,
+                                        Trabajador.cuil == cuil)).first()
+    return responde_por(True, bool(t and t.registrado))
+
+
+def padron_responde_por_empresa(s, sindicato_id: int, cuit: str) -> bool:
+    """Lo mismo que `padron_responde_por`, para la cuenta de una empresa
+    (`CuentaEmpleador` y `Empleador.registrado`)."""
+    c = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+    if c is None or not c.clave_hash:
+        return True
+    e = s.exec(select(Empleador).where(Empleador.sindicato_id == sindicato_id,
+                                       Empleador.cuit == cuit)).first()
+    return responde_por(True, bool(e and e.registrado))
+
+
+def cuiles_con_clave(s, cuiles) -> set:
+    """De estos CUIL, los que ya tienen cuenta con clave (la persona ya se
+    registró). Una sola consulta: lo usa la carga masiva, que no puede hacer
+    una por línea."""
+    cuiles = list(cuiles)
+    if not cuiles:
+        return set()
+    return set(s.exec(select(CuentaTrabajador.cuil).where(
+        CuentaTrabajador.cuil.in_(cuiles), CuentaTrabajador.clave_hash != "")).all())
 
 
 def datos_personales(cuil: str) -> Optional[dict]:
@@ -3028,6 +3679,7 @@ def _dict_personales(c: CuentaTrabajador) -> dict:
         "latitud": c.latitud, "longitud": c.longitud,
         "precision_geo": c.precision_geo, "geo_actualizado": c.geo_actualizado,
         "telefono": c.telefono, "mail": c.mail,
+        "fecha_nacimiento": c.fecha_nacimiento,
     }
 
 
@@ -3056,7 +3708,8 @@ def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
 
 
 def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
-                                  domicilio: dict, telefono: str, mail: str) -> bool:
+                                  domicilio: dict, telefono: str, mail: str,
+                                  fecha_nacimiento: str = None) -> bool:
     """El trabajador edita sus propios datos -- todo menos el CUIL (identidad,
     no se toca acá) y los campos de gestión del sindicato (seccional,
     vigencia de credencial, etc.), que siguen siendo resorte del admin.
@@ -3071,7 +3724,32 @@ def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
         if not t:
             return False
         guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                 telefono=telefono, mail=mail)
+                                 telefono=telefono, mail=mail,
+                                 fecha_nacimiento=fecha_nacimiento)
+        s.commit()
+        return True
+
+
+def actualizar_dato_personal(cuil: str, dato: str, valor: str) -> bool:
+    """Un dato PROPIO de la persona (validaciones_tramite.DATOS_PROPIOS) que
+    el afiliado corrigió en un campo extraído de un trámite (2026-10-18):
+    `fecha_nacimiento` (ya ISO) o `provincia` / `localidad`. El domicilio se
+    escribe como un bloque (regla de 2026-09-22): se toma el que hay, se
+    cambia ese dato y, como la localidad cambió, el globo del mapa deja de
+    valer (`sin_geo`)."""
+    valor = str(valor or "").strip()
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not c or not valor:
+            return False
+        if dato == "fecha_nacimiento":
+            guardar_datos_personales(s, cuil, fecha_nacimiento=valor[:10])
+        elif dato in ("provincia", "localidad"):
+            bloque = {k: getattr(c, k, "") or "" for k in ("calle", "numero", "piso_depto", "localidad", "provincia", "codigo_postal")}
+            bloque[dato] = valor
+            guardar_datos_personales(s, cuil, domicilio=geo.campos_para_guardar(bloque, "sin_geo"))
+        else:
+            return False
         s.commit()
         return True
 
@@ -3247,13 +3925,22 @@ def visible_para_seccional(destino_seccionales: list, seccional_id: Optional[int
     return not destino_seccionales or seccional_id in destino_seccionales
 
 
-def noticias_del_sindicato(sindicato_id: int) -> list:
-    """Todas las noticias del sindicato (para el panel de admin), más
-    recientes primero."""
+def noticias_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Las noticias del sindicato para el panel de admin, más recientes
+    primero. Con `alcance`, solo las que le llegan a la gente de esas
+    seccionales (`publicacion_visible`), y cada una dice si quien mira puede
+    editarla o borrarla (`propia`, ver `publicacion_en_alcance`)."""
     with Session(engine) as s:
         noticias = s.exec(select(Noticia).where(Noticia.sindicato_id == sindicato_id)
                           .order_by(Noticia.creada.desc(), Noticia.id.desc())).all()
-        return [_noticia_a_dict(n) for n in noticias]
+        salida = []
+        for n in noticias:
+            if not publicacion_visible(n.destino_seccionales or [], alcance):
+                continue
+            d = _noticia_a_dict(n)
+            d["propia"] = publicacion_en_alcance(n.destino_seccionales or [], alcance)
+            salida.append(d)
+        return salida
 
 
 def noticias_vigentes(sindicato_id: int, seccional_id: Optional[int] = None, limite: int = None) -> list:
@@ -3291,13 +3978,20 @@ def _beneficio_a_dict(b: "Beneficio") -> dict:
     }
 
 
-def beneficios_del_sindicato(sindicato_id: int) -> list:
-    """Todos los beneficios del sindicato (para el panel de admin), más
-    recientes primero."""
+def beneficios_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Los beneficios del sindicato para el panel de admin, más recientes
+    primero. Mismo recorte y misma marca `propia` que noticias_del_sindicato."""
     with Session(engine) as s:
         beneficios = s.exec(select(Beneficio).where(Beneficio.sindicato_id == sindicato_id)
                             .order_by(Beneficio.creada.desc(), Beneficio.id.desc())).all()
-        return [_beneficio_a_dict(b) for b in beneficios]
+        salida = []
+        for b in beneficios:
+            if not publicacion_visible(b.destino_seccionales or [], alcance):
+                continue
+            d = _beneficio_a_dict(b)
+            d["propia"] = publicacion_en_alcance(b.destino_seccionales or [], alcance)
+            salida.append(d)
+        return salida
 
 
 def beneficios_vigentes(sindicato_id: int, seccional_id: Optional[int] = None) -> list:
@@ -3599,6 +4293,74 @@ def sincronizar_por_cuil(sindicato_id: int, cuil: str) -> None:
         sincronizar_empleado(uid)
 
 
+# ---------- Cuenta del panel: una clave por CUIL (2026-10-17) ----------
+
+def cuenta_panel(cuil: str):
+    """La cuenta del panel de ese CUIL, o None."""
+    with Session(engine) as s:
+        return s.exec(select(CuentaPanel).where(CuentaPanel.cuil == cuil)).first()
+
+
+def fijar_clave_panel(cuil: str, clave_hash: str, debe_cambiar: bool) -> None:
+    """Única escritura de la clave del panel: la crea si no existe. La
+    llaman el reseteo de plataforma y el cambio de clave de la persona."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaPanel).where(CuentaPanel.cuil == cuil)).first()
+        if not c:
+            c = CuentaPanel(cuil=cuil)
+        c.clave_hash = clave_hash
+        c.debe_cambiar_clave = debe_cambiar
+        s.add(c)
+        s.commit()
+
+
+def sindicatos_del_operador(cuil: str) -> list:
+    """Los usuarios ACTIVOS del panel de ese CUIL, uno por sindicato activo,
+    con lo que el selector de después del login necesita mostrar. Ordenado
+    por nombre del sindicato: el orden de la base no es un criterio."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato, Sindicato).where(
+            UsuarioSindicato.cuil == cuil, UsuarioSindicato.activo == True,
+            Sindicato.id == UsuarioSindicato.sindicato_id,
+            Sindicato.activo == True)).all()
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.id.in_([u.area_id for u, _ in filas if u.area_id] or [0]))).all()}
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.id.in_([u.seccional_id for u, _ in filas if u.seccional_id] or [0]))).all()}
+        salida = [{
+            "usuario_id": u.id, "sindicato_id": sind.id, "sindicato": sind.nombre,
+            "logo": bool(sind.logo_datos),
+            "rol": ("Super Admin" if u.es_super_admin else
+                    "Admin de Seccional" if u.es_admin_seccional else "Usuario de área"),
+            "area": areas.get(u.area_id, ""), "seccional": secs.get(u.seccional_id, ""),
+        } for u, sind in filas]
+    return sorted(salida, key=lambda x: x["sindicato"].lower())
+
+
+def operadores_de_todos_los_sindicatos() -> list:
+    """Para plataforma: una fila por PERSONA (CUIL) con todos los sindicatos
+    en los que tiene usuario del panel y el estado de su cuenta. Es la vista
+    que permite ver de un vistazo quién trabaja en más de un gremio."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato, Sindicato).where(
+            Sindicato.id == UsuarioSindicato.sindicato_id)).all()
+        cuentas = {c.cuil: c for c in s.exec(select(CuentaPanel)).all()}
+    personas: dict = {}
+    for u, sind in filas:
+        p = personas.setdefault(u.cuil, {"cuil": u.cuil, "nombre": "", "sindicatos": []})
+        p["nombre"] = p["nombre"] or u.nombre
+        p["sindicatos"].append({
+            "sindicato": sind.nombre, "activo": bool(u.activo and sind.activo),
+            "rol": ("Super Admin" if u.es_super_admin else
+                    "Admin de Seccional" if u.es_admin_seccional else "Usuario de área")})
+    for p in personas.values():
+        c = cuentas.get(p["cuil"])
+        p["cuenta"] = ("sin clave" if not c or not c.clave_hash else
+                       "clave inicial" if c.debe_cambiar_clave else "clave propia")
+        p["sindicatos"].sort(key=lambda x: x["sindicato"].lower())
+    return sorted(personas.values(), key=lambda p: ((p["nombre"] or "").lower(), p["cuil"]))
+
+
 def empleados_del_sindicato(sindicato_id: int) -> list:
     """CUILs del padrón marcados como empleados del sindicato. Lo usa la
     pantalla de Trabajadores para distinguirlos de un afiliado común."""
@@ -3720,6 +4482,9 @@ def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
             Area.sindicato_id == sindicato_id)).all()}
         secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id)).all()}
+        cuiles = [u.cuil for u in usuarios if u.cuil] or [""]
+        cuentas = {c.cuil: c for c in s.exec(select(CuentaPanel).where(
+            CuentaPanel.cuil.in_(cuiles))).all()}
         salida = []
         for u in usuarios:
             ind = permisos_individuales(u.id)
@@ -3727,7 +4492,10 @@ def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
                 "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
                 "cuil": u.cuil, "trabajador_id": u.trabajador_id,
                 "es_afiliado": bool(u.trabajador_id),
-                "debe_cambiar_clave": u.debe_cambiar_clave,
+                # De la CUENTA de la persona, no de la fila: la clave es una
+                # sola para todos los sindicatos en los que trabaja.
+                "debe_cambiar_clave": bool(cuentas.get(u.cuil) and cuentas[u.cuil].debe_cambiar_clave),
+                "sin_clave": not (cuentas.get(u.cuil) and cuentas[u.cuil].clave_hash),
                 "es_super_admin": u.es_super_admin,
                 "es_admin_seccional": u.es_admin_seccional,
                 "area_id": u.area_id, "area": areas.get(u.area_id, ""),
@@ -3745,6 +4513,185 @@ def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         return t.seccional_id if t else None
+
+
+class RegistroEnmascarado(SQLModel, table=True):
+    """Una fila por documento que pasó por el enmascarado en modo sombra o
+    activo (preparacion.py): si se tapó, qué camino tomó y, si no se pudo,
+    por qué. Es el "log para análisis posterior" de la decisión de mejor
+    esfuerzo, y lo que dice en Pruebas cuántas fotos quedan sin tapar en una
+    ráfaga.
+
+    **Sin ningún dato personal a propósito**: ni CUIL, ni nombre, ni texto
+    del documento -- la tabla existe para medir la protección de esos datos
+    y no puede ser un lugar más donde queden."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    fecha: str = ""                  # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
+    tipo: str = ""                   # "recibo" | "aportes" | "aprendizaje"
+    modo: str = ""                   # "sombra" | "activo"
+    camino: str = ""                 # "pdf_texto" | "pdf_imagen" | "foto" | "otro"
+    motivo: str = ""                 # "ok" | "sin_ocr" | "sin_lugar" | "tiempo" | "sin_palabras" | "error:..."
+    tapado: bool = False             # si lo que viajó iba tapado
+    cajas: int = 0                   # zonas tapadas (o que se habrían tapado, en sombra)
+    fugas: int = 0                   # lo que el control de fuga vio a la vista
+    cuil_encontrado: Optional[bool] = None
+    pertenece: Optional[bool] = None # None: no se pudo afirmar
+    espera_ms: int = 0               # fila por un lector de OCR libre
+    lectura_ms: int = 0              # OCR
+    total_ms: int = 0                # todo el paso, de punta a punta
+
+
+class ImagenEnmascarado(SQLModel, table=True):
+    """DIAGNÓSTICO TRANSITORIO, solo Pruebas (pedido de SDN, 2026-09-24): la
+    imagen original y la que se mandó a la IA de un documento del enmascarado,
+    para ver en la pantalla qué se tapó de verdad.
+
+    **La original tiene datos personales reales.** Por eso vive en una tabla
+    aparte de `RegistroEnmascarado` (que sigue sin ninguno), solo se escribe
+    donde `preparacion.guardar_imagenes_habilitado()` lo permite (entorno
+    local o pruebas + ENMASCARADO_GUARDAR_IMAGENES=1), vence a los
+    `preparacion.DIAS_IMAGENES` días y se vacía entera desde la pantalla."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    registro_id: int = Field(foreign_key="registroenmascarado.id", index=True)
+    creado: str = ""                              # "AAAA-MM-DD HH:MM", Buenos Aires
+    original: bytes = b""
+    enviada: bytes = b""
+
+
+def registrar_enmascarado(sindicato_id: Optional[int], tipo: str, registro: dict) -> Optional[int]:
+    """Guarda el registro de `preparacion.preparar` y devuelve su id. NUNCA
+    levanta: es un registro para mirar después y no puede tumbar la lectura de
+    un recibo (mejor esfuerzo), ni siquiera si la tabla todavía no existe
+    porque la migración no corrió."""
+    if not registro:
+        return None
+    try:
+        campos = {k: registro.get(k) for k in (
+            "modo", "camino", "motivo", "tapado", "cajas", "fugas", "cuil_encontrado",
+            "pertenece", "espera_ms", "lectura_ms", "total_ms") if registro.get(k) is not None}
+        with Session(engine) as s:
+            fila = RegistroEnmascarado(fecha=fechas.ahora_texto(), sindicato_id=sindicato_id,
+                                       tipo=tipo, **campos)
+            s.add(fila)
+            s.commit()
+            return fila.id
+    except Exception as e:
+        print(f"[enmascarado] no se pudo registrar ({type(e).__name__})")
+        return None
+
+
+def guardar_imagenes_enmascarado(registro_id: int, original: bytes, enviada: bytes,
+                                 dias: int = 7) -> None:
+    """Guarda el par de imágenes de diagnóstico y, de paso, borra las que ya
+    vencieron. Nunca levanta. Quien llama decide si está habilitado."""
+    try:
+        limite = (fechas.ahora() - timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
+        with Session(engine) as s:
+            s.exec(sa_delete(ImagenEnmascarado).where(ImagenEnmascarado.creado < limite))
+            s.add(ImagenEnmascarado(registro_id=registro_id, creado=fechas.ahora_texto(),
+                                    original=original, enviada=enviada))
+            s.commit()
+    except Exception as e:
+        print(f"[enmascarado] no se pudieron guardar las imágenes ({type(e).__name__})")
+
+
+def imagen_enmascarado(registro_id: int, cual: str) -> Optional[bytes]:
+    """Los bytes JPEG de la imagen "original" o "enviada" de un registro."""
+    if cual not in ("original", "enviada"):
+        return None
+    with Session(engine) as s:
+        f = s.exec(select(ImagenEnmascarado)
+                   .where(ImagenEnmascarado.registro_id == registro_id)).first()
+        return getattr(f, cual) if f else None
+
+
+def borrar_imagenes_enmascarado() -> int:
+    """Vacía la tabla de imágenes de diagnóstico. Devuelve cuántas borró."""
+    with Session(engine) as s:
+        n = len(s.exec(select(ImagenEnmascarado.id)).all())
+        s.exec(sa_delete(ImagenEnmascarado))
+        s.commit()
+        return n
+
+
+def registros_enmascarado(limite: int = 3000) -> list:
+    """Los últimos registros del enmascarado, más reciente primero, para la
+    sub-pestaña "Enmascarado" de Uso de IA en /plataforma. El `resultado` ya
+    viene resuelto, porque en modo sombra nada viaja tapado y lo que importa
+    es si SE HABRÍA tapado:
+
+    - "tapado": viajó tapado (modo activo).
+    - "se_habria_tapado": en sombra, se leyó bien y había qué tapar.
+    - "sin_tapar": no se pudo (el motivo dice por qué) o no se encontró nada.
+
+    Nunca levanta: sin la tabla (migración sin correr) devuelve lista vacía."""
+    try:
+        with Session(engine) as s:
+            filas = s.exec(select(RegistroEnmascarado)
+                           .order_by(RegistroEnmascarado.id.desc()).limit(limite)).all()
+            nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
+            try:
+                con_imagenes = set(s.exec(select(ImagenEnmascarado.registro_id)).all())
+            except Exception:
+                con_imagenes = set()
+    except Exception:
+        return []
+    salida = []
+    for f in filas:
+        leido = f.motivo == "ok" and f.cajas > 0
+        salida.append({
+            "fecha": f.fecha, "sindicato": nombres.get(f.sindicato_id, "—"),
+            "tipo": f.tipo, "modo": f.modo, "camino": f.camino or "—", "motivo": f.motivo,
+            "tapado": f.tapado, "cajas": f.cajas, "fugas": f.fugas,
+            "cuil_encontrado": f.cuil_encontrado, "pertenece": f.pertenece,
+            "espera_ms": f.espera_ms, "lectura_ms": f.lectura_ms, "total_ms": f.total_ms,
+            "resultado": ("tapado" if f.tapado else "se_habria_tapado") if leido else "sin_tapar",
+            "id": f.id, "con_imagenes": f.id in con_imagenes,
+        })
+    return salida
+
+
+def cuits_conocidos(cuil: str = "", sindicato_id: Optional[int] = None) -> tuple:
+    """Los CUITs de empleador que la app ya conoce, para el enmascarado: con
+    `cuil`, los de esa persona (su empadronamiento y sus recibos anteriores);
+    con `sindicato_id`, los de ese sindicato (empleadores y conceptos). Un
+    CUIT leído que coincide con uno de estos se tapa y se rearma con el
+    conocido. Vacío si algo falla: el enmascarado es mejor esfuerzo."""
+    def dig(x):
+        return "".join(c for c in (x or "") if c.isdigit())
+    cuil = dig(cuil)
+    res = set()
+    try:
+        with Session(engine) as s:
+            if cuil:
+                res |= set(s.exec(select(Trabajador.cuit_empleador)
+                                  .where(Trabajador.cuil == cuil)).all())
+                res |= set(s.exec(select(ReciboVerificado.cuit_empleador)
+                                  .where(ReciboVerificado.cuil == cuil).distinct()).all())
+            if sindicato_id:
+                res |= set(s.exec(select(Empleador.cuit)
+                                  .where(Empleador.sindicato_id == sindicato_id)).all())
+                res |= set(s.exec(select(Concepto.cuit_empleador)
+                                  .where(Concepto.sindicato_id == sindicato_id).distinct()).all())
+    except Exception:
+        return ()
+    return tuple(sorted(d for d in map(dig, res) if len(d) == 11))
+
+
+def razon_social_de_cuit(sindicato_id: Optional[int], cuit: str) -> Optional[str]:
+    """La razón social con que el sindicato tiene cargado a ese empleador,
+    para rearmar el recibo cuando se le tapó a la IA. None si no está."""
+    cuit = "".join(c for c in (cuit or "") if c.isdigit())
+    if not cuit or not sindicato_id:
+        return None
+    try:
+        with Session(engine) as s:
+            e = s.exec(select(Empleador).where(Empleador.sindicato_id == sindicato_id,
+                                               Empleador.cuit == cuit)).first()
+            return (e.razon_social or None) if e else None
+    except Exception:
+        return None
 
 
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
@@ -3885,12 +4832,17 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
         filas = s.exec(q).all()
     if criterio == "todos":
         return sorted({t.cuil for t, _prov in filas})
+    # CUIL y CUIT se comparan NORMALIZADOS de los dos lados: el admin los tipea
+    # con o sin guiones y las filas viejas pueden tenerlos guardados de las
+    # dos formas (PLAN_CUIT_MOD11.md; antes "30-11122233-5" no encontraba a
+    # quien tenía "30111222335").
     if criterio == "cuil":
-        objetivo = set(valores)
-        return sorted({t.cuil for t, _prov in filas if t.cuil in objetivo})
+        objetivo = {cuit.normalizar(v) for v in valores} - {""}
+        return sorted({t.cuil for t, _prov in filas if cuit.normalizar(t.cuil) in objetivo})
     if criterio == "cuit_empleador":
-        objetivo = set(valores)
-        return sorted({t.cuil for t, _prov in filas if t.cuit_empleador in objetivo})
+        objetivo = {cuit.normalizar(v) for v in valores} - {""}
+        return sorted({t.cuil for t, _prov in filas
+                       if cuit.normalizar(t.cuit_empleador) in objetivo})
     if criterio == "seccional":
         objetivo = {int(v) for v in valores if v.isdigit()}
         return sorted({t.cuil for t, _prov in filas if t.seccional_id in objetivo})
@@ -4057,6 +5009,46 @@ def marcar_todas_notificaciones_leidas(cuil: str, sindicato_id: int) -> int:
         return len(pendientes)
 
 
+def resumen_recibos_trabajador(cuil: str, sindicato_id: int) -> dict:
+    """Lo que la portada del afiliado dice de SUS propios recibos: cuántos
+    verificó en lo que va del año y cómo salió el último.
+
+    Todo el filtro va adentro de la consulta. La portada la abre cada
+    afiliado en cada entrada a la app, así que no puede traerse el
+    historial entero para contarlo en Python.
+
+    El año sale de `fechas.hoy_texto()` (hora de Buenos Aires) y no del
+    reloj del servidor, que en Render corre en UTC -- entre las 21:00 y la
+    medianoche del 31 de diciembre el contador diría el año que viene.
+
+    El "último" se elige por PERÍODO, no por fecha de carga: alguien que
+    sube en diciembre el recibo de marzo no cambia cuál es su último
+    recibo. `procesado_en` desempata dos cargas del mismo período (se
+    puede volver a subir un recibo corregido).
+    """
+    from sqlalchemy import func
+    anio = fechas.hoy_texto()[:4]
+    with Session(engine) as s:
+        cantidad = s.execute(
+            select(func.count(ReciboVerificado.id)).where(
+                ReciboVerificado.cuil == cuil,
+                ReciboVerificado.sindicato_id == sindicato_id,
+                ReciboVerificado.periodo.like(anio + "-%"))).scalar()
+        ultimo = s.exec(
+            select(ReciboVerificado)
+            .where(ReciboVerificado.cuil == cuil,
+                   ReciboVerificado.sindicato_id == sindicato_id)
+            .order_by(ReciboVerificado.periodo.desc(),
+                      ReciboVerificado.procesado_en.desc())
+            .limit(1)).first()
+    return {
+        "anio": int(cantidad or 0),
+        "ultimo_periodo": (ultimo.periodo if ultimo else ""),
+        # "OK" | "CON_DISCREPANCIAS" | "" (todavía no verificó ninguno)
+        "ultimo_estado": (ultimo.estado if ultimo else ""),
+    }
+
+
 def contar_notificaciones_no_leidas(cuil: str, sindicato_id: int) -> int:
     return sum(1 for n in notificaciones_de_trabajador(cuil, sindicato_id) if not n["leida_en"])
 
@@ -4093,8 +5085,9 @@ def resolver_destinatarios_empleador(sindicato_id: int, criterio: str, valores: 
     if not valores:
         return []
     if criterio == "cuit":
-        objetivo = set(valores)
-        return sorted({e.cuit for e in empleadores if e.cuit in objetivo})
+        # Normalizado de los dos lados, como en resolver_destinatarios.
+        objetivo = {cuit.normalizar(v) for v in valores} - {""}
+        return sorted({e.cuit for e in empleadores if cuit.normalizar(e.cuit) in objetivo})
     if criterio == "provincia":
         objetivo = set(valores)
         return sorted({e.cuit for e in empleadores if e.provincia in objetivo})
@@ -4217,16 +5210,18 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
 
 def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
                         reglas: list = None, area_destino_default_id: int = None,
-                        seccional_id: int = None, permite_pase: bool = False) -> int:
+                        seccional_id: int = None, permite_pase: bool = False,
+                        requisitos: list = None, borrador: bool = False) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
     dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
     son las reglas de consistencia ya saneadas
-    (validaciones_tramite.reglas_saneadas)."""
+    (validaciones_tramite.reglas_saneadas). Un `borrador` nace inactivo."""
     with Session(engine) as s:
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
-                         reglas_consistencia=reglas or [],
+                         reglas_consistencia=reglas or [], requisitos=requisitos or [],
                          area_destino_default_id=area_destino_default_id,
                          seccional_id=seccional_id, permite_pase=permite_pase,
+                         borrador=borrador, activo=not borrador,
                          creado=fechas.ahora_texto())
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -4245,7 +5240,9 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
                          activo: bool, campos: list, reglas: list = None,
                          area_destino_default_id: int = None,
-                         permite_pase: Optional[bool] = None) -> bool:
+                         permite_pase: Optional[bool] = None,
+                         requisitos: Optional[list] = None,
+                         borrador: Optional[bool] = None) -> bool:
     """Actualiza título/código/activo y SINCRONIZA los campos por id: el
     constructor sigue siendo "lo que ves es lo que queda", pero borrar y
     recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
@@ -4260,6 +5257,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         if not t or t.sindicato_id != sindicato_id:
             return False
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        if borrador is not None:
+            t.borrador = borrador
         # La SECCIONAL de un formulario no se edita: cambiarla le sacaría
         # el trámite de la vista a los trabajadores que ya lo tenían
         # disponible. El destino, en cambio, sí -- es la configuración
@@ -4268,6 +5267,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
             t.area_destino_default_id = area_destino_default_id
         if permite_pase is not None:
             t.permite_pase = permite_pase
+        if requisitos is not None:
+            t.requisitos = requisitos
         t.reglas_consistencia = reglas or []
         s.add(t)
         existentes = {c.id: c for c in s.exec(select(CampoTramite).where(
@@ -4322,7 +5323,7 @@ def borrar_tipo_tramite(tipo_id: int, sindicato_id: int) -> bool:
 
 
 def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
-                                 seccional_id: Optional[int] = "todas") -> list:
+                                 seccional_id: Optional[int] = "todas", alcance=None) -> list:
     """Tipos de trámite del sindicato con sus campos, para el constructor de
     admin y el listado que ve el trabajador (con solo_activos=True).
 
@@ -4341,6 +5342,15 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
             q = q.where((TipoTramite.seccional_id == None) |  # noqa: E711
                         (TipoTramite.seccional_id == seccional_id)) \
                 if seccional_id else q.where(TipoTramite.seccional_id == None)  # noqa: E711
+        # `alcance` recorta lo que ve un USUARIO DEL PANEL acotado (bloque 3):
+        # los globales (le llegan a su gente) más los de su alcance; los de
+        # otras seccionales no viajan. Cada fila dice si es `propio` (la puede
+        # editar o borrar): un global lo toca solo el alcance total.
+        if alcance is not None:
+            if not alcance:
+                return []
+            q = q.where((TipoTramite.seccional_id == None) |  # noqa: E711
+                        (TipoTramite.seccional_id.in_(list(alcance))))
         tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
         resultado = []
         for t in tipos:
@@ -4350,9 +5360,12 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
                             .order_by(CampoTramite.orden)).all()
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
+                "borrador": t.borrador,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
                 "reglas_consistencia": t.reglas_consistencia or [],
+                "requisitos": t.requisitos or [],
                 "seccional_id": t.seccional_id,
+                "propio": alcance is None or (t.seccional_id in alcance),
                 "area_destino_default_id": t.area_destino_default_id,
                 "permite_pase": t.permite_pase,
                 "areas_pase": sorted({x.area_id for x in s.exec(
@@ -4455,8 +5468,10 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
                         .order_by(CampoTramite.orden)).all()
         return {
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
-            "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+            "activo": t.activo, "borrador": t.borrador, "creado": t.creado,
+            "campos": [_campo_tramite_a_dict(c) for c in campos],
             "reglas_consistencia": t.reglas_consistencia or [],
+            "requisitos": t.requisitos or [],
             "seccional_id": t.seccional_id,
             "area_destino_default_id": t.area_destino_default_id,
         }
@@ -5472,6 +6487,76 @@ class CambioPlan(SQLModel, table=True):
     error: str = ""
 
 
+class CasoHerramienta(SQLModel, table=True):
+    """Un caso guardado desde una herramienta de /entornos → Herramientas (la
+    primera, la Calculadora bancaria): lo que se eligió, lo que la
+    herramienta calculó, lo que decía el recibo real y una nota. Existe para
+    revisarlos después y corregir la calculadora o el auditor de recibos.
+    Sin nombre ni CUIL: el banco es opcional y la nota, libre."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    herramienta: str = Field(default="bancaria", index=True)
+    creado: str = Field(default_factory=fechas.ahora_con_segundos)     # hora de Buenos Aires
+    quien: str = ""                       # usuario de plataforma, o "pase" si entró con el PIN
+    grilla: str = ""                      # período de la grilla usada (AAAA-MM)
+    banco: str = ""
+    nota: str = ""
+    entrada: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    esperado: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    real: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    diferencias: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    distintos: int = 0                    # renglones y totales que no coinciden
+    estado: str = "nuevo"                 # nuevo | revisado | aplicado | descartado
+    estado_cambiado: str = ""
+    estado_quien: str = ""
+
+
+ESTADOS_CASO = ("nuevo", "revisado", "aplicado", "descartado")
+
+
+def guardar_caso_herramienta(**campos) -> int:
+    with Session(engine) as s:
+        caso = CasoHerramienta(**campos)
+        s.add(caso)
+        s.commit()
+        s.refresh(caso)
+        return caso.id
+
+
+def sindicatos_para_asistente() -> list:
+    """Los sindicatos activos del entorno, para elegir uno en el Asistente
+    de trámites (Herramientas de /entornos, D6). Solo id y nombre."""
+    with Session(engine) as s:
+        return [{"id": x.id, "nombre": x.nombre} for x in
+                s.exec(select(Sindicato).where(Sindicato.activo == True).order_by(Sindicato.nombre)).all()]  # noqa: E712
+
+
+def casos_herramienta(herramienta: str) -> list:
+    with Session(engine) as s:
+        return list(s.exec(select(CasoHerramienta).where(CasoHerramienta.herramienta == herramienta)
+                           .order_by(CasoHerramienta.id.desc())).all())
+
+
+def caso_herramienta(herramienta: str, caso_id: int):
+    with Session(engine) as s:
+        caso = s.get(CasoHerramienta, caso_id)
+        return caso if caso and caso.herramienta == herramienta else None
+
+
+def cambiar_estado_caso(herramienta: str, caso_id: int, estado: str, quien: str) -> bool:
+    if estado not in ESTADOS_CASO:
+        raise ValueError("Estado desconocido.")
+    with Session(engine) as s:
+        caso = s.get(CasoHerramienta, caso_id)
+        if not caso or caso.herramienta != herramienta:
+            return False
+        caso.estado = estado
+        caso.estado_cambiado = fechas.ahora_con_segundos()
+        caso.estado_quien = quien
+        s.add(caso)
+        s.commit()
+        return True
+
+
 def planes_programados() -> list:
     with Session(engine) as s:
         filas = s.exec(select(PlanProgramado).order_by(
@@ -5530,6 +6615,31 @@ def reclamar_plan_programado(regla_id: int, marca: str) -> bool:
             "UPDATE planprogramado SET ultimo_disparo = :marca "
             "WHERE id = :id AND activo = :si AND ultimo_disparo <> :marca"
         ).bindparams(marca=marca, id=regla_id, si=True))
+        s.commit()
+        return (r.rowcount or 0) == 1
+
+
+class AvisoEnviado(SQLModel, table=True):
+    """Una fila por (clave, fecha): "este aviso diario ya salió hoy". Es el
+    candado del resumen por Telegram (resumen_diario.py): antes de mandar,
+    cada proceso intenta insertar la fila del día y solo manda si ganó el
+    INSERT. Mismo criterio que `PlanProgramado.ultimo_disparo`, para avisos
+    que salen una vez por día y no por regla."""
+    __table_args__ = (UniqueConstraint("clave", "fecha", name="uq_avisoenviado_clave_fecha"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    clave: str = Field(index=True)
+    fecha: str                                   # "AAAA-MM-DD" de Buenos Aires
+
+
+def reclamar_aviso_diario(clave: str, fecha: str) -> bool:
+    """True solo si ESTE proceso ganó el derecho a mandar el aviso `clave` del
+    día `fecha`. INSERT ... ON CONFLICT DO NOTHING: la condición y la escritura
+    viajan juntas, así que dos instancias no pueden ganar las dos."""
+    with Session(engine) as s:
+        r = s.exec(text(
+            "INSERT INTO avisoenviado (clave, fecha) VALUES (:clave, :fecha) "
+            "ON CONFLICT (clave, fecha) DO NOTHING"
+        ).bindparams(clave=clave, fecha=fecha))
         s.commit()
         return (r.rowcount or 0) == 1
 
@@ -6331,7 +7441,7 @@ def registrar_respuesta_encuesta(encuesta_id: int, cuil: str, sindicato_id: int,
                 if "provincia" in cortes:
                     datos_corte["provincia"] = provincia or ""
                 if "empleador" in cortes:
-                    datos_corte["cuit_empleador"] = t.cuit_empleador or ""
+                    datos_corte["cuit_empleador"] = cuit.normalizar(t.cuit_empleador)   # sin guiones: un empleador, un grupo
 
     dia = fechas.hoy_texto()
     with Session(engine) as s:
@@ -6438,6 +7548,14 @@ def noticia_de_encuesta(encuesta_id: int, sindicato_id: int, usuario_id: Optiona
     A diferencia de la notificación, la noticia es PÚBLICA en la portada y
     no se dirige al padrón: la puede ver alguien que no fue invitado. Por
     eso su vigencia es la ventana de la encuesta y ni un día más.
+
+    **Hereda el alcance de la encuesta** (PLAN_ALCANCE_SECCIONAL.md, bloque
+    7, G1): si la encuesta nació en una seccional (la creó un Admin de
+    Seccional, N18), la noticia va solo a esa seccional; si la creó el
+    general (`seccional_id` NULL), va a todas, como siempre. No hace falta
+    mirar el alcance de quien publica la noticia: la encuesta ya lo lleva, y
+    sin esto una encuesta de una seccional se anunciaba a todo el sindicato
+    (`destino_seccionales` vacío = todas).
     """
     e = encuesta_por_id(encuesta_id, sindicato_id)
     if not e:
@@ -6450,7 +7568,8 @@ def noticia_de_encuesta(encuesta_id: int, sindicato_id: int, usuario_id: Optiona
         s.add(Noticia(sindicato_id=sindicato_id, titulo=titulo.strip(),
                       bajada=(bajada or "").strip(), texto_completo=(texto or "").strip(),
                       fecha_desde=e["fecha_desde"], fecha_hasta=e["fecha_hasta"],
-                      creada=fechas.ahora_texto(), encuesta_id=encuesta_id))
+                      creada=fechas.ahora_texto(), encuesta_id=encuesta_id,
+                      destino_seccionales=([e["seccional_id"]] if e.get("seccional_id") else [])))
         s.commit()
     registrar_evento_encuesta(encuesta_id, usuario_id, "noticia", titulo.strip()[:200])
     return {"ok": True, "error": ""}
@@ -6476,3 +7595,237 @@ def avisos_de_encuesta(encuesta_id: int) -> list:
                 "leidos": sum(1 for d in destinatarios if d.leida_en),
             })
         return salida
+
+
+# ==================== Listas del sindicato (PLAN_LISTAS_VALIDACIONES.md) ====================
+
+class ListaSindicato(SQLModel, table=True):
+    """Una lista que subió el admin del sindicato por CSV: la tabla genérica
+    por debajo de las plantillas tipadas de `listas.PLANTILLAS` (D1). Se
+    identifica por sindicato + plantilla + nombre + seccional, y una carga
+    nueva la REEMPLAZA entera (D5): es una foto del padrón del sindicato.
+    `seccional_id` NULL = vale para todo el sindicato."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    plantilla: str
+    nombre: str
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    columnas: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    filas: int = 0
+    archivo: str = ""                      # nombre del CSV que se subió
+    cargada_en: str = ""                   # hora de Buenos Aires
+    cargada_por: str = ""                  # usuario del panel
+
+
+class FilaLista(SQLModel, table=True):
+    """Una fila de una lista. `clave1` es SIEMPRE el CUIL del afiliado
+    (normalizado); `clave2` la segunda clave de la plantilla (el DNI del
+    familiar) o "". `datos` trae todas las columnas ya normalizadas."""
+    __table_args__ = (Index("ix_filalista_claves", "lista_id", "clave1", "clave2"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    lista_id: int = Field(foreign_key="listasindicato.id", index=True)
+    clave1: str
+    clave2: str = ""
+    datos: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+
+
+def _lista_a_dict(l: "ListaSindicato", seccional: str = "") -> dict:
+    return {"id": l.id, "plantilla": l.plantilla, "nombre": l.nombre, "seccional_id": l.seccional_id,
+            "seccional": seccional, "columnas": l.columnas or [], "filas": l.filas, "archivo": l.archivo,
+            "cargada_en": l.cargada_en, "cargada_por": l.cargada_por}
+
+
+def listas_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Las listas del sindicato, recortadas al alcance de quien mira EN LA
+    CONSULTA (None = todas; un set = solo las de esas seccionales; una lista
+    sin seccional la alcanza solo quien tiene alcance total)."""
+    with Session(engine) as s:
+        q = select(ListaSindicato).where(ListaSindicato.sindicato_id == sindicato_id)
+        if alcance is not None:
+            if not alcance:
+                return []
+            q = q.where(ListaSindicato.seccional_id.in_(list(alcance)))
+        listas = s.exec(q.order_by(ListaSindicato.plantilla, ListaSindicato.nombre)).all()
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(Seccional.sindicato_id == sindicato_id)).all()}
+        return [_lista_a_dict(l, secs.get(l.seccional_id, "")) for l in listas]
+
+
+def lista_del_sindicato(sindicato_id: int, lista_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        l = s.get(ListaSindicato, lista_id)
+        if not l or l.sindicato_id != sindicato_id:
+            return None
+        sec = s.get(Seccional, l.seccional_id) if l.seccional_id else None
+        return _lista_a_dict(l, sec.nombre if sec else "")
+
+
+def reemplazar_lista(sindicato_id: int, plantilla: str, nombre: str, seccional_id: Optional[int],
+                     columnas: list, filas: list, archivo: str, quien: str) -> int:
+    """Crea la lista o la REEMPLAZA entera (misma plantilla + nombre +
+    seccional), en una transacción: si algo falla a mitad, la lista anterior
+    queda como estaba."""
+    with Session(engine) as s:
+        l = s.exec(select(ListaSindicato).where(
+            ListaSindicato.sindicato_id == sindicato_id, ListaSindicato.plantilla == plantilla,
+            ListaSindicato.nombre == nombre, ListaSindicato.seccional_id == seccional_id)).first()
+        if l:
+            s.exec(sa_delete(FilaLista).where(FilaLista.lista_id == l.id))
+        else:
+            l = ListaSindicato(sindicato_id=sindicato_id, plantilla=plantilla, nombre=nombre, seccional_id=seccional_id)
+            s.add(l)
+            s.flush()
+        l.columnas = columnas
+        l.filas = len(filas)
+        l.archivo = archivo[:200]
+        l.cargada_en = fechas.ahora_texto()
+        l.cargada_por = quien
+        s.add_all(FilaLista(lista_id=l.id, clave1=f["clave1"], clave2=f.get("clave2") or "", datos=f["datos"]) for f in filas)
+        s.add(l)
+        s.commit()
+        return l.id
+
+
+def borrar_lista(sindicato_id: int, lista_id: int) -> bool:
+    with Session(engine) as s:
+        l = s.get(ListaSindicato, lista_id)
+        if not l or l.sindicato_id != sindicato_id:
+            return False
+        s.exec(sa_delete(FilaLista).where(FilaLista.lista_id == lista_id))
+        s.delete(l)
+        s.commit()
+        return True
+
+
+def filas_de_lista(lista_id: int, limite: Optional[int] = 200) -> list:
+    with Session(engine) as s:
+        q = select(FilaLista).where(FilaLista.lista_id == lista_id).order_by(FilaLista.id)
+        if limite:
+            q = q.limit(limite)
+        return [f.datos for f in s.exec(q).all()]
+
+
+def buscar_en_lista(sindicato_id: int, plantilla: str, clave1: str, clave2: str = "",
+                    seccional_id: Optional[int] = None, nombre: Optional[str] = None) -> Optional[dict]:
+    """La fila que coincide, o None. Busca en las listas de esa plantilla del
+    sindicato que valgan para todos (sin seccional) o para `seccional_id`;
+    con `nombre`, solo en esa. Es lo que van a usar las validaciones de
+    fuente `funcion` (bloque 3)."""
+    with Session(engine) as s:
+        q = select(ListaSindicato.id).where(ListaSindicato.sindicato_id == sindicato_id,
+                                            ListaSindicato.plantilla == plantilla)
+        if nombre:
+            q = q.where(ListaSindicato.nombre == nombre)
+        ids = [i for i in s.exec(q).all()]
+        if not ids:
+            return None
+        q = select(FilaLista).where(FilaLista.lista_id.in_(ids), FilaLista.clave1 == cuit.normalizar(clave1),
+                                    FilaLista.clave2 == (clave2 or ""))
+        for f in s.exec(q).all():
+            l = s.get(ListaSindicato, f.lista_id)
+            if l.seccional_id is None or l.seccional_id == seccional_id:
+                return dict(f.datos)
+        return None
+
+
+def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dict = None) -> dict:
+    """Lo que las validaciones de fuente `funcion` miran fuera del formulario
+    (PLAN_LISTAS_VALIDACIONES.md, bloque 3), para `cuil` en este sindicato:
+
+    - `sistema`: los datos del padrón que nombra `validaciones_tramite.DATOS_SISTEMA`.
+    - `buscar(plantilla, clave2)`: la fila de la lista, YA TRAÍDA. Las
+      búsquedas que el envío necesita salen de `busquedas_necesarias` y se
+      hacen acá, antes de evaluar, con el CUIL de la SESIÓN como primera
+      clave siempre (nunca uno que venga del formulario). Así la evaluación
+      queda pura y el request no abre una sesión adentro de otra.
+
+    Un CUIL que no está en este padrón devuelve `en_padron=False` y lo
+    demás vacío: una validación que lo mire no pasa, no revienta."""
+    from sqlalchemy import func
+    import validaciones_tramite as _vt
+    valores = valores or {}
+    cuil = cuit.normalizar(cuil) or (cuil or "")
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        sec = s.get(Seccional, t.seccional_id) if t and t.seccional_id else None
+        recibos = s.exec(select(func.count(ReciboVerificado.id)).where(
+            ReciboVerificado.sindicato_id == sindicato_id,
+            ReciboVerificado.cuil == cuil)).one()
+        semaforo = (t.semaforo_datos or {}).get("color") if t else None
+        hoy = fechas.hoy_texto()
+        # La credencial: generada y, si el admin le puso vigencia, no vencida
+        # (sin fecha, vigente: es lo que muestra la app). Decisión de SDN,
+        # 2026-10-18.
+        credencial = bool(t and t.codigo_credencial and (not t.vigencia_credencial or t.vigencia_credencial >= hoy))
+        ultimo = s.exec(select(ReciboVerificado).where(
+            ReciboVerificado.cuil == cuil, ReciboVerificado.sindicato_id == sindicato_id)
+            .order_by(ReciboVerificado.periodo.desc(), ReciboVerificado.procesado_en.desc()).limit(1)).first()
+        empleador = None
+        if t and t.cuit_empleador:
+            empleador = s.exec(select(Empleador).where(
+                Empleador.sindicato_id == sindicato_id, Empleador.cuit == t.cuit_empleador)).first()
+        abiertos_todos = s.exec(select(func.count(Tramite.id)).where(
+            Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+            Tramite.estado != "terminado")).one() or 0
+        ultimo_pedido = None
+        if tipo.get("id"):
+            ultimo_pedido = s.exec(select(Tramite.creado).where(
+                Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+                Tramite.tipo_tramite_id == tipo["id"]).order_by(Tramite.creado.desc()).limit(1)).first()
+        # "Una sola vez" / "no repetir mientras haya uno abierto": cuenta los
+        # pedidos de ESTE formulario del afiliado. Un tipo sin id (el banco
+        # de pruebas con un formulario sin guardar) no tiene pedidos.
+        de_este_tipo = abiertos = 0
+        if tipo.get("id"):
+            de_este_tipo = s.exec(select(func.count(Tramite.id)).where(
+                Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+                Tramite.tipo_tramite_id == tipo["id"])).one() or 0
+            abiertos = s.exec(select(func.count(Tramite.id)).where(
+                Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+                Tramite.tipo_tramite_id == tipo["id"], Tramite.estado != "terminado")).one() or 0
+        sistema = {
+            "en_padron": t is not None,
+            "activo": bool(t and t.activo),
+            "registrado": bool(t and t.registrado),
+            "seccional": sec.nombre if sec else None,
+            "provincia": (c.provincia or None) if c else None,
+            "localidad": (c.localidad or None) if c else None,
+            "nivel_fiabilidad": float(c.nivel_fiabilidad or 1) if (c and c.clave_hash) else None,
+            "recibos_verificados": float(recibos or 0),
+            "semaforo": semaforo or None,
+            "fecha_afiliacion": (t.fecha_afiliacion or None) if t else None,
+            "fecha_nacimiento": (c.fecha_nacimiento or None) if c else None,
+            "tramites_de_este_tipo": float(de_este_tipo),
+            "tramites_abiertos_de_este_tipo": float(abiertos),
+            "credencial_vigente": credencial,
+            "numero_credencial": (t.codigo_credencial or None) if t else None,
+            "edad": _vt.anios_cumplidos(c.fecha_nacimiento) if c else None,
+            "antiguedad_meses": _vt.meses_cumplidos(t.fecha_afiliacion) if t else None,
+            "ultimo_recibo_periodo": (ultimo.periodo or None) if ultimo else None,
+            "meses_sin_recibo": _vt.meses_cumplidos(ultimo.periodo) if ultimo else None,
+            "ultimo_recibo_bruto": (float(ultimo.bruto) if ultimo.bruto is not None else None) if ultimo else None,
+            "empleador_cuit": (t.cuit_empleador or None) if t else None,
+            "empleador_nombre": (empleador.razon_social or None) if empleador else None,
+            "tramites_abiertos": float(abiertos_todos),
+            "dias_desde_ultimo_pedido_de_este_tipo": (
+                (fechas.hoy() - date.fromisoformat(ultimo_pedido[:10])).days
+                if ultimo_pedido and _vt._RE_FECHA.match(ultimo_pedido[:10]) else None),
+        }
+        seccional_id = t.seccional_id if t else None
+    filas = {}
+    for plantilla, clave2 in _vt.busquedas_necesarias(tipo.get("campos"), tipo.get("requisitos"), valores):
+        filas[(plantilla, clave2)] = buscar_en_lista(sindicato_id, plantilla, cuil, clave2,
+                                                    seccional_id=seccional_id)
+    return {"sistema": sistema, "buscar": lambda plantilla, clave2: filas.get((plantilla, clave2)),
+            "cuil": cuil}
+
+
+def quien_es_usuario_sindicato(usuario_id: int) -> str:
+    """«Nombre (CUIT)» del usuario del panel, para dejar escrito quién cargó
+    una lista. Vacío si no existe."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u:
+            return ""
+        return f"{u.nombre} ({u.usuario})" if u.nombre else u.usuario

@@ -53,17 +53,17 @@ with db.get_session() as s:
     s.add(Seccional(sindicato_id=SID, nombre="Rosario", ve_todas=True))
     # Padrón de arranque. El que se va a registrar SIN domicilio cargado, y
     # otro que YA lo tiene puesto por el sindicato (para probar que no se pisa).
-    s.add(Trabajador(sindicato_id=SID, cuil="20444444442"))
-    db.guardar_datos_personales(s, "20444444442", nombre="Sin Domicilio")
-    s.add(Trabajador(sindicato_id=SID, cuil="20555555553"))
-    db.guardar_datos_personales(s, "20555555553", nombre="Con Domicilio",
+    s.add(Trabajador(sindicato_id=SID, cuil="20444444445"))
+    db.guardar_datos_personales(s, "20444444445", nombre="Sin Domicilio")
+    s.add(Trabajador(sindicato_id=SID, cuil="20555555556"))
+    db.guardar_datos_personales(s, "20555555556", nombre="Con Domicilio",
                                 domicilio=geo.campos_para_guardar(
                                     {"calle": "Mitre", "numero": "100",
                                      "localidad": "Rafaela", "provincia": "Santa Fe"},
                                     precision="sin_geo"))
     # El MISMO CUIL en dos sindicatos (pluriempleo): el domicilio es de la
     # persona, así que los dos gremios ven el mismo.
-    s.add(Trabajador(sindicato_id=SID_OTRO, cuil="20444444442"))
+    s.add(Trabajador(sindicato_id=SID_OTRO, cuil="20444444445"))
     s.add(Trabajador(sindicato_id=SID, cuil="20666666664", registrado=True))
     db.guardar_datos_personales(s, "20666666664", nombre="Ya Registrado")
     db.asegurar_cuenta(s, "20666666664").clave_hash = auth.hashear_clave(CLAVE_TRAB)
@@ -117,14 +117,14 @@ def test_la_regla_se_escribe_una_sola_vez():
 # ------------------------------------------------- 1. alta manual del admin
 
 def test_el_alta_sin_provincia_ni_localidad_no_entra():
-    r = admin.post("/admin/trabajador", data={"cuil": "27111111114", "nombre": "Sin Zona"},
+    r = admin.post("/admin/trabajador", data={"cuil": "27111111117", "nombre": "Sin Zona"},
                     follow_redirects=False)
     assert r.status_code == 303
     destino = r.headers["location"]
     assert "err=domicilio" in destino, destino
     # El mensaje NOMBRA lo que falta: "revisá los datos" obliga a adivinar.
     assert "provincia" in destino and "localidad" in destino, destino
-    assert _trab("27111111114") is None, "no se creó la fila a medias"
+    assert _trab("27111111117") is None, "no se creó la fila a medias"
     print("OK  test_el_alta_sin_provincia_ni_localidad_no_entra")
 
 
@@ -132,11 +132,11 @@ def test_el_alta_con_provincia_y_localidad_entra_sin_nada_mas():
     """Lo que hace que la decisión sea la decisión: el domicilio fino NO es
     obligatorio. Sin esto, el admin que carga mil personas inventa alturas."""
     r = admin.post("/admin/trabajador", data={
-        "cuil": "27222222224", "nombre": "Con Zona",
+        "cuil": "27222222228", "nombre": "Con Zona",
         "provincia": "Santa Fe", "localidad": "Rosario"}, follow_redirects=False)
     assert r.status_code == 303 and "err=" not in r.headers["location"]
-    assert _trab("27222222224") is not None
-    p = _persona("27222222224")
+    assert _trab("27222222228") is not None
+    p = _persona("27222222228")
     assert (p.provincia, p.localidad) == ("Santa Fe", "Rosario")
     assert p.calle == "" and p.numero == ""
     assert p.precision_geo == "sin_geo", "nadie se geocodifica en el alta"
@@ -147,12 +147,12 @@ def test_el_alta_con_provincia_y_localidad_entra_sin_nada_mas():
 def test_editar_no_puede_vaciar_la_provincia():
     """El borde que se olvida: la obligatoriedad también tiene que valer en la
     edición, o el dato se carga una vez y se borra en el segundo guardado."""
-    t = _trab("27222222224")
+    t = _trab("27222222228")
     r = admin.post("/admin/trabajador", data={
         "id": str(t.id), "cuil": t.cuil, "nombre": _persona(t.cuil).nombre,
         "provincia": "", "localidad": "Rosario"}, follow_redirects=False)
     assert "err=domicilio" in r.headers["location"]
-    assert _persona("27222222224").provincia == "Santa Fe", "la fila quedó como estaba"
+    assert _persona("27222222228").provincia == "Santa Fe", "la fila quedó como estaba"
     print("OK  test_editar_no_puede_vaciar_la_provincia")
 
 
@@ -160,10 +160,10 @@ def test_editar_no_puede_vaciar_la_provincia():
 
 def test_la_masiva_carga_las_lineas_completas_y_avisa_de_las_otras():
     lista = "\n".join([
-        "20777777771, Completo Uno, San Martín, 850, , Rosario, Santa Fe",
-        "20777777772, Sin Provincia, Mitre, 100, , Rafaela, ",
-        "20777777773, Completo Dos, , , , Córdoba, Córdoba",
-        "20777777774, Sin Localidad, , , , , Santa Fe",
+        "20777777786, Completo Uno, San Martín, 850, , Rosario, Santa Fe",
+        "20777777794, Sin Provincia, Mitre, 100, , Rafaela, ",
+        "20777777808, Completo Dos, , , , Córdoba, Córdoba",
+        "20777777816, Sin Localidad, , , , , Santa Fe",
     ])
     r = admin.post("/admin/trabajador/masivo", data={"lista": lista}, follow_redirects=False)
     destino = r.headers["location"]
@@ -173,18 +173,18 @@ def test_la_masiva_carga_las_lineas_completas_y_avisa_de_las_otras():
     # Y se ve un ejemplo, que en la práctica es lo que revela el patrón (casi
     # siempre falta la misma columna en todas).
     assert "muestra=" in destino, destino
-    assert _trab("20777777771") is not None and _trab("20777777773") is not None
-    assert _trab("20777777772") is None and _trab("20777777774") is None
+    assert _trab("20777777786") is not None and _trab("20777777808") is not None
+    assert _trab("20777777794") is None and _trab("20777777816") is None
     print("OK  test_la_masiva_carga_las_lineas_completas_y_avisa_de_las_otras")
 
 
 def test_la_masiva_deja_las_filas_listas_para_georreferenciar_despues():
     """Sin localidad, "Georreferenciar pendientes" no puede hacer nada: exigir
     provincia y localidad en el alta es lo que hace que ese proceso sirva."""
-    p = _persona("20777777771")
+    p = _persona("20777777786")
     assert p.precision_geo == "sin_geo" and p.localidad == "Rosario"
     pendientes = db.trabajadores_sin_geo(SID, None)
-    assert any(cuil == "20777777771" for cuil, _ in pendientes)
+    assert any(cuil == "20777777786" for cuil, _ in pendientes)
     print("OK  test_la_masiva_deja_las_filas_listas_para_georreferenciar_despues")
 
 
@@ -192,13 +192,13 @@ def test_la_masiva_deja_las_filas_listas_para_georreferenciar_despues():
 
 def test_el_registro_sin_provincia_no_crea_la_cuenta():
     r = TestClient(main.app).post("/trabajador/registro", data={
-        "cuil": "20444444442", "clave": "secreta", "provincia": "", "localidad": "Rosario"},
+        "cuil": "20444444445", "clave": "secreta", "provincia": "", "localidad": "Rosario"},
         follow_redirects=False)
     assert r.headers["location"] == "/ingresar?error=domicilio", r.headers["location"]
     # La fila de la persona ya existe (la crea el alta del padrón); lo que no
     # puede haber quedado es la CLAVE, que es lo que convierte a ese CUIL en
     # una cuenta con la que se entra.
-    assert not _persona("20444444442").clave_hash, \
+    assert not _persona("20444444445").clave_hash, \
         "la cuenta no puede quedar creada a medias"
     print("OK  test_el_registro_sin_provincia_no_crea_la_cuenta")
 
@@ -209,22 +209,24 @@ def test_el_registro_guarda_los_datos_en_la_persona_y_los_ven_los_dos_gremios():
     registrados y los dos leen el mismo domicilio, porque es el mismo renglón
     y no dos copias que haya que acordarse de sincronizar."""
     r = TestClient(main.app).post("/trabajador/registro", data={
-        "cuil": "20444444442", "clave": "secreta", "nombre": "Pedro Gómez",
+        "cuil": "20444444445", "clave": "secreta", "nombre": "Pedro Gómez",
         "provincia": "Córdoba", "localidad": "Córdoba",
         "calle": "Boulevard San Juan", "numero": "430",
         "telefono": "3511234567", "mail": "pedro@example.com"},
         follow_redirects=False)
     assert r.status_code == 303 and "error=" not in r.headers["location"]
     for sid in (SID, SID_OTRO):
-        assert _trab("20444444442", sid).registrado is True
-    p = _persona("20444444442")
+        assert _trab("20444444445", sid).registrado is True
+    p = _persona("20444444445")
     assert p.nombre == "Pedro Gómez"
     assert (p.provincia, p.localidad) == ("Córdoba", "Córdoba")
     assert p.calle == "Boulevard San Juan" and p.numero == "430"
     # El teléfono y el mail se piden acá desde el 2026-09-22: son los mismos
     # campos que el perfil, y pedirlos recién después era hacerle descubrir un
     # formulario nuevo a quien creía haber terminado de registrarse.
-    assert p.telefono == "3511234567" and p.mail == "pedro@example.com"
+    # El mail ya NO se escribe desde el registro (PLAN_REGISTRO.md §4.1): se
+    # confirma en el paso 2 y el del padrón es del sindicato.
+    assert p.telefono == "3511234567" and p.mail == ""
     # El texto lo arma el servidor, igual que en las otras tres puertas.
     assert p.direccion_texto == "Boulevard San Juan 430, Córdoba"
     # Y NO se geocodifica: el alta no espera a un servicio ajeno.
@@ -242,11 +244,11 @@ def test_el_registro_reemplaza_el_domicilio_entero_y_no_lo_fusiona():
     ya se lo permite un minuto después, así que pedirle dos campos
     obligatorios para descartarlos sería un formulario que miente."""
     r = TestClient(main.app).post("/trabajador/registro", data={
-        "cuil": "20555555553", "clave": "secreta", "provincia": "Buenos Aires",
+        "cuil": "20555555556", "clave": "secreta", "provincia": "Buenos Aires",
         "localidad": "La Plata"}, follow_redirects=False)
     assert r.status_code == 303 and "error=" not in r.headers["location"]
-    assert _trab("20555555553").registrado is True
-    p = _persona("20555555553")
+    assert _trab("20555555556").registrado is True
+    p = _persona("20555555556")
     assert (p.provincia, p.localidad) == ("Buenos Aires", "La Plata")
     assert p.calle == "" and p.numero == "", "no quedó la calle del domicilio viejo"
     assert p.direccion_texto == "La Plata, Buenos Aires"
@@ -259,16 +261,16 @@ def test_un_domicilio_identico_no_toca_la_fila():
     coordenadas (el alta escribe `sin_geo`) y lo mandaría de nuevo a la cola de
     georreferenciación estando ya ubicado."""
     with db.get_session() as s:
-        db.guardar_datos_personales(s, "20777777771", domicilio=geo.campos_para_guardar(
+        db.guardar_datos_personales(s, "20777777786", domicilio=geo.campos_para_guardar(
             {"calle": "San Martín", "numero": "850", "localidad": "Rosario",
              "provincia": "Santa Fe"},
             precision="exacta", lat=-32.947338, lon=-60.636893))
         s.commit()
     TestClient(main.app).post("/trabajador/registro", data={
-        "cuil": "20777777771", "clave": "secreta", "provincia": "Santa Fe",
+        "cuil": "20777777786", "clave": "secreta", "provincia": "Santa Fe",
         "localidad": "Rosario", "calle": "San Martín", "numero": "850"},
         follow_redirects=False)
-    p = _persona("20777777771")
+    p = _persona("20777777786")
     assert p.precision_geo == "exacta", "la ubicación que ya tenía no se perdió"
     assert p.latitud is not None
     print("OK  test_un_domicilio_identico_no_toca_la_fila")

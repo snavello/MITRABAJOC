@@ -1,0 +1,566 @@
+{
+  "formato": "colm3na.tramite",
+  "version": 1,
+  "generado": "2026-10-16",
+  "estado": "borrador",
+  "tramite": {
+    "nombre": "Kit escolar 2027",
+    "objetivo": "El afiliado pide un kit escolar por cada hijo o nieto en edad escolar y la seccional le avisa dónde retirarlo.",
+    "relato": "En La Bancaria queremos pasar a Colm3na el pedido del kit escolar. Lo pide el afiliado titular, uno por cada hijo o nieto en edad escolar, entre principios de diciembre y fines de enero. Carga los datos del chico (apellido y nombre, DNI, fecha de nacimiento y vínculo), el nivel (inicial, primaria hasta 3.º, primaria de 4.º en adelante, secundaria) y el grado, y sube el DNI del chico, la partida de nacimiento la primera vez y la constancia de alumno regular. Lo revisa Acción Social de la seccional del afiliado; si falta algo le pide que lo complete. Cuando lo aprueba, le avisa dónde y cuándo retirarlo: en la sede, en una delegación o en la comisión gremial del banco. Se retira mostrando la credencial. Los kits son limitados por seccional y necesitamos el listado por nivel para la compra al proveedor."
+  },
+  "requisitos_previos": {
+    "modulos": [
+      "tramites",
+      "notificaciones",
+      "noticias"
+    ],
+    "areas": [
+      {
+        "area": "Acción Social",
+        "en": "cada_seccional",
+        "permisos": [
+          "tramites_recibidos"
+        ]
+      }
+    ]
+  },
+  "formularios": [
+    {
+      "clave": "principal",
+      "titulo": "Kit escolar 2027",
+      "codigo": "KE27",
+      "activo": true,
+      "seccional": null,
+      "destino": {
+        "modo": "misma_area_en_cada_seccional",
+        "area": "Acción Social",
+        "por_defecto": {
+          "area": "Acción Social",
+          "seccional": "Sede Central"
+        }
+      },
+      "permite_pase": false,
+      "areas_pase": [],
+      "campos": [
+        {
+          "etiqueta": "¿Es la primera vez que lo pedís para este chico?",
+          "tipo_dato": "booleano",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Datos del chico",
+          "tipo_dato": "separador",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "completo",
+          "obligatorio": false,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Apellido y nombre del chico",
+          "tipo_dato": "texto",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "completo",
+          "obligatorio": true,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "DNI del chico",
+          "tipo_dato": "numero",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": 0,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "tercio",
+          "obligatorio": true,
+          "validaciones": [],
+          "x_pendiente": "No repetir entre pedidos"
+        },
+        {
+          "etiqueta": "Fecha de nacimiento",
+          "tipo_dato": "fecha",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "tercio",
+          "obligatorio": true,
+          "validaciones": [
+            {
+              "fuente": "fija",
+              "operador": "<=",
+              "valor": "hoy",
+              "mensaje": "No puede ser una fecha futura.",
+              "bloquea": true
+            }
+          ]
+        },
+        {
+          "etiqueta": "Vínculo",
+          "tipo_dato": "seleccion",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "Hijo/a,Nieto/a",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Nivel",
+          "tipo_dato": "seleccion",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "Inicial,Primaria 1.º a 3.º,Primaria 4.º en adelante,Secundaria",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Grado o año",
+          "tipo_dato": "seleccion",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "Sala de 3,Sala de 4,Sala de 5,1.º,2.º,3.º,4.º,5.º,6.º,7.º",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": [],
+          "x_pendiente": "Depende de otra respuesta"
+        },
+        {
+          "etiqueta": "Documentación",
+          "tipo_dato": "separador",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "completo",
+          "obligatorio": false,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "DNI del chico, ambas caras",
+          "tipo_dato": "archivo",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "pdf,jpg,jpeg,png",
+          "opciones": "",
+          "ancho": "completo",
+          "obligatorio": true,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Partida de nacimiento (solo la primera vez)",
+          "tipo_dato": "archivo",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "pdf,jpg,jpeg,png",
+          "opciones": "",
+          "ancho": "completo",
+          "obligatorio": false,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Constancia de alumno regular",
+          "tipo_dato": "archivo",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "pdf,jpg,jpeg,png",
+          "opciones": "",
+          "ancho": "completo",
+          "obligatorio": true,
+          "validaciones": []
+        },
+        {
+          "etiqueta": "Lugar de retiro",
+          "tipo_dato": "seleccion",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "Sede de la seccional,Delegación,Comisión gremial del banco",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": []
+        }
+      ],
+      "reglas_consistencia": [],
+      "requisitos": [
+        {
+          "origen": "sistema",
+          "trae": "en_padron",
+          "operador": "==",
+          "valor": "si",
+          "mensaje": "Tenés que estar en el padrón del sindicato como titular.",
+          "bloquea": true
+        }
+      ]
+    }
+  ],
+  "circuito": {
+    "actores": [
+      {
+        "actor": "Afiliado",
+        "usa_colm3na": true
+      },
+      {
+        "actor": "Acción Social",
+        "usa_colm3na": true
+      },
+      {
+        "actor": "Delegado de la comisión gremial",
+        "usa_colm3na": false
+      },
+      {
+        "actor": "Proveedor de kits",
+        "usa_colm3na": false
+      }
+    ],
+    "pasos": [
+      {
+        "id": "ini",
+        "tipo": "inicio",
+        "texto": "Necesita el trámite",
+        "actor": "Afiliado",
+        "estado": null
+      },
+      {
+        "id": "env",
+        "tipo": "accion",
+        "texto": "Completa y envía el formulario",
+        "actor": "Afiliado",
+        "estado": "iniciado"
+      },
+      {
+        "id": "rev",
+        "tipo": "accion",
+        "texto": "Revisa datos y documentación",
+        "actor": "Acción Social",
+        "estado": "en_tratamiento"
+      },
+      {
+        "id": "g1",
+        "tipo": "decision",
+        "texto": "¿Está completo?",
+        "actor": "Acción Social",
+        "estado": null
+      },
+      {
+        "id": "corr",
+        "tipo": "accion",
+        "texto": "Responde en el chat y adjunta lo que falta",
+        "actor": "Afiliado",
+        "estado": "espera_info"
+      },
+      {
+        "id": "dec",
+        "tipo": "accion",
+        "texto": "Evalúa y decide",
+        "actor": "Acción Social",
+        "estado": null
+      },
+      {
+        "id": "g2",
+        "tipo": "decision",
+        "texto": "¿Aprobado?",
+        "actor": "Acción Social",
+        "estado": null
+      },
+      {
+        "id": "rech",
+        "tipo": "fin",
+        "texto": "Rechazado",
+        "actor": "Afiliado",
+        "estado": "terminado"
+      },
+      {
+        "id": "prov",
+        "tipo": "accion",
+        "texto": "Provee lo que se entrega",
+        "actor": "Proveedor de kits",
+        "estado": null
+      },
+      {
+        "id": "aviso",
+        "tipo": "accion",
+        "texto": "Avisa dónde y cuándo retirar",
+        "actor": "Acción Social",
+        "estado": "respondido"
+      },
+      {
+        "id": "va",
+        "tipo": "accion",
+        "texto": "Va a retirar con la credencial",
+        "actor": "Afiliado",
+        "estado": null
+      },
+      {
+        "id": "ent",
+        "tipo": "accion",
+        "texto": "Entrega y controla la credencial",
+        "actor": "Delegado de la comisión gremial",
+        "estado": null
+      },
+      {
+        "id": "cierra",
+        "tipo": "accion",
+        "texto": "Registra la entrega y cierra",
+        "actor": "Acción Social",
+        "estado": "terminado"
+      },
+      {
+        "id": "fin",
+        "tipo": "fin",
+        "texto": "Fin",
+        "actor": "Acción Social",
+        "estado": null
+      }
+    ],
+    "flujos": [
+      {
+        "de": "ini",
+        "a": "env",
+        "etiqueta": null,
+        "tipo": "secuencia"
+      },
+      {
+        "de": "env",
+        "a": "rev",
+        "etiqueta": "envía",
+        "tipo": "secuencia"
+      },
+      {
+        "de": "rev",
+        "a": "g1",
+        "etiqueta": null,
+        "tipo": "secuencia"
+      },
+      {
+        "de": "g1",
+        "a": "corr",
+        "etiqueta": "No: lo pide por el chat",
+        "tipo": "secuencia"
+      },
+      {
+        "de": "corr",
+        "a": "rev",
+        "etiqueta": null,
+        "tipo": "secuencia"
+      },
+      {
+        "de": "g1",
+        "a": "dec",
+        "etiqueta": "Sí",
+        "tipo": "secuencia"
+      },
+      {
+        "de": "dec",
+        "a": "g2",
+        "etiqueta": null,
+        "tipo": "secuencia"
+      },
+      {
+        "de": "g2",
+        "a": "rech",
+        "etiqueta": "No: explica el motivo",
+        "tipo": "secuencia"
+      },
+      {
+        "de": "g2",
+        "a": "prov",
+        "etiqueta": "listado de pedidos",
+        "tipo": "mensaje_fuera_de_colm3na"
+      },
+      {
+        "de": "g2",
+        "a": "aviso",
+        "etiqueta": "Sí",
+        "tipo": "secuencia"
+      },
+      {
+        "de": "aviso",
+        "a": "va",
+        "etiqueta": null,
+        "tipo": "secuencia"
+      },
+      {
+        "de": "va",
+        "a": "ent",
+        "etiqueta": "muestra la credencial",
+        "tipo": "secuencia"
+      },
+      {
+        "de": "aviso",
+        "a": "ent",
+        "etiqueta": "lista de entregas",
+        "tipo": "mensaje_fuera_de_colm3na"
+      },
+      {
+        "de": "ent",
+        "a": "cierra",
+        "etiqueta": "informa la entrega",
+        "tipo": "mensaje_fuera_de_colm3na"
+      },
+      {
+        "de": "cierra",
+        "a": "fin",
+        "etiqueta": null,
+        "tipo": "secuencia"
+      }
+    ],
+    "datos": [
+      {
+        "dato": "Datos del formulario y documentación adjunta",
+        "de": "Afiliado",
+        "a": "Acción Social",
+        "canal": "Formulario del trámite"
+      },
+      {
+        "dato": "Pedido de lo que falta",
+        "de": "Acción Social",
+        "a": "Afiliado",
+        "canal": "Chat del trámite"
+      },
+      {
+        "dato": "Dato o documento faltante",
+        "de": "Afiliado",
+        "a": "Acción Social",
+        "canal": "Chat del trámite, con adjunto"
+      },
+      {
+        "dato": "Motivo del rechazo",
+        "de": "Acción Social",
+        "a": "Afiliado",
+        "canal": "Chat del trámite"
+      },
+      {
+        "dato": "Listado de pedidos aprobados",
+        "de": "Acción Social",
+        "a": "Proveedor de kits",
+        "canal": "Fuera de Colm3na (hoy sin exportación)"
+      },
+      {
+        "dato": "Lugar y fecha de retiro",
+        "de": "Acción Social",
+        "a": "Afiliado",
+        "canal": "Chat del trámite y aviso en la app"
+      },
+      {
+        "dato": "Lista de quiénes retiran",
+        "de": "Acción Social",
+        "a": "Delegado de la comisión gremial",
+        "canal": "Fuera de Colm3na (planilla)"
+      },
+      {
+        "dato": "Credencial digital (QR)",
+        "de": "Afiliado",
+        "a": "Delegado de la comisión gremial",
+        "canal": "Presencial"
+      },
+      {
+        "dato": "Constancia de entrega",
+        "de": "Delegado de la comisión gremial",
+        "a": "Acción Social",
+        "canal": "Fuera de Colm3na"
+      }
+    ]
+  },
+  "respuestas": {
+    "requisitos": [
+      "titular",
+      "familiar",
+      "edad"
+    ],
+    "quien": "afiliado",
+    "atiende": "seccional",
+    "area": "Acción Social",
+    "aprueba": "misma",
+    "fin": "entrega",
+    "lugar": "Sede, delegación o comisión gremial del banco",
+    "frecuencia": "familiar",
+    "segundo": "no",
+    "ventana": "si",
+    "fechas": "de principios de diciembre a fines de enero",
+    "entrega": "delegado",
+    "entrega_quien": "Delegado de la comisión gremial",
+    "cupo": "si",
+    "listado": "si",
+    "tercero": "si",
+    "tercero_nombre": "Proveedor de kits"
+  },
+  "pendientes": {
+    "brechas": [
+      {
+        "clave": "ventana",
+        "nivel": "ajuste",
+        "motivo": "Es una campaña con fechas.",
+        "provisorio": "Alguien del sindicato activa el formulario el día de apertura y lo desactiva al cierre. La noticia que lo anuncia sí vence sola."
+      },
+      {
+        "clave": "familia",
+        "nivel": "desarrollo",
+        "motivo": "Se pide por familiar.",
+        "provisorio": "El formulario pide los datos y documentos del familiar en cada pedido."
+      },
+      {
+        "clave": "duplicados",
+        "nivel": "ajuste",
+        "motivo": "Se puede pedir más de una vez (por familiar o por período). Campo «DNI del chico»: no repetir entre pedidos.",
+        "provisorio": "«Una sola vez» ya se controla con un requisito (sistema.tramites_de_este_tipo). Por familiar o por período nada lo impide: el área lo detecta al revisar."
+      },
+      {
+        "clave": "cupo",
+        "nivel": "desarrollo",
+        "motivo": "La cantidad es limitada.",
+        "provisorio": "El área lleva las unidades en su planilla y avisa por el chat si se agotaron."
+      },
+      {
+        "clave": "exportar",
+        "nivel": "ajuste",
+        "motivo": "Piden un listado de los pedidos.",
+        "provisorio": "El Panel Sindical lista expediente, seccional, estado y días, pero no las respuestas."
+      },
+      {
+        "clave": "entrega",
+        "nivel": "ajuste",
+        "motivo": "Termina con una entrega en persona.",
+        "provisorio": "Al entregar, el área pasa el trámite a Terminado con un mensaje. El afiliado se identifica con su credencial digital."
+      },
+      {
+        "clave": "dependencia",
+        "nivel": "ajuste",
+        "motivo": "Campo «Grado o año»: depende de otra respuesta.",
+        "provisorio": "Las reglas entre campos comparan solo números o fechas. Salida: unir las dos preguntas en una lista («Primaria 1.º», «Primaria 2.º»…)."
+      }
+    ],
+    "preguntas": [
+      "¿Aprueba la seccional o Acción Social Nacional?",
+      "¿Desde qué grado o año ya no corresponde el kit?"
+    ]
+  }
+}

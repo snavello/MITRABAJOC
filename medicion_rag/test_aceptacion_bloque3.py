@@ -30,7 +30,7 @@ print("-" * 92)
 ok = 0
 fallas = []
 for pregunta, debe, articulo in CASOS:
-    r = rag.responder(pregunta, SID, CONV, cuil="20111111119", registrar=True)
+    r = rag.responder(pregunta, SID, CONV, cuil="20111111112", registrar=True)
     contesto = r["hubo_respuesta"]
     bien = contesto == debe
     if bien and debe and articulo:

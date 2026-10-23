@@ -58,6 +58,14 @@ USOS = {
                    "modelo.",
         "default": "claude-sonnet-5",
     },
+    "asistente_tramites": {
+        "nombre": "Asistente de trámites (Herramientas de /entornos)",
+        "detalle": "Lee el relato de un trámite que cuenta un sindicato y propone "
+                   "respuestas, campos y dudas; el circuito y el formulario los "
+                   "arma el servidor. Lo usa el implementador, no el afiliado: "
+                   "pocas llamadas, una o dos por trámite relevado.",
+        "default": "claude-sonnet-5",
+    },
 }
 
 

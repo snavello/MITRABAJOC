@@ -4,6 +4,92 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Trámites: seis brechas verificadas contra el código** (2026-10-16,
+  Parte 2 del cierre del Asistente de trámites, aprobadas por SDN; las
+  mismas seis viven en `BRECHAS` de `asistente_tramites.py` cuando exista,
+  `PLAN_ASISTENTE_TRAMITES.md` D10). Confirmadas una por una con archivo y
+  función:
+  1. **Ventana por fechas** (chico): `TipoTramite` solo tiene `activo`
+     (db.py); el afiliado lo lista con `db.tipos_tramite_del_sindicato(
+     solo_activos=True)` y `/api/tramite` solo chequea `tipo["activo"]`.
+     Dos columnas `fecha_desde`/`fecha_hasta` (patrón de `Noticia`),
+     migración, el WHERE de esa función, el chequeo del envío, dos inputs
+     en el constructor y el espejo en `TipoTramiteEmpleador`.
+  2. **Marca «solo encadenado»** (chico): para adjuntarse en una nota el
+     formulario tiene que estar activo (`main._formulario_para_chat`,
+     `db.formulario_activo_de`) y entonces también sale en "Iniciar
+     trámite" (`/api/tramites/tipos`). Peor: `origen_tramite_id` es
+     opcional en `/api/tramite`, así que un encadenado se puede enviar
+     SIN trámite de origen ni aprobación previa. Una marca en el tipo,
+     excluirla del listado del afiliado y exigir origen válido al enviar.
+  3. ~~**Extensiones jpg/jpeg**~~ **HECHO el 2026-10-16** (Trabajador
+     0.45.06, Admin 0.53.06): `main.extensiones_permitidas` suma la
+     equivalente de cada una (jpg↔jpeg, tif↔tiff) al comparar en las dos
+     rutas de envío y al armar el `accept` del navegador, sin tocar lo
+     guardado; la ayuda del constructor lo dice.
+  4. **Exportar trámites con sus respuestas** (mediano): no hay CSV de
+     trámites; `dashboard.explorador_tramites` devuelve expediente, fecha,
+     seccional, tipo, estado y días, y las respuestas solo se ven de a
+     una en el modal "Ver". Una ruta por tipo con una columna por campo,
+     dentro del alcance de seccional y área del operador, registrando
+     cada descarga como hace Encuestas (nombres y DNI de familiares son
+     dato sensible).
+  5. **Opciones que dependen de otra respuesta** (mediano, prioridad
+     baja): `validaciones_tramite.TIPOS_VALIDABLES = ("numero", "fecha")`
+     y `reglas_saneadas` descarta una regla si los dos campos no son del
+     mismo tipo; no existe nada de opciones dependientes. Modelo en el
+     campo (opciones por valor del padre), constructor, JS de afiliado y
+     empresa, y validación en el servidor del subconjunto. Provisorio:
+     unir las dos listas en una ("Primaria 1.º", "Primaria 2.º"…).
+  6. **Pedidos repetidos**: "uno por afiliado por formulario" **HECHO el
+     2026-10-16** como requisito sobre `sistema.tramites_de_este_tipo`
+     (bloque 5 de `PLAN_LISTAS_VALIDACIONES.md`). Queda "único por valor
+     de un campo" (el mismo DNI del chico en dos pedidos): mediano, una
+     marca «único» sobre el campo y una consulta a las respuestas de los
+     trámites del tipo antes de crear, con `bloquea`/`avisa`.
+
+- [ ] **Panel Sindical: una dirección con solo `sal_max` pierde ese filtro**
+  (2026-10-12, encontrado al portar el estado a la v2, `PLAN_DASHBOARD_V2.md`
+  bloque 2). En `initCatalogo` de `static/dashboard.js`, si la dirección no
+  trae `sal_min`, el salario se vuelve a los dos límites y el `sal_max` que
+  venía se descarta: un enlace compartido con "hasta $2.000.000" abre sin ese
+  filtro. La v2 copia la rareza a propósito (`estado.conLimites`), porque
+  tiene que pedir exactamente lo mismo que la v1. Por D10 se arregla en las
+  DOS en el mismo PR; `test_dashboard_v2_nucleo.py` compara las dos y lo va a
+  exigir.
+
+- [ ] **Para el motor v2: dos variaciones del modelo con el MISMO recibo**
+  (2026-09-24, medición del enmascarado, `medicion_enmascarado/RESULTADO.md`).
+  (1) "SEGURO OBLIGATORIO - DGI" ($380 fijo) sale `aporte_trabajador` en una
+  lectura y `otro` en la siguiente, sin cambiar nada: leído tres veces el
+  mismo original dio `aporte / otro / otro`. Como `tipo` alimenta la
+  retención sindical y el tope del 2%, una línea ambigua cambia el resultado
+  entre dos lecturas del mismo recibo. Es el caso de manual para el catálogo
+  maestro (D8: elegir de una lista cerrada) y la confianza por renglón. (2)
+  El signo de los descuentos: a veces como figura en la columna (positivo),
+  a veces negativo. Hoy no rompe nada (el validador usa `abs()` y el banco ya
+  no lo marca), pero el motor v2 debería normalizarlo en un solo lugar.
+
+- [ ] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
+  decisión de SDN al construir el enmascarado: "por ahora no lo testeamos,
+  lo anotamos para cuando avancemos en ese tema"). Hoy la app no valida el
+  verificador en ningún lado, y **ninguno de los CUIL/CUIT de la demo lo
+  cumple** (20111111119, 27222222224, 30999888776, 30111222339, los de los
+  admins...). Por eso el enmascarado NO depende de él: tapa lo que viene
+  con formato de CUIL (`enmascarado.parece_cuil`) y decide que un recibo es
+  ajeno por distancia (3 o más dígitos distintos, `distintos_de_verdad`) en
+  vez de por verificador. Cuando se valide: (1) sembrar la demo con CUIL y
+  CUIT válidos (`cargar_demo.py`, `cargar_lote_*`, `IDENTIDAD_FICTICIA` de
+  los sintéticos) -- los tests y los accesos de CLAUDE.md usan esos números;
+  (2) validar en el alta y el registro; (3) volver a exigir el verificador
+  en `enmascarado.pertenece`, que es más firme que la distancia.
+  **Plan propuesto el 2026-10-10: [`PLAN_CUIT_MOD11.md`](PLAN_CUIT_MOD11.md)**
+  (diagnóstico, conversión de los números cargados a mano y recién después
+  exigir el verificador en las puertas de alta). **Hechos (1) y (2) el
+  2026-10-10** (CLAUDE.md, "Estado actual" 31). Queda (3), el verificador en
+  `enmascarado.pertenece`, y convertir los lotes sintéticos (etapa 5 del
+  plan, opcional).
+
 - [ ] **El empleador quedó con el defecto que se le corrigió al trabajador**
   (2026-09-22, al terminar "Una persona, un domicilio" en HISTORIAL.md).
   `Empleador` es una fila POR SINDICATO y ahí viven `razon_social`,
@@ -102,6 +188,10 @@ se hace.
 - [ ] **Validaciones de Trámites, fases 2–4** (2026-09-01): la Fase 1
   (fuente `fija` + consistencia entre campos) está HECHA y en el código —
   ver "Validaciones en formularios de Trámites" en CLAUDE.md/HISTORIAL.md.
+  **Fases 2 y 3 HECHAS el 2026-10-16 como una sola fuente `funcion`**
+  (`PLAN_LISTAS_VALIDACIONES.md`, cinco bloques): listas tipadas por CSV,
+  datos del padrón, fórmulas con nombres cerrados, requisitos para iniciar,
+  campo calculado, en vivo con tope de intentos. Queda la Fase 4.
   Decisiones YA CERRADAS con Sd para lo que sigue:
   - **Fase 2 — fuente `sistema`**: catálogo cerrado de funciones sobre
     datos que la app ya tiene (padrón, antigüedad como afiliado calculada
@@ -137,6 +227,37 @@ se hace.
   expedientes emitidos parte la serie — decidir si se normaliza solo para los
   nuevos.
 
+- [ ] **Sesiones que sobreviven al cambio de clave** (2026-10-12, QR-1 de la
+  revisión de QA del registro): huella de `clave_hash` en el token de sesión y
+  chequeo en `sesion_actual`; hoy un impostor activo sigue adentro tras una
+  recuperación. Cuesta una consulta por request. Test que lo mide:
+  `test_qa_recuperacion_clave.py::test_rojo_qr1_...` (`xfail(strict=True)`: al
+  arreglarlo hay que sacarle la marca).
+- [ ] **Un tercero puede invalidar el código vivo** (2026-10-12, QR-4): pedir
+  otro código vence el anterior ("un solo código vivo"), así que quien resuelve
+  el captcha le pisa el código a la persona. Reusar el código vivo si tiene
+  menos de N minutos en vez de vencerlo. Tensión con el diseño actual, hay que
+  decidirla. Test: `test_qa_recuperacion_clave.py::test_rojo_qr4_...`
+  (`xfail(strict=True)`).
+- [ ] **Verificar el código en el paso 2 del registro** (2026-10-12, QA-REG-08b):
+  `POST /registro/verificar`, para que un error de tipeo no devuelva al paso 1
+  ni gaste cupo y captcha. Hoy el código recién se comprueba en el paso 3.
+- [ ] **El freno por IP toma el primer `X-Forwarded-For`** (2026-10-12, QA-REG-05,
+  ya es H-0008): lo escribe el cliente. Con Cloudflare, usar la IP que firma el
+  perímetro. Test: `test_qa_registro_flujo.py::test_el_freno_por_ip_no_se_evade_...`
+  (`xfail(strict=True)`).
+
+- [ ] **Calculadora bancaria: horas extras, averiguar antes de construir**
+  (2026-10-13, decisión de SDN: "no construir en falso"). El CCT 18/75 no las
+  regula (solo las nombra en el art. 43) y la grilla de agosto 2026 no trae
+  valor hora: rige la LCT, art. 201 (50% días comunes, 100% sábados después
+  de las 13, domingos y feriados). Falta saber, con el sindicato o con
+  recibos reales: (1) el divisor del valor hora (cuántas horas por mes toma
+  la banca) y (2) qué conceptos entran en la base (básico solo, o también
+  conformado, ROE y adicionales). Hasta entonces la calculadora no las
+  contempla; un recibo real que las traiga las deja en "renglones que la
+  calculadora no tiene".
+
 ## Hecho
 
 - [x] **Mergear `areas-permisos` a `main`** y **Sprint "Admin de Seccional"**
@@ -165,3 +286,4 @@ se hace.
 - [x] **Badge "NEW" en la tarjeta del Panel Sindical** (2026-08-31): estrella
   + etiqueta "NUEVO" en `/admin/inicio`. **Sacarla a mano** en un deploy
   posterior: no expira sola.
+- [ ] **Bitácora de acciones del panel del sindicato** (2026-10-11, QD-7 de la revisión de QA del registro): quién restableció una clave o confirmó una identidad, cuándo y sobre quién. Hoy solo queda una línea en el log (`mitrabajo.panel`), sin tabla ni pantalla.

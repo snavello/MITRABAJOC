@@ -81,7 +81,7 @@ RC3=skip
 if [[ -n "${ADMIN_CLAVE:-}" ]]; then
   echo "=== Test 3: filtro frenético del panel (2 min) ==="
   set +e
-  BASE_URL="$BASE_URL" ADMIN_CLAVE="$ADMIN_CLAVE" ADMIN_CUIT="${ADMIN_CUIT:-20111111110}"     RESUMEN_PANEL="$CARPETA/test3_resumen.json"     k6 run --out "json=$CARPETA/test3_panel.json"     k6/test3_panel.js 2>&1 | tee "$CARPETA/test3_stdout.log"
+  BASE_URL="$BASE_URL" ADMIN_CLAVE="$ADMIN_CLAVE" ADMIN_CUIT="${ADMIN_CUIT:-20111111120}"     RESUMEN_PANEL="$CARPETA/test3_resumen.json"     k6 run --out "json=$CARPETA/test3_panel.json"     k6/test3_panel.js 2>&1 | tee "$CARPETA/test3_stdout.log"
   RC3=${PIPESTATUS[0]}
   set -e
   echo "(Test 3 terminó con código $RC3 -- 0 = criterios cumplidos, no 0 = algún threshold se cruzó)"

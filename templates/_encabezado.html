@@ -1,22 +1,31 @@
 {# ============================================================
    Encabezado de TODAS las pantallas de las cuatro apps.
 
-   Una sola regla, sin excepciones (antes cada plantilla armaba el suyo:
-   cuatro tamaños de logo distintos, dos órdenes opuestos y el nombre del
-   sindicato repetido al lado de un logo que ya lo decía):
+   UNA sola línea, sin excepciones (2026-09-23, decisión de Sd). Antes cada
+   plantilla armaba el suyo -- cuatro tamaños de logo distintos, dos órdenes
+   opuestos y el nombre del sindicato repetido al lado de un logo que ya lo
+   decía --; después hubo una cinta arriba con el rol del panel; ahora es:
 
-     CINTA   [ rol del panel ]                      [ Colm3na ]
-     BARRA   [ logo del sindicato ]                 [ pantalla ]
+     [ logo del sindicato ]                          [ Colm3na ]
 
-   El estilo vive en marca.css (bloque "Encabezado normalizado"): esta
-   plantilla solo decide QUÉ se muestra, nunca CÓMO se ve.
+   Dos reglas y nada más:
+
+   1. **No hay cinta.** Era una franja entera para decir el rol del panel
+      ("Panel de administración"), y en la app del afiliado ni siquiera eso:
+      un logo solo. El rol ya lo dice el `<title>`, la pantalla y el login
+      por el que se entró.
+   2. **No se escribe el nombre de la pantalla.** Todas las pantallas de una
+      app llevan el mismo encabezado que su inicio. La tira de pestañas (o
+      la barra de abajo, en el afiliado) ya dice dónde estás.
+
+   Donde la marca principal ES la plataforma (panel de plataforma, demo
+   anónima), el logo grande de la izquierda es el de Colm3na y a la derecha
+   no se repite.
+
+   El estilo vive en static/encabezado.css: esta plantilla solo decide QUÉ
+   se muestra, nunca CÓMO se ve.
 
    Variables opcionales, con {% set %} antes del include:
-     enc_rol        texto de la cinta. Vacío en la app del afiliado: la
-                    plataforma firma con el logo, no con texto.
-     enc_pantalla   nombre de la pantalla (derecha de la barra). En los
-                    paneles con pestañas lo actualiza el JS al cambiar de
-                    pestaña, así el encabezado dice siempre dónde estás.
      enc_volver     URL del link "Volver" (pantallas sin tira de pestañas).
      enc_fecha      True en el Panel Sindical: deja el hueco de la fecha,
                     con los ids que espera static/dashboard.js.
@@ -24,6 +33,10 @@
                     al scrollear (paneles internos; las portadas, no).
      enc_plataforma True cuando la marca principal ES la plataforma
                     (/plataforma): entonces el logo grande es el de Colm3na.
+
+   `enc_rol` y `enc_pantalla` ya no existen. El JS de los paneles que
+   escribía en `#marca-pantalla` está guardado con `if (rotulo)`, así que no
+   falla al no encontrarlo.
    ============================================================ #}
 {# La hoja la carga el parcial, no cada plantilla: trabajador.html y
    empresa.html no cargan marca.css y el encabezado tiene que ser el mismo.
@@ -34,20 +47,10 @@
 {% set _logo_plataforma = '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro
    else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') %}
 {# Cuando la marca principal YA es la de la plataforma (panel de
-   plataforma, demo anónima sin sindicato), la cinta no repite el logo:
-   quedaba Colm3na dos veces, una arriba de la otra. #}
+   plataforma, demo anónima sin sindicato), la derecha no repite el logo:
+   quedaría Colm3na dos veces en la misma línea. #}
 {% set _marca_es_plataforma = enc_plataforma or not sindicato %}
 <div class="marca-enc{% if enc_fija %} fija{% endif %}">
-  {# Sin rol y sin logo la cinta sería una franja vacía (demo anónima):
-     entonces no va. #}
-  {% if enc_rol or not _marca_es_plataforma %}
-  <div class="marca-cinta">
-    {% if enc_rol %}<span class="marca-rol">{{ enc_rol }}</span>{% endif %}
-    {% if not _marca_es_plataforma %}
-    <img class="marca-colmena" src="{{ _logo_plataforma }}" alt="Colm3na">
-    {% endif %}
-  </div>
-  {% endif %}
   <header class="marca-barra">
     {% if _marca_es_plataforma %}
       {# Sin sindicato activo (demo anónima, panel de plataforma) la marca
@@ -61,11 +64,15 @@
     {% if enc_fecha %}
     <div class="marca-fecha"><strong id="hoy-fecha"></strong><span id="rango-texto"></span></div>
     {% endif %}
-    <span class="marca-pantalla" id="marca-pantalla">{{ enc_pantalla or '' }}</span>
     {% if enc_volver %}
     <a class="marca-volver" href="{{ enc_volver }}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Volver
     </a>
+    {% endif %}
+    {# Colm3na al final para que quede pegado al borde derecho aun cuando la
+       pantalla tiene fecha o "Volver". #}
+    {% if not _marca_es_plataforma %}
+    <img class="marca-colmena" src="{{ _logo_plataforma }}" alt="Colm3na">
     {% endif %}
   </header>
 </div>

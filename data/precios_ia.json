@@ -1,25 +1,41 @@
 {
-  "fuente": "https://www.anthropic.com/pricing (tabla de modelos de la skill claude-api)",
-  "leido": "2026-06-24",
+  "fuente": "https://platform.claude.com/docs/en/about-claude/pricing (pagina de precios de la API de Anthropic)",
+  "leido": "2026-10-11",
   "moneda": "USD",
   "unidad": "dolares por millon de tokens",
   "nota": "Precios de la API estandar de Anthropic, sin descuentos de cache ni Batch. Se copian a mano: no hay pagina que se pueda leer con un script sin inventar, por eso vale la fecha de arriba.",
   "modelos": [
+    {
+      "id": "claude-fable-5-1",
+      "nombre": "Claude Fable 5.1",
+      "entrada": 10.0,
+      "salida": 50.0,
+      "contexto": "1M",
+      "resumen": "El mas capaz de Anthropic y el mas caro: el doble que Opus 5.5. Razona siempre. Sin probarlo con recibos reales."
+    },
+    {
+      "id": "claude-opus-5-5",
+      "nombre": "Claude Opus 5.5",
+      "entrada": 4.0,
+      "salida": 20.0,
+      "contexto": "1M",
+      "resumen": "El Opus actual: mas nuevo y mas barato que Opus 5. Razona siempre. Sin probarlo con recibos reales."
+    },
     {
       "id": "claude-opus-5",
       "nombre": "Claude Opus 5",
       "entrada": 5.0,
       "salida": 25.0,
       "contexto": "1M",
-      "resumen": "El mas capaz. Hoy responde las consultas sobre el convenio."
+      "resumen": "El Opus anterior. Hoy responde las consultas sobre el convenio."
     },
     {
-      "id": "claude-sonnet-4-6",
-      "nombre": "Claude Sonnet 4.6",
-      "entrada": 3.0,
-      "salida": 15.0,
+      "id": "claude-sonnet-5-5",
+      "nombre": "Claude Sonnet 5.5",
+      "entrada": 2.0,
+      "salida": 10.0,
       "contexto": "1M",
-      "resumen": "El que lee recibos y comprobantes de ARCA hoy."
+      "resumen": "El Sonnet actual, al mismo precio que Sonnet 5. Razona siempre. Sin probarlo con recibos reales."
     },
     {
       "id": "claude-sonnet-5",
@@ -30,12 +46,28 @@
       "resumen": "Mas nuevo y mas barato que Sonnet 4.6. Hoy corre el Asistente del Panel."
     },
     {
+      "id": "claude-sonnet-4-6",
+      "nombre": "Claude Sonnet 4.6",
+      "entrada": 3.0,
+      "salida": 15.0,
+      "contexto": "1M",
+      "resumen": "El que lee recibos y comprobantes de ARCA hoy."
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "nombre": "Claude Haiku 5.5",
+      "entrada": 0.1,
+      "salida": 0.5,
+      "contexto": "1M",
+      "resumen": "El Haiku actual y el mas barato de todos. Ese precio vale para pedidos de hasta 100.000 tokens de entrada (por encima, US$ 0,50 / 2,50); un recibo queda siempre por debajo. Razona por defecto. Sin probarlo con recibos reales."
+    },
+    {
       "id": "claude-haiku-4-5",
       "nombre": "Claude Haiku 4.5",
       "entrada": 1.0,
       "salida": 5.0,
       "contexto": "200K",
-      "resumen": "El mas barato y el mas rapido. Sin probarlo con recibos reales."
+      "resumen": "El Haiku anterior. Sin probarlo con recibos reales."
     }
   ]
 }

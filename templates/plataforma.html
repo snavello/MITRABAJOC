@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colm3na — Plataforma</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 <style>
   :root {
     /* La plataforma no tiene un 4to color propio (no tiene portada oscura):
@@ -133,11 +135,17 @@
   .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
     mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .marca-barra > * { position:relative; z-index:1; }
-  .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:9px 14px; }
-  .ptab { background:transparent; border-color:rgba(255,255,255,.16); color:rgba(255,255,255,.72);
-    font-family:var(--fuente-display); font-weight:700; font-size:12.5px; letter-spacing:.8px; text-transform:uppercase; }
-  .ptab:hover { background:rgba(255,255,255,.08); }
-  .ptab.activa { background:var(--marca-acento); color:var(--marca-base); border-color:var(--marca-acento); }
+  /* La misma tira que /admin (SDN, 2026-10-19, hoja de trabajo de
+     Impeccable): pastillas de texto solo, sin íconos, la activa en blanco. */
+  .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:0 14px 12px; gap:6px; }
+  .ptab { flex-direction:row; gap:6px; padding:8px 12px; border-radius:9px;
+    background:color-mix(in srgb, var(--marca-base) 82%, #fff); border-color:rgba(255,255,255,.14); color:#c9d3e3;
+    font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px; text-transform:uppercase;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .ptab svg { display:none; }
+  .ptab:hover { background:color-mix(in srgb, var(--marca-base) 70%, #fff); color:#fff; }
+  .ptab:active { scale:.97; }
+  .ptab.activa { background:#fff; color:var(--marca-base); border-color:#fff; }
   h2 { font-family:var(--fuente-display); font-weight:700; font-size:22px; letter-spacing:.4px; text-transform:uppercase;
     line-height:1.05; border-bottom:none; padding-bottom:0; display:flex; align-items:center; gap:12px; color:var(--tinta); }
   h2::after { content:""; flex:1; height:1px; background:var(--linea); }
@@ -162,13 +170,12 @@
   .link-num { font-family:var(--fuente-num); font-variant-numeric:tabular-nums; }
   .msg { border-radius:10px; }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa franja">
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
 {# Acá la marca principal ES la plataforma: el logo grande es el de Colm3na. #}
-{% set enc_rol = 'Administración de plataforma' %}
-{% set enc_pantalla = 'Sindicatos' %}   {# pestaña abierta al entrar; el JS la va cambiando #}
 {% set enc_plataforma = True %}
 {% include "_encabezado.html" %}
 <a class="btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
@@ -206,7 +213,7 @@
   </defs>
 </svg>
 
-<div class="wrap">
+<div class="wrap mesa-cont">
   {% set reset = request.query_params.get('reset') %}
   {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
   {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
@@ -214,8 +221,8 @@
   {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
   {% if request.query_params.get('error') == 'guardado' %}<div style="background:#fdf3e7; border:1px solid #e8d9b0; color:#8a5a1a; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
 
-  <div class="ppanel activo" id="pp-lista">
-  <h2>Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
+  <div class="ppanel activo" data-mov-vista id="pp-lista">
+  <h2 class="titulo-pagina">Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
   <table>
     <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabaj.</th><th></th></tr>
     {% for i in sindicatos %}
@@ -234,7 +241,7 @@
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -252,6 +259,29 @@
     <div id="admins-lista"></div>
   </div>
 
+  {# Todas las personas con usuario en algún panel, una fila por CUIL
+     (2026-10-17). La clave es UNA por persona (CuentaPanel), así que esta
+     vista muestra en qué sindicatos trabaja cada una y si ya eligió su
+     clave. Antes solo existía la lista de un sindicato, escondida en el
+     número de la tabla. #}
+  <details style="margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:12px 16px;">
+    <summary style="cursor:pointer; font-weight:700;">Usuarios de los paneles ({{ operadores|length }} personas)</summary>
+    <p class="muted" style="font-size:12.5px; margin:8px 0 10px;">Una persona tiene una sola clave para todos los sindicatos en los que trabaja y, si son varios, elige a cuál entra después del login. «Clave inicial» es la que puso quien la dio de alta; «sin clave» no puede entrar hasta que se le restablezca.</p>
+    <table>
+      <tr><th>CUIL</th><th>Nombre</th><th>Sindicatos y rol</th><th>Clave</th></tr>
+      {% for o in operadores %}
+      <tr>
+        <td><code>{{ o.cuil }}</code></td>
+        <td>{{ o.nombre or '—' }}</td>
+        <td>{% for x in o.sindicatos %}<div{% if not x.activo %} class="muted" style="text-decoration:line-through;"{% endif %}>{{ x.sindicato }} · {{ x.rol }}</div>{% endfor %}</td>
+        <td>{{ o.cuenta }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No hay usuarios de panel cargados.</td></tr>
+      {% endfor %}
+    </table>
+  </details>
+
   <!-- Panel de trabajadores (se llena al clickear el número) -->
   <div id="trabajadores-box" style="display:none; margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -268,9 +298,18 @@
 
   </div>
 
-  <div class="ppanel" id="pp-nuevo">
-  <h2 id="form-sind-titulo">Dar de alta un sindicato</h2>
+  <div class="ppanel" data-mov-vista id="pp-nuevo">
+  <h2 class="titulo-pagina" id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
+    {% if request.query_params.get('error') == 'clausula' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: para marcar la cláusula de confidencialidad como aceptada, el sindicato tiene que tener cargado el contrato firmado. Subilo en el mismo formulario.</div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'contrato' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el contrato tiene que ser un PDF o una imagen (PNG, JPG o WEBP) de hasta 15 MB.</div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'cuit' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el CUIT del sindicato no es válido -- revisá los 11 números. Tiene que ser el de una persona jurídica (empieza con 30, 33 o 34).<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+    {% endif %}
     {% if request.query_params.get('error') == 'colorbase' %}
     <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El color base tiene que ser oscuro (es el fondo de la portada del trabajador y de los encabezados) — el que cargaste es muy claro para que el texto blanco se lea bien encima. Probá con un tono más oscuro.</div>
     {% endif %}
@@ -278,7 +317,7 @@
       <input type="hidden" name="id" id="sind-id">
       <div class="grid">
         <div class="campo"><label>Nombre *</label><input name="nombre" required></div>
-        <div class="campo"><label>CUIT</label><input name="cuit" placeholder="30-12345678-9"></div>
+        <div class="campo"><label>CUIT</label><input name="cuit" data-cuit="empresa" placeholder="30-12345678-1"></div>
         <div class="campo full"><label>Descripción</label><input name="descripcion" placeholder="Breve descripción del gremio"></div>
         <div class="campo"><label>Mail</label><input name="mail" type="email"></div>
         <div class="campo"><label>Teléfonos</label><input name="telefonos"></div>
@@ -355,15 +394,39 @@
         <span class="muted" style="font-size:11px;">Independiente de la del trabajador -- por ejemplo, se puede dejar oscura para el trabajador y clara para el admin.</span>
       </div>
 
+      <div class="campo" style="margin-top:14px;">
+        <label>Contrato / convenio firmado con el sindicato (PDF o imagen)</label>
+        <div id="sind-contrato-actual" class="oculto" style="margin-bottom:8px; font-size:12.5px;">
+          Cargado: <a id="sind-contrato-link" href="#" target="_blank" rel="noopener"></a>
+          <span class="muted" style="font-size:11px; margin-left:6px;">-- subí otro para reemplazarlo.</span>
+        </div>
+        <input type="file" name="contrato" accept="application/pdf,image/png,image/jpeg,image/webp">
+        <span class="muted" style="font-size:11px;">El documento por el que el sindicato acepta la responsabilidad sobre los datos que recibe. Solo lo ve plataforma.</span>
+      </div>
+
+      <div class="campo" style="margin-top:8px;">
+        <label class="chk-modulo"><input type="checkbox" name="clausula_confidencialidad" value="true" id="sind-clausula"> Aceptó la cláusula de confidencialidad</label>
+        <span class="muted" style="font-size:11px;">Tildado: en Reportes y en el explorador del Panel Sindical ve también los recibos que los afiliados verificaron y NO enviaron, siempre anonimizados (sin nombre, CUIL ni empresa). Sin tildar, ve solo los enviados. Exige el contrato cargado.</span>
+        <span class="muted" id="sind-clausula-quien" style="font-size:11px; display:block;"></span>
+      </div>
+
+      <div class="campo" style="margin-top:8px;">
+        <label class="chk-modulo"><input type="checkbox" name="acepta_mail_declarado" value="true" id="sind-acepta-mail-declarado" checked> Acepta registro con mail declarado</label>
+        <span class="muted" style="font-size:11px;">Tildado: el afiliado que no tiene mail cargado en el padrón puede registrarse declarando uno propio (queda en nivel 2, marcado como "mail declarado"). Sin tildar, solo puede registrarse con el mail que el sindicato cargó.</span>
+      </div>
+
       <button type="submit">Crear sindicato</button>
     </form>
   </div>
 
   </div>
 
-  <div class="ppanel" id="pp-admin">
-  <h2>Crear un administrador de sindicato</h2>
+  <div class="ppanel" data-mov-vista id="pp-admin">
+  <h2 class="titulo-pagina">Crear un administrador de sindicato</h2>
   <div class="card">
+    {% if request.query_params.get('error') == 'cuil' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se creó el administrador: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+    {% endif %}
     {% if sindicatos %}
     <form method="post" action="/plataforma/usuario" id="form-nuevo-admin" onsubmit="return confirmarClaves(this, 'na-clave', 'na-repetir', 'na-error')">
       <div class="grid">
@@ -375,7 +438,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre</label><input name="nombre"></div>
         <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
         <div class="campo"><label>Repetir clave inicial *</label><input id="na-repetir" required></div>
@@ -389,8 +452,8 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-clave">
-  <h2>Cambiar la clave de un usuario</h2>
+  <div class="ppanel" data-mov-vista id="pp-clave">
+  <h2 class="titulo-pagina">Cambiar la clave de un usuario</h2>
   <div class="card">
     <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
       <strong>Opción transitoria para pruebas.</strong> Permite resetear la clave de cualquier
@@ -407,7 +470,7 @@
           </select>
           <span class="muted" style="font-size:11px;">Son cuentas separadas aunque compartan CUIT/CUIL: elegí la que corresponda al login que querés cambiar.</span>
         </div>
-        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456786"></div>
         <div class="campo"><label>Nueva clave *</label><input id="rc-clave" name="clave_nueva" required></div>
         <div class="campo"><label>Repetir nueva clave *</label><input id="rc-repetir" required></div>
       </div>
@@ -417,8 +480,8 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-marca">
-  <h2>Marca de la plataforma</h2>
+  <div class="ppanel" data-mov-vista id="pp-marca">
+  <h2 class="titulo-pagina">Marca de la plataforma</h2>
   <div class="card">
     <p class="muted" style="margin-bottom:14px;">Es la marca de Colm3na en sí — el logo y los colores de las pantallas de login y de este panel, antes de entrar a un sindicato en particular. La marca de cada sindicato se edita aparte, desde "Sindicatos".</p>
     <form method="post" action="/plataforma/marca" enctype="multipart/form-data">
@@ -464,8 +527,8 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-config">
-  <h2>Configuración legal</h2>
+  <div class="ppanel" data-mov-vista id="pp-config">
+  <h2 class="titulo-pagina">Configuración legal</h2>
   <div class="card">
     <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
       <strong>Límite de ley nacional.</strong> El tope sindical es el límite global del
@@ -509,8 +572,8 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-usoia">
-  <h2>Uso de la API de IA</h2>
+  <div class="ppanel" data-mov-vista id="pp-usoia">
+  <h2 class="titulo-pagina">Uso de la API de IA</h2>
   <div class="subtabs">
     <button type="button" class="ia-subtab activa" data-ia-sub="consumo"
             onclick="cambiarSubIA('consumo')">Consumo y costo ({{ uso_ia|length }})</button>
@@ -518,10 +581,12 @@
             onclick="cambiarSubIA('modelos')">Modelos</button>
     <button type="button" class="ia-subtab" data-ia-sub="probar"
             onclick="cambiarSubIA('probar')">Banco de pruebas</button>
+    <button type="button" class="ia-subtab" data-ia-sub="enmascarado"
+            onclick="cambiarSubIA('enmascarado')">Enmascarado ({{ enmascarado_registros|length }})</button>
   </div>
 
   {# ---------------- Consumo y costo ---------------- #}
-  <div class="ia-subpanel activo" id="ia-sub-consumo">
+  <div class="ia-subpanel activo" data-mov-vista id="ia-sub-consumo">
   <p class="muted" style="margin-bottom:14px; max-width:700px;">Una fila por cada llamada real a la API de Anthropic, con los tokens que devolvió la propia respuesta, lo que tardó y lo que costó. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo. El costo sale de los tokens por el precio del modelo <strong>que regía en ese momento</strong>: actualizar la lista de precios no reescribe el gasto de los meses anteriores.</p>
 
   <div class="card">
@@ -556,6 +621,7 @@
       <option value="aportes">Aportes (ARCA)</option>
       <option value="aprendizaje">Aprendizaje</option>
       <option value="prueba">Banco de pruebas</option>
+      <option value="herramienta">Herramientas (/entornos)</option>
     </select>
     <button type="button" class="sec mini" onclick="limpiarFiltroUsoIA()">Limpiar</button>
     <span class="f-cant" id="f-usoia-cant"></span>
@@ -584,7 +650,7 @@
   </div>
 
   {# ---------------- Modelos: qué modelo usa cada parte ---------------- #}
-  <div class="ia-subpanel" id="ia-sub-modelos">
+  <div class="ia-subpanel" data-mov-vista id="ia-sub-modelos">
   <div class="aviso-caja">
     <strong>Esto cambia lo que corre en producción.</strong> El modelo elegido se usa desde la
     llamada siguiente, sin reiniciar nada y para todos los sindicatos a la vez. El precio se ve
@@ -613,8 +679,96 @@
     operación puntual del alta de un convenio, no del uso diario.</p>
   </div>
 
+  {# ---------------- Enmascarado ---------------- #}
+  <div class="ia-subpanel" data-mov-vista id="ia-sub-enmascarado">
+  <p class="muted" style="margin-bottom:10px; max-width:760px;">Cada recibo, comprobante de ARCA o aprendizaje que pasa por el enmascarado deja una fila: si se tapó lo que identifica a la persona antes de mandarlo a la IA, por qué camino y, si no se pudo, por qué. <strong>Es mejor esfuerzo:</strong> si algo no se tapa, el recibo se analiza igual y queda anotado acá. Las filas no tienen ningún dato personal.</p>
+  <div class="aviso-caja" style="margin-bottom:14px;">
+    Modo en este servidor: <strong>{{ enmascarado_modo }}</strong>
+    {% if enmascarado_modo == "sombra" %}— se calcula todo y se anota, pero a la IA le llega el original: la columna dice si <em>se habría</em> tapado.
+    {% elif enmascarado_modo == "activo" %}— a la IA le llega el documento tapado.
+    {% else %}— no se tapa ni se anota nada. Se prende con la variable <code>ENMASCARADO</code> del servicio (<code>sombra</code> o <code>activo</code>).{% endif %}
+    Lector de fotos: <strong>{{ "listo" if enmascarado_ocr else "no disponible (solo se tapa el PDF con texto)" }}</strong>.
+  </div>
+  {% if enmascarado_diag_entorno %}
+  <div class="aviso-caja" style="margin-bottom:14px; border-color:#b8860b;">
+    <strong>Diagnóstico (transitorio, solo Pruebas):</strong>
+    {% if enmascarado_diagnostico %}se guardan la imagen original y la que recibió la IA de cada documento, para verlas con «Ver» en la lista. <strong>La original tiene datos personales</strong>: se borran solas a los {{ enmascarado_dias }} días.
+    {% else %}apagado. Se prende con <code>ENMASCARADO_GUARDAR_IMAGENES=1</code> en el servicio de Pruebas.{% endif %}
+    <form method="post" action="/plataforma/enmascarado/imagenes/borrar" style="display:inline; margin-left:8px;"
+          onsubmit="return confirm('¿Borrar todas las imágenes de diagnóstico guardadas? No se puede deshacer.');">
+      <button type="submit" class="mini borrar">Borrar todas las imágenes</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="ia-tot" id="enm-totales"></div>
+    <div class="tabla-ancha" style="margin-top:16px;">
+      <table>
+        <tr><th>Camino</th><th class="num">Documentos</th><th class="num">Tapados</th>
+            <th class="num">Sin tapar</th><th class="num">Tiempo mediano</th>
+            <th class="num">Tiempo p95</th><th class="num">Espera p95</th></tr>
+        <tbody id="enm-por-camino"></tbody>
+      </table>
+    </div>
+    <div class="tabla-ancha" style="margin-top:16px;">
+      <table>
+        <tr><th>Por qué no se tapó</th><th class="num">Documentos</th><th>Qué significa</th></tr>
+        <tbody id="enm-motivos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="filtros" style="margin-top:16px;">
+    <select id="f-enm-tipo" onchange="filtrarEnmascarado()">
+      <option value="">Todos los documentos</option>
+      <option value="recibo">Recibos</option>
+      <option value="aportes">Comprobantes de ARCA</option>
+      <option value="aprendizaje">Aprendizaje</option>
+      <option value="prueba">Banco de pruebas</option>
+      <option value="herramienta">Herramientas (/entornos)</option>
+    </select>
+    <select id="f-enm-camino" onchange="filtrarEnmascarado()">
+      <option value="">Todos los caminos</option>
+      <option value="pdf_texto">PDF con texto</option>
+      <option value="pdf_imagen">PDF escaneado</option>
+      <option value="foto">Foto</option>
+    </select>
+    <select id="f-enm-resultado" onchange="filtrarEnmascarado()">
+      <option value="">Todos los resultados</option>
+      <option value="tapados">Tapados (o se habrían tapado)</option>
+      <option value="sin_tapar">Sin tapar</option>
+      <option value="fugas">Con fugas</option>
+    </select>
+    <span class="f-cant" id="f-enm-cant"></span>
+  </div>
+  <div class="tabla-ancha">
+    <table>
+      <tr><th>Fecha</th><th>Sindicato</th><th>Documento</th><th>Camino</th><th>Resultado</th>
+          <th class="num">Zonas</th><th class="num">Fugas</th><th class="num">Espera</th><th class="num">Total</th>
+          {% if enmascarado_diag_entorno %}<th>Imágenes</th>{% endif %}</tr>
+      {% for r in enmascarado_registros %}
+      <tr class="fila-enm" data-tipo="{{ r.tipo }}" data-camino="{{ r.camino }}" data-resultado="{{ r.resultado }}"
+          data-motivo="{{ r.motivo }}" data-fugas="{{ r.fugas }}" data-pertenece="{{ '' if r.pertenece is none else ('si' if r.pertenece else 'no') }}"
+          data-espera="{{ r.espera_ms }}" data-total="{{ r.total_ms }}"{% if loop.index > 300 %} data-sobra="1"{% endif %}>
+        <td>{{ r.fecha }}</td><td>{{ r.sindicato }}</td><td>{{ r.tipo }}</td>
+        <td class="enm-camino">{{ r.camino }}</td>
+        <td class="enm-resultado">{{ r.resultado }}</td>
+        <td class="num">{{ r.cajas }}</td>
+        <td class="num">{% if r.fugas %}<strong style="color:#b8860b;">{{ r.fugas }}</strong>{% else %}0{% endif %}</td>
+        <td class="num">{{ r.espera_ms }} ms</td><td class="num">{{ r.total_ms }} ms</td>
+        {% if enmascarado_diag_entorno %}<td>{% if r.con_imagenes %}<a href="/plataforma/enmascarado/{{ r.id }}" target="_blank" rel="noopener">Ver</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="muted">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</td></tr>
+      {% endfor %}
+    </table>
+    <p class="muted" style="font-size:12px; margin-top:8px;">Se listan las 300 más recientes que cumplen el filtro; los números de arriba cuentan todas las que llegaron a esta pantalla (hasta 3.000).</p>
+  </div>
+  </div>
+
   {# ---------------- Banco de pruebas ---------------- #}
-  <div class="ia-subpanel" id="ia-sub-probar">
+  <div class="ia-subpanel" data-mov-vista id="ia-sub-probar">
   <div class="aviso-caja">
     <strong>Cada prueba gasta créditos de verdad.</strong> Se hace una llamada a la API por cada
     modelo tildado, con el archivo que subas. Cada una queda registrada en «Consumo y costo»
@@ -643,6 +797,8 @@
         </div>
       </div>
     </div>
+    <label class="chk-modulo" style="margin:4px 0 12px;"><input type="checkbox" id="prueba-tapado">
+      Comparar también con el documento tapado <span class="muted" style="font-size:11px;">(cada modelo lee dos veces: el original y la versión con los datos personales tapados)</span></label>
     <button type="button" id="prueba-btn" onclick="correrPrueba()">Probar con los modelos tildados</button>
     <span class="muted" id="prueba-estado" style="margin-left:10px;"></span>
   </div>
@@ -651,8 +807,8 @@
 
   </div>
 
-  <div class="ppanel" id="pp-sospechosos">
-  <h2>Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
+  <div class="ppanel" data-mov-vista id="pp-sospechosos">
+  <h2 class="titulo-pagina">Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:640px;">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador — solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
   <table>
     <tr><th>Fecha</th><th>Sindicato</th><th>CUIL</th><th>Período</th><th>Motivo</th><th></th></tr>
@@ -668,8 +824,8 @@
   </table>
   </div>
 
-  <div class="ppanel" id="pp-topes">
-  <h2>Topes de la seguridad social ({{ topes|length }})</h2>
+  <div class="ppanel" data-mov-vista id="pp-topes">
+  <h2 class="titulo-pagina">Topes de la seguridad social ({{ topes|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. Ordenados del período más nuevo al más viejo; el estado (chip de color) indica cuánto se puede confiar en cada valor. <strong>Los montos van sin punto de separador de miles, con coma para los decimales</strong> (ej. 4594798,23).</p>
   {% if request.query_params.get('error') == 'topebajo' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
@@ -747,9 +903,6 @@
 <script>
 function activarTab(dest) {
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
-  const rotulo = document.getElementById('marca-pantalla');
-  const btnActivo = document.querySelector('.ptab[data-pp="' + dest + '"] span');
-  if (rotulo && btnActivo) rotulo.textContent = btnActivo.textContent;
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
 }
 
@@ -844,6 +997,112 @@ function limpiarFiltroUsoIA() {
 }
 if (document.getElementById('usoia-totales')) filtrarUsoIA();
 
+/* ---------- Enmascarado: cuántos documentos se taparon y por qué no ---------- */
+const ENM_CAMINOS = {pdf_texto: 'PDF con texto', pdf_imagen: 'PDF escaneado', foto: 'Foto', otro: 'Otro', '—': '—'};
+const ENM_RESULTADOS = {tapado: 'tapado', se_habria_tapado: 'se habría tapado', sin_tapar: 'sin tapar'};
+const ENM_MOTIVOS = {
+  sin_lugar: ['Lector ocupado', 'Había otra foto leyéndose y no se liberó dentro de la espera. Si se repite, es capacidad: más núcleos o más procesos.'],
+  tiempo: ['Se pasó de tiempo', 'La lectura de la foto no terminó dentro del presupuesto de 5 s.'],
+  sin_ocr: ['Sin lector de fotos', 'Este servidor no tiene Tesseract: solo se tapa el PDF con texto.'],
+  sin_palabras: ['No se encontró texto', 'El lector no devolvió palabras: foto muy oscura, borrosa o que no es un documento.'],
+  tipo_no_soportado: ['Tipo de archivo', 'Ni PDF ni imagen.'],
+  ok: ['Nada que tapar', 'Se leyó bien pero no apareció ningún dato personal reconocible.'],
+};
+const percentil = (xs, p) => {
+  if (!xs.length) return 0;
+  const o = xs.slice().sort((a, b) => a - b);
+  return o[Math.min(o.length - 1, Math.ceil(p * o.length) - 1)];
+};
+const pct = (n, d) => d ? Math.round(100 * n / d) + ' %' : '—';
+
+function filtrarEnmascarado() {
+  const tipo = document.getElementById('f-enm-tipo').value;
+  const camino = document.getElementById('f-enm-camino').value;
+  const res = document.getElementById('f-enm-resultado').value;
+  const vis = [];
+  let mostradas = 0;
+  document.querySelectorAll('.fila-enm').forEach(f => {
+    const d = f.dataset;
+    let ok = (!tipo || d.tipo === tipo) && (!camino || d.camino === camino);
+    if (ok && res === 'tapados') ok = d.resultado !== 'sin_tapar';
+    if (ok && res === 'sin_tapar') ok = d.resultado === 'sin_tapar';
+    if (ok && res === 'fugas') ok = Number(d.fugas) > 0;
+    const mostrar = ok && mostradas < 300;
+    if (mostrar) mostradas++;
+    f.style.display = mostrar ? '' : 'none';
+    if (ok) vis.push(d);
+  });
+  const cant = document.getElementById('f-enm-cant');
+  if (cant) cant.textContent = vis.length + (vis.length === 1 ? ' documento' : ' documentos');
+
+  const tapados = vis.filter(d => d.resultado !== 'sin_tapar').length;
+  const totales = vis.map(d => Number(d.total));
+  const caja = document.getElementById('enm-totales');
+  if (caja) {
+    const bloque = (cifra, rotulo) =>
+      '<div><span class="cifra">' + cifra + '</span><span class="rotulo">' + rotulo + '</span></div>';
+    caja.innerHTML = [
+      bloque(vis.length.toLocaleString('es-AR'), 'Documentos'),
+      bloque(pct(tapados, vis.length), 'Tapados (o se habrían tapado)'),
+      bloque((vis.length - tapados).toLocaleString('es-AR'), 'Sin tapar'),
+      bloque(vis.filter(d => Number(d.fugas) > 0).length.toLocaleString('es-AR'), 'Con fugas'),
+      bloque(vis.filter(d => d.pertenece === 'no').length.toLocaleString('es-AR'), 'Recibos ajenos detectados'),
+      bloque(totales.length ? segTxt(medianaDe(totales)) : '—', 'Tiempo mediano'),
+      bloque(totales.length ? segTxt(percentil(totales, 0.95)) : '—', 'Tiempo p95'),
+    ].join('');
+  }
+
+  const cuerpo = document.getElementById('enm-por-camino');
+  if (cuerpo) {
+    const grupos = new Map();
+    vis.forEach(d => {
+      if (!grupos.has(d.camino)) grupos.set(d.camino, {n: 0, t: 0, ms: [], esp: []});
+      const g = grupos.get(d.camino);
+      g.n++; if (d.resultado !== 'sin_tapar') g.t++;
+      g.ms.push(Number(d.total)); g.esp.push(Number(d.espera));
+    });
+    cuerpo.innerHTML = [...grupos.entries()].sort((a, b) => b[1].n - a[1].n).map(([c, g]) =>
+      '<tr><td>' + escHTML(ENM_CAMINOS[c] || c) + '</td>' +
+      '<td class="num">' + g.n.toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + pct(g.t, g.n) + '</td>' +
+      '<td class="num">' + (g.n - g.t).toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + segTxt(medianaDe(g.ms)) + '</td>' +
+      '<td class="num">' + segTxt(percentil(g.ms, 0.95)) + '</td>' +
+      '<td class="num">' + segTxt(percentil(g.esp, 0.95)) + '</td></tr>').join('') ||
+      '<tr><td colspan="7" class="muted">Sin documentos para este filtro.</td></tr>';
+  }
+
+  const motivos = document.getElementById('enm-motivos');
+  if (motivos) {
+    const cuenta = new Map();
+    vis.filter(d => d.resultado === 'sin_tapar').forEach(d => {
+      const m = d.motivo.startsWith('error:') ? 'error' : d.motivo;
+      cuenta.set(m, (cuenta.get(m) || 0) + 1);
+    });
+    motivos.innerHTML = [...cuenta.entries()].sort((a, b) => b[1] - a[1]).map(([m, n]) => {
+      const [rot, txt] = m === 'error'
+        ? ['Error del enmascarado', 'Falló algo al leer o tapar (el tipo de error queda en la fila). El recibo siguió igual.']
+        : (ENM_MOTIVOS[m] || [m, '']);
+      return '<tr><td>' + escHTML(rot) + '</td><td class="num">' + n.toLocaleString('es-AR') +
+             '</td><td class="muted">' + escHTML(txt) + '</td></tr>';
+    }).join('') || '<tr><td colspan="3" class="muted">Ninguno: todo lo que se pudo leer se tapó.</td></tr>';
+  }
+}
+document.querySelectorAll('.fila-enm').forEach(f => {
+  const c = f.querySelector('.enm-camino'), r = f.querySelector('.enm-resultado');
+  if (c) c.textContent = ENM_CAMINOS[c.textContent] || c.textContent;
+  if (r) {
+    const motivo = f.dataset.motivo;
+    r.textContent = ENM_RESULTADOS[r.textContent] || r.textContent;
+    if (f.dataset.resultado === 'sin_tapar') {
+      const m = motivo.startsWith('error:') ? motivo : (ENM_MOTIVOS[motivo] || [motivo])[0].toLowerCase();
+      r.textContent += ' · ' + m;
+      r.style.color = '#b8860b';
+    }
+  }
+});
+if (document.getElementById('enm-totales')) filtrarEnmascarado();
+
 /* ---------- Banco de pruebas: el mismo archivo con varios modelos ---------- */
 async function correrPrueba() {
   const inp = document.getElementById('prueba-archivo');
@@ -852,13 +1111,17 @@ async function correrPrueba() {
   const elegidos = [...document.querySelectorAll('.prueba-modelo:checked')].map(c => c.value);
   if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
   if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
-  const veces = elegidos.length === 1 ? 'una vez' : elegidos.length + ' veces';
-  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo, una por modelo. ' +
-               'Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
+  const tapado = document.getElementById('prueba-tapado').checked;
+  const n = elegidos.length * (tapado ? 2 : 1);
+  const veces = n === 1 ? 'una vez' : n + ' veces';
+  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo' +
+               (tapado ? ' (cada modelo, con el original y con el tapado)' : ', una por modelo') +
+               '. Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
   const fd = new FormData();
   fd.append('archivo', inp.files[0]);
   fd.append('tipo', document.getElementById('prueba-tipo').value);
   elegidos.forEach(m => fd.append('modelos', m));
+  if (tapado) fd.append('tapado', '1');
   btn.disabled = true;
   estado.textContent = 'Leyendo el archivo con ' + elegidos.length +
     (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo…');
@@ -917,8 +1180,30 @@ function pintarPrueba(data) {
            'diferencia: la app los normaliza antes de usarlos.'
          : 'Ningún modelo pudo leer el archivo.') +
     '</p><div class="tabla-ancha"><table>' + cab + filas.join('') + '</table></div>' +
-    tablaLineas(data, ms) +
+    tablaLineas(data, ms) + bloqueTapado(data.enmascarado) +
     (crudos ? '<div class="card">' + crudos + '</div>' : '');
+}
+
+/* La imagen tal como la recibe la IA, y cómo salió el tapado. Si no se pudo
+   tapar, el motivo: el banco es el lugar donde eso se tiene que ver. */
+function bloqueTapado(e) {
+  if (!e) return '';
+  const motivos = {sin_ocr: 'no hay lector de fotos en este servidor', sin_lugar: 'el lector estaba ocupado',
+                   tiempo: 'la lectura se pasó de su tiempo', sin_palabras: 'no se encontró texto',
+                   tipo_no_soportado: 'tipo de archivo no soportado'};
+  const caminos = {pdf_texto: 'PDF con texto (sin OCR)', pdf_imagen: 'PDF escaneado (OCR)', foto: 'foto (OCR)'};
+  const dato = (r, v) => '<div><span class="muted" style="font-size:11px;">' + r + '</span><br>' +
+    '<strong style="font-family:ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums;">' + v + '</strong></div>';
+  const cabeza = '<div style="display:flex; gap:24px; flex-wrap:wrap; margin:6px 0 12px;">' +
+    dato('Camino', escHTML(caminos[e.camino] || e.camino || '—')) +
+    dato('Zonas tapadas', e.cajas ?? '—') + dato('Fugas', e.fugas ?? '—') +
+    dato('Tiempo del tapado', ((e.total_ms || 0) / 1000).toFixed(1).replace('.', ',') + ' s') + '</div>';
+  const cuerpo = e.tapado && e.imagen
+    ? '<img src="' + e.imagen + '" alt="El documento tal como lo recibe la IA" ' +
+      'style="max-width:100%; border:1px solid var(--linea); border-radius:12px; background:#fff;">'
+    : '<p class="muted">No se tapó: ' + escHTML(motivos[e.motivo] || e.motivo || 'no se encontró nada que tapar') +
+      '. En la app, el recibo sigue igual y se manda sin tapar (mejor esfuerzo).</p>';
+  return '<h2 style="margin-top:22px;">Así lo recibe la IA</h2>' + cabeza + cuerpo;
 }
 
 /* La comparación línea por línea. Es la que contesta lo que el resumen deja
@@ -970,6 +1255,8 @@ function resetSindForm() {
   f.querySelector('button[type=submit]').textContent = 'Crear sindicato';
   document.getElementById('sind-logo-preview').classList.add('oculto');
   document.getElementById('sind-firma-preview').classList.add('oculto');
+  document.getElementById('sind-contrato-actual').classList.add('oculto');
+  document.getElementById('sind-clausula-quien').textContent = '';
 }
 
 document.querySelectorAll('.ptab').forEach(btn => {
@@ -1042,6 +1329,19 @@ function editarSind(s) {
   });
   document.getElementById('sind-portada-clara').checked = !!s.portada_clara;
   document.getElementById('sind-admin-portada-clara').checked = !!s.admin_portada_clara;
+  document.getElementById('sind-clausula').checked = !!s.clausula;
+  document.getElementById('sind-acepta-mail-declarado').checked = s.acepta_mail_declarado !== false;
+  document.getElementById('sind-clausula-quien').textContent = s.clausula
+    ? 'Aceptada el ' + s.clausula_en + ' (cargó: ' + s.clausula_por + ').' : '';
+  const contratoBox = document.getElementById('sind-contrato-actual');
+  if (s.contrato_nombre) {
+    const a = document.getElementById('sind-contrato-link');
+    a.href = '/plataforma/sindicato/' + s.id + '/contrato';
+    a.textContent = s.contrato_nombre;
+    contratoBox.classList.remove('oculto');
+  } else {
+    contratoBox.classList.add('oculto');
+  }
   // Preview del logo/firma YA cargados -- sin esto no había forma de saber,
   // parado en el form de edición, si ya había una imagen ni si la que se
   // acaba de subir reemplazó a la anterior. Date.now() como sello de cache
@@ -1172,5 +1472,6 @@ function prepararEnvioTope(form) {
   }
 })();
 </script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 </body>
 </html>

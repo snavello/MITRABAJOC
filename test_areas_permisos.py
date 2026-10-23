@@ -138,7 +138,7 @@ def test_secciones_de_modulos_filtra():
     assert "trabajadores" in pocas and "seccionales" in pocas
 
     # Sin ningún módulo quedan solo las independientes.
-    assert set(secciones_de_modulos([])) == {"trabajadores", "seccionales"}
+    assert set(secciones_de_modulos([])) == {"trabajadores", "seccionales", "listas"}
     print("OK  test_secciones_de_modulos_filtra")
 
 

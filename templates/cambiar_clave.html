@@ -1,0 +1,41 @@
+{% extends "_clave_base.html" %}
+{#- Cambio obligatorio de la clave temporal (PLAN_REGISTRO.md, D6): el sindicato
+    restableció la clave de la persona y el primer ingreso exige elegir la suya.
+    Llega con el token firmado del login (10 minutos). Es un <form> común: al
+    guardar, el servidor abre la sesión y redirige a la portada. -#}
+{% block titulo %}Elegí tu clave{% endblock %}
+{% block chip %}{{ 'Empresa' if rol == 'empleador' else 'Trabajador' }}{% endblock %}
+{% block mrz %}CLAVE{% endblock %}
+
+{% block cuerpo %}
+    {% if vencido %}
+    <h1>El pedido venció</h1>
+    <p class="bajada">Por seguridad, esta pantalla dura pocos minutos. Volvé a ingresar con la clave temporal que te dio el sindicato.</p>
+    <a class="enviar" href="{{ login }}" style="display:block;text-align:center;text-decoration:none;padding:14px;margin-top:20px;border-radius:10px;font-family:var(--fuente-display);font-size:18px;letter-spacing:1.6px;text-transform:uppercase;background:linear-gradient(90deg,var(--miel),color-mix(in srgb,var(--miel) 82%,#8a5f14));color:#231a08;">Volver a ingresar</a>
+    {% else %}
+    <h1>Elegí tu clave</h1>
+    <p class="bajada">Tu sindicato te dio una clave temporal. Para seguir, elegí una propia: al menos {{ clave_minima }} caracteres.</p>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ base }}/cambiar-clave" autocomplete="off" onsubmit="return controlar(this)">
+      <input type="hidden" name="token" value="{{ token }}">
+      <label>Clave temporal</label>
+      <input type="password" name="clave_actual" autocomplete="current-password" required>
+      <label>Clave nueva</label>
+      <input type="password" name="clave" minlength="{{ clave_minima }}" autocomplete="new-password" required>
+      <label>Repetí la clave nueva</label>
+      <input type="password" name="clave2" minlength="{{ clave_minima }}" autocomplete="new-password" required>
+      <div class="error" id="no-coinciden" hidden style="margin:10px 0 0;">Las dos claves no coinciden.</div>
+      <button class="enviar" type="submit">Guardar y entrar</button>
+    </form>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function controlar(f) {
+  var ok = f.clave.value === f.clave2.value;
+  document.getElementById('no-coinciden').hidden = ok;
+  return ok;
+}
+</script>
+{% endblock %}

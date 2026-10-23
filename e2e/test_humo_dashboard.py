@@ -27,7 +27,7 @@ import fechas
 
 BASE = os.environ.get("E2E_BASE_URL", "http://localhost:8000")
 
-ADMIN_UOM = {"usuario": "20111111110", "clave": "uom-demo"}
+ADMIN_UOM = {"usuario": "20111111120", "clave": "uom-demo"}
 
 # Primer trabajador del lote sintético de la UOM. Son DOS porque hay dos
 # cargadores: `cargar_lote_sindicato.py` (el actual, para cualquier sindicato)

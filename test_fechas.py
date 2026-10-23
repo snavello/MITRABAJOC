@@ -95,6 +95,16 @@ def test_formatos():
     assert fechas.ahora_con_segundos().startswith(fechas.ahora_texto()[:13])
 
 
+def test_a_texto_escribe_vencimientos_y_limites_con_el_formato_del_proyecto():
+    """`a_texto` es lo que usan los códigos de verificación para escribir
+    "ahora + 15 minutos" y "hace una hora" con el mismo formato que los
+    sellos ya guardados, que se comparan como texto."""
+    base = datetime(2026, 10, 11, 23, 50, 59)
+    assert fechas.a_texto(base) == "2026-10-11 23:50"
+    assert fechas.a_texto(base + timedelta(minutes=15)) == "2026-10-12 00:05"
+    assert fechas.a_texto(fechas.ahora()) == fechas.ahora_texto()
+
+
 def test_ningun_modulo_de_la_app_le_pide_la_hora_al_servidor():
     culpables = {}
     for ruta in _modulos_de_la_app():

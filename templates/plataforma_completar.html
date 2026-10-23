@@ -10,6 +10,8 @@
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --acento: {{ marca_plataforma.color_acento if marca_plataforma else '#E5188F' }};
     --alerta: #ff8c42;
+    /* El aviso en línea de static/cuit.js: sobre fondo oscuro va claro. */
+    --cuit-aviso-color: #ffd2b0;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { min-height:100vh; padding:32px 16px 60px; color:#fff; display:flex; justify-content:center; align-items:flex-start;
@@ -38,7 +40,7 @@
   <div class="caja">
     <h1>Completá tu cuenta</h1>
     <p class="lede">Hola <b>{{ u.nombre or u.usuario }}</b>. Antes de entrar, elegí una clave nueva y cargá tus datos. Es por única vez.</p>
-    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    {% if error %}<div class="error">{{ error }}{% if codigo_error %}<br><small style="opacity:.8;">Código {{ codigo_error }}</small>{% endif %}</div>{% endif %}
     {% set d = datos or {} %}
     <form method="post" action="/plataforma/completar">
       <div class="sep">Clave nueva</div>
@@ -51,7 +53,7 @@
       <div class="fila">
         <div>
           <label for="cuil">CUIL (11 dígitos)</label>
-          <input type="text" id="cuil" name="cuil" inputmode="numeric" value="{{ d.cuil or '' }}" required>
+          <input type="text" id="cuil" name="cuil" inputmode="numeric" data-cuit="persona" value="{{ d.cuil or '' }}" required>
         </div>
         <div>
           <label for="dni">DNI</label>
@@ -69,5 +71,6 @@
       <div class="nota">Todos los campos son obligatorios.</div>
     </form>
   </div>
+<script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 </body>
 </html>

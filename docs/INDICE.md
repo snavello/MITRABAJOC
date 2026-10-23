@@ -41,6 +41,8 @@ cuenta), no en cada commit.
 | `docs/ASISTENTE_PANEL.md` | Ficha rectora del Asistente del Panel Sindical (se actualiza esta ficha, no otra). |
 | `docs/DASHBOARD.md` | Especificación funcional y técnica del Panel Sindical. |
 | `docs/cct-1875-bancarios.md` | Lo que la simulación usa del CCT 18/75. |
+| `docs/chat/2026-10-16-asistente-tramites.md` + `-contrato-importacion-tramites.md` | **Asistente de trámites** (prototipo de Chat, 2026-10-16): onboarding que convierte el pedido de un sindicato en circuito por actor, instrucción, vista previa del formulario y JSON importable `colm3na.tramite` v1; el segundo es el contrato de ese JSON y las reglas propuestas del importador (no construido). Van con el prototipo `-asistente-tramites-prototipo.html` (se abre solo en el navegador) y el ejemplo `-ejemplo-kit-escolar.colm3na.json`. |
+| `docs/chat/2026-10-17-auditoria-alcance.md` | **Auditoría del alcance del Admin de Seccional** (Code, 2026-10-17): qué veía y qué podía hacer un admin local sobre el lote de La Bancaria antes y después de `PLAN_ALCANCE_SECCIONAL.md`, sección por sección, con los números. |
 
 ### Planes y sprints (documentan el plan **tal cual se acordó**, no se actualizan; el avance va en `CLAUDE.md`)
 
@@ -56,13 +58,22 @@ cuenta), no en cada commit.
 | `PLAN_MOTOR_V2.md` | Motor de análisis de recibos v2 (7 bloques, bandera `MOTOR_V2`). Borrador, sin código escrito. | 2026-09-14 |
 | `PLAN_XSK.md` | XSANDERS Security Kit: método de seguridad en diez etapas, seis decisiones cerradas, nueve ejes, plan por bloques. El método genérico vive en `xsk/METODO.md`. | 2026-09-20 |
 | `SPRINT_R1.md` | Usuarios de plataforma nominales (sub-sprint de XSK: H-0002/H-0003/H-0016). | 2026-09-20 |
+| `PLAN_ENMASCARADO.md` | Paso cero del motor v2: los datos que identifican a la persona se tapan antes de salir hacia la IA. Revisión de `docs/chat/2026-08-28-arquitectura-enmascarado-pii.md`. | 2026-09-24 |
+| `xsk/XSANDERS_HERRAMIENTA.md` | Blueprint agnóstico de XSK como herramienta reutilizable: método, herramientas, aprendizajes de la iteración 1 y hoja de ruta del producto. Documento vivo. | 2026-09-21 |
+| `PLAN_CUIT_MOD11.md` | Validar CUIL/CUIT con el módulo 11 de AFIP (primera medida de la serie XSK): diagnóstico, conversión de los números cargados a mano y validación en las puertas de alta. Propuesta, a acordar con SDN. | 2026-10-10 |
+| `PLAN_REGISTRO.md` | Registro confirmado por mail con niveles de fiabilidad (R2), recuperación de clave (R3), captcha y freno en el registro (segunda medida de la serie XSK, cierra H-0017). Acordado con SDN decisión por decisión. | 2026-10-11 |
+| `PLAN_DASHBOARD_V2.md` | Panel Sindical v2 con Preact sin build, en paralelo a la v1 (`/admin/dashboard-v2`, solo local y Pruebas): primer piloto de una capa de componentes, sin tocar el backend. Acordado con SDN decisión por decisión. | 2026-10-12 |
+| `PLAN_ASISTENTE_TRAMITES.md` | El Asistente de trámites como Herramienta de `/entornos` (IA que propone, motor que arma con el catálogo real, casos guardados y vista de brechas; el importador queda para después). Acordado con SDN decisión por decisión (D1–D10). | 2026-10-16 |
+| `PLAN_LISTAS_VALIDACIONES.md` | Listas que sube el admin del sindicato (plantillas tipadas sobre una tabla genérica) y validaciones por función en Trámites: requisito para iniciar, validación de campo y campo calculado con fórmula; dos fechas nuevas en el padrón. Cierra las fases 2 y 3 de validaciones. Acordado con SDN decisión por decisión (D1–D7). | 2026-10-16 |
 
 ### Carpetas
 
 | Carpeta | Qué hay |
 |---|---|
 | `docs/chat/` | Documentos que salen de Chat y Cowork, con prefijo de fecha (`AAAA-MM-DD-tema.md`). Ver `OPERATIVA.md`. |
+| `docs/prompts/` | Prompts reutilizables para aplicar en OTROS proyectos con Claude Code, con lo aprendido acá. Primero: `MAPA_FUNCIONAL.md` (mapa app → funcionalidad → código, datos y servicios), publicado también como Recurso de `/entornos`. |
 | `docs/generador/` | Genera `recursos/documentacion-tecnica.html` desde el código. |
+| `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4), hoja guía de la reunión con autoridades y catálogo de trámites (`tramites-bancaria.json` con las 86 gestiones verificadas → `tramites-bancaria.html` con `generar_tramites.py`, y → `tramites-bancaria.docx` (completo) y `tramites-bancaria-resumen.docx` (6 páginas) con `generar_tramites_docx.js`). Fuente de los artifacts y de los PDF. Versiones Word para corregir (con control de cambios) generadas por `generar_docx.js`. |
 | `docs/capturas-georef/` | Capturas de las pantallas de georreferenciación. |
 | `recursos/` | Documentos publicados en `/entornos` (HTML + miniatura), registrados en `recursos.SEMILLA`. |
 | `carga/` | Test de estrés: `INFORME.md`, experimentos, scripts. |
@@ -78,8 +89,13 @@ a SDN. **No se escribe en ningún documento.**
 
 | Recurso | Origen |
 |---|---|
+| Instructivo de montaje: cuentas y entornos a nombre de XP | `recursos/colm3na-instructivo-montaje.html` y `.pdf` (A4, 39 páginas) ← artifact `PdD98igB` (versión 5, con la hoja C de certificados). **Interno del equipo.** |
+| Plan de implementación en La Bancaria (seis fases, v0.2) | `recursos/colm3na-plan-implementacion-bancaria.html`, `.pdf` (4 hojas A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/plan-implementacion-bancaria.html` |
+| Guía de la reunión con las autoridades de La Bancaria (v0.2) | `recursos/colm3na-guia-reunion-autoridades-bancaria.html`, `.pdf` (1 hoja A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/guia-reunion-autoridades-bancaria.html` |
+| Trámites de La Bancaria en Colm3na: resumen (6 páginas) y catálogo completo, en Word | `recursos/colm3na-tramites-bancaria-resumen.docx` y `-completo.docx` (con miniatura) ← `docs/bancaria/generar_tramites_docx.js` ← `tramites-bancaria.json` |
 | Bitácora del proyecto | `recursos/bitacora.html` ← `generar_bitacora.py` ← `BITACORA.md` |
 | Motor de recibos: de la foto al veredicto | `recursos/motor-recibos.html` |
+| Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
 | Anexo Servicios Mensuales | `recursos/anexo-servicios-mensuales.html` |
 | Documentación técnica (generada del código) | `recursos/documentacion-tecnica.html` |
 | Plan Maestro Colm3na | `recursos/colm3na-plan-maestro.html` |
@@ -108,6 +124,11 @@ a SDN. **No se escribe en ningún documento.**
 | Motor v2 · Avance | Tablero de los 46 ítems del plan con checklist. | *(completar link)* |
 | Colm3na · Mi Trabajo (presentación v3) | Presentación HTML para sindicatos. | *(completar link)* |
 | Bitácora Colm3na (Claude Doc) | Espejo de `BITACORA.md` para leer desde Claude. | https://claude.ai/code/artifact/d5f13de8-bbd4-4f3b-93a0-7f32b5772c33 |
+| Plan de implementación La Bancaria (resumido) | Borrador v0.1, 4 hojas A4: seis fases, hitos, responsables, datos, indicadores y riesgos. Fuente: `docs/bancaria/plan-implementacion-bancaria.html`; la v0.2 está en Recursos. | https://claude.ai/artifact/JMGWcmEMgiJWQB7n3c8eNb |
+| Guía de reunión La Bancaria | Hoja de una página para la reunión con las autoridades. Fuente: `docs/bancaria/guia-reunion-autoridades-bancaria.html`; la v0.2 está en Recursos. | https://claude.ai/artifact/BQoR9L61oWHGEHd6X5ttTg |
+| Trámites de La Bancaria en Colm3na | Versión 2: 81 gestiones del afiliado verificadas una por una (cómo se hacen hoy, cómo las resuelve Colm3na, qué validar con el sindicato) y la propuesta de kit de inicio. Datos en `docs/bancaria/tramites-bancaria.json`; se regenera con `generar_tramites.py`. | https://claude.ai/artifact/8LPgWSNEf5swpqqmsoNfru |
+| Instructivo de montaje Colm3na | Paso a paso para rearmar las cuentas y entornos a nombre de XP (AKG titular; SDN, ARS y GCF invitados). Copia en Recursos (`recursos/colm3na-instructivo-montaje.html` y `.pdf`): si cambia el artifact, volver a copiarla. **Interno del equipo.** | https://claude.ai/artifact/PdD98igBPewGzzZRCUBiKb |
+| Piloto de trámites Colm3na (Asistente de trámites) | Prototipo del onboarding: relato → preguntas guiadas → circuito, instrucción, vista previa y JSON `colm3na.tramite` v1 (versión 8). Fuente en el repo: `docs/chat/2026-10-16-asistente-tramites-prototipo.html` y los tres documentos del mismo día. | https://claude.ai/artifact/BgZ441HNMwtQw2jFPsALsd |
 
 ### Chats del proyecto (por fecha; el id corto es el que cita `BITACORA.md`)
 

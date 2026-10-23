@@ -29,7 +29,8 @@ from sqlalchemy import bindparam, text
 
 import fechas
 import db
-from validador import _norm_cuil, a_numero
+from cuit import normalizar as _norm_cuil
+from validador import a_numero
 
 
 # Estados del dashboard (3) <- estados reales de Tramite (5).
@@ -222,6 +223,42 @@ def catalogo_empresas(sid: int) -> list:
              "nombre": fila[2] or fila[1]} for fila in filas]
 
 
+def imponer_alcance(f: dict, alcance) -> dict:
+    """Impone el alcance de seccional de quien pide (db.alcance_seccional)
+    sobre los filtros ya parseados (PLAN_ALCANCE_SECCIONAL.md, bloque 4).
+
+    None = sin recorte (el administrador general): no toca nada. Un set:
+    `f["seccionales"]` pasa a ser lo pedido ∩ el alcance, o el alcance entero
+    si no pidió nada; vacío (set() o una intersección vacía) se traduce a
+    `[0]`, un id que no existe, así el SQL no devuelve filas. Queda además
+    `f["alcance"]` para lo que necesita distinguir el alcance IMPUESTO de un
+    filtro elegido (el mapa, que ignora el filtro porque es el selector, pero
+    no el alcance). Muta `f` y lo devuelve, como _resolver."""
+    if alcance is None:
+        f["alcance"] = None
+        return f
+    permitidas = sorted(alcance)
+    pedidas = f.get("seccionales") or []
+    f["seccionales"] = ([x for x in pedidas if x in alcance] if pedidas else permitidas) or [0]
+    f["alcance"] = permitidas
+    return f
+
+
+def _seccionales_impuestas(f: dict) -> list:
+    """Lo que el mapa usa como filtro de seccional: nada si no hay alcance
+    impuesto (el mapa es el selector), el alcance si lo hay."""
+    impuesto = f.get("alcance")
+    return [] if impuesto is None else (list(impuesto) or [0])
+
+
+def _en_alcance(alcance, seccional_id) -> bool:
+    """None alcanza todo; un set alcanza solo lo que contiene; una fila sin
+    seccional no la alcanza nadie acotado (misma regla que main._en_alcance)."""
+    if alcance is None:
+        return True
+    return bool(seccional_id) and seccional_id in alcance
+
+
 def _resolver(sid: int, f: dict) -> dict:
     """Traduce los ids del filtro (empresas, afiliado) a lo que el SQL
     compara -- CUITs y CUIL -- y lo deja en `f["cuits"]` / `f["cuil_af"]`.
@@ -272,7 +309,8 @@ def _normalizar(texto: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9 ]+", " ", sin_tildes.lower()).split())
 
 
-def buscar_afiliados(sid: int, texto: str, cuits: Optional[list] = None, limite: int = 10) -> list:
+def buscar_afiliados(sid: int, texto: str, cuits: Optional[list] = None, limite: int = 10,
+                     alcance=None) -> list:
     """Padrón del sindicato por CUIL (si lo que escribieron son dígitos) o por
     nombre, tolerante a tildes, mayúsculas y orden de las palabras ("perez
     juan" encuentra a "Juan Pablo Pérez"). `cuits` acota a esas empresas
@@ -297,6 +335,8 @@ def buscar_afiliados(sid: int, texto: str, cuits: Optional[list] = None, limite:
     for tid, nombre, cuil, secc_id, cuit_emp in filas:
         if cuits is not None and _norm_cuil(cuit_emp or "") not in cuits:
             continue
+        if not _en_alcance(alcance, secc_id):
+            continue          # fuera del alcance de quien busca (bloque 4)
         if es_cuil:
             if digitos not in _norm_cuil(cuil or ""):
                 continue
@@ -319,15 +359,16 @@ def buscar_afiliados(sid: int, texto: str, cuits: Optional[list] = None, limite:
             for _, _, nombre, tid, cuil, secc_id, cuit_emp in candidatos[:limite]]
 
 
-def afiliado_por_id(sid: int, afiliado_id: int) -> Optional[dict]:
-    """Para etiquetar el chip al cargar un link con ?afiliado=. Solo del tenant."""
+def afiliado_por_id(sid: int, afiliado_id: int, alcance=None) -> Optional[dict]:
+    """Para etiquetar el chip al cargar un link con ?afiliado=. Solo del
+    tenant, y dentro del alcance de quien pregunta."""
     with db.get_session() as s:
         fila = s.execute(text(
             "SELECT t.id, c.nombre, t.cuil, t.seccional_id, t.cuit_empleador "
             "FROM trabajador t LEFT JOIN cuentatrabajador c ON c.cuil = t.cuil "
             "WHERE t.id = :id AND t.sindicato_id = :sid"),
             {"id": afiliado_id, "sid": sid}).first()
-    if not fila:
+    if not fila or not _en_alcance(alcance, fila[3]):
         return None
     return {"id": fila[0], "nombre": fila[1], "cuil": fila[2],
             "seccional": _etiquetas_seccionales(sid).get(fila[3]) or "Sin seccional",
@@ -690,7 +731,9 @@ def seccionales_geo(sid: int, f: dict) -> dict:
     Nunca sale una fila cruda ni un dato de una persona: son seis números por
     seccional.
     """
-    f = dict(_resolver(sid, f), seccionales=[])   # el mapa es el selector, no un filtrado
+    # El mapa es el selector, no un filtrado: ignora el filtro de seccional
+    # ELEGIDO, pero no el alcance IMPUESTO a un admin acotado (bloque 4).
+    f = dict(_resolver(sid, f), seccionales=_seccionales_impuestas(f))
     filas = {}
 
     def fila(secc_id):
@@ -751,7 +794,10 @@ def seccionales_geo(sid: int, f: dict) -> dict:
     # agregados se les pegan encima. Una seccional sin actividad aparece con
     # ceros, no ausente: "no hay recibos en Salta" es información.
     ubicadas, sin_ubicar = [], []
+    impuesto = f.get("alcance")
     for sec in db.seccionales_del_sindicato(sid):
+        if impuesto is not None and sec["id"] not in impuesto:
+            continue          # un admin acotado no ve las otras burbujas
         r = filas.get(sec["id"], fila(sec["id"]))
         tasa = (round(r["notif_leidas"] / r["notif_enviadas"] * 100, 1)
                 if r["notif_enviadas"] else None)
@@ -859,6 +905,11 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
     # Con afiliado elegido se listan TODOS sus recibos enviados, no solo los
     # observados: la pregunta es "qué mandó esta persona", no "qué está mal".
     solo_diferencias = "" if (f.get("resultado") or f.get("afiliado")) else "r.estado != 'OK'"
+    # Sin la cláusula de confidencialidad firmada, las FILAS de recibos no
+    # enviados no salen (ni siquiera anonimizadas). Los agregados del panel
+    # los cuentan igual: esto recorta solo la vista fila por fila.
+    if not clausula_aceptada(sid):
+        solo_diferencias = " AND ".join(c for c in (solo_diferencias, "r.enviado_sindicato") if c)
     joins, where, params = _sql_recibos(sid, f, extra_conds=solo_diferencias,
                                         forzar_join=True)
     joins += (" LEFT JOIN seccional sec ON sec.id = t.seccional_id"
@@ -871,7 +922,9 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
                      params)[0]
         params_pagina = dict(params, limite=page_size, salto=(page - 1) * page_size)
         filas = s.execute(_stmt(f"""
-            SELECT r.procesado_en, sec.nombre, r.cuit_empleador, r.categoria,
+            SELECT r.procesado_en, sec.nombre,
+                   CASE WHEN r.enviado_sindicato THEN r.cuit_empleador ELSE NULL END,
+                   r.categoria,
                    r.formato, r.bruto, r.monto_diferencia, r.estado, r.enviado_sindicato,
                    CASE WHEN r.enviado_sindicato THEN ct.nombre ELSE NULL END,
                    CASE WHEN r.enviado_sindicato THEN r.cuil ELSE NULL END,
@@ -882,7 +935,8 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
     etiquetas = _etiquetas_empresas(sid)
     items = [{
         "fecha": fila[0], "seccional": fila[1] or "Sin seccional",
-        "empresa": etiquetas.get(fila[2]) or fila[2] or "—",
+        # Recibo no enviado: la empresa también se tapa (llega NULL del SQL).
+        "empresa": (etiquetas.get(fila[2]) or fila[2]) if fila[2] else "—",
         "categoria": fila[3] or "—", "formato": fila[4] or "",
         "bruto": fila[5], "diferencia": fila[6],
         "resultado": "con_diferencias" if fila[7] == "CON_DISCREPANCIAS" else "ok",
@@ -996,22 +1050,179 @@ def _explorador_notificaciones_de_afiliado(joins, where, params, page, page_size
             "modo": "afiliado"}
 
 
+# ---------- Reportes (pestaña del panel del sindicato) ----------
+
+# Lo que identifica a la persona dentro del JSON guardado de un recibo. Un
+# recibo que el afiliado NO envió sale sin nada de esto ni de su empresa.
+_CLAVES_EMPLEADO = ("apellido_nombre", "cuil", "legajo", "fecha_ingreso")
+
+
+def anonimizar_detalle(recibo: dict, resultado: dict) -> None:
+    """Borra EN EL LUGAR los datos identificatorios del trabajador y de la
+    empresa de un recibo no enviado. Una sola implementación para el modal
+    del Panel y el de Reportes: si cada pantalla anonimizara a su manera, la
+    primera que se olvidara de un campo lo dejaría pasar."""
+    empleado = recibo.get("empleado")
+    if isinstance(empleado, dict):
+        for clave in _CLAVES_EMPLEADO:
+            empleado.pop(clave, None)
+    if "empleador" in recibo:
+        recibo["empleador"] = {}
+    resultado.pop("cuil", None)
+
+
+def clausula_aceptada(sid: int) -> bool:
+    """¿El sindicato firmó la cláusula de confidencialidad? Sin ella, ninguna
+    vista fila por fila le muestra recibos no enviados."""
+    with db.get_session() as s:
+        fila = s.execute(text(
+            "SELECT clausula_confidencialidad FROM sindicato WHERE id = :sid"),
+            {"sid": sid}).first()
+    return bool(fila and fila[0])
+
+
+def _cuiles_por_nombre(sid: int, texto: str) -> list:
+    """CUILes del padrón cuyo nombre contiene todas las palabras buscadas,
+    sin importar tildes ni mayúsculas (mismo criterio que buscar_afiliados)."""
+    tokens = _normalizar(texto).split()
+    if not tokens:
+        return []
+    with db.get_session() as s:
+        filas = s.execute(text(
+            "SELECT t.cuil, c.nombre FROM trabajador t "
+            "JOIN cuentatrabajador c ON c.cuil = t.cuil "
+            "WHERE t.sindicato_id = :sid"), {"sid": sid}).all()
+    return [cuil for cuil, nombre in filas
+            if all(t in _normalizar(nombre) for t in tokens)]
+
+
+PAGINA_REPORTES = 50
+
+
+def listado_reportes(sid: int, filtros: dict, alcance, page: int) -> dict:
+    """La pestaña Reportes: TODOS los recibos que verificaron los afiliados
+    del sindicato, los hayan enviado o no, del más nuevo al más viejo y
+    paginados en el servidor (un sindicato con lote tiene miles).
+
+    PRIVACIDAD, en el SQL y no en la pantalla: nombre, CUIL y empresa salen
+    SOLO de los recibos enviados. Y la búsqueda por CUIL o por nombre busca
+    SOLO entre los enviados: si encontrara también los no enviados, la fila
+    anónima quedaría identificada por el filtro que la trajo.
+
+    Sin la cláusula de confidencialidad no se listan los no enviados; se
+    devuelve cuántos quedaron afuera para que la pantalla lo diga.
+
+    `alcance` es el de db.alcance_seccional: None = todas, set = esas (vacío
+    = ninguna), por la seccional del padrón del afiliado.
+
+    `filtros`: cuil, nombre, desde, hasta (AAAA-MM-DD), resultado
+    ("ok" | "con_diferencias"), enviado ("si" | "no")."""
+    conds = ["r.sindicato_id = :sid"]
+    params = {"sid": sid}
+    joins = ""
+    if alcance is not None:
+        joins = (" LEFT JOIN trabajador t ON t.sindicato_id = r.sindicato_id "
+                 "AND t.cuil = r.cuil")
+        conds.append("t.seccional_id IN :alcance")
+        params["alcance"] = sorted(alcance) or [-1]
+    if filtros.get("desde"):
+        conds.append("r.procesado_en >= :desde")
+        params["desde"] = filtros["desde"]
+    if filtros.get("hasta"):
+        conds.append("r.procesado_en <= :hasta")
+        params["hasta"] = filtros["hasta"] + " 23:59"
+    if filtros.get("resultado") == "ok":
+        conds.append("r.estado = 'OK'")
+    elif filtros.get("resultado") == "con_diferencias":
+        conds.append("r.estado != 'OK'")
+    if filtros.get("enviado") == "si":
+        conds.append("r.enviado_sindicato")
+    elif filtros.get("enviado") == "no":
+        conds.append("NOT r.enviado_sindicato")
+    digitos = re.sub(r"\D", "", filtros.get("cuil") or "")
+    if digitos:
+        conds.append("r.enviado_sindicato AND REPLACE(r.cuil, '-', '') LIKE :cuil")
+        params["cuil"] = f"%{digitos}%"
+    if (filtros.get("nombre") or "").strip():
+        conds.append("r.enviado_sindicato AND r.cuil IN :cuiles_nombre")
+        params["cuiles_nombre"] = _cuiles_por_nombre(sid, filtros["nombre"]) or ["__nadie__"]
+
+    clausula = clausula_aceptada(sid)
+    where_base = " AND ".join(conds)
+    where = where_base if clausula else where_base + " AND r.enviado_sindicato"
+    page = max(1, page)
+    with db.get_session() as s:
+        total = _uno(s, f"SELECT COUNT(*) FROM reciboverificado r{joins} WHERE {where}", params)[0]
+        ocultos = 0 if clausula else _uno(
+            s, f"SELECT COUNT(*) FROM reciboverificado r{joins} "
+               f"WHERE {where_base} AND NOT r.enviado_sindicato", params)[0]
+        params_pag = dict(params, limite=PAGINA_REPORTES, salto=(page - 1) * PAGINA_REPORTES)
+        filas = s.execute(_stmt(f"""
+            SELECT r.id, r.fecha, r.periodo, r.estado, r.enviado_sindicato,
+                   CASE WHEN r.enviado_sindicato THEN r.cuil ELSE NULL END,
+                   CASE WHEN r.enviado_sindicato THEN ct.nombre ELSE NULL END,
+                   CASE WHEN r.enviado_sindicato THEN r.cuit_empleador ELSE NULL END
+            FROM reciboverificado r{joins}
+            LEFT JOIN cuentatrabajador ct ON ct.cuil = r.cuil
+            WHERE {where}
+            ORDER BY r.procesado_en DESC NULLS LAST, r.id DESC
+            LIMIT :limite OFFSET :salto""", params_pag), params_pag).all()
+    etiquetas = _etiquetas_empresas(sid)
+    items = [{
+        "id": f[0], "fecha": f[1], "periodo": f[2] or "",
+        "con_diferencias": f[3] != "OK", "enviado": bool(f[4]),
+        "cuil": f[5], "nombre": f[6],
+        "empresa": (etiquetas.get(f[7]) or f[7]) if f[7] else None,
+    } for f in filas]
+    return {"total": total, "page": page, "page_size": PAGINA_REPORTES,
+            "items": items, "clausula": clausula, "ocultos_sin_clausula": ocultos}
+
+
+def detalle_reporte(sid: int, recibo_id: int, alcance) -> Optional[dict]:
+    """El recibo para el modal "Ver" de Reportes: el mismo del Panel
+    (anonimizado y con la compuerta de la cláusula), más el recorte por
+    seccional de quien lo pide."""
+    if alcance is not None:
+        ids = sorted(alcance) or [-1]
+        with db.get_session() as s:
+            fila = s.execute(_stmt(
+                "SELECT 1 FROM reciboverificado r JOIN trabajador t "
+                "ON t.sindicato_id = r.sindicato_id AND t.cuil = r.cuil "
+                "WHERE r.id = :rid AND r.sindicato_id = :sid AND t.seccional_id IN :alcance",
+                {"alcance": ids}), {"rid": recibo_id, "sid": sid, "alcance": ids}).first()
+        if not fila:
+            return None
+    return detalle_recibo(sid, recibo_id)
+
+
 # ---------- Detalle por fila del explorador ("Ver" -> modal) ----------
 
-def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
+def detalle_recibo(sid: int, recibo_id: int, alcance=None) -> Optional[dict]:
     """El recibo completo tal como quedó verificado (conceptos, totales,
     discrepancias, alertas). PRIVACIDAD (§1.3, con test): si el trabajador NO
     lo envió voluntariamente, el detalle sale ANONIMIZADO -- se borra todo lo
-    que identifique a la persona (nombre, CUIL, legajo, fecha de ingreso)
-    ANTES de que el dict llegue a la ruta; el frontend nunca lo recibe."""
+    que identifique a la persona (nombre, CUIL, legajo, fecha de ingreso) y a
+    su empresa (nombre y CUIT) ANTES de que el dict llegue a la ruta; el
+    frontend nunca lo recibe. Y sin la cláusula de confidencialidad firmada,
+    un recibo no enviado no se entrega de ninguna forma (None -> 404)."""
     import copy
     with db.get_session() as s:
         fila = s.execute(text(
-            "SELECT cuil, periodo, estado, enviado_sindicato, detalle, procesado_en, "
-            "cuit_empleador, categoria, formato, bruto, monto_diferencia "
-            "FROM reciboverificado WHERE id = :rid AND sindicato_id = :sid"),
+            "SELECT r.cuil, r.periodo, r.estado, r.enviado_sindicato, r.detalle, r.procesado_en, "
+            "r.cuit_empleador, r.categoria, r.formato, r.bruto, r.monto_diferencia, "
+            "s.clausula_confidencialidad "
+            "FROM reciboverificado r JOIN sindicato s ON s.id = r.sindicato_id "
+            "WHERE r.id = :rid AND r.sindicato_id = :sid"),
             {"rid": recibo_id, "sid": sid}).first()
+        # La seccional del afiliado en ESTE padrón, para el alcance (bloque 4).
+        secc = s.execute(text(
+            "SELECT seccional_id FROM trabajador WHERE sindicato_id = :sid AND cuil = :cuil"),
+            {"sid": sid, "cuil": fila[0] if fila else ""}).first() if fila else None
     if not fila:
+        return None
+    if not _en_alcance(alcance, secc[0] if secc else None):
+        return None
+    if not fila[3] and not fila[11]:
         return None
     cuil, periodo, estado, enviado, detalle, procesado_en = fila[0], fila[1], fila[2], bool(fila[3]), fila[4], fila[5]
     if isinstance(detalle, str):
@@ -1033,18 +1244,15 @@ def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
                 {"sid": sid, "cuil": cuil}).first()
         nombre = (t[0] if t else None) or (recibo.get("empleado") or {}).get("apellido_nombre")
     else:
-        empleado = recibo.get("empleado")
-        if isinstance(empleado, dict):
-            for clave in ("apellido_nombre", "cuil", "legajo", "fecha_ingreso"):
-                empleado.pop(clave, None)
-        resultado.pop("cuil", None)
+        anonimizar_detalle(recibo, resultado)
         cuil = None
     etiquetas = _etiquetas_empresas(sid)
+    empresa = (etiquetas.get(fila[6]) or fila[6] or "—") if enviado else "—"
     return {
         "id": recibo_id, "enviado": enviado,
         "estado": "con_diferencias" if estado == "CON_DISCREPANCIAS" else "ok",
         "periodo": periodo, "procesado_en": procesado_en,
-        "empresa": etiquetas.get(fila[6]) or fila[6] or "—",
+        "empresa": empresa,
         "categoria": fila[7] or "—", "formato": fila[8] or "",
         "bruto": fila[9], "monto_diferencia": fila[10],
         "trabajador_nombre": nombre, "trabajador_cuil": cuil,
@@ -1052,7 +1260,7 @@ def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
     }
 
 
-def detalle_tramite(sid: int, tramite_id: int) -> Optional[dict]:
+def detalle_tramite(sid: int, tramite_id: int, alcance=None) -> Optional[dict]:
     """El trámite con formulario respondido, hilo de conversación e historial
     (reusa db.tramite_detalle). Los trámites NO se anonimizan: el sindicato
     los gestiona identificados, igual que en su panel de siempre."""
@@ -1061,11 +1269,13 @@ def detalle_tramite(sid: int, tramite_id: int) -> Optional[dict]:
         return None
     with db.get_session() as s:
         t = s.execute(text(
-            "SELECT c.nombre, sec.nombre FROM trabajador tr "
+            "SELECT c.nombre, sec.nombre, tr.seccional_id FROM trabajador tr "
             "LEFT JOIN cuentatrabajador c ON c.cuil = tr.cuil "
             "LEFT JOIN seccional sec ON sec.id = tr.seccional_id "
             "WHERE tr.sindicato_id = :sid AND tr.cuil = :cuil"),
             {"sid": sid, "cuil": d["cuil"]}).first()
+    if not _en_alcance(alcance, t[2] if t else None):
+        return None           # de un afiliado fuera del alcance (bloque 4)
     d["trabajador_nombre"] = t[0] if t else ""
     d["seccional"] = (t[1] if t else None) or "Sin seccional"
     return d
@@ -1101,11 +1311,13 @@ def _destino_legible(sid: int, criterio: str, valores: list, cache: dict) -> str
 
 
 def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int],
-                                 tipo: str) -> list:
+                                 tipo: str, alcance=None) -> list:
     """Las notificaciones individuales que componen una fila agregada del
     explorador (día × seccional × tipo): destino legible, mensaje completo,
     lectura de ESTA seccional y total del envío completo (una misma
     notificación puede tener destinatarios en varias seccionales)."""
+    if not _en_alcance(alcance, seccional_id):
+        return []             # un grupo de otra seccional, o "sin seccional", para un acotado
     conds = ["n.sindicato_id = :sid", "substr(n.enviado_en, 1, 10) = :dia",
              "n.origen = :tipo"]
     params = {"sid": sid, "dia": dia, "tipo": tipo}
@@ -1154,7 +1366,7 @@ def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int]
 DESTINATARIOS_MAXIMOS = 500
 
 
-def destinatarios_notificacion(sid: int, notificacion_id: int) -> Optional[dict]:
+def destinatarios_notificacion(sid: int, notificacion_id: int, alcance=None) -> Optional[dict]:
     """El último nivel del modal: persona por persona, quién recibió la
     notificación y cuándo la leyó (NULL = sin leer). Los destinatarios de
     una notificación NO se anonimizan: es la misma vista que el admin ya
@@ -1166,7 +1378,7 @@ def destinatarios_notificacion(sid: int, notificacion_id: int) -> Optional[dict]
         if not propia:
             return None
         filas = s.execute(text("""
-            SELECT d.cuil, c.nombre, sec.nombre, d.leida_en
+            SELECT d.cuil, c.nombre, sec.nombre, d.leida_en, t.seccional_id
             FROM notificaciondestinatario d
              LEFT JOIN trabajador t ON t.sindicato_id = :sid AND t.cuil = d.cuil
              -- El nombre cuelga de `t.cuil` y NO de `d.cuil`: así solo sale
@@ -1178,6 +1390,10 @@ def destinatarios_notificacion(sid: int, notificacion_id: int) -> Optional[dict]
             WHERE d.notificacion_id = :nid
             ORDER BY d.leida_en IS NULL, c.nombre, d.cuil"""),
             {"sid": sid, "nid": notificacion_id}).all()
+    # Un acotado ve solo los destinatarios de su alcance (bloque 4).
+    filas = [f for f in filas if _en_alcance(alcance, f[4])]
+    if alcance is not None and not filas:
+        return None
     items = [{"cuil": f[0], "nombre": f[1] or "—",
               "seccional": f[2] or "Sin seccional", "leida_en": f[3]}
              for f in filas[:DESTINATARIOS_MAXIMOS]]
@@ -1185,16 +1401,16 @@ def destinatarios_notificacion(sid: int, notificacion_id: int) -> Optional[dict]
             "recortado": len(filas) > DESTINATARIOS_MAXIMOS}
 
 
-def detalle_consulta(sid: int, consulta_id: int) -> Optional[dict]:
+def detalle_consulta(sid: int, consulta_id: int, alcance=None) -> Optional[dict]:
     with db.get_session() as s:
         f = s.execute(text(
-            "SELECT c.creado, c.tema, c.pregunta, c.hubo_respuesta, sec.nombre "
+            "SELECT c.creado, c.tema, c.pregunta, c.hubo_respuesta, sec.nombre, t.seccional_id "
             "FROM consultaconvenio c "
             "LEFT JOIN trabajador t ON t.sindicato_id = c.sindicato_id AND t.cuil = c.cuil "
             "LEFT JOIN seccional sec ON sec.id = t.seccional_id "
             "WHERE c.id = :cid AND c.sindicato_id = :sid"),
             {"cid": consulta_id, "sid": sid}).first()
-    if not f:
+    if not f or not _en_alcance(alcance, f[5]):
         return None
     return {"id": consulta_id, "fecha": f[0], "tema": f[1] or "Sin clasificar",
             "pregunta": f[2], "resuelta_por_bot": bool(f[3]),

@@ -258,6 +258,12 @@
   .sala-tarjeta { border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:22px 24px; background:rgba(255,255,255,.04); display:flex; flex-wrap:wrap; align-items:center; gap:16px 24px; }
   .sala-tarjeta p { margin:0; flex:1 1 320px; opacity:.85; }
   .sala-tarjeta .boton { white-space:nowrap; }
+  /* ---- Mapa funcional (2026-09-30) */
+  .mapa-botones { display:flex; flex-wrap:wrap; gap:8px; }
+  .mapa-botones form { margin:0; }
+  .mapa-botones a.boton { text-decoration:none; display:inline-block; }
+  .mapa-estado { flex:1 1 100%; font-family:var(--mono); font-size:12.5px; color:rgba(255,255,255,.65); }
+  .mapa-estado b { color:var(--pruebas); font-weight:600; }
 
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
@@ -314,6 +320,13 @@
   .recurso .quitar { appearance:none; background:none; border:0; cursor:pointer; padding:2px 0; color:rgba(255,255,255,.5);
     font:inherit; letter-spacing:inherit; text-transform:inherit; text-decoration:underline; text-underline-offset:3px; }
   .recurso .quitar:hover { color:var(--pruebas); }
+  /* Bajar: por encima del enlace que cubre la tarjeta (h3 a::after). */
+  .recurso .bajar { position:relative; z-index:1; margin-left:auto; display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); color:rgba(255,255,255,.8);
+    transition:background .15s, border-color .15s, color .15s; }
+  .recurso .bajar:hover, .recurso .bajar:focus-visible { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.5); color:#fff; outline:none; }
+  .recurso .bajar svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .recurso .bajar + form { margin-left:0; }
   .vacio { padding:22px; border-radius:16px; border:1px dashed rgba(255,255,255,.25); color:rgba(255,255,255,.6); font-size:14px; text-align:center; }
 
   .alta { margin-top:18px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
@@ -370,6 +383,8 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad">Observabilidad</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="mapa">Mapa funcional</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="herramientas">Herramientas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="xsanders">Seguridad</button>
     </nav>
 
@@ -460,6 +475,47 @@
       </div>
     </div>
 
+    <div class="panel-etab" data-panel="mapa" hidden>
+      {# Mapa funcional (2026-09-30): la plataforma por funcionalidad, leída del
+         código desplegado por mapa_funcional.py. Se abre en su propia página
+         (necesita todo el ancho para el grafo); acá, el estado y los accesos. #}
+      <div class="sala-tarjeta mapa-tarjeta">
+        <p>Las seis apps y sus funcionalidades (las pestañas), y de cada una su pantalla, rutas, código, tablas y servicios externos, leídos del código que corre en este entorno. Dos vistas: <b>Lista</b>, para ver una funcionalidad entera y en qué otras se usa cada pieza, y <b>Grafo</b>, para desplegar varias y ver lo que comparten. Es orientación: ante la duda, manda el código.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/mapa" target="_blank" rel="noopener">Abrir el mapa</a>
+          <form method="post" action="/entornos/mapa/actualizar" target="_blank"><button class="boton suave" type="submit">Actualizar desde el código</button></form>
+          <a class="boton suave" href="/recursos/prompt-mapa-funcional/archivo" target="_blank" rel="noopener">Prompt para otros proyectos</a>
+        </div>
+        <div class="mapa-estado" id="mapa-estado">Se lee al abrir esta pestaña…</div>
+      </div>
+    </div>
+
+    <div class="panel-etab" data-panel="herramientas" hidden>
+      {# Herramientas (2026-10-13): asistentes de la implementación, desarrollos
+         chicos que no van en las apps de sindicato ni de trabajador. Cada uno
+         abre su propia página. #}
+      <div class="sala-tarjeta">
+        <p><b>Calculadora bancaria.</b> El recibo que corresponde según la grilla firmada de La Bancaria (CCT 18/75): las tres ramas, adicionales, ROE, conformado, aportes con tope y cuota. Con "Chequear recibo" se compara contra un recibo real cargado a mano, y el caso se guarda para revisar y corregir la calculadora o el auditor de recibos.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/herramientas/calculadora-bancaria-v2">Abrir la calculadora</a>
+          <a class="boton suave" href="/entornos/herramientas/calculadora-bancaria-v2#casos">Casos guardados</a>
+        </div>
+        <div class="mapa-estado" id="herramientas-estado">Se lee al abrir esta pestaña…</div>
+      </div>
+      {# Asistente de trámites (2026-10-16, PLAN_ASISTENTE_TRAMITES.md): del
+         relato del sindicato al circuito, la instrucción, la vista previa y
+         el JSON importable. La IA propone, el motor decide. #}
+      <div class="sala-tarjeta">
+        <p><b>Asistente de trámites.</b> Contás el trámite como te lo contó el sindicato; la IA propone respuestas y campos, vos confirmás pregunta por pregunta, y el asistente arma el circuito por actor, quién hace qué, la instrucción y la vista previa del formulario, lo que hay que preparar antes (configurar, ajuste o desarrollo) y el JSON <code>colm3na.tramite</code> para importar. Cada caso se guarda, y la pestaña Brechas acumula lo que los sindicatos piden y Colm3na todavía no tiene.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/herramientas/asistente-tramites">Abrir el asistente</a>
+          <a class="boton suave" href="/entornos/herramientas/asistente-tramites#casos">Casos guardados</a>
+          <a class="boton suave" href="/entornos/herramientas/asistente-tramites#brechas">Brechas acumuladas</a>
+        </div>
+        <div class="mapa-estado" id="asistente-estado">Se lee al abrir esta pestaña…</div>
+      </div>
+    </div>
+
     <div class="panel-etab" data-panel="xsanders" hidden>
       {% include "_xsanders.html" %}
     </div>
@@ -508,6 +564,9 @@
             <div class="pie">
               <time datetime="{{ r.fecha_iso }}">{{ r.fecha_legible }}</time>
               {% if r.tamanio_legible %}<span>{{ r.tamanio_legible }}</span>{% endif %}
+              {% if r.descarga %}
+              <a class="bajar" href="{{ r.descarga }}" download="{{ r.nombre_archivo }}" title="{{ ('Descargar ' ~ r.nombre_archivo ~ ' en un solo archivo, listo para mandar por WhatsApp o mail') if r.tipo == 'html' else ('Descargar ' ~ r.nombre_archivo) }}" aria-label="Descargar {{ r.titulo }}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-bajar"/></svg></a>
+              {% endif %}
               {% if r.origen == 'repo' %}
               <span title="Versionado en recursos/ del repositorio: se cambia con un commit">del repositorio</span>
               {% else %}
@@ -581,6 +640,7 @@
       <g id="ic-recursos"><path d="M3 5h6l2 2h10v12H3z"/><path d="M3 10h18"/></g>
       <g id="ic-candado"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g>
       <g id="ic-mas"><path d="M12 5v14"/><path d="M5 12h14"/></g>
+      <g id="ic-bajar"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></g>
       <g id="ic-tipo-html"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="m10 12-2 2 2 2"/><path d="m14 12 2 2-2 2"/></g>
       <g id="ic-tipo-pdf"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></g>
       <g id="ic-tipo-imagen"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-8 8"/></g>
@@ -723,11 +783,63 @@
     tabs.forEach(t => t.classList.toggle('activa', t.dataset.tab === nombre));
     tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === nombre ? 'true' : 'false'));
     paneles.forEach(p => { p.hidden = p.dataset.panel !== nombre; });
+    // Herramientas ocupa la pantalla sola: sin Recursos debajo (pedido de SDN).
+    const recursos = document.getElementById('recursos');
+    if (recursos) recursos.hidden = nombre === 'herramientas';
     if (nombre !== 'accesos') location.hash = nombre; else history.replaceState(null, '', location.pathname + location.search);
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'xsanders'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'mapa', 'herramientas', 'xsanders'].includes(inicial)) activar(inicial);
+})();
+
+// Mapa funcional (2026-09-30): el estado se pide recién al abrir la pestaña,
+// porque la primera vez el servidor arma el mapa (unos segundos).
+(function () {
+  const tab = document.querySelector('.etab[data-tab="mapa"]');
+  const estado = document.getElementById('mapa-estado');
+  let pedido = false;
+  function cargar() {
+    if (pedido) return; pedido = true;
+    estado.textContent = 'Leyendo el código…';
+    fetch('/api/entornos/mapa', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        estado.innerHTML = d.generado + (d.commit ? ' · commit ' + d.commit : '') + ' · <b>' + d.apps + '</b> apps · <b>' +
+          d.funcionalidades + '</b> funcionalidades · <b>' + d.rutas + '</b> rutas' +
+          (d.sin_clasificar ? ' · <b>' + d.sin_clasificar + ' sin clasificar</b> (sumarles su regla en mapa_funcional.py)' : ' · ninguna sin clasificar');
+      })
+      .catch(() => { pedido = false; estado.textContent = 'No se pudo leer el estado del mapa. Probá abrirlo igual.'; });
+  }
+  tab.addEventListener('click', cargar);
+  if (location.hash === '#mapa') cargar();
+})();
+
+// Herramientas (2026-10-13): cuántos casos guardó la Calculadora bancaria.
+(function () {
+  const tab = document.querySelector('.etab[data-tab="herramientas"]');
+  const estado = document.getElementById('herramientas-estado');
+  function cargar() {
+    fetch('/api/entornos/herramientas/bancaria/casos', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        const nuevos = d.casos.filter(c => c.estado === 'nuevo').length;
+        estado.textContent = d.casos.length ? `${d.casos.length} casos guardados, ${nuevos} sin revisar.` : 'Todavía no hay casos guardados.';
+      })
+      .catch(() => { estado.textContent = 'No se pudo leer cuántos casos hay.'; });
+  }
+  const estadoAsist = document.getElementById('asistente-estado');
+  function cargarAsistente() {
+    fetch('/api/entornos/herramientas/asistente/brechas', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        const pedidas = d.brechas.filter(b => b.casos > 0).length;
+        estadoAsist.textContent = d.casos ? `${d.casos} trámites relevados; ${pedidas} brechas pedidas por algún sindicato.` : 'Todavía no hay trámites relevados.';
+      })
+      .catch(() => { estadoAsist.textContent = 'No se pudo leer cuántos trámites hay.'; });
+  }
+  tab.addEventListener('click', () => { cargar(); cargarAsistente(); });
+  if (location.hash === '#herramientas') { cargar(); cargarAsistente(); }
 })();
 
 // Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe
@@ -838,6 +950,11 @@
       `${r.estado === 'vencido' ? 'VENCIDO' : r.dias + ' días'}</span> <b>${esc(r.nombre)}</b>` +
       `<span class="cuando">vence ${esc(r.vence)}</span></div>`).join('');
 
+    const tg = d.telegram || {};
+    const tgEstado = document.getElementById('obs-telegram-estado');
+    if (tgEstado) tgEstado.textContent = tg.configurado
+      ? `Configurado: chat ${tg.chat_id_oculto} · resumen del día a las ${tg.hora_resumen} de Buenos Aires · errores con freno de ${tg.freno_minutos} min por código.`
+      : 'No configurado: faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en este servicio.';
     const c = d.config;
     const sel = document.getElementById('obs-repetir');
     sel.innerHTML = (d.intervalos || []).map(i => `<option value="${esc(i)}">${esc(i.replace('h', ' h'))}</option>`).join('');
@@ -1112,6 +1229,16 @@
     boton.textContent = original;
     boton.disabled = false;
   });
+  for (const [id, ruta, listo] of [['obs-telegram-probar', '/entornos/observabilidad/probar-telegram', 'Mensaje de prueba enviado a Telegram: revisá el teléfono.'],
+                                    ['obs-telegram-resumen', '/entornos/observabilidad/resumen-ahora', 'Resumen del día enviado a Telegram.']]) {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', async ev => {
+      ev.target.disabled = true;
+      try { await pedir(ruta, {method: 'POST'}); decir(listo, false); }
+      catch (err) { decir(err.message, true); }
+      ev.target.disabled = false;
+    });
+  }
   document.getElementById('obs-probar').addEventListener('click', async ev => {
     ev.target.disabled = true;
     try {

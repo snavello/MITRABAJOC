@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Calculadora bancaria v2</title>
+{# Calculadora bancaria v2 (Herramientas de /entornos). Convive con la v1
+   (calculadora_bancaria.html) hasta que SDN decida reemplazarla: mismas
+   rutas de la API, misma puerta, otra interfaz (Preact, sin build, como la
+   v2 del Panel Sindical). El movimiento usa los tokens de movimiento.css,
+   que se carga ANTES que calc.css. #}
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+  }
+</style>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/calc_v2/calc.css?v={{ sello_static('calc_v2/calc.css') }}">
+{# Cada módulo se pide por nombre y el mapa lo traduce a su archivo CON su
+   sello ?v= (main._importmap_calculadora_v2). La precarga los baja juntos. #}
+<script type="importmap">{{ importmap | safe }}</script>
+{% for url in precarga %}<link rel="modulepreload" href="{{ url }}">
+{% endfor %}
+</head>
+<body>
+<div class="pagina">
+  <div class="cab">
+    <div>
+      <a class="volver" href="/entornos#herramientas">← Entornos · Herramientas</a>
+      <h1>Calculadora bancaria<span class="v2">v2</span></h1>
+      <p class="lede">El recibo que corresponde según la grilla firmada de La Bancaria (CCT 18/75): elegí la categoría y lo que cobra, y si tenés un recibo real, chequealo renglón por renglón. Los casos que guardes quedan para revisar y corregir la calculadora o el auditor de recibos.</p>
+    </div>
+    <a class="boton suave otra-version" href="/entornos/herramientas/calculadora-bancaria">Volver a la versión anterior</a>
+  </div>
+  {# Los datos que el JS necesita los dice el servidor: los estados de un
+     caso y el isotipo de Colm3na con su sello de versión. #}
+  <main id="calculadora" data-estados='{{ estados }}'
+        data-isotipo="/static/icons/favicon-64.png?v={{ sello_static('icons/favicon-64.png') }}"></main>
+  <noscript><p>La calculadora necesita JavaScript.</p></noscript>
+</div>
+<script type="module" src="/static/calc_v2/app.js?v={{ sello_static('calc_v2/app.js') }}"></script>
+</body>
+</html>

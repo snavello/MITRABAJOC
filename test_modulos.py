@@ -196,7 +196,7 @@ def test_admin_completo_con_catalogo_completo():
     c = _admin_client("20111111110", "full-demo")  # sindicato "full"
     r = c.get("/admin")
     assert r.status_code == 200
-    for panel in ["reportes", "formulas", "conceptos", "aprendizaje", "cotizantes",
+    for panel in ["reportes", "formulas", "conceptos", "aprendizaje",
                   "noticias", "beneficios", "trabajadores", "seccionales"]:
         assert f'data-panel="{panel}"' in r.text, panel
     print("OK  test_admin_completo_con_catalogo_completo")

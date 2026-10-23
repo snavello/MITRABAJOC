@@ -132,10 +132,17 @@ def informe(request):
 def pytest_runtest_makereport(item, call):
     reporte = yield
     if reporte.when == "call":
+        # Un `pytest.skip` adentro del test (un prerequisito que falta, o la
+        # comparación con una pantalla que todavía no existe) no es una falla:
+        # se informa aparte y con su motivo. Antes salía como "FALLÓ".
+        motivo = ""
+        if reporte.skipped and isinstance(reporte.longrepr, tuple):
+            motivo = str(reporte.longrepr[-1]).removeprefix("Skipped: ")
         _RESULTADOS[item.nodeid] = {
             "estado": reporte.outcome,
             "duracion": reporte.duration,
             "error": (str(reporte.longrepr)[-1500:] if reporte.failed else ""),
+            "motivo": motivo,
         }
     return reporte
 
@@ -190,10 +197,12 @@ _PLANTILLA = """<!doctype html>
 
 def _bloque_test(nombre, res, inf, artefactos):
     ok = res["estado"] == "passed"
-    color = "#0d7a5f" if ok else "#c0392b"
+    salteado = res["estado"] == "skipped"
+    color = "#0d7a5f" if ok else ("#5b6478" if salteado else "#c0392b")
+    etiqueta = "PASÓ" if ok else ("SALTEADO" if salteado else "FALLÓ")
     partes = [f'<div class="test" style="--lc:{color}">',
               f'<h2>{html.escape(nombre)} <span class="chip">'
-              f'{"PASÓ" if ok else "FALLÓ"}</span>'
+              f'{etiqueta}</span>'
               f'<span class="dur">{res["duracion"]:.1f}s</span></h2>']
     if inf and inf.pasos:
         partes.append('<div class="sec">Lo que hizo</div><ol>')
@@ -213,6 +222,9 @@ def _bloque_test(nombre, res, inf, artefactos):
             partes.append(f'<tr><td>{html.escape(etiqueta)}</td>'
                           f'<td><a href="{uri}">{html.escape(Path(ruta).name)}</a></td></tr>')
         partes.append("</table>")
+    if salteado and res.get("motivo"):
+        partes.append('<div class="sec">Por qué se salteó</div>'
+                      f'<pre>{html.escape(res["motivo"])}</pre>')
     if not ok and res["error"]:
         partes.append('<div class="sec">Dónde se rompió</div>'
                       f'<pre>{html.escape(res["error"])}</pre>')
@@ -226,7 +238,8 @@ def pytest_sessionfinish(session, exitstatus):
     config = session.config
     salida = Path(config.getoption("--output") or "test-results")
     headed = bool(config.getoption("--headed"))
-    total = len(_RESULTADOS)
+    salteados = sum(1 for r in _RESULTADOS.values() if r["estado"] == "skipped")
+    total = len(_RESULTADOS) - salteados
     aprobados = sum(1 for r in _RESULTADOS.values() if r["estado"] == "passed")
     duracion = sum(r["duracion"] for r in _RESULTADOS.values())
 
@@ -265,11 +278,14 @@ def pytest_sessionfinish(session, exitstatus):
         codificacion = sys.stdout.encoding or "utf-8"
         print(texto.encode(codificacion, errors="replace").decode(codificacion))
 
-    escribir(f"\n{'=' * 62}\n  RESULTADO: {aprobados}/{total} robots en verde · {duracion:.1f}s")
+    extra = f" ({salteados} salteados)" if salteados else ""
+    escribir(f"\n{'=' * 62}\n  RESULTADO: {aprobados}/{total} robots en verde{extra} · {duracion:.1f}s")
     for nodeid, res in _RESULTADOS.items():
         inf = _INFORMES.get(nodeid)
-        marca = "OK   " if res["estado"] == "passed" else "FALLÓ"
+        marca = {"passed": "OK   ", "skipped": "SALTÓ"}.get(res["estado"], "FALLÓ")
         escribir(f"  {marca} {inf.nombre if inf else nodeid.split('::')[-1]} ({res['duracion']:.1f}s)")
+        if res.get("motivo"):
+            escribir(f"         motivo: {res['motivo']}")
         for segundos, texto in (inf.pasos if inf else []):
             escribir(f"         · {texto}")
         for clave, valor in (inf.datos if inf else []):

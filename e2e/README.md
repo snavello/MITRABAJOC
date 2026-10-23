@@ -73,6 +73,21 @@ eso se ve exactamente en qué punto se rompió algo, sin volver a correr nada.
 - `test_robot_tramite_guarderia.py` — ciclo completo de un trámite con dos
   actores: el trabajador lo presenta, el admin responde y lo cierra, el
   trabajador ve la respuesta.
+- `test_paridad_dashboard.py` + `paridad.py` — paridad del Panel Sindical
+  v1 / v2 (`PLAN_DASHBOARD_V2.md`). Abre la v1 con 7 combinaciones de
+  filtros, verifica que nunca haya más de 4 pedidos en vuelo y deja lectura
+  (JSON) y captura en `e2e/resultados/paridad/`. Después lee la v2 con las
+  mismas combinaciones y exige los mismos datos y los mismos pedidos, y
+  maneja la v2 como una persona (controles, gráficos, mapa, explorador,
+  modal, Asistente) comparando con la v1 en cada paso. El robot del
+  Asistente simula las respuestas del servidor (no gasta créditos) pero
+  necesita que la app arranque con una `ANTHROPIC_API_KEY`, aunque sea
+  falsa, para que el botón exista; sin ella se saltea. Todos corren con
+  "reducir movimiento" para leer valores quietos, menos
+  `test_la_v2_con_movimiento`, que verifica justamente el movimiento: los
+  paneles de abajo esperan a verse, el gráfico se dibuja al entrar, el modal
+  abre al instante con su esqueleto. Un robot salteado sale como SALTEADO en
+  el informe, con su motivo, no como FALLÓ.
 
 ## Al escribir uno nuevo
 

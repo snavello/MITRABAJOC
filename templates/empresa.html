@@ -7,6 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Panel de empleador — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
 <style>
   /* La condensada y las variables de fuente viven en marca.css, que ESTA
      plantilla no carga (tiene su propio CSS). Se declaran acá para que los
@@ -42,6 +43,17 @@
   .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; padding-bottom:98px; }
   h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
   .sub { color:var(--gris); margin-top:6px; font-size:15px; }
+  /* El título y su bajada caen sobre la franja de marca, que es oscura (ver
+     static/interior.css): en tinta sobre ese degradé no se leen. Solo en
+     escritorio, porque en teléfono la franja no se dibuja. */
+  @media (min-width:761px) {
+    body.franja .cont > h1 { color:#fff; }
+    body.franja .cont > .sub { color:rgba(255,255,255,.75); }
+    /* El estado vacío ("todavía no tenés…") es lo único que queda en texto
+       suelto arriba de todo cuando no hay nada cargado: con contenido real,
+       ahí van tarjetas claras. */
+    body.franja #notif-lista > .notif-vacio { color:rgba(255,255,255,.7); }
+  }
   .card { background:var(--card); border:1px solid var(--linea); border-radius:12px; padding:16px 18px; margin-top:16px; }
   .tpanel { display:none; }
   .tpanel.activo { display:block; }
@@ -295,27 +307,26 @@
   .tx-r .pie b.esp { color:var(--alerta); }
   @media (prefers-reduced-motion:reduce) { .tx-punto, .notif-item.no-leida .nh-av::after { animation:none; } }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa franja">
 {% include "_entorno.html" %}
-{% set enc_rol = 'Panel de empleador' %}
-{% set enc_pantalla = 'Notificaciones' %}   {# pestaña abierta al entrar; el JS la va cambiando #}
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}
 
-<div class="cont">
+<div class="cont mesa-cont">
   <h1>{{ razon_social or cuit }}</h1>
   <div class="sub">CUIT {{ cuit }} · {{ sindicato }}</div>
 
   <!-- ============ PESTAÑA: NOTIFICACIONES ============ -->
-  <div class="tpanel activo" id="tp-notificaciones">
+  <div class="tpanel activo" data-mov-vista id="tp-notificaciones">
     <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
   </div>
 
   <!-- ============ PESTAÑA: TRÁMITES ============ -->
-  <div class="tpanel" id="tp-tramites">
+  <div class="tpanel" id="tp-tramites" data-mov-vista>
 
-    <div id="trx-inicio">
+    <div id="trx-inicio" data-mov-vista>
       <h1>Trámites</h1>
       <p class="sub2">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
 
@@ -344,7 +355,7 @@
       <div id="trx-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
     </div>
 
-    <div id="trx-tipos" style="display:none;">
+    <div id="trx-tipos" data-mov-vista style="display:none;">
       <div class="tramx-box">
         <div class="tramx-box-enc">
           <div class="tit">Iniciar un trámite</div>
@@ -357,7 +368,7 @@
       <button class="btn sec" id="trx-tipos-volver" style="margin-top:16px;">Volver</button>
     </div>
 
-    <div id="trx-form" style="display:none;">
+    <div id="trx-form" data-mov-vista style="display:none;">
       <div class="tramx-box">
         <div class="tramx-box-enc">
           <div class="tit" id="trx-form-titulo">Trámite</div>
@@ -372,7 +383,7 @@
       <button class="btn sec" id="trx-form-volver" style="margin-top:16px;">Cancelar</button>
     </div>
 
-    <div id="trx-detalle" style="display:none;">
+    <div id="trx-detalle" data-mov-vista style="display:none;">
       <div class="tramx-box">
         <div class="tramx-box-enc">
           <div class="tit" id="trx-det-expediente">Trámite</div>
@@ -435,11 +446,6 @@ document.querySelectorAll('.tab-t').forEach(btn => {
   btn.addEventListener('click', () => {
     const dest = btn.dataset.tp;
     document.querySelectorAll('.tab-t').forEach(b => b.classList.toggle('activa', b === btn));
-    const rotulo = document.getElementById('marca-pantalla');
-    if (rotulo) {
-      rotulo.textContent = Array.from(btn.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
-    }
     document.querySelectorAll('.tpanel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'tp-' + dest);
     });
@@ -701,7 +707,10 @@ if (document.getElementById('tp-tramites')) {
   function campoInputHtmlTrx(c) {
     const id = 'txc_' + c.id;
     if (c.tipo_dato === 'archivo') {
-      const accept = (c.tipos_archivo_permitidos || '').split(',').map(e => e.trim()).filter(Boolean).map(e => '.' + e).join(',');
+      // jpg vale también para jpeg (y tif para tiff): el servidor compara igual.
+      const EQUIV = { jpg: 'jpeg', jpeg: 'jpg', tif: 'tiff', tiff: 'tif' };
+      const accept = [...new Set((c.tipos_archivo_permitidos || '').split(',').map(e => e.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
+        .flatMap(e => EQUIV[e] ? [e, EQUIV[e]] : [e]))].map(e => '.' + e).join(',');
       return `<label class="btn sec archivo-trigger" for="${id}">📎 Elegir archivo</label>
         <input type="file" id="${id}" ${accept ? `accept="${accept}"` : ''} onchange="document.getElementById('${id}-nombre').textContent = this.files[0] ? this.files[0].name : '';">
         <div class="archivo-nombre" id="${id}-nombre"></div>`;

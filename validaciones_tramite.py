@@ -22,10 +22,14 @@ Sin acceso a base de datos a propósito: funciones puras, testeables solas
 (test_validaciones_tramite.py).
 """
 
+import ast
 import re
-from datetime import timedelta
+from typing import Optional
+import unicodedata
+from datetime import date, timedelta
 
 import fechas
+import listas as listas_mod
 
 # Operadores admitidos. Se guardan en ASCII; _OP_LEGIBLE es solo para armar
 # mensajes por defecto.
@@ -39,7 +43,143 @@ _OP_LEGIBLE_CORTO = {"<=": "≤", ">=": "≥", "<": "<", ">": ">", "==": "=", "!
 # Texto libre/opciones/archivos quedan afuera en la Fase 1.
 TIPOS_VALIDABLES = ("numero", "fecha")
 
-FUENTES = ("fija",)  # se amplía en fases siguientes: lista, sistema, externa
+FUENTES = ("fija", "funcion")   # externa: BACKLOG, fase 4
+
+# ---------------------------------------------------------------------------
+# Fuente `funcion` (PLAN_LISTAS_VALIDACIONES.md, D2/D6, bloque 3)
+# ---------------------------------------------------------------------------
+# Una validación de fuente `funcion` busca algo fuera del formulario -- una
+# fila de una LISTA del sindicato (listas.PLANTILLAS) o un dato del SISTEMA
+# (el padrón) -- y lo compara, o evalúa una fórmula escrita como las Reglas
+# de control (parseo con `ast`, sin eval, nombres cerrados). Lo que se
+# nombra en una fórmula: `campo.<etiqueta_normalizada>` (lo que la persona
+# escribió en el formulario, ya tipado), `lista.<columna>` (la fila
+# encontrada) y `sistema.<dato>` (DATOS_SISTEMA). Un campo de tipo
+# `calculado` es una de estas sin operador: lo que se muestra es el
+# resultado.
+ORIGENES = ("lista", "sistema")
+
+# 2026-10-18 (SDN): los datos del sistema se nombran por familia:
+# `sistema.afiliado.<dato>` (el afiliado que inicia el trámite). La forma
+# corta `sistema.<dato>` sigue valiendo en lo ya guardado. Y los datos que
+# son DE LA PERSONA (los edita ella en su perfil): si el afiliado corrige
+# uno de esos en un campo extraído, se actualiza en su perfil; los demás
+# (afiliación, credencial, empleador, recibos) quedan anotados en el
+# trámite para quien lo evalúa.
+FAMILIA_SISTEMA = "afiliado"
+DATOS_PROPIOS = ("fecha_nacimiento", "provincia", "localidad")
+
+
+def nombre_dato(clave: str) -> str:
+    return f"sistema.{FAMILIA_SISTEMA}.{clave}"
+TIPOS_CON_FUNCION = ("texto", "numero", "fecha", "seleccion", "opcion_unica", "calculado")
+TIPO_CALCULADO = "calculado"
+
+# dato -> (tipo, rótulo). Lo que `sistema.<dato>` puede nombrar. Lo llena
+# db.contexto_validaciones; acá solo se declara para que el constructor lo
+# ofrezca y el saneo lo verifique.
+DATOS_SISTEMA = {
+    "en_padron": ("booleano", "Está en el padrón de este sindicato"),
+    "activo": ("booleano", "Empadronamiento activo (no dado de baja)"),
+    "registrado": ("booleano", "Ya se registró en la app"),
+    "seccional": ("texto", "Nombre de su seccional"),
+    "provincia": ("texto", "Provincia de su domicilio"),
+    "localidad": ("texto", "Localidad de su domicilio"),
+    "nivel_fiabilidad": ("numero", "Nivel de fiabilidad de la cuenta (1 a 4)"),
+    "recibos_verificados": ("numero", "Cantidad de recibos verificados"),
+    "semaforo": ("texto", "Color del último semáforo de aportes (verde, amarillo, rojo o gris)"),
+    "fecha_afiliacion": ("fecha", "Fecha de afiliación a este sindicato"),
+    "fecha_nacimiento": ("fecha", "Fecha de nacimiento"),
+    "tramites_de_este_tipo": ("numero", "Cuántas veces ya pidió este mismo trámite (en cualquier estado)"),
+    "tramites_abiertos_de_este_tipo": ("numero", "Cuántos pedidos de este mismo trámite tiene sin terminar"),
+    # ---- 2026-10-18: funciones pedidas por SDN para los requisitos y las
+    # validaciones (la credencial primero). Todas las calcula
+    # db.contexto_validaciones con el CUIL de la sesión; ninguna se guarda.
+    "credencial_vigente": ("booleano", "Tiene credencial generada y, si tiene fecha de vigencia, no venció"),
+    "numero_credencial": ("texto", "Código de la credencial (vacío si no se generó)"),
+    "edad": ("numero", "Años cumplidos (desde la fecha de nacimiento)"),
+    "antiguedad_meses": ("numero", "Meses cumplidos desde la afiliación a este sindicato"),
+    "ultimo_recibo_periodo": ("texto", "Período AAAA-MM del último recibo verificado"),
+    "meses_sin_recibo": ("numero", "Meses desde el período del último recibo verificado"),
+    "ultimo_recibo_bruto": ("numero", "Bruto del último recibo verificado"),
+    "empleador_cuit": ("texto", "CUIT del empleador que figura en el padrón"),
+    "empleador_nombre": ("texto", "Razón social de ese empleador, si el sindicato lo tiene cargado"),
+    "tramites_abiertos": ("numero", "Cuántos trámites tiene sin terminar, de cualquier formulario"),
+    "dias_desde_ultimo_pedido_de_este_tipo": ("numero", "Días desde su último pedido de este mismo trámite"),
+}
+
+# Las funciones que una fórmula puede llamar, con su ayuda. Las de fechas
+# reciben AAAA-MM-DD (lo que emite <input type=date> y lo que guardan las
+# listas y el padrón) y cuentan unidades ENTERAS cumplidas.
+FUNCIONES_FORMULA = {
+    "hoy": "hoy() → la fecha del día (Buenos Aires)",
+    "dias_entre": "dias_entre(desde, hasta) → días entre dos fechas",
+    "meses_entre": "meses_entre(desde, hasta) → meses cumplidos entre dos fechas",
+    "anios_entre": "anios_entre(desde, hasta) → años cumplidos entre dos fechas",
+    "min": "min(a, b, …)",
+    "max": "max(a, b, …)",
+    "redondear": "redondear(x, decimales=0)",
+    "largo": "largo(texto) → cantidad de caracteres",
+    "existe": "existe(x) → verdadero si el dato tiene valor",
+}
+PALABRAS_FORMULA = {"y": "and", "o": "or", "no": "not", "verdadero": "True", "falso": "False"}
+
+# ---- la ayuda de cada dato y de cada función (2026-10-18) -----------------
+# Con 22 datos del sistema ya no alcanza el rótulo: el constructor y el
+# asistente muestran, al elegir cada uno, qué devuelve y un ejemplo de cómo
+# se compara. Un dato nuevo en DATOS_SISTEMA tiene que tener su entrada acá
+# (lo exige test_validaciones_funcion): sin ejemplo no se ofrece.
+GRUPOS_SISTEMA = (("padron", "Padrón"), ("credencial", "Credencial"), ("recibos", "Recibos"),
+                  ("tramites", "Trámites"), ("domicilio", "Domicilio"))
+
+# tipo -> cómo se compara un dato de ese tipo, en una frase.
+COMO_SE_COMPARA = {
+    "booleano": "Vale sí o no. Como control: «es igual a» sí (o no). En una fórmula va solo, o con «no» adelante.",
+    "numero": "Es un número: se compara con <= >= < > == != contra un valor fijo o contra otro dato.",
+    "texto": "Es un texto: igual (==) o distinto (!=) a un valor entre comillas, o se mide con largo().",
+    "fecha": "Es una fecha AAAA-MM-DD: se compara contra hoy, hoy-365 (días) u otra fecha, o se mide con dias_entre, meses_entre y anios_entre.",
+}
+
+# dato -> (grupo, qué devuelve, ejemplo, qué significa el ejemplo).
+AYUDA_SISTEMA = {
+    "en_padron": ("padron", "sí / no", "sistema.afiliado.en_padron", "está en el padrón de este sindicato"),
+    "activo": ("padron", "sí / no", "sistema.afiliado.activo", "no fue dado de baja"),
+    "registrado": ("padron", "sí / no", "no sistema.afiliado.registrado", "todavía no se registró en la app"),
+    "seccional": ("padron", "texto", 'sistema.afiliado.seccional == "Rosario"', "pertenece a la seccional Rosario"),
+    "nivel_fiabilidad": ("padron", "número de 1 a 4", "sistema.afiliado.nivel_fiabilidad >= 3", "subió un recibo propio o el sindicato la confirmó"),
+    "fecha_afiliacion": ("padron", "fecha AAAA-MM-DD", "dias_entre(sistema.afiliado.fecha_afiliacion, hoy()) >= 180", "se afilió hace 180 días o más"),
+    "fecha_nacimiento": ("padron", "fecha AAAA-MM-DD", "anios_entre(sistema.afiliado.fecha_nacimiento, hoy()) >= 18", "es mayor de edad"),
+    "edad": ("padron", "años cumplidos", "sistema.afiliado.edad < 60", "tiene menos de 60 años"),
+    "antiguedad_meses": ("padron", "meses cumplidos", "sistema.afiliado.antiguedad_meses >= 6", "lleva al menos seis meses de afiliación"),
+    "empleador_cuit": ("padron", "CUIT sin guiones", 'sistema.afiliado.empleador_cuit == "30999888778"', "trabaja en esa empresa"),
+    "empleador_nombre": ("padron", "texto (vacío si no está cargado)", "existe(sistema.afiliado.empleador_nombre)", "el sindicato tiene cargada su empresa"),
+    "credencial_vigente": ("credencial", "sí / no", "sistema.afiliado.credencial_vigente", "tiene credencial generada y no vencida"),
+    "numero_credencial": ("credencial", "texto (vacío si no se generó)", "campo.credencial == sistema.afiliado.numero_credencial", "escribió el número de su credencial"),
+    "recibos_verificados": ("recibos", "cantidad", "sistema.afiliado.recibos_verificados >= 1", "verificó al menos un recibo"),
+    "semaforo": ("recibos", "verde, amarillo, rojo o gris", 'sistema.afiliado.semaforo != "rojo"', "sus aportes no están impagos"),
+    "ultimo_recibo_periodo": ("recibos", "período AAAA-MM", 'sistema.afiliado.ultimo_recibo_periodo >= "2026-06"', "su último recibo es de junio o después"),
+    "meses_sin_recibo": ("recibos", "meses cumplidos", "sistema.afiliado.meses_sin_recibo <= 2", "verificó un recibo en los últimos dos meses"),
+    "ultimo_recibo_bruto": ("recibos", "importe en pesos", "sistema.afiliado.ultimo_recibo_bruto <= 1500000", "cobra hasta 1.500.000 de bruto"),
+    "tramites_de_este_tipo": ("tramites", "cantidad", "sistema.afiliado.tramites_de_este_tipo == 0", "nunca pidió este trámite (una sola vez)"),
+    "tramites_abiertos_de_este_tipo": ("tramites", "cantidad", "sistema.afiliado.tramites_abiertos_de_este_tipo == 0", "no tiene otro pedido de este trámite en curso"),
+    "tramites_abiertos": ("tramites", "cantidad", "sistema.afiliado.tramites_abiertos < 3", "tiene menos de tres trámites sin terminar"),
+    "dias_desde_ultimo_pedido_de_este_tipo": ("tramites", "días (vacío si nunca lo pidió)", "sistema.afiliado.dias_desde_ultimo_pedido_de_este_tipo >= 365", "pasó un año desde la última vez"),
+    "provincia": ("domicilio", "texto", 'sistema.afiliado.provincia == "Santa Fe"', "vive en Santa Fe"),
+    "localidad": ("domicilio", "texto", 'sistema.afiliado.localidad == "Rafaela"', "vive en Rafaela"),
+}
+
+# función -> (ejemplo, qué significa).
+AYUDA_FUNCION = {
+    "hoy": ("campo.fecha_del_hecho <= hoy()", "la fecha que escribió no es futura"),
+    "dias_entre": ("dias_entre(campo.fecha_del_hecho, hoy()) <= 30", "pasaron 30 días o menos"),
+    "meses_entre": ("meses_entre(sistema.afiliado.fecha_afiliacion, hoy()) >= 6", "seis meses cumplidos de afiliación"),
+    "anios_entre": ("anios_entre(lista.fecha_nacimiento, hoy()) <= 12", "el familiar tiene hasta 12 años"),
+    "min": ("min(campo.monto, 50000)", "el menor de los dos: un tope de 50.000"),
+    "max": ("max(campo.cuotas, 1)", "nunca menos de una cuota"),
+    "redondear": ("redondear(campo.monto * 0.1, 2)", "el 10 %, con dos decimales"),
+    "largo": ("largo(campo.legajo) == 6", "el legajo tiene exactamente seis caracteres"),
+    "existe": ("existe(lista.fecha_nacimiento)", "la fila de la lista trae la fecha de nacimiento"),
+}
 
 _RE_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # lo que emite <input type=date>
 
@@ -114,7 +254,7 @@ def _valor_legible(valor, tipo_dato):
     return str(valor)
 
 
-def validaciones_saneadas(crudas, tipo_dato) -> list:
+def validaciones_saneadas(crudas, tipo_dato, campos=None, indice=None) -> list:
     """Filtra/normaliza las validaciones de UN campo al guardar el tipo.
 
     Descarta en silencio lo mal formado (fuente desconocida, operador fuera
@@ -122,12 +262,31 @@ def validaciones_saneadas(crudas, tipo_dato) -> list:
     criterio defensivo que _campos_tramite_validos en main.py. Si el admin
     no escribió mensaje, se genera uno por defecto ACÁ (queda guardado y el
     admin lo ve al reabrir, en vez de descubrirlo en la pantalla del
-    trabajador)."""
-    if tipo_dato not in TIPOS_VALIDABLES:
-        return []
+    trabajador).
+
+    `campos` e `indice` (la lista entera del formulario y la posición de
+    este campo) hacen falta para la fuente `funcion`: la segunda clave se
+    referencia por orden y la fórmula se compila contra los nombres del
+    formulario. Sin ellos, las de fuente `funcion` se descartan."""
     validas = []
-    for v in crudas or []:
-        if not isinstance(v, dict):
+    es_calc = tipo_dato == TIPO_CALCULADO
+    # En un calculado, el INGRESO es la función marcada `ingreso` (o, en lo
+    # guardado antes de la marca, la primera sin operador); una sola.
+    crudas = [v for v in (crudas or []) if isinstance(v, dict)]
+    ingreso = None
+    if es_calc:
+        funciones = [v for v in crudas if v.get("fuente") == "funcion"]
+        ingreso = next((v for v in funciones if v.get("ingreso")), None) \
+            or next((v for v in funciones if not v.get("operador")), None) \
+            or (funciones[0] if funciones else None)   # lo guardado antes: una sola función
+    for v in crudas:
+        if v.get("fuente") == "funcion":
+            if campos is not None and tipo_dato in TIPOS_CON_FUNCION:
+                limpia = funcion_saneada(v, campos, indice, calculado=(v is ingreso))
+                if limpia:
+                    validas.append(limpia)
+            continue
+        if tipo_dato not in TIPOS_VALIDABLES and not es_calc:
             continue
         if v.get("fuente") not in FUENTES:
             continue
@@ -135,12 +294,13 @@ def validaciones_saneadas(crudas, tipo_dato) -> list:
         if operador not in OPERADORES:
             continue
         valor = str(v.get("valor") or "").strip()
-        if _limite_comparable(valor, tipo_dato) is None:
+        tipo_limite = _tipo_inferido(valor) if es_calc else tipo_dato
+        if not valor or _limite_comparable(valor, tipo_limite) is None:
             continue
         mensaje = str(v.get("mensaje") or "").strip()[:300]
         if not mensaje:
             mensaje = (f"Tiene que ser {_OP_LEGIBLE[operador]} "
-                       f"{_valor_legible(valor, tipo_dato)}.")
+                       f"{_valor_legible(valor, tipo_limite)}.")
         validas.append({
             "fuente": "fija",
             "operador": operador,
@@ -148,6 +308,8 @@ def validaciones_saneadas(crudas, tipo_dato) -> list:
             "mensaje": mensaje,
             "bloquea": bool(v.get("bloquea", True)),
         })
+    if es_calc:
+        validas.sort(key=lambda v: 0 if v.get("ingreso") else 1)
     return validas
 
 
@@ -192,8 +354,18 @@ def reglas_saneadas(crudas, campos) -> list:
     return validas
 
 
-def evaluar_envio(campos, reglas, valores) -> dict:
+def evaluar_envio(campos, reglas, valores, contexto=None, requisitos=None) -> dict:
     """Evalúa TODAS las validaciones de un envío ya tipado-válido.
+
+    `contexto` (bloque 3) es lo que las validaciones de fuente `funcion`
+    miran fuera del formulario: `{"sistema": {dato: valor}, "buscar":
+    callable(plantilla, clave2) -> fila | None}`, armado por
+    db.contexto_validaciones con el CUIL de la SESIÓN. Sin contexto, las de
+    fuente `funcion` y los `requisitos` no se evalúan y se cuentan en
+    `sin_contexto` (el banco de pruebas sin CUIL elegido lo dice; el envío
+    real siempre lo trae). `calculados` trae el valor FINAL de cada campo
+    extraído o calculado por id (lo propuesto, o lo que el afiliado
+    escribió encima); `corregidos`, los que el afiliado cambió.
 
     - `campos`: lista de dicts del tipo (id/orden/etiqueta/tipo_dato/
       validaciones), como la devuelve db.tipo_tramite_por_id. El orden de la
@@ -208,18 +380,96 @@ def evaluar_envio(campos, reglas, valores) -> dict:
     pero no comparable tampoco (el llamador ya rechazó números ilegibles);
     ante la duda esta capa NO inventa un bloqueo."""
     errores, errores_campos, advertencias = [], {}, []
+    calculados, sin_contexto, corregidos = {}, 0, []
+    valores = dict(valores or {})   # copia de trabajo: los calculados entran acá
+    cache_filas = {}
+
+    # ---- 1. INGRESO de los campos extraídos o calculados (2026-10-18)
+    # El valor propuesto sale del padrón, de la lista o de la fórmula. Si el
+    # afiliado escribió otro, vale el suyo (decisión de SDN): queda anotado
+    # para quien evalúa (`advertencias`) y, si es un dato propio de la
+    # persona, en `corregidos` para que el llamador lo actualice en su
+    # perfil. Una fórmula que da "no" se muestra como "No", no queda vacía.
+    ns_campo = _namespace_campos(campos, valores)
+    for campo in campos or []:
+        if campo.get("tipo_dato") != TIPO_CALCULADO:
+            continue
+        cid = campo.get("id")
+        ing = ingreso_de(campo)
+        if not ing:
+            continue
+        if contexto is None:
+            sin_contexto += 1
+            continue
+        _pasa, resultado, motivo = _evaluar_funcion(ing, ns_campo, contexto, campos, valores, cache_filas)
+        propuesto = _texto_resultado(resultado) if resultado is not None else ""
+        escrito = str(valores.get(cid) or "").strip()
+        if escrito and _plano(escrito) != _plano(propuesto):
+            desc = descripcion_ingreso(campo) or {}
+            if desc.get("propio") and desc.get("dato") == "fecha_nacimiento" and not _RE_FECHA.match(escrito):
+                errores.append(f'"{campo.get("etiqueta")}": la fecha tiene que ser AAAA-MM-DD.')
+                errores_campos.setdefault(cid, "La fecha tiene que ser AAAA-MM-DD.")
+                continue
+            corregidos.append({"id": cid, "etiqueta": campo.get("etiqueta"), "propuesto": propuesto,
+                               "escrito": escrito, "dato": desc.get("dato"), "propio": bool(desc.get("propio"))})
+            advertencias.append(
+                f'"{campo.get("etiqueta")}": el afiliado corrigió el dato: puso «{escrito}»; '
+                f'el sistema tenía «{propuesto or "sin dato"}».'
+                + (" Se actualizó en su perfil." if desc.get("propio") else " Revisarlo al evaluar."))
+            final = escrito
+        else:
+            final = escrito or propuesto
+            if not escrito and resultado is None:
+                advertencias.append(f'"{campo.get("etiqueta")}": no se pudo calcular ({motivo}).')
+        calculados[cid] = final
+        valores[cid] = final
+
+    # ---- 2. VALIDACIÓN: requisitos del tipo y funciones de cada campo
+    ns_campo = _namespace_campos(campos, valores)
+
+    def _resolver(v):
+        return _evaluar_funcion(v, ns_campo, contexto, campos, valores, cache_filas)
+
+    for r in requisitos or []:
+        if contexto is None:
+            sin_contexto += 1
+            continue
+        pasa, _resultado, motivo = _resolver(r)
+        if not pasa:
+            errores.append(r.get("mensaje") or motivo)
 
     for campo in campos or []:
         cid = campo.get("id")
-        comparable = _a_comparable(valores.get(cid), campo.get("tipo_dato"))
-        if comparable is None:
-            continue
-        for v in campo.get("validaciones") or []:
+        funcion = [v for v in validaciones_de(campo) if v.get("fuente") == "funcion"]
+        if funcion and str(valores.get(cid) or "").strip():
+            for v in funcion:
+                if contexto is None:
+                    sin_contexto += 1
+                    continue
+                pasa, _resultado, motivo = _resolver(v)
+                if pasa:
+                    continue
+                mensaje = f'"{campo.get("etiqueta")}": {v.get("mensaje")}'
+                if v.get("bloquea", True):
+                    errores.append(mensaje)
+                    errores_campos.setdefault(cid, v.get("mensaje"))
+                else:
+                    advertencias.append(mensaje)
+
+    for campo in campos or []:
+        cid = campo.get("id")
+        es_calc = campo.get("tipo_dato") == TIPO_CALCULADO
+        for v in validaciones_de(campo):
             if v.get("fuente") != "fija":
-                continue  # fuentes de fases siguientes: todavía no evalúan
-            limite = _limite_comparable(v.get("valor"), campo.get("tipo_dato"))
-            if limite is None:
+                continue  # las de fuente `funcion` ya se evaluaron arriba
+            # un extraído o calculado no declara tipo: lo dice su límite
+            tipo = _tipo_inferido(v.get("valor")) if es_calc else campo.get("tipo_dato")
+            comparable = _a_comparable(valores.get(cid), tipo)
+            limite = _limite_comparable(v.get("valor"), tipo)
+            if comparable is None or limite is None:
                 continue
+            if tipo == "texto" and v.get("operador") in ("==", "!="):
+                comparable, limite = _plano(comparable), _plano(str(limite))
             if _compara(comparable, v.get("operador"), limite):
                 continue
             mensaje = f'"{campo.get("etiqueta")}": {v.get("mensaje")}'
@@ -252,4 +502,595 @@ def evaluar_envio(campos, reglas, valores) -> dict:
             advertencias.append(mensaje)
 
     return {"errores": errores, "errores_campos": errores_campos,
-            "advertencias": advertencias}
+            "advertencias": advertencias, "calculados": calculados,
+            "sin_contexto": sin_contexto, "corregidos": corregidos}
+
+
+# ===========================================================================
+# Fuente `funcion`: nombres, saneo, fórmulas y evaluación
+# ===========================================================================
+
+def _plano(texto: str) -> str:
+    plano = unicodedata.normalize("NFD", str(texto or "").strip().lower())
+    plano = "".join(c for c in plano if unicodedata.category(c) != "Mn")
+    plano = re.sub(r"[^a-z0-9]+", "_", plano).strip("_")
+    if plano and plano[0].isdigit():
+        plano = "c_" + plano
+    return plano or "campo"
+
+
+def nombres_de_campos(campos) -> list:
+    """El nombre con el que una fórmula nombra a cada campo del formulario,
+    POR ORDEN: `campo.<etiqueta_normalizada>` (minúsculas, sin tildes, los
+    espacios y signos como guion bajo; repetidos con `_2`, `_3`…). El
+    constructor los muestra al lado de cada campo. Un separador no tiene
+    nombre (devuelve '')."""
+    nombres, vistos = [], {}
+    for c in campos or []:
+        if c.get("tipo_dato") == "separador":
+            nombres.append("")
+            continue
+        base = _plano(c.get("etiqueta"))
+        n = vistos.get(base, 0) + 1
+        vistos[base] = n
+        nombres.append(base if n == 1 else f"{base}_{n}")
+    return nombres
+
+
+def _tipado(valor, tipo):
+    """Un valor de texto convertido al tipo con el que lo ve una fórmula.
+    None = no hay dato (vacío o ilegible): nunca entra a una cuenta como 0."""
+    if valor is None:
+        return None
+    if isinstance(valor, bool):
+        return valor
+    if tipo == "numero":
+        if isinstance(valor, (int, float)):
+            return float(valor)
+        return _a_comparable(valor, "numero")
+    if tipo == "fecha":
+        return _a_comparable(valor, "fecha")
+    if tipo == "booleano":
+        t = str(valor).strip().lower()
+        return t in ("si", "sí", "true", "1", "verdadero", "x")
+    if tipo in ("cuil", "dni", "texto") or tipo is None:
+        t = str(valor).strip()
+        return t if t else None
+    if isinstance(valor, (int, float)):
+        return float(valor)
+    t = str(valor).strip()
+    return t if t else None
+
+
+def _namespace_campos(campos, valores) -> dict:
+    ns = {}
+    for nombre, c in zip(nombres_de_campos(campos), campos or []):
+        if not nombre:
+            continue
+        tipo = c.get("tipo_dato")
+        tipo = tipo if tipo in ("numero", "fecha", "booleano") else "texto"
+        ns[nombre] = _tipado(valores.get(c.get("id")), tipo)
+    return ns
+
+
+def _namespace_lista(plantilla, fila) -> dict:
+    if not fila:
+        return {}
+    return {col["clave"]: _tipado(fila.get(col["clave"]), col["tipo"])
+            for col in listas_mod.columnas(plantilla)}
+
+
+# ---- la fórmula --------------------------------------------------------
+
+_RE_PALABRA = re.compile(r'("[^"]*"|\'[^\']*\')|\b(y|o|no|verdadero|falso)\b')
+
+
+_RE_NOMBRE = re.compile(r'("[^"]*"|\'[^\']*\')|\b(campo|lista|sistema)(\.[A-Za-z_]\w*)+', re.I)
+
+
+def _a_python(expr: str) -> str:
+    """`y` / `o` / `no` / `verdadero` / `falso` → los operadores de Python,
+    y los nombres con punto en minúsculas (`Sistema.Afiliado.Edad` es lo
+    mismo que `sistema.afiliado.edad`), sin tocar lo que va entre comillas."""
+    def _r(m):
+        return m.group(1) if m.group(1) else PALABRAS_FORMULA[m.group(2)]
+
+    def _n(m):
+        return m.group(1) if m.group(1) else m.group(0).lower()
+    return _RE_PALABRA.sub(_r, _RE_NOMBRE.sub(_n, expr or ""))
+
+
+def _fecha(valor):
+    if isinstance(valor, date):
+        return valor
+    f = _a_comparable(valor, "fecha")
+    if f is None:
+        raise ValueError("fecha inválida")
+    return date.fromisoformat(f)
+
+
+def meses_cumplidos(desde, hasta=None):
+    """Meses cumplidos entre una fecha ISO (o AAAA-MM, que cuenta desde el
+    día 1) y `hasta` (hoy por defecto); None si `desde` no es una fecha.
+    Es lo que usan los datos del sistema `antiguedad_meses` y
+    `meses_sin_recibo`, con la misma regla que `meses_entre` en una fórmula."""
+    d = str(desde or "").strip()
+    if len(d) == 7 and d[4] == "-":
+        d += "-01"
+    if not _RE_FECHA.match(d):
+        return None
+    try:
+        return _meses_entre(d, (hasta or fechas.hoy().isoformat()))
+    except ValueError:
+        return None
+
+
+def anios_cumplidos(desde, hasta=None):
+    m = meses_cumplidos(desde, hasta)
+    return None if m is None else int(m // 12)
+
+
+def _meses_entre(desde, hasta) -> int:
+    a, b = _fecha(desde), _fecha(hasta)
+    meses = (b.year - a.year) * 12 + (b.month - a.month)
+    if b.day < a.day:
+        meses -= 1
+    return meses
+
+
+_FUNCIONES = {
+    "hoy": lambda: fechas.hoy().isoformat(),
+    "dias_entre": lambda a, b: (_fecha(b) - _fecha(a)).days,
+    "meses_entre": _meses_entre,
+    "anios_entre": lambda a, b: int(_meses_entre(a, b) // 12),
+    "min": min,
+    "max": max,
+    "redondear": lambda x, n=0: round(float(x), int(n)),
+    "largo": lambda t: len(str(t)) if t is not None else 0,
+    "existe": lambda x: x is not None and str(x).strip() != "",
+}
+_BINOPS = {ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
+           ast.Mult: lambda a, b: a * b, ast.Div: lambda a, b: a / b,
+           ast.Mod: lambda a, b: a % b}
+_COMPARA = {ast.Lt: lambda a, b: a < b, ast.LtE: lambda a, b: a <= b,
+            ast.Gt: lambda a, b: a > b, ast.GtE: lambda a, b: a >= b,
+            ast.Eq: lambda a, b: _igual(a, b), ast.NotEq: lambda a, b: not _igual(a, b)}
+
+
+def _igual(a, b) -> bool:
+    if isinstance(a, str) and isinstance(b, str):
+        return _plano(a) == _plano(b)
+    return a == b
+
+
+def _ev(nodo, ns):
+    """Recorre el árbol de la fórmula a mano (como validador._ev_nodo, XSK
+    H-0005): solo números, textos entre comillas, los tres espacios de
+    nombres, aritmética, comparaciones, y/o/no y las funciones de la lista.
+    Cualquier otra cosa es SyntaxError. Un dato que falta (None) en una
+    cuenta o una comparación levanta TypeError: la validación no pasa."""
+    if isinstance(nodo, ast.Constant):
+        if isinstance(nodo.value, (bool, int, float, str)):
+            return float(nodo.value) if isinstance(nodo.value, (int, float)) and not isinstance(nodo.value, bool) else nodo.value
+        raise SyntaxError("constante no permitida")
+    if isinstance(nodo, ast.Attribute) and isinstance(nodo.value, ast.Attribute) \
+            and isinstance(nodo.value.value, ast.Name) and nodo.value.value.id == "sistema" \
+            and nodo.value.attr == FAMILIA_SISTEMA:
+        # sistema.afiliado.edad es sistema.edad: la familia es el nombre
+        # completo del dato, no un espacio aparte.
+        nodo = ast.Attribute(value=nodo.value.value, attr=nodo.attr, ctx=nodo.ctx)
+    if isinstance(nodo, ast.Attribute) and isinstance(nodo.value, ast.Name):
+        espacio = nodo.value.id
+        if espacio not in ns:
+            raise NameError(f"name '{espacio}' is not defined")
+        if nodo.attr not in ns[espacio]:
+            raise NameError(f"name '{espacio}.{nodo.attr}' is not defined")
+        return ns[espacio][nodo.attr]
+    if isinstance(nodo, ast.Name):
+        raise NameError(f"name '{nodo.id}' is not defined")
+    if isinstance(nodo, ast.BinOp) and type(nodo.op) in _BINOPS:
+        a, b = _ev(nodo.left, ns), _ev(nodo.right, ns)
+        if a is None or b is None:
+            raise TypeError("falta un dato")
+        return _BINOPS[type(nodo.op)](a, b)
+    if isinstance(nodo, ast.UnaryOp):
+        v = _ev(nodo.operand, ns)
+        if isinstance(nodo.op, ast.Not):
+            return not v
+        if v is None:
+            raise TypeError("falta un dato")
+        if isinstance(nodo.op, ast.USub):
+            return -v
+        if isinstance(nodo.op, ast.UAdd):
+            return +v
+        raise SyntaxError("operador no permitido")
+    if isinstance(nodo, ast.BoolOp):
+        valores = [_ev(v, ns) for v in nodo.values]
+        return all(valores) if isinstance(nodo.op, ast.And) else any(valores)
+    if isinstance(nodo, ast.Compare):
+        izq = _ev(nodo.left, ns)
+        for op, der in zip(nodo.ops, nodo.comparators):
+            if type(op) not in _COMPARA:
+                raise SyntaxError("comparación no permitida")
+            d = _ev(der, ns)
+            if izq is None or d is None:
+                raise TypeError("falta un dato")
+            if not _COMPARA[type(op)](izq, d):
+                return False
+            izq = d
+        return True
+    if isinstance(nodo, ast.Call) and isinstance(nodo.func, ast.Name) and not nodo.keywords:
+        if nodo.func.id not in _FUNCIONES:
+            raise NameError(f"name '{nodo.func.id}' is not defined")
+        args = [_ev(a, ns) for a in nodo.args]
+        return _FUNCIONES[nodo.func.id](*args)
+    raise SyntaxError("expresión no permitida")
+
+
+def evaluar_formula(expr: str, ns: dict):
+    """El valor de la fórmula contra el namespace {campo, lista, sistema}.
+    Levanta SyntaxError / NameError / TypeError / ValueError / ZeroDivisionError."""
+    arbol = ast.parse(_a_python((expr or "").strip()), mode="eval")
+    return _ev(arbol.body, ns)
+
+
+def namespace_de_prueba(campos, plantilla=None) -> dict:
+    """Valores de juguete para COMPILAR una fórmula al guardar: los nombres
+    reales del formulario, de la lista y del sistema, con un valor del tipo
+    que corresponde. Si se nombra algo que no existe, falla acá y no en la
+    pantalla del afiliado (mismo criterio que validador.error_de_expresion)."""
+    muestra = {"numero": 1.0, "fecha": "2020-01-15", "booleano": True, "texto": "x",
+               "cuil": "20111111112", "dni": "12345678"}
+    ns_campo = {}
+    for nombre, c in zip(nombres_de_campos(campos), campos or []):
+        if nombre:
+            tipo = c.get("tipo_dato")
+            ns_campo[nombre] = muestra.get(tipo if tipo in ("numero", "fecha", "booleano") else "texto")
+    ns_lista = ({col["clave"]: muestra.get(col["tipo"], "x") for col in listas_mod.columnas(plantilla)}
+                if plantilla in listas_mod.PLANTILLAS else {})
+    ns_sistema = {k: muestra[t] for k, (t, _) in DATOS_SISTEMA.items()}
+    return {"campo": ns_campo, "lista": ns_lista, "sistema": ns_sistema}
+
+
+def error_de_formula(expr: str, campos, plantilla=None):
+    """None si la fórmula compila y evalúa contra los nombres del formulario;
+    si no, el motivo en castellano (lo ve el admin al guardar o al probar)."""
+    if not (expr or "").strip():
+        return "La fórmula está vacía."
+    try:
+        evaluar_formula(expr, namespace_de_prueba(campos, plantilla))
+    except SyntaxError:
+        return ("No es una fórmula válida: usá punto decimal, * para multiplicar, "
+                "y / o / no para combinar, y las funciones de la lista.")
+    except NameError as e:
+        nombre = str(e).split("'")[1] if "'" in str(e) else "?"
+        return f"No existe ningún dato llamado «{nombre}». Los nombres válidos son los que muestra el constructor."
+    except ZeroDivisionError:
+        return "La fórmula divide por cero."
+    except Exception as e:
+        return f"No se pudo evaluar la fórmula ({type(e).__name__})."
+    return None
+
+
+def funcion_saneada(v: dict, campos, indice=None, calculado=False, requisito=False):
+    """Una validación de fuente `funcion` normalizada, o None si está mal
+    formada. Contrato en PLAN_LISTAS_VALIDACIONES.md ("El contrato")."""
+    origen = v.get("origen")
+    if origen not in ORIGENES:
+        return None
+    plantilla = v.get("lista") if origen == "lista" else None
+    if origen == "lista" and plantilla not in listas_mod.PLANTILLAS:
+        return None
+    clave2 = None
+    if origen == "lista" and not requisito and v.get("clave2") not in (None, ""):
+        try:
+            clave2 = int(v.get("clave2"))
+        except (TypeError, ValueError):
+            return None
+        # La segunda clave puede ser el MISMO campo que se valida (el caso
+        # típico: el DNI del familiar se busca con el DNI que se tipeó).
+        if not (0 <= clave2 < len(campos or [])):
+            return None
+        if (campos[clave2].get("tipo_dato") or "") in ("separador", "archivo", "booleano", "multiple", TIPO_CALCULADO):
+            return None
+    trae = str(v.get("trae") or "").strip()
+    if trae == "__formula":        # marca del constructor: "lo que se mira es una fórmula"
+        trae = ""
+    formula = str(v.get("formula") or "").strip() or None
+    if origen == "lista":
+        columnas = {c["clave"] for c in listas_mod.columnas(plantilla)}
+        if trae and trae != "existe" and trae not in columnas:
+            return None
+        if not trae and not formula:
+            trae = "existe"
+    else:
+        if trae and trae not in DATOS_SISTEMA:
+            return None
+        if not trae and not formula:
+            return None
+    if formula and error_de_formula(formula, campos, plantilla):
+        return None
+    operador = v.get("operador") or None
+    if operador is not None and operador not in OPERADORES:
+        return None
+    valor = str(v.get("valor") or "").strip()
+    if calculado:
+        if not formula and not trae:
+            return None
+        operador, valor = None, ""
+    elif operador is None and not formula and trae != "existe":
+        if origen == "sistema" and DATOS_SISTEMA.get(trae, ("",))[0] == "booleano":
+            operador, valor = "==", "si"   # "Tiene credencial vigente" sin más = tiene que ser sí
+        else:
+            # Un dato traído sin fórmula ni operador no afirma nada.
+            return None
+    if trae == "existe" and operador is None:
+        operador, valor = "==", "si"
+    mensaje = str(v.get("mensaje") or "").strip()[:300]
+    if not mensaje:
+        mensaje = _mensaje_funcion(origen, plantilla, trae, formula, operador, valor)
+    salida = {
+        "fuente": "funcion", "origen": origen, "lista": plantilla, "clave2": clave2,
+        "trae": trae or "", "formula": formula, "operador": operador, "valor": valor,
+        "mensaje": mensaje, "bloquea": True if requisito else bool(v.get("bloquea", True)),
+        "en_vivo": bool(v.get("en_vivo", False)) and not requisito,
+    }
+    if calculado:
+        salida["ingreso"] = True   # la función que COMPLETA el campo (Extraer / Calcular)
+    return salida
+
+
+# ---- Ingreso y validación (2026-10-18, SDN) ----------------------------
+# Un campo tiene dos cosas separadas: el INGRESO (de dónde sale su valor: lo
+# carga el afiliado, se EXTRAE de un dato o se CALCULA con una fórmula) y la
+# VALIDACIÓN (qué se controla sobre el valor, opcional). En lo guardado, un
+# campo extraído o calculado es `tipo_dato = "calculado"` y su ingreso es la
+# validación de fuente `funcion` marcada `ingreso` (sin operador); lo demás
+# de su lista son validaciones comunes. Lo guardado antes de la marca tiene
+# una sola función sin operador: esa es el ingreso.
+
+def ingreso_de(campo) -> Optional[dict]:
+    """La función que completa un campo calculado, o None."""
+    if (campo or {}).get("tipo_dato") != TIPO_CALCULADO:
+        return None
+    funciones = [v for v in (campo.get("validaciones") or []) if v.get("fuente") == "funcion"]
+    for v in funciones:
+        if v.get("ingreso"):
+            return v
+    for v in funciones:
+        if not v.get("operador"):
+            return v
+    return funciones[0] if funciones else None
+
+
+def validaciones_de(campo) -> list:
+    """Las validaciones de un campo, sin su ingreso."""
+    ing = ingreso_de(campo)
+    return [v for v in (campo.get("validaciones") or []) if v is not ing]
+
+
+def descripcion_ingreso(campo) -> Optional[dict]:
+    """Para la app del afiliado y el operador: `modo` (extraer / calcular),
+    `dato` (la clave del sistema o la columna de lista), `propio` (si es un
+    dato que la persona edita en su perfil: al corregirlo se actualiza) y
+    `rotulo`."""
+    ing = ingreso_de(campo)
+    if not ing:
+        return None
+    if ing.get("formula"):
+        return {"modo": "calcular", "dato": None, "propio": False, "rotulo": "una fórmula"}
+    dato = ing.get("trae") or ""
+    if ing.get("origen") == "sistema":
+        return {"modo": "extraer", "dato": dato, "propio": dato in DATOS_PROPIOS,
+                "rotulo": DATOS_SISTEMA.get(dato, ("", dato))[1]}
+    col = next((c for c in listas_mod.columnas(ing.get("lista")) if c["clave"] == dato), None)
+    return {"modo": "extraer", "dato": dato, "propio": False,
+            "rotulo": (col["rotulo"] if col else dato) + " (lista del sindicato)"}
+
+
+def _tipo_inferido(valor) -> str:
+    """El tipo de un límite escrito a mano, para validar un campo extraído
+    o calculado (que no declara tipo): número, fecha (o hoy±N) o texto."""
+    if _a_comparable(valor, "numero") is not None:
+        return "numero"
+    if _limite_comparable(valor, "fecha") is not None:
+        return "fecha"
+    return "texto"
+
+
+def _mensaje_funcion(origen, plantilla, trae, formula, operador, valor) -> str:
+    if trae == "existe":
+        nombre = listas_mod.PLANTILLAS[plantilla]["nombre"].lower()
+        return (f"Tiene que figurar en la lista «{nombre}» del sindicato." if valor != "no" and operador == "=="
+                else f"No puede figurar en la lista «{nombre}» del sindicato.")
+    que = formula or (nombre_dato(trae) if origen == "sistema" else f"{origen}.{trae}")
+    if operador:
+        return f"{que} tiene que ser {_OP_LEGIBLE[operador]} {valor}."
+    return f"No se cumple: {que}."
+
+
+def requisitos_saneados(crudos, campos) -> list:
+    """Los requisitos para INICIAR el trámite (TipoTramite.requisitos): una
+    lista de validaciones de fuente `funcion`, todas bloqueantes y sin
+    segunda clave (se evalúan antes de que haya formulario)."""
+    salida = []
+    for r in crudos or []:
+        if isinstance(r, dict):
+            limpio = funcion_saneada(r, campos, requisito=True)
+            if limpio:
+                salida.append(limpio)
+    return salida
+
+
+def evaluar_campo_en_vivo(campos, indice, valores, contexto) -> dict:
+    """La validación EN VIVO de un campo (D3, bloque 4): solo sus funciones
+    marcadas `en_vivo`, y solo pasa / no pasa con el mensaje del admin --
+    nunca la fila ni el dato que se miró. Recalcula además los campos
+    `calculado` que usan a este campo como segunda clave, porque es el
+    momento en que se puede. Devuelve {"pasa", "mensaje", "calculados"}."""
+    campos = list(campos or [])
+    try:
+        campo = campos[int(indice)]
+    except (IndexError, TypeError, ValueError):
+        return {"pasa": True, "mensaje": "", "calculados": {}}
+    ns_campo = _namespace_campos(campos, valores)
+    cache = {}
+    pasa, mensaje = True, ""
+    if str(valores.get(campo.get("id")) or "").strip():
+        for v in campo.get("validaciones") or []:
+            if v.get("fuente") != "funcion" or not v.get("en_vivo"):
+                continue
+            ok, _r, _m = _evaluar_funcion(v, ns_campo, contexto, campos, valores, cache)
+            if not ok and v.get("bloquea", True):
+                pasa, mensaje = False, v.get("mensaje") or ""
+                break
+    calculados = {}
+    for c in campos:
+        if c.get("tipo_dato") != TIPO_CALCULADO:
+            continue
+        f = next((v for v in (c.get("validaciones") or []) if v.get("fuente") == "funcion"), None)
+        if not f or f.get("clave2") is None or int(f["clave2"]) != int(indice):
+            continue
+        _ok, resultado, _m = _evaluar_funcion(f, ns_campo, contexto, campos, valores, cache)
+        calculados[c.get("id")] = _texto_resultado(resultado) if resultado is not None else ""
+    return {"pasa": pasa, "mensaje": mensaje, "calculados": calculados}
+
+
+def requisitos_al_abrir(campos, requisitos, contexto) -> dict:
+    """Al abrir el formulario (bloque 4): si los requisitos no se cumplen,
+    los mensajes en vez de los campos; y los calculados que ya se pueden
+    completar (los que no dependen de una segunda clave del formulario)."""
+    v = evaluar_envio(campos, [], {}, contexto, requisitos)
+    calculados = {}
+    for c in campos or []:
+        if c.get("tipo_dato") != TIPO_CALCULADO:
+            continue
+        f = next((x for x in (c.get("validaciones") or []) if x.get("fuente") == "funcion"), None)
+        if f and f.get("clave2") is None and v["calculados"].get(c.get("id")):
+            calculados[c.get("id")] = v["calculados"][c.get("id")]
+    mensajes = [r.get("mensaje") for r in (requisitos or [])
+                if r.get("mensaje") in v["errores"]]
+    return {"cumple": not mensajes, "mensajes": mensajes, "calculados": calculados}
+
+
+def _texto_resultado(resultado) -> str:
+    if resultado is None:
+        return ""
+    if isinstance(resultado, bool):
+        return "Sí" if resultado else "No"
+    if isinstance(resultado, float):
+        return str(int(resultado)) if resultado == int(resultado) else f"{resultado:.2f}".rstrip("0").rstrip(".")
+    return str(resultado)
+
+
+def _comparable_para(resultado, valor):
+    """El `valor` de la validación convertido al tipo del resultado."""
+    if isinstance(resultado, bool):
+        return _tipado(valor, "booleano")
+    if isinstance(resultado, (int, float)):
+        return _a_comparable(valor, "numero")
+    if isinstance(resultado, str) and _RE_FECHA.match(resultado):
+        return _limite_comparable(valor, "fecha")
+    return str(valor or "").strip()
+
+
+def clave2_de(v, campos, valores):
+    """(clave2, motivo): la segunda clave con la que esta validación busca
+    en la lista -- el valor del campo del formulario que `clave2` señala,
+    normalizado como lo normaliza la lista (un DNI, a sus dígitos). Sin
+    segunda clave, ''. `motivo` explica por qué no se puede buscar."""
+    if v.get("clave2") is None:
+        return "", ""
+    try:
+        campo2 = campos[int(v["clave2"])]
+    except (IndexError, TypeError, ValueError):
+        return None, "la segunda clave no existe en el formulario"
+    clave2 = str(valores.get(campo2.get("id")) or "").strip()
+    if not clave2:
+        return None, "falta el dato de la segunda clave"
+    return listas_mod.normalizar_dni(clave2) or clave2, ""
+
+
+def busquedas_necesarias(campos, requisitos, valores) -> set:
+    """Las (plantilla, clave2) que un envío va a buscar en las listas, para
+    que db.contexto_validaciones las traiga ANTES de evaluar y la
+    evaluación siga siendo pura (y una sola conexión por request)."""
+    pendientes = [v for c in (campos or []) for v in (c.get("validaciones") or [])
+                  if v.get("fuente") == "funcion" and v.get("origen") == "lista"]
+    pendientes += [r for r in (requisitos or []) if r.get("origen") == "lista"]
+    salida = set()
+    for v in pendientes:
+        clave2, motivo = clave2_de(v, campos, valores)
+        if not motivo:
+            salida.add((v.get("lista"), clave2))
+    return salida
+
+
+def catalogo_funcion() -> dict:
+    """Lo que el constructor ofrece para armar una validación por función:
+    los datos del sistema (con grupo, qué devuelve y un ejemplo), las
+    funciones de fórmula (con ejemplo) y las listas con sus columnas. Es el
+    catálogo del código, no una lista a mano."""
+    return {
+        "sistema": [{"clave": k, "nombre": nombre_dato(k), "tipo": t, "rotulo": r, "grupo": AYUDA_SISTEMA[k][0],
+                     "devuelve": AYUDA_SISTEMA[k][1], "ejemplo": AYUDA_SISTEMA[k][2], "significa": AYUDA_SISTEMA[k][3],
+                     "propio": k in DATOS_PROPIOS}
+                    for k, (t, r) in DATOS_SISTEMA.items()],
+        "familia": {"clave": FAMILIA_SISTEMA, "nombre": "Afiliado", "prefijo": f"sistema.{FAMILIA_SISTEMA}."},
+        "grupos": [{"clave": k, "nombre": n} for k, n in GRUPOS_SISTEMA],
+        "comparar": dict(COMO_SE_COMPARA),
+        "funciones": [{"nombre": k, "ayuda": v, "ejemplo": AYUDA_FUNCION[k][0], "significa": AYUDA_FUNCION[k][1]}
+                      for k, v in FUNCIONES_FORMULA.items()],
+        "listas": [{"clave": k, "nombre": p["nombre"],
+                    "columnas": [{"clave": c["clave"], "tipo": c["tipo"], "rotulo": c["rotulo"],
+                                  "busqueda": c.get("busqueda", 0)} for c in p["columnas"]]}
+                   for k, p in listas_mod.PLANTILLAS.items()],
+        "operadores": list(OPERADORES),
+    }
+
+
+def _evaluar_funcion(v, ns_campo, contexto, campos, valores, cache):
+    """(pasa, resultado, motivo). `motivo` explica por qué no pasó, para el
+    banco de pruebas y los calculados; lo que ve el afiliado es `mensaje`."""
+    sistema = (contexto or {}).get("sistema") or {}
+    buscar = (contexto or {}).get("buscar")
+    fila = None
+    if v.get("origen") == "lista":
+        clave2, motivo = clave2_de(v, campos, valores)
+        if motivo:
+            return False, None, motivo
+        llave = (v.get("lista"), clave2)
+        if llave not in cache:
+            cache[llave] = buscar(v.get("lista"), clave2) if buscar else None
+        fila = cache[llave]
+    ns = {"campo": ns_campo, "lista": _namespace_lista(v.get("lista"), fila), "sistema": sistema}
+    try:
+        if v.get("formula"):
+            if v.get("origen") == "lista" and fila is None:
+                return False, None, "no está en la lista"
+            resultado = evaluar_formula(v["formula"], ns)
+        elif v.get("trae") == "existe":
+            resultado = fila is not None
+        elif v.get("origen") == "lista":
+            if fila is None:
+                return False, None, "no está en la lista"
+            resultado = ns["lista"].get(v.get("trae"))
+        else:
+            resultado = sistema.get(v.get("trae"))
+        if v.get("operador"):
+            limite = _comparable_para(resultado, v.get("valor"))
+            if resultado is None or limite is None:
+                return False, resultado, "falta el dato para comparar"
+            return bool(_compara(resultado, v["operador"], limite)
+                        if not isinstance(resultado, str) or _RE_FECHA.match(resultado)
+                        else _compara(_plano(resultado), v["operador"], _plano(str(limite)))), resultado, "no cumple la condición"
+        if v.get("formula") and not isinstance(resultado, bool) and resultado is not None:
+            # un calculado: lo que se muestra es el resultado
+            return True, resultado, ""
+        return bool(resultado), resultado, "no cumple la condición"
+    except ZeroDivisionError:
+        return False, None, "la fórmula divide por cero"
+    except (TypeError, ValueError):
+        return False, None, "falta un dato que la fórmula necesita"
+    except (SyntaxError, NameError):
+        return False, None, "la fórmula no se pudo evaluar"

@@ -46,24 +46,27 @@ def _admin_client(usuario, clave):
 def test_alta_de_un_segundo_admin_queda_en_el_sindicato_de_la_sesion():
     c = _admin_client("20111111110", "clave-a")
     r = c.post("/admin/usuario", data={
-        "usuario": "20333333330", "nombre": "Admin Dos", "clave_inicial": "nueva-clave",
+        "usuario": "20333333334", "nombre": "Admin Dos", "clave_inicial": "nueva-clave",
         "rol": "super",
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
-        u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == "20333333330")).first()
+        u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == "20333333334")).first()
         assert u is not None
         assert u.sindicato_id == SID_A          # no un campo del form -- sale de la sesión
         assert u.nombre == "Admin Dos"
-        assert u.debe_cambiar_clave is True
-        assert auth.verificar_clave("nueva-clave", u.clave_hash)
+        # La clave es de la persona: vive en su cuenta, la fila queda vacía.
+        assert u.clave_hash == ""
+        cuenta = db.cuenta_panel("20333333334")
+        assert cuenta.debe_cambiar_clave is True
+        assert auth.verificar_clave("nueva-clave", cuenta.clave_hash)
     print("OK  test_alta_de_un_segundo_admin_queda_en_el_sindicato_de_la_sesion")
 
 
 def test_alta_duplicada_en_el_mismo_sindicato_rechaza():
     c = _admin_client("20111111110", "clave-a")
     r = c.post("/admin/usuario", data={
-        "usuario": "20333333330", "nombre": "Otra vez", "clave_inicial": "x",
+        "usuario": "20333333334", "nombre": "Otra vez", "clave_inicial": "x",
         "rol": "super",
     }, follow_redirects=False)
     assert r.status_code == 303
@@ -75,14 +78,14 @@ def test_listado_de_admin_no_ve_los_de_otro_sindicato():
     c = _admin_client("20111111110", "clave-a")
     r = c.get("/admin")
     assert "20111111110" in r.text
-    assert "20333333330" in r.text
+    assert "20333333334" in r.text
     assert "20222222220" not in r.text  # del sindicato B, no debe aparecer
     print("OK  test_listado_de_admin_no_ve_los_de_otro_sindicato")
 
 
 def test_editar_solo_cambia_nombre():
     with Session(db.engine) as s:
-        u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == "20333333330")).first()
+        u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == "20333333334")).first()
         uid = u.id
 
     c = _admin_client("20111111110", "clave-a")
@@ -95,7 +98,7 @@ def test_editar_solo_cambia_nombre():
     with Session(db.engine) as s:
         u = s.get(UsuarioSindicato, uid)
         assert u.nombre == "Admin Dos Editado"
-        assert u.usuario == "20333333330"  # sin cambios
+        assert u.usuario == "20333333334"  # sin cambios
     print("OK  test_editar_solo_cambia_nombre")
 
 
@@ -116,7 +119,7 @@ def test_no_puede_editar_ni_dar_de_baja_admin_de_otro_sindicato():
 
 def test_baja_y_reactivar():
     with Session(db.engine) as s:
-        u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == "20333333330")).first()
+        u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == "20333333334")).first()
         uid = u.id
 
     c = _admin_client("20111111110", "clave-a")

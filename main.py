@@ -26,6 +26,7 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
 import asyncio
+import logging
 import os
 import re
 import threading
@@ -46,12 +47,18 @@ from psycopg.errors import QueryCanceled
 from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
+import captcha
+import correo
+import cuit
 import encuestas
 import esquema
+import resumen_diario
+import telegram
 import precios_ia
 import resultados_encuesta
 import fechas
 import geo
+import secrets
 import db
 import auth
 import validaciones_tramite
@@ -70,7 +77,7 @@ from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_compar
                         comparar_lineas, ErrorLectura)
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
-                        error_de_expresion,
+                        error_de_expresion, totales_leidos, clasificacion_vista,
                         CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
@@ -80,7 +87,12 @@ import entorno
 import permisos as permisos_mod
 from permisos import SECCION_SUPER_ADMIN
 import recursos
+import empaquetar
 import render_admin
+import grilla_bancaria
+import asistente_tramites
+import asistente_tramites_ia
+import listas as listas_mod
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
@@ -88,7 +100,20 @@ from observabilidad import sentry_panel
 from observabilidad import metricas_panel
 import sentry_config
 import planificador
+import preparacion
+import lectores
 from xsk.motor import tablero as xsk_tablero
+
+# Traza de las acciones del panel del sindicato sobre cuentas de personas
+# (restablecer clave, confirmar identidad). Uvicorn no configura el logger raíz
+# y por defecto descartaría el INFO: este logger lleva su propio handler para
+# que la línea llegue al log de Render. Nunca se escribe la clave temporal.
+log = logging.getLogger("mitrabajo.panel")
+if not log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
 from xsk.motor.registro import ErrorRegistro as XSKErrorRegistro
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
@@ -134,27 +159,43 @@ def set_cookie_segura(respuesta, nombre, valor, max_age=None, samesite="lax"):
 LOGIN_MAX_FALLOS = int(os.getenv("LOGIN_MAX_FALLOS", "10"))
 LOGIN_ESPERA_SEGUNDOS = int(os.getenv("LOGIN_ESPERA_SEGUNDOS", "60"))
 _intentos_login: dict[str, list] = {}
+# El registro tiene su PROPIA tabla (PLAN_REGISTRO.md, etapa 1): un tanteo de
+# CUILes contra el registro no tiene que dejar sin login a quien comparte la IP,
+# ni al revés. Mismo mecanismo y mismos umbrales que los logins.
+_intentos_registro: dict[str, list] = {}
+# Validación en vivo de un campo de trámite (PLAN_LISTAS_VALIDACIONES.md,
+# D3): {(cuil, tipo_tramite_id): intentos}. Diez por sesión y formulario, para
+# que la respuesta "está / no está en la lista" no sirva para enumerar la
+# lista probando DNI. Se limpia al enviar el trámite.
+_intentos_en_vivo: dict[tuple, int] = {}
+EN_VIVO_MAX_INTENTOS = 10
 
 
-def _login_bloqueado(request) -> bool:
+def _login_bloqueado(request, tabla=None) -> bool:
     import time
-    estado = _intentos_login.get(_ip_de(request))
+    if tabla is None:
+        tabla = _intentos_login
+    estado = tabla.get(_ip_de(request))
     return bool(estado) and estado[1] > time.time()
 
 
-def _login_fallo(request) -> None:
+def _login_fallo(request, tabla=None) -> None:
     import time
-    estado = _intentos_login.setdefault(_ip_de(request), [0, 0.0])
+    if tabla is None:
+        tabla = _intentos_login
+    estado = tabla.setdefault(_ip_de(request), [0, 0.0])
     estado[0] += 1
     if estado[0] >= LOGIN_MAX_FALLOS:
         estado[0] = 0
         estado[1] = time.time() + LOGIN_ESPERA_SEGUNDOS
-    if len(_intentos_login) > 5000:      # que la tabla no crezca sin límite
-        _intentos_login.clear()
+    if len(tabla) > 5000:      # que la tabla no crezca sin límite
+        tabla.clear()
 
 
-def _login_ok(request) -> None:
-    _intentos_login.pop(_ip_de(request), None)
+def _login_ok(request, tabla=None) -> None:
+    if tabla is None:
+        tabla = _intentos_login
+    tabla.pop(_ip_de(request), None)
 
 
 @app.get("/sw.js")
@@ -216,6 +257,10 @@ def _capturar_en_sentry(request: Request, exc: Exception, ref: str, codigo: str)
                 rol, sid = r, ses.get("sid")
                 break
         sentry_config.capturar(exc, ruta=ruta, rol=rol, sindicato_id=sid, ref=ref, codigo=codigo)
+        # El mismo aviso, al teléfono del equipo (telegram.py): mismos datos que
+        # Sentry, sin personas, con freno por código. Sale en otro hilo.
+        telegram.avisar_error(codigo=codigo, ref=ref, ruta=ruta, rol=rol,
+                              sindicato_id=sid, entorno_nombre=entorno.ENTORNO)
     except Exception:
         pass
 
@@ -364,15 +409,42 @@ async def sin_cache_en_paneles(request: Request, call_next):
 # cabeceras. Un `blob:` no es una fuente externa: lo fabrica el mismo
 # documento a partir de un archivo que la persona eligió, así que no abre
 # ninguna puerta que `data:` no tuviera ya abierta.
-CSP = ("default-src 'self'; "
-       "img-src 'self' data: blob: https:; "
-       "media-src 'self' data: blob:; "
-       "style-src 'self' 'unsafe-inline'; "
-       "script-src 'self' 'unsafe-inline'; "
-       "connect-src 'self' https:; "
-       "frame-ancestors 'none'; "
-       "base-uri 'self'; "
-       "form-action 'self'")
+def _armar_csp(captcha_activo=None) -> str:
+    """Arma la CSP. Con el captcha apagado devuelve la política de siempre,
+    byte por byte. Con Turnstile prendido suma `https://challenges.cloudflare.com`
+    en `script-src` (el api.js del widget) y un `frame-src` (el widget vive en un
+    iframe de Cloudflare).
+
+    **Es la excepción explícita D7 de PLAN_REGISTRO.md a "nada externo"**: se
+    carga un script y un marco de un tercero, solo en las pantallas de registro
+    y recuperación (el parcial `_captcha.html`), y solo si hay claves. Se evalúa
+    UNA vez al importar (`CSP`), igual que el global de Jinja `captcha_site_key`:
+    así la política y el widget nunca quedan desparejos."""
+    if captcha_activo is None:
+        captcha_activo = captcha.habilitado()
+    origen = " https://challenges.cloudflare.com" if captcha_activo else ""
+    partes = ["default-src 'self'",
+              "img-src 'self' data: blob: https:",
+              "media-src 'self' data: blob:",
+              "style-src 'self' 'unsafe-inline'",
+              f"script-src 'self' 'unsafe-inline'{origen}",
+              "connect-src 'self' https:"]
+    if captcha_activo:
+        partes.append("frame-src https://challenges.cloudflare.com")
+    partes += ["frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"]
+    return "; ".join(partes)
+
+
+CSP = _armar_csp(False)          # la de siempre: la llevan todas las pantallas
+CSP_INGRESOS = _armar_csp()      # con Turnstile si hay claves: SOLO los ingresos
+# Dónde se dibuja el captcha: los dos logins con su pestaña de registro y las
+# pantallas de recuperación de clave. El resto de la app sigue con la CSP de
+# siempre, aunque el captcha esté prendido (QA etapa 1, hallazgo 3).
+RUTAS_CON_CAPTCHA = ("/ingresar", "/ingresar-empresa")
+
+
+def _csp_para(path: str) -> str:
+    return CSP_INGRESOS if any(path == r or path.startswith(r + "/") for r in RUTAS_CON_CAPTCHA) else CSP
 
 
 @app.middleware("http")
@@ -381,7 +453,7 @@ async def cabeceras_de_seguridad(request: Request, call_next):
     respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
     respuesta.headers.setdefault("X-Frame-Options", "DENY")
     respuesta.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    respuesta.headers.setdefault("Content-Security-Policy", CSP)
+    respuesta.headers.setdefault("Content-Security-Policy", _csp_para(request.url.path))
     if COOKIE_SECURE:      # demo/prod, servidos por HTTPS
         respuesta.headers.setdefault(
             "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -599,14 +671,38 @@ def _sello_static(nombre: str) -> str:
 
 
 templates.env.globals["sello_static"] = _sello_static
+
+
+def _url_static(nombre: str) -> str:
+    """La URL completa de un archivo de /static CON su sello (`?v=`). Es lo que
+    usan las plantillas de la recuperación de clave (`url_static('...')`) y el
+    mapa funcional: un solo lugar donde se arma, en vez de escribir la ruta y
+    acordarse del sello a mano (QR-7)."""
+    return f"/static/{nombre}?v={_sello_static(nombre)}"
+
+
+templates.env.globals["url_static"] = _url_static
+# Clave pública del widget de Turnstile; vacía = captcha apagado y el parcial
+# `_captcha.html` no dibuja nada. Se lee al arrancar, igual que la CSP.
+templates.env.globals["captcha_site_key"] = captcha.site_key()
 # Las fechas que lee una persona van en dd/mm/aaaa, también en las
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
+templates.env.filters["periodo"] = fechas.periodo_legible
 
 
 @app.on_event("startup")
 def _startup():
     db.init_db()
+    # El lector de fotos del enmascarado se carga al arrancar y no con la
+    # primera foto del día. Nunca puede tumbar el arranque (mejor esfuerzo).
+    if preparacion.modo() != "apagado":
+        try:
+            lectores.precargar()
+            ocr = "listo" if lectores.ocr_disponible() else "no disponible (solo PDF digital)"
+            print(f"[enmascarado] modo {preparacion.modo()}, OCR {ocr}")
+        except Exception as e:
+            print(f"[enmascarado] no se precargó el OCR ({type(e).__name__})")
     # Ninguna indexación de convenio sobrevive a un reinicio: corre en un
     # hilo de ESTE proceso. Lo que quedó en "procesando" está muerto y hay
     # que decirlo, o el admin ve un cartel que no avanza nunca.
@@ -631,6 +727,11 @@ def _startup():
             hilo_colector.arrancar(entorno.ENTORNO)
         except Exception as e:
             print(f"[colector-metricas] no arrancó ({type(e).__name__}: {e})")
+        # El resumen del día por Telegram (resumen_diario.py). Nunca tumba el arranque.
+        try:
+            resumen_diario.arrancar(entorno.ENTORNO)
+        except Exception as e:
+            print(f"[resumen-diario] no arrancó ({type(e).__name__}: {e})")
 
     try:
         colgadas = db.rescatar_indexaciones_colgadas()
@@ -644,17 +745,23 @@ def _startup():
 # ================= App del trabajador =================
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("trabajador.html", {
-        # Sin sindicato: acá NO hay uno elegido, y pasar el primero de la
-        # base (lo que hacía esta ruta) ponía el nombre de un gremio
-        # cualquiera en el encabezado y en la pestaña del navegador. Vacío,
-        # el encabezado común firma con el logo de la plataforma.
-        "request": request, "sindicato": "",
-        "marca_plataforma": db.marca_plataforma(),
-        # Demo anónima sin sindicato real: solo tiene sentido mostrar "Tu
-        # recibo" -- las demás pestañas dependen de un sindicato/login.
-        "modulos": {"recibos"},
+    # La raíz es la PUERTA: tres entradas, una por app. Hasta el 2026-09-26
+    # servía trabajador.html sin sesión -- cualquiera que entrara a la URL
+    # caía en "subí tu recibo" salteándose el login, y /api/leer le leía el
+    # archivo con la IA (créditos pagos) sin saber quién era.
+    return templates.TemplateResponse("inicio.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
     })
+
+
+def _exigir_trabajador_logueado(request: Request) -> str:
+    """Las rutas que mandan un documento a la IA exigen sesión de trabajador:
+    sin ella no hay a quién atribuir la lectura ni contra qué CUIL cortar un
+    documento ajeno, y el costo lo paga la plataforma."""
+    cuil = _cuil_seguro(request)
+    if not cuil:
+        raise ErrorApp("E-SESION-02")
+    return cuil
 
 
 def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str) -> None:
@@ -670,16 +777,107 @@ def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str)
                         uso["tokens_salida"], uso.get("duracion_ms", 0))
 
 
+# ---------- Enmascarado antes de la IA (PLAN_ENMASCARADO.md) ----------
+# Mejor esfuerzo (CLAUDE.md, decisión del 2026-09-24): nada de esto puede
+# frenar ni demorar la lectura del recibo. Con ENMASCARADO=apagado (default)
+# no se hace nada y las rutas quedan exactamente como antes.
+
+def _conocidos_trabajador(cuil: str):
+    """Lo que la app ya sabe de quien sube el documento: su CUIL, su nombre
+    (la persona, CuentaTrabajador) y los CUITs de sus empleadores. Buscar un
+    texto conocido es lo que más fiable hace el tapado, y es lo que permite
+    rearmar un CUIT con certeza aunque el OCR le erre un dígito. None en modo
+    apagado: no se toca la base."""
+    if not cuil or preparacion.modo() == "apagado":
+        return None
+    try:
+        nombre = (db.datos_personales(cuil) or {}).get("nombre") or ""
+    except Exception:
+        nombre = ""
+    return preparacion.E.Conocidos(cuil=cuil, nombre=nombre, cuits=db.cuits_conocidos(cuil=cuil))
+
+
+async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid, tipo: str):
+    """Tapa lo que identifica (si el modo lo pide) y deja el registro. En un
+    hilo aparte, como la llamada a la IA: el OCR usa CPU."""
+    if preparacion.modo() == "apagado":
+        return preparacion.Preparado("apagado")
+    try:
+        prep = await run_in_threadpool(preparacion.preparar, contenido, content_type, conocidos)
+    except Exception:
+        prep = preparacion.Preparado("apagado")
+    rid = db.registrar_enmascarado(sid or None, tipo, prep.registro)
+    await _guardar_diagnostico(rid, prep, contenido, content_type)
+    return prep
+
+
+async def _guardar_diagnostico(rid, prep, contenido: bytes, content_type: str) -> None:
+    """TRANSITORIO, solo Pruebas: guarda la imagen original y la enviada a la
+    IA para revisarlas desde /plataforma (preparacion.guardar_imagenes_habilitado).
+    Nunca frena el recibo."""
+    if not rid or not preparacion.guardar_imagenes_habilitado():
+        return
+    try:
+        par = await run_in_threadpool(preparacion.imagenes_diagnostico, prep, contenido, content_type)
+        if par:
+            db.guardar_imagenes_enmascarado(rid, *par, dias=preparacion.DIAS_IMAGENES)
+    except Exception as e:
+        print(f"[enmascarado] diagnóstico sin guardar ({type(e).__name__})")
+
+
+def _para_la_ia(prep) -> dict:
+    """Los argumentos extra para extraer(): la imagen ya preparada (tapada o
+    no) y el aviso de zonas tapadas. Vacío en modo apagado: la llamada queda
+    idéntica a la de siempre."""
+    if prep.imagen is None:
+        return {}
+    return {"imagen": prep.imagen, "aviso_enmascarado": prep.tapado}
+
+
+def _acreditar_recibo_propio(cuil_sesion: str, recibo: dict) -> None:
+    """Nivel 3 de fiabilidad (PLAN_REGISTRO.md, D3): "recibo propio verificado
+    por la IA". Se otorga en `/api/leer`, DESPUÉS del corte de pertenencia
+    (E-RECIBO-04), porque ahí la que leyó el documento fue la IA: el CUIL
+    sale del archivo y no de un JSON que arma el cliente (`/api/validar`
+    recibe el recibo del cliente y no acredita nada).
+
+    Se exige el CUIL leído presente e igual al de la sesión FIRMADA: un recibo
+    donde la IA no pudo leer el CUIL pasa el corte de pertenencia pero no
+    acredita nada. `subir_nivel` solo sube, así que no baja un nivel 4. Sesión
+    corta y propia (a esta altura de `/api/leer` no hay ninguna abierta).
+
+    Con `MOCK_EXTRACTOR=1` (Pruebas) el mock devuelve el CUIL de la sesión y
+    el nivel sube igual: no hay lectura real, pero es el entorno de pruebas."""
+    cuil_sesion = _norm_cuil(cuil_sesion)
+    cuil_leido = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+    if not cuil_sesion or not cuil_leido or cuil_leido != cuil_sesion:
+        return
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == cuil_sesion)).first()
+        if cuenta and db.subir_nivel(s, cuenta, "recibo_propio"):
+            s.commit()
+
+
 @app.post("/api/leer")
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
+    _exigir_trabajador_logueado(request)
     contenido = await archivo.read()
     sid = sindicato_activo_trabajador(request)
+    conocidos = _conocidos_trabajador(_cuil_seguro(request))
+    prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, sid, "recibo")
+    # Un recibo de OTRA persona se corta acá, ANTES de mandarlo a la IA: ni se
+    # paga la lectura ni sale el documento. Solo con un CUIL ajeno de dígito
+    # verificador válido (enmascarado.pertenece): un dígito mal leído por el OCR
+    # no puede rechazarle a nadie su propio recibo. En sombra solo se anota.
+    if prep.modo == "activo" and prep.pertenece is False:
+        raise ErrorApp("E-RECIBO-04")
     try:
         # La llamada a la IA es sincrónica y puede tardar varios segundos --
         # se corre en un hilo aparte para no bloquear el worker de FastAPI
         # (y con él, a todos los demás pedidos) mientras se espera la respuesta.
         recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
-                                              db.modelo_ia("recibos"))
+                                              db.modelo_ia("recibos"), **_para_la_ia(prep))
     except Exception as e:
         _registrar_uso_fallido(e, sid or None, _cuil_seguro(request), "recibo")
         raise ErrorApp("E-RECIBO-01")
@@ -688,6 +886,12 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     db.registrar_uso_ia(sid or None, _cuil_seguro(request), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
+    if prep.tapado:
+        # Lo que se le tapó a la IA vuelve con lo leído acá (CUIL y CUIT del
+        # documento; nombre de la persona). Antes de los chequeos de siempre,
+        # que así siguen mirando el CUIL del recibo.
+        preparacion.rearmar_recibo(recibo, prep.analisis, conocidos,
+                                   lambda cuit: db.razon_social_de_cuit(sid, cuit))
     if recibo.get("confianza") == "baja":
         raise ErrorApp("E-RECIBO-02")
     # El recibo no es de quien inició sesión: cortar ACÁ, apenas se sabe.
@@ -702,6 +906,7 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     # propósito: de un recibo ajeno no se guarda nada, ni el archivo.
     if cuil_no_coincide(recibo, _cuil_seguro(request)):
         raise ErrorApp("E-RECIBO-04")
+    _acreditar_recibo_propio(_cuil_seguro(request), recibo)
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
     # fechas): no bloquea el proceso, solo avisa y guarda una copia del
     # archivo original para que la plataforma la pueda revisar.
@@ -715,6 +920,9 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"], cuit_empleador)
     return {
         "recibo": recibo, "conceptos_nuevos": nuevos,
+        # Los totales de la pantalla de confirmar los suma el servidor con la
+        # misma regla de zonas que la validación (reintegros incluidos).
+        "totales_leidos": totales_leidos(recibo),
         "advertencia_deposito": advertencia_ultimo_deposito(recibo),
         "alerta_adulteracion": alerta if alerta.get("detectada") else None,
     }
@@ -767,7 +975,7 @@ def api_validar(request: Request, payload: dict):
                     s.add(Concepto(
                         sindicato_id=sid,
                         codigo=n["codigo"], nombre=n["descripcion"], tipo=n["tipo"],
-                        remunerativo=n.get("remunerativo", True),
+                        remunerativo=n.get("remunerativo", n.get("tipo") == "ingreso"),
                         alias=[n["descripcion"]], pendiente_revision=True,
                         cuit_empleador=cuit_empleador or None,
                         codigo_generico=codigo_generico,
@@ -795,6 +1003,11 @@ def api_validar(request: Request, payload: dict):
             **dashboard.campos_analiticos(recibo, resultado),
         )
         s.add(registro)
+        # OJO: el nivel 3 (recibo propio) NO se otorga acá. Esta ruta recibe
+        # el recibo del CLIENTE y se puede llamar sola con cualquier JSON: un
+        # impostor que solo conoce el CUIL (público) lo escribiría en
+        # `recibo.empleado.cuil` y subiría de nivel sin ningún documento. El
+        # nivel 3 sube en `/api/leer`, que es donde la IA lee el archivo.
         s.commit()
         resultado["recibo_verificado_id"] = registro.id
 
@@ -812,30 +1025,25 @@ def api_reportar(request: Request, payload: dict):
     sindicato lo revise) se registra como EnvioSindicato -- el mismo padrón
     de afiliados cotizantes que ya arma /api/enviar-sindicato para los
     recibos sin discrepancias. No reemplaza al Reporte, se suma."""
-    sid = sindicato_activo_trabajador(request)
-    if not sid:
-        raise ErrorApp("E-SESION-01")
-    resultado = payload.get("resultado") or {}
+    sid, cuil, resultado = _envio_del_afiliado(request, payload)
     fecha = fechas.ahora().strftime("%d/%m/%Y %H:%M")
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     with db.get_session() as s:
+        registro = _recibo_propio(s, resultado, sid, cuil)
         s.add(Reporte(
             sindicato_id=sid, fecha=fecha,
-            cuil=resultado.get("cuil", ""), periodo=resultado.get("periodo", ""),
+            cuil=cuil, periodo=resultado.get("periodo", ""),
             estado="nuevo", detalle=payload,
         ))
         s.add(EnvioSindicato(
-            sindicato_id=sid, cuil=resultado.get("cuil", ""),
+            sindicato_id=sid, cuil=cuil,
             periodo=resultado.get("periodo", ""), monto_cuota=monto,
             fecha=fecha, detalle=payload,
         ))
-        recibo_id = resultado.get("recibo_verificado_id")
-        if recibo_id:
-            registro = s.get(ReciboVerificado, recibo_id)
-            if registro and registro.sindicato_id == sid:
-                registro.enviado_sindicato = True
-                registro.fecha_envio = fecha
-                s.add(registro)
+        if registro:
+            registro.enviado_sindicato = True
+            registro.fecha_envio = fecha
+            s.add(registro)
         s.commit()
     return {"ok": True}
 
@@ -848,27 +1056,63 @@ def api_enviar_sindicato(request: Request, payload: dict):
     payload = {"recibo": {...}, "resultado": {...}} (lo mismo que se guarda en
     el historial propio del trabajador — ver ReciboVerificado). "resultado"
     trae "recibo_verificado_id" del intento EXACTO que se está enviando."""
-    sid = sindicato_activo_trabajador(request)
-    if not sid:
-        raise ErrorApp("E-SESION-01")
-    resultado = payload.get("resultado") or {}
+    sid, cuil, resultado = _envio_del_afiliado(request, payload)
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     fecha = fechas.ahora().strftime("%d/%m/%Y %H:%M")
     with db.get_session() as s:
+        registro = _recibo_propio(s, resultado, sid, cuil)
         s.add(EnvioSindicato(
-            sindicato_id=sid, cuil=resultado.get("cuil", ""),
+            sindicato_id=sid, cuil=cuil,
             periodo=resultado.get("periodo", ""), monto_cuota=monto,
             fecha=fecha, detalle=payload,
         ))
-        recibo_id = resultado.get("recibo_verificado_id")
-        if recibo_id:
-            registro = s.get(ReciboVerificado, recibo_id)
-            if registro and registro.sindicato_id == sid:
-                registro.enviado_sindicato = True
-                registro.fecha_envio = fecha
-                s.add(registro)
+        if registro:
+            registro.enviado_sindicato = True
+            registro.fecha_envio = fecha
+            s.add(registro)
         s.commit()
     return {"ok": True}
+
+
+def _envio_del_afiliado(request: Request, payload: dict):
+    """Lo común a /api/reportar y /api/enviar-sindicato (XSK H-0021): de quién
+    es el envío lo dice la SESIÓN FIRMADA, nunca el cuerpo del pedido. Antes
+    las dos rutas guardaban el CUIL que mandaba el navegador, así que un
+    afiliado podía fabricar la prueba de "afiliado cotizante" (art. 21 bis) a
+    nombre de otro. Si el cuerpo trae un CUIL -- el del resultado o el del
+    recibo -- y no es el de la sesión, se corta con E-RECIBO-04 sin escribir
+    nada, igual que /api/validar. Devuelve (sindicato, cuil, resultado)."""
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise ErrorApp("E-SESION-01")
+    cuil = _cuil_seguro(request)
+    if not cuil:
+        raise ErrorApp("E-SESION-02")
+    resultado = payload.get("resultado") or {}
+    if (cuiles_distintos(resultado.get("cuil"), cuil)
+            or cuil_no_coincide(payload.get("recibo") or {}, cuil)):
+        raise ErrorApp("E-RECIBO-04")
+    return sid, _norm_cuil(cuil), resultado
+
+
+def _recibo_propio(s, resultado: dict, sid: int, cuil: str):
+    """El ReciboVerificado que el envío dice mandar, solo si es DE ESTA
+    PERSONA y de este sindicato (XSK H-0021). Antes alcanzaba con que fuera
+    del sindicato: con un id ajeno (son consecutivos) un afiliado marcaba como
+    enviado el recibo de otro, y desde ahí Reportes y el Panel mostraban su
+    nombre, CUIL y empresa sin que lo hubiera consentido. Un id que no es
+    suyo corta con E-RECIBO-04 antes de escribir nada; sin id, None."""
+    recibo_id = resultado.get("recibo_verificado_id")
+    if not recibo_id:
+        return None
+    try:
+        registro = s.get(ReciboVerificado, int(recibo_id))
+    except (TypeError, ValueError):
+        registro = None
+    if (not registro or registro.sindicato_id != sid
+            or _norm_cuil(registro.cuil) != _norm_cuil(cuil)):
+        raise ErrorApp("E-RECIBO-04")
+    return registro
 
 
 @app.get("/api/mis-recibos")
@@ -895,18 +1139,24 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     """Lee el comprobante de aportes de ARCA que sube el trabajador y arma el
     semáforo. Lo persiste (si hay sesión de trabajador con sindicato
     resuelto) para que no se pierda al navegar o recargar la página."""
+    cuil = _exigir_trabajador_logueado(request)
     contenido = await archivo.read()
-    cuil = _cuil_seguro(request)
     sid = sindicato_activo_trabajador(request)
+    conocidos = _conocidos_trabajador(cuil)
+    prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, sid, "aportes")
+    if prep.modo == "activo" and prep.pertenece is False:
+        raise ErrorApp("E-APORTE-03")
     try:
         datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type,
-                                             db.modelo_ia("recibos"))
+                                             db.modelo_ia("recibos"), **_para_la_ia(prep))
     except Exception as e:
         _registrar_uso_fallido(e, sid or None, cuil, "aportes")
         raise ErrorApp("E-APORTE-01")
     db.registrar_uso_ia(sid or None, cuil, "aportes",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
+    if prep.tapado:
+        preparacion.rearmar_aportes(datos, prep.analisis, conocidos)
     if datos.get("confianza") == "baja" or not datos.get("meses"):
         raise ErrorApp("E-APORTE-02")
     # Mismo corte que en /api/leer, y acá importa todavía más: sin este
@@ -975,10 +1225,13 @@ PERMISOS_RUTAS = {
     "/admin/trabajador/georreferenciar-pendientes": "trabajadores",
     "/admin/trabajador/baja":               "trabajadores",
     "/admin/trabajador/alta-logica":        "trabajadores",
+    "/admin/trabajador/confirmar-identidad": "trabajadores",
+    "/admin/trabajador/restablecer-clave":  "trabajadores",
 
     # La gestión de usuarios es del Super Admin y de nadie más: no es una
     # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
     "/admin/usuario":                       SECCION_SUPER_ADMIN,
+    "/admin/usuario/padron":                SECCION_SUPER_ADMIN,
     "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
     "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
     "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
@@ -990,6 +1243,8 @@ PERMISOS_RUTAS = {
     "/admin/concepto/confirmar":            "conceptos",
     "/admin/concepto/fusionar":             "conceptos",
     "/admin/conceptos-universales":         "conceptos",
+    "/admin/reportes/lista":                "reportes",
+    "/admin/reportes/recibo/{recibo_id}":   "reportes",
     "/admin/formula":                       "formulas",
     "/admin/formula/borrar":                "formulas",
     "/admin/aprender":                      "aprendizaje",
@@ -999,6 +1254,12 @@ PERMISOS_RUTAS = {
     "/admin/noticia/borrar":                "noticias",
     "/admin/beneficio":                     "beneficios",
     "/admin/beneficio/borrar":              "beneficios",
+    "/admin/listas":                        "listas",
+    "/admin/lista/cargar":                  "listas",
+    "/admin/lista/borrar":                  "listas",
+    "/admin/listas/modelo/{plantilla}.csv": "listas",
+    "/admin/lista/{lista_id}":              "listas",
+    "/admin/lista/{lista_id}/datos.csv":    "listas",
     "/admin/seccional":                     "seccionales",
     "/admin/seccional/borrar":              "seccionales",
     "/admin/seccional/{seccional_id}/ficha": "seccionales",
@@ -1031,6 +1292,7 @@ PERMISOS_RUTAS = {
 
     "/admin/tramite-tipo":                  "tramites_formularios",
     "/admin/tramite-tipo/probar":           "tramites_formularios",
+    "/admin/tramite-tipo/nombres":          "tramites_formularios",
     "/admin/tramite-tipo/borrar":           "tramites_formularios",
     "/admin/tramite/{tramite_id}":          "tramites_recibidos",
     "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
@@ -1044,6 +1306,8 @@ PERMISOS_RUTAS = {
     "/admin/empleador":                     "emp_empresas",
     "/admin/empleador/baja":                "emp_empresas",
     "/admin/empleador/alta-logica":         "emp_empresas",
+    "/admin/empleador/confirmar-identidad": "emp_empresas",
+    "/admin/empleador/restablecer-clave":   "emp_empresas",
     "/admin/empleador/importar-cuits":      "emp_empresas",
     "/admin/notificacion-empresa":          "emp_notificaciones",
     "/admin/notificacion-empresa/preview":  "emp_notificaciones",
@@ -1102,8 +1366,12 @@ PERMISOS_RUTAS = {
 # panel en vez de tirar 403. Su permiso se chequea adentro del handler, con
 # el mismo criterio -- una pantalla que redirige es mejor que un 403 seco.
 # Sus endpoints de datos (/admin/dashboard/*) sí están todos gateados.
+# /admin/dashboard-v2 (PLAN_DASHBOARD_V2.md) está por la misma razón: es la
+# misma página en su versión nueva, con el mismo chequeo adentro, y pide sus
+# datos a los mismos endpoints gateados.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
-                           "/admin/dashboard"}
+                           "/admin/dashboard", "/admin/dashboard-v2",
+                           "/admin/elegir", "/admin/cambiar-sindicato"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -1153,6 +1421,12 @@ def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
         return
     if not db.tiene_permiso(uid, seccion):
         raise _sin_permiso("No tenés permiso para esta sección del panel.")
+    # El catálogo del sindicato es de solo lectura para quien está acotado a
+    # una seccional (PLAN_ALCANCE_SECCIONAL.md, bloque 5): lo ve, no lo edita.
+    if (seccion in permisos_mod.SECCIONES_CATALOGO and request.method == "POST"
+            and db.es_acotado(uid)):
+        raise _sin_permiso("El catálogo del sindicato (conceptos, reglas, aprendizaje y "
+                           "convenio) lo edita el administrador general.")
 
 
 def exigir_sindicato(request: Request) -> int:
@@ -1222,6 +1496,11 @@ def admin(request: Request):
     def puede(*secciones) -> bool:
         return any(x in permisos for x in secciones)
 
+    # Sobre qué seccionales opera quien mira (db.alcance_seccional): None =
+    # todas, {id} = esa, set() = ninguna. Recorta el padrón, las
+    # publicaciones, las seccionales, las áreas y los usuarios EN LA CONSULTA.
+    alcance_propio = db.alcance_seccional(uid)
+
     with db.get_session() as s:
         sind = s.get(Sindicato, sid)
         # Los conceptos alimentan además los <select> de Fórmulas y el panel
@@ -1231,24 +1510,47 @@ def admin(request: Request):
             if puede("conceptos", "formulas", "aprendizaje") else []
         formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all() \
             if puede("formulas") else []
-        reportes = s.exec(select(Reporte).where(Reporte.sindicato_id == sid)
-                          .order_by(Reporte.id.desc())).all() \
-            if puede("reportes") else []
-        # El padrón se usa también para resolver nombres por CUIL en Reportes
-        # y en Cotizantes, que solo guardan el CUIL. Viene como dicts con el
-        # empadronamiento y la persona ya unidos (db.padron_del_sindicato):
-        # el nombre y el domicilio son de la persona, no de esta fila.
-        trabajadores = db.padron_del_sindicato(s, sid) \
-            if puede("trabajadores", "reportes", "cotizantes") else []
-        envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
-                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all() \
-            if puede("cotizantes") else []
+        # Qué rubro sugieren los recibos para cada concepto (dónde leyó la IA
+        # sus líneas): se propone al confirmar un pendiente y se marca el
+        # revisado que está cargado en el rubro contrario. Con la misma
+        # sesión del request, no una propia.
+        rubro_visto = {}
+        if puede("conceptos") and conceptos:
+            vistas = db.secciones_vistas(s, sid)
+            especificos = {(c.codigo.strip(), c.cuit_empleador) for c in conceptos
+                           if c.cuit_empleador}
+            for c in conceptos:
+                propuesta = clasificacion_vista(db.secciones_del_concepto(
+                    vistas, c.codigo, c.cuit_empleador, especificos))
+                if propuesta:
+                    rubro_visto[c.id] = propuesta
+        # Reportes ya no viaja en el HTML: son miles de recibos y se piden
+        # paginados a /admin/reportes/lista (anonimizados en el servidor).
+        # Viene como dicts con el empadronamiento y la persona ya unidos
+        # (db.padron_del_sindicato): el nombre y el domicilio son de la
+        # persona, no de esta fila.
+        trabajadores = db.padron_del_sindicato(s, sid, alcance_propio) \
+            if puede("trabajadores") else []
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
                              .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
             if puede("emp_empresas") else []
-    # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
-    # nombre (esas tablas solo guardan el CUIL, no el nombre).
-    nombres_por_cuil = {t["cuil"]: t["nombre"] for t in trabajadores}
+        # Nivel de fiabilidad de la cuenta de cada empresa (PLAN_REGISTRO.md),
+        # por CUIT: una cuenta es de la persona jurídica, no de este sindicato.
+        niveles_empleadores = {}
+        if empleadores:
+            for c in s.exec(select(CuentaEmpleador).where(
+                    CuentaEmpleador.cuit.in_([e.cuit for e in empleadores]))).all():
+                niveles_empleadores[c.cuit] = {
+                    "tiene_cuenta": bool(c.clave_hash),
+                    "nivel_fiabilidad": c.nivel_fiabilidad or 1,
+                    "nivel_origen": c.nivel_origen or ""}
+            # ¿Este sindicato responde por la cuenta? (db.responde_por): si la
+            # empresa ya se registró y este padrón no la tenía cuando lo hizo,
+            # la pantalla no muestra su nivel ni los botones.
+            for e in empleadores:
+                cta = niveles_empleadores.get(e.cuit)
+                if cta:
+                    cta["responde"] = db.responde_por(cta["tiene_cuenta"], e.registrado)
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1275,7 +1577,6 @@ def admin(request: Request):
     # porque necesita editar la suya. El servidor rechazaba el intento, así
     # que no había agujero, pero la pantalla ofrecía lo que no se podía
     # hacer y encima dejaba ver las delegaciones ajenas.
-    alcance_propio = db.alcance_seccional(uid)
     seccionales_visibles = [
         x for x in seccionales
         if alcance_propio is None or x["id"] in (alcance_propio or set())]
@@ -1310,21 +1611,28 @@ def admin(request: Request):
     ) if administra else []
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
+        "hoy": fechas.hoy_texto(),   # estado vigente / vencida de noticias y beneficios
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
-        "formulas": formulas, "reportes": reportes,
-        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
+        "rubro_visto": rubro_visto,
+        "formulas": formulas,
+        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
+        "niveles_empleadores": niveles_empleadores,
+        # Sobre qué seccionales opera quien mira: None = todas, {id} = esa,
+        # set() = ninguna. Los botones de cuenta solo se dibujan dentro.
+        "alcance_propio": alcance_propio,
+        "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
         "usuarios_sindicato": usuarios_sindicato,
         "permisos": permisos, "es_super_admin": es_super_admin,
         "administra_areas": administra,
         "seccionales_alcance": seccionales_alcance,
         "areas": areas, "catalogo_permisos": catalogo_permisos,
         "etiquetas_secciones": {k: v[0] for k, v in permisos_mod.SECCIONES.items()},
-        "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
+        "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
-        "noticias": db.noticias_del_sindicato(sid) if puede("noticias") else [],
-        "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
+        "noticias": db.noticias_del_sindicato(sid, alcance_propio) if puede("noticias") else [],
+        "beneficios": db.beneficios_del_sindicato(sid, alcance_propio) if puede("beneficios") else [],
         "notificaciones": db.notificaciones_del_sindicato(sid, usuario_id=uid)
                           if puede("notificaciones") else [],
         # Encuestas: la lista se recorta por alcance de seccional EN LA
@@ -1338,8 +1646,17 @@ def admin(request: Request):
         "encuestas_tipos_anonima": [t for t, _ in encuestas.tipos_para(encuestas.ANONIMA)],
         "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
         "encuestas_umbral": db.umbral_encuestas(),
-        "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
+        # Listas del sindicato: recortadas al alcance EN LA CONSULTA, como
+        # las seccionales (una lista sin seccional la ve solo el alcance total).
+        "listas": db.listas_del_sindicato(sid, alcance_propio) if puede("listas") else [],
+        "plantillas_listas": listas_mod.resumen_plantillas() if puede("listas") else [],
+        # Lo que el constructor de Trámites ofrece para una validación por
+        # función: datos del sistema, funciones y listas con sus columnas.
+        "catalogo_funcion": validaciones_tramite.catalogo_funcion(),
+        "tipos_tramite": db.tipos_tramite_del_sindicato(sid, alcance=alcance_propio)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
+        # El catálogo es de solo lectura para quien está acotado (bloque 5).
+        "catalogo_solo_lectura": alcance_propio is not None,
         "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
                     if puede("tramites_recibidos") else [],
         "tramites_nuevos": db.contar_tramites_nuevos(sid, uid)
@@ -1412,6 +1729,74 @@ def admin_dashboard_pagina(request: Request):
     })
 
 
+# ---------- Panel Sindical v2 (PLAN_DASHBOARD_V2.md) ----------
+# La v2 del panel, hecha con Preact + htm sin build, convive con la v1 mientras
+# dura el piloto. Usa los MISMOS endpoints /admin/dashboard/* (línea roja 1 del
+# plan: el backend no se toca), así que acá solo vive la página.
+
+# Las librerías vendoreadas, por el nombre con que las importa el código.
+# `hooks.module.js` importa "preact" por nombre: sin esta entrada no carga.
+_VENDOR_PANEL_V2 = {
+    "preact": "vendor/preact/preact.module.js",
+    "preact/hooks": "vendor/preact/hooks.module.js",
+    "htm": "vendor/preact/htm.module.js",
+}
+
+
+def _importmap_panel_v2() -> str:
+    """El importmap de la v2 (D3): cada módulo se importa POR NOMBRE y el mapa
+    lo traduce a su archivo de /static CON su sello `?v=`. Un `import
+    "./filtros.js"` saldría sin sello y quedaría cacheado una hora después de
+    un deploy: la página nueva con un módulo viejo. Los módulos propios salen
+    de recorrer static/panel_v2/, así que un archivo nuevo entra solo
+    (`panel/<nombre>`); test_dashboard_v2.py exige que todo import resuelva."""
+    import json
+    imports = {nombre: _url_static(ruta) for nombre, ruta in _VENDOR_PANEL_V2.items()}
+    for js in sorted((Path("static") / "panel_v2").glob("*.js")):
+        imports[f"panel/{js.stem}"] = _url_static(f"panel_v2/{js.name}")
+    return json.dumps({"imports": imports}, ensure_ascii=False)
+
+
+def _precarga_panel_v2() -> list:
+    """Las URL del importmap, para `<link rel="modulepreload">`: sin esto el
+    navegador descubre los módulos en cascada (app.js, después lo que importa,
+    después preact) y cada escalón es un viaje de ida y vuelta al servidor.
+    Con la precarga salen todos juntos, en paralelo."""
+    import json
+    return list(json.loads(_importmap_panel_v2())["imports"].values())
+
+
+@app.get("/admin/dashboard-v2", response_class=HTMLResponse)
+def admin_dashboard_v2_pagina(request: Request):
+    """Página del Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Mismas puertas que
+    la v1 (sesión, módulo y permiso de la sección "dashboard") y, mientras dure
+    el piloto, solo donde hay distintivo de entorno: en demo y prod no existe
+    (D4), igual que /entornos. MUESTRA_DISTINTIVO se lee por request para que
+    un test pueda simular la demo."""
+    if not entorno.MUESTRA_DISTINTIVO:
+        raise HTTPException(404, "No existe en este entorno")
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+    sid = ses.get("sid", 0)
+    if not db.modulo_habilitado(sid, "dashboard") \
+            or not db.tiene_permiso(ses.get("uid", 0), "dashboard"):
+        return RedirectResponse("/admin", status_code=303)
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("dashboard_v2.html", {
+        "request": request, "sindicato": marca.get("nombre", ""),
+        "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
+        "asistente": asistente.disponible(),
+        "hoy": fechas.hoy_texto(),
+        "importmap": _importmap_panel_v2(),
+        "precarga": _precarga_panel_v2(),
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
+    })
+
+
 @app.get("/admin/inicio", response_class=HTMLResponse)
 def admin_inicio(request: Request):
     ses = sesion_actual(request, "sindicato")
@@ -1434,12 +1819,40 @@ def admin_inicio(request: Request):
         if "tramites" in modulos and "tramites_recibidos" in permisos else 0
     tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) \
         if "empleadores" in modulos and "emp_tramites_recibidos" in permisos else 0
+    # Ficha del operador para el círculo de perfil de la portada (2026-09-23,
+    # pedido de Sd: el mismo lugar que en la app del afiliado). Es de LECTURA:
+    # el usuario del sindicato no edita sus datos desde acá.
+    #
+    # La FOTO sale de `CuentaTrabajador`, o sea del CUIL, no de una copia del
+    # usuario del panel: quien trabaja en el gremio y además está afiliado
+    # tiene una sola foto, igual que tiene un solo domicilio. Quien no está
+    # en el padrón (caso real, no un error) simplemente no tiene.
+    cuil_admin = (usuario.cuil if usuario else "") or ""
+    rol_admin = ("Super Admin" if es_super_admin else
+                 ("Admin de Seccional" if usuario and usuario.es_admin_seccional
+                  else "Usuario de área"))
+    sec_admin = db.seccional_del_sindicato(sid, usuario.seccional_id) \
+        if usuario and usuario.seccional_id else None
+    area_admin = ""
+    if usuario and usuario.area_id:
+        for a in db.areas_del_sindicato(sid):
+            if a["id"] == usuario.area_id:
+                area_admin = a["nombre"]
+                break
     return templates.TemplateResponse("admin_portada.html", {
         "permisos": permisos, "es_super_admin": es_super_admin,
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "primer_nombre": nombre_admin.split(" ")[0] or "Admin",
+        "nombre_admin": nombre_admin,
+        "usuario_admin": (usuario.usuario if usuario else ""),
+        "cuil_admin": cuil_admin,
+        "rol_admin": rol_admin,
+        "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
+        "area_admin": area_admin,
+        "tiene_foto_perfil": bool(cuil_admin and db.foto_trabajador(cuil_admin)),
+        "trabaja_en_varios": bool(cuil_admin) and len(db.sindicatos_del_operador(cuil_admin)) > 1,
         "tramites_nuevos": tramites_nuevos,
         "tramites_empresa_nuevos": tramites_empresa_nuevos,
         "modulos": modulos,
@@ -1449,20 +1862,92 @@ def admin_inicio(request: Request):
 
 @app.post("/admin/login")
 def admin_login(request: Request, usuario: str = Form(...), clave: str = Form(...)):
+    """Una persona, una clave (2026-10-17): la clave se valida contra la
+    CUENTA del CUIL (`CuentaPanel`), no contra un usuario de un sindicato.
+    Si la persona trabaja en un solo sindicato entra directo; si trabaja en
+    varios, elige a cuál, igual que el afiliado con pluriempleo.
+
+    Antes se buscaba la primera fila con ese CUIL en CUALQUIER sindicato y la
+    clave se probaba solo contra esa: quien estaba en dos gremios entraba a
+    uno solo, y a cuál lo decidía el orden de la base."""
     if _login_bloqueado(request):
         return RedirectResponse("/admin?error=espera", status_code=303)
-    cuit = _norm_cuil(usuario)   # todos los usuarios se identifican con CUIT/CUIL
-    with db.get_session() as s:
-        user = s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == cuit, UsuarioSindicato.activo == True)).first()
-        if not user or not auth.verificar_clave(clave, user.clave_hash):
-            _login_fallo(request)
-            return RedirectResponse("/admin?error=1", status_code=303)
-        token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
-        db.registrar_acceso("admin", sindicato_id=user.sindicato_id)
+    cuil = _norm_cuil(usuario)   # todos los usuarios se identifican con CUIT/CUIL
+    cuenta = db.cuenta_panel(cuil)
+    if not cuenta or not cuenta.clave_hash or not auth.verificar_clave(clave, cuenta.clave_hash):
+        _login_fallo(request)
+        return RedirectResponse("/admin?error=1", status_code=303)
+    opciones = db.sindicatos_del_operador(cuil)
+    if not opciones:
+        # Clave correcta pero sin ningún usuario activo: se contesta igual
+        # que una clave mala, para no confirmar que la cuenta existe.
+        _login_fallo(request)
+        return RedirectResponse("/admin?error=1", status_code=303)
     _login_ok(request)
+    if len(opciones) == 1:
+        return _abrir_sesion_panel(opciones[0]["usuario_id"])
+    token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
+    return RedirectResponse(f"/admin/elegir?token={token}", status_code=303)
+
+
+_PROPOSITO_ELEGIR_PANEL = "elegir_panel"
+
+
+def _abrir_sesion_panel(usuario_id: int):
+    """Abre la sesión del panel para ESE usuario (un sindicato) y lleva a
+    la portada. Lo comparten el login directo y el selector."""
+    with db.get_session() as s:
+        user = s.get(UsuarioSindicato, usuario_id)
+        token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
+        sid = user.sindicato_id
+    db.registrar_acceso("admin", sindicato_id=sid)
     resp = RedirectResponse("/admin/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_SINDICATO, token)
+    return resp
+
+
+@app.get("/admin/elegir", response_class=HTMLResponse)
+def admin_elegir(request: Request, token: str = ""):
+    """El selector de sindicato de quien trabaja en más de uno. El CUIL viaja
+    en un token firmado de 10 minutos que solo sirve para esta pantalla:
+    nunca en la URL ni en un campo oculto sin firmar."""
+    datos = auth.leer_paso(token, _PROPOSITO_ELEGIR_PANEL)
+    if not datos:
+        return RedirectResponse("/admin", status_code=303)
+    return templates.TemplateResponse("admin_elegir.html", {
+        "request": request, "token": token,
+        "opciones": db.sindicatos_del_operador(datos.get("cuil", "")),
+        "marca_plataforma": db.marca_plataforma()})
+
+
+@app.post("/admin/elegir")
+def admin_elegir_post(token: str = Form(...), usuario_id: int = Form(...)):
+    """Abre la sesión en el sindicato elegido, solo si ese usuario es de la
+    persona del token y sigue activo: el id viaja en el form y se valida."""
+    datos = auth.leer_paso(token, _PROPOSITO_ELEGIR_PANEL)
+    if not datos:
+        return RedirectResponse("/admin", status_code=303)
+    validos = {o["usuario_id"] for o in db.sindicatos_del_operador(datos.get("cuil", ""))}
+    if usuario_id not in validos:
+        return RedirectResponse("/admin", status_code=303)
+    return _abrir_sesion_panel(usuario_id)
+
+
+@app.get("/admin/cambiar-sindicato")
+def admin_cambiar_sindicato(request: Request):
+    """Desde la portada, volver al selector sin pedir la clave otra vez: la
+    sesión vigente ya dice quién es la persona."""
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return RedirectResponse("/admin", status_code=303)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, ses.get("uid", 0))
+        cuil = u.cuil if u else ""
+    if len(db.sindicatos_del_operador(cuil)) < 2:
+        return RedirectResponse("/admin/inicio", status_code=303)
+    token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
+    resp = RedirectResponse(f"/admin/elegir?token={token}", status_code=303)
+    resp.delete_cookie(COOKIE_SINDICATO)
     return resp
 
 
@@ -1483,9 +1968,22 @@ def admin_trabajador_alta(
     telefono: str = Form(""), mail: str = Form(""),
     vigencia_credencial: str = Form(""), seccional_id: str = Form(""),
     cuit_empleador: str = Form(""),
+    fecha_afiliacion: str = Form(""), fecha_nacimiento: str = Form(""),
 ):
     """Alta o modificación manual de un trabajador. Obligatorios: cuil,
     nombre y **provincia y localidad** (geo.OBLIGATORIOS_AFILIADO).
+
+    Las dos fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4) son
+    opcionales y van cada una a su dueño: `fecha_afiliacion` al
+    empadronamiento (es de ESTE gremio) y `fecha_nacimiento` a la persona,
+    con la misma regla que el nombre y el domicilio (solo si este padrón
+    responde por la cuenta). Una fecha ilegible frena el alta (`err=fecha`)
+    en vez de guardarse como texto.
+
+    El CUIL -- y el CUIT del empleador, si viene -- tienen que cumplir el
+    dígito verificador (módulo 11, PLAN_CUIT_MOD11.md). En una EDICIÓN solo se
+    exige si el número cambió: un padrón cargado antes de la regla tiene CUIL
+    que no lo cumplen y corregirle un teléfono no puede chocar con eso.
 
     El domicilio usa la misma carga guiada y el mismo armado que el de la
     seccional (geo.campos_para_guardar): es la única forma de que el mismo
@@ -1504,45 +2002,112 @@ def admin_trabajador_alta(
     if faltan:
         return RedirectResponse("/admin?err=domicilio&faltan=" + quote(", ".join(faltan))
                                 + "#trabajadores", status_code=303)
+    f_afiliacion = _fecha_formulario(fecha_afiliacion)
+    f_nacimiento = _fecha_formulario(fecha_nacimiento)
+    if f_afiliacion is None or f_nacimiento is None:
+        return RedirectResponse("/admin?err=fecha#trabajadores", status_code=303)
     sec_id = int(seccional_id) if seccional_id else None
     domicilio = geo.campos_para_guardar(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision_geo, latitud, longitud)
+    datos_ajenos = False   # la cuenta es de una persona que este padrón no tenía al registrarse
     with db.get_session() as s:
         if sec_id and not s.exec(select(Seccional).where(
                 Seccional.id == sec_id, Seccional.sindicato_id == sid)).first():
             sec_id = None  # seccional ajena o inexistente: se ignora, no se rechaza el alta
+        # Un admin acotado solo carga gente EN su seccional (vacía = la suya;
+        # otra = 403). PLAN_ALCANCE_SECCIONAL.md, bloque 1.
+        sec_id = _seccional_en_alcance(request, sec_id)
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
-                t.cuil = cuil_norm
+                # Y solo edita a quien ya alcanza.
+                _exigir_alcance_seccional(request, t.seccional_id)
+                # El CUIL NO se cambia desde una edición (E-IDENT-03): es la
+                # identidad de la persona en todo el sistema y entre tablas
+                # se une por texto. Cambiarlo acá movía solo esta fila y
+                # dejaba atrás su cuenta, sus recibos, sus trámites y su
+                # empadronamiento en otros gremios. Si está mal, se corrige
+                # con regularizar_cuit.py, que lo cambia en todas las tablas
+                # a la vez (PLAN_CUIT_MOD11.md). Reenviar el mismo número --
+                # aunque no cumpla el verificador, como los de un lote -- no
+                # frena la edición de los otros campos.
+                if _norm_cuil(cuil_norm) != _norm_cuil(t.cuil):
+                    return RedirectResponse("/admin?err=cuilfijo#trabajadores", status_code=303)
+                if _cuit_mal(cuit_empleador, guardado=t.cuit_empleador, opcional=True):
+                    return RedirectResponse("/admin?err=cuitempleador#trabajadores",
+                                            status_code=303)
                 t.vigencia_credencial = vigencia_credencial or None
+                t.fecha_afiliacion = f_afiliacion or None
                 t.seccional_id = sec_id
-                t.cuit_empleador = cuit_empleador.strip() or None
+                t.cuit_empleador = _norm_cuil(cuit_empleador) or None   # sin guiones, como empleador.cuit
                 s.add(t)
                 # El nombre, el domicilio y el contacto son de la PERSONA:
                 # se escriben en un solo lugar y por eso el cambio se ve
                 # también en los otros gremios donde esté empadronada. Es la
                 # contracara de que no puedan existir dos versiones.
-                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail)
+                # `mail_padron` es el que carga el SINDICATO (acá y en el alta
+                # masiva, y en ningún otro lugar). El formulario de edición
+                # llega precargado con el mail de CONTACTO, que la persona
+                # puede haber cambiado desde su perfil: reenviarlo sin tocar
+                # no puede convertirlo en "mail del padrón". Solo se escribe
+                # cuando el admin lo CAMBIÓ.
+                #
+                # Salvo que la persona haya creado su cuenta ANTES de estar en
+                # este padrón (`db.padron_responde_por`): sus datos son suyos y
+                # un admin que cargó su CUIL a mano no los reescribe -- sobre
+                # todo el mail del padrón, que es el canal de recuperación.
+                if db.padron_responde_por(s, sid, t.cuil):
+                    actual = db.asegurar_cuenta(s, t.cuil).mail or ""
+                    cambio_mail = (mail or "").strip() != actual.strip()
+                    # La fecha de nacimiento llega precargada como el resto:
+                    # en blanco, acá SÍ borra (el admin la está viendo).
+                    db.guardar_datos_personales(s, t.cuil, nombre=nombre,
+                                                domicilio=domicilio, telefono=telefono, mail=mail,
+                                                mail_padron=mail if cambio_mail else None,
+                                                fecha_nacimiento=f_nacimiento)
+                else:
+                    datos_ajenos = True
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
+            # Un número que NACE en el sistema: el CUIL con su verificador, y
+            # el CUIT del empleador (opcional) también. Nada se escribió aún.
+            if _cuil_mal(cuil_norm):
+                return RedirectResponse("/admin?err=cuil#trabajadores", status_code=303)
+            if _cuit_mal(cuit_empleador, opcional=True):
+                return RedirectResponse("/admin?err=cuitempleador#trabajadores",
+                                        status_code=303)
             existe = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sid, Trabajador.cuil == cuil_norm)).first()
             if not existe:
+                # Se decide ANTES de crear el empadronamiento. Si la persona ya
+                # tiene cuenta con clave (se registró en otro gremio), este
+                # padrón no responde por ella: se crea el empadronamiento y
+                # nada más -- ni nombre, ni domicilio, ni teléfono, ni mails.
+                responde = db.padron_responde_por(s, sid, cuil_norm)
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
-                    cuit_empleador=cuit_empleador.strip() or None))
-                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail)
+                    cuit_empleador=_norm_cuil(cuit_empleador) or None,
+                    fecha_afiliacion=f_afiliacion or None))
+                if responde:
+                    # En el alta, un mail en blanco NO borra el que ya hubiera
+                    # cargado otro gremio para esta persona (`or None` = no tocar).
+                    # La fecha de nacimiento, lo mismo.
+                    db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                                domicilio=domicilio, telefono=telefono, mail=mail,
+                                                mail_padron=mail or None,
+                                                fecha_nacimiento=f_nacimiento or None)
+                else:
+                    datos_ajenos = True
         s.commit()
     # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
     # había dado usuario del panel, acá se arma el vínculo y se prende la
     # marca de empleado. Sin esto quedaría en el padrón sin marca, en
     # silencio.
     db.sincronizar_por_cuil(sid, cuil_norm)
+    if datos_ajenos:
+        return RedirectResponse("/admin?aviso=datosajenos#trabajadores", status_code=303)
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
@@ -1564,7 +2129,17 @@ def admin_generar_credencial(request: Request, id: int = Form(...)):
 def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     """Alta masiva: una línea por trabajador, campos separados por coma.
     Orden: cuil, nombre, calle, numero, piso, localidad, provincia, telefono,
-    mail, CP, seccional. Obligatorios los dos primeros (cuil y nombre).
+    mail, CP, seccional, fecha_afiliacion, fecha_nacimiento. Obligatorios los
+    dos primeros (cuil y nombre).
+
+    **Las dos fechas** (PLAN_LISTAS_VALIDACIONES.md, D4) van al final para
+    que una planilla armada antes siga entrando igual. Son opcionales, pero
+    una fecha que no se entiende deja la línea afuera (`omitidas`, con la
+    línea a la vista): si entrara sin la fecha, el sindicato creería que la
+    cargó. En un CUIL que YA está en el padrón, la fecha de afiliación sí se
+    actualiza (es del empadronamiento, siempre de este gremio) y se cuenta en
+    `fechasactualizadas`; la de nacimiento no, porque es de la persona y en
+    esa línea no se tocan sus datos.
 
     **Nadie se geocodifica acá.** Cien direcciones a un pedido por segundo
     son cien segundos con el navegador colgado, y Nominatim bloqueando de
@@ -1585,45 +2160,132 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     sindicato creería que cargó 500 y tendría 497. Antes esta ruta ya
     descartaba en silencio las líneas sin CUIL o sin nombre; ahora el conteo
     vuelve y se ve.
+
+    **El CUIL tiene que cumplir el dígito verificador** (módulo 11, cuit.py;
+    PLAN_CUIT_MOD11.md): acá nacen números, así que una línea con un CUIL
+    inválido queda afuera como las demás, pero se cuenta APARTE
+    (`cuilinvalidos`) y la pantalla muestra cuáles son (`cuilmuestra`, hasta
+    diez), porque el arreglo es distinto -- corregir un dígito, no completar
+    una columna.
+
+    **Un CUIL que ya está en el padrón de este sindicato** no es una alta ni
+    una omitida si su línea trae mail: se actualiza SOLO su `mail_padron`
+    (PLAN_REGISTRO.md, Q-6) y se cuenta aparte (`mailsactualizados`). Es la
+    única vía del gremio para cargar el mail de quienes ya se registraron. Sin
+    mail, el CUIL repetido sigue yendo a `omitidas`. En una alta nueva, un
+    mail en blanco no borra el `mail_padron` que otro gremio ya hubiera cargado.
     """
     sid = exigir_sindicato(request)
     altas = 0
+    mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
+    fechas_actualizadas = 0  # CUIL ya en el padrón cuya línea trajo fecha de afiliación
+    datos_ajenos = 0         # líneas cuya persona ya tenía cuenta antes de este padrón: sin tocar sus datos
     omitidas = []
+    cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
                   for sec in db.seccionales_del_sindicato(sid)}
+    # Un admin acotado carga solo en su seccional: una línea con otra
+    # seccional queda omitida (y se informa), una sin seccional va a la suya.
+    alcance = _alcance_de(request)
+    fuera_de_alcance = 0
     with db.get_session() as s:
-        existentes = {t.cuil for t in s.exec(select(Trabajador).where(
+        propios = {t.cuil: t for t in s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sid)).all()}
+        existentes = set(propios)
+        # Quiénes ya se registraron (una consulta para toda la lista): sobre
+        # esas cuentas este padrón solo responde si ya tenía a la persona
+        # cargada cuando se registró (`db.responde_por`). Si no, la línea crea
+        # el empadronamiento y NO escribe nombre, domicilio, contacto ni mails.
+        con_clave = db.cuiles_con_clave(s, {
+            _norm_cuil(ln.split(",")[0]) for ln in lista.strip().splitlines() if ln.strip()})
         for linea in lista.strip().splitlines():
             if not linea.strip():
                 continue
             campos = [c.strip() for c in linea.split(",")]
             cuil = _norm_cuil(campos[0]) if campos else ""
             nombre = campos[1] if len(campos) > 1 else ""
+            def campo(i): return campos[i] if len(campos) > i else ""
+            f_afiliacion = _fecha_formulario(campo(11))
+            f_nacimiento = _fecha_formulario(campo(12))
+            if f_afiliacion is None or f_nacimiento is None:
+                omitidas.append(linea.strip()[:60])
+                continue
+            if len(cuil) == 11 and cuil in existentes and (campo(8) or f_afiliacion):
+                # Ya está en el padrón de este sindicato (quizá ya registrado):
+                # no es un alta, pero la línea trae el mail y esta es la ÚNICA
+                # vía que tiene el gremio para cargar el mail del padrón de
+                # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
+                # el resto de los datos de la persona se tocan.
+                if f_afiliacion:
+                    propios[cuil].fecha_afiliacion = f_afiliacion
+                    s.add(propios[cuil])
+                    fechas_actualizadas += 1
+                if campo(8):
+                    if db.responde_por(cuil in con_clave, propios[cuil].registrado):
+                        db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
+                        mails_actualizados += 1
+                    else:
+                        datos_ajenos += 1
+                continue
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
                 continue
-            def campo(i): return campos[i] if len(campos) > i else ""
+            # Un CUIL cuyo verificador no cierra: la línea queda afuera y se
+            # cuenta aparte, con el número a la vista. Si entrara, el padrón
+            # se llenaría de personas que no pueden registrarse (el registro
+            # también lo exige) y nadie sabría por qué.
+            if _cuil_mal(cuil):
+                cuil_invalidos.append(campos[0][:20])
+                continue
             if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
                 omitidas.append(linea.strip()[:60])
                 continue
+            sec_linea = por_nombre.get(geo._norm(campo(10)))
+            if alcance is not None:
+                if not sec_linea and len(alcance) == 1:
+                    sec_linea = next(iter(alcance))
+                if not _en_alcance(alcance, sec_linea):
+                    fuera_de_alcance += 1
+                    omitidas.append(linea.strip()[:60])
+                    continue
             domicilio = geo.campos_para_guardar({
                 "calle": campo(2), "numero": campo(3), "piso_depto": campo(4),
                 "localidad": campo(5), "provincia": campo(6),
                 "codigo_postal": campo(9)}, precision="sin_geo")
             s.add(Trabajador(
                 sindicato_id=sid, cuil=cuil,
-                seccional_id=por_nombre.get(geo._norm(campo(10)))))
-            db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                        telefono=campo(7), mail=campo(8))
+                seccional_id=sec_linea,
+                fecha_afiliacion=f_afiliacion or None))
+            if cuil in con_clave:
+                datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
+            else:
+                db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
+                                            telefono=campo(7), mail=campo(8),
+                                            mail_padron=campo(8) or None,
+                                            fecha_nacimiento=f_nacimiento or None)
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
     # patrón (casi siempre es la misma columna que falta en todas) sin armar
     # una query string de diez mil caracteres con la planilla entera.
     destino = f"/admin?altas={altas}"
+    if mails_actualizados:
+        destino += f"&mailsactualizados={mails_actualizados}"
+    if fechas_actualizadas:
+        destino += f"&fechasactualizadas={fechas_actualizadas}"
+    if datos_ajenos:
+        destino += f"&datosajenos={datos_ajenos}"
     if omitidas:
         destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
+    if fuera_de_alcance:
+        destino += f"&fueraalcance={fuera_de_alcance}"
+    if cuil_invalidos:
+        # Acá sí van todos (hasta diez): son CUIL de once números, no líneas
+        # enteras, y la persona los tiene que poder corregir de a uno.
+        muestra = ", ".join(cuil_invalidos[:10])
+        if len(cuil_invalidos) > 10:
+            muestra += f" y {len(cuil_invalidos) - 10} más"
+        destino += (f"&cuilinvalidos={len(cuil_invalidos)}&cuilmuestra=" + quote(muestra))
     return RedirectResponse(destino + "#trabajadores", status_code=303)
 
 
@@ -1677,6 +2339,92 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
+# ---------- Confirmar identidad y restablecer clave (PLAN_REGISTRO.md, 4.4) ----------
+# Letras sin I ni O y dígitos sin 0 ni 1: la clave se dicta o se lee de una
+# pantalla, y "0/O" o "1/l" son los errores de siempre.
+_ALFABETO_CLAVE_TEMPORAL = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _clave_temporal_nueva() -> str:
+    return "".join(secrets.choice(_ALFABETO_CLAVE_TEMPORAL) for _ in range(8))
+
+
+def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str, clave: str):
+    """La clave temporal se muestra UNA vez, en la respuesta del propio POST:
+    no viaja en una URL (nada de redirect con la clave), no se guarda en
+    claro en ningún lado y la página no se cachea. Recargar re-envía el POST
+    y genera otra clave: la anterior deja de valer, así que no hay forma de
+    volver a verla."""
+    # Pantalla interior del panel: lleva el encabezado y la marca del sindicato
+    # de quien opera (el sindicato sale de la sesión, nunca de un parámetro).
+    ses = sesion_actual(request, "sindicato") or {}
+    marca = db.marca_sindicato(ses.get("sid", 0))
+    return templates.TemplateResponse(
+        "clave_temporal.html",
+        {"request": request, "quien": quien, "ident": ident, "clave": clave, "volver": volver,
+         "sindicato": marca.get("nombre", ""), "marca": marca,
+         "marca_plataforma": db.marca_plataforma()},
+        headers={"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"})
+
+
+def _cuenta_y_empadronamiento(request: Request, sid: int, cuil: str):
+    """(empadronamiento, cuenta) de un afiliado DE ESTE sindicato y dentro del
+    alcance de seccional de quien opera. 404 si no es del sindicato; 403 si es
+    de otra seccional (mismo criterio que el resto de las rutas del panel)."""
+    with db.get_session() as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sid, Trabajador.cuil == cuil)).first()
+        if not t:
+            raise HTTPException(404, "Ese CUIL no está en el padrón de este sindicato.")
+        _exigir_alcance_seccional(request, t.seccional_id)
+    return t
+
+
+@app.post("/admin/trabajador/confirmar-identidad")
+def admin_trabajador_confirmar_identidad(request: Request, cuil: str = Form(...)):
+    """Nivel 4: una persona del sindicato confirmó la identidad del afiliado
+    en persona. Solo si ya tiene cuenta, y dentro de su alcance de seccional."""
+    sid = exigir_sindicato(request)
+    cuil = _norm_cuil(cuil)
+    _cuenta_y_empadronamiento(request, sid, cuil)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        if not db.padron_responde_por(s, sid, cuil):
+            return RedirectResponse("/admin?err=cuentaajena#trabajadores", status_code=303)
+        db.subir_nivel(s, cuenta, "presencial")
+        s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "confirmar-identidad", cuil, _uid_sesion(request), sid)
+    return RedirectResponse("/admin?ok=identidad#trabajadores", status_code=303)
+
+
+@app.post("/admin/trabajador/restablecer-clave")
+def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
+    """Pone una clave temporal de un solo uso a la cuenta de un afiliado (es lo
+    que le devuelve la cuenta al afiliado real cuando alguien llegó primero).
+    La clave se muestra una vez; el próximo ingreso obliga a cambiarla."""
+    sid = exigir_sindicato(request)
+    cuil = _norm_cuil(cuil)
+    _cuenta_y_empadronamiento(request, sid, cuil)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        if not db.padron_responde_por(s, sid, cuil):
+            return RedirectResponse("/admin?err=cuentaajena#trabajadores", status_code=303)
+        clave = _clave_temporal_nueva()
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = True
+        s.add(cuenta)
+        s.commit()
+        nombre = cuenta.nombre or cuil
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "restablecer-clave", cuil, _uid_sesion(request), sid)
+    return _pagina_clave_temporal(request, nombre, cuil, "/admin#trabajadores", clave)
+
+
 # ---------- ABM de administradores del propio sindicato ----------
 # Antes solo plataforma podía dar de alta/ver los UsuarioSindicato de un
 # sindicato (POST /plataforma/usuario, GET /plataforma/admins/{id}) -- un
@@ -1710,7 +2458,7 @@ def _volver_a_au(sub: str, err: str = "", ok: str = "") -> RedirectResponse:
 
 @app.post("/admin/usuario")
 def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str = Form(""),
-                        clave_inicial: str = Form(...), rol: str = Form("area"),
+                        clave_inicial: str = Form(""), rol: str = Form("area"),
                         area_id: str = Form(""), seccional_id: str = Form(""),
                         agregar: list[str] = Form(default=[]),
                         bloquear: list[str] = Form(default=[])):
@@ -1720,11 +2468,21 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     `rol` se pide EXPLÍCITO y su default es "area", no "super": si el campo
     llegara a faltar, el usuario nace SIN poder en vez de con todo. Antes
     de las Áreas todo usuario nacía omnipotente, que es lo que este default
-    corrige."""
+    corrige.
+
+    La clave es de la PERSONA, no del sindicato (`CuentaPanel`): si ese CUIL
+    ya trabaja en el panel de otro sindicato, entra con la clave que ya
+    tiene y la de este formulario no se pide ni se usa -- si se usara, el
+    admin de un gremio le fijaría la clave con la que la persona entra al
+    panel de otro. El aviso de vuelta (`ok=usuariocuenta`) lo dice."""
     sid = exigir_sindicato(request)
     cuit = _norm_cuil(usuario)
-    if len(cuit) != 11 or not clave_inicial:
+    ya_tiene_clave = bool(len(cuit) == 11 and (c := db.cuenta_panel(cuit)) and c.clave_hash)
+    if len(cuit) != 11 or (not clave_inicial and not ya_tiene_clave):
         return _volver_a_au("usuarios", err="datos")
+    # El usuario ES el CUIL de la persona: nace acá, con su verificador.
+    if _cuil_mal(cuit):
+        return _volver_a_au("usuarios", err="cuilusuario")
     es_super = (rol == "super")
     es_admin_local = (rol == "seccional")
     # Otorgar Super Admin es del administrador general y de nadie más: si un
@@ -1764,7 +2522,10 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
             # mañana se habilita entrar con mail, `usuario` cambia y la
             # identidad de la persona sigue en pie.
             cuil=cuit,
-            clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
+            # Va a la cuenta de la persona solo si todavía no tiene una
+            # (db._mover_clave_a_la_cuenta); la fila queda sin clave.
+            clave_hash="" if ya_tiene_clave else auth.hashear_clave(clave_inicial),
+            debe_cambiar_clave=True,
             es_super_admin=es_super,
             es_admin_seccional=es_admin_local,
             # Ni un Super Admin ni un admin de seccional cuelgan de un área:
@@ -1785,7 +2546,43 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     if not es_super and not es_admin_local:
         db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
                                 _secciones_que_puede_dar(request, bloquear), sid)
-    return _volver_a_au("usuarios", ok="usuario")
+    return _volver_a_au("usuarios", ok="usuariocuenta" if ya_tiene_clave else "usuario")
+
+
+@app.get("/admin/usuario/padron")
+def admin_usuario_padron(request: Request, cuil: str = ""):
+    """Qué sabe el panel de ese CUIL antes de darle usuario (2026-10-17):
+    si está en el padrón de ESTE sindicato (nombre y seccional, para
+    autocompletar), si ya tiene usuario acá y si ya tiene clave del panel
+    por otro sindicato (la clave inicial no se va a usar).
+
+    Solo dice el nombre si la fila cae dentro del alcance de quien pregunta:
+    un admin de seccional no lee el padrón de otra delegación por acá. Un
+    CUIL que no está devuelve `en_padron: false` y nada más: el padrón de
+    este sindicato no es consultable fuera de su pantalla."""
+    sid = exigir_sindicato(request)
+    cuil_n = _norm_cuil(cuil)
+    if len(cuil_n) != 11:
+        return {"en_padron": False, "valido": False}
+    salida = {"en_padron": False, "valido": not _cuil_mal(cuil_n),
+              "tiene_clave_panel": bool((c := db.cuenta_panel(cuil_n)) and c.clave_hash)}
+    with db.get_session() as s:
+        t = db._trabajador_por_cuil(s, sid, cuil_n)
+        if not t:
+            return salida
+        salida["en_padron"] = True
+        if not _en_alcance(_alcance_de(request), t.seccional_id):
+            salida["fuera_alcance"] = True
+            return salida
+        persona = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil_n)).first()
+        sec = s.get(Seccional, t.seccional_id) if t.seccional_id else None
+        salida.update({
+            "nombre": (persona.nombre if persona else "") or "",
+            "seccional_id": t.seccional_id, "seccional": sec.nombre if sec else "",
+            "ya_es_usuario": bool(s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.cuil == cuil_n)).first()),
+        })
+    return salida
 
 
 @app.post("/admin/usuario/editar")
@@ -1963,6 +2760,28 @@ def _exigir_alcance_seccional(request: Request, seccional_id) -> None:
         raise _sin_permiso("Esto es de otra seccional.")
 
 
+def _seccional_en_alcance(request: Request, seccional_id):
+    """La seccional en la que un usuario acotado puede CREAR algo (un
+    afiliado, un formulario). Con alcance total devuelve lo que vino; con
+    alcance a una seccional, vacío = la suya (no puede crear "sin
+    seccional": nadie acotado lo alcanzaría) y otra = 403."""
+    alcance = _alcance_de(request)
+    if alcance is None:
+        return seccional_id
+    if not seccional_id and len(alcance) == 1:
+        return next(iter(alcance))
+    if not _en_alcance(alcance, seccional_id):
+        raise _sin_permiso("Esto es de otra seccional.")
+    return seccional_id
+
+
+def _exigir_alcance_publicacion(request: Request, destino_seccionales) -> None:
+    """403 si una noticia o un beneficio con esos destinos está fuera del
+    alcance de quien quiere editarla o borrarla (db.publicacion_en_alcance)."""
+    if not db.publicacion_en_alcance(destino_seccionales or [], _alcance_de(request)):
+        raise _sin_permiso("Esa publicación es de otra seccional o de todo el sindicato.")
+
+
 def _exigir_super_admin(request: Request) -> None:
     """Para lo que es del administrador general y de nadie más: crear o
     borrar seccionales, tildar `ve_todas`, y otorgar el rol de Super Admin.
@@ -2085,12 +2904,22 @@ def abm_concepto(
         aliases.append(nombre)
     es_remun = remunerativo == "si"
     categoria = categoria_sindical if categoria_sindical in CATEGORIAS_SINDICALES else ""
+    # Texto sin dígitos ("abc") no es un campo vacío: se frena acá, antes de
+    # que normalizar lo convierta en "concepto genérico" sin avisar.
+    if (cuit_empleador or "").strip() and not _norm_cuil(cuit_empleador):
+        return RedirectResponse("/admin?error=cuitconcepto#conceptos", status_code=303)
     cuit_empleador = _norm_cuil(cuit_empleador) or None
     codigo_gen = codigo_generico.strip() or None
     with db.get_session() as s:
         if id:  # edición — solo si el concepto es de este sindicato
             c = s.get(Concepto, int(id))
             if c and c.sindicato_id == sid:
+                # El CUIT del empleador es opcional (vacío = concepto
+                # genérico) y su verificador se exige solo si CAMBIÓ: un
+                # concepto cargado antes puede traer uno que no lo cumple.
+                if _cuit_mal(cuit_empleador, guardado=c.cuit_empleador, opcional=True):
+                    return RedirectResponse("/admin?error=cuitconcepto#conceptos",
+                                            status_code=303)
                 c.codigo, c.nombre, c.tipo = codigo, nombre, tipo
                 c.remunerativo, c.alias = es_remun, aliases
                 c.categoria_sindical = categoria
@@ -2098,6 +2927,8 @@ def abm_concepto(
                 c.pendiente_revision = False
                 s.add(c)
         else:   # alta
+            if _cuit_mal(cuit_empleador, opcional=True):
+                return RedirectResponse("/admin?error=cuitconcepto#conceptos", status_code=303)
             s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
                            remunerativo=es_remun, alias=aliases,
                            categoria_sindical=categoria,
@@ -2119,14 +2950,29 @@ def borrar_concepto(request: Request, id: int = Form(...)):
 
 
 @app.post("/admin/concepto/confirmar")
-def confirmar_concepto(request: Request, id: int = Form(...)):
+def confirmar_concepto(request: Request, id: int = Form(...),
+                       tipo: str = Form(""), remunerativo: str = Form("")):
     """Saca la marca "por revisar" de un concepto sin abrir el formulario de
     edición -- antes solo se podía limpiar como efecto secundario de editar
-    y guardar (ver abm_concepto), lo cual no era evidente en la UI."""
+    y guardar (ver abm_concepto), lo cual no era evidente en la UI.
+
+    Con `tipo` (y opcionalmente `remunerativo`), lo confirma además en ese
+    rubro: es el botón "Confirmar como descuento" que aparece cuando los
+    recibos leídos dicen otra cosa que el tipo con que se dio de alta (ver
+    validador.clasificacion_vista)."""
     sid = exigir_sindicato(request)
     with db.get_session() as s:
         c = s.get(Concepto, id)
         if c and c.sindicato_id == sid:
+            # Confirmar un concepto pendiente es darlo de alta con el CUIT que
+            # leyó la IA: si ese CUIT no cumple el módulo 11 no se confirma
+            # (se corrige con Editar, que lo valida). PLAN_CUIT_MOD11.md, D2.
+            if c.cuit_empleador and not cuit.es_valido(c.cuit_empleador):
+                return RedirectResponse("/admin?error=cuitconfirmar#conceptos", status_code=303)
+            if tipo in ("ingreso", "descuento"):
+                c.tipo = tipo
+            if remunerativo in ("si", "no"):
+                c.remunerativo = remunerativo == "si"
             c.pendiente_revision = False
             s.add(c)
             s.commit()
@@ -2255,6 +3101,7 @@ async def abm_noticia(
         if id:
             n = s.get(Noticia, int(id))
             if n and n.sindicato_id == sid:
+                _exigir_alcance_publicacion(request, n.destino_seccionales)
                 n.titulo, n.bajada, n.texto_completo = titulo, bajada, texto_completo
                 n.fecha_desde, n.fecha_hasta = fecha_desde, fecha_hasta
                 n.destino_seccionales = destinos
@@ -2294,6 +3141,7 @@ def borrar_noticia(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         n = s.get(Noticia, id)
         if n and n.sindicato_id == sid:
+            _exigir_alcance_publicacion(request, n.destino_seccionales)
             s.delete(n)
             s.commit()
     return RedirectResponse("/admin#noticias", status_code=303)
@@ -2315,6 +3163,7 @@ async def abm_beneficio(
         if id:
             b = s.get(Beneficio, int(id))
             if b and b.sindicato_id == sid:
+                _exigir_alcance_publicacion(request, b.destino_seccionales)
                 b.rubro, b.descripcion, b.link = rubro, descripcion, link
                 b.fecha_desde, b.fecha_hasta = fecha_desde, fecha_hasta
                 b.destino_seccionales = destinos
@@ -2346,9 +3195,119 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         b = s.get(Beneficio, id)
         if b and b.sindicato_id == sid:
+            _exigir_alcance_publicacion(request, b.destino_seccionales)
             s.delete(b)
             s.commit()
     return RedirectResponse("/admin#beneficios", status_code=303)
+
+
+# ==================== Listas del sindicato (PLAN_LISTAS_VALIDACIONES.md, bloque 1) ====================
+# Plantillas tipadas sobre una tabla genérica (D1); carga por CSV con ENSAYO
+# y reemplazo entero (D5); pestaña propia con permiso `listas`. El parseo es
+# puro (listas.py) y lo comparten el ensayo y la carga: lo que el ensayo
+# muestra es exactamente lo que la carga escribe.
+
+def _seccional_para_lista(request: Request, seccional_id: str) -> int | None:
+    """La seccional de una lista, dentro del alcance de quien carga. Con
+    alcance total, vacío = vale para todo el sindicato; un admin local solo
+    puede cargar sobre las suyas y nunca una lista global."""
+    alcance = _alcance_de(request)
+    try:
+        sec = int(seccional_id or 0) or None
+    except ValueError:
+        raise HTTPException(422, "Seccional inválida.")
+    if not _en_alcance(alcance, sec):
+        raise _sin_permiso("Esa lista es de otra seccional." if sec else
+                           "Elegí tu seccional: una lista para todo el sindicato la carga el administrador general.")
+    return sec
+
+
+@app.get("/admin/listas")
+def admin_listas(request: Request):
+    sid = exigir_sindicato(request)
+    alcance = _alcance_de(request)
+    return {"listas": db.listas_del_sindicato(sid, alcance), "plantillas": listas_mod.resumen_plantillas(),
+            "alcance": None if alcance is None else sorted(alcance)}
+
+
+@app.post("/admin/lista/cargar")
+async def admin_lista_cargar(request: Request, plantilla: str = Form(...), nombre: str = Form(""),
+                             seccional_id: str = Form(""), confirmar: str = Form(""),
+                             archivo: UploadFile = File(...)):
+    """Sin `confirmar`, ENSAYO: parsea y cuenta, no escribe. Con `confirmar`,
+    reemplaza la lista entera con las filas válidas (las que tienen error
+    quedan afuera y se informan: el ensayo ya las mostró)."""
+    sid = exigir_sindicato(request)
+    if plantilla not in listas_mod.PLANTILLAS:
+        raise HTTPException(422, "Plantilla desconocida.")
+    sec = _seccional_para_lista(request, seccional_id)
+    nombre = (nombre or "").strip()[:80] or listas_mod.PLANTILLAS[plantilla]["nombre"]
+    contenido = await archivo.read()
+    if len(contenido) > 5 * 1024 * 1024:
+        raise HTTPException(422, "El archivo pasa de 5 MB.")
+    r = listas_mod.parsear_csv(plantilla, contenido)
+    resumen = {"plantilla": plantilla, "nombre": nombre, "seccional_id": sec, "archivo": archivo.filename or "",
+               "total": r["total"], "validas": r["validas"], "con_error": r["con_error"], "errores": r["errores"],
+               "muestra": [f["datos"] for f in r["filas"][:5]], "columnas": r["columnas"]}
+    if not confirmar:
+        return {"ensayo": True, **resumen}
+    if not r["validas"]:
+        raise HTTPException(422, "Ninguna fila es válida: no hay nada que cargar.")
+    lista_id = db.reemplazar_lista(sid, plantilla, nombre, sec, r["columnas"], r["filas"],
+                                   archivo.filename or "", db.quien_es_usuario_sindicato(_uid_sesion(request)))
+    return {"ensayo": False, "id": lista_id, **resumen}
+
+
+@app.post("/admin/lista/borrar")
+def admin_lista_borrar(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    lista = db.lista_del_sindicato(sid, id)
+    if not lista:
+        raise HTTPException(404, "No existe esa lista.")
+    _exigir_alcance_seccional(request, lista["seccional_id"])
+    db.borrar_lista(sid, id)
+    return RedirectResponse("/admin#listas", status_code=303)
+
+
+@app.get("/admin/listas/modelo/{plantilla}.csv")
+def admin_lista_modelo(request: Request, plantilla: str):
+    exigir_sindicato(request)
+    if plantilla not in listas_mod.PLANTILLAS:
+        raise HTTPException(404, "Plantilla desconocida.")
+    return BinResponse(listas_mod.csv_modelo(plantilla).encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="modelo-{plantilla}.csv"'})
+
+
+@app.get("/admin/lista/{lista_id}")
+def admin_lista_detalle(request: Request, lista_id: int):
+    sid = exigir_sindicato(request)
+    lista = db.lista_del_sindicato(sid, lista_id)
+    if not lista:
+        raise HTTPException(404, "No existe esa lista.")
+    _exigir_alcance_seccional(request, lista["seccional_id"])
+    return {**lista, "muestra": db.filas_de_lista(lista_id, limite=200)}
+
+
+@app.get("/admin/lista/{lista_id}/datos.csv")
+def admin_lista_datos_csv(request: Request, lista_id: int):
+    """Lo cargado, tal cual quedó (normalizado), para revisarlo o corregirlo
+    y volver a subirlo."""
+    sid = exigir_sindicato(request)
+    lista = db.lista_del_sindicato(sid, lista_id)
+    if not lista:
+        raise HTTPException(404, "No existe esa lista.")
+    _exigir_alcance_seccional(request, lista["seccional_id"])
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";", lineterminator="\n")
+    claves = [c["clave"] for c in lista["columnas"]]
+    w.writerow(claves)
+    for fila in db.filas_de_lista(lista_id, limite=None):
+        w.writerow([fila.get(k, "") for k in claves])
+    nombre = re.sub(r"[^A-Za-z0-9_-]+", "-", lista["nombre"]).strip("-") or lista["plantilla"]
+    return BinResponse(("\ufeff" + salida.getvalue()).encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="lista-{nombre}.csv"'})
 
 
 @app.post("/admin/seccional")
@@ -2542,17 +3501,44 @@ def admin_empleador_alta(
         if id:
             e = s.get(Empleador, int(id))
             if e and e.sindicato_id == sid:
-                e.cuit, e.razon_social = cuit_norm, razon_social.strip()
+                # El CUIT NO se cambia desde una edición (E-IDENT-03), por lo
+                # mismo que el CUIL del afiliado: une al empleador con su
+                # cuenta, sus empleados, sus recibos y sus trámites. Si está
+                # mal, se corrige con regularizar_cuit.py en todas las tablas.
+                if _norm_cuil(cuit_norm) != _norm_cuil(e.cuit):   # `cuit` es el campo del formulario: tapa al módulo
+                    return RedirectResponse("/admin?error=cuitfijo#empleadores", status_code=303)
+                e.razon_social = razon_social.strip()
+                mail_anterior = e.mail
                 e.domicilio, e.telefono = domicilio, telefono
                 e.provincia, e.mail = provincia, mail
+                # `mail_padron` lo escribe SOLO esta ruta (la empresa edita su
+                # contacto desde /api/empresa/perfil y no lo toca). Mismo
+                # criterio que el afiliado: solo si el admin cambió el mail
+                # del formulario, que llega precargado con el de contacto.
+                # Salvo que la empresa ya tenga cuenta y este padrón no la
+                # tuviera cargada cuando se registró: ese mail es el canal de
+                # recuperación y no lo puede reescribir quien cargó el CUIT
+                # a mano (db.padron_responde_por_empresa).
+                if (mail or "").strip() != (mail_anterior or "").strip() \
+                        and db.padron_responde_por_empresa(s, sid, e.cuit):
+                    e.mail_padron = (mail or "").strip()[:200]
                 s.add(e)
         else:
+            # Un empleador NUEVO: su CUIT nace acá. Cualquier tipo -- un
+            # monotributista con empleados tiene CUIT de persona.
+            if _cuit_mal(cuit_norm):
+                return RedirectResponse("/admin?error=cuit#empleadores", status_code=303)
             existe = s.exec(select(Empleador).where(
                 Empleador.sindicato_id == sid, Empleador.cuit == cuit_norm)).first()
             if not existe:
+                # Antes de crear la fila: si la empresa ya tiene cuenta con
+                # clave, este padrón no responde por ella y su `mail_padron`
+                # queda vacío (la fila propia sí se crea).
+                responde = db.padron_responde_por_empresa(s, sid, cuit_norm)
                 s.add(Empleador(sindicato_id=sid, cuit=cuit_norm,
                                  razon_social=razon_social.strip(), domicilio=domicilio,
-                                 telefono=telefono, provincia=provincia, mail=mail))
+                                 telefono=telefono, provincia=provincia, mail=mail,
+                                 mail_padron=mail.strip()[:200] if responde else ""))
         s.commit()
     return RedirectResponse("/admin#empleadores", status_code=303)
 
@@ -2581,12 +3567,72 @@ def admin_empleador_reactivar(request: Request, id: int = Form(...)):
     return RedirectResponse("/admin#empleadores", status_code=303)
 
 
+def _cuenta_de_empresa_del_sindicato(sid: int, cuit: str):
+    """404 si el CUIT no está dado de alta como Empleador en ESTE sindicato.
+    El empleador no tiene seccional: el alcance es el del sindicato, como
+    en el resto de las rutas de Empleadores."""
+    with db.get_session() as s:
+        e = s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sid, Empleador.cuit == cuit)).first()
+        if not e:
+            raise HTTPException(404, "Ese CUIT no está cargado como empleador de este sindicato.")
+        return e
+
+
+@app.post("/admin/empleador/confirmar-identidad")
+def admin_empleador_confirmar_identidad(request: Request, cuit: str = Form(...)):
+    """Nivel 4 para la cuenta de una empresa (espejo de la del trabajador)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    numero = _norm_cuil(cuit)
+    _cuenta_de_empresa_del_sindicato(sid, numero)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        if not db.padron_responde_por_empresa(s, sid, numero):
+            return RedirectResponse("/admin?err=cuentaajena#empleadores", status_code=303)
+        db.subir_nivel(s, cuenta, "presencial")
+        s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "confirmar-identidad-empresa", numero, _uid_sesion(request), sid)
+    return RedirectResponse("/admin?ok=identidad#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/restablecer-clave")
+def admin_empleador_restablecer_clave(request: Request, cuit: str = Form(...)):
+    """Clave temporal para la cuenta de una empresa (espejo de la del trabajador)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    numero = _norm_cuil(cuit)
+    e = _cuenta_de_empresa_del_sindicato(sid, numero)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        if not db.padron_responde_por_empresa(s, sid, numero):
+            return RedirectResponse("/admin?err=cuentaajena#empleadores", status_code=303)
+        clave = _clave_temporal_nueva()
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = True
+        s.add(cuenta)
+        s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "restablecer-clave-empresa", numero, _uid_sesion(request), sid)
+    return _pagina_clave_temporal(request, e.razon_social or numero, numero,
+                                  "/admin#empleadores", clave)
+
+
 @app.post("/admin/empleador/importar-cuits")
 def admin_empleador_importar(request: Request):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
-    agregados = db.importar_cuits_de_conceptos(sid)
-    return RedirectResponse(f"/admin?importados={agregados}#empleadores", status_code=303)
+    invalidos = []
+    agregados = db.importar_cuits_de_conceptos(sid, invalidos=invalidos)
+    destino = f"/admin?importados={agregados}"
+    if invalidos:
+        destino += f"&cuitinvalidos={len(invalidos)}&cuitmuestra=" + quote(", ".join(invalidos[:10]))
+    return RedirectResponse(destino + "#empleadores", status_code=303)
 
 
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
@@ -2904,6 +3950,24 @@ ARCHIVO_MIMES_TRAMITE = {
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 MAX_ARCHIVO_TRAMITE = 10 * 1024 * 1024  # 10 MB
+# Extensiones que son el mismo formato con otro nombre. "pdf,jpg" en un
+# formulario rechazaba una foto .jpeg -- que es lo que generan muchos
+# teléfonos -- porque la comparación era letra por letra (BACKLOG, brecha 3
+# del 2026-10-16). Se aplica al comparar, nunca sobre lo guardado.
+EXTENSIONES_EQUIVALENTES = {"jpg": "jpeg", "jpeg": "jpg", "tif": "tiff", "tiff": "tif", "htm": "html", "html": "htm"}
+
+
+def extensiones_permitidas(lista: str) -> list:
+    """«pdf, JPG» → ["pdf", "jpg", "jpeg"]: normalizadas, sin punto ni
+    repetidas, y con la equivalente de cada una. Lista vacía = cualquiera."""
+    salida = []
+    for e in (lista or "").split(","):
+        e = e.strip().lower().lstrip(".")
+        if e:
+            for x in (e, EXTENSIONES_EQUIVALENTES.get(e)):
+                if x and x not in salida:
+                    salida.append(x)
+    return salida
 
 
 def _leer_archivo_tramite(archivo: UploadFile):
@@ -2929,23 +3993,32 @@ def _notificar_cambio_tramite(sid: int, cuil: str, numero: str, texto: str) -> N
 
 
 TIPOS_DATO_TRAMITE = ("texto", "numero", "fecha", "archivo", "seleccion",
-                       "opcion_unica", "multiple", "booleano", "separador")
+                       "opcion_unica", "multiple", "booleano", "separador",
+                       validaciones_tramite.TIPO_CALCULADO)
 ANCHOS_CAMPO_TRAMITE = ("completo", "mitad", "tercio")
 
 
-def _campos_tramite_validos(campos_crudos: list) -> list:
+def _campos_tramite_validos(campos_crudos: list, borrador: bool = False) -> list:
     """Normaliza y descarta campos mal formados que pudieran llegar de un
     request armado a mano -- misma lógica de saneo defensivo que ya usan
     _destinos_validos/_modulos_de para otros datos que vienen del cliente.
     "separador" es el único tipo_dato sin etiqueta obligatoria (es una raya
-    visual, no junta respuesta)."""
+    visual, no junta respuesta).
+
+    Dos pasadas: primero los campos, después sus validaciones, porque una de
+    fuente `funcion` nombra a OTROS campos del formulario (la segunda clave
+    por orden, `campo.<nombre>` en la fórmula) y hay que tener la lista
+    entera para sanearla.
+
+    En un `borrador` un campo sin etiqueta se conserva (es trabajo a medias
+    que se va a terminar otro día); al publicar, se descarta como siempre."""
     validos = []
     for c in campos_crudos:
         if not isinstance(c, dict):
             continue
         if c.get("tipo_dato") not in TIPOS_DATO_TRAMITE:
             continue
-        if c.get("tipo_dato") != "separador" and not str(c.get("etiqueta") or "").strip():
+        if c.get("tipo_dato") != "separador" and not str(c.get("etiqueta") or "").strip() and not borrador:
             continue
 
         def _entero(v):
@@ -2969,11 +4042,13 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
             "opciones": str(c.get("opciones") or "").strip()[:500],
             "ancho": c.get("ancho") if c.get("ancho") in ANCHOS_CAMPO_TRAMITE else "completo",
             "obligatorio": bool(c.get("obligatorio", True)),
-            # Una validación mal formada no se guarda (se descarta acá, no
-            # explota después en la pantalla del trabajador).
-            "validaciones": validaciones_tramite.validaciones_saneadas(
-                c.get("validaciones"), c["tipo_dato"]),
+            "_validaciones_crudas": c.get("validaciones"),
         })
+    for i, c in enumerate(validos):
+        # Una validación mal formada no se guarda (se descarta acá, no
+        # explota después en la pantalla del trabajador).
+        c["validaciones"] = validaciones_tramite.validaciones_saneadas(
+            c.pop("_validaciones_crudas"), c["tipo_dato"], campos=validos, indice=i)
     return validos
 
 
@@ -2982,41 +4057,51 @@ async def abm_tramite_tipo(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
-    reglas_json: str = Form("[]"),
+    reglas_json: str = Form("[]"), requisitos_json: str = Form("[]"),
     area_destino_default_id: str = Form(""), seccional_id: str = Form(""),
     destinos_json: str = Form("{}"),
     permite_pase: str = Form(""), areas_pase: list[str] = Form(default=[]),
+    accion: str = Form(""),
 ):
     """El formulario declara su RUTEO además de sus campos (decisiones N6 y
     N7): a qué área cae por defecto, el mapa seccional -> área, y si es
-    global o de una seccional."""
+    global o de una seccional.
+
+    `accion=borrador` (SDN, 2026-10-19) guarda el trabajo a medias: no exige
+    campos ni área, conserva los campos sin etiqueta y deja el tipo inactivo
+    con la marca `borrador`. Cualquier otra acción PUBLICA: exige todo y saca
+    la marca."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
+    borrador = accion == "borrador"
     import json
     try:
         campos_crudos = json.loads(campos_json)
         assert isinstance(campos_crudos, list)
         reglas_crudas = json.loads(reglas_json or "[]")
         assert isinstance(reglas_crudas, list)
+        requisitos_crudos = json.loads(requisitos_json or "[]")
+        assert isinstance(requisitos_crudos, list)
         destinos_crudos = json.loads(destinos_json or "{}")
         assert isinstance(destinos_crudos, dict)
     except Exception:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
-    campos = _campos_tramite_validos(campos_crudos)
-    if not campos:
+    campos = _campos_tramite_validos(campos_crudos, borrador=borrador)
+    if not campos and not borrador:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
+    requisitos = validaciones_tramite.requisitos_saneados(requisitos_crudos, campos)
     with db.get_session() as s:
         destino_default = _id_propio(s, Area, area_destino_default_id, sid)
         del_seccional = _id_propio(s, Seccional, seccional_id, sid)
     # El destino por defecto es OBLIGATORIO: sin él, una seccional que nadie
     # mapeó dejaría trámites sin dueño y nadie los vería en ninguna bandeja.
-    if not destino_default:
+    if not destino_default and not borrador:
         return RedirectResponse("/admin?error=sindestino#tramites", status_code=303)
-    # Un admin local solo arma formularios DE su seccional, y su destino y
-    # su mapa tienen que caer dentro de su alcance.
-    if del_seccional:
-        _exigir_alcance_seccional(request, del_seccional)
+    # Un admin local solo arma formularios DE su seccional (vacía = la suya;
+    # un global lo arma solo el alcance total), y su destino y su mapa
+    # tienen que caer dentro de su alcance. Bloque 3.
+    del_seccional = _seccional_en_alcance(request, del_seccional)
     mapa = {}
     for k, v in destinos_crudos.items():
         try:
@@ -3028,18 +4113,20 @@ async def abm_tramite_tipo(
         if not tipo or tipo["sindicato_id"] != sid:
             return RedirectResponse("/admin#tramites", status_code=303)
         # La seccional de un formulario no se edita (ver editar_tipo_tramite).
-        if tipo.get("seccional_id"):
-            _exigir_alcance_seccional(request, tipo["seccional_id"])
-        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
-                               area_destino_default_id=destino_default,
-                               permite_pase=bool(permite_pase))
+        # Un global (None) lo edita solo el alcance total: fail-closed.
+        _exigir_alcance_seccional(request, tipo.get("seccional_id"))
+        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si" and not borrador,
+                               campos, reglas, area_destino_default_id=destino_default,
+                               permite_pase=bool(permite_pase), requisitos=requisitos,
+                               borrador=borrador)
         db.set_destinos_tipo_tramite(int(id), mapa, sid)
         db.set_areas_de_pase(int(id), _ids_int(areas_pase), sid)
     else:
         nuevo_id = db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas,
                                          area_destino_default_id=destino_default,
                                          seccional_id=del_seccional,
-                                         permite_pase=bool(permite_pase))
+                                         permite_pase=bool(permite_pase),
+                                         requisitos=requisitos, borrador=borrador)
         db.set_destinos_tipo_tramite(nuevo_id, mapa, sid)
         db.set_areas_de_pase(nuevo_id, _ids_int(areas_pase), sid)
     return RedirectResponse("/admin#tramites", status_code=303)
@@ -3054,13 +4141,20 @@ async def probar_tramite_tipo(request: Request):
     error sería silencioso porque nadie los compara (el criterio de
     resolver_destinatarios en Notificaciones). Sirve para los dos
     constructores (trabajador y empresa): la lógica es pura, no toca tablas,
-    por eso alcanza con tener habilitado cualquiera de los dos módulos."""
+    por eso alcanza con tener habilitado cualquiera de los dos módulos.
+
+    Las validaciones de fuente `funcion` y los requisitos (bloque 3) se
+    evalúan contra un CUIL DE PRUEBA que elige el admin (`cuil` en el
+    cuerpo), con el padrón y las listas reales de SU sindicato
+    (`db.contexto_validaciones`). Sin CUIL no se evalúan y la respuesta
+    lo dice (`sin_contexto`), en vez de dar un verde que no vale."""
     sid = exigir_sindicato(request)
     if "tramites" not in _modulos_de(sid):
         _exigir_modulo(sid, "empleadores")
     cuerpo = await request.json()
     campos = _campos_tramite_validos(cuerpo.get("campos") or [])
     reglas = validaciones_tramite.reglas_saneadas(cuerpo.get("reglas") or [], campos)
+    requisitos = validaciones_tramite.requisitos_saneados(cuerpo.get("requisitos") or [], campos)
     # Los campos todavía no tienen id (no están guardados): se usa el índice
     # como id, y el cliente referencia sus inputs de prueba igual.
     for i, c in enumerate(campos):
@@ -3072,13 +4166,41 @@ async def probar_tramite_tipo(request: Request):
             valores[int(clave)] = str(valor)
         except (TypeError, ValueError):
             continue
-    return validaciones_tramite.evaluar_envio(campos, reglas, valores)
+    cuil_prueba = _norm_cuil(str(cuerpo.get("cuil") or ""))
+    contexto = None
+    if len(cuil_prueba) == 11:
+        contexto = db.contexto_validaciones(sid, cuil_prueba,
+                                            {"campos": campos, "requisitos": requisitos}, valores)
+    veredicto = validaciones_tramite.evaluar_envio(campos, reglas, valores, contexto, requisitos)
+    veredicto["nombres"] = validaciones_tramite.nombres_de_campos(campos)
+    veredicto["cuil"] = cuil_prueba if contexto else ""
+    return veredicto
+
+
+@app.post("/admin/tramite-tipo/nombres")
+async def nombres_tramite_tipo(request: Request):
+    """Los nombres con los que una fórmula nombra a cada campo del
+    formulario tal cual está en pantalla (`campo.<nombre>`). Los arma el
+    servidor y no el JS: es la misma función que después evalúa, y dos
+    normalizaciones distintas serían un nombre que el constructor muestra y
+    la fórmula no encuentra."""
+    sid = exigir_sindicato(request)
+    if "tramites" not in _modulos_de(sid):
+        _exigir_modulo(sid, "empleadores")
+    cuerpo = await request.json()
+    campos = _campos_tramite_validos(cuerpo.get("campos") or [])
+    return {"nombres": validaciones_tramite.nombres_de_campos(campos)}
 
 
 @app.post("/admin/tramite-tipo/borrar")
 def borrar_tramite_tipo(request: Request, id: int = Form(...)):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
+    tipo = db.tipo_tramite_por_id(id)
+    if not tipo or tipo["sindicato_id"] != sid:
+        return RedirectResponse("/admin#tramites", status_code=303)
+    # Un global o uno de otra seccional no lo borra un admin acotado (bloque 3).
+    _exigir_alcance_seccional(request, tipo.get("seccional_id"))
     ok = db.borrar_tipo_tramite(id, sid)
     if not ok:
         return RedirectResponse("/admin?error=tramitesenviados#tramites", status_code=303)
@@ -3600,8 +4722,16 @@ def api_tipos_tramite(request: Request):
     # Los formularios GLOBALES más los de SU seccional (decisión N7). El
     # recorte va en la consulta: si se hiciera en el cliente, los
     # formularios de otras delegaciones viajarían igual en el JSON.
-    return {"tipos": db.tipos_tramite_del_sindicato(
-        sid, solo_activos=True, seccional_id=db.seccional_de_trabajador(cuil, sid))}
+    tipos = db.tipos_tramite_del_sindicato(
+        sid, solo_activos=True, seccional_id=db.seccional_de_trabajador(cuil, sid))
+    # Cada campo extraído o calculado dice de dónde sale y si es un dato
+    # propio de la persona: la app avisa qué pasa si lo corrige.
+    for t in tipos:
+        for c in t.get("campos") or []:
+            desc = validaciones_tramite.descripcion_ingreso(c)
+            if desc:
+                c["ingreso"] = desc
+    return {"tipos": tipos}
 
 
 @app.get("/api/tramites/mios")
@@ -3904,9 +5034,17 @@ async def api_enviar_tramite(request: Request):
 
     errores = []
     respuestas = []
+    valores_calculados = {}
     for campo in tipo["campos"]:
         if campo["tipo_dato"] == "separador":
             continue  # raya visual, no junta respuesta
+        if campo["tipo_dato"] == validaciones_tramite.TIPO_CALCULADO:
+            # Extraído o calculado: el servidor lo propone y el afiliado puede
+            # corregirlo (SDN, 2026-10-18). Lo que mande el cliente entra a
+            # `valores_calculados` y evaluar_envio decide (queda anotado para
+            # quien evalúa; un dato propio se actualiza en su perfil).
+            valores_calculados[campo["id"]] = str(form.get(f'campo_{campo["id"]}') or "").strip()[:500]
+            continue
         if campo["tipo_dato"] == "booleano":
             # Un checkbox desmarcado ni siquiera viaja en el form -- "No" es
             # una respuesta válida en sí misma, no aplica el chequeo de
@@ -3934,7 +5072,7 @@ async def api_enviar_tramite(request: Request):
                 continue
             import os
             ext = os.path.splitext(archivo.filename)[1].lower().lstrip(".")
-            permitidos = [e.strip().lower() for e in (campo["tipos_archivo_permitidos"] or "").split(",") if e.strip()]
+            permitidos = extensiones_permitidas(campo["tipos_archivo_permitidos"])
             if permitidos and ext not in permitidos:
                 errores.append(f'"{campo["etiqueta"]}": el archivo tiene que ser {", ".join(permitidos)}.')
                 continue
@@ -3973,19 +5111,35 @@ async def api_enviar_tramite(request: Request):
             continue
         respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
 
-    # Capa de validaciones del formulario (fija + consistencia): corre
-    # SIEMPRE en el servidor aunque el cliente valide lo mismo en vivo --
-    # esto es lo que decide qué se persiste. "avisa" no frena: queda como
-    # advertencia para el operador en el detalle del trámite.
+    # Capa de validaciones del formulario (fija + consistencia + función):
+    # corre SIEMPRE en el servidor aunque el cliente valide lo mismo en vivo
+    # -- esto es lo que decide qué se persiste. "avisa" no frena: queda como
+    # advertencia para el operador en el detalle del trámite. Las de fuente
+    # `funcion` y los requisitos miran el padrón y las listas con el CUIL de
+    # la SESIÓN (db.contexto_validaciones); un campo extraído o calculado se
+    # guarda con lo que propuso el servidor, salvo que el afiliado lo haya
+    # corregido (queda anotado en las advertencias del trámite).
     valores = {r["campo_tramite_id"]: r.get("valor_texto", "")
                for r in respuestas if "valor_texto" in r}
+    valores.update(valores_calculados)
+    contexto = db.contexto_validaciones(sid, cuil, tipo, valores)
     veredicto = validaciones_tramite.evaluar_envio(
-        tipo["campos"], tipo.get("reglas_consistencia"), valores)
+        tipo["campos"], tipo.get("reglas_consistencia"), valores,
+        contexto, tipo.get("requisitos"))
     errores += veredicto["errores"]
 
     if errores:
         return JSONResponse(status_code=422, content={
             "errores": errores, "errores_campos": veredicto["errores_campos"]})
+    for cid, texto in veredicto["calculados"].items():
+        respuestas.append({"campo_tramite_id": cid, "valor_texto": texto})
+    # Un dato PROPIO de la persona (fecha de nacimiento, provincia,
+    # localidad) que corrigió en el formulario se actualiza en su perfil: la
+    # app se lo avisó antes de dejarla cambiarlo.
+    for c in veredicto.get("corregidos") or []:
+        if c.get("propio") and c.get("dato"):
+            db.actualizar_dato_personal(cuil, c["dato"], c["escrito"])
+    _intentos_en_vivo.pop((cuil, tipo_tramite_id), None)
 
     # Trámite encadenado: si el formulario se abrió desde el CHAT de otro
     # trámite, el nuevo queda vinculado. Solo vale un trámite DEL MISMO
@@ -4006,6 +5160,84 @@ async def api_enviar_tramite(request: Request):
     if not resultado:
         raise HTTPException(400, "No se pudo crear el trámite.")
     return resultado
+
+
+@app.get("/api/tramite/requisitos/{tipo_tramite_id}")
+def api_tramite_requisitos(tipo_tramite_id: int, request: Request):
+    """Al abrir el formulario (bloque 4 de PLAN_LISTAS_VALIDACIONES.md): si
+    los requisitos del tipo no se cumplen para el afiliado de la SESIÓN,
+    los mensajes en vez de los campos; y los calculados que ya se pueden
+    completar (los que no dependen de una segunda clave). Misma puerta que
+    el envío: sesión, módulo, tipo activo de su sindicato y seccional."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "tramites")
+    tipo = _tipo_tramite_del_afiliado(tipo_tramite_id, sid, cuil)
+    contexto = db.contexto_validaciones(sid, cuil, tipo, {})
+    return validaciones_tramite.requisitos_al_abrir(tipo["campos"], tipo.get("requisitos"), contexto)
+
+
+@app.post("/api/tramite/validar-campo")
+async def api_tramite_validar_campo(request: Request):
+    """Validación EN VIVO de un campo (D3): `{tipo_tramite_id, indice_campo,
+    valor, valores}` → `{pasa, mensaje, calculados}`. Solo las funciones que
+    el admin marcó "en vivo", y solo pasa / no pasa con su mensaje: nunca
+    la fila ni el dato que se miró. **Diez intentos por sesión y formulario**
+    (`EN_VIVO_MAX_INTENTOS`): después, 429 y el afiliado sigue hasta el
+    envío, donde todo se evalúa igual. Es cortesía: el servidor decide al
+    enviar."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "tramites")
+    cuerpo = await request.json()
+    try:
+        tipo_id = int(cuerpo.get("tipo_tramite_id") or 0)
+        indice = int(cuerpo.get("indice_campo"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Pedido inválido")
+    tipo = _tipo_tramite_del_afiliado(tipo_id, sid, cuil)
+    campos = tipo["campos"]
+    if not (0 <= indice < len(campos)):
+        raise HTTPException(400, "Pedido inválido")
+    llave = (cuil, tipo_id)
+    if _intentos_en_vivo.get(llave, 0) >= EN_VIVO_MAX_INTENTOS:
+        raise HTTPException(429, "Ya probaste este dato muchas veces: completá el formulario y envialo, lo revisamos al recibirlo.")
+    if len(_intentos_en_vivo) > 5000:
+        _intentos_en_vivo.clear()
+    _intentos_en_vivo[llave] = _intentos_en_vivo.get(llave, 0) + 1
+    crudos = cuerpo.get("valores") or {}
+    valores = {}
+    for clave, valor in (crudos.items() if isinstance(crudos, dict) else []):
+        try:
+            i = int(clave)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= i < len(campos):
+            valores[campos[i]["id"]] = str(valor or "")[:500]
+    valores[campos[indice]["id"]] = str(cuerpo.get("valor") or "")[:500]
+    contexto = db.contexto_validaciones(sid, cuil, tipo, valores)
+    return validaciones_tramite.evaluar_campo_en_vivo(campos, indice, valores, contexto)
+
+
+def _tipo_tramite_del_afiliado(tipo_tramite_id: int, sid: int, cuil: str) -> dict:
+    """El tipo, si es activo de SU sindicato y de su seccional (o global);
+    si no, 404 -- mismo criterio que api_enviar_tramite."""
+    tipo = db.tipo_tramite_por_id(tipo_tramite_id)
+    if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        raise HTTPException(404, "Tipo de trámite inválido")
+    if tipo.get("seccional_id") and tipo["seccional_id"] != db.seccional_de_trabajador(cuil, sid):
+        raise HTTPException(404, "Tipo de trámite inválido")
+    return tipo
 
 
 @app.post("/api/tramite/{tramite_id}/nota")
@@ -4270,7 +5502,7 @@ async def api_enviar_tramite_empresa(request: Request):
                 continue
             import os
             ext = os.path.splitext(archivo.filename)[1].lower().lstrip(".")
-            permitidos = [e.strip().lower() for e in (campo["tipos_archivo_permitidos"] or "").split(",") if e.strip()]
+            permitidos = extensiones_permitidas(campo["tipos_archivo_permitidos"])
             if permitidos and ext not in permitidos:
                 errores.append(f'"{campo["etiqueta"]}": el archivo tiene que ser {", ".join(permitidos)}.')
                 continue
@@ -4514,14 +5746,23 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     _exigir_modulo(sid, "recibos")
     conceptos_actuales = db.conceptos_como_dicts(sid)
     genericos_actuales = [c for c in conceptos_actuales if not c.get("cuit_empleador")]
+    conocidos_sind = (None if preparacion.modo() == "apagado"
+                      else preparacion.E.Conocidos(cuits=db.cuits_conocidos(sindicato_id=sid)))
     acumulados = {}
     leidos, fallidos = 0, 0
 
     for archivo in archivos:
         contenido = await archivo.read()
+        # Recibos de otras personas: de la persona no se sabe nada, se tapa
+        # por patrones y rótulos. Del empleador sí: los CUITs del sindicato,
+        # que es de lo que dependen los conceptos por empleador.
+        prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos_sind, sid, "aprendizaje")
         try:
             recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
-                                                  db.modelo_ia("recibos"))
+                                                  db.modelo_ia("recibos"), **_para_la_ia(prep))
+            if prep.tapado:
+                preparacion.rearmar_recibo(recibo, prep.analisis, None,
+                                           lambda cuit: db.razon_social_de_cuit(sid, cuit))
         except Exception as e:
             _registrar_uso_fallido(e, sid, "", "aprendizaje")
             fallidos += 1
@@ -4536,7 +5777,7 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
             if clave in acumulados:
                 acumulados[clave]["veces"] += 1
             else:
-                acumulados[clave] = {**n, "remunerativo": n["tipo"] == "ingreso", "veces": 1,
+                acumulados[clave] = {**n, "veces": 1,
                                       "cuit_empleador": cuit_empleador}
 
     # Antes de que el admin apruebe el lote, avisar si alguna propuesta se
@@ -4588,10 +5829,19 @@ def aprender_aplicar(request: Request, payload: dict):
     _exigir_modulo(sid, "recibos")
     aprobados = payload.get("aprobados", [])
     altas = 0
+    # El CUIT del empleador lo propuso la IA leyendo recibos, y al aprobar el
+    # lote el concepto nace CONFIRMADO: es una puerta de alta como
+    # /admin/concepto (PLAN_CUIT_MOD11.md, D2). Un CUIT que no cumple el
+    # módulo 11 (casi siempre, un dígito mal leído) no entra: ese concepto
+    # queda afuera y se informa, para cargarlo a mano con el CUIT correcto.
+    cuit_invalidos = []
     with db.get_session() as s:
         existentes = {(c.codigo, c.cuit_empleador or "") for c in s.exec(select(Concepto).where(
             Concepto.sindicato_id == sid)).all()}
         for c in aprobados:
+            if _cuit_mal(c.get("cuit_empleador", ""), opcional=True):
+                cuit_invalidos.append(c.get("codigo", ""))
+                continue
             cuit_empleador = _norm_cuil(c.get("cuit_empleador", "")) or None
             clave = (c["codigo"], cuit_empleador or "")
             if clave not in existentes:
@@ -4606,7 +5856,7 @@ def aprender_aplicar(request: Request, payload: dict):
                 existentes.add(clave)
                 altas += 1
         s.commit()
-    return {"ok": True, "altas": altas}
+    return {"ok": True, "altas": altas, "cuit_invalidos": cuit_invalidos}
 
 
 # ================= Admin de plataforma =================
@@ -4726,10 +5976,19 @@ def plataforma(request: Request):
                    "tope_maximo": t.tope_maximo, "base_minima": t.base_minima} for t in topes]
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
+        "operadores": db.operadores_de_todos_los_sindicatos(),
         "tope_sindical_pct": db.obtener_tope_sindical(),
         "config_dashboard": db.config_dashboard(),
         "marca_plataforma": db.marca_plataforma(),
         "uso_ia": uso_ia,
+        # Sub-pestaña "Enmascarado": los registros y el modo que rige en ESTE
+        # proceso (lo dice la variable ENMASCARADO del servicio).
+        "enmascarado_registros": db.registros_enmascarado(),
+        "enmascarado_modo": preparacion.modo(),
+        "enmascarado_ocr": lectores.ocr_disponible(),
+        "enmascarado_diagnostico": preparacion.guardar_imagenes_habilitado(),
+        "enmascarado_diag_entorno": entorno.ENTORNO in ("local", "pruebas"),
+        "enmascarado_dias": preparacion.DIAS_IMAGENES,
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         # (id, nombre): el filtro compara contra el id que guarda la fila, pero
         # muestra el nombre lindo -- un modelo viejo que ya no está en el
@@ -4882,10 +6141,10 @@ def plataforma_completar_guardar(
     if not fila:
         return RedirectResponse("/plataforma/inicio", status_code=303)
 
-    def _volver(msg):
+    def _volver(msg, codigo=""):
         return templates.TemplateResponse("plataforma_completar.html", {
             "request": request, "marca_plataforma": db.marca_plataforma(),
-            "u": fila, "error": msg,
+            "u": fila, "error": msg, "codigo_error": codigo,
             "datos": {"cuil": cuil, "dni": dni, "email": email,
                       "direccion": direccion, "telefono": telefono}}, status_code=400)
 
@@ -4897,6 +6156,9 @@ def plataforma_completar_guardar(
     cuil_n = re.sub(r"[^0-9]", "", cuil or "")
     if len(cuil_n) != 11:
         return _volver("El CUIL tiene que tener 11 dígitos.")
+    # El CUIL del usuario de plataforma nace acá: con su verificador.
+    if _cuil_mal(cuil_n):
+        return _volver("El CUIL no es válido: revisá los 11 números.", "E-IDENT-01")
     if not (dni or "").strip():
         return _volver("El DNI es obligatorio.")
     if not _RE_EMAIL.match((email or "").strip()):
@@ -5054,7 +6316,8 @@ def plataforma_config_dashboard(
 def plataforma_modelos_ia(request: Request,
                           modelo_recibos: str = Form(""),
                           modelo_convenio: str = Form(""),
-                          modelo_asistente: str = Form("")):
+                          modelo_asistente: str = Form(""),
+                          modelo_asistente_tramites: str = Form("")):
     """Qué modelo de Anthropic usa cada parte de la app. Solo plataforma: la
     API la paga la plataforma, no el sindicato, y un cambio acá vale para
     todos los sindicatos a la vez.
@@ -5064,15 +6327,69 @@ def plataforma_modelos_ia(request: Request,
     con otra cosa significa un POST armado a mano."""
     exigir_plataforma(request)
     db.set_modelos_ia({"recibos": modelo_recibos, "convenio": modelo_convenio,
-                       "asistente": modelo_asistente})
+                       "asistente": modelo_asistente,
+                       "asistente_tramites": modelo_asistente_tramites})
     return RedirectResponse("/plataforma?config=ok#usoia-modelos", status_code=303)
+
+
+# ---------- Diagnóstico del enmascarado (TRANSITORIO, solo Pruebas) ----------
+# Las imágenes original y enviada de cada documento, para ver qué se tapó de
+# verdad. 404 fuera de local/pruebas aunque hubiera filas: la original tiene
+# datos personales y no se muestra en la demo ni en producción.
+
+def _exigir_diagnostico(request: Request):
+    exigir_plataforma(request)
+    if entorno.ENTORNO not in ("local", "pruebas"):
+        raise HTTPException(404)
+
+
+@app.get("/plataforma/enmascarado/{registro_id}/imagen/{cual}")
+def enmascarado_imagen(request: Request, registro_id: int, cual: str):
+    _exigir_diagnostico(request)
+    datos = db.imagen_enmascarado(registro_id, cual)
+    if not datos:
+        raise HTTPException(404)
+    return Response(content=datos, media_type="image/jpeg",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.get("/plataforma/enmascarado/{registro_id}", response_class=HTMLResponse)
+def enmascarado_comparar(request: Request, registro_id: int):
+    """Las dos imágenes lado a lado: la que subió la persona y la que recibió
+    la IA. Página mínima a propósito: es una herramienta de diagnóstico."""
+    _exigir_diagnostico(request)
+    if not db.imagen_enmascarado(registro_id, "original"):
+        raise HTTPException(404)
+    base = f"/plataforma/enmascarado/{registro_id}/imagen"
+    return HTMLResponse(f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colm3na — Diagnóstico del enmascarado #{registro_id}</title>
+<style>body{{margin:0;font-family:system-ui,sans-serif;background:#f6f7f9;color:#152238}}
+header{{background:#152238;color:#fff;padding:12px 18px;font-size:14px}}
+main{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}}
+@media (max-width:900px){{main{{grid-template-columns:1fr}}}}
+figure{{margin:0;background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:10px}}
+figcaption{{font-size:12px;color:#5b6478;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}}
+img{{width:100%;height:auto;display:block}}</style></head><body>
+<header>Diagnóstico del enmascarado · registro #{registro_id} · solo Pruebas, se borra a los {preparacion.DIAS_IMAGENES} días</header>
+<main><figure><figcaption>Lo que subió la persona</figcaption><img src="{base}/original" alt="Original"></figure>
+<figure><figcaption>Lo que recibió la IA</figcaption><img src="{base}/enviada" alt="Enviada a la IA"></figure></main>
+</body></html>""", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/plataforma/enmascarado/imagenes/borrar")
+def enmascarado_borrar_imagenes(request: Request):
+    _exigir_diagnostico(request)
+    n = db.borrar_imagenes_enmascarado()
+    return RedirectResponse(f"/plataforma?imagenes_borradas={n}#usoia-enmascarado", status_code=303)
 
 
 @app.post("/plataforma/probar-modelos")
 async def plataforma_probar_modelos(request: Request,
                                     archivo: UploadFile = File(...),
                                     tipo: str = Form("recibo"),
-                                    modelos: list[str] = Form([])):
+                                    modelos: list[str] = Form([]),
+                                    tapado: str = Form("")):
     """Banco de pruebas: lee el MISMO archivo con dos o más modelos y
     devuelve, lado a lado, qué leyó cada uno, cuánto tardó y cuánto costó.
 
@@ -5111,13 +6428,32 @@ async def plataforma_probar_modelos(request: Request,
         print(f"[banco de pruebas] no se pudo preparar el archivo: {type(e).__name__}: {e}")
         raise HTTPException(422, "No se pudo abrir el archivo. ¿Es una imagen o un PDF?")
 
+    # "Comparar también con el documento tapado" (PLAN_ENMASCARADO.md, bloque
+    # 4): cada modelo lee además la versión tapada, en la columna de al lado.
+    # Es la prueba de que tapar no le cambia la lectura: mismo modelo, mismo
+    # archivo, y la tabla línea por línea marca cualquier diferencia. Sin nada
+    # conocido de antemano (como el aprendizaje del admin): el banco no es de
+    # un afiliado.
+    prep = None
+    if tapado:
+        prep = await run_in_threadpool(preparacion.preparar, contenido, archivo.content_type,
+                                       None, "activo")
+        rid = db.registrar_enmascarado(None, "prueba", prep.registro)
+        await _guardar_diagnostico(rid, prep, contenido, archivo.content_type)
+    tareas = [(m, False) for m in elegidos]
+    if prep is not None and prep.tapado:
+        tareas = [t for m in elegidos for t in ((m, False), (m, True))]
     lecturas = await asyncio.gather(
-        *(run_in_threadpool(leer, contenido, archivo.content_type, m, imagen) for m in elegidos),
+        *(run_in_threadpool(leer, contenido, archivo.content_type, m,
+                            prep.imagen if t else imagen,
+                            **({"aviso_enmascarado": True} if t else {}))
+          for m, t in tareas),
         return_exceptions=True)
 
     salida, referencia, leidas = [], None, []
-    for modelo, r in zip(elegidos, lecturas):
-        fila = {"modelo": modelo, "nombre": precios_ia.nombre(modelo),
+    for (modelo, es_tapado), r in zip(tareas, lecturas):
+        nombre = precios_ia.nombre(modelo) + (" — tapado" if es_tapado else "")
+        fila = {"modelo": modelo, "nombre": nombre, "tapado": es_tapado,
                 "precio_txt": precios_ia.precio_txt(precios_ia.modelo(modelo))}
         if isinstance(r, BaseException):
             # El error crudo a la vista: acá lo lee quien administra la
@@ -5139,6 +6475,13 @@ async def plataforma_probar_modelos(request: Request,
         datos, uso = r
         db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
                             uso["tokens_salida"], uso.get("duracion_ms", 0))
+        if es_tapado:
+            # Lo que se le tapó vuelve con lo leído acá, como en las rutas de
+            # verdad: la comparación es contra el recibo tal como lo usa la app.
+            if tipo == "aportes":
+                preparacion.rearmar_aportes(datos, prep.analisis, None)
+            else:
+                preparacion.rearmar_recibo(datos, prep.analisis, None)
         p = precios_ia.precios(uso["modelo"])
         costo = precios_ia.costo(uso["tokens_entrada"], uso["tokens_salida"], p[0], p[1]) if p else None
         resumen = resumen_comparable(tipo, datos)
@@ -5160,16 +6503,26 @@ async def plataforma_probar_modelos(request: Request,
             "json": json.dumps(datos, ensure_ascii=False, indent=1),
         })
         salida.append(fila)
-        leidas.append((modelo, datos))
+        leidas.append((nombre, datos))
 
     # La comparación línea por línea es la que contesta la pregunta que el
     # resumen deja abierta: dos modelos pueden coincidir en los totales y aun
     # así clasificar distinto una línea, y ESE campo (`tipo`) alimenta la
     # retención sindical y el tope del 2%. Solo aplica a un recibo (un
     # comprobante de ARCA no tiene líneas) y con dos lecturas o más.
+    enmascarado = None
+    if prep is not None:
+        r = prep.registro
+        enmascarado = {
+            "tapado": prep.tapado, "camino": r.get("camino"), "motivo": r.get("motivo"),
+            "cajas": r.get("cajas"), "fugas": r.get("fugas"), "total_ms": r.get("total_ms"),
+            # La imagen TAL COMO la recibe la IA: es la que hay que mirar.
+            "imagen": (f"data:{prep.imagen[1]};base64,{prep.imagen[0]}"
+                       if prep.tapado and prep.imagen else None),
+        }
     return {"tipo": tipo, "archivo": archivo.filename or "", "modelos": salida,
             "lineas": comparar_lineas(leidas) if tipo == "recibo" and len(leidas) > 1 else None,
-            "modelos_leidos": [precios_ia.nombre(m) for m, _ in leidas]}
+            "modelos_leidos": [n for n, _ in leidas], "enmascarado": enmascarado}
 
 
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")
@@ -5276,11 +6629,21 @@ async def plataforma_alta_sindicato(
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
+    clausula_confidencialidad: bool = Form(False),
+    acepta_mail_declarado: bool = Form(False),
+    contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    # El CUIT del gremio es opcional, pero si viene tiene que ser el de una
+    # persona jurídica con su verificador. Antes de leer ningún archivo.
+    if _cuit_empresa_mal(cuit):
+        return RedirectResponse("/plataforma?error=cuit#nuevo", status_code=303)
+    contrato_leido = _leer_contrato(contrato)
+    if contrato_leido == "invalido":
+        return RedirectResponse("/plataforma?error=contrato#sindicatos", status_code=303)
     modulos_validos = [m for m in modulos_habilitados if m in MODULOS]
     slug = slugify(nombre)
     logo_datos, logo_mime, logo_flag = (None, "", "")
@@ -5304,7 +6667,11 @@ async def plataforma_alta_sindicato(
             modulos_habilitados=modulos_validos,
             portada_clara=portada_clara,
             admin_portada_clara=admin_portada_clara,
+            acepta_mail_declarado=acepta_mail_declarado,
         )
+        if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
+                                            clausula_confidencialidad):
+            return RedirectResponse("/plataforma?error=clausula#sindicatos", status_code=303)
         s.add(sind); s.commit(); s.refresh(sind)
         sind_id = sind.id
     # Aportes de ley (jubilación, PAMI, obra social): mismo % en cualquier
@@ -5438,10 +6805,14 @@ def _cupo_panel():
 
 
 def _filtros_dashboard(request: Request) -> dict:
+    """Los filtros del Panel, con el alcance de seccional de quien pide YA
+    impuesto (dashboard.imponer_alcance, bloque 4): los once endpoints de
+    agregados, el explorador y el mapa lo heredan de acá, en un solo lugar."""
     try:
-        return dashboard.parsear_filtros(request.query_params)
+        f = dashboard.parsear_filtros(request.query_params)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    return dashboard.imponer_alcance(f, _alcance_de(request))
 
 
 @app.post("/admin/dashboard/asistente")
@@ -5470,7 +6841,8 @@ def dashboard_asistente(request: Request, cuerpo: dict = Body(default={})):
                                  f"por día de tu sindicato. Mañana vuelve a estar disponible; los "
                                  f"filtros del panel siguen funcionando a mano.")
     try:
-        salida = asistente.responder(sid, pregunta, filtros, historial)
+        salida = asistente.responder(sid, pregunta, filtros, historial,
+                                     alcance=_alcance_de(request))
     except asistente.ErrorModelo as e:
         print(f"[asistente] sindicato {sid}: {e}")
         raise ErrorApp("E-ASISTENTE-01")
@@ -5612,7 +6984,37 @@ def dashboard_detalle_recibo(request: Request, recibo_id: int):
     """Modal "Ver" del explorador. La anonimización de un recibo NO enviado
     la hace dashboard.detalle_recibo en el servidor, no el frontend."""
     sid = _exigir_dashboard_detalle(request)
-    d = dashboard.detalle_recibo(sid, recibo_id)
+    d = dashboard.detalle_recibo(sid, recibo_id, _alcance_de(request))
+    if not d:
+        raise HTTPException(404, "Recibo inexistente.")
+    return d
+
+
+@app.get("/admin/reportes/lista")
+def admin_reportes_lista(request: Request, cuil: str = "", nombre: str = "",
+                         desde: str = "", hasta: str = "", resultado: str = "",
+                         enviado: str = "", page: int = 1):
+    """La pestaña Reportes: todos los recibos verificados del sindicato,
+    enviados (identificados) y no enviados (anonimizados, y solo con la
+    cláusula de confidencialidad firmada). Toda la privacidad vive en
+    dashboard.listado_reportes, en el SQL."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "recibos")
+    for fecha in (desde, hasta):
+        if fecha and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+            raise HTTPException(422, "Fecha inválida (AAAA-MM-DD).")
+    filtros = {"cuil": cuil, "nombre": nombre, "desde": desde, "hasta": hasta,
+               "resultado": resultado, "enviado": enviado}
+    alcance = _alcance_de(request)
+    return dashboard.listado_reportes(sid, filtros, alcance, page)
+
+
+@app.get("/admin/reportes/recibo/{recibo_id}")
+def admin_reportes_recibo(request: Request, recibo_id: int):
+    """Modal "Ver" de Reportes: el recibo, anonimizado si no fue enviado."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "recibos")
+    d = dashboard.detalle_reporte(sid, recibo_id, _alcance_de(request))
     if not d:
         raise HTTPException(404, "Recibo inexistente.")
     return d
@@ -5621,7 +7023,7 @@ def dashboard_detalle_recibo(request: Request, recibo_id: int):
 @app.get("/admin/dashboard/detalle/tramite/{tramite_id}")
 def dashboard_detalle_tramite(request: Request, tramite_id: int):
     sid = _exigir_dashboard_detalle(request)
-    d = dashboard.detalle_tramite(sid, tramite_id)
+    d = dashboard.detalle_tramite(sid, tramite_id, _alcance_de(request))
     if not d:
         raise HTTPException(404, "Trámite inexistente.")
     return d
@@ -5638,7 +7040,7 @@ def dashboard_detalle_notificaciones(request: Request, dia: str, tipo: str,
     if tipo not in dashboard.TIPOS_NOTIF:
         raise HTTPException(422, "'tipo' admite 'manual' o 'sistema'.")
     return {"notificaciones": dashboard.detalle_notificaciones_grupo(
-        sid, dia, seccional_id or None, tipo)}
+        sid, dia, seccional_id or None, tipo, _alcance_de(request))}
 
 
 @app.get("/admin/dashboard/detalle/notificacion/{notificacion_id}/destinatarios")
@@ -5646,7 +7048,7 @@ def dashboard_detalle_notif_destinatarios(request: Request, notificacion_id: int
     """Último nivel del modal de notificaciones: quién la recibió y cuándo
     la leyó, persona por persona."""
     sid = _exigir_dashboard_detalle(request)
-    d = dashboard.destinatarios_notificacion(sid, notificacion_id)
+    d = dashboard.destinatarios_notificacion(sid, notificacion_id, _alcance_de(request))
     if d is None:
         raise HTTPException(404, "Notificación inexistente.")
     return d
@@ -5657,7 +7059,7 @@ def dashboard_detalle_consulta(request: Request, consulta_id: int):
     sid = _exigir_dashboard_detalle(request)
     if not db.config_dashboard()["consultas_bot_habilitado"]:
         raise HTTPException(404, "No disponible.")
-    d = dashboard.detalle_consulta(sid, consulta_id)
+    d = dashboard.detalle_consulta(sid, consulta_id, _alcance_de(request))
     if not d:
         raise HTTPException(404, "Consulta inexistente.")
     return d
@@ -5670,10 +7072,11 @@ def dashboard_buscar_afiliados(request: Request, q: str = "", id: int = 0):
     devuelve ese afiliado solo (para etiquetar el chip de un link con
     ?afiliado=). Gate del explorador: mirar a una persona es detalle."""
     sid = _exigir_dashboard_detalle(request)
+    alcance = _alcance_de(request)
     if id:
-        uno = dashboard.afiliado_por_id(sid, id)
+        uno = dashboard.afiliado_por_id(sid, id, alcance)
         return {"items": [uno] if uno else []}
-    return {"items": dashboard.buscar_afiliados(sid, q[:80])}
+    return {"items": dashboard.buscar_afiliados(sid, q[:80], alcance=alcance)}
 
 
 @app.get("/admin/dashboard/filtros")
@@ -5683,8 +7086,11 @@ def dashboard_catalogo_filtros(request: Request):
     (percentiles 1 y 99 del tenant, §4.3 -- se calculan en Fase 2 si hace
     falta afinar; por ahora min/max reales)."""
     sid = _exigir_dashboard(request)
+    alcance = _alcance_de(request)
     with db.get_session() as s:
-        secc = db.seccionales_del_sindicato(sid)
+        # Un admin acotado no elige entre las otras seccionales (bloque 4).
+        secc = [x for x in db.seccionales_del_sindicato(sid)
+                if alcance is None or x["id"] in alcance]
         from sqlalchemy import text as _text
         categorias = [f[0] for f in s.execute(_text(
             "SELECT DISTINCT categoria FROM reciboverificado "
@@ -5719,6 +7125,75 @@ def _leer_logo(archivo: UploadFile):
     return datos, mimes[ext], f"logo{ext}"
 
 
+CONTRATO_MIMES = {".pdf": "application/pdf", ".png": "image/png",
+                  ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+CONTRATO_MAX_BYTES = 15 * 1024 * 1024
+
+
+def _leer_contrato(archivo: UploadFile | None):
+    """El contrato/convenio firmado con el sindicato: (datos, mime, nombre),
+    None si no se subió nada, o "invalido" si el archivo no sirve (tipo que
+    no es PDF ni imagen, vacío o de más de 15 MB). Bytes en la base, como el
+    logo."""
+    import os
+    if not archivo or not archivo.filename:
+        return None
+    ext = os.path.splitext(archivo.filename)[1].lower()
+    if ext not in CONTRATO_MIMES:
+        return "invalido"
+    datos = archivo.file.read()
+    if not datos or len(datos) > CONTRATO_MAX_BYTES:
+        return "invalido"
+    return datos, CONTRATO_MIMES[ext], os.path.basename(archivo.filename)[:200]
+
+
+def _aplicar_contrato_y_clausula(request: Request, sind: Sindicato, contrato_leido,
+                                 aceptada: bool) -> bool:
+    """Guarda el contrato (si vino) y el estado de la cláusula de
+    confidencialidad. Devuelve False si se quiso marcar la cláusula sin que
+    el sindicato tenga contrato cargado: la aceptación es la firma de ese
+    documento, un tilde sin papel no le da a nadie los recibos anonimizados.
+
+    Quién y cuándo se registran solo al PASAR a aceptada (editar la ficha
+    otra vez no reescribe la fecha), y se borran al desmarcarla."""
+    if contrato_leido:
+        sind.contrato_datos, sind.contrato_mime, sind.contrato_nombre = contrato_leido
+    if aceptada and not sind.contrato_datos:
+        return False
+    fila = _usuario_plataforma_de_sesion(request)
+    quien = fila.usuario if fila else "generico"
+    if aceptada and not sind.clausula_confidencialidad:
+        sind.clausula_confidencialidad = True
+        sind.clausula_aceptada_en = fechas.ahora_texto()
+        sind.clausula_aceptada_por = quien
+        db.registrar_log_plataforma("clausula_aceptada", quien, objetivo=sind.nombre,
+                                    ip=_ip_de(request))
+    elif not aceptada and sind.clausula_confidencialidad:
+        sind.clausula_confidencialidad = False
+        sind.clausula_aceptada_en = sind.clausula_aceptada_por = ""
+        db.registrar_log_plataforma("clausula_quitada", quien, objetivo=sind.nombre,
+                                    ip=_ip_de(request))
+    return True
+
+
+@app.get("/plataforma/sindicato/{sindicato_id}/contrato")
+def plataforma_ver_contrato(request: Request, sindicato_id: int):
+    """El contrato firmado, solo para plataforma (no es público como el logo)."""
+    exigir_plataforma(request)
+    with db.get_session() as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind or not sind.contrato_datos:
+            raise HTTPException(404, "Sin contrato cargado.")
+        # La cabecera va en latin-1: un nombre con tildes la rompería.
+        nombre = re.sub(r"[^A-Za-z0-9._ -]", "_", sind.contrato_nombre or "contrato")
+        return BinResponse(
+            content=sind.contrato_datos,
+            media_type=sind.contrato_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{nombre}"',
+                     "Cache-Control": "private, no-store"},
+        )
+
+
 @app.post("/plataforma/usuario")
 def plataforma_alta_usuario(
     request: Request,
@@ -5726,6 +7201,10 @@ def plataforma_alta_usuario(
     nombre: str = Form(""), clave_inicial: str = Form(...),
 ):
     exigir_plataforma(request)
+    # El CUIL del primer admin nace acá: con su verificador, y antes de
+    # escribir nada.
+    if _cuil_mal(usuario):
+        return RedirectResponse("/plataforma?error=cuil#admin", status_code=303)
     with db.get_session() as s:
         s.add(UsuarioSindicato(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
@@ -5755,15 +7234,26 @@ async def plataforma_editar_sindicato(
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
+    clausula_confidencialidad: bool = Form(False),
+    acepta_mail_declarado: bool = Form(False),
+    contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    contrato_leido = _leer_contrato(contrato)
+    if contrato_leido == "invalido":
+        return RedirectResponse("/plataforma?error=contrato#sindicatos", status_code=303)
     modulos_validos = [m for m in modulos_habilitados if m in MODULOS]
     with db.get_session() as s:
         sind = s.get(Sindicato, id)
         if sind:
+            # Edición: el verificador se exige solo si el CUIT cambió (el de
+            # un sindicato cargado antes puede no cumplirlo). Va antes de
+            # tocar un solo campo del objeto.
+            if _cuit_empresa_mal(cuit, guardado=sind.cuit):
+                return RedirectResponse("/plataforma?error=cuit#nuevo", status_code=303)
             sind.nombre, sind.descripcion = nombre, descripcion
             sind.cuit, sind.direccion, sind.mail = cuit, direccion, mail
             sind.telefonos, sind.autoridad, sind.cargo_autoridad = telefonos, autoridad, cargo_autoridad
@@ -5775,6 +7265,7 @@ async def plataforma_editar_sindicato(
             sind.modulos_habilitados = modulos_validos
             sind.portada_clara = portada_clara
             sind.admin_portada_clara = admin_portada_clara
+            sind.acepta_mail_declarado = acepta_mail_declarado
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
@@ -5783,6 +7274,9 @@ async def plataforma_editar_sindicato(
                 datos, mime, flag = _leer_logo(firma)
                 if datos:
                     sind.firma_datos, sind.firma_mime, sind.firma = datos, mime, flag
+            if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
+                                                clausula_confidencialidad):
+                return RedirectResponse("/plataforma?error=clausula#sindicatos", status_code=303)
             s.add(sind); s.commit()
     return RedirectResponse("/plataforma", status_code=303)
 
@@ -5841,9 +7335,11 @@ def plataforma_reset_clave(
     hasheada = auth.hashear_clave(clave_nueva)
     with db.get_session() as s:
         if tipo == "sindicato":
-            u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == ident)).first()
+            # La clave es de la persona (CuentaPanel): una para todos los
+            # sindicatos en los que trabaja.
+            u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.cuil == ident)).first()
             if u:
-                u.clave_hash = hasheada; u.debe_cambiar_clave = False; s.add(u); s.commit()
+                db.fijar_clave_panel(ident, hasheada, debe_cambiar=False)
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
         elif tipo == "trabajador":
             # Desde que la fila de la persona nace con el alta del padrón, un
@@ -5864,9 +7360,66 @@ def plataforma_reset_clave(
     return RedirectResponse("/plataforma?reset=nohay", status_code=303)
 
 
+def _fecha_formulario(valor: str):
+    """Una fecha que llega de un formulario: "" si vino en blanco, ISO si es
+    una fecha (AAAA-MM-DD o DD/MM/AAAA) y None si no se entiende. Las dos
+    fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4) pasan por acá en las
+    cinco puertas por las que entran, así una fecha ilegible se rechaza en
+    la puerta y no se guarda como texto cualquiera."""
+    v = (valor or "").strip()
+    if not v:
+        return ""
+    return listas_mod.normalizar_fecha(v)
+
+
 def _norm_cuil(cuil: str) -> str:
-    import re
-    return re.sub(r"[^0-9]", "", cuil or "")
+    return cuit.normalizar(cuil)
+
+
+# ---- Dígito verificador en las puertas de alta (PLAN_CUIT_MOD11.md, D2) ----
+# Se exige donde un número NACE en el sistema (altas, registro, carga masiva);
+# donde se REFERENCIA uno que ya existe (los cuatro logins, el reset de clave,
+# los criterios de notificación, los filtros) se busca tal cual, para que los
+# CUIL sintéticos de los lotes -- que no cumplen el módulo 11 y quedan así --
+# sigan pudiendo entrar. Estas funciones son el único punto de contacto de
+# las rutas con `cuit.py`, y viven acá a propósito: en varias rutas (empleador,
+# sindicato, registro de la empresa) el formulario trae un campo llamado
+# `cuit` y esa variable local tapa el módulo.
+#
+# Cada una devuelve True si hay que FRENAR el número. Reglas comunes:
+#   - `guardado`: en una edición, el número que la fila ya tenía. Si el que
+#     llega es el mismo (comparado sin guiones ni espacios), no se exige nada:
+#     reenviar un número viejo e inválido -- de un lote, o todavía sin
+#     convertir -- no puede bloquear la edición de los otros campos. El
+#     verificador se exige SOLO si el número cambió.
+#   - `opcional`: un campo opcional vacío sigue siendo opcional.
+
+def _identificador_mal(numero, de=None, guardado=None, opcional=False) -> bool:
+    n = cuit.normalizar(numero)
+    if not n:
+        # Vacío de verdad: lo decide `opcional`. Pero un texto sin un solo
+        # dígito ("abc") no es un campo vacío, es un número mal escrito, y
+        # antes pasaba como vacío (QA, 2026-10-10).
+        return (not opcional) or bool(str(numero or "").strip())
+    if guardado is not None and n == cuit.normalizar(guardado):
+        return False
+    return not cuit.es_valido(n, de)
+
+
+def _cuil_mal(numero, guardado=None) -> bool:
+    """CUIL de una persona (afiliado, usuario del panel, usuario de plataforma)."""
+    return _identificador_mal(numero, cuit.PERSONA, guardado)
+
+
+def _cuit_mal(numero, guardado=None, opcional=False) -> bool:
+    """CUIT de un empleador: persona jurídica O física (un monotributista con
+    empleados tiene CUIT de persona), así que no restringe el tipo."""
+    return _identificador_mal(numero, None, guardado, opcional)
+
+
+def _cuit_empresa_mal(numero, guardado=None, opcional=True) -> bool:
+    """CUIT de una persona jurídica (el del sindicato)."""
+    return _identificador_mal(numero, cuit.EMPRESA, guardado, opcional)
 
 
 def _fmt_fecha_ar(iso: str) -> str:
@@ -5959,7 +7512,25 @@ def ingresar(request: Request):
     filtro por zona."""
     return templates.TemplateResponse("trabajador_login.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
-        "provincias": db.PROVINCIAS_AR})
+        "provincias": db.PROVINCIAS_AR, "clave_minima": CLAVE_MINIMA})
+
+
+def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
+    """Abre la sesión del afiliado y devuelve la respuesta que lo lleva a la
+    portada, o None si su CUIL ya no está en ningún sindicato activo. Es el
+    bloque del login, sacado a una función para que el cambio de la clave
+    temporal (que abre la sesión recién DESPUÉS de cambiarla) abra exactamente
+    la misma."""
+    sinds = db.sindicatos_de_cuil(cuil)
+    if not sinds:
+        return None
+    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
+    db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
+    # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
+    resp = RedirectResponse("/app/inicio", status_code=303)
+    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
+    set_cookie_segura(resp, "cuil_trab", cuil)
+    return resp
 
 
 @app.post("/trabajador/login")
@@ -5973,16 +7544,17 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
             _login_fallo(request)
             return RedirectResponse("/ingresar?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+        temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
-    sinds = db.sindicatos_de_cuil(cuil)
-    if not sinds:
+    if temporal:
+        # La puso el administrador del sindicato (PLAN_REGISTRO.md, D6): la
+        # clave es correcta pero NO se abre sesión hasta que la persona elija la
+        # suya. El token firmado dura 10 minutos y solo sirve para esa pantalla.
+        token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito="cambio_clave")
+        return RedirectResponse(f"/ingresar/cambiar-clave?token={token}", status_code=303)
+    resp = _abrir_sesion_trabajador(cuil, cuenta_id)
+    if resp is None:
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
-    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
-    db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
-    # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
-    resp = RedirectResponse("/app/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
-    set_cookie_segura(resp, "cuil_trab", cuil)
     return resp
 
 
@@ -5998,14 +7570,244 @@ def _domicilio_distinto(persona, domicilio: dict) -> bool:
                              "provincia", "codigo_postal"))
 
 
+# ---- Registro en tres pasos (PLAN_REGISTRO.md, §4.1 y §4.2) ----
+# Paso 1 `/iniciar` (CUIL/CUIT + captcha) -> paso 2 `/mail` (solo si hay que
+# declarar uno) -> paso 3 el POST de siempre, con `token` y `codigo`. El estado
+# entre pasos viaja en un token firmado (`auth.firmar_paso`, propósito
+# "registro"): nunca en un campo oculto sin firmar ni en la cookie plana. La
+# cuenta NO existe hasta el paso 3. Las rutas de la empresa son el espejo
+# exacto: aislamiento total entre trabajador y empleador, a costa de repetir.
+# Los helpers de abajo son lo único compartido y solo reciben el `tipo`.
+_PROPOSITO_REGISTRO = "registro"
+
+
+def _registro_error(status: int, error: str, mensaje: str) -> JSONResponse:
+    """Un fallo del registro que no tiene código E-... propio ("no habilitado",
+    "ya tiene cuenta", token vencido): `error` es la clave que el JS conoce."""
+    return JSONResponse(status_code=status, content={
+        "ok": False, "error": error, "mensaje": mensaje, "detail": mensaje})
+
+
+def _contar_pedido(request: Request) -> None:
+    """Un pedido de código que SALIÓ BIEN también suma al freno de la IP
+    (QA-REG-04). Si solo contaran los fallos, desde una IP se podría mandar un
+    mail por segundo a afiliados distintos, y averiguar quién está afiliado y
+    la pista de su mail, sin llegar nunca a E-REGISTRO-05. Una persona real
+    pide uno, dos a lo sumo, y `LOGIN_MAX_FALLOS` (10 por minuto) no la toca; el
+    éxito FINAL (cuenta creada, clave cambiada, mail confirmado) hace
+    `_login_ok` y limpia la cuenta."""
+    _login_fallo(request, _intentos_registro)
+
+
+def _registro_token_ok(token: str, tipo: str, numero: str) -> bool:
+    """¿Es `token` un token de registro de ESTE tipo y de ESTE número? Es lo que
+    permite saltear el captcha del paso 3 (un token de Turnstile sirve una sola
+    vez y ya se resolvió en el paso 1). Un token de otro número o del otro tipo
+    no vale ni para eso (QA-REG-01): si valiera, con un solo captcha resuelto se
+    tantearía el padrón entero."""
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
+    return bool(datos) and datos.get("tipo") == tipo and _norm_cuil(str(datos.get("id", ""))) == numero
+
+
+def _mandar_codigo_registro(s, request: Request, tipo: str, identificador: str,
+                            destino: str, origen_destino: str) -> int:
+    """Código -> mail. Devuelve el id de la fila del código. `db.crear_codigo`
+    aplica los cupos (por persona y por mail de destino) y levanta E-REGISTRO-03;
+    acá se levanta E-REGISTRO-06 si el mail no salió (el código queda en la
+    tabla igual: es traza, y cuenta para el cupo)."""
+    fila, codigo = db.crear_codigo(s, tipo, identificador, _PROPOSITO_REGISTRO,
+                                   destino, origen_destino, _ip_de(request))
+    fila_id = fila.id
+    s.commit()
+    asunto, cuerpo = correo.texto_codigo_registro(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(destino, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    return fila_id
+
+
+def _registro_iniciar_previo(request: Request, token_captcha: str) -> None:
+    """Primera mitad del paso 1: freno por IP y captcha, ANTES de mirar nada.
+    La segunda mitad (verificador, padrón, canal) vive en `_registro_iniciar`;
+    el verificador lo llama cada ruta, que es la puerta (test_cuit_puertas)."""
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-REGISTRO-01")
+
+
+def _registro_iniciar(request: Request, tipo: str, numero: str):
+    """Segunda mitad del paso 1, con el número ya normalizado y con el
+    verificador comprobado (el tipo decide dónde se busca). Todo fallo cuenta
+    para el freno de la IP."""
+    es_trab = tipo == "trabajador"
+    sinds = db.sindicatos_de_cuil(numero) if es_trab else db.sindicatos_de_cuit_empleador(numero)
+    if not sinds:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(403, "nohabilitado", (
+            "Tu CUIL no está habilitado en ningún sindicato todavía. Pedile a tu sindicato que te agregue."
+            if es_trab else
+            "Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador."))
+    try:
+        with db.get_session() as s:
+            if es_trab:
+                cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == numero)).first()
+            else:
+                cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+            if cuenta and cuenta.clave_hash:
+                _login_fallo(request, _intentos_registro)
+                return _registro_error(409, "yaexiste", (
+                    "Ya tenés una cuenta con ese %s. Ingresá con tu clave." % ("CUIL" if es_trab else "CUIT")))
+            if not correo.habilitado():
+                # D9: el canal de mail apagado no frena el registro; la cuenta
+                # nace nivel 1, como hasta ahora.
+                _contar_pedido(request)
+                return {"ok": True, "paso": "datos", "token": auth.firmar_paso(
+                    {"id": numero, "tipo": tipo, "nivel_origen": "cuil_padron"},
+                    proposito=_PROPOSITO_REGISTRO)}
+            mail = (db.mail_padron_de(s, numero) if es_trab
+                    else db.mail_padron_de_empresa(s, numero))
+            if mail:
+                codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail, "padron")
+                _contar_pedido(request)
+                return {"ok": True, "paso": "codigo", "pista": correo.pista(mail),
+                        "token": auth.firmar_paso(
+                            {"id": numero, "tipo": tipo, "codigo_id": codigo_id,
+                             "origen": "mail_padron"},
+                            proposito=_PROPOSITO_REGISTRO)}
+            acepta = (db.acepta_mail_declarado(s, numero) if es_trab
+                      else db.acepta_mail_declarado_empresa(s, numero))
+            if not acepta:
+                raise ErrorApp("E-REGISTRO-04")
+            _contar_pedido(request)
+            return {"ok": True, "paso": "mail", "token": auth.firmar_paso(
+                {"id": numero, "tipo": tipo}, proposito=_PROPOSITO_REGISTRO)}
+    except ErrorApp:
+        _login_fallo(request, _intentos_registro)
+        raise
+
+
+def _registro_mail(request: Request, tipo: str, token: str, mail: str):
+    """Paso 2: la persona declara un mail y se le manda el código. Solo vale
+    un token de `/iniciar` que dijo `paso: mail` (trae el número y el TIPO, y
+    nada más): sin el tipo, el `{id}` de un afiliado sin mail en el padrón
+    serviría en el registro de la empresa con el mismo número (QA-REG-02)."""
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO)
+    if not datos or set(datos) != {"id", "tipo"} or datos["tipo"] != tipo:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(400, "paso", "La verificación venció. Empezá de nuevo.")
+    numero = str(datos["id"])
+    mail_ok = (mail or "").strip()
+    if not correo.destino_valido(mail_ok):          # la única puerta de una dirección (QA-REG-06)
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(422, "mail", "Escribí un mail válido.")
+    try:
+        with db.get_session() as s:
+            acepta = (db.acepta_mail_declarado(s, numero) if tipo == "trabajador"
+                      else db.acepta_mail_declarado_empresa(s, numero))
+            if not acepta:
+                raise ErrorApp("E-REGISTRO-04")
+            codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail_ok, "declarado")
+    except ErrorApp:
+        _login_fallo(request, _intentos_registro)
+        raise
+    return {"ok": True, "paso": "codigo", "pista": correo.pista(mail_ok),
+            "token": auth.firmar_paso(
+                {"id": numero, "tipo": tipo, "codigo_id": codigo_id,
+                 "origen": "mail_declarado", "mail": mail_ok},
+                proposito=_PROPOSITO_REGISTRO)}
+
+
+def _registro_confirmar(s, tipo: str, numero: str, token: str, codigo: str):
+    """Paso 3, la parte del código. Devuelve (origen, mail_declarado, error):
+    `error` es la clave del `?error=` a la que hay que redirigir, o "" si todo
+    cerró; `origen` es el de `db.ORIGENES_NIVEL` que justifica el nivel.
+    Con el canal de mail prendido exige un token con código; apagado, el token
+    de `/iniciar` sin código (o ningún token) deja nacer la cuenta en nivel 1.
+    El origen y el mail salen de la FILA del código, no del token, y la fila
+    tiene que ser de este número y de este tipo. Se hace commit siempre,
+    TAMBIÉN con "incorrecto", o el contador de intentos no avanza."""
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
+    if datos is not None and (datos.get("tipo") != tipo
+                              or _norm_cuil(str(datos.get("id", ""))) != numero):
+        return "", "", "paso"
+    con_codigo = datos is not None and "codigo_id" in datos
+    if correo.habilitado() and not con_codigo:
+        return "", "", "paso"
+    if not con_codigo:
+        return "cuil_padron", "", ""
+    fila = s.get(db.CodigoVerificacion, datos["codigo_id"])
+    if (not fila or fila.tipo != tipo or fila.identificador != numero
+            or fila.proposito != _PROPOSITO_REGISTRO):
+        return "", "", "codigo"
+    resultado = db.verificar_codigo(s, fila.id, codigo)
+    s.commit()
+    if resultado != "ok":
+        return "", "", "codigo"
+    if fila.origen_destino == "padron":
+        return "mail_padron", "", ""
+    return "mail_declarado", fila.destino, ""
+
+
+def _registro_nivel(s, cuenta, origen: str) -> None:
+    """Deja a la cuenta recién creada en el nivel que acredita `origen`.
+    `db.subir_nivel` solo SUBE, así que para el nivel 1 (`cuil_padron`, el del
+    canal de mail apagado) no escribe nada: acá se deja asentado el origen, que
+    es lo que el panel muestra como "CUIL en el padrón"."""
+    if not db.subir_nivel(s, cuenta, origen) and not cuenta.nivel_origen:
+        cuenta.nivel_origen = origen
+        cuenta.nivel_actualizado = fechas.ahora_texto()
+        s.add(cuenta)
+
+
+@app.post("/trabajador/registro/iniciar")
+def trabajador_registro_iniciar(request: Request, cuil: str = Form(""),
+                                token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 1 del registro del afiliado. Contrato JSON:
+    200 `{ok, paso: "datos"|"codigo"|"mail", token, pista?}`; 403 `nohabilitado`;
+    409 `yaexiste`; errores con código (E-REGISTRO-01/03/04/05/06, E-IDENT-01)
+    como `{detail, codigo}`. Todo fallo cuenta para el freno de la IP."""
+    _registro_iniciar_previo(request, token_captcha)
+    cuil = _norm_cuil(cuil)
+    if _cuil_mal(cuil):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-IDENT-01")
+    return _registro_iniciar(request, "trabajador", cuil)
+
+
+@app.post("/trabajador/registro/mail")
+def trabajador_registro_mail(request: Request, token: str = Form(""), mail: str = Form("")):
+    """Paso 2 (solo si el padrón no tiene mail y el sindicato acepta uno
+    declarado): manda el código al mail que la persona declara. Contrato JSON:
+    200 `{ok, paso: "codigo", pista, token}`; 400 `paso` (token vencido);
+    422 `mail`; E-REGISTRO-03/04/05/06 como `{detail, codigo}`."""
+    return _registro_mail(request, "trabajador", token, mail)
+
+
 @app.post("/trabajador/registro")
 def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...),
                          nombre: str = Form(""),
                          provincia: str = Form(""), localidad: str = Form(""),
                          calle: str = Form(""), numero: str = Form(""),
                          piso_depto: str = Form(""), codigo_postal: str = Form(""),
-                         telefono: str = Form(""), mail: str = Form("")):
-    """Crea la cuenta del afiliado y, con ella, sus datos personales.
+                         telefono: str = Form(""), mail: str = Form(""),
+                         fecha_nacimiento: str = Form(""),
+                         token: str = Form(""), codigo: str = Form(""),
+                         token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Crea la cuenta del afiliado y, con ella, sus datos personales. Es el
+    PASO 3 del registro (PLAN_REGISTRO.md §4.1): llega con el `token` firmado
+    de `/trabajador/registro/iniciar` (o `/mail`) y el `codigo` que la persona
+    recibió por mail. La cuenta nace con el nivel que acredita ese camino
+    (`mail_padron` o `mail_declarado` = 2); con el canal de mail apagado, o sin
+    token (cliente viejo), sigue como siempre y nace nivel 1 `cuil_padron`.
+
+    **El campo `mail` ya NO se escribe desde el registro**: la pantalla dejó de
+    pedirlo (el mail se confirma en el paso 2, no se tipea dos veces) y el del
+    padrón es del sindicato. Si la persona declaró uno, va a
+    `mail_declarado` (confirmado), nunca a `mail`. El parámetro se queda en la
+    firma para que sea idéntica a la del perfil (`test_datos_personales.py`).
 
     **Pide exactamente los mismos campos que el perfil** (nombre, domicilio,
     teléfono y mail), y con la misma marca de obligatorio y opcional. Antes
@@ -6049,13 +7851,58 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     cargada, que es exactamente lo que "Georreferenciar pendientes" procesa
     después.
     """
+    # Freno y captcha ANTES de mirar el padrón (PLAN_REGISTRO.md, etapa 1): las
+    # respuestas de este registro revelan si un CUIL está afiliado, y sin esto
+    # son una enumeración gratis. Cada registro que no crea la cuenta cuenta
+    # como fallo de la IP; el que la crea limpia la tabla.
+    if _login_bloqueado(request, _intentos_registro):
+        return RedirectResponse("/ingresar?error=espera_registro", status_code=303)
     cuil = _norm_cuil(cuil)
+    # Con un token válido del paso 1 PARA ESTE CUIL el captcha ya se resolvió
+    # ahí (un token de Turnstile sirve una sola vez); sin él, esta es la única
+    # puerta y se exige. El número del token se compara ANTES de mirar nada
+    # (QA-REG-01): un token de otro CUIL es "sin token".
+    if not _registro_token_ok(token, "trabajador", cuil):
+        if not captcha.verificar(token_captcha, _ip_de(request)):
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar?error=captcha", status_code=303)
+        if correo.habilitado():
+            # Con el canal prendido no hay cuenta sin código, así que lo que
+            # falta (el token) corta ANTES de consultar el padrón: si no, el
+            # redirect distinguiría afiliados de ajenos (`paso` / `nohabilitado`).
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar?error=paso", status_code=303)
+    # Primero que el número exista de verdad (verificador de AFIP) y recién
+    # después se lo busca en el padrón: un número que no pasa el módulo 11 no
+    # es de nadie, y decirle "no estás habilitado" a quien tipeó mal un dígito
+    # lo manda a reclamarle al sindicato por algo que es un error de tipeo.
+    if _cuil_mal(cuil):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=cuil", status_code=303)
+    # El domicilio se valida ANTES de mirar el padrón y cuenta como fallo: si
+    # el redirect `domicilio` saliera solo para quien está afiliado, mandar
+    # CUILes sin provincia enumeraría el padrón sin frenarse nunca (QA, etapa 1).
+    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
+    # La fecha de nacimiento es opcional (PLAN_LISTAS_VALIDACIONES.md, D4),
+    # pero si vino tiene que ser una fecha; se mira acá, antes del padrón,
+    # por la misma razón que el domicilio.
+    f_nacimiento = _fecha_formulario(fecha_nacimiento)
+    if f_nacimiento is None:
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=fecha", status_code=303)
+    # La clave mínima, ANTES de consumir el código (QA-REG-07): el mismo piso que
+    # la recuperación y el cambio de clave temporal. La pantalla ya lo pide con
+    # `minlength`; esto es para quien arma el POST a mano.
+    if len(clave) < CLAVE_MINIMA:
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=clave", status_code=303)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=nohabilitado", status_code=303)
-    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
-        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
     domicilio = geo.campos_para_guardar(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
@@ -6067,7 +7914,12 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         # tiene, esto es un alta duplicada.
         persona = db.asegurar_cuenta(s, cuil)
         if persona.clave_hash:
+            _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar?error=yaexiste", status_code=303)
+        origen, mail_declarado, error = _registro_confirmar(s, "trabajador", cuil, token, codigo)
+        if error:
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse(f"/ingresar?error={error}", status_code=303)
         persona.clave_hash = auth.hashear_clave(clave)
         # Cada `None` es "no lo toques": el domicilio idéntico no se reescribe
         # (ver `_domicilio_distinto`), y el teléfono o el mail en blanco
@@ -6076,12 +7928,18 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
             s, cuil, nombre=nombre,
             domicilio=domicilio if _domicilio_distinto(persona, domicilio) else None,
             telefono=telefono if telefono.strip() else None,
-            mail=mail if mail.strip() else None)
+            fecha_nacimiento=f_nacimiento or None)
+        if mail_declarado:
+            persona.mail_declarado = mail_declarado
+            persona.mail_declarado_confirmado = fechas.ahora_texto()
+        _registro_nivel(s, persona, origen)
+        s.add(persona)
         # marcar los empadronamientos como registrados
         for t in s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all():
             t.registrado = True
             s.add(t)
         s.commit()
+    _login_ok(request, _intentos_registro)
     token = auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil)
     resp = RedirectResponse("/app/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
@@ -6187,6 +8045,9 @@ def app_portada(request: Request):
                              if seccional_id else None),
             "etiquetas_precision": geo.ETIQUETAS_PRECISION,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
+            # Lo que la tarjeta principal de la portada dice de verdad:
+            # cuántos recibos verificó este año y cómo salió el último.
+            "recibos_resumen": db.resumen_recibos_trabajador(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),
@@ -6194,6 +8055,8 @@ def app_portada(request: Request):
             "encuestas_pendientes": db.contar_encuestas_pendientes(cuil, sid_activo)
                                     if "encuestas" in _modulos_de(sid_activo) else 0,
             "modulos": _modulos_de(sid_activo),
+            # Tarjeta no bloqueante "Confirmá tu mail" para las cuentas de nivel 1.
+            "aviso_mail": _aviso_mail_de(cuil),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
     # Varios y no eligió → selector (mismo criterio que /app)
@@ -6202,14 +8065,155 @@ def app_portada(request: Request):
     })
 
 
+# ---------- Confirmar el mail de una cuenta ya registrada (PLAN_REGISTRO.md, D10 y §4.6) ----------
+# Las cuentas creadas antes del registro por mail quedaron en nivel 1. La portada
+# les muestra una tarjeta NO bloqueante que lleva acá; con el código la cuenta
+# pasa a nivel 2. Exige la sesión de trabajador y toma el CUIL de ella, nunca de
+# un campo del formulario.
+
+
+def _aviso_mail_de(cuil: str) -> bool:
+    """¿Va la tarjeta de confirmar el mail en la portada? Solo para el nivel 1 y
+    solo si el canal de mail está prendido: sin canal no habría cómo confirmar."""
+    if not correo.habilitado():
+        return False
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return bool(cuenta) and (cuenta.nivel_fiabilidad or 1) == 1
+
+
+def _texto_codigo_confirmacion(codigo: str, minutos: int) -> tuple[str, str]:
+    """(asunto, cuerpo) del mail que confirma el mail de una cuenta existente.
+    Mismo criterio que correo.py: sin nombre de la persona y sin enlaces."""
+    asunto = f"Tu código para confirmar tu mail en Colm3na: {codigo}"
+    cuerpo = (
+        f"Tu código para confirmar tu mail en Colm3na es:\n\n"
+        f"    {codigo}\n\n"
+        f"Ingresalo en la pantalla donde lo pediste. Vence en {minutos} minutos.\n\n"
+        f"Si no lo pediste vos, ignorá este mensaje: tu cuenta no cambia.\n\n"
+        f"Colm3na"
+    )
+    return asunto, cuerpo
+
+
+@app.get("/app/confirmar-mail", response_class=HTMLResponse)
+def confirmar_mail_pagina(request: Request):
+    """Pantalla de dos pasos (mail -> código) para subir la cuenta a nivel 2."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        return RedirectResponse("/ingresar", status_code=303)
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return RedirectResponse("/app/inicio", status_code=303)
+    marca = db.marca_sindicato(sid)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        nivel = (cuenta.nivel_fiabilidad or 1) if cuenta else 1
+        pista = correo.pista(db.mail_padron_de(s, cuil))
+        acepta_declarado = db.acepta_mail_declarado(s, cuil)
+    return templates.TemplateResponse("confirmar_mail.html", {
+        "request": request, "sindicato": marca["nombre"], "marca": marca,
+        "marca_plataforma": db.marca_plataforma(),
+        "canal": correo.habilitado(), "ya_confirmado": nivel >= 2,
+        "pista": pista, "acepta_declarado": acepta_declarado})
+
+
+@app.post("/app/confirmar-mail/iniciar")
+def confirmar_mail_iniciar(request: Request, mail: str = Form("")):
+    """Manda el código: al mail del padrón si el sindicato cargó uno; si no, y el
+    sindicato acepta el declarado, al que escribió la persona. Si no hay a dónde
+    mandarlo, lo dice: el camino es pedirle al sindicato que cargue el mail."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not correo.habilitado():
+        raise ErrorApp("E-REGISTRO-06")
+    mail = (mail or "").strip()
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta:
+            raise HTTPException(403, "No autorizado")
+        if (cuenta.nivel_fiabilidad or 1) >= 2:
+            return JSONResponse({"paso": "listo", "mensaje": "Tu cuenta ya tiene el mail confirmado."})
+        destino = db.mail_padron_de(s, cuil)
+        origen = "padron"
+        if not destino:
+            if not (db.acepta_mail_declarado(s, cuil) and mail):
+                return JSONResponse({"paso": "sindicato", "mensaje":
+                    "Tu sindicato todavía no tiene un mail tuyo cargado. Pedile que lo cargue "
+                    "y volvé a intentar."})
+            if not correo.destino_valido(mail):         # la única puerta (QR-6)
+                raise HTTPException(400, "Escribí un mail válido.")
+            destino, origen = mail, "declarado"
+        fila, codigo = db.crear_codigo(s, "trabajador", cuil, "confirmacion", destino, origen,
+                                       _ip_de(request))
+        s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
+        codigo_id = fila.id
+    asunto, cuerpo = _texto_codigo_confirmacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(destino, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    _contar_pedido(request)
+    return JSONResponse({
+        "paso": "codigo", "pista": correo.pista(destino),
+        "token": auth.firmar_paso({"cuil": cuil, "codigo_id": codigo_id},
+                                  proposito="confirmar_mail")})
+
+
+@app.post("/app/confirmar-mail")
+def confirmar_mail(request: Request, token: str = Form(""), codigo: str = Form("")):
+    """Verifica el código y sube la cuenta a nivel 2 (`mail_padron` o
+    `mail_declarado`). El mail declarado va a `mail_declarado`; `mail` es del
+    sindicato y esta ruta NUNCA lo escribe."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    d = auth.leer_paso(token, "confirmar_mail")
+    if not d or d.get("cuil") != cuil:          # un token de otra persona no sirve
+        raise ErrorApp("E-REGISTRO-02")
+    with db.get_session() as s:
+        fila = s.get(db.CodigoVerificacion, d.get("codigo_id") or 0)
+        if (not fila or fila.tipo != "trabajador" or fila.proposito != "confirmacion"
+                or fila.identificador != cuil):
+            raise ErrorApp("E-REGISTRO-02")
+        resultado = db.verificar_codigo(s, fila.id, codigo)
+        s.commit()          # también tras "incorrecto": el intento tiene que contar
+        if resultado != "ok":
+            _login_fallo(request, _intentos_registro)
+            raise ErrorApp("E-REGISTRO-02")
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta:
+            raise ErrorApp("E-REGISTRO-02")
+        if fila.origen_destino == "declarado":
+            db.subir_nivel(s, cuenta, "mail_declarado")
+            cuenta.mail_declarado = fila.destino
+            cuenta.mail_declarado_confirmado = fechas.ahora_texto()
+        else:
+            db.subir_nivel(s, cuenta, "mail_padron")
+        s.add(cuenta)
+        s.commit()
+        nivel = cuenta.nivel_fiabilidad
+    _login_ok(request, _intentos_registro)
+    return {"ok": True, "nivel": nivel}
+
+
 @app.post("/api/perfil")
 async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle: str = Form(""),
                                  numero: str = Form(""), piso_depto: str = Form(""),
                                  localidad: str = Form(""), provincia: str = Form(""),
                                  codigo_postal: str = Form(""), latitud: str = Form(""),
                                  longitud: str = Form(""), precision_geo: str = Form(""),
-                                 telefono: str = Form(""), mail: str = Form("")):
+                                 telefono: str = Form(""), mail: str = Form(""),
+                                 fecha_nacimiento: str = Form("")):
     """El trabajador edita su propio perfil -- todo menos el CUIL.
+
+    `fecha_nacimiento` (PLAN_LISTAS_VALIDACIONES.md, D4) es un dato más de
+    la persona: opcional, en blanco borra como el resto, y una fecha que no
+    se entiende es un 400 y no un texto guardado.
 
     Escribe en la PERSONA (`CuentaTrabajador`), así que el cambio se ve en
     TODOS los sindicatos donde esté empadronada. Hasta el 2026-09-22 escribía
@@ -6249,6 +8253,9 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
                             + (": tu sindicato las necesita" if cuantos > 1
                                else ": tu sindicato la necesita")
                             + " para agruparte por zona.")
+    f_nacimiento = _fecha_formulario(fecha_nacimiento)
+    if f_nacimiento is None:
+        raise HTTPException(400, "La fecha de nacimiento no se entiende: usá el formato AAAA-MM-DD.")
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(403, "No autorizado")
@@ -6256,7 +8263,8 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision_geo, latitud, longitud)
-    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, domicilio, telefono, mail):
+    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, domicilio, telefono, mail,
+                                           fecha_nacimiento=f_nacimiento):
         raise HTTPException(404, "No se encontró tu empadronamiento en este sindicato.")
     nombre_guardado = db.nombre_trabajador(cuil, sid)
     return {"ok": True, "nombre": nombre_guardado,
@@ -6426,6 +8434,206 @@ def verificar_credencial(token: str, request: Request, k: str = ""):
     })
 
 
+# ---------- Recuperación de clave y cambio de la clave temporal (PLAN_REGISTRO.md, D6) ----------
+# El afiliado y la empresa comparten la mecánica y no las tablas: cada rol tiene
+# sus rutas, su cuenta y su tipo de código (aislamiento total trabajador/
+# empleador), y lo común vive en estas funciones que reciben el rol.
+CLAVE_MINIMA = 6
+MENSAJE_RECUPERACION_SINDICATO = (
+    "Si tu cuenta tiene un mail cargado por el sindicato, te mandamos un código. "
+    "Si no te llega, pedile al sindicato que te restablezca la clave.")
+
+# rol -> cómo se llama su cuenta, su identificador y cómo se ve su mail del padrón.
+_ROLES_CLAVE = {
+    "trabajador": {"tipo": "trabajador", "cuenta": CuentaTrabajador, "campo": "cuil",
+                   "mail_padron": db.mail_padron_de, "login": "/ingresar",
+                   "base": "/ingresar", "etiqueta": "CUIL", "abrir": lambda ident, cid: _abrir_sesion_trabajador(ident, cid)},
+    "empleador": {"tipo": "empleador", "cuenta": CuentaEmpleador, "campo": "cuit",
+                  "mail_padron": db.mail_padron_de_empresa, "login": "/ingresar-empresa",
+                  "base": "/ingresar-empresa", "etiqueta": "CUIT", "abrir": lambda ident, cid: _abrir_sesion_empleador(ident, cid)},
+}
+
+
+def _fila_de_codigo_valida(s, d: dict, rol: str, proposito: str):
+    """La fila del código que nombra un token firmado, SI es de esta persona,
+    de este rol y de este propósito. El token ya viene firmado, pero un código
+    de otro CUIL o de otro trámite no tiene que servir ni por error."""
+    cfg = _ROLES_CLAVE[rol]
+    fila = s.get(db.CodigoVerificacion, d.get("codigo_id") or 0)
+    if (not fila or fila.tipo != cfg["tipo"] or fila.proposito != proposito
+            or fila.identificador != d.get(cfg["campo"])):
+        return None
+    return fila
+
+
+def _validar_claves_nuevas(clave: str, clave2: str):
+    if clave != clave2:
+        raise HTTPException(400, "Las dos claves no coinciden.")
+    if len(clave) < CLAVE_MINIMA:
+        raise HTTPException(400, f"La clave tiene que tener al menos {CLAVE_MINIMA} caracteres.")
+
+
+def _pagina_recuperar(request: Request, rol: str):
+    cfg = _ROLES_CLAVE[rol]
+    return templates.TemplateResponse("recuperar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "rol": rol, "etiqueta": cfg["etiqueta"], "base": cfg["base"], "login": cfg["login"],
+        "campo": cfg["campo"], "clave_minima": CLAVE_MINIMA})
+
+
+def _recuperar_iniciar(request: Request, rol: str, identificador: str, token_captcha: str):
+    """Paso 1: freno -> captcha -> busca la cuenta TAL CUAL (es una referencia,
+    no un alta: sin verificador). Solo si hay cuenta con clave, mail del PADRÓN
+    y canal de mail prendido se manda el código; en cualquier otro caso la
+    respuesta es la misma, palabra por palabra, para no revelar si el número
+    tiene cuenta. Un mail solo declarado no alcanza: la recuperación sin el
+    mail del sindicato la hace el administrador."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-REGISTRO-01")
+    ident = _norm_cuil(identificador)
+    with db.get_session() as s:
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == ident)).first()
+        mail = ""
+        if cuenta and cuenta.clave_hash and correo.habilitado():
+            mail = cfg["mail_padron"](s, ident)
+        if not mail:
+            _login_fallo(request, _intentos_registro)
+            return JSONResponse({"paso": "sindicato", "mensaje": MENSAJE_RECUPERACION_SINDICATO})
+        fila, codigo = db.crear_codigo(s, cfg["tipo"], ident, "recuperacion", mail, "padron",
+                                       _ip_de(request))
+        s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
+        codigo_id = fila.id
+    asunto, cuerpo = correo.texto_codigo_recuperacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(mail, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    _contar_pedido(request)            # también el que sale bien (QR-5)
+    return JSONResponse({
+        "paso": "codigo", "pista": correo.pista(mail),
+        "token": auth.firmar_paso({cfg["campo"]: ident, "codigo_id": codigo_id},
+                                  proposito="recuperacion")})
+
+
+def _recuperar_confirmar(request: Request, rol: str, token: str, codigo: str,
+                         clave: str, clave2: str):
+    """Paso 3: el token del paso 1 + el código + la clave nueva dos veces. Las
+    claves se validan ANTES de gastar el código, así un error de tipeo no
+    obliga a pedir otro."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    d = auth.leer_paso(token, "recuperacion")
+    if not d or not d.get(cfg["campo"]):
+        raise ErrorApp("E-REGISTRO-02")
+    _validar_claves_nuevas(clave, clave2)
+    with db.get_session() as s:
+        fila = _fila_de_codigo_valida(s, d, rol, "recuperacion")
+        if not fila:
+            raise ErrorApp("E-REGISTRO-02")
+        resultado = db.verificar_codigo(s, fila.id, codigo)
+        s.commit()          # también tras "incorrecto": el intento tiene que contar
+        if resultado != "ok":
+            _login_fallo(request, _intentos_registro)
+            raise ErrorApp("E-REGISTRO-02")
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == d[cfg["campo"]])).first()
+        if not cuenta:
+            raise ErrorApp("E-REGISTRO-02")
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = False
+        s.add(cuenta)
+        s.commit()
+    _login_ok(request, _intentos_registro)
+    return RedirectResponse(f"{cfg['login']}?ok=clave", status_code=303)
+
+
+def _pagina_cambiar_clave(request: Request, rol: str, token: str, error: str = "", status: int = 200):
+    cfg = _ROLES_CLAVE[rol]
+    d = auth.leer_paso(token, "cambio_clave")
+    vigente = bool(d and d.get(cfg["campo"]))
+    return templates.TemplateResponse("cambiar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "rol": rol, "etiqueta": cfg["etiqueta"], "base": cfg["base"], "login": cfg["login"],
+        "token": token if vigente else "", "vencido": not vigente, "error": error,
+        "clave_minima": CLAVE_MINIMA}, status_code=status)
+
+
+def _cambiar_clave_temporal(request: Request, rol: str, token: str, clave_actual: str,
+                            clave: str, clave2: str):
+    """Reemplaza la clave temporal por la que elige la persona y RECIÉN ahí abre
+    la sesión. Verificar la temporal acá (y no solo en el login) es lo que impide
+    que el token firmado, por sí solo, alcance para elegir una clave. Los
+    intentos con una temporal equivocada cuentan para el freno de los logins."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request):
+        return _pagina_cambiar_clave(request, rol, token,
+                                     "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.", 429)
+    d = auth.leer_paso(token, "cambio_clave")
+    if not d or not d.get(cfg["campo"]):
+        return _pagina_cambiar_clave(request, rol, "")
+    if clave != clave2:
+        return _pagina_cambiar_clave(request, rol, token, "Las dos claves no coinciden.", 400)
+    if len(clave) < CLAVE_MINIMA:
+        return _pagina_cambiar_clave(request, rol, token,
+                                     f"La clave tiene que tener al menos {CLAVE_MINIMA} caracteres.", 400)
+    if clave == clave_actual:
+        return _pagina_cambiar_clave(request, rol, token,
+                                     "Elegí una clave distinta de la temporal.", 400)
+    with db.get_session() as s:
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == d[cfg["campo"]])).first()
+        if not cuenta or not cuenta.clave_temporal:
+            return _pagina_cambiar_clave(request, rol, "")
+        if not auth.verificar_clave(clave_actual, cuenta.clave_hash):
+            _login_fallo(request)
+            return _pagina_cambiar_clave(request, rol, token, "La clave temporal no es correcta.", 400)
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = False
+        s.add(cuenta)
+        s.commit()
+        cuenta_id = cuenta.id
+    _login_ok(request)
+    resp = cfg["abrir"](d[cfg["campo"]], cuenta_id)
+    if resp is None:
+        return RedirectResponse(f"{cfg['login']}?error=sinsind", status_code=303)
+    return resp
+
+
+@app.get("/ingresar/recuperar", response_class=HTMLResponse)
+def recuperar_clave_pagina(request: Request):
+    """Recuperar la clave del afiliado: CUIL + captcha, código al mail del
+    padrón y clave nueva, los tres pasos en una página."""
+    return _pagina_recuperar(request, "trabajador")
+
+
+@app.post("/ingresar/recuperar/iniciar")
+def recuperar_iniciar(request: Request, cuil: str = Form(""),
+                      token_captcha: str = Form("", alias="cf-turnstile-response")):
+    return _recuperar_iniciar(request, "trabajador", cuil, token_captcha)
+
+
+@app.post("/ingresar/recuperar")
+def recuperar_confirmar(request: Request, token: str = Form(""), codigo: str = Form(""),
+                        clave: str = Form(""), clave2: str = Form("")):
+    return _recuperar_confirmar(request, "trabajador", token, codigo, clave, clave2)
+
+
+@app.get("/ingresar/cambiar-clave", response_class=HTMLResponse)
+def cambiar_clave_pagina(request: Request, token: str = ""):
+    """Cambio obligatorio de la clave temporal que puso el sindicato."""
+    return _pagina_cambiar_clave(request, "trabajador", token)
+
+
+@app.post("/ingresar/cambiar-clave")
+def cambiar_clave_temporal(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                           clave: str = Form(""), clave2: str = Form("")):
+    return _cambiar_clave_temporal(request, "trabajador", token, clave_actual, clave, clave2)
+
+
 @app.get("/trabajador/salir")
 def trabajador_salir():
     resp = RedirectResponse("/ingresar", status_code=303)
@@ -6444,7 +8652,21 @@ def trabajador_salir():
 def ingresar_empresa(request: Request):
     """Pantalla de login/registro del empleador."""
     return templates.TemplateResponse("empresa_login.html", {
-        "request": request, "marca_plataforma": db.marca_plataforma()})
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "clave_minima": CLAVE_MINIMA})
+
+
+def _abrir_sesion_empleador(cuit: str, cuenta_id: int):
+    """Lo mismo que `_abrir_sesion_trabajador`, para la empresa."""
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return None
+    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
+    db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, "cuit_emp", cuit)
+    return resp
 
 
 @app.post("/empresa/login")
@@ -6458,38 +8680,98 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
             _login_fallo(request)
             return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+        temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
-    sinds = db.sindicatos_de_cuit_empleador(cuit)
-    if not sinds:
+    if temporal:
+        token = auth.firmar_paso({"cuit": cuit}, minutos=10, proposito="cambio_clave")
+        return RedirectResponse(f"/ingresar-empresa/cambiar-clave?token={token}", status_code=303)
+    resp = _abrir_sesion_empleador(cuit, cuenta_id)
+    if resp is None:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
-    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
-    db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
-    resp = RedirectResponse("/empresa/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
-    set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
 
-@app.post("/empresa/registro")
-def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+@app.post("/empresa/registro/iniciar")
+def empresa_registro_iniciar(request: Request, cuit: str = Form(""),
+                             token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 1 del registro de la empresa: espejo de `/trabajador/registro/iniciar`
+    con el CUIT, `CuentaEmpleador` y el mail de `Empleador`."""
+    _registro_iniciar_previo(request, token_captcha)
     cuit = _norm_cuil(cuit)
+    if _cuit_mal(cuit):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-IDENT-02")
+    return _registro_iniciar(request, "empleador", cuit)
+
+
+@app.post("/empresa/registro/mail")
+def empresa_registro_mail(request: Request, token: str = Form(""), mail: str = Form("")):
+    """Paso 2 del registro de la empresa: espejo de `/trabajador/registro/mail`."""
+    return _registro_mail(request, "empleador", token, mail)
+
+
+@app.post("/empresa/registro")
+def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...),
+                     token: str = Form(""), codigo: str = Form(""),
+                     token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 3 del registro de la empresa (form clásico con redirect). Espejo
+    de `trabajador_registro`: con el canal de mail prendido exige el token del
+    paso 1 y el código; la cuenta nace con el nivel que acredita el origen y,
+    si el mail fue declarado, queda en `mail_declarado` (el del padrón es del
+    sindicato). Apagado y sin token, sigue como siempre y nace nivel 1."""
+    # Freno y captcha antes de mirar el padrón: mismo criterio que el registro
+    # del afiliado (PLAN_REGISTRO.md, etapa 1), con la misma tabla de IPs.
+    if _login_bloqueado(request, _intentos_registro):
+        return RedirectResponse("/ingresar-empresa?error=espera_registro", status_code=303)
+    cuit = _norm_cuil(cuit)
+    # Con un token válido del paso 1 PARA ESTE CUIT el captcha ya se resolvió
+    # ahí (un token de Turnstile sirve una sola vez); sin él, es la única
+    # puerta y se exige. Mismo criterio que el afiliado (QA-REG-01).
+    if not _registro_token_ok(token, "empleador", cuit):
+        if not captcha.verificar(token_captcha, _ip_de(request)):
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)
+        if correo.habilitado():
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar-empresa?error=paso", status_code=303)
+    # Antes de buscarlo: un CUIT sin verificador válido no es de nadie. Vale
+    # cualquier tipo (una empresa unipersonal tiene CUIT de persona).
+    if _cuit_mal(cuit):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar-empresa?error=cuit", status_code=303)
+    if len(clave) < CLAVE_MINIMA:                       # antes de consumir el código (QA-REG-07)
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar-empresa?error=clave", status_code=303)
     # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=nohabilitado", status_code=303)
     with db.get_session() as s:
         existe = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
-        if existe:
+        if existe and existe.clave_hash:
+            _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar-empresa?error=yaexiste", status_code=303)
-        s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave)))
+        origen, mail_declarado, error = _registro_confirmar(s, "empleador", cuit, token, codigo)
+        if error:
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse(f"/ingresar-empresa?error={error}", status_code=303)
+        cuenta = existe or CuentaEmpleador(cuit=cuit)
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        if mail_declarado:
+            cuenta.mail_declarado = mail_declarado
+            cuenta.mail_declarado_confirmado = fechas.ahora_texto()
+        s.add(cuenta)
+        _registro_nivel(s, cuenta, origen)
         # marcar las altas de este CUIT como registradas
         for e in s.exec(select(Empleador).where(Empleador.cuit == cuit)).all():
             e.registrado = True
             s.add(e)
         s.commit()
-    token = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
+    _login_ok(request, _intentos_registro)
+    token_sesion = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token_sesion)
     set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
@@ -6588,6 +8870,37 @@ def empresa_cambiar():
     resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.delete_cookie("sind_elegido_emp")
     return resp
+
+
+# ---------- Recuperación de clave y cambio de la clave temporal de la empresa ----------
+# Espejo de las rutas del afiliado (ver `_ROLES_CLAVE`): CuentaEmpleador, CUIT y
+# el mail del primer alta de Empleador que lo tenga.
+@app.get("/ingresar-empresa/recuperar", response_class=HTMLResponse)
+def empresa_recuperar_pagina(request: Request):
+    return _pagina_recuperar(request, "empleador")
+
+
+@app.post("/ingresar-empresa/recuperar/iniciar")
+def empresa_recuperar_iniciar(request: Request, cuit: str = Form(""),
+                              token_captcha: str = Form("", alias="cf-turnstile-response")):
+    return _recuperar_iniciar(request, "empleador", cuit, token_captcha)
+
+
+@app.post("/ingresar-empresa/recuperar")
+def empresa_recuperar_confirmar(request: Request, token: str = Form(""), codigo: str = Form(""),
+                                clave: str = Form(""), clave2: str = Form("")):
+    return _recuperar_confirmar(request, "empleador", token, codigo, clave, clave2)
+
+
+@app.get("/ingresar-empresa/cambiar-clave", response_class=HTMLResponse)
+def empresa_cambiar_clave_pagina(request: Request, token: str = ""):
+    return _pagina_cambiar_clave(request, "empleador", token)
+
+
+@app.post("/ingresar-empresa/cambiar-clave")
+def empresa_cambiar_clave_temporal(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                                   clave: str = Form(""), clave2: str = Form("")):
+    return _cambiar_clave_temporal(request, "empleador", token, clave_actual, clave, clave2)
 
 
 @app.get("/empresa/salir")
@@ -7078,6 +9391,7 @@ def _esquema_datos(con_grafana: bool = False) -> dict:
     return {
         "entorno": entorno.ENTORNO, "versiones": _versiones(), "urls": entorno.URLS, "kpis": kpis,
         "vencimiento": proximo, "seguridad": seguridad, "semaforo": semaforo,
+        "telegram": telegram.configurado(),      # la Sala dibuja Telegram como activo o planeado
         "actualizado": fechas.ahora_con_segundos(),
     }
 
@@ -7115,6 +9429,491 @@ def api_entornos_esquema(request: Request):
     if not _pase_landing(request):
         raise HTTPException(403, "Ingresá a la landing.")
     return _esquema_datos(con_grafana=True)
+
+
+# ==================== Solapa "Mapa funcional" ====================
+# La plataforma por funcionalidad (app -> pestaña -> pantalla, rutas, código,
+# tablas y servicios), leída del CÓDIGO DESPLEGADO por mapa_funcional.py. Es
+# orientación, no verdad (lo dice la página). Generarlo lee ~100 archivos con
+# ast (2-3 s en una PC, más con el medio núcleo de Pruebas): se arma una vez
+# por proceso y queda en memoria; con cada deploy nace de nuevo con el código
+# nuevo, y el botón "Actualizar" lo rehace a pedido.
+_MAPA_FUNCIONAL: dict = {}
+_MAPA_LOCK = threading.Lock()
+PROMPT_MAPA_FUNCIONAL = "/recursos/prompt-mapa-funcional/archivo"
+
+
+def _mapa_funcional(forzar: bool = False) -> dict:
+    with _MAPA_LOCK:
+        if forzar or not _MAPA_FUNCIONAL:
+            import mapa_funcional
+            datos = mapa_funcional.armar()
+            datos["generado"] = "Generado " + fechas.ahora_texto()
+            acciones = (
+                '<a href="/entornos#mapa">← Entornos</a>'
+                '<form method="post" action="/entornos/mapa/actualizar">'
+                '<button type="submit" class="fuerte">Actualizar desde el código</button></form>'
+                f'<a href="{PROMPT_MAPA_FUNCIONAL}" target="_blank" rel="noopener">Prompt para otros proyectos</a>')
+            _MAPA_FUNCIONAL["html"] = mapa_funcional.pagina(
+                datos, _url_static("vendor/vis-network/vis-network.min.js"),
+                _url_static("colmena_dorada.webp"), _url_static("fonts/barlow-condensed-bold.woff2"), acciones)
+            _MAPA_FUNCIONAL["resumen"] = {
+                "generado": datos["generado"], "commit": datos["commit"],
+                "apps": len({f["app"] for f in datos["funcionalidades"]}),
+                "funcionalidades": len(datos["funcionalidades"]),
+                "rutas": datos["total_rutas"], "sin_clasificar": len(datos["sin_clasificar"]),
+            }
+        return _MAPA_FUNCIONAL
+
+
+@app.get("/entornos/mapa", response_class=HTMLResponse)
+def entornos_mapa(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return HTMLResponse(_mapa_funcional()["html"])
+
+
+@app.post("/entornos/mapa/actualizar")
+def entornos_mapa_actualizar(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    _mapa_funcional(forzar=True)
+    return RedirectResponse("/entornos/mapa", status_code=303)
+
+
+@app.get("/api/entornos/mapa")
+def api_entornos_mapa(request: Request):
+    """Lo que muestra la tarjeta de la pestaña: cuándo se generó y cuánto hay."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá a la landing.")
+    return _mapa_funcional()["resumen"]
+
+
+# ==================== Solapa "Herramientas" ====================
+# Asistentes de la implementación (2026-10-13, pedido de SDN): desarrollos
+# chicos que ayudan a poner en marcha un sindicato y no van en las apps de
+# sindicato ni de trabajador. Viven donde vive /entornos (local y Pruebas, 404
+# en Demo) y con su misma puerta. La primera es la Calculadora bancaria: el
+# recibo que corresponde según la grilla de La Bancaria (grilla_bancaria.py),
+# la comparación con un recibo real cargado a mano y los casos guardados para
+# revisarlos. Los cálculos los hace el servidor: el navegador solo los muestra.
+HERRAMIENTA_BANCARIA = "bancaria"
+
+
+def _exigir_herramientas(request: Request) -> str:
+    """Puerta de las API de Herramientas. Devuelve quién está (para guardar
+    casos y cambios de estado): el usuario de plataforma, o "pase" si entró
+    con el PIN de la transición."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá a la landing.")
+    sesion = sesion_actual(request, "plataforma")
+    return (sesion or {}).get("ident") or ("plataforma" if sesion else "pase")
+
+
+@app.get("/entornos/herramientas/calculadora-bancaria", response_class=HTMLResponse)
+def entornos_calculadora_bancaria(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("calculadora_bancaria.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": db.ESTADOS_CASO,
+    })
+
+
+def _importmap_calculadora_v2() -> str:
+    """El importmap de la Calculadora bancaria v2: el mismo esquema que la v2
+    del Panel (`_importmap_panel_v2`), con sus módulos como `calc/<nombre>`.
+    Cada uno sale con su sello ?v=; un archivo nuevo de static/calc_v2/ entra
+    solo, y test_calculadora_bancaria_v2.py exige que todo import resuelva."""
+    import json
+    imports = {nombre: _url_static(ruta) for nombre, ruta in _VENDOR_PANEL_V2.items()}
+    for js in sorted((Path("static") / "calc_v2").glob("*.js")):
+        imports[f"calc/{js.stem}"] = _url_static(f"calc_v2/{js.name}")
+    return json.dumps({"imports": imports}, ensure_ascii=False)
+
+
+@app.get("/entornos/herramientas/calculadora-bancaria-v2", response_class=HTMLResponse)
+def entornos_calculadora_bancaria_v2(request: Request):
+    """La Calculadora bancaria v2: la misma herramienta, con la interfaz en
+    Preact y el movimiento de la plataforma. Usa las MISMAS rutas que la v1
+    (no hay cálculo nuevo) y convive con ella, con un enlace de ida y vuelta,
+    hasta que SDN decida reemplazarla. Misma puerta que la v1."""
+    import json
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    mapa = _importmap_calculadora_v2()
+    return templates.TemplateResponse("calculadora_bancaria_v2.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": json.dumps(list(db.ESTADOS_CASO)),
+        "importmap": mapa, "precarga": list(json.loads(mapa)["imports"].values()),
+    })
+
+
+@app.get("/api/entornos/herramientas/bancaria/opciones")
+def api_bancaria_opciones(request: Request, periodo: str = ""):
+    _exigir_herramientas(request)
+    try:
+        return grilla_bancaria.opciones(periodo)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/entornos/herramientas/bancaria/calcular")
+def api_bancaria_calcular(request: Request, payload: dict = Body(...)):
+    """El recibo esperado y, si vino el recibo real, la comparación."""
+    _exigir_herramientas(request)
+    try:
+        esperado = grilla_bancaria.calcular_recibo(payload.get("entrada") or {})
+        real = payload.get("real")
+        return {"esperado": esperado,
+                "comparacion": grilla_bancaria.comparar(esperado, real) if real else None}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+LEER_MAX_BYTES = 10 * 1024 * 1024
+
+
+@app.post("/api/entornos/herramientas/bancaria/leer")
+async def api_bancaria_leer(request: Request, archivo: UploadFile = File(...)):
+    """Lee un recibo real con la IA (el mismo extractor y el mismo enmascarado
+    que /api/leer) y lo devuelve ubicado en los renglones de la calculadora,
+    para revisarlo en "Chequear recibo". No se guarda el archivo ni el nombre
+    o CUIL leídos: solo vuelven importes. La llamada se paga y queda en Uso de
+    IA de /plataforma con tipo "herramienta"."""
+    _exigir_herramientas(request)
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(422, "El archivo está vacío.")
+    if len(contenido) > LEER_MAX_BYTES:
+        raise HTTPException(422, "El archivo pasa de 10 MB.")
+    conocidos = None if preparacion.modo() == "apagado" else preparacion.E.Conocidos()
+    prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, None, "herramienta")
+    try:
+        recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
+                                              db.modelo_ia("recibos"), **_para_la_ia(prep))
+    except Exception as e:
+        _registrar_uso_fallido(e, None, "", "herramienta")
+        raise HTTPException(422, "No se pudo leer el recibo. Probá con otra foto o el PDF original.")
+    db.registrar_uso_ia(None, "", "herramienta", uso["modelo"], uso["tokens_entrada"],
+                        uso["tokens_salida"], uso.get("duracion_ms", 0))
+    leido = grilla_bancaria.mapear_recibo_leido(recibo)
+    periodo = recibo.get("periodo") if recibo.get("periodo") in grilla_bancaria.GRILLAS else ""
+    return {**leido, "periodo": recibo.get("periodo") or "",
+            "categorias": grilla_bancaria.categorias_por_basico(leido["renglones"].get("BAS"), periodo),
+            "banco": (recibo.get("empleador") or {}).get("nombre") or "",
+            "confianza": recibo.get("confianza") or "",
+            "mock": os.getenv("MOCK_EXTRACTOR") == "1"}
+
+
+@app.post("/api/entornos/herramientas/bancaria/casos")
+def api_bancaria_guardar_caso(request: Request, payload: dict = Body(...)):
+    """Guarda un caso. El esperado y las diferencias se recalculan acá con la
+    entrada: no se guarda lo que diga el navegador."""
+    quien = _exigir_herramientas(request)
+    entrada = payload.get("entrada") or {}
+    real = payload.get("real") or {}
+    try:
+        esperado = grilla_bancaria.calcular_recibo(entrada)
+        comparacion = grilla_bancaria.comparar(esperado, real)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    nota = str(payload.get("nota") or "").strip()[:4000]
+    banco = str(payload.get("banco") or "").strip()[:120]
+    if not nota and not comparacion["renglones"] and not comparacion["totales"] and not comparacion["extras"]:
+        raise HTTPException(422, "Cargá algo del recibo real o escribí una nota: un caso vacío no sirve para revisar.")
+    caso_id = db.guardar_caso_herramienta(
+        herramienta=HERRAMIENTA_BANCARIA, quien=quien, grilla=esperado["periodo"], banco=banco, nota=nota,
+        entrada=entrada, esperado=esperado, real=real, diferencias=comparacion,
+        distintos=comparacion["distintos"])
+    return {"ok": True, "id": caso_id}
+
+
+def _caso_resumen(c) -> dict:
+    return {"id": c.id, "creado": c.creado, "quien": c.quien, "grilla": c.grilla, "banco": c.banco,
+            "nota": c.nota, "distintos": c.distintos, "estado": c.estado,
+            "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,
+            "categoria": (c.esperado.get("renglones") or [{}])[0].get("nota", ""),
+            "neto": (c.esperado.get("totales") or {}).get("neto")}
+
+
+@app.get("/api/entornos/herramientas/bancaria/casos")
+def api_bancaria_casos(request: Request):
+    _exigir_herramientas(request)
+    return {"casos": [_caso_resumen(c) for c in db.casos_herramienta(HERRAMIENTA_BANCARIA)],
+            "estados": db.ESTADOS_CASO}
+
+
+@app.get("/api/entornos/herramientas/bancaria/casos/{caso_id}")
+def api_bancaria_caso(request: Request, caso_id: int):
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_BANCARIA, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese caso.")
+    return {**_caso_resumen(c), "entrada": c.entrada, "esperado": c.esperado, "real": c.real,
+            "diferencias": c.diferencias}
+
+
+@app.post("/api/entornos/herramientas/bancaria/casos/{caso_id}/estado")
+def api_bancaria_caso_estado(request: Request, caso_id: int, payload: dict = Body(...)):
+    quien = _exigir_herramientas(request)
+    try:
+        if not db.cambiar_estado_caso(HERRAMIENTA_BANCARIA, caso_id, str(payload.get("estado") or ""), quien):
+            raise HTTPException(404, "No existe ese caso.")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.get("/entornos/herramientas/bancaria/casos.csv")
+def entornos_bancaria_casos_csv(request: Request):
+    """Todos los casos, uno por renglón comparado (más uno por caso sin
+    renglones), para analizarlos en una planilla."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";")
+    w.writerow(["caso", "creado", "quien", "estado", "grilla", "banco", "categoria", "renglon", "concepto",
+                "esperado", "otros", "real", "diferencia", "coincide", "nota"])
+    for c in db.casos_herramienta(HERRAMIENTA_BANCARIA):
+        r = _caso_resumen(c)
+        base = [c.id, c.creado, c.quien, c.estado, c.grilla, c.banco, r["categoria"]]
+        # "otros": lo que no es de convenio, sumado a la par (grilla_bancaria.otros_del_recibo).
+        filas = [[d["codigo"], d["concepto"], d["esperado"], d.get("otros", ""), d["real"], d["diferencia"],
+                  d["coincide"]] for d in (c.diferencias.get("renglones") or [])]
+        filas += [["TOTAL", d["total"], d["esperado"], d.get("otros", ""), d["real"], d["diferencia"], d["coincide"]]
+                  for d in (c.diferencias.get("totales") or [])]
+        filas += [["EXTRA", f"{e['concepto']} ({e['seccion']})", "", e["importe"], e["importe"], "", "sin chequear"]
+                  for e in (c.diferencias.get("extras") or [])]
+        for f in filas or [["", "", "", "", "", "", ""]]:
+            w.writerow(base + f + [c.nota])
+    contenido = "﻿" + salida.getvalue()      # BOM: Excel lo abre con tildes
+    return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="casos-calculadora-bancaria-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramientas: Asistente de trámites ====================
+# PLAN_ASISTENTE_TRAMITES.md. La IA propone (asistente_tramites_ia), el motor
+# puro decide (asistente_tramites); acá solo viven la puerta, el sindicato
+# elegido, el registro del uso de IA y los casos guardados.
+HERRAMIENTA_ASISTENTE = "asistente_tramites"
+API_ASISTENTE = "/api/entornos/herramientas/asistente"
+
+
+def _importmap_asistente_tramites() -> str:
+    """Mismo esquema que la Calculadora v2: módulos `asistente/<nombre>` desde
+    static/asistente_tramites/, cada uno con su sello; un archivo nuevo entra solo."""
+    import json
+    imports = {nombre: _url_static(ruta) for nombre, ruta in _VENDOR_PANEL_V2.items()}
+    for js in sorted((Path("static") / "asistente_tramites").glob("*.js")):
+        imports[f"asistente/{js.stem}"] = _url_static(f"asistente_tramites/{js.name}")
+    return json.dumps({"imports": imports}, ensure_ascii=False)
+
+
+@app.get("/entornos/herramientas/asistente-tramites", response_class=HTMLResponse)
+def entornos_asistente_tramites(request: Request):
+    """El Asistente de trámites: del relato del sindicato al circuito, la
+    instrucción, la vista previa y el JSON importable. Misma puerta que la
+    Calculadora (landing + pase); 404 en Demo."""
+    import json
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    mapa = _importmap_asistente_tramites()
+    return templates.TemplateResponse("asistente_tramites.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": json.dumps(list(db.ESTADOS_CASO)),
+        "importmap": mapa, "precarga": list(json.loads(mapa)["imports"].values()),
+    })
+
+
+def _sindicatos_para_asistente() -> list:
+    return [{"id": s["id"], "nombre": s["nombre"]} for s in db.sindicatos_para_asistente()]
+
+
+def _sindicato_para_asistente(sindicato_id) -> dict | None:
+    """Lo que el motor necesita del sindicato elegido (D6): módulos
+    encendidos, seccionales y áreas con su seccional. None si no se eligió
+    ninguno o el id no existe."""
+    try:
+        sid = int(sindicato_id or 0)
+    except (TypeError, ValueError):
+        return None
+    if not sid:
+        return None
+    nombre = next((s["nombre"] for s in _sindicatos_para_asistente() if s["id"] == sid), None)
+    if nombre is None:
+        return None
+    return {"id": sid, "nombre": nombre, "modulos": db.modulos_habilitados(sid),
+            "seccionales": [s["nombre"] for s in db.seccionales_del_sindicato(sid)],
+            "areas": [{"nombre": a["nombre"], "seccional": a["seccional"]}
+                      for a in db.areas_del_sindicato(sid) if a["activo"]]}
+
+
+@app.get(API_ASISTENTE + "/catalogo")
+def api_asistente_catalogo(request: Request):
+    """Todo lo que la pantalla necesita para andar sin IA."""
+    _exigir_herramientas(request)
+    return {**asistente_tramites.catalogo(), "sindicatos": _sindicatos_para_asistente(),
+            "ia": asistente_tramites_ia.disponible(), "estados_caso": list(db.ESTADOS_CASO)}
+
+
+def _registrar_uso_asistente(uso: dict | None, sindicato_id) -> None:
+    if uso:
+        db.registrar_uso_ia(sindicato_id or None, "", "herramienta", uso["modelo"],
+                            uso["tokens_entrada"], uso["tokens_salida"], uso.get("duracion_ms", 0))
+
+
+@app.post(API_ASISTENTE + "/entender")
+def api_asistente_entender(request: Request, payload: dict = Body(...)):
+    """La IA lee el relato y PROPONE; lo que vuelve ya pasó por el saneo del
+    motor. Sin cliente configurado, {"disponible": false} y la pantalla sigue a
+    mano. La llamada se paga y queda en Uso de IA con tipo "herramienta"."""
+    _exigir_herramientas(request)
+    if not asistente_tramites_ia.disponible():
+        return {"disponible": False}
+    sind = _sindicato_para_asistente(payload.get("sindicato_id"))
+    sid = sind["id"] if sind else None
+    try:
+        propuesta, uso = asistente_tramites_ia.entender(str(payload.get("relato") or ""),
+                                                         db.modelo_ia("asistente_tramites"))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except asistente_tramites_ia.ErrorModelo as e:
+        _registrar_uso_asistente(getattr(e, "uso", None), sid)
+        raise HTTPException(502, "No se pudo analizar el relato. Probá de nuevo o seguí sin IA.")
+    _registrar_uso_asistente(uso, sid)
+    return {"disponible": True, "propuesta": propuesta, "uso": uso}
+
+
+def _resolver_pedido(payload: dict) -> tuple:
+    """(entrada saneada, sindicato elegido o None, resultado del motor)."""
+    entrada = asistente_tramites.sanear_propuesta(payload.get("entrada"))
+    sind = _sindicato_para_asistente(payload.get("sindicato_id"))
+    return entrada, sind, asistente_tramites.resolver(entrada, sind)
+
+
+@app.post(API_ASISTENTE + "/resolver")
+def api_asistente_resolver(request: Request, payload: dict = Body(...)):
+    """El motor puro: lo que la pantalla muestra en Resultado. Se recalcula
+    en cada cambio de respuesta; sin IA."""
+    _exigir_herramientas(request)
+    entrada, sind, resultado = _resolver_pedido(payload)
+    return {"entrada": entrada, "sindicato": sind, "resultado": resultado}
+
+
+def _caso_asistente_resumen(c) -> dict:
+    return {"id": c.id, "creado": c.creado, "quien": c.quien, "nota": c.nota, "estado": c.estado,
+            "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,
+            "nombre": (c.entrada or {}).get("nombre", ""), "codigo": (c.esperado or {}).get("codigo", ""),
+            "sindicato": ((c.entrada or {}).get("sindicato") or {}).get("nombre", ""),
+            "brechas": [b["clave"] for b in (c.diferencias.get("brechas") or [])], "distintos": c.distintos}
+
+
+@app.post(API_ASISTENTE + "/casos")
+def api_asistente_guardar_caso(request: Request, payload: dict = Body(...)):
+    """Guarda un caso: la entrada, el resultado RECALCULADO acá y el JSON.
+    No se guarda lo que diga el navegador. Sin nombres de personas: el
+    relato es del trámite."""
+    quien = _exigir_herramientas(request)
+    entrada, sind, resultado = _resolver_pedido(payload)
+    if not entrada["nombre"] and not entrada["relato"]:
+        raise HTTPException(422, "Un caso sin nombre ni relato no sirve para revisar.")
+    nota = str(payload.get("nota") or "").strip()[:4000]
+    brechas = [{"clave": k, "nivel": asistente_tramites.BRECHAS[k]["nivel"]} for k in resultado["brechas"]]
+    caso_id = db.guardar_caso_herramienta(
+        herramienta=HERRAMIENTA_ASISTENTE, quien=quien, nota=nota,
+        entrada={**entrada, "sindicato": sind}, esperado={k: v for k, v in resultado.items() if k != "json"},
+        real=resultado["json"], diferencias={"brechas": brechas}, distintos=len(brechas))
+    return {"ok": True, "id": caso_id}
+
+
+@app.get(API_ASISTENTE + "/casos")
+def api_asistente_casos(request: Request):
+    _exigir_herramientas(request)
+    return {"casos": [_caso_asistente_resumen(c) for c in db.casos_herramienta(HERRAMIENTA_ASISTENTE)],
+            "estados": db.ESTADOS_CASO}
+
+
+@app.get(API_ASISTENTE + "/casos/{caso_id}")
+def api_asistente_caso(request: Request, caso_id: int):
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_ASISTENTE, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese caso.")
+    return {**_caso_asistente_resumen(c), "entrada": c.entrada, "resultado": {**c.esperado, "json": c.real}}
+
+
+@app.post(API_ASISTENTE + "/casos/{caso_id}/estado")
+def api_asistente_caso_estado(request: Request, caso_id: int, payload: dict = Body(...)):
+    quien = _exigir_herramientas(request)
+    try:
+        if not db.cambiar_estado_caso(HERRAMIENTA_ASISTENTE, caso_id, str(payload.get("estado") or ""), quien):
+            raise HTTPException(404, "No existe ese caso.")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.get(API_ASISTENTE + "/brechas")
+def api_asistente_brechas(request: Request):
+    """El inventario (D5): cada brecha del catálogo con cuántos trámites la
+    pidieron (sin los descartados), de qué sindicatos y cuándo fue el último.
+    Una brecha que ya no está en el catálogo (se desarrolló) sale aparte."""
+    _exigir_herramientas(request)
+    casos = [c for c in db.casos_herramienta(HERRAMIENTA_ASISTENTE) if c.estado != "descartado"]
+    conteo = {}
+    for c in casos:
+        r = _caso_asistente_resumen(c)
+        for clave in r["brechas"]:
+            x = conteo.setdefault(clave, {"casos": 0, "sindicatos": set(), "ultimo": "", "tramites": []})
+            x["casos"] += 1
+            if r["sindicato"]:
+                x["sindicatos"].add(r["sindicato"])
+            x["ultimo"] = max(x["ultimo"], c.creado or "")
+            if len(x["tramites"]) < 6:
+                x["tramites"].append({"id": c.id, "nombre": r["nombre"], "sindicato": r["sindicato"]})
+    filas = []
+    for clave, b in asistente_tramites.BRECHAS.items():
+        x = conteo.get(clave, {"casos": 0, "sindicatos": set(), "ultimo": "", "tramites": []})
+        filas.append({"clave": clave, "titulo": b["titulo"], "nivel": b["nivel"], "tam": b["tam"],
+                      "backlog": b["backlog"], "recomendacion": b["rec"], "provisorio": b["hoy"],
+                      "casos": x["casos"], "sindicatos": sorted(x["sindicatos"]), "ultimo": x["ultimo"],
+                      "tramites": x["tramites"]})
+    filas.sort(key=lambda f: (-f["casos"], f["nivel"], f["titulo"]))
+    resueltas = [{"clave": k, "casos": v["casos"]} for k, v in conteo.items() if k not in asistente_tramites.BRECHAS]
+    return {"brechas": filas, "resueltas": resueltas, "casos": len(casos)}
+
+
+@app.get("/entornos/herramientas/asistente/casos.csv")
+def entornos_asistente_casos_csv(request: Request):
+    """Todos los casos, uno por brecha (más uno por caso sin brechas)."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";")
+    w.writerow(["caso", "creado", "quien", "estado", "sindicato", "tramite", "codigo", "brecha", "nivel", "nota"])
+    for c in db.casos_herramienta(HERRAMIENTA_ASISTENTE):
+        r = _caso_asistente_resumen(c)
+        base = [c.id, c.creado, c.quien, c.estado, r["sindicato"], r["nombre"], r["codigo"]]
+        filas = [[b["clave"], b["nivel"]] for b in (c.diferencias.get("brechas") or [])] or [["", ""]]
+        for f in filas:
+            w.writerow(base + f + [c.nota])
+    contenido = "﻿" + salida.getvalue()
+    return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="casos-asistente-tramites-{fechas.hoy_texto()}.csv"'})
 
 
 # ==================== Solapa "Observabilidad" ====================
@@ -7156,6 +9955,29 @@ def entornos_observabilidad_config(request: Request, payload: dict = Body(...)):
     except Exception as e:
         print(f"[observabilidad] no se pudo guardar: {type(e).__name__}: {e}")
         raise HTTPException(502, "Grafana no aceptó el cambio. Revisá que el token de configuración siga vigente.")
+
+
+@app.post("/entornos/observabilidad/probar-telegram")
+def entornos_observabilidad_probar_telegram(request: Request):
+    """Un mensaje de prueba al chat de Telegram configurado, directo desde la app."""
+    _exigir_observabilidad(request)
+    if not telegram.configurado():
+        raise HTTPException(503, "Faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en este servicio.")
+    if not telegram.enviar(f"✅ Prueba de Colm3na ({entorno.ENTORNO}): los avisos por Telegram funcionan. "
+                           f"{fechas.ahora_texto()}"):
+        raise HTTPException(502, "Telegram no aceptó el mensaje: revisá el token y que le hayas escrito al bot.")
+    return {"ok": True, "detalle": "Mensaje enviado: revisá Telegram."}
+
+
+@app.post("/entornos/observabilidad/resumen-ahora")
+def entornos_observabilidad_resumen_ahora(request: Request):
+    """Manda el resumen del día ya mismo (el mismo texto que sale a la hora fija)."""
+    _exigir_observabilidad(request)
+    if not telegram.configurado():
+        raise HTTPException(503, "Faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en este servicio.")
+    if not resumen_diario.enviar_ahora():
+        raise HTTPException(502, "Telegram no aceptó el resumen.")
+    return {"ok": True, "detalle": "Resumen enviado: revisá Telegram."}
 
 
 @app.post("/entornos/observabilidad/probar-mail")
@@ -7420,14 +10242,15 @@ def _error_recurso(request: Request, codigo: str, mensaje: str):
 
 
 def _bytes_con_rango(request: Request, datos: bytes, mime: str, nombre: str,
-                     cache: str = "private, max-age=86400") -> BinResponse:
+                     cache: str = "private, max-age=86400",
+                     disposicion: str = "inline") -> BinResponse:
     """Sirve bytes de la base respetando `Range` (un solo rango), que es lo
     que el reproductor del navegador manda para adelantar un video o un
     audio: sin 206 se puede reproducir pero no saltar. Los archivos del
     repositorio no pasan por acá (FileResponse ya lo hace solo)."""
     total = len(datos)
     cabeceras = {"Cache-Control": cache, "Accept-Ranges": "bytes",
-                 "Content-Disposition": f"inline; filename*=UTF-8''{quote(nombre or 'recurso')}"}
+                 "Content-Disposition": f"{disposicion}; filename*=UTF-8''{quote(nombre or 'recurso')}"}
     rango = request.headers.get("range", "")
     if rango.startswith("bytes=") and "," not in rango:
         desde, _, hasta = rango[6:].partition("-")
@@ -7515,12 +10338,28 @@ def recursos_quitar(recurso_id: int, request: Request):
     return RedirectResponse("/entornos?aviso=quitado#recursos", status_code=303)
 
 
+def _es_html(mime: str | None, nombre: str | None) -> bool:
+    return (mime or "").startswith("text/html") or (nombre or "").lower().endswith((".html", ".htm"))
+
+
+def _html_autocontenido(datos: bytes, clave: str, nombre: str) -> BinResponse:
+    """La descarga de un HTML: un solo archivo con las fuentes (y lo que se
+    pueda) embebido, para que abra igual mandado por WhatsApp o por mail
+    (empaquetar.py). Lo que no se pudo traer queda como estaba."""
+    return BinResponse(content=empaquetar.empaquetar_bytes(datos, clave),
+                       media_type="text/html; charset=utf-8",
+                       headers={"Cache-Control": "private, no-cache",
+                                "Content-Disposition": f"attachment; filename*=UTF-8''{quote(nombre or 'recurso.html')}"})
+
+
 @app.get("/recursos/{ref}/archivo")
-def recursos_archivo(ref: str, request: Request):
+def recursos_archivo(ref: str, request: Request, descargar: bool = False):
     """Abre el recurso: `ref` es la clave de uno del repositorio
     (recursos.SEMILLA) o el id de uno subido. Un enlace redirige a su URL.
-    Pide el pase: son documentos internos."""
+    Pide el pase: son documentos internos. Con `?descargar=1` sale como
+    adjunto (el botón de bajar de la ficha) en vez de abrirse en la pestaña."""
     _exigir_landing()
+    disposicion = "attachment" if descargar else "inline"
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
     if ref.isdigit():
@@ -7531,13 +10370,20 @@ def recursos_archivo(ref: str, request: Request):
             if r.url:
                 return RedirectResponse(r.url, status_code=303)
             raise HTTPException(404, "Ese recurso no tiene archivo")
+        if descargar and _es_html(r.mime, r.nombre_archivo):
+            return _html_autocontenido(r.archivo_datos, f"base:{r.id}:{len(r.archivo_datos)}",
+                                       r.nombre_archivo)
         return _bytes_con_rango(request, r.archivo_datos, r.mime or "application/octet-stream",
-                                r.nombre_archivo)
+                                r.nombre_archivo, disposicion=disposicion)
     item = recursos.del_repositorio_por_clave(ref)
     if not item or not item["ruta"].exists():
         raise HTTPException(404, "No existe ese recurso")
+    if descargar and _es_html(item["mime"], item["nombre_archivo"]):
+        st = item["ruta"].stat()
+        return _html_autocontenido(item["ruta"].read_bytes(),
+                                   f"repo:{ref}:{int(st.st_mtime)}-{st.st_size}", item["nombre_archivo"])
     return FileResponse(item["ruta"], media_type=item["mime"], filename=item["nombre_archivo"],
-                        content_disposition_type="inline",
+                        content_disposition_type=disposicion,
                         headers={"Cache-Control": "private, no-cache"})
 
 

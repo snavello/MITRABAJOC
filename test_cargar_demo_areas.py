@@ -144,7 +144,7 @@ def test_el_empleado_no_afiliado_no_inventa_fila_en_el_padron():
     usuario existe, la fila del padrón no, y el vínculo queda en NULL."""
     with Session(db.engine) as s:
         u = s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "27777777774")).first()
+            UsuarioSindicato.usuario == "27777777772")).first()
         assert u is not None and u.area_id
         assert u.trabajador_id is None
         assert not s.exec(select(Trabajador).where(

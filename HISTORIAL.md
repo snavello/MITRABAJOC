@@ -5469,3 +5469,2985 @@ todavía: su `domicilio` sigue siendo un texto libre, nunca se migró al bloque
 estructurado de `geo.CAMPOS_DOMICILIO`. Quedó anotado en BACKLOG.md; hacerlo
 en el mismo bloque duplicaba el tamaño del cambio y el pedido era sobre el
 trabajador.
+
+
+## La portada del afiliado, esquema "Tablero" (2026-09-23)
+
+El pedido de Sd fue "en escritorio las tarjetas son demasiado largas y queda
+mucho espacio, y las letras de los títulos son chicas y difíciles de leer".
+La causa no era de gusto y estaba en una línea: **`.pad` no tenía ancho
+máximo**. En un monitor de 1920 la grilla de `.tarjetas` (3 columnas arriba
+de 700 px) repartía todo el ancho disponible, así que cada tarjeta terminaba
+midiendo unos 600 px, con un `min-height: 88px`, el ícono arriba, el texto
+abajo y un título de 13 px en el medio de todo ese aire. No era "poca
+letra": era una tarjeta que se estiraba sin tope.
+
+**Tres mockups antes de tocar código**, en `disenos/portadas-propuestas.html`
+(la carpeta está en `.gitignore`): A "Respiro" (la de hoy, con tope de ancho
+y tipografía más grande), B "Tablero" (dos columnas: acción a la izquierda,
+novedades a la derecha) y C "Mesa de trabajo" (agrupada por familias, pensada
+por el panel del sindicato con sus 15 accesos). Cada propuesta se renderiza
+dentro de un `<iframe>` de 1440 y otro de 390 al mismo tiempo, así las media
+queries responden al ancho del iframe y no al de la página: lo que se ve en
+el panel "Escritorio" es literalmente el CSS a 1440. Sd eligió la B.
+
+### Qué cambió
+
+- **Tope de 1320 px centrado** y dos columnas arriba de 1040 px
+  (`minmax(0,1fr) 352px`). Abajo de eso se apila y queda como antes.
+- **Los accesos son horizontales**: ícono en una pastilla a la izquierda,
+  título y estado a la derecha, flecha al final. Es la forma que llena el
+  ancho en vez de dejar hueco, y el título sube de 13 a 19 px.
+- **La tarjeta principal dice números reales.** `db.resumen_recibos_trabajador`
+  devuelve cuántos recibos verificó en lo que va del año y cómo salió el
+  último; la tarjeta muestra "72 · recibos verificados este año" y "Julio
+  2026 · con diferencias para revisar". Antes decía "Revisá tus aportes", que
+  no le informaba al afiliado nada que él no supiera ya. Sin ningún recibo
+  todavía no inventa un cero: cambia el texto e invita a subir el primero.
+- **Novedades y Beneficios suben al riel**, donde se ven al entrar, en vez de
+  quedar al final de un scroll largo.
+
+### Las dos cosas que Sd pidió conservar
+
+**La foto de la noticia.** En la primera versión de la propuesta B el riel las
+había reducido a un hilo de texto. La miniatura ya existía (44 px,
+`/noticia-imagen/{id}/1`): ahora sube a 62 px y la más nueva lleva filo de
+acento, el mismo recurso que ya usa `.notif-item.no-leida`. La noticia sin
+imagen sigue cayendo en el ícono genérico, del mismo tamaño, para que los
+títulos queden alineados.
+
+**El carrusel de beneficios**, rehecho como pieza de marketing: imagen a
+sangre con velo oscuro de abajo hacia arriba, el rubro como chip en acento,
+la descripción en condensada cortada a dos renglones (la escribe el sindicato
+y puede ser larga; si no, la tarjeta cambia de alto entre una lámina y la
+siguiente) y la vigencia al pie. La fluidez son cinco cosas concretas:
+deslizamiento con curva de salida de 620 ms, **zoom lento sobre la lámina
+activa** (Ken Burns de 7 s, que es lo que hace que una tarjeta quieta parezca
+viva), barra que muestra cuánto falta para la que sigue, arrastre con el dedo
+que sigue la mano y decide al soltar, y **pausa al pasar el mouse** -- nadie
+quiere que se le mueva lo que está leyendo. Las cinco se apagan con
+`prefers-reduced-motion`.
+
+Dos decisiones del carrusel que conviene recordar:
+
+- **Clases propias (`.car-*`) y no las `.carrusel*` de marca.css.** Esas las
+  sigue usando la vista previa del panel de admin y no tienen por qué cambiar
+  juntas.
+- **La imagen pasó de `contain` sobre una tira de 88 px a `cover` sobre
+  16/11.** Las imágenes cargadas hasta ahora se van a ver recortadas si son
+  verticales: hay que pedirle al sindicato que las suba apaisadas.
+
+### La profundidad, sin un solo color nuevo
+
+Sd trajo como referencia una app de club de pádel hecha con Code. Lo que se
+tomó de ahí son cuatro recursos, ninguno de los cuales agrega color: dos
+**manchas de luz difuminadas** (que son el primario y el acento del PROPIO
+sindicato, al 42% y 16% con blur de 110 px), una **retícula de colmena** muy
+tenue de fondo -- el equivalente nuestro a sus líneas de cancha --, la
+**trama diagonal más fina** (1 px cada 6) y **radios más grandes** en las
+piezas principales. En la portada clara las manchas se apagan: dos blobs
+sobre papel se ven como una mancha de impresión.
+
+### Lo que se verificó
+
+Contra el local con Postgres: **La Bancaria** (con logo y con 20 beneficios
+sintéticos) en 1440 y en 375, la variante clara forzada por DOM, y el
+carrusel medido en vivo -- avanzó solo a la quinta lámina, `carMover(1)`
+pasó a la sexta, los puntos siguieron el estado y la barra corrió. Tests:
+`test_portada` (12, cuatro nuevos: números reales, el caso sin recibos, la
+foto de la noticia y el carrusel), `test_beneficios`, `test_encuestas`,
+`test_modulos`, `test_noticias`, `test_notificaciones`, `test_modales`,
+`test_fechas`, `test_datos_personales` y `test_codigos_error`.
+
+Dos tests había que tocarlos y valía la pena entender por qué. El de
+beneficios afirmaba las clases viejas del carrusel (prueba lo mismo de
+siempre: con una sola lámina no hay a dónde ir, así que no se dibujan ni
+flechas ni puntos). Y el de encuestas buscaba `class="acceso" href="/app?tab=
+encuestas"`; al aflojarlo al href pelado empezó a dar falso negativo, porque
+ese mismo href aparece **dentro de un template literal del JS** de
+notificaciones. Quedó con la clase nueva.
+
+### Lo que NO cambió
+
+Las portadas del sindicato, la empresa y la plataforma siguen con el esquema
+anterior (`.tarjetas` + `.acceso` de marca.css). El pedido era sobre la del
+afiliado y llevarlas a las cuatro de una vez es otro bloque.
+
+
+### El mismo esquema en las otras tres portadas (2026-09-23)
+
+Sd pidió llevarlo a sindicato, plataforma y empresa, en ese orden. Lo que
+obligó a pensar antes de copiar fue **dónde poner el CSS**: cuatro copias del
+mismo bloque en cuatro `<style>` es exactamente lo que este proyecto ya vivió
+con el encabezado. Las cuatro portadas cargan `marca.css`, así que ahí va.
+
+**Y ahí apareció el problema de verdad**: `.fila`, `.filas`, `.pastilla`,
+`.mini`, `.txt`, `.nov` y `.sec` **ya existen** en admin.html, dashboard.js,
+encuesta_resultados.js, entornos.html y empresa.html. `marca.css` la carga
+casi toda la app, así que subir esas clases sin prefijo habría pisado media
+docena de pantallas sin que ningún test lo notara (son estilos, no
+comportamiento). Por eso todo el bloque quedó prefijado **`pt-`**
+(`.pt-fila`, `.pt-pastilla`, `.pt-hero`…), y el renombre se hizo solo sobre
+selectores CSS y atributos `class="..."`, nunca sobre texto libre: "una fila
+por sindicato" y "dos columnas" son frases que aparecen en los comentarios.
+
+Cada portada quedó con lo suyo:
+
+- **Sindicato**: hero para el Panel Sindical (sin cifra propia -- la portada
+  no tiene de dónde sacarla sin pegarle a la base, y el Panel es justo la
+  pantalla que las trae todas) y los 14 accesos restantes en **tres
+  columnas** (`.pt-tres`, un modificador para las portadas sin riel: en dos
+  columnas 15 accesos son una lista larguísima). Se fue la estrella de la
+  esquina del módulo nuevo: en una tarjeta chica marcaba algo, sobre el hero
+  es ruido. La etiqueta NUEVO queda.
+- **Plataforma**: hero para Sindicatos, que es lo que se hace ahí el 90% de
+  las veces, y los otros siete accesos en tres columnas.
+- **Empresa**: sin hero. Son dos accesos y ninguno es "el principal"; un hero
+  ahí sería una jerarquía inventada. De paso se estrenó el globo de novedades
+  de Trámites, que **ya se contaba en el contexto y no se mostraba**: un
+  expediente con respuesta del sindicato no se veía hasta entrar.
+
+### El círculo de perfil del sindicato
+
+Sd lo pidió "en el mismo lugar" que en la app del afiliado. Es de **lectura**:
+abre una ficha con nombre, usuario, CUIL, rol, seccional, área y sindicato.
+No edita nada -- cambiar la clave de un usuario del panel sigue siendo cosa
+de plataforma, y los permisos los da el Super Admin desde Áreas y Usuarios.
+
+La foto sale de `CuentaTrabajador`, o sea **del CUIL**, no de una copia
+guardada en `UsuarioSindicato`: quien trabaja en el gremio y además está
+afiliado tiene una sola foto, igual que tiene un solo domicilio. Quien no
+está en el padrón -- que es un caso real y no un error, como Elena Vidal de
+Prensa en la demo -- simplemente no tiene, y se ve el ícono.
+
+Un detalle que costó encontrar: `.fila-hola` (el flex que pone el saludo y el
+círculo en la misma línea) vivía en el `<style>` de portada.html y de
+empresa_portada.html. Al llevar el esquema al sindicato, el círculo caía
+debajo del saludo. Ahora está en `marca.css` con el resto.
+
+## Avisos por Telegram: errores al instante y el resumen del día (2026-09-23)
+
+Rama `feature/avisos-telegram`. Sd pidió "agregar mi número para que me
+lleguen alertas como las de Sentry y un resumen de la actividad del día
+tomado de los KPI que ya tenemos: algo simple y que no agregue costos".
+Telegram es lo único que cumple las tres: API oficial gratuita, un POST sin
+librerías, y un bot que se crea con BotFather. WhatsApp exige cuenta de
+empresa aprobada y cobra por conversación; los SMS se pagan uno por uno.
+
+**Lo que se construyó.** `telegram.py` (puro: `enviar`, `avisar_error` con
+freno de 10 minutos por código, `texto_resumen`, sin claves en el repo) y
+`resumen_diario.py` (hilo en la app, a la hora de `TELEGRAM_RESUMEN_HORA`,
+21:00 por defecto porque lo pidió Sd). El handler global manda a Telegram
+lo mismo que a Sentry, sin personas, en otro hilo. El resumen reclama el
+día con `db.reclamar_aviso_diario` (tabla `avisoenviado`, migración
+`b3c7e1d9a4f2`): un INSERT que solo gana un worker. Grafana suma un segundo
+punto de contacto (`sdn-telegram`) y una política de dos rutas, solo si el
+entorno trae las claves. La pestaña Observación técnica muestra el estado y
+tiene dos botones: prueba y "resumen ahora". La Sala de mando dibuja
+Telegram como activo cuando está configurado (cierra esa decisión
+pendiente). Tests: `test_telegram.py` (11). Plataforma 0.36.01.
+
+**El token pasó por el chat.** Sd pegó el primer token en la conversación
+por error de portapapeles; se le pidió revocarlo en BotFather y cargar el
+nuevo directo en Render, que es la regla: los secretos no pasan por Code.
+
+### El servidor en el resumen: picos, horarios y congestión (mismo día)
+
+Con el primer resumen ya en el teléfono, Sd pidió "una línea o dos de cómo
+funcionó el servicio web, si se congestionó, si tuvo picos en algún horario,
+y lo mismo para la base, con algún número si hiciera falta". Las métricas
+ya existían: son las que el colector manda a Grafana cada cinco minutos.
+`observabilidad/metricas_dia.py` las lee de Render para las últimas 24
+horas (CPU y memoria contra el límite del plan, pedidos HTTP por código de
+estado, latencia p95, conexiones de la base) y las resume en dos líneas con
+las horas en Buenos Aires: pico de CPU y cuándo, promedio, pico de memoria,
+cuántos pedidos, la hora más cargada, cuántos 5xx, la latencia máxima; y
+para la base CPU, memoria y conexiones máximas. El veredicto "sin
+congestión / hubo congestión: …" usa el mismo criterio que las alertas del
+tablero pero mirando el día entero (CPU al 80 %, cinco 5xx, p95 de 3 s).
+Lectura y análisis separados: el análisis es puro y se prueba con series
+inventadas. Sin `RENDER_API_KEY` o con Render caído, el resumen sale igual
+con una línea que lo dice. Plataforma 0.36.02.
+
+## Reportes unificados y la cláusula de confidencialidad (2026-09-24)
+
+Pedido de SDN: las dos listas de recibos del panel del sindicato --Reportes
+y Cotizantes-- pasan a ser una sola, "Reportes", y se le suman los recibos
+que el afiliado verificó y NO envió, sin datos que lo identifiquen a él ni a
+su empresa, y solo si el sindicato aceptó por contrato una cláusula de
+confidencialidad.
+
+### De dónde salían las dos listas
+
+- **Reportes** leía la tabla `Reporte`: los recibos que el afiliado
+  "reportó" por tener diferencias, con un estado (nuevo / en revisión /
+  resuelto) que nadie gestionaba.
+- **Cotizantes** leía `EnvioSindicato`: los que el afiliado envió. Y como
+  `/api/reportar` escribe también un `EnvioSindicato`, **todo lo de
+  Reportes ya estaba en Cotizantes**.
+- La tabla con TODOS los recibos verificados, enviados o no, ya existía:
+  `ReciboVerificado`, con `enviado_sindicato` y `estado` OK /
+  CON_DISCREPANCIAS. La lista nueva no pidió datos nuevos, solo otra forma
+  de mostrarlos.
+
+`Reporte` y `EnvioSindicato` no se tocaron: se siguen escribiendo y
+`EnvioSindicato` sigue siendo la prueba de afiliado cotizante (art. 21 bis
+Dto 407/2026). Lo que desapareció es su pestaña.
+
+### Por qué la lista se pide paginada y no viaja en el HTML
+
+Las dos listas viejas se renderizaban enteras dentro de `/admin`, con el
+detalle de cada recibo escondido en una fila oculta. Con `ReciboVerificado`
+eso son miles de filas (el lote de un sindicato tiene 5.000) en cada carga
+del panel. Ahora `/admin/reportes/lista` devuelve de a 50, se pide recién al
+abrir la pestaña, y el modal "Ver" pide un solo recibo a
+`/admin/reportes/recibo/{id}`. De paso, el HTML del panel ya no lleva
+ningún recibo adentro.
+
+### Privacidad: en el SQL, y también en la búsqueda
+
+`dashboard.listado_reportes` saca CUIL, nombre y CUIT del empleador con un
+`CASE WHEN r.enviado_sindicato`, igual que el explorador del Panel. Lo que
+no era obvio: **la búsqueda por CUIL o por nombre busca SOLO entre los
+enviados**. Si buscar "27422222228" trajera la fila anónima de ese CUIL, el
+filtro mismo la identificaría. La pantalla lo aclara debajo de los filtros.
+
+El modal usa `dashboard.detalle_recibo`, el mismo del Panel, y la limpieza
+del JSON guardado quedó en una sola función, `anonimizar_detalle`: borra
+nombre, CUIL, legajo y fecha de ingreso del empleado y **el empleador
+entero** (antes el Panel dejaba la empresa). Una sola implementación porque
+la primera pantalla que anonimizara a su manera y se olvidara un campo lo
+dejaría pasar.
+
+### La compuerta de la cláusula, y qué queda afuera de ella
+
+Decisión de SDN: **los números, conteos y gráficos del Panel cuentan todo**,
+enviado o no, como hasta ahora; lo que se ve fila por fila, anonimizado. La
+cláusula recorta solo las filas: sin ella, ni Reportes ni el explorador del
+Panel muestran recibos no enviados, y el modal responde 404. La lista dice
+cuántos quedaron afuera, para que el sindicato sepa que existen y por qué no
+los ve.
+
+La cláusula vive en `Sindicato` (`clausula_confidencialidad`, más
+`clausula_aceptada_en` y `clausula_aceptada_por`) y solo la marca
+plataforma. **Exige el contrato cargado**: un tilde sin el papel firmado no
+le da a nadie los recibos. Quién y cuándo se escriben solo al PASAR a
+aceptada --volver a guardar la ficha no reescribe la fecha-- y se borran al
+desmarcarla; los dos movimientos quedan además en `LogPlataforma`. El
+contrato va en bytes en la base (PDF o imagen, hasta 15 MB) y lo sirve
+`/plataforma/sindicato/{id}/contrato`, que exige sesión de plataforma: no es
+público como el logo.
+
+### Permisos
+
+La sección `cotizantes` salió de `permisos.SECCIONES`. La migración
+`c9e4a2f7b815` pasa cada permiso de área y cada ajuste individual
+(agregar o bloquear) de `cotizantes` a `reportes`, sin duplicar filas: nadie
+gana ni pierde acceso a esos recibos. La lista respeta además el alcance de
+seccional (`db.alcance_seccional`) dentro de la consulta, cosa que las dos
+listas viejas no hacían.
+
+### Lo que sigue
+
+Próximo sprint: en el primer uso, el afiliado acepta términos y condiciones
+que le dicen que sus recibos llegan al sindicato anonimizados, y con nombre
+solo si los envía él.
+
+## Enmascarado, bloque 1: qué se tapa (2026-09-24)
+
+Paso cero del motor v2 (`PLAN_ENMASCARADO.md`). El bloque 1 es el módulo que
+decide qué se tapa, `enmascarado.py`, puro y sin tocar la app: recibe
+"palabras con posición" y devuelve las cajas a tapar, el CUIL y el CUIT
+leídos, y la imagen tapada con un rótulo gris ("CUIL OCULTO"). `lectores.py`
+trae por ahora solo el PDF digital (`pypdfium2`); el OCR de fotos es el
+bloque 2.
+
+### Lo que enseñó el recibo digital ficticio
+
+Se armó con reportlab un recibo con capa de texto (identidad inventada:
+nombre con acentos y Ñ, CUIL y CUIT con verificador válido, CBU, dos
+páginas) porque los 10 sintéticos son todos imágenes. Encontró dos cosas que
+los sintéticos no mostraban:
+
+- **El lector partía los números.** `30-71234567-1` salía como tres
+  palabras: la caja de un guion mide un punto de alto y el corte por hueco
+  usaba esa altura. Se usa la caja "amplia" de cada carácter
+  (`get_charbox(loose=True)`).
+- **Palabra por palabra no alcanza.** Aun con el lector arreglado, un PDF
+  trae "Apellido y Nombre:" como tres palabras y un OCR puede partir un CUIL
+  en tres cajas. El módulo trabaja por **frase**: palabras contiguas de una
+  línea, cortadas en los huecos grandes para que dos columnas no formen un
+  número.
+
+### Otras decisiones
+
+- **La tabla de conceptos no tiene rótulos**: "A CUENTA DE FUTUROS
+  AUMENTOS" no es una cuenta bancaria. La tabla arranca en una FILA de
+  títulos de columna (dos o más) y no en cualquier frase que diga "haberes":
+  "RECIBO DE HABERES" del encabezado apagaba todos los rótulos.
+- **El valor de un rótulo está en la primera fila de abajo, no en la
+  segunda**: en el sintético, "Categoria" quedaba más centrada bajo
+  "Apellido y nombre" que el nombre mismo.
+- **Lo que se tapó por rótulo se aprende** y se busca en el resto del
+  documento (el nombre se repite al pie para la firma). Con eso el caso del
+  aprendizaje del admin, sin nada conocido de antemano, tapa lo mismo que el
+  del afiliado.
+- **Un importe nunca se tapa**, venga del detector que venga.
+- El verificador de CUIL/CUIT es lo que deja tapar un número de 11 cifras
+  sin rótulo; el CUIL de los sintéticos (27-99999999-9) tiene verificador
+  inválido y se tapa por el rótulo o por ser el de la sesión.
+
+### Resultado
+
+`test_enmascarado.py`, 53 tests: con y sin datos conocidos, en el digital y
+en los 10 sintéticos se tapa **exactamente** la identidad (nombre, CUIL, DNI,
+legajo, cuenta, CUIT, razón social), ningún importe ni concepto, y el
+control de fuga da vacío. Las palabras de cada recibo están en
+`datos_prueba/enmascarado/*.json` (los PDF sintéticos no se versionan: 2 MB
+cada uno); se regeneran con `datos_prueba/enmascarado/generar.py`.
+
+### Lo que condiciona al bloque 2
+
+**El OCR completo de una página es lento**: RapidOCR tardó 10 a 16 s por
+página en una notebook de 8 núcleos y 35 s con un solo hilo. Detectar dónde
+hay texto cuesta 1,3 s; lo caro es LEER las ~136 cajas (el modelo que trae
+el paquete es el chino, con más de 6.600 caracteres). Así no entra en los 3 s
+del plan. El bloque 2 tiene que leer solo lo necesario (el encabezado, no la
+tabla) y/o usar un modelo latino más liviano, y medirlo antes de enchufar
+nada. El PDF digital no tiene este problema: sus palabras salen del archivo
+en milisegundos.
+
+## Enmascarado: el OCR de las fotos es Tesseract, sin Docker (2026-09-24)
+
+El plan (C2) elegía RapidOCR porque Tesseract "es un programa del sistema y
+el Render nativo no deja instalarlo". Medido, RapidOCR no llegaba al límite
+de 3 s por foto, y SDN rechazó ajustar el límite apostando a que llegaran
+pocas fotos. Se buscó otra solución antes que pasar el servicio a Docker.
+
+**`tesserocr` publica ruedas para Linux que traen Tesseract 5.5.1 adentro**
+(`libtesseract` y `libleptonica` empaquetadas, 5,5 MB): se instala con `pip`
+en el Render nativo, sin `apt` y sin Docker. Se verificó en un contenedor
+`python:3.12.8-slim-bookworm` pelado (Debian 12, lo mismo que el Render
+nativo), sin instalar nada del sistema. Le falta solo el idioma:
+`spa.traineddata` de `tessdata_fast` (2,3 MB). No hay rueda para Windows:
+en una PC de desarrollo con Windows el camino de las fotos se prueba en
+Docker.
+
+### La medición (contenedor con `--memory=512m`, 10 sintéticos + el digital)
+
+Los tiempos de reloj en la notebook variaron hasta 4 veces entre corridas
+(la máquina estaba ocupada con otras cosas), así que el número que vale es el
+**tiempo de CPU por página**, que no depende de qué más corre:
+
+| Motor | CPU por página | Memoria del proceso |
+|---|---|---|
+| RapidOCR, modelo chino, página entera | ~21 s (notebook, 1 hilo) | — |
+| RapidOCR, latino v5, sin leer la tabla | 3,4–3,8 s | 256–305 MB |
+| **Tesseract, página entera** | **0,7 s** | ~128 MB |
+
+Con 1 CPU (producción) una foto suma ~0,7 s; con medio núcleo (Pruebas),
+~1,4 s. El modelo de Tesseract ocupa ~20 MB por proceso, no los 200 que
+estimaba el plan. El modelo latino cuantizado a 8 bits se descartó: más
+lento y dejó escapar el nombre. Leer "sin la tabla" (reconocer las filas de
+conceptos por geometría y no leerlas) le sirvió a RapidOCR pero no a
+Tesseract, que analiza la página dos veces para eso.
+
+### Lo que cambió en el módulo
+
+Tesseract lee "CUIL N" como **"CUILN"**: el rótulo acepta ahora la N pegada.
+Con eso, en los 11 recibos se tapa exactamente la identidad y el control de
+fuga da 0, con y sin datos conocidos.
+
+### Docker, por si alguna vez hace falta
+
+Se relevó qué implicaría: Render permite cambiar el runtime de un servicio
+existente a Docker (conserva URL, variables y base); hay que mantener un
+`Dockerfile` (y las actualizaciones del sistema base pasan a ser nuestras),
+`render_admin.py` cambia los workers en el "Start Command", que en Docker
+es el "Docker Command", y el cambio se hace dos veces (Pruebas y Demo).
+Con `tesserocr` no hace falta.
+
+## Enmascarado, bloque 2: los lectores, y el enmascarado pasa a "mejor esfuerzo" (2026-09-24)
+
+### La definición de SDN
+
+Antes de este bloque SDN fijó el objetivo, y cambió dos reglas del plan: el
+análisis de recibos tiene que ser lo más preciso, confiable y viable en
+tiempo y recursos; tapar los datos personales es un agregado a la
+confidencialidad que ya existe, **no una condición**. No debe entorpecer ni
+demorar ni ser cuello de botella; se tolera la fuga eventual de un CUIT o un
+nombre ("no construimos una jaula de acero": el compromiso es el mejor
+esfuerzo), y **un dato que no se pudo tapar no es razón para no analizar el
+recibo**: a lo sumo queda un registro. Eso reemplaza la línea roja 2 ("si el
+enmascarado no está seguro, el recibo no sale") y el §6 entero del plan
+(reintento con imagen mejorada, pedir otra foto, E-RECIBO-05/E-APORTE-04).
+Quedó en "Decisiones tomadas" de CLAUDE.md. La verificación de pertenencia
+NO se relaja: un CUIL ajeno leído localmente corta como hoy (E-RECIBO-04).
+
+### Lo que se construyó
+
+`lectores.py`: el PDF digital con `pypdfium2` y la foto con Tesseract
+(`tesserocr`). La lectura de una foto **nunca espera ni levanta
+excepciones**: devuelve el motivo ("sin_ocr", "sin_lugar", "tiempo",
+"error") y quien llama manda sin tapar y registra.
+
+- **Cupo que no hace fila** (`ENMASCARADO_CUPO`, 2 por proceso): la foto que
+  no entra vuelve al instante con "sin_lugar". Es a propósito distinto del
+  cupo del Panel Sindical, que espera 2 s: acá esperar sería demorar el
+  análisis por un agregado.
+- **Tiempo máximo** (`ENMASCARADO_OCR_MS`, 4000): lo corta Tesseract mismo
+  (`Recognize(timeout)`), no un hilo aparte.
+- **Un hilo por lectura** (`OMP_THREAD_LIMIT=1`, antes de cargar Tesseract)
+  y sin buscar texto invertido.
+- **La foto se lee achicada** a 2000 px de lado y las cajas vuelven en
+  píxeles de la original. **Y derecha**: `abrir_imagen` aplica la rotación
+  del EXIF, porque al volver a codificar la imagen tapada ese dato se pierde
+  y la IA recibiría la foto acostada.
+- El idioma (`spa.traineddata`, `tessdata_fast`, 2,3 MB) va en
+  `data/tessdata/`, versionado. En Windows no hay rueda de tesserocr: el OCR
+  queda "sin_ocr" (se tapa solo el PDF digital) y se prueba en Docker.
+- Los datos de prueba de los sintéticos se regeneraron con Tesseract (el
+  lector de la app, no RapidOCR). El CUIT admite ":" como separador: así lee
+  Tesseract a veces el guion.
+
+### La tabla del §5 (contenedor Debian 12, 512 MB)
+
+| | 1 núcleo | ½ núcleo (Pruebas) | Límite |
+|---|---|---|---|
+| PDF digital, 2 páginas, p95 | 0,14 s | 0,45 s | 0,3 s |
+| Foto de 1 página, p95 | 0,80 s | 2,28 s | 3 s |
+| Modelo cargado | +9 MB | +9 MB | 250 MB |
+| Por lectura | +10 MB | +10 MB | 60 MB |
+| Resto de la app durante 10 fotos a la vez, p95 | 3 ms | 47 ms | sin demora |
+
+Con 10 fotos a la vez se leen 2 (el cupo) y 8 vuelven sin tapar en 0 ms.
+El PDF de dos páginas con medio núcleo pasa el límite (0,45 s contra 0,3 s:
+es pasar dos páginas a imagen); con un núcleo sobra.
+
+Tests: `test_lectores.py` (11; los dos de Tesseract real se saltean en
+Windows) y `test_enmascarado.py` (54). En Linux corren los 65.
+
+### Ráfagas: presupuesto de 5 s y un lector por proceso (2026-09-24)
+
+Con el cupo que no esperaba, una ráfaga de 10 fotos dejaba 8 sin tapar: más
+que una excepción. SDN extendió el criterio a **5 s por foto** y pidió
+mirarlo además en Pruebas. Quedó así:
+
+- **Presupuesto** (`ENMASCARADO_PRESUPUESTO_MS`, 5000): lo máximo que una foto
+  suma, fila más lectura. Hasta `ENMASCARADO_ESPERA_MS` (3000) esperando un
+  lector libre; lo que queda es para leer (nunca menos de 1 s). Pasado el
+  presupuesto, sale sin tapar y se registra.
+- **Un lector por proceso** (`ENMASCARADO_CUPO` = 1). Medido en un
+  contenedor con 4 núcleos y 4 procesos (la forma de Render: un proceso por
+  núcleo): ráfaga de 10, **10 tapadas** en 3,3 s como máximo con 1 lector
+  contra 8 con 2; ráfaga de 20, 12 contra 2. Con dos lectores en el mismo
+  núcleo cada lectura pasó de 0,8 s a 2,6 s de CPU: no leen más, se estorban.
+- La configuración de producción que dejaron las pruebas de estrés (web en
+  2 instancias de 4 CPU, 8 procesos) reparte una ráfaga de 20 en 2 o 3 fotos
+  por proceso, la misma proporción que la ráfaga de 10 sobre 4 procesos.
+- **Lo que queda para Pruebas**: con medio núcleo y un proceso, una ráfaga
+  deja fotos sin tapar (por capacidad: ~1,3 fotos por segundo por núcleo).
+  Lo mide el modo sombra (bloque 5) con datos reales, y el número de la
+  notebook no se usa para proyectar: con todos sus núcleos ocupados la CPU
+  por lectura se triplica.
+
+## Enmascarado, bloque 3: el enganche en la app (2026-09-24)
+
+`preparacion.py` es la capa entre las rutas y los dos módulos del
+enmascarado: elige el camino (PDF con texto, PDF escaneado, foto), arma la
+imagen que viaja, rearma la identidad en lo que devuelve la IA y deja el
+registro. Variable `ENMASCARADO`:
+
+- **`apagado`** (default): no se hace nada. La llamada a `extraer()` queda
+  idéntica a la de siempre (lo verifica `test_preparacion.py`), así que los
+  tests que simulan la IA siguen valiendo tal cual y nada cambia en ningún
+  entorno hasta prender la variable.
+- **`sombra`**: se calcula todo y se registra, pero viaja el original, y un
+  recibo ajeno solo se anota. Es para medir en Pruebas sin tocar a nadie.
+- **`activo`**: viaja la imagen tapada, la IA recibe un aviso (las zonas
+  grises son intencionales: null en esos campos y no es adulteración) y la
+  identidad vuelve con lo leído acá.
+
+Las cuatro salidas hacia la IA: el recibo (`/api/leer`), el comprobante de
+ARCA (`/api/aportes`) y el aprendizaje del admin (`/admin/aprender`, sin
+nada conocido: patrones y rótulos). El banco de pruebas de plataforma se
+toca en el bloque 4.
+
+### Decisiones del bloque
+
+- **El recibo ajeno se corta ANTES de la IA** (E-RECIBO-04 / E-APORTE-03):
+  ni se paga la lectura ni sale el documento. Pero solo con un CUIL ajeno de
+  **dígito verificador válido** (`enmascarado.pertenece`): un dígito mal
+  leído por el OCR no puede rechazarle a nadie su propio recibo. Con "no se
+  sabe" el recibo sigue y los chequeos de siempre sobre lo que devuelve la
+  IA siguen en pie.
+- **La identidad se rearma con lo leído en el documento, no con la base**:
+  el CUIL y el CUIT del recibo (con pluriempleo el CUIT guardado puede no ser
+  el del recibo, y de ese CUIT dependen los conceptos por empleador); el
+  nombre, de `CuentaTrabajador` si se lo encontró en el recibo; la razón
+  social, del empleador cargado en el sindicato por ese CUIT o, si no está,
+  de lo leído (una sola vez: el logo y la firma repiten texto). Solo se
+  completa lo que la IA devolvió vacío o como "OCULTO".
+- **Si la IA marca el rótulo gris como adulteración**, esa alerta no vale.
+  Una alerta real (otro motivo) sigue en pie.
+- **Registro sin datos personales**: tabla `registroenmascarado` (migración
+  `e5b2c8d4f1a7`): modo, camino, motivo, si se tapó, cajas, fugas, si se
+  encontró el CUIL, pertenencia y tiempos. Nunca levanta: ni una tabla
+  faltante puede frenar un recibo.
+- **La foto viaja derecha** (EXIF) y con 3000 px de lado como mucho; un PDF
+  tapado viaja como PNG de la primera página, igual que hoy.
+- El lector de fotos se precarga al arrancar si el modo no es `apagado`.
+
+Tests: `test_preparacion.py` (18: modos, caminos, archivo roto, rearmado, el
+aviso, y las rutas de punta a punta con la IA simulada: apagado idéntico,
+activo tapa y rearma, ajeno cortado sin llamar a la IA, sombra no cambia
+nada, un error del enmascarado no frena el recibo). Probado además el camino
+de fotos con Tesseract real en Linux: 17 zonas tapadas, 0 fugas, 1,3 s.
+Trabajador 0.42.01, Admin 0.46.01.
+
+### Sin módulo 11, por ahora (2026-09-24)
+
+SDN: por ahora no se valida el dígito verificador de CUIL/CUIT; queda en
+BACKLOG.md para cuando se avance. Y ninguno de los CUIL/CUIT de la demo lo
+cumple, así que el enmascarado dejó de depender de él en los dos lugares
+donde lo usaba:
+
+- **Detectar**: un número con formato de CUIL/CUIT (con separadores y
+  prefijo válido) se tapa aunque no cumpla el verificador. Once cifras
+  pegadas y sin rótulo siguen necesitándolo: podrían ser un importe
+  (`enmascarado.parece_cuil`).
+- **Recibo ajeno**: en vez del verificador, el CUIL leído tiene que diferir
+  del de la sesión en **3 dígitos o más** (`distintos_de_verdad`). Un error
+  del OCR cambia uno, rara vez dos: a esa distancia es el propio mal leído y
+  el recibo sigue.
+
+## Enmascarado, bloque 4: tapar no cambia la lectura (2026-09-24)
+
+El criterio del plan era "cero diferencias en importes y en la clasificación
+de cada línea, con y sin enmascarado". Se midió con la IA real
+(`medicion_enmascarado/medir.py`, resultado en `RESULTADO.md`): cada recibo
+leído tres veces con el mismo modelo (claude-sonnet-4-6) -- original, tapado
+con la identidad conocida y tapado sin conocidos --, sobre los 10 sintéticos
+(fotos: OCR con Tesseract) y el digital ficticio (texto del PDF). 33
+llamadas.
+
+- **Totales, cantidad de líneas, período y categoría: iguales en los 11.**
+- **Identidad rearmada igual a la que leyó la IA en el original** (CUIL,
+  CUIT, nombre, legajo, empleador) en los 11.
+- **Ninguna alerta de adulteración** por el rótulo gris.
+- **3 líneas distintas, siempre la misma**: "SEGURO OBLIGATORIO - DGI"
+  (importe fijo de $380), clasificada a veces como `aporte_trabajador` y a
+  veces como `otro`, en los dos sentidos. Control: el **original sin tapar
+  leído tres veces** también cambia (`aporte / otro / otro`). Es la
+  variación del propio modelo sobre una línea ambigua, no efecto del tapado.
+
+Criterio cumplido: cero diferencias atribuibles al enmascarado.
+
+### El banco de pruebas, con el documento tapado
+
+En `/plataforma` → Uso de IA → Banco de pruebas, la casilla "Comparar
+también con el documento tapado": cada modelo lee el archivo dos veces y el
+tapado queda en la columna de al lado ("Claude Sonnet 4.6 — tapado"), así la
+tabla línea por línea dice si tapar cambió algo. Debajo, **"Así lo recibe la
+IA"**: el camino (PDF con texto, PDF escaneado, foto), las zonas, las fugas,
+el tiempo del tapado y la imagen tal cual viaja. La versión tapada vuelve
+rearmada, como en las rutas de verdad. Plataforma 0.38.01.
+
+### El signo solo ya no es una diferencia
+
+En una prueba real del banco, el original transcribió los descuentos en
+positivo (como figuran en la columna Deducciones) y el tapado con signo
+menos: la tabla marcaba 4 de 8 líneas en rojo con la misma clasificación.
+El validador usa el valor absoluto de cada descuento, así que
+`comparar_lineas` ya no cuenta el signo como diferencia -- mismo criterio que
+un CUIT con o sin guiones. Afecta también la comparación entre modelos.
+
+Las dos variaciones del modelo (la clasificación de "SEGURO OBLIGATORIO" y
+el signo de los descuentos) quedaron en BACKLOG.md para el motor v2: son
+exactamente el tipo de imprecisión que la confianza por renglón y el
+catálogo maestro tienen que resolver.
+
+## Enmascarado, bloque 5: en Pruebas en modo sombra, y la pantalla de registros (2026-09-24)
+
+PR #66 mergeado a `main`: Pruebas corre el enmascarado en **modo sombra**
+(`ENMASCARADO=sombra`, cargada en el servicio `mitrabajo-pruebas` con "Save
+only" para que la tomara el deploy del merge). Al arrancar, el log dice
+`[enmascarado] modo sombra, OCR listo`: Tesseract se instaló con pip en el
+Render nativo, sin Docker, como se había medido. En sombra a la IA le sigue
+llegando el original; cada documento queda anotado en `registroenmascarado`.
+
+El CI encontró algo que en la PC no se veía: **su servidor no tiene
+poppler**, así que un test que prepara un PDF original con `pdf2image` falla
+ahí. Los tests del banco ahora simulan esa preparación.
+
+### La sub-pestaña "Enmascarado" de Uso de IA
+
+En `/plataforma` → Uso de IA → **Enmascarado**: el modo que rige en el
+servidor y si hay lector de fotos; indicadores (documentos, porcentaje
+tapado --en sombra, "se habría tapado"--, sin tapar, con fugas, recibos
+ajenos detectados, tiempo mediano y p95); una tabla por camino (PDF con
+texto, PDF escaneado, foto) con su porcentaje tapado, tiempos y espera p95;
+**por qué no se tapó**, con lo que significa cada motivo ("lector ocupado"
+es capacidad; "se pasó de tiempo", el presupuesto de 5 s); y la lista de
+documentos con filtros por tipo, camino y resultado. Como Consumo y costo,
+los números acompañan a los filtros y se calculan en la pantalla sobre las
+filas que manda el servidor (las últimas 3.000; se listan 300).
+
+El `resultado` lo resuelve el servidor (`db.registros_enmascarado`) porque
+en sombra nada viaja tapado: "tapado" (activo), "se habría tapado" (sombra,
+se leyó bien y había qué tapar) o "sin tapar". Plataforma 0.39.01.
+
+**Tesseract se importa en el hilo principal.** El CI del PR de la pantalla
+falló en las cuatro partes con `ValueError: signal only works in main
+thread`: la pantalla de plataforma preguntaba si había lector de fotos y
+eso importaba `tesserocr` por primera vez desde el pool de hilos de FastAPI,
+cosa que en Linux revienta. En Render no se notaba porque la precarga del
+arranque ya lo había importado, pero dependía de eso. Ahora `lectores.py`
+lo importa al cargarse (cuando main arranca, en el hilo principal) y si
+falla queda "no disponible"; `ocr_disponible()` ya no importa nada. Test:
+preguntar desde otro hilo no revienta.
+
+### Pruebas en modo activo, y el diagnóstico con imágenes (2026-09-24)
+
+Con el banco de pruebas corrido en Pruebas (PDF digital, escaneado y foto:
+cero diferencias con y sin tapar, 0 fugas, 0,4 / 2,1 / 1,5 s de tapado con
+medio núcleo) y dos recibos reales de SDN (PDF y foto) tapados sin fugas,
+**Pruebas pasó a `ENMASCARADO=activo`** ("Save and deploy" en Render; el
+arranque dice `[enmascarado] modo activo, OCR listo`). Volver atrás es
+cambiar la variable: no hay código de por medio.
+
+La foto de SDN tuvo 5 zonas tapadas contra 9 del PDF, y el registro no
+permite saber por qué: a propósito no guarda nada del documento. SDN pidió,
+**transitoriamente y solo para esta etapa de pruebas y diagnóstico**,
+guardar la imagen original y la enviada a la IA y verlas desde el listado:
+
+- Tabla aparte, `imagenenmascarado` (migración `f3a9d1c6b2e8`): el
+  registro sigue sin datos personales y vaciar las imágenes es vaciar una
+  tabla.
+- **Solo en `local` y `pruebas`**, y solo con
+  `ENMASCARADO_GUARDAR_IMAGENES=1` (`preparacion.guardar_imagenes_habilitado`):
+  en demo/prod no se guarda aunque alguien cargue la variable, y las rutas
+  de las imágenes responden 404 fuera de local/pruebas aunque hubiera filas.
+- JPEG de 1600 px como mucho; **vencen a los 7 días** (se purgan al guardar
+  la siguiente) y el botón "Borrar todas las imágenes" vacía la tabla.
+- En la lista de la sub-pestaña Enmascarado, "Ver" abre las dos lado a lado
+  (`/plataforma/enmascarado/{id}`), con sesión de plataforma.
+- Nunca frena el recibo: si falla el guardado, se anota en el log y sigue.
+
+**Cuando termine la etapa de diagnóstico, se saca** (tabla, rutas y
+variable). Plataforma 0.40.01.
+
+### La primera foto real que falló, y por qué (2026-09-24)
+
+Con el diagnóstico de imágenes, SDN vio que en la foto de su recibo de AEFIP
+(en modo activo) quedaban a la vista el CUIL, el legajo, el número de cuenta
+y "SANDRO", del nombre. La primera sospecha (poca resolución) era
+**falsa**: el navegador mostraba la imagen achicada; en la foto el recibo
+llena el cuadro y la letra se lee bien. Las causas reales, reproducidas con
+la foto original:
+
+- **Los logos de agua "AFIP" impresos encima del encabezado** hacen que el
+  OCR lea `20202790414` donde dice `...411` y "CUL" donde dice "CUIL Nº", y
+  "Legajo" como "2".
+- **Las líneas se armaban comparando con la palabra anterior**: en una foto
+  apenas torcida, una caja alta de ruido unía dos filas, y "Datos de la
+  Cuenta Bancaria" con "Sucursal - Nro. Cuenta" salían en una sola frase
+  entremezclada. Ahora una palabra entra a la línea por la distancia a su
+  centro promedio, medida con el alto típico de la letra.
+- **Un signo suelto después del rótulo** ("Nro. Cuenta >") se tomaba como su
+  valor y no se buscaba el de abajo. Ahora se ignora.
+- **El dibujo**: SANDRO estaba marcado para tapar, pero la unión de cajas
+  vecinas se quedaba con el borde izquierdo de la caja equivocada cuando la
+  foto torcida las traía desordenadas. SANDRO quedaba a la vista aunque el
+  análisis dijera "tapado". Ahora se une por ambos bordes.
+
+Y tolerancia para lo que el OCR lee a medias: el rótulo "CUL"; **el CUIL de
+la sesión con hasta dos dígitos mal leídos** se reconoce como propio;
+**una letra de diferencia en partes del nombre de 6+ letras** (con 5,
+"JULIA" y "JULIO" chocaban -- lo encontró un sintético con el período en
+julio); y **la fila de la identidad**: en la línea del nombre o del CUIL, un
+número de 4+ cifras que no es fecha, año ni importe se tapa como legajo.
+
+Con la foto original: 10 zonas tapadas (nombre completo, CUIL, legajo, DNI,
+cuenta, CUIT del empleador), 0 fugas, 0,9 s. La idea de SDN de subir el
+contraste (blanquear los grises del logo) se probó: el CUIL se lee perfecto,
+pero según el umbral se pierden el legajo, la cuenta o parte del nombre; el
+blanco y negro propio de Tesseract rinde mejor en conjunto. Queda como
+alternativa. Tests nuevos con datos ficticios de la misma forma (65 en
+`test_enmascarado.py`). Trabajador 0.42.05.
+
+### Enfoque mixto y tapones más grandes (2026-09-24)
+
+SDN advirtió que se estaba ajustando para un recibo y que vendrán otros
+formatos. Se compararon tres estrategias -- detectar la identidad (la de
+hasta hoy), tapar por defecto fuera de la tabla, y un mixto -- y SDN eligió
+probar el **mixto**: tapar alrededor de lo ya encontrado (la frase del
+nombre entera y los números de la fila de la identidad), con una lista
+blanca de lo que la IA necesita (fechas, períodos, años, importes). Tapar
+por defecto quedó descartado por ahora: más protector, pero si el límite de
+la tabla se detecta mal se tapan conceptos, y eso pega en el objetivo
+principal. **La ficha rectora es `docs/ENMASCARADO.md`.**
+
+Tapones: margen proporcional al alto de la letra (en una foto torcida
+asomaban los bordes del dato) y color configurable (`ENMASCARADO_COLOR`,
+rojo en Pruebas a pedido de SDN). Lo que se tapa por la fila de identidad
+dice "DATO OCULTO": no se sabe si es el legajo o un código interno.
+
+**Medido con la IA real** (12 recibos, incluida la foto real): totales,
+líneas, período, categoría e identidad iguales; ninguna alerta de
+adulteración con tapones rojos. **Hallazgo abierto**: "A cuenta futuros
+aumentos" dio `remuneracion` 4/4 en el original y 3/4 (rojo) y 2/4 (gris)
+tapado. No es el color. Muestra chica, pero es el riesgo que importa: se
+mide sobre un conjunto variado antes de llevar esto a la demo.
+`medicion_enmascarado/medir.py` ahora acepta fotos y recibos reales con
+`--conocidos-archivo` (que no se versionan). Trabajador 0.43.01.
+
+### La regla de certeza: "CUIT OCULTO" en la pantalla de confirmar (2026-09-24)
+
+SDN subió en Pruebas la misma foto real y la pantalla de confirmar mostró
+"CUIT OCULTO" en lugar del CUIL. Mirando la imagen guardada (registro 11)
+aparecieron dos cosas. El OCR de Pruebas leyó mal el CUIL: la fila de la
+identidad lo tapó como "DATO OCULTO" y ya no se pudo volver a poner, así que
+la IA devolvió el rótulo y ese texto llegó a la pantalla. Además leyó el CUIT
+`33-69345023-9` como `39-69945023.9`: se tapó por su formato y el recibo se
+rearmó con el CUIT equivocado. Ese número mal leído cumplía el verificador de
+casualidad, cosa que pasa una vez de cada once.
+
+La regla que salió, general y no para este recibo: **un CUIL o un CUIT se tapa
+solo si después se puede volver a poner con certeza**, porque la evaluación
+los usa (el CUIL para saber si el recibo es de quien lo sube, el CUIT para
+elegir los conceptos del empleador). Hay certeza en tres casos:
+- es el de la sesión, aunque tenga hasta 2 dígitos mal leídos;
+- es un CUIT conocido. `db.cuits_conocidos` junta los del empadronamiento y
+  los de los recibos anteriores de la persona y, para el aprendizaje, los del
+  sindicato. También con 2 dígitos de tolerancia, pero si dos conocidos
+  quedan igual de cerca no se elige ninguno;
+- el número tiene un prefijo que existe (20/23/24/25/26/27/30/33/34) y el
+  verificador válido (`enmascarado.leido_con_certeza`). Así el módulo 11
+  sirve para probar que se leyó bien, no para validar el número (sigue en
+  BACKLOG.md).
+
+Si no hay certeza, el número queda a la vista y la IA lo lee como siempre.
+Igual queda anotado como leído, para cortar un recibo ajeno. La fila de la
+identidad ya no tapa números de 10 cifras o más, el control de fuga reclama
+solo lo que había que tapar y el rearmado del CUIL usa solo uno que se tapó
+con certeza.
+
+Probado con la IA real (claude-sonnet-4-6) sobre la imagen del registro 11 y
+la foto original, conociendo el CUIT y sin conocerlo: las cuatro veces
+salieron el CUIL 20202790411 y el CUIT 33693450239. Trabajador 0.43.02,
+Admin 0.46.03 (aprendizaje).
+
+## CUIL/CUIT con módulo 11: el número nace válido y no se cambia por partes (2026-10-10)
+
+Primera medida de la serie para regularizar las observaciones de XSANDERS
+(XSK). Plan acordado decisión por decisión en `PLAN_CUIT_MOD11.md`; lo
+ejecutó un equipo de agentes coordinado por Code: tres de desarrollo en
+paralelo (herramienta de regularización; números de la demo; puertas de
+alta), dos de QA y un revisor general.
+
+**Por qué en este orden.** Exigir el verificador sin más dejaba inválida a
+casi toda la base: ninguno de los CUIL/CUIT de la demo lo cumplía y los
+testers cargaban números inventados. Primero se identifica, después se
+convierte, y recién entonces se exige.
+
+**Una sola implementación** (`cuit.py`, puro). El enmascarado tenía su
+propia copia del cálculo y `_norm_cuil` estaba copiado en `main.py` y
+`validador.py`; ahora todos delegan, y `test_cuit.py` falla si un .py vuelve
+a escribir los pesos. `normalizar` deja solo dígitos ASCII: con `\D` pasaban
+los de ancho completo ("２０"), que `int()` acepta y ninguna búsqueda por
+texto vuelve a encontrar. El navegador tiene su espejo (`static/cuit.js`),
+cortesía y no control, comparado con el de Python por un test que lo corre
+en Node contra 800 números.
+
+**Dónde se exige (D2).** Donde un número NACE: altas del panel, carga
+masiva (la línea inválida queda afuera y se cuenta aparte), alta de usuario
+del panel y de plataforma, alta y edición del CUIT del sindicato, datos del
+usuario de plataforma, y los dos registros (afiliado y empresa) antes de
+buscar en el padrón. Donde se REFERENCIA uno que ya existe —los logins, el
+reset de clave, los criterios de notificación, los filtros— se busca tal
+cual: los miles de CUIL sintéticos de los lotes no cumplen el verificador y
+quedan así, y tienen que seguir entrando. `test_cuit_puertas.py` recorre con
+`ast` toda ruta POST que reciba un CUIL/CUIT y falla si no está clasificada.
+Un texto sin dígitos en un CUIT opcional ("abc") pasaba como campo vacío;
+QA lo encontró y ya no.
+
+**El número no se cambia desde una edición (E-IDENT-03).** Apareció al
+revisar el trabajo del desarrollador de las puertas: el formulario de
+edición de afiliado y de empleador dejaba cambiar el CUIL/CUIT, y eso
+cambiaba UNA tabla. La persona quedaba separada de su cuenta (la clave, la
+foto), de sus recibos, sus trámites y sus otros empadronamientos, y
+`guardar_datos_personales` le creaba una cuenta nueva sin clave. Ya pasaba
+antes, pero con el verificador nuevo un admin iba a tener todos los motivos
+para "corregir" el número justo ahí. Ahora el campo queda de solo lectura
+en la edición y el servidor lo frena aunque se arme el POST a mano.
+
+**La demo con números válidos** (`identificadores_demo.py`). Los nuevos
+conservan los diez primeros dígitos con el verificador correcto, salvo el
+admin de la UOM: `20111111110` y `20111111119` (Juan Molina) se corrigen los
+dos a `20111111112`, y como el operador se vincula al padrón por CUIL, la
+corrección ciega lo habría fusionado con el afiliado. Es el caso que dio la
+regla de colisiones (D4). El mapa vive en un módulo propio porque
+**`cargar_demo.py` carga la demo al importarse** (no tiene
+`if __name__ == "__main__"`): si la herramienta lo hubiera importado para
+leer una constante, habría borrado y recreado la demo de la base contra la
+que corría.
+
+**La herramienta** (`regularizar_cuit.py`). Su `INVENTARIO` es la lista de
+dónde vive un CUIL/CUIT: 32 lugares entre columnas de texto y JSON, con lo
+que se excluye a propósito y por qué (las bitácoras dicen lo que pasó con el
+número de ese momento y no se reescriben; la traza nueva,
+`CambioIdentificador`, permite seguirlas). Un test falla si aparece una
+columna con `cuil`/`cuit` en el nombre, o cualquier columna JSON, sin
+decidir. Clasifica cada número inválido por origen —`demo` (el nuevo exacto
+del mapa), `manual` (se corrige), `lote` (la regla de cada generador; no se
+toca), `lectura` (solo lo leyó la IA de un documento: no se "corrige" lo que
+dice un papel)— y marca colisiones con una alternativa. La conversión es
+todo o nada: valida todo antes del backup, toma un candado de escritura,
+reescribe columnas y JSON en el formato que tenían, y antes del COMMIT
+verifica que cada nuevo tenga exactamente las apariciones que tenía el
+viejo y que ningún otro número haya cambiado.
+
+**Lo que encontró QA sobre la base "como Pruebas"** (demo vieja + lotes +
+datos cargados a mano con las rutas reales del código viejo): diff celda por
+celda contra el backup restaurado, 0 diferencias colaterales; 31 relaciones
+por texto idénticas antes y después; las 422 páginas del admin iguales con
+el código viejo sobre la base vieja y el nuevo sobre la convertida. Y una
+ventana real: un pedido que pasó el chequeo de sesión antes del COMMIT
+escribe después con el número viejo. Para eso la herramienta "completa" una
+conversión ya registrada en la traza (motivo `RESTO`), lo único que acepta
+con el número nuevo ya ocupado. De paso salió **H-0021**: reportar y enviar
+al sindicato toman el CUIL y el id del recibo del cuerpo del pedido, así que
+un afiliado podía marcar como enviado el recibo de otro.
+
+**Lo que encontró la revisión general**, después de QA: tres puertas más
+por donde nacía un CUIT confirmado sin verificador —aplicar el aprendizaje,
+importar los CUIT de los conceptos como empleadores y confirmar un concepto
+pendiente, todas con el CUIT que leyó la IA—, ahora cerradas y vigiladas por
+un test que falla si una función de `main.py` o `db.py` escribe un CUIL/CUIT
+sin estar clasificada como puerta o como derivado; los criterios de
+notificación por CUIL o CUIT comparaban el texto tal cual, así que
+`30-11122233-5` no encontraba a quien tenía `30111222335` (ahora se compara
+normalizado de los dos lados); dos tests de la herramienta fallaban con
+`ENTORNO=pruebas`, que es lo que pone el CI; y no había forma de corregir un
+número VÁLIDO pero de otra persona (ahora `--permitir-validos`). Además la
+herramienta se niega a escribir en un entorno distinto del de la planilla,
+escapa las fórmulas del CSV, guarda el backup en `backups/` con permisos
+0600, y el texto sobre las sesiones abiertas se corrigió: no vencen solas en
+15 minutos, se renuevan con cada pedido, así que después de aplicar hay que
+esperar a que esas personas dejen de usar la app, volver a diagnosticar y
+aplicar los `RESTO`.
+
+Al desplegar, en cada entorno hay que correr la regularización
+(`DESPLIEGUE_RENDER.md`): hasta entonces los accesos nuevos de la demo no
+existen en esa base. Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
+
+## Lo que el afiliado manda al sindicato es suyo (XSK H-0021, 2026-10-10)
+
+`/api/reportar` y `/api/enviar-sindicato` guardaban el `Reporte` y el
+`EnvioSindicato` con el CUIL que mandaba el navegador, y marcaban como
+"enviado" cualquier recibo del sindicato cuyo id viniera en el pedido. Lo vio
+el desarrollador de las puertas de alta durante el plan del módulo 11. Dos
+consecuencias: un afiliado podía fabricar la prueba de afiliado cotizante
+(art. 21 bis) a nombre de otro, y con un id ajeno (son consecutivos) podía
+marcar el recibo de otra persona, que desde ese momento aparecía en Reportes
+y en el Panel con nombre, CUIL y empresa sin haberlo consentido: dato
+sensible por la Ley 25.326.
+
+Ahora las dos rutas pasan por `_envio_del_afiliado`, que toma el CUIL de la
+sesión firmada y corta con E-RECIBO-04 si el cuerpo trae otro (en el
+resultado o en el recibo), y por `_recibo_propio`, que exige que el recibo sea
+de la persona además del sindicato. Ante cualquiera de los dos no se escribe
+nada. Tests en `test_envio_sindicato_idor.py`. Trabajador 0.44.02.
+
+En el mismo bloque se arregló `test_panel_avisos.py`, que tenía el CI en rojo
+desde el 2026-09-30: buscaba el título de Seccionales sin la clase
+`titulo-pagina` que le sumó la regla de títulos del 2026-09-24.
+
+## Reintegros entre los descuentos: la zona la dice dónde está impresa la línea, no el signo (2026-10-11)
+
+SDN subió un recibo de AEFIP de febrero de 2015, bien leído, que la app dio
+por mal. Entre los descuentos traía "IMP.GCIAS. PERIODOS ANTERIORES" en
+**+62.949,21**: una devolución de Impuesto a las Ganancias. El resultado decía
+"Total ingresos $107.924,61" (el impreso era 44.975,40), que la suma de
+descuentos (-16.489,08) no coincidía con la impresa (46.460,13), y una
+diferencia de $72,65 en jubilación y de $19,82 en PAMI y obra social.
+
+**Causa.** El código 433-001 no estaba en el catálogo, y
+`detectar_nuevos` decidía el tipo de un concepto nuevo **por el signo**:
+positivo = haber. El afiliado vio el "¿Remunerativo?" con el Sí marcado de
+fábrica, y el concepto quedó dado de alta como haber remunerativo (pendiente de
+revisión, pero los pendientes participan igual del cálculo). De ahí el bruto
+inflado, la base de los aportes inflada (no se notó porque el sueldo ya pasaba
+el tope) y los dos totales que no cerraban. El total de descuentos de AEFIP es
+la suma con signo de su columna: 62.949,21 - 16.489,08 = 46.460,13.
+
+**La regla.** Un recibo tiene dos zonas, haberes y descuentos, y a cuál
+pertenece una línea lo dice **dónde está impresa**. El signo solo dice si va
+en el sentido de su zona o al revés:
+
+- entre los descuentos y con el signo contrario al de los descuentos =
+  **reintegro**: no es remuneración (no suma al bruto ni a la base de los
+  aportes) y entra entero al neto;
+- entre los haberes y en negativo (inasistencias, ajuste de otro mes) = haber
+  que resta: baja el bruto y la base.
+
+El "signo de los descuentos" es de cada recibo: unos los imprimen en negativo
+y otros sin signo en su columna (ya se había visto en el banco de pruebas, con
+"173.520,83" contra "-173.520,83"). Lo define la mayoría de los aportes de ley,
+que son descuentos por definición.
+
+**Cómo quedó.**
+
+- `extractor.py` pide un dato nuevo por línea, `seccion`
+  (`haberes` / `no_remunerativos` / `descuentos`): es ubicación, no cálculo, y
+  con el recibo a la vista la IA lo ve sin dificultad. El banco de pruebas lo
+  compara entre modelos.
+- `validador.repartir_por_zona` es la ÚNICA implementación de la regla. La
+  usan `validar` (zona por el catálogo; para un concepto **pendiente** manda la
+  sección de la línea, porque ese tipo no lo eligió nadie), `totales_leidos`
+  (los totales de la pantalla de confirmar, que antes sumaba el navegador por
+  el signo) y `detectar_nuevos` (tipo por sección; el reintegro sale
+  `reintegro: true` y nunca remunerativo; los no remunerativos, en No). Sin
+  sección, el criterio viejo del signo.
+- El total de descuentos impreso se compara sin signo y, con reintegros, vale
+  tanto el bruto como el neto de reintegros. El neto se suma con el signo de
+  cada zona, así que también cierra en los recibos con descuentos sin signo,
+  que antes daban siempre "no coincide".
+- `totales` suma `reintegros` y el resultado trae la lista, más una alerta
+  `reintegro` que explica qué es y que no cambia los aportes. El reintegro de
+  una cuota sindical resta de la retención. En las pantallas: fila
+  "Reintegros" en los totales (afiliado, Reportes y modal del Panel), el chip
+  del concepto nuevo dice "reintegro" y el "¿Remunerativo?" solo se pregunta
+  para un haber.
+
+**El tope de esa fecha.** Con la regla aplicada, el recibo seguía marcando
+$72,65 de menos en jubilación. El recibo estaba bien: aplicaba $36.531,48, el
+tope de la Res. ANSES 449/2014 (art. 7, vigente desde el devengado septiembre
+2014). La semilla arrancaba en una vigencia "2015-01" de $37.191,95 marcada
+por_verificar, que no existe (el tope cambia en marzo y septiembre). Se corrigió
+el CSV y la migración `e28e33b0aec5` corrige las bases ya sembradas, solo si
+la fila sigue como la dejó la semilla. Probada sobre Postgres en los tres
+casos: fila de la semilla, vuelta atrás, y 2014-09 ya cargada a mano.
+
+Tests: `test_reintegros.py` (el recibo con sus importes reales e identidad
+sintética, el concepto pendiente cargado por el signo, un reintegro debajo del
+tope, descuentos sin signo, la cuota sindical, el alta por sección y el tope).
+Trabajador 0.44.03, Admin 0.47.02.
+
+## Catálogo contra recibo: por qué no hay un rubro "reintegro" y qué pasa cuando el catálogo está mal (2026-10-11)
+
+Después del arreglo de los reintegros, SDN planteó si la devolución de
+Ganancias no debería tener un rubro propio, o pasar a "ingreso no
+remunerativo". Se evaluó y se decidió que **no**, por tres motivos:
+
+- **Hay dos "reintegros" distintos.** La devolución de algo retenido
+  (Ganancias, aportes en exceso, cuota cobrada de más) es plata del propio
+  trabajador que vuelve, va impresa entre los descuentos y el total de
+  descuentos la neta. El reintegro de gastos o de guardería (arts. 103 bis y
+  106 LCT) lo paga el empleador y va entre los haberes: ese sí es un ingreso
+  no remunerativo, y el sistema ya lo trata así. Un rubro único los mezclaría.
+- **"Ingreso no remunerativo" rompe tres cosas** si se usa para la
+  devolución: el control de totales (el bruto daría 107.924 contra 44.975
+  impreso y el total de descuentos deja de cerrar), el "bruto" del Panel
+  Sindical (sale de ese total) y toda fórmula sobre `total_ingresos` (una
+  cuota sindical sobre el total de haberes cobraría sobre la devolución).
+- **Ser reintegro es del mes, no del concepto.** El 433-001 retiene un mes y
+  devuelve otro; el 161-001 hace lo mismo en el ajuste anual. Además el tipo
+  binario está en unas 40 líneas de 8 archivos: un tercer valor caería en
+  silencio en la rama "descuento" de cada `if`.
+
+Queda el modelo de dos ejes: el catálogo dice la zona (haber o descuento) y
+el recibo dice el sentido de la línea dentro de su zona.
+
+**Lo que se reforzó**, porque el catálogo le ganaba a la sección leída en
+cuanto el concepto estaba revisado (alguien confirma la devolución como haber
+y vuelve el error):
+
+1. `validar` arbitra con los totales impresos. Si un concepto revisado está en
+   un rubro y la IA lo leyó en el otro, se arma el reparto también "según el
+   recibo" y se usa ese SOLO si con él cierran todos los totales que se pueden
+   controlar y con el catálogo no. Si no hay totales o no cierran de ninguna
+   forma, manda el catálogo. Cuando gana el recibo sale la alerta
+   `concepto_mal_clasificado` ("…figura entre los descuentos de tu recibo,
+   pero tu sindicato lo tiene cargado como haber…"). El control de totales se
+   mudó a `validador.controlar_totales`, única implementación para los
+   chequeos y para el arbitraje.
+2. La pestaña Conceptos dice dónde leyó la IA cada código:
+   `db.secciones_vistas` abre el JSON de los últimos 500 recibos del
+   sindicato (con la sesión del request) y `validador.clasificacion_vista`
+   propone el rubro por mayoría, sin proponer nada ante un empate. El
+   pendiente muestra "Confirmar como descuento"; el revisado en el rubro
+   contrario queda marcado, con un aviso arriba y el botón "Pasar a
+   descuento" (`/admin/concepto/confirmar` acepta ahora `tipo` y
+   `remunerativo`). Una ayuda fija explica cuándo una devolución va como
+   descuento y cuándo un reintegro es un haber no remunerativo; Aprendizaje
+   dice lo mismo.
+
+Tests: `test_reintegros.py` (arbitraje: gana el recibo, sin totales manda el
+catálogo, IA que ubica mal una línea, totales que no cierran) y
+`test_rubro_visto.py` (conteos por código y empleador, aislamiento entre
+sindicatos, la pantalla y el botón). Trabajador 0.44.04, Admin 0.48.01.
+
+## Registro confirmado por mail, niveles de fiabilidad y recuperación de clave (2026-10-11)
+
+Plan acordado con SDN decisión por decisión en `PLAN_REGISTRO.md` y
+construido el mismo día por un equipo de agentes en olas (siete de
+desarrollo, cinco de QA), con Code como coordinador: cada desarrollador en
+un worktree propio contra un contrato de firmas fijado de antemano, QA
+adversarial sobre cada bloque, y lo que el QA encontró se cerró antes del
+merge. Cierra H-0017 (el alta acreditaba identidad solo con el CUIL, que es
+público: el primero que llegaba se quedaba con la cuenta) y las decisiones
+R2 (niveles de fiabilidad) y R3 (recuperación de clave) del relevamiento.
+
+**Lo que se construyó.** `correo.py` (Resend por `avisos.colm3na.com.ar`,
+un POST con urllib, sin librería, el patrón de `telegram.py`) y
+`captcha.py` (Cloudflare Turnstile, falla cerrado, tope al largo del token);
+freno por IP y captcha en los dos registros, con su propio código de error
+para que la espera de un login no abra la pestaña "Registrarme"; la CSP
+ensanchada con Cloudflare SOLO en `/ingresar*` (`RUTAS_CON_CAPTCHA`). El
+modelo: `nivel_fiabilidad`/`nivel_origen`/`nivel_actualizado`,
+`mail_padron`, `mail_declarado`/`mail_declarado_confirmado` y
+`clave_temporal` en las dos cuentas, `Sindicato.acepta_mail_declarado`, la
+tabla `CodigoVerificacion` (un código usado o vencido no se borra: es la
+traza), migración `f2d3d0bcf179` con backfill (las cuentas existentes
+quedan nivel 1 `cuil_padron`, y a 3 las que ya tienen un recibo propio). El
+registro en tres pasos para trabajador y empresa (`/registro/iniciar`,
+`/registro/mail`, `/registro`), con el estado entre pasos en un token firmado
+(`auth.firmar_paso`/`leer_paso`, propósito y vencimiento propios: una sesión
+no sirve como token de paso ni al revés). Nivel 3 automático, columna y
+botones en Trabajadores y Empleadores, interruptor en la ficha del
+sindicato, recuperación autoservicio (`/ingresar/recuperar`), clave
+temporal desde el panel con cambio obligatorio en el primer ingreso, y la
+tarjeta "Confirmá tu mail" para las cuentas viejas.
+
+**Lo que el QA encontró, y cómo se decidió.**
+
+- *El mail del padrón era el mail que la persona edita.* `CuentaTrabajador.mail`
+  lo escribe el afiliado desde su perfil (regla vigente: la persona es dueña
+  de sus datos), así que mandar ahí los códigos permitía a un impostor
+  redirigírselos. Decisión: tres mails que no se mezclan. `mail` es contacto
+  y no sirve para códigos; `mail_padron` lo escribe solo el sindicato (alta
+  individual y masiva, que ahora también lo actualiza para un CUIL ya
+  existente); `mail_declarado` lo da la persona y se confirma con código. En
+  la edición desde el panel, `mail_padron` se escribe solo si el admin
+  cambió el mail respecto del contacto actual: si reenviaba el formulario
+  precargado, el contacto del impostor se volvía mail del padrón. Las
+  cuentas ya registradas quedan con `mail_padron` vacío (procedencia
+  desconocida: conservador); el sindicato lo recarga por alta masiva.
+- *El nivel 3 se falsificaba con un POST.* `/api/validar` recibe el recibo
+  del cliente (CLAUDE.md ya decía que "se puede llamar sola con cualquier
+  payload"), así que un impostor subía a nivel 3 sin documento. Decisión: el
+  nivel sube en `/api/leer`, después del corte de pertenencia, solo si el
+  CUIL leído por la IA es el de la sesión. Es la letra de R2: "recibo propio
+  verificado por la IA".
+- *Un admin tomaba la cuenta de alguien de otro sindicato.* Cargaba el CUIL
+  (público) en su padrón, le restablecía la clave y entraba. Decisión: un
+  sindicato responde por una cuenta solo si la persona ya estaba en SU padrón
+  cuando la creó (`Trabajador.registrado`, que el registro marca sobre los
+  empadronamientos que existían en ese momento; `db.padron_responde_por`).
+  Si no, no restablece, no confirma, no pisa nombre ni mail del padrón, y el
+  panel muestra "—" sin botones. Condiciona en parte D6 (un gremio que carga
+  a una persona ya registrada no puede restablecerle la clave: lo hace
+  plataforma o la persona por el mail del padrón) a favor de no abrir una
+  toma de cuentas entre sindicatos.
+- *Los intentos del código no se persistían y dos intentos paralelos
+  contaban uno.* `verificar_codigo` incrementaba `intentos` sin commit y el
+  idioma de las rutas (`with get_session(): ... raise ErrorApp`) hace
+  rollback: el tope de 5 no existía. Decisión: el helper hace commit él
+  mismo (excepción con motivo a "ningún helper hace commit") y lee la fila
+  con `FOR UPDATE`, así un código correcto se consume una sola vez. El hash
+  del código pasó a HMAC con `SESSION_SECRET` (con la base filtrada, un
+  SHA-256 pelado de 6 dígitos se rompe en segundos) y `crear_codigo` aplica
+  el cupo por sí mismo, como defensa en profundidad.
+- *El error `domicilio` enumeraba afiliados sin frenarse.* Se decidía
+  después de consultar el padrón y no sumaba al freno. Ahora se valida antes
+  del padrón y cuenta.
+- *Un token propio salteaba el captcha del paso 3 y enumeraba el padrón.*
+  Bastaba un token de paso válido (de cualquier CUIL) para no exigir captcha,
+  y el número del token se comparaba después de mirar el padrón. Ahora se
+  compara antes, y con el canal prendido el token válido es condición para
+  consultar el padrón. El token del paso de mail lleva además el `tipo`
+  (trabajador/empleador): sin eso cruzaba entre las dos apps para un número
+  que fuera afiliado y empleador a la vez.
+- *El canal de mail como arma.* El cupo era solo por CUIL: con N afiliados
+  sin mail del padrón se mandaban 3×N códigos a un mismo mail ajeno, y con
+  mil CUILes se agotaba el plan gratuito de Resend en una hora. Ahora hay
+  también cupo por destino, y cada pedido de código suma al freno de la IP
+  aunque salga bien (antes los exitosos eran gratis, y cada uno devolvía la
+  pista del mail de otra persona).
+- *Un token no ASCII daba 500.* `hmac.compare_digest` sobre `str` levanta
+  `TypeError` con caracteres fuera de ASCII: cinco rutas públicas devolvían
+  500 (y una alerta a Sentry y Telegram) con `token=é.é`. Se compara en
+  bytes, también en `leer_sesion`.
+- *Dos cosas quedan diferidas a BACKLOG con test `xfail`*: la sesión abierta
+  sobrevive a un cambio de clave (hace falta una huella de la clave en el
+  token y una consulta por request), y un tercero puede invalidar el código
+  vivo de una persona pidiendo otro (tensión con "un solo código vivo").
+- Menores: destino del mail validado antes de salir hacia Resend (con un
+  mail declarado `a@b.com\r\nBcc:` no sale nada), `pista()` estricta, la
+  pantalla de la clave temporal avisa que la clave es una sola para todos los
+  sindicatos, el Admin de Seccional ve los botones solo en su alcance, y las
+  cuatro acciones del panel quedan en el log con operador y CUIL (la tabla
+  de bitácora del sindicato va al backlog).
+
+**Riesgo residual, aceptado (H-0022).** El registro y la recuperación
+responden distinto según el CUIL esté afiliado o tenga mail del padrón; con
+la variante de mail declarado no hay forma de no decirlo, y la persona
+necesita saber que tiene que ir al sindicato. Lo encarecen captcha y freno
+(que se saltea rotando `X-Forwarded-For`, parcial a propósito como H-0008) y
+lo cierra el perímetro de Cloudflare.
+
+**Canal apagado = las demos siguen (D9).** Sin `RESEND_API_KEY` +
+`MAIL_REMITENTE` el registro salta el código y la cuenta nace nivel 1
+visible; sin `TURNSTILE_*` no hay captcha. `chequeo.py` lo reporta. Los
+prerrequisitos (Cloudflare para `colm3na.com.ar`, Resend verificando
+`avisos.colm3na.com.ar`, el sitio de Turnstile, las cuatro variables) están
+en `DESPLIEGUE_RENDER.md`; hasta configurarlos en Pruebas, H-0017 queda en
+corrección.
+
+Tests: `test_canales_registro.py`, `test_registro_modelo.py`,
+`test_auth_paso.py`, `test_registro_flujo.py`, `test_registro_panel.py`,
+`test_recuperacion_clave.py`, más los cinco archivos `test_qa_*.py` que
+dejaron los QA (sus hallazgos en rojo pasaron a verde con los arreglos; los
+dos `xfail` documentan el límite del freno por IP). Trabajador 0.45.01,
+Admin 0.49.01, Plataforma 0.43.03.
+
+
+## Panel Sindical v2: el plan y el robot de paridad (2026-10-12)
+
+**De dónde sale.** SDN preguntó si se podía usar React para mejorar la
+estética y lo que la interfaz puede ofrecer, sin tocar la lógica ni arriesgar
+lo que funciona, empezando de a poco. La respuesta fue sí para las pantallas
+que ya hablan JSON con el servidor, y el Panel Sindical es la mejor candidata:
+página propia, todos los datos desde `/admin/dashboard/*` y nada de negocio en
+el cliente. Al comparar React con Preact pesó lo que el proyecto ya tiene como
+regla: nada de CDN, todo vendoreado, el deploy de Render es `pip install` y
+los tests leen el JS que corre. Preact + htm se usan sin build, como Chart.js
+y Leaflet; React 19 ya no publica versiones para cargar directo en el
+navegador. El plan (`PLAN_DASHBOARD_V2.md`) se acordó decisión por decisión;
+SDN sumó animaciones fluidas en gráficos, KPIs y modales, para que el piloto
+muestre una mejora visual además del cambio técnico.
+
+**Las reglas del front que hay que portar.** El plan las lista en §3.1 porque
+ninguna se ve y cada una costó un incidente: la fecha de hoy que manda el
+servidor, la cola de 4 pedidos y el reintento ante un 503 (el cuelgue del
+2026-09-18), el motivo del 422 a la vista, el saneo de la URL. La v2 tiene que
+cumplirlas todas.
+
+**El robot de paridad (bloque 0).** `e2e/paridad.py` + `e2e/test_paridad_dashboard.py`.
+Abre la v1 con 7 combinaciones de filtros (las 6 del plan más una URL con
+fecha futura, para el saneo) y arma una LECTURA de lo que el panel muestra:
+KPIs, contadores, tabla, semáforo, burbujas del mapa, filtros activos, los
+datos de cada gráfico leídos de Chart.js con `Chart.getChart` (son canvas, no
+hay texto) y **los pedidos que hizo al servidor**, con los parámetros
+ordenados. Ese último punto es la línea roja 3 del plan: si la v2 pide
+exactamente lo mismo que la v1, el servidor le devuelve lo mismo. Los textos
+se comparan por sus números, no por su formato, porque la v2 va a cambiar la
+estética (D5). Corre con `prefers-reduced-motion` para que ninguna animación
+deje un valor a medio camino.
+
+Tres cosas que salieron al armarlo:
+- **La cola de 4 se midió en un navegador de verdad**: contando pedidos en
+  vuelo con los eventos de Playwright, la v1 llega a 4 y no pasa, en las 7
+  combinaciones. Hasta ahora eso solo lo probaba `test_dashboard_cola_front.py`
+  sobre el código.
+- **El robot necesita su propia baranda**: `test_la_lectura_es_estable` lee la
+  v1 dos veces con los mismos filtros y exige lo mismo. Si no, una diferencia
+  con la v2 podría ser del robot y no de la v2.
+- **El informe de los robots marcaba "FALLÓ" a los salteados**: un
+  `pytest.skip` dentro del test (prerequisito que falta, o la v2 que todavía
+  no existe) salía en rojo. Ahora sale como SALTEADO, con su motivo, y no
+  cuenta para el total en verde.
+
+Corrido en una sesión de Code en la nube: base nueva con la demo y el lote
+UOM, uvicorn local y el Chromium preinstalado (`E2E_CHROMIUM_PATH`). 8 en
+verde y los 7 de comparación salteados, como corresponde.
+
+**El andamio (bloque 1, Admin 0.50.01).** `/admin/dashboard-v2` tiene las
+mismas puertas que la v1 (sesión, módulo y permiso de la sección "dashboard")
+y además responde 404 donde no hay distintivo de entorno, como `/entornos`
+(D4). La página es una cáscara: encabezado común, mesa, los colores del
+sindicato en `:root`, la fecha de hoy del servidor en `data-hoy` y un
+`<div id="panel">` donde Preact monta todo.
+
+Lo que tuvo vueltas fue la regla del sello `?v=` con módulos ES. Un
+`import "./filtros.js"` sale sin sello y el navegador lo cachea una hora, así
+que después de un deploy podría correr la página nueva con un módulo viejo:
+la misma rotura que el modal de noticias del 2026-09-03. Por eso el código de
+la v2 importa siempre por nombre (`"panel/filtros"`, `"preact"`) y la
+plantilla recibe un `importmap` que arma `main._importmap_panel_v2()`
+recorriendo `static/panel_v2/`, con el sello de cada archivo. `hooks.module.js`
+de Preact importa `"preact"` por nombre, y el mismo mapa lo resuelve.
+`test_dashboard_v2.py` busca todo `import` de la v2 y de lo vendoreado y exige
+que esté en el mapa; probado al revés, un import por ruta lo hace fallar.
+
+Otras tres cosas:
+- **Lo vendoreado es byte a byte lo de npm**: `ORIGEN.md` guarda versión,
+  integridad del paquete y SHA-256 de cada archivo, y el test los compara. Al
+  vendorear apareció que htm es Apache-2.0 y no MIT, como decía el plan; se
+  corrigió ahí y su licencia va como `LICENSE-htm`. pip-audit no mira
+  JavaScript: quedó anotado en XSK (`avance.md`) que los vendoreados no tienen
+  auditoría automática de CVE.
+- **`mapa_funcional.py` no puede leer un importmap**: la plantilla lo recibe
+  ya armado. Regla nueva: un `<script type="module">` trae todos los `.js` de
+  su carpeta.
+- **El enlace de la v1 a la v2 (D6)** es la única línea que se le agregó a la
+  v1, y solo se dibuja con distintivo. Lleva los filtros que haya en la
+  dirección al momento del clic: un `onclick` en línea, para no tocar
+  `dashboard.js`.
+
+Verificado en un navegador de verdad: `test_la_v2_abre_sin_errores` abre la
+v2, controla que no haya errores en la consola ni archivos de `/static/`
+rechazados, que se pinte la fecha del servidor, y que los dos enlaces lleven
+de una versión a la otra con los filtros.
+
+**El núcleo sin pantalla (bloque 2, Admin 0.50.02).** `estado.js` tiene el
+estado de los filtros y la única función que lo cambia (D8); `api.js`, los
+pedidos al servidor. Ninguno toca el DOM ni importa nada, así que Node los
+corre de verdad.
+
+La pregunta de este bloque era cómo saber que la v2 le pide al servidor lo
+mismo que la v1, sin confiar en haber leído bien `dashboard.js`. La respuesta
+fue no compararla contra la lectura sino contra la v1 misma:
+`test_dashboard_v2_nucleo.py` extrae de `dashboard.js` las funciones que arman
+y sanean el estado (`paramsDeEstado`, `estadoDeParams`, `setPreset`,
+`reiniciar`, `alternarSeccional`, `aplicarEstado` y el encaje del salario de
+`initCatalogo`) y las corre al lado de las de la v2. Con 8.000 direcciones al
+azar (fechas que no existen, futuras o invertidas, ids rotos, salarios que no
+son número, pestañas que no están) y 3.600 cambios encadenados, las dos tienen
+que dar exactamente los mismos parámetros. Para confirmar que el test detecta
+una diferencia, se cambió a propósito una regla en la v2 y falló mostrando las
+direcciones exactas.
+
+Lo que salió de comparar así son las rarezas de la v1, que la v2 copia para
+pedir lo mismo: un día que no existe se corre (2026-02-30 es el 2 de marzo),
+un `sal_min` que no es número cuenta como puesto, y **sin `sal_min` se
+descarta el `sal_max` de la dirección**. Esa última es un bug de la v1: un
+enlace con solo "hasta $2.000.000" abre sin ese filtro. Quedó en BACKLOG.md
+para arreglarlo en las dos a la vez (D10), y el test lo va a exigir.
+
+`api.js` es la `pedir` y la `enCola` de la v1 con lo de afuera inyectado
+(fetch, la espera, qué hacer al perder la sesión). Una diferencia buscada: si
+la ronda ya se abortó, la espera del reintento ni empieza.
+
+**El mockup y la dirección B.** Antes del bloque 3, `disenos/panel-v2-propuestas.html`
+(fuera de git; fuentes en `disenos/panel-v2/`) mostró tres direcciones con los
+números reales de la demo + lote UOM, pedidos a los mismos endpoints del
+panel, y las animaciones de D5 hechas con el mismo Chart.js de la app, para
+no prometer nada que después no se pudiera hacer. A "Continuidad" mantenía el
+orden de hoy; B "Sala de mando" ponía los números grandes sobre la tarjeta
+oscura del vocabulario "Hilo" y los filtros en una barra; C "Por tema"
+llevaba los filtros a un riel lateral y ordenaba el tablero por recibos,
+trámites y comunicación. SDN eligió B.
+
+**Filtros e indicadores (bloque 3, Admin 0.51.01).** La barra de la tarjeta
+tiene el período rápido, los filtros puestos como pastillas que se sacan de a
+una y Reiniciar; el resto va en un cajón que entra de costado (desde abajo en
+el teléfono): el calendario pintable, formato, seccionales, empresas, el
+salario de dos manijas y el buscador de afiliado. Cada control se comporta
+como su par de la v1 y todos cambian el estado por el reductor (D8).
+
+Lo que costó: el cajón quedaba debajo del encabezado aunque tuviera z-index
+900. `<main class="mesa-cont">` se levanta sobre el fondo de la mesa con
+z-index 1, y eso arma una capa propia: nada de adentro puede tapar lo que
+está afuera. La v1 tiene su modal después de `</main>` por lo mismo. La v2
+pinta lo que se abre por encima de todo en `#capas`, afuera de `<main>`, con
+un "portal" de diez líneas (`panel/capa`). Otro detalle: el robot no puede
+usar `wait_for_function` en estas pantallas, porque la CSP no deja evaluar
+texto como JavaScript (no hay 'unsafe-eval', y está bien que no haya).
+
+Cómo se verificó, sin mirar el código de la v1 sino la v1 andando:
+- Un lector parcial de la v2 en el robot (`cubre`: indicadores y filtros) y
+  `test_lo_que_ya_tiene_la_v2_coincide`: las 7 combinaciones dan los mismos
+  indicadores, las mismas pastillas y la misma dirección que la v1, y la v2 no
+  le pide al servidor nada que la v1 no pida.
+- `test_los_controles_de_la_v2_dan_lo_mismo_que_la_v1`: el robot maneja la
+  v2 como una persona (período, una seccional desde el cajón, formato, quitar
+  una pastilla, Reiniciar) y en cada paso abre la v1 con la misma dirección.
+  Las cinco veces, lo mismo.
+- En Node, el atajo de período contra el `presetActivo` de la v1 con las
+  mismas miles de direcciones, y los textos de las pastillas contra los de
+  `pintarChips`.
+
+
+**Gráficos, mapa y explorador (bloques 4 y 5).** Los siete paneles, el
+semáforo, el mapa de seccionales, el explorador con sus pestañas y "Ver más",
+y el modal "Ver" con sus cuatro fichas (recibo, trámite, consulta,
+notificaciones del día). Cada gráfico es Chart.js detrás de un `useGrafico`
+que lo crea la primera vez y después le cambia los datos y llama a
+`update()`: así anima del valor viejo al nuevo en vez de volver a dibujarse
+desde cero (D5). El clic en un gráfico despacha una LISTA de acciones al
+reductor (filtrar y cambiar de pestaña en un solo paso), y una pestaña nueva
+con los mismos filtros trae solo el explorador, como la v1. El mapa usa la
+misma `MapaMT` de la v1; el globo de cada burbuja se arma con Preact sobre
+un nodo propio, sin `innerHTML`.
+
+**El Asistente y la voz (bloque 6).** El cajón de la v1 con el mismo
+recorrido: la foto del estado que viaja con cada pregunta, el historial de
+cuatro intercambios en memoria, "Volver", los homónimos elegidos con un clic
+sin volver al modelo, el micrófono con envío solo a los cuatro segundos, y la
+barra chica del teléfono. La foto del estado (`estadoPlano`) y su vuelta a
+parámetros (`comoParams`) pasaron a `estado.js`, y el test de Node las
+compara contra el `estadoPlano` de la v1 en los mismos 3.600 cambios
+encadenados. Lo nuevo es la entrada de cada burbuja y una salida más suave
+del cajón; con "reducir movimiento", quieto. De paso, en el teléfono las
+pastillas de filtros puestos bajan a su propio renglón: entre "Más filtros" y
+"Reiniciar" no tenían lugar y una se partía en tres líneas.
+
+Cómo se probó sin gastar créditos: `test_el_asistente_de_la_v2_hace_lo_mismo_que_el_de_la_v1`
+intercepta en el navegador el POST a `/admin/dashboard/asistente` y contesta
+cuatro respuestas armadas con datos reales del sindicato (una que filtra, una
+que no toca el panel, homónimos y un 429). Las dos versiones reciben las
+mismas preguntas y tienen que mandarle al servidor exactamente lo mismo
+(pregunta, foto y historial), decir lo mismo en el hilo y dejar la misma
+dirección al filtrar, al elegir el homónimo y al volver. Para que el botón
+exista hace falta una `ANTHROPIC_API_KEY`, pero alcanza con una falsa: el
+modelo nunca se llama.
+
+**Paridad y medición (bloque 7).** Con la v2 completa, `test_paridad_v1_v2`
+dejó de saltearse: las 7 combinaciones del robot dan los mismos indicadores,
+gráficos, semáforo, mapa, explorador y contadores, y los mismos pedidos al
+servidor, nunca más de 4 en vuelo. Los robots de controles, de gráficos y del
+Asistente manejan la v2 como una persona y, en cada paso, la v1 abierta con
+la misma dirección muestra lo mismo. Uno de ellos fallaba una vez de cada
+tres: apretaba Escape un cuadro antes de que el modal empezara a escuchar la
+tecla. Ahora espera el foco en la X, que se pone en el mismo paso.
+
+La medición de D9 (tiempo hasta ver los indicadores y peso), con la base de
+la demo + lote UOM y 90 días de filtro:
+- **Tiempo**: medido primero con uvicorn, la v2 salía 0,26 s más lenta con
+  150 ms de latencia simulada. No era la v2 sino el banco: uvicorn sirve
+  HTTP/1.1, el navegador abre 6 conexiones y la v2 pide 18 archivos de JS
+  contra 5. Render sirve HTTP/2 (todo en paralelo por una conexión), así que
+  se volvió a medir con hypercorn en HTTP/2: **1,73 s la v1 y 1,74 s la v2**,
+  con los mismos 13 pedidos de datos. Antes se sumó `<link rel="modulepreload">`
+  para cada módulo del importmap (y el importmap pasó al `<head>`): sin eso el
+  navegador los descubre en cascada, un viaje al servidor por escalón.
+- **Peso**: la v2 es **más pesada**. El JS que viaja comprimido es ~165 KB
+  contra ~143 KB (+22 KB, +15%); la diferencia es Preact (~7 KB) y que los
+  módulos de la v2 van con sus comentarios y sin minificar (no hay build, D1).
+  Los estilos van en un archivo aparte que el navegador cachea (21 KB contra
+  11 KB de `marca.css`), mientras la v1 los trae dentro del HTML en cada
+  visita (45 KB sin comprimir contra 5 KB de la v2).
+
+La cuarta condición de D9 dice "no es más pesada": por peso de JS no se
+cumple. Queda para SDN junto con su uso en Pruebas.
+
+**Movimiento, caso cero (2026-10-12, Admin 0.53.01).** SDN probó la v2,
+pidió conservar las dos versiones para comparar mientras se mejora la nueva, y
+marcó que las animaciones de los gráficos y la apertura de los modales eran
+tan rápidas que casi no se veían. Lo planteó como el caso cero para mejorar de
+a poco la interfaz de toda la plataforma.
+
+El diagnóstico no fue la duración. Los gráficos se animaban **cuando llegaban
+los datos**, y en un monitor se ven 2 o 3 de los 9 paneles al abrir: el resto
+terminaba su entrada fuera de pantalla. Además la curva (easeOutQuart en 600
+ms) hace casi todo el recorrido en el primer cuarto, así que se percibía como
+150 ms. Y el modal abría recién cuando llegaba el detalle: primero una espera
+sin nada y después una caja que aparecía casi de golpe.
+
+Antes de construir se instaló la skill `emil-design-eng` de Emil Kowalski
+(`.claude/skills/emil-design-eng/`, copia textual fijada a un commit, leída
+entera, licencia MIT; `ORIGEN.md` dice de dónde sale y que ante un choque
+manda `diseno-mi-trabajo`). Una regla suya cambió lo propuesto: el modal no
+crece desde la fila tocada, porque eso es para popovers; los modales escalan
+desde su centro.
+
+Lo que se hizo:
+- **Tokens de movimiento** (`--mov-*`, `--ease-*`) en `panel_v2/panel.css`.
+  `panel/movimiento` los lee para Chart.js: CSS y gráficos usan los mismos
+  números. Las reglas quedaron en `diseno-mi-trabajo` → "Movimiento".
+- **Entradas al hacer scroll.** Un solo IntersectionObserver para todos los
+  paneles (`alEntrar`), con escalón entre los que entran juntos. El gráfico se
+  crea igual apenas llegan los datos, quieto y con el panel invisible (así el
+  robot de paridad lo sigue leyendo), y al entrar en pantalla vuelve a cero y
+  se dibuja (`reset()` + `update()`). La dona no giraba: `reset()` leía las
+  opciones viejas, que todavía decían "sin animación". Se arregló aplicando
+  primero las opciones de la entrada con `update("none")`.
+- **El modal "Ver"** abre en el momento del clic con un esqueleto. Va arriba
+  y no al medio de la pantalla, para que al llegar el detalle crezca hacia
+  abajo sin saltar. El fondo se desenfoca apenas y el contenido llega nítido
+  desde un desenfoque leve. Abre en 420 ms y cierra en 260.
+- **Hover solo con mouse**, y solo levanta los gráficos, que se tocan. Los
+  indicadores se aclaran. Todo botón se achica a .97 al apretarlo; la regla va
+  con `:where()`, que no pesa, así cada botón conserva su propia transición.
+- **El explorador**: la marca de la pestaña es una pastilla aparte que se
+  desliza, las filas de "Ver más" entran escalonadas y un cambio de filtros
+  renueva la tabla con un fundido corto.
+- **Esqueletos con brillo** en los paneles y los indicadores mientras llegan
+  los primeros datos.
+- **Tooltips de la casa**: base oscura del sindicato, cifra en monoespaciada,
+  sin muestra de color en los gráficos de una sola serie. La manito aparece
+  sobre lo que filtra.
+
+Los 31 robots de siempre siguen en verde, pero corren con "reducir
+movimiento" y no prueban nada de esto. Por eso se sumó
+`test_la_v2_con_movimiento`, el único que corre con el movimiento prendido.
+Verifica que un panel de abajo espere a verse con sus datos ya cargados, que
+el gráfico se dibuje al entrar, que el modal abra con el esqueleto antes de
+que llegue el detalle (el detalle se retiene en el robot), que la marca quede
+debajo de la pestaña elegida y que las filas nuevas entren escalonadas. Se
+revisaron además cuadros a lo largo de cada animación, en escritorio y
+teléfono.
+
+**Movimiento, segunda vuelta (2026-10-13, Admin 0.53.02).** SDN probó en
+Pruebas: los gráficos le seguían pareciendo muy rápidos y los modales
+aparecían "sin ningún efecto, rápido y brusco". En los cuadros de la primera
+vuelta el modal sí se animaba. La diferencia estaba en cómo se medía: en vez
+de sacar fotos sueltas, se tomó en el navegador, cuadro por cuadro, qué
+porcentaje de cada animación ya había pasado. Salieron dos causas:
+
+- **Con el movimiento normal**, el modal estaba al 79% de opacidad a los 100
+  ms y al 95% a los 150. Duraba 420 ms en el papel, pero la curva de salida
+  fuerte (la que recomienda `emil-design-eng` para la interfaz de todos los
+  días) hace casi todo al principio, y la escala de .96 apenas se notaba. Los
+  gráficos crecían visiblemente durante unos 600 ms.
+- **Con "reducir movimiento" prendido en el sistema** no había ningún efecto:
+  marca.css corta todo con `!important`. El celular de SDN ya lo tenía
+  prendido (por eso la colmena del Asistente se mueve igual desde el
+  2026-09-05), y en una PC con Windows lo prende "Efectos de animación"
+  apagado.
+
+Lo que se hizo:
+- **Duraciones de presentación** en los tokens: gráficos 1,4 s, con las barras
+  en cascada (hasta 900 ms entre la primera y la última) y la línea que se
+  dibuja de punta a punta; modal 650 ms; paneles 900 ms con 36 px de
+  recorrido; indicadores 1,6 s. Y una curva nueva, `--ease-entrada`
+  (easeOutCubic), para lo que tiene que verse entrar. Medido después: el
+  modal llega al 52% a los 100 ms y sigue moviéndose hasta los 400; una barra
+  crece durante más de un segundo.
+- **El modal entra desde más lejos**: escala .92, 28 px más abajo y
+  desenfocado, y llega nítido.
+- **Con "reducir movimiento" quedan fundidos suaves** (200 a 500 ms) en
+  paneles, modal, cajón y Asistente, sin nada que se desplace. Es lo que pide
+  la skill de Emil ("menos y más suave, no nada"). Y un aviso arriba del
+  panel dice que el sistema lo tiene prendido y cómo apagarlo en Windows,
+  iPhone, Mac y Android.
+
+Las reglas quedaron en `diseno-mi-trabajo` → "Movimiento", incluida una
+nueva: medir el porcentaje que ya pasó a los 100, 200 y 300 ms antes de
+opinar sobre una animación. La duración escrita no dice cómo se ve.
+
+**Movimiento, tercera vuelta (2026-10-13, Admin 0.53.03).** SDN vio mejor los
+gráficos, pero el modal todavía aparecía "como un rayo, ya completo", después
+de "una pantalla gris translúcida por una fracción de segundo"; lo mismo le
+pasaba a los gráficos al esperar datos. Además, en el explorador no encontraba
+diferencias con la v1. Eran tres cosas distintas:
+- **El modal** abría con un esqueleto gris, desenfocado y casi transparente.
+  Cuando llegaba el detalle, la caja saltaba a su alto. Ahora se arma con lo
+  que la fila ya sabe (`previa`: título, fecha, empresa...), pieza por pieza.
+  Lo que llega del servidor se suma debajo, también en cascada, y la caja
+  crece de a poco: un ResizeObserver mide el contenido y anima el alto. Las
+  fichas llevan `key` en cada pieza, así lo que llega después se inserta en
+  su lugar sin pisar lo que ya estaba. La caja se vuelve opaca en 220 ms.
+- **Los paneles**, al cambiar un filtro, se ponían translúcidos (`opacity:
+  .55`) hasta tener datos. Ahora quedan nítidos y corre una línea fina
+  arriba. En la primera carga, en vez de barras grises, trazan las líneas de
+  la grilla del gráfico (o los renglones de una lista) una por una.
+- **El explorador**: sus cambios (la marca que se desliza, "Ver más"
+  escalonado) eran demasiado sutiles. Ahora arma sus filas en cascada cada
+  vez que la tabla se renueva, marca la fila bajo el mouse con un filo y
+  enciende su "Ver", y los totales de las pestañas corren hasta su número.
+
+**El movimiento, a todos los modales (2026-10-13; Trabajador 0.45.02, Admin
+0.53.04, Plataforma 0.43.05).** SDN aprobó la tercera vuelta y pidió llevarla
+"al modal de perfil, noticias, trámites, recibo y los que falten, sin afectar
+funcionalidad". Relevados, son 25 modales en 9 pantallas, de seis familias de
+caja (`.modal-hoja`, `.modal-notif-caja`, `.modal-articulo`, `.modal-recibo`,
+`.overlay-ayuda-caja` y las imágenes ampliadas), y TODOS se abren y se cierran
+igual: la clase `abierto` en el fondo, que pasa de `display:none` a `flex`.
+Eso decidió el diseño, para no tocar ninguna de las ~40 funciones de abrir y
+cerrar:
+- **Las duraciones se mudaron a `static/movimiento.css`** (de `panel.css`, que
+  ahora la carga antes). Ahí van también las reglas de los modales.
+- **Entrar es CSS**: una animación arranca sola cuando el elemento aparece;
+  una transición desde `display:none`, no. La caja centrada llega desde .94 y
+  26 px más abajo, opaca en 220 ms; la hoja pegada abajo (perfil, "Acerca
+  de", notificaciones) sube desde el borde con `--ease-hoja`. El fondo anima
+  su color, no su opacidad, para no llevarse la caja con él.
+- **Irse lo sostiene `modales.js`**: al ver que el fondo perdió `abierto`, le
+  pone `mov-sale` el tiempo de la salida (320 ms) y después lo saca. El
+  arrastre espera a que termine para devolver la caja a su lugar (si no, se
+  la vería saltar al centro mientras se va), y si el modal se vuelve a abrir
+  a mitad de la salida, vuelve a su lugar en el acto.
+- **El contenido se arma**: los bloques del cuerpo (o los del contenedor que
+  cada pantalla llena con innerHTML) entran en cascada, de a 45 ms. Lo que
+  dice exactamente "Cargando…" -- hay once lugares que lo escriben -- se marca
+  `mov-cargando` y se dibuja como tres líneas que respiran (un título, el
+  título mismo respira); en la noticia y el beneficio, que dejan el cuerpo
+  vacío mientras esperan, las líneas van en el cuerpo. Cuando llega el
+  detalle, se arma de nuevo y la caja crece de su alto viejo al nuevo, todo
+  antes de que el navegador pinte (los MutationObserver corren antes), así
+  que el salto nunca se ve. Un repintado cualquiera, como un mensaje nuevo en
+  el chat de un trámite, solo ajusta el alto: rearmar todo cada vez sería
+  ruido.
+- **Afuera, a propósito**: el "Ver" del Panel (`.overlay-det`). La v1 recibe
+  solo arreglos mientras SDN decide D9 y la v2 trae su propio movimiento.
+- **Medido cuadro por cuadro** dentro de la página (requestAnimationFrame),
+  con la red frenada por CDP y el service worker bloqueado: con el worker
+  activo los pedidos de la página no pasan por el freno y "llegaban" en el
+  primer cuadro.
+
+Un error que estaba de antes y apareció al mirarlo: **cinco modales de
+`/admin` (trámite, trámite de empresa, seccional, avisar y publicar encuesta)
+quedaban DEBAJO de la barra fija de pestañas.** Viven adentro de
+`.mesa-cont`, que desde la "mesa" (2026-09-24) arma su propia capa con
+`z-index: 1`, y el 250 del modal solo valía adentro de ella. En un trámite
+largo la caja, centrada, metía su encabezado detrás de la barra: no se veían
+ni el número de expediente ni la X de cerrar. Arreglo en `interior.css`:
+mientras hay un modal abierto adentro, la capa sube a 45 (arriba de la barra,
+21, y de los botones flotantes, 40), pero no a más: el detalle de un mensaje
+vive afuera (250) y se abre ENCIMA del trámite, y tiene que seguir arriba.
+
+El robot del arrastre (`e2e/test_robot_modales.py`) medía la caja apenas
+visible, a mitad de su entrada: ahora espera a que termine de llegar
+(`_quieto`, que ignora las animaciones infinitas) y prueba además reabrir el
+perfil mientras se está cerrando.
+
+**Y las vistas de Trámites (2026-10-13, Trabajador 0.45.03).** SDN lo probó en
+Pruebas: "se ve bien; los trámites del trabajador no tienen el efecto". No lo
+tenían porque no son modales: la pestaña Trámites del afiliado (y su espejo en
+la app de empresa) cambia de VISTA adentro de la pestaña -- lista, formularios,
+formulario, detalle --, con `style.display`, y espera con la ruedita de
+`.cargando`. La marca `data-mov-vista` (en la pestaña y sus cuatro vistas) les
+da el mismo tratamiento desde `modales.js`: al aparecer, sus piezas entran en
+cascada; la ruedita se esconde y quedan las líneas que respiran (el detalle
+muestra ya el número de expediente, que es lo que se sabe); y cuando llega la
+respuesta se arma LO QUE LLEGÓ (los nodos nuevos, sin repetir los que vienen
+adentro de otro y en orden de lectura), no la vista entera. Lo que no hacen es
+crecer de a poco: una vista está en el flujo de la página y animar su alto
+reacomodaría todo lo de abajo cuadro por cuadro. Cambiar un filtro de la
+lista, que repinta sin esperar, no rearma: sería ruido.
+
+**Y todas las pestañas de las cuatro apps (2026-10-13; Trabajador 0.45.04,
+Admin 0.53.05, Plataforma 0.43.06).** Con "seguí", lo que faltaba de la misma
+familia: las 7 pestañas del afiliado (y el historial de recibos), las de la
+empresa, las 14 del panel del sindicato con sus sub-pestañas y las 9 de
+plataforma con las de Uso de IA llevan `data-mov-vista`; plataforma empezó a
+cargar `modales.js` y `movimiento.css`. Tres ajustes que salieron al medirlo:
+- **Una pieza más alta que dos pantallas no se anima entera.** En la pestaña
+  Trámites del panel (2000 filas), subir la tabla a su propia capa para
+  fundirla y moverla le sumaba 100 a 200 ms al cambio de pestaña (medido
+  contra la misma página sin `modales.js`: 337 contra 237 ms). Ahora se entra
+  en ella y se arma lo que se ve; si es una sola cosa enorme, queda quieta.
+  Con eso, el cambio cuesta lo mismo que sin el efecto.
+- **Lo que llega se arma hasta 40 piezas**, en orden de lectura y sin
+  comparar cada una contra todas (eso era cuadrático con 2000 filas).
+- **Un panel que se repinta en cada tecla** (la vista previa de Noticias)
+  no se recorre entero: solo se mira si había una espera o si lo que llegó
+  trae una. Y la ruedita que viene con un texto ("Leyendo tu comprobante…")
+  se queda como está: explica qué pasa. "Cargando…" en la celda única de una
+  tabla sigue siendo celda.
+
+## La Bancaria con la grilla de agosto 2026: básico no es conformado (2026-10-13)
+
+Al relevar la web oficial de La Bancaria se leyó la grilla firmada de agosto
+2026 (`GRILLAS-AGOSTO-2026.pdf`, 8 páginas escaneadas, transcriptas a mano a
+`docs/cct-1875-bancarios.md`) y el modelo de `cargar_bancaria.py` estaba mal
+en tres cosas:
+
+1. **Tomaba el conformado como básico.** `SUELDO_INICIAL = 2.463.757,68` era
+   el "Salario Inicial" del comunicado de julio, que es el **conformado**: la
+   remuneración mínima garantizada hasta los 15 años de antigüedad. El básico
+   del inicial es $ 1.642.764,63. Ahora el recibo lleva el básico de la
+   grilla y una línea "Complemento salario conformado" por la diferencia. El
+   nombre y la mecánica (piso del básico, sin contar los adicionales de
+   función) son un supuesto: la grilla no dice cómo lo imprime un banco y no
+   se encontró fuente. SDN decidió dejarlo así hasta saberlo.
+2. **Los adicionales como % del inicial de 1975.** Hoy la grilla publica
+   montos fijos (cajero $ 163.963,06, falla $ 287.355,05, títulos, zona
+   patagónica en tres tramos). Computación, técnicos, máquinas, portavalores
+   y nocturno no tienen monto vigente y se dejaron de simular.
+3. **El ROE como un solo monto.** Sale de una tabla de 4 tramos de bruto × 6
+   tramos de ROE del banco, anual, de a 1/12; cada banco del lote tiene su
+   tramo fijo y uno no paga. Verificado: el inicial en el tramo 3,5–8,75% da
+   los $ 72.413,50 del comunicado.
+
+Los coeficientes de la rama administrativa resultaron ser los mismos del
+art. 5 de 1975 (lo distinto son maestranza y ordenanza, que el lote no usa).
+La grilla pasó a un módulo puro, `grilla_bancaria.py`, para que el lote, el
+generador de PDF y el test lean los mismos números.
+
+**Regenerar sin re-sembrar.** `lote.sembrar_base` es idempotente para las
+filas pero vuelve a sortear el nombre de cada afiliado y lo escribe en su
+cuenta: llamarlo para regenerar recibos le cambiaba el nombre a los cien.
+`--rehacer-recibos` arma la lista de trabajadores desde la base. Por la misma
+razón la antigüedad del agente pasó a derivarse del CUIL (`antiguedad_de`):
+el valor sorteado por el lote no quedaba en ninguna columna.
+
+**Diez PDF de prueba** (`docs/recibos-bancaria-prueba/`), del CUIL de prueba
+de Pruebas, siete bien y tres con error. Un caso previsto se cayó al
+verificarlo: una cuota sindical al 2,5% no es un error para la app, porque el
+tope del 2% (art. 133) solo mira las cuotas de **convenio** y la de La
+Bancaria está cargada como **afiliación**; se cambió por un neto mal sumado.
+El test arma cada caso como el PDF y lo pasa por el camino de `/api/leer` +
+`/api/validar` (alta de los códigos nuevos como pendientes, aportes
+vinculados a su genérico): sin ese paso, con códigos que el catálogo no
+conoce, todo da diferencia.
+
+
+## Herramientas en /entornos y la Calculadora bancaria (2026-10-13)
+
+SDN pidió retomar una calculadora de sueldos bancarios que había quedado a
+medio hacer en otro chat (no llegó al repo: ni rama ni commit), ahora con la
+grilla de agosto 2026 ya transcripta, como **asistente de la implementación**.
+No va en las apps de sindicato ni de trabajador: se abrió una pestaña
+**Herramientas** en `/entornos` para este tipo de desarrollos. Las decisiones,
+tomadas con SDN una por una antes de construir:
+
+- Arma el **recibo esperado** y, con un botón opcional, **chequea un recibo
+  real** cargado **a mano** renglón por renglón (sin IA ni costo), con los
+  totales impresos y renglones que la calculadora no tiene.
+- **Las tres ramas completas**, por antigüedad y por jerarquía.
+- **Varias grillas con mes**: la de agosto pasó de constantes en
+  `grilla_bancaria.py` a `data/grillas_bancarias/2026-08.json`, armado desde
+  las tablas de `docs/cct-1875-bancarios.md` (no se volvió a tipear ningún
+  número) y controlado con la regla de que todo básico sobre el piso es
+  coeficiente × la misma unidad (≈ $ 1.474.068): las tres ramas cierran.
+  Las constantes que usan el lote y los PDF siguen existiendo, derivadas de
+  la grilla más nueva, y el lote da lo mismo que antes.
+- Suma falla de caja en moneda extranjera, guardería, conectividad, Día del
+  Bancario y cuota (afiliado sí/no, % editable). **Ganancias no se calcula**
+  (deducciones, cargas de familia y acumulado anual la harían más grande que
+  todo lo demás): renglón a mano.
+- **Casos guardados** con nota libre, para revisarlos y corregir la
+  calculadora o el auditor de recibos: lista con estado (nuevo / revisado /
+  aplicado / descartado) y CSV. Sin nombre ni CUIL.
+- Solo local y Pruebas, con la puerta de `/entornos`.
+
+Probado con un robot de Playwright contra la app local (calcular, cambiar de
+rama, chequear, renglón extra, guardar, revisar, cambiar estado, reabrir el
+caso en la calculadora, la pestaña de la landing y el ancho de un teléfono).
+Dos detalles que salieron de ahí: la nota de la categoría ("coef. 1,00") y un
+fondo con `background-attachment: fixed` que no pintaba la página entera.
+
+**Primera vuelta de SDN** (mismo día, Plataforma 0.45.01): en la pestaña
+Herramientas ya no aparecen los Recursos debajo; la calculadora dice qué no
+contempla (Ganancias, retroactivos y ajustes de otros meses); y "Chequear
+recibo" suma la lectura con IA. La carga a mano había quedado como única vía
+porque en la pregunta de diseño se anotó esa opción; SDN esperaba las dos.
+La lectura reusa el extractor y el enmascarado de `/api/leer`, ubica cada
+línea por su texto (cada banco numera a su manera), manda lo desconocido y
+los reintegros a la vista, elige la categoría por el básico leído y avisa en
+rojo si el entorno tiene el extractor simulado (`MOCK_EXTRACTOR`).
+
+
+### El enmascarado tapaba "Sueldo" en "Sueldo básico" (2026-10-13)
+
+SDN leyó con IA el recibo simulado 02 en la Calculadora bancaria: el bruto
+cerraba pero el básico no aparecía, la categoría quedaba en la primera y el
+complemento esperado salía en $ 862.296,61 (conformado menos el básico del
+piso) contra los $ 686.978,98 del recibo.
+
+La causa estaba en el enmascarado y no en la calculadora. Al pie del recibo
+dice "Acreditado en cuenta sueldo BANCO DE PRUEBAS DEL LITORAL S.A.": una
+frase sin números que lleva una forma jurídica se toma entera como razón
+social (paso 4 de `enmascarado.analizar`), y el paso 5 aprende esa razón y
+busca sus pedazos de 6+ letras en todo el documento. "sueldo" es uno, así
+que se tapaba en "Sueldo básico" y la IA perdía el renglón. Afecta igual a
+`/api/leer`: esa frase es muy común en los recibos bancarios reales.
+
+Arreglo: lo aprendido de la razón social no se busca adentro de la tabla de
+conceptos (`_en_tabla`). La razón social ahí no aporta identidad y tapar un
+concepto va contra la regla del enmascarado (nunca estorba al análisis).
+Test: `test_preparacion.py::test_lo_aprendido_de_la_razon_social_no_se_tapa_en_la_tabla`,
+con el PDF 02. Además la calculadora avisa cuando no se leyó el básico, en
+vez de quedarse callada con la primera categoría. Trabajador 0.45.05,
+Plataforma 0.45.02.
+
+### Calculadora bancaria, segunda vuelta de SDN (2026-10-13)
+
+Con el recibo 02 leído bien (después del arreglo del enmascarado), SDN pidió:
+
+- **El análisis con IA en su propio recuadro**, que se abre con "Analizar con
+  IA" (al lado de "Chequear recibo") y muestra la misma espera que el
+  análisis de recibo del afiliado: aro con el reloj y las fases (abrir,
+  tapar datos personales, leer con IA, ubicar cada renglón). "Del recibo
+  real" pasó también a un recuadro aparte.
+- **La categoría no se cambia sola.** Antes la lectura la elegía por el
+  básico sin preguntar. Ahora se propone, debajo del selector de categoría y
+  en el recuadro de la IA, con un botón "Ajustar al recibo" por cada
+  categoría que tiene ese básico (las tres ramas pueden compartirlo). Vale
+  igual si el básico se carga a mano.
+- **Colores de la diferencia**: rojo si pasa el 1% de lo esperado, amarillo
+  hasta el 1% (`grilla_bancaria.gravedad`). Es solo el color: la tolerancia
+  de $ 1 y el resumen ("n de m no coinciden") no cambian. Como el amarillo
+  quedó para eso, los totales pasaron al celeste de los gráficos de
+  `/entornos` (#8ecbff).
+
+De paso, al probarlo con un robot apareció que la IA ubicaba 10 renglones y
+la tabla mostraba 7: función cajero, falla de caja y título se perdían en
+silencio porque la calculadora no los tenía elegidos. Ahora salen en su
+sección con esperado "—", diferencia en rojo y qué tildar
+(`FUERA_DEL_ESPERADO`); cuando se tilda, pasan a ser renglones comunes.
+Plataforma 0.45.03.
+
+### Otros del recibo: lo que no es de convenio, a la par (2026-10-13)
+
+SDN: un recibo puede traer conceptos de ingreso o de egreso que la
+calculadora no tiene, y alguno puede ser una condición especial; si no se
+muestran se pierden. Hasta acá iban a "Renglones que la calculadora no
+tiene", fuera de la tabla, y no sumaban a nada: el bruto y el neto daban
+diferencia sin decir de dónde, y si eran remunerativos también la
+jubilación, el INSSJP, la obra social y la cuota.
+
+Ahora van a una columna propia, **"Otros del recibo"**, al lado de la de
+convenio y sin tocarla (`grilla_bancaria.otros_del_recibo`):
+
+- Cada concepto ajeno es un renglón en su sección, con el importe del
+  recibo, en violeta y con "sin chequear" en la diferencia: se toma como dato.
+- Un haber remunerativo arrastra sus aportes con el mismo % y el mismo tope,
+  y la cuota sindical sobre todo el remunerativo (marcada como supuesto: el
+  convenio no fija la base). Decisiones 1 y 2 de SDN.
+- La diferencia de cada renglón y de cada total es recibo − (convenio +
+  otros): si algo no cierra, es de convenio.
+- Los reintegros (devolución de Ganancias) entran ahí con signo negativo, y
+  la sección que dijo la IA vale tal cual y se corrige a mano (decisión 4).
+- La columna "Recibo real" pasó a llamarse "Recibo leído IA" y "Esperado",
+  "Convenio". La de "Otros" aparece solo si hay algo que poner.
+- Los adicionales DEL convenio que no están tildados (cajero, título) siguen
+  aparte, en rojo y con qué tildar: no son "otros", hay que elegirlos.
+
+El CSV de casos suma la columna "otros". Plataforma 0.46.01.
+
+Primera vuelta de SDN sobre la columna, el mismo día: sin las aclaraciones en
+violeta debajo de cada renglón (ensuciaban la tabla; la aclaración de alcance
+de arriba ya lo dice) y "Recibo leído IA" antes que "Otros del recibo".
+
+### Ajustar al recibo también los adicionales (2026-10-13)
+
+SDN: en casos claros, como función cajero y falla de caja leídas del recibo
+sin "Cajero" tildado, la calculadora tiene que proponer el ajuste igual que
+hace con la categoría, en vez de solo decir "Tildá «Cajero»".
+
+`grilla_bancaria.ajuste_sugerido(codigo, importe, esperado)` dice qué control
+tocar cuando el recibo no deja dudas, y `comparar` lo agrega como `ajuste` a:
+
+- los renglones que el recibo trae y la calculadora no tiene elegidos
+  (cajero y falla de caja → Cajero; falla en moneda extranjera; guardería;
+  Día del Bancario; título y zona si el importe es uno de la grilla;
+  conectividad por modo o por días; cuota con su %; Ganancias con su importe);
+- y los que difieren por un control mal elegido: ROE (el tramo que da ese
+  importe con la base del esperado, solo si es uno), título, zona y
+  conectividad.
+
+Un importe que no es de la grilla no se adivina: queda sin botón y con el
+"Tildá…" de antes. En pantalla, un botón chico de contorno en el renglón
+(↳ Tildar «Cajero») y, en el recuadro de la IA, la lista con "Ajustar todo al
+recibo". Nunca se aplica solo, como la categoría. Plataforma 0.47.01.
+
+### Botones del chequeo y edición plegada (2026-10-13)
+
+SDN: "Analizar con IA Colm3na" pasa primero y destacado, con el isotipo de
+Colm3na (`static/icons/favicon-64.png`), y "Chequear recibo" pasa a
+"Chequeo manual recibo". Después de leer con IA, la edición de importes
+(totales impresos y renglones que la calculadora no tiene) queda plegada en
+"Editar importes del recibo": lo leído ya está en la tabla y tenerla abierta
+confundía. Con el chequeo manual se abre sola. Guardar caso sigue a la
+vista. Plataforma 0.47.02.
+
+### Calculadora bancaria v2 (2026-10-14)
+
+SDN: llevar a la calculadora la fluidez que ya tiene la v2 del Panel (Preact
+y movimiento), sin riesgo: una v2 copia, con un botón de ida y vuelta desde
+la v1, hasta reemplazarla. Mismo criterio que `PLAN_DASHBOARD_V2.md`.
+
+- **Dónde**: `/entornos/herramientas/calculadora-bancaria-v2`, misma puerta
+  que la v1 (`_exigir_landing` + pase; 404 en demo). Plantilla
+  `calculadora_bancaria_v2.html`, módulos en `static/calc_v2/` (`app`,
+  `piezas`, `movimiento`, `html`) y `calc.css`. Preact y htm son los mismos
+  vendoreados de la v2 del Panel; el importmap
+  (`main._importmap_calculadora_v2`) les pone el sello `?v=` y precarga todo.
+- **Sin cálculo nuevo**: pide a las mismas rutas
+  `/api/entornos/herramientas/bancaria/*`; el servidor sigue decidiendo.
+- **Lo que se mueve** (skill `emil-design-eng` + "Movimiento" de
+  `diseno-mi-trabajo`, solo con los tokens de `movimiento.css`):
+  los importes corren de su valor anterior al nuevo (`--mov-cambio`, curva
+  de `--ease-mueve`, interrumpible) con un destello breve que dice qué
+  cambió; el ✓ se dibuja con trazo; las filas entran en cascada corta y un
+  adicional que se tilda entra solo; el input del recibo leído se enmarca en
+  verde, amarillo o rojo; el **veredicto** (convenio + otros contra el
+  recibo) tiene una barra con un segmento por valor comparado y, si todo
+  coincide, una luz lo cruza una vez; lo que toca un "Ajustar al recibo" se
+  ilumina para que se vea qué cambió; las pestañas tienen una marca que se
+  desliza; las tarjetas tienen retícula de colmena, grano, filo de luz y una
+  luz que sigue al mouse (en su propio nodo, con `transform`, para no
+  recalcular la tabla). Con "reducir movimiento" quedan solo fundidos.
+- Medido en el navegador: al cambiar la categoría el neto corre en ~800 ms.
+- Tests: `test_calculadora_bancaria_v2.py` (puerta, importmap y precarga, ida
+  y vuelta, imports, nada de `innerHTML`, mismas rutas, tokens). Plataforma 0.48.01.
+
+## Las propuestas de la calculadora se ven (2026-10-14, Plataforma 0.48.02)
+
+SDN probó la v2 con el recibo 04 (Jefe de Sección, cajero, ROE "más de 25%")
+y dijo que solo proponía la categoría. No era así: el servidor proponía
+Cajero y el ROE (`grilla_bancaria.ajuste_sugerido`; el caso 3 guardado en
+Pruebas tiene la misma lectura, y el robot con esa lectura muestra los tres),
+pero las cápsulas "↳ Tildar «Cajero»" iban en el mismo ámbar que todos los
+botones y, en la caja de la IA, los ajustes eran una lista de texto con un
+solo botón. El problema era de lectura de la pantalla, no de cálculo.
+
+- Color propio, `--propuesta` (fucsia): no se confunde con el ámbar de los
+  botones ni con el amarillo de las diferencias leves, que son permanentes.
+- Una propuesta pendiente titila: un halo en su propia capa (opacity y
+  scale, `calc(--mov-correr + --mov-lento)`), quieto al pasar el mouse y sin
+  animar con "reducir movimiento". Es lo único que se mueve solo.
+- La caja de la IA da un botón por ajuste, más "Ajustar todo" si hay varios.
+- El veredicto dice "N ajustes propuestos por el recibo ↓" y lleva al primero.
+- SDN eligió la v2: la pestaña Herramientas de `/entornos` la abre; la v1
+  sigue a un botón de distancia.
+
+## El Asistente de trámites como Herramienta de /entornos (2026-10-16, Plataforma 0.49.01)
+
+Rama `feature/asistente-tramites`, plan `PLAN_ASISTENTE_TRAMITES.md` (D1–D10,
+acordado el mismo día). El prototipo HTML de Chat (`docs/chat/2026-10-16-asistente-tramites-prototipo.html`)
+pasó a ser una Herramienta de `/entornos`, al lado de la Calculadora bancaria,
+con la IA del lado del servidor y el motor en Python.
+
+**La IA propone, el código arma (D1).** `asistente_tramites.py` es un módulo
+PURO (no importa `db` ni `main`): las catorce preguntas del onboarding con
+sus opciones y su `cuando` como dato, el catálogo de lo que Colm3na tiene
+(tipos de campo, anchos, controles, estados), la lista cerrada `BRECHAS` de
+lo que no tiene (con nivel ajuste/desarrollo, esfuerzo, salida provisoria y
+recomendación), y el motor: `sanear_propuesta` (toda propuesta, de la IA o del
+navegador, entra por acá y lo que no está en el catálogo se descarta),
+`circuito` (carriles, nodos, flujos y datos, traducción fiel del prototipo),
+`brechas_de`, `configuracion` (módulos, áreas, pase y los formularios con la
+forma exacta de `main._campos_tramite_validos`), `preparar` (configurar /
+ajuste / desarrollo, y con el sindicato elegido dice qué módulo o área YA
+existe y cuál falta), `instruccion`, `mensajes_estados` y `exportar` (el JSON
+`colm3na.tramite` v1). `test_asistente_tramites.py` compara el catálogo contra
+las constantes reales (fail-closed: un tipo de campo nuevo en el constructor
+hace fallar el test), verifica que cada campo exportado pase por el saneo del
+constructor sin cambiar, y tiene al **kit escolar de La Bancaria como caso
+dorado**: el JSON que genera el motor es idéntico, byte a byte, al que generó
+el prototipo (`docs/chat/2026-10-16-ejemplo-kit-escolar.colm3na.json`).
+
+**La llamada a la IA** (`asistente_tramites_ia.py`): una herramienta con
+esquema cerrado (`proponer_tramite`, las respuestas son enumeraciones de las
+preguntas y los campos son tipos del catálogo), `tool_choice: any`, `effort:
+low`, prompt de sistema con caché, cliente inyectable para los tests y la
+duración medida pegada a `messages.create`. Cuarto uso de IA
+`asistente_tramites` en `precios_ia.USOS` (default `claude-sonnet-5`), columna
+`modelo_asistente_tramites` en `ConfiguracionPlataforma` (migración
+`d4e8b2a1c7f3`) y elegible en `/plataforma` → Uso de IA → Modelos. Cada llamada
+queda en `UsoIA` con tipo `herramienta`, a nombre del sindicato elegido; si la
+API contestó pero no propuso nada, el uso igual se registra (ya se pagó).
+
+**Las rutas** (`/api/entornos/herramientas/asistente/*`, puerta
+`_exigir_herramientas`, 404 en Demo): `catalogo` (preguntas, capacidades,
+brechas, sindicatos del entorno, si hay IA), `entender` (la IA; sin cliente,
+`{"disponible": false}` y la pantalla sigue a mano), `resolver` (el motor, se
+llama en cada cambio de respuesta con 250 ms de debounce), `preguntas-extra`
+(entre 4 y 8 preguntas sobre casos borde), los casos (`CasoHerramienta` con
+`herramienta="asistente_tramites"`, el resultado y el JSON se RECALCULAN al
+guardar), `brechas` (el inventario: cada brecha con cuántos casos no
+descartados la pidieron, de qué sindicatos y cuándo fue el último) y el CSV.
+
+**La pantalla** (`templates/asistente_tramites.html` + `static/asistente_tramites/`,
+Preact sin build con el importmap `_importmap_asistente_tramites`): las cuatro
+etapas del prototipo, el diagrama BPMN simplificado dibujado en SVG desde lo
+que manda el servidor (`circuito.js`), la vista "lo que ve el afiliado", la
+vista previa con el teléfono del constructor, "Antes de crearlo" con el
+estado de cada ítem de configuración, y las pestañas Casos y Brechas. Lo que
+la IA propuso se marca en fucsia (`.marca-ia`, el color de las propuestas de
+la Calculadora) hasta que se confirma. El estado vive en `localStorage` para
+retomar donde se dejó. Tests: `test_asistente_tramites_api.py` (rutas, IA
+simulada, casos, inventario), `test_asistente_tramites_v2.py` (importmap,
+sin `innerHTML`, tokens de movimiento, rutas) y el robot
+`e2e/test_robot_asistente_tramites.py` (las cuatro etapas sin IA, guardar y
+encontrar el caso). Probado además en Chromium contra uvicorn local: las
+catorce preguntas, el resultado completo y las dos pestañas sin errores.
+
+**Lo que se encontró de paso.** Un formulario encadenado no solo aparece en
+"Iniciar trámite": `origen_tramite_id` es opcional en `/api/tramite`, así que
+se puede ENVIAR sin trámite de origen ni aprobación previa (la brecha
+`encadenado` lo dice ahora). Y el orden de `db.ESTADOS_TRAMITE` (respondido
+antes que espera_info) no es el cronológico que la pantalla muestra: el
+asistente usa el suyo y el test compara conjuntos.
+
+**Queda para después** (fuera de este bloque, en orden): el importador del
+JSON (contrato en `docs/chat/2026-10-16-contrato-importacion-tramites.md`,
+después de probar con trámites reales de La Bancaria), la entrada por foto o
+PDF del formulario actual, y el uso desde el panel del sindicato.
+
+## Listas del sindicato (2026-10-16, Admin 0.54.01)
+
+Bloque 1 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/listas-sindicato`).
+Lo que el sindicato tiene en sus planillas y Colm3na no: el grupo familiar de
+cada afiliado, su fecha de afiliación, quiénes están en una lista. Es la base
+sobre la que el bloque 3 monta las validaciones de fuente `funcion` (el DNI
+del chico contra el grupo familiar, la antigüedad para habilitar un trámite).
+
+**Plantillas tipadas sobre una tabla genérica (D1).** `listas.py` es puro:
+`PLANTILLAS` (grupo familiar, datos del afiliado, lista simple) declara las
+columnas con tipo (cuil / dni / texto / fecha) y cuáles son las claves de
+búsqueda —la primera es SIEMPRE el CUIL del afiliado—; `csv_modelo` arma el
+archivo para completar (con punto y coma, que Excel en castellano abre sin
+pelear) y `parsear_csv` lee lo que subió el admin: detecta el separador,
+acepta la cabecera por clave o por rótulo, decodifica UTF-8 o Latin-1,
+normaliza (CUIL con `cuit.normalizar`, fechas DD/MM/AAAA → ISO) y valida FILA
+POR FILA (módulo 11 del CUIL porque acá el número NACE, DNI de 6 a 9
+dígitos, fecha legible, claves repetidas), devolviendo las filas buenas y
+los errores con su línea. Nunca escribe. En la base, `ListaSindicato`
+(plantilla + nombre + seccional, columnas, quién y cuándo) y `FilaLista`
+(clave1, clave2, datos JSONB) con índice por claves — migración
+`e5f1c3a9b2d4`. Una plantilla nueva es una entrada en `PLANTILLAS`, no un
+modelo nuevo.
+
+**Ensayo y reemplazo entero (D5).** `POST /admin/lista/cargar` sin
+`confirmar` parsea y cuenta (cuántas filas entran, cuáles tienen error, las
+primeras cinco como quedan) y no escribe nada; con `confirmar`, las filas
+válidas REEMPLAZAN la lista entera (misma plantilla + nombre + seccional), en
+una transacción. El ensayo y la carga usan el mismo parseo: lo que el ensayo
+muestra es exactamente lo que la carga escribe. Sin filas válidas, 422.
+
+**Pestaña propia, permiso `listas`, alcance por seccional.** Sección nueva
+en `permisos.SECCIONES` (grupo Padrón, sin módulo, como Trabajadores): la
+tienen los dos roles de administrador y se puede dar a un área. Las rutas
+entran al gateo fail-closed de `PERMISOS_RUTAS`. Un Admin de Seccional
+carga solo sobre la suya (nunca una lista global, que es del administrador
+general), ve solo las suyas (el recorte va EN LA CONSULTA,
+`db.listas_del_sindicato(sid, alcance)`), y no abre, baja ni borra una
+ajena. `db.buscar_en_lista` ya está escrita para el bloque 3: busca en las
+listas de esa plantilla que valgan para todos o para la seccional del
+afiliado.
+
+**La pantalla**: las plantillas con su descripción, columnas y "Descargar
+modelo"; el formulario de carga (plantilla, nombre, para quién vale,
+archivo) con "Ensayar (no guarda nada)" y recién después "Confirmar y
+reemplazar"; la tabla de listas cargadas con Ver (las primeras 200 filas),
+Descargar (lo cargado tal cual quedó, para corregir y volver a subir) y
+Borrar. Probada en Chromium contra uvicorn local: subir el modelo con una
+fila rota, ensayar (2 entran, 1 con error), confirmar y verla cargada.
+Tests: `test_listas.py` (parseo, permiso, ensayo sin escritura, reemplazo,
+alcance, aislamiento, cada plantilla con su propio modelo).
+
+**Queda del plan**: bloque 2 (las dos fechas en el padrón), bloque 3 (la
+fuente `funcion` en `validaciones_tramite`, requisitos y campo calculado),
+bloque 4 (en vivo con tope) y bloque 5 (las brechas del asistente).
+
+## Las dos fechas del padrón (2026-10-16, Admin 0.54.02, Trabajador 0.45.07)
+
+Bloque 2 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/padron-fechas`,
+decisión D4). La fuente `sistema` de las validaciones (bloque 3) necesita
+dos datos que el padrón no tenía: desde cuándo está afiliada la persona a
+ESTE gremio y cuándo nació. Se guardan como hechos, nunca como derivados:
+la antigüedad y la edad se calculan en la validación que las pide, con la
+fecha del día de Buenos Aires (`fechas.hoy`), y no envejecen en la base.
+
+**Cada fecha va a su dueño.** `Trabajador.fecha_afiliacion` es del
+empadronamiento (una persona se afilió a cada gremio en una fecha
+distinta) y la escribe solo el sindicato: alta manual, edición y carga
+masiva. `CuentaTrabajador.fecha_nacimiento` es de la PERSONA y sigue la
+regla del nombre y el domicilio: la carga ella en el registro y en el
+perfil, y el sindicato en Trabajadores solo si su padrón responde por la
+cuenta (`db.padron_responde_por`). Una cuenta creada antes de entrar a
+este padrón recibe la fecha de afiliación (que es nuestra) y no la de
+nacimiento (que es suya). Migración `f6a2d4c8e1b7`, dos columnas de texto
+ISO nulas.
+
+**Cinco puertas, una sola regla de formato.** `main._fecha_formulario`
+devuelve `""` si vino en blanco, ISO si es una fecha (AAAA-MM-DD o
+DD/MM/AAAA, vía `listas.normalizar_fecha`) y `None` si no se entiende; y
+en las cinco puertas el `None` corta antes de escribir: `err=fecha` en el
+alta y la edición, línea omitida (y contada, con la línea a la vista) en
+la carga masiva, 400 en el perfil y `error=fecha` en el registro, contado
+como fallo de la IP como el domicilio (si no, un CUIL ajeno con una fecha
+rota se distinguiría de uno propio). Nada se guarda como texto cualquiera.
+
+**En blanco significa lo mismo que el resto de los campos de esa
+pantalla.** En la edición y en el perfil la persona está viendo el valor
+cargado, así que en blanco borra; en el alta, la carga masiva y el
+registro, en blanco es "no lo completé" y no toca lo que ya hubiera.
+
+**La carga masiva las lleva al final.** Columnas 12 y 13
+(`fecha_afiliacion`, `fecha_nacimiento`), para que una planilla armada
+antes entre sin cambios. En un CUIL que YA está en el padrón, la línea
+actualiza su fecha de afiliación (es del empadronamiento, siempre de este
+gremio) y se cuenta en `fechasactualizadas`; la de nacimiento no, porque
+en esa línea no se tocan los datos de la persona. De paso la pantalla
+pasó a decir cuántos mails del padrón actualizó (`mailsactualizados`
+viajaba en la URL desde PLAN_REGISTRO y nadie lo mostraba).
+
+Lo que ve cada uno: el admin tiene los dos campos en el alta y la edición
+(precargados al editar) y "afiliado desde" bajo el estado en el listado;
+el afiliado, "Fecha de nacimiento (opcional)" en el registro y en el
+perfil. El registro y el perfil siguen pidiendo los mismos campos
+(`test_datos_personales` compara las firmas). Tests: `test_fechas_padron.py`
+(11: las cinco puertas, la fecha ilegible en cada una, la cuenta ajena y
+la planilla vieja).
+
+
+## Validaciones por función en Trámites (2026-10-16, Admin 0.55.01, Trabajador 0.46.01)
+
+Bloque 3 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/validaciones-funcion`,
+decisiones D2, D3 parcial, D6). Hasta acá una validación de formulario solo
+comparaba el campo con un valor fijo o con otro campo. Ahora puede mirar
+AFUERA del formulario: una fila de una lista del sindicato (bloque 1) o un
+dato del padrón (bloque 2), y evaluar una fórmula escrita como las Reglas de
+control. Es la fase 2 y 3 de validaciones del BACKLOG en una sola fuente,
+`funcion`.
+
+**El contrato** es el del plan: `{fuente: "funcion", origen: lista|sistema,
+lista, clave2, trae, formula, operador, valor, mensaje, bloquea, en_vivo}`.
+`trae: "existe"` es "el DNI está en el grupo familiar"; `trae: <columna>` +
+operador es la comparación simple; `formula` es la general. **El CUIL de la
+sesión es SIEMPRE la primera clave** de toda búsqueda en una lista: nunca
+viene del formulario (`db.contexto_validaciones` lo toma de la sesión, y el
+test prueba que Ana no puede usar la familia de Juan). La segunda clave es
+un campo del formulario, por orden (como las reglas de consistencia) y puede
+ser el mismo campo que se valida, que es el caso típico.
+
+**La fórmula se parsea con `ast` y se recorre a mano**, como
+`validador._ev_nodo` (XSK H-0005), en un evaluador propio de
+`validaciones_tramite` (`_ev`): números, textos entre comillas, los tres
+espacios de nombres (`campo.<etiqueta_normalizada>`, `lista.<columna>`,
+`sistema.<dato>`), aritmética, comparaciones encadenadas, `y` / `o` / `no`
+(se traducen a los operadores de Python sin tocar lo que va entre comillas)
+y nueve funciones cerradas (`hoy`, `dias_entre`, `meses_entre`,
+`anios_entre` en unidades CUMPLIDAS, `min`, `max`, `redondear`, `largo`,
+`existe`). Cualquier otra cosa es SyntaxError. **Los nombres de los campos
+los arma el servidor** (`nombres_de_campos`, ruta
+`POST /admin/tramite-tipo/nombres`) y no el JS: es la misma función que
+después evalúa, y dos normalizaciones distintas serían un nombre que el
+constructor muestra y la fórmula no encuentra. Una fórmula que nombra algo
+que no existe **no se guarda** (`error_de_formula`, contra un namespace de
+juguete con los nombres reales: el mismo criterio que `error_de_expresion`
+en las Reglas). Un dato que falta (`None`) en una cuenta o una comparación
+hace que la validación NO pase: nunca vale 0.
+
+**Lo que mira el sistema** (`DATOS_SISTEMA`): en el padrón, activo,
+registrado, seccional, provincia, localidad, nivel de fiabilidad, recibos
+verificados, color del semáforo y las dos fechas del bloque 2. Lo arma
+`db.contexto_validaciones(sid, cuil, tipo, valores)` en UNA sesión, y
+además trae de antemano las filas de lista que el envío va a necesitar
+(`busquedas_necesarias`): la evaluación queda pura y el request no abre una
+sesión adentro de otra (regla del 2026-09-19).
+
+**Requisitos para iniciar** (`TipoTramite.requisitos`, migración
+`a9c4e7f2d1b6`): la misma validación, sin segunda clave y siempre
+bloqueante, que se evalúa al enviar (y en el bloque 4, al abrir). **Campo
+`calculado`**: un tipo de dato nuevo cuya única validación es la fórmula
+que dice qué se muestra; el servidor lo calcula en `/api/tramite`, lo guarda
+como respuesta y **lo que mande el navegador se ignora**. Si no se puede
+calcular, queda vacío con un aviso al operador. En la app del afiliado se
+dibuja como un campo de solo lectura ("Se calcula al enviar").
+
+**El banco de pruebas prueba contra un afiliado real.** Sin un CUIL de
+prueba, las validaciones por función y los requisitos no se evalúan y la
+respuesta lo dice (`sin_contexto`), en vez de dar un verde que no vale.
+Con el CUIL, se usa el padrón y las listas reales del sindicato. El
+constructor dibuja las filas por función en violeta (lo que mira afuera del
+formulario), con el origen, la lista, la segunda clave, qué se controla
+(que esté / un dato / una fórmula), el comparador, el mensaje, Bloquea /
+Avisa y la marca "en vivo" (que el bloque 4 hace funcionar), más una ayuda
+desplegable con todos los nombres y funciones y un `datalist` sobre el
+campo de la fórmula. `__formula` es una marca SOLO del constructor ("lo que
+se mira es una fórmula", aunque todavía no se haya escrito); el servidor la
+lee como vacío.
+
+Lo que NO cambió: el constructor de empresa (D7, segunda vuelta) no ofrece
+funciones ni calculados; la validación en vivo del afiliado (`tvEvaluaCampo`)
+sigue siendo solo de las fijas, porque las de función necesitan al servidor
+(bloque 4). El asistente de trámites conoce el tipo `calculado` pero no lo
+propone (`TIPOS_QUE_PROPONE`). Tests: `test_validaciones_funcion.py` (11:
+motor, saneo, evaluación con contexto simulado, alta por la ruta, banco de
+pruebas con CUIL, envío frenado por la lista y por el requisito, calculado
+guardado por el servidor) y el humo con Playwright del constructor y del
+afiliado.
+
+
+## Validación en vivo y requisitos al abrir (2026-10-16, Trabajador 0.46.02)
+
+Bloque 4 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/validaciones-en-vivo`,
+decisión D3). Hasta acá las validaciones por función se evaluaban solo al
+enviar: el afiliado cargaba todo el formulario y recién al final se enteraba
+de que el DNI no estaba en su grupo familiar. Ahora:
+
+- **`GET /api/tramite/requisitos/{tipo_id}`, al abrir el formulario.** Si
+  los requisitos del tipo no se cumplen para el afiliado de la SESIÓN, la
+  app muestra los mensajes en vez de los campos (caja `tram-form-requisitos`,
+  sin botón de enviar) -- postergar es no responder, y un formulario que se
+  va a rechazar al final es peor que uno que dice por qué al principio.
+  Misma respuesta trae los **calculados que ya se pueden completar** (los
+  que no dependen de una segunda clave del formulario, como la antigüedad):
+  se dibujan apenas se abre. Misma puerta que el envío
+  (`_tipo_tramite_del_afiliado`: sesión, módulo, tipo activo de su
+  sindicato y seccional).
+- **`POST /api/tramite/validar-campo`, al salir del campo.** Solo las
+  funciones que el admin marcó "en vivo", y la respuesta es **pasa / no
+  pasa con el mensaje del admin, nunca la fila ni el dato que se miró**
+  (`vt.evaluar_campo_en_vivo`; el test lo verifica sobre las claves de la
+  respuesta). Recalcula además los calculados que usan ese campo como
+  segunda clave (la edad del chico aparece al escribir el DNI). **Diez
+  intentos por sesión y formulario** (`main._intentos_en_vivo`,
+  `EN_VIVO_MAX_INTENTOS`; después, 429): es lo que impide usar la respuesta
+  para enumerar una lista probando DNI. El contador se limpia con el envío
+  que ENTRA, no con uno rechazado. Del lado del navegador, un 429 apaga las
+  consultas (`enVivoAgotado`) y el afiliado sigue hasta el envío, donde todo
+  se evalúa igual: es cortesía, el servidor decide al enviar.
+- La validación en vivo de las fijas sigue siendo el espejo JS de siempre;
+  la de función se pregunta al servidor solo si el campo pasó las fijas y
+  tiene alguna marcada "en vivo" (o un calculado que depende de él).
+
+Tests: `test_tramites_en_vivo.py` (6: motor, requisitos al abrir con y sin
+cumplir, validar-campo sin fila, el tope de diez y su limpieza con el envío,
+la app pide las dos rutas). Humo con Playwright: Juan ve el error al salir
+del DNI y la edad al corregirlo; Ana ve los requisitos en vez de los campos.
+
+
+## Cierre de Listas y validaciones: el asistente deja de marcar lo que ya existe (2026-10-16, Plataforma 0.49.02)
+
+Bloque 5 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/validaciones-cierre`).
+El plan decía que al terminar, el Asistente de trámites dejara de marcar
+como brecha `duplicados`, `lista` y `requisitos`. Se hizo con una
+salvedad honesta:
+
+- **`lista` y `requisitos` salieron de `BRECHAS`** porque existen. El
+  control «contra una lista del sindicato» sobre un campo ya no es un
+  `x_pendiente`: exporta una validación por función real (el dato tiene que
+  estar en el grupo familiar, buscado por el CUIL de la sesión y por ese
+  mismo campo, con aviso en vivo), que pasa entera por el saneo del
+  constructor. Las respuestas a «¿Qué tiene que cumplir quien lo pide?»
+  salen como `requisitos` del formulario en el JSON (`requisitos_colm3na`):
+  antigüedad mínima (con `MESES_ANTIGUEDAD` = 6 como número de partida, la
+  instrucción dice que se ajusta) y ser titular (`sistema.en_padron`). Lo
+  que mira al familiar (tenerlo, su edad) no es un requisito del tipo sino
+  una validación sobre el campo del DNI: la instrucción lo dice en un paso
+  nuevo, «Requisitos».
+- **`duplicados` quedó, más chica.** «Una sola vez» (`frecuencia: unica`)
+  se cierra con un requisito sobre dos datos nuevos del sistema,
+  `sistema.tramites_de_este_tipo` y `sistema.tramites_abiertos_de_este_tipo`
+  (`db.contexto_validaciones` los cuenta por tipo; un formulario sin
+  guardar tiene cero). Pero «no repetir por familiar o por período» (el
+  mismo DNI dos veces) sigue sin existir: eso es unicidad por VALOR de un
+  campo entre pedidos, y el BACKLOG lo conserva como la mitad mediana del
+  punto 6.
+- El JSON dorado del kit escolar se regeneró con el motor: la única
+  diferencia es `requisitos` (ser titular) y las brechas que ya no están,
+  anotada en el test. El contrato de importación suma `requisitos` a cada
+  formulario.
+
+Estado del plan: **los cinco bloques hechos** el mismo día en que se
+acordó. Fuera del plan quedan, como decía: la tabla de columnas libres, la
+carga incremental, la fuente `externa` (fase 4 del BACKLOG) y la segunda
+vuelta de empresa (D7).
+
+
+
+## El asistente de trámites, más ágil, y once datos nuevos del sistema (2026-10-18, Admin 0.60.03, Plataforma 0.51.01)
+
+Pedido de SDN probando el asistente: "hace demasiadas preguntas y en las
+opciones pone opciones ridículas; siempre debe recomendar una y permitir
+una respuesta; una vez hechas las preguntas no tiene sentido agregar otro
+set al final; en los campos, un texto aclaratorio no obligatorio; tener en
+cuenta las validaciones que los formularios ya tienen; y que el resultado
+diga «usar la función X para validar así» o «desarrollar la función X que
+haga tal cosa», en formato prompt". Decisiones tomadas de a una con él:
+seis preguntas (la opción mínima), credencial vigente = código generado y
+fecha no vencida (sin fecha, vigente), la aclaración es del asistente (no
+una columna del formulario), y el prompt se suma como pestaña al lado de la
+instrucción y las brechas, sin reemplazarlas.
+
+**Seis preguntas, seis inferidas.** `PREGUNTAS` quedó con quién inicia,
+quién recibe, aprobación, requisitos, cómo termina y cuántas veces. Las
+otras seis que el motor necesita (segundo formulario, ventana, quién
+entrega, cupo, listado, tercero) pasaron a `INFERIDAS`: la IA las completa
+desde el relato, cada una tiene un valor por defecto y el analista las ve y
+las corrige en "Lo que entendí", sin pantalla propia. Los dos
+pseudo-pasos "actores" y "campos" dejaron de ser preguntas: los datos del
+formulario son la etapa 4 (con el editor de actores plegado adentro) y el
+flujo quedó en cinco etapas. **Toda pregunta tiene una recomendada**
+(`recomendada` en el catálogo): si la IA no propuso nada, `sanear_respuestas`
+la deja puesta y la marca en `recomendadas`, así la pantalla muestra
+"Recomendada" o "Propuesto por la IA" y el analista confirma con un clic.
+Y toda pregunta admite **una respuesta libre** (`nota_<clave>`, 300
+caracteres) que viaja al prompt bajo "A confirmar con el sindicato".
+**El segundo cuestionario se fue**: `preguntas_pendientes` devuelve solo
+las dudas de la IA, la ruta `/preguntas-extra` y `asistente_tramites_ia.preguntas_extra`
+no existen más, y las brechas se leen en el prompt con su salida provisoria.
+
+**Por campo: aclaración, regla, fórmula y función nueva.** `sanear_campo`
+acepta `aclaracion` (qué es el dato, para quien arma el formulario),
+`regla` (qué hay que controlar, en una frase), `formula` (la regla escrita
+con el catálogo) y `funcion_nueva` ("nombre: qué devuelve"). En
+`campos_colm3na` la fórmula que compila contra los nombres del formulario
+(`validaciones_tramite.error_de_formula`, con la lista Grupo familiar si
+nombra `lista.`) sale como validación por función REAL, con el mensaje de
+la regla y en vivo si mira la lista; la que no compila queda como
+`x_regla` con el motivo; la aclaración va como `x_aclaracion` y la función
+nueva como `x_funcion_nueva` (el importador ignora `x_`). **La IA conoce
+el catálogo**: `PROMPT_SISTEMA` lleva los datos del sistema, las listas y
+las funciones sacados de `validaciones_tramite.catalogo_funcion()`, con la
+regla de proponer lo mínimo, no repetir lo que el padrón ya sabe y no
+inventar datos que no estén ahí. Los requisitos suman la opción
+"credencial vigente".
+
+**El prompt** (`prompt_para_code`, pestaña "Prompt para Code" del
+resultado): configuración en el panel, los campos con sus aclaraciones,
+"Validaciones: usar lo que existe" (fijas, fórmulas con qué lista y si van
+en vivo, requisitos), "A controlar sin función todavía", "Funciones a
+desarrollar", "A confirmar con el sindicato" (notas libres y dudas) y las
+brechas. Es texto para pegar en Claude Code o pasarle a quien arma el
+formulario. La instrucción y la vista previa muestran también la
+aclaración y las reglas de cada campo.
+
+**Once datos nuevos del sistema** (`DATOS_SISTEMA`, los calcula
+`db.contexto_validaciones` con el CUIL de la sesión, ninguno se guarda):
+`credencial_vigente` (código generado y, si tiene vigencia, no vencida;
+sin fecha, vigente), `numero_credencial`, `edad`, `antiguedad_meses`
+(ambos con `meses_cumplidos` / `anios_cumplidos`, las mismas cuentas que
+`meses_entre` en una fórmula), `ultimo_recibo_periodo`, `meses_sin_recibo`,
+`ultimo_recibo_bruto` (el último recibo verificado por período, como la
+portada), `empleador_cuit`, `empleador_nombre` (la razón social si el
+sindicato tiene cargado ese CUIT), `tramites_abiertos` (de cualquier
+formulario) y `dias_desde_ultimo_pedido_de_este_tipo`. Con esto "credencial
+vigente y mayor de 18" es `sistema.credencial_vigente y sistema.edad >= 18`,
+y "hasta el 30% del bruto" es `campo.monto <= sistema.ultimo_recibo_bruto * 0.3`.
+
+JSON dorado del kit escolar regenerado (lo único que cambió es
+`pendientes.preguntas`, que ya no trae el segundo cuestionario). Tests:
+`test_asistente_tramites` (65: preguntas y recomendadas, prompt con usar /
+desarrollar / a controlar), `test_asistente_tramites_api` (15: el catálogo
+en el prompt de la IA, la ruta que se fue), `test_asistente_tramites_v2`,
+`test_validaciones_funcion` (12: los once datos contra el padrón, los
+recibos y el empleador, la credencial vencida y sin fecha) y el robot
+`e2e/test_robot_asistente_tramites.py` con el flujo de cinco etapas. Humo
+con Playwright: sin relato las recomendadas quedan puestas, la respuesta
+libre, la aclaración, la fórmula y la función nueva llegan al prompt.
+
+## Una clave por persona en el panel (2026-10-17, Admin 0.56.01, Plataforma 0.50.01)
+
+**El síntoma.** SDN dio de alta en La Bancaria a un usuario de área de la
+seccional Lomas de Zamora (CUIL 27000000006, área Secretaria General) y la
+persona no podía entrar. La pantalla de Usuarios lo mostraba bien: rol, área,
+seccional, "afiliado" y "clave pendiente".
+
+**La causa.** El alta impedía repetir un CUIL dentro de un sindicato, pero no
+entre sindicatos, y cada `UsuarioSindicato` guardaba su propia clave. El login
+de `/admin` buscaba ese CUIL en TODOS los sindicatos, se quedaba con la
+primera fila (sin `ORDER BY`: en Postgres el orden no está garantizado) y
+probaba la clave solo contra esa. Reproducido en una base descartable: con el
+CUIL solo en La Bancaria entra; con el mismo CUIL también en otro sindicato,
+uno de los dos recibe "Usuario o clave incorrectos". La definición del
+proyecto era otra: un CUIL, una clave, y si trabaja en más de un lado elige
+después del login, como el afiliado con pluriempleo. Se cumplía para el
+afiliado (`CuentaTrabajador`) y la empresa (`CuentaEmpleador`), no para el
+panel. No se pudo confirmar contra la base de Pruebas: la política de red del
+entorno de Code no deja llegar a `mitrabajo-pruebas.onrender.com`.
+
+**El arreglo, con el mismo patrón que el afiliado.**
+- `CuentaPanel` (una fila por CUIL) guarda la clave; `UsuarioSindicato` dice
+  en qué sindicato trabaja la persona y con qué rol.
+- El enganche `db._mover_clave_a_la_cuenta` (`before_insert` del modelo) lleva
+  la clave de un alta a la cuenta solo si la persona no tenía, y deja la fila
+  vacía. Vive en el modelo porque hay cinco puertas de alta (panel,
+  plataforma, `cargar_demo`, `cargar_bancaria`, robots): ninguna puede crear
+  una segunda clave. `medir_dashboard.py`, que inserta con SQL a mano, crea la
+  cuenta él mismo.
+- **La clave la fija el primer sindicato.** Si un segundo sindicato suma a la
+  persona, la clave inicial del formulario se descarta y el aviso lo dice
+  (`ok=usuariocuenta`). Si se usara, el admin de un gremio entraría al panel
+  de otro con una clave elegida por él.
+- Login: valida contra la cuenta; con un solo usuario activo entra directo,
+  con varios va a `/admin/elegir` (token firmado de 10 minutos, propósito
+  `elegir_panel`; el `usuario_id` elegido se valida contra los de esa
+  persona). "Cambiar de sindicato" en la portada vuelve al selector sin pedir
+  la clave. Clave correcta sin usuarios activos contesta igual que una clave
+  mala.
+- Aislamiento: el sindicato no ve en qué otro gremio trabaja la persona. Se
+  probó mostrarlo y se sacó. Lo ve plataforma, en la sección nueva "Usuarios
+  de los paneles" (una fila por CUIL, sus sindicatos con rol y el estado de la
+  clave), que responde a otra observación de SDN: `/plataforma` no tenía un
+  listado general de usuarios de admin.
+- El reseteo transitorio de plataforma escribe la cuenta (`db.fijar_clave_panel`).
+- La etiqueta "clave pendiente" pasó a "clave inicial" o "sin clave", leída de
+  la cuenta. El panel todavía no obliga a cambiarla ni deja que la persona
+  cambie la suya: queda como pendiente.
+
+**Migración `b8d2f6a4c1e9`.** Crea la tabla, completa `cuil = usuario` en filas
+viejas solo si el usuario es un CUIL de 11 dígitos, y por cada CUIL copia la
+clave de su fila ACTIVA más vieja (la del primer sindicato, que es la que la
+regla nueva hubiera conservado). Si una persona tenía claves distintas, la del
+sindicato más nuevo deja de valer y plataforma se la puede restablecer.
+Después vacía `clave_hash` de todas las filas. Ensayada ida y vuelta con datos
+(dos claves distintas, fila inactiva más vieja, fila sin `cuil`, login que no
+es CUIL). La demo cargada de cero entra con los once accesos de panel
+documentados.
+
+Tests: `test_cuenta_panel.py` (11). Se ajustaron `test_admin_usuarios.py`, las
+exentas de `test_areas_rutas.py`, el inventario de `test_regularizar_cuit.py`
+(la cuenta es una columna de CUIL más que se regulariza) y la clasificación de
+`test_cuit_puertas.py`.
+
+## El alta de usuario consulta el padrón, y la auditoría del alcance (2026-10-17, Admin 0.57.01)
+
+**Lo que preguntó SDN.** Si el alta de un usuario en Áreas y Usuarios falla
+"por CUIL inválido" cuando la persona no está primero en Trabajadores, y si
+convenía mover el alta del padrón a esa pestaña y eliminar Trabajadores.
+
+**Lo primero: no.** Las dos altas usan la misma `_cuil_mal` (módulo 11 y
+prefijo de persona) y ninguna consulta la otra tabla; el test de ayer da de
+alta un usuario que no está en ningún padrón. El número que rebotó,
+2301010101014, tiene 13 dígitos; sus dos recortes de 11 tampoco cumplen el
+módulo 11 (el válido es 23010101018). La ilusión de dependencia viene de que
+un CUIL copiado del padrón ya pasó la validación al entrar, o entró por un
+lote (inválido a propósito) que escribe directo.
+
+**Lo segundo: tampoco**, y quedó dicho en la conversación: Trabajadores es
+el padrón (miles de afiliados, sección del grupo Padrón que se da a un área
+y se recorta por seccional, siempre visible) y Áreas y Usuarios es el equipo
+del gremio (decenas de operadores, la única sección que no se puede dar a
+un área). Dos credenciales distintas, dos "Restablecer clave" con efectos
+distintos sobre la misma persona si vivieran en una pantalla. Lo que sí
+molestaba era tipear el CUIL dos veces: eso se resolvió con dos piezas
+chicas.
+
+- `GET /admin/usuario/padron?cuil=` (sección `areas_usuarios`): si está en
+  el padrón de ESTE sindicato devuelve nombre y seccional, si ya es usuario,
+  y si ya tiene clave del panel por otro sindicato. Un admin de seccional no
+  lee el padrón de otra delegación por acá (`fuera_alcance`, sin nombre). Un
+  CUIL que no está no revela nada más que eso.
+- En el formulario, al salir del campo CUIL, el aviso completa nombre y
+  seccional si faltan, y si la persona ya tiene clave del panel deja de
+  exigir la clave inicial (que el servidor igual descarta).
+- En la fila del padrón, "Dar usuario del panel" (solo si administra, dentro
+  del alcance y si la persona todavía no es empleada del sindicato) abre el
+  alta con CUIL, nombre y seccional puestos, por la URL: el mismo `sub=`
+  que ya usa el servidor al volver de un alta.
+- Tests: `test_alta_usuario_padron.py` (8).
+
+**Lo tercero, lo grave: el Admin de Seccional ve y toca todo el sindicato
+en la mitad del panel.** Se midió con datos (lote de La Bancaria, un admin
+local creado por la ruta real, comparado sección por sección con el
+general). Recortan bien Trámites (431 de 2.000), Notificaciones (89 de 200),
+Reportes (389 de 1.597), Encuestas, Listas, Seccionales, Usuarios y toda
+acción sobre un afiliado de otra seccional. No recortan: Trabajadores (lista
+los 100 del padrón, da de alta y carga masiva en otra seccional), Noticias y
+Beneficios (lista todo, edita y borra ajenas; al editar una ajena la
+redirige a su seccional), formularios de trámite (crea, edita y borra
+globales: el chequeo solo corre si la seccional vino cargada) y el Panel
+Sindical entero (5.000 recibos, filtros con las seis seccionales, explorador
+y mapa). Empleadores no tiene seccional (N11) y el catálogo del sindicato
+tampoco: son decisiones. El plan de corrección, por bloques, sin migraciones
+y con la regla de "fail-closed" que ya existe, está en
+`PLAN_ALCANCE_SECCIONAL.md`. Sobre "ve todos los trámites" en Pruebas: en el
+código la bandeja recorta; si ahí ve todos, revisar si Lomas de Zamora tiene
+"ve todas" tildado o si el usuario es administrador general.
+
+## Alcance del Admin de Seccional, bloques 0 a 2 (2026-10-17, Admin 0.58.01)
+
+SDN aprobó `PLAN_ALCANCE_SECCIONAL.md` con las dos decisiones: Empleadores
+(a), el admin local no los ve; catálogo (a), solo lectura. Y aclaró que
+Lomas de Zamora tiene "ve solo la suya": la excepción de `ve_todas` no
+explica lo que vio en Trámites, que sigue abierto (ver abajo).
+
+**Bloque 0, la red.** `test_alcance_seccional_panel.py` lleva
+`ALCANCE_POR_PREFIJO`: cada prefijo de ruta `/admin/*` con su relación con
+la seccional (`seccional` recorta o exige alcance, `sindicato` es del
+sindicato entero, `entrada` login y pantallas). Una ruta nueva sin
+clasificar hace fallar el test, y un prefijo que no calza con ninguna ruta
+también. Mismo criterio fail-closed que `PERMISOS_RUTAS`.
+
+**Bloque 1, Trabajadores.** `db.padron_del_sindicato(s, sid, alcance)`
+recorta en el `WHERE` (`seccional_id IN alcance`; `set()` devuelve vacío);
+es la única lectura del padrón del panel, así que el "Dar usuario del
+panel" y cualquier pantalla futura heredan el recorte. Plataforma sigue
+llamando sin alcance. En el alta, `_seccional_en_alcance` decide la
+seccional de quien está acotado: vacía = la suya (no puede crear "sin
+seccional", que nadie acotado alcanzaría), otra = 403; y la edición exige
+alcance sobre la fila que ya existe. La carga masiva aplica lo mismo línea
+por línea: sin seccional va a la suya, con otra queda omitida y la pantalla
+dice cuántas (`fueraalcance`). El `<select>` del formulario ofrece solo
+`seccionales_visibles` y, para el acotado, no ofrece "Sin asignar".
+
+**Bloque 2, Noticias y Beneficios.** Dos reglas puras en `db.py`:
+`publicacion_visible` (la ve si va a todas o alguno de sus destinos cae en
+el alcance: la misma regla que el historial de Notificaciones) y
+`publicacion_en_alcance` (la edita o borra solo si TODOS sus destinos caen
+en el alcance: una global o una de otra seccional la toca solo el alcance
+total). `noticias_del_sindicato` y `beneficios_del_sindicato` reciben el
+alcance, filtran y marcan cada fila con `propia`; la plantilla dibuja
+Editar y Borrar solo en las propias y en las otras dice por qué no. Las
+cuatro rutas de escritura pasan por `_exigir_alcance_publicacion`. Antes un
+admin local editaba una publicación ajena y, al guardarla, la redirigía a
+su seccional, o la borraba.
+
+Trece tests nuevos, cada bloque con su "el general sigue viendo todo".
+Nada cambia para el administrador general ni para una seccional con
+`ve_todas`.
+
+## Alcance del Admin de Seccional, bloques 3 y 5 (2026-10-17, Admin 0.59.01)
+
+**Bloque 3, formularios de trámite.** El alta pasa por
+`_seccional_en_alcance`: para un acotado, seccional vacía = la suya (antes
+vacía era GLOBAL y el chequeo de alcance ni corría), otra = 403. La edición
+y el borrado exigen alcance sobre la seccional del formulario también cuando
+es `None` (global): `_en_alcance` deja pasar un `None` solo al alcance total,
+que es exactamente lo que N7 dice ("no edita los globales"). El borrado no
+chequeaba nada. El listado (`tipos_tramite_del_sindicato(..., alcance)`) trae
+los globales (le llegan a su gente) más los de su alcance, con la marca
+`propio` para que la plantilla dibuje Editar y Borrar solo donde el servidor
+los aceptaría; el `<select>` de "¿Quién lo ve?" ya no ofrece "global" al
+acotado.
+
+**Bloque 5, las dos decisiones de SDN.** `Empleador` no tiene seccional
+(N11), así que un usuario acotado a una seccional sin `ve_todas` (admin
+local o usuario de área) no tiene las cuatro secciones `emp_*`:
+`db.permisos_efectivos` las descuenta (`permisos.SECCIONES_EMPLEADORES`),
+resolviendo "acotado" con la misma sesión para no abrir otra. Con eso la
+pestaña no se dibuja, las listas no se consultan y las rutas dan 403, todo
+por el mismo camino de siempre. El catálogo (Conceptos, Reglas, Aprendizaje,
+Convenio: `permisos.SECCIONES_CATALOGO`) queda en solo lectura para el
+acotado: `_exigir_permiso_de_ruta` rechaza todo POST de esas secciones si
+`db.es_acotado`, y la pantalla pone un banner en los cuatro paneles y
+esconde las acciones (Aprendizaje entero, que es acción). Un Admin de
+Seccional de una seccional con `ve_todas` no está acotado y conserva todo:
+lo fija un test. `test_areas_seccional.py` pasó de "las mismas secciones" a
+"las mismas menos Empleadores".
+
+## Alcance del Admin de Seccional, bloque 4: el Panel Sindical (2026-10-17, Admin 0.60.01)
+
+El bloque más grande del plan, y el que más pesaba en la auditoría: un
+admin local veía los 5.000 recibos, los 2.000 trámites, las seis
+seccionales en los filtros y en el mapa, y el explorador entero.
+
+**Un solo lugar.** `dashboard.imponer_alcance(f, alcance)` se llama desde
+`main._filtros_dashboard`, que ya era el único parseo de filtros del panel:
+los once endpoints de agregados, el explorador y el mapa lo heredan sin
+tocarlos uno por uno (igual que Encuestas con N18 y Reportes con su
+`alcance`). La regla: `f["seccionales"]` pasa a ser lo pedido ∩ el alcance,
+o el alcance entero si no pidió nada; una intersección vacía o un alcance
+vacío se traduce a `[0]`, un id que no existe, así el SQL no devuelve filas
+(un `IN ()` vacío no es SQL). Queda además `f["alcance"]`, porque el mapa
+necesita distinguir el alcance IMPUESTO del filtro ELEGIDO: ignora el
+segundo (el mapa es el selector) y respeta el primero
+(`_seccionales_impuestas`), y además no dibuja las burbujas de las otras.
+
+**Lo que recibe un id de persona chequea aparte.** Los cuatro detalles del
+modal "Ver" (recibo, trámite, grupo de notificaciones y sus destinatarios,
+consulta) reciben el alcance y devuelven `None` → 404 cuando la fila es de
+un afiliado fuera de él o sin seccional (fail-closed, con `_en_alcance`
+copiada en `dashboard.py` para no importar `main`). El catálogo de filtros
+no ofrece las otras seccionales y el buscador de afiliados (`buscar_afiliados`,
+`afiliado_por_id`) no las encuentra ni por id. El Asistente pasa por el
+mismo `imponer_alcance` en `_validar`, y busca personas con el mismo
+alcance: el modelo no puede pedir más de lo que el panel muestra.
+
+**La v2 (Preact) queda cubierta sola**: usa los mismos endpoints. Nada
+cambia para el general ni para una seccional con `ve_todas`; un test lo
+fija con los KPIs del local iguales a los del general filtrado por su
+seccional, y otro con el admin de una seccional `ve_todas` viendo los tres
+recibos. Cinco tests nuevos; la regresión del panel (46 de `test_dashboard`,
+cupo, concurrencia, v2, asistente, mapa, reportes, encuestas) en verde.
+
+## Alcance del Admin de Seccional, cierre (2026-10-17)
+
+Con los seis bloques en `main` se repitió la auditoría del mediodía, con la
+misma base (lote de La Bancaria) y el mismo método. Los números, antes y
+después, están en `docs/chat/2026-10-17-auditoria-alcance.md`: el padrón del
+local pasó de 100 a 20, el Panel de 5.000 a 1.180 recibos y de 6 a 1
+seccional en filtros y mapa, y las nueve escrituras ajenas que antes
+pasaban (alta y carga masiva en otra seccional, editar y borrar
+publicaciones ajenas, crear, editar y borrar formularios globales, el
+catálogo, los detalles del Panel, las rutas de Empleadores) quedaron
+bloqueadas. El general no cambió en nada. Seis PRs en el día (#135 a #139
+más el de cierre), cada uno con su CI y su regresión; sin migraciones.
+
+## Alcance del Admin de Seccional, bloque 7: lo que la pantalla ofrecía (2026-10-17, Admin 0.60.02)
+
+El cierre del plan duró una hora. SDN entró en Pruebas con el Admin de
+Seccional de Lomas de Zamora (23010101018) y lo vio elegir cualquiera de las
+siete seccionales de La Bancaria como destino de una noticia, un beneficio,
+una notificación o una encuesta. La auditoría de los bloques 0 a 6 había
+medido lo que el servidor DEVUELVE (listas recortadas) y lo que ACEPTA
+(escrituras ajenas rechazadas), y en los dos frentes estaba bien: los
+destinos fuera del alcance se descartan (`_destinos_de_publicacion`,
+`resolver_destinatarios` con `usuario_id`), y en Pruebas una notificación
+"a Rosario" del admin de Lomas daba cero destinatarios. Lo que nunca se
+midió fue lo que la pantalla OFRECE: las casillas iteraban `seccionales`
+(todas las del sindicato) y no `seccionales_visibles`. El servidor tenía
+razón y la pantalla mentía, que es exactamente lo que el código del
+catálogo de permisos ya decía que no había que hacer ("ofrecérselo en
+pantalla para después descartarlo en el POST sería mentirle"). Quedó como
+regla 8 del plan.
+
+De paso apareció un agujero real de servidor, el único del bloque:
+`db.noticia_de_encuesta` creaba la `Noticia` que anuncia una encuesta sin
+`destino_seccionales`, y en este modelo lista vacía es "a todas". Una
+encuesta creada por un admin local lleva su seccional (N18), pero su
+noticia salía a todo el sindicato. Ahora hereda la seccional de la
+encuesta: `[seccional_id]` si la tiene, `[]` si la creó el general.
+
+**Pantalla** (`templates/admin.html`): Noticias y Beneficios iteran las
+visibles y, con una sola, en vez de casillas va "Va a tu seccional: X"
+(sin input: el servidor fuerza el destino igual); Notificaciones y
+Publicar encuesta muestran "Por seccional" solo con más de una visible,
+con un aviso de alcance arriba del criterio y "A todo el padrón de tu
+seccional"; el aviso de Seccionales "sin ubicación" cuenta las visibles.
+Provincia, CUIT y CUIL siguen para el acotado: son filtros dentro de su
+alcance y el preview dice el número real.
+
+**Método**, pedido por SDN después del tropiezo: dos desarrolladores en
+paralelo (servidor y pantalla, cada uno en su worktree), dos QA
+independientes (uno de código, con intentos de escape por POST y búsqueda
+de la otra seccional en todo el HTML del acotado y de un usuario de área;
+otro de uso, un robot Playwright contra la demo local como Rosario, como
+el general y como Prensa Córdoba, con capturas) y la aprobación final de
+Code, que además repitió en Pruebas la verificación con 23010101018.
+`test_alcance_seccional_pantalla.py` recorre TODOS los bloques de casillas
+del HTML (no solo los conocidos) y falla si a un acotado se le ofrece un
+id fuera de su alcance; `test_alcance_seccional_panel.py` suma los tres
+tests de la noticia de la encuesta.
+
+Lo que encontraron los dos QA, y se corrigió antes del merge: (1) al sacar
+"Por seccional" para el acotado, Notificaciones (que no tiene criterio
+"todos") le quitó al admin local la única forma de decir "a toda mi
+seccional", y el general de un sindicato con UNA sola seccional también la
+perdió; ahora el acotado ve primero "A toda tu seccional (X)" con su
+casilla tildada y oculta, y el general con una seccional sigue viendo "Por
+seccional" (el robot lo confirmó: 28 destinatarios de Rosario guardados).
+(2) Un usuario de área sin el permiso Seccionales recibía un `TypeError`
+de JS en cada carga del panel, anterior al bloque, porque el script de
+georreferenciación enganchaba `form-seccional` sin comprobar que exista.
+(3) El texto del modal "Avisale a los afiliados" decía que la noticia la
+ve cualquiera; para el acotado ahora dice que es de su seccional.
+
+
+## Cada dato explicado con un ejemplo, y los datos del asistente en tarjetas (2026-10-18, Admin 0.61.01, Plataforma 0.52.01)
+
+Con 22 datos del sistema (`DATOS_SISTEMA`) el rótulo solo no alcanzaba:
+SDN pidió que cada función esté explicada en unas palabras y con un ejemplo,
+en el constructor y en el asistente, porque en varias no se sabe qué devuelve
+ni cómo se compara. Y que el paso "Los datos" del asistente, que mostraba
+cuatro cajas sueltas por fila, se rediseñe limpio con la skill de Emil
+Kowalski, respetando la marca y sin perder un dato.
+
+**Una sola fuente.** `validaciones_tramite.AYUDA_SISTEMA` (dato → grupo,
+qué devuelve, ejemplo, qué significa), `AYUDA_FUNCION` (función → ejemplo,
+significa) y `COMO_SE_COMPARA` (tipo → cómo se compara, en una frase).
+`catalogo_funcion()` las expone (`grupo`, `devuelve`, `ejemplo`,
+`significa` por dato; `grupos`; `comparar`), y de ahí leen las tres
+pantallas y el prompt de la IA (`_catalogo_para_el_prompt`, que ahora lleva
+el ejemplo de cada dato y de cada función). Fail-closed:
+`test_cada_dato_y_cada_funcion_traen_su_ejemplo` exige una entrada por dato
+y por función, y que **cada ejemplo compile** con `error_de_formula`
+contra un formulario de prueba: una ayuda que enseña una fórmula rota es
+peor que ninguna (el primer borrador tenía dos así: `hoy-180` es un límite
+de los controles, no de las fórmulas, y `lista.fecha_baja` no existe).
+
+**Constructor (`templates/admin.html`).** Tres lugares, todos del mismo
+catálogo:
+- la **línea bajo la fila** (`htmlAyudaElegido`, `.ct-fn-ayuda`): al elegir
+  un dato del padrón dice "Devuelve sí / no. Vale sí o no. Como control…
+  Ej.: `sistema.credencial_vigente` → tiene credencial generada y no
+  vencida", con "Ver todos"; al elegir una columna de lista, el tipo y cómo
+  se compara; al elegir "una fórmula", con qué se escribe. "Que esté en la
+  lista" no lleva línea.
+- el **`title` de cada opción** del select (`tituloDe`): el tooltip del
+  navegador al recorrer la lista, antes de elegir.
+- el **modal "Datos y funciones para las fórmulas"**
+  (`#overlay-ayuda-funciones`, familia `.overlay-ayuda`, así movimiento.css
+  y modales.js ya lo cubren; `renderAyudaFormula` arma su cuerpo): buscador
+  (`filtrarAyudaFunciones`, por data-texto, esconde los grupos vacíos solo
+  mientras hay texto), "Cómo se compara cada tipo", los campos de este
+  formulario, el padrón por grupo (Padrón, Credencial, Recibos, Trámites,
+  Domicilio), las listas y las funciones, cada uno con tipo, rótulo y
+  ejemplo. "Ver todos" desde una fila abre el modal **en ese dato**
+  (`data-ancla`, `scrollIntoView` y un resalte de 1,8 s). El `<details>`
+  "Nombres y funciones para las fórmulas" que había al pie se reemplazó por
+  una línea con el enlace al modal. Un detalle de CSS: los botones primarios
+  de admin van en condensada mayúscula por una regla con trece `:not()`; el
+  enlace `.ct-fn-mas` se sumó a esa lista de excepciones, que es el patrón
+  de la hoja.
+
+**Asistente (`static/asistente_tramites/app.js`, `Campos` y `Catalogo`).**
+Cada dato es una tarjeta `.cp`: número en ámbar, la pregunta grande (16px,
+600; un separador va en condensada mayúscula), abajo tipo / control /
+opciones / obligatorio con rótulo chico en mono, y un renglón `.cp-det`
+plegado, "Aclaración y control", que **resume en chips** lo que está
+escrito (`.cp-chip`, con el valor entero en `title`) y abierto muestra los
+cuatro campos con rótulo y ayuda (aclaración, regla, fórmula con `datalist`
+y placeholder, función nueva) más "Ver los datos y las funciones, con
+ejemplos", que abre el catálogo debajo. Los chips se esconden mientras el
+detalle está abierto para no decir dos veces lo mismo. `Catalogo` es el
+mismo contenido que el modal del constructor, en la colmena nocturna de la
+herramienta, con buscador que filtra los tres grupos a la vez. Reglas de
+`emil-design-eng` y de `diseno-mi-trabajo` aplicadas: se anima opacity y
+translate al entrar (`fila-entra`, cascada con `--mov-escalon`), el chevrón
+gira con `--ease-mueve`, el renglón plegable se aprieta (`scale: .995`),
+hover solo con mouse, nada anima el alto, y con "reducir movimiento" quedan
+fundidos. De paso se corrigió el `.catalogo` viejo, que tenía colores de
+pantalla clara (gris `#5b6478`, código sobre `#f1eefa`) sobre el fondo
+oscuro. htm no decodifica entidades: los `<=` del texto del catálogo van
+como expresión `${"<= >= < > == !="}`, no como `&lt;=`.
+
+**Verificado** con dos robots Playwright contra la app local (constructor:
+línea de ayuda, title de la opción, modal abierto en el dato, buscador,
+"sin resultados", enlace del pie; asistente: tarjetas, plegado y chips,
+catálogo y búsqueda, y el prompt del resultado que sigue llevando
+aclaración, regla, fórmula y función nueva) y con
+`test_validaciones_funcion.py` (14), `test_asistente_tramites_v2.py` (8),
+`test_asistente_tramites_api.py`, `test_tramites.py`, `test_modales.py` y
+`test_alcance_seccional_pantalla.py`.
+
+## Un calculado con condición muestra Sí / No y nunca frena (2026-10-18, Admin 0.61.02, Trabajador 0.46.03)
+
+SDN probó en el banco de pruebas un campo **calculado** con la fórmula
+`sistema.edad > 1` y vio que "pasaba todo": con `> 1000000` o con `<`
+también daba "Listo para enviar". Dos cosas distintas:
+
+- **Por diseño**: un calculado MUESTRA el resultado de su fórmula, no
+  valida. Nunca frena el envío. Para frenar por una condición hay que usar
+  una **validación del campo** o un **requisito para iniciar** (p. ej.
+  "en el padrón" → "Años cumplidos" → mayor que 18, o la fórmula
+  `sistema.edad >= 18`). La fila de un calculado ahora lo dice en su línea
+  de ayuda.
+- **Bug real**: `_evaluar_funcion` devuelve `pasa=False` cuando una fórmula
+  da un booleano falso (es el camino de las validaciones), y
+  `evaluar_envio`, `validar_campo_en_vivo` y `requisitos_al_abrir` tomaban
+  ese `pasa` para decidir si había resultado: con `sistema.edad > 1000000`
+  el campo quedaba **vacío** y salía el aviso "no se pudo calcular (no
+  cumple la condición)". Ahora el calculado muestra `_texto_resultado`
+  siempre que haya resultado ("No" para un falso) y el aviso queda solo
+  para cuando falta un dato (`resultado is None`). Test:
+  `test_un_calculado_con_condicion_muestra_si_o_no_y_nunca_frena`.
+
+## Ingreso y validación: dos cosas separadas en cada campo de Trámites (2026-10-18, Admin 0.62.01, Trabajador 0.47.01, Plataforma 0.52.02)
+
+SDN encontró el constructor difícil de leer para alguien que no lo conoce y
+lo definió así: un campo **se completa** de una de tres maneras (lo carga
+el afiliado a mano, se **extrae** de una función directa como "traeme la
+edad", o se **calcula** como "la antigüedad por cinco") y, aparte, **se
+valida** o no (contra un valor fijo, un rango, otro campo, el resultado de
+otra función, una fórmula). El único chequeo del ingreso es el intrínseco
+(no se cargó, no se pudo recuperar); todo lo de contenido va en la
+validación. Nombres normalizados: `Extraer X`, `Calcular X`, `Validar X`, y
+los datos del sistema como `Sistema.Afiliado.Edad`. Cuatro decisiones más,
+tomadas con opciones: alcance **pantalla y nombres, mismo modelo guardado**;
+lo extraído o calculado es **propuesto y el afiliado lo puede corregir**; la
+consistencia entre campos pasa a ser «Validar contra otro campo» y los
+requisitos quedan aparte como «Validar antes de abrir». Y una regla más,
+de SDN sobre la marcha: **al tocar un dato propuesto la app avisa que está
+registrado**; si es un dato propio de la persona el cambio se actualiza en
+su perfil, si es del sindicato o un cálculo queda anotado en el trámite
+para quien lo evalúa, y el trámite sigue.
+
+**Motor (`validaciones_tramite.py`).**
+- `sistema.afiliado.<dato>` es el nombre completo (`FAMILIA_SISTEMA`,
+  `nombre_dato`); `_ev` lo resuelve al mismo diccionario que `sistema.<dato>`,
+  que sigue valiendo en lo guardado, y `_a_python` pasa los nombres con
+  punto a minúsculas fuera de comillas (`Sistema.Afiliado.Edad` vale). El
+  catálogo trae `nombre`, `propio` y `familia`; la ayuda, el prompt de la
+  IA y las dos pantallas lo usan.
+- El ingreso de un calculado es la validación de fuente `funcion` marcada
+  **`ingreso`** (`funcion_saneada(calculado=True)` la marca;
+  `validaciones_saneadas` la pone primera). Lo guardado antes tenía una sola
+  función sin operador: `ingreso_de` la toma como ingreso. `validaciones_de`
+  devuelve el resto. Un calculado ahora **puede tener validaciones**: una
+  fija infiere el tipo del límite (`_tipo_inferido`: número, fecha u
+  hoy±N, texto) porque el campo no declara tipo; las de función van como en
+  cualquier campo.
+- `evaluar_envio` en dos pasadas: primero los ingresos (lo propuesto, y si
+  el afiliado escribió otra cosa vale lo suyo: `calculados` lleva el valor
+  FINAL, `corregidos` la lista de lo cambiado con `dato` y `propio`, y la
+  advertencia dice "el afiliado corrigió el dato: puso «41»; el sistema
+  tenía «40». Revisarlo al evaluar / Se actualizó en su perfil"); una fecha
+  de nacimiento corregida que no sea ISO frena. Después, con los valores
+  finales en el namespace, requisitos, funciones, fijas y reglas.
+- Un dato sí / no elegido sin operador (un requisito «Tiene credencial
+  vigente» a secas) vale "tiene que ser sí": antes se descartaba en
+  silencio al guardar y el requisito desaparecía.
+- `descripcion_ingreso(campo)` → `{modo, dato, propio, rotulo}`, lo que la
+  app del afiliado necesita para avisar. `DATOS_PROPIOS` = fecha de
+  nacimiento, provincia, localidad: lo que la persona edita en su perfil.
+
+**Servidor.** `/api/tramite` ya no ignora el valor de un calculado: lo
+lleva a `evaluar_envio` y, por cada corregido propio, llama a
+`db.actualizar_dato_personal` (la fecha directa; provincia o localidad
+rearmando el bloque de domicilio con `geo.campos_para_guardar` y `sin_geo`,
+porque el globo ya no vale). `/api/tramites/tipos` suma `ingreso` a cada
+campo extraído o calculado.
+
+**Constructor (`templates/admin.html`).** "Calculado" dejó de ser un tipo
+del desplegable. Cada campo tiene dos bloques: **INGRESO** con tres radios
+(Lo carga el afiliado / Extraer un dato / Calcular con una fórmula;
+`htmlIngresoCampo`, `cambiarIngresoTramite` guarda el tipo manual en
+`_tipo_manual` para volver) y la fila de ingreso (`htmlFuncionRow` en modo
+`extraer`, que ofrece solo datos y columnas, o `calcular`, solo la fórmula)
+con la ayuda que dice qué pasa si el afiliado lo corrige; y **VALIDACIÓN**
+con un menú «+ Validar…» (un valor, un rango —dos fijas—, otro campo, un
+dato del afiliado o una lista, una fórmula) y las filas "Validar que sea…",
+"Validar contra otro campo:" (las reglas de consistencia, `htmlReglasDeCampo`,
+se dibujan adentro del campo restringido y se siguen guardando por orden) y
+las de función. Sin filas: "Sin validación: el dato se toma como está". La
+sección "Consistencia al enviar" se fue; "Requisitos para iniciar" es
+«Validar antes de abrir» con rótulo "Antes de abrir". El banco de pruebas
+deja escribir encima de un extraído para probar la corrección. El
+constructor de empresa conserva su sección de consistencia (D7).
+
+**App del afiliado (`templates/trabajador.html`).** El campo extraído o
+calculado ya no es de solo lectura: se precarga (`data-propuesto`), se ve
+en violeta claro, y al enfocarlo aparece la nota: "Este dato está registrado
+en tu perfil. Si lo cambiás acá, se actualiza en el sistema" para los
+propios; "Este dato lo tiene registrado el sindicato / Este valor lo
+calcula el sistema. Si lo cambiás, queda anotado en el trámite para que lo
+revisen" para el resto. Un recálculo en vivo no pisa lo que la persona ya
+corrigió (`data-editado`). El valor viaja al enviar.
+
+**Asistente.** Rótulos del detalle: Aclaración / Validar / Validar con
+fórmula / Función a desarrollar; catálogo y sugerencias con
+`sistema.afiliado.…`.
+
+**Verificado** con dos robots Playwright contra la app local: el
+constructor arma extraer (propio y del sindicato), calcular, un valor, un
+rango, contra otro campo y antes de abrir, prueba con un afiliado real
+(corrige la edad a 70 y la validación "hasta 60" frena con el aviso de
+corrección), guarda y reabre con los modos reconocidos; y la app del
+afiliado muestra los propuestos, las dos notas, envía con la edad corregida
+(queda la advertencia) y con la fecha de nacimiento corregida (se actualiza
+en `CuentaTrabajador`). Tests: `test_validaciones_funcion.py` (16, con
+`test_ingreso_y_validacion_de_un_campo_extraido_o_calculado`),
+`test_tramites.py`, `test_tramites_en_vivo.py`, `test_asistente_tramites*.py`,
+`test_alcance_seccional_pantalla.py`, `test_modales.py` y el robot e2e del
+asistente.
+
+## El banco de pruebas no inventa correcciones, y cada campo es una tarjeta (2026-10-18, Admin 0.62.02)
+
+Dos observaciones de SDN al probar el constructor nuevo:
+
+- **"El afiliado corrigió el dato" cuando el que cambió las condiciones fue
+  el admin.** El banco de pruebas dejaba en el input de un extraído el valor
+  del "Probar" anterior y lo mandaba como corrección en el siguiente. Ahora
+  lo propuesto se guarda aparte (`propuestosPruebaTramite`, `data-propuesto`
+  en el input) y solo viaja lo que el admin escribe ENCIMA de eso; cambiar
+  el ingreso del campo (`cambiarIngresoTramite`, cualquier cambio en la fila
+  de ingreso) olvida lo probado. Robot: tres pruebas seguidas cambiando el
+  dato dan cero avisos; escribir 999 encima da uno.
+- **Delimitar y marcar.** Cada campo pasó a ser una tarjeta con filo de 5px
+  del primario de la marca, fondo blanco y sombra corta (se fue el lomo
+  punteado y el lavado alternado); adentro, los bloques INGRESO (filo
+  violeta, rótulo sólido violeta) y VALIDACIÓN (filo y rótulo del primario)
+  con fondo propio; «Validar antes de abrir» con el mismo marco; el menú
+  «+ Validar…» en el primario con borde punteado. Todas las ayudas del
+  constructor (`.ct-fn-ayuda`, los `muted` de la sub-pestaña, los vacíos)
+  van en 11px itálica gris, con el código derecho.
+
+## El campo del constructor como un onboarding de tres pasos (2026-10-18, Admin 0.62.03)
+
+SDN vio los bloques de la vuelta anterior "demasiado aislados" y pidió un
+solo bloque por campo, paso a paso como un onboarding, con la aclaración al
+costado de cada dato y marcando qué es obligatorio y qué opcional. Cada
+campo es ahora una tarjeta con una **cabecera** (orden, etiqueta en
+condensada, tipo como chip, subir / bajar / quitar) y **tres pasos**
+numerados en un círculo del primario: **1 El dato** (obligatorio: etiqueta,
+tipo, ancho, obligatorio para el afiliado y solo los controles que aplican
+al tipo: longitudes para texto, decimales para número, opciones para las
+listas, tipos para archivo), **2 Ingreso** (obligatorio: los tres radios y,
+si extrae o calcula, la fila de ingreso) y **3 Validación** (opcional: el
+menú «+ Validar…» y las filas). Cada paso lleva a la derecha su
+**aclaración en 10,5px itálica** (`.ct-paso-nota`): la del ingreso es la
+misma ayuda que la fila mostraba abajo (`ayudaDeIngreso`, qué devuelve,
+cómo se compara, el ejemplo y "Ver todos"), ahora al costado; en teléfono
+baja debajo. `renderCamposTramite` arma la tarjeta; `htmlValidacionesPiezas`
+devuelve filas y menú (el constructor de empresa sigue con su envoltorio
+`htmlValidacionesCampo`); `htmlFuncionRow(..., sinAyuda)` omite la ayuda
+inline cuando va al costado. Los selectores de los robots pasaron de
+`.ct-bloque.valid` a `.ct-paso.valid`.
+
+## El constructor como formulario guía, con la ayuda a pedido (2026-10-18, Admin 0.63.01)
+
+SDN: "es desproporcionada la cantidad de texto de ayuda; no lo quiero ver
+por default; poné solo los datos necesarios, las explicaciones solo si se
+presiona; un diseño más profesional del formulario guía, con la skill de
+Emil Kowalski". Lo que cambió en `templates/admin.html`:
+
+- **Cuatro pasos con riel** (`.ct-guia`, `.ct-pasog`): 1 El trámite (título,
+  código), 2 Quién lo recibe (área por defecto, quién lo ve, permitir pase,
+  mapa por seccional plegado), 3 Los campos (las tarjetas) y 4 Validar
+  antes de abrir; cada uno con su número en un círculo del primario, el
+  nombre en condensada, obligatorio / opcional y un «?». La vista del
+  afiliado queda a la derecha, fija, para los cuatro. Los seis párrafos
+  `muted` que SDN pegó desaparecieron de la vista; el pie "Las fórmulas
+  nombran…" es ahora un enlace corto, "Datos y funciones, con ejemplos".
+- **El «?»** (`.ct-help`, `data-ayuda` con HTML propio escapado por
+  `escAttr`; `helpBtn()` lo arma): un solo globo `#ct-tip` delegado en
+  `document`, porque los constructores se redibujan con `innerHTML`. Al
+  pasar el mouse aparece a los 150 ms y, si se recorre el siguiente dentro
+  de los 600 ms, al instante (Emil Kowalski: la espera es para el primero);
+  escala desde `.97` con `--mov-rapido` y `--ease-salida`, con el origen en
+  el disparador y flip hacia arriba si no entra abajo; un clic lo deja
+  fijo (para tocar "Ver todos") y Escape o un clic afuera lo cierra; el
+  foco del teclado también lo abre. Se agregó a la lista de excepciones de
+  la regla global de botones (condensada mayúscula), como `.ct-fn-mas`.
+- **En la tarjeta del campo**, la columna de aclaraciones se fue: cada paso
+  lleva su «?» en la cabecera, y la fila de ingreso o de validación por
+  función lleva el suyo con lo específico del dato elegido (qué devuelve,
+  cómo se compara, ejemplo, "Ver todos"). `htmlAyudaElegido` devuelve el
+  HTML pelado y `htmlFuncionRow` lo envuelve en `helpBtn`.
+- Un tropiezo que atrapó el robot: al reemplazar el bloque de CSS de los
+  pasos se fue con él el de las filas de validación (`.ct-vrow`,
+  `.ct-sello-sw`, `.ct-fuente`): "Bloquea / Avisa" quedó como texto plano
+  en la primera captura. Se restauró desde `main`. Y el «?» salía como un
+  círculo rojo lleno sin signo: la regla global de botones le pisaba el
+  fondo; de ahí la excepción.
+- De paso, el texto vacío del teléfono ("Agregá campos para ver la vista
+  previa") ocupaba una sola columna de la grilla de 12 y salía una palabra
+  por línea: ahora cruza toda la grilla.
+
+Robots: el del constructor completo más uno del globo (oculto por default,
+hover lo muestra y lo esconde, clic lo fija, Escape lo cierra; cero textos
+`muted` de ayuda visibles salvo los dos estados vacíos).
+
+## La skill Impeccable, instalada para la revisión de diseño (2026-10-19)
+
+SDN pidió "la skill de diseño impecable" disponible para todo el proyecto,
+porque desde el 2026-10-20 se revisa y mejora el diseño de toda la plataforma
+paso a paso, respetando los colores de marca. Es **Impeccable** de Paul Bakaus
+(https://github.com/pbakaus/impeccable, impeccable.style, Apache 2.0, v4.6.0):
+nació de la `frontend-design` de Anthropic y suma 24 comandos con un
+vocabulario compartido (`critique`, `audit`, `polish`, `typeset`, `layout`,
+`colorize`, `animate`, `clarify`, `distill`, `bolder`, `quieter`, `harden`,
+`onboard`, `adapt`, `optimize`...), cuatro subagentes y un detector de 61
+reglas de anti-patrones (Inter para todo, degradés violeta-azul, tarjetas
+dentro de tarjetas, texto gris sobre color).
+
+Se instaló como las otras dos skills de terceros: copia textual de lo que el
+repo distribuye para Claude Code (`.claude/skills/impeccable/` y
+`.claude/agents/impeccable-*.md`), fijada al commit `0665bd8` con SHA-256 en
+`ORIGEN.md`, leída antes de instalarla (SKILL.md, los cuatro subagentes y
+`craft-floor.md` enteros; las 42 referencias recorridas buscando cualquier
+instrucción que no fuera de diseño: no hay). Lo que se dejó afuera, con el
+porqué en la ficha: los **hooks del detector** (corren un binario que el
+lanzador baja de GitHub Releases en el primer uso; en la nube no persiste y
+no siempre se puede ejecutar, y la skill prevé seguir sin él), y el **modo
+`live`** (servidor local más CSP ensanchada: la CSP es una decisión de XSK y
+no se abre para una herramienta de diseño). Quien quiera el detector en su PC
+lo prende con `/impeccable hooks on`, que escribe en `settings.local.json`,
+ahora en `.gitignore` junto con lo que dejan el detector y el modo live.
+
+El orden entre las tres skills de diseño queda escrito en `ORIGEN.md` y en
+CLAUDE.md: manda `diseno-mi-trabajo`. Dos choques conocidos desde el primer
+día, porque el `craft-floor` de Impeccable los lista entre lo que "rechaza":
+el kicker arriba del título (el esquema "Hilo" lo lleva en acento) y los
+números de sección (el formulario guía del constructor numera sus pasos).
+Los dos se quedan. Y la tipografía no se cambia por sindicato ni se buscan
+fuentes "con carácter": es la de la skill del proyecto.
+
+`PRODUCT.md` y `DESIGN.md`, los dos archivos con los que Impeccable guarda el
+contexto del producto y el sistema visual, no se escribieron: son el primer
+paso de la revisión (`/impeccable init` entrevista; `/impeccable document`
+lee el sistema del código), no de la instalación.
+
+## El constructor como hoja de trabajo, con borrador (2026-10-19, Admin 0.64.01)
+
+Primer bloque de la revisión de diseño con Impeccable. Se armaron tres
+direcciones para el constructor de formularios de Trámites en un lienzo de
+diseño (https://claude.ai/artifact/39fiNwNrpcyDXpGaQHqNnn): A «Hoja de
+trabajo» (densa, riel de pasos + filas de campos + vista fija), B «Guía de a
+un paso» (un paso por pantalla) y C «El formulario como lo ve el afiliado»
+(el lienzo es el formulario, inspector al costado). SDN eligió la **A**, "la
+más clara aunque sea densa", con el fondo cuadriculado suave de la C detrás
+del área de construcción, y pidió poder **guardar un borrador**.
+
+Lo construido sobre `templates/admin.html` (sección `tramite-sub-tipos`):
+
+- **Tres columnas**: el riel (`#tt-riel`, `.ct-riel-paso`) con los cuatro
+  pasos y su estado, que `actualizarRielTramite()` recalcula con cada
+  cambio del formulario (hecho en verde cuando el paso tiene lo
+  obligatorio, actual en blanco el primero que falta, y debajo el estado
+  "Nuevo / Borrador / Publicado · sin guardar"); el **área de construcción**
+  (`.ct-area`, retícula de 24 px con el primario al 6%) con la hoja blanca
+  adentro; y la vista del afiliado de siempre, fija. La hoja se sale del
+  ancho del panel (`.ct-ancho`: `min(1232px, 100vw - 44px)` centrado),
+  porque tres columnas no entran en los 956 px del `.wrap`; en teléfono
+  vuelve a una columna y el riel deja de ser fijo.
+- **Los campos como filas de una tabla** (`.ct-tabla`, `.ct-fila`): orden,
+  etiqueta, tipo, ingreso y validación como chips, subir y quitar. **Un solo
+  campo abierto a la vez** (`campoAbiertoTramite`): al tocar una fila se
+  despliega debajo el editor (`.ct-editor`) con los tres pasos de siempre
+  (El dato, Ingreso, Validación) como rótulo a la izquierda y controles a la
+  derecha; el contenido de cada paso es el mismo código de antes
+  (`editorDe`), solo cambió el marco. Agregar un campo lo abre y pone el
+  foco en la etiqueta; escribir la etiqueta actualiza la fila sin
+  re-dibujar (se perdería el foco); mover, quitar y arrastrar conservan
+  cuál está abierto.
+- **Borrador** (`TipoTramite.borrador`, migración `c7e9a1d3f5b2`): el botón
+  "Guardar borrador" del riel manda `accion=borrador` y el servidor guarda
+  sin exigir campos ni área, **conserva los campos sin etiqueta**
+  (`_campos_tramite_validos(..., borrador=True)`) y deja el tipo inactivo
+  con la marca. Es una marca aparte de `activo`: un formulario publicado y
+  apagado a propósito no es un borrador. La tabla lo lista como
+  **borrador** (ámbar); "Editar" abre "Terminar el borrador" con el botón
+  primario "Publicar", que exige todo como el alta de siempre y saca la
+  marca. El afiliado nunca lo ve (`solo_activos`). Volver a guardar como
+  borrador uno publicado lo saca de la vista. `required` del área se
+  suspende solo para ese botón. Tests: `test_tramites_borrador.py` (6).
+
+Lo que quedó pendiente a propósito: las tablas "Mapa por seccional" y
+"Tipos cargados" desbordan en teléfono como antes (no son de este bloque);
+y los mockups de Noticias, Notificaciones y Beneficios con la misma hoja de
+trabajo (segunda fila del lienzo) esperan la decisión de SDN para
+construirse.
+
+## La tira de pestañas como en la hoja de trabajo (2026-10-19, Admin 0.64.02, Plataforma 0.52.03)
+
+SDN vio el constructor nuevo y pidió adoptar también **el menú superior tal
+como lo dibujó el mockup A**: pastillas de texto solo, en una fila, sin
+íconos, con la activa en blanco sobre la barra oscura. Hasta ahora cada
+pestaña era una baldosa de ícono más texto chico (10,5 px) con la activa en
+acento. Cambio solo de CSS en `templates/admin.html` (`.tab-btn`) y en
+`templates/plataforma.html` (`.ptab`), que comparten el mismo cromo: los SVG
+de los íconos siguen en el HTML (`display:none`) porque la portada los usa;
+la tira queda en 47 px de alto contra 60; el acento vuelve a ser solo de las
+acciones. En teléfono sigue siendo una fila deslizable. Las sub-pestañas no
+cambiaron: ya eran pastillas redondas con la activa en el color de apoyo,
+como en el mockup.
+
+## Noticias, Beneficios y Notificaciones como hoja de trabajo (2026-10-19, Admin 0.65.01)
+
+Tercer bloque de la revisión de diseño: SDN pidió "el formato completo" de
+la hoja de trabajo A también en las tres pantallas de publicación, que el
+lienzo ya mostraba en su segunda fila. Las tres comparten ahora el mismo
+cromo que el constructor de Trámites, con las MISMAS clases (`.ct-layout`,
+`.ct-riel`, `.ct-area`, `.ct-pasog`, `.ct-guardar`, `.ct-ancho`): nada se
+duplicó en CSS.
+
+- **Tres pasos por pantalla**, con lo obligatorio y lo opcional separado:
+  Noticias = La noticia (título, bajada, texto) / Cuándo y a quién
+  (vigencia, destino) / Imágenes y formulario; Beneficios = El beneficio
+  (rubro, descripción, link) / Cuándo y a quién / Imagen y formulario;
+  Notificaciones = El mensaje (remitente, texto) / A quién le llega
+  (criterio y valores) / Adjunto y formulario. Los campos son los de antes,
+  reagrupados; las explicaciones que estaban como `muted` a la vista pasaron
+  al «?» de cada paso (regla del 2026-10-18).
+- **El riel** (`pintarRiel` + `rielNoticia` / `rielBeneficio` /
+  `rielNotificacion`) resume lo cargado en cada paso (título, "20/10 al
+  31/10/2026 · todas las seccionales", "Por CUIL · 3", "con adjunto · sin
+  formulario"), marca hecho / actual, y dice el estado: Nueva o Editando
+  (con la fecha de carga) y "sin guardar" desde que se toca algo. En
+  Notificaciones el riel lleva "Vista previa" y la aclaración de que se
+  envía al confirmar y no se edita después; el recuadro de la vista previa
+  y "Confirmar y enviar" quedaron en la barra de guardado de la hoja.
+- **El riel va sobre la franja de marca**, así que se separa por luz: hoja
+  blanca con la misma sombra que la hoja central (antes el texto del primer
+  paso quedaba en tinta sobre el degradé oscuro). El rótulo "Vista del
+  afiliado" pasa a blanco arriba de 760 px por lo mismo. Vale también para
+  el constructor de Trámites.
+- **Las tablas de cargadas dicen el estado**: vigente / próxima / vencida
+  para noticias y beneficios, calculado en la plantilla contra `hoy`
+  (`fechas.hoy_texto()`, nuevo en el contexto de `/admin`). En teléfono las
+  tablas de todos los paneles se desplazan de costado en vez de ensanchar
+  la página.
+- Lo que el lienzo dibujaba y NO se construyó, a propósito: "Guardar como
+  borrador" en las tres (necesita una columna y migración por tabla, y SDN
+  lo pidió solo para el constructor) y el conteo de a cuántos afiliados les
+  llega una notificación antes de la vista previa (sigue en la vista
+  previa). La vista del afiliado de la derecha es la de siempre.
+
+Verificado con `test_noticias.py`, `test_beneficios.py`,
+`test_notificaciones.py`, `test_alcance_seccional_pantalla.py` y
+`test_modales.py`, y con un robot en el navegador sobre las tres pantallas
+(riel que sigue al formulario, edición desde la tabla, 1400 y 390 px).

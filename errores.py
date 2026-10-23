@@ -60,6 +60,30 @@ MENSAJES = {
     "E-SESION-01": (400, "No pudimos determinar tu sindicato. Volvé a ingresar."),
     "E-SESION-02": (400, "No pudimos determinar tu identidad. Volvé a ingresar."),
 
+    # --- CUIL / CUIT con dígito verificador (PLAN_CUIT_MOD11.md) ---------
+    # Se exigen donde un número NACE (altas, registro, carga masiva); donde se
+    # referencia uno que ya existe (logins, filtros) no se mira el verificador.
+    # No hablan de la foto: no es un error de lectura, es un número mal escrito.
+    "E-IDENT-01": (422, "El CUIL no es válido: revisá los 11 números. Si es el que "
+                        "figura en tu recibo de sueldo, avisale a tu sindicato."),
+    "E-IDENT-02": (422, "El CUIT no es válido: revisá los 11 números."),
+    # El número ya existe y alguien intenta cambiarlo desde una edición. No se
+    # puede: une a la persona con su cuenta, sus recibos y sus trámites, y
+    # cambiarlo en una sola tabla corta todo eso en silencio.
+    "E-IDENT-03": (409, "El CUIL/CUIT no se cambia desde una edición: es la identidad "
+                        "de la persona en todo el sistema. Si está mal, pedile a la "
+                        "plataforma que lo corrija."),
+    # --- Registro y recuperación de cuenta (PLAN_REGISTRO.md) ---------------
+    # Ninguno habla de la foto: son errores de la persona o del canal de mail.
+    "E-REGISTRO-01": (400, "No pudimos comprobar que sos una persona. Probá de nuevo."),
+    "E-REGISTRO-02": (400, "El código es incorrecto o ya venció. Pedí uno nuevo."),
+    "E-REGISTRO-03": (429, "Ya pediste varios códigos. Esperá una hora para pedir otro."),
+    "E-REGISTRO-04": (403, "Tu sindicato pide confirmar con el mail que ellos tienen cargado, "
+                           "y todavía no hay uno. Pedile al sindicato que lo cargue."),
+    "E-REGISTRO-05": (429, "Hiciste demasiados intentos desde este lugar. "
+                           "Esperá un minuto y probá de nuevo."),
+    "E-REGISTRO-06": (503, "No pudimos mandar el mail en este momento. "
+                           "Probá de nuevo en unos minutos."),
     # --- Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md) -----------
     "E-ASISTENTE-01": (502, "El asistente no pudo responder en este momento. Los filtros "
                             "del panel siguen funcionando a mano; probá de nuevo en un rato."),

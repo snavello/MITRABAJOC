@@ -65,6 +65,167 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "instructivo-montaje",
+        "titulo": "Instructivo de montaje: cuentas y entornos a nombre de XP",
+        "descripcion": "Paso a paso para rearmar las cuentas de Colm3na a nombre de XP sin cortar nada: "
+                       "AKG titular; SDN, ARS y GCF invitados (GCF como miembro de Claude Team). "
+                       "Correo y dominio, GitHub, Render, Cloudflare, Anthropic, AWS y observabilidad, "
+                       "los certificados de seguridad (HTTPS) paso a paso, con quién se sienta en cada "
+                       "paso y el control final. Interno del equipo.",
+        "fecha": date(2026, 10, 14),
+        "archivo": "colm3na-instructivo-montaje.html",
+        "miniatura": "colm3na-instructivo-montaje.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "instructivo-montaje-pdf",
+        "titulo": "Instructivo de montaje (PDF para imprimir)",
+        "descripcion": "El mismo instructivo en A4, 39 páginas, para seguirlo en papel o adjuntarlo.",
+        "fecha": date(2026, 10, 14),
+        "archivo": "colm3na-instructivo-montaje.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "tramites-bancaria-resumen",
+        "titulo": "Trámites de La Bancaria en Colm3na: resumen (Word, 6 páginas)",
+        "descripcion": "Para leer primero: lo que hay que saber, los sistemas que ya tiene el sindicato, la "
+                       "propuesta de kit de inicio y las 81 gestiones del afiliado de un vistazo, cada una con "
+                       "su código. Control de cambios activado. Fuente: docs/bancaria/generar_tramites_docx.js.",
+        "fecha": date(2026, 10, 13),
+        "archivo": "colm3na-tramites-bancaria-resumen.docx",
+        "miniatura": "colm3na-tramites-bancaria-resumen.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "tramites-bancaria-completo",
+        "titulo": "Trámites de La Bancaria en Colm3na: catálogo completo (Word)",
+        "descripcion": "Las 81 gestiones verificadas una por una: cómo se hacen hoy y con qué fuentes, cómo "
+                       "las resuelve Colm3na (formulario, encadenados, área) y qué validar con el sindicato, "
+                       "con un recuadro de observaciones por gestión. Para consultar por código desde el resumen.",
+        "fecha": date(2026, 10, 13),
+        "archivo": "colm3na-tramites-bancaria-completo.docx",
+        "miniatura": "colm3na-tramites-bancaria-completo.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "plan-implementacion-bancaria",
+        "titulo": "Plan de implementación en La Bancaria: seis fases (borrador v0.2)",
+        "descripcion": "La propuesta para consensuar con las autoridades: preparación, definición del plan, "
+                       "relevamiento, configuración, piloto con 50 a 1.000 afiliados e implementación total, "
+                       "con el entorno de prueba en la semana 4, responsables, datos e indicadores. 4 hojas A4.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-plan-implementacion-bancaria.html",
+        "miniatura": "colm3na-plan-implementacion-bancaria.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "plan-implementacion-bancaria-pdf",
+        "titulo": "Plan de implementación en La Bancaria (PDF)",
+        "descripcion": "El mismo plan v0.2 en PDF, 4 hojas A4, para imprimir o adjuntar.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-plan-implementacion-bancaria.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "plan-implementacion-bancaria-word",
+        "titulo": "Plan de implementación en La Bancaria (Word editable)",
+        "descripcion": "El mismo plan v0.2 en Word, con control de cambios activado, para corregirlo "
+                       "y devolverlo. Fuente: docs/bancaria/generar_docx.js.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-plan-implementacion-bancaria-v0.2.docx",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "guia-reunion-bancaria",
+        "titulo": "Guía de la reunión estratégica con las autoridades de La Bancaria (v0.2)",
+        "descripcion": "Una hoja para conducir la reunión: orden del día de 90 minutos, lo que buscamos "
+                       "acordar, funcionalidades prioritarias y datos disponibles para el alta de afiliados.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-guia-reunion-autoridades-bancaria.html",
+        "miniatura": "colm3na-guia-reunion-autoridades-bancaria.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "guia-reunion-bancaria-pdf",
+        "titulo": "Guía de la reunión con La Bancaria (PDF)",
+        "descripcion": "La misma hoja guía v0.2 en PDF, una hoja A4, para imprimir y llevar a la reunión.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-guia-reunion-autoridades-bancaria.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "guia-reunion-bancaria-word",
+        "titulo": "Guía de la reunión con La Bancaria (Word editable)",
+        "descripcion": "La misma hoja guía v0.2 en Word, con control de cambios activado, para corregirla "
+                       "y devolverla. Fuente: docs/bancaria/generar_docx.js.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-guia-reunion-autoridades-bancaria-v0.2.docx",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "prompt-mapa-funcional",
+        "titulo": "Prompt reutilizable: mapa funcional de un proyecto",
+        "descripcion": "Para pegar en Claude Code en OTRO proyecto y construir su mapa funcional "
+                       "(app, funcionalidad, pantalla, código, tablas y servicios, en Lista y Grafo), "
+                       "con lo aprendido acá y lo que ya se sabe que no sirve. Botón para copiarlo. "
+                       "Fuente: docs/prompts/MAPA_FUNCIONAL.md; el de Colm3na está en la pestaña Mapa funcional.",
+        "fecha": date(2026, 9, 30),
+        "archivo": "prompt-mapa-funcional.html",
+        "miniatura": "prompt-mapa-funcional.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "relevamiento-sindicatos-resumen-ejecutivo",
+        "titulo": "Resumen ejecutivo: cuánto de lo que prestan los sindicatos cubre Colm3na",
+        "descripcion": "Tres páginas para dirección, socios e inversores: 47 sindicatos y 715 "
+                       "servicios relevados, 75 % cubiertos por Colm3na (versión actual + ola de "
+                       "bajo esfuerzo), vacancia digital por gremio y diez sindicatos en detalle. "
+                       "Imprimible; también en PDF (relevamiento-sindicatos-resumen-ejecutivo.pdf).",
+        "fecha": date(2026, 9, 26),
+        "archivo": "relevamiento-sindicatos-resumen-ejecutivo.html",
+        "miniatura": "relevamiento-sindicatos-resumen-ejecutivo.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "relevamiento-sindicatos",
+        "titulo": "Relevamiento de servicios sindicales: 47 gremios, 715 servicios, 34 propuestas",
+        "descripcion": "Informe interactivo: hallazgos, cobertura de Colm3na (hoy, corto plazo, "
+                       "potencial) por sindicato y por servicio, 34 propuestas de funcionalidad con "
+                       "diseño y evidencia, fichas de cada sindicato y matriz. La planilla con los "
+                       "mismos datos está en relevamiento-sindicatos-planilla.xlsx.",
+        "fecha": date(2026, 9, 26),
+        "archivo": "relevamiento-sindicatos.html",
+        "miniatura": "relevamiento-sindicatos.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "relevamiento-sindicatos-planilla",
+        "titulo": "Planilla del relevamiento de servicios sindicales",
+        "descripcion": "Excel con las 34 propuestas, las 47 fichas, los 715 servicios con modalidad "
+                       "y cobertura, la cobertura por sindicato y la matriz sindicato × propuesta.",
+        "fecha": date(2026, 9, 26),
+        "archivo": "relevamiento-sindicatos-planilla.xlsx",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "anatomia-analisis-inteligente",
+        "titulo": "Anatomía del análisis inteligente: IA, aprendizaje y reglas (caso Marina)",
+        "descripcion": "Diagrama animado y educativo del recorrido de un recibo, bloque por bloque: "
+                       "qué hace cada uno, qué datos maneja y cómo se ve con un caso real de "
+                       "bancarios (grilla oficial de agosto 2026). Portada con el recibo y "
+                       "controles de reproducción. Para el equipo y para el sindicato.",
+        "fecha": date(2026, 9, 26),
+        "archivo": "anatomia-analisis-inteligente.html",
+        "miniatura": "anatomia-analisis-inteligente.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "video-panel-de-control",
         "titulo": "Video: Panel de Control, la arquitectura en 20 segundos",
         "descripcion": "La Sala de mando en movimiento, al ritmo del tango del proyecto: un recibo "
@@ -330,6 +491,8 @@ def _ficha(ref, origen, titulo, descripcion, fecha, tipo, url, nombre_archivo,
         "nombre_archivo": nombre_archivo, "tamanio": tamanio,
         "tamanio_legible": tamanio_legible(tamanio), "fragmento": fragmento,
         "href": f"/recursos/{ref}/archivo{fragmento}", "miniatura_url": miniatura_url,
+        # Solo lo que tiene archivo se baja: un enlace no tiene qué descargar.
+        "descarga": f"/recursos/{ref}/archivo?descargar=1" if nombre_archivo else "",
     }
 
 

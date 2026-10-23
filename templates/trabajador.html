@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <title>Revisá tu recibo — {{ sindicato or 'Colm3na' }}</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
 <style>
   /* La condensada y las variables de fuente viven en marca.css, que ESTA
      plantilla no carga (tiene su propio CSS). Se declaran acá para que los
@@ -442,6 +443,18 @@
     color:var(--ok); opacity:0; transform:scale(.4); pointer-events:none;
     transition:all .25s cubic-bezier(.2,1.6,.4,1); }
   .campo-tram.ok .tram-tick { opacity:1; transform:scale(1); }
+  /* Un campo extraído o calculado (2026-10-18): lo propone el servidor y la
+     persona puede corregirlo. Se ve como propuesto hasta que lo toca. */
+  .tram-input.tram-calculado { background:#f5f3ff; border-color:#cdbde9; color:#3b2d63; }
+  .tram-input.tram-calculado:focus { background:#fff; }
+  .campo-tram .tram-nota-ingreso { display:none; font-size:11px; color:#5b4a86; line-height:1.4; margin-top:5px;
+    background:#f5f3ff; border-left:3px solid #cdbde9; padding:5px 8px; border-radius:0 6px 6px 0; }
+  .campo-tram.ingreso-tocado .tram-nota-ingreso { display:block; }
+  .tram-requisitos { border:1px solid color-mix(in srgb, var(--error) 35%, white); background:color-mix(in srgb, var(--error) 7%, white);
+    border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .tram-requisitos b { display:block; margin-bottom:6px; }
+  .tram-requisitos li { margin:4px 0 0 18px; }
+  .tram-requisitos.espera { border-color:var(--linea); background:#f7f7f4; color:var(--gris); }
   .campo-tram.ok .tram-input { border-color:color-mix(in srgb, var(--ok) 40%, white); }
   /* La ✗ roja es simétrica al tilde: mismo lugar, mismo pop */
   .campo-tram.mal .tram-tick { opacity:1; transform:scale(1); color:var(--error); }
@@ -604,10 +617,21 @@
        época, y los paneles claros se confundían con el fondo de la app. El
        oscuro es lo que los despega del fondo y lo que hace que las cinco
        pantallas se lean como una sola pieza. --- */
+  /* El panel se separa del fondo con LUZ y no con contraste de color: filo de
+     1px alrededor, brillo interior arriba y una sombra más honda abajo. Hace
+     falta porque arriba de él baja la franja de marca (body.mesa.franja, ver
+     static/interior.css), que es del mismo degradé base→primario que el
+     panel: sin el filo, el borde superior desaparecía contra el fondo justo
+     en el paso 1 del recibo. Sobre el gris claro de los pasos siguientes el
+     mismo filo se lee como el borde de una tarjeta de vidrio. */
   .rc-panel { position:relative; overflow:hidden; border-radius:16px; padding:16px; color:#fff;
     background:linear-gradient(150deg, var(--marca-base),
       color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base)));
-    border-left:5px solid var(--marca-acento); box-shadow:0 14px 34px rgba(15,27,45,.25); }
+    border-left:5px solid var(--marca-acento);
+    box-shadow:0 0 0 1px rgba(255,255,255,.26),
+               inset 0 1px 0 rgba(255,255,255,.22),
+               0 22px 48px rgba(5,10,22,.45),
+               0 2px 10px rgba(5,10,22,.30); }
   .rc-panel::before { content:""; position:absolute; inset:0; opacity:.09; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .rc-panel > * { position:relative; z-index:1; }
@@ -987,8 +1011,9 @@
   .enq-rank-res .nom { flex:1; }
   .enq-rank-res .det { color:var(--gris); font-size:12px; text-align:right; }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa franja">
 {% include "_entorno.html" %}
 {# Encabezado normalizado (marca.css + _encabezado.html). La pantalla de la
    derecha la va escribiendo activarPestana() más abajo. #}
@@ -1008,11 +1033,11 @@
 </div>
 {% endif %}
 
-<div class="cont">
+<div class="cont mesa-cont">
 
   <!-- ============ PESTAÑA: TU RECIBO ============ -->
   {% if 'recibos' in modulos %}
-  <div class="tpanel" id="tp-recibo">
+  <div class="tpanel" data-mov-vista id="tp-recibo">
     <!-- PASO 1 DE 3 -- subir el archivo.
          DOS ESTADOS EN EL MISMO PANEL: sin archivo (guía de foto + los dos
          botones de carga) y con archivo elegido (el archivo + "Leer recibo").
@@ -1077,8 +1102,8 @@
     </div>
 
     <!-- Historial: mis recibos verificados -->
-    <div id="misrecibos" style="display:none;">
-      <h1>Mis recibos verificados</h1>
+    <div id="misrecibos" data-mov-vista style="display:none;">
+      <h1 class="titulo-pagina">Mis recibos verificados</h1>
       <p class="sub">Historial privado: todo lo que verificaste, lo hayas enviado a tu sindicato o no.</p>
       <div id="historial-contenido"></div>
       <button class="btn sec" id="historial-volver" style="margin-top:14px;">Volver</button>
@@ -1109,9 +1134,9 @@
 
   <!-- ============ PESTAÑA: NOVEDADES ============ -->
   {% if 'noticias' in modulos %}
-  <div class="tpanel" id="tp-novedades">
+  <div class="tpanel" data-mov-vista id="tp-novedades">
     {% if noticias %}
-      <h1 style="margin-bottom:6px;">Novedades</h1>
+      <h1 class="titulo-pagina" style="margin-bottom:6px;">Novedades</h1>
       {# Hilo: un hito por día (fecha_hora es "DD/MM HH:MM"), una burbuja por noticia #}
       <div class="nv-hilo">
       {% for n in noticias %}
@@ -1139,8 +1164,8 @@
 
   <!-- ============ PESTAÑA: MIS APORTES ============ -->
   {% if 'aportes' in modulos %}
-  <div class="tpanel" id="tp-aportes">
-    <h1>Mis aportes</h1>
+  <div class="tpanel" data-mov-vista id="tp-aportes">
+    <h1 class="titulo-pagina">Mis aportes</h1>
     <div class="sem-card">
       <div class="th-head">
         <div class="k">Semáforo</div>
@@ -1154,8 +1179,8 @@
 
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
   {% if 'capacitacion' in modulos %}
-  <div class="tpanel" id="tp-capacitacion">
-    <h1>Capacitación</h1>
+  <div class="tpanel" data-mov-vista id="tp-capacitacion">
+    <h1 class="titulo-pagina">Capacitación</h1>
     <div class="cap-card">
       <div class="th-head">
         <div class="k">Guía</div>
@@ -1174,7 +1199,7 @@
       <p style="margin-top:10px;"><b>Regla simple:</b> tu neto = tu bruto − tus aportes. El "costo laboral total" (bruto + contribuciones) es lo que le cuesta tu puesto al empleador, no lo que cobrás vos.</p>
 
       <h3>Qué mirar para detectar un problema</h3>
-      <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Tu Recibo".</p>
+      <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Mis Recibos".</p>
       </div>
     </div>
   </div>
@@ -1183,8 +1208,8 @@
   <!-- ============ PESTAÑA: CREDENCIAL ============ -->
   {# Solo con sesión de trabajador: la ruta / (demo sin login) no tiene marca. #}
   {% if marca and 'credencial' in modulos %}
-  <div class="tpanel" id="tp-credencial">
-    <h1>Credencial</h1>
+  <div class="tpanel" data-mov-vista id="tp-credencial">
+    <h1 class="titulo-pagina">Credencial</h1>
     <div class="cred" style="margin-top:16px;">
       {% if tiene_foto_perfil %}
       <div class="cred-retrato"><img src="/perfil-foto/{{ cuil }}" alt="" aria-hidden="true"></div>
@@ -1248,10 +1273,10 @@
 
   <!-- ============ PESTAÑA: TRÁMITES ============ -->
   {% if 'tramites' in modulos %}
-  <div class="tpanel" id="tp-tramites">
+  <div class="tpanel" id="tp-tramites" data-mov-vista>
 
-    <div id="tram-inicio">
-      <h1>Trámites</h1>
+    <div id="tram-inicio" data-mov-vista>
+      <h1 class="titulo-pagina">Trámites</h1>
       <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
 
       <!-- "Necesita tu atención": el trámite con novedad más reciente (lo llena renderTramites) -->
@@ -1279,7 +1304,7 @@
       <div id="tram-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
     </div>
 
-    <div id="tram-tipos" style="display:none;">
+    <div id="tram-tipos" data-mov-vista style="display:none;">
       <div class="tram-box">
         <div class="tram-box-enc">
           <div class="tit">Iniciar un trámite</div>
@@ -1292,7 +1317,7 @@
       <button class="btn sec" id="tram-tipos-volver" style="margin-top:16px;">Volver</button>
     </div>
 
-    <div id="tram-form" style="display:none;">
+    <div id="tram-form" data-mov-vista style="display:none;">
       <div class="tram-box" style="position:relative;">
         <!-- El sello de ENVIADO cae sobre el formulario (ver enviarTramiteOk) -->
         <div class="tram-sello-overlay" id="tram-sello"></div>
@@ -1306,6 +1331,9 @@
         </div>
         <div class="tram-box-body">
           <div id="tram-form-error" class="banner mal" style="display:none;"></div>
+          {# Requisitos para iniciar (bloque 4): si no se cumplen, los
+             mensajes en vez de los campos. #}
+          <div id="tram-form-requisitos" class="tram-requisitos" style="display:none;"></div>
           <div class="tram-prog" id="tram-prog" style="display:none;">
             <span>Completaste <b id="tram-prog-n">0 de 0</b></span>
             <div class="tram-prog-bar"><i id="tram-prog-fill"></i></div>
@@ -1317,7 +1345,7 @@
       <button class="btn sec" id="tram-form-volver" style="margin-top:16px;">Cancelar</button>
     </div>
 
-    <div id="tram-detalle" style="display:none;">
+    <div id="tram-detalle" data-mov-vista style="display:none;">
       <div class="tram-box">
         <div class="tram-box-enc">
           <div class="tit" id="tram-det-expediente">Trámite</div>
@@ -1334,7 +1362,7 @@
   {% endif %}
 
   {% if 'encuestas' in modulos %}
-  <div class="tpanel" id="tp-encuestas">
+  <div class="tpanel" data-mov-vista id="tp-encuestas">
     <!-- ======= ENCUESTAS (SPRINT_ENCUESTAS.md, Fase 2) ======= -->
     <div id="enc-lista"><p class="muted" style="font-size:13px;">Cargando…</p></div>
     <div id="enc-responder" class="oculto"></div>
@@ -1400,7 +1428,7 @@
 
 <!-- Barra de pestañas -->
 <nav class="tabbar">
-  {% if 'recibos' in modulos %}<button class="tab-t" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Tu Recibo</button>{% endif %}
+  {% if 'recibos' in modulos %}<button class="tab-t" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Mis Recibos</button>{% endif %}
   {% if marca and 'credencial' in modulos %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Credencial</button>{% endif %}
   {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>{% endif %}
   {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
@@ -1418,13 +1446,6 @@ function activarPestana(dest) {
   document.querySelectorAll('.tpanel').forEach(pan => {
     pan.classList.toggle('activo', pan.id === 'tp-' + dest);
   });
-  // El encabezado dice siempre dónde estás. El nombre sale de los nodos de
-  // TEXTO del botón: así no arrastra el ícono ni el globo de novedades.
-  const rotulo = document.getElementById('marca-pantalla');
-  if (rotulo) {
-    rotulo.textContent = Array.from(btn.childNodes)
-      .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
-  }
 }
 document.querySelectorAll('.tab-t').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1623,25 +1644,19 @@ function dato(k, v) {
     <span class="v ${vacio?'vacio':''}">${vacio ? 'sin dato' : v}</span></div>`;
 }
 
-// Suma ingresos/descuentos a partir de las líneas crudas del recibo (preview,
-// antes de validar contra el catálogo de conceptos).
-function renderTotalesIngresosDescuentos(lineas) {
-  let ingresos = 0, descuentos = 0;
-  for (const ln of (lineas || [])) {
-    const imp = ln.importe || 0;
-    if (imp >= 0) ingresos += imp; else descuentos += Math.abs(imp);
-  }
-  return renderTotalesResumen({ingresos, descuentos, neto: ingresos - descuentos});
-}
-
-// Suma ingresos/descuentos/neto ya validados (resultado.totales, matcheados
-// contra el catálogo del sindicato) — la versión oficial, post-verificación.
+// Ingresos/descuentos/reintegros/neto. Los suma SIEMPRE el servidor, con la
+// regla de zonas de validador.py: en la pantalla de confirmar vienen en
+// totales_leidos (/api/leer) y en el resultado en totales (/api/validar).
+// Antes el preview los sumaba acá por el signo, y un reintegro de Ganancias
+// impreso en positivo entre los descuentos salía como ingreso.
 function renderTotalesResumen(totales) {
   if (!totales) return '';
-  const neto = totales.neto != null ? totales.neto : (totales.ingresos || 0) - (totales.descuentos || 0);
+  const neto = totales.neto != null ? totales.neto
+    : (totales.ingresos || 0) - (totales.descuentos || 0) + (totales.reintegros || 0);
   return `<div class="rc-card rc-totales">
     <div class="t"><span>Total ingresos</span><span class="imp">${peso(totales.ingresos || 0)}</span></div>
     <div class="t"><span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>
+    ${totales.reintegros ? `<div class="t"><span>Reintegros</span><span class="imp">${peso(totales.reintegros)}</span></div>` : ''}
     <div class="t neto"><span>Total neto</span><span class="imp">${peso(neto)}</span></div>
   </div>`;
 }
@@ -1698,7 +1713,7 @@ function renderPreview(d) {
     h += `<div class="fila"><span>${ln.descripcion || ln.codigo || '—'}</span>
       <span class="imp ${neg?'neg':''}">${peso(ln.importe || 0)}</span></div>`;
   }
-  h += renderTotalesIngresosDescuentos(r.lineas);
+  h += renderTotalesResumen(d.totales_leidos);
   h += `</div>`;
 
   // Recibo formato nuevo (Anexo III): contribuciones patronales + costo laboral total.
@@ -1718,25 +1733,31 @@ function renderPreview(d) {
   // Conceptos nuevos detectados
   if (d.conceptos_nuevos && d.conceptos_nuevos.length) {
     h += `<div class="nuevos"><h2>Conceptos nuevos detectados</h2>
-      <p>Estos conceptos no estaban registrados. Marcá si cada uno es remunerativo (si suma para calcular los aportes). Al continuar se agregan y quedan marcados para que el sindicato los revise.</p>`;
+      <p>Estos conceptos no estaban registrados. En los haberes, marcá si cada uno es remunerativo (si suma para calcular los aportes). Al continuar se agregan y quedan marcados para que el sindicato los revise.</p>`;
     d.conceptos_nuevos.forEach((n, i) => {
       const neg = (n.importe || 0) < 0;
-      h += `<div class="chip ${n.tipo==='descuento'?'chip-descuento':''}">
+      h += `<div class="chip ${n.tipo==='descuento' && !n.reintegro ?'chip-descuento':''}">
         <div class="chip-info">
           <span class="chip-desc">${n.descripcion}</span>
-          <span class="tag">${n.tipo}</span>
+          <span class="tag">${n.reintegro ? 'reintegro' : n.tipo}</span>
         </div>
         <span class="imp ${neg?'neg':''}">${peso(n.importe)}</span>
-      </div>
-      <div class="remun" data-idx="${i}">
-        <span class="remun-lbl">¿Remunerativo?</span>
-        <div class="toggle" role="group">
-          <button type="button" class="tg-si activo" onclick="setRemun(${i}, true, this)">Sí</button>
-          <button type="button" class="tg-no" onclick="setRemun(${i}, false, this)">No</button>
-        </div>
       </div>`;
-      // Por defecto: remunerativo = true
-      n.remunerativo = true;
+      // "¿Remunerativo?" solo tiene sentido en un haber: la base de los
+      // aportes suma haberes. El valor de arranque lo propone el servidor
+      // según la sección del recibo (los no remunerativos vienen en No).
+      if (n.remunerativo === undefined) n.remunerativo = n.tipo === 'ingreso';
+      if (n.tipo === 'ingreso') {
+        h += `<div class="remun" data-idx="${i}">
+          <span class="remun-lbl">¿Remunerativo?</span>
+          <div class="toggle" role="group">
+            <button type="button" class="tg-si ${n.remunerativo ? 'activo' : ''}" onclick="setRemun(${i}, true, this)">Sí</button>
+            <button type="button" class="tg-no ${n.remunerativo ? '' : 'activo'}" onclick="setRemun(${i}, false, this)">No</button>
+          </div>
+        </div>`;
+      } else if (n.reintegro) {
+        h += `<div class="remun"><span class="remun-lbl">Plata que te devuelven: no suma a tu remuneración ni lleva aportes.</span></div>`;
+      }
     });
     h += `</div>`;
   }
@@ -2323,7 +2344,10 @@ if (document.getElementById('tp-tramites')) {
   function campoInputHtml(c) {
     const id = 'tc_' + c.id;
     if (c.tipo_dato === 'archivo') {
-      const accept = (c.tipos_archivo_permitidos || '').split(',').map(e => e.trim()).filter(Boolean).map(e => '.' + e).join(',');
+      // jpg vale también para jpeg (y tif para tiff): el servidor compara igual.
+      const EQUIV = { jpg: 'jpeg', jpeg: 'jpg', tif: 'tiff', tiff: 'tif' };
+      const accept = [...new Set((c.tipos_archivo_permitidos || '').split(',').map(e => e.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
+        .flatMap(e => EQUIV[e] ? [e, EQUIV[e]] : [e]))].map(e => '.' + e).join(',');
       // input[type=file] está oculto globalmente (lo dispara el <label for>,
       // igual que "Elegí recibo" en Tu Recibo) -- si no, el campo no se ve.
       return `<label class="btn sec archivo-trigger" for="${id}">📎 Elegir archivo</label>
@@ -2332,6 +2356,18 @@ if (document.getElementById('tp-tramites')) {
     }
     if (c.tipo_dato === 'fecha') return `<input type="date" class="tram-input" id="${id}">`;
     if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" class="tram-input" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
+    // Un campo extraído o calculado lo propone el servidor (con el padrón y
+    // las listas del sindicato) y la persona puede corregirlo (SDN,
+    // 2026-10-18): al tocarlo se le avisa qué pasa con el cambio.
+    if (c.tipo_dato === 'calculado') {
+      const ing = c.ingreso || {};
+      const nota = ing.propio
+        ? 'Este dato está registrado en tu perfil. Si lo cambiás acá, se actualiza en el sistema.'
+        : (ing.modo === 'calcular' ? 'Este valor lo calcula el sistema.' : 'Este dato lo tiene registrado el sindicato.') + ' Si lo cambiás, queda anotado en el trámite para que lo revisen.';
+      return `<input type="text" class="tram-input tram-calculado" id="${id}" placeholder="Se completa solo" data-propuesto=""
+        onfocus="document.getElementById('ctw_${c.id}').classList.add('ingreso-tocado')" oninput="this.dataset.editado = '1'">
+        <div class="tram-nota-ingreso">${escTram(nota)}</div>`;
+    }
     if (c.tipo_dato === 'seleccion') {
       const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
       return `<select class="tram-input" id="${id}">
@@ -2357,6 +2393,7 @@ if (document.getElementById('tp-tramites')) {
   window.abrirFormularioTramite = function (tipo) {
     tipoTramiteActual = tipo;
     tramiteOrigenParaEnvio = null;
+    enVivoAgotado = false;
     document.getElementById('tram-form-titulo').textContent = tipo.titulo;
     document.getElementById('tram-form-codigo').textContent = tipo.codigo;
     document.getElementById('tram-form-error').style.display = 'none';
@@ -2375,7 +2412,80 @@ if (document.getElementById('tp-tramites')) {
     }).join('');
     iniciarValidacionTram(tipo);
     verTram('tram-form');
+    abrirConRequisitos(tipo);
   };
+
+  // ---- Requisitos al abrir y calculados (bloque 4) ----
+  // El servidor dice si el afiliado de la sesión cumple los requisitos del
+  // formulario; si no, se muestran los mensajes en vez de los campos. Los
+  // calculados que no dependen de otro campo se completan acá.
+  async function abrirConRequisitos(tipo) {
+    const caja = document.getElementById('tram-form-requisitos');
+    const campos = document.getElementById('tram-form-campos');
+    const enviar = document.getElementById('tram-form-enviar');
+    const prog = document.getElementById('tram-prog');
+    caja.style.display = 'none'; caja.className = 'tram-requisitos';
+    campos.style.display = ''; enviar.style.display = '';
+    const hayAlgo = (tipo.requisitos || []).length || tipo.campos.some(c => c.tipo_dato === 'calculado');
+    if (!hayAlgo) return;
+    try {
+      const r = await fetch('/api/tramite/requisitos/' + tipo.id);
+      if (!r.ok) return;                 // sin respuesta, el envío decide igual
+      const d = await r.json();
+      if (tipoTramiteActual !== tipo) return;
+      if (!d.cumple) {
+        caja.innerHTML = '<b>Por ahora no podés iniciar este trámite:</b><ul>' +
+          (d.mensajes || []).map(m => `<li>${escTram(m)}</li>`).join('') + '</ul>';
+        caja.style.display = ''; campos.style.display = 'none'; enviar.style.display = 'none'; prog.style.display = 'none';
+        return;
+      }
+      pintarCalculados(d.calculados);
+    } catch (e) { /* cortesía: el servidor decide al enviar */ }
+  }
+  function pintarCalculados(calculados) {
+    Object.entries(calculados || {}).forEach(([cid, texto]) => {
+      const el = document.getElementById('tc_' + cid);
+      if (!el) return;
+      el.dataset.propuesto = texto;
+      // lo que la persona ya corrigió no se pisa con un recálculo
+      if (el.dataset.editado !== '1') el.value = texto;
+    });
+  }
+  // Validación en vivo contra el servidor (solo las funciones que el admin
+  // marcó "en vivo"): pasa / no pasa y el mensaje, nunca el dato. Diez
+  // intentos por formulario; después se deja de preguntar y decide el envío.
+  let enVivoAgotado = false;
+  async function tvEnVivo(tipo, c) {
+    if (enVivoAgotado || tipoTramiteActual !== tipo) return;
+    const idx = tipo.campos.indexOf(c);
+    const valor = tvValorCampo(c);
+    if (!String(valor).trim()) return;
+    const valores = {};
+    tipo.campos.forEach((o, i) => { if (['texto', 'numero', 'fecha', 'seleccion'].includes(o.tipo_dato)) valores[i] = tvValorCampo(o); });
+    let d;
+    try {
+      const r = await fetch('/api/tramite/validar-campo', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo_tramite_id: tipo.id, indice_campo: idx, valor, valores }) });
+      if (r.status === 429) { enVivoAgotado = true; return; }
+      if (!r.ok) return;
+      d = await r.json();
+    } catch (e) { return; }
+    if (tipoTramiteActual !== tipo || tvValorCampo(c) !== valor) return;
+    const cont = document.getElementById('ctw_' + c.id);
+    const errEl = document.getElementById('ctw_' + c.id + '_err');
+    if (!cont) return;
+    if (!d.pasa) {
+      cont.classList.remove('ok', 'avs'); cont.classList.add('mal');
+      const tick = cont.querySelector('.tram-tick'); if (tick) tick.textContent = '✗';
+      if (errEl) errEl.textContent = d.mensaje || 'Revisá este dato.';
+    }
+    pintarCalculados(d.calculados);
+    tvProgreso(tipo);
+  }
+  function tieneEnVivo(c) {
+    return (c.validaciones || []).some(v => v.fuente === 'funcion' && v.en_vivo)
+      || tipoTramiteActual.campos.some(o => o.tipo_dato === 'calculado' && (o.validaciones || []).some(v => v.fuente === 'funcion' && v.clave2 != null && tipoTramiteActual.campos[v.clave2] === c));
+  }
 
   /* ---- Validación en vivo (rediseño 2026-09-01) ----
      Espejo JS de validaciones_tramite.evaluar_envio: fuente "fija" del
@@ -2508,8 +2618,9 @@ if (document.getElementById('tp-tramites')) {
       }
       const el = document.getElementById('tc_' + c.id);
       if (!el) return;
-      el.addEventListener('blur', () => { tvPintaCampo(tipo, c); tvProgreso(tipo); });
-      el.addEventListener('change', () => { tvPintaCampo(tipo, c); tvProgreso(tipo); });
+      const enVivo = tieneEnVivo(c);
+      el.addEventListener('blur', () => { if (tvPintaCampo(tipo, c) && enVivo) tvEnVivo(tipo, c); tvProgreso(tipo); });
+      el.addEventListener('change', () => { if (tvPintaCampo(tipo, c) && enVivo) tvEnVivo(tipo, c); tvProgreso(tipo); });
       el.addEventListener('input', () => {
         // mientras escribe solo se limpia un error viejo, no se lo apura
         const cont = document.getElementById('ctw_' + c.id);

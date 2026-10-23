@@ -250,20 +250,53 @@ def buscar_sindicato(texto: str):
     return candidatos[0].id, candidatos[0].nombre
 
 
+# Los CUIL/CUIT del lote salen de una REGLA, no de una lista: bloque propio por
+# sindicato (sid % BASES_DE_CUIL) y el verificador es un derivado del índice, no
+# el módulo 11 (por azar sale válido uno de cada once). Las tres funciones que
+# siguen son esa regla, y `contexto_lote` las usa: así `regularizar_cuit.py`
+# puede reconocer un número sintético sin importar el sindicato ni copiar la
+# fórmula (PLAN_CUIT_MOD11.md, D3).
+BASES_DE_CUIL = 40
+
+
+def base_cuil_del_lote(sid: int) -> int:
+    return 65000000 + (sid % BASES_DE_CUIL) * 1_000_000
+
+
+def cuil_del_lote(base_cuil: int, i: int) -> str:
+    return f"{'20' if i % 3 else '27'}{base_cuil + i:08d}{(i * 7) % 10}"
+
+
+def cuit_del_lote(base_cuil: int, j: int) -> str:
+    return f"30{base_cuil + 900000 + j:08d}{(j * 3) % 10}"
+
+
+def identificadores_sinteticos() -> tuple:
+    """(CUILs, CUITs) que este generador PUEDE producir, para cualquier
+    sindicato: las 40 bases posibles, los 100 trabajadores de cada una y las
+    empresas de cada una de las tres listas. Puro: no toca la base."""
+    cuils, cuits = set(), set()
+    for bloque in range(BASES_DE_CUIL):
+        base = base_cuil_del_lote(bloque)
+        cuils.update(cuil_del_lote(base, i) for i in range(CANT_TRABAJADORES))
+        for lista in (ORGANISMOS_FISCALES, BANCOS, EMPRESAS_GENERICAS):
+            cuits.update(cuit_del_lote(base, j) for j in range(len(lista)))
+    return cuils, cuits
+
+
 def contexto_lote(sid: int, nombre: str) -> dict:
     """Todo lo determinista del lote depende del sindicato: CUILes propios
     (bloque separado por sid para no chocar con otros lotes), semilla propia."""
     rnd = random.Random(73000 + sid)
-    base_cuil = 65000000 + (sid % 40) * 1_000_000
-    cuils = [f"{'20' if i % 3 else '27'}{base_cuil + i:08d}{(i * 7) % 10}"
-             for i in range(CANT_TRABAJADORES)]
+    base_cuil = base_cuil_del_lote(sid)
+    cuils = [cuil_del_lote(base_cuil, i) for i in range(CANT_TRABAJADORES)]
     if any(p in nombre.upper() for p in ("AEFIP", "FISCAL")):
         empresas_base = ORGANISMOS_FISCALES
     elif "BANCARIA" in nombre.upper() or "BANCARIO" in nombre.upper():
         empresas_base = BANCOS
     else:
         empresas_base = EMPRESAS_GENERICAS
-    cuits = [f"30{base_cuil + 900000 + j:08d}{(j * 3) % 10}" for j in range(len(empresas_base))]
+    cuits = [cuit_del_lote(base_cuil, j) for j in range(len(empresas_base))]
     # El número de expediente es ÚNICO EN TODA LA PLATAFORMA y su prefijo
     # sale del código del tipo: si dos sindicatos usan el mismo código
     # ("F01"), sus expedientes chocan (hallazgo anotado en BACKLOG.md). Los

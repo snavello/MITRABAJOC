@@ -1,0 +1,152 @@
+/* ============================================================
+   Fondo de las pantallas INTERIORES — "franja de marca"
+   ------------------------------------------------------------
+   El problema que resuelve: en escritorio la columna de contenido de
+   estas pantallas mide 480px (afiliado, empresa), 660–1000px (convenio,
+   paneles) o 1280px (Panel Sindical), y el resto del ancho quedaba en un
+   plano liso, sin nada.
+
+   Son tres capas y ninguna toca el contenido:
+
+   1. `body.mesa` — la MESA. Gris apenas más frío que el papel.
+   2. `body.mesa::before` — la TEXTURA, fija: la retícula de colmena muy
+      tenue más dos halos difuminados del acento y del primario DEL PROPIO
+      SINDICATO. Ningún color nuevo: la mesa cambia de temperatura con la
+      marca del gremio. La transparencia de la retícula va en el `stroke`
+      del SVG y no en un `opacity` del elemento, justamente para poder
+      compartir la capa con los halos sin apagarlos.
+   3. `body.mesa.franja::after` — la FRANJA de marca, que baja del
+      encabezado y se desvanece en la mesa. Va `absolute` y no `fixed` a
+      propósito: es parte de la página y se va con el scroll, así el
+      encabezado deja de ser una línea suelta arriba y la pantalla se lee
+      como una sola pieza. Es OPT-IN: ver el comentario de la regla.
+
+   `.mesa-cont` es el contenedor de ancho máximo que cada pantalla YA tenía
+   (`.cont`, `.wrap`, `main`, `.hilo`, `.cuerpo`): lo único que hace la
+   clase es levantarlo por encima de las tres capas.
+
+   Dónde NO va (decisión de Sd, 2026-09-24): los tres logins y el primer
+   ingreso de plataforma, las cuatro portadas (ya tienen su propio ambiente,
+   ver "Portadas v2" en marca.css) y las pantallas que ya son oscuras.
+
+   La carga el parcial templates/_fondo_interior.html, no cada plantilla:
+   así el sello ?v= obligatorio de /static/ está en un solo lugar.
+   ============================================================ */
+
+body.mesa {
+  --mesa-bg: #e6e9ef;
+  --mesa-franja: 340px;
+  background: var(--mesa-bg);
+  position: relative;
+}
+
+/* Textura fija: retícula de colmena + los dos halos, en una sola capa.
+   La retícula va grande y al 6% de alfa en el trazo: el mosaico chico y más
+   opaco se leía como un panal dibujado y competía con la pantalla. Menos
+   líneas por centímetro es lo que la vuelve textura en vez de dibujo. */
+body.mesa::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(560px 400px at 90% -8%,
+      color-mix(in srgb, var(--marca-acento, #e8a33d) 30%, transparent), transparent 70%),
+    radial-gradient(480px 360px at -8% 90%,
+      color-mix(in srgb, var(--marca-primario, #1a3d6b) 18%, transparent), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23152238' stroke-opacity='0.06' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: auto, auto, 96px 166px;
+  background-repeat: no-repeat, no-repeat, repeat;
+}
+
+/* La franja de marca. Baja del encabezado y muere en la mesa.
+
+   Es OPT-IN (`<body class="mesa franja">`) y no automática: en la app del
+   afiliado y en la de empresa lo primero que se ve es una tarjeta OSCURA
+   (`.rc-panel`, degradé base→primario), y la franja se la come -- el borde
+   superior de la tarjeta desaparece contra un fondo del mismo color. Ahí
+   queda la mesa sola, que es lo que esas dos pantallas necesitan. */
+body.mesa.franja::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--mesa-franja);
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    var(--marca-base, #0f1b2d) 0,
+    color-mix(in srgb, var(--marca-primario, #1a3d6b) 55%, var(--marca-base, #0f1b2d)) 42%,
+    color-mix(in srgb, var(--marca-primario, #1a3d6b) 14%, var(--mesa-bg)) 86%,
+    var(--mesa-bg) 100%);
+}
+
+/* ---------- El título de la pantalla ----------
+   Todas las pantallas de las tres apps escriben su título igual: la misma
+   condensada, el mismo cuerpo y en mayúsculas, copiado de `.rc-h1` -- el
+   "SUBÍ TU RECIBO" de la app del afiliado, que era el único que ya tenía
+   este tratamiento. Antes cada app usaba lo suyo: 26px en system-ui en el
+   afiliado, 22px condensada en los dos paneles.
+
+   Lo lleva el PRIMER título de cada panel y de cada sub-panel, que es el
+   que queda arriba de todo. Los títulos de sección que vienen más abajo
+   ("Noticias cargadas (30)") NO lo llevan: siguen chicos y en tinta, sobre
+   fondo claro.
+
+   Y va en BLANCO, porque ahí atrás baja la franja de marca -- que es
+   oscura. Solo arriba de 760px: en teléfono la franja no se dibuja y el
+   título tiene que volver a la tinta o queda blanco sobre blanco. */
+body.mesa .titulo-pagina {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  font-size: 31px;
+  line-height: 1;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+@media (min-width: 761px) {
+  body.mesa.franja .titulo-pagina { color: #fff; }
+  /* El hilo que cierra el título en los paneles: sobre la franja, en luz. */
+  body.mesa.franja .titulo-pagina::after { background: rgba(255, 255, 255, .28); }
+  /* Y la bajada que casi todas las pantallas ponen pegada al título: cae en
+     el mismo tramo oscuro, así que en gris no se lee. Solo la que está
+     INMEDIATAMENTE después del título -- el resto del texto de la pantalla
+     ya aterriza sobre el claro. */
+  body.mesa.franja .titulo-pagina + p,
+  body.mesa.franja .titulo-pagina + .sub,
+  body.mesa.franja .titulo-pagina + .muted { color: rgba(255, 255, 255, .78); }
+  /* Menos lo que adentro de esa bajada trae superficie propia: un <code> es
+     una píldora clara y con el texto heredado en blanco queda una cajita
+     vacía. Vuelve a la tinta, que es su color sobre su propio fondo. */
+  body.mesa.franja .titulo-pagina + p code,
+  body.mesa.franja .titulo-pagina + .sub code,
+  body.mesa.franja .titulo-pagina + .muted code { color: var(--tinta); }
+}
+
+/* El contenido, por encima de las tres capas. */
+body.mesa .mesa-cont {
+  position: relative;
+  z-index: 1;
+}
+/* Pero esa capa propia encierra también a los modales que viven adentro del
+   contenedor (en /admin, el de un trámite, una seccional, una encuesta): su
+   z-index alto solo valía DENTRO de ella, y quedaban debajo de la barra fija
+   de pestañas. En un trámite largo eso tapaba el título y la X de cerrar.
+   Mientras un modal está abierto -- o yéndose (`mov-sale`, modales.js) --,
+   la capa sube por encima de la barra (21) y de los botones flotantes (40),
+   pero NO de los modales que viven afuera (100 a 250): alguno se abre
+   encima de uno de adentro, como el detalle de un mensaje sobre su trámite.
+   Sin `:has()` (navegadores viejos) queda como estaba. */
+body.mesa .mesa-cont:has(:is(.overlay, .modal-recibo-overlay, .overlay-ayuda, .overlay-foto-grande):is(.abierto, .mov-sale)) {
+  z-index: 45;
+}
+
+/* En teléfono se apaga todo: la columna YA ocupa el ancho completo, la
+   franja solo le quitaría contraste a lo primero que se lee y la textura no
+   se aprecia. Ahí la pantalla vuelve a ser exactamente la de hoy. */
+@media (max-width: 760px) {
+  body.mesa { background: var(--papel, #f7f5f0); }
+  body.mesa::before, body.mesa.franja::after { display: none; }
+}

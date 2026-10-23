@@ -42,8 +42,12 @@ RANGO = {"desde": _dia(30), "hasta": _dia(0)}
 
 with db.get_session() as s:
     # --- Sindicato A: el tenant bajo prueba ---
+    # Con la cláusula de confidencialidad firmada: el explorador le muestra
+    # los recibos no enviados (anonimizados). Sin ella no los ve, y eso lo
+    # cubre test_reportes_unificados.py.
     sind_a = Sindicato(nombre="UOM Dash", slug="uom-dash", color_base="#0f1b2d",
-                       modulos_habilitados=["dashboard", "tramites", "notificaciones"])
+                       modulos_habilitados=["dashboard", "tramites", "notificaciones"],
+                       clausula_confidencialidad=True)
     # --- Sindicato B: el "otro" tenant, para aislamiento ---
     sind_b = Sindicato(nombre="Fega Dash", slug="fega-dash", color_base="#0d2027",
                        modulos_habilitados=["dashboard"])
@@ -106,6 +110,7 @@ with db.get_session() as s:
         estado="CON_DISCREPANCIAS", enviado_sindicato=False,
         detalle={"recibo": {"empleado": {"apellido_nombre": "Ana Privada", "cuil": CUIL_2,
                                           "legajo": "0099", "categoria": "Administrativo"},
+                            "empleador": {"nombre": "Textil Belgrano", "cuit": "30-22222222-5"},
                             "lineas": [{"descripcion": "Sueldo básico", "importe": 500000.0}]},
                  "resultado": {"cuil": CUIL_2, "totales": {"ingresos": 500000.0},
                                "discrepancias": [{"detalle": "Cuota sindical: figura de más"}]}},
@@ -326,6 +331,9 @@ def test_privacidad_recibo_no_enviado_anonimo():
     assert privado["trabajador_cuil"] is None
     assert CUIL_2 not in r.text
     assert "Ana" not in r.text
+    # Ni la empresa: la fila de un recibo no enviado no dice de dónde es.
+    assert privado["empresa"] == "—"
+    assert "Textil" not in r.text and "30222222225" not in r.text
     print("OK  test_privacidad_recibo_no_enviado_anonimo")
 
 
@@ -533,6 +541,8 @@ def test_detalle_recibo_no_enviado_anonimizado():
     assert CUIL_2 not in r.text
     assert "Ana" not in r.text
     assert "0099" not in r.text          # ni el legajo
+    assert d["empresa"] == "—"           # ni la empresa, en ningún campo
+    assert "Textil" not in r.text and "22222222" not in r.text
     # Pero el contenido NO identificatorio sí está (líneas, discrepancias).
     assert d["recibo"]["lineas"][0]["importe"] == 500000.0
     assert d["resultado"]["discrepancias"]

@@ -1,0 +1,122 @@
+{% extends "_clave_base.html" %}
+{#- Recuperar la clave sin pedírsela a nadie (PLAN_REGISTRO.md, D6 y §4.3). Sirve a
+    los dos roles: `rol` = trabajador | empleador, y de él salen la etiqueta
+    (CUIL/CUIT), el campo del formulario y las rutas. Tres pasos en una página:
+      1. el número + captcha  -> POST {{ base }}/recuperar/iniciar (JSON)
+      2. el código que llegó al mail
+      3. la clave nueva dos veces -> POST {{ base }}/recuperar (redirige al ingreso)
+    El servidor responde LO MISMO haya o no cuenta: esta pantalla nunca sabe cuál
+    de los dos casos es, y no lo dice. -#}
+{% block titulo %}Recuperar clave{% endblock %}
+{% block chip %}{{ 'Empresa' if rol == 'empleador' else 'Trabajador' }}{% endblock %}
+{% block mrz %}RECUPERAR{% endblock %}
+
+{% block cuerpo %}
+    <h1>Recuperar mi clave</h1>
+
+    <div class="error" id="error" hidden></div>
+    <div class="aviso" id="aviso" hidden></div>
+
+    <form class="paso activo" id="paso-1" autocomplete="off">
+      <p class="bajada">Escribí tu {{ etiqueta }} y, si tu sindicato tiene un mail tuyo cargado, te mandamos un código para elegir una clave nueva.</p>
+      <label>{{ etiqueta }}</label>
+      <input name="{{ campo }}" inputmode="numeric" placeholder="{{ '30123456781' if rol == 'empleador' else '20123456786' }}" required>
+      {% include "_captcha.html" %}
+      <button class="enviar" type="submit">Mandarme el código</button>
+      <div class="ayuda"><a href="{{ login }}">Volver a ingresar</a></div>
+    </form>
+
+    <form class="paso" id="paso-2" autocomplete="off">
+      <p class="bajada" id="bajada-2"></p>
+      <label>Código de 6 dígitos</label>
+      <input class="codigo" id="codigo" name="codigo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+      <button class="enviar" type="submit">Continuar</button>
+      <div class="ayuda">Si no te llega, revisá el correo no deseado. El código vence en 15 minutos.</div>
+    </form>
+
+    <form class="paso" id="paso-3" autocomplete="off">
+      <p class="bajada">Elegí tu clave nueva. Tiene que tener al menos {{ clave_minima }} caracteres.</p>
+      <label>Clave nueva</label>
+      <input type="password" name="clave" minlength="{{ clave_minima }}" autocomplete="new-password" required>
+      <label>Repetí la clave</label>
+      <input type="password" name="clave2" minlength="{{ clave_minima }}" autocomplete="new-password" required>
+      <button class="enviar" type="submit">Guardar mi clave</button>
+    </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var BASE = "{{ base }}", LOGIN = "{{ login }}";
+  var token = "";
+  var $ = function (id) { return document.getElementById(id); };
+
+  function ir(n) {
+    [1, 2, 3].forEach(function (i) { $('paso-' + i).classList.toggle('activo', i === n); });
+    if (n === 2) $('codigo').focus();
+  }
+  function error(txt, codigo) {
+    var e = $('error');
+    e.textContent = txt || '';
+    if (txt && codigo) { var s = document.createElement('small'); s.style.cssText = 'display:block;opacity:.8;margin-top:4px;'; s.textContent = 'Código ' + codigo; e.appendChild(s); }
+    e.hidden = !txt;
+  }
+  function aviso(txt) { var a = $('aviso'); a.textContent = txt || ''; a.hidden = !txt; }
+
+  // Manda un formulario y devuelve {r, datos}. redirect:'manual' porque el paso
+  // final contesta con un 303 al ingreso y acá solo hace falta saber que llegó.
+  async function mandar(url, form) {
+    var r = await fetch(url, { method: 'POST', body: new FormData(form), redirect: 'manual', credentials: 'same-origin' });
+    var datos = null;
+    if (r.type !== 'opaqueredirect') { try { datos = await r.json(); } catch (e) { datos = null; } }
+    return { r: r, datos: datos };
+  }
+  function falla(res) {
+    var d = res.datos || {};
+    error(d.detail || 'No pudimos completar el pedido. Probá de nuevo en un rato.', d.codigo);
+  }
+  function reiniciarCaptcha() { if (window.turnstile) { try { window.turnstile.reset(); } catch (e) {} } }
+
+  $('paso-1').addEventListener('submit', async function (ev) {
+    ev.preventDefault(); error(''); aviso('');
+    var boton = ev.target.querySelector('button.enviar'); boton.disabled = true;
+    try {
+      var res = await mandar(BASE + '/recuperar/iniciar', ev.target);
+      if (!res.r.ok) { falla(res); reiniciarCaptcha(); return; }
+      if (res.datos.paso === 'codigo') {
+        token = res.datos.token;
+        $('bajada-2').textContent = 'Te mandamos un código a ' + res.datos.pista + '. Escribilo acá.';
+        ir(2);
+      } else {
+        aviso(res.datos.mensaje); reiniciarCaptcha();
+      }
+    } catch (e) { error('No pudimos conectar. Revisá tu conexión y probá de nuevo.'); }
+    finally { boton.disabled = false; }
+  });
+
+  $('paso-2').addEventListener('submit', function (ev) {
+    ev.preventDefault(); error('');
+    if (!/^[0-9]{6}$/.test($('codigo').value.trim())) { error('El código tiene 6 números.'); return; }
+    ir(3);
+  });
+
+  $('paso-3').addEventListener('submit', async function (ev) {
+    ev.preventDefault(); error('');
+    var f = ev.target;
+    if (f.clave.value !== f.clave2.value) { error('Las dos claves no coinciden.'); return; }
+    var fd = new FormData(f);
+    fd.append('token', token); fd.append('codigo', $('codigo').value.trim());
+    var boton = f.querySelector('button.enviar'); boton.disabled = true;
+    try {
+      var r = await fetch(BASE + '/recuperar', { method: 'POST', body: fd, redirect: 'manual', credentials: 'same-origin' });
+      if (r.type === 'opaqueredirect' || r.status === 303) { location.href = LOGIN + '?ok=clave'; return; }
+      var d = null; try { d = await r.json(); } catch (e) {}
+      falla({ datos: d });
+      // Código mal o vencido: se vuelve a pedir; una clave mal puesta se corrige acá.
+      if (d && d.codigo === 'E-REGISTRO-02') ir(1);
+    } catch (e) { error('No pudimos conectar. Revisá tu conexión y probá de nuevo.'); }
+    finally { boton.disabled = false; }
+  });
+})();
+</script>
+{% endblock %}

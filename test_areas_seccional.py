@@ -69,7 +69,7 @@ with db.get_session() as s:
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111111", nombre="Raúl (Rosario)",
                            clave_hash=auth.hashear_clave("raul"), debe_cambiar_clave=False,
                            es_admin_seccional=True, seccional_id=SEC_ROSARIO))
-    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111112", nombre="Cielo (Córdoba)",
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111139", nombre="Cielo (Córdoba)",
                            clave_hash=auth.hashear_clave("cielo"), debe_cambiar_clave=False,
                            area_id=AREA_CBA, seccional_id=SEC_CORDOBA))
     s.commit()
@@ -80,7 +80,7 @@ with db.get_session() as s:
     U_RAUL = s.exec(select(UsuarioSindicato).where(
         UsuarioSindicato.usuario == "20111111111")).first().id
     U_CIELO = s.exec(select(UsuarioSindicato).where(
-        UsuarioSindicato.usuario == "20111111112")).first().id
+        UsuarioSindicato.usuario == "20111111139")).first().id
 
 
 def _cliente(usuario, clave):
@@ -103,8 +103,12 @@ def _marta():
 
 def test_tiene_las_mismas_secciones_que_el_general():
     """No es un descuido: lo que lo achica es el alcance, no el catálogo.
-    Tener dos catálogos sería tener dos cosas que mantener."""
-    assert db.permisos_efectivos(U_RAUL) == db.permisos_efectivos(U_MARTA)
+    Tener dos catálogos sería tener dos cosas que mantener.
+
+    La única resta (PLAN_ALCANCE_SECCIONAL.md, bloque 5, decisión de SDN):
+    Empleadores no tiene seccional, así que quien está acotado no los ve."""
+    from permisos import SECCIONES_EMPLEADORES
+    assert db.permisos_efectivos(U_RAUL) == db.permisos_efectivos(U_MARTA) - SECCIONES_EMPLEADORES
     print("OK  test_tiene_las_mismas_secciones_que_el_general")
 
 
@@ -131,13 +135,13 @@ def test_crea_areas_y_usuarios_en_su_seccional():
     assert creada and creada[0]["seccional_id"] == SEC_ROSARIO
 
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777770", "nombre": "Nuevo Rosario", "clave_inicial": "x",
+        "usuario": "20777777786", "nombre": "Nuevo Rosario", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_ROS), "seccional_id": str(SEC_ROSARIO),
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         u = s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777770")).first()
+            UsuarioSindicato.usuario == "20777777786")).first()
         assert u is not None and u.seccional_id == SEC_ROSARIO
     print("OK  test_crea_areas_y_usuarios_en_su_seccional")
 
@@ -149,13 +153,13 @@ def test_no_puede_otorgar_el_rol_general():
     dejaría de significar nada."""
     c = _raul()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777771", "nombre": "Colado", "clave_inicial": "x",
+        "usuario": "20777777794", "nombre": "Colado", "clave_inicial": "x",
         "rol": "super", "seccional_id": str(SEC_ROSARIO),
     }, follow_redirects=False)
     assert r.status_code == 403
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777771")).first() is None
+            UsuarioSindicato.usuario == "20777777794")).first() is None
     print("OK  test_no_puede_otorgar_el_rol_general")
 
 
@@ -268,13 +272,13 @@ def test_no_puede_tocar_usuarios_de_otra_seccional():
 def test_no_puede_crear_usuarios_en_otra_seccional():
     c = _raul()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777772", "nombre": "Infiltrado", "clave_inicial": "x",
+        "usuario": "20777777808", "nombre": "Infiltrado", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_CBA), "seccional_id": str(SEC_CORDOBA),
     }, follow_redirects=False)
     assert r.status_code == 403
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777772")).first() is None
+            UsuarioSindicato.usuario == "20777777808")).first() is None
     print("OK  test_no_puede_crear_usuarios_en_otra_seccional")
 
 
@@ -285,21 +289,21 @@ def test_area_y_seccional_del_usuario_tienen_que_coincidir():
     qué ve. El general tampoco puede armarlo."""
     c = _marta()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777773", "nombre": "Mezclado", "clave_inicial": "x",
+        "usuario": "20777777816", "nombre": "Mezclado", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_ROS), "seccional_id": str(SEC_CORDOBA),
     }, follow_redirects=False)
     assert r.status_code == 303
     assert "err=areaajena" in r.headers.get("location", "")
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777773")).first() is None
+            UsuarioSindicato.usuario == "20777777816")).first() is None
     print("OK  test_area_y_seccional_del_usuario_tienen_que_coincidir")
 
 
 def test_un_admin_de_seccional_sin_seccional_se_rechaza():
     c = _marta()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777774", "nombre": "Sin Alcance", "clave_inicial": "x",
+        "usuario": "20777777824", "nombre": "Sin Alcance", "clave_inicial": "x",
         "rol": "seccional", "seccional_id": "",
     }, follow_redirects=False)
     assert "err=sinseccional" in r.headers.get("location", "")
@@ -322,7 +326,7 @@ def test_el_panel_del_admin_local_no_trae_las_otras_seccionales():
     assert U_CIELO not in ids, "un usuario de Córdoba no es asunto suyo"
 
     html = _raul().get("/admin").text
-    assert "20111111112" not in html, "se filtró el CUIT de la usuaria de Córdoba"
+    assert "20111111139" not in html, "se filtró el CUIT de la usuaria de Córdoba"
     print("OK  test_el_panel_del_admin_local_no_trae_las_otras_seccionales")
 
 
@@ -331,7 +335,7 @@ def test_el_general_si_ve_todo():
     areas = db.areas_del_sindicato(SID, db.alcance_seccional(U_MARTA))
     assert {AREA_ROS, AREA_CBA} <= {a["id"] for a in areas}
     html = _marta().get("/admin").text
-    assert "20111111112" in html
+    assert "20111111139" in html
     print("OK  test_el_general_si_ve_todo")
 
 

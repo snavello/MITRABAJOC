@@ -84,7 +84,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - main.py — servidor y todas las rutas.
 - db.py — modelos SQLModel, engine dual, acceso a datos, marca_sindicato().
   `CuentaTrabajador` es la PERSONA (una fila por CUIL, dueña de sus datos
-  personales) y `Trabajador` el EMPADRONAMIENTO en un sindicato.
+  personales) y `Trabajador` el EMPADRONAMIENTO en un sindicato. Lo mismo en
+  el panel: `CuentaPanel` es la clave del operador (por CUIL) y
+  `UsuarioSindicato` su rol en cada sindicato.
 - auth.py — hash de claves y sesiones.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
@@ -101,6 +103,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
   `test_fechas.py` recorriendo los archivos con `ast`.
+- cuit.py — el dígito verificador del CUIL/CUIT (módulo 11 de AFIP), ÚNICA
+  implementación: `es_valido`, `normalizar`, `corregir`, `siguiente_libre`.
+  Puro. `test_cuit.py` falla si otro .py escribe los pesos; `static/cuit.js`
+  es la cortesía del navegador (sus pesos los compara `test_cuit_puertas.py`).
+- regularizar_cuit.py — convierte los CUIL/CUIT inválidos cargados a mano (y
+  los viejos de la demo, `identificadores_demo.py`) a un número válido en
+  TODAS las tablas, en una transacción, con traza en `CambioIdentificador`.
+  Su `INVENTARIO` es la lista de dónde vive un CUIL/CUIT; un test falla si
+  aparece una columna nueva sin decidir. Uso en `DESPLIEGUE_RENDER.md`.
 - encuestas.py — catálogo y reglas PURAS del módulo Encuestas (modos,
   cortes, tipos de pregunta, estados, disclaimer, textos de los avisos). No
   importa `db`, así que se prueba solo y rápido.
@@ -115,8 +126,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   sintéticas" en DESPLIEGUE_RENDER.md.
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
+- listas.py — Listas del sindicato (`PLAN_LISTAS_VALIDACIONES.md`): las
+  plantillas tipadas (grupo familiar, datos del afiliado, lista simple), el
+  CSV modelo y el parseo con validación fila por fila. Puro, no importa
+  `db`; el ensayo y la carga usan el mismo parseo. Ver "Listas del sindicato".
 - validaciones_tramite.py — motor puro de validaciones de formularios de
-  Trámites (fija + consistencia; ver sección propia).
+  Trámites (fija + consistencia + `funcion`: listas, padrón y fórmulas con
+  su propio evaluador `ast`; ver sección propia).
 - recursos.py — Recursos de la landing `/entornos`: catálogo de la
   documentación del proyecto (los versionados en `recursos/` + los subidos
   a la base), el pase de 30 días que deja el PIN y la clasificación por tipo.
@@ -126,6 +142,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   de `diagramas.py` y los textos de `contenido.py`. Se corre a mano tras
   cambios grandes: `python docs/generador/extraer.py && python
   docs/generador/generar.py`.
+- correo.py — el canal de mail (Resend, un POST con urllib, sin librería):
+  códigos de registro y de recuperación de clave. `destino_valido` es la
+  única puerta por la que sale una dirección; `pista()` la muestra tapada.
+  Apagado sin `RESEND_API_KEY` + `MAIL_REMITENTE`.
+- captcha.py — Cloudflare Turnstile (`verificar`, falla cerrado); parcial
+  `templates/_captcha.html`. Apagado sin claves. Ver "Registro confirmado".
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
 - xsk/ — **XSANDERS Security Kit** (plan en `PLAN_XSK.md`, método en
@@ -139,7 +161,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).
   `probar_asistente.py` + `medicion_asistente/` = set de aceptación del
   prompt contra la API real (gasta créditos; a mano, nunca en CI).
+- asistente_tramites.py — Asistente de trámites (Herramientas de `/entornos`,
+  `PLAN_ASISTENTE_TRAMITES.md`): el motor PURO que convierte las respuestas
+  del onboarding en circuito por actor, formulario con la forma exacta del
+  constructor, brechas, instrucción y JSON `colm3na.tramite` v1. `BRECHAS` es
+  la lista cerrada de lo que Colm3na no hace; cuando algo se desarrolla, se
+  saca de ahí. `asistente_tramites_ia.py` es la llamada a la IA (propone,
+  nunca decide). Ver "Herramientas".
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
+  **Carga la demo AL IMPORTARSE** (no tiene `if __name__`): nunca importarlo
+  para leer una constante. Sus números viejos → nuevos, en `identificadores_demo.py`.
 - cargar_marca_plataforma.py — siembra el logo y los colores de Colm3na
   (viven en la base, no en el código: sin esto un entorno nuevo arranca con
   el placeholder `static/logo_mitrabajo.svg`). Va primero al poblar.
@@ -151,10 +182,45 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
   anterior, específica de la UOM. Ver "Lotes de datos sintéticos".
 - cargar_bancaria.py — alta de "La Bancaria" con los conceptos del CCT 18/75
-  (ver `docs/cct-1875-bancarios.md`) + su lote.
+  (ver `docs/cct-1875-bancarios.md`) + su lote. `--rehacer-recibos` regenera
+  solo los recibos del lote; `--borrar-recibos-de CUIL [--si]` borra los de
+  una persona. Los montos salen de `grilla_bancaria.py` (puro), que lee las
+  grillas de `data/grillas_bancarias/AAAA-MM.json` (una por mes, transcriptas
+  del PDF firmado; hoy agosto 2026) y arma el recibo que corresponde para la
+  Calculadora bancaria (ver "Herramientas"); `docs/recibos-bancaria-prueba/`
+  tiene diez recibos PDF simulados del CUIL de prueba 27999999994.
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
+- mapa_funcional.py — **mapa funcional** de la plataforma: app → funcionalidad
+  (las pestañas) → pantalla, rutas, código, tablas y servicios externos, con
+  vista Lista y vista Grafo. Todo se lee del código con `ast` (rutas de
+  main.py, llamadas entre funciones, clases `table=True` y el SQL escrito a
+  mano, librerías y URLs de servicios); lo único a mano es `FUNCIONALIDADES`
+  (qué prefijo de ruta es de qué funcionalidad) y los nombres legibles. Una
+  ruta nueva que no encaje sale en "Sin clasificar": sumarle su regla.
+  Revisado pieza por pieza el 2026-09-30: la ruta que arma la página entera
+  de cada app va en su propia funcionalidad "(carga inicial)", las consultas
+  de "¿está configurado?" no cuentan como llamar al servicio, las utilidades
+  privadas de otro módulo no cuentan como usarlo, y las docstrings no son
+  código. Las pantallas no se asignan a mano: una plantilla es pantalla
+  de una funcionalidad si llama a sus rutas (fetch o action, en ella o en
+  el JS que carga con <script src>). `test_mapa_funcional.py` verifica
+  que nada de eso vuelva.
+  **Orientación, nunca fuente de verdad**: no ve llamadas dinámicas; ante la
+  duda manda el código. **Es herramienta del proyecto en `/entornos` →
+  pestaña "Mapa funcional"** (`/entornos/mapa`, mismo pase y 404 en demo):
+  el servidor lo arma del código DESPLEGADO una vez por proceso (2-3 s) y lo
+  guarda en memoria; se renueva solo con cada deploy y a pedido con
+  "Actualizar desde el código". Estética de la landing; vis-network va
+  VENDOREADO en `static/vendor/vis-network/` (la CSP no deja cargar CDN).
+  En la PC, `python mapa_funcional.py` escribe y abre
+  `mapa-funcional/mapa.html` (no se versiona). El prompt para usarlo en
+  otros proyectos es `docs/prompts/MAPA_FUNCIONAL.md`, publicado como
+  Recurso con `python mapa_funcional.py --publicar-prompt`. Reemplazó a graphify
+  (2026-09-30), que se probó y se desinstaló: por archivo o por función no
+  servía y traía relaciones falsas. Detalle en
+  `docs/chat/2026-09-30-mapa-funcional.md`.
 - migrations/ — Alembic (env.py + versions/).
 - alembic.ini — config de Alembic.
 - templates/ — HTML de las 4 apps (trabajador, sindicato, plataforma,
@@ -164,15 +230,41 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   static/fonts/ (Barlow Condensed, licencia SIL OFL) + mapa.js (capa fina
   sobre Leaflet y las burbujas de los dos mapas de tablero, compartida por las
   cinco pantallas con mapa) +
-  modales.js (arrastre de modales en escritorio, ver "Modales") +
-  static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN).
+  modales.js (arrastre de modales en escritorio y su movimiento, ver "Modales") +
+  movimiento.css (las duraciones y curvas `--mov-*`/`--ease-*` de TODA la app,
+  en un solo lugar, y cómo entran, se arman y se van los modales) +
+  static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN) +
+  static/vendor/preact/ (Preact 10.29.8 + htm 3.1.1, solo para la v2 del
+  Panel Sindical; `ORIGEN.md` guarda el SHA-256 de cada archivo y un test lo
+  compara) + static/panel_v2/ (los módulos de la v2, ver Pendientes 11).
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
 - data/precios_ia.json — precios de la API de Anthropic (USD por millón de
   tokens), con su fuente y su fecha de lectura. A mano, no hay scraper.
 - data/topes_ss.csv — vigencias de topes de la seguridad social (ver
   "Topes de base imponible" en HISTORIAL.md).
-- .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño;
-  .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general.
+- .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño
+  (incluido "Movimiento": tokens de duración y curva, caso cero en la v2 del Panel);
+  .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general;
+  .claude/skills/emil-design-eng/ — skill de Emil Kowalski sobre animación y pulido de
+  interfaz, copia textual fijada a un commit (`ORIGEN.md`): es referencia, y ante un
+  choque manda `diseno-mi-trabajo`;
+  .claude/skills/impeccable/ (+ `.claude/agents/impeccable-*.md`) — skill
+  **Impeccable** de Paul Bakaus (impeccable.style, Apache 2.0, instalada el
+  2026-10-19 para la revisión de diseño pantalla por pantalla): 24 comandos
+  (`/impeccable critique|audit|polish|typeset|layout|colorize|animate|
+  clarify|distill|quieter ...`), copia textual fijada a un commit
+  (`ORIGEN.md`, con qué NO se instaló: ni los hooks del detector, que
+  necesitan un binario bajado, ni el modo `live`, que pide abrir la CSP).
+  Mismo orden: ante un choque manda `diseno-mi-trabajo` (su `craft-floor`
+  prohíbe el kicker y los números de sección, que acá se quedan), y los
+  colores son SIEMPRE los cuatro de marca del sindicato. **La revisión de
+  diseño arrancó el 2026-10-19** con el constructor de Trámites (dirección
+  A, "hoja de trabajo"), la tira de pestañas de los dos paneles (pastillas
+  de texto, activa en blanco) y las pantallas de Noticias, Beneficios y
+  Notificaciones con la misma hoja (las clases `.ct-layout/.ct-riel/
+  .ct-area/.ct-pasog/.ct-guardar/.ct-ancho` son el patrón para cualquier
+  pantalla de alta del panel); los mockups viven en el lienzo
+  https://claude.ai/artifact/39fiNwNrpcyDXpGaQHqNnn.
 - **FLUJO.md** — el ciclo de un cambio en una página: de tu PC a Pruebas y de
   Pruebas a la demo, con los comandos y las tres reglas.
 - **HISTORIAL.md** — changelog técnico detallado, no se carga automático.
@@ -181,15 +273,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
    sindicatos (con marca y logo) y sus admins. Login → `/plataforma/inicio`
    (portada de tarjetas) → `/plataforma` (panel de siempre).
-2. Usuario de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
+2. Usuario de sindicato — /admin con CUIT + clave (una sola clave aunque
+   trabaje en varios sindicatos: elige a cuál después del login). Gestiona conceptos, fórmulas,
    trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
-   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 15
+   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 14
    entradas en una tira de pestañas deslizable: Panel Sindical, Reportes,
-   Fórmulas, Conceptos, Trabajadores, Aprendizaje, Cotizantes, Noticias,
+   Reglas, Conceptos, Trabajadores, Aprendizaje, Noticias,
    Beneficios, Notificaciones, Trámites, Empleadores, Convenio, Seccionales
    y Áreas y Usuarios; varias dependen de un módulo). Desde el sprint de
    Áreas V2 no es un rol sino **tres** (ver "Áreas, permisos y ruteo"):
-   Super Admin (= Admin de Sede Central, el de siempre, ve las 15),
+   Super Admin (= Admin de Sede Central, el de siempre, ve las 14),
    Admin de Seccional (lo mismo pero solo sobre SU seccional) y usuario de
    área (solo las secciones que le dé su área, y solo sobre su alcance).
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
@@ -240,26 +333,45 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   GRAFANA_METRICS_TOKEN (solo `metrics:write`) para el hilo colector de métricas;
   COLECTOR_METRICAS=off lo apaga.
   SENTRY_URL opcional. Detalle y vencimiento en `DESPLIEGUE_RENDER.md`.
+- TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — avisos al teléfono del equipo
+  (`telegram.py`, solo Pruebas por ahora): errores no previstos al instante,
+  resumen del día a la hora de TELEGRAM_RESUMEN_HORA (21:00 BA por defecto,
+  `resumen_diario.py`) y las alertas de Grafana por su propio punto de
+  contacto. Sin las dos, apagado en silencio. Ver "Estado actual" 25.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
+- RESEND_API_KEY / MAIL_REMITENTE — canal de mail del registro y la
+  recuperación de clave (`correo.py`); sin las dos, apagado en silencio y el
+  registro cae a nivel 1. TURNSTILE_SITE_KEY / TURNSTILE_SECRET — captcha de
+  los registros y la recuperación (`captcha.py`); sin las dos, apagado.
+  Detalle y prerrequisitos (Cloudflare, Resend) en `DESPLIEGUE_RENDER.md`.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
-- Admin UOM: CUIT 20111111110 / uom-demo (Super Admin).
-- Admin Gastronómica: CUIT 20222222220 / fega-demo (Super Admin).
-- UOM, Admin de Seccional de Rosario: 20555555553 / rosario-demo.
+- Admin UOM: CUIT 20111111120 / uom-demo (Super Admin).
+- Admin Gastronómica: CUIT 20222222223 / fega-demo (Super Admin).
+- UOM, Admin de Seccional de Rosario: 20555555556 / rosario-demo.
 - UOM, un usuario por área (la lista completa la imprime `cargar_demo.py`
   al terminar). Los dos que muestran el contraste de un vistazo:
-  27777777774 / prensa-demo (Prensa de Sede Central, alcanza a todo el
-  país) y 20888888887 / prensacba-demo (el mismo perfil, recortado a
+  27777777772 / prensa-demo (Prensa de Sede Central, alcanza a todo el
+  país) y 20888888889 / prensacba-demo (el mismo perfil, recortado a
   Córdoba). El de Prensa central, además, NO está en el padrón a propósito:
   trabaja en el gremio sin estar afiliado.
-- Trabajador un solo sindicato: CUIL 20111111119 (UOM).
-- Trabajador pluriempleo (ambos): CUIL 27222222224.
-- Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
-- Empresa multisindicato (ambos): CUIT 30111222339.
-- Admin La Bancaria: CUIT 20333444550 / bancaria-demo (sindicato con lote
+- Trabajador un solo sindicato: CUIL 20111111112 (UOM).
+- Trabajador pluriempleo (ambos): CUIL 27222222228.
+- Empresa un solo sindicato: CUIT 30999888778 (UOM) — registrarse en `/ingresar-empresa`.
+- Empresa multisindicato (ambos): CUIT 30111222335.
+- Admin La Bancaria: CUIT 20333444551 / bancaria-demo (sindicato con lote
   sintético completo, recibos según CCT 18/75 — ver `cargar_bancaria.py`).
+- **Usuarios de prueba que se CONSERVAN en Pruebas** (La Bancaria, seccional
+  Lomas de Zamora, pedido de SDN 2026-10-17; no son de nadie): 23010101018 /
+  23010 (Admin de Seccional, el que destapó el bloque 7 del alcance),
+  20900000015 / diag-code-2026 (Admin de Seccional) y 20900000023 /
+  diag-code-2026 (usuario de área Secretaría General). Sirven para repetir
+  cualquier verificación del alcance sin crear nada.
+- Todos estos números cumplen el módulo 11 desde 2026-10-10 (PLAN_CUIT_MOD11.md,
+  etapa 3). Los de antes (`20111111110`, `20111111119`...) ya no sirven en una
+  base cargada de cero; el mapa viejo → nuevo es `identificadores_demo.py`.
 
 ## Decisiones tomadas (no rediscutir sin motivo)
 - **Motor: Render Postgres** (no Supabase). La app ya tiene auth propia, que es el
@@ -313,17 +425,60 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Estados:
   pagado/parcial/impago/no_presentada/no_declarado/informado (ver
   "Ajustes de recibos, aportes y trámites" en HISTORIAL.md para "INFORMADO").
-- **Un solo encabezado para las cuatro apps** (2026-09-13): ninguna
-  plantilla escribe el suyo, se arma con `{% include "_encabezado.html" %}`
-  (+ `static/encabezado.css`, que el propio parcial carga porque
-  `trabajador.html` y `empresa.html` no cargan `marca.css`). Cinta oscura
-  con el rol del panel a la izquierda y **Colm3na a la derecha**; debajo, la
-  barra del sindicato: logo a 52px de ALTO y ancho libre (38px en mobile) y
-  el nombre de la pantalla a la derecha, dicho UNA sola vez. El nombre del
-  sindicato en texto solo si no hay logo. Fuera del sistema a propósito: los 3 logins standalone
+- **Un solo encabezado para las cuatro apps, de UNA línea** (2026-09-13,
+  reducido a una línea el 2026-09-23): ninguna plantilla escribe el suyo, se
+  arma con `{% include "_encabezado.html" %}` (+ `static/encabezado.css`, que
+  el propio parcial carga porque `trabajador.html` y `empresa.html` no cargan
+  `marca.css`). Es una sola barra oscura: **logo del sindicato a la izquierda
+  y Colm3na a la derecha**, el logo del gremio a 62px de alto y ancho libre
+  (46 en móvil) contra los 24 de Colm3na (19 en móvil) -- el gremio manda y
+  Colm3na firma. **No hay cinta** (era una franja entera para decir el rol
+  del panel) y **el nombre de la pantalla no se escribe en ninguna app**: la
+  tira de pestañas, o la barra de abajo en el afiliado, ya dice dónde estás.
+  El nombre del sindicato en texto solo si no hay logo. Donde la marca
+  principal ES la plataforma, el logo grande de la izquierda es el de Colm3na
+  y a la derecha no se repite. `enc_rol` y `enc_pantalla` ya no existen; las
+  variables que quedan son `enc_volver`, `enc_fecha`, `enc_fija` y
+  `enc_plataforma`. Fuera del sistema a propósito: los 3 logins standalone
   (logo de plataforma grande, 148/85px) y las herramientas internas
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
+- **Las pantallas interiores claras van sobre una "mesa", no sobre un plano
+  liso** (2026-09-24, `static/interior.css` + `templates/_fondo_interior.html`).
+  Tres capas, ninguna toca el contenido: la **mesa** (gris frío), la
+  **textura** fija (retícula de colmena al 6% de alfa en el trazo + dos halos
+  difuminados del acento y el primario DEL SINDICATO) y la **franja** de
+  marca, que baja del encabezado y se desvanece en la mesa. El contenedor de
+  ancho máximo que cada pantalla ya tenía (`.cont`, `.wrap`, `main`,
+  `.hilo`, `.cuerpo`) lleva `mesa-cont`, que solo lo levanta por encima.
+  **La franja es opt-in** (`<body class="mesa franja">`) y hoy la usan las
+  ocho. Lo que queda ARRIBA de todo sobre ella tiene que separarse por LUZ y
+  no por contraste de color: la tarjeta oscura del recibo lleva filo de 1px
+  y brillo interior (`.rc-panel` en trabajador.html), y en la app de empresa
+  el título y su bajada van en claro. Una pantalla nueva que ponga algo
+  oscuro o un texto en tinta arriba de todo tiene que resolver lo mismo.
+  **En teléfono se apaga todo**
+  (≤760px). Una pantalla se suma con el include, `mesa` (y `franja` si
+  corresponde) en el `<body>` y `mesa-cont` en su contenedor. **No va** en
+  los logins, el primer ingreso de plataforma, las cuatro portadas (que
+  tienen su propio ambiente, "Portadas v2" en marca.css) ni las pantallas
+  que ya son oscuras.
+- **El título de cada pantalla se escribe igual en las tres apps**
+  (2026-09-24): condensada, 31px, mayúsculas -- el tratamiento que ya tenía
+  `.rc-h1` ("SUBÍ TU RECIBO") y que ahora usan todas. Antes cada app iba por
+  su lado: 26px en system-ui en el afiliado, 22px condensada en los dos
+  paneles. Lo lleva la clase **`titulo-pagina`**, y solo el PRIMER título de
+  cada panel y de cada sub-panel: los encabezados de sección que vienen más
+  abajo ("Noticias cargadas (30)") siguen chicos y en tinta. Va en **blanco**
+  arriba de 760px, porque ahí atrás baja la franja de marca, junto con la
+  bajada pegada al título (menos lo que traiga superficie propia, como un
+  `<code>`); en teléfono no hay franja y vuelve a la tinta. Una pantalla
+  nueva marca su título con esa clase y no define tipografía propia.
+- **La pestaña "Fórmulas" se llama Reglas** (2026-09-24) y su título es
+  "Reglas de control". Solo cambió lo que lee una persona: la clave de la
+  sección sigue siendo `formulas` en `permisos.py`, la ruta sigue siendo
+  `/admin/formula` y el ancla `#formulas` -- renombrar la clave obligaría a
+  migrar los permisos ya asignados de cada área.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
   nombre viejo salió de todo lo que ve una persona — títulos del navegador,
   banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de
@@ -366,6 +521,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   donde el modal es una hoja pegada al borde. Una FAMILIA nueva de modal tiene
   que sumarse a `CAJAS` de ese archivo y al cursor de marca.css; `test_modales.py`
   verifica que toda plantilla con modales cargue el script.
+  **Y entran con movimiento** (2026-10-13, `static/movimiento.css` + el segundo
+  bloque de modales.js): la entrada es CSS, la salida la sostiene el script
+  con `mov-sale`, el contenido se arma en cascada, lo que dice "Cargando…" se
+  dibuja como la forma de lo que viene y la caja crece de a poco al llegar el
+  detalle. Ninguna función de abrir o cerrar se tocó. Una familia nueva suma
+  su fondo a `FONDOS_MOV` y sus reglas a movimiento.css (lo verifica el mismo
+  test); el "Ver" del Panel queda afuera a propósito. Las pestañas de las
+  cuatro apps y las vistas que cambian adentro de una pestaña sin ser modales
+  (los trámites del afiliado y de la empresa) llevan `data-mov-vista` y
+  reciben lo mismo, menos el crecer de a poco; una pestaña nueva tiene que
+  llevarla (lo verifica `test_modales.py`). Reglas en la skill `diseno-mi-trabajo` → "Movimiento".
 - **Patrón portada + panel interno**, repetido para los 3 roles con login
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
@@ -422,6 +588,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   request. Así se rompió la carga de foto de perfil del 2026-09-20 al
   2026-09-22, en las apps de trabajador y de empresa.
 
+- **Reportes: los recibos no enviados llegan al sindicato anonimizados y
+  solo con cláusula firmada** (2026-09-24). La pestaña Reportes lista TODOS
+  los recibos verificados; de los que el afiliado no envió no sale nombre,
+  CUIL ni empresa, y la búsqueda por CUIL/nombre busca solo entre los
+  enviados (si no, el filtro identificaría la fila anónima). Esas filas --en
+  Reportes y en el explorador del Panel-- aparecen solo si
+  `Sindicato.clausula_confidencialidad`, que marca plataforma con el
+  contrato ya cargado. Los números y gráficos del Panel cuentan todo, con o
+  sin cláusula (decisión de Sd). `EnvioSindicato` sigue existiendo como la
+  prueba de afiliado cotizante (art. 21 bis); ya no tiene pestaña propia.
+
 - **Un documento que no es del CUIL logueado se corta APENAS SE LEE, no al
   confirmar** (2026-09-14): `/api/leer` (recibo) y `/api/aportes`
   (comprobante de ARCA) comparan el CUIL leído contra el de la sesión con
@@ -431,12 +608,129 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   comprobante ajeno además se guardaba como semáforo propio. El chequeo de
   `/api/validar` SIGUE además de este: esa ruta se puede llamar sola con
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
-  el suyo. Detalle en HISTORIAL.md.
+  el suyo. **Lo mismo vale para lo que el afiliado manda al sindicato**
+  (`/api/reportar`, `/api/enviar-sindicato`, XSK H-0021, 2026-10-10): el CUIL
+  sale de la sesión y el recibo tiene que ser suyo (`_envio_del_afiliado`,
+  `_recibo_propio`); antes un afiliado podía marcar como enviado el recibo de
+  otro. Detalle en HISTORIAL.md.
 
-## Estado actual (actualizado 2026-09-11)
-Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
-cada push redeploya) **salvo el punto 21**, que vive en la rama
-`areas-permisos-v2` y todavía no se mergeó ni se desplegó.
+- **El CUIL/CUIT cumple el módulo 11 donde NACE, y no se cambia desde una
+  edición** (2026-10-10, `PLAN_CUIT_MOD11.md`, primera medida de la serie
+  XSK). Es el campo más importante del modelo y entre tablas se une POR
+  TEXTO, sin claves foráneas. El verificador (`cuit.py`) se exige en las
+  altas, la carga masiva, el registro de afiliado y de empresa, y los datos
+  de sindicato y usuarios (E-IDENT-01/02); donde se REFERENCIA un número que
+  ya existe (logins, reset de clave, filtros, criterios de notificación) se
+  busca tal cual, para que los sintéticos de los lotes —inválidos y que
+  quedan así— sigan entrando. Lo que lee la IA no se bloquea por el
+  verificador. Un número ya cargado **no se cambia desde el panel**
+  (E-IDENT-03): cambiarlo en una sola tabla cortaba la cuenta, los recibos y
+  los trámites de la persona; la única vía es `regularizar_cuit.py`, que lo
+  cambia en todas a la vez y no reescribe bitácoras. Una puerta de alta nueva
+  usa `_cuil_mal`/`_cuit_mal` de main.py (`test_cuit_puertas.py` clasifica
+  con `ast` toda ruta POST que reciba un CUIL/CUIT).
+
+- **El enmascarado es "mejor esfuerzo" y nunca estorba al análisis**
+  (2026-09-24, definición de SDN, **reemplaza la línea roja 2 y el §6 de
+  `PLAN_ENMASCARADO.md`**). El objetivo del análisis de recibos es ser lo
+  más preciso, confiable y viable posible en tiempo y recursos; tapar los
+  datos personales antes de la IA es un agregado a la confidencialidad que
+  ya existe, no una condición. Por eso: tiene que ser liviano; si un dato no
+  se pudo tapar o quedó en duda (fuga, CUIL no encontrado, OCR que falla o
+  no está), **el recibo se analiza igual** y queda un registro para revisar
+  después; si el cupo del OCR está lleno o se pasa de su tiempo máximo, no
+  se espera: sale sin tapar y se registra. Se tolera la fuga eventual de un
+  CUIT o un nombre -- no se construye una jaula de acero. Lo que NO se
+  relaja es la verificación de pertenencia (un CUIL ajeno leído localmente
+  corta como E-RECIBO-04): es seguridad, no enmascarado.
+
+- **Una persona, una clave para el panel de todos los sindicatos**
+  (2026-10-17). La clave del operador vive en `CuentaPanel` (una fila por
+  CUIL), no en cada `UsuarioSindicato`: el usuario dice dónde trabaja y con
+  qué rol, la cuenta con qué clave entra. Quien está en el panel de más de un
+  sindicato entra con su única clave y **elige a cuál después del login**
+  (`/admin/elegir`, token firmado de 10 minutos; "Cambiar de sindicato" en la
+  portada), como el afiliado con pluriempleo. **La clave la fija el primer
+  sindicato que da de alta a la persona**: los que la suman después no la
+  pisan (si pudieran, el admin de un gremio entraría al panel de otro con una
+  clave elegida por él). Lo garantiza el enganche
+  `db._mover_clave_a_la_cuenta` en el modelo, así que ninguna de las cinco
+  puertas de alta puede crear una segunda clave: la fila queda SIEMPRE con
+  `clave_hash` vacío. Es una credencial aparte de la del afiliado. El
+  sindicato no ve en qué otro gremio trabaja la persona (aislamiento);
+  plataforma sí, en "Usuarios de los paneles". Antes el login probaba la
+  clave contra la primera fila con ese CUIL en cualquier sindicato, y quien
+  estaba en dos entraba a uno solo. Detalle en HISTORIAL.md, "Una clave por
+  persona en el panel".
+
+- **El registro se confirma por mail y el nivel de fiabilidad es dato de la
+  cuenta; ningún nivel esconde nada en la app** (2026-10-11,
+  `PLAN_REGISTRO.md`, segunda medida de la serie XSK, cierra H-0017). Tres
+  pasos: CUIL + captcha + freno → código de 6 dígitos al **mail del padrón**
+  (`CuentaTrabajador.mail_padron`, lo escribe SOLO el sindicato) o, si no hay
+  y el sindicato lo acepta (`Sindicato.acepta_mail_declarado`), a un mail que
+  la persona declara (`mail_declarado`, confirmado) → clave y datos. **Tres
+  mails y no se mezclan**: `mail` es el de CONTACTO (lo edita la persona, no
+  sirve para códigos), `mail_padron` el del sindicato, `mail_declarado` el
+  confirmado por la persona. Niveles 1 a 4 (`nivel_fiabilidad` + `nivel_origen`,
+  `db.subir_nivel` única escritura, nunca baja): 1 CUIL en el padrón, 2 mail
+  confirmado, 3 recibo propio **leído por la IA en `/api/leer`** (no en
+  `/api/validar`, cuyo payload lo arma el cliente), 4 confirmado por el
+  sindicato. El sindicato ve el nivel en Trabajadores y Empleadores y actúa:
+  confirmar identidad, restablecer una clave temporal (se muestra una vez,
+  obliga a cambiarla en el primer ingreso). **Un sindicato solo responde por
+  una cuenta si la persona ya estaba en SU padrón cuando la creó**
+  (`Trabajador.registrado`; `db.padron_responde_por`): si no, no le
+  restablece la clave, no la confirma, no le pisa los datos ni el mail del
+  padrón, y el panel no le muestra el nivel (un admin puede cargar CUALQUIER
+  CUIL, es público). Recuperación de clave autoservicio solo al mail del
+  padrón; la respuesta es la misma haya o no cuenta. **Canal de mail apagado
+  = las demos siguen**: el registro nace nivel 1 visible (D9). Captcha
+  (Turnstile) y la CSP ensanchada SOLO en `/ingresar*` (`RUTAS_CON_CAPTCHA`),
+  única excepción a "nada externo" (D7). El estado entre pasos viaja en
+  `auth.firmar_paso`/`leer_paso`, nunca en campo oculto ni cookie plana.
+  Riesgo residual aceptado (H-0022): el registro y la recuperación revelan
+  si un CUIL está afiliado o tiene mail del padrón; lo encarecen captcha y
+  freno, lo cierra el perímetro. Detalle en HISTORIAL.md, "Registro
+  confirmado por mail".
+
+- **Un campo de Trámites tiene INGRESO y VALIDACIÓN, por separado**
+  (2026-10-18, definición de SDN). El **ingreso** dice de dónde sale el
+  valor: lo carga el afiliado, se **extrae** de un dato (`Extraer`: la edad,
+  el número de credencial, una columna de lista) o se **calcula** con una
+  fórmula (`Calcular`). El único chequeo del ingreso es el intrínseco: no se
+  cargó, o no se pudo extraer. La **validación** es aparte y opcional
+  (`Validar …`): contra un valor fijo, un rango, otro campo del formulario,
+  un dato del afiliado o una lista, o una fórmula; bloquea o avisa. Un campo
+  sin validación es declarativo: se toma como está. Los requisitos para
+  iniciar son «Validar antes de abrir». En lo guardado NO cambió nada: un
+  extraído o calculado sigue siendo `tipo_dato = "calculado"` y su ingreso
+  es la función marcada `ingreso` (`validaciones_tramite.ingreso_de`); lo
+  demás de su lista son validaciones comunes. **Lo propuesto se muestra y
+  el afiliado puede corregirlo**: al tocarlo la app le avisa que el dato
+  está registrado; si es un dato PROPIO de la persona (`DATOS_PROPIOS`:
+  fecha de nacimiento, provincia, localidad) el cambio se actualiza en su
+  perfil (`db.actualizar_dato_personal`); si es del sindicato o un cálculo,
+  queda anotado en las advertencias del trámite para quien lo evalúa, y el
+  trámite sigue. Los datos del sistema se nombran por familia,
+  **`sistema.afiliado.<dato>`** (`sistema.<dato>` sigue valiendo en lo ya
+  guardado; mayúsculas indistintas). Detalle en HISTORIAL.md, "Ingreso y
+  validación".
+
+## Estado actual (actualizado 2026-10-17)
+Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
+sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
+sobre `main`.
+
+**La demo está al día desde el 2026-09-23** (tag `demo-2026-09-23-v0.40.01`):
+se promovieron de una vez los 241 commits acumulados desde el 2026-09-05 —
+Encuestas, Áreas V2, georreferenciación, Asistente del Panel, landing
+`/entornos`, costo de la IA, XSK y la Sala de mando—, con 18 migraciones
+ensayadas antes sobre una copia de la base real. Trabajador 0.40.01, Admin
+0.43.01, Plataforma 0.35.10. **En demo, `/entornos` y `/entornos/xsanders`
+responden 404 a propósito** (la landing interna solo existe donde hay
+distintivo de entorno), y el login genérico de plataforma quedó apagado: se
+entra con usuario nominal. Detalle del ensayo y del resultado en BITACORA.md.
 
 **SPRINT_REFORMA.md (adaptación a la Reforma Laboral, Dto 407/2026) —
 COMPLETO**, los 5 puntos de los dos sprints originales: extractor bi-formato
@@ -575,6 +869,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de lectura) y el detalle de cada error de Sentry: para mirar no hace falta
     iniciar sesión en ninguno de los dos (regla: no se publican enlaces abiertos).
     Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
+    **Telegram (2026-09-23)**: el bot `Colm3na_bot` recibe, gratis y sin
+    librerías (`telegram.py`, un POST a `api.telegram.org`), tres cosas: las
+    alertas de Grafana (segundo punto de contacto, `sdn-telegram`, creado por
+    `aplicar_grafana.py` solo si el entorno trae las claves), cada error no
+    previsto al instante desde el handler global (mismos datos que Sentry,
+    sin personas, freno de 10 min por código) y el **resumen del día** a las
+    21:00 de Buenos Aires (`resumen_diario.py`, hilo en la app, candado por
+    día en la tabla `avisoenviado`). Botones de prueba en la pestaña
+    Observación técnica. Cierra la decisión "Telegram" de la Sala de mando.
     **Ficha rectora: [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md)** (reglas, claves y
     el procedimiento para replicar en Demo y Producción); versión ilustrada en Recursos.
 
@@ -651,6 +954,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     H-0003 y H-0016 → Solucionado.** Plataforma 0.33.01. Estado del kit: 8
     Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1 (H-0008,
     cierra con el perímetro INF-05).
+    **Verificación del 2026-10-12** (`corridas/2026-10-12-2215-VERIFICACION.md`):
+    re-corridos los tests de regresión, todo lo corregido pasó a
+    `verificado`. Estado: 10 Solucionado, 5 Parcial, 4 Pendiente, 3
+    Aceptado (22 hallazgos); bloquean 3: H-0019 (claves semilla públicas),
+    H-0008 (perímetro) y H-0020 (regularizar la Demo). La solapa Seguridad
+    ya no tiene "Cómo seguir": lo pendiente se lee en "Estado de resolución".
 
 27. **Sala de mando: el esquema físico de la plataforma, vivo** (2026-09-21,
     rama `feature/esquema-fisico`): el boceto en papel de Sd llevado a una
@@ -690,6 +999,193 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     decisiones nuevas en "Decisiones tomadas" y el detalle en HISTORIAL.md
     ("Una persona, un domicilio").
 
+29. **La portada del afiliado, esquema "Tablero"** (2026-09-23, rama
+    `feature/portada-tablero`): `/app/inicio` deja la tira vertical de
+    tarjetas cuadradas. El problema era de una línea -- `.pad` sin ancho
+    máximo, así que en un monitor cada tarjeta medía ~600px con un título de
+    13px adentro. Ahora tope de 1320px y dos columnas (acción a la
+    izquierda, novedades y beneficios a la derecha), accesos horizontales
+    con el título en 19px, y la tarjeta principal con **números reales**
+    (`db.resumen_recibos_trabajador`: cuántos verificó este año y cómo salió
+    el último). La noticia **conserva su foto** (62px, filo de acento en la
+    más nueva) y el carrusel de beneficios se rehízo con velo, chip de
+    rubro, barra de tiempo, zoom lento, arrastre y pausa al pasar el mouse.
+    Profundidad nueva sin ningún color nuevo (manchas de luz con el primario
+    y el acento del sindicato, retícula de colmena, trama diagonal). Las dos
+    variantes, oscura y clara. El mismo día se llevó a **las cuatro
+    portadas**: el CSS se mudó al bloque "Portadas v2" de `marca.css` con
+    todas las clases prefijadas **`pt-`** (`.fila`, `.filas`, `.pastilla`,
+    `.mini`, `.txt` y `.nov` ya existen en otras pantallas y esa hoja la
+    carga casi toda la app), con `.pt-tres` para las portadas sin riel
+    (sindicato y plataforma, que tienen muchos accesos). El **sindicato
+    estrena el círculo de perfil** del afiliado, de lectura, con la foto
+    tomada de `CuentaTrabajador` por CUIL. Detalle en HISTORIAL.md.
+
+30. **Reportes unificados + cláusula de confidencialidad** (2026-09-24,
+    rama `feature/reportes-unificados`): Reportes y Cotizantes pasan a ser
+    una sola pestaña "Reportes" sobre `ReciboVerificado` (todos los recibos
+    verificados), paginada en el servidor (`/admin/reportes/lista`), sin las
+    columnas "estado" ni "reforma" y con tilde verde/rojo de diferencias.
+    Los no enviados salen anonimizados (sin nombre, CUIL ni empresa), y solo
+    si plataforma marcó en la ficha del sindicato la **cláusula de
+    confidencialidad**, que exige el **contrato firmado** subido (bytes en
+    la base, lo baja solo plataforma). Migración `c9e4a2f7b815` (columnas +
+    permiso `cotizantes` → `reportes`). Tests: `test_reportes_unificados.py`.
+    Sigue en el próximo sprint: términos y condiciones del afiliado en el
+    primer uso. Admin 0.45.01, Plataforma 0.37.01.
+
+31. **CUIL/CUIT con módulo 11** (2026-10-10, PR #84, **en Pruebas y
+    regularizado; falta la Demo**, que va con la próxima promoción; plan
+    `PLAN_CUIT_MOD11.md`, primera medida para las observaciones de XSK —
+    la siguiente es el alta de usuarios, H-0017). `cuit.py` como única
+    implementación; las puertas de alta exigen el verificador y el
+    navegador avisa antes (`static/cuit.js`); los accesos de la demo pasaron
+    a números válidos (`identificadores_demo.py`, `CLAUDE.md` → Accesos);
+    `regularizar_cuit.py` convierte las bases ya cargadas (diagnóstico →
+    planilla → ensayo → `--si` con backup), con tabla de traza
+    `CambioIdentificador` (migración `b6d3f1a8c902`). **Al desplegar en
+    cada entorno hay que correrla** (`DESPLIEGUE_RENDER.md`, "Regularizar
+    CUIL/CUIT"): hasta entonces los accesos nuevos de la demo no existen en
+    esa base. **Pruebas, hecho el 2026-10-10**: corrida como Job de Render
+    dentro del servicio (desde un contenedor en la nube no hay red al
+    puerto de Postgres; el Job usa la base y las variables del propio
+    servicio), con la exportación de Render y la recuperación a un momento
+    puntual como respaldo (el disco de un Job se borra al terminar). 22
+    números convertidos y 4 que no tenían corrección eliminados o vaciados
+    con autorización de SDN; el diagnóstico quedó en 0 manuales y 0 demo. Hecho por un equipo de agentes (3 de desarrollo, 2 de QA y un
+    revisor) con QA sobre una copia de la base como estaba Pruebas. XSK:
+    test IDS-06, H-0020 (este) y H-0021 (abierto, encontrado de paso).
+    Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
+
+32. **Registro confirmado por mail, niveles de fiabilidad y recuperación de
+    clave** (2026-10-11, PR #93, plan `PLAN_REGISTRO.md`; cierra H-0017, R2 y
+    R3). Hecho por un equipo de agentes (7 de desarrollo, 5 de QA, en olas,
+    coordinados por Code): `correo.py` (Resend) y `captcha.py` (Turnstile),
+    freno por IP y captcha en los registros, modelo (niveles, tres mails,
+    política por sindicato, tabla `CodigoVerificacion`, migración
+    `f2d3d0bcf179` con backfill), registro en tres pasos para trabajador y
+    empresa, nivel 3 en `/api/leer`, columna y botones en Trabajadores y
+    Empleadores, interruptor en la ficha del sindicato, recuperación
+    autoservicio, clave temporal con cambio obligatorio, aviso y confirmación
+    de mail a las cuentas viejas. El QA encontró y se cerró antes del merge:
+    el mail del padrón era la misma columna que edita la persona (→
+    `mail_padron`), el nivel 3 se falsificaba por `/api/validar` (→ `/api/leer`),
+    un admin tomaba cuentas de otro sindicato dándolas de alta en su padrón
+    (→ `padron_responde_por`), intentos de código que no se persistían y una
+    carrera entre dos intentos (→ commit interno y `FOR UPDATE`). **Canal de
+    mail y captcha APAGADOS hasta configurar** Cloudflare, Resend y las cuatro
+    variables en Render (`DESPLIEGUE_RENDER.md`): mientras tanto el registro
+    nace nivel 1 visible. Trabajador 0.45.01, Admin 0.49.01, Plataforma 0.43.03.
+
+33. **Herramientas en `/entornos` y la Calculadora bancaria** (2026-10-13,
+    Plataforma 0.44.01): pestaña nueva para los asistentes de la
+    implementación, que no van en las apps de sindicato ni de trabajador. La
+    primera calcula el recibo bancario que corresponde (tres ramas,
+    conformado, adicionales, ROE, aportes con tope, cuota), lo compara con un
+    recibo real cargado a mano y guarda casos para revisar (tabla
+    `CasoHerramienta`, migración `a3c7e91d4b26`). Ver "Herramientas".
+    El mismo día sumó la lectura del recibo real con IA (Plataforma 0.45.01).
+
+34. **Asistente de trámites como Herramienta de `/entornos`** (2026-10-16,
+    Plataforma 0.49.01, `PLAN_ASISTENTE_TRAMITES.md` D1–D10): del relato del
+    sindicato al circuito por actor, la instrucción, la vista previa y el JSON
+    importable, con la IA que propone (cuarto uso de IA, elegible desde
+    `/plataforma`) y el motor puro que decide, casos guardados y el inventario
+    de brechas (lo que los sindicatos piden y Colm3na no tiene). Ver
+    "Herramientas". El importador del JSON queda para después de probar con
+    trámites reales de La Bancaria. El mismo día se acordó el plan de Listas
+    y validaciones por función (`PLAN_LISTAS_VALIDACIONES.md`, PR #127).
+
+35. **Listas del sindicato** (2026-10-16, Admin 0.54.01, bloque 1 de
+    `PLAN_LISTAS_VALIDACIONES.md`): pestaña Listas propia de `/admin` con
+    permiso `listas`, plantillas tipadas sobre una tabla genérica, carga por
+    CSV con ensayo y reemplazo entero, alcance por seccional. Ver "Listas del
+    sindicato". **Bloque 2 HECHO** el mismo día (Admin 0.54.02, Trabajador
+    0.45.07): `Trabajador.fecha_afiliacion` (la carga solo el sindicato) y
+    `CuentaTrabajador.fecha_nacimiento` (de la persona) en las cinco puertas
+    del padrón, con la fecha ilegible rechazada en cada una (HISTORIAL, "Las
+    dos fechas del padrón"). **Bloque 3 HECHO** (Admin 0.55.01, Trabajador
+    0.46.01): fuente `funcion` (lista o padrón, fórmula con nombres
+    cerrados), requisitos para iniciar y campo `calculado`, con el banco de
+    pruebas contra un afiliado real (HISTORIAL, "Validaciones por función en
+    Trámites"). **Bloque 4 HECHO** (Trabajador 0.46.02): requisitos al abrir
+    el formulario y validación en vivo contra el servidor con tope de diez
+    intentos (HISTORIAL, "Validación en vivo y requisitos al abrir").
+    **Bloque 5 HECHO, plan COMPLETO** (Plataforma 0.49.02): el asistente
+    dejó de marcar `lista` y `requisitos` como brechas (exporta la
+    validación y los requisitos reales) y `duplicados` quedó solo para
+    «por familiar o por período» (HISTORIAL, "Cierre de Listas y
+    validaciones").
+
+36. **Una clave por persona en el panel** (2026-10-17, Admin 0.56.01,
+    Plataforma 0.50.01): `CuentaPanel` con la clave por CUIL, selector de
+    sindicato después del login, "Cambiar de sindicato" en la portada, alta
+    que no pisa la clave de quien ya trabaja en otro sindicato, y en
+    `/plataforma` la lista general "Usuarios de los paneles". Migración
+    `b8d2f6a4c1e9`: si una persona tenía claves distintas, queda la de su fila
+    activa más vieja. Ver la decisión en "Decisiones tomadas".
+    **Queda**: que el panel obligue a cambiar la clave inicial en el primer
+    ingreso y que la persona pueda cambiar la suya (hoy solo plataforma).
+
+37. **El alta de usuario consulta el padrón y el padrón ofrece dar usuario**
+    (2026-10-17, Admin 0.57.01): al salir del campo CUIL en Áreas y Usuarios,
+    `GET /admin/usuario/padron` dice si la persona está en el padrón de este
+    sindicato (y completa nombre y seccional), si ya es usuario y si ya tiene
+    clave del panel por otro sindicato (la inicial no se pide). En
+    Trabajadores, "Dar usuario del panel" abre el alta con todo puesto. Las
+    dos pestañas siguen separadas a propósito (padrón ≠ equipo del gremio).
+    **Auditoría del alcance del Admin de Seccional hecha con datos** el mismo
+    día: la mitad del panel recorta (Trámites, Notificaciones, Reportes,
+    Encuestas, Listas, Seccionales, Usuarios) y la otra mitad no
+    (Trabajadores lista todo el padrón y da de alta en otra seccional; edita
+    y borra noticias y beneficios ajenos; crea, edita y borra formularios
+    globales; el Panel Sindical muestra todo el sindicato). Plan de
+    corrección por bloques, sin migraciones, en
+    [`PLAN_ALCANCE_SECCIONAL.md`](PLAN_ALCANCE_SECCIONAL.md), aprobado por
+    SDN el mismo día con las dos decisiones: Empleadores (a) el admin local
+    no los ve; catálogo (a) solo lectura para el admin local.
+    **Bloques 0, 1 y 2 HECHOS** (Admin 0.58.01): la red
+    `test_alcance_seccional_panel.py` (toda ruta `/admin/*` clasificada por
+    su relación con la seccional, fail-closed), el padrón recortado en la
+    consulta (`db.padron_del_sindicato(s, sid, alcance)`), alta y carga
+    masiva solo en la propia seccional (`_seccional_en_alcance`; vacía = la
+    suya, otra = 403 u omitida con aviso), y Noticias y Beneficios: el local
+    ve las suyas y las globales, no las de otra, y edita o borra solo las
+    que caen enteras en su alcance (`db.publicacion_en_alcance`,
+    `_exigir_alcance_publicacion`, marca `propia` en la fila).
+    **Bloques 3 y 5 HECHOS** (Admin 0.59.01): formularios de trámite (un
+    acotado crea solo de su seccional, vacía = la suya; ve los globales pero
+    no los edita ni borra: `_exigir_alcance_seccional` también con `None`,
+    `tipos_tramite_del_sindicato(..., alcance)` con marca `propio`);
+    Empleadores fuera para quien está acotado (`permisos.SECCIONES_EMPLEADORES`
+    descontadas en `db.permisos_efectivos`, también para un usuario de área
+    de una seccional sin `ve_todas`); catálogo en solo lectura (todo POST de
+    `permisos.SECCIONES_CATALOGO` rechazado en `_exigir_permiso_de_ruta` si
+    `db.es_acotado`, banner y acciones ocultas en los cuatro paneles).
+    **Bloque 4 HECHO** (Admin 0.60.01): el Panel Sindical, v1 y v2, impone
+    el alcance en un solo lugar (`dashboard.imponer_alcance` desde
+    `main._filtros_dashboard`: lo pedido ∩ el alcance, vacío = sin filas),
+    el mapa ignora el filtro elegido pero no el impuesto, el catálogo de
+    filtros y el buscador de afiliados no ofrecen las otras seccionales, los
+    cuatro detalles del modal "Ver" devuelven 404 fuera del alcance y el
+    Asistente pasa por el mismo `imponer_alcance`. **Bloque 6 HECHO, plan
+    COMPLETO**: la auditoría repetida contra el lote está en
+    `docs/chat/2026-10-17-auditoria-alcance.md` (padrón 100 → 20, Panel
+    5.000 → 1.180 recibos, filtros y mapa 6 → 1, todas las escrituras
+    ajenas bloqueadas, el general sin cambios).
+    **Bloque 7 HECHO** (misma tarde, Admin 0.60.02): SDN entró en Pruebas
+    con el admin de Lomas de Zamora y lo vio ELEGIR las otras seccionales
+    como destino. La auditoría medía lo que el servidor acepta, no lo que
+    la pantalla ofrece. Regla 8 del plan: **la pantalla no ofrece lo que el
+    servidor va a descartar** (todo selector de seccional dibuja
+    `seccionales_visibles`; con una sola, texto fijo "Va a tu seccional").
+    Y un agujero real de servidor: la noticia que anuncia una encuesta
+    salía sin destino (a todas); ahora hereda la seccional de la encuesta.
+    Tests `test_alcance_seccional_pantalla.py` (recorre TODOS los bloques
+    de casillas del HTML del acotado, fail-closed). Hecho por dos
+    desarrolladores y dos QA independientes (código y robot Playwright
+    contra la demo local), con aprobación final de Code.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -717,8 +1213,11 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas.
 3. Los topes de base imponible previos a 2025 siguen marcados
-   `por_verificar` (menor urgencia, sin inconsistencia detectada) — ver
-   "Topes de base imponible" en HISTORIAL.md.
+   `por_verificar` (menor urgencia) — ver "Topes de base imponible" en
+   HISTORIAL.md. El primero ya no: la semilla arrancaba en un "2015-01" de
+   $37.191,95 que no existe, y un recibo real de feb-2015 mostró el valor
+   correcto, $36.531,48 desde 2014-09 (Res. ANSES 449/2014, migración
+   `e28e33b0aec5`). Los siguientes pueden tener errores parecidos.
 4. **Editor visual de formularios de Trámites con lienzo libre (drag X/Y)**,
    evaluado y pospuesto: se implementó en su lugar un camino más liviano
    (ancho por campo + reordenar arrastrando en lista + vista previa en
@@ -879,15 +1378,280 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    detrás de la variable `MOTOR_V2`. El avance ítem por ítem se lleva en el
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
+   **Antes va el paso cero: enmascarado** —plan acordado el 2026-09-24,
+   **bloques 1 a 4 hechos** (medido con la IA real: tapar no cambia la lectura);
+   **en Pruebas en modo activo** desde el 2026-09-24, con los registros en
+   `/plataforma` → Uso de IA → Enmascarado. Diagnóstico TRANSITORIO (solo
+   local/pruebas, `ENMASCARADO_GUARDAR_IMAGENES=1`): guarda la imagen original
+   y la enviada a la IA por 7 días en `imagenenmascarado`; se saca al terminar
+   la etapa de pruebas (`enmascarado.py`, puro: qué se tapa;
+   `lectores.py`: PDF digital con pypdfium2 y fotos con Tesseract vía
+   `tesserocr`, sin Docker; `preparacion.py`: el enganche en las rutas,
+   con registro en `registroenmascarado`), [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
+   identifica a la persona (CUIL, nombre, DNI, legajo, cuenta, CUIT y razón
+   social) se tapa en el servidor antes de salir hacia la IA y la identidad se
+   rearma del lado nuestro. Es MEJOR ESFUERZO (ver Decisiones tomadas).
+   **Ficha rectora: [`docs/ENMASCARADO.md`](docs/ENMASCARADO.md)** (estrategia
+   mixta en prueba, qué necesita la IA, cómo se mide, lo abierto),
+   variable `ENMASCARADO` = `apagado`/`sombra`/`activo`. Absorbe el enganche
+   D7 del motor v2. Sale de una arquitectura de Chat del 2026-08-28 que nunca
+   se había bajado al repo (`docs/chat/2026-08-28-arquitectura-enmascarado-pii.md`).
 
 9. **Cuelgue del panel (2026-09-18, Pruebas): corregido y en Pruebas desde el
    2026-09-19** (PR #6). Causa y correcciones C1–C8 en
    `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md` y en HISTORIAL.md
    ("El cuelgue del Panel Sindical en Pruebas"); `carga/k6/test3_panel.js`
-   dio APROBADO contra Pruebas. Queda: al promover a la demo, cargar
-   `/healthz` como Health Check Path en `mitrabajo-demo` (hoy vacío; ponerlo
-   antes de promover haría fallar sus deploys). Si una app no responde:
+   dio APROBADO contra Pruebas. **Cerrado el 2026-09-23**: con la versión nueva ya viva en la demo se
+   cargó `/healthz` como Health Check Path en `mitrabajo-demo` (estaba
+   vacío; ponerlo antes de promover habría hecho fallar sus deploys,
+   porque esa ruta no existía en la versión anterior). Si una app no responde:
    `docs/OPERATIVA.md` §9.
+10. **Registro confirmado por mail y niveles de fiabilidad** (H-0017, R2 y
+    R3): plan en [`PLAN_REGISTRO.md`](PLAN_REGISTRO.md), **código HECHO**
+    (ver "Estado actual" 32). Queda de SDN: delegar `colm3na.com.ar` a
+    Cloudflare, dar de alta `avisos.colm3na.com.ar` en Resend, crear el sitio
+    de Turnstile y cargar `RESEND_API_KEY`, `MAIL_REMITENTE`,
+    `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET` en Pruebas; hasta entonces el
+    canal está apagado y el registro nace nivel 1. Después: smoke test del
+    widget en Pruebas y H-0017 → Solucionado. Pendientes menores anotados en
+    BACKLOG.md (bitácora de acciones del panel, teléfono como segundo canal).
+11. **Panel Sindical v2 con Preact** (2026-10-12, **completa en Pruebas,
+    falta la decisión D9**): [`PLAN_DASHBOARD_V2.md`](PLAN_DASHBOARD_V2.md). Primer piloto
+    de una capa de componentes: Preact 10.29.8 + htm 3.1.1 vendoreados, sin
+    build, en `/admin/dashboard-v2` (solo local y Pruebas) al lado de la v1,
+    con los mismos endpoints y sin tocar el backend. Estética mejorada sobre
+    un mockup previo, con animaciones en gráficos, KPIs y modales; mientras
+    dure, la v1 recibe solo arreglos. **Bloque 0 HECHO** (2026-10-12): robot
+    de paridad `e2e/test_paridad_dashboard.py` (7 combinaciones, mide la cola
+    de 4 en el navegador, compara datos y pedidos). **Bloque 1 HECHO**
+    (2026-10-12, Admin 0.50.01): `/admin/dashboard-v2` con las puertas de la
+    v1 y 404 sin distintivo, `templates/dashboard_v2.html`, los módulos se
+    importan POR NOMBRE y `main._importmap_panel_v2()` los traduce a su
+    archivo con sello (recorre `static/panel_v2/`: un archivo nuevo entra
+    solo), enlace entre versiones solo con distintivo, y
+    `test_dashboard_v2.py` (puertas, todo import resuelve por el mapa, nada
+    de `innerHTML`, SHA-256 de lo vendoreado). **Bloque 2 HECHO**
+    (2026-10-12, Admin 0.50.02): `static/panel_v2/estado.js` (estado y
+    reductor, puros) y `api.js` (pedidos con la cola de 4, reintento del 503,
+    403 y 422), probados con Node en `test_dashboard_v2_nucleo.py` **contra
+    la v1 misma**: se extraen sus funciones de `dashboard.js` y tienen que dar
+    los mismos parámetros con miles de direcciones al azar. Una rareza de la
+    v1 que salió de ahí (sin `sal_min` se pierde el `sal_max`) quedó copiada a
+    propósito y anotada en BACKLOG.md, para arreglarla en las dos (D10).
+    **Mockup de D5 hecho y elegida la dirección B, "Sala de mando"**
+    (`disenos/panel-v2-propuestas.html`, fuera de git). **Bloque 3 HECHO**
+    (2026-10-12, Admin 0.51.01): la barra de período y filtros puestos, el
+    cajón con el resto (calendario, formato, seccionales, empresas, salario,
+    afiliado) y los 10 indicadores sobre la tarjeta oscura, con el número que
+    corre. El cajón va AFUERA de `<main>` (`panel/capa`): `.mesa-cont` arma su
+    propia capa con z-index 1. El robot compara la v2 con la v1 en
+    indicadores y filtros en las 7 combinaciones y manejando los controles, y
+    exige que la v2 no pida nada que la v1 no pida. **Bloques 4 a 6 HECHOS**
+    (Admin 0.52.01): gráficos con transición del valor viejo al nuevo,
+    semáforo, mapa, explorador, modal "Ver" y el Asistente con voz
+    (`panel/graficos`, `panel/explorador`, `panel/asistente`). **Bloque 7**:
+    `test_paridad_v1_v2` en verde en las 7 combinaciones (mismos datos y
+    mismos pedidos) y robots que manejan la v2 y comparan con la v1 paso a
+    paso, el del Asistente con respuestas simuladas (alcanza una
+    `ANTHROPIC_API_KEY` falsa). Medido en HTTP/2 como Render: mismo tiempo
+    hasta los indicadores (1,73 s contra 1,74 s) pero **+22 KB de JS
+    comprimido** (+15%), así que la cuarta condición de D9 no se cumple por
+    peso. `<link rel="modulepreload">` por módulo, para que no bajen en
+    cascada. **Falta: que SDN la use en Pruebas y decida (D9) reemplazar,
+    seguir conviviendo o descartar.** El reemplazo NO se hace sin esa
+    decisión. SDN la probó y pidió conservar las dos mientras mejora la v2.
+    **Movimiento, caso cero** (2026-10-12, Admin 0.53.01): tokens de duración
+    y curva en `panel_v2/panel.css` que también lee Chart.js
+    (`panel/movimiento`); cada panel entra y se dibuja cuando se lo mira y no
+    cuando llegan los datos (la causa de que "casi no se vieran"); modal que
+    abre al clic con esqueleto; hover solo con mouse; presión en botones;
+    marca de pestaña que se desliza; esqueletos con brillo; tooltips de la
+    casa. Reglas en `diseno-mi-trabajo` → "Movimiento"; robot
+    `test_la_v2_con_movimiento`, el único que corre sin reducir movimiento.
+    **Segunda vuelta** (2026-10-13, Admin 0.53.02): SDN los seguía viendo
+    rápidos y el modal brusco. Medido, el modal estaba al 95% a los 150 ms:
+    duraciones de presentación (gráficos 1,4 s en cascada, modal 650 ms que
+    llega desenfocado y se enfoca) y una curva `--ease-entrada` que reparte
+    el recorrido. Con "reducir movimiento" ya no queda todo quieto: fundidos
+    suaves y un aviso que dice cómo apagarlo. **Tercera vuelta** (Admin
+    0.53.03): esperar ya no es una pantalla gris. El modal se arma con lo que
+    la fila ya sabe y crece de a poco; los paneles trazan su grilla; al
+    filtrar, una línea fina arriba en vez de ponerse translúcidos; y el
+    explorador arma sus filas en cascada, marca la fila bajo el mouse y sus
+    totales corren. **Llevado a todos los modales de la plataforma**
+    (2026-10-13; Trabajador 0.45.02, Admin 0.53.04, Plataforma 0.43.05): ver
+    "Los modales se mueven" en Decisiones. De paso se corrigió que en `/admin`
+    cinco modales quedaban debajo de la barra de pestañas y, en un trámite
+    largo, sin título ni X visibles. Y a las vistas de Trámites del afiliado
+    y de la empresa, que no son modales (`data-mov-vista`, Trabajador 0.45.03),
+    y a TODAS las pestañas y sub-pestañas de las cuatro apps (Trabajador
+    0.45.04, Admin 0.53.05, Plataforma 0.43.06).
+12. **Asistente de trámites e importación de formularios** (prototipo de Chat
+    del 2026-10-16, **construido el mismo día como Herramienta de `/entornos`**,
+    ver "Estado actual" 34 y "Herramientas"): el JSON `colm3na.tramite` v1
+    sale con la forma exacta de `_campos_tramite_validos`. **Lo que queda**: el
+    importador, especificado como propuesta en
+    `docs/chat/2026-10-16-contrato-importacion-tramites.md`, que NO se
+    construye hasta probar el asistente con un trámite acordado con el
+    sindicato; la entrada por foto o PDF del formulario actual; y el uso desde
+    el panel del sindicato. Criterios: las correcciones van por el chat del
+    trámite; los formularios encadenados son solo para datos nuevos después de
+    la aprobación.
+14. **El Admin de Seccional acotado en todo el panel**
+    (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): **COMPLETO el mismo día**,
+    los seis bloques. Ver "Estado actual" 37 y la auditoría de cierre en
+    `docs/chat/2026-10-17-auditoria-alcance.md`. Queda, si un sindicato lo
+    pide, Empleadores con seccional (opción b del plan).
+13. **Listas del sindicato y validaciones por función en Trámites**
+    (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7; **bloque
+    1 HECHO**, ver "Estado actual" 35): plantillas tipadas (grupo familiar,
+    datos del afiliado, lista simple) sobre una tabla genérica que sube el
+    admin desde una pestaña Listas propia; validación de fuente `funcion`
+    (requisito para iniciar, validación de campo, campo calculado) con la
+    sintaxis de las Reglas y nombres cerrados; dos fechas nuevas en el
+    padrón. **Los cinco bloques HECHOS el 2026-10-16** (ver "Estado actual"
+    35): cierra las fases 2 y 3 de validaciones del BACKLOG. Queda la segunda
+    vuelta de empresa (D7) y la fuente `externa` (fase 4).
+
+## Herramientas (solapa de `/entornos`)
+
+Asistentes de la implementación: desarrollos chicos que ayudan a poner en
+marcha un sindicato y **no van en las apps de sindicato ni de trabajador**.
+Existen donde existe `/entornos` (local y Pruebas, 404 en Demo) y con su
+misma puerta (`_exigir_herramientas`, `_exigir_pase`). Cada herramienta abre
+su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
+
+**Calculadora bancaria** (`templates/calculadora_bancaria.html`, rutas
+`/api/entornos/herramientas/bancaria/*`):
+- **El cálculo lo hace el servidor** (`grilla_bancaria.calcular_recibo`,
+  puro); el navegador solo muestra. Al guardar un caso el esperado y las
+  diferencias se RECALCULAN con la entrada: no se guarda lo que mande el
+  navegador. Tolerancia de $ 1 al comparar. La diferencia se pinta en
+  amarillo hasta el 1% de lo esperado y en rojo arriba de eso
+  (`grilla_bancaria.gravedad`): es SOLO el color, no cambia qué coincide. Los
+  totales van en celeste.
+- **Una grilla por mes**, en `data/grillas_bancarias/AAAA-MM.json`. Una
+  nueva es un archivo nuevo (procedimiento en `docs/cct-1875-bancarios.md`):
+  la calculadora la ofrece sola y las constantes del lote pasan a ser las de
+  la más nueva. `test_calculadora_bancaria.py` controla cada grilla (todo
+  básico sobre el piso es coeficiente × la misma unidad: atrapa un dígito mal
+  copiado).
+- **El recibo real entra a mano o leído por la IA** (`POST .../bancaria/leer`,
+  el mismo extractor y enmascarado que `/api/leer`, tipo `herramienta` en
+  Uso de IA). `grilla_bancaria.mapear_recibo_leido` ubica cada línea por lo
+  que dice, no por su código; lo que no reconoce y los reintegros van a
+  "renglones que la calculadora no tiene", nunca a un renglón ajeno. Solo
+  vuelven importes: ni el archivo ni el nombre o CUIL se guardan ni se
+  devuelven. La lectura va en su propio recuadro, con la espera del afiliado
+  (aro con reloj y fases).
+- **Lo que dice el recibo se PROPONE, nunca se aplica solo** (SDN,
+  2026-10-13): el básico del recibo real, leído o cargado a mano, sugiere la
+  categoría con un botón "Ajustar al recibo"; un adicional que el recibo trae
+  y la calculadora no tiene elegido sale como renglón con esperado $ 0, y si
+  el recibo lo dice sin dudas (un importe de la grilla), con un botón que
+  tilda o elige el control (`grilla_bancaria.ajuste_sugerido`; también el ROE,
+  el título, la zona y la conectividad cuando difieren). En el recuadro de la
+  IA, "Ajustar todo al recibo".
+- **Lo que no es de convenio va a "Otros del recibo", a la par** (SDN,
+  2026-10-13; `grilla_bancaria.otros_del_recibo`): los renglones que la
+  calculadora no tiene se suman en su propia columna, en violeta y "sin
+  chequear", sin tocar la de convenio. Un haber remunerativo arrastra sus
+  aportes (mismo % y tope) y la cuota (supuesto), y cada diferencia es
+  recibo − (convenio + otros): lo que no cierra es de convenio.
+- **v2 en Preact, conviviendo con la v1** (2026-10-14, pedido de SDN,
+  mismo criterio que la v2 del Panel): `/entornos/herramientas/calculadora-bancaria-v2`
+  (`templates/calculadora_bancaria_v2.html` + `static/calc_v2/`, importmap
+  `main._importmap_calculadora_v2`), con un botón de ida y vuelta. MISMAS
+  rutas de la API: no hay cálculo nuevo. Lo nuevo es la interfaz: importes
+  que corren de un valor a otro, el ✓ que se dibuja, filas que entran,
+  veredicto con barra por valor y luz cuando todo coincide, lo que toca un
+  "Ajustar" se ilumina, tarjetas con textura y luz que sigue al mouse. Solo
+  con los tokens de `movimiento.css`. Tests: `test_calculadora_bancaria_v2.py`.
+  **SDN eligió la v2 (2026-10-14)**: la pestaña Herramientas abre la v2; la
+  v1 sigue a un botón de distancia y no recibe cambios.
+- **Lo que se propone y espera una acción va en fucsia y titila**
+  (`--propuesta`, clase `propuesta` + `data-propuesta`; SDN, 2026-10-14): la
+  categoría y cada "Ajustar al recibo", nunca en el ámbar de los botones ni
+  en el amarillo de las diferencias leves, que son permanentes. El veredicto
+  dice cuántos ajustes hay pendientes y lleva al primero. Una propuesta
+  aplicada se va sola (el servidor deja de proponerla).
+- **Alcance dicho en pantalla**: solo el mes; no contempla retenciones ni
+  reintegros de Ganancias ni conceptos de períodos anteriores.
+- **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el
+  nombre "Complemento salario conformado", y guardería y conectividad como no
+  remunerativos. El Día del Bancario va no remunerativo por el acta de 2020.
+  Ganancias no se calcula: se carga a mano.
+- **Casos** (`CasoHerramienta`, genérica por `herramienta`): entrada,
+  esperado, real, diferencias, banco opcional y nota; **sin nombre ni CUIL**.
+  Estados nuevo / revisado / aplicado / descartado, con quién y cuándo, y
+  descarga en CSV. Los textos que escribe una persona se dibujan con
+  `textContent`, nunca como HTML.
+
+**Asistente de trámites** (`templates/asistente_tramites.html` +
+`static/asistente_tramites/`, rutas `/api/entornos/herramientas/asistente/*`,
+plan `PLAN_ASISTENTE_TRAMITES.md`):
+- **La IA propone, el código arma** (D1). `asistente_tramites_ia.entender`
+  lee el relato y devuelve, por una herramienta con esquema cerrado, nombre,
+  respuestas a las preguntas, campos y dudas; TODO pasa por
+  `asistente_tramites.sanear_propuesta`, que descarta lo que no está en el
+  catálogo. Circuito, instrucción, vista previa, brechas, prompt y JSON los
+  arma el motor puro (`resolver`), que se llama en cada cambio de respuesta.
+  Nada de lo que la herramienta afirma sobre Colm3na sale del modelo.
+- **Seis preguntas, cada una con una recomendada y una respuesta libre;
+  nada se pregunta dos veces** (SDN, 2026-10-18). `PREGUNTAS` son seis
+  (quién inicia, quién recibe, aprobación, requisitos, cómo termina,
+  cuántas veces) con `recomendada`, que queda puesta si la IA no propuso
+  (`recomendadas` en la entrada) y se confirma con un clic; `nota_<clave>`
+  es la respuesta libre y va al prompt. Lo demás que el motor necesita son
+  `INFERIDAS` (segundo formulario, ventana, quién entrega, cupo, listado,
+  tercero): las completa la IA y se corrigen en "Lo que entendí". No hay
+  segundo cuestionario: `pendientes` son solo las dudas de la IA.
+- **Por campo, aclaración y regla** (`aclaracion`, `regla`, `formula`,
+  `funcion_nueva` en `sanear_campo`): la fórmula que compila contra el
+  catálogo se exporta como validación por función real; la que no, queda
+  `x_regla`; la función nueva, `x_funcion_nueva`. La IA recibe el catálogo
+  de `validaciones_tramite.catalogo_funcion()` en su prompt de sistema y
+  solo puede nombrar lo que existe. El resultado trae **"Prompt para
+  Code"** (`prompt_para_code`): qué configurar, qué validar con qué
+  función y qué función desarrollar, al lado de la instrucción.
+- **"Los datos" son tarjetas, no una tabla** (2026-10-18, pedido de SDN
+  con la skill `emil-design-eng`): la pregunta grande, abajo tipo /
+  control / opciones / obligatorio con rótulo, y un renglón plegado
+  «Aclaración y validación» que resume en chips lo escrito (aclaración,
+  validar, validar con fórmula, función a desarrollar) y abierto muestra
+  los cuatro campos con su rótulo. Nada se perdió, solo se plegó. El catálogo de datos y
+  funciones (con qué devuelve cada uno y ejemplo) se abre debajo, con
+  buscador. Se anima opacity, translate y el chevrón; nunca el alto.
+- **El catálogo se compara contra el código** (D4): `test_asistente_tramites.py`
+  falla si el constructor suma un tipo de campo, un ancho o un estado que el
+  asistente no conoce. `BRECHAS` es la lista cerrada de lo que no existe, con
+  nivel (ajuste / desarrollo), esfuerzo, salida provisoria y referencia al
+  BACKLOG; **cuando una se desarrolla se saca de la lista** y deja de
+  señalarse y de contarse.
+- **El kit escolar es el caso dorado**: el JSON que genera el motor tiene
+  que ser idéntico al del prototipo de Chat. Una diferencia a propósito se
+  anota en el test.
+- **Cuarto uso de IA** `asistente_tramites` (default `claude-sonnet-5`,
+  `db.modelo_ia("asistente_tramites")`, columna
+  `ConfiguracionPlataforma.modelo_asistente_tramites`), registrado en `UsoIA`
+  con tipo `herramienta` a nombre del sindicato elegido. Sin cliente, la
+  pantalla sigue a mano ("Seguir sin IA").
+- **Sindicato de la lista o texto libre** (D6): con uno elegido, "Antes de
+  crearlo" dice qué módulo y qué área ya existen y cuáles faltan.
+- **Casos** en `CasoHerramienta` (`herramienta="asistente_tramites"`, sin
+  nombres de personas), con el resultado recalculado al guardar, y la
+  pestaña **Brechas**: cada brecha con cuántos casos no descartados la
+  pidieron y de qué sindicatos. Es el inventario de lo que falta desarrollar.
+- **Lo que ya existe no es brecha** (2026-10-16): el control «contra una
+  lista» exporta una validación por función real y las respuestas de
+  requisitos salen como `requisitos` del formulario (`requisitos_colm3na`);
+  `duplicados` quedó solo para «por familiar o por período».
+- **El importador NO existe** (D7): se construye después de probar con uno o
+  dos trámites reales de La Bancaria, con el contrato
+  `docs/chat/2026-10-16-contrato-importacion-tramites.md`.
+- Tests: `test_asistente_tramites.py` (motor), `test_asistente_tramites_api.py`
+  (rutas e IA simulada), `test_asistente_tramites_v2.py` (pantalla) y el robot
+  `e2e/test_robot_asistente_tramites.py`.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
@@ -940,8 +1704,12 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   a la migración) se muestra ESTIMADA con los precios de hoy y marcada; un
   modelo fuera del catálogo muestra "—". Nunca "US$ 0,00".
 - **Los precios van con fecha de lectura.** `data/precios_ia.json` se copia a
-  mano de anthropic.com/pricing (no hay scraper, a diferencia de
-  `render_planes.py`) y la pantalla muestra el `leido` al pie.
+  mano de la página de precios de la API de Anthropic
+  (platform.claude.com/docs/en/about-claude/pricing; no hay scraper, a
+  diferencia de `render_planes.py`) y la pantalla muestra el `leido` al pie.
+  Última lectura: 2026-10-11, cuando entraron Fable 5.1, Opus 5.5, Sonnet 5.5
+  y Haiku 5.5 (este último tiene precio escalonado: el del catálogo vale hasta
+  100.000 tokens de entrada por pedido, que ningún uso de la app supera).
 - **El listado cubre los TRES tipos de lectura de recibos** (recibo, aportes,
   aprendizaje) más `prueba`. El bot del convenio y el Asistente **no**
   registran acá (decisión de Sd, 2026-09-13): el total es el gasto de lectura
@@ -970,8 +1738,13 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   de un recibo de 17 líneas mide ~1.790: el modelo de producción pasaba al
   89% del tope y los que razonan por default (Opus 5, Sonnet 5) lo cruzaban y
   devolvían un JSON cortado. El tope no se paga, se paga lo generado. Esos
-  dos van con `effort: low` (`extractor.MODELOS_QUE_RAZONAN`); a los que no
-  razonan por default no se les toca la llamada.
+  dos, y los cuatro de la generación siguiente (Opus 5.5, Sonnet 5.5, Haiku
+  5.5 y Fable 5.1, que razonan siempre o por defecto), van con `effort: low`
+  (`extractor.MODELOS_QUE_RAZONAN`); a los que no razonan por default no se
+  les toca la llamada. **Un modelo nuevo en el catálogo obliga a decidir**:
+  `test_precios_ia.py` falla si no está en esa lista ni en la de los que no
+  razonan. Una lectura que el modelo declina (`stop_reason: refusal`) se
+  explica como tal, no como "JSON inválido".
 - **El banco de pruebas compara LÍNEA POR LÍNEA, no solo los totales**
   (`extractor.comparar_lineas`). Dos modelos pueden coincidir en el neto y
   clasificar distinto una línea, y ese campo (`lineas[].tipo`) alimenta la
@@ -998,11 +1771,115 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   los `default` de `precios_ia.USOS` tienen que ser las constantes de los
   tres módulos.
 
+## Listas del sindicato (pestaña Listas de `/admin`)
+
+Bloque 1 de `PLAN_LISTAS_VALIDACIONES.md` (2026-10-16). Lo que el sindicato
+tiene en sus planillas y Colm3na no, cargado por CSV para que las
+validaciones de Trámites lo consulten. Reglas vigentes:
+
+- **Plantillas tipadas sobre una tabla genérica** (D1): `listas.PLANTILLAS`
+  declara columnas con tipo (cuil / dni / texto / fecha) y claves de
+  búsqueda; la primera clave es SIEMPRE el CUIL del afiliado. Una plantilla
+  nueva es una entrada ahí, no un modelo nuevo (`ListaSindicato` +
+  `FilaLista`, datos en JSONB, índice por claves).
+- **El parseo es puro y único** (`listas.parsear_csv`): el ensayo y la carga
+  lo comparten, así lo que el ensayo muestra es exactamente lo que la carga
+  escribe. El CUIL se exige con módulo 11 porque acá NACE; las fechas entran
+  como AAAA-MM-DD o DD/MM/AAAA y se guardan ISO. Hechos, no derivados.
+- **Ensayo y reemplazo entero** (D5): sin `confirmar` no se escribe nada;
+  con `confirmar`, las filas válidas reemplazan la lista entera (misma
+  plantilla + nombre + seccional) en una transacción. Las filas con error
+  quedan afuera y se informan con su línea.
+- **Permiso `listas`** (grupo Padrón, sin módulo): lo tienen los dos roles de
+  administrador, se puede dar a un área. Un Admin de Seccional carga y ve
+  solo las de su seccional; una lista para todo el sindicato la carga el
+  administrador general. El recorte va EN LA CONSULTA.
+- `db.buscar_en_lista(sid, plantilla, cuil, clave2, seccional_id)` es la
+  puerta que van a usar las validaciones de fuente `funcion` (bloque 3).
+- **Las dos fechas del padrón** (bloque 2, D4): `Trabajador.fecha_afiliacion`
+  es del empadronamiento y la escribe solo el sindicato (alta, edición,
+  carga masiva: columna 12); `CuentaTrabajador.fecha_nacimiento` es de la
+  persona (registro, perfil, y Trabajadores solo si el padrón responde por
+  la cuenta). Texto ISO, NULL = no se cargó; hechos, no derivados. Toda
+  fecha de formulario pasa por `main._fecha_formulario`: en blanco, ISO o
+  rechazo en la puerta (`err=fecha` / línea omitida / 400 / `error=fecha`).
+  En blanco borra donde la persona ve el valor (edición, perfil) y no toca
+  donde no lo ve (alta, masiva, registro).
+- Tests: `test_listas.py`, `test_fechas_padron.py`.
+
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
 prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`
 (API catalogada). **Fase 1 HECHA** (fija + consistencia entre dos campos);
-fases 2–4 anotadas en BACKLOG.md con decisiones cerradas. Reglas vigentes:
+**fases 2 y 3 HECHAS como la fuente `funcion`** (2026-10-16,
+`PLAN_LISTAS_VALIDACIONES.md` bloque 3; detalle en HISTORIAL, "Validaciones
+por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes:
+
+- **Ingreso y validación, por separado** (2026-10-18): ver la decisión en
+  "Decisiones tomadas". El constructor es una **hoja de trabajo**
+  (2026-10-19, dirección A de los mockups de Impeccable, elegida por SDN):
+  riel de pasos a la izquierda con el estado de cada uno (El trámite, Quién
+  lo recibe, Los campos, Validar antes de abrir), la hoja al centro sobre un
+  área cuadriculada y la vista del afiliado fija a la derecha; se sale del
+  ancho del panel (`.ct-ancho`). Los campos son **filas de una tabla con un
+  solo campo abierto a la vez**: el editor con sus tres pasos (El dato,
+  Ingreso: Lo carga el afiliado / Extraer / Calcular, Validación:
+  «+ Validar…») se despliega debajo de la fila tocada. **Borrador**
+  (`TipoTramite.borrador`, `accion=borrador`): se guarda sin exigir campos
+  ni área y conservando los campos sin etiqueta, inactivo y marcado; el
+  afiliado no lo ve; "Publicar" exige todo. Es una marca aparte de `activo`. **Ninguna explicación a la vista**: viven en un
+  «?» (`.ct-help`, `data-ayuda`) que abre un globo al pasar el mouse y queda
+  fijo con un clic (`#ct-tip`, delegado en `document`). Un texto de ayuda
+  nuevo en esta pantalla va ahí, nunca en un `muted` siempre visible. Lo
+  guardado no cambió.
+- **Fuente `funcion`** (`origen` lista o sistema): busca una fila de una
+  lista del sindicato o un dato del padrón y compara, o evalúa una fórmula
+  escrita como las Reglas (`campo.*`, `lista.*`, `sistema.afiliado.*`, `y`/`o`/`no`,
+  nueve funciones cerradas; evaluador `ast` propio en
+  `validaciones_tramite`, sin `eval`). **El CUIL de la sesión es siempre la
+  primera clave de la búsqueda**; la segunda es un campo del formulario por
+  orden. Los nombres de los campos los arma el servidor
+  (`nombres_de_campos`, `POST /admin/tramite-tipo/nombres`). Una fórmula que
+  nombra algo que no existe no se guarda (`error_de_formula`). Un dato que
+  falta no vale 0: la validación no pasa.
+- **Requisitos para iniciar** (`TipoTramite.requisitos`): funciones sin
+  segunda clave, siempre bloqueantes, evaluadas al enviar y **al abrir**
+  (`GET /api/tramite/requisitos/{id}`: si no se cumplen, la app muestra los
+  mensajes en vez de los campos, y trae los calculados que no dependen de
+  otro campo). **Campo extraído o calculado** (`tipo_dato = "calculado"`):
+  su ingreso es la función marcada `ingreso`; el servidor lo propone
+  (`calculados`), el afiliado puede corregirlo y, si lo hace, vale lo suyo
+  con aviso al operador (`corregidos`); puede tener validaciones como
+  cualquier campo (una fija infiere el tipo del límite).
+- `sistema.tramites_de_este_tipo` / `tramites_abiertos_de_este_tipo` cuentan
+  los pedidos del afiliado de ESE formulario: «una sola vez» es un requisito
+  (`== 0`), no una brecha. **Desde 2026-10-18, once datos más**
+  (`DATOS_SISTEMA`; los calcula `db.contexto_validaciones`, ninguno se
+  guarda): `credencial_vigente` (código generado y vigencia no vencida; sin
+  fecha, vigente), `numero_credencial`, `edad`, `antiguedad_meses`,
+  `ultimo_recibo_periodo`, `meses_sin_recibo`, `ultimo_recibo_bruto`,
+  `empleador_cuit`, `empleador_nombre`, `tramites_abiertos` y
+  `dias_desde_ultimo_pedido_de_este_tipo`. Un dato nuevo es una entrada ahí
+  más su cálculo en `contexto_validaciones` **y su ayuda en `AYUDA_SISTEMA`**
+  (grupo, qué devuelve, ejemplo, qué significa; `AYUDA_FUNCION` para las
+  funciones; `COMO_SE_COMPARA` por tipo): sin ayuda el test falla, y cada
+  ejemplo tiene que compilar. El constructor la muestra al elegir (línea
+  bajo la fila + `title` de la opción) y entera en el modal "Datos y
+  funciones" (`overlay-ayuda-funciones`, buscable); el asistente, en su
+  catálogo (`Catalogo` de app.js). Las tres pantallas leen
+  `catalogo_funcion()`, nada a mano.
+- **En vivo** (`POST /api/tramite/validar-campo`, D3): solo las funciones
+  marcadas `en_vivo`, respuesta pasa / no pasa con el mensaje y NUNCA la fila;
+  **diez intentos por sesión y formulario** (`EN_VIVO_MAX_INTENTOS`, 429
+  después, se limpia con el envío que entra) para que la respuesta no sirva
+  para enumerar una lista. Cortesía: el servidor decide al enviar.
+- **`db.contexto_validaciones(sid, cuil, tipo, valores)`** arma en UNA sesión
+  los datos del sistema (`DATOS_SISTEMA`) y trae de antemano las filas de
+  lista que el envío necesita: `evaluar_envio` sigue siendo puro. Sin contexto
+  (banco de pruebas sin CUIL) las funciones no se evalúan y se cuenta
+  `sin_contexto`; el banco las prueba contra un afiliado real del padrón.
+- El constructor de empresa no ofrece funciones ni calculados (D7, segunda
+  vuelta).
 
 - **No son tipos de dato**: capa componible sobre el campo (0..N por campo),
   cada una con `bloquea` (frena con mensaje) o `avisa` (pasa y queda en
@@ -1068,6 +1945,14 @@ Especificación rectora en [`docs/DASHBOARD.md`](docs/DASHBOARD.md) (+ mockup
 habilitable `"dashboard"` (opt-in, fuera de `MODULOS_INICIALES`). Reglas
 vigentes:
 
+- **El alcance de seccional se impone en los filtros, en un solo lugar**
+  (2026-10-17, `PLAN_ALCANCE_SECCIONAL.md` bloque 4): `main._filtros_dashboard`
+  llama a `dashboard.imponer_alcance(f, alcance)`, que deja `f["seccionales"]`
+  = lo pedido ∩ el alcance (o el alcance entero; vacío = `[0]`, sin filas) y
+  `f["alcance"]` para lo que distingue impuesto de elegido (el mapa). Los
+  detalles del modal "Ver", el buscador de afiliados y el Asistente reciben
+  el alcance aparte. Un endpoint nuevo del panel que use `_filtros_dashboard`
+  lo hereda; uno que reciba un id de persona tiene que chequearlo.
 - **Agregados 100% en SQL** (`dashboard.py`), con índices compuestos que
   empiezan por `sindicato_id` + fecha. Columnas analíticas en
   `ReciboVerificado` (`procesado_en` ordenable, `cuit_empleador`, `bruto`,
@@ -1082,10 +1967,13 @@ vigentes:
   Sesión de admin + módulo; el `sindicato_id` sale SIEMPRE de la cookie,
   jamás de un parámetro.
 - **Privacidad (test en `test_dashboard.py`)**: el detalle de recibos
-  muestra nombre/CUIL SOLO si `enviado_sindicato=true`; el CASE está en el
-  SQL, no en el frontend. En el modal "Ver" de un recibo NO enviado, el
-  servidor además BORRA nombre/CUIL/legajo del JSON guardado antes de
-  responder (`dashboard.detalle_recibo`).
+  muestra nombre/CUIL **y empresa** SOLO si `enviado_sindicato=true`; el
+  CASE está en el SQL, no en el frontend. En el modal "Ver" de un recibo NO
+  enviado, el servidor además BORRA nombre/CUIL/legajo y el empleador del
+  JSON guardado antes de responder (`dashboard.anonimizar_detalle`, única
+  implementación, la usa también Reportes). Los **agregados** cuentan todo,
+  enviado o no; las **filas** de no enviados solo salen si el sindicato
+  firmó la cláusula de confidencialidad (ver "Reportes" en Decisiones).
 - **Dos estados de validación** (OK / con diferencias): "en revisión" no
   existe a nivel recibo (decisión de Sd 2026-08-29). Tipos de notificación
   = `origen` real (manual/sistema). KPI "Afiliados registrados" =
@@ -1143,9 +2031,12 @@ existente: 6 seccionales, ~12 empresas, 100 trabajadores con cuenta (**clave
 - **Perfiles de recibo por convenio**: un sindicato puede registrar en
   `cargar_lote_sindicato.PERFILES` una función que arma sus líneas de ingreso
   según SU convenio, en vez del armado genérico. `cargar_bancaria.py` es el
-  ejemplo: reproduce el CCT 18/75 (adicionales como % del **sueldo inicial**,
-  antigüedad embebida en el básico, cajero función + falla de caja como dos
-  líneas). Los rasgos estables del trabajador (antigüedad, si es cajero,
+  ejemplo: reproduce el CCT 18/75 con la **grilla firmada de agosto 2026**
+  (básico de la categoría + "Complemento salario conformado" hasta el
+  conformado, adicionales en **montos fijos**, ROE por la tabla de tramo de
+  bruto × ROE del banco, antigüedad embebida en el básico, cajero función +
+  falla de caja como dos líneas). Hasta el 2026-10-13 tomaba el conformado
+  como básico y los adicionales como % del inicial, y estaba mal. Los rasgos estables del trabajador (antigüedad, si es cajero,
   título) salen de `trab["semilla"]`, derivada del CUIL — no se sortean en
   cada recibo.
 
@@ -1360,6 +2251,25 @@ app, no solo recibos. El catálogo del sindicato tampoco se toma como
 confiable: códigos y alias se normalizan (`_clave`, `_alias_de`) antes de
 matchear. Detalle en HISTORIAL.md, "el 500 genérico que mentía".
 
+**Haber o descuento lo dice dónde está impresa la línea, nunca el signo**
+(2026-10-11). El extractor devuelve `lineas[].seccion` (`haberes` /
+`no_remunerativos` / `descuentos`) y `validador.repartir_por_zona` es la única
+implementación: una línea entre los descuentos con el signo contrario al de
+los descuentos de ESE recibo es un **reintegro** (devolución de Ganancias, de
+aportes): no suma al bruto ni a la base de los aportes, entra al neto, y el
+total de descuentos impreso puede venir bruto o neto de reintegros. Un haber
+negativo sigue siendo haber. Para un concepto pendiente de revisión manda la
+sección de la línea, no su tipo. Para uno ya revisado manda el catálogo,
+salvo que con la sección leída cierren todos los totales impresos y con el
+catálogo no: ahí se toma el recibo y sale la alerta `concepto_mal_clasificado`.
+**No hay un tercer rubro "reintegro" en el catálogo** (decisión de SDN): ser
+reintegro es del mes, no del concepto (Ganancias retiene un mes y devuelve
+otro), y un reintegro de gastos o guardería es otra cosa: un haber no
+remunerativo. La pestaña Conceptos dice en qué sección leyó la IA cada código
+(`db.secciones_vistas`, últimos 500 recibos) y ofrece "Confirmar como …" /
+"Pasar a …". Detalle en HISTORIAL.md, "Reintegros entre los descuentos" y
+"Catálogo contra recibo".
+
 ## Códigos de error propios (`errores.py`)
 Todo error que ve una persona lleva un código (`raise ErrorApp("E-...")`),
 que viaja al frontend y se muestra debajo del mensaje. **Solo los errores
@@ -1434,13 +2344,32 @@ se agrega ahí.
   simulada. Preferir cambios quirúrgicos y probar antes de avanzar.
 - Sd tiene skills intermedias de Python, trabaja en Argentina, deploya con
   GitHub + Render (push dispara redeploy).
-- Preferencia: durante la construcción mostrar poco output intermedio; dar un
-  resumen claro al final.
+- **Code mergea sus propios PR sin preguntar** (autorización permanente de
+  SDN, 2026-10-11): con el CI en verde y sin conflictos, el PR se mergea a
+  `main` (o se le activa el auto-merge) y se avisa en el reporte. Preguntar
+  antes cada vez demoraba todo una vuelta de conversación.
+- **La suite completa la corre el CI, no la sesión** (2026-10-11): en local
+  se corren los `test_*.py` del área tocada; las 4 tandas del CI corren los
+  127 archivos en ~4 minutos, contra 20 a 25 en un contenedor de la nube.
+- **Reportes, no narración** (regla de SDN, 2026-10-11): no contar paso por
+  paso lo que se va haciendo. Mientras dura el trabajo, un reporte cada ~10
+  minutos o al terminar, con tres partes: qué se hizo, qué quedó listo y qué
+  queda pendiente. Entre reporte y reporte, nada.
 - Sesiones largas acumulan contexto y eso enlentece cada respuesta — para
   bloques de trabajo sin relación entre sí, preferir abrir una sesión nueva
   en vez de seguir apilando todo en la misma conversación.
 
 ## Comandos útiles
+- **Sesiones de Code en la nube**: `.claude/hooks/session-start.sh` (registrado
+  en `.claude/settings.json`) levanta Postgres 16 con pgvector, arma `.venv`
+  con Python 3.12 + requirements + pytest/bandit y carga las variables del CI.
+  Idempotente (0,2 s si ya está todo); solo corre con `CLAUDE_CODE_REMOTE=true`.
+  Con eso `python -m pytest test_x.py` anda desde el primer minuto.
+- **Análisis estático** (job `auditoria` del CI): **frenan el PR** `ruff
+  check .` (solo errores que revientan al correr, reglas en `ruff.toml`) y
+  `bandit -r . -x ./.venv,./e2e,./carga -lll` (seguridad, severidad alta, XSK
+  ENT-04). Los de severidad media (`-ll`) solo se informan y van a una
+  revisión grupal de código registrada en XSK (`avance.md`, `alcance.md`).
 - Correr local (Postgres vía Docker): `docker compose up -d`,
   después `alembic upgrade head`, después `uvicorn main:app --reload`.
 - Autodiagnóstico: `python chequeo.py`
@@ -1448,6 +2377,9 @@ se agrega ahí.
 - Migraciones: `alembic upgrade head` (aplicar) / `alembic revision --autogenerate -m "msg"` (crear)
 - Promover a la demo: `python promover_demo.py` (o `--solo-pr`). Nunca
   pushear a `demo` a mano.
+- Regularizar CUIL/CUIT de una base: `python regularizar_cuit.py diagnostico`
+  → revisar la planilla → `aplicar --planilla X.csv` (ensayo) → `--si --quien SDN`.
+  Detalle en `DESPLIEGUE_RENDER.md`.
 - En la Shell de Render, si `alembic` no se encuentra: usar `python -m alembic upgrade head`
 - Reset completo de la base local Postgres: `docker compose down -v && docker compose up -d`
   (espera a que el healthcheck pase) `&& alembic upgrade head && python cargar_demo.py`

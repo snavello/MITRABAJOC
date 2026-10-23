@@ -498,6 +498,19 @@ setEstado("verde");
 // toma el semáforo de Grafana y la hora; si el pedido falla, violeta.
 function aplicarDatos(d) {
   if (!d) return;
+  if (d.telegram && porId.telegram && porId.telegram.estado !== "activo") {   // el bot ya avisa: deja de ser una idea
+    porId.telegram.estado = "activo"; porId.telegram.pagoFuturo = undefined;
+    porId.telegram.ficha = {notas:["Configurado: recibe las alertas de Grafana por su propio punto de contacto, cada error no previsto al instante (freno de 10 minutos por código) y el resumen del día a la hora fija de Buenos Aires.","Sin datos de personas: los mismos campos que Sentry.","Se configura con TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID; la hora, con TELEGRAM_RESUMEN_HORA."], campos:{"Costo":"0"}};
+    const g = nodeG("telegram");
+    if (g) {
+      g.classList.remove("planeado");
+      const subs = g.querySelectorAll("text.s"), textos = ["alertas · errores · resumen", "al teléfono del equipo"];
+      subs.forEach((t, i) => { t.textContent = textos[i] || ""; if (t.textContent === "PLANEADO") t.remove(); });
+      [...g.querySelectorAll("text")].filter(t => t.textContent === "PLANEADO").forEach(t => t.remove());
+    }
+    const a = capaA.querySelector('[data-arista="grafana-tg"]'); if (a) { a.removeAttribute("stroke-dasharray"); a.setAttribute("stroke", ZONAS.obs.color); }
+    [...capaL.querySelectorAll("text")].filter(t => t.textContent === "idea").forEach(t => { t.textContent = "alertas"; });
+  }
   setEstado(d.semaforo && ESTADOS[d.semaforo] ? d.semaforo : "gris");
   const act = document.getElementById("actualizado"); if (act) act.textContent = "· " + (d.actualizado || "");
 }

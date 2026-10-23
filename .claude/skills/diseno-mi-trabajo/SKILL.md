@@ -58,9 +58,15 @@ Nunca se personaliza:
    pantallas (ver "El encabezado" más abajo). El gremio manda, no la app.
 2. **Saludo**: "Hola, {nombre}" con el nombre en color de acento, y debajo
    seccional y antigüedad de afiliación.
-3. **Tarjetas de acceso** en grilla de 2 columnas: Tu recibo (destacada con
-   fondo de acento), Mis aportes, Credencial, Capacitación. Cada una con ícono
-   de línea, título y una línea de estado real ("12 de 12 al día", no "Ver más").
+3. **Accesos horizontales** (`.pt-fila`, esquema "Tablero" 2026-09-23):
+   ícono en pastilla a la izquierda, título en condensada de 19px y una línea
+   de estado real ("12 de 12 al día", no "Ver más"), flecha al final. Arriba
+   de todo, la tarjeta principal (`.pt-hero`) con un número de verdad. Las
+   cuatro portadas comparten el bloque "Portadas v2" de marca.css, con todas
+   las clases prefijadas `pt-`: media docena de esos nombres (`.fila`,
+   `.pastilla`, `.mini`, `.txt`) ya existen en otras pantallas y esa hoja la
+   carga casi toda la app. `.pt-tres` da tres columnas a las portadas sin
+   riel (sindicato, plataforma).
 4. **Novedades**: hasta 3 items con título y antigüedad, más "Ver todas".
 5. **Beneficios**: fila de 3 tarjetas chicas.
 6. **Barra inferior**: 4 pestañas con íconos SVG de línea y píldora de fondo
@@ -71,38 +77,74 @@ Nunca se personaliza:
 Encabezado común (abajo), cuerpo claro, botón principal en color de acento,
 pestaña activa marcada con acento.
 
-## El encabezado (2026-09-13): uno solo, para las cuatro apps
+**Y el fondo es una mesa, no un plano liso** (2026-09-24). En escritorio la
+columna de contenido ocupa entre 480 y 1280px y el resto del ancho quedaba
+vacío. El `<body>` lleva `mesa` (gris frío + retícula de colmena muy tenue +
+dos halos difuminados del acento y el primario del sindicato) y el contenedor
+de ancho máximo lleva `mesa-cont`, que solo lo levanta por encima de esas
+capas.
+
+La **franja** de marca -- un degradé que baja del encabezado y muere en la
+mesa -- se suma con `mesa franja`. Lo que queda ARRIBA DE TODO sobre ella se
+separa por LUZ y no por contraste de color: la tarjeta oscura del recibo
+lleva un filo de 1px y brillo interior, y un título en tinta pasa a claro.
+Si algo oscuro sobre la franja no lleva ese filo, pierde el borde y se funde
+con el fondo.
+
+En teléfono se apaga todo: ahí el contenido ya ocupa el ancho completo. No va
+en los logins, el primer ingreso de plataforma, las portadas ni las pantallas
+oscuras. El estilo y el porqué, en `static/interior.css`.
+
+## El título de la pantalla
+
+Uno solo para las tres apps, con la clase **`titulo-pagina`**: condensada
+(`--fuente-display`), 700, **31px**, interlineado 1, `letter-spacing: .3px` y
+en **MAYÚSCULAS**. Es el tratamiento que ya tenía `.rc-h1` -- el "SUBÍ TU
+RECIBO" del afiliado -- y que ahora usan todas.
+
+- Lo lleva **el primer título de cada panel y de cada sub-panel**: el que
+  queda arriba de todo. Los encabezados de sección que vienen más abajo
+  ("Noticias cargadas (30)") no lo llevan y siguen chicos, en tinta y sobre
+  fondo claro.
+- **Va en blanco arriba de 760px**, porque atrás baja la franja de marca, y
+  con él la bajada que va pegada al título. Lo que adentro de esa bajada
+  tenga superficie propia (un `<code>`, una píldora) vuelve a la tinta: si
+  no, queda una cajita clara vacía.
+- En teléfono no hay franja, así que el título vuelve a la tinta. Eso lo
+  resuelve `static/interior.css`; una pantalla nueva solo marca su título
+  con la clase y no define tipografía propia.
+
+## El encabezado: uno solo, de UNA línea, para las cuatro apps
 
 **Ninguna pantalla escribe su propio encabezado.** Se arma SIEMPRE con
 `{% include "_encabezado.html" %}`, que trae su hoja (`static/encabezado.css`)
-y no depende de `marca.css` — `trabajador.html` y `empresa.html` no la cargan.
-Son dos franjas y esa separación es el punto:
+y no depende de `marca.css` -- `trabajador.html` y `empresa.html` no la
+cargan. Es UNA sola barra (2026-09-23; antes eran dos franjas):
 
-    CINTA   [ rol del panel ]                          [ Colm3na ]
-    BARRA   [ logo del sindicato ]                     [ pantalla ]
+    BARRA   [ logo del sindicato ]                     [ Colm3na ]
 
-- La **cinta** dice quién opera la plataforma: el logo de Colm3na a la
-  derecha, siempre 17px de alto. A la izquierda, el rol del panel
-  ("Panel de administración", "Panel de empleador"…) — **vacío en la app del
-  afiliado**: ahí la plataforma firma con el logo, no con texto.
-- La **barra** es del sindicato: su logo a 62px de alto (46 en móvil) y
-  **ancho libre** (un logo horizontal no se aplasta en una caja cuadrada) y,
-  a la derecha, el nombre de la pantalla. En los paneles con pestañas lo
-  actualiza el JS al cambiar de pestaña.
+- El **logo del sindicato** va a 62px de alto (46 en móvil) y **ancho libre**:
+  un logo horizontal no se aplasta en una caja cuadrada.
+- **Colm3na va a la derecha, a 24px** (19 en móvil). Es la firma de quien
+  opera la plataforma, no la marca principal: el gremio manda.
+- **No hay cinta.** Existía para decir el rol del panel ("Panel de
+  administración") y se sacó: el rol ya lo dicen el `<title>`, la pantalla y
+  el login por el que se entró.
+- **El nombre de la pantalla no se escribe.** Todas las pantallas de una app
+  llevan el mismo encabezado que su inicio; la tira de pestañas (o la barra
+  de abajo, en el afiliado) ya dice dónde estás.
 - Donde la marca principal ES la plataforma (panel de plataforma, demo
-  anónima), la barra lleva el logo de Colm3na y **la cinta no lo repite**;
-  si además no hay rol que mostrar, la cinta no se dibuja.
+  anónima), el logo grande de la izquierda es el de Colm3na y a la derecha
+  no se repite.
 - **El nombre del sindicato en texto solo aparece si NO hay logo cargado**
   (entonces es el logotipo, en condensada sobre un filo de acento). Con logo,
   escribirlo al lado es decir dos veces lo mismo.
-- **El título de la pantalla se dice una sola vez**: si está en el
-  encabezado, no va también como `<h1>` del cuerpo.
 - **La plataforma se llama Colm3na**: "Mi Trabajo" no va en ninguna
   pantalla. Los `<title>` siguen el mismo criterio que el encabezado:
   `<pantalla> — {{ sindicato }}` donde hay sindicato, `Colm3na — <pantalla>`
   donde no lo hay.
-- Variables del parcial: `enc_rol`, `enc_pantalla`, `enc_volver`, `enc_fecha`,
-  `enc_fija`, `enc_plataforma`. Una pantalla nueva se encabeza con eso.
+- Variables del parcial: `enc_volver`, `enc_fecha`, `enc_fija`,
+  `enc_plataforma`. Una pantalla nueva se encabeza con eso y nada más.
 - Fuera del sistema, a propósito: los tres ingresos (el logo grande de
   plataforma es la identidad de esa pantalla) y las herramientas internas del
   equipo (`/entornos`, informes de carga).
@@ -129,6 +171,118 @@ que sumar su caja a `CAJAS` de ese archivo y su encabezado a la regla del
 cursor en `marca.css`, o ese modal va a ser el único que no se mueve. En
 teléfono no se arrastran: ahí el modal ocupa el ancho completo y no hay nada
 atrás que destapar.
+
+## Movimiento (caso cero: la v2 del Panel Sindical, 2026-10-12)
+
+Nació en la v2 del Panel y el 2026-10-13 se llevó a **todos los modales**.
+Los tokens viven en **`static/movimiento.css`** (y en ningún otro lado: lo
+verifica `test_modales.py`), que cargan las pantallas con modales y la v2;
+el motor de los modales es el segundo bloque de `static/modales.js`. Lo que
+sigue pendiente de llevar pantalla por pantalla es el resto (tarjetas,
+pestañas, listas). La referencia es la skill `emil-design-eng`;
+**ante un choque mandan las reglas de este archivo** (nada de CDN ni de paso
+de compilación, así que nada de Framer Motion).
+
+**Duraciones y curvas con nombre, nunca un número suelto:**
+
+| Token | Valor | Para qué |
+|---|---|---|
+| `--mov-presion` | 120ms | un botón que se aprieta (`scale: .97`) |
+| `--mov-rapido` | 180ms | pasar el mouse, tooltips |
+| `--mov-medio` | 320ms | cambios de estado y todo CIERRE |
+| `--mov-lento` | 650ms | APERTURA de modales y cajones |
+| `--mov-entrada` | 900ms | un panel que entra al hacer scroll |
+| `--mov-cambio` | 800ms | un gráfico que pasa de un valor a otro |
+| `--mov-datos` | 1400ms | un gráfico que se dibuja por primera vez |
+| `--mov-correr` | 1600ms | un indicador que corre hasta su número |
+| `--mov-escalon` | 120ms | entre dos que entran juntos |
+| `--ease-entrada` | `cubic-bezier(.33,1,.68,1)` | lo que tiene que VERSE entrar |
+| `--ease-salida` | `cubic-bezier(.23,1,.32,1)` | la respuesta inmediata: hover, apretar, cerrar |
+| `--ease-mueve` | `cubic-bezier(.65,0,.35,1)` | lo que se MUEVE de un lugar a otro |
+| `--ease-hoja` | `cubic-bezier(.32,.72,0,1)` | cajones y hojas que entran |
+
+**Son duraciones de presentación, a pedido de SDN (2026-10-13).** La primera
+vuelta usó las de una interfaz de todos los días (~300 ms con una curva de
+salida fuerte, lo que recomienda `emil-design-eng`), y medido en el
+navegador el modal ya estaba al 95% a los 150 ms: se veía "rápido y brusco".
+La curva importa tanto como la duración: `--ease-salida` hace casi todo el
+recorrido al principio y una entrada de 420 ms se percibe de 120. Lo que se
+quiere VER entrar usa `--ease-entrada`, que lo reparte.
+
+**Reglas:**
+- **Se anima cuando la persona lo ve, no cuando llegan los datos.** Un panel
+  entra en escena al entrar en pantalla (`alEntrar`, IntersectionObserver) y
+  recién ahí se dibuja su gráfico. Esa fue la causa de "casi no se ven": la
+  mitad terminaba de animarse fuera de vista.
+- **Nunca `ease-in`** en algo de la interfaz: arranca lento y se siente
+  pesado. Lo que entra a la vista usa `--ease-entrada`; la respuesta
+  inmediata, `--ease-salida`; lo que se mueve en pantalla (la marca de una
+  pestaña, una barra que cambia), `--ease-mueve`.
+- **Medir antes de opinar**: el porcentaje de la animación que ya pasó a los
+  100, 200 y 300 ms, tomado en el navegador, dice cómo se ve. La duración
+  escrita no lo dice.
+- **Cerrar es más rápido que abrir** (`--mov-medio` contra `--mov-lento`).
+- **Lo que se repite seguido es corto**: cambiar un filtro anima en
+  `--mov-cambio`, nunca en `--mov-datos`.
+- **Nada aparece desde cero**: un modal centrado entra desde `scale: .94` y
+  26px más abajo; una hoja pegada abajo sube desde el borde con `--ease-hoja`.
+  Los modales escalan desde su centro; lo que escala desde su disparador son
+  los popovers.
+- **Se anima `scale`, `translate` y `opacity`**, nunca `transform` en algo que
+  `modales.js` arrastra, y nunca propiedades que reacomodan la página
+  (`height`, `margin`).
+- **Hover solo con mouse** (`@media (hover: hover) and (pointer: fine)`), y
+  solo levanta lo que se puede tocar: lo que solo se lee, a lo sumo se aclara.
+- **Esperar es armar, nunca apagar.** En la primera carga, el panel traza
+  las líneas de la grilla de su gráfico (o los renglones de una lista) una
+  por una. Al cambiar un filtro queda nítido y corre una línea fina arriba.
+  Nada se pone translúcido ni gris: SDN lo leía como "una pantalla gris".
+- **El modal abre en el momento del clic y se arma a la vista** con lo que la
+  fila ya sabe (título, fecha, empresa). Lo que llega del servidor se suma
+  debajo en cascada, y la caja crece de a poco hasta su alto, sin saltar.
+  La caja se vuelve opaca enseguida (en 220 ms): un velo translúcido no se
+  lee como movimiento sino como espera.
+- **Con reducir movimiento quedan solo fundidos suaves** (200 a 500 ms): nada
+  se desplaza, crece ni gira, y los gráficos se dibujan quietos. Reducir es
+  "menos y más suave", no "nada": sin fundidos, un modal aparece de golpe y
+  se pierde qué cambió. `marca.css` corta todo con `* { ... !important }`;
+  la v2 devuelve la opacidad con reglas más específicas, también con
+  `!important`. Y lo dice en pantalla (`.v2-aviso-mov`), con el camino para
+  apagarlo en Windows, iPhone, Mac y Android: quien lo tiene prendido sin
+  saberlo veía todo quieto y no sabía por qué.
+
+**Los modales de toda la plataforma (2026-10-13).** Todos se abren poniendo
+`abierto` en el fondo, que pasa de `display:none` a `flex`. Por eso:
+- **La entrada es CSS** (keyframes en `movimiento.css`, que arrancan solos
+  cuando el fondo aparece) y **la salida la sostiene `modales.js`**: al
+  sacarse `abierto` le pone `mov-sale` al fondo el tiempo de irse. Las
+  funciones de abrir y cerrar de cada pantalla no se tocan, y si el script
+  no carga el modal anda igual, solo que se cierra de golpe.
+- **El contenido se arma en cascada** (`data-armado`) al abrir y otra vez
+  cuando llega lo que se estaba cargando. Un repintado cualquiera (un
+  mensaje nuevo en el chat) NO se rearma: sería ruido.
+- **"Cargando…" no es un texto suelto**: lo que dice exactamente eso queda
+  marcado `mov-cargando` y se dibuja como la forma de lo que viene (líneas
+  que respiran; un título que respira). Una pantalla nueva que escriba
+  "Cargando…" en su modal lo hereda sola.
+- **La caja crece de a poco** cuando cambia su contenido con el modal abierto.
+- **Toda pestaña, sub-pestaña o vista que cambia adentro de una pestaña**
+  (las de las cuatro apps; los trámites del afiliado y de la empresa: lista,
+  formularios, formulario, detalle) lleva `data-mov-vista` y recibe lo mismo: piezas en cascada al aparecer, la
+  ruedita de `.cargando` dibujada como líneas, y lo que llega se arma. Lo
+  único que no hace es crecer de a poco: está en el flujo de la página y
+  animar su alto reacomodaría todo lo de abajo. Y una pieza más alta que dos
+  pantallas (una tabla de miles de filas) no se anima entera: se arma lo que
+  se ve de adentro, o queda quieta. Medido, animarla costaba 100 a 200 ms.
+- **Una familia nueva de modal** suma su fondo a `FONDOS_MOV` (modales.js) y
+  sus reglas de entrada y `mov-sale` a `movimiento.css`, o va a ser la única
+  que aparece de golpe (lo cuida `test_modales.py`). El "Ver" del Panel
+  (`.overlay-det`) queda afuera a propósito: la v1 no se toca y la v2 trae
+  el suyo.
+- **Un modal adentro de `.mesa-cont`** quedaba debajo de la barra fija de
+  pestañas (la capa de la mesa encerraba su z-index). Mientras hay un modal
+  abierto la capa sube a 45: arriba de la barra y los botones flotantes,
+  abajo de los modales que viven afuera (`interior.css`).
 
 ## El flujo del recibo (2026-09-14, "Marco")
 

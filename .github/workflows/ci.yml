@@ -96,3 +96,24 @@ jobs:
         run: |
           python -m pip install pip-audit
           python -m pip_audit -r requirements.txt --progress-spinner off
+      - name: Ruff — errores de Python (no estilo)
+        # FRENA (decisión de SDN, 2026-10-11). Solo las reglas de ruff.toml:
+        # nombres sin definir, código que no compila, comparaciones que
+        # siempre dan lo mismo. Todo lo que marca revienta al correr.
+        run: |
+          python -m pip install ruff==0.13.3
+          ruff check .
+      - name: Bandit — severidad alta (XSK ENT-04)
+        # FRENA (decisión de SDN, 2026-10-11): un eval, un subprocess con
+        # shell, una clave escrita en el código. Hoy da 0.
+        run: |
+          python -m pip install bandit==1.9.4
+          bandit -r . -x ./.venv,./e2e,./carga -lll
+      - name: Bandit — severidad media (informativo)
+        # NO frena: los medios van a la revisión grupal de código de XSK
+        # (avance.md, 2026-10-11). Queda a la vista para que uno nuevo no
+        # pase sin que nadie lo vea. Línea de base: 63, en
+        # xsk/proyectos/mitrabajo/corridas/2026-10-11-2040-ENT.md.
+        continue-on-error: true
+        run: |
+          bandit -r . -x ./.venv,./e2e,./carga -ll

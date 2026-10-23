@@ -125,13 +125,23 @@ def crear_sesion(rol: str, id_usuario: int = 0, sindicato_id: int = 0, ident: st
     return f"{cuerpo}.{firma}"
 
 
+def _firma_igual(firma: str, esperada: str) -> bool:
+    """Compara dos firmas en tiempo constante. Se compara en BYTES: con `str`,
+    `hmac.compare_digest` levanta TypeError si alguna tiene caracteres no ASCII,
+    y el token llega tal cual de un formulario, una URL o una cookie (QR-8: un
+    "é.é" hacía un 500 en cinco rutas públicas, y cada 500 avisa a Sentry y a
+    Telegram). Una firma que no es ASCII simplemente no cierra."""
+    return hmac.compare_digest(firma.encode("utf-8", "surrogatepass"),
+                               esperada.encode("utf-8"))
+
+
 def leer_sesion(token: str) -> dict | None:
     """Valida la firma del token y devuelve el payload, o None si es inválido."""
     if not token or "." not in token:
         return None
     cuerpo, firma = token.rsplit(".", 1)
     esperada = hmac.new(SECRETO.encode(), cuerpo.encode(), hashlib.sha256).hexdigest()[:32]
-    if not hmac.compare_digest(firma, esperada):
+    if not _firma_igual(firma, esperada):
         return None
     try:
         # Re-agregar el padding "=" que crear_sesion quita (múltiplo de 4).
@@ -142,6 +152,52 @@ def leer_sesion(token: str) -> dict | None:
     if time.time() - payload.get("t", 0) > IDLE_TIMEOUT_SEGUNDOS:
         return None
     return payload
+
+
+def firmar_paso(datos: dict, minutos: int = 20, proposito: str = "") -> str:
+    """Token firmado para llevar el ESTADO ENTRE PASOS de un flujo de varias
+    pantallas (registro en tres pasos, recuperación de clave, confirmación de
+    mail): el CUIL, el id del código de verificación, el paso alcanzado.
+
+    Mismo formato y misma firma que la sesión (`crear_sesion`), pero con un
+    propósito propio y un vencimiento corto: un token de registro NO abre una
+    sesión y una sesión NO sirve como token de registro, aunque los dos salgan
+    del mismo secreto. Nada de esto viaja en una cookie plana ni en un campo
+    oculto sin firmar: es la regla de H-0004 llevada a los flujos nuevos.
+
+    `datos` tiene que ser un dict (TypeError si no): `leer_paso` solo devuelve
+    dicts, así que firmar otra cosa produciría un token que nunca se puede
+    leer, y el error aparecería lejos de donde está el defecto."""
+    if not isinstance(datos, dict):
+        raise TypeError("firmar_paso: `datos` tiene que ser un dict")
+    payload = {"p": proposito, "d": datos, "t": int(time.time()), "m": int(minutos)}
+    cuerpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    firma = hmac.new(SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{cuerpo}.{firma}"
+
+
+def leer_paso(token: str, proposito: str) -> dict | None:
+    """Devuelve los datos de `firmar_paso`, o None si la firma no cierra, el
+    propósito no es el esperado o el token venció. El propósito es OBLIGATORIO
+    (sin default): un lector que se olvidara de pedirlo aceptaría tokens de
+    otro flujo, que es justo lo que el propósito evita."""
+    if not token or "." not in token:
+        return None
+    cuerpo, firma = token.rsplit(".", 1)
+    esperada = hmac.new(SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
+    if not _firma_igual(firma, esperada):
+        return None
+    try:
+        relleno = cuerpo + "=" * (-len(cuerpo) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(relleno.encode()).decode())
+    except Exception:
+        return None
+    if payload.get("p", "") != proposito:
+        return None
+    if time.time() - payload.get("t", 0) > payload.get("m", 0) * 60:
+        return None
+    datos = payload.get("d")
+    return datos if isinstance(datos, dict) else None
 
 
 def verificar_plataforma(clave: str, cuit: str = None) -> bool:

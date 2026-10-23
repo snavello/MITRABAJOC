@@ -1,32 +1,38 @@
 # -*- coding: utf-8 -*-
 """Alta de "La Bancaria" (Asociación Bancaria) + su lote de datos sintéticos.
 
-Los conceptos y las reglas de cálculo salen del **CCT 18/75** (el texto
-ordenado del convenio bancario, `docs/cct-1875-bancarios.md` resume lo
-relevante). Dos particularidades del convenio que mandan sobre el resto:
+La ESTRUCTURA sale del **CCT 18/75** (categorías, coeficientes, qué
+adicionales existen) y los MONTOS de la **grilla salarial de agosto 2026**,
+firmada con las cámaras el 11/09/2026 (`docs/cct-1875-bancarios.md` la
+transcribe entera, con las fuentes). Lo que manda sobre el resto:
 
-1. **Casi todos los adicionales son un % del "sueldo inicial"** (Auxiliar
-   inicial, art. 5), NO del básico propio del agente: un cajero con 20 años
-   cobra su adicional sobre el inicial, no sobre su básico de coeficiente
-   1,74 (arts. 11, 12, 14, 16, 22, 24, 25).
-2. **La antigüedad NO es una línea aparte**: está embebida en el básico, que
-   sube por escala de coeficientes y dispara promociones automáticas a los
-   15/20/25/30/35 años (art. 5). Un rubro "Antigüedad" suelto no existe en
-   este convenio.
-
-El sueldo inicial y la participación en las ganancias (ROE) son los reales
-acordados con las cámaras para **julio de 2026**; el ROE no surge del CCT
-(art. 42 b solo prohíbe absorberlo) sino del acuerdo paritario.
+1. **Básico y conformado no son lo mismo.** El básico es el de la categoría
+   (tiene un piso de $ 1.642.764,63 hasta cierta antigüedad); el conformado
+   ($ 2.505.061,24 el inicial, el "Salario Inicial" del comunicado mensual) es
+   la remuneración mínima garantizada hasta los 15 años. La diferencia va en
+   una línea propia, "Complemento salario conformado". Cómo la imprime un
+   banco no lo dice la grilla: el nombre y la mecánica son un supuesto.
+2. **Los adicionales son montos fijos** (cajero, falla de caja, título, zona
+   patagónica), no un % del inicial como en el texto de 1975.
+3. **El ROE sale de una tabla**: tramo de sueldo bruto × ROE del banco, en
+   montos anuales que se cobran de a 1/12.
+4. **La antigüedad NO es una línea aparte**: está embebida en el básico, que
+   sube por la escala de coeficientes y dispara promociones automáticas a los
+   15/20/25/30/35 años (art. 44).
 
 Los aportes de ley (jubilación, INSSJP, obra social) y la cuota sindical
-**tampoco están en el CCT** —el convenio no fija ningún porcentaje—: son de
-la ley general y del estatuto gremial. Por eso la cuota sindical se carga
-como concepto pero SIN fórmula de validación: el sistema no puede reclamar
-un porcentaje que el convenio no fija.
+**no están en el CCT** —el convenio no fija ningún porcentaje—: son de la ley
+general y del estatuto gremial. Por eso la cuota sindical se carga como
+concepto pero SIN fórmula de validación.
 
 Uso:
-    python cargar_bancaria.py            # crea el sindicato y siembra el lote
-    python cargar_bancaria.py --limpiar  # borra el lote (deja el sindicato)
+    python cargar_bancaria.py                    # crea el sindicato y siembra el lote
+    python cargar_bancaria.py --limpiar          # borra el lote (deja el sindicato)
+    python cargar_bancaria.py --rehacer-recibos  # borra y regenera SOLO los recibos
+                                                 # del lote (y sus envíos y reportes)
+    python cargar_bancaria.py --borrar-recibos-de CUIL [--si]
+        # borra los recibos, envíos, reportes y alertas de UN CUIL en La Bancaria
+        # (la cuenta queda). Sin --si solo muestra qué borraría.
 """
 import random
 import sys
@@ -42,41 +48,28 @@ import auth
 import db
 from db import Sindicato, UsuarioSindicato, Concepto, Formula
 import cargar_lote_sindicato as lote
+from grilla_bancaria import (GRILLA, FUNCION_CAJERO, FALLA_DE_CAJA, TITULOS,
+                             ZONA_PATAGONICA, categoria_de, fila_de_escala, roe_mensual)
 
 NOMBRE = "La Bancaria"
-ADMIN = ("20333444550", "bancaria-demo")
-
-# Julio 2026, acordado con las cámaras empresariales bancarias.
-SUELDO_INICIAL = 2_463_757.68      # Auxiliar inicial, art. 5 (coeficiente 1,00)
-ROE_JULIO_2026 = 71_219.54         # Participación en las ganancias
-
-# Art. 5: coeficiente del básico según años de antigüedad (la antigüedad va
-# ADENTRO del básico). Se toma el tramo cumplido más alto.
-ESCALA_ANTIGUEDAD = [
-    (0, 1.00), (1, 1.04), (2, 1.08), (3, 1.11), (4, 1.13), (5, 1.17), (6, 1.20),
-    (7, 1.24), (8, 1.26), (9, 1.30), (10, 1.35), (11, 1.39), (12, 1.43), (13, 1.48),
-    (14, 1.52), (15, 1.63), (20, 1.74), (25, 1.96), (30, 2.07), (35, 2.17),
-]
-# Art. 5: la categoría también la da la antigüedad (promociones automáticas).
-CATEGORIA_POR_ANTIGUEDAD = [
-    (35, "2º Jefe de División de 1º"), (30, "2º Jefe de División de 2º"),
-    (25, "2º Jefe de División de 3º"), (20, "Jefe de Sección"),
-    (15, "Ayudante de firma"), (0, "Auxiliar"),
-]
+ADMIN = ("20333444551", "bancaria-demo")
 
 # Conceptos: (código, nombre, tipo, remunerativo, categoria_sindical)
 CONCEPTOS = [
     ("BAS", "Sueldo básico (art. 5 CCT 18/75)", "ingreso", True, ""),
+    ("CONFOR", "Complemento salario conformado", "ingreso", True, ""),
     ("ROE", "Participación en las ganancias (ROE)", "ingreso", True, ""),
     ("CAJFUN", "Adicional cajero - función (art. 22)", "ingreso", True, ""),
     ("CAJFAL", "Adicional falla de caja (art. 22)", "ingreso", True, ""),
     ("TITULO", "Adicional por título habilitante (art. 10)", "ingreso", True, ""),
+    # Los cinco que siguen existen en el CCT pero la grilla vigente no les
+    # publica monto: quedan en el catálogo y la simulación no los usa.
     ("TECNICO", "Adicional funciones técnicas con título (art. 11)", "ingreso", True, ""),
     ("COMPU", "Adicional computación (art. 14)", "ingreso", True, ""),
     ("NOCTUR", "Suplemento horario nocturno (art. 15 B)", "ingreso", True, ""),
     ("MAQCON", "Adicional máquinas de contabilidad (art. 24)", "ingreso", True, ""),
     ("PORTAV", "Adicional portavalores (art. 39)", "ingreso", True, ""),
-    ("ZONA", "Adicional por zona desfavorable (art. 25)", "ingreso", True, ""),
+    ("ZONA", "Adicional zona patagónica (art. 25)", "ingreso", True, ""),
     # Los tres aportes de ley usan los códigos UNIVERSALES de la plataforma
     # (validador.CONCEPTOS_UNIVERSALES): todo sindicato nuevo los recibe solo
     # al darse de alta desde /plataforma. Inventarles un código propio los
@@ -98,31 +91,19 @@ FORMULAS = [
     ("OBRASOCIAL", "Obra Social = 3% del remunerativo", "0.03 * base_remunerativa", 1.0, True),
 ]
 
-# Art. 22: cajero. (función, falla de caja) como % del sueldo inicial.
-CAJEROS = {"Recibidor": (0.15, 0.20), "Recibidor y pagador": (0.20, 0.30), "Pagador": (0.25, 0.40)}
-# Art. 10: un solo adicional por título, el de mayor monto. Como el CCT los
-# fija en pesos de 1975, se expresan como % del inicial manteniendo su
-# proporción original (150/300/450 sobre 4.600).
-TITULOS = {"secundario": 0.0326, "intermedio": 0.0652, "universitario": 0.0978}
-# Art. 11, agrupamiento III (el más frecuente), letras por antigüedad en la función.
-TECNICO_III = [0.352, 0.638 / 2, 0.562, 0.495, 0.419, 0.352]
-# Art. 25: zona desfavorable por grupo.
-ZONAS = {"A": 0.60, "B": 0.50, "C": 0.40, "D": 0.20}
+# Cada banco tiene SU tramo de ROE (lo publica el BCRA), estable: sale del
+# CUIT. Pesos: la mayoría en los tramos medios y alguno que no paga.
+PESOS_TRAMO_ROE = [1, 3, 3, 2, 1, 1]
 
 
-def coeficiente_antiguedad(anios: int) -> float:
-    coef = 1.00
-    for desde, valor in ESCALA_ANTIGUEDAD:
-        if anios >= desde:
-            coef = valor
-    return coef
+def antiguedad_de(cuil: str) -> int:
+    """Años de antigüedad del agente, estables y derivados del CUIL: así el
+    lote y su regeneración (--rehacer-recibos) le dan la misma categoría."""
+    return random.Random(f"antig-{cuil}").randint(0, 38)
 
 
-def categoria_de(anios: int) -> str:
-    for desde, nombre in CATEGORIA_POR_ANTIGUEDAD:
-        if anios >= desde:
-            return nombre
-    return "Auxiliar"
+def tramo_roe_del_banco(cuit: str) -> int:
+    return random.Random(f"roe-{cuit}").choices(range(6), weights=PESOS_TRAMO_ROE)[0]
 
 
 def _linea(codigo: str, importe: float) -> dict:
@@ -132,47 +113,38 @@ def _linea(codigo: str, importe: float) -> dict:
 
 
 def componer_recibo_bancario(rnd, trab, conceptos, fecha_proceso):
-    """Las líneas de ingreso de un recibo bancario, según el CCT 18/75.
+    """Las líneas de ingreso de un recibo bancario, con la grilla vigente.
 
     Los rasgos del agente (antigüedad, si es cajero, título, zona) son
     ESTABLES: salen de una semilla derivada de su CUIL, no se sortean en cada
-    recibo. Lo que sí varía mes a mes es lo circunstancial (horas nocturnas,
-    si ese mes hizo de portavalores)."""
+    recibo. El ROE depende del banco (su tramo es fijo) y del bruto del mes."""
     propio = random.Random(trab["semilla"])
-    anios = trab["antiguedad"]
+    anios = antiguedad_de(trab["cuil"])
     trab["categoria"] = categoria_de(anios)
+    _, _, basico, conformado = fila_de_escala(anios)
 
-    lineas = [_linea("BAS", SUELDO_INICIAL * coeficiente_antiguedad(anios))]
-    lineas.append(_linea("ROE", ROE_JULIO_2026))
+    lineas = [_linea("BAS", basico)]
+    if conformado and conformado > basico:
+        lineas.append(_linea("CONFOR", conformado - basico))
 
-    # Función de caja (art. 22): dos líneas separadas, función y falla.
+    # Cajero (art. 22): dos líneas separadas, función y falla.
     if propio.random() < 0.22:
-        funcion = propio.choice(list(CAJEROS))
-        pct_funcion, pct_falla = CAJEROS[funcion]
-        lineas.append(_linea("CAJFUN", SUELDO_INICIAL * pct_funcion))
-        lineas.append(_linea("CAJFAL", SUELDO_INICIAL * pct_falla))
+        lineas.append(_linea("CAJFUN", FUNCION_CAJERO))
+        lineas.append(_linea("CAJFAL", FALLA_DE_CAJA))
 
     # Título habilitante (art. 10): uno solo, el de mayor monto.
     if propio.random() < 0.45:
-        titulo = propio.choice(list(TITULOS))
-        lineas.append(_linea("TITULO", SUELDO_INICIAL * TITULOS[titulo]))
-        # Adicional por funciones técnicas (art. 11), solo si además las ejerce.
-        if titulo == "universitario" and propio.random() < 0.5:
-            letra = min(5, max(0, 5 - anios // 3))
-            lineas.append(_linea("TECNICO", SUELDO_INICIAL * TECNICO_III[letra]))
+        lineas.append(_linea("TITULO", TITULOS[propio.choice(list(TITULOS))]))
 
-    if propio.random() < 0.12:                      # área de computación (art. 14)
-        lineas.append(_linea("COMPU", SUELDO_INICIAL * propio.choice([0.667, 0.619, 0.571])))
-        if rnd.random() < 0.4:                      # nocturno, a prorrata (art. 15 B)
-            lineas.append(_linea("NOCTUR", SUELDO_INICIAL * 0.0435 * rnd.uniform(0.3, 1.0)))
-    elif propio.random() < 0.15:                    # máquinas de contabilidad (art. 24)
-        lineas.append(_linea("MAQCON", SUELDO_INICIAL * 0.057))
+    # Zona patagónica: solo quien trabaja allá.
+    if propio.random() < 0.10:
+        lineas.append(_linea("ZONA", ZONA_PATAGONICA[propio.choice(list(ZONA_PATAGONICA))]))
 
-    if rnd.random() < 0.08:                         # portavalores, mes a mes (art. 39)
-        lineas.append(_linea("PORTAV", SUELDO_INICIAL * 0.0652))
-
-    if propio.random() < 0.18:                      # zona desfavorable (art. 25)
-        lineas.append(_linea("ZONA", SUELDO_INICIAL * ZONAS[propio.choice(list(ZONAS))]))
+    # ROE: el tramo de bruto se elige con el mes SIN el ROE.
+    bruto = sum(l["importe"] for l in lineas)
+    roe = roe_mensual(bruto, tramo_roe_del_banco(trab["empresa"]["cuit"]))
+    if roe:
+        lineas.insert(1, _linea("ROE", roe))
 
     # Cuota sindical: el 70% de los recibos la tiene (afiliados cotizantes).
     # Sin fórmula que la valide, su ausencia no genera discrepancia.
@@ -291,7 +263,7 @@ def crear_sindicato() -> int:
         sind = Sindicato(
             nombre=NOMBRE, slug="la-bancaria",
             descripcion="Asociación Bancaria — Sociedad de Empleados de Banco (CCT 18/75)",
-            cuit="30-52573385-9", mail="info@labancaria.org",
+            cuit="30-52573385-4", mail="info@labancaria.org",
             autoridad="Comisión Directiva Nacional", cargo_autoridad="Secretaría General",
             color_base="#132a4a", color_primario="#1d4e89",
             color_acento="#e8b84b", color_secundario="#2f8f83",
@@ -307,6 +279,66 @@ def crear_sindicato() -> int:
     return sid
 
 
+def _tablas_de_recibos():
+    """Donde vive un recibo leído o sembrado, por CUIL. UsoIA NO: es el
+    historial de gasto de la IA, y borrarlo haría mentir al panel de costos."""
+    from db import ReciboVerificado, EnvioSindicato, Reporte, ReciboSospechoso
+    return (ReciboVerificado, EnvioSindicato, Reporte, ReciboSospechoso)
+
+
+def borrar_recibos(sid: int, cuils: set, aplicar: bool) -> dict:
+    """Borra los recibos, envíos al sindicato, reportes y alertas de
+    adulteración de esos CUIL en ESTE sindicato. Las cuentas, el padrón y los
+    trámites no se tocan. Sin `aplicar` solo cuenta."""
+    conteo = {}
+    with db.get_session() as s:
+        for modelo in _tablas_de_recibos():
+            filas = s.exec(select(modelo).where(modelo.sindicato_id == sid,
+                                                modelo.cuil.in_(cuils))).all()
+            conteo[modelo.__tablename__] = len(filas)
+            if aplicar:
+                for fila in filas:
+                    s.delete(fila)
+        if aplicar:
+            s.commit()
+    return conteo
+
+
+def trabajadores_del_lote(sid: int, ctx: dict) -> list:
+    """Los trabajadores del lote YA sembrado, leídos de la base.
+
+    `lote.sembrar_base` no sirve para esto: vuelve a sortear el nombre y lo
+    escribe en la cuenta de la persona, así que regenerar los recibos le
+    cambiaría el nombre a los cien afiliados."""
+    from db import Trabajador, CuentaTrabajador, Empleador
+    conductas = dict(lote.BANCOS)
+    with db.get_session() as s:
+        razones = {e.cuit: e.razon_social or e.cuit for e in s.exec(
+            select(Empleador).where(Empleador.sindicato_id == sid)).all()}
+        nombres = {c.cuil: c.nombre for c in s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil.in_(ctx["cuils"]))).all()}
+        filas = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
+                                                Trabajador.cuil.in_(ctx["cuils"]))).all()
+    orden = {c: i for i, c in enumerate(ctx["cuils"])}
+    trabajadores = []
+    for t in sorted(filas, key=lambda f: orden[f.cuil]):
+        razon = razones.get(t.cuit_empleador, t.cuit_empleador or "Banco")
+        trabajadores.append({
+            "cuil": t.cuil, "nombre": nombres.get(t.cuil) or t.cuil,
+            "empresa": {"cuit": t.cuit_empleador or "", "razon": razon,
+                        "conducta": conductas.get(razon, (5, 20))},
+            "semilla": int(t.cuil[-7:])})
+    return trabajadores
+
+
+def _resumen_recibos(contadores: dict) -> None:
+    total = contadores.get("OK", 0) + contadores.get("CON_DISCREPANCIAS", 0)
+    pct = 100 * contadores.get("OK", 0) / total if total else 0
+    print(f"  Recibos: {contadores.get('OK', 0)} OK ({pct:.0f}%), "
+          f"{contadores.get('CON_DISCREPANCIAS', 0)} con discrepancias, "
+          f"{contadores['enviados']} enviados, {contadores['reportados']} reportados.")
+
+
 if __name__ == "__main__":
     # El perfil se registra ANTES de armar el contexto del lote.
     lote.PERFILES["BANCARIA"] = componer_recibo_bancario
@@ -316,6 +348,29 @@ if __name__ == "__main__":
 
     if "--limpiar" in sys.argv:
         lote.limpiar(sid, ctx)
+        sys.exit(0)
+
+    if "--borrar-recibos-de" in sys.argv:
+        cuil = lote.argumento("--borrar-recibos-de").replace("-", "").strip()
+        if not cuil.isdigit() or len(cuil) != 11:
+            sys.exit("Indicá el CUIL, once dígitos: --borrar-recibos-de CUIL")
+        aplicar = "--si" in sys.argv
+        conteo = borrar_recibos(sid, {cuil}, aplicar)
+        verbo = "Borrados" if aplicar else "Se borrarían (corré con --si para borrar)"
+        print(f"{verbo}, CUIL {cuil} en {NOMBRE}: " +
+              ", ".join(f"{t} {n}" for t, n in conteo.items()))
+        sys.exit(0)
+
+    if "--rehacer-recibos" in sys.argv:
+        revisar_catalogo_ajeno(sid)
+        trabajadores = trabajadores_del_lote(sid, ctx)
+        if not trabajadores:
+            sys.exit("No hay lote sembrado en La Bancaria: corré el script sin opciones.")
+        conteo = borrar_recibos(sid, set(ctx["cuils"]), aplicar=True)
+        print("Recibos del lote borrados: " +
+              ", ".join(f"{t} {n}" for t, n in conteo.items()))
+        print(f"Generando y VALIDANDO 5.000 recibos con la grilla de {GRILLA}...")
+        _resumen_recibos(lote.sembrar_recibos(sid, ctx, trabajadores))
         sys.exit(0)
 
     revisar_catalogo_ajeno(sid)
@@ -332,11 +387,8 @@ if __name__ == "__main__":
 
     print("Sembrando base (seccionales, bancos, 100 trabajadores con cuenta)...")
     trabajadores, empresas, secc_ids = lote.sembrar_base(sid, ctx)
-    print("Generando y VALIDANDO 5.000 recibos con los conceptos del CCT 18/75...")
-    contadores = lote.sembrar_recibos(sid, ctx, trabajadores)
-    print(f"  Recibos: {contadores.get('OK', 0)} OK, "
-          f"{contadores.get('CON_DISCREPANCIAS', 0)} con discrepancias, "
-          f"{contadores['enviados']} enviados, {contadores['reportados']} reportados.")
+    print(f"Generando y VALIDANDO 5.000 recibos con la grilla de {GRILLA}...")
+    _resumen_recibos(lote.sembrar_recibos(sid, ctx, trabajadores))
     print("Creando 5 tipos de trámite y 2.000 trámites con formulario y diálogo...")
     print(f"  Trámites creados: {lote.sembrar_tramites(sid, ctx, trabajadores)}.")
     print("Enviando 200 notificaciones...")

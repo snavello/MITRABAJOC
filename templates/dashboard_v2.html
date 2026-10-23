@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<title>Panel Sindical — {{ sindicato }}</title>
+{# Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Convive con la v1
+   (dashboard.html) mientras dura el piloto, y solo existe donde hay
+   distintivo de entorno (D4). Los datos no viajan acá: los pide la v2 a los
+   mismos endpoints que la v1 (línea roja 1). #}
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
+<link rel="stylesheet" href="/static/panel_v2/panel.css?v={{ sello_static('panel_v2/panel.css') }}">
+<style>
+  {# Los colores del sindicato, igual que en la v1. Es lo único de estilo que
+     queda en la plantilla: el resto vive en panel.css (D7). #}
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+    --destacado: {{ marca.color_destacado }};
+    --destacado-suave: color-mix(in srgb, var(--destacado) 12%, white);
+    --destacado-borde: color-mix(in srgb, var(--destacado) 45%, white);
+    --destacado-osc: color-mix(in srgb, var(--destacado) 78%, black);
+  }
+</style>
+{% include "_fondo_interior.html" %}
+{# Cada módulo se pide por nombre y el mapa lo traduce a su archivo CON su
+   sello ?v= (D3). Lo arma main._importmap_panel_v2() recorriendo la carpeta:
+   un archivo nuevo de static/panel_v2/ entra solo. Va en el <head>, antes de
+   todo módulo, y con él la precarga: los módulos bajan en paralelo mientras
+   se lee la página, en vez de descubrirse en cascada. #}
+<script type="importmap">{{ importmap | safe }}</script>
+{% for url in precarga %}<link rel="modulepreload" href="{{ url }}">
+{% endfor %}
+</head>
+<body class="mesa franja">
+{% include "_entorno.html" %}
+
+{% set enc_fecha = True %}
+{% include "_encabezado.html" %}
+
+{# Lo mismo que lee la v1: la fecha de hoy SEGÚN EL SERVIDOR y si el carril
+   de consultas y el Asistente existen. Lo decide el servidor, no el JS. #}
+{# El logo del gremio va como dato para las burbujas del mapa (vacío sin logo),
+   igual que en la v1, y la colmena del Asistente también: la plantilla es la
+   que sabe el sello de versión de cada imagen. #}
+<main class="mesa-cont" data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
+      data-hoy="{{ hoy }}" data-logo="{{ ('/logo/' ~ marca.id ~ '?v=' ~ marca.logo_v) if marca.logo else '' }}"
+      data-colmena="/static/colmena_dorada.webp?v={{ sello_static('colmena_dorada.webp') }}">
+  <div id="panel"></div>
+  <noscript><p>El Panel Sindical necesita JavaScript.</p></noscript>
+</main>
+{# Lo que se abre por encima de todo (el cajón de filtros, los modales) va
+   AFUERA de <main>: .mesa-cont arma su propia capa con z-index 1 y nada de
+   adentro podría tapar el encabezado (static/panel_v2/capa.js). #}
+<div id="capas"></div>
+
+<a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
+  <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>
+</a>
+<a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+</a>
+
+<footer class="dash">Panel Sindical · versión {{ version }} · {{ fecha_version }}</footer>
+
+{# Chart.js, Leaflet, la capa de mapas y el arrastre de modales: los mismos
+   scripts comunes que la v1, con su sello. Los módulos de la v2 corren
+   después (los módulos esperan a que termine de leerse la página). #}
+<script src="/static/chart.umd.min.js?v={{ sello_static('chart.umd.min.js') }}"></script>
+<script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
+<script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+
+<script type="module" src="/static/panel_v2/app.js?v={{ sello_static('panel_v2/app.js') }}"></script>
+</body>
+</html>

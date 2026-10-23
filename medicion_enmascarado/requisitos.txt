@@ -1,0 +1,6 @@
+anthropic==0.120.2
+python-dotenv==1.2.3
+pdf2image==1.17.0
+pypdfium2==5.13.0
+tesserocr==2.11.0
+pillow

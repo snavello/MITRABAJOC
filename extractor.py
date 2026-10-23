@@ -49,15 +49,15 @@ _RECIBO_MOCK = {
     "fecha_pago": "2026-09-01",
     "lineas": [
         {"codigo": "1", "descripcion": "Sueldo básico", "cantidad": None, "unidad": None,
-         "importe": 1000000, "tipo": "remuneracion", "categoria_universal": None},
+         "importe": 1000000, "tipo": "remuneracion", "seccion": "haberes", "categoria_universal": None},
         {"codigo": "2", "descripcion": "Jubilación", "cantidad": None, "unidad": None,
-         "importe": -110000, "tipo": "aporte_trabajador", "categoria_universal": "jubilacion"},
+         "importe": -110000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "jubilacion"},
         {"codigo": "3", "descripcion": "Ley 19032/PAMI", "cantidad": None, "unidad": None,
-         "importe": -30000, "tipo": "aporte_trabajador", "categoria_universal": "pami"},
+         "importe": -30000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "pami"},
         {"codigo": "4", "descripcion": "Obra Social", "cantidad": None, "unidad": None,
-         "importe": -30000, "tipo": "aporte_trabajador", "categoria_universal": "obra_social"},
+         "importe": -30000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "obra_social"},
         {"codigo": "5", "descripcion": "Cuota sindical", "cantidad": None, "unidad": None,
-         "importe": -20000, "tipo": "aporte_trabajador", "categoria_universal": "cuota_sindical"},
+         "importe": -20000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "cuota_sindical"},
     ],
     "totales_impresos": {"remuneraciones": 1000000, "descuentos": -190000, "neto": 810000},
     "contribuciones_patronales": [],
@@ -110,7 +110,7 @@ ESQUEMA = """Extraé los datos con este esquema exacto:
   "empleador": {"nombre": null, "cuit": null},
   "periodo": "AAAA-MM",
   "fecha_pago": null,
-  "lineas": [{"codigo": null, "descripcion": "", "cantidad": null, "unidad": null, "importe": 0, "tipo": "otro", "categoria_universal": null}],
+  "lineas": [{"codigo": null, "descripcion": "", "cantidad": null, "unidad": null, "importe": 0, "tipo": "otro", "seccion": null, "categoria_universal": null}],
   "totales_impresos": {"remuneraciones": null, "descuentos": null, "neto": null},
   "contribuciones_patronales": [],
   "costo_laboral_total": null,
@@ -129,6 +129,17 @@ Reglas para los campos nuevos:
   propios del trabajador que reducen su neto: jubilación, obra social, Ley
   19.032/PAMI, cuota sindical) u "otro" (cualquier otra línea: anticipos, embargos,
   ajustes, algo ambiguo).
+- "lineas[].seccion": en qué parte del recibo está IMPRESA la línea. Es un dato de
+  ubicación, no de signo: "haberes" (entre las remuneraciones con aportes, las que
+  forman el total de remuneraciones), "no_remunerativos" (columna o bloque de haberes
+  sin aportes / no remunerativos / exentos) o "descuentos" (entre los descuentos y
+  retenciones). Una línea impresa entre los descuentos va con "descuentos" AUNQUE su
+  importe tenga el signo contrario al de los demás descuentos: por ejemplo una
+  devolución o reintegro de Impuesto a las Ganancias, de aportes o de un descuento de
+  otro mes. Al revés, una línea negativa impresa entre los haberes (inasistencias,
+  ajuste de un mes anterior) va con "haberes". Transcribí el importe con el signo
+  impreso, sin corregirlo. Si el recibo no separa las secciones o no podés decidirlo,
+  null.
 - "lineas[].categoria_universal": SOLO para líneas con tipo "aporte_trabajador", que
   además reconozcas con confianza como uno de estos 4 aportes de ley (son casi
   iguales en cualquier recibo argentino en blanco, cambia el nombre/código que le
@@ -221,9 +232,39 @@ MAX_TOKENS = 8000
 # Opus 5 y Sonnet 5 RAZONAN por default, y ese razonamiento sale del mismo
 # MAX_TOKENS que el JSON: por eso fueron los dos que se cortaron primero.
 # Leer un recibo es transcribir, no razonar, así que van con esfuerzo bajo.
+# La generación siguiente razona igual o más: Opus 5.5 y Fable 5.1 no dejan
+# apagarlo (pedir thinking desactivado es un 400), Sonnet 5.5 solo con un
+# modo propio, y Haiku 5.5 arranca con esfuerzo medio. El esfuerzo es la
+# única perilla que sirve en los cuatro, así que van en la misma lista.
 # A los que no razonan por default no se les toca la llamada -- uno de ellos
 # es el que hoy corre en producción, y no se cambia a ciegas lo que anda.
-MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5"}
+# test_precios_ia.py exige que todo modelo del catálogo esté acá o en la
+# lista de los que no razonan: uno nuevo obliga a decidir.
+MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5",
+                       "claude-opus-5-5", "claude-sonnet-5-5",
+                       "claude-haiku-5-5", "claude-fable-5-1"}
+
+
+# Se suma al pedido SOLO cuando la imagen va con datos tapados
+# (preparacion.py). Dos cosas: que devuelva null en esos campos en vez de
+# inventar, y que el rótulo no es una tachadura -- sin esto, la alerta de
+# adulteración lo leería como una edición del recibo.
+AVISO_ENMASCARADO = (
+    "Aviso: algunas zonas del documento están cubiertas por un rectángulo con un rótulo que "
+    "dice, por ejemplo, 'CUIL OCULTO', 'NOMBRE OCULTO', 'LEGAJO OCULTO', 'CUENTA "
+    "OCULTA', 'CUIT OCULTO' o 'EMPLEADOR OCULTO'. Las cubrimos nosotros a propósito "
+    "para proteger datos personales: devolvé null en esos campos y NO las "
+    "consideres adulteración ni señal de edición. El resto del documento (importes, "
+    "conceptos, códigos, períodos, fechas, categoría) está intacto y se lee como siempre."
+)
+
+
+def _contenido(b64: str, media: str, esquema: str, aviso_enmascarado: bool) -> list:
+    partes = [{"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
+              {"type": "text", "text": esquema}]
+    if aviso_enmascarado:
+        partes.append({"type": "text", "text": AVISO_ENMASCARADO})
+    return partes
 
 
 def _opciones(modelo: str) -> dict:
@@ -246,6 +287,14 @@ def _parsear(msg, modelo: str, ms: int) -> tuple[dict, dict]:
     """El JSON que devolvió el modelo, o un ErrorLectura que dice por qué no
     se pudo -- con el uso adentro en los dos casos."""
     uso = _uso(msg, modelo, ms)
+    # Los modelos de la generación 5 traen filtros de seguridad que pueden
+    # declinar un pedido: la API contesta 200 con el contenido vacío. Sin
+    # esto el panel diría "no es un JSON válido", que manda a buscar el
+    # problema en el lugar equivocado.
+    if getattr(msg, "stop_reason", None) == "refusal":
+        detalle = getattr(msg, "stop_details", None)
+        motivo = getattr(detalle, "category", None) or "sin categoría"
+        raise ErrorLectura(f"el modelo declinó leer el documento (motivo: {motivo})", uso)
     if getattr(msg, "stop_reason", None) == "max_tokens":
         raise ErrorLectura(
             f"la respuesta se cortó en el tope de {MAX_TOKENS} tokens de salida "
@@ -285,7 +334,8 @@ def _uso_mock(inicio: float) -> dict:
 
 
 def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
-            imagen: tuple[str, str] | None = None) -> tuple[dict, dict]:
+            imagen: tuple[str, str] | None = None,
+            aviso_enmascarado: bool = False) -> tuple[dict, dict]:
     """Devuelve (datos_del_recibo, uso) -- uso trae modelo/tokens_entrada/
     tokens_salida/duracion_ms de esta llamada puntual, para registrar el costo
     real. `modelo` lo decide quien llama; sin él, MODELO. `imagen` es el
@@ -304,13 +354,8 @@ def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
         max_tokens=MAX_TOKENS,
         system=SYSTEM,
         **_opciones(modelo),
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-                {"type": "text", "text": ESQUEMA},
-            ],
-        }],
+        messages=[{"role": "user",
+                   "content": _contenido(b64, media, ESQUEMA, aviso_enmascarado)}],
     )
     return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))
 
@@ -403,6 +448,7 @@ def lineas_comparables(datos: dict) -> list:
         "descripcion": _txt(ln.get("descripcion")),
         "importe": _num(ln.get("importe")),
         "tipo": _txt(ln.get("tipo")),
+        "seccion": _txt(ln.get("seccion")),
         "categoria": _txt(ln.get("categoria_universal")),
         "_cod": _norm_clave(ln.get("codigo")),
         "_desc": _norm_clave(ln.get("descripcion")),
@@ -459,10 +505,19 @@ def comparar_lineas(lecturas: list) -> dict:
                 celdas.append({"valor": "no la leyó", "igual": False, "falta": True})
                 continue
             valor = ln["tipo"] if ln["categoria"] == "—" else f'{ln["tipo"]} · {ln["categoria"]}'
+            # La sección decide si una línea en positivo entre los descuentos
+            # es un reintegro (validador.repartir_por_zona): leerla distinto
+            # es leer distinto el recibo.
+            if ln["seccion"] != "—":
+                valor += f' · {ln["seccion"]}'
             # Lo que difiere del renglón se dice en la celda: un importe o un
             # código distinto es tan diferencia como una clasificación
             # distinta, y si no se nombra, la fila parece coincidir.
-            if ln["importe"] != ref["importe"]:
+            # El SIGNO solo no es diferencia: el validador usa el valor
+            # absoluto de cada descuento, y un modelo puede transcribir
+            # "173.520,83" en la columna Deducciones y otro "-173.520,83".
+            # Mismo criterio que un CUIT con o sin guiones.
+            if ln["importe"].lstrip("-") != ref["importe"].lstrip("-"):
                 valor += f' · {ln["importe"]}'
             if ln["codigo"] != ref["codigo"]:
                 valor += f' · código {ln["codigo"]}'
@@ -516,7 +571,8 @@ de ARCA, poné confianza en "baja"."""
 
 
 def extraer_aportes(contenido: bytes, content_type: str, modelo: str | None = None,
-                    imagen: tuple[str, str] | None = None) -> tuple[dict, dict]:
+                    imagen: tuple[str, str] | None = None,
+                    aviso_enmascarado: bool = False) -> tuple[dict, dict]:
     """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve
     (estado_mensual, uso) -- mismo criterio que extraer()."""
     if _mock_activo():
@@ -532,12 +588,7 @@ def extraer_aportes(contenido: bytes, content_type: str, modelo: str | None = No
         max_tokens=MAX_TOKENS,
         system=SYSTEM_APORTES,
         **_opciones(modelo),
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-                {"type": "text", "text": ESQUEMA_APORTES},
-            ],
-        }],
+        messages=[{"role": "user",
+                   "content": _contenido(b64, media, ESQUEMA_APORTES, aviso_enmascarado)}],
     )
     return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))
