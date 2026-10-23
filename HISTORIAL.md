@@ -8533,3 +8533,73 @@ probados y un trabajador del lote, en los dos.
 **Queda**: `cargar_demo.py` sigue sin restablecer la clave de un usuario de la
 demo cuya cuenta del panel ya existe; si se vuelve a correr sobre una base con
 esas cuentas, hay que limpiarlas antes (como se hizo acá).
+
+## Dos modelos de diseño que se cambian a gusto (2026-10-23)
+
+Cierre del concurso de diseño de diez rondas (mockups de la última en
+https://claude.ai/artifact/3ERPpzHPvQXFjcaxRtu6ps). SDN eligió dos modelos y
+pidió que cada persona pueda pasar de uno a otro: `laguna` (el 162, por
+defecto: la portada en verde agua, turquesa y azul y el resto blanco y liviano)
+y `noticiero` (el 147: papel claro, tinta índigo y un solo color vivo, como un
+diario). El plan, con sus decisiones D1 a D7, está en `PLAN_TEMAS.md`.
+
+**Por qué la elección vive en la cuenta y no en el navegador.** Un afiliado
+entra desde el teléfono y desde la PC del trabajo; si la elección viviera en
+`localStorage`, cambiarla en un aparato no se vería en el otro, y una cookie
+nueva sería un rol más que listar en `COOKIES_POR_ROL`. Por eso
+`CuentaTrabajador.tema` y `CuentaPanel.tema`, vacío = vale el del sindicato. La
+**paleta** (colores de Colm3na o del sindicato) no la elige cada persona: es
+identidad del gremio, como el logo.
+
+**Por qué una hoja por modelo y por pantalla.** Cada modelo se tenía que
+mantener fiel a su mockup (pedido de SDN), así que no hay una capa común que
+los dos "configuren": `static/temas/<modelo>-<pantalla>.css`, con todo selector
+bajo `html[data-tema="<modelo>"]`, cargada después de los estilos de la
+plantilla y solo si el archivo existe (el sello de `sello_static` sale vacío
+cuando no está). Así un modelo sin hoja para una pantalla se ve como antes, y
+borrar un modelo es borrar sus archivos. Lo que vale para los dos (pautas de
+SDN: Inicio fuera de la portada y Salir flotando junto a Inicio, la última
+noticia como nota de tapa, la portada sin diferencias ni faltantes, el orden de
+los accesos, el riel lateral del panel, importes con `peso()`) se hizo en las
+plantillas, no en las hojas.
+
+**La paleta del sindicato sale de sus cuatro colores con `color-mix(in
+oklab, …)`**, siguiendo la tabla de correspondencias de cada mockup
+(`.p162m.pg`, `.p147e.pg`). Los colores de un gremio no siempre se leen bien en
+los lugares donde el modelo pone texto, y probarlo a ojo con tres gremios no
+alcanza: `temas.prueba_de_lectura` calcula el contraste WCAG de las cinco
+combinaciones que usan los modelos (blanco sobre base y sobre primario, acento
+sobre claro, acento sobre la base como texto grande y texto sobre un botón de
+acento) y devuelve un aviso por cada una que no llega. **Avisa, no bloquea**:
+las hojas ya corrigen el tono donde hace falta, y el gremio tiene que poder
+elegir sus colores aunque no sean ideales. La misma prueba la ven el Super
+Admin en Apariencia y plataforma en la ficha del sindicato. Los tres gremios de
+la demo tienen al menos un aviso, sobre todo el acento oscuro de la
+Gastronómica sobre su base.
+
+**Las fotos se normalizan al subirlas, y el color lo pone el modelo.** SDN
+pidió que una foto nueva no rompa los efectos difusos y luminosos de la
+portada. Si cada foto llegara con su color y su luz, una sacada al mediodía y
+otra de noche quedarían una quemada y la otra apagada debajo del mismo velo.
+`fotos_tema.normalizar` la pasa a gris, recorta el 2% de cada punta del
+histograma, lleva el brillo medio a 0,46 con una corrección gamma (hasta cuatro
+pasadas: con un histograma muy partido, una sola no alcanza) y acota el lado
+largo a 1.600 px en webp. Los tests usan una imagen con tonos continuos
+(degradé más ruido) porque con una imagen de dos tonos la gamma no tiene de
+dónde agarrarse. El webp no tiene modo gris: se guarda RGB con los tres canales
+iguales, y el test admite una diferencia de hasta 6 niveles por la compresión.
+
+**Lo que costó.** Los logos de Colm3na tienen el nombre al revés de lo que uno
+supone: `colm3na-claro.png` es el que va SOBRE FONDO CLARO (dorado oscuro) y
+`colm3na-oscuro.png` el que va sobre fondo oscuro. En el panel de Noticiero,
+que es claro donde Laguna es oscuro, el logo se cambia con `content:url(...)`
+sobre el `<img>`, el mismo truco que usa la hoja de la portada; en Firefox eso
+puede no aplicar y se vería el logo para fondo oscuro sobre el papel. Las rutas
+nuevas pidieron sumar sus excepciones a los tests que clasifican rutas
+(`test_areas_rutas`, `test_rutas_sin_sesion`) y las columnas JSON nuevas a las
+excluidas de `regularizar_cuit.py`, que no tienen CUIL adentro.
+
+**Fuentes.** Manrope (Laguna), Anton y Archivo (Noticiero), vendoreadas en
+`static/fonts/` con sus licencias OFL en `static/fonts/licencias/`. Barlow
+Condensed solo tiene vendoreado el peso 700, así que el riel de Noticiero sale
+en negrita.

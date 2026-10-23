@@ -1047,8 +1047,8 @@
 {# El modelo de diseño (PLAN_TEMAS.md): su hoja va DESPUÉS de todo lo de
    arriba y cada selector empieza con html[data-tema="<modelo>"]. Solo se
    carga la del modelo que tiene la suya; sin hoja, la pantalla de siempre. #}
-{% if apariencia and apariencia.tema == 'laguna' %}
-<link rel="stylesheet" href="/static/temas/laguna-app.css?v={{ sello_static('temas/laguna-app.css') }}">
+{% if apariencia and apariencia.tema in ('laguna', 'noticiero') %}
+<link rel="stylesheet" href="/static/temas/{{ apariencia.tema }}-app.css?v={{ sello_static('temas/' ~ apariencia.tema ~ '-app.css') }}">
 {% endif %}
 </head>
 <body class="mesa franja">
