@@ -372,10 +372,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   20900000015 / diag-code-2026 (Admin de Seccional) y 20900000023 /
   diag-code-2026 (usuario de área Secretaría General). Sirven para repetir
   cualquier verificación del alcance sin crear nada.
-- **Ojo (2026-10-23)**: desde que la demo es copia de Pruebas, valen las
-  claves de Pruebas. Verificado ese día en los dos entornos: entra La Bancaria
-  (20333444551 / bancaria-demo); UOM 20111111120 existe pero `uom-demo` ya no
-  es su clave, y el Admin de Rosario hoy es 20555555564, no 20555555556.
+- **Recargados el 2026-10-23 en Demo y Pruebas** (`cargar_demo.py` + el lote de
+  la UOM): todos los accesos de arriba entran en los dos entornos, verificado
+  por HTTP. La UOM quedó con id 8 y la Gastronómica es "Federación
+  Gastronómica" (id 9). Trabajador del lote de la UOM: CUIL 27730000000 /
+  clave 27730 (los demás, del bloque 7300000x).
 - Todos estos números cumplen el módulo 11 desde 2026-10-10 (PLAN_CUIT_MOD11.md,
   etapa 3). Los de antes (`20111111110`, `20111111119`...) ya no sirven en una
   base cargada de cero; el mapa viejo → nuevo es `identificadores_demo.py`.
@@ -749,7 +750,11 @@ Pruebas** (ya en head), con un Job de Render dentro del servicio de la demo
 propias de Pruebas (`imagenenmascarado`, `suscripcionpush`, `planprogramado`,
 `cambioplan`, `codigoverificacion`, `testcarga`). **Respaldo de la demo
 anterior**: la base `mitrabajo_db_respaldo_20261023` en el mismo servidor
-(borrarla cuando ya no haga falta). Con eso la demo quedó además con los
+(borrarla cuando ya no haga falta). Ese mismo día, en los DOS entornos, se
+borraron la UOM y la gastronómica viejas y se recargó la demo con
+`cargar_demo.py` + el lote de la UOM (respaldo previo en
+`<base>_respaldo_20261023b` de cada servidor); en la Demo además se borró
+"Sindicato de Pruebas -- Carga", que en Pruebas sigue para los tests de carga. Con eso la demo quedó además con los
 CUIL/CUIT regularizados (cierra H-0020 en la práctica). La demo lleva
 `ENMASCARADO=activo` como Pruebas. **En demo, `/entornos`, `/entornos/xsanders`
 y la v2 del Panel responden 404 a propósito** (solo existen donde hay

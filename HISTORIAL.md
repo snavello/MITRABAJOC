@@ -8497,3 +8497,39 @@ logins dan el mismo resultado en los dos. Lo que queda abierto: el tag
 rechaza); `arsantagati` sigue con `debe_cambiar_clave` (H-0019) y ahora la
 demo comparte las claves de Pruebas; y hay que borrar el respaldo cuando ya no
 haga falta.
+
+### Recarga de la demo en los dos entornos (2026-10-23, misma tarde)
+
+Pedido de SDN, después de la copia: borrar el sindicato de prueba y cargar la
+demo. Decisiones de SDN: "Sindicato de Pruebas -- Carga" se borra **solo en la
+Demo** (en Pruebas lo usan los tests de carga), la demo se recarga en los dos
+entornos y la UOM vuelve con su lote; también se borra la gastronómica vieja
+("Union de Trabajadores Gastronomico y Hoteleros"), porque `cargar_demo.py`
+crea "Federación Gastronómica" y busca por nombre para limpiar.
+
+**Por qué no alcanzaba con correr `cargar_demo.py`.** La clave del panel vive
+en `CuentaPanel` (una por CUIL) y el alta nunca pisa la que ya existe
+(`db._mover_clave_a_la_cuenta`). Con la cuenta de 20111111120 viva, la demo se
+recargaba pero `uom-demo` seguía sin entrar. Antes de cargar se borraron, junto
+con los sindicatos, las cuentas de persona, del panel y de empresa que solo
+existían por ellos (las que no aparecen en ningún otro sindicato). Los CUIL de
+la demo se verificaron con `cuit.py` (los 19 cumplen el módulo 11); los del
+lote y las encuestas sintéticas no lo cumplen a propósito, pero esos scripts
+escriben directo en la base y el login los busca tal cual.
+
+**Corrida.** Un Job de Render por entorno: respaldo en una base aparte del
+mismo servidor (`<base>_respaldo_20261023b`, con conteo tabla por tabla
+igual), limpieza, `cargar_demo.py`, `cargar_lote_sindicato.py --sindicato
+"Obrera Metal"` y verificación de claves. Antes, un ensayo completo en una
+base local descartable. La primera corrida en la Demo falló en la limpieza
+sin tocar nada (todo iba en una transacción): un `IN` con más de 65.535 ids de
+`accesolog` lo rechaza el protocolo de Postgres. Se pasó a borrar por tandas
+de 20.000, y se llevó el mismo arreglo a `cargar_demo.borrar_sindicato_completo`,
+que tenía el mismo límite. Los dos entornos quedaron con los mismos ids y los
+mismos conteos (UOM 8: 206 trabajadores, 5.000 recibos, 2.000 trámites;
+Federación Gastronómica 9), y por HTTP entran los cinco accesos del panel
+probados y un trabajador del lote, en los dos.
+
+**Queda**: `cargar_demo.py` sigue sin restablecer la clave de un usuario de la
+demo cuya cuenta del panel ya existe; si se vuelve a correr sobre una base con
+esas cuentas, hay que limpiarlas antes (como se hizo acá).
