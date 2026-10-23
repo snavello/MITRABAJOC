@@ -8451,3 +8451,49 @@ Verificado con `test_noticias.py`, `test_beneficios.py`,
 `test_notificaciones.py`, `test_alcance_seccional_pantalla.py` y
 `test_modales.py`, y con un robot en el navegador sobre las tres pantallas
 (riel que sigue al formulario, edición desde la tabla, 1400 y 390 px).
+
+## La demo, copia de Pruebas (2026-10-23)
+
+Pedido de SDN: que Demo y Pruebas queden idénticas, incluidos datos y usuarios.
+La demo estaba congelada desde el 2026-09-23 (Trabajador 0.40.01) y `main` le
+llevaba 316 commits y 14 migraciones. SDN confirmó que la demo no tenía nada
+propio, así que se reemplazó su base entera en vez de migrarla.
+
+**Por qué con un Job de Render.** Desde un contenedor en la nube no hay red al
+puerto de Postgres (lo mismo que con `regularizar_cuit.py` el 2026-10-10). La
+API de Render sí responde, y un Job corre dentro del servicio con su base y sus
+variables. La imagen trae `pg_dump`/`pg_restore` 18.6, igual que los dos
+servidores, así que no hizo falta ningún script nuevo en el repo. El Job corrió
+en el servicio de la DEMO con la URL interna de Pruebas en una variable
+temporal (`ORIGEN_DATABASE_URL`, borrada al terminar) y con guardas: `ENTORNO`
+tiene que ser `demo`, el origen tiene que decir "pruebas" y el destino no.
+
+**Orden.** 0) respaldo: `pg_dump` de la demo restaurado en una base nueva del
+mismo servidor (`mitrabajo_db_respaldo_20261023`), con conteo tabla por tabla
+igual a la original antes de seguir; 1) `pg_dump -Fc` de Pruebas, sin
+`pg_stat_statements` (su dueño es `postgres` y el usuario de la demo no la
+puede crear); 2) `pg_restore --clean --if-exists --single-transaction
+--exit-on-error` sobre la demo: o entra todo o no cambia nada; 3) TRUNCATE de
+lo que es propio de Pruebas: imágenes de diagnóstico del enmascarado,
+suscripciones push (atadas al dominio y a las claves VAPID de cada entorno),
+reglas y bitácora de planes de Render, códigos de verificación y tests de
+carga; 4) conteo de las 71 tablas en los dos lados: iguales salvo esas seis.
+Recién después se promovió el código (PR #154 `main → demo`, porque el push
+directo a `demo` está cerrado para las sesiones en la nube). El Pre-Deploy no
+tuvo nada que migrar: la base ya estaba en `c7e9a1d3f5b2`. En los minutos que
+hubo entre los dos pasos, el código viejo corrió sobre el esquema nuevo sin
+nadie usándolo; `/healthz`, `/api/version` e `/ingresar` respondieron 200.
+
+**Configuración.** En la demo se sumó `ENMASCARADO=activo` (como Pruebas) y se
+sacó `DB_PATH`, que ya no lee nadie (era del SQLite). Siguen distintas a
+propósito: `ENTORNO`, `DATABASE_URL`, `SESSION_SECRET` (se cortan las sesiones
+abiertas), las de observabilidad, `RENDER_API_KEY` y
+`ENMASCARADO_GUARDAR_IMAGENES` (solo Pruebas), y VAPID (solo la demo).
+
+**Verificado.** `/api/version` igual en los dos entornos; `/healthz` y
+`/readyz` en 200; `/entornos` y la v2 del Panel en 404 en la demo; los mismos
+logins dan el mismo resultado en los dos. Lo que queda abierto: el tag
+`demo-2026-10-23-v0.47.01` hay que pushearlo desde la PC (desde la nube se
+rechaza); `arsantagati` sigue con `debe_cambiar_clave` (H-0019) y ahora la
+demo comparte las claves de Pruebas; y hay que borrar el respaldo cuando ya no
+haga falta.
