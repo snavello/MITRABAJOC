@@ -403,5 +403,5 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
 @media (max-width: 760px) {
   html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
-    border-right: 0; padding-right: 0; }  /* en dos renglones el filete quedaba suelto */
+    border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
 }
