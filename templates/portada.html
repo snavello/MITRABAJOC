@@ -36,6 +36,93 @@
   body.claro .hola { color: var(--tinta); }
   .hola em { font-style: normal; color: var(--marca-acento); }
 
+  /* ---------- Estructura común de la portada (PLAN_TEMAS.md, bloque 4) ----------
+     Vale para los dos modelos y es lo que se ve si un modelo todavía no tiene
+     su hoja (static/temas/<modelo>-portada.css). Pautas de SDN: Inicio no va
+     en la portada y Salir flota con su rótulo; la portada no muestra
+     diferencias ni faltantes; Mis recibos baja de peso; la última noticia va
+     como nota de tapa; los accesos en un orden fijo. */
+  .pt-gremio { position: relative; }
+  .pt-gremio-media { display: none; }
+  .pt-gremio-hola { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; padding: 22px 15px 0; }
+  @media (min-width: 900px) { .pt-gremio-hola { padding: 26px 26px 0; } }
+  .pt-hola-k { display: none; }
+  /* La cinta de titulares (solo la dibuja Noticiero): sin su hoja, no se ve. */
+  .pt-tick { display: none; }
+  .pad.pt-cuerpo { padding-top: 0; padding-bottom: 0; }
+  .pt-portada > .pt-sec { margin-top: 0; min-width: 0; }
+  h2.pt-riel-tit { margin: 0 0 12px; }
+  /* Escritorio: Novedades en la columna ancha; Tus cosas y Beneficios en el riel. */
+  @media (min-width: 1040px) {
+    .pt-portada { grid-template-areas: "nov tus" "nov ben"; grid-template-rows: auto 1fr; align-items: start; }
+    .pt-portada:not(:has(.pt-sec-nov)) { grid-template-areas: "tus ben"; grid-template-rows: auto; }
+    .pt-sec-nov { grid-area: nov; } .pt-sec-tus { grid-area: tus; } .pt-sec-ben { grid-area: ben; }
+    .pt-sec-tus .pt-filas { grid-template-columns: 1fr; }
+  }
+
+  /* La nota de tapa: la última noticia, grande. */
+  .pt-tapa { display: block; width: 100%; text-align: left; border: 0; padding: 0; background: none;
+    font: inherit; color: inherit; cursor: pointer; }
+  .pt-tapa-foto { position: relative; display: block; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
+    background: linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 70%, var(--marca-base))); }
+  .pt-tapa-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: transform .9s cubic-bezier(.22,.61,.36,1); }
+  .pt-tapa:hover .pt-tapa-foto img { transform: scale(1.03); }
+  .pt-tapa-chip { position: absolute; left: 12px; top: 12px; z-index: 1; padding: 3px 10px; border-radius: 99px;
+    background: var(--marca-acento); color: var(--marca-base); font-size: 10.5px; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase; }
+  .pt-tapa-f { display: block; margin-top: 12px; font-size: 11px; letter-spacing: .06em; color: var(--marca-acento); }
+  .pt-tapa-t { display: block; margin-top: 4px; font-family: var(--fuente-display); font-weight: 700; font-size: 28px;
+    line-height: 1.08; color: var(--sobre-base); }
+  .pt-tapa-b { display: block; margin-top: 6px; font-size: 13.5px; line-height: 1.5; color: var(--sobre-base-mute); }
+  .pt-tapa-leer { display: inline-flex; align-items: center; gap: 4px; margin-top: 9px; font-size: 13px;
+    font-weight: 650; color: var(--marca-acento); }
+  .pt-tapa-leer svg, .pt-rec-cta svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; }
+  body.claro .pt-tapa-f, body.claro .pt-tapa-leer { color: var(--marca-primario); }
+  body.claro .pt-tapa-t { color: var(--tinta); }
+  body.claro .pt-tapa-b { color: var(--gris); }
+  .pt-nov-lista { margin-top: 14px; }
+  .pt-mini-marco { display: block; flex-shrink: 0; line-height: 0; }
+
+  /* Mis recibos, chica y neutra: cuántos verificó este año, nada más. */
+  .pt-rec { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+    gap: 3px 14px; padding: 14px 16px; border-radius: 14px; margin-bottom: 10px;
+    color: var(--sobre-base); text-decoration: none; }
+  .pt-rec-ico { position: absolute; right: -12px; top: -12px; opacity: .08; pointer-events: none; }
+  .pt-rec-ico svg { width: 88px; height: 88px; stroke: currentColor; stroke-width: 1; fill: none; }
+  .pt-rec-k { grid-column: 1 / -1; font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase;
+    font-weight: 700; color: var(--sobre-base-mute); }
+  .pt-rec-t { grid-column: 1; font-size: 16px; font-weight: 650; line-height: 1.25; }
+  .pt-rec-e { grid-column: 1; font-size: 12.5px; line-height: 1.4; color: var(--sobre-base-mute); }
+  .pt-rec-e b { font-weight: 700; color: var(--sobre-base); }
+  .pt-rec-cta { grid-column: 2; grid-row: 2 / span 2; display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 99px; font-size: 12.5px; font-weight: 650; white-space: nowrap;
+    color: var(--marca-acento); border: 1px solid color-mix(in srgb, var(--marca-acento) 45%, transparent); }
+  body.claro .pt-rec { color: var(--tinta); }
+  body.claro .pt-rec-k, body.claro .pt-rec-e { color: var(--gris); }
+  body.claro .pt-rec-e b { color: var(--tinta); }
+  body.claro .pt-rec-cta { color: var(--marca-primario); border-color: color-mix(in srgb, var(--marca-primario) 35%, transparent); }
+  @media (max-width: 380px) {
+    .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
+  }
+
+  /* Salir, flotando abajo con su rótulo (sin Inicio: ya estás en el inicio). */
+  .pt-sesion { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 40; }
+  .pt-salir { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 17px 0 13px;
+    border-radius: 99px; background: var(--marca-base); color: var(--sobre-base); text-decoration: none;
+    font-size: 13.5px; font-weight: 650; letter-spacing: .02em;
+    border: 1px solid rgba(255,255,255,.14); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  .pt-salir svg { width: 18px; height: 18px; stroke: var(--marca-acento); stroke-width: 1.8; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .pt-salir:hover { opacity: .9; }
+  .pt-pie { position: relative; z-index: 1; text-align: center;
+    padding: 26px 15px calc(84px + env(safe-area-inset-bottom)); }
+  @media (prefers-reduced-motion: reduce) {
+    .pt-tapa-foto img { transition: none; }
+    .pt-tapa:hover .pt-tapa-foto img { transform: none; }
+  }
+
   /* ---------- Vidrio (tarjetas/filas) + tipografía condensada en
      encabezados de sección -- variantes oscura/clara según body.oscuro/
      body.claro. Ver también .grano/.grano-osc/.grano-clara en marca.css,
@@ -253,45 +340,81 @@
   .overlay-foto-grande img { max-width: 25vw; max-height: 25vh; min-width: 140px; min-height: 140px;
     object-fit: cover; border-radius: 14px; border: 3px solid #fff; }
 </style>
+{# Hoja del modelo (PLAN_TEMAS.md, bloque 4): va DESPUÉS de los estilos de la
+   página para poder pisarlos. Solo para los modelos que ya tienen la suya;
+   el resto se ve con la estructura común de arriba. #}
+{% if apariencia and apariencia.tema in ('laguna', 'noticiero') %}
+<link rel="stylesheet" href="/static/temas/{{ apariencia.tema }}-portada.css?v={{ sello_static('temas/' ~ apariencia.tema ~ '-portada.css') }}">
+{% endif %}
 </head>
 <body class="{{ 'claro' if marca.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.portada_clara else 'grano-osc' }}">
 {% include "_entorno.html" %}
-
-{# Encabezado normalizado: el mismo parcial que el resto de la suite.
-   En la app del afiliado es UNA sola línea -- logo del gremio a la
-   izquierda, Colm3na a la derecha -- y sin nombre de pantalla: no hay rol
-   que poner en la cinta, así que la cinta no existe. Ver _encabezado.html. #}
-{% include "_encabezado.html" %}
-
-<a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><use href="#ic-home"/></svg>
-</a>
-<a class="btn-flotante btn-cerrar" href="/trabajador/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
-</a>
 
 <div class="pt-ambiente" aria-hidden="true">
   <span class="pt-blob b1"></span><span class="pt-blob b2"></span><span class="pt-reticula"></span>
 </div>
 
-<div class="pad">
-  <div class="fila-hola">
-    <div>
-      <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
-      <div class="pt-hola-baj">{% if mi_seccional %}Seccional {{ mi_seccional.nombre }} · {% endif %}{{ sindicato }}</div>
-    </div>
-    <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
-      {% if tiene_foto_perfil %}
-      <img id="circulo-foto-perfil" src="/perfil-foto/{{ cuil }}?v={{ range(1, 999999) | random }}" alt="">
-      {% else %}
-      <svg id="circulo-foto-perfil-svg" viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
-      {% endif %}
-    </button>
+{# ---------- El gremio y la persona (PLAN_TEMAS.md, bloque 4) ----------
+   El encabezado normalizado y el saludo van juntos en una sección: cada
+   modelo decide cómo se ven (en Laguna, la laguna con la foto de portada
+   del sindicato detrás; sin foto, el degradé solo). La foto ya viene en
+   gris de la biblioteca: el color lo pone la hoja del modelo. Sin hoja,
+   la foto no se dibuja y la portada queda como siempre. #}
+<section class="pt-gremio{% if foto_portada %} con-foto{% endif %}" aria-label="Tu gremio">
+  <div class="pt-gremio-media" aria-hidden="true">
+    {% if foto_portada %}<img class="pt-gremio-foto" src="{{ foto_portada.url }}" alt=""
+         style="object-position: {{ ((foto_portada.foco_x or 0.5) * 100) | round(1) }}% {{ ((foto_portada.foco_y or 0.5) * 100) | round(1) }}%;">{% endif %}
   </div>
+  {# Encabezado normalizado: el mismo parcial que el resto de la suite.
+     En la app del afiliado es UNA sola línea -- logo del gremio a la
+     izquierda, Colm3na a la derecha -- y sin nombre de pantalla. #}
+  {% include "_encabezado.html" %}
+  <div class="pt-gremio-hola">
+    <div class="fila-hola">
+      <div>
+        <div class="pt-hola-k" aria-hidden="true">{{ iniciales }}</div>
+        <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+        <div class="pt-hola-baj">{% if mi_seccional %}Seccional {{ mi_seccional.nombre }} · {% endif %}{{ sindicato }}</div>
+      </div>
+      <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
+        {% if tiene_foto_perfil %}
+        <img id="circulo-foto-perfil" src="/perfil-foto/{{ cuil }}?v={{ range(1, 999999) | random }}" alt="">
+        {% else %}
+        <svg id="circulo-foto-perfil-svg" viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+        {% endif %}
+      </button>
+    </div>
+  </div>
+</section>
 
+{# La cinta de titulares (modelo Noticiero, mockup p147 T1): las noticias y
+   los beneficios vigentes corriendo bajo la tapa, como el zócalo de un
+   noticiero. Solo existe en ese modelo; la segunda vuelta va aria-hidden
+   (es la copia que hace continuo el desplazamiento). #}
+{% if apariencia and apariencia.tema == 'noticiero' and 'noticias' in modulos and noticias %}
+<a class="pt-tick" href="/app?tab=novedades" aria-label="Últimas novedades">
+  <span class="pt-tick-l" aria-hidden="true"><i></i>Último</span>
+  <span class="pt-tick-v"><span class="pt-tick-pista">
+    {%- for vuelta in (0, 1) %}
+    {%- for n in noticias %}<span{% if vuelta %} aria-hidden="true"{% endif %}>{{ n.titulo }} <small class="num">{{ n.fecha_hora }}</small></span>{% endfor %}
+    {%- if 'beneficios' in modulos %}{% for b in beneficios %}<span{% if vuelta %} aria-hidden="true"{% endif %}>{{ b.descripcion or b.rubro }}{% if b.fecha_hasta %} <small class="num">Hasta el {{ b.fecha_hasta | dia }}</small>{% endif %}</span>{% endfor %}{% endif %}
+    {%- endfor %}
+  </span></span>
+</a>
+{% endif %}
+
+{# Inicio NO va en la portada (ya estás en el inicio) y Salir flota abajo
+   con su rótulo a la vista: un ícono de cruz solo se leía como "cerrar
+   este cartel" (pauta de SDN para los dos modelos). #}
+<nav class="pt-sesion" aria-label="Sesión">
+  <a class="pt-salir" href="/trabajador/salir" title="Salir">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-salir"/></svg><span>Salir</span>
+  </a>
+</nav>
+
+<div class="pad pt-cuerpo">
   {% if aviso_mail %}
-  {# Cuenta de nivel 1 (PLAN_REGISTRO.md, D10): invitación, no bloqueo. Reusa la
-     fila de vidrio de la portada, así que sale bien en las dos variantes. #}
+  {# Cuenta de nivel 1 (PLAN_REGISTRO.md, D10): invitación, no bloqueo. #}
   <a class="pt-fila pt-vid pt-aviso" href="/app/confirmar-mail">
     <span class="pt-pastilla"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
     <span class="pt-fila-txt"><span class="pt-fila-t">Confirmá tu mail para proteger tu cuenta</span>
@@ -300,51 +423,89 @@
   </a>
   {% endif %}
 
-  <div class="pt-dos">
-    <div>
+  {# Tres secciones en el orden en que se leen en el teléfono: Novedades
+     (con la última noticia como nota de tapa), Tus cosas y Beneficios. En
+     escritorio, Novedades ocupa la columna ancha y las otras dos el riel. #}
+  <div class="pt-dos pt-portada">
+    {% if 'noticias' in modulos %}
+    <section class="sec pt-sec pt-sec-nov" aria-labelledby="pt-t-nov">
+      <h2 class="pt-riel-tit" id="pt-t-nov"><span>Novedades</span>{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</h2>
+      {% if noticias %}
+      {% set tapa = noticias[0] %}
+      {# La última noticia va grande, como nota de tapa: foto, fecha, título y
+         bajada. Las que siguen, en renglones con su miniatura. #}
+      <button type="button" class="pt-tapa" onclick="abrirNoticia({{ tapa.id }})">
+        <span class="pt-tapa-foto">
+          {% if tapa.tiene_imagen1 %}<img class="pt-mini" src="/noticia-imagen/{{ tapa.id }}/1" alt="">{% endif %}
+          <span class="pt-tapa-chip">Lo último</span>
+        </span>
+        <span class="pt-tapa-f num">{{ tapa.fecha_hora }}</span>
+        <span class="pt-tapa-t">{{ tapa.titulo }}</span>
+        {% if tapa.bajada %}<span class="pt-tapa-b">{{ tapa.bajada }}</span>{% endif %}
+        <span class="pt-tapa-leer">Leer la nota<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron"/></svg></span>
+      </button>
+      {% if noticias|length > 1 %}
+      <div class="pt-nov-lista">
+        {% for n in noticias[1:] %}
+        <button class="pt-nov pt-vid" onclick="abrirNoticia({{ n.id }})">
+          {% if n.tiene_imagen1 %}<span class="pt-mini-marco"><img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt=""></span>
+          {% else %}<span class="pt-mini pt-mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
+          <span class="pt-txt">
+            <span class="f">{{ n.fecha_hora }}</span>
+            <span class="t">{{ n.titulo }}</span>
+            {% if n.bajada %}<span class="b">{{ n.bajada }}</span>{% endif %}
+          </span>
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="sec pt-sec pt-sec-tus" aria-labelledby="pt-t-tus">
+      <h2 class="pt-riel-tit" id="pt-t-tus"><span>Tus cosas</span></h2>
       {% if 'recibos' in modulos %}
-      {# La tarjeta principal dice números reales: cuántos recibos verificó
-         este año y cómo salió el último. "Revisá tus aportes" no le
-         informaba nada al afiliado que él no supiera ya. #}
-      <a class="pt-hero" href="/app">
-        <span class="pt-hero-k">{% if recibos_resumen.ultimo_periodo %}Lo primero{% else %}Empezá por acá{% endif %}</span>
-        <span class="pt-hero-t">Mis recibos</span>
+      {# Mis recibos, chica y neutra: una más entre tus cosas. Dice cuántos
+         recibos verificó este año y NADA de diferencias ni faltantes: eso
+         se ve adentro, en Tu Recibo y en Mis Aportes (pauta de SDN). #}
+      <a class="pt-rec pt-vid" href="/app">
+        <span class="pt-rec-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>
+        <span class="pt-rec-k">{% if recibos_resumen.ultimo_periodo %}Lo primero{% else %}Empezá por acá{% endif %}</span>
+        <span class="pt-rec-t">Mis recibos</span>
         {% if recibos_resumen.ultimo_periodo %}
-        <span class="pt-hero-n num">{{ recibos_resumen.anio }}<small>{{ 'recibo verificado' if recibos_resumen.anio == 1 else 'recibos verificados' }} este año</small></span>
-        <span class="pt-hero-e">{{ recibos_resumen.ultimo_periodo | periodo }} · {% if recibos_resumen.ultimo_estado == 'OK' %}sin diferencias{% else %}con diferencias para revisar{% endif %}</span>
+        <span class="pt-rec-e"><b class="num">{{ recibos_resumen.anio }}</b> {{ 'recibo verificado' if recibos_resumen.anio == 1 else 'recibos verificados' }} este año</span>
         {% else %}
-        <span class="pt-hero-e">Sacale una foto o subí el PDF y te decimos si los aportes están bien calculados.</span>
+        <span class="pt-rec-e">Sacale una foto o subí el PDF y te decimos si los aportes están bien calculados.</span>
         {% endif %}
-        <span class="pt-hero-cta">{% if recibos_resumen.ultimo_periodo %}Subir un recibo nuevo{% else %}Subí tu primer recibo{% endif %}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-flecha"/></svg></span>
-        <span class="pt-hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>
+        <span class="pt-rec-cta">{% if recibos_resumen.ultimo_periodo %}Subir un recibo nuevo{% else %}Subí tu primer recibo{% endif %}<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron"/></svg></span>
       </a>
       {% endif %}
 
+      {# Orden fijo de los accesos (pauta de SDN): Credencial · Trámites ·
+         Notificaciones · Encuestas · Mis aportes · Capacitación. #}
       <div class="pt-filas">
-        {% if 'aportes' in modulos %}
-        <a class="pt-fila pt-vid" href="/app?tab=aportes">
-          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>
-          <span class="pt-fila-txt"><span class="pt-fila-t">Mis aportes</span>
-            <span class="pt-fila-e">Semáforo de aportes</span></span>
-          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-        </a>
-        {% endif %}
         {% if 'credencial' in modulos %}
         <a class="pt-fila pt-vid" href="/app?tab=credencial">
           <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>
           <span class="pt-fila-txt"><span class="pt-fila-t">Credencial</span>
             <span class="pt-fila-e">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</span></span>
-          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
         </a>
         {% endif %}
-        {% if 'capacitacion' in modulos %}
-        <a class="pt-fila pt-vid" href="/app?tab=capacitacion">
-          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>
-          <span class="pt-fila-txt"><span class="pt-fila-t">Capacitación</span>
-            <span class="pt-fila-e">Entendé tu nuevo recibo</span></span>
-          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-        </a>
+        {% if 'tramites' in modulos %}
+        <div class="acceso-badge-wrap">
+          <a class="pt-fila pt-vid" href="/app?tab=tramites">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+              <span class="pt-fila-e">Formularios y seguimiento</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
+          </a>
+          {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
+          <span class="badge-noleidas" id="badge-tramites-portada" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
+        </div>
         {% endif %}
         {% if 'notificaciones' in modulos %}
         <div class="acceso-badge-wrap">
@@ -354,7 +515,7 @@
             <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
             <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
               <span class="pt-fila-e">Mensajes de tu sindicato</span></span>
-            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
           </a>
           <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
         </div>
@@ -367,95 +528,76 @@
             <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>
             <span class="pt-fila-txt"><span class="pt-fila-t">Encuestas</span>
               <span class="pt-fila-e">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</span></span>
-            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
           </a>
           <span class="badge-noleidas" id="badge-encuestas-portada" style="display:{{ 'flex' if encuestas_pendientes else 'none' }};">{{ encuestas_pendientes }}</span>
         </div>
         {% endif %}
-        {% if 'tramites' in modulos %}
-        <div class="acceso-badge-wrap">
-          <a class="pt-fila pt-vid" href="/app?tab=tramites">
-            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
-            <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
-              <span class="pt-fila-e">Formularios y seguimiento</span></span>
-            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-          </a>
-          {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
-          <span class="badge-noleidas" id="badge-tramites-portada" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
-        </div>
+        {% if 'aportes' in modulos %}
+        <a class="pt-fila pt-vid" href="/app?tab=aportes">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Mis aportes</span>
+            <span class="pt-fila-e">Semáforo de aportes</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
+        </a>
+        {% endif %}
+        {% if 'capacitacion' in modulos %}
+        <a class="pt-fila pt-vid" href="/app?tab=capacitacion">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Capacitación</span>
+            <span class="pt-fila-e">Entendé tu nuevo recibo</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
+        </a>
         {% endif %}
       </div>
-    </div>
+    </section>
 
-    <aside class="pt-riel">
-      {% if 'noticias' in modulos %}
-      <div class="sec">
-        <div class="pt-riel-tit">Novedades{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
-        {% if noticias %}
-          {% for n in noticias %}
-          <button class="pt-nov pt-vid{% if loop.first %} fresca{% endif %}" onclick="abrirNoticia({{ n.id }})">
-            {% if n.tiene_imagen1 %}<img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt="">
-            {% else %}<span class="pt-mini pt-mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
-            <span class="pt-txt">
-              <span class="f">{{ n.fecha_hora }}</span>
-              <span class="t">{{ n.titulo }}</span>
-              {% if n.bajada %}<span class="b">{{ n.bajada }}</span>{% endif %}
-            </span>
-          </button>
-          {% endfor %}
-        {% else %}
-        <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      {% if 'beneficios' in modulos %}
-      <div class="sec">
-        <div class="pt-riel-tit">Beneficios</div>
-        {% if beneficios %}
-        <div class="car" id="car-beneficios">
-          <div class="car-marco">
-            <div class="car-pista" id="car-pista">
-              {% for b in beneficios %}
-              <button type="button" class="car-sl" onclick="abrirBeneficio({{ b.id }})">
-                {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
-                <span class="car-velo"></span>
-                <span class="car-txt">
-                  <span class="car-k">{{ b.rubro }}</span>
-                  {% if b.descripcion %}<span class="car-t">{{ b.descripcion }}</span>{% endif %}
-                  {% if b.fecha_hasta %}<span class="car-p">Hasta el {{ b.fecha_hasta | dia }}</span>{% endif %}
-                </span>
-              </button>
-              {% endfor %}
-            </div>
-            {% if beneficios|length > 1 %}
-            <button type="button" class="car-flecha car-izq" onclick="carMover(-1)" aria-label="Anterior"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
-            <button type="button" class="car-flecha car-der" onclick="carMover(1)" aria-label="Siguiente"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
-            {% endif %}
+    {% if 'beneficios' in modulos %}
+    <section class="sec pt-sec pt-sec-ben" aria-labelledby="pt-t-ben">
+      <h2 class="pt-riel-tit" id="pt-t-ben"><span>Beneficios</span></h2>
+      {% if beneficios %}
+      <div class="car" id="car-beneficios" aria-roledescription="carrusel">
+        <div class="car-marco">
+          <div class="car-pista" id="car-pista">
+            {% for b in beneficios %}
+            <button type="button" class="car-sl" onclick="abrirBeneficio({{ b.id }})">
+              {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
+              <span class="car-velo"></span>
+              <span class="car-txt">
+                <span class="car-k">{{ b.rubro }}</span>
+                {% if b.descripcion %}<span class="car-t">{{ b.descripcion }}</span>{% endif %}
+                {% if b.fecha_hasta %}<span class="car-p">Hasta el {{ b.fecha_hasta | dia }}</span>{% endif %}
+              </span>
+            </button>
+            {% endfor %}
           </div>
           {% if beneficios|length > 1 %}
-          <div class="car-pie">
-            <span class="car-barra"><i id="car-barra"></i></span>
-            <span class="car-puntos">
-              {% for b in beneficios %}
-              <button type="button" class="car-punto{% if loop.first %} on{% endif %}" onclick="carIr({{ loop.index0 }})" aria-label="Beneficio {{ loop.index }}"></button>
-              {% endfor %}
-            </span>
-          </div>
+          <button type="button" class="car-flecha car-izq" onclick="carMover(-1)" aria-label="Anterior"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
+          <button type="button" class="car-flecha car-der" onclick="carMover(1)" aria-label="Siguiente"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
           {% endif %}
         </div>
-        {% else %}
-        <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
+        {% if beneficios|length > 1 %}
+        <div class="car-pie">
+          <span class="car-barra"><i id="car-barra"></i></span>
+          <span class="car-puntos">
+            {% for b in beneficios %}
+            <button type="button" class="car-punto{% if loop.first %} on{% endif %}" onclick="carIr({{ loop.index0 }})" aria-label="Beneficio {{ loop.index }}"></button>
+            {% endfor %}
+          </span>
+        </div>
         {% endif %}
       </div>
+      {% else %}
+      <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
       {% endif %}
-    </aside>
-  </div>
-
-  <div style="text-align:center; margin-top:26px;">
-    <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
+    </section>
+    {% endif %}
   </div>
 </div>
+
+<footer class="pt-pie">
+  <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
+</footer>
 
 <!-- Overlay: tu perfil (editable, mismo criterio claro+marca que Notificaciones) -->
 <div class="overlay" id="overlay-perfil" onclick="if (event.target === this) cerrarPerfil()">
@@ -732,13 +874,14 @@
     <g id="ic-aportes"><line x1="5" y1="21" x2="5" y2="12"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="9"/></g>
     <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
     <g id="ic-capac"><path d="M12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1 3 2.5 6 2.5s6-1.5 6-2.5v-5"/></g>
-    <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-flecha"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></g>
+    <g id="ic-chevron"><path d="m9 6 6 6-6 6"/></g>
+    <g id="ic-salir"><path d="M14 4.5H6.5v15H14"/><path d="M11 12h9"/><path d="m17 8.5 3.5 3.5-3.5 3.5"/></g>
   </defs>
 </svg>
 

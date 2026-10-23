@@ -1,0 +1,362 @@
+/* ============================================================
+   Modelo LAGUNA (el 162, el por defecto) · portada del afiliado
+   (/app/inicio, templates/portada.html). PLAN_TEMAS.md, bloque 4.
+   ------------------------------------------------------------
+   Fuente de verdad visual: figuras T1 y T1b del mockup p162-movil.
+   La laguna (azul profundo → turquesa con la foto de portada en duotono →
+   verde agua) presenta al gremio y a la persona; el resto es liviano y
+   claro, con un solo flúor.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="laguna"]: la hoja solo se
+     carga con este modelo, pero así nunca pisa al otro aunque se cargue.
+   - Todo color sale de las variables --lg-*, declaradas UNA vez abajo; la
+     paleta del sindicato (data-paleta="sindicato") redefine las mismas
+     variables a partir de --marca-* con color-mix, como el mockup (.pg).
+   - Los estados (ámbar del aviso, rojo de los globos) no toman la paleta.
+   - Ninguna selección se marca con una barra de color a un costado.
+   - La fuente del modelo es Manrope, vendoreada en /static/fonts (SIL OFL,
+     variable 300–800): la CSP no deja traerla de un CDN.
+   ============================================================ */
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- La paleta del modelo (colores de Colm3na) ---------- */
+html[data-tema="laguna"] {
+  --lg-negro: #171a20; --lg-gris2: #5c5e62; --lg-claro: #f4f4f4; --lg-claro2: #eeeeee; --lg-linea2: #d0d1d2;
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-noche: #0a1a2b;
+  --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-m: #e6f8f3; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7;
+  --lg-azgris: #3d5a6c; --lg-gris-lag: #2d4c5e;
+  --lg-sobre-osc: #d3f2f0;                       /* texto secundario sobre la laguna oscura */
+  --lg-fluor: #46f0d2; --lg-fluor-h: #6af4dc;   /* el único flúor */
+  --lg-fluor-txt: var(--lg-fluor);               /* flúor como texto sobre oscuro */
+  --lg-sobre-fluor: var(--lg-azul);              /* texto sobre un relleno flúor */
+  /* estados: fijos, nunca de marca */
+  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3; --lg-mal: #b3261e;
+  --lg-curva: cubic-bezier(.22, .61, .36, 1);
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* ---------- Con los colores del sindicato (mockup: .p162m.pg) ----------
+   La laguna pasa a ser base → primario → apoyo del gremio y el flúor, su
+   acento. Texto sobre un relleno de acento: blanco o negro según la luz del
+   acento (oklch relativo; sin soporte, la base del gremio). Acento como
+   texto sobre oscuro: el acento levantado a una luz legible. */
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--marca-base);
+  --lg-azul2: color-mix(in oklab, var(--marca-base) 45%, var(--marca-primario));
+  --lg-noche: color-mix(in oklab, var(--marca-base) 78%, black);
+  --lg-turq: var(--marca-primario);
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario) 80%, black);
+  --lg-lag: var(--marca-apoyo);
+  --lg-agua: color-mix(in oklab, var(--marca-apoyo) 45%, white);
+  --lg-agua-m: color-mix(in oklab, var(--marca-apoyo) 11%, white);
+  --lg-agua-f: color-mix(in oklab, var(--marca-apoyo) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--marca-apoyo) 7%, white);
+  --lg-azgris: color-mix(in oklab, var(--marca-base) 72%, white);
+  --lg-gris-lag: color-mix(in oklab, var(--marca-base) 84%, white);
+  --lg-sobre-osc: color-mix(in oklab, var(--marca-apoyo) 16%, white);
+  --lg-fluor: var(--marca-acento);
+  --lg-fluor-h: color-mix(in oklab, var(--marca-acento) 86%, white);
+  --lg-fluor-txt: color-mix(in oklab, var(--marca-acento) 55%, white);
+  --lg-fluor-txt: oklch(from var(--marca-acento) max(l, .82) c h);
+  --lg-sobre-fluor: var(--marca-base);
+  --lg-sobre-fluor: oklch(from var(--marca-acento) clamp(0, (.62 - l) * 1000, 1) 0 0);
+}
+
+/* ---------- La página: clara, sobre agua ---------- */
+html[data-tema="laguna"] body {
+  /* Los tokens de marca.css que usa la portada, llevados a la laguna: así
+     todo lo que antes era "texto sobre base oscura" queda en tinta azul. */
+  --sobre-base: var(--lg-azul); --sobre-base-mute: var(--lg-azgris);
+  --tinta: var(--lg-azul); --gris: var(--lg-gris-lag);
+  --linea: color-mix(in oklab, var(--lg-azul) 12%, transparent);
+  --papel: var(--lg-claro);
+  font-family: var(--lg-fuente); color: var(--lg-azul); letter-spacing: .005em;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(180deg, var(--lg-agua-f) 0, var(--lg-agua-f) 600px, var(--lg-agua-m) 60%, var(--lg-agua-f2) 100%);
+}
+html[data-tema="laguna"] .grano::before, html[data-tema="laguna"] .pt-ambiente { display: none; }
+html[data-tema="laguna"] :is(a, button, input, select, textarea, label):focus-visible { outline: 2px solid var(--lg-negro); outline-offset: 2px; }
+
+/* ---------- T1 · La laguna: el gremio y la persona ---------- */
+html[data-tema="laguna"] .pt-gremio { overflow: hidden; background: var(--lg-azul); isolation: isolate; }
+html[data-tema="laguna"] .pt-gremio-media { display: block; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(180deg, var(--lg-azul2) 0%, var(--lg-turq) 42%, var(--lg-lag) 62%, var(--lg-agua) 100%);
+  animation: lg-respira 28s ease-in-out infinite alternate; }
+/* La foto viene en gris de la biblioteca; el color se lo da la laguna de atrás. */
+html[data-tema="laguna"] .pt-gremio-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: luminosity; opacity: .9; }
+html[data-tema="laguna"] .pt-gremio::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--lg-azul) 97%, transparent) 0%,
+    color-mix(in oklab, var(--lg-azul) 90%, transparent) 46%,
+    color-mix(in oklab, color-mix(in oklab, var(--lg-azul2) 60%, var(--lg-turq)) 55%, transparent) 60%,
+    color-mix(in oklab, var(--lg-lag) 14%, transparent) 72%,
+    color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 82%, transparent) 88%,
+    var(--lg-agua-f) 100%); }
+/* Sin foto, el velo se aclara: la laguna se ve entera, sin una foto que tapar. */
+html[data-tema="laguna"] .pt-gremio:not(.con-foto)::after { opacity: .8; }
+html[data-tema="laguna"] .pt-gremio .marca-enc { z-index: 3; }
+html[data-tema="laguna"] .pt-gremio .marca-barra { background: transparent; border-bottom: 0; color: #fff; padding: 14px 16px 10px;
+  padding-top: calc(14px + env(safe-area-inset-top)); }
+html[data-tema="laguna"] .pt-gremio .marca-nombre { color: #fff; border-right-color: var(--lg-fluor); }
+html[data-tema="laguna"] .pt-gremio-hola { z-index: 2; padding: 16px 24px 128px; }
+html[data-tema="laguna"] .pt-hola-k { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .pt-gremio .hola { margin-top: 8px; font-family: var(--lg-fuente); font-size: 30px; font-weight: 500;
+  letter-spacing: -.005em; line-height: 1.15; color: #fff; }
+html[data-tema="laguna"] .pt-gremio .hola em { font-weight: 700; color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .pt-gremio .pt-hola-baj { margin-top: 5px; font-size: 13px; line-height: 1.4; color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .pt-gremio .fila-hola { align-items: center; gap: 14px; }
+html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 52px; height: 52px; flex: none; color: var(--lg-azul); background: var(--lg-agua);
+  border: 1.5px solid var(--lg-fluor); box-shadow: 0 0 0 4px color-mix(in oklab, var(--lg-fluor) 18%, transparent); }
+html[data-tema="laguna"] .pt-gremio .circulo-acento svg { stroke: var(--lg-azul); width: 24px; height: 24px; }
+html[data-tema="laguna"] .pt-gremio .circulo-acento img { filter: grayscale(1) contrast(1.05) brightness(1.04); mix-blend-mode: luminosity; }
+html[data-tema="laguna"] .pt-gremio .circulo-acento:focus-visible { outline-color: var(--lg-fluor-txt); }
+/* entrada: el saludo sube */
+html[data-tema="laguna"] .pt-gremio-hola .fila-hola > div > * { animation: lg-sube .9s var(--lg-curva) both; }
+html[data-tema="laguna"] .pt-gremio-hola .hola { animation-delay: .12s; }
+html[data-tema="laguna"] .pt-gremio-hola .pt-hola-baj, html[data-tema="laguna"] .pt-gremio .circulo-acento { animation: lg-sube .9s .24s var(--lg-curva) both; }
+
+/* ---------- El cuerpo ---------- */
+html[data-tema="laguna"] .pad.pt-cuerpo { padding: 0 24px; }
+html[data-tema="laguna"] .pt-portada { gap: 34px; margin-top: 28px; }
+
+/* Aviso de mail: tarjeta ámbar con el ícono en un círculo (sin franja al costado). */
+html[data-tema="laguna"] .pt-fila.pt-aviso { margin-top: 0; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 12px;
+  border: 0; border-radius: 10px; background: var(--lg-amb-f); backdrop-filter: none;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-amb) 24%, transparent), 0 8px 22px -16px color-mix(in oklab, var(--lg-azul) 40%, transparent); }
+html[data-tema="laguna"] .pt-aviso .pt-pastilla { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--lg-amb); color: #fff; }
+html[data-tema="laguna"] .pt-aviso .pt-pastilla svg { width: 19px; height: 19px; }
+html[data-tema="laguna"] .pt-aviso .pt-fila-t { font-family: var(--lg-fuente); font-size: 14px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; line-height: 1.3; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-aviso .pt-fila-e { color: var(--lg-azgris); }
+
+/* Títulos de sección: versalitas con el subrayado de laguna solo bajo el texto. */
+html[data-tema="laguna"] h2.pt-riel-tit { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 6px;
+  font-family: var(--lg-fuente); font-size: 12.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--lg-azul); }
+html[data-tema="laguna"] h2.pt-riel-tit::after { display: none; }
+html[data-tema="laguna"] h2.pt-riel-tit > span { padding-bottom: 4px; box-shadow: inset 0 -2px 0 var(--lg-lag); }
+html[data-tema="laguna"] h2.pt-riel-tit a { font-family: var(--lg-fuente); font-size: 13px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--lg-turq-osc); border-bottom: 1px solid var(--lg-lag); padding-bottom: 1px; }
+
+/* La nota de tapa */
+html[data-tema="laguna"] .pt-tapa { margin-top: 10px; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-tapa-foto { aspect-ratio: auto; height: 232px; border-radius: 6px; isolation: isolate;
+  background: linear-gradient(160deg, var(--lg-azul2) 0%, var(--lg-turq) 48%, var(--lg-agua) 100%);
+  box-shadow: inset 0 3px 0 var(--lg-fluor), 0 14px 30px -22px color-mix(in oklab, var(--lg-azul) 60%, transparent); }
+html[data-tema="laguna"] .pt-tapa-foto img { filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: luminosity; opacity: .92; }
+html[data-tema="laguna"] .pt-tapa-chip { left: 12px; top: 14px; display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+  background: var(--lg-fluor); color: var(--lg-sobre-fluor); font-size: 12px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; }
+html[data-tema="laguna"] .pt-tapa-f { margin-top: 14px; font-family: var(--lg-fuente); font-size: 11.5px; letter-spacing: .1em; color: var(--lg-azgris); }
+html[data-tema="laguna"] .pt-tapa-t { margin-top: 5px; font-family: var(--lg-fuente); font-size: 27px; font-weight: 500; letter-spacing: -.005em;
+  line-height: 1.12; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-tapa-b { margin-top: 7px; font-size: 14px; line-height: 1.5; color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .pt-tapa-leer { margin-top: 10px; font-weight: 600; color: var(--lg-turq-osc);
+  border-bottom: 1px solid var(--lg-lag); padding-bottom: 1px; }
+
+/* Las otras noticias: renglones con miniatura, sin tarjeta */
+html[data-tema="laguna"] .pt-nov-lista { margin-top: 14px; border-top: 1px solid var(--linea); }
+html[data-tema="laguna"] .pt-nov { gap: 14px; margin: 0; padding: 14px 0; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0;
+  background: none; backdrop-filter: none; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-nov:last-child { border-bottom: 0; }
+html[data-tema="laguna"] .pt-nov:hover { transform: none; }
+html[data-tema="laguna"] .pt-vid::after { display: none; }
+html[data-tema="laguna"] .pt-mini-marco, html[data-tema="laguna"] .pt-nov .pt-mini-ico { width: 62px; height: 62px; border-radius: 4px; overflow: hidden; isolation: isolate;
+  background: linear-gradient(135deg, var(--lg-azul2) 0%, var(--lg-turq) 50%, var(--lg-agua) 100%); }
+html[data-tema="laguna"] .pt-mini-marco .pt-mini { border-radius: 0; filter: grayscale(1) contrast(1.06) brightness(1.04); mix-blend-mode: luminosity; }
+html[data-tema="laguna"] .pt-nov .f { font-family: var(--lg-fuente); font-size: 11.5px; letter-spacing: .1em; color: var(--lg-azgris); }
+html[data-tema="laguna"] .pt-nov .t { font-size: 15px; font-weight: 600; margin-top: 3px; }
+html[data-tema="laguna"] .pt-nov .b { font-size: 12.5px; color: var(--lg-azgris); }
+
+/* Mis recibos: tarjeta chica y serena, una más entre tus cosas */
+html[data-tema="laguna"] .pt-rec { gap: 4px 12px; margin: 10px 0 6px; padding: 14px 14px 14px 16px; border: 0; border-radius: 8px;
+  color: var(--lg-azul); background: rgba(255, 255, 255, .72); backdrop-filter: none;
+  box-shadow: inset 0 0 0 1px var(--linea); }
+html[data-tema="laguna"] .pt-rec-ico { right: -14px; top: -10px; opacity: 1; color: color-mix(in oklab, var(--lg-lag) 12%, transparent); }
+html[data-tema="laguna"] .pt-rec-ico svg { width: 92px; height: 92px; }
+html[data-tema="laguna"] .pt-rec-k { font-size: 10.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-azgris); }
+html[data-tema="laguna"] .pt-rec-t { font-size: 16px; font-weight: 600; }
+html[data-tema="laguna"] .pt-rec-e { color: var(--lg-azgris); }
+html[data-tema="laguna"] .pt-rec-e b { font-family: var(--lg-fuente); font-variant-numeric: tabular-nums; color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .pt-rec-cta { position: relative; height: 34px; padding: 0 15px; border: 0; border-radius: 999px; font-size: 13px;
+  font-weight: 600; letter-spacing: .02em; background: var(--lg-agua-f); color: var(--lg-turq-osc);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 35%, transparent);
+  transition: background-color .33s var(--lg-curva); }
+html[data-tema="laguna"] .pt-rec:hover .pt-rec-cta { background: var(--lg-agua); }
+/* Sin recibos, la invitación es una oración entera: el botón va abajo. */
+html[data-tema="laguna"] .pt-rec:not(:has(.pt-rec-e b)) .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
+
+/* Los accesos: una lista de renglones, no tarjetas */
+html[data-tema="laguna"] .pt-filas { grid-template-columns: 1fr; gap: 0; margin-top: 6px; }
+html[data-tema="laguna"] .pt-fila { gap: 14px; padding: 13px 0; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0;
+  background: none; backdrop-filter: none; box-shadow: none; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-filas > .pt-fila:last-child, html[data-tema="laguna"] .pt-filas > .acceso-badge-wrap:last-child .pt-fila { border-bottom: 0; }
+html[data-tema="laguna"] .pt-fila:hover { transform: none; }
+html[data-tema="laguna"] .pt-filas .pt-pastilla { width: 40px; height: 40px; border-radius: 50%; border: 0; color: var(--lg-turq-osc);
+  background: rgba(255, 255, 255, .75); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-lag) 35%, transparent); }
+html[data-tema="laguna"] .pt-filas .pt-pastilla svg { width: 20px; height: 20px; stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-filas .pt-fila-t { font-family: var(--lg-fuente); font-size: 15px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; line-height: 1.25; }
+html[data-tema="laguna"] .pt-filas .pt-fila-e { margin-top: 2px; color: var(--lg-azgris); }
+html[data-tema="laguna"] .pt-fila-f { color: var(--lg-azgris); opacity: 1; transition: transform .3s var(--lg-curva); }
+html[data-tema="laguna"] .pt-fila-f svg { stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: translateX(3px); }
+/* El globo va sobre el círculo del ícono, como en el mockup. */
+html[data-tema="laguna"] .pt-filas .badge-noleidas { top: 6px; left: 29px; right: auto; min-width: 22px; height: 22px; padding: 0 5px;
+  font-size: 12px; background: var(--lg-mal); border: 2px solid var(--lg-agua-f); }
+
+/* Beneficios: la lámina con la foto en duotono y el velo de laguna */
+html[data-tema="laguna"] .car-marco { border: 0; border-radius: 6px; box-shadow: 0 14px 30px -22px color-mix(in oklab, var(--lg-azul) 60%, transparent); }
+html[data-tema="laguna"] .car-sl { aspect-ratio: auto; height: 300px; isolation: isolate;
+  background: linear-gradient(180deg, var(--lg-agua) 0%, var(--lg-lag) 45%, var(--lg-azul2) 100%); }
+html[data-tema="laguna"] .car-sl img { filter: grayscale(1) contrast(1.05) brightness(1.04); mix-blend-mode: luminosity; }
+html[data-tema="laguna"] .car-velo { background: linear-gradient(180deg, transparent 30%,
+  color-mix(in oklab, var(--lg-azul) 55%, transparent) 58%, color-mix(in oklab, var(--lg-azul) 94%, transparent) 100%); }
+html[data-tema="laguna"] .car-txt { padding: 0 20px 22px; }
+html[data-tema="laguna"] .car-k { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; background: var(--lg-fluor);
+  color: var(--lg-sobre-fluor); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+html[data-tema="laguna"] .car-t { margin-top: 10px; font-family: var(--lg-fuente); font-size: 20px; font-weight: 600; letter-spacing: 0;
+  line-height: 1.25; text-shadow: none; }
+html[data-tema="laguna"] .car-p { margin-top: 6px; font-size: 13px; color: var(--lg-sobre-osc); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .car-flecha { opacity: 1; width: 36px; height: 36px; border: 0; background: rgba(255, 255, 255, .9); color: var(--lg-azul); }
+html[data-tema="laguna"] .car-izq { left: 10px; } html[data-tema="laguna"] .car-der { right: 10px; }
+html[data-tema="laguna"] .car-pie { gap: 12px; margin-top: 12px; }
+html[data-tema="laguna"] .car-barra { background: var(--linea); }
+html[data-tema="laguna"] .car-barra i { background: var(--lg-lag); }
+html[data-tema="laguna"] .car-punto { width: 8px; height: 8px; background: var(--lg-linea2); }
+html[data-tema="laguna"] .car-punto.on { width: 20px; border-radius: 4px; background: var(--lg-azul); }
+
+html[data-tema="laguna"] .vacio-sec { margin-top: 10px; background: rgba(255, 255, 255, .6); border: 1px dashed var(--lg-linea2);
+  border-radius: 8px; color: var(--lg-gris-lag); }
+
+/* Pie: la franja de laguna con «Acerca de» */
+html[data-tema="laguna"] .pt-pie { margin-top: 40px; padding: 22px 24px calc(80px + env(safe-area-inset-bottom)); background: var(--lg-azul);
+  color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .pt-pie .btn-acerca { opacity: 1; padding: 0 0 2px; font-family: var(--lg-fuente); font-size: 13px; font-weight: 600;
+  letter-spacing: .04em; color: var(--lg-sobre-osc); border-bottom: 1px solid var(--lg-fluor); }
+html[data-tema="laguna"] .pt-pie .btn-acerca:focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* Salir: la pastilla azul que flota abajo */
+html[data-tema="laguna"] .pt-sesion { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+html[data-tema="laguna"] .pt-salir { height: 46px; padding: 0 19px 0 16px; border: 0; background: var(--lg-azul); color: #fff;
+  font-family: var(--lg-fuente); font-weight: 600;
+  box-shadow: 0 14px 28px -14px color-mix(in oklab, var(--lg-azul) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .08);
+  transition: background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .pt-salir:hover { opacity: 1; background: color-mix(in oklab, var(--lg-azul) 88%, white); }
+html[data-tema="laguna"] .pt-salir svg { stroke: #fff; stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-salir:focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* ---------- T1b · Las hojas (modales) de la portada ---------- */
+html[data-tema="laguna"] .overlay { background: color-mix(in oklab, var(--lg-noche) 62%, transparent); }
+html[data-tema="laguna"] .modal-notif-caja { border-radius: 18px 18px 0 0; font-family: var(--lg-fuente);
+  box-shadow: 0 -18px 40px -24px color-mix(in oklab, var(--lg-azul) 70%, transparent); }
+/* Encabezado: azul liso con el filete flúor ABAJO (nunca una barra al costado). */
+html[data-tema="laguna"] .modal-notif-enc, html[data-tema="laguna"] .modal-articulo-enc { border-left: 0; border-radius: 18px 18px 0 0; padding: 18px 18px 16px 20px;
+  background: var(--lg-azul); background-image: none; color: #fff; box-shadow: inset 0 -3px 0 var(--lg-fluor); }
+html[data-tema="laguna"] .modal-notif-enc::before, html[data-tema="laguna"] .modal-articulo-enc::before { display: none; }
+html[data-tema="laguna"] .modal-notif-enc .modal-k, html[data-tema="laguna"] .modal-articulo-enc .modal-k { font-size: 11.5px; font-weight: 600; letter-spacing: .2em;
+  color: var(--lg-agua); }
+html[data-tema="laguna"] .modal-notif-enc h3, html[data-tema="laguna"] .modal-articulo-enc h3 { margin-top: 4px; font-family: var(--lg-fuente); font-size: 22px;
+  font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.2; color: #fff; }
+html[data-tema="laguna"] .modal-cerrar-clara { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .12); opacity: 1; }
+html[data-tema="laguna"] .modal-cerrar-clara svg { width: 17px; height: 17px; }
+html[data-tema="laguna"] .modal-cerrar-clara:focus-visible { outline-color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .modal-notif-body { padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
+html[data-tema="laguna"] .modal-articulo { border-radius: 18px; font-family: var(--lg-fuente); }
+html[data-tema="laguna"] .modal-articulo-bajada { font-weight: 600; color: var(--lg-azul); }
+html[data-tema="laguna"] .modal-articulo-texto a { color: var(--lg-turq-osc); border-bottom: 1px solid var(--lg-lag); text-decoration: none; }
+html[data-tema="laguna"] .modal-articulo-figuras img { border-radius: 6px; }
+
+/* Tu perfil */
+html[data-tema="laguna"] .perfil-foto-circulo { border: 2px solid var(--lg-lag); background: linear-gradient(135deg, var(--lg-turq), var(--lg-agua)); }
+html[data-tema="laguna"] .perfil-foto-circulo { isolation: isolate; }
+html[data-tema="laguna"] .perfil-foto-circulo img { filter: grayscale(1) contrast(1.05) brightness(1.04); mix-blend-mode: luminosity; }
+html[data-tema="laguna"] .perfil-foto-circulo svg { stroke: #fff; }
+html[data-tema="laguna"] .perfil-foto-lapiz { background: var(--lg-turq); }
+html[data-tema="laguna"] .perfil-campo label { font-size: 11px; font-weight: 600; letter-spacing: .14em; color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .perfil-campo label .opc { color: var(--lg-azgris); opacity: 1; }
+html[data-tema="laguna"] .perfil-campo input, html[data-tema="laguna"] .perfil-campo select { height: 44px; padding: 0 14px; border: 1px solid var(--lg-linea2);
+  border-radius: 4px; background: #fff; font-size: 14px; color: var(--lg-azul);
+  transition: border-color .3s var(--lg-curva), background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .perfil-campo input:focus, html[data-tema="laguna"] .perfil-campo select:focus { border-color: var(--lg-negro); outline: none; }
+html[data-tema="laguna"] .perfil-campo input:disabled { background: var(--lg-claro2); color: var(--lg-gris-lag); border-color: transparent; }
+html[data-tema="laguna"] .pf-geo-nota { color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .perfil-guardar-btn { height: 44px; padding: 0 24px; border-radius: 999px; background: var(--lg-turq); color: #fff;
+  font-family: var(--lg-fuente); font-size: 14px; font-weight: 600; letter-spacing: .02em; text-transform: none;
+  transition: background-color .33s var(--lg-curva); }
+html[data-tema="laguna"] .perfil-guardar-btn:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .perfil-guardar-msg { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .pf-mapa-btn, html[data-tema="laguna"] .mi-secc-otras { height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: #fff;
+  color: var(--lg-azul); font-size: 14px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--lg-linea2); }
+html[data-tema="laguna"] .mini-mapa { border-radius: 6px; border: 0; box-shadow: 0 0 0 1px var(--linea); }
+html[data-tema="laguna"] .pf-cands button { border-radius: 6px; border-color: var(--lg-linea2); color: var(--lg-azul); }
+html[data-tema="laguna"] .pf-cands button.elegido { background: var(--lg-agua-f); border-color: var(--lg-turq); color: var(--lg-turq-osc); font-weight: 600; }
+html[data-tema="laguna"] .mi-secc h4, html[data-tema="laguna"] .ap-sec h4 { margin-bottom: 4px; font-family: var(--lg-fuente); font-size: 12px; font-weight: 700;
+  letter-spacing: .18em; color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .mi-secc-nombre { font-size: 16px; color: var(--lg-azul); }
+html[data-tema="laguna"] .mi-secc-dir, html[data-tema="laguna"] .mi-secc-aviso, html[data-tema="laguna"] .ap-bajada, html[data-tema="laguna"] .ap-paleta, html[data-tema="laguna"] .cerca-permiso { color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .mi-secc-aviso, html[data-tema="laguna"] .ap-paleta { background: var(--lg-agua-f2); border-color: var(--linea); }
+html[data-tema="laguna"] .mi-secc-btn { flex: 0 0 auto; display: inline-flex; align-items: center; height: 34px; padding: 0 15px; border-radius: 999px;
+  background: var(--lg-agua-f); color: var(--lg-turq-osc); font-size: 13px; font-weight: 600;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 35%, transparent); }
+html[data-tema="laguna"] .mi-secc-btn:hover { background: var(--lg-agua); }
+html[data-tema="laguna"] .cerca-item { border: 0; border-radius: 8px; box-shadow: 0 0 0 1px var(--linea); }
+html[data-tema="laguna"] .cerca-item.propia { background: var(--lg-agua-f2); box-shadow: 0 0 0 2px var(--lg-turq); }
+html[data-tema="laguna"] .cerca-km { color: var(--lg-azul); }
+html[data-tema="laguna"] .notif-item { border: 1px solid var(--linea); border-radius: 8px; background: #fff; }
+html[data-tema="laguna"] .notif-item.no-leida { border-color: color-mix(in oklab, var(--lg-turq) 40%, transparent); background: var(--lg-agua-f2); }
+html[data-tema="laguna"] .notif-remitente, html[data-tema="laguna"] .notif-item.no-leida .notif-remitente, html[data-tema="laguna"] .notif-adjunto { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .cta-form { background: var(--lg-fluor); }
+
+/* Acerca de: la tarjeta azul */
+html[data-tema="laguna"] #overlay-acerca .modal-hoja { border: 0; border-radius: 18px 18px 0 0; background: var(--lg-azul); color: #fff;
+  font-family: var(--lg-fuente); }
+html[data-tema="laguna"] #overlay-acerca .modal-hoja h3 { margin-bottom: 12px; font-size: 20px; font-weight: 500; color: #fff; }
+html[data-tema="laguna"] #overlay-acerca .modal-fila { border-bottom-color: rgba(255, 255, 255, .12); }
+html[data-tema="laguna"] #overlay-acerca .modal-fila .k { color: var(--lg-agua); }
+html[data-tema="laguna"] #overlay-acerca .modal-fila .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] #overlay-acerca .modal-cerrar { color: #fff; }
+html[data-tema="laguna"] .overlay-foto-grande { background: color-mix(in oklab, var(--lg-noche) 82%, transparent); }
+
+/* ---------- Escritorio ---------- */
+@media (min-width: 900px) {
+  html[data-tema="laguna"] .pt-gremio .marca-barra { padding: 16px 26px 10px; }
+  html[data-tema="laguna"] .pt-gremio-hola { padding: 22px 26px 150px; }
+  html[data-tema="laguna"] .pt-gremio .hola { font-size: 40px; }
+  html[data-tema="laguna"] .pt-gremio .pt-hola-baj { font-size: 14px; }
+  html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 64px; height: 64px; }
+  html[data-tema="laguna"] .pad.pt-cuerpo { padding: 0 26px; }
+  html[data-tema="laguna"] .pt-tapa-foto { height: auto; aspect-ratio: 16 / 9; max-height: 440px; }
+  html[data-tema="laguna"] .pt-tapa-t { font-size: 34px; }
+  html[data-tema="laguna"] .pt-tapa-b { font-size: 15px; max-width: 62ch; }
+  html[data-tema="laguna"] .pt-pie { padding-bottom: 26px; }
+}
+@media (min-width: 1040px) {
+  html[data-tema="laguna"] .pt-portada { column-gap: 48px; row-gap: 40px; }
+  html[data-tema="laguna"] .car-sl { height: 320px; }
+  /* En el riel, el botón de Mis recibos baja abajo del texto. */
+  html[data-tema="laguna"] .pt-sec-tus .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
+}
+
+/* ---------- Movimiento ---------- */
+@keyframes lg-respira { from { transform: scale(1); } to { transform: scale(1.07); } }
+@keyframes lg-sube { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .pt-gremio-media,
+  html[data-tema="laguna"] .pt-gremio-hola .fila-hola > div > *,
+  html[data-tema="laguna"] .pt-gremio-hola .pt-hola-baj,
+  html[data-tema="laguna"] .pt-gremio .circulo-acento { animation: none; }
+  html[data-tema="laguna"] .pt-fila-f, html[data-tema="laguna"] .pt-salir, html[data-tema="laguna"] .pt-rec-cta, html[data-tema="laguna"] .perfil-guardar-btn { transition: none; }
+  html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: none; }
+}

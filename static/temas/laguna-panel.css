@@ -1,0 +1,694 @@
+/* ============================================================
+   Modelo 162 · Laguna — el panel del sindicato (/admin, todas sus pestañas)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md, bloque 6. Mockup: figuras E2, E2b, E3, E4, E4b, E5, E5b y
+   E6 de p162-escritorio.html. La portada es la laguna; el panel es LIVIANO:
+   blanco y grises, con el turquesa en la acción principal y el paso activo
+   y el azul profundo en lo elegido.
+
+   La pieza central es el RIEL: la tira de pestañas (.nav-strip) pasa a una
+   columna fija a la izquierda, con las secciones en su orden, sus globos y
+   el Panel Sindical con la flechita de "abre otra página". Es una regla de
+   layout: los mismos botones, los mismos data-panel y el mismo JS que
+   cambia de pestaña. En teléfono vuelve a ser una tira deslizable, clara.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="laguna"]: la plantilla la
+     carga solo con ese modelo, y aun así no pisa nada del otro.
+   - Todo color sale de las variables --lg-*, declaradas UNA vez. Con la
+     paleta del sindicato (data-paleta="sindicato") se redefinen desde los
+     cuatro colores de marca (--marca-*) con color-mix, como en el mockup.
+     Los estados (verde, ámbar, rojo) no cambian nunca.
+   - Duraciones y curvas: los tokens de movimiento.css.
+   - La selección se pinta entera (relleno del color del modelo), nunca con
+     una barra al costado (D6). Las tarjetas y avisos que traían un filo de
+     color a la izquierda pasan a borde completo fino + fondo teñido.
+   - Tipografía: Manrope, la del mockup, vendoreada en static/fonts (SIL
+     OFL; la CSP no deja cargar fuentes de afuera), con la sans del sistema
+     de respaldo.
+   ============================================================ */
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Paleta del modelo (la de Colm3na) ---------- */
+html[data-tema="laguna"] {
+  --lg-negro: #171a20; --lg-tinta: #171a20; --lg-gris: #393c41; --lg-gris2: #5c5e62;
+  --lg-claro: #f4f4f4; --lg-claro2: #eeeeee; --lg-claro-h: #e6e6e6;
+  --lg-linea: #e3e4e5; --lg-linea2: #d0d1d2; --lg-suave: #fafafa; --lg-suave2: #fbfbfb; --lg-fijo: #eef0f3;
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7; --lg-azgris: #3d5a6c;
+  --lg-fluor: #46f0d2; --lg-fluor-t: var(--lg-azul); --lg-fluor-txt: var(--lg-fluor);
+  --lg-globo-txt: #e9f7f5; --lg-sombra: #051423;
+  /* estados: fijos, nunca toman la paleta */
+  --lg-ok: #367519; --lg-ok-f: #eef5e7; --lg-ok-t: #2b5d14;
+  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3; --lg-amb-p: #c98a1e;
+  --lg-mal: #b3261e; --lg-mal-f: #fbeceb; --lg-mal-t: #8e1e17;
+  --lg-violeta: #6b4aa3; --lg-violeta-f: #f5f1fb;
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --lg-curva: var(--ease-salida, cubic-bezier(.22, .61, .36, 1));
+  /* medidas del cromo */
+  --lg-riel: 212px;
+  --lg-top: 78px;
+  /* Los tokens de la plantilla también toman el modelo: así todo lo que ya
+     usaba --tinta, --linea, --gris o --papel se aliviana solo. */
+  --tinta: var(--lg-tinta); --linea: var(--lg-linea); --gris: var(--lg-gris2); --papel: var(--lg-suave);
+  accent-color: var(--lg-turq);
+  /* Al abrir /admin#seccion el navegador lleva el ancla arriba de todo: que
+     no quede escondida debajo del encabezado fijo. */
+  scroll-padding-top: calc(var(--lg-top) + 18px);
+}
+
+/* ---------- Paleta del sindicato ----------
+   La laguna pasa a ser base → primario → apoyo, y el flúor pasa a ser el
+   acento. El texto SOBRE el acento y el acento COMO texto sobre oscuro los
+   calcula la plantilla (--marca-tinta-acento, --marca-acento-txt), porque
+   dependen de qué tan oscuro es el acento de cada gremio. */
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--marca-base);
+  --lg-azul2: color-mix(in oklab, var(--marca-primario) 70%, var(--marca-base));
+  --lg-turq: var(--marca-primario);
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario) 82%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario) 75%, var(--marca-base));
+  --lg-lag: var(--marca-apoyo, var(--marca-secundario));
+  --lg-agua: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 50%, white);
+  --lg-agua-f: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 6%, white);
+  --lg-azgris: color-mix(in oklab, var(--marca-base) 78%, white);
+  --lg-fluor: var(--marca-acento);
+  --lg-fluor-t: var(--marca-tinta-acento, var(--marca-base));
+  --lg-fluor-txt: var(--marca-acento-txt, var(--marca-acento));
+  --lg-globo-txt: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 8%, white);
+  --lg-sombra: color-mix(in oklab, var(--marca-base) 55%, black);
+}
+
+/* ============================================================
+   1. La página: blanca, sin mesa ni franja de marca
+   ============================================================ */
+html[data-tema="laguna"] body,
+html[data-tema="laguna"] body.mesa {
+  background: #fff; color: var(--lg-tinta); font-family: var(--lg-fuente);
+  font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; letter-spacing: .005em;
+}
+html[data-tema="laguna"] body.mesa::before,
+html[data-tema="laguna"] body.mesa.franja::after { display: none; }
+
+/* ============================================================
+   2. Encabezado: blanco, una línea, filete turquesa ARRIBA
+   ============================================================ */
+html[data-tema="laguna"] .app-bar-fija { background: #fff; }
+html[data-tema="laguna"] .marca-enc { border-left: 0; }
+html[data-tema="laguna"] .marca-barra {
+  box-sizing: border-box; height: var(--lg-top); padding: 0 28px; gap: 14px;
+  background: #fff; background-image: none; color: var(--lg-tinta);
+  box-shadow: inset 0 3px 0 var(--lg-turq); border-bottom: 1px solid var(--lg-linea);
+}
+html[data-tema="laguna"] .marca-barra::before { display: none; }
+html[data-tema="laguna"] .marca-logo { height: 54px; max-width: 280px; }
+html[data-tema="laguna"] .marca-nombre {
+  font-family: var(--lg-fuente); font-size: 17px; font-weight: 700; letter-spacing: .01em;
+  text-transform: none; color: var(--lg-tinta); border-right: 0; padding-right: 0;
+}
+/* El logo de Colm3na para fondo oscuro se cambia por el de fondo claro. */
+html[data-tema="laguna"] .marca-colmena { display: none; }
+html[data-tema="laguna"] .enc-c3-claro {
+  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 11px);
+  height: 22px; width: auto; max-width: 140px; object-fit: contain; z-index: 3;
+}
+
+/* ============================================================
+   3. El riel de secciones (escritorio)
+   ============================================================ */
+@media (min-width: 761px) {
+  html[data-tema="laguna"] .nav-strip {
+    position: fixed; top: var(--lg-top); left: 0; bottom: 0; z-index: 20;
+    width: var(--lg-riel); display: flex; flex-direction: column; gap: 1px;
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    padding: 16px 10px 96px; margin: 0;
+    background: var(--lg-suave); border-bottom: 0; border-right: 1px solid var(--lg-linea);
+  }
+  html[data-tema="laguna"] .tab-btn {
+    flex: none; width: 100%; height: 34px; flex-direction: row; justify-content: flex-start; align-items: center;
+    gap: 8px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent;
+    color: var(--lg-gris); font: 500 13.5px/1 var(--lg-fuente); letter-spacing: 0; text-transform: none;
+    text-align: left; white-space: nowrap;
+  }
+  html[data-tema="laguna"] .tab-btn > span:not(.badge-noleidas) { overflow: hidden; text-overflow: ellipsis; }
+  html[data-tema="laguna"] .tab-btn:hover { background: var(--lg-claro2); color: var(--lg-tinta); }
+  /* La sección activa: la fila entera en el azul del modelo. Sin barra. */
+  html[data-tema="laguna"] .tab-btn.activa {
+    background: var(--lg-azul); color: #fff; font-weight: 700; border-radius: 8px;
+    box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--lg-azul) 70%, transparent);
+  }
+  /* El Panel Sindical abre otra página: va primero, con su flechita, y un
+     separador lo aparta de las secciones de esta página. */
+  html[data-tema="laguna"] a.tab-btn[href="/admin/dashboard"] { position: relative; margin-bottom: 15px; overflow: visible; }
+  html[data-tema="laguna"] a.tab-btn[href="/admin/dashboard"]::after {
+    content: ""; position: absolute; left: 10px; right: 10px; bottom: -8px; height: 1px; background: var(--lg-linea);
+  }
+  html[data-tema="laguna"] .wrap {
+    max-width: 1280px; margin: 0 0 0 var(--lg-riel); padding: 30px 34px 110px;
+  }
+  html[data-tema="laguna"] .acerca-pie { margin-left: var(--lg-riel); }
+  /* El distintivo de entorno se corre al borde del contenido: abajo a la
+     izquierda quedaría sobre el riel. */
+  html[data-tema="laguna"] #distintivo-entorno {
+    left: calc(var(--lg-riel) + 18px) !important; bottom: 26px !important;
+    border-color: transparent !important; box-shadow: none !important;
+  }
+}
+/* Íconos del riel: no se dibujan (como hasta hoy); solo la flechita. */
+html[data-tema="laguna"] .tab-btn svg { display: none; }
+html[data-tema="laguna"] .tab-btn svg.tab-ext {
+  display: block; width: 15px; height: 15px; margin-left: auto; flex: none;
+  fill: none; stroke: var(--lg-gris2); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+html[data-tema="laguna"] .tab-btn:hover svg.tab-ext { stroke: var(--lg-tinta); }
+/* Los globos: rojos (estado, no marca), al final de la fila. */
+html[data-tema="laguna"] .tab-btn .badge-noleidas {
+  position: static; margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border: 0;
+  border-radius: 999px; background: var(--lg-mal); color: #fff; font: 700 11.5px/1 var(--lg-fuente);
+  font-variant-numeric: tabular-nums;
+}
+html[data-tema="laguna"] .tab-btn.activa .badge-noleidas { box-shadow: 0 0 0 2px var(--lg-azul); }
+
+/* ============================================================
+   4. Inicio + Salir, flotando abajo con rótulo
+   ============================================================ */
+html[data-tema="laguna"] .flota-sesion {
+  right: 18px; bottom: 16px; gap: 4px; padding: 5px; border-radius: 999px;
+  background: rgba(255, 255, 255, .94); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--lg-azul) 45%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--lg-negro) 8%, transparent);
+}
+html[data-tema="laguna"] .btn-home,
+html[data-tema="laguna"] .btn-cerrar,
+html[data-tema="laguna"] .btn-ayuda {
+  height: 38px; border: 0; box-shadow: none; border-radius: 999px; font: 600 13.5px/1 var(--lg-fuente);
+  transition: background-color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .btn-home { background: transparent; color: var(--lg-tinta); padding: 0 16px 0 13px; }
+html[data-tema="laguna"] .btn-home svg { stroke: currentColor; width: 16px; height: 16px; stroke-width: 1.7; }
+html[data-tema="laguna"] .btn-home:hover { background: var(--lg-claro); opacity: 1; }
+html[data-tema="laguna"] .btn-cerrar { background: var(--lg-azul); color: #fff; padding: 0 16px 0 13px; }
+html[data-tema="laguna"] .btn-cerrar svg { width: 15px; height: 15px; stroke-width: 2; }
+html[data-tema="laguna"] .btn-cerrar:hover { background: var(--lg-azul2); opacity: 1; }
+html[data-tema="laguna"] .btn-ayuda { width: 38px; background: var(--lg-claro); }
+html[data-tema="laguna"] .btn-ayuda span { color: var(--lg-tinta); font: 700 15px/1 var(--lg-fuente); }
+html[data-tema="laguna"] .btn-ayuda:hover { background: var(--lg-claro-h); opacity: 1; }
+
+/* ============================================================
+   5. Títulos y textos
+   ============================================================ */
+html[data-tema="laguna"] body.mesa .titulo-pagina,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina {
+  font-family: var(--lg-fuente); font-size: 30px; font-weight: 500; line-height: 1.15;
+  letter-spacing: -.005em; text-transform: none; color: var(--lg-tinta); margin-bottom: 8px;
+}
+html[data-tema="laguna"] body.mesa .titulo-pagina::after { display: none; }
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + p,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .sub,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .muted { color: var(--lg-gris); }
+html[data-tema="laguna"] h2:not(.titulo-pagina) {
+  font-family: var(--lg-fuente); font-size: 12.5px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--lg-tinta); line-height: 1.3;
+}
+html[data-tema="laguna"] h2::after { display: none; }
+html[data-tema="laguna"] .muted { color: var(--lg-gris2); font-size: 13.5px; line-height: 1.55; }
+html[data-tema="laguna"] .panel > p.muted { color: var(--lg-gris); max-width: 820px; }
+html[data-tema="laguna"] .card h3,
+html[data-tema="laguna"] .ct-secc {
+  font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: var(--lg-tinta);
+}
+html[data-tema="laguna"] .card h3::after,
+html[data-tema="laguna"] .ct-secc::after { background: var(--lg-linea); }
+html[data-tema="laguna"] .rep-sub {
+  font-family: var(--lg-fuente); font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--lg-gris2);
+}
+html[data-tema="laguna"] code,
+html[data-tema="laguna"] .tvc-exp, html[data-tema="laguna"] .mt-exp {
+  font-family: var(--lg-mono); font-size: 12.5px; letter-spacing: 0;
+}
+html[data-tema="laguna"] code { background: var(--lg-claro); color: var(--lg-tinta); border-radius: 3px; }
+html[data-tema="laguna"] a { color: var(--lg-turq-osc); text-decoration-color: color-mix(in srgb, var(--lg-turq-osc) 40%, transparent); text-underline-offset: 3px; }
+
+/* ============================================================
+   6. Botones: turquesa la acción principal, blancos los secundarios
+   ============================================================
+   La plantilla pinta TODO botón con una regla de quince :not(); esta la
+   repite con el prefijo del modelo, así le gana sin !important. Los botones
+   de cerrar de los modales salen de esa lista: llevan su propio círculo. */
+html[data-tema="laguna"] button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas):not(.ct-help):not(.modal-recibo-cerrar):not(.overlay-ayuda-cerrar) {
+  font-family: var(--lg-fuente); font-weight: 600; font-size: 13.5px; letter-spacing: .02em; text-transform: none;
+  background: var(--lg-turq); color: #fff; border-radius: 999px;
+  transition: background-color var(--mov-medio, 320ms) var(--lg-curva), transform var(--mov-presion, 120ms) var(--lg-curva);
+}
+html[data-tema="laguna"] button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas):not(.ct-help):not(.modal-recibo-cerrar):not(.overlay-ayuda-cerrar):hover {
+  background: var(--lg-turq-h); opacity: 1;
+}
+html[data-tema="laguna"] button:active { transform: scale(.98); }
+html[data-tema="laguna"] button.sec {
+  font-family: var(--lg-fuente); font-weight: 600; text-transform: none; letter-spacing: .02em;
+  background: #fff; color: var(--lg-tinta); border: 0; border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--lg-linea2);
+  transition: box-shadow var(--mov-rapido, 180ms) var(--lg-curva), background-color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] button.sec { margin-top: 0; }
+html[data-tema="laguna"] .card > button.sec { margin-top: 6px; }
+html[data-tema="laguna"] button.sec:hover { box-shadow: inset 0 0 0 1px var(--lg-gris2); opacity: 1; }
+/* Las acciones de una fila: pastillas blancas con borde fino. */
+html[data-tema="laguna"] button.mini,
+html[data-tema="laguna"] a.mini,
+html[data-tema="laguna"] a.btn-mini {
+  font-family: var(--lg-fuente); font-weight: 600; font-size: 12.5px; letter-spacing: 0; text-transform: none;
+  background: #fff; color: var(--lg-tinta); border: 0; border-radius: 999px; padding: 6px 12px;
+  box-shadow: inset 0 0 0 1px var(--lg-linea2);
+  transition: box-shadow var(--mov-rapido, 180ms) var(--lg-curva), background-color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] button.mini:hover,
+html[data-tema="laguna"] a.mini:hover,
+html[data-tema="laguna"] a.btn-mini:hover { background: var(--lg-claro); box-shadow: inset 0 0 0 1px var(--lg-gris2); opacity: 1; }
+html[data-tema="laguna"] button.mini.borrar,
+html[data-tema="laguna"] button.peligro { color: var(--lg-mal); background: #fff; border: 0; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lg-mal) 35%, var(--lg-linea2)); }
+html[data-tema="laguna"] button.peligro:hover,
+html[data-tema="laguna"] button.mini.borrar:hover { background: var(--lg-mal-f); }
+html[data-tema="laguna"] button:disabled { background: var(--lg-claro2) !important; color: var(--lg-gris2) !important; box-shadow: none !important; opacity: 1; }
+
+/* ============================================================
+   7. Sub-pestañas: un segmentado claro, la elegida en azul
+   ============================================================ */
+html[data-tema="laguna"] .subtabs {
+  display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 999px;
+  background: var(--lg-claro); margin: 14px 0 18px;
+}
+html[data-tema="laguna"] :is(.subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab) {
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 16px;
+  border: 0; border-radius: 999px; background: transparent; color: var(--lg-gris);
+  font: 600 13px/1 var(--lg-fuente); letter-spacing: 0; text-transform: none;
+  transition: background-color var(--mov-medio, 320ms) var(--lg-curva), color var(--mov-medio, 320ms) var(--lg-curva);
+}
+html[data-tema="laguna"] :is(.subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab):hover { color: var(--lg-tinta); }
+html[data-tema="laguna"] :is(.subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab).activa {
+  background: var(--lg-azul); color: #fff; font-weight: 700;
+  box-shadow: 0 4px 10px -6px color-mix(in srgb, var(--lg-azul) 70%, transparent);
+}
+html[data-tema="laguna"] .subtabs .badge-noleidas {
+  position: static; min-width: 20px; height: 20px; padding: 0 6px; border: 0; border-radius: 999px;
+  background: var(--lg-mal); color: #fff; font: 700 11.5px/1 var(--lg-fuente);
+}
+
+/* ============================================================
+   8. Formularios
+   ============================================================ */
+html[data-tema="laguna"] .campo label,
+html[data-tema="laguna"] .form-trab label { font-size: 12.5px; color: var(--lg-gris); font-weight: 600; }
+html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input) {
+  border: 1px solid transparent; border-radius: 4px; background-color: var(--lg-claro);
+  color: var(--lg-tinta); font-family: inherit; font-size: 13.5px;
+  transition: border-color var(--mov-medio, 320ms) var(--lg-curva), background-color var(--mov-medio, 320ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):hover { border-color: var(--lg-linea2); }
+html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):focus {
+  background-color: #fff; border-color: var(--lg-negro); outline: none; box-shadow: none;
+}
+html[data-tema="laguna"] .wrap :is(input, select, textarea)::placeholder { color: var(--lg-gris2); }
+html[data-tema="laguna"] .wrap select:not([multiple]):not(.tram-input):not(.tramx-input) {
+  appearance: none; -webkit-appearance: none; padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23393c41' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; background-size: 15px;
+}
+html[data-tema="laguna"] #trab-cuil[readonly],
+html[data-tema="laguna"] #emp-cuit[readonly] { background-color: var(--lg-fijo); color: var(--lg-gris); border-color: var(--lg-linea); }
+/* Bloques de formulario sueltos (alta de concepto, de regla...). */
+html[data-tema="laguna"] form.linea { background: var(--lg-suave); border-color: var(--lg-linea); border-radius: 8px; padding: 14px 16px; }
+/* Las casillas de seccional como pastillas: la marcada, rellena de azul. */
+html[data-tema="laguna"] .check-seccionales { gap: 8px; padding: 0; border: 0; background: transparent; }
+html[data-tema="laguna"] .chk-seccional {
+  height: 36px; padding: 0 14px; border: 1px solid var(--lg-linea2); border-radius: 999px; background: #fff;
+  font-size: 13px; font-weight: 500; color: var(--lg-gris);
+  transition: border-color var(--mov-rapido, 180ms) var(--lg-curva), background-color var(--mov-rapido, 180ms) var(--lg-curva), color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .chk-seccional:hover { border-color: var(--lg-gris2); color: var(--lg-tinta); }
+html[data-tema="laguna"] .chk-seccional:has(input:checked) { background: var(--lg-azul); border-color: var(--lg-azul); color: #fff; font-weight: 700; }
+html[data-tema="laguna"] .chk-seccional:has(input:checked) input { accent-color: #fff; }
+html[data-tema="laguna"] .chk-seccional:has(input:focus-visible) { outline: 2px solid var(--lg-negro); outline-offset: 2px; }
+html[data-tema="laguna"] .drop {
+  border: 1px dashed var(--lg-linea2); border-radius: 6px; background: #fff; color: var(--lg-gris); font-size: 13px;
+  transition: border-color var(--mov-medio, 320ms) var(--lg-curva), background-color var(--mov-medio, 320ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .drop:hover { border-color: var(--lg-gris2); background: var(--lg-suave); }
+html[data-tema="laguna"] .wrap :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--lg-negro); outline-offset: 2px; }
+
+/* ============================================================
+   9. Filtros arriba de un listado
+   ============================================================ */
+html[data-tema="laguna"] .filtros {
+  gap: 10px; margin: 16px 0 14px; padding: 14px 16px; border-radius: 8px;
+  background: var(--lg-suave); border: 1px solid var(--lg-linea);
+}
+html[data-tema="laguna"] .wrap .filtros :is(input, select):not([type=checkbox]):not([type=radio]) {
+  height: 38px; padding-top: 0; padding-bottom: 0; background-color: #fff; border-color: var(--lg-linea); border-radius: 4px; font-size: 13px;
+}
+html[data-tema="laguna"] .wrap .filtros input[type=text] { min-width: 170px; }
+html[data-tema="laguna"] .filtros .f-cant {
+  margin-left: auto; font: 600 12.5px var(--lg-mono); color: var(--lg-tinta); white-space: nowrap;
+}
+/* "Limpiar" es un enlace subrayado, no otro botón que compita. */
+html[data-tema="laguna"] .filtros button.sec {
+  background: none; box-shadow: none; padding: 0 6px; height: 38px; font-size: 13px;
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--lg-linea2);
+}
+
+/* ============================================================
+   10. Tablas: blancas, cabecera espaciada, filas con línea fina
+   ============================================================ */
+html[data-tema="laguna"] .wrap table { border: 0; border-radius: 0; background: transparent; font-size: 13px; }
+html[data-tema="laguna"] .wrap th {
+  background: transparent; font: 700 10.5px/1.3 var(--lg-fuente); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--lg-gris2); padding: 11px 9px; border-bottom: 1px solid var(--lg-linea2); white-space: nowrap; vertical-align: bottom;
+}
+html[data-tema="laguna"] .wrap td { padding: 12px 9px; border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .wrap tr:last-child td { border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .wrap tbody tr { transition: background-color var(--mov-rapido, 180ms) var(--lg-curva); }
+html[data-tema="laguna"] .wrap tr.par > td { background: var(--lg-suave); }
+html[data-tema="laguna"] .wrap tr.fila-concepto.es-ingreso > td { background: color-mix(in srgb, var(--lg-agua-f) 45%, #fff); }
+html[data-tema="laguna"] .wrap tr.fila-concepto.es-descuento > td { background: var(--lg-suave); }
+html[data-tema="laguna"] .wrap tr.fila-concepto.pend > td,
+html[data-tema="laguna"] .wrap .pend { background: var(--lg-amb-f); }
+html[data-tema="laguna"] .rep-anon { color: var(--lg-gris2); opacity: 1; }
+html[data-tema="laguna"] .rep-tilde.ok { background: var(--lg-ok-f); color: var(--lg-ok); }
+html[data-tema="laguna"] .rep-tilde.dif { background: var(--lg-mal-f); color: var(--lg-mal); }
+html[data-tema="laguna"] .rep-paginas { color: var(--lg-gris2); }
+
+/* ============================================================
+   11. Estados (palabra + color fijo), avisos y tarjetas
+   ============================================================ */
+html[data-tema="laguna"] .tag {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px;
+  font: 600 11.5px/1 var(--lg-fuente); letter-spacing: 0; white-space: nowrap; vertical-align: middle;
+}
+html[data-tema="laguna"] .tag-si { color: var(--lg-ok); background: var(--lg-ok-f); }
+html[data-tema="laguna"] .tag-pend { color: var(--lg-amb); background: var(--lg-amb-f); }
+html[data-tema="laguna"] .tag-no { color: var(--lg-mal); background: var(--lg-mal-f); }
+html[data-tema="laguna"] .tag-reforma { color: var(--lg-violeta); background: var(--lg-violeta-f); }
+html[data-tema="laguna"] .msg { border-radius: 6px; padding: 12px 16px; font-size: 13.5px; line-height: 1.5; }
+html[data-tema="laguna"] .msg.ok { background: var(--lg-ok-f); color: var(--lg-ok-t); }
+html[data-tema="laguna"] .aviso { background: var(--lg-amb-f); border: 0; border-radius: 6px; color: var(--lg-amb); padding: 12px 16px; }
+html[data-tema="laguna"] .card {
+  background: #fff; border: 1px solid var(--lg-linea); border-radius: 10px; padding: 22px 24px; box-shadow: none;
+}
+html[data-tema="laguna"] .card.ct-card { border: 0; padding: 0; background: transparent; }
+html[data-tema="laguna"] .prov-item { background: var(--lg-suave); border: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .geo-resumen { background: var(--lg-suave); border-color: var(--lg-linea); border-radius: 8px; }
+html[data-tema="laguna"] .geo-resumen b { color: var(--lg-azul); }
+/* Los pasos de la georreferenciación: el actual en turquesa, los hechos con borde. */
+html[data-tema="laguna"] .geo-paso-n { background: #fff; border-color: var(--lg-linea2); color: var(--lg-gris); border-radius: 999px; }
+html[data-tema="laguna"] .geo-paso-n.activo { background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; }
+html[data-tema="laguna"] .geo-paso-n.hecho { background: var(--lg-agua-f); border-color: var(--lg-agua-f); color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .geo-cand { border-color: var(--lg-linea2); border-radius: 6px; }
+html[data-tema="laguna"] .geo-cand.elegido { border-color: var(--lg-azul); background: var(--lg-agua-f); color: var(--lg-azul); }
+html[data-tema="laguna"] .geo-barra { background: var(--lg-claro2); }
+html[data-tema="laguna"] .geo-barra i { background: var(--lg-turq); }
+html[data-tema="laguna"] .geo-mapa,
+html[data-tema="laguna"] .geo-mapa-chico { border-color: var(--lg-linea); border-radius: 8px; }
+
+/* Lo que traía un filo de color a la izquierda pasa a borde completo fino
+   y fondo teñido (CAMBIOS10b): el color se lee en todo el contorno. */
+html[data-tema="laguna"] .enc-disc {
+  border: 1px solid color-mix(in srgb, var(--lg-lag) 35%, var(--lg-linea)); border-radius: 6px;
+  background: var(--lg-agua-f2); color: var(--lg-azgris);
+}
+html[data-tema="laguna"] .vap-notif { border: 1px solid color-mix(in srgb, var(--lg-lag) 40%, var(--lg-linea)); }
+html[data-tema="laguna"] .tram-chat-form {
+  border: 1px solid var(--lg-linea2); border-radius: 6px; background: #fff;
+}
+html[data-tema="laguna"] .ct-ficha .campo-tramite-fila { border: 1px solid var(--lg-linea2); border-radius: 8px; }
+html[data-tema="laguna"] .ct-bloque {
+  border: 1px solid color-mix(in srgb, var(--lg-violeta) 30%, var(--lg-linea)); background: var(--lg-violeta-f); border-radius: 6px;
+}
+html[data-tema="laguna"] .ct-bloque.valid {
+  border-color: color-mix(in srgb, var(--lg-turq) 30%, var(--lg-linea)); background: var(--lg-agua-f2);
+}
+html[data-tema="laguna"] #tt-requisitos-lista {
+  border: 1px solid color-mix(in srgb, var(--lg-turq) 30%, var(--lg-linea)); background: var(--lg-agua-f2); border-radius: 6px;
+}
+html[data-tema="laguna"] .ct-bloque.valid .ct-kicker { background: var(--lg-turq); }
+
+/* ============================================================
+   12. La hoja de trabajo (Noticias, Beneficios, Notificaciones, Trámites)
+   ============================================================ */
+html[data-tema="laguna"] .ct-ancho { width: auto; margin-left: 0; }
+/* Las tres columnas en un solo marco: el riel de pasos sobre gris suave,
+   la hoja sobre el área cuadriculada y la vista del afiliado sobre blanco.
+   Los fondos de las columnas los pinta el marco, así el riel y el teléfono
+   siguen pegados al desplazar (sticky) sin perder su color de fondo. */
+html[data-tema="laguna"] .ct-layout { gap: 0; border: 1px solid var(--lg-linea); border-radius: 10px; background: #fff; }
+@media (min-width: 1001px) {
+  html[data-tema="laguna"] .ct-layout {
+    background:
+      linear-gradient(90deg, var(--lg-suave) 0 176px, var(--lg-linea) 176px 177px, transparent 177px),
+      linear-gradient(270deg, #fff 0 300px, var(--lg-linea) 300px 301px, transparent 301px), #fff;
+  }
+  html[data-tema="laguna"] .ct-area { align-self: stretch; }
+}
+html[data-tema="laguna"] .ct-riel {
+  top: calc(var(--lg-top) + 12px); gap: 3px; padding: 16px 12px; border-radius: 10px 0 0 10px; box-shadow: none;
+  background: transparent;
+}
+html[data-tema="laguna"] .ct-riel-paso { padding: 10px 8px; border-radius: 6px; color: var(--lg-tinta); }
+html[data-tema="laguna"] .ct-riel-paso:hover { background: #fff; }
+html[data-tema="laguna"] .ct-riel-paso b {
+  font-family: var(--lg-fuente); font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; line-height: 1.25;
+}
+html[data-tema="laguna"] .ct-riel-paso small { color: var(--lg-gris2); line-height: 1.35; }
+html[data-tema="laguna"] .ct-riel-paso .num {
+  background: #fff; border: 1px solid var(--lg-linea2); color: var(--lg-tinta); font: 700 11.5px var(--lg-fuente);
+}
+html[data-tema="laguna"] .ct-riel-paso.hecho .num { background: var(--lg-ok); border-color: var(--lg-ok); color: #fff; font-size: 0; }
+/* El paso activo: la fila entera teñida y el número en el color del modelo. */
+html[data-tema="laguna"] .ct-riel-paso.actual {
+  background: var(--lg-agua-f); box-shadow: 0 0 0 1px color-mix(in srgb, var(--lg-azul) 18%, transparent);
+}
+html[data-tema="laguna"] .ct-riel-paso.actual b { color: var(--lg-azul); }
+html[data-tema="laguna"] .ct-riel-paso.actual small { color: var(--lg-azgris); }
+html[data-tema="laguna"] .ct-riel-paso.actual .num { background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; }
+html[data-tema="laguna"] .ct-riel-estado { border-top-color: var(--lg-linea); color: var(--lg-gris); }
+html[data-tema="laguna"] .ct-area {
+  border: 0; border-radius: 0; padding: 20px; background-color: var(--lg-suave2);
+  background-image: linear-gradient(color-mix(in srgb, var(--lg-negro) 4.5%, transparent) 1px, transparent 1px),
+                    linear-gradient(90deg, color-mix(in srgb, var(--lg-negro) 4.5%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+html[data-tema="laguna"] .ct-area > .ct-izq {
+  border-radius: 6px; padding: 4px 22px 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .04), 0 14px 30px -20px rgba(0, 0, 0, .28), 0 0 0 1px var(--lg-linea);
+}
+html[data-tema="laguna"] .ct-guardar { margin: 4px -22px 0; padding: 14px 22px; background: var(--lg-suave); border-top-color: var(--lg-linea); border-radius: 0 0 6px 6px; }
+html[data-tema="laguna"] .ct-pasog { padding-top: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .ct-pasog:last-child { border-bottom: 0; }
+html[data-tema="laguna"] .ct-pasog::before { display: none; }
+html[data-tema="laguna"] .ct-riel-estado button { font-size: 12.5px; padding: 8px 12px; line-height: 1.25; }
+html[data-tema="laguna"] .ct-pasog-cab b {
+  background: #fff; color: var(--lg-tinta); border: 1px solid var(--lg-linea2); font: 700 11.5px var(--lg-fuente);
+  box-shadow: 0 0 0 3px #fff;
+}
+html[data-tema="laguna"] .ct-pasog-cab h3 {
+  font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--lg-tinta);
+}
+html[data-tema="laguna"] :is(.ct-paso-cab, .ct-pasog-cab) i {
+  font: 700 10px/1 var(--lg-fuente); letter-spacing: .12em; padding: 4px 8px; border-radius: 999px;
+}
+html[data-tema="laguna"] :is(.ct-paso-cab, .ct-pasog-cab) i.op { background: transparent; color: var(--lg-gris2); box-shadow: inset 0 0 0 1px var(--lg-linea2); }
+html[data-tema="laguna"] :is(.ct-paso-cab, .ct-pasog-cab) i.ob { background: transparent; color: var(--lg-gris2); box-shadow: inset 0 0 0 1px var(--lg-linea2); }
+html[data-tema="laguna"] .ct-der { top: calc(var(--lg-top) + 12px); padding: 16px 16px 20px; }
+html[data-tema="laguna"] .ct-der > .ct-secc {
+  color: var(--lg-gris2); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 600;
+}
+html[data-tema="laguna"] .ct-der > .ct-secc::after { background: var(--lg-linea); }
+html[data-tema="laguna"] .ct-tabla { border-color: var(--lg-linea); border-radius: 8px; }
+html[data-tema="laguna"] .ct-fila.cab { background: var(--lg-suave); color: var(--lg-gris2); font-family: var(--lg-fuente); letter-spacing: .12em; }
+html[data-tema="laguna"] .ct-fila.abierta { background: var(--lg-agua-f2); border-top-color: var(--lg-turq); }
+html[data-tema="laguna"] .ct-fila .ct-orden,
+html[data-tema="laguna"] .ct-campo-cab .ct-orden { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .ct-campo-cab { background: var(--lg-suave); }
+html[data-tema="laguna"] .ct-campo-tit { font-family: var(--lg-fuente); font-weight: 700; font-size: 13.5px; letter-spacing: 0; text-transform: none; }
+html[data-tema="laguna"] .ct-paso-cab b { background: var(--lg-turq); }
+html[data-tema="laguna"] .ct-editor { background: var(--lg-suave2); }
+/* El «?» de las ayudas y su globo, en el azul del modelo. */
+html[data-tema="laguna"] .ct-help {
+  width: 20px; height: 20px; border: 1px solid var(--lg-linea2); background: #fff; color: var(--lg-gris);
+  font: 700 11px/1 var(--lg-fuente);
+}
+html[data-tema="laguna"] .ct-help:hover,
+html[data-tema="laguna"] .ct-help.fijo { background: var(--lg-azul); border-color: var(--lg-azul); color: #fff; }
+html[data-tema="laguna"] #ct-tip { background: var(--lg-azul); color: var(--lg-globo-txt); border-radius: 6px; font-family: var(--lg-fuente); }
+html[data-tema="laguna"] #ct-tip .ct-fn-mas { color: var(--lg-fluor-txt); }
+
+/* El teléfono de la vista previa: marco negro, barra blanca con filete. */
+html[data-tema="laguna"] .ttp-marco { background: var(--lg-negro); border-radius: 30px; padding: 8px; box-shadow: 0 30px 50px -30px rgba(0, 0, 0, .5); }
+html[data-tema="laguna"] .ttp-pant { border-radius: 23px; background: var(--lg-claro); }
+html[data-tema="laguna"] .vap-enc {
+  background: #fff; color: var(--lg-tinta); text-align: center; font: 700 12.5px/1 var(--lg-fuente);
+  letter-spacing: 0; text-transform: none; padding: 15px 12px; box-shadow: inset 0 3px 0 var(--lg-turq); border-bottom: 1px solid var(--lg-linea);
+}
+html[data-tema="laguna"] .vap-card { border: 0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+html[data-tema="laguna"] .vap-form { background: var(--lg-agua-f); color: var(--lg-turq-osc); box-shadow: none; }
+html[data-tema="laguna"] .vap-remitente { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .ttp-caratula { background: var(--lg-azul); background-image: linear-gradient(160deg, var(--lg-azul) 20%, var(--lg-azul2) 70%, var(--lg-turq)); }
+html[data-tema="laguna"] .ttp-caratula .tit { font-family: var(--lg-fuente); font-size: 16px; text-transform: none; letter-spacing: 0; }
+html[data-tema="laguna"] .ttp-probar { background: var(--lg-turq); color: #fff; border-radius: 999px; font: 600 13px/1.2 var(--lg-fuente); text-transform: none; letter-spacing: .02em; }
+html[data-tema="laguna"] .enc-cab { background: linear-gradient(135deg, var(--lg-azul2), var(--lg-turq)); }
+
+/* ============================================================
+   13. Modales: cabecera azul con filete arriba, cuerpo blanco
+   ============================================================ */
+html[data-tema="laguna"] :is(.modal-recibo-overlay, .overlay-ayuda) {
+  background: color-mix(in srgb, var(--lg-azul) 46%, transparent);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
+}
+html[data-tema="laguna"] #acerca-box { background: color-mix(in srgb, var(--lg-azul) 46%, transparent) !important; }
+html[data-tema="laguna"] .modal-recibo {
+  border-radius: 10px; box-shadow: 0 34px 70px -24px color-mix(in srgb, var(--lg-sombra) 60%, transparent);
+}
+html[data-tema="laguna"] .modal-recibo-enc {
+  background: var(--lg-azul); background-image: none; border-left: 0; border-radius: 10px 10px 0 0;
+  padding: 15px 16px 15px 22px; box-shadow: inset 0 3px 0 var(--lg-fluor-txt);
+}
+html[data-tema="laguna"] .modal-recibo-enc::before { display: none; }
+html[data-tema="laguna"] .modal-recibo-enc h3 {
+  font: 600 17px/1.3 var(--lg-fuente); letter-spacing: .005em; text-transform: none; color: #fff;
+}
+html[data-tema="laguna"] button.modal-recibo-cerrar {
+  width: 34px; height: 34px; padding: 0; border-radius: 50% !important; justify-content: center; align-items: center;
+  background: rgba(255, 255, 255, .12) !important; color: #fff !important; opacity: 1; flex: none;
+}
+html[data-tema="laguna"] button.modal-recibo-cerrar:hover { background: rgba(255, 255, 255, .22) !important; }
+html[data-tema="laguna"] .modal-recibo-cerrar svg { width: 15px; height: 15px; stroke-width: 2; }
+html[data-tema="laguna"] .modal-recibo-body { padding: 18px 22px 22px; }
+html[data-tema="laguna"] .modal-recibo-card { background: #fff; padding: 0; border-radius: 0; }
+html[data-tema="laguna"] .overlay-ayuda-caja { border-radius: 10px; box-shadow: 0 34px 70px -24px color-mix(in srgb, var(--lg-sombra) 60%, transparent); }
+html[data-tema="laguna"] .overlay-ayuda-caja h3 {
+  font: 600 17px/1.3 var(--lg-fuente); letter-spacing: .005em; text-transform: none; color: var(--lg-azul);
+}
+html[data-tema="laguna"] .overlay-ayuda-caja h4 {
+  font: 700 11px/1.3 var(--lg-fuente); letter-spacing: .16em; text-transform: uppercase; color: var(--lg-gris2);
+}
+html[data-tema="laguna"] button.overlay-ayuda-cerrar { background: transparent !important; color: var(--lg-gris) !important; }
+html[data-tema="laguna"] .rep-k { color: var(--lg-gris2); }
+html[data-tema="laguna"] .linea-concepto.descuento { background: var(--lg-mal-f); }
+/* La conversación de un trámite. */
+html[data-tema="laguna"] .tram-chat-sistema { background: #fff; border: 0; box-shadow: 0 0 0 1px var(--lg-linea); color: var(--lg-gris); font-size: 12px; }
+html[data-tema="laguna"] .tram-chat-fila.propio .tram-chat-burbuja { background: var(--lg-agua-f); }
+html[data-tema="laguna"] .tram-chat-fila.ajeno .tram-chat-burbuja { background: #fff; border: 0; box-shadow: 0 1px 0 rgba(0, 0, 0, .05), 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .tram-chat-remitente { color: var(--lg-gris); }
+html[data-tema="laguna"] .tram-chat-estado { background: var(--lg-amb-f); color: var(--lg-amb); }
+html[data-tema="laguna"] .tram-chat-avatar-fallback { background: var(--lg-turq); border-color: var(--lg-turq); }
+html[data-tema="laguna"] .tram-chat-avatar-fallback svg { stroke: #fff; }
+html[data-tema="laguna"] .tram-chat-form .tcf-btn { background: var(--lg-turq); color: #fff; border-radius: 999px; }
+html[data-tema="laguna"] .tram-chat-responder { border: 0; background: var(--lg-claro); border-radius: 6px; }
+html[data-tema="laguna"] .tram-msg-adjunto { color: var(--lg-turq-osc); font-weight: 600; }
+
+/* ============================================================
+   14. Apariencia (E6): las opciones elegidas, enteras en el color del modelo
+   ============================================================ */
+html[data-tema="laguna"] .ap-op { border-color: var(--lg-linea2); border-radius: 8px; }
+html[data-tema="laguna"] .ap-op:hover { border-color: var(--lg-gris2); }
+html[data-tema="laguna"] .ap-op:has(input:checked) { background: var(--lg-agua-f); border-color: var(--lg-azul); }
+html[data-tema="laguna"] .ap-op:has(input:checked) .ap-op-t { color: var(--lg-azul); }
+html[data-tema="laguna"] .ap-op:has(input:checked) .ap-op-d { color: var(--lg-azgris); }
+html[data-tema="laguna"] .ap-op:has(input:checked) .ap-tilde { background: var(--lg-azul); border-color: var(--lg-azul); }
+html[data-tema="laguna"] .ap-op:has(input:focus-visible) { outline-color: var(--lg-negro); }
+html[data-tema="laguna"] .ap-sub { font: 700 11px/1.3 var(--lg-fuente); letter-spacing: .16em; color: var(--lg-gris2); }
+html[data-tema="laguna"] .ap-lectura.pasa { background: var(--lg-ok-f); color: var(--lg-ok-t); }
+html[data-tema="laguna"] .ap-lectura.avisa { background: var(--lg-amb-f); color: var(--lg-amb); }
+
+/* ============================================================
+   15. Teléfono: el riel vuelve a ser una tira clara y deslizable
+   ============================================================ */
+@media (max-width: 760px) {
+  html[data-tema="laguna"] { --lg-top: 62px; }
+  html[data-tema="laguna"] .marca-barra { padding: 0 16px; }
+  html[data-tema="laguna"] .marca-logo { height: 42px; max-width: 180px; }
+  html[data-tema="laguna"] .marca-nombre { font-size: 15px; }
+  html[data-tema="laguna"] .enc-c3-claro { right: 16px; height: 18px; top: calc(var(--lg-top) / 2 - 9px); }
+  html[data-tema="laguna"] .nav-strip {
+    background: #fff; border-bottom: 1px solid var(--lg-linea); padding: 8px 12px; gap: 4px;
+  }
+  html[data-tema="laguna"] .tab-btn {
+    flex-direction: row; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border: 0;
+    border-radius: 999px; background: transparent; color: var(--lg-gris);
+    font: 600 13px/1 var(--lg-fuente); letter-spacing: 0; text-transform: none;
+  }
+  html[data-tema="laguna"] .tab-btn.activa { background: var(--lg-azul); color: #fff; font-weight: 700; }
+  html[data-tema="laguna"] .tab-btn .badge-noleidas { margin-left: 2px; }
+  html[data-tema="laguna"] .tab-btn svg.tab-ext { margin-left: 2px; width: 13px; height: 13px; }
+  html[data-tema="laguna"] .wrap { padding: 20px 16px 104px; }
+  html[data-tema="laguna"] body.mesa .titulo-pagina { font-size: 24px; }
+  html[data-tema="laguna"] .ct-layout { border: 0; border-radius: 0; background: transparent; }
+  html[data-tema="laguna"] .ct-riel { border-radius: 8px; border: 1px solid var(--lg-linea); background: var(--lg-suave); }
+  html[data-tema="laguna"] .ct-area { padding: 8px; }
+  html[data-tema="laguna"] .ct-area > .ct-izq { padding: 4px 12px 0; }
+  html[data-tema="laguna"] .ct-guardar { margin: 4px -12px 0; padding: 12px; }
+  html[data-tema="laguna"] .ct-der { padding: 16px 0 0; }
+  html[data-tema="laguna"] .flota-sesion { right: 12px; bottom: 12px; }
+  html[data-tema="laguna"] .filtros { padding: 12px; }
+  html[data-tema="laguna"] .wrap .filtros input[type=text] { min-width: 0; flex: 1 1 140px; }
+  html[data-tema="laguna"] .modal-recibo-enc { padding: 13px 12px 13px 16px; }
+  html[data-tema="laguna"] .modal-recibo-body { padding: 16px; }
+}
+
+/* ============================================================
+   16. Menos movimiento: sin transiciones ni escalas
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] :is(.tab-btn, button, a.btn-mini, .chk-seccional, .drop, .btn-home, .btn-cerrar, .btn-ayuda,
+    .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab, .ct-riel-paso, tbody tr, input, select, textarea) {
+    transition: none !important;
+  }
+  html[data-tema="laguna"] button:active { transform: none; }
+}
+
+/* ============================================================
+   17. Detalles que completan los listados y los formularios
+   ============================================================ */
+/* Las acciones de una fila del padrón se acomodan en renglones en vez de
+   empujar la tabla fuera de la pantalla. */
+html[data-tema="laguna"] .fila-trabajador > td:last-child { white-space: normal !important; min-width: 230px; }
+html[data-tema="laguna"] .fila-trabajador > td:last-child :is(button, a) { margin: 2px 0 2px 4px; }
+/* El archivo a subir: zona punteada y el botón como pastilla clara. */
+html[data-tema="laguna"] .wrap input[type=file] {
+  border: 1px dashed var(--lg-linea2); border-radius: 6px; background: #fff; padding: 9px 10px;
+  color: var(--lg-gris); font-size: 12.5px; max-width: 100%;
+}
+html[data-tema="laguna"] .wrap input[type=file]::file-selector-button {
+  margin-right: 10px; border: 0; border-radius: 999px; padding: 7px 13px; cursor: pointer;
+  background: var(--lg-claro); color: var(--lg-tinta); font: 600 12.5px/1 var(--lg-fuente);
+}
+html[data-tema="laguna"] .wrap input[type=file]:hover::file-selector-button { background: var(--lg-claro-h); }
+@media (max-width: 1000px) {
+  html[data-tema="laguna"] .ct-riel { background: var(--lg-suave); border-radius: 10px 10px 0 0; border-bottom: 1px solid var(--lg-linea); }
+}
+@media (max-width: 760px) {
+  html[data-tema="laguna"] { scroll-padding-top: 130px; }
+  /* Un listado ancho se desliza solo, nunca la página entera. */
+  html[data-tema="laguna"] .wrap :is(.panel, .subpanel, .tramite-subpanel, .emp-subpanel, .emptram-subpanel, .enc-subpanel, .au-subpanel) > table {
+    display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch;
+  }
+}
+html[data-tema="laguna"] .wrap .filtros button { margin: 0; }
+/* Una casilla dentro de los filtros, como pastilla: marcada, en azul. */
+html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]) {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 15px; border-radius: 999px;
+  border: 1px solid var(--lg-linea2); background: #fff; font-size: 13px; font-weight: 500; color: var(--lg-gris); cursor: pointer;
+  transition: border-color var(--mov-rapido, 180ms) var(--lg-curva), background-color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) { background: var(--lg-azul); border-color: var(--lg-azul); color: #fff; font-weight: 700; }
+html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) input { accent-color: #fff; }
+html[data-tema="laguna"] .wrap td { vertical-align: top; }

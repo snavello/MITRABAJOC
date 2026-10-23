@@ -250,6 +250,9 @@
     .ft-comparar { grid-template-columns:minmax(0,1fr); }
     .ft-flecha { justify-self:center; rotate:90deg; }
   }
+.prueba-lectura{margin-top:12px;padding:12px 14px;border:1px solid #e4c48a;background:#fdf6e8;border-radius:10px;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.prueba-lectura.ok{border-color:#9fd3b8;background:#eef8f2}
+.prueba-lectura ul{margin:4px 0 0;padding-left:18px}
 </style>
 {% include "_fondo_interior.html" %}
 </head>
@@ -435,6 +438,13 @@
           <input type="color" name="color_destacado" value="#E5188F">
           <span class="muted" style="font-size:11px;">Panel Sindical: SOLO selecciones y filtros activos</span>
         </div>
+      </div>
+      <!-- Prueba de lectura (PLAN_TEMAS.md, D4): si el sindicato elige ver la app
+           con sus colores, estas son las combinaciones que van a llevar texto. -->
+      <div class="prueba-lectura" id="prueba-lectura" aria-live="polite">
+        <strong>Prueba de lectura</strong>
+        <span class="muted" id="prueba-lectura-resumen">Con sus colores, ¿se lee la app?</span>
+        <ul id="prueba-lectura-avisos"></ul>
       </div>
 
       <div class="campo" style="margin-top:14px;">
@@ -1500,6 +1510,7 @@ function editarSind(s) {
   f.color_acento.value = s.color_acento || '#b23a2e';
   f.color_base.value = s.color_base || '#0f1b2d';
   f.color_destacado.value = s.color_destacado || '#E5188F';
+  probarLectura();
   const modulosSet = new Set((s.modulos_habilitados || []).map(String));
   document.querySelectorAll('#sind-modulos input[type=checkbox]').forEach(chk => {
     chk.checked = modulosSet.has(chk.value);
@@ -1982,6 +1993,40 @@ async function ftBorrar() {
   }
 })();
 </script>
-<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}">
+// Prueba de lectura de los colores del sindicato: la calcula el servidor
+// (temas.prueba_de_lectura, una sola implementación) y acá solo se muestra.
+let _plTimer = null;
+function probarLectura() {
+  clearTimeout(_plTimer);
+  _plTimer = setTimeout(async () => {
+    const f = document.getElementById('form-sind');
+    if (!f) return;
+    const q = new URLSearchParams({base: f.color_base.value, primario: f.color_primario.value,
+                                   acento: f.color_acento.value, apoyo: f.color_secundario.value});
+    const resumen = document.getElementById('prueba-lectura-resumen');
+    const lista = document.getElementById('prueba-lectura-avisos');
+    try {
+      const r = await fetch('/plataforma/prueba-lectura?' + q.toString());
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      lista.replaceChildren();
+      resumen.textContent = d.avisos.length
+        ? 'Si el sindicato elige ver la app con sus colores, los modelos van a corregir esto:'
+        : 'Sus colores pasan la prueba de lectura.';
+      document.getElementById('prueba-lectura').classList.toggle('ok', !d.avisos.length);
+      d.avisos.forEach(a => {
+        const li = document.createElement('li');
+        li.textContent = a.aviso + (a.contraste ? ' (' + String(a.contraste).replace('.', ',') + ':1, mínimo ' + String(a.minimo).replace('.', ',') + ':1)' : '');
+        lista.appendChild(li);
+      });
+    } catch (e) {
+      resumen.textContent = 'No se pudo hacer la prueba de lectura ahora.';
+    }
+  }, 200);
+}
+document.querySelectorAll('#form-sind input[type=color]').forEach(i => i.addEventListener('input', probarLectura));
+probarLectura();
+</script>
 </body>
 </html>

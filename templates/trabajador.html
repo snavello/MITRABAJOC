@@ -33,6 +33,33 @@
     --marca-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
     --marca-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
     --marca-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
+    /* Copia cruda de los cuatro colores del gremio (PLAN_TEMAS.md, D4): un
+       modelo de diseño (static/temas/<modelo>-app.css) redefine --marca-*
+       con sus propios colores por función, y con la paleta del sindicato los
+       deriva de ESTOS, que nunca se pisan. */
+    --gremio-base: {{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --gremio-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --gremio-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
+    --gremio-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
+    {#- Texto SOBRE un relleno de acento (la base del gremio o blanco) y el
+        acento usado COMO texto sobre oscuro (aclarado si es muy oscuro). Se
+        calcula acá por luminancia relativa, igual que los mockups: el CSS
+        todavía no sabe elegir entre blanco y oscuro por contraste. #}
+    {%- set _ac = (marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e')) or '#b23a2e' %}
+    {%- set _h = _ac|trim|replace('#', '') %}
+    {%- if _h|length == 3 %}{% set _h = _h[0] ~ _h[0] ~ _h[1] ~ _h[1] ~ _h[2] ~ _h[2] %}{% endif %}
+    {%- set _c = [(_h[0:2]|int(0, 16)) / 255, (_h[2:4]|int(0, 16)) / 255, (_h[4:6]|int(0, 16)) / 255] %}
+    {%- set _l = [] %}
+    {%- for c in _c %}{% set _ = _l.append(((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92) %}{% endfor %}
+    {%- set _lum = 0.2126 * _l[0] + 0.7152 * _l[1] + 0.0722 * _l[2] %}
+    --gremio-tinta-acento: {{ 'var(--gremio-base)' if _lum > 0.35 else '#ffffff' }};
+    --gremio-acento-txt: {{ 'color-mix(in oklab, var(--gremio-acento) 45%, white)' if _lum < 0.25 else 'var(--gremio-acento)' }};
+    {#- El logo de Colm3na para fondo CLARO: el encabezado lo pone en su
+        versión para fondo oscuro, y un modelo con encabezado blanco lo
+        cambia por esta (content: var(--logo-colmena-claro)). #}
+    {%- if marca_plataforma and marca_plataforma.logo %}
+    --logo-colmena-claro: url("/logo-plataforma");
+    {%- endif %}
   }
   * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
   html { -webkit-text-size-adjust:100%; }
@@ -45,17 +72,22 @@
   /* El encabezado (cinta + barra de marca) vive entero en marca.css, igual
      que en las otras diez pantallas: acá no se redefine nada. */
   .marca-enc.fija { z-index:10; }
-  /* Botones flotantes inicio/salir: fondo base del sindicato, ícono acento
-     (mismo color que el botón principal y la pestaña activa). */
-  .btn-flotante { position:fixed; bottom:84px; width:42px; height:42px; border-radius:50%;
-    background:var(--marca-base); display:flex; align-items:center; justify-content:center;
-    text-decoration:none; border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
-  .btn-flotante svg { width:19px; height:19px; stroke:var(--marca-acento); stroke-width:1.8; fill:none; }
-  .btn-flotante:hover { opacity:.85; }
-  .btn-cerrar { right:18px; }
-  .btn-cerrar svg { stroke:#fff; stroke-width:2.6; }
-  .btn-home { right:68px; }
+  /* Inicio + Salir flotando juntos, con rótulo: una pastilla del color base
+     del sindicato apoyada sobre la tira de pestañas; el ícono de Inicio en
+     acento (el mismo color que la pestaña activa). */
+  .flota-sal { position:fixed; right:14px; bottom:calc(80px + env(safe-area-inset-bottom)); z-index:40;
+    display:inline-flex; align-items:center; gap:2px; padding:4px; border-radius:999px;
+    background:var(--marca-base); border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 10px 24px -10px rgba(0,0,0,.45); }
+  .flota-sal a { display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 15px 0 12px;
+    border-radius:999px; color:#fff; text-decoration:none; font-size:13.5px; font-weight:600;
+    letter-spacing:.02em; transition:background-color .2s ease; }
+  .flota-sal a:hover { background:rgba(255,255,255,.1); }
+  .flota-sal a + a { box-shadow:-1px 0 0 rgba(255,255,255,.16); }
+  .flota-sal a:focus-visible { outline:2px solid var(--marca-acento); outline-offset:2px; }
+  .flota-sal svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .flota-sal .flota-ini svg { stroke:var(--marca-acento); }
   /* ---------- Noticias (pestaña Novedades) ---------- */
   .noticia-card { display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--linea); border-radius:11px;
     padding:12px 13px; margin-bottom:8px; cursor:pointer; text-align:left; width:100%; font-family:inherit; }
@@ -1012,6 +1044,12 @@
   .enq-rank-res .det { color:var(--gris); font-size:12px; text-align:right; }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño (PLAN_TEMAS.md): su hoja va DESPUÉS de todo lo de
+   arriba y cada selector empieza con html[data-tema="<modelo>"]. Solo se
+   carga la del modelo que tiene la suya; sin hoja, la pantalla de siempre. #}
+{% if apariencia and apariencia.tema == 'laguna' %}
+<link rel="stylesheet" href="/static/temas/laguna-app.css?v={{ sello_static('temas/laguna-app.css') }}">
+{% endif %}
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
@@ -1021,12 +1059,14 @@
 {% include "_encabezado.html" %}
 
 {% if cuil %}
-<a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><use href="#ic-home"/></svg>
-</a>
-<a class="btn-flotante btn-cerrar" href="/trabajador/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
-</a>
+{# Inicio y Salir: UNA pastilla que flota abajo, apoyada sobre la tira de
+   pestañas, con el rótulo a la vista (pauta de SDN para los dos modelos:
+   dos círculos con un ícono solo no se entendían, y la X se leía como
+   "cerrar esta pantalla", no como salir de la cuenta). #}
+<nav class="flota-sal" aria-label="Inicio y salida">
+  <a class="flota-ini" href="/app/inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-home"/></svg>Inicio</a>
+  <a class="flota-salir" href="/trabajador/salir"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-salir"/></svg>Salir</a>
+</nav>
 <div class="ident">
   <div class="ident-nombre">{{ nombre_trab or 'Trabajador' }}</div>
   <div class="ident-cuil">CUIL {{ cuil }}</div>
@@ -1419,6 +1459,7 @@
     <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
     <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-salir"><path d="M14 4.5H6.5v15H14"/><path d="M11 12h9M17 8.5l3.5 3.5-3.5 3.5"/></g>
     <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
@@ -1427,14 +1468,18 @@
 </svg>
 
 <!-- Barra de pestañas -->
-<nav class="tabbar">
+{# Orden de la tira (pauta de SDN, PLAN_TEMAS.md D7): lo que la persona usa
+   más, primero. Cada pestaña sigue dependiendo de su módulo. Los &shy; dejan
+   cortar en dos renglones las palabras que no entran en un séptimo del
+   teléfono, en vez de desbordar. #}
+<nav class="tabbar" aria-label="Secciones de la app">
   {% if 'recibos' in modulos %}<button class="tab-t" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Mis Recibos</button>{% endif %}
-  {% if marca and 'credencial' in modulos %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Credencial</button>{% endif %}
-  {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>{% endif %}
-  {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
-  {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>{% endif %}
+  {% if marca and 'credencial' in modulos %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Creden&shy;cial</button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-t" data-tp="tramites" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites<span class="tab-badge-tram" id="badge-tramites" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades or '' }}</span></button>{% endif %}
+  {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Nove&shy;dades</button>{% endif %}
   {% if 'encuestas' in modulos %}<button class="tab-t" data-tp="encuestas" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>Encuestas<span class="tab-badge-tram" id="badge-encuestas" style="display:none;"></span></button>{% endif %}
+  {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
+  {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capaci&shy;tación</button>{% endif %}
 </nav>
 
 <script>
@@ -1442,7 +1487,10 @@
 function activarPestana(dest) {
   const btn = document.querySelector('.tab-t[data-tp="' + dest + '"]');
   if (!btn) return;  // pestaña inexistente (ej. "credencial" sin marca activa) -> se ignora, queda la default
-  document.querySelectorAll('.tab-t').forEach(b => b.classList.toggle('activa', b === btn));
+  document.querySelectorAll('.tab-t').forEach(b => {
+    b.classList.toggle('activa', b === btn);
+    if (b === btn) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   document.querySelectorAll('.tpanel').forEach(pan => {
     pan.classList.toggle('activo', pan.id === 'tp-' + dest);
   });
@@ -1476,7 +1524,14 @@ function cerrarModalRecibo() {
 
 let archivo = null, datosLeidos = null;
 const $ = id => document.getElementById(id);
-const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2});
+// Importes en formato argentino, siempre con dos decimales y un espacio
+// después del signo: "$ 1.284.560,00" (pauta común a los dos modelos). El
+// menos va delante del signo: "-$ 1.200,00".
+const peso = n => {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '—';  // ilegible: nunca "$ 0,00"
+  return (v < 0 ? '-' : '') + '$ ' + Math.abs(v).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+};
 // 'listo' ya no está: elegir el archivo es un ESTADO del paso 1, no otra
 // pantalla. Y ver(null) no muestra ninguna -- es lo que se usa mientras la IA
 // trabaja, cuando la pantalla la ocupa el panel de espera de #resultado.
