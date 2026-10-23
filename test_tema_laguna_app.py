@@ -120,12 +120,13 @@ def test_la_plantilla_copia_los_colores_crudos_del_gremio():
                        ("--gremio-acento", "#e8b84b"), ("--gremio-apoyo", "#2fa88f")):
         assert f"{var}: {valor};" in html, var
     # Acento claro (el ámbar de la UOM): el texto encima va en la base del gremio.
-    assert "--gremio-tinta-acento: var(--gremio-base);" in html
+    assert "--gremio-tinta-acento: #0f2240;" in html
     # Acento oscuro (el verde de la Gastronómica): texto blanco encima y, como
     # texto sobre oscuro, aclarado.
     html = _app(AFILIADO_POCOS)
     assert "--gremio-tinta-acento: #ffffff;" in html
-    assert "--gremio-acento-txt: color-mix(in oklab, var(--gremio-acento) 45%, white);" in html
+    m = re.search(r"--gremio-acento-txt: (#[0-9a-f]{6});", html)
+    assert m and m.group(1) != "#3d6b4a"   # corregido por temas.paleta_legible
 
 
 # ---------- pautas comunes (van en la plantilla, para los dos modelos) ----------

@@ -77,34 +77,30 @@ html[data-tema="noticiero"] {
                       base).
    Sin soporte de color relativo quedan la base y el acento tal cual. */
 html[data-tema="noticiero"][data-paleta="sindicato"] {
-  --nt-tinta-acento: var(--marca-base);
-  --nt-acento-txt: var(--marca-acento);
-  --nt-fondo: color-mix(in oklab, var(--marca-base) 5%, var(--nt-k-fondo));
-  --nt-hoja: color-mix(in oklab, var(--marca-base) 5%, var(--nt-k-hoja));
-  --nt-hoja-2: color-mix(in oklab, var(--marca-base) 5%, var(--nt-k-hoja-2));
-  --nt-carta: color-mix(in oklab, var(--marca-base) 3%, var(--nt-k-carta));
-  --nt-linea: color-mix(in oklab, var(--marca-base) 8%, var(--nt-k-linea));
-  --nt-linea-2: color-mix(in oklab, var(--marca-base) 10%, var(--nt-k-linea-2));
-  --nt-tinta: var(--marca-base);
-  --nt-tinta-1: color-mix(in oklab, var(--marca-base) 88%, var(--nt-fondo));
-  --nt-tinta-2: color-mix(in oklab, var(--marca-base) 80%, var(--nt-fondo));
-  --nt-tinta-3: color-mix(in oklab, var(--marca-base) 72%, var(--nt-fondo));
-  --nt-indigo: var(--marca-base);
-  --nt-indigo-2: var(--marca-primario);
-  --nt-noche: color-mix(in oklab, var(--marca-base) 70%, black);
-  --nt-marfil: color-mix(in oklab, var(--marca-base) 4%, var(--nt-k-fondo));
-  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--marca-primario));
+  /* Texto sobre el acento y acento como texto: ya corregidos por el
+     servidor (temas.paleta_legible, templates/_paleta_legible.html). */
+  --nt-tinta-acento: var(--marca-tinta-acento, var(--marca-base-tinta, var(--marca-base)));
+  --nt-acento-txt: var(--marca-acento-txt, var(--marca-acento));
+  --nt-fondo: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 5%, var(--nt-k-fondo));
+  --nt-hoja: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 5%, var(--nt-k-hoja));
+  --nt-hoja-2: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 5%, var(--nt-k-hoja-2));
+  --nt-carta: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 3%, var(--nt-k-carta));
+  --nt-linea: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 8%, var(--nt-k-linea));
+  --nt-linea-2: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 10%, var(--nt-k-linea-2));
+  --nt-tinta: var(--marca-base-tinta, var(--marca-base));
+  --nt-tinta-1: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 88%, var(--nt-fondo));
+  --nt-tinta-2: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 80%, var(--nt-fondo));
+  --nt-tinta-3: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 72%, var(--nt-fondo));
+  --nt-indigo: var(--marca-base-tinta, var(--marca-base));
+  --nt-indigo-2: var(--marca-primario-relleno, var(--marca-primario));
+  --nt-noche: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 70%, black);
+  --nt-marfil: color-mix(in oklab, var(--marca-base-tinta, var(--marca-base)) 4%, var(--nt-k-fondo));
+  --nt-marfil-2: color-mix(in oklab, var(--nt-marfil) 82%, var(--marca-primario-relleno, var(--marca-primario)));
   --nt-coral: var(--marca-acento);
   --nt-coral-suave: color-mix(in oklab, var(--marca-acento) 24%, var(--nt-carta));
   --nt-coral-tinta: var(--nt-tinta-acento);
   --nt-coral-osc: var(--nt-acento-txt);
   --nt-resaltador: color-mix(in oklab, var(--marca-acento) 45%, var(--nt-carta));
-}
-@supports (color: oklch(from red l c h)) {
-  html[data-tema="noticiero"][data-paleta="sindicato"] {
-    --nt-tinta-acento: oklch(from var(--marca-acento) clamp(0.12, (0.57 - l) * 1000, 1) 0 h);
-    --nt-acento-txt: oklch(from var(--marca-acento) max(l, 0.8) c h);
-  }
 }
 
 /* ---------- Página: todo sobre papel ---------- */

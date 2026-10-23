@@ -1,0 +1,16 @@
+{#- Los colores con los que los modelos de diseño escriben sobre (o con) la
+    marca del sindicato, ya corregidos para que se lean (PLAN_TEMAS.md, D4 y
+    bloque 7). Los calcula temas.paleta_legible, una sola implementación: la
+    misma que la prueba de lectura de plataforma y de Apariencia. Uso, dentro
+    de un bloque de variables CSS:
+      {% from "_paleta_legible.html" import variables_legibles %}
+      {{ variables_legibles('marca', base, primario, acento, apoyo) }} -#}
+{%- macro variables_legibles(prefijo, base, primario, acento, apoyo) -%}
+{%- set L = paleta_legible(base, primario, acento, apoyo) -%}
+--{{ prefijo }}-tinta-acento: {{ L.tinta_acento }};
+    --{{ prefijo }}-acento-txt: {{ L.acento_txt }};
+    --{{ prefijo }}-acento-oscuro: {{ L.acento_oscuro }};
+    --{{ prefijo }}-primario-relleno: {{ L.primario_relleno }};
+    --{{ prefijo }}-base-relleno: {{ L.base_relleno }};
+    --{{ prefijo }}-base-tinta: {{ L.base_tinta }};
+{%- endmacro %}

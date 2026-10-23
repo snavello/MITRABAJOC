@@ -93,11 +93,11 @@ html[data-tema="laguna"] {
    --gremio-tinta-acento (blanco o la base; los calcula la plantilla). */
 html[data-tema="laguna"][data-paleta="sindicato"] {
   --lg-azul: var(--gremio-base);
-  --lg-azul2: color-mix(in oklab, var(--gremio-base) 45%, var(--gremio-primario));
+  --lg-azul2: color-mix(in oklab, var(--gremio-base) 45%, var(--gremio-primario-relleno, var(--gremio-primario)));
   --lg-noche: color-mix(in oklab, var(--gremio-base) 78%, black);
-  --lg-turq: var(--gremio-primario);
-  --lg-turq-h: color-mix(in oklab, var(--gremio-primario) 84%, black);
-  --lg-turq-osc: color-mix(in oklab, var(--gremio-primario) 80%, black);
+  --lg-turq: var(--gremio-primario-relleno, var(--gremio-primario));
+  --lg-turq-h: color-mix(in oklab, var(--gremio-primario-relleno, var(--gremio-primario)) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--gremio-primario-relleno, var(--gremio-primario)) 80%, black);
   --lg-lag: var(--gremio-apoyo);
   --lg-agua: color-mix(in oklab, var(--gremio-apoyo) 45%, white);
   --lg-agua-m: color-mix(in oklab, var(--gremio-apoyo) 11%, white);

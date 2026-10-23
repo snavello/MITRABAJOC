@@ -72,10 +72,10 @@ html[data-tema="laguna"] {
    dependen de qué tan oscuro es el acento de cada gremio. */
 html[data-tema="laguna"][data-paleta="sindicato"] {
   --lg-azul: var(--marca-base);
-  --lg-azul2: color-mix(in oklab, var(--marca-primario) 70%, var(--marca-base));
-  --lg-turq: var(--marca-primario);
-  --lg-turq-h: color-mix(in oklab, var(--marca-primario) 82%, black);
-  --lg-turq-osc: color-mix(in oklab, var(--marca-primario) 75%, var(--marca-base));
+  --lg-azul2: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 70%, var(--marca-base));
+  --lg-turq: var(--marca-primario-relleno, var(--marca-primario));
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 82%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 75%, var(--marca-base));
   --lg-lag: var(--marca-apoyo, var(--marca-secundario));
   --lg-agua: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 50%, white);
   --lg-agua-f: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 14%, white);

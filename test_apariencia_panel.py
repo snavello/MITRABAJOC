@@ -236,7 +236,7 @@ def test_prueba_de_lectura_con_los_tres_gremios():
     assert [a["clave"] for a in gastro] == ["acento_sobre_base"]
     assert "muy oscuro" in gastro[0]["aviso"] and gastro[0]["contraste"] < gastro[0]["minimo"]
     for a in uom + bancaria + gastro:
-        assert set(a) == {"clave", "combinacion", "contraste", "minimo", "aviso"}
+        assert set(a) == {"clave", "combinacion", "contraste", "minimo", "aviso", "original", "corregido"}
 
 
 def test_prueba_de_lectura_que_pasa_y_casos_borde():
