@@ -140,6 +140,62 @@
   .perfil-guardar-msg { text-align: center; font-size: 12px; color: var(--marca-primario); margin-top: 8px;
     min-height: 15px; }
 
+  /* ---- Apariencia (PLAN_TEMAS.md, bloque 3a) ----
+     Dos tarjetas-radio, una por modelo, con una miniatura hecha solo de CSS.
+     La elegida se marca con el color DEL MODELO (tinte de fondo, borde
+     completo y tilde), nunca con una barra o un corchete de color a un
+     costado (regla de SDN). Los colores de cada miniatura son los del
+     modelo, no la marca del sindicato: muestran cómo se ve el modelo. */
+  .ap-sec { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--linea); }
+  .ap-sec h4 { margin: 0 0 4px; font-family: var(--fuente-display); font-size: 17px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--marca-primario); }
+  .ap-bajada { font-size: 12.5px; color: var(--gris); line-height: 1.5; margin: 0 0 12px; }
+  .ap-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ap-grupo { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .ap-ops { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ap-op { --ap-color: #0f8f8a; --ap-tinte: #e6f6f4;
+    position: relative; display: flex; flex-direction: column; gap: 8px; cursor: pointer;
+    border: 1.5px solid var(--linea); border-radius: 12px; padding: 8px 8px 11px; background: #fff;
+    transition: border-color var(--mov-rapido, 160ms) ease, background-color var(--mov-rapido, 160ms) ease; }
+  .ap-op[data-tema="noticiero"] { --ap-color: #2b2f7a; --ap-tinte: #eeeef8; }
+  .ap-op input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .ap-op:has(input:checked) { border-color: var(--ap-color); background: var(--ap-tinte); }
+  .ap-op:has(input:focus-visible) { outline: 2px solid var(--ap-color); outline-offset: 2px; }
+  .ap-tilde { position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ap-color); display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(.6); z-index: 1;
+    transition: opacity var(--mov-rapido, 160ms) ease, transform var(--mov-rapido, 160ms) ease; }
+  .ap-tilde svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3; fill: none; }
+  .ap-op:has(input:checked) .ap-tilde { opacity: 1; transform: scale(1); }
+  .ap-mini { height: 78px; border-radius: 8px; overflow: hidden; position: relative; }
+  /* Laguna: degradé azul → turquesa → verde agua, con una tarjeta clara. */
+  .ap-mini.laguna { background: linear-gradient(160deg, #1f5fbf 0%, #13a3b0 55%, #7fd9c4 100%); }
+  .ap-mini.laguna i { position: absolute; display: block; border-radius: 5px; }
+  .ap-mini.laguna .l1 { left: 9px; top: 10px; width: 44%; height: 7px; background: rgba(255,255,255,.85); }
+  .ap-mini.laguna .l2 { left: 9px; top: 21px; width: 28%; height: 5px; background: rgba(255,255,255,.55); }
+  .ap-mini.laguna .l3 { left: 9px; right: 9px; bottom: 9px; height: 32px; background: #fff;
+    box-shadow: 0 3px 8px rgba(10,40,70,.18); }
+  /* Noticiero: papel marfil, titular índigo grueso y una tira coral. */
+  .ap-mini.noticiero { background: #f7f1e3; border: 1px solid #e8dfca; }
+  .ap-mini.noticiero i { position: absolute; display: block; }
+  .ap-mini.noticiero .n1 { left: 0; right: 0; top: 0; height: 6px; background: #e8664a; }
+  .ap-mini.noticiero .n2 { left: 9px; top: 15px; width: 72%; height: 11px; background: #2b2f7a; border-radius: 1px; }
+  .ap-mini.noticiero .n3 { left: 9px; top: 31px; width: 50%; height: 11px; background: #2b2f7a; border-radius: 1px; }
+  .ap-mini.noticiero .n4 { left: 9px; right: 9px; top: 50px; height: 3px; background: #c9bfa8; }
+  .ap-mini.noticiero .n5 { left: 9px; right: 30%; top: 58px; height: 3px; background: #c9bfa8; }
+  .ap-mini.noticiero .n6 { left: 9px; right: 45%; top: 66px; height: 3px; background: #c9bfa8; }
+  .ap-nombre { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; padding: 0 3px;
+    font-family: var(--fuente-display); font-weight: 700; font-size: 16px; letter-spacing: .6px;
+    text-transform: uppercase; color: var(--tinta); }
+  .ap-defecto { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 10.5px;
+    font-weight: 700; letter-spacing: .4px; text-transform: none; color: var(--ap-color);
+    background: var(--ap-tinte); border-radius: 20px; padding: 1px 7px; }
+  .ap-op:has(input:checked) .ap-defecto { background: #fff; }
+  .ap-desc { font-size: 12px; color: var(--gris); line-height: 1.45; padding: 0 3px; }
+  .ap-paleta { font-size: 12px; color: var(--gris); background: var(--papel); border: 1px solid var(--linea);
+    border-radius: 10px; padding: 9px 12px; margin-top: 12px; line-height: 1.5; }
+  @media (max-width: 380px) { .ap-ops { grid-template-columns: 1fr; } }
+
   /* ---- Domicilio con mapa y bloque "Mi seccional" ----
      Móvil primero: el mapa chico son 220px de alto, que entra en una
      pantalla de teléfono sin empujar el botón de guardar fuera de vista. */
@@ -497,6 +553,42 @@
         <div class="perfil-guardar-msg" id="perfil-guardar-msg"></div>
       </form>
 
+      {# ---------- Apariencia (PLAN_TEMAS.md, bloque 3a) ----------
+         El modelo se guarda en la CUENTA (POST /api/apariencia), así que se
+         ve igual en cualquier teléfono. Elegir el mismo que el del sindicato
+         manda "" para volver a seguirlo. La paleta la decide el sindicato:
+         acá solo se informa. Los nombres y descripciones son los de
+         temas.TEMAS (test_apariencia_afiliado.py verifica que coincidan). #}
+      {% set ap = apariencia or {"tema": "laguna", "paleta": "colm3na", "elegido": "", "defecto": "laguna"} %}
+      <section class="ap-sec" id="ap-sec" aria-labelledby="ap-titulo">
+        <h4 id="ap-titulo">Apariencia</h4>
+        <p class="ap-bajada">Elegí cómo querés ver la app. Se guarda en tu cuenta: la ves igual en cualquier teléfono.</p>
+        <form id="form-apariencia" onsubmit="return guardarApariencia(event)" data-defecto="{{ ap.defecto }}">
+          <fieldset class="ap-grupo">
+            <legend class="ap-oculto">Modelo de diseño</legend>
+            <div class="ap-ops">
+              <label class="ap-op" data-tema="laguna">
+                <input type="radio" name="tema" value="laguna" {{ 'checked' if ap.tema == 'laguna' else '' }}>
+                <span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+                <span class="ap-mini laguna" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></span>
+                <span class="ap-nombre">Laguna <span class="ap-defecto">Por defecto</span></span>
+                <span class="ap-desc">Portada en verde agua, turquesa y azul; el resto liviano y blanco.</span>
+              </label>
+              <label class="ap-op" data-tema="noticiero">
+                <input type="radio" name="tema" value="noticiero" {{ 'checked' if ap.tema == 'noticiero' else '' }}>
+                <span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+                <span class="ap-mini noticiero" aria-hidden="true"><i class="n1"></i><i class="n2"></i><i class="n3"></i><i class="n4"></i><i class="n5"></i><i class="n6"></i></span>
+                <span class="ap-nombre">Noticiero</span>
+                <span class="ap-desc">Papel claro, tinta índigo y un solo color vivo, como un diario.</span>
+              </label>
+            </div>
+          </fieldset>
+          <p class="ap-paleta" id="ap-paleta">{% if ap.paleta == 'sindicato' %}Tu sindicato eligió mostrar la app con sus colores.{% else %}La app se ve con los colores de Colm3na.{% endif %}</p>
+          <button type="submit" class="perfil-guardar-btn" id="ap-guardar-btn">Guardar</button>
+          <div class="perfil-guardar-msg" id="ap-guardar-msg" role="status"></div>
+        </form>
+      </section>
+
       {# ---------- Mi seccional (solo lectura) ----------
          La seccional la asigna ÚNICAMENTE el sindicato: acá no hay botón ni
          enlace para pedir un cambio, y no existe ningún trámite para eso. #}
@@ -703,6 +795,33 @@ async function guardarPerfil(ev) {
     msg.textContent = e.message || 'No se pudo guardar. Probá de nuevo.';
   } finally {
     btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+  return false;
+}
+
+// Apariencia: guarda el modelo en la cuenta y recarga para que la página lo
+// tome. Si eligió el mismo que el del sindicato, manda "" para volver a
+// seguirlo (si el sindicato lo cambia después, la persona lo acompaña).
+async function guardarApariencia(ev) {
+  ev.preventDefault();
+  const form = document.getElementById('form-apariencia');
+  const btn = document.getElementById('ap-guardar-btn');
+  const msg = document.getElementById('ap-guardar-msg');
+  const marcado = form.querySelector('input[name="tema"]:checked');
+  if (!marcado) { msg.textContent = 'Elegí un modelo.'; return false; }
+  const fd = new FormData();
+  fd.append('tema', marcado.value === form.dataset.defecto ? '' : marcado.value);
+  btn.disabled = true; btn.textContent = 'Guardando…'; msg.textContent = '';
+  try {
+    const r = await fetch('/api/apariencia', { method: 'POST', body: fd });
+    let data = {};
+    try { data = await r.json(); } catch (_) {}
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'No se pudo guardar.');
+    msg.textContent = 'Guardado ✓';
+    location.reload();
+  } catch (e) {
+    msg.textContent = (e && e.message) || 'No se pudo guardar. Probá de nuevo.';
+    btn.disabled = false; btn.textContent = 'Guardar';
   }
   return false;
 }
