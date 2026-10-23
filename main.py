@@ -567,6 +567,17 @@ def servir_logo(sindicato_id: int):
         )
 
 
+def _url_foto_portada(sindicato_id, tema: str) -> dict | None:
+    """La foto de portada del modelo para una pantalla: {"url", "foco_x",
+    "foco_y", "descripcion"}, o None si la biblioteca de ese modelo todavía no
+    tiene ninguna para este sindicato (la portada se arma sin foto)."""
+    f = db.foto_portada_de(sindicato_id, tema) if sindicato_id else None
+    if not f:
+        return None
+    return {"url": f"/foto-tema/{f['id']}?v={f['v']}", "foco_x": f["foco_x"],
+            "foco_y": f["foco_y"], "descripcion": f["descripcion"]}
+
+
 @app.get("/foto-tema/{foto_id}")
 def servir_foto_tema(foto_id: int, request: Request):
     """Una foto de la biblioteca de un modelo (PLAN_TEMAS.md, D5). Las
@@ -1867,9 +1878,11 @@ def admin_inicio(request: Request):
             if a["id"] == usuario.area_id:
                 area_admin = a["nombre"]
                 break
+    apariencia = db.apariencia_de(sid, cuil_admin, rol="panel")
     return templates.TemplateResponse("admin_portada.html", {
         "permisos": permisos, "es_super_admin": es_super_admin,
-        "apariencia": db.apariencia_de(sid, cuil_admin, rol="panel"),
+        "apariencia": apariencia,
+        "foto_portada": _url_foto_portada(sid, apariencia["tema"]),
         # "Tu modelo" en Tu cuenta: cada operador elige el suyo
         # (POST /admin/apariencia/mia), sea cual sea su rol.
         "temas_catalogo": temas.TEMAS,
@@ -8118,9 +8131,11 @@ def app_portada(request: Request):
         credencial = db.credencial_de(cuil, sid_activo) or {}
         nombre_trab = db.nombre_trabajador(cuil, sid_activo)
         seccional_id = db.seccional_de_trabajador(cuil, sid_activo)
+        apariencia = db.apariencia_de(sid_activo, cuil)
         return templates.TemplateResponse("portada.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
-            "apariencia": db.apariencia_de(sid_activo, cuil),
+            "apariencia": apariencia,
+            "foto_portada": _url_foto_portada(sid_activo, apariencia["tema"]),
             "marca_plataforma": db.marca_plataforma(),
             "cuil": cuil, "nombre_trab": nombre_trab,
             "primer_nombre": (nombre_trab or "").split(" ")[0] or "Trabajador",
