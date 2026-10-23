@@ -849,3 +849,12 @@ html[data-tema="noticiero"] .acerca-pie button {
   }
   html[data-tema="noticiero"] button:active { transform: none; }
 }
+
+/* ---------- Errores (SDN, 2026-10-23): nada de cartel rosa ----------
+   Como una fe de erratas: el papel de la página, una regla roja arriba y
+   el ícono de alerta; el texto en tinta. */
+html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) { background: var(--nt-carta); color: var(--nt-tinta);
+  border: 0; border-top: 3px solid var(--nt-mal); border-radius: 2px; padding-left: 46px;
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--nt-mal); left: 16px; top: 14px; }
+html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--nt-mal); }

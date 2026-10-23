@@ -692,3 +692,12 @@ html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]) {
 html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) { background: var(--lg-azul); border-color: var(--lg-azul); color: #fff; font-weight: 700; }
 html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) input { accent-color: #fff; }
 html[data-tema="laguna"] .wrap td { vertical-align: top; }
+
+/* ---------- Errores (SDN, 2026-10-23): nada de cartel rosa ----------
+   La tarjeta blanca de siempre, un filo rojo fino y el ícono de alerta en
+   rojo; el texto en tinta y lo destacado en el rojo oscuro. */
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) { background: #fff; color: var(--lg-tinta);
+  border: 0; border-radius: 10px; padding-left: 46px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--lg-mal); left: 16px; }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--lg-mal-t); }

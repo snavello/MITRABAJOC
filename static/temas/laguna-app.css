@@ -240,12 +240,12 @@ html[data-tema="laguna"] .archivo-nombre { font-size: 12.5px; color: var(--lg-gr
 /* ---------- carteles ---------- */
 html[data-tema="laguna"] .banner { border-radius: 6px; padding: 13px 14px; font-size: 13.5px; font-weight: 500; line-height: 1.5; }
 html[data-tema="laguna"] .banner.ok { background: var(--lg-ok-f); color: var(--lg-ok-t); }
-html[data-tema="laguna"] .banner.mal { background: var(--lg-mal-f); color: var(--lg-mal-t); }
 html[data-tema="laguna"] .cod-error { font-family: var(--lg-mono); font-size: 11.5px; }
 /* .disc es una nota con su color en un filo a la izquierda (inline): rojo
    por defecto, ámbar para la base aproximada, verde para "Enviar a mi
    sindicato". En Laguna el color va de relleno y el filo se va. */
-html[data-tema="laguna"] .disc { border-left: 0; border-radius: 6px; background: var(--lg-mal-f); color: var(--lg-mal-t); }
+html[data-tema="laguna"] .disc { border-left: 0; border-radius: 10px; background: #fff; color: var(--lg-tinta);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent); }
 html[data-tema="laguna"] .disc[style*="#d9a441"] { background: var(--lg-amb-f); color: var(--lg-amb-t); }
 html[data-tema="laguna"] .disc[style*="--agua"] { background: var(--lg-ok-f); color: var(--lg-ok-t); }
 html[data-tema="laguna"] .rc-hoja > .disc { margin: 12px; }
@@ -433,7 +433,7 @@ html[data-tema="laguna"] .toggle button.activo { background: var(--lg-turq); col
 html[data-tema="laguna"] .rc-hoja > .rc-veredicto { margin: 12px; }
 html[data-tema="laguna"] .rc-veredicto { border: 0; border-radius: 10px; padding: 14px;
   background: var(--lg-claro); box-shadow: 0 0 0 1px var(--lg-linea); }
-html[data-tema="laguna"] .rc-veredicto.mal { background: var(--lg-mal-f); box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 26%, transparent); }
+html[data-tema="laguna"] .rc-veredicto.mal { background: #fff; box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
 html[data-tema="laguna"] .rc-veredicto.ok { background: var(--lg-ok-f); box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-ok) 26%, transparent); }
 html[data-tema="laguna"] .rc-vcab { align-items: center; gap: 10px; }
 html[data-tema="laguna"] .rc-vico { width: 30px; height: 30px; border-radius: 50%; }
@@ -829,7 +829,6 @@ html[data-tema="laguna"] .enq-rank { border-color: var(--lg-linea2); border-radi
 html[data-tema="laguna"] .enq-disc { background: var(--lg-agua-f2); border-left: 0; border-radius: 6px; color: var(--lg-gris);
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-turq) 18%, transparent); }
 html[data-tema="laguna"] .enq-pie { background: var(--lg-claro); border-top-color: var(--lg-linea); }
-html[data-tema="laguna"] .enq-error { background: var(--lg-mal-f); color: var(--lg-mal-t); }
 html[data-tema="laguna"] .enq-hecha { color: var(--lg-ok); }
 html[data-tema="laguna"] .enq-chip.abierta { background: var(--lg-ok-f); color: var(--lg-ok); }
 
@@ -912,3 +911,12 @@ html[data-tema="laguna"] #pwa-banner #pwa-btn-cerrar { color: var(--lg-gris) !im
    fila de Inicio/Salir, a la izquierda, para que no tape la tira. */
 html[data-tema="laguna"] #distintivo-entorno { bottom: calc(126px + env(safe-area-inset-bottom)) !important; left: 14px !important; }
 html[data-tema="laguna"] #tram-det-contenido a { color: var(--lg-turq-osc); text-decoration: none; border-bottom: 1px solid var(--lg-lag); }
+
+/* ---------- Errores (SDN, 2026-10-23): nada de cartel rosa ----------
+   La tarjeta blanca de siempre, un filo rojo fino y el ícono de alerta en
+   rojo; el texto en tinta y lo destacado en el rojo oscuro. */
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) { background: #fff; color: var(--lg-tinta);
+  border: 0; border-radius: 10px; padding-left: 46px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--lg-mal); left: 16px; }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--lg-mal-t); }

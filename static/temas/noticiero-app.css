@@ -294,14 +294,13 @@ html[data-tema="noticiero"] .archivo-nombre { font-family: var(--nt-f-mono); fon
 html[data-tema="noticiero"] .banner { border-radius: 8px; padding: 12px 13px; font-size: 13.5px; font-weight: 500;
   line-height: 1.45; color: var(--nt-tinta); }
 html[data-tema="noticiero"] .banner.ok { background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-ok) 38%, transparent); }
-html[data-tema="noticiero"] .banner.mal { background: var(--nt-mal-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
 html[data-tema="noticiero"] .cod-error { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); opacity: 1; }
 /* .disc es una nota con su color en un filo a la izquierda (inline): rojo
    por defecto, ámbar para la base aproximada, verde para "Enviar a mi
    sindicato". Acá el color va de relleno con el borde entero y el filo se va. */
-html[data-tema="noticiero"] .disc { border-left: 0 !important; border-radius: 8px; color: var(--nt-tinta);
-  background: var(--nt-mal-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
-html[data-tema="noticiero"] .disc[style*="#d9a441"] { background: var(--nt-amb-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-amb) 38%, transparent); }
+html[data-tema="noticiero"] .disc { border-left: 0 !important; border-radius: 2px; color: var(--nt-tinta);
+  background: var(--nt-carta); border-top: 3px solid var(--nt-mal); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .disc[style*="#d9a441"] { border-top-color: var(--nt-amb); }
 html[data-tema="noticiero"] .disc[style*="--agua"] { background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-ok) 38%, transparent); }
 html[data-tema="noticiero"] .rc-hoja > .disc { margin: 12px 14px; }
 html[data-tema="noticiero"] .disc .btn.sec { margin-top: 0; background: var(--nt-carta); }
@@ -512,7 +511,7 @@ html[data-tema="noticiero"] .toggle button.activo { background: var(--nt-indigo)
 html[data-tema="noticiero"] .rc-hoja > .rc-veredicto { margin: 14px; }
 html[data-tema="noticiero"] .rc-veredicto { border: 0; border-radius: 10px; padding: 14px 13px;
   background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
-html[data-tema="noticiero"] .rc-veredicto.mal { background: var(--nt-mal-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
+html[data-tema="noticiero"] .rc-veredicto.mal { background: var(--nt-carta); border-top: 3px solid var(--nt-mal); border-radius: 2px; box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
 html[data-tema="noticiero"] .rc-veredicto.ok { background: var(--nt-ok-fondo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-ok) 38%, transparent); }
 html[data-tema="noticiero"] .rc-vcab { align-items: center; gap: 10px; }
 html[data-tema="noticiero"] .rc-vico { width: 28px; height: 28px; border-radius: 50%; }
@@ -998,8 +997,6 @@ html[data-tema="noticiero"] .enq-rank-res .pos { background: var(--nt-indigo); c
 html[data-tema="noticiero"] .enq-disc { border-left: 0; border-radius: 8px; background: color-mix(in oklab, var(--nt-indigo) 5%, var(--nt-hoja-2));
   color: var(--nt-tinta-1); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-indigo) 22%, transparent); }
 html[data-tema="noticiero"] .enq-pie { background: var(--nt-hoja-2); border-top-color: var(--nt-linea); }
-html[data-tema="noticiero"] .enq-error { border-radius: 8px; background: var(--nt-mal-fondo); color: var(--nt-tinta);
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-mal) 38%, transparent); }
 html[data-tema="noticiero"] .enq-hecha { color: var(--nt-ok); }
 html[data-tema="noticiero"] .enq-revision dd { color: var(--nt-tinta-1); }
 html[data-tema="noticiero"] .enq-barra .via { border-radius: 0; background: var(--nt-linea); }
@@ -1091,3 +1088,12 @@ html[data-tema="noticiero"] #pwa-banner #pwa-btn-cerrar { color: var(--nt-tinta-
 /* El distintivo de entorno (_entorno.html, estilos en línea): arriba de la
    fila de Inicio/Salir, a la izquierda, para que no tape la tira. */
 html[data-tema="noticiero"] #distintivo-entorno { bottom: calc(130px + env(safe-area-inset-bottom)) !important; left: 14px !important; }
+
+/* ---------- Errores (SDN, 2026-10-23): nada de cartel rosa ----------
+   Como una fe de erratas: el papel de la página, una regla roja arriba y
+   el ícono de alerta; el texto en tinta. */
+html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) { background: var(--nt-carta); color: var(--nt-tinta);
+  border: 0; border-top: 3px solid var(--nt-mal); border-radius: 2px; padding-left: 46px;
+  box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--nt-mal); left: 16px; top: 14px; }
+html[data-tema="noticiero"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--nt-mal); }
