@@ -145,7 +145,7 @@ html[data-tema="laguna"] .marca-nombre { color: var(--lg-tinta); font-family: va
   border-right-color: var(--lg-turq); }
 /* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
    existe; si no, queda la de siempre). */
-html[data-tema="laguna"] .marca-colmena { height: 24px; max-width: 140px; content: var(--logo-colmena-claro, normal); }
+html[data-tema="laguna"] .marca-colmena { height: 30px; max-width: 150px; content: var(--logo-colmena-claro, normal); }
 @media (max-width: 760px) {
   html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="laguna"] .marca-colmena { height: 19px; }
@@ -878,18 +878,17 @@ html[data-tema="laguna"] #pwa-banner {
 html[data-tema="laguna"] #pwa-banner #pwa-btn-instalar { background: var(--lg-turq) !important; color: #fff !important; border-radius: 999px !important; }
 html[data-tema="laguna"] #pwa-banner #pwa-btn-cerrar { color: var(--lg-gris) !important; opacity: 1 !important; }
 
-/* escritorio: una columna de lectura (680 px, no la del teléfono estirada a
-   la pantalla); el encabezado sobre la misma grilla de 1320 px que la
-   portada, así el logo no salta al pasar de una a otra. La tira se agrupa al
-   centro y la pastilla de Inicio/Salir va afuera de la columna, a la derecha */
+/* escritorio: la columna sigue siendo la del teléfono (SDN, 2026-10-23: la
+   de 680 px con el encabezado en la grilla de la portada se veía peor
+   distribuida); la tira se agrupa al centro y la pastilla de Inicio/Salir va
+   afuera de la columna, a la derecha */
 @media (min-width: 761px) {
   html[data-tema="laguna"] body { background: #fff; }
-  html[data-tema="laguna"] .cont { max-width: 680px; }
-  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 340px)); }
-  html[data-tema="laguna"] .marca-barra { padding-inline: max(26px, calc(50% - 634px)); }
+  html[data-tema="laguna"] .cont { max-width: 520px; }
+  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 260px)); }
   html[data-tema="laguna"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 96px)); justify-content: center; gap: 4px; }
   html[data-tema="laguna"] .tabbar button { font-size: 11px; }
-  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 560px)); }
+  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 470px)); }
 }
 
 /* ---------- movimiento ---------- */

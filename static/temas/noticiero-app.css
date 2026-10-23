@@ -165,7 +165,7 @@ html[data-tema="noticiero"] .marca-nombre {
 }
 /* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
    existe; si no, queda la de siempre). */
-html[data-tema="noticiero"] .marca-colmena { height: 24px; max-width: 140px; content: var(--logo-colmena-claro, normal); }
+html[data-tema="noticiero"] .marca-colmena { height: 30px; max-width: 150px; content: var(--logo-colmena-claro, normal); }
 @media (max-width: 760px) {
   html[data-tema="noticiero"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="noticiero"] .marca-colmena { height: 19px; }
@@ -1062,17 +1062,15 @@ html[data-tema="noticiero"] #pwa-banner #pwa-btn-instalar { background: var(--nt
   border-radius: 2px !important; font-weight: 700 !important; letter-spacing: 1px; text-transform: uppercase; font-size: 12px !important; }
 html[data-tema="noticiero"] #pwa-banner #pwa-btn-cerrar { color: var(--nt-tinta-2) !important; opacity: 1 !important; }
 
-/* escritorio: una columna de lectura (680 px, no la del teléfono estirada a
-   la pantalla); el encabezado sobre la grilla de 1320 px de la portada, así
-   el logo no salta al pasar de una a otra. La tira se agrupa al centro y la
-   pastilla de Inicio/Salir va afuera de la columna, a la derecha */
+/* escritorio: la columna sigue siendo la del teléfono, un poco más ancha
+   (SDN, 2026-10-23: la de 680 px se veía peor distribuida); la tira se
+   agrupa al centro y la pastilla de Inicio/Salir va afuera de la columna */
 @media (min-width: 761px) {
-  html[data-tema="noticiero"] .cont { max-width: 680px; }
-  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - 340px)); }
-  html[data-tema="noticiero"] .marca-barra { padding-inline: max(26px, calc(50% - 634px)); }
+  html[data-tema="noticiero"] .cont { max-width: 540px; }
+  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - 270px)); }
   html[data-tema="noticiero"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 96px)); justify-content: center; gap: 4px; }
   html[data-tema="noticiero"] .tabbar button { font-size: 12.5px; }
-  html[data-tema="noticiero"] .flota-sal { right: max(14px, calc(50% - 560px)); }
+  html[data-tema="noticiero"] .flota-sal { right: max(14px, calc(50% - 480px)); }
 }
 
 /* ---------- movimiento ---------- */

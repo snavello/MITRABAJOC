@@ -118,8 +118,8 @@ html[data-tema="laguna"] .marca-nombre {
 /* El logo de Colm3na para fondo oscuro se cambia por el de fondo claro. */
 html[data-tema="laguna"] .marca-colmena { display: none; }
 html[data-tema="laguna"] .enc-c3-claro {
-  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 12px);
-  height: 24px; width: auto; max-width: 140px; object-fit: contain; z-index: 3;
+  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 15px);
+  height: 30px; width: auto; max-width: 150px; object-fit: contain; z-index: 3;
 }
 
 /* ============================================================

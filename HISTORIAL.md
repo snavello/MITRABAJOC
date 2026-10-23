@@ -8681,3 +8681,17 @@ no tenía título y mostraba una línea suelta. En Noticiero, la tarjeta «Área
 Usuarios» se partía en cuatro renglones por el rótulo «Solo Super Admin» (se
 sacó: solo la ve el Super Admin), y el Colm3na de la portada se invertía con
 un filtro y quedaba marrón: ahora es la versión para fondo claro.
+
+**Segunda vuelta, la misma noche.** Pruebas daba 502, y 500 al cambiar la
+paleta: el recorte de logos decodificaba el de Colm3na (8854×2559, 90 MB en
+RGBA) con varias copias y pasaba los 512 MB del servicio. Se reprodujo contra
+Pruebas: después de pedir `/logo-plataforma`, `/healthz` daba 502. Ahora
+`logos.py` lee el tamaño de la cabecera y no toca lo que pase de 2,5 millones
+de píxeles, y recorta de a uno por proceso. SDN además pidió: la foto de
+perfil del panel, grande, en el hueco a la derecha del Panel Sindical
+(Laguna, 220 px con foto y 132 sin); los grupos de accesos sin título ni
+subrayado (sumaban alto y no iban con el diseño; el título queda para el
+lector de pantalla); la app del afiliado de vuelta a la columna del teléfono
+(la de 680 px se veía peor distribuida), y Colm3na a 30 px en escritorio. La
+foto de portada que "no se veía" en La Bancaria no era del diseño: la
+biblioteca de Pruebas no tiene ninguna foto disponible para ese sindicato.

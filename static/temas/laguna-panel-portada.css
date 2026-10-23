@@ -390,9 +390,7 @@ html[data-tema="laguna"] body.claro .fila-hola button:focus-visible { outline-co
   html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: none; }
 }
 
-/* ---------- Los grupos de accesos (SDN, 2026-10-23) ---------- */
-html[data-tema="laguna"] .pt-grupo-tit { display: inline-block; padding-bottom: 4px; font-family: var(--lg-fuente); font-size: 12.5px;
-  font-weight: 700; letter-spacing: .2em; color: var(--lg-azul); box-shadow: inset 0 -2px 0 var(--lg-lag); }
+/* ---------- Los grupos de accesos (SDN, 2026-10-23): sin título a la vista ---------- */
 
 /* ---------- Sin logo: el nombre del gremio es el logotipo ----------
    Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
@@ -404,4 +402,28 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
   html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
     border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
+}
+
+/* ---------- Escritorio: la foto de perfil, grande, al lado del Panel Sindical ----------
+   SDN, 2026-10-23: a la derecha de la tarjeta quedaba un hueco enorme y la
+   foto de perfil era un círculo de 44 px. En escritorio el saludo y la
+   tarjeta van en la columna izquierda y el círculo de perfil ocupa la
+   derecha (la fila del saludo se disuelve en la grilla). */
+@media (min-width: 1040px) {
+  html[data-tema="laguna"] .pt-heroe > .pad {
+    display: grid; grid-template-columns: minmax(0, 740px) minmax(0, 1fr); grid-template-rows: auto 1fr;
+    column-gap: 40px;
+  }
+  html[data-tema="laguna"] .fila-hola { display: contents; }
+  html[data-tema="laguna"] .fila-hola > div { grid-column: 1; grid-row: 1; margin: 20px 0 28px;
+    animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards; animation-delay: var(--mov-escalon); }
+  html[data-tema="laguna"] .pt-hero { grid-column: 1; grid-row: 2; align-self: end; }
+  html[data-tema="laguna"] .circulo-acento { grid-column: 2; grid-row: 1 / span 2; justify-self: center; align-self: center;
+    width: 132px; height: 132px; border-width: 3px; box-shadow: 0 0 0 10px color-mix(in srgb, var(--lg-fluor-txt) 14%, transparent);
+    animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards; animation-delay: calc(var(--mov-escalon) * 2); }
+  html[data-tema="laguna"] .circulo-acento:has(img) { width: 220px; height: 220px; }
+  html[data-tema="laguna"] .circulo-acento svg { width: 48px; height: 48px; }
+}
+@media (min-width: 1040px) and (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .fila-hola > div, html[data-tema="laguna"] .circulo-acento { animation: none; }
 }

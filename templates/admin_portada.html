@@ -75,8 +75,12 @@
   .pt-salir:hover { opacity: .88; }
   /* Los accesos en cuatro grupos con título: cuatro columnas en escritorio
      para que cada grupo quede en una fila. */
-  .pt-grupo + .pt-grupo { margin-top: 30px; }
-  .pt-grupo-tit { margin: 0 0 12px; font-size: 12.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  /* Los grupos se separan con aire, sin título a la vista (SDN, 2026-10-23:
+     un título subrayado por grupo sumaba mucho alto y no iba con el diseño).
+     El título queda para el lector de pantalla. */
+  .pt-grupo + .pt-grupo { margin-top: 22px; }
+  .pt-grupo-tit { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
   @media (min-width: 1040px) { .pt-grupo .pt-filas.pt-tres { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 </style>
 {# La hoja del modelo (static/temas/<modelo>-panel-portada.css), después de
