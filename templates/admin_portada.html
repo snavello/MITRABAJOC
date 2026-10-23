@@ -40,6 +40,16 @@
     font-size: 9px; font-weight: 800; letter-spacing: .5px; }
 
   .hola { margin-top: 2px; }
+
+  /* Tu modelo: la opción elegida se tiñe entera (D6), sin barra al costado. */
+  .tm-bloque { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--linea); }
+  .tm-t { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700;
+    color: var(--gris); margin-bottom: 8px; }
+  .tm-ops { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tm-op { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--linea); background: #fff; color: var(--tinta); }
+  .tm-op.activa { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+  .tm-nota { font-size: 12px; color: var(--gris); margin-top: 8px; }
 </style>
 </head>
 <body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
@@ -219,6 +229,20 @@
     <div class="modal-fila"><span class="k">Seccional</span><span class="v">{{ seccional_admin or 'Todas' }}</span></div>
     {% if area_admin %}<div class="modal-fila"><span class="k">Área</span><span class="v">{{ area_admin }}</span></div>{% endif %}
     <div class="modal-fila"><span class="k">Sindicato</span><span class="v">{{ sindicato }}</span></div>
+    {% if apariencia and temas_catalogo and cuil_admin %}
+    {# Tu modelo (PLAN_TEMAS.md, D2): lo elige cada operador para sí, en
+       todos los sindicatos donde trabaja; vacío = el del sindicato. #}
+    <div class="tm-bloque">
+      <div class="tm-t">Tu modelo</div>
+      <div class="tm-ops" role="radiogroup" aria-label="Tu modelo">
+        <button type="button" role="radio" class="tm-op{% if not apariencia.elegido %} activa{% endif %}" aria-checked="{{ 'true' if not apariencia.elegido else 'false' }}" onclick="elegirMiModelo('')">El del sindicato ({{ temas_catalogo[apariencia.defecto].nombre }})</button>
+        {% for clave, t in temas_catalogo.items() %}
+        <button type="button" role="radio" class="tm-op{% if apariencia.elegido == clave %} activa{% endif %}" aria-checked="{{ 'true' if apariencia.elegido == clave else 'false' }}" onclick="elegirMiModelo('{{ clave }}')">{{ t.nombre }}</button>
+        {% endfor %}
+      </div>
+      <div class="tm-nota" id="tm-nota">Vale para vos, en cualquier aparato.</div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -261,6 +285,15 @@ function abrirPerfil() { document.getElementById('overlay-perfil').classList.add
 function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
 function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
 function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
+async function elegirMiModelo(tema) {
+  const nota = document.getElementById('tm-nota');
+  const datos = new FormData(); datos.append('tema', tema);
+  try {
+    const r = await fetch('/admin/apariencia/mia', { method: 'POST', body: datos });
+    if (!r.ok) throw new Error();
+    location.reload();
+  } catch (e) { if (nota) nota.textContent = 'No se pudo guardar. Probá de nuevo en un momento.'; }
+}
 </script>
 
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>

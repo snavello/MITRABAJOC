@@ -80,6 +80,7 @@ FUNCIONALIDADES = [
     ("Sindicato", "Listas", r"^/admin/listas?(/|$)", "admin.html"),
     ("Sindicato", "Áreas y Usuarios", r"^/admin/(area|usuario)", "admin.html"),
     ("Sindicato", "Encuestas", r"^/admin/encuesta", "admin.html"),
+    ("Sindicato", "Apariencia", r"^/admin/apariencia", "admin.html"),
     ("Sindicato", "Marca del sindicato", r"^/(logo|firma)/", None),
 
     ("Plataforma", "Cambiar clave (transitoria, sacar antes de producción)", r"^/plataforma/reset-clave", "plataforma.html"),

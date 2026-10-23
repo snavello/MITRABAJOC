@@ -1227,8 +1227,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     y `Sindicato.fotos_portada` (migración `e5b9f3a7c2d4`), rutas de
     plataforma `/plataforma/fotos-tema` (listar, subir, editar, borrar) y
     `GET /foto-tema/{id}` (pública si está publicada, como el logo). Tests:
-    `test_fotos_tema.py`. Siguen: pantallas de Apariencia y los dos modelos
-    en cada pantalla.
+    `test_fotos_tema.py`. **Bloque 3 HECHO**, las pantallas de Apariencia:
+    en "Tu perfil" del afiliado (elige Laguna o Noticiero; la paleta se lee),
+    la pestaña **Apariencia** del panel, solo Super Admin (`POST
+    /admin/apariencia`, clasificada como `SECCION_SUPER_ADMIN`: modelo por
+    defecto de afiliados y operadores, paleta con la **prueba de lectura**
+    `temas.prueba_de_lectura` —contraste WCAG de las combinaciones que usan
+    los modelos; avisa y el modelo corrige el tono, no bloquea— y foto de
+    portada por modelo), "Tu modelo" en "Tu cuenta" de la portada del panel
+    para cualquier operador, y la pestaña **Fotos** de `/plataforma` (subir,
+    original → normalizada, punto de interés, publicar, para qué
+    sindicatos). Tests: `test_apariencia_afiliado.py`,
+    `test_apariencia_panel.py`, `test_biblioteca_fotos_pantalla.py`. Siguen:
+    los dos modelos en cada pantalla (bloques 4 a 7).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

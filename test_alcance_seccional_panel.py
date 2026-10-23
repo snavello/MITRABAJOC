@@ -124,6 +124,9 @@ ALCANCE_POR_PREFIJO = [
     ("/admin/tramite-tipo", "seccional"), ("/admin/tramite", "seccional"),
     ("/admin/tramites-nuevos-cantidad", "seccional"),
     ("/admin/usuario", "seccional"), ("/admin/area", "seccional"),
+    # Apariencia (PLAN_TEMAS.md): la del sindicato es del gremio entero y la
+    # cambia solo el general; la propia es de la persona.
+    ("/admin/apariencia/mia", "entrada"), ("/admin/apariencia", "sindicato"),
     ("/admin", "entrada"),
 ]
 
