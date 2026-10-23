@@ -156,14 +156,20 @@ html[data-tema="noticiero"] .marca-barra {
   box-shadow: 0 8px 18px -16px var(--nt-sombra);
   padding: 9px 16px; padding-top: calc(9px + env(safe-area-inset-top));
 }
-html[data-tema="noticiero"] .marca-logo { height: 46px; max-width: 120px; }
+/* Escritorio: gremio 64 px y Colm3na 24 px, como en las otras pantallas;
+   en el teléfono, 46 y 19. */
+html[data-tema="noticiero"] .marca-logo { height: 64px; max-width: 320px; }
 html[data-tema="noticiero"] .marca-nombre {
   color: var(--nt-tinta); font-family: var(--nt-f-tit); font-weight: 400; font-size: 21px;
   letter-spacing: .2px; text-transform: uppercase; border-right-color: var(--nt-coral);
 }
 /* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
    existe; si no, queda la de siempre). */
-html[data-tema="noticiero"] .marca-colmena { height: 19px; content: var(--logo-colmena-claro, normal); }
+html[data-tema="noticiero"] .marca-colmena { height: 24px; max-width: 140px; content: var(--logo-colmena-claro, normal); }
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .marca-logo { height: 46px; max-width: 192px; }
+  html[data-tema="noticiero"] .marca-colmena { height: 19px; }
+}
 
 /* La identidad: nombre a la izquierda, CUIL en condensada a la derecha. */
 html[data-tema="noticiero"] .ident { justify-content: space-between; align-items: baseline;

@@ -3932,10 +3932,11 @@ setInterval(() => {
 (function abrirDesdeHash() {
   let h = (location.hash || '').replace('#', '');
   if (h === 'cotizantes') h = 'reportes';   // pestaña unificada el 2026-09-24
-  if (h) {
-    const btn = document.querySelector('.tab-btn[data-panel="' + h + '"]');
-    if (btn) btn.click();
-  }
+  // Sin ancla (o con una que este usuario no tiene), la primera sección:
+  // con el riel lateral, entrar a /admin a secas dejaba la hoja en blanco.
+  const btn = (h && document.querySelector('.tab-btn[data-panel="' + h + '"]'))
+    || document.querySelector('.nav-strip .tab-btn[data-panel]');
+  if (btn) btn.click();
 })();
 
 // ---------- Sub-pestañas de Trabajadores ----------

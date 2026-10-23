@@ -331,18 +331,30 @@ html[data-tema="laguna"] .overlay-foto-grande { background: color-mix(in oklab, 
 /* ---------- Escritorio ---------- */
 @media (min-width: 900px) {
   html[data-tema="laguna"] .pt-gremio .marca-barra { padding: 16px 26px 10px; }
-  html[data-tema="laguna"] .pt-gremio-hola { padding: 22px 26px 150px; }
+  /* El saludo y un fundido corto hacia el cuerpo: el contenido empieza
+     arriba, sin una franja vacía en el medio. */
+  html[data-tema="laguna"] .pt-gremio-hola { padding: 14px 26px 56px; }
+  /* Con el encabezado más bajo, el velo sigue oscuro hasta pasar el saludo
+     y la bajada, y recién ahí se funde con el cuerpo. */
+  html[data-tema="laguna"] .pt-gremio::after {
+    background: linear-gradient(180deg,
+      color-mix(in oklab, var(--lg-azul) 97%, transparent) 0%,
+      color-mix(in oklab, var(--lg-azul) 92%, transparent) 64%,
+      color-mix(in oklab, color-mix(in oklab, var(--lg-azul2) 60%, var(--lg-turq)) 60%, transparent) 78%,
+      color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 82%, transparent) 92%,
+      var(--lg-agua-f) 100%); }
   html[data-tema="laguna"] .pt-gremio .hola { font-size: 40px; }
   html[data-tema="laguna"] .pt-gremio .pt-hola-baj { font-size: 14px; }
   html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 64px; height: 64px; }
   html[data-tema="laguna"] .pad.pt-cuerpo { padding: 0 26px; }
-  html[data-tema="laguna"] .pt-tapa-foto { height: auto; aspect-ratio: 16 / 9; max-height: 440px; }
+  html[data-tema="laguna"] .pt-tapa-foto { height: auto; aspect-ratio: 2 / 1; max-height: 340px; }
   html[data-tema="laguna"] .pt-tapa-t { font-size: 34px; }
   html[data-tema="laguna"] .pt-tapa-b { font-size: 15px; max-width: 62ch; }
   html[data-tema="laguna"] .pt-pie { padding-bottom: 26px; }
 }
 @media (min-width: 1040px) {
-  html[data-tema="laguna"] .pt-portada { column-gap: 48px; row-gap: 40px; }
+  /* Novedades y Tus cosas, 60/40: el riel de accesos tiene que leerse. */
+  html[data-tema="laguna"] .pt-dos.pt-portada { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: 48px; row-gap: 40px; }
   html[data-tema="laguna"] .car-sl { height: 320px; }
   /* En el riel, el botón de Mis recibos baja abajo del texto. */
   html[data-tema="laguna"] .pt-sec-tus .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }

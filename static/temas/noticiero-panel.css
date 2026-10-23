@@ -84,7 +84,7 @@ html[data-tema="noticiero"] {
   --nt-curva: var(--ease-salida, cubic-bezier(.33, 1, .68, 1));
   /* medidas del cromo */
   --nt-riel: 212px;
-  --nt-top: 79px;
+  --nt-top: 88px;
   /* Los tokens de la plantilla también toman el modelo: así todo lo que ya
      usaba --tinta, --linea, --gris o --papel pasa al papel y la tinta. */
   --tinta: var(--nt-tinta); --linea: var(--nt-linea); --gris: var(--nt-tinta-2); --papel: var(--nt-hoja-2);
@@ -149,7 +149,7 @@ html[data-tema="noticiero"] .marca-barra {
   box-shadow: inset 5px 0 0 var(--nt-coral), 0 10px 18px -16px var(--nt-sombra);
 }
 html[data-tema="noticiero"] .marca-barra::before { display: none; }
-html[data-tema="noticiero"] .marca-logo { height: 58px; max-width: 220px; }
+html[data-tema="noticiero"] .marca-logo { height: 64px; max-width: 320px; }
 /* Sin logo, el nombre del gremio es el logotipo: en Anton y en tinta, con
    el filete coral que ya tenía (igual que en la portada). */
 html[data-tema="noticiero"] .marca-nombre {
@@ -159,7 +159,7 @@ html[data-tema="noticiero"] .marca-nombre {
 /* Colm3na sobre papel: la versión para fondo claro (el parcial trae la de
    fondo oscuro, que en marfil no se lee). Solo cuando existen las dos. */
 html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] {
-  content: url("/logo-plataforma"); height: 22px;
+  content: url("/logo-plataforma"); height: 24px;
 }
 
 /* ============================================================
@@ -802,9 +802,9 @@ html[data-tema="noticiero"] .acerca-pie button {
 @media (max-width: 760px) {
   html[data-tema="noticiero"] { --nt-top: 64px; scroll-padding-top: 130px; }
   html[data-tema="noticiero"] .marca-barra { padding: 0 16px; }
-  html[data-tema="noticiero"] .marca-logo { height: 44px; max-width: 180px; }
+  html[data-tema="noticiero"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="noticiero"] .marca-nombre { font-size: 22px; }
-  html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] { height: 18px; }
+  html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] { height: 19px; }
   html[data-tema="noticiero"] .nav-strip {
     background: var(--nt-hoja); border-bottom: 1px solid var(--nt-linea-2); padding: 8px 12px; gap: 4px; counter-reset: nt-sec;
   }

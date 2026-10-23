@@ -55,7 +55,7 @@ html[data-tema="laguna"] {
   --lg-curva: var(--ease-salida, cubic-bezier(.22, .61, .36, 1));
   /* medidas del cromo */
   --lg-riel: 212px;
-  --lg-top: 78px;
+  --lg-top: 88px;
   /* Los tokens de la plantilla también toman el modelo: así todo lo que ya
      usaba --tinta, --linea, --gris o --papel se aliviana solo. */
   --tinta: var(--lg-tinta); --linea: var(--lg-linea); --gris: var(--lg-gris2); --papel: var(--lg-suave);
@@ -110,7 +110,7 @@ html[data-tema="laguna"] .marca-barra {
   box-shadow: inset 0 3px 0 var(--lg-turq); border-bottom: 1px solid var(--lg-linea);
 }
 html[data-tema="laguna"] .marca-barra::before { display: none; }
-html[data-tema="laguna"] .marca-logo { height: 54px; max-width: 280px; }
+html[data-tema="laguna"] .marca-logo { height: 64px; max-width: 320px; }
 html[data-tema="laguna"] .marca-nombre {
   font-family: var(--lg-fuente); font-size: 17px; font-weight: 700; letter-spacing: .01em;
   text-transform: none; color: var(--lg-tinta); border-right: 0; padding-right: 0;
@@ -118,8 +118,8 @@ html[data-tema="laguna"] .marca-nombre {
 /* El logo de Colm3na para fondo oscuro se cambia por el de fondo claro. */
 html[data-tema="laguna"] .marca-colmena { display: none; }
 html[data-tema="laguna"] .enc-c3-claro {
-  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 11px);
-  height: 22px; width: auto; max-width: 140px; object-fit: contain; z-index: 3;
+  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 12px);
+  height: 24px; width: auto; max-width: 140px; object-fit: contain; z-index: 3;
 }
 
 /* ============================================================
@@ -615,9 +615,9 @@ html[data-tema="laguna"] .ap-lectura.avisa { background: var(--lg-amb-f); color:
 @media (max-width: 760px) {
   html[data-tema="laguna"] { --lg-top: 62px; }
   html[data-tema="laguna"] .marca-barra { padding: 0 16px; }
-  html[data-tema="laguna"] .marca-logo { height: 42px; max-width: 180px; }
+  html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="laguna"] .marca-nombre { font-size: 15px; }
-  html[data-tema="laguna"] .enc-c3-claro { right: 16px; height: 18px; top: calc(var(--lg-top) / 2 - 9px); }
+  html[data-tema="laguna"] .enc-c3-claro { right: 16px; height: 19px; top: calc(var(--lg-top) / 2 - 9.5px); }
   html[data-tema="laguna"] .nav-strip {
     background: #fff; border-bottom: 1px solid var(--lg-linea); padding: 8px 12px; gap: 4px;
   }

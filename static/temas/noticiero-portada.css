@@ -469,22 +469,24 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
 
 /* ---------- Escritorio ---------- */
 @media (min-width: 900px) {
-  html[data-tema="noticiero"] .pt-gremio { min-height: 470px; }
-  html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 340px; }
+  /* La foto acompaña el saludo; no ocupa media pantalla antes del contenido. */
+  html[data-tema="noticiero"] .pt-gremio { min-height: 340px; }
+  html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 260px; }
   html[data-tema="noticiero"] .pt-gremio .marca-barra { padding: 12px 26px; }
   html[data-tema="noticiero"] .pt-gremio-hola { max-width: 1320px; padding: 0 26px 40px; }
   html[data-tema="noticiero"] .pt-gremio .hola { font-size: 80px; }
   html[data-tema="noticiero"] .pt-gremio .pt-hola-baj { font-size: 15px; }
   html[data-tema="noticiero"] .pt-gremio .circulo-acento { right: 26px; top: calc(92px + env(safe-area-inset-top)); width: 58px; height: 58px; }
   html[data-tema="noticiero"] .pad.pt-cuerpo { padding: 0 26px; }
-  html[data-tema="noticiero"] .pt-tapa-foto { height: auto; aspect-ratio: 16 / 9; max-height: 460px; margin: 0; }
+  html[data-tema="noticiero"] .pt-tapa-foto { height: auto; aspect-ratio: 2 / 1; max-height: 340px; margin: 0; }
   html[data-tema="noticiero"] .pt-tapa-t { font-size: 52px; }
   html[data-tema="noticiero"] .pt-tapa-b { font-size: 16px; max-width: 62ch; }
   html[data-tema="noticiero"] .car-sl { height: 260px; }
   html[data-tema="noticiero"] .car-flecha { top: 98px; }
 }
 @media (min-width: 1040px) {
-  html[data-tema="noticiero"] .pt-portada { grid-template-columns: minmax(0, 1fr) 380px; column-gap: 48px; row-gap: 40px; }
+  /* Novedades y Tus cosas, 60/40. */
+  html[data-tema="noticiero"] .pt-portada { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: 48px; row-gap: 40px; }
   /* En el riel el tablero sigue en dos columnas; el botón de Mis recibos baja. */
   html[data-tema="noticiero"] .pt-sec-tus .pt-filas { grid-template-columns: 1fr 1fr; }
   html[data-tema="noticiero"] .pt-sec-tus .pt-rec-cta { grid-column: 2 / -1; grid-row: auto; justify-self: start; margin-top: 9px; }
