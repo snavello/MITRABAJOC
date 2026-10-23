@@ -313,9 +313,12 @@ def test_accesos_de_siempre_mas_convenio_y_listas():
                   "convenio", "seccionales", "listas", "administradores"):
         assert f'href="/admin#{panel}"' in html, panel
     assert 'href="/admin/dashboard"' in html
-    # En el orden del panel: Convenio antes de Seccionales, Listas después.
-    assert html.index("/admin#empleadores") < html.index("/admin#convenio") \
-        < html.index("/admin#seccionales") < html.index("/admin#listas") < html.index("/admin#administradores")
+    # En cuatro grupos (SDN, 2026-10-23): Recibos, Afiliados, Comunicación y
+    # El gremio, en ese orden.
+    for grupo in ("Recibos", "Afiliados", "Comunicación", "El gremio"):
+        assert f">{grupo}</h2>" in html, grupo
+    assert html.index("/admin#reportes") < html.index("/admin#trabajadores") < html.index("/admin#listas") \
+        < html.index("/admin#noticias") < html.index("/admin#convenio") < html.index("/admin#administradores")
 
 
 def test_convenio_sigue_el_modulo():

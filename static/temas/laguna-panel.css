@@ -55,7 +55,7 @@ html[data-tema="laguna"] {
   --lg-curva: var(--ease-salida, cubic-bezier(.22, .61, .36, 1));
   /* medidas del cromo */
   --lg-riel: 212px;
-  --lg-top: 78px;
+  --lg-top: 88px;
   /* Los tokens de la plantilla también toman el modelo: así todo lo que ya
      usaba --tinta, --linea, --gris o --papel se aliviana solo. */
   --tinta: var(--lg-tinta); --linea: var(--lg-linea); --gris: var(--lg-gris2); --papel: var(--lg-suave);
@@ -110,7 +110,7 @@ html[data-tema="laguna"] .marca-barra {
   box-shadow: inset 0 3px 0 var(--lg-turq); border-bottom: 1px solid var(--lg-linea);
 }
 html[data-tema="laguna"] .marca-barra::before { display: none; }
-html[data-tema="laguna"] .marca-logo { height: 54px; max-width: 280px; }
+html[data-tema="laguna"] .marca-logo { height: 64px; max-width: 320px; }
 html[data-tema="laguna"] .marca-nombre {
   font-family: var(--lg-fuente); font-size: 17px; font-weight: 700; letter-spacing: .01em;
   text-transform: none; color: var(--lg-tinta); border-right: 0; padding-right: 0;
@@ -118,8 +118,8 @@ html[data-tema="laguna"] .marca-nombre {
 /* El logo de Colm3na para fondo oscuro se cambia por el de fondo claro. */
 html[data-tema="laguna"] .marca-colmena { display: none; }
 html[data-tema="laguna"] .enc-c3-claro {
-  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 11px);
-  height: 22px; width: auto; max-width: 140px; object-fit: contain; z-index: 3;
+  display: block; position: absolute; right: 28px; top: calc(var(--lg-top) / 2 - 12px);
+  height: 24px; width: auto; max-width: 140px; object-fit: contain; z-index: 3;
 }
 
 /* ============================================================
@@ -615,9 +615,9 @@ html[data-tema="laguna"] .ap-lectura.avisa { background: var(--lg-amb-f); color:
 @media (max-width: 760px) {
   html[data-tema="laguna"] { --lg-top: 62px; }
   html[data-tema="laguna"] .marca-barra { padding: 0 16px; }
-  html[data-tema="laguna"] .marca-logo { height: 42px; max-width: 180px; }
+  html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="laguna"] .marca-nombre { font-size: 15px; }
-  html[data-tema="laguna"] .enc-c3-claro { right: 16px; height: 18px; top: calc(var(--lg-top) / 2 - 9px); }
+  html[data-tema="laguna"] .enc-c3-claro { right: 16px; height: 19px; top: calc(var(--lg-top) / 2 - 9.5px); }
   html[data-tema="laguna"] .nav-strip {
     background: #fff; border-bottom: 1px solid var(--lg-linea); padding: 8px 12px; gap: 4px;
   }
@@ -692,3 +692,39 @@ html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]) {
 html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) { background: var(--lg-azul); border-color: var(--lg-azul); color: #fff; font-weight: 700; }
 html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) input { accent-color: #fff; }
 html[data-tema="laguna"] .wrap td { vertical-align: top; }
+
+/* ---------- Errores (SDN, 2026-10-23): nada de cartel rosa ----------
+   La tarjeta blanca de siempre, un filo rojo fino y el ícono de alerta en
+   rojo; el texto en tinta y lo destacado en el rojo oscuro. */
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) { background: #fff; color: var(--lg-tinta);
+  border: 0; border-radius: 10px; padding-left: 46px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error)::before { background: var(--lg-mal); left: 16px; }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal, .enq-error) :is(b, strong) { color: var(--lg-mal-t); }
+
+/* ============================================================
+   Con los colores del sindicato, la marca manda (SDN, 2026-10-23):
+   el encabezado y el riel en el color base del gremio y la sección
+   activa en su acento. Con los colores de Colm3na sigue blanco.
+   ============================================================ */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
+  background: var(--marca-base-relleno, var(--marca-base)); color: #fff;
+  box-shadow: inset 0 3px 0 var(--marca-acento); border-bottom-color: transparent;
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-nombre { color: #fff; }
+/* Sobre el color base va el Colm3na para fondo oscuro, el de siempre. */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { display: block; }
+html[data-tema="laguna"][data-paleta="sindicato"] .enc-c3-claro { display: none; }
+html[data-tema="laguna"][data-paleta="sindicato"] .nav-strip {
+  background: var(--marca-base-relleno, var(--marca-base)); border-right-color: transparent; border-bottom-color: transparent;
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn { color: rgba(255, 255, 255, .8); }
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn:hover { background: rgba(255, 255, 255, .09); color: #fff; }
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn.activa {
+  background: var(--marca-acento); color: var(--marca-tinta-acento, var(--marca-base));
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .45);
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn svg.tab-ext { stroke: rgba(255, 255, 255, .7); }
+html[data-tema="laguna"][data-paleta="sindicato"] a.tab-btn[href="/admin/dashboard"]::after { background: rgba(255, 255, 255, .14); }
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn .badge-noleidas,
+html[data-tema="laguna"][data-paleta="sindicato"] .tab-btn.activa .badge-noleidas { box-shadow: 0 0 0 2px var(--marca-base-relleno, var(--marca-base)); }

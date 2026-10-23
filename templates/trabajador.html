@@ -546,7 +546,15 @@
   /* ---------- Resultado ---------- */
   .banner { margin-top:20px; padding:16px; border-radius:12px; font-weight:500; font-size:16px; display:flex; align-items:center; gap:8px; }
   .banner.ok { background:#e3f2ee; color:var(--agua); }
-  .banner.mal { background:#f8e5e2; color:var(--alerta); }
+  /* Un error no es un cartel rosa (SDN, 2026-10-23): la superficie de la
+     pantalla, un filo rojo fino y el ícono de alerta; el texto, en tinta. */
+  .msg.err, .banner.mal, .enq-error { position:relative; padding-left:44px; background:#fff; color:#2b1d1b;
+    border:1px solid color-mix(in srgb, #b3261e 32%, transparent);
+    box-shadow:0 10px 22px -18px rgba(120,20,20,.5); }
+  .msg.err::before, .banner.mal::before, .enq-error::before { content:""; position:absolute; left:15px; top:13px;
+    width:18px; height:18px; background:#b3261e;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .msg.err b, .msg.err strong, .banner.mal b, .enq-error b { color:#8e1e17; }
   /* el banner es flex: el código va en su propia línea, discreto */
   .banner { flex-wrap:wrap; }
   .cod-error { flex-basis:100%; font-size:12px; font-weight:400; opacity:.75; letter-spacing:.04em; }
@@ -1006,7 +1014,7 @@
     line-height:1.5; margin-bottom:16px; }
   .enq-disc p { margin:0 0 6px; } .enq-disc p:last-child { margin:0; }
   .enq-pie { background:#fafafa; border-top:1px solid var(--linea); padding:14px 16px; }
-  .enq-error { background:#f8e5e2; color:#b23a2e; padding:10px 12px; border-radius:9px;
+  .enq-error { padding:10px 12px 10px 44px; border-radius:9px;
     font-size:13px; margin-bottom:10px; }
   .enq-revision { font-size:14px; }
   .enq-revision dt { font-weight:700; margin-top:11px; font-size:13.5px; }

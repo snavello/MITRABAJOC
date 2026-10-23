@@ -82,6 +82,15 @@
   button:hover { opacity:.92; }
   .muted { color:var(--gris); font-size:13px; }
   .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-bottom:14px; }
+  /* Un error no es un cartel rosa (SDN, 2026-10-23): la superficie de la
+     pantalla, un filo rojo fino y el ícono de alerta; el texto, en tinta. */
+  .msg.err, .banner.mal, .enq-error { position:relative; padding-left:44px; background:#fff; color:#2b1d1b;
+    border:1px solid color-mix(in srgb, #b3261e 32%, transparent);
+    box-shadow:0 10px 22px -18px rgba(120,20,20,.5); }
+  .msg.err::before, .banner.mal::before, .enq-error::before { content:""; position:absolute; left:15px; top:13px;
+    width:18px; height:18px; background:#b3261e;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .msg.err b, .msg.err strong, .banner.mal b, .enq-error b { color:#8e1e17; }
   .badge { font-size:11px; background:#e3f2ee; color:var(--agua); padding:2px 8px; border-radius:8px; }
   details { margin-top:14px; }
   summary { cursor:pointer; font-size:14px; color:var(--tinta); font-weight:500; padding:6px 0; }
@@ -304,7 +313,7 @@
 <div class="wrap mesa-cont">
   {% set reset = request.query_params.get('reset') %}
   {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
-  {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
+  {% elif reset == 'nohay' %}<div class="msg err">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
   {% if request.query_params.get('config') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Configuración actualizada.</div>{% endif %}
   {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
   {% if request.query_params.get('error') == 'guardado' %}<div style="background:#fdf3e7; border:1px solid #e8d9b0; color:#8a5a1a; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
@@ -390,16 +399,16 @@
   <h2 class="titulo-pagina" id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
     {% if request.query_params.get('error') == 'clausula' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: para marcar la cláusula de confidencialidad como aceptada, el sindicato tiene que tener cargado el contrato firmado. Subilo en el mismo formulario.</div>
+    <div class="msg err">No se guardó: para marcar la cláusula de confidencialidad como aceptada, el sindicato tiene que tener cargado el contrato firmado. Subilo en el mismo formulario.</div>
     {% endif %}
     {% if request.query_params.get('error') == 'contrato' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el contrato tiene que ser un PDF o una imagen (PNG, JPG o WEBP) de hasta 15 MB.</div>
+    <div class="msg err">No se guardó: el contrato tiene que ser un PDF o una imagen (PNG, JPG o WEBP) de hasta 15 MB.</div>
     {% endif %}
     {% if request.query_params.get('error') == 'cuit' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el CUIT del sindicato no es válido -- revisá los 11 números. Tiene que ser el de una persona jurídica (empieza con 30, 33 o 34).<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+    <div class="msg err">No se guardó: el CUIT del sindicato no es válido -- revisá los 11 números. Tiene que ser el de una persona jurídica (empieza con 30, 33 o 34).<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
     {% endif %}
     {% if request.query_params.get('error') == 'colorbase' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El color base tiene que ser oscuro (es el fondo de la portada del trabajador y de los encabezados) — el que cargaste es muy claro para que el texto blanco se lea bien encima. Probá con un tono más oscuro.</div>
+    <div class="msg err">El color base tiene que ser oscuro (es el fondo de la portada del trabajador y de los encabezados) — el que cargaste es muy claro para que el texto blanco se lea bien encima. Probá con un tono más oscuro.</div>
     {% endif %}
     <form method="post" action="/plataforma/sindicato" enctype="multipart/form-data" id="form-sind">
       <input type="hidden" name="id" id="sind-id">
@@ -520,7 +529,7 @@
   <h2 class="titulo-pagina">Crear un administrador de sindicato</h2>
   <div class="card">
     {% if request.query_params.get('error') == 'cuil' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se creó el administrador: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+    <div class="msg err">No se creó el administrador: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
     {% endif %}
     {% if sindicatos %}
     <form method="post" action="/plataforma/usuario" id="form-nuevo-admin" onsubmit="return confirmarClaves(this, 'na-clave', 'na-repetir', 'na-error')">
@@ -1017,13 +1026,13 @@
   <h2 class="titulo-pagina">Topes de la seguridad social ({{ topes|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. Ordenados del período más nuevo al más viejo; el estado (chip de color) indica cuánto se puede confiar en cada valor. <strong>Los montos van sin punto de separador de miles, con coma para los decimales</strong> (ej. 4594798,23).</p>
   {% if request.query_params.get('error') == 'topebajo' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
+  <div class="msg err">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
   {% elif request.query_params.get('error') == 'topeduplicado' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un tope cargado para ese período. Para cambiarlo, editá el existente en vez de agregar otro.</div>
+  <div class="msg err">Ya existe un tope cargado para ese período. Para cambiarlo, editá el existente en vez de agregar otro.</div>
   {% elif request.query_params.get('error') == 'topenoexiste' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se encontró el tope que intentabas editar.</div>
+  <div class="msg err">No se encontró el tope que intentabas editar.</div>
   {% elif request.query_params.get('error') == 'topeformato' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El tope máximo y la base mínima van sin punto de separador de miles — usá coma para los decimales (ej. 4594798,23).</div>
+  <div class="msg err">El tope máximo y la base mínima van sin punto de separador de miles — usá coma para los decimales (ej. 4594798,23).</div>
   {% endif %}
   <table>
     <tr><th>Vigencia</th><th>Tope máximo</th><th>Base mínima</th><th>Estado</th><th>Fuente</th><th></th></tr>

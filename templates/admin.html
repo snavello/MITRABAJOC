@@ -772,6 +772,15 @@
   .oculto { display:none; }
   .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-top:12px; }
   .msg.ok { background:#e3f2ee; color:var(--agua); }
+  /* Un error no es un cartel rosa (SDN, 2026-10-23): la superficie de la
+     pantalla, un filo rojo fino y el ícono de alerta; el texto, en tinta. */
+  .msg.err, .banner.mal, .enq-error { position:relative; padding-left:44px; background:#fff; color:#2b1d1b;
+    border:1px solid color-mix(in srgb, #b3261e 32%, transparent);
+    box-shadow:0 10px 22px -18px rgba(120,20,20,.5); }
+  .msg.err::before, .banner.mal::before, .enq-error::before { content:""; position:absolute; left:15px; top:13px;
+    width:18px; height:18px; background:#b3261e;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .msg.err b, .msg.err strong, .banner.mal b, .enq-error b { color:#8e1e17; }
   .muted { color:var(--gris); font-size:13px; }
   .veces { font-size:12px; color:var(--gris); }
 
@@ -1064,7 +1073,8 @@
   <span class="btn-rot">Inicio</span>
 </a>
 <a class="btn-cerrar" href="/admin/salir" title="Salir">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+  {# El mismo ícono de salida que en la app del afiliado: una × se lee como "cerrar". #}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg>
   <span class="btn-rot">Salir</span>
 </a>
 </div>
@@ -1190,10 +1200,10 @@
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.
   La expresión es una cuenta: punto decimal (<code>0.015</code>, no <code>0,015</code>), <code>*</code> para multiplicar y sin el signo <code>%</code>. Se prueba al guardar.</p>
   {% if request.query_params.get('error') == 'formulaexpr' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó la fórmula: {{ request.query_params.get('motivo') }}</div>
+  <div class="msg err">No se guardó la fórmula: {{ request.query_params.get('motivo') }}</div>
   {% endif %}
   {% if request.query_params.get('error') == 'superposicion' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
+  <div class="msg err">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
   {% endif %}
   {% if request.query_params.get('universales') == 'ok' %}
   <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
@@ -1255,9 +1265,9 @@
   <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
   {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
   {% if request.query_params.get('error') == 'cuitconcepto' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó el concepto: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  <div class="msg err">No se guardó el concepto: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% elif request.query_params.get('error') == 'cuitconfirmar' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se confirmó el concepto: el CUIT del empleador que se leyó del recibo no es válido (seguramente un dígito mal leído). Corregilo con Editar y guardá.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  <div class="msg err">No se confirmó el concepto: el CUIT del empleador que se leyó del recibo no es válido (seguramente un dígito mal leído). Corregilo con Editar y guardá.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
   {% if request.query_params.get('universales') == 'ok' %}
   <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
@@ -1269,8 +1279,8 @@
     <button type="submit" class="sec mini">Cargar aportes de ley (jubilación, PAMI, obra social)</button>
   </form>
   {% if provisorios %}
-  <div class="aviso" style="background:#f8e5e2; border-color:#e0c4c0;">
-    <strong>⚠ {{ provisorios|length }} concepto(s) con código provisorio.</strong>
+  <div class="msg err">
+    <strong>{{ provisorios|length }} concepto(s) con código provisorio.</strong>
     La IA no pudo leer el código en el recibo y le puso uno inventado
     (<code>NUEVO-…</code>). Ningún recibo trae ese código, así que estos conceptos
     solo pueden matchear por nombre: conviene resolverlos.
@@ -1407,21 +1417,21 @@
   {# `err=datos` existía desde antes y no se mostraba en ninguna parte: el
      alta fallaba y la pantalla volvía igual, sin decir nada. #}
   {% if request.query_params.get('err') == 'domicilio' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: falta {{ request.query_params.get('faltan') }}. El sindicato necesita al menos la provincia y la localidad de cada afiliado para agruparlo por zona.</div>
+  <div class="msg err">No se guardó: falta {{ request.query_params.get('faltan') }}. El sindicato necesita al menos la provincia y la localidad de cada afiliado para agruparlo por zona.</div>
   {% elif request.query_params.get('err') == 'datos' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: revisá el CUIL (11 dígitos) y el nombre.</div>
+  <div class="msg err">No se guardó: revisá el CUIL (11 dígitos) y el nombre.</div>
   {% elif request.query_params.get('err') == 'cuil' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+  <div class="msg err">No se guardó: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'cuilfijo' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no se cambia desde una edición, porque es la identidad de la persona en todo el sistema (su cuenta, sus recibos, sus trámites). Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
+  <div class="msg err">No se guardó: el CUIL no se cambia desde una edición, porque es la identidad de la persona en todo el sistema (su cuenta, sus recibos, sus trámites). Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
   {% elif request.query_params.get('err') == 'fecha' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: una de las fechas no se entiende. Usá el formato AAAA-MM-DD (o DD/MM/AAAA).</div>
+  <div class="msg err">No se guardó: una de las fechas no se entiende. Usá el formato AAAA-MM-DD (o DD/MM/AAAA).</div>
   {% elif request.query_params.get('err') == 'cuitempleador' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  <div class="msg err">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% elif request.query_params.get('err') == 'sincuenta' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esa persona todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
+  <div class="msg err">Esa persona todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
   {% elif request.query_params.get('err') == 'cuentaajena' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esta persona creó su cuenta antes de que la cargaras en tu padrón: por seguridad, solo plataforma puede restablecerle la clave o confirmar su identidad.</div>
+  <div class="msg err">Esta persona creó su cuenta antes de que la cargaras en tu padrón: por seguridad, solo plataforma puede restablecerle la clave o confirmar su identidad.</div>
   {% elif request.query_params.get('aviso') == 'datosajenos' %}
   <div class="msg">Se guardó el empadronamiento, pero no el nombre, el domicilio, el teléfono ni los mails: esta persona creó su cuenta antes de que la cargaras en tu padrón y esos datos son suyos.</div>
   {% elif request.query_params.get('ok') == 'identidad' %}
@@ -2038,11 +2048,11 @@
   <div class="panel" data-mov-vista id="panel-tramites">
   <!-- ============ TRÁMITES ============ -->
   {% if request.query_params.get('error') == 'campos' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
+  <div class="msg err">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
   {% elif request.query_params.get('error') == 'tramitesenviados' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
+  <div class="msg err">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
   {% elif request.query_params.get('error') == 'sindestino' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Elegí el área que recibe este trámite por defecto. Sin eso, un trámite de una seccional sin mapear no caería en ninguna bandeja.</div>
+  <div class="msg err">Elegí el área que recibe este trámite por defecto. Sin eso, un trámite de una seccional sin mapear no caería en ninguna bandeja.</div>
   {% endif %}
 
   <div class="subtabs">
@@ -2306,7 +2316,7 @@
   <div class="panel" data-mov-vista id="panel-encuestas">
   <!-- ============ ENCUESTAS (SPRINT_ENCUESTAS.md) ============ -->
   {% if request.query_params.get('error') == 'encuesta' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">{{ request.query_params.get('motivo') }}</div>
+  <div class="msg err">{{ request.query_params.get('motivo') }}</div>
   {% endif %}
   {% if request.query_params.get('aviso') %}
   <div class="msg" style="background:#e6f5ec;color:#1c7a45;">Aviso enviado a {{ request.query_params.get('aviso') }} afiliados.</div>
@@ -2593,14 +2603,14 @@
   <div class="panel" data-mov-vista id="panel-empleadores">
   <!-- ============ EMPLEADORES ============ -->
   {% if request.query_params.get('error') == 'cuit' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIT no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  <div class="msg err">El CUIT no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% elif request.query_params.get('error') == 'cuitfijo' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el CUIT no se cambia desde una edición, porque une al empleador con su cuenta, sus empleados, sus recibos y sus trámites. Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
+  <div class="msg err">No se guardó: el CUIT no se cambia desde una edición, porque une al empleador con su cuenta, sus empleados, sus recibos y sus trámites. Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
   {% endif %}
   {% if request.query_params.get('importados') %}
   <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
   {% if request.query_params.get('cuitinvalidos') %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se importaron {{ request.query_params.get('cuitinvalidos') }} CUIT de conceptos porque no son válidos (revisá los 11 números en Conceptos): <code>{{ request.query_params.get('cuitmuestra') }}</code><br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  <div class="msg err">No se importaron {{ request.query_params.get('cuitinvalidos') }} CUIT de conceptos porque no son válidos (revisá los 11 números en Conceptos): <code>{{ request.query_params.get('cuitmuestra') }}</code><br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
   {% endif %}
 
@@ -2653,9 +2663,9 @@
     </form>
 
     {% if request.query_params.get('err') == 'sincuenta' %}
-    <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esa empresa todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
+    <div class="msg err">Esa empresa todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
     {% elif request.query_params.get('err') == 'cuentaajena' %}
-    <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esta empresa creó su cuenta antes de que la cargaras en tu padrón: por seguridad, solo plataforma puede restablecerle la clave o confirmar su identidad.</div>
+    <div class="msg err">Esta empresa creó su cuenta antes de que la cargaras en tu padrón: por seguridad, solo plataforma puede restablecerle la clave o confirmar su identidad.</div>
     {% elif request.query_params.get('ok') == 'identidad' %}
     <div class="msg ok">Identidad confirmada: la cuenta pasó a nivel 4.</div>
     {% endif %}
@@ -2779,9 +2789,9 @@
   {% if 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}
   <div class="emp-subpanel {% if emp_primera == 'tramites' %}activo{% endif %}" data-mov-vista id="emp-sub-tramites">
     {% if request.query_params.get('error') == 'campos' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
+    <div class="msg err">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
     {% elif request.query_params.get('error') == 'tramitesenviados' %}
-    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
+    <div class="msg err">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
     {% endif %}
 
     <div class="subtabs">
@@ -2935,13 +2945,13 @@
   <!-- ============ CONVENIO (RAG) ============ -->
   {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
   {% if request.query_params.get('error') == 'formato' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El archivo tiene que ser un PDF.</div>
+  <div class="msg err">El archivo tiene que ser un PDF.</div>
   {% elif request.query_params.get('error') == 'tamano' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El PDF supera los 30 MB.</div>
+  <div class="msg err">El PDF supera los 30 MB.</div>
   {% elif request.query_params.get('error') == 'archivo' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Elegí un archivo PDF.</div>
+  <div class="msg err">Elegí un archivo PDF.</div>
   {% elif request.query_params.get('error') == 'datos' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Falta el nombre del convenio.</div>
+  <div class="msg err">Falta el nombre del convenio.</div>
   {% endif %}
 
   <h2 class="titulo-pagina" id="convenio-titulo">Dar de alta un convenio</h2>
@@ -3126,7 +3136,7 @@
            afiliado toca "Cómo llegar" y el teléfono lo lleva al punto
            guardado. La vía de escape cuando la búsqueda falla no es guardar
            sin ubicar, es marcar el punto a mano: está en el paso 2. #}
-        <div class="msg oculto" id="sec-error" style="background:#f8e5e2; color:#b23a2e;"></div>
+        <div class="msg err oculto" id="sec-error"></div>
         <button type="button" onclick="secBuscar()" id="sec-btn-buscar">Buscar en el mapa</button>
         <p class="muted" style="font-size:12px; margin:8px 0 0;">La seccional queda ubicada en el mapa: es lo que hace funcionar "Cómo llegar" en la app del afiliado y el mapa del Panel Sindical.</p>
       </div>
@@ -3163,11 +3173,11 @@
   </div>
 
   {% if request.query_params.get('err') == 'secdireccion' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó la seccional: falta {{ request.query_params.get('faltan') }}. La dirección de una seccional tiene que estar completa y ubicada en el mapa.</div>
+  <div class="msg err">No se guardó la seccional: falta {{ request.query_params.get('faltan') }}. La dirección de una seccional tiene que estar completa y ubicada en el mapa.</div>
   {% elif request.query_params.get('err') == 'secsinubicar' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó la seccional: falta ubicarla en el mapa. Buscá la dirección y, si el globo no quedó en la puerta, arrastralo hasta ahí.</div>
+  <div class="msg err">No se guardó la seccional: falta ubicarla en el mapa. Buscá la dirección y, si el globo no quedó en la puerta, arrastralo hasta ahí.</div>
   {% elif request.query_params.get('err') == 'secsinnombre' %}
-  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó la seccional: falta el nombre.</div>
+  <div class="msg err">No se guardó la seccional: falta el nombre.</div>
   {% endif %}
 
   {# El aviso solo aparece si hay algo que hacer, y recién después de que
@@ -3326,7 +3336,7 @@
   <!-- Sub: ÁREAS -->
   <div class="au-subpanel activo" data-mov-vista id="au-sub-areas">
   {% if request.query_params.get('err') == 'sinpermiso' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No tenés permiso para esa sección del panel. Si te hace falta, pedísela al administrador de tu sindicato.</div>
+  <div class="msg err">No tenés permiso para esa sección del panel. Si te hace falta, pedísela al administrador de tu sindicato.</div>
   {% endif %}
   {# Solo los avisos DE ÁREAS. Los de usuarios estaban acá y se veían arriba
      del formulario equivocado -- y encima el panel abría siempre en esta
@@ -3334,7 +3344,7 @@
      otra pantalla. Ahora cada aviso vive donde está su formulario, y el
      servidor manda `sub=` para abrir la sub-pestaña correcta. #}
   {% if request.query_params.get('err') == 'datosarea' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área necesita un nombre y una seccional.</div>
+  <div class="msg err">El área necesita un nombre y una seccional.</div>
   {% elif request.query_params.get('ok') == 'area' %}
   <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Área guardada.</div>
   {% endif %}
@@ -3420,19 +3430,19 @@
      lo emitía nadie -- cartel muerto, se fue. test_panel_avisos.py ata las
      dos listas para que no vuelvan a separarse. #}
   {% if request.query_params.get('err') == 'usuarioexiste' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un administrador con ese CUIT/CUIL en este sindicato.</div>
+  <div class="msg err">Ya existe un administrador con ese CUIT/CUIL en este sindicato.</div>
   {% elif request.query_params.get('err') == 'ultimoadmin' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
+  <div class="msg err">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
   {% elif request.query_params.get('err') == 'datos' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
+  <div class="msg err">CUIT/CUIL o clave inválidos.</div>
   {% elif request.query_params.get('err') == 'cuilusuario' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+  <div class="msg err">El CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'sinarea' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un usuario de área necesita un área. Elegile una, o dejalo como administrador de seccional.</div>
+  <div class="msg err">Un usuario de área necesita un área. Elegile una, o dejalo como administrador de seccional.</div>
   {% elif request.query_params.get('err') == 'sinseccional' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un administrador de seccional tiene que tener una seccional asignada.</div>
+  <div class="msg err">Un administrador de seccional tiene que tener una seccional asignada.</div>
   {% elif request.query_params.get('err') == 'areaajena' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área y la seccional del usuario tienen que ser la misma. Elegí un área de esa seccional.</div>
+  <div class="msg err">El área y la seccional del usuario tienen que ser la misma. Elegí un área de esa seccional.</div>
   {% elif request.query_params.get('ok') == 'usuario' %}
   <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Usuario guardado.</div>
   {% elif request.query_params.get('ok') == 'usuariocuenta' %}
@@ -3572,9 +3582,9 @@
   {% if request.query_params.get('ok') == 'apariencia' %}
   <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Apariencia guardada.</div>
   {% elif request.query_params.get('err') == 'apariencia' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: elegí un modelo para los afiliados, uno para el panel y una paleta de las que están en pantalla.</div>
+  <div class="msg err">No se guardó: elegí un modelo para los afiliados, uno para el panel y una paleta de las que están en pantalla.</div>
   {% elif request.query_params.get('err') == 'aparienciafoto' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: esa foto ya no está disponible para tu sindicato. Elegí otra o dejala en automática.</div>
+  <div class="msg err">No se guardó: esa foto ya no está disponible para tu sindicato. Elegí otra o dejala en automática.</div>
   {% endif %}
 
   <form method="post" action="/admin/apariencia">
@@ -3729,7 +3739,7 @@ function listaNombreSugerido() {
 function _listaMsg(texto, mal) {
   const m = document.getElementById('lista-msg');
   m.textContent = texto; m.classList.toggle('oculto', !texto);
-  m.style.background = mal ? '#f8e5e2' : '#e6f4ea'; m.style.color = mal ? '#b23a2e' : '#1d6b3a';
+  m.classList.toggle('err', !!mal); m.classList.toggle('ok', !mal);
 }
 async function _listaMandar(confirmar) {
   const archivo = document.getElementById('lista-archivo');
@@ -3768,7 +3778,7 @@ async function listaEnsayar() {
   const caja = document.getElementById('lista-ensayo');
   caja.classList.remove('oculto');
   const vale = d.seccional_id ? 'la seccional elegida' : 'todo el sindicato';
-  caja.innerHTML = `<div class="msg" style="background:${d.validas ? '#e6f4ea' : '#f8e5e2'};color:${d.validas ? '#1d6b3a' : '#b23a2e'};">
+  caja.innerHTML = `<div class="msg ${d.validas ? 'ok' : 'err'}">
       <b>Ensayo:</b> ${d.total} filas leídas, <b>${d.validas} entran</b>${d.con_error ? `, <b>${d.con_error} con error</b> quedan afuera` : ''}.
       Lista «${escHtml(d.nombre)}» (${escHtml(d.plantilla)}), vale para ${vale}. Todavía no se guardó nada.</div>`
     + _listaMuestra(d.columnas, d.muestra) + _listaTablaErrores(d.errores, d.con_error);
@@ -3932,10 +3942,11 @@ setInterval(() => {
 (function abrirDesdeHash() {
   let h = (location.hash || '').replace('#', '');
   if (h === 'cotizantes') h = 'reportes';   // pestaña unificada el 2026-09-24
-  if (h) {
-    const btn = document.querySelector('.tab-btn[data-panel="' + h + '"]');
-    if (btn) btn.click();
-  }
+  // Sin ancla (o con una que este usuario no tiene), la primera sección:
+  // con el riel lateral, entrar a /admin a secas dejaba la hoja en blanco.
+  const btn = (h && document.querySelector('.tab-btn[data-panel="' + h + '"]'))
+    || document.querySelector('.nav-strip .tab-btn[data-panel]');
+  if (btn) btn.click();
 })();
 
 // ---------- Sub-pestañas de Trabajadores ----------
@@ -7288,7 +7299,7 @@ document.getElementById('form-aprender').onsubmit = async (e) => {
     propuestas = data.propuestas;
     renderPropuestas(data);
   } catch (err) {
-    document.getElementById('ap-resultado').innerHTML = `<div class="msg" style="background:#f8e5e2;color:#b23a2e;">${err.message}</div>`;
+    document.getElementById('ap-resultado').innerHTML = `<div class="msg err">${err.message}</div>`;
   }
   apBtn.disabled = false; apBtn.textContent = 'Leer recibos';
 };
@@ -7371,7 +7382,7 @@ async function aplicarAprendizaje() {
   const malos = (data.cuit_invalidos || []).map(c => String(c).replace(/[<>&"]/g, '')).join(', ');
   document.getElementById('ap-final').innerHTML =
     `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>` +
-    (malos ? `<div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se dieron de alta ${data.cuit_invalidos.length} concepto(s) porque el CUIT del empleador no es válido: ${malos}. Cargalos a mano en Conceptos con el CUIT correcto.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>` : '');
+    (malos ? `<div class="msg err">No se dieron de alta ${data.cuit_invalidos.length} concepto(s) porque el CUIT del empleador no es válido: ${malos}. Cargalos a mano en Conceptos con el CUIT correcto.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>` : '');
 }
 {% endif %}
 

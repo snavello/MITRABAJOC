@@ -92,12 +92,12 @@ html[data-tema="laguna"] .pt-pie button:focus-visible { outline-color: var(--lg-
 
 /* ---------- La laguna (encabezado + saludo + Panel Sindical) ---------- */
 html[data-tema="laguna"] .pt-heroe {
-  position: relative; z-index: 1; overflow: hidden; min-height: 560px;
+  position: relative; z-index: 1; overflow: hidden; min-height: 440px;
   display: flex; flex-direction: column; background: var(--lg-azul);
 }
 /* Sin el Panel Sindical (un usuario de área sin ese permiso) la laguna se
    acorta: no queda un hueco de foto vacío. */
-html[data-tema="laguna"] .pt-heroe:not(:has(.pt-hero)) { min-height: 340px; }
+html[data-tema="laguna"] .pt-heroe:not(:has(.pt-hero)) { min-height: 260px; }
 html[data-tema="laguna"] .pt-media {
   display: block; position: absolute; inset: 0; z-index: 0;
   background: linear-gradient(180deg, var(--lg-azul2) 0%, var(--lg-turq) 44%, var(--lg-lag) 66%, var(--lg-agua) 100%);
@@ -389,3 +389,7 @@ html[data-tema="laguna"] body.claro .fila-hola button:focus-visible { outline-co
   html[data-tema="laguna"] .pt-fila:hover,
   html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: none; }
 }
+
+/* ---------- Los grupos de accesos (SDN, 2026-10-23) ---------- */
+html[data-tema="laguna"] .pt-grupo-tit { display: inline-block; padding-bottom: 4px; font-family: var(--lg-fuente); font-size: 12.5px;
+  font-weight: 700; letter-spacing: .2em; color: var(--lg-azul); box-shadow: inset 0 -2px 0 var(--lg-lag); }

@@ -54,4 +54,5 @@ backup_regularizacion_*
 .impeccable/live/
 .impeccable/review/
 .impeccable/build/
+.impeccable/critique/
 .claude/settings.local.json

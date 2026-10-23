@@ -71,6 +71,7 @@
   .pt-tapa-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
     transition: transform .9s cubic-bezier(.22,.61,.36,1); }
   .pt-tapa:hover .pt-tapa-foto img { transform: scale(1.03); }
+  .pt-tapa.sin-foto .pt-tapa-chip { position: static; display: inline-block; }
   .pt-tapa-chip { position: absolute; left: 12px; top: 12px; z-index: 1; padding: 3px 10px; border-radius: 99px;
     background: var(--marca-acento); color: var(--marca-base); font-size: 10.5px; font-weight: 800;
     letter-spacing: 1px; text-transform: uppercase; }
@@ -437,11 +438,15 @@
       {% set tapa = noticias[0] %}
       {# La última noticia va grande, como nota de tapa: foto, fecha, título y
          bajada. Las que siguen, en renglones con su miniatura. #}
-      <button type="button" class="pt-tapa" onclick="abrirNoticia({{ tapa.id }})">
+      {# Sin foto, la tapa es tipográfica: una caja vacía en el mejor lugar de
+         la portada parece una pantalla sin terminar. #}
+      <button type="button" class="pt-tapa{% if not tapa.tiene_imagen1 %} sin-foto{% endif %}" onclick="abrirNoticia({{ tapa.id }})">
+        {% if tapa.tiene_imagen1 %}
         <span class="pt-tapa-foto">
-          {% if tapa.tiene_imagen1 %}<img class="pt-mini" src="/noticia-imagen/{{ tapa.id }}/1" alt="">{% endif %}
+          <img class="pt-mini" src="/noticia-imagen/{{ tapa.id }}/1" alt="">
           <span class="pt-tapa-chip">Lo último</span>
         </span>
+        {% else %}<span class="pt-tapa-chip">Lo último</span>{% endif %}
         <span class="pt-tapa-f num">{{ tapa.fecha_hora }}</span>
         <span class="pt-tapa-t">{{ tapa.titulo }}</span>
         {% if tapa.bajada %}<span class="pt-tapa-b">{{ tapa.bajada }}</span>{% endif %}
