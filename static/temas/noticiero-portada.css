@@ -103,7 +103,7 @@ html[data-tema="noticiero"] .grano::before, html[data-tema="noticiero"] .pt-ambi
 html[data-tema="noticiero"] :is(a, button, input, select, textarea, label):focus-visible { outline: 2px solid var(--nt-indigo); outline-offset: 3px; }
 
 /* ---------- T1 · La tapa: la foto en duotono y el saludo ---------- */
-html[data-tema="noticiero"] .pt-gremio { display: flex; flex-direction: column; min-height: 400px; overflow: hidden;
+html[data-tema="noticiero"] .pt-gremio { display: flex; flex-direction: column; min-height: 300px; overflow: hidden;
   isolation: isolate; background: var(--nt-fondo); }
 html[data-tema="noticiero"] .pt-gremio-media { display: block; position: absolute; inset: 0; z-index: 0; overflow: hidden;
   isolation: isolate; background: var(--nt-indigo); }
@@ -123,7 +123,7 @@ html[data-tema="noticiero"] .pt-gremio-media::after { content: ""; position: abs
     color-mix(in oklab, var(--nt-fondo) 95%, transparent) 74%,
     var(--nt-fondo) 90%); }
 /* Sin foto en la biblioteca: papel con una trama de puntos de imprenta. */
-html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 300px; }
+html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 240px; }
 html[data-tema="noticiero"] .pt-gremio:not(.con-foto) .pt-gremio-media { background: var(--nt-hoja);
   background-image: radial-gradient(color-mix(in oklab, var(--nt-indigo) 13%, transparent) 1.1px, transparent 1.4px);
   background-size: 9px 9px; }
@@ -221,6 +221,7 @@ html[data-tema="noticiero"] .pt-tapa-chip { left: auto; right: 0; top: 16px; z-i
   background: var(--nt-indigo); color: var(--nt-marfil); font-family: var(--nt-f-cond); font-size: 12px; font-weight: 700;
   letter-spacing: 1.4px; }
 /* fecha (como rótulo, con el filete coral), título, bajada */
+html[data-tema="noticiero"] .pt-tapa.sin-foto .pt-tapa-chip { position: static; align-self: flex-start; }
 html[data-tema="noticiero"] .pt-tapa-f { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-family: var(--nt-f-cond);
   font-weight: 700; font-size: 14px; letter-spacing: .8px; color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .pt-tapa-f::before { content: ""; flex: none; width: 18px; height: 2px; background: var(--nt-coral); }
@@ -470,10 +471,11 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
 /* ---------- Escritorio ---------- */
 @media (min-width: 900px) {
   /* La foto acompaña el saludo; no ocupa media pantalla antes del contenido. */
-  html[data-tema="noticiero"] .pt-gremio { min-height: 340px; }
-  html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 260px; }
-  html[data-tema="noticiero"] .pt-gremio .marca-barra { padding: 12px 26px; }
-  html[data-tema="noticiero"] .pt-gremio-hola { max-width: 1320px; padding: 0 26px 40px; }
+  html[data-tema="noticiero"] .pt-gremio { min-height: 280px; }
+  html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 240px; }
+  /* El encabezado sobre la misma grilla que el contenido (1320 px). */
+  html[data-tema="noticiero"] .pt-gremio .marca-barra { box-sizing: border-box; width: 100%; max-width: 1320px; margin: 0 auto; padding: 12px 26px; }
+  html[data-tema="noticiero"] .pt-gremio-hola { max-width: 1320px; padding: 0 26px 18px; }
   html[data-tema="noticiero"] .pt-gremio .hola { font-size: 80px; }
   html[data-tema="noticiero"] .pt-gremio .pt-hola-baj { font-size: 15px; }
   html[data-tema="noticiero"] .pt-gremio .circulo-acento { right: 26px; top: calc(92px + env(safe-area-inset-top)); width: 58px; height: 58px; }
