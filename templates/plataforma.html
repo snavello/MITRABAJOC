@@ -153,7 +153,7 @@
   .subtab, .ia-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
     text-transform:uppercase; background:#fff; border-radius:20px; }
   th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.ia-subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.btn-ayuda):not(.link-num) {
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.ia-subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.btn-ayuda):not(.link-num):not(.ft-subtab):not(.ft-foto) {
     font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
@@ -169,6 +169,87 @@
   summary { font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--gris); }
   .link-num { font-family:var(--fuente-num); font-variant-numeric:tabular-nums; }
   .msg { border-radius:10px; }
+
+  /* ============ Biblioteca de fotos de los modelos (PLAN_TEMAS.md, D5) ============
+     Lo elegido se marca con relleno de color, nunca con una barra o corchete
+     a un costado (D6, regla de SDN). Las sub-pestañas por modelo tienen su
+     propio namespace (.ft-subtab), como las de Uso de IA. */
+  .ft-subtab { padding:6px 14px; border-radius:20px; background:#fff; color:var(--gris);
+    border:1px solid var(--linea); cursor:pointer; margin-top:0;
+    font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px; text-transform:uppercase;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .ft-subtab:hover { background:#f2f0ea; opacity:1; }
+  .ft-subtab.activa { background:var(--agua); color:#fff; border-color:var(--agua); }
+  .ft-zona { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    padding:26px 16px; border:1.5px dashed #c9c4b8; border-radius:12px; background:#fbfaf7;
+    text-align:center; cursor:pointer; color:var(--tinta); font-size:14px;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), border-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .ft-zona svg { width:26px; height:26px; stroke:currentColor; stroke-width:1.7; fill:none; color:var(--agua); }
+  .ft-zona:hover, .ft-zona:focus-within, .ft-zona.encima { background:color-mix(in srgb, var(--agua) 10%, #fff); border-color:var(--agua); }
+  .ft-zona strong { font-weight:600; }
+  .ft-zona .muted { font-size:12px; }
+  .ft-zona input[type=file] { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .ft-ayuda { font-size:12.5px; color:var(--gris); margin:10px 0 0; }
+  .ft-comparar { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:12px; align-items:center; margin-top:16px; }
+  .ft-comparar figure { margin:0; display:flex; flex-direction:column; gap:6px; }
+  .ft-comparar img, .ft-comparar .ft-espera { width:100%; aspect-ratio:3 / 2; object-fit:cover; border-radius:9px;
+    border:1px solid var(--linea); background:#f2f0ea; display:block; }
+  .ft-comparar .ft-espera { display:flex; align-items:center; justify-content:center; font-size:12.5px; color:var(--gris); padding:10px; text-align:center; }
+  .ft-comparar figcaption { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:1px;
+    text-transform:uppercase; color:var(--gris); }
+  .ft-flecha { font-size:22px; color:var(--gris); }
+  .ft-msg { margin-top:12px; font-size:13.5px; }
+  .ft-msg.error { color:#b23a2e; }
+  .ft-msg.ok { color:#0f6e56; }
+  .ft-trabajo { display:grid; grid-template-columns:minmax(0,1fr); gap:18px; margin-top:6px; align-items:start; }
+  .ft-trabajo.editando { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); }
+  .ft-grilla { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; }
+  .ft-foto { display:flex; flex-direction:column; gap:6px; padding:7px; margin:0; text-align:left;
+    background:#fff; color:#1b1b1b; border:1px solid var(--linea); border-radius:11px; cursor:pointer;
+    font-family:inherit; font-size:12.5px; font-weight:400;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), border-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .ft-foto:hover { background:#f6f4ef; opacity:1; }
+  .ft-foto:active { scale:.98; }
+  .ft-foto.elegida { background:color-mix(in srgb, var(--agua) 16%, #fff); border-color:var(--agua); }
+  .ft-foto img { width:100%; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; display:block; background:#eee; }
+  .ft-foto .ft-desc { color:#333; line-height:1.35; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; min-height:2.7em; }
+  .ft-foto .ft-desc.vacia { color:var(--gris); font-style:italic; }
+  .ft-foto .ft-alcance { color:var(--gris); font-size:11.5px; }
+  .ft-chip-pub { background:#e3f2ee; color:#0f6e56; }
+  .ft-chip-borr { background:#fdf3e7; color:#8a5a1a; }
+  .ft-editor h3 { margin-bottom:10px; }
+  .ft-lienzo { position:relative; display:block; cursor:crosshair; border-radius:9px; overflow:hidden;
+    border:1px solid var(--linea); background:#eee; touch-action:manipulation; }
+  .ft-lienzo:focus-visible { outline:2px solid var(--agua); outline-offset:2px; }
+  .ft-lienzo img { width:100%; display:block; user-select:none; -webkit-user-drag:none; }
+  .ft-punto { position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+    background:color-mix(in srgb, var(--marca-acento) 70%, transparent); border:3px solid #fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.35); pointer-events:none;
+    transition:left var(--mov-rapido, 180ms) var(--ease-mueve, ease), top var(--mov-rapido, 180ms) var(--ease-mueve, ease); }
+  .ft-recortes { display:flex; gap:10px; align-items:flex-end; margin-top:10px; }
+  .ft-recortes figure { margin:0; display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--gris); }
+  .ft-recortes img { display:block; object-fit:cover; border-radius:6px; border:1px solid var(--linea); background:#eee; }
+  .ft-rec-ancho { width:180px; height:62px; }
+  .ft-rec-alto { width:44px; height:78px; }
+  #pp-fotos [hidden] { display:none !important; }
+  .ft-seg { align-self:flex-start; display:inline-flex; flex-wrap:wrap; gap:4px; padding:3px; border:1px solid var(--linea); border-radius:10px; background:#fbfaf7; }
+  .ft-seg label { display:flex; align-items:center; padding:6px 12px; border-radius:7px; cursor:pointer;
+    font-size:13px; color:var(--gris);
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .ft-seg input { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+  .ft-seg label:has(input:checked) { background:var(--agua); color:#fff; }
+  .ft-seg label:has(input:focus-visible) { outline:2px solid var(--agua); outline-offset:2px; }
+  .ft-sinds { margin-top:8px; max-height:180px; overflow:auto; }
+  .ft-sinds .chk-modulo:has(input:checked) { color:var(--tinta); font-weight:600; }
+  .ft-acciones { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:16px; }
+  .ft-acciones button { margin-top:0; }
+  .ft-acciones button.ft-borrar { background:#fff; color:#b23a2e; border:1px solid #e0c4c0; }
+  .ft-ficha { font-size:12px; color:var(--gris); margin-top:6px; }
+  @media (max-width:760px) {
+    .ft-trabajo.editando { grid-template-columns:minmax(0,1fr); }
+    .ft-comparar { grid-template-columns:minmax(0,1fr); }
+    .ft-flecha { justify-self:center; rotate:90deg; }
+  }
 </style>
 {% include "_fondo_interior.html" %}
 </head>
@@ -191,6 +272,7 @@
   <button class="ptab" data-pp="admin"><svg viewBox="0 0 24 24"><use href="#ic-nuevo-admin"/></svg><span>Nuevo admin</span></button>
   <button class="ptab" data-pp="clave"><svg viewBox="0 0 24 24"><use href="#ic-clave"/></svg><span>Cambiar clave</span></button>
   <button class="ptab" data-pp="marca"><svg viewBox="0 0 24 24"><use href="#ic-marca"/></svg><span>Marca</span></button>
+  <button class="ptab" data-pp="fotos"><svg viewBox="0 0 24 24"><use href="#ic-fotos"/></svg><span>Fotos</span></button>
   <button class="ptab" data-pp="config"><svg viewBox="0 0 24 24"><use href="#ic-config-legal"/></svg><span>Config. legal</span></button>
   <button class="ptab" data-pp="usoia"><svg viewBox="0 0 24 24"><use href="#ic-usoia"/></svg><span>Uso de IA</span></button>
   <button class="ptab" data-pp="sospechosos"><svg viewBox="0 0 24 24"><use href="#ic-sospechosos"/></svg><span>Con alerta</span></button>
@@ -209,6 +291,7 @@
     <g id="ic-config-legal"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 13a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></g>
     <g id="ic-usoia"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="6" y1="10" x2="3" y2="10"/><line x1="6" y1="14" x2="3" y2="14"/><line x1="18" y1="10" x2="21" y2="10"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="10" y1="6" x2="10" y2="3"/><line x1="14" y1="6" x2="14" y2="3"/><line x1="10" y1="18" x2="10" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/></g>
     <g id="ic-sospechosos"><path d="M12 4 3 20h18z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></g>
+    <g id="ic-fotos"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></g>
     <g id="ic-topes"><path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="16" y2="10"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></g>
   </defs>
 </svg>
@@ -524,6 +607,100 @@
       </div>
       <button type="submit">Guardar marca</button>
     </form>
+  </div>
+  </div>
+
+  {# ---------------- Biblioteca de fotos de los modelos (PLAN_TEMAS.md, D5) ----------------
+     Todo por JSON contra /plataforma/fotos-tema: la lista se pide al abrir la
+     pestaña y al cambiar de modelo. Lo que viene del servidor se dibuja con
+     textContent, nunca como HTML. #}
+  <div class="ppanel" data-mov-vista id="pp-fotos">
+  <h2 class="titulo-pagina">Biblioteca de fotos</h2>
+  <p class="muted" style="margin-bottom:14px; max-width:700px;">Las fotos de portada de cada modelo de diseño. Una foto nueva queda en borrador hasta que la publiques; publicada, la pueden elegir todos los sindicatos o solo los que marques.</p>
+  <div class="subtabs" role="tablist" aria-label="Modelo de diseño">
+    <button type="button" class="ft-subtab activa" role="tab" aria-selected="true" data-ft-tema="laguna">Laguna (por defecto)</button>
+    <button type="button" class="ft-subtab" role="tab" aria-selected="false" data-ft-tema="noticiero">Noticiero</button>
+  </div>
+
+  <div class="card" id="ft-subir">
+    <h3>Subir una foto a <span id="ft-modelo-subir">Laguna</span></h3>
+    <label class="ft-zona" id="ft-zona" for="ft-archivo">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <strong id="ft-zona-txt">Arrastrá una foto acá o tocá para elegirla</strong>
+      <span class="muted">JPG, PNG o WEBP, hasta 8 MB, de al menos 600 px de lado.</span>
+      <input type="file" id="ft-archivo" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+    </label>
+    <p class="ft-ayuda">Toda foto se pasa a escala de grises y se le emparejan brillo y contraste; el color lo pone el modelo.</p>
+    <div class="campo" style="margin-top:12px;">
+      <label for="ft-desc-nueva">Descripción (texto alternativo)</label>
+      <input id="ft-desc-nueva" maxlength="300" placeholder="Ej: Asamblea en la puerta de la planta">
+    </div>
+    <button type="button" id="ft-btn-subir" disabled>Subir foto</button>
+    <p class="ft-msg" id="ft-msg-subir" role="status" hidden></p>
+    <div class="ft-comparar" id="ft-comparar" hidden>
+      <figure><img id="ft-original" alt="Original elegida"><figcaption>Original</figcaption></figure>
+      <span class="ft-flecha" aria-hidden="true">→</span>
+      <figure>
+        <div class="ft-espera" id="ft-espera">Se ve cuando la subas</div>
+        <img id="ft-normalizada" alt="Normalizada por el servidor" hidden>
+        <figcaption>Normalizada</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <h2 style="margin-top:28px;">Fotos de <span id="ft-modelo-lista">Laguna</span> <small class="muted" id="ft-cuenta"></small></h2>
+  <div class="ft-trabajo" id="ft-trabajo">
+    <div>
+      <div class="ft-grilla" id="ft-grilla" aria-live="polite"></div>
+      <p class="muted" id="ft-vacio" hidden></p>
+    </div>
+
+    <div class="card ft-editor" id="ft-editor" hidden style="margin-top:0;">
+      <h3>Editar foto</h3>
+      <div class="ft-lienzo" id="ft-lienzo" tabindex="0" role="button"
+           aria-label="Tocá la foto para marcar el punto de interés. Con las flechas del teclado se mueve.">
+        <img id="ft-ed-img" alt="" draggable="false">
+        <span class="ft-punto" id="ft-punto" aria-hidden="true"></span>
+      </div>
+      <p class="muted" style="margin-top:8px; font-size:12.5px;">Tocá la foto para marcar el <strong>punto de interés</strong>: el recorte de la portada lo deja siempre a la vista.</p>
+      <div class="ft-recortes" aria-hidden="true">
+        <figure><img class="ft-rec-ancho" id="ft-rec-ancho" alt=""><figcaption>Escritorio</figcaption></figure>
+        <figure><img class="ft-rec-alto" id="ft-rec-alto" alt=""><figcaption>Teléfono</figcaption></figure>
+      </div>
+      <p class="ft-ficha" id="ft-ficha"></p>
+
+      <div class="campo" style="margin-top:14px;">
+        <label for="ft-desc">Descripción (texto alternativo)</label>
+        <input id="ft-desc" maxlength="300">
+      </div>
+      <div class="campo" style="margin-top:12px;">
+        <label>Estado</label>
+        <div class="ft-seg">
+          <label><input type="radio" name="ft-estado" value="0"> Borrador</label>
+          <label><input type="radio" name="ft-estado" value="1"> Publicada</label>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:12px;">
+        <label>Disponible para</label>
+        <div class="ft-seg">
+          <label><input type="radio" name="ft-alcance" value="1"> Todos los sindicatos</label>
+          <label><input type="radio" name="ft-alcance" value="0"> Los que elija</label>
+        </div>
+        <div class="check-modulos ft-sinds" id="ft-sinds" hidden>
+          {% for i in sindicatos %}
+          <label class="chk-modulo"><input type="checkbox" class="ft-sind" value="{{ i.s.id }}"> {{ i.s.nombre }}</label>
+          {% else %}
+          <span class="muted">Todavía no hay sindicatos en la plataforma.</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="ft-acciones">
+        <button type="button" id="ft-guardar">Guardar cambios</button>
+        <button type="button" class="sec" id="ft-cerrar">Cerrar</button>
+        <button type="button" class="sec ft-borrar" id="ft-borrar">Borrar foto</button>
+      </div>
+      <p class="ft-msg" id="ft-msg-editar" role="status" hidden></p>
+    </div>
   </div>
   </div>
 
@@ -1454,6 +1631,339 @@ function prepararEnvioTope(form) {
   }
   return true;
 }
+
+/* ---------- Biblioteca de fotos de los modelos (PLAN_TEMAS.md, D5) ----------
+   Todo lo que viene del servidor (descripción, quién la subió, nombres) se
+   escribe con textContent o como atributo: acá no se arma HTML con datos. */
+const FT_NOMBRES = {laguna: 'Laguna', noticiero: 'Noticiero'};
+const FT_MAX_BYTES = 8 * 1024 * 1024, FT_LADO_MINIMO = 600;
+const ft = {tema: 'laguna', fotos: [], elegida: null, archivo: null, urlOriginal: null,
+            foco: {x: 0.5, y: 0.5}, cargado: false};
+const ft$ = id => document.getElementById(id);
+
+function ftEl(tag, clase, texto) {
+  const e = document.createElement(tag);
+  if (clase) e.className = clase;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+function ftMsg(id, texto, tipo) {
+  const p = ft$(id);
+  p.textContent = texto || '';
+  p.className = 'ft-msg' + (tipo ? ' ' + tipo : '');
+  p.hidden = !texto;
+}
+const ftEntre01 = v => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000 : 0.5;
+};
+const ftUrl = f => '/foto-tema/' + encodeURIComponent(f.id) + '?v=' + encodeURIComponent(f.v);
+const ftNombresSind = () => {
+  const m = {};
+  document.querySelectorAll('.ft-sind').forEach(c => { m[c.value] = c.parentElement.textContent.trim(); });
+  return m;
+};
+
+// El `detail` del servidor (un 400 dice por qué la foto no sirve) o un texto
+// según el código. Nunca se muestra la respuesta cruda.
+async function ftDetalle(r) {
+  if (r.status === 403) return 'Tu sesión venció: volvé a ingresar a la plataforma.';
+  try {
+    const j = await r.json();
+    if (j && typeof j.detail === 'string') return j.detail;
+  } catch (e) { /* no era JSON */ }
+  return 'No se pudo completar (código ' + r.status + '). Probá de nuevo en un momento.';
+}
+
+function ftAlcanceTxt(f) {
+  if (f.todos_los_sindicatos) return 'Todos los sindicatos';
+  const ids = f.sindicatos || [];
+  if (!ids.length) return 'Ningún sindicato elegido';
+  if (ids.length === 1) return ftNombresSind()[String(ids[0])] || '1 sindicato';
+  return ids.length + ' sindicatos';
+}
+
+function ftVacio(texto) {
+  ft$('ft-grilla').replaceChildren();
+  ft$('ft-cuenta').textContent = '';
+  const v = ft$('ft-vacio');
+  v.textContent = texto;
+  v.hidden = false;
+}
+
+async function ftCargar(idElegir) {
+  const tema = ft.tema;
+  let r;
+  try {
+    r = await fetch('/plataforma/fotos-tema?tema=' + encodeURIComponent(tema), {credentials: 'same-origin'});
+  } catch (e) { ftVacio('No se pudo traer la lista: revisá la conexión y volvé a abrir la pestaña.'); return; }
+  if (tema !== ft.tema) return;              // se cambió de modelo mientras tanto
+  if (!r.ok) { ftVacio(await ftDetalle(r)); return; }
+  const data = await r.json();
+  ft.fotos = Array.isArray(data.fotos) ? data.fotos : [];
+  ft.cargado = true;
+  ftPintarGrilla();
+  const id = idElegir !== undefined ? idElegir : (ft.elegida && ft.elegida.id);
+  const f = ft.fotos.find(x => x.id === id);
+  if (f) ftAbrir(f); else ftCerrar();
+}
+
+function ftPintarGrilla() {
+  const g = ft$('ft-grilla');
+  g.replaceChildren();
+  ft$('ft-cuenta').textContent = '(' + ft.fotos.length + ')';
+  const vacio = ft$('ft-vacio');
+  vacio.hidden = ft.fotos.length > 0;
+  if (!ft.fotos.length) vacio.textContent = 'Todavía no hay fotos en ' + FT_NOMBRES[ft.tema] + '. Subí la primera desde arriba.';
+  for (const f of ft.fotos) {
+    const b = ftEl('button', 'ft-foto');
+    b.type = 'button';
+    b.dataset.id = String(f.id);
+    const img = ftEl('img');
+    img.src = ftUrl(f);
+    img.alt = f.descripcion || '';
+    img.loading = 'lazy';
+    img.style.objectPosition = (ftEntre01(f.foco_x) * 100) + '% ' + (ftEntre01(f.foco_y) * 100) + '%';
+    const chip = ftEl('span', 'chip-estado ' + (f.publicada ? 'ft-chip-pub' : 'ft-chip-borr'),
+                      f.publicada ? 'Publicada' : 'Borrador');
+    chip.style.alignSelf = 'flex-start';
+    const desc = ftEl('span', 'ft-desc' + (f.descripcion ? '' : ' vacia'), f.descripcion || 'Sin descripción');
+    b.append(img, chip, desc, ftEl('span', 'ft-alcance', ftAlcanceTxt(f)));
+    b.addEventListener('click', () => ftAbrir(f));
+    g.append(b);
+  }
+  ftMarcarElegida();
+}
+
+function ftMarcarElegida() {
+  const id = ft.elegida ? String(ft.elegida.id) : null;
+  document.querySelectorAll('#ft-grilla .ft-foto').forEach(b => {
+    const si = b.dataset.id === id;
+    b.classList.toggle('elegida', si);
+    b.setAttribute('aria-pressed', si ? 'true' : 'false');
+  });
+}
+
+function ftPintarFoco() {
+  const x = ft.foco.x * 100, y = ft.foco.y * 100;
+  ft$('ft-punto').style.left = x + '%';
+  ft$('ft-punto').style.top = y + '%';
+  ft$('ft-rec-ancho').style.objectPosition = x + '% ' + y + '%';
+  ft$('ft-rec-alto').style.objectPosition = x + '% ' + y + '%';
+}
+
+function ftSincAlcance() {
+  const todos = (document.querySelector('input[name="ft-alcance"]:checked') || {}).value !== '0';
+  ft$('ft-sinds').hidden = todos;
+}
+
+function ftAbrir(f) {
+  ft.elegida = f;
+  ft.foco = {x: ftEntre01(f.foco_x), y: ftEntre01(f.foco_y)};
+  const url = ftUrl(f);
+  ['ft-ed-img', 'ft-rec-ancho', 'ft-rec-alto'].forEach(id => { ft$(id).src = url; });
+  ft$('ft-ed-img').alt = f.descripcion || 'Foto sin descripción';
+  ft$('ft-desc').value = f.descripcion || '';
+  document.querySelectorAll('input[name="ft-estado"]').forEach(r => { r.checked = r.value === (f.publicada ? '1' : '0'); });
+  document.querySelectorAll('input[name="ft-alcance"]').forEach(r => { r.checked = r.value === (f.todos_los_sindicatos ? '1' : '0'); });
+  const ids = (f.sindicatos || []).map(String);
+  document.querySelectorAll('.ft-sind').forEach(c => { c.checked = ids.includes(c.value); });
+  ftSincAlcance();
+  ftPintarFoco();
+  ft$('ft-ficha').textContent = f.ancho + ' × ' + f.alto + ' px' +
+    (f.creada ? ' · subida el ' + f.creada : '') + (f.subida_por ? ' por ' + f.subida_por : '');
+  ftMsg('ft-msg-editar', '');
+  ft$('ft-editor').hidden = false;
+  ft$('ft-trabajo').classList.add('editando');
+  ftMarcarElegida();
+  if (window.matchMedia('(max-width:760px)').matches) ft$('ft-editor').scrollIntoView({block: 'start'});
+}
+
+function ftCerrar() {
+  ft.elegida = null;
+  ft$('ft-editor').hidden = true;
+  ft$('ft-trabajo').classList.remove('editando');
+  ftMarcarElegida();
+}
+
+function ftCambiarTema(tema) {
+  if (!FT_NOMBRES[tema] || tema === ft.tema && ft.cargado) return;
+  ft.tema = tema;
+  document.querySelectorAll('.ft-subtab').forEach(b => {
+    const si = b.dataset.ftTema === tema;
+    b.classList.toggle('activa', si);
+    b.setAttribute('aria-selected', si ? 'true' : 'false');
+  });
+  ft$('ft-modelo-subir').textContent = FT_NOMBRES[tema];
+  ft$('ft-modelo-lista').textContent = FT_NOMBRES[tema];
+  ftCerrar();
+  ft$('ft-grilla').replaceChildren();
+  ft$('ft-cuenta').textContent = '';
+  ftCargar(null);
+}
+
+/* Subir: la vista previa de la original es local (blob:, la CSP lo permite);
+   la normalizada es la que guardó el servidor. */
+function ftReiniciarZona() {
+  ft.archivo = null;
+  ft$('ft-archivo').value = '';
+  ft$('ft-zona-txt').textContent = 'Arrastrá una foto acá o tocá para elegirla';
+  ft$('ft-btn-subir').disabled = true;
+}
+
+function ftElegirArchivo(file) {
+  ftMsg('ft-msg-subir', '');
+  if (!file) return;
+  const tipoOk = /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name || '');
+  if (!tipoOk) { ftReiniciarZona(); ftMsg('ft-msg-subir', 'Ese archivo no es una foto JPG, PNG o WEBP.', 'error'); return; }
+  if (file.size > FT_MAX_BYTES) { ftReiniciarZona(); ftMsg('ft-msg-subir', 'La foto pesa más de 8 MB.', 'error'); return; }
+  ft.archivo = file;
+  if (ft.urlOriginal) URL.revokeObjectURL(ft.urlOriginal);
+  ft.urlOriginal = URL.createObjectURL(file);
+  const orig = ft$('ft-original');
+  orig.onload = () => {
+    // Aviso temprano; el que decide es el servidor.
+    if (ft.archivo === file && Math.max(orig.naturalWidth, orig.naturalHeight) < FT_LADO_MINIMO) {
+      ftMsg('ft-msg-subir', 'La foto es muy chica: el lado largo tiene que medir al menos ' + FT_LADO_MINIMO + ' px.', 'error');
+      ft$('ft-btn-subir').disabled = true;
+    }
+  };
+  orig.src = ft.urlOriginal;
+  const norm = ft$('ft-normalizada');
+  norm.hidden = true;
+  norm.removeAttribute('src');
+  ft$('ft-espera').hidden = false;
+  ft$('ft-espera').textContent = 'Se ve cuando la subas';
+  ft$('ft-comparar').hidden = false;
+  ft$('ft-zona-txt').textContent = file.name || 'Foto elegida';
+  ft$('ft-btn-subir').disabled = false;
+}
+
+async function ftSubir() {
+  if (!ft.archivo) return;
+  const tema = ft.tema, btn = ft$('ft-btn-subir');
+  const fd = new FormData();
+  fd.append('tema', tema);
+  fd.append('archivo', ft.archivo);
+  fd.append('descripcion', ft$('ft-desc-nueva').value.trim());
+  fd.append('foco_x', '0.5');
+  fd.append('foco_y', '0.5');
+  btn.disabled = true;
+  btn.textContent = 'Subiendo…';
+  ft$('ft-espera').textContent = 'Normalizando…';
+  ftMsg('ft-msg-subir', '');
+  let r;
+  try {
+    r = await fetch('/plataforma/fotos-tema', {method: 'POST', body: fd, credentials: 'same-origin'});
+  } catch (e) {
+    r = null;
+  }
+  btn.textContent = 'Subir foto';
+  if (!r || !r.ok) {
+    ft$('ft-espera').textContent = 'Se ve cuando la subas';
+    btn.disabled = false;
+    ftMsg('ft-msg-subir', r ? await ftDetalle(r) : 'No se pudo subir: revisá la conexión.', 'error');
+    return;
+  }
+  const j = await r.json();
+  ftReiniciarZona();
+  ft$('ft-desc-nueva').value = '';
+  if (tema === ft.tema) await ftCargar(j.id);
+  const f = ft.fotos.find(x => x.id === j.id);
+  const norm = ft$('ft-normalizada');
+  norm.src = f ? ftUrl(f) : '/foto-tema/' + encodeURIComponent(j.id);
+  norm.hidden = false;
+  ft$('ft-espera').hidden = true;
+  ftMsg('ft-msg-subir', 'Lista: quedó en borrador en ' + FT_NOMBRES[tema] + ' (' + j.ancho + ' × ' + j.alto +
+        ' px). Marcá el punto de interés y publicala.', 'ok');
+}
+
+async function ftGuardar() {
+  const f = ft.elegida;
+  if (!f) return;
+  const publicada = (document.querySelector('input[name="ft-estado"]:checked') || {}).value === '1';
+  const todos = (document.querySelector('input[name="ft-alcance"]:checked') || {}).value !== '0';
+  const elegidos = [...document.querySelectorAll('.ft-sind:checked')].map(c => c.value);
+  if (publicada && !todos && !elegidos.length) {
+    ftMsg('ft-msg-editar', 'Elegí al menos un sindicato, o dejala disponible para todos.', 'error');
+    return;
+  }
+  const fd = new FormData();
+  fd.append('descripcion', ft$('ft-desc').value.trim());
+  fd.append('foco_x', String(ft.foco.x));
+  fd.append('foco_y', String(ft.foco.y));
+  fd.append('publicada', publicada ? '1' : '0');
+  fd.append('todos_los_sindicatos', todos ? '1' : '0');
+  // Siempre va el campo (vacío de más): sin él el servidor no toca la lista,
+  // y destildar todos no se guardaría nunca.
+  fd.append('sindicatos', '');
+  elegidos.forEach(id => fd.append('sindicatos', id));
+  const btn = ft$('ft-guardar');
+  btn.disabled = true;
+  let r;
+  try {
+    r = await fetch('/plataforma/fotos-tema/' + encodeURIComponent(f.id), {method: 'POST', body: fd, credentials: 'same-origin'});
+  } catch (e) { r = null; }
+  btn.disabled = false;
+  if (!r || !r.ok) {
+    ftMsg('ft-msg-editar', r ? await ftDetalle(r) : 'No se pudo guardar: revisá la conexión.', 'error');
+    return;
+  }
+  await ftCargar(f.id);
+  ftMsg('ft-msg-editar', publicada ? 'Guardado. La foto está publicada.' : 'Guardado. La foto sigue en borrador.', 'ok');
+}
+
+async function ftBorrar() {
+  const f = ft.elegida;
+  if (!f) return;
+  if (!confirm('¿Borrar esta foto de ' + FT_NOMBRES[ft.tema] + '? Si algún sindicato la usa de portada, ' +
+               'vuelve a la de por defecto. No se puede deshacer.')) return;
+  let r;
+  try {
+    r = await fetch('/plataforma/fotos-tema/' + encodeURIComponent(f.id) + '/borrar', {method: 'POST', credentials: 'same-origin'});
+  } catch (e) { r = null; }
+  if (!r || !r.ok) {
+    ftMsg('ft-msg-editar', r ? await ftDetalle(r) : 'No se pudo borrar: revisá la conexión.', 'error');
+    return;
+  }
+  await ftCargar(null);
+}
+
+(function ftEnganchar() {
+  const zona = ft$('ft-zona'), input = ft$('ft-archivo'), lienzo = ft$('ft-lienzo');
+  if (!zona) return;
+  document.querySelectorAll('.ft-subtab').forEach(b => b.addEventListener('click', () => ftCambiarTema(b.dataset.ftTema)));
+  const tab = document.querySelector('.ptab[data-pp="fotos"]');
+  if (tab) tab.addEventListener('click', () => { if (!ft.cargado) ftCargar(); });
+  input.addEventListener('change', () => ftElegirArchivo(input.files[0]));
+  zona.addEventListener('dragover', e => { e.preventDefault(); zona.classList.add('encima'); });
+  zona.addEventListener('dragleave', () => zona.classList.remove('encima'));
+  zona.addEventListener('drop', e => {
+    e.preventDefault();
+    zona.classList.remove('encima');
+    ftElegirArchivo(e.dataTransfer && e.dataTransfer.files[0]);
+  });
+  ft$('ft-btn-subir').addEventListener('click', ftSubir);
+  ft$('ft-guardar').addEventListener('click', ftGuardar);
+  ft$('ft-borrar').addEventListener('click', ftBorrar);
+  ft$('ft-cerrar').addEventListener('click', ftCerrar);
+  document.querySelectorAll('input[name="ft-alcance"]').forEach(r => r.addEventListener('change', ftSincAlcance));
+  // El punto de interés: un clic sobre la foto, o las flechas del teclado.
+  lienzo.addEventListener('click', e => {
+    const caja = ft$('ft-ed-img').getBoundingClientRect();
+    if (!caja.width || !caja.height) return;
+    ft.foco = {x: ftEntre01((e.clientX - caja.left) / caja.width), y: ftEntre01((e.clientY - caja.top) / caja.height)};
+    ftPintarFoco();
+  });
+  lienzo.addEventListener('keydown', e => {
+    const paso = {ArrowLeft: [-0.02, 0], ArrowRight: [0.02, 0], ArrowUp: [0, -0.02], ArrowDown: [0, 0.02]}[e.key];
+    if (!paso) return;
+    e.preventDefault();
+    ft.foco = {x: ftEntre01(ft.foco.x + paso[0]), y: ftEntre01(ft.foco.y + paso[1])};
+    ftPintarFoco();
+  });
+})();
+/* ---------- fin de la Biblioteca de fotos ---------- */
 
 // Si la URL trae un ancla (ej. #marca desde una tarjeta de /plataforma/inicio,
 // o #topes tras un alta) o un error de topes, abrir esa pestaña -- mismo

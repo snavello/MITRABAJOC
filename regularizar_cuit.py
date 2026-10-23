@@ -282,6 +282,8 @@ EXCLUIDAS = {
     "eventoencuesta.detalle": "bitácora de la encuesta: texto libre (D5)",
     "cambioplan.detalle": "bitácora de planes de Render: no lleva identidades (D5)",
     "avisoenviado.clave": "candado de avisos por día: no lleva identidades",
+    "fototema.sindicatos": "ids de fila de los sindicatos a los que se ofrece la foto (PLAN_TEMAS.md): no son identidades",
+    "sindicato.fotos_portada": "ids de FotoTema elegidas por modelo de diseño (PLAN_TEMAS.md): no lleva identidades",
     "casoherramienta.entrada": "caso de la Calculadora bancaria: opciones del cálculo, sin CUIL a propósito",
     "casoherramienta.esperado": "caso de la Calculadora bancaria: importes calculados, sin CUIL a propósito",
     "casoherramienta.real": "caso de la Calculadora bancaria: importes cargados a mano, sin CUIL a propósito",

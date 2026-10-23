@@ -99,6 +99,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - esquema.py — indicadores de la **Sala de mando** (`/entornos/esquema`,
   `templates/esquema.html`): el esquema físico de toda la solución, vivo.
   Recibe la sesión, todo en SQL agrupado. Ver "Estado actual" 27.
+- temas.py — los dos modelos de diseño (`laguna` por defecto, `noticiero`) y
+  las paletas (`colm3na` / `sindicato`); resuelve el que ve una persona: el
+  suyo, el de su sindicato o el por defecto. Puro. Ver PLAN_TEMAS.md.
 - fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
@@ -618,6 +621,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   sale de la sesión y el recibo tiene que ser suyo (`_envio_del_afiliado`,
   `_recibo_propio`); antes un afiliado podía marcar como enviado el recibo de
   otro. Detalle en HISTORIAL.md.
+
+- **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
+  (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
+  (147); cada persona cambia el suyo (afiliado: `CuentaTrabajador.tema`;
+  operador: `CuentaPanel.tema`), vacío = el que eligió su sindicato
+  (`Sindicato.tema_afiliados` / `tema_panel`). La **paleta** (colores de
+  Colm3na o del sindicato) la decide el sindicato, nunca la persona. Un valor
+  fuera del catálogo no se guarda y, si aparece en la base, vale el por
+  defecto. Las fotos se normalizan al subirlas y el color lo pone el modelo.
+  **La opción seleccionada de un menú no se marca con una barra o corchete de
+  color a un costado** (SDN): se pinta en el color del modelo.
 
 - **El CUIL/CUIT cumple el módulo 11 donde NACE, y no se cambia desde una
   edición** (2026-10-10, `PLAN_CUIT_MOD11.md`, primera medida de la serie
@@ -1201,6 +1215,36 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de casillas del HTML del acotado, fail-closed). Hecho por dos
     desarrolladores y dos QA independientes (código y robot Playwright
     contra la demo local), con aprobación final de Code.
+
+38. **Dos modelos de diseño que se cambian a gusto** (2026-10-23,
+    [`PLAN_TEMAS.md`](PLAN_TEMAS.md), cierre del concurso de diseño de diez
+    rondas): `laguna` (el 162, por defecto) y `noticiero` (el 147). **Bloque 1
+    HECHO** (Trabajador 0.48.01, Admin 0.66.01): `temas.py` (catálogo y
+    resolución, puro), `CuentaTrabajador.tema` / `CuentaPanel.tema` (la
+    elección de la persona, en la cuenta), `Sindicato.tema_afiliados` /
+    `tema_panel` / `paleta_tema`, migración `d4a8e2f6b1c3`,
+    `db.apariencia_de`, `POST /api/apariencia` y `POST /admin/apariencia/mia`,
+    y las cuatro páginas marcadas con `data-tema` / `data-paleta` (todavía sin
+    cambio visual). Tests: `test_temas.py`. **Bloque 2 HECHO** (Plataforma
+    0.53.01): `fotos_tema.py` normaliza toda foto al subirla (gris, niveles
+    con 2% de recorte, brillo medio 0,46, lado largo 1.600 px, webp; rechaza
+    lo ilegible, lo de más de 8 MB y lo de menos de 600 px), tabla `FotoTema`
+    y `Sindicato.fotos_portada` (migración `e5b9f3a7c2d4`), rutas de
+    plataforma `/plataforma/fotos-tema` (listar, subir, editar, borrar) y
+    `GET /foto-tema/{id}` (pública si está publicada, como el logo). Tests:
+    `test_fotos_tema.py`. **Bloque 3 HECHO**, las pantallas de Apariencia:
+    en "Tu perfil" del afiliado (elige Laguna o Noticiero; la paleta se lee),
+    la pestaña **Apariencia** del panel, solo Super Admin (`POST
+    /admin/apariencia`, clasificada como `SECCION_SUPER_ADMIN`: modelo por
+    defecto de afiliados y operadores, paleta con la **prueba de lectura**
+    `temas.prueba_de_lectura` —contraste WCAG de las combinaciones que usan
+    los modelos; avisa y el modelo corrige el tono, no bloquea— y foto de
+    portada por modelo), "Tu modelo" en "Tu cuenta" de la portada del panel
+    para cualquier operador, y la pestaña **Fotos** de `/plataforma` (subir,
+    original → normalizada, punto de interés, publicar, para qué
+    sindicatos). Tests: `test_apariencia_afiliado.py`,
+    `test_apariencia_panel.py`, `test_biblioteca_fotos_pantalla.py`. Siguen:
+    los dos modelos en cada pantalla (bloques 4 a 7).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

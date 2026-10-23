@@ -132,11 +132,15 @@ def test_las_exentas_son_solo_entrar_salir_y_las_pantallas():
     (PLAN_DASHBOARD_V2.md): mismo chequeo adentro, mismos endpoints.
     /admin/elegir y /admin/cambiar-sindicato son parte de ENTRAR: el
     selector de quien trabaja en más de un sindicato (una persona, una
-    clave), que todavía no tiene sesión o la está cambiando."""
+    clave), que todavía no tiene sesión o la está cambiando.
+    /admin/apariencia/mia (PLAN_TEMAS.md) es la única que no es pantalla:
+    guarda el modelo de diseño de la PROPIA persona en su cuenta, no toca
+    nada del sindicato, y cualquier operador tiene que poder elegirlo."""
     assert main.RUTAS_ADMIN_SIN_PERMISO == {
         "/admin", "/admin/inicio", "/admin/login", "/admin/salir",
         "/admin/dashboard", "/admin/dashboard-v2",
-        "/admin/elegir", "/admin/cambiar-sindicato"}
+        "/admin/elegir", "/admin/cambiar-sindicato",
+        "/admin/apariencia/mia"}
     print("OK  test_las_exentas_son_solo_entrar_salir_y_las_pantallas")
 
 

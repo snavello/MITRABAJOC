@@ -57,6 +57,8 @@ import telegram
 import precios_ia
 import resultados_encuesta
 import fechas
+import temas
+import fotos_tema
 import geo
 import secrets
 import db
@@ -563,6 +565,29 @@ def servir_logo(sindicato_id: int):
             media_type=sind.logo_mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
+
+
+def _url_foto_portada(sindicato_id, tema: str) -> dict | None:
+    """La foto de portada del modelo para una pantalla: {"url", "foco_x",
+    "foco_y", "descripcion"}, o None si la biblioteca de ese modelo todavía no
+    tiene ninguna para este sindicato (la portada se arma sin foto)."""
+    f = db.foto_portada_de(sindicato_id, tema) if sindicato_id else None
+    if not f:
+        return None
+    return {"url": f"/foto-tema/{f['id']}?v={f['v']}", "foco_x": f["foco_x"],
+            "foco_y": f["foco_y"], "descripcion": f["descripcion"]}
+
+
+@app.get("/foto-tema/{foto_id}")
+def servir_foto_tema(foto_id: int, request: Request):
+    """Una foto de la biblioteca de un modelo (PLAN_TEMAS.md, D5). Las
+    publicadas son decorado de la app y se sirven a cualquiera, como el logo;
+    un borrador solo lo ve plataforma."""
+    f = db.foto_tema(foto_id)
+    if not f or (not f.publicada and not sesion_actual(request, "plataforma")):
+        raise HTTPException(404, "Sin foto")
+    return BinResponse(content=f.datos, media_type=f.mime or "image/webp",
+                       headers={"Cache-Control": "public, max-age=3600"})
 
 
 @app.get("/firma/{sindicato_id}")
@@ -1237,6 +1262,11 @@ PERMISOS_RUTAS = {
     "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
     "/admin/area":                          SECCION_SUPER_ADMIN,
     "/admin/area/estado":                   SECCION_SUPER_ADMIN,
+    # Apariencia del sindicato (PLAN_TEMAS.md, bloque 3): pasa la puerta de
+    # los administradores y el handler deja solo al general
+    # (_exigir_super_admin). Es identidad del gremio entero, no de una
+    # seccional: un admin local no la cambia para todos.
+    "/admin/apariencia":                    SECCION_SUPER_ADMIN,
 
     "/admin/concepto":                      "conceptos",
     "/admin/concepto/borrar":               "conceptos",
@@ -1371,7 +1401,10 @@ PERMISOS_RUTAS = {
 # datos a los mismos endpoints gateados.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
                            "/admin/dashboard", "/admin/dashboard-v2",
-                           "/admin/elegir", "/admin/cambiar-sindicato"}
+                           "/admin/elegir", "/admin/cambiar-sindicato",
+                           # Cada operador elige SU modelo de diseño: es una
+                           # preferencia de la persona, no una sección del panel.
+                           "/admin/apariencia/mia"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -1609,10 +1642,16 @@ def admin(request: Request):
     catalogo_permisos = permisos_mod.agrupar_para_ui(
         [x for x in permisos_mod.secciones_de_modulos(modulos) if x in permisos]
     ) if administra else []
+    marca_sind = db.marca_sindicato(sid)
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
+        "apariencia": db.apariencia_de(sid, rol="panel", uid=ses.get("uid", 0)),
+        # La pestaña Apariencia (PLAN_TEMAS.md, bloque 3) es del Super Admin:
+        # para los demás no se consulta nada.
+        "apariencia_sindicato": _apariencia_del_sindicato(sid, sind, marca_sind)
+                                if es_super_admin and sind else None,
         "hoy": fechas.hoy_texto(),   # estado vigente / vencida de noticias y beneficios
-        "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
+        "marca": marca_sind, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
         "rubro_visto": rubro_visto,
@@ -1839,8 +1878,14 @@ def admin_inicio(request: Request):
             if a["id"] == usuario.area_id:
                 area_admin = a["nombre"]
                 break
+    apariencia = db.apariencia_de(sid, cuil_admin, rol="panel")
     return templates.TemplateResponse("admin_portada.html", {
         "permisos": permisos, "es_super_admin": es_super_admin,
+        "apariencia": apariencia,
+        "foto_portada": _url_foto_portada(sid, apariencia["tema"]),
+        # "Tu modelo" en Tu cuenta: cada operador elige el suyo
+        # (POST /admin/apariencia/mia), sea cual sea su rol.
+        "temas_catalogo": temas.TEMAS,
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
@@ -6226,6 +6271,64 @@ def plataforma_usuarios(request: Request):
     })
 
 
+@app.get("/plataforma/fotos-tema")
+def plataforma_fotos_tema(request: Request, tema: str = Query(temas.TEMA_DEFECTO)):
+    """La biblioteca de fotos de un modelo, sin los bytes."""
+    exigir_plataforma(request)
+    if temas.tema_valido(tema) is None:
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"tema": tema, "fotos": db.fotos_de_tema(tema)}
+
+
+@app.post("/plataforma/fotos-tema")
+async def plataforma_fotos_tema_subir(request: Request, tema: str = Form(...),
+                                      archivo: UploadFile = File(...), descripcion: str = Form(""),
+                                      foco_x: float = Form(0.5), foco_y: float = Form(0.5)):
+    """Sube una foto a la biblioteca de un modelo: se normaliza acá (gris,
+    niveles y brillo parejos) y queda como borrador hasta publicarla."""
+    exigir_plataforma(request)
+    if temas.tema_valido(tema) is None:
+        raise HTTPException(400, "Ese modelo no existe.")
+    try:
+        normalizada = fotos_tema.normalizar(await archivo.read())
+    except fotos_tema.FotoInvalida as e:
+        raise HTTPException(400, str(e))
+    fid = db.crear_foto_tema(temas.tema_valido(tema), normalizada, descripcion,
+                             _quien_plataforma(request), foco_x, foco_y)
+    db.registrar_log_plataforma("foto_tema_alta", _quien_plataforma(request), objetivo=str(fid),
+                                ip=_ip_de(request), detalle=f"tema={tema}")
+    return {"ok": True, "id": fid, "ancho": normalizada["ancho"], "alto": normalizada["alto"]}
+
+
+@app.post("/plataforma/fotos-tema/{foto_id}")
+def plataforma_fotos_tema_editar(request: Request, foto_id: int, descripcion: str = Form(None),
+                                 foco_x: float = Form(None), foco_y: float = Form(None),
+                                 publicada: str = Form(None), todos_los_sindicatos: str = Form(None),
+                                 sindicatos: list[str] = Form(None)):
+    """Descripción, punto de interés, publicación y para qué sindicatos."""
+    exigir_plataforma(request)
+    campos = {k: v for k, v in {"descripcion": descripcion, "foco_x": foco_x, "foco_y": foco_y,
+                                "sindicatos": sindicatos}.items() if v is not None}
+    for k, v in (("publicada", publicada), ("todos_los_sindicatos", todos_los_sindicatos)):
+        if v is not None:
+            campos[k] = v in ("1", "true", "on", "si", "sí")
+    if not db.editar_foto_tema(foto_id, **campos):
+        raise HTTPException(404, "Sin foto")
+    db.registrar_log_plataforma("foto_tema_edicion", _quien_plataforma(request), objetivo=str(foto_id),
+                                ip=_ip_de(request), detalle=",".join(sorted(campos)))
+    return {"ok": True}
+
+
+@app.post("/plataforma/fotos-tema/{foto_id}/borrar")
+def plataforma_fotos_tema_borrar(request: Request, foto_id: int):
+    exigir_plataforma(request)
+    if not db.borrar_foto_tema(foto_id):
+        raise HTTPException(404, "Sin foto")
+    db.registrar_log_plataforma("foto_tema_baja", _quien_plataforma(request), objetivo=str(foto_id),
+                                ip=_ip_de(request))
+    return {"ok": True}
+
+
 @app.post("/plataforma/usuarios")
 def plataforma_usuarios_crear(request: Request, usuario: str = Form(...), nombre: str = Form(""),
                               rol: str = Form("admin"), clave_transitoria: str = Form(...)):
@@ -7987,6 +8090,7 @@ def app_trabajador(request: Request):
             "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
             "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
+            "apariencia": db.apariencia_de(sid_activo, cuil),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -8027,8 +8131,11 @@ def app_portada(request: Request):
         credencial = db.credencial_de(cuil, sid_activo) or {}
         nombre_trab = db.nombre_trabajador(cuil, sid_activo)
         seccional_id = db.seccional_de_trabajador(cuil, sid_activo)
+        apariencia = db.apariencia_de(sid_activo, cuil)
         return templates.TemplateResponse("portada.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "apariencia": apariencia,
+            "foto_portada": _url_foto_portada(sid_activo, apariencia["tema"]),
             "marca_plataforma": db.marca_plataforma(),
             "cuil": cuil, "nombre_trab": nombre_trab,
             "primer_nombre": (nombre_trab or "").split(" ")[0] or "Trabajador",
@@ -8199,6 +8306,103 @@ def confirmar_mail(request: Request, token: str = Form(""), codigo: str = Form("
         nivel = cuenta.nivel_fiabilidad
     _login_ok(request, _intentos_registro)
     return {"ok": True, "nivel": nivel}
+
+
+@app.post("/api/apariencia")
+def api_apariencia(request: Request, tema: str = Form("")):
+    """El afiliado elige su modelo de diseño (PLAN_TEMAS.md, D2). Se guarda en
+    su CUENTA, así lo ve igual en cualquier aparato; vacío vuelve al que eligió
+    su sindicato. Un modelo que no existe no se guarda."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if not db.guardar_tema_persona(cuil, tema, "afiliado"):
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"ok": True, "tema": temas.tema_valido(tema) or ""}
+
+
+@app.post("/admin/apariencia/mia")
+def admin_apariencia_mia(request: Request, tema: str = Form("")):
+    """El operador del panel elige su modelo de diseño, para todos los
+    sindicatos donde trabaja: vive en su CuentaPanel (una por persona)."""
+    exigir_sindicato(request)
+    ses = sesion_actual(request, "sindicato")
+    with db.get_session() as s:
+        usuario = s.get(UsuarioSindicato, ses.get("uid", 0))
+        cuil = usuario.cuil if usuario else ""
+    if not cuil or not db.guardar_tema_persona(cuil, tema, "panel"):
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"ok": True, "tema": temas.tema_valido(tema) or ""}
+
+
+def _apariencia_del_sindicato(sid: int, sind, marca: dict) -> dict:
+    """Lo que dibuja la pestaña Apariencia: los defaults del sindicato, la
+    paleta, la prueba de lectura de sus cuatro colores y, por modelo, las
+    fotos que puede usar con la elegida marcada (None = automática). Una
+    elección que ya no está disponible (la foto se despublicó) se muestra
+    como automática, que es lo que el afiliado ve en ese caso."""
+    portadas = dict(sind.fotos_portada or {})
+    modelos = []
+    for clave, t in temas.TEMAS.items():
+        fotos = db.fotos_disponibles(sid, clave)
+        elegida = portadas.get(clave)
+        modelos.append({"clave": clave, "nombre": t["nombre"], "descripcion": t["descripcion"],
+                        "fotos": fotos,
+                        "elegida": elegida if elegida in {f["id"] for f in fotos} else None})
+    colores = [marca.get("color_base"), marca.get("color_primario"),
+               marca.get("color_acento"), marca.get("color_secundario")]
+    return {
+        "tema_afiliados": temas.resolver_tema(None, sind.tema_afiliados),
+        "tema_panel": temas.resolver_tema(None, sind.tema_panel),
+        "paleta": temas.resolver_paleta(sind.paleta_tema),
+        "paletas": temas.PALETAS,
+        "modelos": modelos,
+        "colores": colores,
+        "prueba": temas.prueba_de_lectura(*colores),
+    }
+
+
+def _foto_de_formulario(valor):
+    """El valor de un grupo "Foto de portada": None = no vino (no se toca),
+    "auto" = la más nueva, un id = esa foto. Lo que no es ninguna de las
+    tres vuelve como False y el formulario se rechaza."""
+    if valor is None:
+        return None
+    v = valor.strip().lower()
+    if v in ("", "auto"):
+        return "auto"
+    return int(v) if v.isdigit() else False
+
+
+@app.post("/admin/apariencia")
+def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_panel: str = Form(""),
+                     paleta: str = Form(""), foto_laguna: str = Form(None),
+                     foto_noticiero: str = Form(None)):
+    """El Super Admin elige la apariencia del sindicato (PLAN_TEMAS.md, D3 y
+    D5): el modelo por defecto de los afiliados y de los operadores, la
+    paleta y la foto de portada de cada modelo. Se valida TODO antes de
+    guardar nada: un valor fuera del catálogo o una foto que este sindicato
+    no puede usar rechazan el formulario entero, sin cambios a medias."""
+    sid = exigir_sindicato(request)
+    _exigir_super_admin(request)
+    if not (temas.tema_valido(tema_afiliados) and temas.tema_valido(tema_panel)
+            and temas.paleta_valida(paleta)):
+        return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
+    fotos = {}
+    for tema, valor in (("laguna", foto_laguna), ("noticiero", foto_noticiero)):
+        elegida = _foto_de_formulario(valor)
+        if elegida is None:
+            continue
+        if elegida is False or (elegida != "auto" and elegida not in
+                                {f["id"] for f in db.fotos_disponibles(sid, tema)}):
+            return RedirectResponse("/admin?err=aparienciafoto#apariencia", status_code=303)
+        fotos[tema] = None if elegida == "auto" else elegida
+    if not db.set_apariencia_sindicato(sid, tema_afiliados, tema_panel, paleta):
+        return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
+    for tema, foto_id in fotos.items():
+        db.elegir_foto_portada(sid, tema, foto_id)
+    return RedirectResponse("/admin?ok=apariencia#apariencia", status_code=303)
 
 
 @app.post("/api/perfil")

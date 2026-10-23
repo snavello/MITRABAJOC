@@ -15,7 +15,7 @@
     {% else %}<span class="tag tag-pend" title="Solo acreditó que su CUIL está en el padrón (el CUIL es un dato público).">1 · CUIL</span>{% endif %}
   {% endmacro -%}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -951,6 +951,62 @@
     .geo-con-lista { grid-template-columns:1fr; }
     .geo-candidatos { max-height:none; }
   }
+
+  /* ---------- Apariencia (PLAN_TEMAS.md, bloque 3) ----------
+     Opciones como tarjetas con un radio adentro. La elegida se TIÑE entera
+     con el acento (relleno + contorno parejo), nunca con una barra de color
+     a un costado (D6). */
+  .ap-grupo { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .ap-op { position:relative; display:flex; flex-direction:column; gap:8px; padding:12px;
+    border:1px solid var(--linea); border-radius:12px; background:#fff; cursor:pointer;
+    transition:background-color var(--mov-rapido, 160ms) ease, border-color var(--mov-rapido, 160ms) ease; }
+  .ap-op:hover { border-color:color-mix(in srgb, var(--marca-acento) 45%, var(--linea)); }
+  .ap-op input { position:absolute; opacity:0; pointer-events:none; }
+  .ap-op:has(input:checked) { background:color-mix(in srgb, var(--marca-acento) 14%, #fff);
+    border-color:color-mix(in srgb, var(--marca-acento) 70%, var(--tinta)); }
+  .ap-op:has(input:focus-visible) { outline:2px solid var(--marca-primario); outline-offset:2px; }
+  .ap-op-t { display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-weight:700; font-size:14px; color:var(--tinta); }
+  .ap-op-d { font-size:12.5px; color:var(--gris); line-height:1.45; }
+  .ap-tilde { width:20px; height:20px; border-radius:50%; flex:none; display:flex; align-items:center;
+    justify-content:center; border:1.5px solid var(--linea); background:#fff; }
+  .ap-tilde svg { width:12px; height:12px; stroke:#fff; stroke-width:3; fill:none; opacity:0; }
+  .ap-op:has(input:checked) .ap-tilde { background:var(--tinta); border-color:var(--tinta); }
+  .ap-op:has(input:checked) .ap-tilde svg { opacity:1; }
+  .ap-sub { font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;
+    color:var(--gris); margin:18px 0 8px; }
+  .ap-sub:first-of-type { margin-top:4px; }
+  /* Miniaturas de cada modelo, dibujadas en CSS (no son capturas). */
+  .ap-mini { height:74px; border-radius:8px; overflow:hidden; position:relative; border:1px solid var(--linea); }
+  .ap-mini i { position:absolute; display:block; border-radius:3px; }
+  .ap-mini-laguna { background:#fff; }
+  .ap-mini-laguna .m1 { inset:0 0 auto 0; height:42px; border-radius:0;
+    background:linear-gradient(120deg, #8ee6d4 0%, #1fb3c4 48%, #2a5bd7 100%); }
+  .ap-mini-laguna .m2 { left:10px; top:12px; width:46%; height:7px; background:rgba(255,255,255,.92); }
+  .ap-mini-laguna .m3 { left:10px; top:24px; width:28%; height:5px; background:rgba(255,255,255,.6); }
+  .ap-mini-laguna .m4 { left:10px; top:52px; width:60%; height:5px; background:#dfe6ee; }
+  .ap-mini-laguna .m5 { left:10px; top:62px; width:40%; height:5px; background:#e9eef3; }
+  .ap-mini-noticiero { background:#f5f1e8; }
+  .ap-mini-noticiero .m1 { left:10px; right:10px; top:10px; height:9px; background:#2c2f6b; }
+  .ap-mini-noticiero .m2 { left:10px; right:10px; top:24px; height:1px; background:#2c2f6b; border-radius:0; }
+  .ap-mini-noticiero .m3 { left:10px; top:32px; width:38%; height:32px; background:#ff5a3c; }
+  .ap-mini-noticiero .m4 { left:calc(38% + 18px); right:10px; top:34px; height:4px; background:#2c2f6b; opacity:.75; }
+  .ap-mini-noticiero .m5 { left:calc(38% + 18px); right:22px; top:44px; height:4px; background:#2c2f6b; opacity:.45; }
+  .ap-muestras { display:flex; gap:6px; }
+  .ap-muestra { width:28px; height:28px; border-radius:7px; border:1px solid rgba(0,0,0,.12); }
+  .ap-muestra-colm3na { background:linear-gradient(135deg, #8ee6d4, #1fb3c4 50%, #2a5bd7); }
+  .ap-lectura { margin-top:12px; padding:12px 14px; border-radius:10px; font-size:13px; line-height:1.5; }
+  .ap-lectura.pasa { background:#e3f3ec; color:#1d6b52; }
+  .ap-lectura.avisa { background:#fdf3e7; color:#8a5a1a; }
+  .ap-lectura ul { margin:6px 0 0 18px; padding:0; }
+  .ap-lectura .num { font-family:ui-monospace, Consolas, monospace; font-variant-numeric:tabular-nums; }
+  .ap-fotos { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+  .ap-fotos .ap-op { padding:8px; gap:6px; }
+  .ap-foto { aspect-ratio:3 / 2; width:100%; object-fit:cover; border-radius:7px; display:block;
+    background:var(--papel); }
+  .ap-foto-auto { aspect-ratio:3 / 2; border-radius:7px; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:8px; font-size:12px; color:var(--gris); background:var(--papel); }
+  .ap-fotos .ap-op-t { font-size:12.5px; font-weight:600; }
 </style>
 {% include "_fondo_interior.html" %}
 </head>
@@ -1025,6 +1081,7 @@
   {% if 'seccionales' in permisos %}<button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>{% endif %}
   {% if 'listas' in permisos %}<button class="tab-btn" data-panel="listas"><svg viewBox="0 0 24 24"><use href="#ic-listas"/></svg><span>Listas</span></button>{% endif %}
   {% if administra_areas %}<button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Áreas y Usuarios</span></button>{% endif %}
+  {% if es_super_admin and apariencia_sindicato %}<button class="tab-btn" data-panel="apariencia"><svg viewBox="0 0 24 24"><use href="#ic-apariencia"/></svg><span>Apariencia</span></button>{% endif %}
 </nav>
 </div>
 
@@ -1046,6 +1103,7 @@
     <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+    <g id="ic-apariencia"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10" cy="7.3" r="1.1"/><circle cx="14.5" cy="7.3" r="1.1"/></g>
     <g id="ic-clip"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></g>
   </defs>
 </svg>
@@ -3465,6 +3523,101 @@
     {% endfor %}
   </table>
   </div>
+  </div>
+  {% endif %}
+
+  {% if es_super_admin and apariencia_sindicato %}
+  {% set ap = apariencia_sindicato %}
+  <div class="panel" data-mov-vista id="panel-apariencia">
+  <!-- ============ APARIENCIA (PLAN_TEMAS.md, bloque 3) ============ -->
+  {# Solo el Super Admin: es identidad del gremio entero. El servidor lo
+     exige igual (POST /admin/apariencia, _exigir_super_admin). #}
+  <h2 class="titulo-pagina">Apariencia</h2>
+  <p class="muted">Cómo se ve Colm3na para tu sindicato: el modelo de diseño, los colores y la foto de portada. Si alguien ya eligió otro modelo desde su perfil, se respeta el suyo.</p>
+
+  {% if request.query_params.get('ok') == 'apariencia' %}
+  <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Apariencia guardada.</div>
+  {% elif request.query_params.get('err') == 'apariencia' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: elegí un modelo para los afiliados, uno para el panel y una paleta de las que están en pantalla.</div>
+  {% elif request.query_params.get('err') == 'aparienciafoto' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: esa foto ya no está disponible para tu sindicato. Elegí otra o dejala en automática.</div>
+  {% endif %}
+
+  <form method="post" action="/admin/apariencia">
+  <div class="card">
+    <h3 style="margin-top:0;">Modelo por defecto</h3>
+    {% for grupo, campo, elegido in [("Para los afiliados", "tema_afiliados", ap.tema_afiliados), ("Para los operadores del panel", "tema_panel", ap.tema_panel)] %}
+    <div class="ap-sub">{{ grupo }}</div>
+    <div class="ap-grupo" role="radiogroup" aria-label="{{ grupo }}">
+      {% for m in ap.modelos %}
+      <label class="ap-op">
+        <input type="radio" name="{{ campo }}" value="{{ m.clave }}" {% if m.clave == elegido %}checked{% endif %}>
+        <span class="ap-mini ap-mini-{{ m.clave }}" aria-hidden="true"><i class="m1"></i><i class="m2"></i><i class="m3"></i><i class="m4"></i><i class="m5"></i></span>
+        <span class="ap-op-t">{{ m.nombre }}<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
+        <span class="ap-op-d">{{ m.descripcion }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Paleta</h3>
+    <p class="muted" style="margin-top:0;">Vale para todo el sindicato y para los dos modelos: cada persona elige su modelo, no los colores.</p>
+    <div class="ap-grupo" role="radiogroup" aria-label="Paleta">
+      {% for clave, nombre in ap.paletas.items() %}
+      <label class="ap-op">
+        <input type="radio" name="paleta" value="{{ clave }}" {% if clave == ap.paleta %}checked{% endif %}>
+        <span class="ap-op-t">{{ nombre }}<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
+        {% if clave == 'sindicato' %}
+        <span class="ap-muestras">{% for c in ap.colores %}<span class="ap-muestra" style="background:{{ c }};" title="{{ c }}"></span>{% endfor %}</span>
+        <span class="ap-op-d">Tus cuatro colores de marca, aplicados a cada modelo.</span>
+        {% else %}
+        <span class="ap-muestras"><span class="ap-muestra ap-muestra-colm3na"></span></span>
+        <span class="ap-op-d">Los colores de cada modelo, tal como se diseñó.</span>
+        {% endif %}
+      </label>
+      {% endfor %}
+    </div>
+    {% if ap.prueba %}
+    <div class="ap-lectura avisa"><b>Prueba de lectura de tus colores</b>
+      <ul>{% for a in ap.prueba %}<li>{{ a.aviso }}{% if a.contraste %} <span class="num">({{ ('%.2f' % a.contraste) | replace('.', ',') }}:1; hace falta {{ ('%.1f' % a.minimo) | replace('.', ',') }}:1)</span>{% endif %}</li>{% endfor %}</ul>
+    </div>
+    {% else %}
+    <div class="ap-lectura pasa"><b>Tus colores pasan la prueba de lectura.</b> Todo el texto que va sobre ellos se lee bien.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Foto de portada</h3>
+    <p class="muted" style="margin-top:0;">Cada modelo tiene su biblioteca. La foto toma los colores del modelo al mostrarse.</p>
+    {% for m in ap.modelos %}
+    <div class="ap-sub">{{ m.nombre }}</div>
+    {% if m.fotos %}
+    <div class="ap-fotos" role="radiogroup" aria-label="Foto de portada de {{ m.nombre }}">
+      <label class="ap-op">
+        <input type="radio" name="foto_{{ m.clave }}" value="auto" {% if not m.elegida %}checked{% endif %}>
+        <span class="ap-foto-auto">La más nueva de la biblioteca</span>
+        <span class="ap-op-t">Automática<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
+      </label>
+      {% for f in m.fotos %}
+      <label class="ap-op">
+        <input type="radio" name="foto_{{ m.clave }}" value="{{ f.id }}" {% if f.id == m.elegida %}checked{% endif %}>
+        <img class="ap-foto" src="/foto-tema/{{ f.id }}?v={{ f.v }}" alt="{{ f.descripcion }}" loading="lazy"
+             style="object-position:{{ (f.foco_x * 100) | round(1) }}% {{ (f.foco_y * 100) | round(1) }}%;">
+        <span class="ap-op-t">{{ f.descripcion or ('Foto ' ~ f.id) }}<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Todavía no hay fotos para este modelo. Las carga Colm3na.</p>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <button type="submit">Guardar apariencia</button>
+  </form>
+  <p class="muted" style="margin-top:14px;">Tu propio modelo lo elegís desde <b>Tu cuenta</b>, en la portada del panel.</p>
   </div>
   {% endif %}
 </div>
