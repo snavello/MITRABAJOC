@@ -136,8 +136,9 @@ html[data-tema="noticiero"] .pt-gremio .marca-barra { background: transparent; b
 html[data-tema="noticiero"] .pt-gremio .marca-nombre { font-family: var(--nt-f-cond); font-size: 26px; color: var(--nt-tinta);
   border-right-color: var(--nt-coral); }
 /* El logo de Colm3na que trae el encabezado es el de fondo oscuro: sobre el
-   papel se invierte la luz sin cambiar el tono (la colmena sigue naranja). */
-html[data-tema="noticiero"] .pt-gremio .marca-colmena { filter: invert(1) hue-rotate(180deg); }
+   papel va la versión para fondo claro (invertirlo con un filtro dejaba la
+   colmena marrón). */
+html[data-tema="noticiero"] .pt-gremio img.marca-colmena[src="/logo-plataforma-oscuro"] { content: url("/logo-plataforma"); }
 
 html[data-tema="noticiero"] .pt-gremio-hola { position: static; z-index: 2; width: 100%; margin-top: auto; padding: 0 18px 30px; }
 html[data-tema="noticiero"] .pt-gremio-hola .fila-hola { position: static; display: block; }
@@ -470,8 +471,21 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
 
 /* ---------- Escritorio ---------- */
 @media (min-width: 900px) {
-  /* La foto acompaña el saludo; no ocupa media pantalla antes del contenido. */
-  html[data-tema="noticiero"] .pt-gremio { min-height: 280px; }
+  /* La tapa a lo ancho: la foto despejada a la derecha y el saludo sobre
+     el papel a la izquierda, como una foto de portada con su título. */
+  html[data-tema="noticiero"] .pt-gremio { min-height: 440px; }
+  html[data-tema="noticiero"] .pt-gremio.con-foto .pt-gremio-media::after {
+    background:
+      linear-gradient(180deg,
+        color-mix(in oklab, var(--nt-fondo) 82%, transparent) 0%,
+        transparent 20%, transparent 70%,
+        color-mix(in oklab, var(--nt-fondo) 90%, transparent) 90%,
+        var(--nt-fondo) 100%),
+      linear-gradient(90deg,
+        color-mix(in oklab, var(--nt-fondo) 96%, transparent) 0%,
+        color-mix(in oklab, var(--nt-fondo) 86%, transparent) 30%,
+        transparent 58%); }
+  html[data-tema="noticiero"] .pt-gremio.con-foto .pt-gremio-hola { padding-bottom: 30px; }
   html[data-tema="noticiero"] .pt-gremio:not(.con-foto) { min-height: 240px; }
   /* El encabezado sobre la misma grilla que el contenido (1320 px). */
   html[data-tema="noticiero"] .pt-gremio .marca-barra { box-sizing: border-box; width: 100%; max-width: 1320px; margin: 0 auto; padding: 12px 26px; }
@@ -509,4 +523,16 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
   html[data-tema="noticiero"] .pt-gremio .hola, html[data-tema="noticiero"] .pt-gremio .pt-hola-baj { animation: nt-funde .45s ease both; }
   html[data-tema="noticiero"] .pt-filas .pt-fila, html[data-tema="noticiero"] .pt-salir, html[data-tema="noticiero"] .pt-rec-cta,
   html[data-tema="noticiero"] .perfil-guardar-btn, html[data-tema="noticiero"] .pf-mapa-btn, html[data-tema="noticiero"] .mi-secc-otras { transition: none; }
+}
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f-tit); font-weight: 400; font-size: 36px; line-height: 1.05;
+  letter-spacing: .3px; text-transform: uppercase; }
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .marca-barra .marca-nombre { font-size: 25px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
 }

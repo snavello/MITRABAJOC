@@ -8633,3 +8633,51 @@ lectura quedó dentro de `<script src="modales.js">`, y el navegador ignora lo
 que va adentro de un script con `src`: `probarLectura()` no existía y
 "Editar" sindicato se cortaba antes de llenar el formulario. Un test recorre
 ahora todas las plantillas buscando ese error.
+
+## Proporciones de las cuatro pantallas (2026-10-23)
+
+SDN, mirando Pruebas en escritorio: «los logos siguen diminutos y la foto
+chica en desktop; corregí todo y revisá página por página, teléfono y
+escritorio». Se revisaron las cuatro pantallas, las seis pestañas de la app y
+las dieciséis secciones del panel, en 390 y 1440 px (las portadas también en
+1920), en los dos modelos y con las dos paletas.
+
+**Los logos no eran chicos por la caja.** En Pruebas la UOM no tiene logo
+cargado (se ve el nombre en texto, de 17 px) y los que sí tienen traen mucho
+margen transparente: uno de 219×148 tiene el dibujo en 42 px de alto, así que
+en una caja de 64 px se veía como un sello de 18. Agrandar la caja no lo
+arregla para todos; recortar el archivo, sí. `logos.py` recorta el margen
+(por el canal alfa, o por un fondo liso si las cuatro esquinas son del mismo
+color) con un 3% de aire, y acota a 1.200 px el lado largo (el de Colm3na
+medía 8.854). Lo hace al SERVIR (`/logo/{id}` y los dos de plataforma), con
+memoria por proceso y el largo del archivo en la clave, y nunca toca lo
+guardado: si el recorte se equivoca, se corrige en un archivo y sale bien
+para todos. Un SVG o algo ilegible pasa tal cual.
+
+**Sin logo, el nombre es un logotipo.** Iba de 17 a 36 px según la pantalla.
+Ahora mide lo mismo en las cuatro (30 px en Laguna, 36 en Anton en
+Noticiero) y en el teléfono baja a dos renglones antes que cortarse.
+
+**La foto.** El velo era parejo y muy oscuro: la foto apenas se adivinaba en
+una franja de 250 px. Ahora la portada con foto mide 440 px en escritorio,
+la foto queda despejada a la derecha y el velo va detrás del saludo, a la
+izquierda, y abajo para fundirse con el cuerpo (en Noticiero, el papel en
+lugar del azul). Sin foto, la portada sigue como estaba.
+
+**Lo que se arregló de paso, por pantalla.** Portada: Beneficios pasó a la
+columna ancha, debajo de Novedades (la columna quedaba vacía y el riel bajaba
+el doble); la tarjeta de Mis recibos perdió el documento de marca de agua, que
+se leía como un recuadro cortado. App: en escritorio era la columna del
+teléfono (480 px) en medio de la pantalla; pasó a 680, con el encabezado en la
+misma grilla que la portada para que el logo no salte. Inicio/Salir: en el
+teléfono flotando tapaban "Subir un PDF" apenas se abría la app; ahí van en la
+barra del nombre, y en el resto de las pantallas se corren al bajar y vuelven
+al subir (`static/flota.js`, uno para las cuatro). Panel: entrando por
+`#encuestas` en el teléfono, la tira mostraba las cuatro primeras pestañas y
+ninguna marcada; ahora se desliza hasta la elegida. La tilde de «Áreas» se
+cortaba (line-height 1 con overflow), la ayuda decía «H» y pasó a «?», y las
+cabeceras de tabla subieron de 10,5 a 11,5 px. Encuestas del afiliado, vacía,
+no tenía título y mostraba una línea suelta. En Noticiero, la tarjeta «Áreas y
+Usuarios» se partía en cuatro renglones por el rótulo «Solo Super Admin» (se
+sacó: solo la ve el Super Admin), y el Colm3na de la portada se invertía con
+un filtro y quedaba marrón: ahora es la versión para fondo claro.

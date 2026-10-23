@@ -1062,15 +1062,17 @@ html[data-tema="noticiero"] #pwa-banner #pwa-btn-instalar { background: var(--nt
   border-radius: 2px !important; font-weight: 700 !important; letter-spacing: 1px; text-transform: uppercase; font-size: 12px !important; }
 html[data-tema="noticiero"] #pwa-banner #pwa-btn-cerrar { color: var(--nt-tinta-2) !important; opacity: 1 !important; }
 
-/* escritorio: la columna sigue siendo la del teléfono, un poco más ancha;
-   la tira se agrupa al centro y la pastilla de Inicio/Salir se apoya en el
-   borde de la columna */
+/* escritorio: una columna de lectura (680 px, no la del teléfono estirada a
+   la pantalla); el encabezado sobre la grilla de 1320 px de la portada, así
+   el logo no salta al pasar de una a otra. La tira se agrupa al centro y la
+   pastilla de Inicio/Salir va afuera de la columna, a la derecha */
 @media (min-width: 761px) {
-  html[data-tema="noticiero"] .cont { max-width: 540px; }
-  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - 270px)); }
+  html[data-tema="noticiero"] .cont { max-width: 680px; }
+  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - 340px)); }
+  html[data-tema="noticiero"] .marca-barra { padding-inline: max(26px, calc(50% - 634px)); }
   html[data-tema="noticiero"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 96px)); justify-content: center; gap: 4px; }
   html[data-tema="noticiero"] .tabbar button { font-size: 12.5px; }
-  html[data-tema="noticiero"] .flota-sal { right: max(14px, calc(50% - 310px)); }
+  html[data-tema="noticiero"] .flota-sal { right: max(14px, calc(50% - 560px)); }
 }
 
 /* ---------- movimiento ---------- */
@@ -1106,3 +1108,23 @@ html[data-tema="noticiero"][data-paleta="sindicato"] .marca-barra {
 }
 html[data-tema="noticiero"][data-paleta="sindicato"] .marca-nombre { color: #fff; border-right-color: var(--gremio-acento); }
 html[data-tema="noticiero"][data-paleta="sindicato"] .marca-colmena { content: normal; }
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f-tit); font-weight: 400; font-size: 36px; line-height: 1.05;
+  letter-spacing: .3px; text-transform: uppercase; }
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .marca-barra .marca-nombre { font-size: 25px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
+}
+
+/* En el teléfono Inicio y Salir van en la barra del nombre (trabajador.html):
+   más bajos y sin sombra de cosa que flota. */
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .ident { align-items: center; padding-block: 8px; }
+  html[data-tema="noticiero"] .ident .flota-sal { height: 36px; box-shadow: none; }
+  html[data-tema="noticiero"] .ident .flota-sal a { height: 36px; padding: 0 12px; letter-spacing: .8px; font-size: 12px; }
+}

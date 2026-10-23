@@ -59,6 +59,7 @@ import resultados_encuesta
 import fechas
 import temas
 import fotos_tema
+import logos
 import geo
 import secrets
 import db
@@ -560,9 +561,12 @@ def servir_logo(sindicato_id: int):
         sind = s.get(Sindicato, sindicato_id)
         if not sind or not sind.logo_datos:
             raise HTTPException(404, "Sin logo")
+        # Sin el margen vacío que traiga el archivo (logos.py): si no, un logo
+        # con mucho aire se ve diminuto en su caja.
+        datos, mime = logos.recortado(("sindicato", sindicato_id), sind.logo_datos, sind.logo_mime)
         return BinResponse(
-            content=sind.logo_datos,
-            media_type=sind.logo_mime or "application/octet-stream",
+            content=datos,
+            media_type=mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
@@ -645,9 +649,10 @@ def servir_logo_plataforma():
         cfg = s.get(ConfiguracionPlataforma, 1)
         if not cfg or not cfg.logo_datos:
             raise HTTPException(404, "Sin logo")
+        datos, mime = logos.recortado("plataforma", cfg.logo_datos, cfg.logo_mime)
         return BinResponse(
-            content=cfg.logo_datos,
-            media_type=cfg.logo_mime or "application/octet-stream",
+            content=datos,
+            media_type=mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
@@ -661,9 +666,10 @@ def servir_logo_plataforma_oscuro():
         cfg = s.get(ConfiguracionPlataforma, 1)
         if not cfg or not cfg.logo_datos_oscuro:
             raise HTTPException(404, "Sin logo")
+        datos, mime = logos.recortado("plataforma-oscuro", cfg.logo_datos_oscuro, cfg.logo_mime_oscuro)
         return BinResponse(
-            content=cfg.logo_datos_oscuro,
-            media_type=cfg.logo_mime_oscuro or "application/octet-stream",
+            content=datos,
+            media_type=mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 templates = Jinja2Templates(directory="templates")

@@ -28,6 +28,7 @@
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 <script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 {% from "_paleta_legible.html" import variables_legibles %}
 <style>
@@ -1066,7 +1067,7 @@
 {% endif %}
 <div class="flota-sesion">
 <button type="button" class="btn-ayuda oculto" id="btn-ayuda" title="Ayuda" aria-label="Ayuda">
-  <span>H</span>
+  <span>?</span>
 </button>
 <a class="btn-home" href="/admin/inicio" title="Inicio">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
@@ -1478,7 +1479,7 @@
         <td class="muted">{{ seccional_por_id.get(t.seccional_id, '—') }}</td>
         <td class="muted">{{ t.cuit_empleador or '—' }}</td>
         <td>
-          {% if not t.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
+          {% if not t.activo %}<span class="tag" style="background:#eee;color:#5f6676;">baja</span>
           {% elif t.registrado %}<span class="tag tag-si">registrado</span>
           {% else %}<span class="muted">sin registrar</span>{% endif %}
           {# La marca no se edita acá: la prende y la apaga el alta o la
@@ -1760,7 +1761,7 @@
     <tr>
       <td>{{ n.titulo }}{% if n.bajada %}<br><span class="muted">{{ n.bajada }}</span>{% endif %}</td>
       <td class="muted" style="white-space:nowrap;">{{ n.fecha_desde }} → {{ n.fecha_hasta }}</td>
-      <td>{% if n.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#888;">vencida</span>{% elif n.fecha_desde > hoy %}<span class="tag tag-pend">próxima</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
+      <td>{% if n.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#5f6676;">vencida</span>{% elif n.fecha_desde > hoy %}<span class="tag tag-pend">próxima</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
       <td class="muted">{% if n.destino_seccionales %}{% for sid in n.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ n.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
@@ -1879,7 +1880,7 @@
     <tr>
       <td>{{ b.rubro }}</td>
       <td class="muted" style="white-space:nowrap;">{{ b.fecha_desde }} → {{ b.fecha_hasta }}</td>
-      <td>{% if b.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#888;">vencido</span>{% elif b.fecha_desde > hoy %}<span class="tag tag-pend">próximo</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
+      <td>{% if b.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#5f6676;">vencido</span>{% elif b.fecha_desde > hoy %}<span class="tag tag-pend">próximo</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
       <td class="muted">{% if b.destino_seccionales %}{% for sid in b.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ b.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
@@ -2027,7 +2028,7 @@
     {% for n in notificaciones %}
     <tr>
       <td class="muted">{{ n.enviado_en }}</td>
-      <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#888;">sistema</span>{% endif %}</td>
+      <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#5f6676;">sistema</span>{% endif %}</td>
       <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
       <td class="muted">{{ CRITERIO_LABELS.get(n.criterio, n.criterio) }}</td>
       <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
@@ -2271,7 +2272,7 @@
         <td>{{ t.titulo }}</td>
         <td><code>{{ t.codigo }}</code></td>
         <td class="muted">{{ t.campos|length }}</td>
-        <td>{% if t.borrador %}<span class="tag tag-pend">borrador</span>{% elif t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td>{% if t.borrador %}<span class="tag tag-pend">borrador</span>{% elif t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#5f6676;">inactivo</span>{% endif %}</td>
         <td class="muted">{{ t.creado }}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick="copiarLinkFormulario({{ t.id }}, this)" title="Link directo al formulario, para pegar en una notificación o noticia">Link</button>
@@ -2678,7 +2679,7 @@
         <td><code>{{ e.cuit }}</code></td>
         <td>{{ e.razon_social or '—' }}</td>
         <td class="muted">{{ e.provincia or '—' }}</td>
-        <td>{% if e.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td>{% if e.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#5f6676;">inactivo</span>{% endif %}</td>
         <td style="white-space:nowrap;">{{ nivel_cuenta(cta) }}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick='editarEmpleador({{ {"id":e.id,"cuit":e.cuit,"razon_social":e.razon_social,"domicilio":e.domicilio,"telefono":e.telefono,"provincia":e.provincia,"mail":e.mail} | tojson }})'>Editar</button>
@@ -2770,7 +2771,7 @@
       {% for n in notificaciones_empresa %}
       <tr>
         <td class="muted">{{ n.enviado_en }}</td>
-        <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#888;">sistema</span>{% endif %}</td>
+        <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#5f6676;">sistema</span>{% endif %}</td>
         <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
         <td class="muted">{{ CRITERIO_LABELS_EMP.get(n.criterio, n.criterio) }}</td>
         <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
@@ -2902,7 +2903,7 @@
           <td>{{ t.titulo }}</td>
           <td><code>{{ t.codigo }}</code></td>
           <td class="muted">{{ t.campos|length }}</td>
-          <td>{% if t.borrador %}<span class="tag tag-pend">borrador</span>{% elif t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+          <td>{% if t.borrador %}<span class="tag tag-pend">borrador</span>{% elif t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#5f6676;">inactivo</span>{% endif %}</td>
           <td class="muted">{{ t.creado }}</td>
           <td style="white-space:nowrap; text-align:right;">
             <button type="button" class="mini" onclick='editarTramiteTipoEmpresa({{ t | tojson }})'>Editar</button>
@@ -2978,7 +2979,7 @@
       <div>
         <strong>{{ c.nombre }}</strong>
         {% if c.codigo %}<span class="muted"> · {{ c.codigo }}</span>{% endif %}
-        {% if not c.activo %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}
+        {% if not c.activo %}<span class="tag" style="background:#eee;color:#5f6676;">inactivo</span>{% endif %}
         <div class="muted" style="font-size:12.5px; margin-top:3px;">
           {{ c.documentos }} documento(s), {{ c.documentos_vigentes }} vigente(s) ·
           <strong>{{ c.fragmentos_vigentes }}</strong> fragmentos indexados
@@ -3009,7 +3010,7 @@
           {% else %}<span class="tag">pendiente</span>{% endif %}
         </td>
         <td>
-          {% if d.vigente %}<span class="tag tag-si">vigente</span>{% else %}<span class="tag" style="background:#eee;color:#888;">no vigente</span>{% endif %}
+          {% if d.vigente %}<span class="tag tag-si">vigente</span>{% else %}<span class="tag" style="background:#eee;color:#5f6676;">no vigente</span>{% endif %}
         </td>
         <td style="white-space:nowrap; text-align:right;">
           {% if d.estado == 'listo' %}
@@ -3396,7 +3397,7 @@
       <td><b>{{ a.nombre }}</b></td>
       <td>{{ a.seccional }}</td>
       <td class="muted">{% for sec in a.permisos %}{{ etiquetas_secciones.get(sec, sec) }}{% if not loop.last %} · {% endif %}{% else %}—{% endfor %}</td>
-      <td>{% if a.activo %}<span class="tag tag-si">activa</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactiva</span>{% endif %}</td>
+      <td>{% if a.activo %}<span class="tag tag-si">activa</span>{% else %}<span class="tag" style="background:#eee;color:#5f6676;">inactiva</span>{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick='editarArea({{ a | tojson }})'>Editar</button>
         <form method="post" action="/admin/area/estado" style="display:inline;"
@@ -3544,7 +3545,7 @@
       <td>{% if u.es_afiliado %}<span class="tag tag-si">afiliado</span>
           {% else %}<span class="muted">no empadronado</span>{% endif %}</td>
       <td>
-        {% if not u.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
+        {% if not u.activo %}<span class="tag" style="background:#eee;color:#5f6676;">baja</span>
         {% elif u.sin_clave %}<span class="tag tag-pend">sin clave</span>
         {% elif u.debe_cambiar_clave %}<span class="tag tag-pend">clave inicial</span>
         {% else %}<span class="tag tag-si">activo</span>{% endif %}
@@ -3809,6 +3810,15 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const destino = btn.dataset.panel;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('activa', b === btn));
+    // En el teléfono la tira se desliza de costado: la pestaña elegida queda
+    // a la vista (si no, entrando por #encuestas la tira mostraba las cuatro
+    // primeras y nada marcado). Solo la tira, nunca la página.
+    const tira = btn.closest('.nav-strip');
+    if (tira && tira.scrollWidth > tira.clientWidth + 1) {
+      const t = tira.getBoundingClientRect(), b = btn.getBoundingClientRect();
+      tira.scrollTo({ left: tira.scrollLeft + (b.left - t.left) - (t.width - b.width) / 2,
+                      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
     document.querySelectorAll('.panel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'panel-' + destino);
     });

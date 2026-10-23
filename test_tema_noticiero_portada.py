@@ -113,6 +113,8 @@ def test_las_fuentes_son_locales_y_existen():
     familias = {re.search(r'font-family:\s*"([^"]+)"', c).group(1) for c in caras}
     assert {"Anton", "Archivo"} <= familias
     for url in re.findall(r"url\(\"?([^\")]+)\"?\)", css):
+        if url == "/logo-plataforma":   # el logo de Colm3na para fondo claro, de la propia app
+            continue
         assert url.startswith("/static/"), f"nada de CDN (CSP): {url}"
         assert Path(url.lstrip("/")).exists(), url
     archivo = next(c for c in caras if '"Archivo"' in c)
