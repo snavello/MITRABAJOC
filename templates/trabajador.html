@@ -861,6 +861,23 @@
     background:#fff; border-bottom:1px solid var(--linea); }
   .ident-nombre { font-weight:600; font-size:14px; color:var(--tinta); }
   .ident-cuil { font-size:12px; color:var(--gris); }
+  /* Una pestaña sin nada todavía: un estado vacío que explica qué va a
+     aparecer, no una línea suelta. */
+  .vacio-tab { display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;
+    margin:18px 0 8px; padding:30px 22px; border:1px dashed var(--linea); border-radius:14px; }
+  .vacio-ico { display:grid; place-items:center; width:46px; height:46px; margin-bottom:4px; border-radius:50%;
+    background:color-mix(in srgb, var(--marca-acento) 16%, transparent); color:var(--tinta); }
+  .vacio-ico svg { width:22px; height:22px; stroke:currentColor; stroke-width:1.7; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .vacio-t { font-weight:650; font-size:15px; color:var(--tinta); }
+  .vacio-x { margin:0; max-width:36ch; font-size:13px; line-height:1.5; color:var(--gris); }
+  /* En el teléfono Inicio y Salir van acá, a la derecha del nombre y el
+     CUIL (ver la pastilla .flota-sal más arriba). */
+  @media (max-width:760px) {
+    .ident { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px; row-gap:1px; }
+    .ident-nombre, .ident-cuil { grid-column:1; min-width:0; }
+    .ident .flota-sal { grid-column:2; grid-row:1 / span 2; align-self:center; position:static; box-shadow:none; }
+    .ident .flota-sal a { height:34px; padding:0 12px 0 10px; font-size:13px; }
+  }
   /* ===== Pestañas del trabajador (barra inferior) ===== */
   .cont { padding-bottom:78px; }  /* espacio para la barra fija */
   .tabbar { position:fixed; bottom:0; left:0; right:0; background:#fff;
@@ -1059,17 +1076,19 @@
 {% include "_encabezado.html" %}
 
 {% if cuil %}
-{# Inicio y Salir: UNA pastilla que flota abajo, apoyada sobre la tira de
-   pestañas, con el rótulo a la vista (pauta de SDN para los dos modelos:
-   dos círculos con un ícono solo no se entendían, y la X se leía como
-   "cerrar esta pantalla", no como salir de la cuenta). #}
-<nav class="flota-sal" aria-label="Inicio y salida">
-  <a class="flota-ini" href="/app/inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-home"/></svg>Inicio</a>
-  <a class="flota-salir" href="/trabajador/salir"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-salir"/></svg>Salir</a>
-</nav>
 <div class="ident">
   <div class="ident-nombre">{{ nombre_trab or 'Trabajador' }}</div>
   <div class="ident-cuil">CUIL {{ cuil }}</div>
+  {# Inicio y Salir: UNA pastilla con el rótulo a la vista (pauta de SDN
+     para los dos modelos: dos círculos con un ícono solo no se entendían, y
+     la X se leía como "cerrar esta pantalla", no como salir de la cuenta).
+     Arriba de 760 px flota abajo, apoyada sobre la tira de pestañas; en el
+     teléfono va en esta barra, junto al nombre: flotando tapaba "Subir un
+     PDF" apenas se abría la app. Va adentro de .ident por eso. #}
+  <nav class="flota-sal" aria-label="Inicio y salida">
+    <a class="flota-ini" href="/app/inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-home"/></svg>Inicio</a>
+    <a class="flota-salir" href="/trabajador/salir"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-salir"/></svg>Salir</a>
+  </nav>
 </div>
 {% endif %}
 
@@ -1404,6 +1423,7 @@
   {% if 'encuestas' in modulos %}
   <div class="tpanel" data-mov-vista id="tp-encuestas">
     <!-- ======= ENCUESTAS (SPRINT_ENCUESTAS.md, Fase 2) ======= -->
+    <h1 class="titulo-pagina">Encuestas</h1>
     <div id="enc-lista"><p class="muted" style="font-size:13px;">Cargando…</p></div>
     <div id="enc-responder" class="oculto"></div>
   </div>
@@ -3138,7 +3158,9 @@ function pintarListaEncuestas() {
   const badge = document.getElementById('badge-encuestas');
   if (badge) { badge.textContent = pendientes || ''; badge.style.display = pendientes ? 'flex' : 'none'; }
   if (!encuestasTrab.length) {
-    cont.innerHTML = '<p class="muted" style="font-size:13.5px;">Tu sindicato todavía no te invitó a ninguna encuesta.</p>';
+    cont.innerHTML = `<div class="vacio-tab"><span class="vacio-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-encuestas"/></svg></span>
+      <div class="vacio-t">Todavía no hay encuestas</div>
+      <p class="vacio-x">Cuando tu sindicato te invite a responder una, la vas a ver acá y te va a llegar un aviso.</p></div>`;
     return;
   }
   cont.innerHTML = encuestasTrab.map(htmlTarjetaEncuesta).join('');
@@ -3519,5 +3541,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 {% endif %}
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 </body>
 </html>

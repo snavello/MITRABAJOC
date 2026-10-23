@@ -276,7 +276,7 @@ def _pares(p):
         "saludo y títulos sobre el papel": (p["tinta"], p["fondo"]),
         "rol bajo el saludo": (p["tinta-1"], p["fondo"]),
         "bajada de una celda": (p["tinta-2"], p["fondo"]),
-        "«Acerca de» y «Solo Super Admin»": (p["tinta-3"], p["fondo"]),
+        "«Acerca de»": (p["tinta-3"], p["fondo"]),
         "bajada de «Lo primero»": (p["tinta-1"], p["carta"]),
         "bajada de una celda al pasar el mouse": (p["tinta-2"], p["carta"]),
         "el nombre sobre el resaltador": (p["tinta"], p["resaltador"]),

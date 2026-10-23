@@ -878,15 +878,18 @@ html[data-tema="laguna"] #pwa-banner {
 html[data-tema="laguna"] #pwa-banner #pwa-btn-instalar { background: var(--lg-turq) !important; color: #fff !important; border-radius: 999px !important; }
 html[data-tema="laguna"] #pwa-banner #pwa-btn-cerrar { color: var(--lg-gris) !important; opacity: 1 !important; }
 
-/* escritorio: la columna sigue siendo la del teléfono; la tira se agrupa al
-   centro y la pastilla de Inicio/Salir se apoya en el borde de la columna */
+/* escritorio: una columna de lectura (680 px, no la del teléfono estirada a
+   la pantalla); el encabezado sobre la misma grilla de 1320 px que la
+   portada, así el logo no salta al pasar de una a otra. La tira se agrupa al
+   centro y la pastilla de Inicio/Salir va afuera de la columna, a la derecha */
 @media (min-width: 761px) {
   html[data-tema="laguna"] body { background: #fff; }
-  html[data-tema="laguna"] .cont { max-width: 520px; }
-  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 260px)); }
+  html[data-tema="laguna"] .cont { max-width: 680px; }
+  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 340px)); }
+  html[data-tema="laguna"] .marca-barra { padding-inline: max(26px, calc(50% - 634px)); }
   html[data-tema="laguna"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 96px)); justify-content: center; gap: 4px; }
   html[data-tema="laguna"] .tabbar button { font-size: 11px; }
-  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 300px)); }
+  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 560px)); }
 }
 
 /* ---------- movimiento ---------- */
@@ -930,3 +933,22 @@ html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
 }
 html[data-tema="laguna"][data-paleta="sindicato"] .marca-nombre { color: #fff; border-right-color: var(--gremio-acento); }
 html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { content: normal; }
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuente); font-weight: 800; font-size: 30px; line-height: 1.05;
+  letter-spacing: -.015em; text-transform: none; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-right: 0; padding-right: 0; }  /* en dos renglones el filete quedaba suelto */
+}
+
+/* En el teléfono Inicio y Salir van en la barra del nombre (trabajador.html):
+   sin sombra de cosa que flota. */
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .ident { align-items: center; padding-block: 8px; }
+  html[data-tema="laguna"] .ident .flota-sal { box-shadow: none; }
+}

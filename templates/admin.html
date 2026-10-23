@@ -28,6 +28,7 @@
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 <script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 {% from "_paleta_legible.html" import variables_legibles %}
 <style>
@@ -1066,7 +1067,7 @@
 {% endif %}
 <div class="flota-sesion">
 <button type="button" class="btn-ayuda oculto" id="btn-ayuda" title="Ayuda" aria-label="Ayuda">
-  <span>H</span>
+  <span>?</span>
 </button>
 <a class="btn-home" href="/admin/inicio" title="Inicio">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
@@ -3809,6 +3810,15 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const destino = btn.dataset.panel;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('activa', b === btn));
+    // En el teléfono la tira se desliza de costado: la pestaña elegida queda
+    // a la vista (si no, entrando por #encuestas la tira mostraba las cuatro
+    // primeras y nada marcado). Solo la tira, nunca la página.
+    const tira = btn.closest('.nav-strip');
+    if (tira && tira.scrollWidth > tira.clientWidth + 1) {
+      const t = tira.getBoundingClientRect(), b = btn.getBoundingClientRect();
+      tira.scrollTo({ left: tira.scrollLeft + (b.left - t.left) - (t.width - b.width) / 2,
+                      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
     document.querySelectorAll('.panel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'panel-' + destino);
     });

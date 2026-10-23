@@ -317,12 +317,6 @@ html[data-tema="noticiero"] body.claro .pt-fila-f {
 }
 html[data-tema="noticiero"] .pt-fila-f svg { width: 16px; height: 16px; stroke-width: 1.7; }
 html[data-tema="noticiero"] .pt-fila:hover .pt-fila-f { transform: translateX(3px); }
-/* Áreas y Usuarios: a lo ancho, y dice para quién es. */
-html[data-tema="noticiero"] .pt-filas > a[href="/admin#administradores"] { grid-column: 1 / -1; }
-html[data-tema="noticiero"] .pt-filas > a[href="/admin#administradores"] .pt-fila-f::before {
-  content: "Solo Super Admin"; font-size: 11.5px; font-weight: 600; letter-spacing: .6px;
-  color: var(--nt-tinta-3);
-}
 /* El globo rojo de trámites nuevos: color de estado, fijo, dentro de la celda. */
 html[data-tema="noticiero"] .badge-noleidas {
   top: 12px; right: 12px; min-width: 18px; height: 18px; padding: 0 5px; border: 0; border-radius: 9px;
@@ -341,7 +335,6 @@ html[data-tema="noticiero"] .badge-noleidas {
   html[data-tema="noticiero"] .pt-filas > :nth-child(3n+1).pt-fila,
   html[data-tema="noticiero"] .pt-filas > :nth-child(3n+1) > .pt-fila { padding-left: 4px; }
 }
-html[data-tema="noticiero"] .pt-filas > a[href="/admin#administradores"] { border-left: 0; padding-left: 4px; }
 
 @media (max-width: 659px) {
   html[data-tema="noticiero"] .pt-fila { padding-left: 4px; padding-right: 8px; }
@@ -448,7 +441,6 @@ html[data-tema="noticiero"] .tm-op.activa {
   html[data-tema="noticiero"] .pad.pt-accesos { padding: 28px 16px 0; }
   html[data-tema="noticiero"] .pt-fila { min-height: 74px; padding-top: 14px; padding-bottom: 14px; }
   html[data-tema="noticiero"] .pt-fila-t { font-size: 20px; }
-  html[data-tema="noticiero"] .pt-filas > a[href="/admin#administradores"] .pt-fila-f::before { display: none; }
   html[data-tema="noticiero"] .pt-pie { padding: 26px 16px 90px; }
   html[data-tema="noticiero"] .pt-flota { right: 14px; bottom: 14px; }
 }
@@ -479,9 +471,8 @@ html[data-tema="noticiero"] .tm-op.activa {
 html[data-tema="noticiero"] .pt-grupo + .pt-grupo { margin-top: 34px; }
 html[data-tema="noticiero"] .pt-grupo-tit { margin: 0; padding-bottom: 10px; border-bottom: 2px solid var(--nt-tinta);
   font-family: var(--nt-f-tit); font-weight: 400; font-size: 26px; line-height: 1; letter-spacing: .2px; color: var(--nt-tinta); }
-/* Dentro de un grupo son cuatro columnas: los filetes y el ancho de Áreas
-   y Usuarios siguen esa cuenta, no la de tres. */
-html[data-tema="noticiero"] .pt-grupo .pt-filas > a[href="/admin#administradores"] { grid-column: auto; }
+/* Dentro de un grupo son cuatro columnas: los filetes siguen esa cuenta,
+   no la de tres. */
 @media (min-width: 1040px) {
   html[data-tema="noticiero"] .pt-grupo .pt-filas > * { border-left: 1px solid var(--nt-linea); }
   html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(4n+1) { border-left: 0; }
@@ -489,4 +480,16 @@ html[data-tema="noticiero"] .pt-grupo .pt-filas > a[href="/admin#administradores
   html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(3n+1) > .pt-fila { padding-left: 20px; }
   html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(4n+1).pt-fila,
   html[data-tema="noticiero"] .pt-grupo .pt-filas > :nth-child(4n+1) > .pt-fila { padding-left: 4px; }
+}
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f-tit); font-weight: 400; font-size: 36px; line-height: 1.05;
+  letter-spacing: .3px; text-transform: uppercase; }
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .marca-barra .marca-nombre { font-size: 25px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-right: 0; padding-right: 0; }  /* en dos renglones el filete quedaba suelto */
 }

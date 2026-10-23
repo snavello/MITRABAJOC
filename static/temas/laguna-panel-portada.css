@@ -393,3 +393,15 @@ html[data-tema="laguna"] body.claro .fila-hola button:focus-visible { outline-co
 /* ---------- Los grupos de accesos (SDN, 2026-10-23) ---------- */
 html[data-tema="laguna"] .pt-grupo-tit { display: inline-block; padding-bottom: 4px; font-family: var(--lg-fuente); font-size: 12.5px;
   font-weight: 700; letter-spacing: .2em; color: var(--lg-azul); box-shadow: inset 0 -2px 0 var(--lg-lag); }
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuente); font-weight: 800; font-size: 30px; line-height: 1.05;
+  letter-spacing: -.015em; text-transform: none; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-right: 0; padding-right: 0; }  /* en dos renglones el filete quedaba suelto */
+}

@@ -189,7 +189,7 @@ html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] {
   }
   /* El filete fino entre una sección y la siguiente. */
   html[data-tema="noticiero"] .tab-btn + .tab-btn { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--nt-indigo) 7%, transparent); }
-  html[data-tema="noticiero"] .tab-btn > span:not(.badge-noleidas) { overflow: hidden; text-overflow: ellipsis; }
+  html[data-tema="noticiero"] .tab-btn > span:not(.badge-noleidas) { overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
   html[data-tema="noticiero"] .tab-btn:hover { background: var(--nt-hoja-2); color: var(--nt-tinta); }
   /* La sección activa: pastilla índigo entera, texto marfil, número coral. */
   html[data-tema="noticiero"] .tab-btn.activa {
@@ -888,3 +888,15 @@ html[data-tema="noticiero"][data-paleta="sindicato"] a.tab-btn[href="/admin/dash
 html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn svg.tab-ext { stroke: var(--marca-acento-txt, var(--marca-acento)); }
 html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn .badge-noleidas,
 html[data-tema="noticiero"][data-paleta="sindicato"] .tab-btn.activa .badge-noleidas { box-shadow: 0 0 0 2px var(--marca-base-relleno, var(--marca-base)); }
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f-tit); font-weight: 400; font-size: 36px; line-height: 1.05;
+  letter-spacing: .3px; text-transform: uppercase; }
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .marca-barra .marca-nombre { font-size: 25px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-right: 0; padding-right: 0; }  /* en dos renglones el filete quedaba suelto */
+}

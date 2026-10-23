@@ -19,6 +19,7 @@
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 {% from "_paleta_legible.html" import variables_legibles %}
 <style>
   :root {
@@ -55,9 +56,11 @@
   .pad.pt-cuerpo { padding-top: 0; padding-bottom: 0; }
   .pt-portada > .pt-sec { margin-top: 0; min-width: 0; }
   h2.pt-riel-tit { margin: 0 0 12px; }
-  /* Escritorio: Novedades en la columna ancha; Tus cosas y Beneficios en el riel. */
+  /* Escritorio: Novedades y Beneficios en la columna ancha, Tus cosas en el
+     riel. Con Beneficios en el riel, la columna ancha quedaba vacía debajo
+     de las tres noticias y el riel bajaba el doble. */
   @media (min-width: 1040px) {
-    .pt-portada { grid-template-areas: "nov tus" "nov ben"; grid-template-rows: auto 1fr; align-items: start; }
+    .pt-portada { grid-template-areas: "nov tus" "ben tus"; grid-template-rows: auto 1fr; align-items: start; }
     .pt-portada:not(:has(.pt-sec-nov)) { grid-template-areas: "tus ben"; grid-template-rows: auto; }
     .pt-sec-nov { grid-area: nov; } .pt-sec-tus { grid-area: tus; } .pt-sec-ben { grid-area: ben; }
     .pt-sec-tus .pt-filas { grid-template-columns: 1fr; }
