@@ -483,6 +483,7 @@
         <div class="check-modulos" id="sind-modulos">
           {% for clave, nombre in catalogo_modulos.items() %}
           <label class="chk-modulo"><input type="checkbox" name="modulos_habilitados" value="{{ clave }}" {% if clave in modulos_iniciales %}checked{% endif %}> {{ nombre }}</label>
+          <input type="hidden" name="modulos_ofrecidos" value="{{ clave }}">
           {% endfor %}
         </div>
         <span class="muted" style="font-size:11px;">Qué tarjetas ve el trabajador y qué pestañas ve el admin de este sindicato. Tildado = disponible.</span>

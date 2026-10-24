@@ -511,7 +511,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `MODULOS`, los de origen en `MODULOS_INICIALES`). Trabajadores y
   Seccionales quedan SIEMPRE visibles, no dependen de ningún módulo. El
   backend rechaza (403, `_exigir_modulo`) igual que esconde el botón — no
-  alcanza con ocultar en el cliente. Cualquier feature grande nueva evalúa
+  alcanza con ocultar en el cliente. **La ficha del sindicato en
+  `/plataforma` solo cambia los módulos que MOSTRÓ** (`modulos_ofrecidos`,
+  una casilla oculta por módulo; `main._modulos_tras_editar`): una pantalla
+  abierta antes de que un módulo existiera no lo apaga al guardar. Así se
+  perdió «Tu día» en La Bancaria (2026-10-24). Cualquier feature grande nueva evalúa
   primero si necesita su propia entrada acá (opt-in, no en
   `MODULOS_INICIALES`) en vez de estar siempre encendida para todos.
 - **Postgres y nada más, en todos lados** (2026-09-11). Desarrollo local
@@ -1295,9 +1299,11 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     en la hoja), **sin feriados**, **solo el dólar oficial del BCRA**, el
     **cumpleaños es una animación de 8 s que la persona ve una sola vez**
     (`CuentaTrabajador.cumple_visto`) y las **alertas del SMN apagadas**
-    (`alerta: null`). Módulo `tu_dia` opt-in, que la migración `f6c1a8d3e2b7`
-    prendió en los sindicatos existentes; rubros, política e intervalo los
-    elige el Super Admin en Apariencia. Las coordenadas nunca llegan al
+    (`alerta: null`). Módulo `tu_dia` **prendido por defecto** (en
+    `MODULOS_INICIALES`; las migraciones `f6c1a8d3e2b7` y `a9d4e7c2f1b8` lo
+    prendieron en los existentes); rubros, política e intervalo los elige el
+    Super Admin en Apariencia, donde el bloque se ve SIEMPRE: apagado, dice
+    que lo prende Colm3na (SDN: un módulo que no aparece no se adivina). Las coordenadas nunca llegan al
     navegador y un tercero caído no da 500. **Falta revisar el contenido**
     (todo `revisado: false`). Detalle en HISTORIAL.md, "Tu día en la portada
     del afiliado".

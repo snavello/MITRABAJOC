@@ -106,6 +106,8 @@ def test_edicion_cambia_modulos():
         "color_primario": "#152238", "color_secundario": "#1a7a6b", "color_acento": "#b23a2e",
         "color_base": "#0f1b2d",
         "modulos_habilitados": ["beneficios"],
+        # Como la pantalla real: una casilla oculta por módulo que mostró.
+        "modulos_ofrecidos": list(MODULOS),
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
