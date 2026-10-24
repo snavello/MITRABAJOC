@@ -159,7 +159,7 @@ html[data-tema="noticiero"] .marca-nombre {
 /* Colm3na sobre papel: la versión para fondo claro (el parcial trae la de
    fondo oscuro, que en marfil no se lee). Solo cuando existen las dos. */
 html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] {
-  content: url("/logo-plataforma"); height: 30px;
+  content: url("/logo-plataforma"); height: 34px;
 }
 
 /* ============================================================

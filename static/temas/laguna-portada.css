@@ -120,8 +120,6 @@ html[data-tema="laguna"] .pt-gremio.con-foto::after {
     color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 80%, transparent) 93%,
     var(--lg-agua-f) 100%); }
 html[data-tema="laguna"] .pt-gremio-hola { z-index: 2; padding: 16px 24px 72px; }
-html[data-tema="laguna"] .pt-hola-k { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
-  color: var(--lg-fluor-txt); }
 html[data-tema="laguna"] .pt-gremio .hola { margin-top: 8px; font-family: var(--lg-fuente); font-size: 30px; font-weight: 500;
   letter-spacing: -.005em; line-height: 1.15; color: #fff; }
 html[data-tema="laguna"] .pt-gremio .hola em { font-weight: 700; color: var(--lg-fluor-txt); }
@@ -362,8 +360,12 @@ html[data-tema="laguna"] .overlay-foto-grande { background: color-mix(in oklab, 
       var(--lg-agua-f) 100%); }
   /* Con foto: 440 px de laguna, la foto despejada a la derecha y el velo
      detrás del saludo, a la izquierda (abajo se funde con el cuerpo). */
-  html[data-tema="laguna"] .pt-gremio.con-foto { min-height: 440px; }
-  html[data-tema="laguna"] .pt-gremio.con-foto .pt-gremio-hola { padding-bottom: 84px; }
+  /* Sin alto fijo: el saludo y los datos útiles arrancan pegados al
+     encabezado (SDN, 2026-10-24: con 440 px y el saludo abajo quedaba un
+     hueco grande entre el encabezado y el contenido). La foto se ve
+     alrededor y a través de la caja de datos. */
+  html[data-tema="laguna"] .pt-gremio.con-foto { min-height: 0; }
+  html[data-tema="laguna"] .pt-gremio.con-foto .pt-gremio-hola { margin-top: 0; padding-top: 22px; padding-bottom: 64px; }
   html[data-tema="laguna"] .pt-gremio.con-foto::after {
     background:
       linear-gradient(180deg,
@@ -378,7 +380,12 @@ html[data-tema="laguna"] .overlay-foto-grande { background: color-mix(in oklab, 
         color-mix(in oklab, var(--lg-azul) 12%, transparent) 82%); }
   html[data-tema="laguna"] .pt-gremio .hola { font-size: 40px; }
   html[data-tema="laguna"] .pt-gremio .pt-hola-baj { font-size: 14px; }
-  html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 64px; height: 64px; }
+  /* La foto de perfil, grande y pegada al saludo. */
+  html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 96px; height: 96px; border-width: 2.5px;
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--lg-fluor) 18%, transparent); }
+  html[data-tema="laguna"] .pt-gremio .circulo-acento:has(img) { width: 120px; height: 120px; }
+  html[data-tema="laguna"] .pt-gremio .circulo-acento svg { width: 36px; height: 36px; }
+  html[data-tema="laguna"] .pt-gremio .fila-hola { gap: 24px; }
   html[data-tema="laguna"] .pad.pt-cuerpo { padding: 0 26px; }
   html[data-tema="laguna"] .pt-tapa-foto { height: auto; aspect-ratio: 2 / 1; max-height: 340px; }
   html[data-tema="laguna"] .pt-tapa-t { font-size: 34px; }
@@ -416,3 +423,17 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
     border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
 }
+
+/* ---------- Datos útiles (SDN, 2026-10-24): vidrio sobre la laguna ---------- */
+html[data-tema="laguna"] .pt-datos { color: #fff; background: color-mix(in oklab, var(--lg-azul) 62%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 18px 36px -22px rgba(0, 0, 0, .6);
+  animation: lg-sube .9s .3s var(--lg-curva) both; }
+html[data-tema="laguna"] .pt-datos-fecha { color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .pt-datos-ico { stroke: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .pt-datos-temp { font-family: var(--lg-fuente); font-weight: 600; letter-spacing: -.02em; }
+html[data-tema="laguna"] .pt-datos-cielo, html[data-tema="laguna"] .pt-datos-lista li { color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .pt-datos-clima { border-right-color: rgba(255, 255, 255, .2); }
+html[data-tema="laguna"] .pt-datos-lista svg { stroke: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .pt-datos-lista li > span > span:last-child { color: #fff; }
+@media (prefers-reduced-motion: reduce) { html[data-tema="laguna"] .pt-datos { animation: none; } }

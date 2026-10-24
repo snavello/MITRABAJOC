@@ -39,9 +39,15 @@ def test_beneficios_bajo_las_novedades_en_escritorio():
     assert 'grid-template-areas: "nov tus" "ben tus"' in _t("portada")
 
 
-def test_la_portada_con_foto_tiene_alto_en_escritorio():
+def test_la_portada_sin_alto_fijo_y_con_la_foto_de_perfil_junto_al_saludo():
+    """SDN, 2026-10-24: con 440 px fijos el saludo quedaba lejos del
+    encabezado. Ahora el alto lo dan el saludo y el widget de datos útiles, y
+    la foto de perfil va grande, antes del saludo."""
     for hoja in ("laguna-portada", "noticiero-portada"):
-        assert re.search(r"\.pt-gremio(\.con-foto)? \{ min-height: 440px; \}", _h(hoja)), hoja
+        css = _h(hoja)
+        assert re.search(r"\.pt-gremio(\.con-foto)? \{ min-height: 0; \}", css), hoja
+        assert ".circulo-acento:has(img) { width: 120px; height: 120px; }" in css, hoja
+    assert ".pt-gremio-hola .fila-hola > .circulo-acento { order: -1; }" in _t("portada")
 
 
 def test_sin_logo_el_nombre_es_un_logotipo_del_mismo_tamano_en_las_cuatro():
@@ -68,10 +74,10 @@ def test_la_pestana_encuestas_tiene_titulo_y_estado_vacio():
     assert 'class="vacio-tab"' in html
 
 
-def test_colm3na_en_escritorio_a_30_px():
-    assert "height: 30px" in Path("static/encabezado.css").read_text(encoding="utf-8").split(".marca-colmena {", 1)[1][:120]
+def test_colm3na_en_escritorio_a_34_px():
+    assert "height: 34px" in Path("static/encabezado.css").read_text(encoding="utf-8").split(".marca-colmena {", 1)[1][:120]
     for hoja in ("laguna-app", "noticiero-app"):
-        assert '.marca-colmena { height: 30px;' in _h(hoja), hoja
+        assert '.marca-colmena { height: 34px;' in _h(hoja), hoja
 
 
 def test_los_grupos_del_panel_sin_titulo_a_la_vista():

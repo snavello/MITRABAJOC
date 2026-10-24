@@ -171,7 +171,7 @@ html[data-tema="noticiero"] .pt-heroe .marca-nombre {
 /* Colm3na sobre papel: la versión para fondo claro (la plantilla trae la de
    fondo oscuro, que en marfil no se lee). Solo cuando existen las dos. */
 html[data-tema="noticiero"] .pt-heroe img.marca-colmena[src="/logo-plataforma-oscuro"] {
-  content: url("/logo-plataforma"); height: 30px;
+  content: url("/logo-plataforma"); height: 34px;
 }
 
 html[data-tema="noticiero"] .pt-heroe > .pad { padding: 0 40px; }
