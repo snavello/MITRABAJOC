@@ -165,7 +165,7 @@ html[data-tema="noticiero"] .marca-nombre {
 }
 /* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
    existe; si no, queda la de siempre). */
-html[data-tema="noticiero"] .marca-colmena { height: 30px; max-width: 150px; content: var(--logo-colmena-claro, normal); }
+html[data-tema="noticiero"] .marca-colmena { height: 34px; max-width: 160px; content: var(--logo-colmena-claro, normal); }
 @media (max-width: 760px) {
   html[data-tema="noticiero"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="noticiero"] .marca-colmena { height: 19px; }

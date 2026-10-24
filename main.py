@@ -60,6 +60,7 @@ import fechas
 import temas
 import fotos_tema
 import logos
+import datos_utiles
 import geo
 import secrets
 import db
@@ -8189,6 +8190,33 @@ def app_portada(request: Request):
     return templates.TemplateResponse("elegir_sindicato.html", {
         "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
     })
+
+
+@app.get("/api/portada/datos")
+def api_portada_datos(request: Request):
+    """Los datos útiles de la portada del afiliado (fecha, clima, próximo
+    feriado, efeméride; `datos_utiles.py`). Los pide el navegador DESPUÉS de
+    dibujar la portada, así un servicio de afuera lento nunca la demora. El
+    clima es el de su domicilio y, si no lo cargó, el de su seccional; sin
+    ninguno de los dos, no hay clima. Nunca falla: lo que no se pudo traer
+    viene en null."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(401, "Sin sesión")
+    sinds = db.sindicatos_de_cuil(cuil)
+    elegido = request.cookies.get("sind_elegido", "")
+    sid = sinds[0]["id"] if len(sinds) == 1 else next(
+        (sd["id"] for sd in sinds if str(sd["id"]) == elegido), None)
+    lat = lon = None
+    if sid:
+        perfil = db.perfil_trabajador(cuil, sid) or {}
+        lat, lon = perfil.get("latitud"), perfil.get("longitud")
+        if lat is None or lon is None:
+            sec_id = db.seccional_de_trabajador(cuil, sid)
+            sec = db.seccional_del_sindicato(sid, sec_id) if sec_id else None
+            lat, lon = (sec or {}).get("latitud"), (sec or {}).get("longitud")
+    return JSONResponse(datos_utiles.datos_de_portada(lat, lon),
+                        headers={"Cache-Control": "private, max-age=300"})
 
 
 # ---------- Confirmar el mail de una cuenta ya registrada (PLAN_REGISTRO.md, D10 y §4.6) ----------

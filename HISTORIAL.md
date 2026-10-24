@@ -8695,3 +8695,32 @@ lector de pantalla); la app del afiliado de vuelta a la columna del teléfono
 (la de 680 px se veía peor distribuida), y Colm3na a 30 px en escritorio. La
 foto de portada que "no se veía" en La Bancaria no era del diseño: la
 biblioteca de Pruebas no tiene ninguna foto disponible para ese sindicato.
+
+## Datos útiles en la portada del afiliado (2026-10-24)
+
+Con las fotos reales cargadas en Pruebas, SDN vio la portada peor en
+escritorio: la foto de perfil chica, Colm3na chico, el saludo lejos del
+encabezado (la portada medía 440 px fijos y el saludo iba abajo) y un «LB»
+arriba del «Hola» (las iniciales del gremio, que Laguna mostraba como
+antetítulo). Propuso poner la foto de perfil junto al saludo y una caja con
+datos útiles; después pidió que la caja no pase de la altura del saludo y la
+seccional: "es un widget, no algo fundamental".
+
+**Qué trae.** La fecha, el clima de la localidad, el próximo feriado y una
+efeméride del mundo del trabajo, cada uno en un renglón. El clima sale de
+Open-Meteo y los feriados de ArgentinaDatos: públicos, gratis y sin clave.
+Las efemérides son una lista propia y corta (`data/efemerides.json`), solo con
+fechas comprobadas; la de hoy o la próxima dentro de tres semanas.
+
+**Por qué desde el servidor y después de dibujar.** Como la
+geocodificación: la CSP no deja salir al navegador, así se cachea (el clima
+media hora por celda de ~10 km, los feriados doce horas) y se controla la
+tasa. La portada se dibuja sin esperar; el navegador pide
+`/api/portada/datos` después y llena el widget con `textContent`. Lo que no
+llega no se muestra y, si no llega nada, el widget no aparece. Una falla se
+recuerda cinco minutos, para no golpear un servicio caído en cada portada.
+
+**De dónde sale el lugar del clima.** El domicilio de la persona y, si no lo
+cargó, su seccional. Las coordenadas viajan redondeadas a un decimal (unos
+10 km): alcanzan para el clima y no señalan un domicilio. Fuera de la
+Argentina no se pide.

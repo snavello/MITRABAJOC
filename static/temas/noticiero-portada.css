@@ -473,7 +473,9 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
 @media (min-width: 900px) {
   /* La tapa a lo ancho: la foto despejada a la derecha y el saludo sobre
      el papel a la izquierda, como una foto de portada con su título. */
-  html[data-tema="noticiero"] .pt-gremio { min-height: 440px; }
+  /* Sin alto fijo (SDN, 2026-10-24): el saludo, la foto de perfil y los
+     datos útiles arrancan pegados al encabezado. */
+  html[data-tema="noticiero"] .pt-gremio { min-height: 0; }
   html[data-tema="noticiero"] .pt-gremio.con-foto .pt-gremio-media::after {
     background:
       linear-gradient(180deg,
@@ -492,7 +494,12 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
   html[data-tema="noticiero"] .pt-gremio-hola { max-width: 1320px; padding: 0 26px 18px; }
   html[data-tema="noticiero"] .pt-gremio .hola { font-size: 80px; }
   html[data-tema="noticiero"] .pt-gremio .pt-hola-baj { font-size: 15px; }
-  html[data-tema="noticiero"] .pt-gremio .circulo-acento { right: 26px; top: calc(92px + env(safe-area-inset-top)); width: 58px; height: 58px; }
+  /* La foto de perfil, grande y pegada al saludo (no más arriba a la derecha). */
+  html[data-tema="noticiero"] .pt-gremio-hola { padding-top: 26px; }
+  html[data-tema="noticiero"] .pt-gremio-hola .fila-hola { display: flex; align-items: center; gap: 28px; }
+  html[data-tema="noticiero"] .pt-gremio .circulo-acento { position: relative; top: auto; right: auto; width: 96px; height: 96px; }
+  html[data-tema="noticiero"] .pt-gremio .circulo-acento:has(img) { width: 120px; height: 120px; }
+  html[data-tema="noticiero"] .pt-gremio .circulo-acento svg { width: 36px; height: 36px; }
   html[data-tema="noticiero"] .pad.pt-cuerpo { padding: 0 26px; }
   html[data-tema="noticiero"] .pt-tapa-foto { height: auto; aspect-ratio: 2 / 1; max-height: 340px; margin: 0; }
   html[data-tema="noticiero"] .pt-tapa-t { font-size: 52px; }
@@ -536,3 +543,19 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
     border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
 }
+
+/* ---------- Datos útiles (SDN, 2026-10-24): un recuadro de diario ---------- */
+html[data-tema="noticiero"] .pt-datos { border-radius: 2px; color: var(--nt-tinta);
+  background: color-mix(in oklab, var(--nt-carta) 92%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: inset 0 3px 0 var(--nt-coral), inset 0 0 0 1px var(--nt-linea), 0 16px 30px -20px var(--nt-sombra);
+  animation: nt-sube .8s .2s var(--nt-curva) both; }
+html[data-tema="noticiero"] .pt-datos-fecha { font-family: var(--nt-f-cond); font-weight: 700; font-size: 13px; letter-spacing: .12em; color: var(--nt-coral-txt, var(--nt-tinta)); }
+html[data-tema="noticiero"] .pt-datos-ico { stroke: var(--nt-tinta); }
+html[data-tema="noticiero"] .pt-datos-temp { font-family: var(--nt-f-tit); font-weight: 400; font-size: 30px; }
+html[data-tema="noticiero"] .pt-datos-clima { border-right-color: var(--nt-linea); }
+html[data-tema="noticiero"] .pt-datos-cielo { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .pt-datos-lista { border-top-color: var(--nt-linea); }
+html[data-tema="noticiero"] .pt-datos-lista li { color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .pt-datos-lista svg { stroke: var(--nt-tinta); }
+html[data-tema="noticiero"] .pt-datos-lista li > span > span:last-child { color: var(--nt-tinta); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .pt-datos { animation: none; } }

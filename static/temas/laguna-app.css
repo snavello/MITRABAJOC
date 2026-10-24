@@ -145,7 +145,7 @@ html[data-tema="laguna"] .marca-nombre { color: var(--lg-tinta); font-family: va
   border-right-color: var(--lg-turq); }
 /* Colm3na en su versión para fondo claro (la plantilla la ofrece solo si
    existe; si no, queda la de siempre). */
-html[data-tema="laguna"] .marca-colmena { height: 30px; max-width: 150px; content: var(--logo-colmena-claro, normal); }
+html[data-tema="laguna"] .marca-colmena { height: 34px; max-width: 160px; content: var(--logo-colmena-claro, normal); }
 @media (max-width: 760px) {
   html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 192px; }
   html[data-tema="laguna"] .marca-colmena { height: 19px; }
