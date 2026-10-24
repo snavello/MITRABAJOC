@@ -60,7 +60,8 @@ import fechas
 import temas
 import fotos_tema
 import logos
-import datos_utiles
+import tu_dia
+import tu_dia_fuentes
 import geo
 import secrets
 import db
@@ -1277,6 +1278,7 @@ PERMISOS_RUTAS = {
     # (_exigir_super_admin). Es identidad del gremio entero, no de una
     # seccional: un admin local no la cambia para todos.
     "/admin/apariencia":                    SECCION_SUPER_ADMIN,
+    "/admin/apariencia/tu-dia":             SECCION_SUPER_ADMIN,
 
     "/admin/concepto":                      "conceptos",
     "/admin/concepto/borrar":               "conceptos",
@@ -8192,31 +8194,69 @@ def app_portada(request: Request):
     })
 
 
-@app.get("/api/portada/datos")
-def api_portada_datos(request: Request):
-    """Los datos útiles de la portada del afiliado (fecha, clima, próximo
-    feriado, efeméride; `datos_utiles.py`). Los pide el navegador DESPUÉS de
-    dibujar la portada, así un servicio de afuera lento nunca la demora. El
-    clima es el de su domicilio y, si no lo cargó, el de su seccional; sin
-    ninguno de los dos, no hay clima. Nunca falla: lo que no se pudo traer
-    viene en null."""
+def _sindicato_activo_trabajador(request: Request, cuil: str):
+    """El sindicato activo del afiliado: el único que tiene, o el que eligió
+    (cookie `sind_elegido`, validada contra los suyos). None si tiene varios
+    y no eligió."""
+    sinds = db.sindicatos_de_cuil(cuil)
+    if len(sinds) == 1:
+        return sinds[0]["id"]
+    elegido = request.cookies.get("sind_elegido", "")
+    return next((sd["id"] for sd in sinds if str(sd["id"]) == elegido), None)
+
+
+@app.get("/api/tu-dia")
+def api_tu_dia(request: Request):
+    """«Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): el clima de su
+    localidad, la hora de Buenos Aires y los ítems que rotan, según lo que
+    prendió su sindicato (`tu_dia.py`, `tu_dia_fuentes.py`). Lo pide el
+    navegador DESPUÉS de dibujar la portada. Sesión del afiliado y módulo
+    `tu_dia`; el sindicato sale de la sesión, nunca de un parámetro. Un
+    servicio de afuera que falla deja su pieza en null, nunca un 500. La
+    respuesta no trae coordenadas."""
     cuil = _cuil_seguro(request)
     if not sesion_actual(request, "trabajador") or not cuil:
         raise HTTPException(401, "Sin sesión")
-    sinds = db.sindicatos_de_cuil(cuil)
-    elegido = request.cookies.get("sind_elegido", "")
-    sid = sinds[0]["id"] if len(sinds) == 1 else next(
-        (sd["id"] for sd in sinds if str(sd["id"]) == elegido), None)
-    lat = lon = None
-    if sid:
-        perfil = db.perfil_trabajador(cuil, sid) or {}
-        lat, lon = perfil.get("latitud"), perfil.get("longitud")
-        if lat is None or lon is None:
-            sec_id = db.seccional_de_trabajador(cuil, sid)
-            sec = db.seccional_del_sindicato(sid, sec_id) if sec_id else None
-            lat, lon = (sec or {}).get("latitud"), (sec or {}).get("longitud")
-    return JSONResponse(datos_utiles.datos_de_portada(lat, lon),
-                        headers={"Cache-Control": "private, max-age=300"})
+    sid = _sindicato_activo_trabajador(request, cuil)
+    if not sid:
+        raise HTTPException(403, "Elegí tu sindicato")
+    _exigir_modulo(sid, "tu_dia")
+    config = tu_dia.config_efectiva(db.tu_dia_de(sid))
+    perfil = db.perfil_trabajador(cuil, sid) or {}
+    sec_id = db.seccional_de_trabajador(cuil, sid)
+    seccional = db.seccional_del_sindicato(sid, sec_id) if sec_id else None
+    lat, lon, localidad = tu_dia_fuentes.ubicacion(perfil, seccional)
+    clima = tu_dia_fuentes.clima(lat, lon) if lat is not None else None
+    if clima:
+        clima["localidad"] = localidad
+        clima["fuente"] = tu_dia_fuentes.ATRIBUCION_CLIMA
+    hoy = fechas.hoy()
+    dolar = tu_dia_fuentes.dolar_oficial() if "mercados" in config["rubros"] else None
+    persona = db.cumple_de(cuil)
+    cumple = None
+    if tu_dia.es_cumple(persona.get("fecha_nacimiento"), hoy) and persona.get("cumple_visto") != str(hoy.year):
+        cumple = {"nombre": (persona.get("nombre") or "").split(" ")[0]}
+    return JSONResponse({
+        "hora_ba": fechas.ahora().isoformat(timespec="seconds"),
+        "intervalo": config["intervalo"],
+        "clima": clima,
+        # Las alertas del SMN no tienen una fuente estable todavía: el lugar
+        # está en la franja y queda apagado (decisión de SDN, 2026-10-24).
+        "alerta": None,
+        "items": tu_dia.armar_items(config, hoy, dolar),
+        "cumple": cumple,
+    }, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/tu-dia/cumple-visto")
+def api_tu_dia_cumple_visto(request: Request):
+    """El saludo de cumpleaños se ve una sola vez: el navegador avisa apenas
+    lo muestra y la cuenta guarda el año."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(401, "Sin sesión")
+    db.marcar_cumple_visto(cuil, str(fechas.hoy().year))
+    return JSONResponse({"ok": True})
 
 
 # ---------- Confirmar el mail de una cuenta ya registrada (PLAN_REGISTRO.md, D10 y §4.6) ----------
@@ -8369,6 +8409,20 @@ def api_apariencia(request: Request, tema: str = Form("")):
     return {"ok": True, "tema": temas.tema_valido(tema) or ""}
 
 
+@app.post("/admin/apariencia/tu-dia")
+async def admin_apariencia_tu_dia(request: Request):
+    """El Super Admin elige qué rubros rotan en «Tu día», cada cuánto y si
+    las efemérides incluyen las fechas con carga política. Lo que no está en
+    el catálogo no se guarda (`tu_dia.normalizar_config`)."""
+    sid = exigir_sindicato(request)
+    _exigir_super_admin(request)
+    _exigir_modulo(sid, "tu_dia")
+    form = await request.form()
+    db.set_tu_dia(sid, {"rubros": form.getlist("rubros"), "politicas": form.get("politicas") == "1",
+                        "intervalo": form.get("intervalo", "")})
+    return RedirectResponse("/admin?ok=tudia#apariencia", status_code=303)
+
+
 @app.post("/admin/apariencia/mia")
 def admin_apariencia_mia(request: Request, tema: str = Form("")):
     """El operador del panel elige su modelo de diseño, para todos los
@@ -8407,6 +8461,10 @@ def _apariencia_del_sindicato(sid: int, sind, marca: dict) -> dict:
         "modelos": modelos,
         "colores": colores,
         "prueba": temas.prueba_de_lectura(*colores),
+        # «Tu día»: solo si plataforma prendió el módulo.
+        "tu_dia": ({"config": tu_dia.config_efectiva(sind.tu_dia), "rubros": tu_dia.RUBROS,
+                    "intervalos": tu_dia.INTERVALOS}
+                   if "tu_dia" in (sind.modulos_habilitados or []) else None),
     }
 
 

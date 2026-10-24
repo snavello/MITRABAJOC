@@ -544,18 +544,38 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
     border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
 }
 
-/* ---------- Datos útiles (SDN, 2026-10-24): un recuadro de diario ---------- */
-html[data-tema="noticiero"] .pt-datos { border-radius: 2px; color: var(--nt-tinta);
-  background: color-mix(in oklab, var(--nt-carta) 92%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  box-shadow: inset 0 3px 0 var(--nt-coral), inset 0 0 0 1px var(--nt-linea), 0 16px 30px -20px var(--nt-sombra);
+/* ---------- «Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): un recuadro de diario ---------- */
+html[data-tema="noticiero"] .pt-dia { color: var(--nt-tinta); background: var(--nt-carta);
+  border: 1px solid var(--nt-linea); border-top: 3px solid var(--nt-tinta); border-radius: 0; }
+html[data-tema="noticiero"] .pt-dia-esc { flex: 0 1 620px; height: 60px; gap: 14px; padding: 0 6px 0 16px;
   animation: nt-sube .8s .2s var(--nt-curva) both; }
-html[data-tema="noticiero"] .pt-datos-fecha { font-family: var(--nt-f-cond); font-weight: 700; font-size: 13px; letter-spacing: .12em; color: var(--nt-coral-txt, var(--nt-tinta)); }
-html[data-tema="noticiero"] .pt-datos-ico { stroke: var(--nt-tinta); }
-html[data-tema="noticiero"] .pt-datos-temp { font-family: var(--nt-f-tit); font-weight: 400; font-size: 30px; }
-html[data-tema="noticiero"] .pt-datos-clima { border-right-color: var(--nt-linea); }
-html[data-tema="noticiero"] .pt-datos-cielo { color: var(--nt-tinta-1); }
-html[data-tema="noticiero"] .pt-datos-lista { border-top-color: var(--nt-linea); }
-html[data-tema="noticiero"] .pt-datos-lista li { color: var(--nt-tinta-1); }
-html[data-tema="noticiero"] .pt-datos-lista svg { stroke: var(--nt-tinta); }
-html[data-tema="noticiero"] .pt-datos-lista li > span > span:last-child { color: var(--nt-tinta); font-weight: 600; }
-@media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .pt-datos { animation: none; } }
+html[data-tema="noticiero"] .pt-dia-esc.cargando { width: 620px; }
+html[data-tema="noticiero"] .pt-dia-esc .pt-dia-h { font-family: var(--nt-f-tit); font-size: 24px; }
+html[data-tema="noticiero"] .pt-dia-esc .pt-dia-f { margin-top: 2px; font-family: var(--nt-f-cond); font-weight: 700; font-size: 12px; letter-spacing: .8px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .pt-dia-sep { height: 32px; background: var(--nt-linea); }
+html[data-tema="noticiero"] .pt-dia-ico svg { width: 28px; height: 28px; stroke: var(--nt-indigo-2); stroke-width: 1.5; }
+html[data-tema="noticiero"] .pt-dia-temp { font-family: var(--nt-f-tit); font-size: 26px; }
+html[data-tema="noticiero"] .pt-dia-esc .pt-dia-pron { font-family: var(--nt-f-cond); font-weight: 700; font-size: 15px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .pt-dia-esc .pt-dia-pron svg { width: 17px; height: 17px; stroke-width: 1.7; }
+html[data-tema="noticiero"] .pt-dia-linea { font-family: var(--nt-f-txt); font-size: 14px; font-weight: 500; }
+html[data-tema="noticiero"] .pt-dia-chip { height: 22px; padding: 0 8px; background: var(--nt-indigo); color: var(--nt-marfil);
+  font-family: var(--nt-f-cond); font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+html[data-tema="noticiero"] .pt-dia-chip.alerta { background: var(--nt-amb-fondo); color: var(--nt-amb); box-shadow: inset 0 0 0 1px var(--nt-amb); }
+html[data-tema="noticiero"] .pt-dia-punto { background: var(--nt-amb-fondo); box-shadow: inset 0 0 0 1px var(--nt-amb); }
+html[data-tema="noticiero"] .pt-dia-punto svg { stroke: var(--nt-amb); }
+html[data-tema="noticiero"] .pt-dia-flecha { width: 16px; height: 16px; stroke: var(--nt-tinta-3); stroke-width: 2.1; }
+html[data-tema="noticiero"] .pt-dia-tel { margin: 0 16px; height: 50px; gap: 10px; padding: 0 2px 0 12px; }
+html[data-tema="noticiero"] .pt-dia-tel .pt-dia-clima { gap: 6px; }
+html[data-tema="noticiero"] .pt-dia-tel .pt-dia-ico svg { width: 24px; height: 24px; }
+html[data-tema="noticiero"] .pt-dia-tel .pt-dia-temp { font-size: 22px; }
+html[data-tema="noticiero"] .pt-dia-tel .pt-dia-sep { height: 26px; }
+html[data-tema="noticiero"] .pt-dia-tel .pt-dia-linea { font-size: 13px; gap: 7px; }
+html[data-tema="noticiero"] .pt-dia-tel .pt-dia-chip { height: 20px; font-size: 12.5px; padding: 0 7px; }
+html[data-tema="noticiero"] .pt-dia-tel + .pt-tick { margin-top: 20px; }
+/* El saludo de cumpleaños, como una tapa. */
+html[data-tema="noticiero"] .pt-cumple-caja { border-radius: 2px; font-family: var(--nt-f-txt); color: var(--nt-tinta); background: var(--nt-carta);
+  border-top: 4px solid var(--nt-tinta); box-shadow: 0 30px 60px -30px var(--nt-sombra); }
+html[data-tema="noticiero"] .pt-cumple-k { font-family: var(--nt-f-cond); color: var(--nt-tinta-2); opacity: 1; }
+html[data-tema="noticiero"] .pt-cumple-t { font-family: var(--nt-f-tit); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; }
+html[data-tema="noticiero"] .pt-cumple-t em { padding: 0 .05em; background: linear-gradient(180deg, transparent 56%, var(--nt-resalta) 56%, var(--nt-resalta) 90%, transparent 90%); }
+@media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .pt-dia-esc { animation: none; } }

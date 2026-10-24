@@ -1,0 +1,384 @@
+{
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "revisado": false,
+ "items": [
+  {
+   "id": "sa-01",
+   "chip": "Salud",
+   "linea": "Llegó el otoño: es tiempo de la vacuna antigripal",
+   "titulo": "Vacuna antigripal",
+   "texto": "La vacuna contra la gripe es gratuita en vacunatorios y hospitales públicos para los grupos de riesgo: embarazadas, chicos de 6 a 24 meses, mayores de 65 y personas con ciertas enfermedades. Conviene darla antes de que llegue el frío.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    3,
+    4,
+    5,
+    6
+   ]
+  },
+  {
+   "id": "sa-02",
+   "chip": "Salud",
+   "linea": "Mayores de 65: la vacuna contra el neumococo también",
+   "titulo": "Vacuna contra el neumococo",
+   "texto": "El neumococo causa neumonías graves, sobre todo en personas mayores. El Calendario Nacional incluye la vacuna para mayores de 65 años y para quienes tienen factores de riesgo; se puede aplicar el mismo día que la antigripal.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    3,
+    4,
+    5,
+    6
+   ]
+  },
+  {
+   "id": "sa-03",
+   "chip": "Salud",
+   "linea": "Contra el dengue: sin agua quieta no hay mosquito",
+   "titulo": "Descacharrado",
+   "texto": "El mosquito del dengue pone sus huevos en recipientes con agua limpia. Una vez por semana, vaciá, tapá o dá vuelta baldes, macetas, botellas y cubiertas, y cambiá el agua de los bebederos de las mascotas.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    11,
+    12,
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "id": "sa-04",
+   "chip": "Salud",
+   "linea": "Fiebre y dolor de cuerpo en verano: consultá",
+   "titulo": "Síntomas de dengue",
+   "texto": "Fiebre alta con dolor de cabeza, detrás de los ojos, de músculos o articulaciones puede ser dengue. Ante esos síntomas, consultá en el centro de salud y no te automediques.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    11,
+    12,
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "id": "sa-05",
+   "chip": "Salud",
+   "linea": "Con mucho calor, tomá agua aunque no tengas sed",
+   "titulo": "Prevenir el golpe de calor",
+   "texto": "En los días de mucho calor tomá agua seguido, evitá el sol y la actividad física intensa en las horas centrales del día, usá ropa liviana y clara y buscá lugares frescos y ventilados.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "id": "sa-06",
+   "chip": "Salud",
+   "linea": "Bebés y mayores sufren más el calor: ofrecé agua",
+   "titulo": "Los más vulnerables al calor",
+   "texto": "Los bebés, los chicos y las personas mayores pueden deshidratarse sin darse cuenta. Ofreceles agua con frecuencia y, a los bebés, el pecho más seguido. Nunca dejes a nadie dentro de un auto estacionado.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    12,
+    1,
+    2
+   ]
+  },
+  {
+   "id": "sa-07",
+   "chip": "Salud",
+   "linea": "Con estufa prendida, dejá siempre una ventana abierta",
+   "titulo": "Monóxido de carbono",
+   "texto": "El monóxido de carbono no tiene olor ni color y puede matar. Dejá una abertura para que entre aire, revisá cada año calefactores y calefones con un gasista matriculado, y fijate que la llama sea azul: si es amarilla o naranja, algo anda mal.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    5,
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "id": "sa-08",
+   "chip": "Salud",
+   "linea": "Dolor de cabeza y mareo con la estufa: salí al aire",
+   "titulo": "Señales de intoxicación por monóxido",
+   "texto": "Dolor de cabeza, mareos, náuseas o sueño en un ambiente calefaccionado pueden ser monóxido de carbono. Apagá el artefacto, abrí puertas y ventanas, salí al aire libre y consultá de inmediato a una guardia.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    5,
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "id": "sa-09",
+   "chip": "Salud",
+   "linea": "Octubre, mes del cáncer de mama: hacete la mamografía",
+   "titulo": "Detección temprana del cáncer de mama",
+   "texto": "Detectado a tiempo, el cáncer de mama tiene altas chances de curarse. Se recomienda que las mujeres de 50 a 69 años se hagan una mamografía cada uno o dos años; si hay antecedentes familiares, consultá antes.",
+   "fuente": "Instituto Nacional del Cáncer – Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    10
+   ]
+  },
+  {
+   "id": "sa-10",
+   "chip": "Salud",
+   "linea": "A los 11 años, la vacuna contra el HPV",
+   "titulo": "Vacuna contra el virus del papiloma humano",
+   "texto": "La vacuna contra el HPV protege contra el cáncer de cuello de útero y otros cánceres. Es gratuita y obligatoria a los 11 años, para chicas y chicos.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-11",
+   "chip": "Salud",
+   "linea": "El cáncer de cuello de útero se puede prevenir",
+   "titulo": "Controles ginecológicos",
+   "texto": "El PAP y el test de HPV permiten encontrar lesiones antes de que se transformen en cáncer. Se hacen gratis en centros de salud y hospitales públicos; preguntá cada cuánto te corresponde según tu edad.",
+   "fuente": "Instituto Nacional del Cáncer – Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-12",
+   "chip": "Salud",
+   "linea": "17 de mayo: ¿cuándo te tomaste la presión?",
+   "titulo": "Día Mundial de la Hipertensión",
+   "texto": "La presión alta muchas veces no da síntomas y aumenta el riesgo de infarto y ACV. Tomarte la presión es rápido y gratis en cualquier centro de salud.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    5
+   ]
+  },
+  {
+   "id": "sa-13",
+   "chip": "Salud",
+   "linea": "Menos sal en la comida, más cuidado del corazón",
+   "titulo": "Bajar el consumo de sal",
+   "texto": "Se recomienda no pasar de 5 gramos de sal por día, más o menos una cucharadita, contando la que ya traen los alimentos procesados. Probá la comida antes de salarla y sacá el salero de la mesa.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-14",
+   "chip": "Salud",
+   "linea": "10 de octubre: hablar de salud mental también es cuidarse",
+   "titulo": "Día Mundial de la Salud Mental",
+   "texto": "La salud mental es parte de la salud. Si algo te angustia, te quita el sueño o te cuesta sostener el día a día, hablalo con alguien de confianza y consultá en tu centro de salud.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    10
+   ]
+  },
+  {
+   "id": "sa-15",
+   "chip": "Salud",
+   "linea": "Pedir ayuda cuando no estás bien no es debilidad",
+   "titulo": "Buscar ayuda en salud mental",
+   "texto": "La atención en salud mental es un derecho y se brinda en hospitales y centros de salud públicos. Si vos o alguien cercano está pasando un mal momento, acercate y consultá: no hace falta esperar a que sea grave.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-16",
+   "chip": "Salud",
+   "linea": "Lavarse bien las manos lleva unos 40 segundos",
+   "titulo": "Lavado de manos",
+   "texto": "Con agua y jabón, frotá palmas, dorsos, entre los dedos y las uñas durante 40 a 60 segundos. Hacelo antes de comer o cocinar, después de ir al baño y al volver de la calle.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-17",
+   "chip": "Salud",
+   "linea": "Las vacunas del calendario son gratis y obligatorias",
+   "titulo": "Calendario Nacional de Vacunación",
+   "texto": "Las vacunas del Calendario Nacional son gratuitas y obligatorias, y se aplican en vacunatorios, centros de salud y hospitales públicos de todo el país. Llevá tu carnet para que te digan cuáles te faltan.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-18",
+   "chip": "Salud",
+   "linea": "Adultos: la doble adultos se refuerza cada 10 años",
+   "titulo": "Vacuna doble adultos",
+   "texto": "La vacuna doble adultos protege contra el tétanos y la difteria. Necesita un refuerzo cada 10 años durante toda la vida; si no te acordás cuándo te la diste, consultá en un vacunatorio.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-19",
+   "chip": "Salud",
+   "linea": "La vacuna contra la hepatitis B es para todas las edades",
+   "titulo": "Hepatitis B",
+   "texto": "La vacuna contra la hepatitis B es universal: está indicada para toda la población y es gratuita. Se completa con tres dosis; si no la tenés, podés empezar en cualquier momento.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-20",
+   "chip": "Salud",
+   "linea": "¿Tenés las dos dosis contra el sarampión?",
+   "titulo": "Sarampión",
+   "texto": "Las personas nacidas después de 1965 necesitan dos dosis de vacuna con componente contra el sarampión, como la triple viral. Revisá tu carnet: si te falta alguna, se aplica gratis.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-21",
+   "chip": "Salud",
+   "linea": "Vuelta a clases: revisá las vacunas de los chicos",
+   "titulo": "Vacunas del ingreso escolar",
+   "texto": "A los 5 o 6 años, al empezar la primaria, corresponden refuerzos de varias vacunas del calendario. Aprovechá antes del inicio de clases para ponerlas al día en el vacunatorio.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "sa-22",
+   "chip": "Salud",
+   "linea": "31 de mayo, Día Mundial Sin Tabaco",
+   "titulo": "Dejar de fumar",
+   "texto": "Los beneficios de dejar de fumar empiezan enseguida: en pocas horas mejora la oxigenación y con los años baja el riesgo de infarto y de cáncer. En los centros de salud hay ayuda gratuita para dejarlo.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    5
+   ]
+  },
+  {
+   "id": "sa-23",
+   "chip": "Salud",
+   "linea": "Moverse 150 minutos por semana ya hace diferencia",
+   "titulo": "Actividad física",
+   "texto": "Para los adultos se recomienda al menos 150 minutos por semana de actividad moderada, como caminar rápido. Se pueden repartir en ratos cortos: subir escaleras o bajarse una parada antes también suma.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": []
+  },
+  {
+   "id": "sa-24",
+   "chip": "Salud",
+   "linea": "Al sol, sombrero, sombra y protector",
+   "titulo": "Cuidar la piel del sol",
+   "texto": "Evitá el sol en las horas de mayor radiación, usá sombrero, anteojos y ropa que cubra, y protector solar. Los chicos menores de un año no deben exponerse al sol directo.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    11,
+    12,
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "id": "sa-25",
+   "chip": "Salud",
+   "linea": "Carne picada bien cocida para prevenir el SUH",
+   "titulo": "Síndrome urémico hemolítico",
+   "texto": "El SUH afecta sobre todo a chicos y la Argentina tiene una de las tasas más altas del mundo. Para prevenirlo, cociná bien la carne picada, lavá frutas y verduras, y no cortes crudo y cocido con el mismo cuchillo.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    11,
+    12,
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "id": "sa-26",
+   "chip": "Salud",
+   "linea": "14 de noviembre: la diabetes se puede detectar a tiempo",
+   "titulo": "Día Mundial de la Diabetes",
+   "texto": "Mucha gente tiene diabetes y no lo sabe. Un control de glucemia es simple; consultá sobre todo si tenés sobrepeso, antecedentes familiares o mucha sed y ganas de orinar.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    11
+   ]
+  },
+  {
+   "id": "sa-27",
+   "chip": "Salud",
+   "linea": "El test de VIH es gratuito y confidencial",
+   "titulo": "Día Mundial del Sida",
+   "texto": "El 1 de diciembre recuerda la importancia de conocer el diagnóstico. El test de VIH es gratuito y confidencial en hospitales y centros de salud públicos, y el tratamiento también es gratuito.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    12
+   ]
+  },
+  {
+   "id": "sa-28",
+   "chip": "Salud",
+   "linea": "9 de noviembre: donar sangre salva vidas",
+   "titulo": "Día Nacional del Donante Voluntario de Sangre",
+   "texto": "Donar sangre es seguro y lleva menos de una hora. Pueden hacerlo personas sanas de entre 16 y 65 años que pesen más de 50 kilos. La fecha recuerda la primera transfusión con sangre citrada de Luis Agote.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    11
+   ]
+  },
+  {
+   "id": "sa-29",
+   "chip": "Salud",
+   "linea": "30 de mayo: hablá en familia sobre donar órganos",
+   "titulo": "Día Nacional de la Donación de Órganos",
+   "texto": "Desde la Ley 27.447 de 2018, conocida como Ley Justina, toda persona mayor de 18 años es donante salvo que haya dicho lo contrario. Hablarlo en familia ayuda a que se respete tu decisión.",
+   "fuente": "INCUCAI",
+   "dudosa": false,
+   "meses": [
+    5
+   ]
+  },
+  {
+   "id": "sa-30",
+   "chip": "Salud",
+   "linea": "En invierno, cuidá a los bebés de la bronquiolitis",
+   "titulo": "Bronquiolitis",
+   "texto": "La bronquiolitis es una infección respiratoria frecuente en bebés durante el invierno. Lavate las manos antes de tocarlos, ventilá los ambientes, no fumes cerca y consultá si respiran con dificultad.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "dudosa": false,
+   "meses": [
+    5,
+    6,
+    7,
+    8
+   ]
+  }
+ ]
+}

@@ -34,6 +34,11 @@ MODULOS = {
     # permisos.py -- armar la encuesta y leer los resultados no es lo mismo,
     # igual que en Trámites.
     "encuestas": "Encuestas",
+    # "Tu día" (docs/chat/2026-10-24-pedido-tu-dia.md): la franja de clima y
+    # datos útiles de la portada del afiliado. Opt-in; la migración que lo
+    # creó lo prendió en los sindicatos que ya existían (reemplazó al widget
+    # de datos útiles, que veían todos).
+    "tu_dia": "Tu día en la portada",
 }
 
 # Lo que existe HOY, para dar de alta un sindicato nuevo con todo tildado
