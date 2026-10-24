@@ -27,6 +27,7 @@ db.crear_tablas()
 AFILIADO = "20345678901"
 OTRO_AFILIADO = "27345678902"
 SUPER = "20111122223"
+SUPER_SIN = "20111122231"
 HOY = fechas.hoy()
 
 with db.get_session() as s:
@@ -44,6 +45,8 @@ with db.get_session() as s:
     s.add(CuentaTrabajador(cuil=OTRO_AFILIADO, nombre="Ana Sol", clave_hash=auth.hashear_clave("x")))
     s.add(Trabajador(sindicato_id=SID_SIN, cuil=OTRO_AFILIADO, registrado=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=SUPER, cuil=SUPER, nombre="General",
+                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
+    s.add(UsuarioSindicato(sindicato_id=SID_SIN, usuario=SUPER_SIN, cuil=SUPER_SIN, nombre="General Sin",
                            clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
     s.commit()
 
@@ -218,6 +221,46 @@ def test_el_super_admin_guarda_los_rubros_desde_apariencia():
     assert r.status_code == 303
     assert db.tu_dia_de(SID) == {"rubros": ["salud", "efemerides"], "politicas": True, "intervalo": 15}
     assert main.PERMISOS_RUTAS["/admin/apariencia/tu-dia"] == main.SECCION_SUPER_ADMIN
+
+
+def test_apagado_se_ve_en_apariencia_y_dice_quien_lo_prende():
+    """Un módulo apagado que no aparece no se puede adivinar (SDN): el bloque
+    va siempre, marcado Apagado, con los controles quietos."""
+    c = TestClient(main.app)
+    assert c.post("/admin/login", data={"usuario": SUPER_SIN, "clave": "gen"}, follow_redirects=False).status_code == 303
+    html = c.get("/admin").text
+    assert 'id="td-config"' in html and 'td-estado off' in html and ">Apagado<" in html
+    assert "lo prende Colm3na" in html
+    assert '<fieldset class="td-campos" disabled>' in html
+    c2 = TestClient(main.app)
+    c2.post("/admin/login", data={"usuario": SUPER, "clave": "gen"})
+    html2 = c2.get("/admin").text
+    assert 'td-estado on' in html2 and '<fieldset class="td-campos" >' in html2
+
+
+def test_tu_dia_viene_prendido_por_defecto():
+    from modulos import MODULOS_INICIALES
+    assert "tu_dia" in MODULOS_INICIALES
+
+
+def test_la_ficha_de_plataforma_no_apaga_un_modulo_que_no_mostro():
+    """Así se perdió «Tu día» en La Bancaria: una pantalla abierta antes del
+    despliegue no tenía la casilla y guardarla reemplazaba la lista entera."""
+    f = main._modulos_tras_editar
+    actuales = ["recibos", "noticias", "tu_dia"]
+    # El formulario mostró recibos y noticias (no tu_dia) y destildó noticias.
+    assert f(actuales, ["recibos"], ["recibos", "noticias"]) == ["recibos", "tu_dia"]
+    # Mostró todo y destildó tu_dia: ahí sí se apaga.
+    assert f(actuales, ["recibos", "noticias"], list(MODULOS)) == ["recibos", "noticias"]
+    # Un formulario de antes, sin la lista de ofrecidos, no apaga nada.
+    assert sorted(f(actuales, ["recibos"], [])) == ["noticias", "recibos", "tu_dia"]
+    # Prender uno nuevo.
+    assert f(["recibos"], ["recibos", "encuestas"], list(MODULOS)) == ["recibos", "encuestas"]
+
+
+def test_la_ficha_de_plataforma_declara_cada_modulo_que_muestra():
+    html = Path("templates/plataforma.html").read_text(encoding="utf-8")
+    assert 'name="modulos_ofrecidos" value="{{ clave }}"' in html
 
 
 # --------------------------------------------------------- el contenido ----

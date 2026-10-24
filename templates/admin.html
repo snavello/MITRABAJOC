@@ -1002,6 +1002,12 @@
   .ap-sub:first-of-type { margin-top:4px; }
   /* «Tu día»: los rubros como interruptores (casilla nativa con forma de llave). */
   .td-config { margin-top:22px; }
+  .td-estado { display:inline-block; margin-left:8px; padding:2px 9px; border-radius:20px; font-size:12px; font-weight:700; vertical-align:middle; }
+  .td-estado.on { background:#e3f3ec; color:#1d6b52; }
+  .td-estado.off { background:#fdecea; color:#a3261b; }
+  .td-apagado { margin:10px 0 4px; padding:11px 14px; border-radius:9px; background:#fff6e0; color:#5b4300; font-size:14px; line-height:1.45; box-shadow:inset 0 0 0 1px #f0d48a; }
+  .td-campos { border:0; margin:0; padding:0; min-width:0; }
+  .td-campos[disabled] { opacity:.55; }
   .td-fijos { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin:14px 0 18px; }
   .td-fijos div { padding:10px 12px; border-radius:9px; background:#f6f7f9; box-shadow:inset 0 0 0 1px var(--linea); }
   .td-fijos b { display:block; font-size:14px; }
@@ -3685,21 +3691,26 @@
   </form>
   <p class="muted" style="margin-top:14px;">Tu propio modelo lo elegís desde <b>Tu cuenta</b>, en la portada del panel.</p>
 
-  {% if ap.tu_dia %}
   {# «Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): la franja de la portada
-     del afiliado. Solo si plataforma prendió el módulo. #}
+     del afiliado. Se muestra SIEMPRE: apagado, dice quién lo prende. #}
   {% set td = ap.tu_dia %}
   {% if request.query_params.get('ok') == 'tudia' %}
   <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Rubros de Tu día guardados.</div>
   {% endif %}
   <form method="post" action="/admin/apariencia/tu-dia" class="card td-config" id="td-config">
-    <h3 style="margin-top:0;">Tu día en la portada</h3>
+    <h3 style="margin-top:0;">Tu día en la portada <span class="td-estado {{ 'on' if td.habilitado else 'off' }}">{{ 'Prendido' if td.habilitado else 'Apagado' }}</span></h3>
+    {% if not td.habilitado %}
+    <div class="td-apagado" role="status">
+      <b>Tus afiliados no ven esta franja.</b> El módulo «Tu día» no está habilitado para este sindicato: lo prende Colm3na desde la ficha del sindicato. Pedíselo y, apenas lo prenda, se ve en la portada con los rubros que elijas acá.
+    </div>
+    {% endif %}
     <p class="muted">Una franja de una línea en la portada del afiliado. La hora y el clima de su localidad van siempre; al lado rota, de a uno, cada rubro que prendas. Ninguno lo escribe el sindicato: para eso están las Noticias. El día de su cumpleaños, cada afiliado ve un saludo una sola vez.</p>
     <div class="td-fijos">
       <div><b>Hora y fecha</b><span>De Buenos Aires</span></div>
       <div><b>Clima</b><span>De la localidad del afiliado · MET Norway</span></div>
       <div><b>Cumpleaños</b><span>Un saludo de ocho segundos, una vez</span></div>
     </div>
+    <fieldset class="td-campos" {% if not td.habilitado %}disabled{% endif %}>
     <div class="td-cab"><span class="ap-sub" style="margin:0;">Rubros que rotan</span><span class="muted" id="td-cuenta"></span></div>
     {% for clave, r in td.rubros.items() %}
     <label class="td-rubro">
@@ -3714,6 +3725,7 @@
       <label>Cambia cada <select name="intervalo">{% for n in td.intervalos %}<option value="{{ n }}" {% if n == td.config.intervalo %}selected{% endif %}>{{ n }} segundos</option>{% endfor %}</select></label>
       <button type="submit">Guardar los rubros</button>
     </div>
+    </fieldset>
   </form>
   <script>
   (function () {
@@ -3723,7 +3735,6 @@
     f.addEventListener('change', contar); contar();
   })();
   </script>
-  {% endif %}
   </div>
   {% endif %}
 </div>

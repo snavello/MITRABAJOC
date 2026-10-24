@@ -35,9 +35,8 @@ MODULOS = {
     # igual que en Trámites.
     "encuestas": "Encuestas",
     # "Tu día" (docs/chat/2026-10-24-pedido-tu-dia.md): la franja de clima y
-    # datos útiles de la portada del afiliado. Opt-in; la migración que lo
-    # creó lo prendió en los sindicatos que ya existían (reemplazó al widget
-    # de datos útiles, que veían todos).
+    # datos útiles de la portada del afiliado. Prendido por defecto (está en
+    # MODULOS_INICIALES): reemplazó al widget de datos útiles, que veían todos.
     "tu_dia": "Tu día en la portada",
 }
 
@@ -46,4 +45,5 @@ MODULOS = {
 # antes de este sistema (ver migración b... tabla de módulos).
 MODULOS_INICIALES = [
     "recibos", "aportes", "credencial", "capacitacion", "noticias", "beneficios",
+    "tu_dia",
 ]

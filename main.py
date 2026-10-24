@@ -7345,6 +7345,18 @@ def plataforma_alta_usuario(
     return RedirectResponse("/plataforma", status_code=303)
 
 
+def _modulos_tras_editar(actuales, tildados: list, ofrecidos: list) -> list:
+    """Los módulos de un sindicato después de guardar su ficha. Solo cambian
+    los que el formulario MOSTRÓ (`ofrecidos`, una casilla oculta por
+    módulo): uno que no figuraba -- una pantalla abierta antes de que ese
+    módulo existiera -- queda como estaba. Antes se reemplazaba la lista
+    entera y así se perdió «Tu día» en La Bancaria (2026-10-24). Un
+    formulario sin `ofrecidos` (de una versión anterior) no apaga nada."""
+    ofrecidos, actuales = set(ofrecidos), [m for m in (actuales or []) if m in MODULOS]
+    quedan = [m for m in actuales if m in tildados or not ofrecidos or m not in ofrecidos]
+    return quedan + [m for m in tildados if m not in quedan]
+
+
 @app.post("/plataforma/sindicato/editar")
 async def plataforma_editar_sindicato(
     request: Request,
@@ -7357,6 +7369,7 @@ async def plataforma_editar_sindicato(
     logo: UploadFile = File(None),
     firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
+    modulos_ofrecidos: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
@@ -7387,7 +7400,8 @@ async def plataforma_editar_sindicato(
             sind.color_acento = color_acento or "#b23a2e"
             sind.color_base = color_base
             sind.color_destacado = color_destacado or "#E5188F"
-            sind.modulos_habilitados = modulos_validos
+            sind.modulos_habilitados = _modulos_tras_editar(
+                sind.modulos_habilitados, modulos_validos, modulos_ofrecidos)
             sind.portada_clara = portada_clara
             sind.admin_portada_clara = admin_portada_clara
             sind.acepta_mail_declarado = acepta_mail_declarado
@@ -8461,10 +8475,11 @@ def _apariencia_del_sindicato(sid: int, sind, marca: dict) -> dict:
         "modelos": modelos,
         "colores": colores,
         "prueba": temas.prueba_de_lectura(*colores),
-        # «Tu día»: solo si plataforma prendió el módulo.
-        "tu_dia": ({"config": tu_dia.config_efectiva(sind.tu_dia), "rubros": tu_dia.RUBROS,
-                    "intervalos": tu_dia.INTERVALOS}
-                   if "tu_dia" in (sind.modulos_habilitados or []) else None),
+        # «Tu día» se muestra SIEMPRE, con su estado: un módulo apagado que no
+        # aparece no se puede adivinar (SDN, 2026-10-24).
+        "tu_dia": {"config": tu_dia.config_efectiva(sind.tu_dia), "rubros": tu_dia.RUBROS,
+                   "intervalos": tu_dia.INTERVALOS,
+                   "habilitado": "tu_dia" in (sind.modulos_habilitados or [])},
     }
 
 

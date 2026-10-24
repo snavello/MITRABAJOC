@@ -8807,3 +8807,18 @@ botones de consumidor (Res. 424/2020 y 316/2018) sigan vigentes; 04-10
 (Houssay como Día de la Ciencia); y que 16 días del año, sin política, se
 quedan solo con efemérides marcadas como políticas: esos días el rubro no
 aparece y rota lo demás.
+
+**El módulo que no aparecía (2026-10-24, Admin 0.70.02, Plataforma 0.56.02).**
+Recién desplegado, SDN no encontró «Tu día» en Apariencia de La Bancaria: el
+bloque solo se dibujaba con el módulo prendido, y La Bancaria lo había
+perdido. La causa: guardar la ficha de un sindicato en `/plataforma`
+reemplazaba la lista entera de módulos por las casillas tildadas, y una
+pantalla abierta antes del despliegue no tenía la casilla de «Tu día». Tres
+cambios: (1) el formulario manda una casilla oculta `modulos_ofrecidos` por
+módulo que muestra y `main._modulos_tras_editar` solo cambia esos (un
+formulario sin la lista, de una versión anterior, no apaga nada); (2) «Tu
+día» pasó a `MODULOS_INICIALES` y la migración `a9d4e7c2f1b8` lo devolvió a
+donde se había perdido; (3) Apariencia muestra el bloque SIEMPRE, con un
+sello Prendido / Apagado y, apagado, un aviso de que los afiliados no lo ven
+y lo prende Colm3na, con los controles quietos. Regla de SDN: un módulo que
+no aparece no se puede adivinar.
