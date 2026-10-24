@@ -1,0 +1,276 @@
+{
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "revisado": false,
+ "items": [
+  {
+   "id": "ci-01",
+   "chip": "Ciencia",
+   "linea": "Houssay fue el primer Nobel de ciencia de Latinoamérica",
+   "titulo": "Bernardo Houssay, Nobel 1947",
+   "texto": "Bernardo Houssay recibió en 1947 el Premio Nobel de Medicina por sus estudios sobre el papel de la hipófisis en el manejo del azúcar en el cuerpo. Fue el primer latinoamericano en ganar un Nobel de ciencia.",
+   "fuente": "Fundación Nobel (nobelprize.org)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-02",
+   "chip": "Ciencia",
+   "linea": "Leloir ganó el Nobel de Química en 1970",
+   "titulo": "Luis Federico Leloir",
+   "texto": "Leloir descubrió cómo el organismo fabrica y guarda los azúcares, a partir de unas moléculas llamadas nucleótidos-azúcar. Por eso recibió el Nobel de Química en 1970, trabajando en un laboratorio modesto de Buenos Aires.",
+   "fuente": "Fundación Instituto Leloir",
+   "dudosa": false
+  },
+  {
+   "id": "ci-03",
+   "chip": "Ciencia",
+   "linea": "Milstein, de Bahía Blanca, abrió el camino a nuevos remedios",
+   "titulo": "César Milstein y los anticuerpos",
+   "texto": "César Milstein, nacido en Bahía Blanca, desarrolló junto a Georges Köhler la técnica para producir anticuerpos monoclonales. Recibió el Nobel de Medicina en 1984; hoy esa técnica se usa en diagnósticos y tratamientos de todo el mundo.",
+   "fuente": "Fundación Nobel (nobelprize.org)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-04",
+   "chip": "Ciencia",
+   "linea": "El CONICET se creó en 1958 y lo presidió Houssay",
+   "titulo": "El nacimiento del CONICET",
+   "texto": "El Consejo Nacional de Investigaciones Científicas y Técnicas se creó en 1958 para impulsar la investigación en el país. Su primer presidente fue Bernardo Houssay.",
+   "fuente": "CONICET",
+   "dudosa": false
+  },
+  {
+   "id": "ci-05",
+   "chip": "Ciencia",
+   "linea": "A Leloir se le atribuye la invención de la salsa golf",
+   "titulo": "Un Nobel en la cocina",
+   "texto": "Se cuenta que en los años veinte, en un club de Mar del Plata, Leloir mezcló mayonesa con kétchup para acompañar unos langostinos. La historia la repitió él mismo, pero no hay registro que la confirme.",
+   "fuente": "Fundación Instituto Leloir",
+   "dudosa": true
+  },
+  {
+   "id": "ci-06",
+   "chip": "Ciencia",
+   "linea": "El INTI ayuda a la industria a medir bien desde 1957",
+   "titulo": "Instituto Nacional de Tecnología Industrial",
+   "texto": "El INTI se creó en 1957 para dar apoyo técnico a la industria: ensayos, certificaciones y desarrollo de procesos. Trabaja con fábricas grandes y con pequeños talleres de todo el país.",
+   "fuente": "INTI",
+   "dudosa": false
+  },
+  {
+   "id": "ci-07",
+   "chip": "Ciencia",
+   "linea": "El INTI guarda los patrones de medida del país",
+   "titulo": "El kilo y el metro oficiales",
+   "texto": "El INTI es el instituto de metrología de la Argentina: mantiene los patrones nacionales de masa, longitud, temperatura y otras magnitudes. Con ellos se calibran balanzas, surtidores y medidores.",
+   "fuente": "INTI",
+   "dudosa": false
+  },
+  {
+   "id": "ci-08",
+   "chip": "Ciencia",
+   "linea": "El INTA investiga el campo argentino desde 1956",
+   "titulo": "Instituto Nacional de Tecnología Agropecuaria",
+   "texto": "El INTA se creó en 1956 para investigar y llevar mejoras técnicas al campo. Tiene estaciones experimentales y agencias de extensión en todas las regiones del país.",
+   "fuente": "INTA",
+   "dudosa": false
+  },
+  {
+   "id": "ci-09",
+   "chip": "Ciencia",
+   "linea": "La CONAE es la agencia espacial argentina",
+   "titulo": "Comisión Nacional de Actividades Espaciales",
+   "texto": "La CONAE se creó en 1991 para diseñar y llevar adelante el plan espacial del país. Sus satélites se usan para el agro, las emergencias y el cuidado del ambiente.",
+   "fuente": "CONAE",
+   "dudosa": false
+  },
+  {
+   "id": "ci-10",
+   "chip": "Ciencia",
+   "linea": "El SAC-D midió la sal de los océanos desde el espacio",
+   "titulo": "SAC-D / Aquarius",
+   "texto": "Lanzado en 2011, el satélite SAC-D llevó el instrumento Aquarius de la NASA, que midió la salinidad de la superficie del mar en todo el planeta. Fue construido en la Argentina por INVAP para la CONAE.",
+   "fuente": "CONAE",
+   "dudosa": false
+  },
+  {
+   "id": "ci-11",
+   "chip": "Ciencia",
+   "linea": "Los SAOCOM ven la tierra de noche y con nubes",
+   "titulo": "Los satélites SAOCOM",
+   "texto": "SAOCOM 1A (2018) y 1B (2020) llevan un radar que funciona aunque esté nublado o sea de noche. Miden la humedad del suelo y ayudan a anticipar inundaciones y a planificar siembras.",
+   "fuente": "CONAE",
+   "dudosa": false
+  },
+  {
+   "id": "ci-12",
+   "chip": "Ciencia",
+   "linea": "ARSAT-1 fue el primer satélite de su tipo hecho en la región",
+   "titulo": "ARSAT-1, en órbita desde 2014",
+   "texto": "ARSAT-1, lanzado en octubre de 2014, fue el primer satélite geoestacionario de telecomunicaciones construido en América Latina. Lo fabricó INVAP en Bariloche; en 2015 lo siguió el ARSAT-2.",
+   "fuente": "ARSAT",
+   "dudosa": false
+  },
+  {
+   "id": "ci-13",
+   "chip": "Ciencia",
+   "linea": "INVAP nació en Bariloche en 1976",
+   "titulo": "INVAP, tecnología desde la Patagonia",
+   "texto": "INVAP es una empresa tecnológica de la provincia de Río Negro, creada en 1976. Diseña y construye reactores nucleares, satélites, radares y equipos médicos.",
+   "fuente": "INVAP",
+   "dudosa": false
+  },
+  {
+   "id": "ci-14",
+   "chip": "Ciencia",
+   "linea": "Un reactor argentino funciona en Australia",
+   "titulo": "El reactor OPAL",
+   "texto": "INVAP diseñó y construyó el reactor de investigación OPAL, en Sídney, que funciona desde 2007. Produce radioisótopos para medicina y sirve para investigación. La empresa también hizo reactores para Perú, Argelia y Egipto.",
+   "fuente": "INVAP",
+   "dudosa": false
+  },
+  {
+   "id": "ci-15",
+   "chip": "Ciencia",
+   "linea": "El primer reactor nuclear de América Latina es argentino",
+   "titulo": "El RA-1, de 1958",
+   "texto": "El reactor de investigación RA-1, en el Centro Atómico Constituyentes, empezó a funcionar en enero de 1958. Fue el primero de América Latina y se construyó en el país.",
+   "fuente": "Comisión Nacional de Energía Atómica (CNEA)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-16",
+   "chip": "Ciencia",
+   "linea": "La CNEA trabaja con energía nuclear desde 1950",
+   "titulo": "Comisión Nacional de Energía Atómica",
+   "texto": "La CNEA se creó en 1950. Además de reactores, produce radioisótopos que se usan en hospitales para diagnosticar y tratar enfermedades.",
+   "fuente": "Comisión Nacional de Energía Atómica (CNEA)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-17",
+   "chip": "Ciencia",
+   "linea": "El Instituto Balseiro forma físicos e ingenieros",
+   "titulo": "Instituto Balseiro, en Bariloche",
+   "texto": "Fundado en 1955 por la CNEA y la Universidad Nacional de Cuyo, forma físicos e ingenieros nucleares, mecánicos y en telecomunicaciones. Lleva el nombre de José Antonio Balseiro, su primer director.",
+   "fuente": "Instituto Balseiro",
+   "dudosa": false
+  },
+  {
+   "id": "ci-18",
+   "chip": "Ciencia",
+   "linea": "Atucha I fue la primera central nuclear de la región",
+   "titulo": "La central Atucha I",
+   "texto": "La central nuclear Atucha I, en Lima, partido de Zárate, entró en servicio en 1974. Fue la primera central nuclear de potencia de América Latina.",
+   "fuente": "Nucleoeléctrica Argentina (NA-SA)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-19",
+   "chip": "Ciencia",
+   "linea": "El CAREM es un reactor chico de diseño argentino",
+   "titulo": "El reactor CAREM",
+   "texto": "La CNEA desarrolla el CAREM, un reactor nuclear pequeño y modular pensado para dar electricidad a zonas alejadas de las grandes redes. El prototipo está ubicado en Lima, junto al complejo Atucha.",
+   "fuente": "Comisión Nacional de Energía Atómica (CNEA)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-20",
+   "chip": "Ciencia",
+   "linea": "Favaloro desarrolló el bypass coronario",
+   "titulo": "René Favaloro",
+   "texto": "En 1967, en la Clínica Cleveland de Estados Unidos, el cirujano René Favaloro sistematizó el bypass aortocoronario con vena safena. La técnica se usa en todo el mundo para tratar arterias del corazón obstruidas.",
+   "fuente": "Fundación Favaloro",
+   "dudosa": false
+  },
+  {
+   "id": "ci-21",
+   "chip": "Ciencia",
+   "linea": "Un argentino diseñó el primer corazón artificial implantado",
+   "titulo": "Domingo Liotta",
+   "texto": "El cirujano Domingo Liotta diseñó el corazón artificial total que en 1969 se implantó por primera vez en una persona, en Houston, como paso previo a un trasplante.",
+   "fuente": "Academia Nacional de Medicina",
+   "dudosa": false
+  },
+  {
+   "id": "ci-22",
+   "chip": "Ciencia",
+   "linea": "Ameghino reunió una de las grandes colecciones de fósiles",
+   "titulo": "Florentino Ameghino",
+   "texto": "A fines del siglo XIX, Florentino Ameghino y su hermano Carlos recorrieron la Pampa y la Patagonia juntando miles de fósiles. Gran parte de su trabajo se conserva en el Museo de La Plata y en el Museo Argentino de Ciencias Naturales.",
+   "fuente": "Museo de La Plata",
+   "dudosa": false
+  },
+  {
+   "id": "ci-23",
+   "chip": "Ciencia",
+   "linea": "El Observatorio de Córdoba mapeó el cielo del sur",
+   "titulo": "La Uranometría Argentina",
+   "texto": "El Observatorio de Córdoba empezó a trabajar en 1871. Desde ahí Benjamin Gould y su equipo publicaron la Uranometría Argentina, un catálogo de las estrellas visibles desde el hemisferio sur.",
+   "fuente": "Observatorio Astronómico de Córdoba (UNC)",
+   "dudosa": false
+  },
+  {
+   "id": "ci-24",
+   "chip": "Ciencia",
+   "linea": "En Malargüe se estudian partículas que llegan del espacio",
+   "titulo": "Observatorio Pierre Auger",
+   "texto": "En Malargüe, Mendoza, funciona el Observatorio Pierre Auger: unos 1.600 detectores repartidos en 3.000 km² registran rayos cósmicos de energía altísima. Participan científicos de más de quince países.",
+   "fuente": "Observatorio Pierre Auger",
+   "dudosa": false
+  },
+  {
+   "id": "ci-25",
+   "chip": "Ciencia",
+   "linea": "La base Orcadas mide el clima antártico desde 1904",
+   "titulo": "Base Orcadas",
+   "texto": "La Argentina ocupa la base Orcadas, en las islas Orcadas del Sur, desde 1904. Es la presencia permanente más antigua en la Antártida y tiene registros meteorológicos sin interrupción desde entonces.",
+   "fuente": "Instituto Antártico Argentino",
+   "dudosa": false
+  },
+  {
+   "id": "ci-26",
+   "chip": "Ciencia",
+   "linea": "Un trigo tolerante a la sequía nació en Santa Fe",
+   "titulo": "El trigo HB4",
+   "texto": "El equipo de la investigadora Raquel Chan, del CONICET y la Universidad Nacional del Litoral, identificó un gen del girasol que ayuda a soportar la sequía. A partir de ese hallazgo se desarrolló el trigo HB4.",
+   "fuente": "CONICET",
+   "dudosa": false
+  },
+  {
+   "id": "ci-27",
+   "chip": "Ciencia",
+   "linea": "Salvador Mazza dedicó su vida a estudiar el Chagas",
+   "titulo": "Salvador Mazza y la MEPRA",
+   "texto": "Desde Jujuy, el médico Salvador Mazza dirigió en los años treinta y cuarenta una misión que recorrió el norte estudiando enfermedades regionales. Confirmó cientos de casos de Chagas y mostró su importancia en el país.",
+   "fuente": "ANLIS Dr. Carlos G. Malbrán",
+   "dudosa": false
+  },
+  {
+   "id": "ci-28",
+   "chip": "Ciencia",
+   "linea": "El Instituto Malbrán investiga enfermedades desde 1916",
+   "titulo": "El Instituto Malbrán",
+   "texto": "El Instituto Bacteriológico, hoy ANLIS Malbrán, abrió en 1916 en Buenos Aires. Es el laboratorio nacional de referencia para diagnosticar y vigilar enfermedades infecciosas.",
+   "fuente": "ANLIS Dr. Carlos G. Malbrán",
+   "dudosa": false
+  },
+  {
+   "id": "ci-29",
+   "chip": "Ciencia",
+   "linea": "De Robertis vio por dentro cómo se comunican las neuronas",
+   "titulo": "Eduardo De Robertis",
+   "texto": "En los años cincuenta, con el microscopio electrónico, Eduardo De Robertis describió las vesículas sinápticas: las pequeñas bolsas donde las neuronas guardan las sustancias con que se pasan mensajes.",
+   "fuente": "Facultad de Medicina de la Universidad de Buenos Aires",
+   "dudosa": false
+  },
+  {
+   "id": "ci-30",
+   "chip": "Ciencia",
+   "linea": "Maldacena unió dos teorías de la física en 1997",
+   "titulo": "Juan Maldacena",
+   "texto": "El físico Juan Maldacena, formado en el Instituto Balseiro, propuso en 1997 una relación entre la gravedad y la física de partículas que hoy es una de las ideas más citadas de la física teórica.",
+   "fuente": "Instituto de Estudios Avanzados de Princeton",
+   "dudosa": false
+  }
+ ]
+}

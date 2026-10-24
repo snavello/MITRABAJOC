@@ -1,0 +1,276 @@
+{
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "revisado": false,
+ "items": [
+  {
+   "id": "cu-01",
+   "chip": "¿Sabías?",
+   "linea": "El colectivo nació en Buenos Aires en 1928",
+   "titulo": "El colectivo, un invento porteño",
+   "texto": "En septiembre de 1928 un grupo de taxistas porteños empezó a llevar varios pasajeros a la vez por un recorrido fijo, cobrando por asiento. Así nació el colectivo, que después se convirtió en el transporte más usado del país.",
+   "fuente": "Gobierno de la Ciudad de Buenos Aires",
+   "dudosa": false
+  },
+  {
+   "id": "cu-02",
+   "chip": "¿Sabías?",
+   "linea": "La birome se patentó en la Argentina en 1943",
+   "titulo": "La birome y Ladislao Biro",
+   "texto": "Ladislao Biro, un periodista húngaro radicado en el país, patentó en 1943 el bolígrafo de tinta con bolita. Por eso el Día del Inventor se celebra el 29 de septiembre, el día de su nacimiento.",
+   "fuente": "Instituto Nacional de la Propiedad Industrial (INPI)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-03",
+   "chip": "¿Sabías?",
+   "linea": "Una leyenda ubica el dulce de leche en Cañuelas",
+   "titulo": "El origen del dulce de leche",
+   "texto": "La versión más contada dice que nació en 1829 en una estancia de Cañuelas, cuando una leche con azúcar quedó olvidada en el fuego. Es una leyenda: Uruguay y otros países también lo reclaman como propio.",
+   "fuente": "Municipalidad de Cañuelas",
+   "dudosa": false
+  },
+  {
+   "id": "cu-04",
+   "chip": "¿Sabías?",
+   "linea": "El primer subte de América Latina es de 1913",
+   "titulo": "La línea A, pionera",
+   "texto": "La línea A del subte porteño se inauguró el 1 de diciembre de 1913, entre Plaza de Mayo y Plaza Once. Fue el primer subterráneo de América Latina y del hemisferio sur.",
+   "fuente": "Subterráneos de Buenos Aires (SBASE)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-05",
+   "chip": "¿Sabías?",
+   "linea": "Las huellas digitales se ordenan con un método argentino",
+   "titulo": "Vucetich y la dactiloscopia",
+   "texto": "Juan Vucetich, de la policía de la provincia de Buenos Aires, creó en 1891 un sistema para clasificar huellas dactilares. En 1892 sirvió para resolver un crimen en Necochea, uno de los primeros casos del mundo aclarados por una huella.",
+   "fuente": "Museo de la Policía de la Provincia de Buenos Aires",
+   "dudosa": false
+  },
+  {
+   "id": "cu-06",
+   "chip": "¿Sabías?",
+   "linea": "Luis Agote hizo posible guardar sangre para transfundir",
+   "titulo": "La transfusión con sangre citrada",
+   "texto": "En noviembre de 1914, en el Hospital Rawson, Luis Agote hizo una transfusión con sangre a la que le había agregado citrato para que no se coagulara. Ese paso permitió conservar sangre y no depender de pasarla de brazo a brazo.",
+   "fuente": "Facultad de Medicina de la Universidad de Buenos Aires",
+   "dudosa": false
+  },
+  {
+   "id": "cu-07",
+   "chip": "¿Sabías?",
+   "linea": "El Aconcagua es la montaña más alta de América",
+   "titulo": "El techo de América",
+   "texto": "El Aconcagua, en Mendoza, mide casi 7.000 metros: las mediciones lo ubican cerca de los 6.960. Es la cumbre más alta fuera de Asia.",
+   "fuente": "Instituto Geográfico Nacional (IGN)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-08",
+   "chip": "¿Sabías?",
+   "linea": "El 1 de mayo se celebra en el país desde 1890",
+   "titulo": "El primer Día del Trabajador",
+   "texto": "El 1 de mayo de 1890 se hizo en Buenos Aires el primer acto por el Día del Trabajador, en el Prado Español. Lo organizaron grupos obreros, en buena parte inmigrantes.",
+   "fuente": "Archivo General de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-09",
+   "chip": "¿Sabías?",
+   "linea": "El descanso dominical es ley desde 1905",
+   "titulo": "El domingo, día de descanso",
+   "texto": "La Ley 4.661, de 1905, estableció el descanso obligatorio los domingos en la Capital. La impulsó Alfredo Palacios, el primer diputado socialista de América.",
+   "fuente": "Biblioteca del Congreso de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-10",
+   "chip": "¿Sabías?",
+   "linea": "El aguinaldo existe en la Argentina desde 1945",
+   "titulo": "El sueldo anual complementario",
+   "texto": "El aguinaldo, que la ley llama sueldo anual complementario, se creó por decreto a fines de 1945 y después lo ratificó una ley. Hoy se paga en dos cuotas, en junio y en diciembre.",
+   "fuente": "InfoLEG – Ministerio de Justicia de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-11",
+   "chip": "¿Sabías?",
+   "linea": "Las Cataratas del Iguazú tienen unos 275 saltos",
+   "titulo": "Iguazú, un parque de agua",
+   "texto": "Las Cataratas del Iguazú, en Misiones, suman alrededor de 275 saltos. El parque nacional que las protege es Patrimonio de la Humanidad desde 1984.",
+   "fuente": "Administración de Parques Nacionales",
+   "dudosa": false
+  },
+  {
+   "id": "cu-12",
+   "chip": "¿Sabías?",
+   "linea": "El primer parque nacional nació de una donación",
+   "titulo": "El regalo del Perito Moreno",
+   "texto": "En 1903 Francisco Pascasio Moreno donó tierras junto al lago Nahuel Huapi para que fueran de uso público. Sobre esa base nació el primer parque nacional del país, hoy Parque Nacional Nahuel Huapi.",
+   "fuente": "Administración de Parques Nacionales",
+   "dudosa": false
+  },
+  {
+   "id": "cu-13",
+   "chip": "¿Sabías?",
+   "linea": "El fileteado porteño es patrimonio de la humanidad",
+   "titulo": "Fileteado, arte de la calle",
+   "texto": "El fileteado, el dibujo de líneas, flores y letras que adornaba carros, camiones y colectivos, fue reconocido por la UNESCO en 2015 como Patrimonio Cultural Inmaterial de la Humanidad.",
+   "fuente": "UNESCO",
+   "dudosa": false
+  },
+  {
+   "id": "cu-14",
+   "chip": "¿Sabías?",
+   "linea": "El tango es patrimonio de la humanidad desde 2009",
+   "titulo": "Tango, del Río de la Plata al mundo",
+   "texto": "En 2009 la UNESCO declaró al tango Patrimonio Cultural Inmaterial de la Humanidad, a pedido conjunto de la Argentina y Uruguay.",
+   "fuente": "UNESCO",
+   "dudosa": false
+  },
+  {
+   "id": "cu-15",
+   "chip": "¿Sabías?",
+   "linea": "El primer largo de dibujos animados se hizo acá",
+   "titulo": "El Apóstol, de 1917",
+   "texto": "El Apóstol, de Quirino Cristiani, se estrenó en Buenos Aires en 1917 y es considerado el primer largometraje de animación del mundo. No se conserva ninguna copia.",
+   "fuente": "Museo del Cine Pablo Ducrós Hicken",
+   "dudosa": false
+  },
+  {
+   "id": "cu-16",
+   "chip": "¿Sabías?",
+   "linea": "La primera transmisión de radio fue desde una azotea",
+   "titulo": "Los locos de la azotea",
+   "texto": "El 27 de agosto de 1920 un grupo de jóvenes transmitió la ópera Parsifal desde la terraza del Teatro Coliseo de Buenos Aires. Por eso ese día es el Día de la Radiodifusión.",
+   "fuente": "Ente Nacional de Comunicaciones (ENACOM)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-17",
+   "chip": "¿Sabías?",
+   "linea": "La Argentina es el octavo país más grande del mundo",
+   "titulo": "Un país enorme",
+   "texto": "Por la superficie de su territorio continental americano, la Argentina está entre los diez países más extensos del planeta: ocupa el octavo lugar.",
+   "fuente": "Instituto Geográfico Nacional (IGN)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-18",
+   "chip": "¿Sabías?",
+   "linea": "El mate tiene su día: el 30 de noviembre",
+   "titulo": "Día Nacional del Mate",
+   "texto": "Desde 2015 una ley fija el 30 de noviembre como Día Nacional del Mate, en recuerdo del nacimiento de Andrés Guacurarí, caudillo misionero. La yerba se produce sobre todo en Misiones y el norte de Corrientes.",
+   "fuente": "Instituto Nacional de la Yerba Mate (INYM)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-19",
+   "chip": "¿Sabías?",
+   "linea": "Belgrano izó la bandera por primera vez en Rosario",
+   "titulo": "La bandera, a orillas del Paraná",
+   "texto": "El 27 de febrero de 1812 Manuel Belgrano hizo izar por primera vez la bandera celeste y blanca, frente a las baterías Libertad e Independencia, en Rosario.",
+   "fuente": "Monumento Nacional a la Bandera",
+   "dudosa": false
+  },
+  {
+   "id": "cu-20",
+   "chip": "¿Sabías?",
+   "linea": "El Himno Nacional se aprobó en mayo de 1813",
+   "titulo": "La marcha patriótica",
+   "texto": "La Asamblea del Año XIII aprobó el 11 de mayo de 1813 la letra de Vicente López y Planes. La música es de Blas Parera. Por eso el 11 de mayo es el Día del Himno.",
+   "fuente": "Archivo General de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-21",
+   "chip": "¿Sabías?",
+   "linea": "La jornada de 8 horas es ley desde 1929",
+   "titulo": "Ocho horas de trabajo",
+   "texto": "La Ley 11.544, de 1929, fijó la jornada laboral en 8 horas diarias o 48 semanales. Fue el resultado de décadas de reclamos de los trabajadores.",
+   "fuente": "InfoLEG – Ministerio de Justicia de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-22",
+   "chip": "¿Sabías?",
+   "linea": "El voto secreto y obligatorio llegó en 1912",
+   "titulo": "La Ley Sáenz Peña",
+   "texto": "La Ley 8.871, de 1912, estableció el voto secreto y obligatorio para los varones mayores de 18 años, con padrón militar. Cambió para siempre la forma de votar en el país.",
+   "fuente": "Biblioteca del Congreso de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-23",
+   "chip": "¿Sabías?",
+   "linea": "Las mujeres votaron por primera vez en 1951",
+   "titulo": "El voto femenino",
+   "texto": "La Ley 13.010, de 1947, reconoció a las mujeres el derecho a votar y a ser elegidas. Lo ejercieron por primera vez en las elecciones nacionales de 1951.",
+   "fuente": "Archivo General de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-24",
+   "chip": "¿Sabías?",
+   "linea": "El glaciar Perito Moreno avanza y se rompe solo",
+   "titulo": "Un glaciar que se renueva",
+   "texto": "El Perito Moreno, en Santa Cruz, avanza sobre el Lago Argentino hasta cerrar un brazo del lago; con los años el agua lo perfora y el frente se derrumba. Está en el Parque Nacional Los Glaciares, Patrimonio de la Humanidad desde 1981.",
+   "fuente": "Administración de Parques Nacionales",
+   "dudosa": false
+  },
+  {
+   "id": "cu-25",
+   "chip": "¿Sabías?",
+   "linea": "En San Juan están algunos de los primeros dinosaurios",
+   "titulo": "Ischigualasto, el Valle de la Luna",
+   "texto": "En Ischigualasto se hallaron fósiles de algunos de los dinosaurios más antiguos que se conocen, como el Eoraptor, de unos 230 millones de años. El parque es Patrimonio de la Humanidad desde 2000, junto con Talampaya.",
+   "fuente": "Parque Provincial Ischigualasto",
+   "dudosa": false
+  },
+  {
+   "id": "cu-26",
+   "chip": "¿Sabías?",
+   "linea": "Uno de los dinosaurios más grandes vivió en Neuquén",
+   "titulo": "El Argentinosaurus",
+   "texto": "El Argentinosaurus huinculensis, hallado cerca de Plaza Huincul, es uno de los animales terrestres más grandes que se conocen: se calcula que medía más de 30 metros de largo.",
+   "fuente": "Museo Municipal Carmen Funes (Plaza Huincul)",
+   "dudosa": false
+  },
+  {
+   "id": "cu-27",
+   "chip": "¿Sabías?",
+   "linea": "La Ruta 40 recorre más de 5.000 km del país",
+   "titulo": "La ruta más larga",
+   "texto": "La Ruta Nacional 40 va de La Quiaca, en Jujuy, a Cabo Vírgenes, en Santa Cruz, siguiendo la cordillera. Cruza once provincias y es la más larga del país.",
+   "fuente": "Dirección Nacional de Vialidad",
+   "dudosa": false
+  },
+  {
+   "id": "cu-28",
+   "chip": "¿Sabías?",
+   "linea": "El lunfardo tiene su propia academia desde 1962",
+   "titulo": "La Academia Porteña del Lunfardo",
+   "texto": "La Academia Porteña del Lunfardo se fundó en 1962 para estudiar el habla popular de Buenos Aires. El 5 de septiembre es el Día del Lunfardo.",
+   "fuente": "Academia Porteña del Lunfardo",
+   "dudosa": false
+  },
+  {
+   "id": "cu-29",
+   "chip": "¿Sabías?",
+   "linea": "La primera huelga del país fue de tipógrafos",
+   "titulo": "La huelga de 1878",
+   "texto": "En 1878 los trabajadores de la Unión Tipográfica de Buenos Aires pararon para reclamar por salarios y jornada. Es considerada la primera huelga organizada del país.",
+   "fuente": "Archivo General de la Nación",
+   "dudosa": false
+  },
+  {
+   "id": "cu-30",
+   "chip": "¿Sabías?",
+   "linea": "El Obelisco mide 67,5 metros y es de 1936",
+   "titulo": "El Obelisco porteño",
+   "texto": "Se inauguró el 23 de mayo de 1936, a los 400 años de la primera fundación de Buenos Aires. Está donde estaba la iglesia de San Nicolás, en la que se izó por primera vez la bandera en la ciudad.",
+   "fuente": "Gobierno de la Ciudad de Buenos Aires",
+   "dudosa": false
+  }
+ ]
+}

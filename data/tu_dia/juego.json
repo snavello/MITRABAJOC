@@ -1,0 +1,486 @@
+{
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "revisado": false,
+ "items": [
+  {
+   "id": "ju-01",
+   "chip": "Juego",
+   "linea": "¿Quién creó la bandera argentina? Tocá para responder",
+   "titulo": "¿Quién creó la bandera argentina?",
+   "texto": "Pista: el Monumento a la Bandera lo recuerda en Rosario.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "dudosa": false,
+   "opciones": [
+    "Manuel Belgrano",
+    "José de San Martín",
+    "Mariano Moreno"
+   ],
+   "correcta": 0,
+   "explicacion": "Manuel Belgrano la izó por primera vez el 27 de febrero de 1812 a orillas del Paraná, en Rosario. Por eso el Monumento a la Bandera está en esa ciudad."
+  },
+  {
+   "id": "ju-02",
+   "chip": "Juego",
+   "linea": "¿En qué año se declaró la Independencia? Tocá para responder",
+   "titulo": "¿En qué año se declaró la Independencia argentina?",
+   "texto": "",
+   "fuente": "Casa Histórica de la Independencia — Ministerio de Cultura",
+   "dudosa": false,
+   "opciones": [
+    "1810",
+    "1853",
+    "1816"
+   ],
+   "correcta": 2,
+   "explicacion": "El Congreso reunido en San Miguel de Tucumán la declaró el 9 de julio de 1816. El 25 de mayo de 1810 fue la Revolución de Mayo, el primer gobierno patrio."
+  },
+  {
+   "id": "ju-03",
+   "chip": "Juego",
+   "linea": "¿Cuál es el pico más alto de América? Tocá para responder",
+   "titulo": "¿Cuál es la montaña más alta de toda América?",
+   "texto": "Pista: está en Mendoza.",
+   "fuente": "Parque Provincial Aconcagua — Gobierno de Mendoza",
+   "dudosa": false,
+   "opciones": [
+    "Ojos del Salado",
+    "Aconcagua",
+    "Lanín"
+   ],
+   "correcta": 1,
+   "explicacion": "El Aconcagua, en Mendoza, mide unos 6.960 metros. Es la cumbre más alta fuera de Asia."
+  },
+  {
+   "id": "ju-04",
+   "chip": "Juego",
+   "linea": "¿En qué provincia están las Cataratas del Iguazú? Tocá para responder",
+   "titulo": "¿En qué provincia están las Cataratas del Iguazú?",
+   "texto": "",
+   "fuente": "Administración de Parques Nacionales",
+   "dudosa": false,
+   "opciones": [
+    "Corrientes",
+    "Misiones",
+    "Entre Ríos"
+   ],
+   "correcta": 1,
+   "explicacion": "Están en Misiones, sobre la frontera con Brasil, dentro del Parque Nacional Iguazú. La Garganta del Diablo es el salto más conocido."
+  },
+  {
+   "id": "ju-05",
+   "chip": "Juego",
+   "linea": "¿Quién escribió el Martín Fierro? Tocá para responder",
+   "titulo": "¿Quién escribió el poema gauchesco «Martín Fierro»?",
+   "texto": "Pista: el Día de la Tradición recuerda su nacimiento.",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "dudosa": false,
+   "opciones": [
+    "José Hernández",
+    "Leopoldo Lugones",
+    "Esteban Echeverría"
+   ],
+   "correcta": 0,
+   "explicacion": "José Hernández publicó «El gaucho Martín Fierro» en 1872 y «La vuelta de Martín Fierro» en 1879. El Día de la Tradición, el 10 de noviembre, recuerda su nacimiento."
+  },
+  {
+   "id": "ju-06",
+   "chip": "Juego",
+   "linea": "¿Quién escribió «El Aleph» y «Ficciones»? Tocá para responder",
+   "titulo": "¿Qué autor argentino escribió «El Aleph» y «Ficciones»?",
+   "texto": "",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "dudosa": false,
+   "opciones": [
+    "Julio Cortázar",
+    "Ernesto Sabato",
+    "Jorge Luis Borges"
+   ],
+   "correcta": 2,
+   "explicacion": "Los dos libros de cuentos son de Jorge Luis Borges, que además dirigió la Biblioteca Nacional entre 1955 y 1973."
+  },
+  {
+   "id": "ju-07",
+   "chip": "Juego",
+   "linea": "¿Qué argentino ganó el Nobel de Medicina en 1947? Tocá para responder",
+   "titulo": "¿Qué científico argentino ganó el Premio Nobel de Medicina en 1947?",
+   "texto": "",
+   "fuente": "Fundación Nobel (nobelprize.org)",
+   "dudosa": false,
+   "opciones": [
+    "Bernardo Houssay",
+    "René Favaloro",
+    "César Milstein"
+   ],
+   "correcta": 0,
+   "explicacion": "Bernardo Houssay lo recibió por sus estudios sobre la hipófisis y el metabolismo del azúcar. Fue el primer Nobel en ciencias de América Latina."
+  },
+  {
+   "id": "ju-08",
+   "chip": "Juego",
+   "linea": "¿Qué Nobel ganó Luis Federico Leloir en 1970? Tocá para responder",
+   "titulo": "¿En qué disciplina ganó Luis Federico Leloir el Premio Nobel en 1970?",
+   "texto": "",
+   "fuente": "Fundación Nobel (nobelprize.org)",
+   "dudosa": false,
+   "opciones": [
+    "Física",
+    "Química",
+    "Medicina"
+   ],
+   "correcta": 1,
+   "explicacion": "Ganó el Nobel de Química por descubrir cómo el cuerpo fabrica y usa los azúcares. Se le atribuye también la invención de la salsa golf."
+  },
+  {
+   "id": "ju-09",
+   "chip": "Juego",
+   "linea": "¿Quién creó el sistema de huellas dactilares? Tocá para responder",
+   "titulo": "¿Quién desarrolló en la Policía de La Plata el sistema de identificación por huellas dactilares?",
+   "texto": "",
+   "fuente": "Museo de la Policía de la Provincia de Buenos Aires",
+   "dudosa": false,
+   "opciones": [
+    "Florentino Ameghino",
+    "Juan Vucetich",
+    "Francisco Moreno"
+   ],
+   "correcta": 1,
+   "explicacion": "Juan Vucetich lo creó a fines del siglo XIX en La Plata. En 1892 se usó por primera vez para resolver un crimen, y su método se adoptó en muchos países."
+  },
+  {
+   "id": "ju-10",
+   "chip": "Juego",
+   "linea": "¿Quién patentó el bolígrafo en la Argentina? Tocá para responder",
+   "titulo": "¿Quién patentó en la Argentina el bolígrafo de tinta moderna?",
+   "texto": "Pista: en el país se lo llama por su apellido.",
+   "fuente": "Instituto Nacional de la Propiedad Industrial (INPI)",
+   "dudosa": false,
+   "opciones": [
+    "Ladislao Biro",
+    "Raúl Pateras Pescara",
+    "Quirino Cristiani"
+   ],
+   "correcta": 0,
+   "explicacion": "Ladislao Biro, nacido en Hungría y radicado en la Argentina, lo patentó en 1943. Por eso en el país al bolígrafo se le dice «birome»."
+  },
+  {
+   "id": "ju-11",
+   "chip": "Juego",
+   "linea": "¿En qué año ganó Argentina su primer Mundial? Tocá para responder",
+   "titulo": "¿En qué año ganó la selección argentina su primera Copa del Mundo?",
+   "texto": "",
+   "fuente": "FIFA (fifa.com)",
+   "dudosa": false,
+   "opciones": [
+    "1986",
+    "1930",
+    "1978"
+   ],
+   "correcta": 2,
+   "explicacion": "La ganó en 1978, de local, con la final ante Países Bajos en el estadio Monumental. En 1930 había llegado a la final pero perdió con Uruguay."
+  },
+  {
+   "id": "ju-12",
+   "chip": "Juego",
+   "linea": "¿Cuántos Mundiales ganó la selección masculina? Tocá para responder",
+   "titulo": "¿Cuántas Copas del Mundo ganó la selección argentina masculina de fútbol?",
+   "texto": "",
+   "fuente": "FIFA (fifa.com)",
+   "dudosa": false,
+   "opciones": [
+    "Dos",
+    "Tres",
+    "Cuatro"
+   ],
+   "correcta": 1,
+   "explicacion": "Ganó tres: 1978, 1986 y 2022. La última fue en Qatar, por penales ante Francia."
+  },
+  {
+   "id": "ju-13",
+   "chip": "Juego",
+   "linea": "¿Qué piloto argentino fue cinco veces campeón de F1? Tocá para responder",
+   "titulo": "¿Qué piloto argentino ganó cinco campeonatos mundiales de Fórmula 1?",
+   "texto": "Pista: nació en Balcarce.",
+   "fuente": "Museo Juan Manuel Fangio (Balcarce)",
+   "dudosa": false,
+   "opciones": [
+    "Carlos Reutemann",
+    "Froilán González",
+    "Juan Manuel Fangio"
+   ],
+   "correcta": 2,
+   "explicacion": "Juan Manuel Fangio, de Balcarce, fue campeón en 1951, 1954, 1955, 1956 y 1957. Su récord de cinco títulos duró casi cincuenta años."
+  },
+  {
+   "id": "ju-14",
+   "chip": "Juego",
+   "linea": "¿Qué Grand Slam ganó Gabriela Sabatini en 1990? Tocá para responder",
+   "titulo": "¿Qué torneo de Grand Slam ganó Gabriela Sabatini en 1990?",
+   "texto": "",
+   "fuente": "Women's Tennis Association (wtatennis.com)",
+   "dudosa": false,
+   "opciones": [
+    "El US Open",
+    "Roland Garros",
+    "Wimbledon"
+   ],
+   "correcta": 0,
+   "explicacion": "Ganó el Abierto de los Estados Unidos en 1990, venciendo en la final a Steffi Graf. Fue su único título de Grand Slam en singles."
+  },
+  {
+   "id": "ju-15",
+   "chip": "Juego",
+   "linea": "¿Qué deporte juegan Las Leonas? Tocá para responder",
+   "titulo": "¿Qué deporte juega la selección femenina conocida como Las Leonas?",
+   "texto": "",
+   "fuente": "Confederación Argentina de Hockey",
+   "dudosa": false,
+   "opciones": [
+    "Rugby",
+    "Hockey sobre césped",
+    "Vóley"
+   ],
+   "correcta": 1,
+   "explicacion": "Las Leonas son la selección de hockey sobre césped. Ganaron dos Mundiales (2002 y 2010) y varias medallas olímpicas."
+  },
+  {
+   "id": "ju-16",
+   "chip": "Juego",
+   "linea": "¿Dónde ganó el oro olímpico la Generación Dorada? Tocá para responder",
+   "titulo": "¿En qué Juegos Olímpicos ganó la medalla de oro la selección de básquet de la Generación Dorada?",
+   "texto": "",
+   "fuente": "Comité Olímpico Argentino",
+   "dudosa": false,
+   "opciones": [
+    "Sídney 2000",
+    "Pekín 2008",
+    "Atenas 2004"
+   ],
+   "correcta": 2,
+   "explicacion": "Fue en Atenas 2004, con Manu Ginóbili como figura. Le ganaron la final a Italia."
+  },
+  {
+   "id": "ju-17",
+   "chip": "Juego",
+   "linea": "¿Cuántas provincias tiene la Argentina? Tocá para responder",
+   "titulo": "¿Cuántas provincias tiene la Argentina, sin contar la Ciudad de Buenos Aires?",
+   "texto": "",
+   "fuente": "Instituto Geográfico Nacional",
+   "dudosa": false,
+   "opciones": [
+    "23",
+    "24",
+    "22"
+   ],
+   "correcta": 0,
+   "explicacion": "Son 23 provincias. La Ciudad Autónoma de Buenos Aires no es una provincia: tiene un régimen autónomo propio."
+  },
+  {
+   "id": "ju-18",
+   "chip": "Juego",
+   "linea": "¿Cuál es la capital de Chubut? Tocá para responder",
+   "titulo": "¿Cuál es la capital de la provincia del Chubut?",
+   "texto": "Pista: no es la ciudad más grande de la provincia.",
+   "fuente": "Instituto Geográfico Nacional",
+   "dudosa": false,
+   "opciones": [
+    "Trelew",
+    "Comodoro Rivadavia",
+    "Rawson"
+   ],
+   "correcta": 2,
+   "explicacion": "La capital es Rawson, aunque Comodoro Rivadavia y Trelew tienen más habitantes."
+  },
+  {
+   "id": "ju-19",
+   "chip": "Juego",
+   "linea": "¿En qué provincia está la Quebrada de Humahuaca? Tocá para responder",
+   "titulo": "¿En qué provincia está la Quebrada de Humahuaca?",
+   "texto": "",
+   "fuente": "UNESCO — Lista del Patrimonio Mundial",
+   "dudosa": false,
+   "opciones": [
+    "Salta",
+    "Jujuy",
+    "Catamarca"
+   ],
+   "correcta": 1,
+   "explicacion": "Está en Jujuy. La UNESCO la declaró Patrimonio de la Humanidad en 2003 por su paisaje y su historia de más de diez mil años."
+  },
+  {
+   "id": "ju-20",
+   "chip": "Juego",
+   "linea": "¿Qué glaciar de Santa Cruz es famoso por sus rupturas? Tocá para responder",
+   "titulo": "¿Qué glaciar de Santa Cruz es famoso por las rupturas de su frente de hielo?",
+   "texto": "",
+   "fuente": "Administración de Parques Nacionales",
+   "dudosa": false,
+   "opciones": [
+    "Perito Moreno",
+    "Upsala",
+    "Viedma"
+   ],
+   "correcta": 0,
+   "explicacion": "El Perito Moreno, en el Parque Nacional Los Glaciares, avanza sobre el Lago Argentino y cada tanto forma un dique de hielo que termina rompiéndose."
+  },
+  {
+   "id": "ju-21",
+   "chip": "Juego",
+   "linea": "¿Qué provincia produce más vino? Tocá para responder",
+   "titulo": "¿Qué provincia es la mayor productora de vino de la Argentina?",
+   "texto": "",
+   "fuente": "Instituto Nacional de Vitivinicultura (INV)",
+   "dudosa": false,
+   "opciones": [
+    "San Juan",
+    "Mendoza",
+    "La Rioja"
+   ],
+   "correcta": 1,
+   "explicacion": "Mendoza concentra la mayor parte de los viñedos y de la producción del país. El Malbec es su cepa más conocida."
+  },
+  {
+   "id": "ju-22",
+   "chip": "Juego",
+   "linea": "¿Cuál es la flor nacional? Tocá para responder",
+   "titulo": "¿Cuál es la flor nacional argentina?",
+   "texto": "Pista: sus flores son rojas.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "dudosa": false,
+   "opciones": [
+    "El jacarandá",
+    "El ceibo",
+    "La pasionaria"
+   ],
+   "correcta": 1,
+   "explicacion": "Es la flor del ceibo, declarada flor nacional en 1942. El árbol crece en las orillas de ríos y lagunas del noreste."
+  },
+  {
+   "id": "ju-23",
+   "chip": "Juego",
+   "linea": "¿Qué ave se considera el ave nacional? Tocá para responder",
+   "titulo": "¿Qué ave se considera el ave nacional de la Argentina?",
+   "texto": "Pista: construye su nido con barro.",
+   "fuente": "Aves Argentinas (Asociación Ornitológica del Plata)",
+   "dudosa": true,
+   "opciones": [
+    "El cóndor",
+    "El hornero",
+    "El ñandú"
+   ],
+   "correcta": 1,
+   "explicacion": "El hornero, famoso por su nido de barro con forma de horno, fue elegido ave nacional en 1928 por una encuesta entre escolares."
+  },
+  {
+   "id": "ju-24",
+   "chip": "Juego",
+   "linea": "¿Quién compuso la música del Himno Nacional? Tocá para responder",
+   "titulo": "¿Quién compuso la música del Himno Nacional Argentino?",
+   "texto": "",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "dudosa": false,
+   "opciones": [
+    "Vicente López y Planes",
+    "Juan Pedro Esnaola",
+    "Blas Parera"
+   ],
+   "correcta": 2,
+   "explicacion": "La música es de Blas Parera y la letra de Vicente López y Planes. La Asamblea del Año XIII lo aprobó en 1813."
+  },
+  {
+   "id": "ju-25",
+   "chip": "Juego",
+   "linea": "¿Qué instrumento es el alma del tango? Tocá para responder",
+   "titulo": "¿Qué instrumento de fuelle se volvió el sonido característico del tango?",
+   "texto": "",
+   "fuente": "Academia Nacional del Tango",
+   "dudosa": false,
+   "opciones": [
+    "El bandoneón",
+    "El acordeón",
+    "La armónica"
+   ],
+   "correcta": 0,
+   "explicacion": "El bandoneón llegó desde Alemania a fines del siglo XIX y se volvió inseparable del tango. Aníbal Troilo y Astor Piazzolla fueron dos de sus grandes intérpretes."
+  },
+  {
+   "id": "ju-26",
+   "chip": "Juego",
+   "linea": "¿Quién creó a Mafalda? Tocá para responder",
+   "titulo": "¿Qué historietista creó a Mafalda?",
+   "texto": "",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "dudosa": false,
+   "opciones": [
+    "Quino",
+    "Fontanarrosa",
+    "Caloi"
+   ],
+   "correcta": 0,
+   "explicacion": "Mafalda es de Joaquín Salvador Lavado, Quino, que la publicó entre 1964 y 1973. Se tradujo a decenas de idiomas."
+  },
+  {
+   "id": "ju-27",
+   "chip": "Juego",
+   "linea": "¿Cómo se llama el aguinaldo en la ley? Tocá para responder",
+   "titulo": "En la ley y en el recibo de sueldo, ¿cómo se llama el aguinaldo?",
+   "texto": "Pista: en el recibo aparece con una sigla de tres letras.",
+   "fuente": "Ley 20.744 de Contrato de Trabajo, art. 121 — Ministerio de Capital Humano",
+   "dudosa": false,
+   "opciones": [
+    "Sueldo Anual Complementario",
+    "Premio Anual Laboral",
+    "Bono Semestral Fijo"
+   ],
+   "correcta": 0,
+   "explicacion": "Se llama Sueldo Anual Complementario (SAC) y está en la Ley de Contrato de Trabajo. Se paga en dos cuotas, a mitad y a fin de año."
+  },
+  {
+   "id": "ju-28",
+   "chip": "Juego",
+   "linea": "¿Qué número tiene la Ley de Contrato de Trabajo? Tocá para responder",
+   "titulo": "¿Qué número tiene la Ley de Contrato de Trabajo?",
+   "texto": "",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "dudosa": false,
+   "opciones": [
+    "Ley 24.240",
+    "Ley 20.744",
+    "Ley 23.551"
+   ],
+   "correcta": 1,
+   "explicacion": "Es la Ley 20.744, de 1974, que regula la relación entre trabajador y empleador. La 23.551 es la de asociaciones sindicales y la 24.240 la de defensa del consumidor."
+  },
+  {
+   "id": "ju-29",
+   "chip": "Juego",
+   "linea": "¿Qué dinosaurio gigante se halló en Plaza Huincul? Tocá para responder",
+   "titulo": "¿Qué dinosaurio gigante se descubrió cerca de Plaza Huincul, en Neuquén?",
+   "texto": "",
+   "fuente": "Museo Municipal Carmen Funes (Plaza Huincul)",
+   "dudosa": false,
+   "opciones": [
+    "Giganotosaurus",
+    "Carnotaurus",
+    "Argentinosaurus"
+   ],
+   "correcta": 2,
+   "explicacion": "El Argentinosaurus, un herbívoro de cuello largo, se halló a fines de los ochenta. Es uno de los animales terrestres más grandes que se conocen."
+  },
+  {
+   "id": "ju-30",
+   "chip": "Juego",
+   "linea": "¿Cuándo fue la primera transmisión de radio? Tocá para responder",
+   "titulo": "¿En qué año se hizo la primera transmisión de radio en la Argentina?",
+   "texto": "",
+   "fuente": "Ente Nacional de Comunicaciones (ENACOM)",
+   "dudosa": false,
+   "opciones": [
+    "1920",
+    "1935",
+    "1910"
+   ],
+   "correcta": 0,
+   "explicacion": "El 27 de agosto de 1920 «Los locos de la azotea» transmitieron una ópera desde el Teatro Coliseo de Buenos Aires. Por eso ese día es el Día de la Radiodifusión."
+  }
+ ]
+}

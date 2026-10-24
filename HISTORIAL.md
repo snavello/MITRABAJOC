@@ -8724,3 +8724,86 @@ recuerda cinco minutos, para no golpear un servicio caído en cada portada.
 cargó, su seccional. Las coordenadas viajan redondeadas a un decimal (unos
 10 km): alcanzan para el clima y no señalan un domicilio. Fuera de la
 Argentina no se pide.
+
+## Tu día en la portada del afiliado (2026-10-24, Trabajador 0.52.01, Admin 0.70.01)
+
+**Reemplaza a "Datos útiles"** (la sección de arriba): `datos_utiles.py`,
+`data/efemerides.json`, `/api/portada/datos` y su test se borraron. El pedido
+está en `docs/chat/2026-10-24-pedido-tu-dia.md` y el mockup con su
+interpretación, en https://claude.ai/artifact/JS5RUwMtqcpw3Xf3NRJCPx.
+
+**Decisiones de SDN sobre el pedido.**
+- **Clima de MET Norway** (api.met.no, Instituto Meteorológico de Noruega) y
+  no Open-Meteo: es gratis también para uso comercial, con atribución (CC BY
+  4.0, que se ve en la hoja del clima) y un User-Agent que identifique la app.
+- **Efemérides sí, feriados no.**
+- **Mercados = solo el dólar oficial** del BCRA (estadísticas cambiarias
+  v1.0; la v3 está dada de baja), cierre del día hábil anterior. Ni blue, ni
+  MEP, ni Merval.
+- **El cumpleaños no es un renglón que rota**: el día que cumple, la persona
+  ve una animación de ocho segundos, una sola vez en el año, y nunca más.
+  La marca es `CuentaTrabajador.cumple_visto` (el año), que se escribe apenas
+  se muestra (`POST /api/tu-dia/cumple-visto`) y no al cerrarla: si cierra la
+  pestaña a los dos segundos, igual no vuelve. 29 de febrero = 28 en los años
+  no bisiestos. Con "reducir movimiento" no hay papelitos.
+- **Alertas del SMN**: el lugar existe (`alerta` en la respuesta, chip ámbar
+  en las hojas) pero sale siempre `null`. Se enciende cuando haya una fuente
+  firme.
+
+**Qué es.** Una franja de una línea: la hora y la fecha de Buenos Aires y el
+clima de la localidad van siempre (en escritorio, también el pronóstico de
+dos días); al lado rota, de a un ítem, cada rubro que el sindicato prende.
+Tocar la línea abre una hoja con el texto entero y la fuente (la del dólar,
+con la tabla de los últimos cierres; la del entretenimiento, con las tres
+opciones y la respuesta). La rotación se detiene con el mouse encima, con el
+foco, con la hoja abierta o con la pestaña oculta. En escritorio va en la
+fila del saludo; en el teléfono, debajo de la portada.
+
+**Módulo `tu_dia`, opt-in** (fuera de `MODULOS_INICIALES`), pero la
+migración `f6c1a8d3e2b7` lo **prende en los sindicatos que ya existían**, que
+venían viendo "Datos útiles": apagarlo de golpe habría sido sacarles algo.
+Sin el módulo, `/api/tu-dia` da 403 y la portada no dibuja ni la franja ni
+el script.
+
+**La configuración es del Super Admin**, en Apariencia
+(`POST /admin/apariencia/tu-dia`, `SECCION_SUPER_ADMIN`):
+`Sindicato.tu_dia` guarda rubros, si las efemérides incluyen fechas con
+carga política y cada cuántos segundos rota (6, 10 o 15). Vacío =
+`tu_dia.POR_DEFECTO` (efemérides, salud, consumidor; sin política; 6 s).
+`tu_dia.normalizar_config` descarta lo que no esté en el catálogo.
+
+**Ninguno lo escribe el sindicato** (para eso están las Noticias). El
+contenido son seis archivos en `data/tu_dia/` (efemérides 497, una o más
+por cada uno de los 366 días; curiosos, ciencia, salud, juego y consumidor,
+30 cada uno), escritos por cinco agentes en paralelo con su fuente y marcados
+`"revisado": false`. **Lo que quedó en duda va con `"dudosa": true` y no se
+muestra nunca** (33 efemérides, 1 de ciencia, 1 de juego, 2 de consumidor);
+las efemérides con carga política (`"politica": true`) solo salen si el
+sindicato lo eligió. Salud se filtra por mes (`meses`). El ítem del día es
+determinista (sha256 de fecha y rubro): todos los afiliados ven lo mismo el
+mismo día y recargar no lo cambia. `test_tu_dia.py` controla las reglas del
+contenido sobre cada archivo y que las efemérides cubran el año entero.
+
+**Los servicios de afuera** (`tu_dia_fuentes.py`): siempre desde el
+servidor, con 2 s de tiempo máximo y caché en la base (`CacheExterna`,
+clave / valor JSONB / vence: Render corre un proceso por núcleo y un caché
+en memoria se pediría una vez por proceso). Clima media hora, dólar hasta la
+medianoche, centroides un mes; una falla se recuerda cinco minutos. Un
+tercero caído vale `None` en esa pieza y la respuesta sale igual con 200.
+
+**Dónde está la persona** (para el clima), en el orden del pedido: las
+coordenadas de su domicilio; si no tiene, el centroide de su localidad según
+Georef; si tampoco, su seccional. Se redondean a dos decimales (~1 km) para
+la consulta y **nunca llegan al navegador** (lo verifica un test sobre la
+respuesta). Fuera de la Argentina no se pide.
+
+**La hora la dice el servidor** (`hora_ba`), como el "hoy" del Panel
+Sindical; el navegador solo la hace avanzar.
+
+**Lo que hay que revisar antes de mostrarlo a un sindicato real**: las
+efemérides marcadas en duda (días del gremio de la construcción y del
+gastronómico, la ley 11.544 de la jornada de ocho horas, etc.); que los
+botones de consumidor (Res. 424/2020 y 316/2018) sigan vigentes; 04-10
+(Houssay como Día de la Ciencia); y que 16 días del año, sin política, se
+quedan solo con efemérides marcadas como políticas: esos días el rubro no
+aparece y rota lo demás.

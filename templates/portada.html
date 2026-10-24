@@ -50,36 +50,15 @@
   .pt-gremio-media { display: none; }
   .pt-gremio-hola { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; padding: 22px 15px 0; }
   @media (min-width: 900px) { .pt-gremio-hola { padding: 26px 26px 0; } }
-  /* Datos útiles: un widget, no una sección (SDN, 2026-10-24): no pasa de la
-     altura del saludo y la seccional. El clima a la izquierda; la fecha, el
-     feriado y la efeméride, un renglón cada uno, a la derecha. Estructura
-     común; cada modelo le pone su superficie. */
-  .pt-datos[hidden], .pt-datos [hidden] { display: none !important; }
-  .pt-datos { position: relative; z-index: 2; display: grid; grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: "clima fecha" "clima lista"; align-items: center; column-gap: 14px; row-gap: 3px;
-    margin-top: 14px; padding: 10px 14px; border-radius: 12px; max-width: 420px; }
-  .pt-datos:not(:has(.pt-datos-clima:not([hidden]))) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "fecha" "lista"; }
-  .pt-datos-fecha { grid-area: fecha; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
-  .pt-datos-clima { grid-area: clima; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 6px;
-    padding-right: 14px; border-right: 1px solid rgba(127,127,127,.3); }
-  .pt-datos-ico { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.6; fill: none;
-    stroke-linecap: round; stroke-linejoin: round; }
-  .pt-datos-temp { font-size: 26px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-  .pt-datos-cielo { grid-column: 1 / -1; display: flex; flex-direction: column; font-size: 11px; line-height: 1.25; margin-top: 3px; }
-  .pt-datos-mm { font-size: 10.5px; opacity: .8; font-variant-numeric: tabular-nums; }
-  .pt-datos-lista { grid-area: lista; list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-  .pt-datos-lista li { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; line-height: 1.3; }
-  .pt-datos-lista li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pt-datos-lista svg { width: 14px; height: 14px; flex: none; stroke: currentColor; stroke-width: 1.7; fill: none;
-    stroke-linecap: round; stroke-linejoin: round; }
-  .pt-datos-k { font-weight: 600; opacity: .8; }
-  .pt-datos-k::after { content: ": "; }
-  /* Escritorio: la foto de perfil pegada al saludo y los datos a la derecha. */
+  /* La fila del saludo (2026-10-24): la foto de perfil pegada al «Hola» y, en
+     escritorio, la franja «Tu día» a la derecha, alineada abajo; si no entra,
+     baja debajo del saludo. La estructura de la franja vive en marca.css
+     ("Tu día") y la superficie, en la hoja de cada modelo. */
   @media (min-width: 900px) {
-    .pt-gremio-hola { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 400px); align-items: center; column-gap: 40px; }
-    .pt-gremio-hola .fila-hola { justify-content: flex-start; }
+    .pt-gremio-hola { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+      column-gap: 28px; row-gap: 16px; }
+    .pt-gremio-hola .fila-hola { flex: 1 1 340px; min-width: 0; justify-content: flex-start; }
     .pt-gremio-hola .fila-hola > .circulo-acento { order: -1; }
-    .pt-datos { margin-top: 0; }
   }
   /* La cinta de titulares (solo la dibuja Noticiero): sin su hoja, no se ve. */
   .pt-tick { display: none; }
@@ -420,26 +399,15 @@
         {% endif %}
       </button>
     </div>
-    {# Datos útiles (SDN, 2026-10-24): fecha, clima de su localidad, próximo
-       feriado y una efeméride del trabajo. Los trae /api/portada/datos
-       después de dibujar la portada (datos_utiles.py); lo que no llega no se
-       muestra, y sin nada la caja no aparece. Se llena con textContent. #}
-    <aside class="pt-datos" id="pt-datos" aria-label="Datos útiles" hidden>
-      <div class="pt-datos-fecha" id="pt-datos-fecha"></div>
-      <div class="pt-datos-clima" id="pt-datos-clima" hidden>
-        <svg class="pt-datos-ico" viewBox="0 0 24 24" aria-hidden="true"><use id="pt-datos-ico" href="#ic-sol"/></svg>
-        <span class="pt-datos-temp" id="pt-datos-temp"></span>
-        <span class="pt-datos-cielo"><span id="pt-datos-cielo"></span><span class="pt-datos-mm" id="pt-datos-mm"></span></span>
-      </div>
-      <ul class="pt-datos-lista">
-        <li id="pt-datos-feriado" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-calendario"/></svg>
-          <span><span class="pt-datos-k" id="pt-datos-feriado-k">Feriado</span><span id="pt-datos-feriado-t"></span></span></li>
-        <li id="pt-datos-efem" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-efemeride"/></svg>
-          <span><span class="pt-datos-k" id="pt-datos-efem-k"></span><span id="pt-datos-efem-t"></span></span></li>
-      </ul>
-    </aside>
+    {# «Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): la franja de una línea.
+       Hay dos: esta, en escritorio, a la derecha del saludo; la del teléfono va
+       debajo de la tapa. Las llena el script de abajo con /api/tu-dia,
+       después de dibujar la portada; arrancan como un esqueleto del mismo
+       alto para que nada se mueva, y si no llega nada se ocultan. #}
+    {% if 'tu_dia' in modulos %}<aside class="pt-dia pt-dia-esc cargando" aria-label="Tu día"></aside>{% endif %}
   </div>
 </section>
+{% if 'tu_dia' in modulos %}<aside class="pt-dia pt-dia-tel cargando" aria-label="Tu día"></aside>{% endif %}
 
 {# La cinta de titulares (modelo Noticiero, mockup p147 T1): las noticias y
    los beneficios vigentes corriendo bajo la tapa, como el zócalo de un
@@ -880,6 +848,35 @@
   </div>
 </div>
 
+<!-- Overlay: detalle de un ítem de «Tu día» (misma familia que la noticia:
+     modales.js y movimiento.css la cubren solos). Se llena con textContent. -->
+{% if 'tu_dia' in modulos %}
+<div class="overlay overlay-articulo" id="overlay-tudia" onclick="if (event.target === this) cerrarTuDia()">
+  <div class="modal-articulo" role="dialog" aria-modal="true" aria-labelledby="td-det-titulo">
+    <div class="modal-articulo-enc">
+      <div><div class="modal-k" id="td-det-chip"></div><h3 id="td-det-titulo"></h3></div>
+      <button class="modal-cerrar-clara" onclick="cerrarTuDia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-articulo-body">
+      <div class="modal-articulo-texto" id="td-det-texto"></div>
+      <div id="td-det-extra"></div>
+      <div class="pt-dia-fuente" id="td-det-fuente"></div>
+    </div>
+  </div>
+</div>
+
+{# El saludo de cumpleaños: una sola vez, ocho segundos (SDN, 2026-10-24). #}
+<div class="pt-cumple" id="pt-cumple" role="status" aria-live="polite" hidden>
+  <canvas class="pt-cumple-papel" aria-hidden="true"></canvas>
+  <div class="pt-cumple-caja">
+    <div class="pt-cumple-k">Hoy es tu día</div>
+    <div class="pt-cumple-t">¡Feliz cumpleaños, <em id="pt-cumple-nombre"></em>!</div>
+    <div class="pt-cumple-b">Todo el gremio te saluda.</div>
+    <button type="button" class="pt-cumple-x" id="pt-cumple-x" aria-label="Cerrar el saludo"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+  </div>
+</div>
+{% endif %}
+
 <!-- Overlay: detalle de beneficio -->
 <div class="overlay overlay-articulo" id="overlay-beneficio" onclick="if (event.target === this) cerrarBeneficio()">
   <div class="modal-articulo">
@@ -939,13 +936,15 @@
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-flecha"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></g>
     <g id="ic-chevron"><path d="m9 6 6 6-6 6"/></g>
-    <g id="ic-sol"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g>
-    <g id="ic-nubes"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/></g>
-    <g id="ic-lluvia"><path d="M7 15h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 6.6 4.2 4.2 0 0 0 7 15z"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></g>
-    <g id="ic-nieve"><path d="M7 15h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 6.6 4.2 4.2 0 0 0 7 15z"/><path d="M8 19h.01M12 20h.01M16 19h.01"/></g>
-    <g id="ic-tormenta"><path d="M7 15h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 6.6 4.2 4.2 0 0 0 7 15z"/><path d="m12.5 15-2 3.5h3l-2 3.5"/></g>
-    <g id="ic-calendario"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
-    <g id="ic-efemeride"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></g>
+    <g id="ic-clima-sol"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g>
+    <g id="ic-clima-parcial"><circle cx="8" cy="8" r="3"/><path d="M8 2.5v1M2.5 8h1M4.1 4.1l.7.7M12 4.1l-.7.7"/><path d="M9 19a3.5 3.5 0 1 1 .8-6.9 4.5 4.5 0 0 1 8.7.9A3 3 0 0 1 18 19z"/></g>
+    <g id="ic-clima-nublado"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/></g>
+    <g id="ic-clima-lluvia"><path d="M7 15h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 6.6 4.2 4.2 0 0 0 7 15z"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></g>
+    <g id="ic-clima-tormenta"><path d="M7 15h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 6.6 4.2 4.2 0 0 0 7 15z"/><path d="m12.5 15-2 3.5h3l-2 3.5"/></g>
+    <g id="ic-clima-nieve"><path d="M7 15h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 6.6 4.2 4.2 0 0 0 7 15z"/><path d="M8 19h.01M12 20h.01M16 19h.01"/></g>
+    <g id="ic-clima-niebla"><path d="M4 9h16M3 13h18M5 17h14"/></g>
+    <g id="ic-clima-viento"><path d="M3 9h11a3 3 0 1 0-3-3"/><path d="M3 13h15a3 3 0 1 1-3 3"/><path d="M3 17h7"/></g>
+    <g id="ic-alerta"><path d="M12 5v9M12 19v.1"/></g>
     <g id="ic-salir"><path d="M14 4.5H6.5v15H14"/><path d="M11 12h9"/><path d="m17 8.5 3.5 3.5-3.5 3.5"/></g>
   </defs>
 </svg>
@@ -1594,42 +1593,7 @@ document.addEventListener('DOMContentLoaded', function () {
 {# sello ?v= para romper el cache de 1h al sumar funciones nuevas #}
 <script src="/static/pwa.js?v=2"></script>
 <script>registrarSW(); if (window.initPushTramites) initPushTramites();</script>
-<script>
-/* Datos útiles de la portada (datos_utiles.py): se piden después de dibujar,
-   y lo que no llega no se muestra. Todo por textContent. */
-(function () {
-  const caja = document.getElementById('pt-datos');
-  if (!caja) return;
-  const $ = id => document.getElementById(id);
-  fetch('/api/portada/datos', { credentials: 'same-origin' })
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d) return;
-      $('pt-datos-fecha').textContent = d.fecha || '';
-      if (d.clima) {
-        $('pt-datos-temp').textContent = d.clima.temp + '°';
-        $('pt-datos-cielo').textContent = d.clima.texto || '';
-        $('pt-datos-mm').textContent = 'Máx. ' + d.clima.max + '° · Mín. ' + d.clima.min + '°';
-        $('pt-datos-ico').setAttribute('href', '#ic-' + (d.clima.icono || 'nubes'));
-        $('pt-datos-clima').hidden = false;
-      }
-      if (d.feriado) {
-        $('pt-datos-feriado-k').textContent = 'Feriado ' + (d.feriado.corto || '');
-        $('pt-datos-feriado-t').textContent = d.feriado.nombre;
-        $('pt-datos-feriado').title = 'Próximo feriado: ' + d.feriado.nombre + ', ' + d.feriado.cuando;
-        $('pt-datos-feriado').hidden = false;
-      }
-      if (d.efemeride) {
-        $('pt-datos-efem-k').textContent = d.efemeride.corto || d.efemeride.cuando;
-        $('pt-datos-efem').title = d.efemeride.cuando + ': ' + d.efemeride.nombre;
-        $('pt-datos-efem-t').textContent = d.efemeride.nombre;
-        $('pt-datos-efem').hidden = false;
-      }
-      caja.hidden = false;
-    })
-    .catch(() => {});
-})();
-</script>
+{% if 'tu_dia' in modulos %}<script defer src="/static/tu_dia.js?v={{ sello_static('tu_dia.js') }}"></script>{% endif %}
 
 </body>
 </html>

@@ -1,0 +1,306 @@
+{
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "revisado": false,
+ "items": [
+  {
+   "id": "co-01",
+   "chip": "Derechos",
+   "linea": "Te tienen que informar todo, claro y sin cobrarte",
+   "titulo": "Derecho a la información",
+   "texto": "El vendedor tiene que darte información cierta, clara y detallada sobre lo que comprás y las condiciones del contrato. Esa información es gratuita y te la tienen que dar por escrito si la pedís.",
+   "fuente": "Ley 24.240, art. 4 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 4"
+  },
+  {
+   "id": "co-02",
+   "chip": "Derechos",
+   "linea": "Nadie puede atenderte con maltrato ni humillarte",
+   "titulo": "Derecho a un trato digno",
+   "texto": "Los comercios y empresas tienen que atenderte con trato digno y equitativo. No pueden hacerte pasar situaciones vergonzantes, intimidatorias o esperas abusivas.",
+   "fuente": "Ley 24.240, art. 8 bis — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 8 bis"
+  },
+  {
+   "id": "co-03",
+   "chip": "Derechos",
+   "linea": "Una deuda no se reclama con cartas que imitan un juicio",
+   "titulo": "Cobranzas sin apariencia de juicio",
+   "texto": "Cuando te reclaman una deuda fuera de un juicio, no pueden usar cartas, sellos ni formatos que parezcan una demanda judicial. Si lo hacen, es una práctica abusiva.",
+   "fuente": "Ley 24.240, art. 8 bis — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 8 bis"
+  },
+  {
+   "id": "co-04",
+   "chip": "Derechos",
+   "linea": "Lo que anuncian con precio, te lo tienen que vender",
+   "titulo": "La oferta obliga",
+   "texto": "Una oferta hecha al público obliga a quien la publica mientras dure. Si se niegan a venderte sin motivo, es una negativa injustificada de venta.",
+   "fuente": "Ley 24.240, art. 7 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 7"
+  },
+  {
+   "id": "co-05",
+   "chip": "Derechos",
+   "linea": "Lo que promete la publicidad es parte del contrato",
+   "titulo": "La publicidad obliga",
+   "texto": "Las precisiones de una publicidad (precio, características, regalos) se tienen por incluidas en el contrato aunque no figuren en el papel que firmaste.",
+   "fuente": "Ley 24.240, art. 8; Código Civil y Comercial, art. 1103 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 8; Código Civil y Comercial, art. 1103"
+  },
+  {
+   "id": "co-06",
+   "chip": "Derechos",
+   "linea": "Todo producto nuevo tiene 6 meses de garantía legal",
+   "titulo": "Garantía legal",
+   "texto": "Las cosas muebles nuevas tienen una garantía legal de seis meses desde la entrega, y las usadas de tres. Rige aunque el vendedor no te dé un certificado.",
+   "fuente": "Ley 24.240, art. 11 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 11"
+  },
+  {
+   "id": "co-07",
+   "chip": "Derechos",
+   "linea": "Mientras está en el service, la garantía no corre",
+   "titulo": "La garantía se estira",
+   "texto": "El tiempo que el producto estuvo en reparación por garantía se suma al plazo que te quedaba. No perdés días de garantía por tenerlo en el taller.",
+   "fuente": "Ley 24.240, art. 16 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 16"
+  },
+  {
+   "id": "co-08",
+   "chip": "Derechos",
+   "linea": "Si la reparación falla, podés pedir otro o la plata",
+   "titulo": "Cuando la reparación no sirve",
+   "texto": "Si te devuelven el producto y sigue sin funcionar bien, podés elegir: que te lo cambien por uno nuevo, que te devuelvan lo que pagaste o una rebaja proporcional del precio.",
+   "fuente": "Ley 24.240, art. 17 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 17"
+  },
+  {
+   "id": "co-09",
+   "chip": "Derechos",
+   "linea": "Fabricante y vendedor responden juntos por la garantía",
+   "titulo": "Responden todos",
+   "texto": "Por la garantía responden juntos el fabricante, el importador, el distribuidor y el vendedor. Podés reclamarle a cualquiera de ellos.",
+   "fuente": "Ley 24.240, art. 13 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 13"
+  },
+  {
+   "id": "co-10",
+   "chip": "Derechos",
+   "linea": "Tiene que haber service y repuestos para lo que comprás",
+   "titulo": "Servicio técnico y repuestos",
+   "texto": "Los fabricantes, importadores y vendedores tienen que asegurar un servicio técnico adecuado y el suministro de repuestos para lo que venden.",
+   "fuente": "Ley 24.240, art. 12 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 12"
+  },
+  {
+   "id": "co-11",
+   "chip": "Derechos",
+   "linea": "Si no cumplen lo pactado, elegís cómo seguir",
+   "titulo": "Incumplimiento del vendedor",
+   "texto": "Si el vendedor no cumple, podés exigir que cumpla, aceptar otro producto o servicio equivalente, o rescindir el contrato y recuperar lo pagado. Además podés reclamar los daños.",
+   "fuente": "Ley 24.240, art. 10 bis — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 10 bis"
+  },
+  {
+   "id": "co-12",
+   "chip": "Derechos",
+   "linea": "Lo que contrataste por teléfono, lo das de baja igual",
+   "titulo": "Baja por el mismo medio",
+   "texto": "Si contrataste un servicio por teléfono, internet u otro medio a distancia, podés darlo de baja por ese mismo medio. No te pueden obligar a ir a una oficina.",
+   "fuente": "Ley 24.240, art. 10 ter — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 10 ter"
+  },
+  {
+   "id": "co-13",
+   "chip": "Derechos",
+   "linea": "Las webs deben tener un botón de baja a la vista",
+   "titulo": "Botón de baja",
+   "texto": "Las empresas que venden servicios por internet tienen que mostrar en su página principal un acceso directo para pedir la baja, sin vueltas ni requisitos de más, y darte un código del trámite.",
+   "fuente": "Res. SC 316/2018 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Res. SC 316/2018"
+  },
+  {
+   "id": "co-14",
+   "chip": "Derechos",
+   "linea": "Compraste por internet: tenés 10 días para arrepentirte",
+   "titulo": "Derecho de arrepentimiento",
+   "texto": "En compras hechas fuera del local (internet, teléfono, a domicilio) podés revocar la compra dentro de los 10 días corridos desde la entrega o la firma, lo que pase último, sin dar explicaciones.",
+   "fuente": "Ley 24.240, art. 34; Código Civil y Comercial, art. 1110 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 34; Código Civil y Comercial, art. 1110"
+  },
+  {
+   "id": "co-15",
+   "chip": "Derechos",
+   "linea": "La tienda online debe tener botón de arrepentimiento",
+   "titulo": "Botón de arrepentimiento",
+   "texto": "Las tiendas online tienen que mostrar un «botón de arrepentimiento» bien visible en la página de inicio, para que puedas revocar la compra sin registrarte ni hacer trámites previos.",
+   "fuente": "Res. SCI 424/2020 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Res. SCI 424/2020"
+  },
+  {
+   "id": "co-16",
+   "chip": "Derechos",
+   "linea": "Arrepentirte de una compra no te cuesta nada",
+   "titulo": "Devolver no tiene costo",
+   "texto": "Ejercer el derecho de revocación no puede implicarte ningún gasto. El envío de vuelta lo paga el vendedor.",
+   "fuente": "Código Civil y Comercial, art. 1115 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Código Civil y Comercial, art. 1115"
+  },
+  {
+   "id": "co-17",
+   "chip": "Derechos",
+   "linea": "Tu silencio no es un sí: no pueden cobrarte lo no pedido",
+   "titulo": "Nada de cargos automáticos",
+   "texto": "Una empresa no puede mandarte algo que no pediste y cobrártelo si no contestás. Tu silencio no es aceptación y no estás obligado a devolver lo que te enviaron.",
+   "fuente": "Ley 24.240, art. 35 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 35"
+  },
+  {
+   "id": "co-18",
+   "chip": "Derechos",
+   "linea": "En un crédito te deben decir el costo financiero total",
+   "titulo": "Información en los créditos",
+   "texto": "En una compra en cuotas o un préstamo te tienen que informar el precio de contado, el monto financiado, la tasa de interés, el costo financiero total y la cantidad y monto de cada cuota. Si falta, podés pedir la nulidad.",
+   "fuente": "Ley 24.240, art. 36 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 36"
+  },
+  {
+   "id": "co-19",
+   "chip": "Derechos",
+   "linea": "Una cláusula abusiva en el contrato no vale",
+   "titulo": "Cláusulas abusivas",
+   "texto": "Las cláusulas que limitan la responsabilidad de la empresa, te hacen renunciar a tus derechos o la favorecen de forma desproporcionada se tienen por no escritas.",
+   "fuente": "Ley 24.240, art. 37; Código Civil y Comercial, arts. 988 y 1119 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 37; Código Civil y Comercial, arts. 988 y 1119"
+  },
+  {
+   "id": "co-20",
+   "chip": "Derechos",
+   "linea": "Ante la duda, gana la lectura que te favorece",
+   "titulo": "A favor del consumidor",
+   "texto": "Si una ley o un contrato de consumo admite dos lecturas, vale la más favorable para vos.",
+   "fuente": "Ley 24.240, art. 3; Código Civil y Comercial, arts. 1094 y 1095 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 3; Código Civil y Comercial, arts. 1094 y 1095"
+  },
+  {
+   "id": "co-21",
+   "chip": "Derechos",
+   "linea": "Si la factura no dice que debés, estás al día",
+   "titulo": "La factura dice si hay deuda",
+   "texto": "Las facturas de servicios públicos tienen que indicar si tenés deudas anteriores. Si no lo dicen, se presume que estás al día.",
+   "fuente": "Ley 24.240, art. 30 bis — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 30 bis"
+  },
+  {
+   "id": "co-22",
+   "chip": "Derechos",
+   "linea": "¿Factura de luz o gas inflada? Pagás el promedio",
+   "titulo": "Facturación excesiva",
+   "texto": "Si un consumo supera en un 75% el promedio de los mismos períodos de los dos años anteriores, se presume un error y pagás solo el promedio hasta que la empresa lo aclare.",
+   "fuente": "Ley 24.240, art. 31 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 31"
+  },
+  {
+   "id": "co-23",
+   "chip": "Derechos",
+   "linea": "Si te cobran recargo por mora, te devuelven igual",
+   "titulo": "Reciprocidad en el trato",
+   "texto": "Las empresas de servicios públicos tienen que aplicar a los reintegros que te deben el mismo criterio de intereses que usan para cobrarte cuando pagás tarde.",
+   "fuente": "Ley 24.240, art. 26 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 26"
+  },
+  {
+   "id": "co-24",
+   "chip": "Derechos",
+   "linea": "Antes de una reparación, pedí presupuesto escrito",
+   "titulo": "Presupuesto obligatorio",
+   "texto": "En un servicio de reparación te tienen que dar un presupuesto con el trabajo a hacer, los materiales, el precio y el plazo de validez.",
+   "fuente": "Ley 24.240, art. 21 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 21"
+  },
+  {
+   "id": "co-25",
+   "chip": "Derechos",
+   "linea": "En una reparación van repuestos nuevos, salvo pacto",
+   "titulo": "Materiales nuevos",
+   "texto": "Quien repara una cosa tiene que usar materiales o repuestos nuevos y adecuados, salvo que hayas aceptado por escrito otra cosa.",
+   "fuente": "Ley 24.240, art. 20 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 20"
+  },
+  {
+   "id": "co-26",
+   "chip": "Derechos",
+   "linea": "No pueden obligarte a comprar algo para venderte otro",
+   "titulo": "Prohibida la venta atada",
+   "texto": "Un comercio no puede condicionar la venta de un producto o servicio a que compres otro. Es una práctica que limita tu libertad de contratar.",
+   "fuente": "Código Civil y Comercial, art. 1099 — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Código Civil y Comercial, art. 1099"
+  },
+  {
+   "id": "co-27",
+   "chip": "Derechos",
+   "linea": "Anotate en «No Llame» y cortá las llamadas de venta",
+   "titulo": "Registro No Llame",
+   "texto": "Podés inscribir tu teléfono gratis en el Registro Nacional No Llame. Desde entonces las empresas no pueden llamarte ni mandarte mensajes para ofrecerte productos o servicios.",
+   "fuente": "Ley 26.951 — Agencia de Acceso a la Información Pública",
+   "dudosa": false,
+   "norma": "Ley 26.951"
+  },
+  {
+   "id": "co-28",
+   "chip": "Derechos",
+   "linea": "Un error en el resumen de la tarjeta se impugna",
+   "titulo": "Impugnar el resumen de la tarjeta",
+   "texto": "Tenés 30 días desde que recibís el resumen para cuestionar un cargo. El banco tiene que acusar recibo y responder en plazos fijos, y no puede cobrarte lo impugnado mientras lo revisa.",
+   "fuente": "Ley 25.065, arts. 26 y 27 — Banco Central de la República Argentina — Secretaría de Comercio",
+   "dudosa": true,
+   "norma": "Ley 25.065, arts. 26 y 27"
+  },
+  {
+   "id": "co-29",
+   "chip": "Derechos",
+   "linea": "Si una empresa abusa, la Justicia puede multarla",
+   "titulo": "Daño punitivo",
+   "texto": "Si una empresa no cumple sus obligaciones con el consumidor, el juez puede aplicarle una multa civil a tu favor, además de la reparación del daño.",
+   "fuente": "Ley 24.240, art. 52 bis — Secretaría de Comercio",
+   "dudosa": false,
+   "norma": "Ley 24.240, art. 52 bis"
+  },
+  {
+   "id": "co-30",
+   "chip": "Derechos",
+   "linea": "Podés reclamar gratis antes de ir a juicio",
+   "titulo": "Conciliación previa gratuita",
+   "texto": "Para reclamos de consumo existe una instancia de conciliación gratuita y rápida ante la Secretaría de Comercio, sin necesidad de pagar un abogado.",
+   "fuente": "Ley 26.993 — Secretaría de Comercio",
+   "dudosa": true,
+   "norma": "Ley 26.993"
+  }
+ ]
+}

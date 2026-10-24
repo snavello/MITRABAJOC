@@ -93,6 +93,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
 - precios_ia.py — catálogo de precios de la API (`data/precios_ia.json`), el
   costo de cada llamada y los tres usos configurables. Puro, no importa db.
+- tu_dia.py — «Tu día», la franja de la portada del afiliado: rubros,
+  configuración por sindicato (`Sindicato.tu_dia`), ítem del día
+  determinista y cumpleaños. Puro; el contenido vive en `data/tu_dia/*.json`
+  (lo marcado `dudosa` no se muestra nunca). `tu_dia_fuentes.py` habla con
+  MET Norway (clima) y el BCRA (dólar oficial), con caché en `CacheExterna`;
+  `static/tu_dia.js` dibuja. Ver "Estado actual" 39.
 - geo.py — geocodificación de domicilios: Georef (provincia/localidad) +
   Nominatim (calle y altura). Ver "Georreferenciación" para las reglas.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
@@ -1280,6 +1286,21 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `test_paleta_legible.py`. De paso: "Editar" sindicato en `/plataforma`
     estaba roto desde Plataforma 0.54.01 (el código de la prueba de lectura
     quedó dentro de un `<script src>`).
+
+39. **Tu día en la portada del afiliado** (2026-10-24, Trabajador 0.52.01,
+    Admin 0.70.01; reemplaza a "Datos útiles", que se borró): hora y clima de
+    la localidad siempre, y un rubro que rota (efemérides, dólar oficial,
+    curiosos, ciencia, salud, entretenimiento, consumidor) con hoja de detalle
+    y fuente. Decisiones de SDN: **clima de MET Norway** (atribución CC BY 4.0
+    en la hoja), **sin feriados**, **solo el dólar oficial del BCRA**, el
+    **cumpleaños es una animación de 8 s que la persona ve una sola vez**
+    (`CuentaTrabajador.cumple_visto`) y las **alertas del SMN apagadas**
+    (`alerta: null`). Módulo `tu_dia` opt-in, que la migración `f6c1a8d3e2b7`
+    prendió en los sindicatos existentes; rubros, política e intervalo los
+    elige el Super Admin en Apariencia. Las coordenadas nunca llegan al
+    navegador y un tercero caído no da 500. **Falta revisar el contenido**
+    (todo `revisado: false`). Detalle en HISTORIAL.md, "Tu día en la portada
+    del afiliado".
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

@@ -598,3 +598,77 @@ body.claro .vacio-sec { background: var(--papel); border-color: var(--linea); co
 .pt-hero.pt-hero-chico .pt-hero-t { font-size: 32px; }
 .pt-hero.pt-hero-chico .pt-hero-ico svg { width: 148px; height: 148px; }
 @media (max-width: 620px) { .pt-hero.pt-hero-chico .pt-hero-t { font-size: 27px; } }
+
+/* =========================================================================
+   «Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): la franja de una línea
+   de la portada del afiliado. Acá, la estructura común; la superficie y los
+   colores, en la hoja de cada modelo (static/temas/<modelo>-portada.css).
+   Dos franjas: .pt-dia-esc (escritorio, a la derecha del saludo) y
+   .pt-dia-tel (teléfono, debajo de la tapa); se ve una sola por ancho.
+   ========================================================================= */
+.pt-dia { position: relative; z-index: 2; display: flex; align-items: center; min-width: 0; box-sizing: border-box; }
+.pt-dia[hidden] { display: none !important; }
+@media (max-width: 899px) { .pt-dia-esc { display: none !important; } }
+@media (min-width: 900px) { .pt-dia-tel { display: none !important; } }
+.pt-dia button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+.pt-dia button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 8px; }
+.pt-dia svg { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.pt-dia-hora { flex: none; display: flex; flex-direction: column; align-items: center; }
+.pt-dia-h { font-variant-numeric: tabular-nums; line-height: 1; }
+.pt-dia-sep { flex: none; width: 1px; align-self: center; }
+.pt-dia-clima { flex: none; display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.pt-dia-ico { position: relative; display: flex; }
+.pt-dia-punto { position: absolute; right: -5px; top: -5px; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; }
+.pt-dia-punto svg { width: 10px; height: 10px; stroke-width: 3; }
+.pt-dia-temp { line-height: 1; font-variant-numeric: tabular-nums; }
+.pt-dia-pron { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.pt-dia-linea { flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; gap: 9px; padding: 0 6px !important; text-align: left; }
+.pt-dia-cuerpo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; overflow: hidden; }
+.pt-dia-chip { flex: none; display: inline-flex; align-items: center; white-space: nowrap; }
+.pt-dia-texto { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pt-dia-flecha { flex: none; }
+.pt-dia.cargando { pointer-events: none; }
+/* Cambio de ítem: sale hacia arriba con fundido, entra desde abajo. */
+.pt-dia-cuerpo.sale { animation: pt-dia-sale var(--mov-medio, 320ms) var(--ease-mueve, ease) both; }
+.pt-dia-cuerpo.entra { animation: pt-dia-entra var(--mov-medio, 320ms) var(--ease-mueve, ease) both; }
+@keyframes pt-dia-sale { to { opacity: 0; transform: translateY(-10px); } }
+@keyframes pt-dia-entra { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) {
+  .pt-dia-cuerpo.sale { animation: pt-dia-funde-sale 150ms linear both; }
+  .pt-dia-cuerpo.entra { animation: pt-dia-funde-entra 150ms linear both; }
+}
+@keyframes pt-dia-funde-sale { to { opacity: 0; } }
+@keyframes pt-dia-funde-entra { from { opacity: 0; } }
+/* La hoja de detalle: tabla del dólar, opciones del juego y la fuente. */
+.pt-dia-fuente { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(127,127,127,.25); font-size: 12.5px; opacity: .8; }
+.pt-dia-fuente[hidden] { display: none; }
+.pt-dia-tabla { width: 100%; border-collapse: collapse; margin-top: 10px; font-variant-numeric: tabular-nums; }
+.pt-dia-tabla td { padding: 8px 2px; border-bottom: 1px solid rgba(127,127,127,.25); }
+.pt-dia-tabla td:last-child { text-align: right; font-weight: 700; }
+.pt-dia-opciones { display: grid; gap: 8px; margin-top: 12px; }
+.pt-dia-opciones button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(127,127,127,.4);
+  background: transparent; color: inherit; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.pt-dia-opciones button[data-ok="si"] { background: #e2f5ec; border-color: #1f7a4d; color: #14532d; }
+.pt-dia-opciones button[data-ok="no"] { background: #fbe8e6; border-color: #b3261e; color: #7a1a14; }
+.pt-dia-respuesta { margin-top: 12px; }
+/* El saludo de cumpleaños: ocho segundos, una vez. */
+.pt-cumple { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(8, 16, 28, .5); animation: pt-cumple-entra var(--mov-entrada, 500ms) var(--ease-entrada, ease) both; }
+.pt-cumple[hidden] { display: none; }
+.pt-cumple.sale { animation: pt-cumple-sale var(--mov-medio, 320ms) var(--ease-salida, ease) both; }
+.pt-cumple-papel { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pt-cumple-caja { position: relative; width: min(440px, 100%); padding: 30px 28px 26px; text-align: center; border-radius: 18px;
+  background: #fff; color: #182033; box-shadow: 0 30px 60px -30px rgba(0,0,0,.6);
+  animation: pt-cumple-caja var(--mov-entrada, 500ms) var(--ease-entrada, ease) both; }
+.pt-cumple-k { font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
+.pt-cumple-t { margin-top: 8px; font-size: 30px; font-weight: 700; line-height: 1.15; text-wrap: balance; }
+.pt-cumple-t em { font-style: normal; }
+.pt-cumple-b { margin-top: 8px; font-size: 15px; opacity: .85; }
+.pt-cumple-x { position: absolute; right: 8px; top: 8px; width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: none; color: inherit; cursor: pointer; display: grid; place-items: center; }
+.pt-cumple-x svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+@keyframes pt-cumple-entra { from { opacity: 0; } }
+@keyframes pt-cumple-sale { to { opacity: 0; } }
+@keyframes pt-cumple-caja { from { opacity: 0; transform: translateY(16px) scale(.96); } }
+@media (prefers-reduced-motion: reduce) { .pt-cumple-caja { animation: pt-cumple-entra 150ms linear both; } }

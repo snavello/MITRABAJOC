@@ -278,6 +278,11 @@ class Sindicato(SQLModel, table=True):
     # {"laguna": id de FotoTema, "noticiero": id}. Sin elegir = la primera
     # publicada que tenga disponible.
     fotos_portada: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    # "Tu día" en la portada del afiliado (módulo opt-in `tu_dia`): qué rubros
+    # rotan, cada cuánto y sus opciones. NULL = los valores por defecto de
+    # tu_dia.py. Lo escribe solo `db.set_tu_dia`, que descarta lo que no está
+    # en el catálogo.
+    tu_dia: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO, nullable=True))
 
 
 class Seccional(SQLModel, table=True):
@@ -662,6 +667,9 @@ class CuentaTrabajador(SQLModel, table=True):
     # la cuenta y no en el navegador para que se respete en cualquier aparato.
     # "" = no eligió: vale el de su sindicato (Sindicato.tema_afiliados).
     tema: str = ""
+    # El año en que ya vio el saludo de cumpleaños de "Tu día" ("2026"): se
+    # muestra una sola vez, ocho segundos, el día de su cumpleaños.
+    cumple_visto: str = ""
     # ---- Registro confirmado y niveles de fiabilidad (PLAN_REGISTRO.md) ----
     # Nivel 1 a 4 (R2). SUBE y no baja: `subir_nivel` es la única escritura.
     nivel_fiabilidad: int = Field(default=1)
@@ -2095,6 +2103,83 @@ class GeoCache(SQLModel, table=True):
     respuesta_json: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # "AAAA-MM-DD HH:MM" de Buenos Aires, igual que el resto del proyecto.
     creado: str = ""
+
+
+class CacheExterna(SQLModel, table=True):
+    """Respuestas de servicios públicos de afuera (clima, dólar oficial,
+    centroides de localidad) para "Tu día". En la base y no en memoria:
+    Render corre un proceso por núcleo y cada uno pediría lo suyo.
+
+    Como `GeoCache`, **no tiene `sindicato_id` a propósito**: lo que se guarda
+    es el clima de una celda de ~1 km o la cotización del día, que no son de
+    nadie. La clave dice qué es ("clima|-33.13|-64.35", "dolar|2026-10-24").
+    `vence` es una marca de tiempo (segundos de época): una fila vencida se
+    reescribe la próxima vez que alguien la pide."""
+    clave: str = Field(primary_key=True)
+    valor: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO, nullable=True))
+    vence: float = 0
+
+
+def cache_externa_leer(clave: str, ahora: float):
+    """(True, valor) si hay una fila vigente; (False, None) si no."""
+    with Session(engine) as s:
+        fila = s.get(CacheExterna, clave)
+        if fila and fila.vence > ahora:
+            return True, fila.valor
+    return False, None
+
+
+def cache_externa_guardar(clave: str, valor, vence: float) -> None:
+    with Session(engine) as s:
+        fila = s.get(CacheExterna, clave)
+        if fila:
+            fila.valor, fila.vence = valor, vence
+        else:
+            fila = CacheExterna(clave=clave, valor=valor, vence=vence)
+        s.add(fila)
+        try:
+            s.commit()
+        except Exception:
+            s.rollback()      # dos procesos guardando lo mismo a la vez: gana uno, da igual
+
+
+def tu_dia_de(sindicato_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        return dict(sind.tu_dia) if sind and sind.tu_dia else None
+
+
+def set_tu_dia(sindicato_id: int, config: dict) -> bool:
+    """Guarda la configuración de "Tu día" ya normalizada por
+    `tu_dia.normalizar_config` (lo que no está en el catálogo no entra)."""
+    import tu_dia
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return False
+        sind.tu_dia = tu_dia.normalizar_config(config)
+        s.add(sind)
+        s.commit()
+        return True
+
+
+def cumple_de(cuil: str) -> dict:
+    """{"fecha_nacimiento", "cumple_visto", "nombre"} de la persona."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not c:
+            return {}
+        return {"fecha_nacimiento": c.fecha_nacimiento, "cumple_visto": c.cumple_visto or "",
+                "nombre": c.nombre or ""}
+
+
+def marcar_cumple_visto(cuil: str, anio: str) -> None:
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if c:
+            c.cumple_visto = anio
+            s.add(c)
+            s.commit()
 
 
 def geocache_leer(clave: str) -> Optional[dict]:
