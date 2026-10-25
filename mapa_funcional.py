@@ -58,7 +58,7 @@ FUNCIONALIDADES = [
     ("Empresa", "Ingreso y registro", r"^/(ingresar-empresa|empresa/(login|registro|salir|elegir|cambiar))", None),
     ("Empresa", "Portada", r"^/empresa/inicio$", None),
     ("Empresa", "Página de la app (carga inicial)", r"^/empresa$", None),
-    ("Empresa", "Perfil", r"^/(api/empresa/perfil|perfil-empleador-foto)", "empresa.html"),
+    ("Empresa", "Perfil", r"^/(api/empresa/(perfil|apariencia)|perfil-empleador-foto)", "empresa.html"),
     ("Empresa", "Notificaciones", r"^/(api/empresa/notificacion|notificacion-empresa-adjunto)", "empresa.html"),
     ("Empresa", "Trámites", r"^/(api/empresa/tramite|tramite-empresa-)", "empresa.html"),
 

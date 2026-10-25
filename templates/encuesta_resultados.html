@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,15 +10,34 @@
 {# Leaflet VENDOREADO, jamás CDN (mismo criterio que Chart.js). Las teselas de
    OSM sí salen a la red en cada uso: no se pueden cachear, es su política. #}
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
-  /* Estética propia de Encuestas (N19): tarjeta limpia con barra de avance,
-     no el "expediente" de Trámites. El color sale de la marca del sindicato
-     usando acento y secundario -- Trámites usa los oscuros. */
+  /* El tablero de una encuesta es una pantalla más del panel del sindicato:
+     se pinta con el modelo de diseño del operador (PLAN_TEMAS.md), igual que
+     /admin, con la hoja static/temas/<modelo>-encuesta-resultados.css. Acá
+     va la estructura y las medidas; los colores y las letras los pone el
+     modelo a través de las variables (--gr-* para los gráficos). */
   :root {
     --marca-base: {{ marca.color_base }};
     --marca-primario: {{ marca.color_primario }};
     --marca-acento: {{ marca.color_acento }};
     --marca-apoyo: {{ marca.color_secundario }};
+    --marca-secundario: {{ marca.color_secundario }};
+    /* Los derivados que CSS no sabe calcular solo (texto sobre el acento, el
+       acento como texto, primario y base como fondo), ya corregidos para que
+       se lean: los mismos que usa /admin. */
+    {{ variables_legibles('marca', marca.color_base, marca.color_primario, marca.color_acento or '#b23a2e', marca.color_secundario) }}
+    {%- if marca_plataforma and marca_plataforma.logo %}
+    --logo-colmena-claro: url("/logo-plataforma");
+    {%- endif %}
+    /* Los colores de las series de los gráficos: los define el modelo. */
+    --gr-1: var(--marca-apoyo);
+    --gr-2: var(--marca-acento);
+    --gr-3: var(--marca-primario);
+    --gr-4: var(--marca-base);
+    --gr-texto: var(--gris);
+    --gr-fuente: system-ui, sans-serif;
     --enc-suave: color-mix(in srgb, var(--marca-apoyo) 12%, white);
     --enc-borde: color-mix(in srgb, var(--marca-apoyo) 38%, white);
     /* Las dos de arriba son el cromo suave de la marca (avisos, notas); estas
@@ -36,27 +55,30 @@
   }
   body { background: var(--papel); }
 
-  /* El encabezado es el parcial común; acá solo el degradé de esta pantalla
-     y el ancho de 1180 px del resto de la página. */
-  .marca-barra { background-image: linear-gradient(135deg, var(--marca-base) 0%,
-      color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%); padding-bottom: 16px; }
-  .marca-barra { padding-left: max(18px, calc((100% - 1180px) / 2));
-    padding-right: max(18px, calc((100% - 1180px) / 2)); }
-  .titulo-encuesta { font-family: var(--fuente-display); font-size: 26px; line-height: 1.05;
-    padding: 16px 0 4px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 18px 110px; }
+  /* El nombre de la encuesta es el título de la pantalla (titulo-pagina) y
+     debajo, en una línea, qué es: modo, estado y ventana. */
+  .enc-cab .titulo-pagina { margin: 0; }
+  .enc-bajada { margin: 8px 0 0; font-size: 14px; color: var(--gris); }
+  .enc-bajada:empty { display: none; }
 
-  main { max-width: 1180px; margin: 0 auto; padding: 0 14px 90px; }
+  /* Inicio y Salir flotan juntos abajo a la derecha, con su rótulo a la
+     vista, como en /admin: un ícono solo no dice qué hace (y la X se leía
+     como "cerrar esta pantalla", no como salir de la cuenta). */
+  .flota-sesion { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: flex; align-items: center; gap: 8px; }
+  .flota-sesion a { position: static; display: inline-flex; align-items: center; gap: 7px; width: auto; height: 44px;
+    padding: 0 16px 0 13px; border-radius: 999px; background: var(--marca-base); color: #fff;
+    text-decoration: none; font-size: 13.5px; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  .flota-sesion svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; }
 
   /* ---------- Filtros ----------
      Pastillas y no desplegables: un <select> esconde las opciones, obliga a
      un clic para ver qué hay y no deja elegir varias. Acá el admin ve todos
      los grupos y su tamaño de un vistazo, y combina los que quiera --
      mismo patrón que el Panel Sindical (.m-chip). */
-  .filtros { background: color-mix(in srgb, var(--gris) 7%, var(--papel));
-    background-image: radial-gradient(color-mix(in srgb, var(--gris) 20%, transparent) 1px, transparent 1px);
-    background-size: 14px 14px;
-    border: 1px solid var(--linea); border-radius: var(--r-card);
-    padding: 13px 15px; margin-top: 14px; }
+  .filtros { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+    padding: 14px 16px; margin-top: 20px; }
   .f-cabecera { display: flex; justify-content: space-between; align-items: center;
     gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
   .f-titulo { font-family: var(--fuente-display); font-size: 16px;
@@ -71,7 +93,7 @@
     text-transform: uppercase; color: var(--gris); }
   .m-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 420px; }
   .m-chip { border: 1.5px solid var(--linea); background: var(--blanco); border-radius: var(--r-chip);
-    padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--gris); cursor: pointer;
+    min-height: 36px; padding: 0 13px; font-size: 13px; font-weight: 600; color: var(--gris); cursor: pointer;
     font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
   /* El :not(.act) no es adorno: sin él el hover le gana en especificidad
      (0,3,1 contra 0,2,0) a la pastilla elegida, y como después de tocarla el
@@ -81,63 +103,82 @@
   .m-chip.act { background: var(--destacado); border-color: var(--destacado); color: #fff; }
   .m-chip.act:hover { filter: brightness(1.08); }
   .m-chip:disabled { opacity: .55; cursor: not-allowed; }
-  .m-chip .n { font-family: var(--fuente-num); font-size: 11px; opacity: .75; }
+  .m-chip .n { font-size: 12px; font-variant-numeric: tabular-nums; opacity: .8; }
   .m-chip .n i { font-style: normal; opacity: .6; margin-left: 1px; }
   /* Sin nadie dentro del recorte: se ve, apagada, porque "Córdoba 0" es un
      dato y esconderla haría creer que ahí no hay a quién preguntarle. */
   .m-chip.vacio:not(.act) { opacity: .4; }
-  .btn-reiniciar { display: inline-flex; align-items: center; gap: 6px;
+  .btn-reiniciar { display: inline-flex; align-items: center; gap: 6px; min-height: 36px;
     border: 1.5px solid var(--destacado); color: var(--destacado); background: none;
-    font-weight: 700; font-size: 12.5px; border-radius: 99px; padding: 6px 14px;
+    font-weight: 700; font-size: 13px; border-radius: 99px; padding: 0 14px;
     cursor: pointer; font-family: inherit; }
   .btn-reiniciar:hover { background: var(--destacado); color: #fff; }
   .f-nota { font-size: 11.5px; color: var(--gris); max-width: 460px; }
   .f-acciones { display: flex; gap: 8px; align-items: center; }
 
+  /* "Cuándo respondieron": un botón que dice el rango y abre el calendario
+     en un globo. Abierto todo el tiempo estiraba la caja de filtros hasta
+     400 px y dejaba un rectángulo vacío arriba de los indicadores. */
+  .f-cuando { position: relative; }
+  .cal-boton { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 13px;
+    border: 1.5px solid var(--linea); background: var(--blanco); border-radius: var(--r-chip);
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--tinta); cursor: pointer; }
+  .cal-boton.act { background: var(--destacado); border-color: var(--destacado); color: #fff; }
+  .cal-boton svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .cal-boton .flecha { width: 14px; height: 14px; transition: transform var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .cal-boton[aria-expanded="true"] .flecha { transform: rotate(180deg); }
+  .cal-globo { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+    box-shadow: 0 18px 40px -18px rgba(8,12,20,.45); border-radius: var(--r-card); }
+  .cal-globo[hidden] { display: none; }
   /* Calendario: el mismo del Panel Sindical, para no inventar un segundo
      lenguaje. Dos clics arman el rango. */
   .cal { border: 1.5px solid var(--linea); border-radius: var(--r-card); padding: 10px 12px;
-    background: var(--blanco); width: 252px; user-select: none; }
+    background: var(--blanco); width: 268px; user-select: none; }
   .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
   .cal-nav b { font-family: var(--fuente-display); font-size: 14px; text-transform: capitalize; }
-  .cal-nav button { width: 26px; height: 26px; border: none; background: none; border-radius: 8px;
-    color: var(--marca-primario); font-weight: 800; font-size: 14px; cursor: pointer; }
+  .cal-nav button { width: 32px; height: 32px; border: none; background: none; border-radius: 8px;
+    color: var(--tinta); cursor: pointer; display: grid; place-items: center; }
+  .cal-nav button:disabled { opacity: .3; cursor: default; }
+  .cal-nav button svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; }
   .cal-nav button:hover { background: var(--papel); }
   .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; text-align: center; }
   .cal-dow { font-size: 10px; font-weight: 700; color: var(--gris); padding: 3px 0; text-transform: uppercase; }
-  .cal-dia { height: 28px; border: none; background: none; border-radius: 8px; font-size: 12px;
+  .cal-dia { height: 32px; border: none; background: none; border-radius: 8px; font-size: 12.5px;
     display: grid; place-items: center; position: relative; cursor: pointer;
-    font-family: var(--fuente-num); color: var(--tinta); }
+    font-variant-numeric: tabular-nums; color: var(--tinta); font-family: inherit; }
   .cal-dia:hover:not(:disabled) { background: var(--papel); }
   .cal-dia:disabled { color: #c3c9d4; cursor: not-allowed; }
   .cal-dia.conresp::after { content: ""; position: absolute; bottom: 2px; width: 4px; height: 4px;
-    border-radius: 50%; background: var(--marca-apoyo); }
+    border-radius: 50%; background: var(--gr-1); }
   .cal-dia.rango { background: var(--sel-suave); border-radius: 0; font-weight: 600; }
   .cal-dia.extremo { background: var(--destacado) !important; color: #fff !important; font-weight: 700; }
   .cal-dia.extremo.ini { border-radius: 8px 0 0 8px; }
   .cal-dia.extremo.fin { border-radius: 0 8px 8px 0; }
   .cal-dia.extremo.solo { border-radius: 8px !important; }
   .cal-ayuda { font-size: 10.5px; color: var(--gris); margin-top: 7px; text-align: center; }
-  a.btn-descargar { display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
-    border: 1.5px solid var(--marca-apoyo); color: var(--marca-apoyo); background: var(--blanco);
-    border-radius: 99px; padding: 7px 15px; font-size: 12.5px; font-weight: 700; }
-  a.btn-descargar:hover { background: var(--marca-apoyo); color: #fff; }
+  a.btn-descargar { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; min-height: 36px;
+    border: 1.5px solid var(--linea); color: var(--tinta); background: var(--blanco);
+    border-radius: 99px; padding: 0 15px; font-size: 13px; font-weight: 700; }
+  a.btn-descargar:hover { border-color: var(--tinta); }
   a.btn-descargar svg { width: 15px; height: 15px; fill: none; stroke: currentColor;
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ---------- Los cuatro indicadores (N22) ---------- */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 10px; margin: 14px 0; }
+  /* Sin el filo de color a la izquierda: el color de cada indicador va en
+     su barra o su gráfico, que es donde dice algo. */
   .kpi { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
-    padding: 12px 14px; position: relative; overflow: hidden; }
-  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: var(--kc, var(--marca-apoyo)); }
-  .kpi .et { font-size: 10.5px; font-weight: 700; letter-spacing: .6px;
+    padding: 14px 16px; position: relative; overflow: hidden; }
+  .kpi .et { font-size: 11px; font-weight: 700; letter-spacing: .6px;
     text-transform: uppercase; color: var(--gris); }
-  .kpi .val { font-family: var(--fuente-display); font-size: 27px; margin: 3px 0 1px; }
-  .kpi .pie { font-size: 11.5px; color: var(--gris); min-height: 16px; }
-  .barra { height: 6px; border-radius: 99px; background: var(--linea); margin: 7px 0 4px; overflow: hidden; }
-  .barra i { display: block; height: 100%; border-radius: 99px; background: var(--kc, var(--marca-apoyo)); }
+  .kpi .val { font-family: var(--fuente-display); font-size: 27px; margin: 4px 0 1px;
+    font-variant-numeric: tabular-nums; }
+  .kpi .pie { font-size: 12.5px; color: var(--gris); min-height: 16px; }
+  .barra { height: 6px; border-radius: 99px; background: var(--linea); margin: 8px 0 5px; overflow: hidden; }
+  .barra i { display: block; height: 100%; border-radius: 99px; background: var(--kc, var(--gr-1)); }
   /* Chart.js con maintainAspectRatio:false se estira hasta el tamaño del
      contenedor, y si el contenedor crece con el canvas el gráfico se va al
      infinito (pasó: paneles de 14.000px de alto). La altura la fija SIEMPRE
@@ -163,9 +204,9 @@
   .panel h3 { font-family: var(--fuente-display); font-size: 16.5px; }
   .panel .sub { font-size: 11.5px; color: var(--gris); margin-bottom: 10px; }
   .prom { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-  .prom b { font-family: var(--fuente-display); font-size: 30px; color: var(--marca-apoyo); }
+  .prom b { font-family: var(--fuente-display); font-size: 30px; color: var(--gr-1); }
   .prom span { font-size: 12px; color: var(--gris); }
-  .lista-textos { max-height: 320px; overflow-y: auto; margin-top: 4px; }
+  .lista-textos { max-height: 320px; overflow-y: auto; margin-top: 4px; padding: 0; }
   .lista-textos li { list-style: none; border-bottom: 1px solid var(--linea);
     padding: 7px 2px; font-size: 13px; }
   .lista-textos li:last-child { border-bottom: none; }
@@ -177,15 +218,14 @@
   .panel-enc { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .g-ops { display: flex; gap: 3px; background: var(--papel); border: 1px solid var(--linea);
     border-radius: 9px; padding: 2px; flex: 0 0 auto; }
-  .g-ops button { border: none; background: none; border-radius: 7px; padding: 4px 9px;
-    font-size: 11px; font-weight: 700; color: var(--gris); cursor: pointer; font-family: inherit; }
-  .g-ops button.act { background: var(--blanco); color: var(--marca-apoyo);
-    box-shadow: 0 1px 2px rgba(21,34,56,.12); }
+  .g-ops button { border: none; background: none; border-radius: 7px; min-height: 30px; padding: 0 11px;
+    font-size: 12px; font-weight: 700; color: var(--gris); cursor: pointer; font-family: inherit; }
+  .g-ops button.act { background: var(--destacado); color: #fff; }
   table.datos { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.datos th { text-align: left; font-size: 10px; text-transform: uppercase;
     letter-spacing: .6px; color: var(--gris); padding: 5px 8px; border-bottom: 1px solid var(--linea); }
   table.datos td { padding: 6px 8px; border-bottom: 1px solid var(--linea); }
-  table.datos td.num { text-align: right; font-family: var(--fuente-num); white-space: nowrap; }
+  table.datos td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   table.datos tr:last-child td { border-bottom: none; }
   table.datos tr.clicable { cursor: pointer; }
   table.datos tr.clicable:hover { background: var(--sel-suave); }
@@ -193,29 +233,29 @@
   .resumen-escala div { font-size: 11px; color: var(--gris); }
   .resumen-escala b { display: block; font-family: var(--fuente-display); font-size: 24px;
     color: var(--tinta); line-height: 1.1; }
-  .resumen-escala .destaca b { color: var(--marca-apoyo); }
+  .resumen-escala .destaca b { color: var(--gr-1); }
   .pista-clic { font-size: 10.5px; color: var(--gris); margin-top: 7px; font-style: italic; }
 
   /* ---------- El cruce: dónde se concentra una opción ---------- */
   .cruce { position: fixed; right: 0; top: 0; bottom: 0; width: min(460px, 100%);
     background: var(--blanco); border-left: 1px solid var(--linea); z-index: 60;
     box-shadow: -12px 0 40px -20px rgba(8,12,20,.35); overflow-y: auto;
-    transform: translateX(100%); transition: transform .22s ease; }
-  .cruce.abierto { transform: none; }
+    transform: translateX(100%); transition: transform .22s ease, visibility 0s .22s; visibility: hidden; }
+  /* Cerrado no se ve ni su sombra (asomaba en el borde derecho) ni recibe
+     el foco del teclado. */
+  .cruce.abierto { transform: none; visibility: visible; transition: transform .22s ease; }
   /* El padding derecho le deja lugar al botón de cerrar: sin él, el texto
      del encabezado se le monta encima y el botón deja de recibir el clic
      (el navegador lo encontró). */
-  .cruce-enc { position: sticky; top: 0; z-index: 2;
-    background: linear-gradient(135deg, var(--marca-base) 0%,
-      color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%);
-    color: var(--sobre-base); padding: 15px 52px 15px 18px; }
+  .cruce-enc { position: sticky; top: 0; z-index: 2; background: var(--marca-base);
+    color: var(--sobre-base); padding: 15px 60px 15px 18px; }
   .cruce-enc .que { font-size: 11px; opacity: .8; text-transform: uppercase; letter-spacing: .7px; }
   .cruce-enc h3 { font-family: var(--fuente-display); font-size: 20px; margin: 3px 0 2px; }
   .cruce-enc .cuantos { font-size: 12.5px; opacity: .92; }
-  .cruce-cerrar { position: absolute; top: 13px; right: 14px; z-index: 3;
-    width: 30px; height: 30px; border-radius: 50%; border: none;
-    background: rgba(255,255,255,.2); color: #fff; cursor: pointer;
-    font-size: 15px; line-height: 1; }
+  .cruce-cerrar { position: absolute; top: 10px; right: 12px; z-index: 3;
+    width: 40px; height: 40px; border-radius: 50%; border: none; display: grid; place-items: center;
+    background: rgba(255,255,255,.16); color: #fff; cursor: pointer; }
+  .cruce-cerrar svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; }
   .cruce-cerrar:hover { background: rgba(255,255,255,.34); }
   .cruce-cuerpo { padding: 16px 18px 40px; }
   .cruce-cuerpo h4 { font-family: var(--fuente-display); font-size: 15px; margin: 18px 0 3px; }
@@ -226,10 +266,10 @@
   .cr-fila:last-child { border-bottom: none; }
   .cr-fila .nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cr-fila .nom small { display: block; color: var(--gris); font-size: 10.5px; }
-  .cr-fila .pct { text-align: right; font-family: var(--fuente-num); font-weight: 700; }
+  .cr-fila .pct { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
   /* La diferencia contra el general es el dato accionable: un conteo no
      dice si algo se concentra, la distancia contra el promedio sí. */
-  .cr-dif { text-align: right; font-size: 11.5px; font-weight: 700; font-family: var(--fuente-num);
+  .cr-dif { text-align: right; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
     border-radius: 99px; padding: 2px 7px; }
   .cr-dif.mas { background: #fbe9e7; color: #b23a2e; }
   .cr-dif.menos { background: #e6f5ec; color: #1c7a45; }
@@ -239,7 +279,7 @@
   .cr-dif { white-space: nowrap; }
   .cr-barra { grid-column: 1 / -1; height: 4px; background: var(--linea); border-radius: 99px;
     overflow: hidden; margin-top: -3px; }
-  .cr-barra i { display: block; height: 100%; background: var(--marca-apoyo); border-radius: 99px; }
+  .cr-barra i { display: block; height: 100%; background: var(--gr-1); border-radius: 99px; }
   .cr-nota { background: var(--enc-suave); border: 1px solid var(--enc-borde);
     border-radius: var(--r-card); padding: 12px 14px; font-size: 12.5px; margin-top: 16px; }
   .cr-nota b { display: block; font-family: var(--fuente-display); font-size: 14px; margin-bottom: 3px; }
@@ -252,6 +292,7 @@
 
   h2.secc { font-family: var(--fuente-display); font-size: 19px; margin: 22px 0 10px;
     display: flex; align-items: baseline; gap: 9px; }
+  .mapa-pop-dir { font-size: 11.5px; color: var(--gris); }
   h2.secc small { font-size: 11.5px; color: var(--gris); font-family: var(--fuente); font-weight: 400; }
 
   /* A 430px la tabla no se achica: se desliza. Apretar cuatro columnas en
@@ -262,17 +303,35 @@
   table.hist th { text-align: left; font-size: 10.5px; text-transform: uppercase;
     letter-spacing: .6px; color: var(--gris); padding: 6px 8px; border-bottom: 1px solid var(--linea); }
   table.hist td { padding: 7px 8px; border-bottom: 1px solid var(--linea); vertical-align: top; }
-  table.hist td.fecha { font-family: var(--fuente-num); white-space: nowrap; color: var(--gris); }
+  table.hist td.fecha { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--gris); }
 
   footer.pie-version { text-align: center; font-size: 11px; color: var(--gris); padding: 16px; }
 
   @media (max-width: 760px) {
+    main { padding: 20px 14px 104px; }
     .panel.mitad, .panel.tercio { grid-column: span 12; }
-    select.f-select { min-width: 0; width: 100%; }
     .f-grupo { width: 100%; }
+    .m-chips { max-width: none; }
+    /* El título de sección arriba y su explicación abajo: en la misma fila
+       se apilaban en tres renglones. */
+    h2.secc { flex-direction: column; align-items: flex-start; gap: 3px; }
+    .flota-sesion { right: 12px; bottom: 12px; }
+  }
+  /* En el teléfono "Volver" queda en la flecha sola (sigue diciendo
+     "Volver" para el lector de pantalla): con el texto, el encabezado no
+     entra y Colm3na queda cortado. */
+  @media (max-width: 420px) {
+    .marca-volver { font-size: 0 !important; min-width: 44px; justify-content: center; }
+    .marca-volver svg { width: 22px; height: 22px; }
   }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño del operador (PLAN_TEMAS.md), el mismo que en
+   /admin: su hoja va DESPUÉS de todo lo anterior. Solo si el archivo
+   existe: el sello sale vacío cuando no está. #}
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-encuesta-resultados.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+{% endif %}
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
@@ -284,7 +343,10 @@
 {% include "_encabezado.html" %}
 
 <main class="mesa-cont">
-  <h1 class="titulo-encuesta" id="enc-titulo">{{ titulo_encuesta }}</h1>
+  <div class="enc-cab">
+    <h1 class="titulo-pagina" id="enc-titulo">{{ titulo_encuesta }}</h1>
+    <p class="enc-bajada" id="enc-bajada"></p>
+  </div>
   <div class="filtros" id="filtros">
     <div class="f-cabecera">
       <div class="f-titulo">Filtros <span class="numf" id="f-cuenta">0</span></div>
@@ -301,25 +363,25 @@
   </div>
 
   <section class="kpis">
-    <div class="kpi" style="--kc:var(--marca-apoyo)">
+    <div class="kpi" style="--kc:var(--gr-1)">
       <div class="et">Participación</div>
       <div class="val" id="k-part">—</div>
       <div class="barra"><i id="k-part-barra" style="width:0"></i></div>
       <div class="pie" id="k-part-pie"></div>
     </div>
-    <div class="kpi" style="--kc:var(--marca-acento)">
+    <div class="kpi" style="--kc:var(--gr-2)">
       <div class="et">Avisos leídos</div>
       <div class="val" id="k-leidos">—</div>
       <div class="barra"><i id="k-leidos-barra" style="width:0"></i></div>
       <div class="pie" id="k-leidos-pie"></div>
     </div>
-    <div class="kpi" style="--kc:var(--marca-primario)">
+    <div class="kpi" style="--kc:var(--gr-3)">
       <div class="et">Ritmo</div>
       <div class="val" id="k-ritmo">—</div>
       <div class="grafico"><canvas id="c-ritmo"></canvas></div>
       <div class="pie" id="k-ritmo-pie"></div>
     </div>
-    <div class="kpi" style="--kc:var(--gris)">
+    <div class="kpi">
       <div class="et">Estado</div>
       <div class="val"><span class="chip" id="k-estado">—</span></div>
       <div class="pie" id="k-estado-pie"></div>
@@ -370,7 +432,7 @@
 <div class="velo" id="velo" onclick="cerrarCruce()"></div>
 <aside class="cruce" id="cruce" role="dialog" aria-modal="false" aria-labelledby="cr-opcion">
   <div class="cruce-enc">
-    <button type="button" class="cruce-cerrar" onclick="cerrarCruce()" aria-label="Cerrar">✕</button>
+    <button type="button" class="cruce-cerrar" onclick="cerrarCruce()" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     <div class="que" id="cr-pregunta"></div>
     <h3 id="cr-opcion"></h3>
     <div class="cuantos" id="cr-cuantos"></div>
@@ -378,12 +440,16 @@
   <div class="cruce-cuerpo" id="cr-cuerpo"></div>
 </aside>
 
-<a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>
-</a>
-<a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-</a>
+<nav class="flota-sesion" aria-label="Inicio y salida">
+  <a class="btn-home" href="/admin/inicio">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+    <span class="btn-rot">Inicio</span>
+  </a>
+  <a class="btn-cerrar" href="/admin/salir">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg>
+    <span class="btn-rot">Salir</span>
+  </a>
+</nav>
 
 <footer class="pie-version">Resultados de encuesta · versión {{ version }} · {{ fecha_version }}</footer>
 
@@ -391,7 +457,7 @@
   const ENCUESTA_ID = {{ encuesta_id }};
   const CORTES = {{ encuestas_cortes | tojson }};
 </script>
-<script src="/static/chart.umd.min.js?v=4.4.9"></script>
+<script src="/static/chart.umd.min.js?v={{ sello_static('chart.umd.min.js') }}"></script>
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/encuesta_resultados.js?v={{ sello_static('encuesta_resultados.js') }}"></script>

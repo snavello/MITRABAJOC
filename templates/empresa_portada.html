@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -7,25 +7,57 @@
 <title>Empresa — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
 <link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
   :root {
     --marca-base: {{ marca.color_base }};
     --marca-primario: {{ marca.color_primario }};
     --marca-acento: {{ marca.color_acento }};
     --marca-apoyo: {{ marca.color_secundario }};
+    {#- Los derivados ya corregidos para que se lean (temas.paleta_legible). #}
+    {{ variables_legibles('marca', marca.color_base, marca.color_primario, marca.color_acento, marca.color_secundario) }}
   }
   body { min-height: 100vh; background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
   .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 26px; letter-spacing: .002em;
-    color: var(--sobre-base); }
-  .hola em { font-style: normal; color: var(--marca-acento); }
-  .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+    color: var(--sobre-base); margin-top: 6px; }
+  .hola em { font-style: normal; color: var(--marca-acento-txt, var(--marca-acento)); }
 
-  body .tarjetas .acceso { position: relative; overflow: hidden;
-    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
-    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
-  body .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
-    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
-    transform: rotate(-18deg); pointer-events: none; }
+  /* ---------- Estructura común de la portada (PLAN_TEMAS.md) ----------
+     La misma que la del afiliado (portada.html): el gremio y la empresa
+     arriba, en una sección que cada modelo viste a su manera; abajo, los
+     dos accesos con su estado real y los últimos mensajes del sindicato.
+     Inicio no va en la portada (ya estás en el inicio) y Salir flota con
+     su rótulo. La hoja de cada modelo
+     (static/temas/<modelo>-empresa-portada.css) va después y pisa lo que
+     haga falta. */
+  .pt-gremio { position: relative; }
+  .pt-gremio-media { display: none; }
+  .pt-gremio-hola { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; padding: 22px 15px 0; }
+  @media (min-width: 900px) {
+    .pt-gremio-hola { padding: 26px 26px 0; }
+    .pt-gremio-hola .fila-hola { justify-content: flex-start; align-items: center; }
+    .pt-gremio-hola .fila-hola > .circulo-acento { order: -1; }
+  }
+  .pad.pt-cuerpo { padding-top: 0; padding-bottom: 0; }
+  .pt-portada > .pt-sec { margin-top: 0; min-width: 0; }
+  h2.pt-riel-tit { margin: 0 0 12px; }
+  .pt-sec-tus .pt-filas { grid-template-columns: 1fr; }
+  /* Escritorio: los mensajes en la columna ancha, los accesos en el riel. */
+  @media (min-width: 1040px) {
+    .pt-portada { grid-template-areas: "nov tus"; align-items: start; }
+    .pt-sec-nov { grid-area: nov; } .pt-sec-tus { grid-area: tus; }
+  }
+  .pt-nov { text-decoration: none; }
+  .pt-nov .t .nl { font-weight: 800; }
+  .pt-sesion { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 40; }
+  .pt-salir { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 17px 0 13px;
+    border-radius: 99px; background: var(--marca-base); color: #fff; text-decoration: none;
+    font-size: 14px; font-weight: 650; letter-spacing: .02em;
+    border: 1px solid rgba(255,255,255,.14); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  .pt-salir svg { width: 18px; height: 18px; stroke: var(--marca-acento-txt, var(--marca-acento)); stroke-width: 1.8; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .pt-salir:hover { opacity: .9; }
+  .pt-pie { height: calc(84px + env(safe-area-inset-bottom)); }
 
   .acceso-badge-wrap { position: relative; }
   .badge-noleidas { position: absolute; top: -8px; right: -8px; background: #e5484d; color: #fff;
@@ -62,7 +94,7 @@
   .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
     letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
   .tarjetas .acceso .estado { margin-top: 5px; }
-  .modal-notif-enc { overflow: hidden; border-left: 5px solid var(--marca-acento);
+  .modal-notif-enc { overflow: hidden;
     background-image: linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
   .modal-notif-enc::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: .08;
     mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
@@ -88,60 +120,160 @@
   .overlay-foto-grande.abierto { display: flex; }
   .overlay-foto-grande img { max-width: 25vw; max-height: 25vh; min-width: 140px; min-height: 140px;
     object-fit: cover; border-radius: 14px; border: 3px solid #fff; }
+
+  /* ---- Apariencia: el modelo de la empresa (PLAN_TEMAS.md, D2) ----
+     Las mismas dos tarjetas-radio que en el perfil del afiliado
+     (portada.html), con una miniatura hecha solo de CSS. La elegida se
+     marca con el color DEL MODELO, nunca con una barra a un costado. Los
+     colores de cada miniatura son los del modelo: muestran cómo se ve. */
+  .ap-sec { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--linea); }
+  .ap-sec h4 { margin: 0 0 4px; font-family: var(--fuente-display); font-size: 17px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--marca-primario); }
+  .ap-bajada { font-size: 12.5px; color: var(--gris); line-height: 1.5; margin: 0 0 12px; }
+  .ap-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ap-grupo { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .ap-ops { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ap-op { --ap-color: #0f8f8a; --ap-tinte: #e6f6f4;
+    position: relative; display: flex; flex-direction: column; gap: 8px; cursor: pointer;
+    border: 1.5px solid var(--linea); border-radius: 12px; padding: 8px 8px 11px; background: #fff;
+    transition: border-color var(--mov-rapido, 160ms) ease, background-color var(--mov-rapido, 160ms) ease; }
+  .ap-op[data-tema="noticiero"] { --ap-color: #2b2f7a; --ap-tinte: #eeeef8; }
+  .ap-op input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .ap-op:has(input:checked) { border-color: var(--ap-color); background: var(--ap-tinte); }
+  .ap-op:has(input:focus-visible) { outline: 2px solid var(--ap-color); outline-offset: 2px; }
+  .ap-tilde { position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ap-color); display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(.6); z-index: 1;
+    transition: opacity var(--mov-rapido, 160ms) ease, transform var(--mov-rapido, 160ms) ease; }
+  .ap-tilde svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3; fill: none; }
+  .ap-op:has(input:checked) .ap-tilde { opacity: 1; transform: scale(1); }
+  .ap-mini { height: 78px; border-radius: 8px; overflow: hidden; position: relative; }
+  .ap-mini.laguna { background: linear-gradient(160deg, #1f5fbf 0%, #13a3b0 55%, #7fd9c4 100%); }
+  .ap-mini.laguna i { position: absolute; display: block; border-radius: 5px; }
+  .ap-mini.laguna .l1 { left: 9px; top: 10px; width: 44%; height: 7px; background: rgba(255,255,255,.85); }
+  .ap-mini.laguna .l2 { left: 9px; top: 21px; width: 28%; height: 5px; background: rgba(255,255,255,.55); }
+  .ap-mini.laguna .l3 { left: 9px; right: 9px; bottom: 9px; height: 32px; background: #fff;
+    box-shadow: 0 3px 8px rgba(10,40,70,.18); }
+  .ap-mini.noticiero { background: #f7f1e3; border: 1px solid #e8dfca; }
+  .ap-mini.noticiero i { position: absolute; display: block; }
+  .ap-mini.noticiero .n1 { left: 0; right: 0; top: 0; height: 6px; background: #e8664a; }
+  .ap-mini.noticiero .n2 { left: 9px; top: 15px; width: 72%; height: 11px; background: #2b2f7a; border-radius: 1px; }
+  .ap-mini.noticiero .n3 { left: 9px; top: 31px; width: 50%; height: 11px; background: #2b2f7a; border-radius: 1px; }
+  .ap-mini.noticiero .n4 { left: 9px; right: 9px; top: 50px; height: 3px; background: #c9bfa8; }
+  .ap-mini.noticiero .n5 { left: 9px; right: 30%; top: 58px; height: 3px; background: #c9bfa8; }
+  .ap-mini.noticiero .n6 { left: 9px; right: 45%; top: 66px; height: 3px; background: #c9bfa8; }
+  .ap-nombre { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; padding: 0 3px;
+    font-family: var(--fuente-display); font-weight: 700; font-size: 16px; letter-spacing: .6px;
+    text-transform: uppercase; color: var(--tinta); }
+  .ap-defecto { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 10.5px;
+    font-weight: 700; letter-spacing: .4px; text-transform: none; color: var(--ap-color);
+    background: var(--ap-tinte); border-radius: 20px; padding: 1px 7px; }
+  .ap-op:has(input:checked) .ap-defecto { background: #fff; }
+  .ap-desc { font-size: 12px; color: var(--gris); line-height: 1.45; padding: 0 3px; }
+  .ap-paleta { font-size: 12px; color: var(--gris); background: var(--papel); border: 1px solid var(--linea);
+    border-radius: 10px; padding: 9px 12px; margin-top: 12px; line-height: 1.5; }
+  @media (max-width: 380px) { .ap-ops { grid-template-columns: 1fr; } }
 </style>
+{# Hoja del modelo (PLAN_TEMAS.md): va DESPUÉS de los estilos de la página
+   para poder pisarlos, y solo la del modelo que se está viendo. #}
+{% if apariencia and apariencia.tema in ('laguna', 'noticiero') %}
+<link rel="stylesheet" href="/static/temas/{{ apariencia.tema }}-empresa-portada.css?v={{ sello_static('temas/' ~ apariencia.tema ~ '-empresa-portada.css') }}">
+{% endif %}
 </head>
 <body class="oscuro grano grano-osc">
 {% include "_entorno.html" %}
 
-{% include "_encabezado.html" %}
-
-<a class="btn-flotante btn-cerrar" href="/empresa/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
-</a>
-
-<div class="pt-ambiente" aria-hidden="true">
-  <span class="pt-blob b1"></span><span class="pt-blob b2"></span><span class="pt-reticula"></span>
-</div>
-
-<div class="pad">
-  <div class="fila-hola">
-    <div>
-      <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
-      <div class="pt-hola-baj">CUIT {{ cuit }} · {{ sindicato }}</div>
+{# ---------- El gremio y la empresa (PLAN_TEMAS.md) ----------
+   El encabezado normalizado y el saludo van juntos en una sección, como en
+   la portada del afiliado: cada modelo decide cómo se ven (en Laguna, la
+   laguna con la foto de portada del sindicato detrás; en Noticiero, la foto
+   en duotono sobre el papel). La foto ya viene en gris de la biblioteca: el
+   color lo pone la hoja del modelo. Sin la trama de colmena: es el diseño
+   viejo. #}
+<section class="pt-gremio{% if foto_portada %} con-foto{% endif %}" aria-label="Tu sindicato">
+  <div class="pt-gremio-media" aria-hidden="true">
+    {% if foto_portada %}<img class="pt-gremio-foto" src="{{ foto_portada.url }}" alt=""
+         style="object-position: {{ ((foto_portada.foco_x or 0.5) * 100) | round(1) }}% {{ ((foto_portada.foco_y or 0.5) * 100) | round(1) }}%;">{% endif %}
+  </div>
+  {% include "_encabezado.html" %}
+  <div class="pt-gremio-hola">
+    <div class="fila-hola">
+      <div>
+        <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
+        <div class="pt-hola-baj">CUIT {{ cuit }} · {{ sindicato }}</div>
+      </div>
+      <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
+        {% if tiene_foto_perfil %}
+        <img id="circulo-foto-perfil" src="/perfil-empleador-foto/{{ cuit }}?v={{ range(1, 999999) | random }}" alt="">
+        {% else %}
+        <svg id="circulo-foto-perfil-svg" viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+        {% endif %}
+      </button>
     </div>
-    <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
-      {% if tiene_foto_perfil %}
-      <img id="circulo-foto-perfil" src="/perfil-empleador-foto/{{ cuit }}?v={{ range(1, 999999) | random }}" alt="">
+  </div>
+</section>
+
+{# Inicio NO va en la portada (ya estás en el inicio) y Salir flota abajo
+   con su rótulo a la vista: la cruz sola se leía como "cerrar este cartel"
+   y no como salir de la cuenta (pauta de SDN para los dos modelos). #}
+<nav class="pt-sesion" aria-label="Sesión">
+  <a class="pt-salir" href="/empresa/salir">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-salir"/></svg><span>Salir</span>
+  </a>
+</nav>
+
+<div class="pad pt-cuerpo">
+  {# Dos secciones, en el orden en que se leen en el teléfono: los accesos
+     (cada uno con su estado real, no la descripción fija de la sección) y
+     los últimos mensajes del sindicato, que es lo que la empresa viene a
+     mirar. En escritorio los mensajes van en la columna ancha. #}
+  <div class="pt-dos pt-portada">
+    <section class="sec pt-sec pt-sec-tus" aria-labelledby="pt-t-tus">
+      <h2 class="pt-riel-tit" id="pt-t-tus"><span>Tus cosas</span></h2>
+      <div class="pt-filas">
+        <div class="acceso-badge-wrap">
+          <a class="pt-fila pt-vid" href="/empresa#notificaciones">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
+              <span class="pt-fila-e">{% if notificaciones_no_leidas == 1 %}1 mensaje sin leer{% elif notificaciones_no_leidas %}{{ notificaciones_no_leidas }} mensajes sin leer{% else %}Sin mensajes nuevos{% endif %}</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          </a>
+          {% if notificaciones_no_leidas %}<span class="badge-noleidas" aria-hidden="true">{{ notificaciones_no_leidas }}</span>{% endif %}
+        </div>
+        <div class="acceso-badge-wrap">
+          <a class="pt-fila pt-vid" href="/empresa#tramites">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+              <span class="pt-fila-e">{% if tramites_novedades == 1 %}1 expediente con novedades{% elif tramites_novedades %}{{ tramites_novedades }} expedientes con novedades{% elif tramites_en_curso == 1 %}1 trámite en curso{% elif tramites_en_curso %}{{ tramites_en_curso }} trámites en curso{% else %}Ningún trámite en curso{% endif %}</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          </a>
+          {# El globo es el número; la línea de arriba ya lo dice en palabras. #}
+          {% if tramites_novedades %}<span class="badge-noleidas" aria-hidden="true">{{ tramites_novedades }}</span>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="sec pt-sec pt-sec-nov" aria-labelledby="pt-t-nov">
+      <h2 class="pt-riel-tit" id="pt-t-nov"><span>Últimos mensajes</span>{% if ultimas_notificaciones %}<a href="/empresa#notificaciones">Ver todos</a>{% endif %}</h2>
+      {% if ultimas_notificaciones %}
+      <div class="pt-nov-lista">
+        {% for n in ultimas_notificaciones %}
+        <a class="pt-nov pt-vid{% if not n.leida_en %} no-leida{% endif %}" href="/empresa#notificaciones">
+          <span class="pt-mini pt-mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+          <span class="pt-txt">
+            <span class="f num">{{ n.fecha_hora }}</span>
+            <span class="t">{% if not n.leida_en %}<span class="nl">Sin leer · </span>{% endif %}{{ n.remitente or 'Tu sindicato' }}</span>
+            <span class="b">{{ n.texto | truncate(140) }}</span>
+          </span>
+        </a>
+        {% endfor %}
+      </div>
       {% else %}
-      <svg id="circulo-foto-perfil-svg" viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+      <div class="vacio-sec">Cuando tu sindicato te mande un aviso, lo vas a ver acá.</div>
       {% endif %}
-    </button>
+    </section>
   </div>
-
-  {# Dos accesos nada más: no hay uno "principal" que justifique un hero, así
-     que van los dos parejos. #}
-  <div class="pt-filas">
-    <div class="acceso-badge-wrap">
-      <a class="pt-fila pt-vid" href="/empresa#notificaciones">
-        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
-        <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
-          <span class="pt-fila-e">Mensajes de tu sindicato</span></span>
-        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-      </a>
-      {% if notificaciones_no_leidas %}<span class="badge-noleidas">{{ notificaciones_no_leidas }}</span>{% endif %}
-    </div>
-    <div class="acceso-badge-wrap">
-      <a class="pt-fila pt-vid" href="/empresa#tramites">
-        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
-        <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
-          <span class="pt-fila-e">Formularios y seguimiento</span></span>
-        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-      </a>
-      {# El globo ya se contaba en el contexto y no se mostraba: un expediente
-         con respuesta del sindicato no se veía hasta entrar. #}
-      {% if tramites_novedades %}<span class="badge-noleidas">{{ tramites_novedades }}</span>{% endif %}
-    </div>
-  </div>
+  <div class="pt-pie" aria-hidden="true"></div>
 </div>
 
 <!-- Overlay: tu perfil (editable, mismo criterio que portada.html) -->
@@ -195,6 +327,42 @@
         <button type="submit" class="perfil-guardar-btn" id="perfil-guardar-btn">Guardar cambios</button>
         <div class="perfil-guardar-msg" id="perfil-guardar-msg"></div>
       </form>
+
+      {# ---------- Apariencia (PLAN_TEMAS.md, D2) ----------
+         El modelo se guarda en la CUENTA de la empresa (POST
+         /api/empresa/apariencia), así que se ve igual en cualquier aparato.
+         Elegir el mismo que el del sindicato manda "" para volver a seguirlo.
+         La paleta la decide el sindicato: acá solo se informa. Nombres y
+         descripciones de temas.TEMAS (test_tema_empresa.py los compara). #}
+      {% set ap = apariencia or {"tema": "laguna", "paleta": "colm3na", "elegido": "", "defecto": "laguna"} %}
+      <section class="ap-sec" id="ap-sec" aria-labelledby="ap-titulo">
+        <h4 id="ap-titulo">Apariencia</h4>
+        <p class="ap-bajada">Elegí cómo querés ver la app. Se guarda en la cuenta de la empresa: la ves igual en cualquier aparato.</p>
+        <form id="form-apariencia" onsubmit="return guardarApariencia(event)" data-defecto="{{ ap.defecto }}">
+          <fieldset class="ap-grupo">
+            <legend class="ap-oculto">Modelo de diseño</legend>
+            <div class="ap-ops">
+              <label class="ap-op" data-tema="laguna">
+                <input type="radio" name="tema" value="laguna" {{ 'checked' if ap.tema == 'laguna' else '' }}>
+                <span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+                <span class="ap-mini laguna" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></span>
+                <span class="ap-nombre">Laguna{% if ap.defecto == 'laguna' %} <span class="ap-defecto">El de tu sindicato</span>{% endif %}</span>
+                <span class="ap-desc">Portada en verde agua, turquesa y azul; el resto liviano y blanco.</span>
+              </label>
+              <label class="ap-op" data-tema="noticiero">
+                <input type="radio" name="tema" value="noticiero" {{ 'checked' if ap.tema == 'noticiero' else '' }}>
+                <span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+                <span class="ap-mini noticiero" aria-hidden="true"><i class="n1"></i><i class="n2"></i><i class="n3"></i><i class="n4"></i><i class="n5"></i><i class="n6"></i></span>
+                <span class="ap-nombre">Noticiero{% if ap.defecto == 'noticiero' %} <span class="ap-defecto">El de tu sindicato</span>{% endif %}</span>
+                <span class="ap-desc">Papel claro, tinta índigo y un solo color vivo, como un diario.</span>
+              </label>
+            </div>
+          </fieldset>
+          <p class="ap-paleta" id="ap-paleta">{% if ap.paleta == 'sindicato' %}Tu sindicato eligió mostrar la app con sus colores.{% else %}La app se ve con los colores de Colm3na.{% endif %}</p>
+          <button type="submit" class="perfil-guardar-btn" id="ap-guardar-btn">Guardar</button>
+          <div class="perfil-guardar-msg" id="ap-guardar-msg" role="status"></div>
+        </form>
+      </section>
     </div>
   </div>
 </div>
@@ -212,6 +380,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+    <g id="ic-salir"><path d="M14 4.5H6.5v15H14"/><path d="M11 12h9"/><path d="m17 8.5 3.5 3.5-3.5 3.5"/></g>
   </defs>
 </svg>
 
@@ -242,6 +411,33 @@ async function guardarPerfil(ev) {
     msg.textContent = e.message || 'No se pudo guardar. Probá de nuevo.';
   } finally {
     btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+  return false;
+}
+
+// Apariencia: guarda el modelo en la cuenta de la empresa y recarga para que
+// la página lo tome. Si eligió el mismo que el del sindicato, manda "" para
+// volver a seguirlo (si el sindicato lo cambia después, la empresa lo acompaña).
+async function guardarApariencia(ev) {
+  ev.preventDefault();
+  const form = document.getElementById('form-apariencia');
+  const btn = document.getElementById('ap-guardar-btn');
+  const msg = document.getElementById('ap-guardar-msg');
+  const marcado = form.querySelector('input[name="tema"]:checked');
+  if (!marcado) { msg.textContent = 'Elegí un modelo.'; return false; }
+  const fd = new FormData();
+  fd.append('tema', marcado.value === form.dataset.defecto ? '' : marcado.value);
+  btn.disabled = true; btn.textContent = 'Guardando…'; msg.textContent = '';
+  try {
+    const r = await fetch('/api/empresa/apariencia', { method: 'POST', body: fd });
+    let data = {};
+    try { data = await r.json(); } catch (_) {}
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'No se pudo guardar.');
+    msg.textContent = 'Guardado ✓';
+    location.reload();
+  } catch (e) {
+    msg.textContent = (e && e.message) || 'No se pudo guardar. Probá de nuevo.';
+    btn.disabled = false; btn.textContent = 'Guardar';
   }
   return false;
 }
@@ -299,5 +495,6 @@ function abrirFotoGrande() {
 function cerrarFotoGrande() { document.getElementById('overlay-foto-grande').classList.remove('abierto'); }
 </script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 </body>
 </html>

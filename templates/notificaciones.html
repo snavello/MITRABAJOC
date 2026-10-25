@@ -1,107 +1,162 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{ marca.color_base }}">
 <title>Notificaciones — {{ sindicato }}</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
-  /* Bandeja de notificaciones, rediseño "Hilo" (2026-09-03, elegido entre
-     3 propuestas -- disenos/notificaciones-tramites-propuestas.html):
-     línea de tiempo vertical con los días como hitos hexagonales (guiño a
-     la colmena) y cada aviso como burbuja con avatar del remitente. Las no
-     leídas laten con un punto de acento sobre el avatar. Los datos salen
-     del mismo /api/mis-notificaciones de siempre. */
+  /* Bandeja de notificaciones del afiliado: una línea de tiempo, más nuevo
+     arriba, con los días como hitos y cada aviso como burbuja con el avatar
+     del remitente. Los datos salen del mismo /api/mis-notificaciones de
+     siempre, ya ordenados por fecha de envío en el servidor.
+
+     Es una pantalla más de la app del afiliado: se pinta con el modelo de
+     diseño de la persona (PLAN_TEMAS.md), con la hoja
+     static/temas/<modelo>-notificaciones.css. Acá va solo la estructura y
+     las medidas; los colores y las letras los pone el modelo, a través de
+     las variables de abajo. */
   :root {
     --marca-base: {{ marca.color_base }};
     --marca-primario: {{ marca.color_primario }};
     --marca-acento: {{ marca.color_acento }};
     --marca-apoyo: {{ marca.color_secundario }};
+    /* Copia cruda de los cuatro colores del gremio: el modelo redefine
+       --marca-* con sus colores por función y, con la paleta del sindicato,
+       los deriva de ESTOS, que nunca se pisan (igual que en /app). */
+    --gremio-base: {{ marca.color_base }};
+    --gremio-primario: {{ marca.color_primario }};
+    --gremio-acento: {{ marca.color_acento }};
+    --gremio-apoyo: {{ marca.color_secundario }};
+    {{ variables_legibles('gremio', marca.color_base, marca.color_primario, marca.color_acento or '#b23a2e', marca.color_secundario) }}
+    {%- if marca_plataforma and marca_plataforma.logo %}
+    --logo-colmena-claro: url("/logo-plataforma");
+    {%- endif %}
+    /* Lo que el modelo define: superficie de la burbuja, la no leída, el
+       punto y los tres colores de avatar (siempre de la marca). */
+    --bn-sup: #fff;
+    --bn-sup-nl: color-mix(in srgb, var(--marca-acento) 6%, #fff);
+    --bn-borde-nl: color-mix(in srgb, var(--marca-acento) 45%, var(--linea));
+    --bn-punto: var(--marca-acento);
+    --bn-sel: var(--marca-base);
+    --bn-sel-txt: #fff;
+    --av-1: var(--marca-base);
+    --av-2: var(--marca-primario);
+    --av-3: color-mix(in srgb, var(--marca-apoyo) 70%, var(--marca-base));
   }
-  body { background: var(--papel); }
   svg.ic { width:16px; height:16px; stroke:currentColor; stroke-width:1.9; fill:none;
     stroke-linecap:round; stroke-linejoin:round; flex:none; }
 
-  /* ---- franja oscura bajo el encabezado: título, contador, chips ---- */
-  .top3 { background:var(--marca-base); color:#fff; padding:10px 15px 12px; position:relative; overflow:hidden; }
-  .top3::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .top3 > * { position:relative; z-index:1; }
-  .top3-in { max-width:680px; margin:0 auto; }
-  .l2 { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; min-height:18px; }
-  .l2 small { font-size:12.5px; color:var(--sobre-base-mute); }
-  .l2 small b { color:#fff; font-weight:600; }
-  .l2 button { background:none; border:none; padding:0; font-family:inherit; font-size:11.5px;
-    color:var(--marca-acento); font-weight:600; cursor:pointer; }
-  .l2 button[hidden] { display:none; }
-  .chips { display:flex; gap:6px; margin-top:11px; align-items:center; }
-  .chip { border:1px solid rgba(255,255,255,.18); background:none; border-radius:20px; padding:5px 12px;
-    font-size:12.5px; font-weight:600; color:rgba(255,255,255,.75); cursor:pointer; font-family:inherit; white-space:nowrap; }
-  .chip i { font-style:normal; font-family:var(--fuente-num); font-size:10.5px; opacity:.75; margin-left:3px; }
-  .chip.activo { background:var(--marca-acento); color:var(--marca-base); border-color:var(--marca-acento); }
-  .chip.lupa { margin-left:auto; padding:5px 9px; display:flex; align-items:center; }
-  .chip.lupa.activo svg { stroke:var(--marca-base); }
-  .busq-row { margin-top:9px; }
+  .bandeja { max-width:600px; margin:0 auto; padding:24px 16px 80px; position:relative; }
+
+  /* ---- cabecera: título, contador y "Marcar todas" ---- */
+  .bn-cab .titulo-pagina { margin:0; }
+  .bn-linea { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:2px; min-height:44px; }
+  .bn-cant { margin:0; font-size:14px; color:var(--gris); }
+  .bn-cant b { color:var(--tinta); font-weight:700; }
+  /* 44 px de alto para el dedo: un texto suelto de 11 px se tocaba sin querer. */
+  .bn-todas { min-height:44px; padding:0 4px; border:0; background:none; cursor:pointer;
+    font:inherit; font-size:13.5px; font-weight:600; color:var(--tinta);
+    text-decoration:underline; text-underline-offset:4px; white-space:nowrap; flex:none; }
+  .bn-todas[hidden] { display:none; }
+
+  /* ---- filtros: pastillas de 40 px y la lupa, un círculo de 40 ---- */
+  .bn-barra { display:flex; align-items:center; gap:8px; margin-top:16px; }
+  .bn-chips { display:flex; gap:8px; overflow-x:auto; padding:2px; scrollbar-width:none; flex:1; min-width:0; }
+  .bn-chips::-webkit-scrollbar { display:none; }
+  .chip { display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px;
+    border:1px solid var(--linea); background:var(--bn-sup); border-radius:999px; cursor:pointer;
+    font:inherit; font-size:13.5px; font-weight:600; color:var(--tinta); white-space:nowrap; }
+  .chip i { font-style:normal; font-size:12.5px; font-variant-numeric:tabular-nums; opacity:.8; }
+  .chip i:empty { display:none; }
+  .chip.activo { background:var(--bn-sel); border-color:var(--bn-sel); color:var(--bn-sel-txt); }
+  .chip.lupa { width:40px; padding:0; justify-content:center; flex:none; }
+  @media (max-width:420px) {
+    .bn-chips { gap:6px; }
+    .chip { padding:0 12px; font-size:13px; gap:5px; }
+    .bn-todas { font-size:13px; }
+    /* En el teléfono "Volver" queda en la flecha sola (sigue diciendo
+       "Volver" para el lector de pantalla): con el texto, el encabezado no
+       entraba y Colm3na quedaba cortado. */
+    .marca-volver { font-size:0 !important; min-width:44px; justify-content:center; }
+    .marca-volver svg { width:22px; height:22px; }
+  }
+  .busq-row { margin-top:10px; }
   .busq-row[hidden] { display:none; }
-  .buscar { width:100%; border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:8px 12px;
-    font-size:13.5px; font-family:inherit; background:rgba(255,255,255,.08); color:#fff; }
-  .buscar::placeholder { color:rgba(255,255,255,.5); }
-  .buscar:focus { outline:2px solid var(--marca-acento); }
+  .buscar { width:100%; min-height:44px; border:1px solid var(--linea); border-radius:10px; padding:0 14px;
+    font:inherit; font-size:14px; background:var(--bn-sup); color:var(--tinta); }
 
   /* ---- la línea de tiempo ---- */
-  .hilo { max-width:680px; margin:0 auto; padding:6px 15px 70px; position:relative; }
-  .hilo::before { content:""; position:absolute; left:31px; top:0; bottom:50px; width:2px; background:var(--linea); }
-  .hito { display:flex; align-items:center; gap:10px; margin:18px 0 10px; position:relative; }
-  .hito i { width:34px; text-align:center; flex:none; display:flex; justify-content:center; }
-  .hito i svg { width:18px; height:18px; fill:var(--papel); stroke:var(--gris); stroke-width:1.6; }
-  .hito span { font-family:var(--fuente-display); font-size:14px; letter-spacing:1.6px;
-    text-transform:uppercase; color:var(--gris); }
-  .m { display:flex; gap:8px; margin-bottom:9px; position:relative; cursor:pointer; }
+  .lista { position:relative; margin-top:8px; }
+  .lista.con-hilo::before { content:""; position:absolute; left:16px; top:18px; bottom:24px; width:2px; background:var(--linea); }
+  .hito { display:flex; align-items:center; gap:10px; margin:22px 0 10px; position:relative; }
+  .hito i { width:34px; flex:none; display:flex; justify-content:center; }
+  .hito i::before { content:""; width:10px; height:10px; border-radius:50%; background:var(--bn-sup);
+    box-shadow:0 0 0 2px var(--gris); }
+  .hito span { font-size:12.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); }
+  .m { display:flex; gap:10px; margin-bottom:10px; position:relative; cursor:pointer; }
+  .m:focus-visible { outline:none; }
+  .m:focus-visible .bur { outline:2px solid var(--tinta); outline-offset:2px; }
   .avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-family:var(--fuente-display); font-size:13px; font-weight:700; letter-spacing:.5px; color:#fff; flex:none;
+    font-size:12.5px; font-weight:700; letter-spacing:.3px; color:#fff; flex:none;
     box-shadow:0 0 0 3px var(--papel); position:relative; margin-top:2px; }
-  .m.nl .avatar::after { content:""; position:absolute; right:-2px; bottom:-2px; width:11px; height:11px;
-    border-radius:50%; background:var(--marca-acento); border:2px solid var(--papel); animation:pulso 1.8s ease-out infinite; }
-  @keyframes pulso { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--marca-acento) 55%, transparent); }
-    100% { box-shadow:0 0 0 9px transparent; } }
-  .bur { flex:1; min-width:0; background:#fff; border:1px solid var(--linea); border-radius:4px 14px 14px 14px;
-    padding:9px 12px 10px; transition:box-shadow .15s; }
-  .m:hover .bur { box-shadow:0 4px 14px rgba(21,34,56,.08); }
-  .m.nl .bur { border-color:color-mix(in srgb, var(--marca-acento) 50%, var(--linea));
-    background:color-mix(in srgb, var(--marca-acento) 5%, #fff); }
-  .cab { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
-  .rem { font-size:12.5px; font-weight:700; color:var(--marca-primario); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .m.nl .rem { color:var(--tinta); }
-  .h { font-family:var(--fuente-num); font-size:10.5px; color:#98a2b3; white-space:nowrap; }
-  .m.nl .h { color:var(--marca-acento); font-weight:700; }
-  .tx { font-size:13px; color:var(--gris); margin-top:2px; overflow:hidden; text-overflow:ellipsis;
+  /* El punto de "no leída": quieto. Solo el aviso más nuevo late, tres
+     veces al entrar, y se queda: veinte puntos latiendo a la vez dejaban de
+     señalar algo. */
+  .m.nl .avatar::after { content:""; position:absolute; right:-3px; bottom:-3px; width:12px; height:12px;
+    border-radius:50%; background:var(--bn-punto); border:2px solid var(--papel); }
+  .m.nl.late .avatar::after { animation:pulso 1.6s var(--ease-salida, ease-out) 3; }
+  @keyframes pulso { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--bn-punto) 55%, transparent); }
+    100% { box-shadow:0 0 0 10px transparent; } }
+  .bur { flex:1; min-width:0; background:var(--bn-sup); border:1px solid var(--linea); border-radius:4px 14px 14px 14px;
+    padding:11px 14px 12px; transition:box-shadow var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .m.nl .bur { border-color:var(--bn-borde-nl); background:var(--bn-sup-nl); }
+  .cab { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .rem { font-size:13.5px; font-weight:700; color:var(--tinta); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* La hora: 12 px y en el gris de la casa, que pasa 4,5:1 sobre la
+     burbuja. La no leída ya se marca con el borde y el punto. */
+  .h { font-size:12px; color:var(--gris); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .m.nl .h { font-weight:700; }
+  .tx { font-size:14px; line-height:1.45; color:var(--gris); margin-top:3px; overflow:hidden; text-overflow:ellipsis;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .m.nl .tx { color:var(--tinta); }
-  .cuerpo { display:none; font-size:13.5px; line-height:1.6; color:var(--tinta); margin-top:6px;
+  .cuerpo { display:none; font-size:14px; line-height:1.6; color:var(--tinta); margin-top:6px;
     white-space:pre-line; overflow-wrap:anywhere; }
   .m.abierta .tx { display:none; }
   .m.abierta .cuerpo { display:block; }
-  .accs { display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
-  .accs a { display:inline-flex; align-items:center; gap:5px; border-radius:9px; padding:7px 11px; font-size:12px;
-    font-weight:700; border:1px solid var(--linea); background:#fff; color:var(--marca-primario); text-decoration:none; }
-  .accs a.cta { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
-  .vacio { text-align:center; padding:60px 20px; color:var(--gris); font-size:14px; }
+  .accs { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .accs a { display:inline-flex; align-items:center; gap:6px; min-height:40px; border-radius:999px; padding:0 14px;
+    font-size:13px; font-weight:700; border:1px solid var(--linea); background:var(--bn-sup); color:var(--tinta); text-decoration:none; }
+  .accs a.cta { background:var(--bn-sel); border-color:var(--bn-sel); color:var(--bn-sel-txt); }
+  .mas[hidden] { display:none; }
+  .mas { display:flex; justify-content:center; margin:18px 0 0; }
+  .mas button { min-height:44px; padding:0 22px; border-radius:999px; border:1px solid var(--linea); background:var(--bn-sup);
+    font:inherit; font-size:14px; font-weight:600; color:var(--tinta); cursor:pointer; }
+  .vacio { text-align:center; padding:48px 20px; color:var(--gris); font-size:14.5px; }
   .cargando { display:flex; justify-content:center; padding:50px 0; }
   .spin { width:26px; height:26px; border:3px solid var(--linea);
-    border-top-color:var(--marca-acento); border-radius:50%; animation:g .8s linear infinite; }
+    border-top-color:var(--tinta); border-radius:50%; animation:g .8s linear infinite; }
   @keyframes g { to { transform:rotate(360deg); } }
-  @media (prefers-reduced-motion:reduce) { .m.nl .avatar::after { animation:none; } .bur { transition:none; } }
+  @media (prefers-reduced-motion:reduce) { .m.nl.late .avatar::after { animation:none; } .bur { transition:none; } }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño (PLAN_TEMAS.md): su hoja va DESPUÉS de todo lo de
+   arriba y cada selector empieza con html[data-tema="<modelo>"]. Solo si
+   el archivo existe: el sello sale vacío cuando no está. #}
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-notificaciones.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+{% endif %}
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/></symbol>
   <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
   <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21 11.5-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></symbol>
   <symbol id="i-form" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
@@ -110,47 +165,69 @@
 {% set enc_volver = '/app/inicio' %}
 {% include "_encabezado.html" %}
 
-{# El <h1> "Notificaciones" que estaba acá salió: el encabezado ya lo dice,
-   y quedaban los dos títulos a dos centímetros uno del otro. #}
-<div class="top3"><div class="top3-in">
-  <div class="l2">
-    <small id="cant"></small>
-    <button type="button" id="btn-todas" hidden onclick="marcarTodasLeidas()">Marcar todas como leídas</button>
+{# El título va: el encabezado de una línea no escribe el nombre de la
+   pantalla, y esta no tiene tira de pestañas que lo diga. #}
+<main class="bandeja mesa-cont" data-hoy="{{ hoy }}">
+  <div class="bn-cab">
+    <h1 class="titulo-pagina">Notificaciones</h1>
+    <div class="bn-linea">
+      <p class="bn-cant" id="cant"></p>
+      <button type="button" class="bn-todas" id="btn-todas" hidden onclick="marcarTodasLeidas()">Marcar todas leídas</button>
+    </div>
   </div>
-  <div class="chips">
-    <button class="chip activo" data-f="todas" onclick="filtrar('todas')">Todas<i id="c-todas"></i></button>
-    <button class="chip" data-f="noleidas" onclick="filtrar('noleidas')">No leídas<i id="c-noleidas"></i></button>
-    <button class="chip" data-f="adjunto" onclick="filtrar('adjunto')">Con adjunto<i id="c-adjunto"></i></button>
-    <button class="chip lupa" id="btn-lupa" type="button" title="Buscar" onclick="toggleBuscar()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-lupa"/></svg></button>
+  <div class="bn-barra">
+    <div class="bn-chips" role="group" aria-label="Filtrar notificaciones">
+      <button type="button" class="chip activo" data-f="todas" aria-pressed="true" onclick="filtrar('todas')">Todas<i id="c-todas"></i></button>
+      <button type="button" class="chip" data-f="noleidas" aria-pressed="false" onclick="filtrar('noleidas')">No leídas<i id="c-noleidas"></i></button>
+      <button type="button" class="chip" data-f="adjunto" aria-pressed="false" onclick="filtrar('adjunto')">Con adjunto<i id="c-adjunto"></i></button>
+    </div>
+    <button type="button" class="chip lupa" id="btn-lupa" title="Buscar" aria-label="Buscar" aria-expanded="false" onclick="toggleBuscar()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-lupa"/></svg></button>
   </div>
   <div class="busq-row" id="busq-row" hidden>
-    <input class="buscar" id="buscar" placeholder="Buscar por texto o remitente" oninput="render()">
+    <input class="buscar" id="buscar" type="search" placeholder="Buscar por texto o remitente" aria-label="Buscar por texto o remitente" oninput="LIMITE = POR_TANDA; render()">
   </div>
-</div></div>
 
-<div class="hilo mesa-cont" id="lista"><div class="cargando"><div class="spin"></div></div></div>
+  <div class="lista" id="lista" aria-live="polite"><div class="cargando"><div class="spin"></div></div></div>
+  <div class="mas" id="mas" hidden><button type="button" onclick="verAnteriores()"></button></div>
+</main>
 
 <script>
 let NOTIFS = [];
 let FILTRO = 'todas';
-const COLORES_AVATAR = ['var(--marca-primario)', 'var(--marca-apoyo)', '#5b3d8a', '#8a5a1a'];
+// La bandeja muestra de a veinte: con cuarenta y tantos avisos de corrido el
+// teléfono quedaba con 6.000 px de scroll y sin un final a la vista.
+const POR_TANDA = 20;
+let LIMITE = POR_TANDA;
+let YA_LATIO = false;
+// Los avatares rotan entre tres colores de la marca (los define el modelo):
+// nunca un violeta o un marrón fijos que choquen con otra paleta.
+const COLORES_AVATAR = ['var(--av-1)', 'var(--av-2)', 'var(--av-3)'];
+// "Hoy" lo dice el servidor (hora de Buenos Aires), no el reloj del teléfono.
+const HOY = document.querySelector('main').dataset.hoy || '';
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+               'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-// "AAAA-MM-DD HH:MM" -> etiqueta de día (Hoy / Ayer / DD/MM/AAAA) y hora
-function etiquetaDia(fh) {
+function diasEntre(a, b) {           // b - a, en días, para fechas "AAAA-MM-DD"
+  const f = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  return Math.round((f(b) - f(a)) / 86400000);
+}
+
+// El hito de un aviso: Hoy / Ayer / el día, y el MES para lo de más de un
+// mes atrás -- lo viejo se agrupa y deja de llevar un hito por aviso.
+function grupoDe(fh) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fh || '');
-  if (!m) return 'Sin fecha';
-  const hoy = new Date(); const p = n => String(n).padStart(2, '0');
-  const hoyISO = `${hoy.getFullYear()}-${p(hoy.getMonth() + 1)}-${p(hoy.getDate())}`;
-  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
-  const ayerISO = `${ayer.getFullYear()}-${p(ayer.getMonth() + 1)}-${p(ayer.getDate())}`;
+  if (!m) return { clave: 'sin', texto: 'Sin fecha', porMes: false };
   const fecha = `${m[1]}-${m[2]}-${m[3]}`;
-  if (fecha === hoyISO) return 'Hoy';
-  if (fecha === ayerISO) return 'Ayer';
-  return `${m[3]}/${m[2]}/${m[1]}`;
+  const dias = HOY ? diasEntre(fecha, HOY) : 99;
+  if (dias === 0) return { clave: fecha, texto: 'Hoy', porMes: false };
+  if (dias === 1) return { clave: fecha, texto: 'Ayer', porMes: false };
+  if (dias >= 0 && dias <= 31) return { clave: fecha, texto: `${m[3]}/${m[2]}/${m[1]}`, porMes: false };
+  return { clave: `${m[1]}-${m[2]}`, texto: `${MESES[+m[2] - 1]} ${m[1]}`, porMes: true };
 }
 function hora(fh) { const m = /(\d{2}:\d{2})$/.exec(fh || ''); return m ? m[1] : ''; }
+function diaCorto(fh) { const m = /^\d{4}-(\d{2})-(\d{2})/.exec(fh || ''); return m ? `${m[2]}/${m[1]}` : ''; }
 
 // Avatar del remitente: iniciales de las dos primeras palabras y un color
 // estable derivado del nombre (el mismo remitente siempre se ve igual).
@@ -167,16 +244,23 @@ function colorAvatar(rem) {
 
 function filtrar(f) {
   FILTRO = f;
-  document.querySelectorAll('.chip[data-f]').forEach(c => c.classList.toggle('activo', c.dataset.f === f));
+  LIMITE = POR_TANDA;
+  document.querySelectorAll('.chip[data-f]').forEach(c => {
+    c.classList.toggle('activo', c.dataset.f === f);
+    c.setAttribute('aria-pressed', c.dataset.f === f ? 'true' : 'false');
+  });
   render();
 }
 function toggleBuscar() {
   const row = document.getElementById('busq-row');
   row.hidden = !row.hidden;
-  document.getElementById('btn-lupa').classList.toggle('activo', !row.hidden);
+  const lupa = document.getElementById('btn-lupa');
+  lupa.classList.toggle('activo', !row.hidden);
+  lupa.setAttribute('aria-expanded', row.hidden ? 'false' : 'true');
   if (!row.hidden) document.getElementById('buscar').focus();
-  else { document.getElementById('buscar').value = ''; render(); }
+  else { document.getElementById('buscar').value = ''; LIMITE = POR_TANDA; render(); }
 }
+function verAnteriores() { LIMITE += POR_TANDA; render(); }
 
 function actualizarContadores() {
   const noLeidas = NOTIFS.filter(n => !n.leida_en).length;
@@ -200,27 +284,37 @@ function render() {
   actualizarContadores();
   const lista = document.getElementById('lista');
   if (!visibles.length) {
+    lista.classList.remove('con-hilo');
+    document.getElementById('mas').hidden = true;
     lista.innerHTML = `<div class="vacio">${NOTIFS.length ? 'Nada que mostrar con este filtro.' : 'Todavía no tenés notificaciones.'}</div>`;
     return;
   }
-  let html = '', diaActual = null;
-  for (const n of visibles) {
-    const dia = etiquetaDia(n.enviado_en);
-    if (dia !== diaActual) {
-      html += `<div class="hito"><i><svg viewBox="0 0 24 24"><use href="#i-hex"/></svg></i><span>${dia}</span></div>`;
-      diaActual = dia;
+  lista.classList.add('con-hilo');
+  // El único punto que late: el del aviso sin leer más nuevo de todos, y
+  // solo al entrar a la pantalla (no cada vez que se filtra).
+  const masNueva = YA_LATIO ? null : NOTIFS.find(n => !n.leida_en);
+  YA_LATIO = true;
+  let html = '', grupoActual = null;
+  for (const n of visibles.slice(0, LIMITE)) {
+    const g = grupoDe(n.enviado_en);
+    if (g.clave !== grupoActual) {
+      html += `<div class="hito"><i aria-hidden="true"></i><span>${g.texto}</span></div>`;
+      grupoActual = g.clave;
     }
     const rem = n.remitente || 'Tu sindicato';
+    // Agrupado por mes, el hito ya no dice el día: va con la hora.
+    const cuando = g.porMes ? `${diaCorto(n.enviado_en)} · ${hora(n.enviado_en)}` : hora(n.enviado_en);
     const accs = (n.tiene_adjunto || n.formulario_id || n.encuesta_id) ? `<div class="accs">
         ${n.tiene_adjunto ? `<a href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-clip"/></svg>${esc(n.adjunto_nombre || 'Ver adjunto')}</a>` : ''}
         ${n.formulario_id ? `<a class="cta" href="/app?tab=tramites&formulario=${n.formulario_id}" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-form"/></svg>Completar el formulario</a>` : ''}
         ${n.encuesta_id ? `<a class="cta" href="/app?tab=encuestas" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-form"/></svg>Responder la encuesta</a>` : ''}
       </div>` : '';
     html += `
-      <div class="m ${n.leida_en ? '' : 'nl'}" data-id="${n.id}" onclick="toggleNotif(${n.id})">
-        <div class="avatar" style="background:${colorAvatar(rem)}">${esc(iniciales(rem))}</div>
+      <div class="m ${n.leida_en ? '' : 'nl'} ${n === masNueva ? 'late' : ''}" data-id="${n.id}" role="button" tabindex="0"
+           aria-expanded="false" onclick="toggleNotif(${n.id})" onkeydown="teclaNotif(event, ${n.id})">
+        <div class="avatar" style="background:${colorAvatar(rem)}" aria-hidden="true">${esc(iniciales(rem))}</div>
         <div class="bur">
-          <div class="cab"><span class="rem">${esc(rem)}</span><span class="h">${hora(n.enviado_en)}</span></div>
+          <div class="cab"><span class="rem">${esc(rem)}</span><span class="h">${cuando}</span></div>
           <div class="tx">${esc(n.texto)}</div>
           <div class="cuerpo">${n.texto_html}</div>
           ${accs}
@@ -228,15 +322,25 @@ function render() {
       </div>`;
   }
   lista.innerHTML = html;
+  const faltan = visibles.length - LIMITE;
+  const mas = document.getElementById('mas');
+  mas.hidden = faltan <= 0;
+  mas.querySelector('button').textContent = `Ver anteriores (${faltan})`;
+}
+
+function teclaNotif(ev, id) {
+  if (ev.target !== ev.currentTarget) return;
+  if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleNotif(id); }
 }
 
 async function toggleNotif(id) {
   const item = document.querySelector(`.m[data-id="${id}"]`);
   if (!item) return;
   const abrir = !item.classList.contains('abierta');
-  document.querySelectorAll('.m.abierta').forEach(el => el.classList.remove('abierta'));
+  document.querySelectorAll('.m.abierta').forEach(el => { el.classList.remove('abierta'); el.setAttribute('aria-expanded', 'false'); });
   if (!abrir) return;
   item.classList.add('abierta');
+  item.setAttribute('aria-expanded', 'true');
   const n = NOTIFS.find(x => x.id === id);
   if (n && !n.leida_en) {
     n.leida_en = 'recien';                       // optimista: la burbuja se atenúa ya

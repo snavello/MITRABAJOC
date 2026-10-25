@@ -8849,3 +8849,37 @@ pestañas y «Olvidé mi clave» a 44 px, la banda tipo pasaporte con
 `aria-hidden`, «Tu CUIL» en el ingreso del panel y la recuperación con sus
 tres pasos y la salida para quien no tiene mail en el sindicato. Tests:
 `test_componentes_compartidos.py`, un test por hallazgo.
+
+**Bloque 2a, la app de la empresa en los dos modelos** (Trabajador 0.53.01):
+la portada y la app del empleador dejan la retícula de colmena y se ven en
+Laguna y en Noticiero, con hojas propias (`static/temas/<modelo>-empresa*.css`)
+calcadas de las del afiliado. La empresa elige su modelo como el afiliado
+(`CuentaEmpleador.tema`, migración `b3e7f1c9a2d5`, `POST /api/empresa/apariencia`,
+sección Apariencia del perfil); vacío = el modelo de afiliados de su sindicato
+(`Sindicato.tema_afiliados`), y `db.apariencia_de` acepta el rol `empresa`.
+La portada copia la estructura de la del afiliado y cada acceso dice su
+estado real (mensajes sin leer, trámites en curso) con los últimos tres
+mensajes debajo; cada pestaña tiene su `titulo-pagina`; Salir con rótulo;
+estados vacíos con qué hacer. De paso: el ancho «mitad»/«tercio» de los
+campos del formulario de trámite de empresa no funcionaba (el CSS apuntaba a
+un id que no existe). Tests: `test_tema_empresa.py`.
+
+**Bloque 3, las pantallas que habían quedado viejas** (Trabajador 0.53.01,
+Admin 0.71.01): Notificaciones y Convenio del afiliado y Resultados de
+encuesta del panel toman el modelo de la persona (hojas
+`<modelo>-notificaciones.css`, `-convenio.css`, `-encuesta-resultados.css`,
+que copian solo lo común de las de app y panel: si estas cambian, aquellas no
+se enteran solas). Notificaciones: sin la franja oscura, el título con su
+contador y «Marcar todas leídas», objetivos de 40 a 44 px, la bandeja
+ordenada por fecha (`notificaciones_de_trabajador` por `enviado_en` desc,
+antes salía desordenada), «Hoy»/«Ayer» con la fecha del servidor, 20 avisos y
+«Ver anteriores», lo de más de un mes agrupado por mes y solo el punto del
+aviso más nuevo late, tres veces. Convenio: «Tu convenio» y un estado vacío
+que ofrece hacer la consulta como trámite. Resultados: título de la casa con
+la bajada del modo y el período, el calendario plegado en un botón, números
+en formato argentino también en los ejes, cuatro colores del modelo en la
+evolución (punteado de la quinta en adelante), Inicio/Salir como en el
+panel, y en el mapa el zoom abajo, más margen y las burbujas que se pisan
+corridas unos píxeles. El color de lo elegido en Resultados pasa a ser el del
+modelo y no el `color_destacado` del sindicato. Tests:
+`test_tema_pantallas_viejas.py`.

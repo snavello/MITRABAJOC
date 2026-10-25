@@ -1,0 +1,296 @@
+/* ============================================================
+   Modelo LAGUNA (el 162, el por defecto) · portada de la empresa
+   (/empresa/inicio, templates/empresa_portada.html). PLAN_TEMAS.md.
+   ------------------------------------------------------------
+   La empresa es un actor externo y su portada es la del afiliado
+   (laguna-portada.css) con menos cosas: la laguna (azul profundo →
+   turquesa con la foto de portada del sindicato en duotono → verde agua)
+   presenta al gremio y a la empresa; abajo, liviano y claro, los dos
+   accesos con su estado y los últimos mensajes del sindicato.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="laguna"].
+   - Todo color sale de las variables --lg-*, declaradas UNA vez abajo; la
+     paleta del sindicato (data-paleta="sindicato") las redefine a partir
+     de --marca-* y de los derivados ya corregidos (temas.paleta_legible).
+   - Los estados (rojo de los globos) no toman la paleta.
+   - Ninguna selección se marca con una barra de color a un costado.
+   - Sin la trama de colmena: es el diseño viejo.
+   - Manrope, vendoreada (la CSP no deja traerla de un CDN).
+   ============================================================ */
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- La paleta del modelo (colores de Colm3na) ---------- */
+html[data-tema="laguna"] {
+  --lg-negro: #171a20; --lg-claro: #f4f4f4; --lg-claro2: #eeeeee; --lg-linea2: #d0d1d2;
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-noche: #0a1a2b;
+  --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-m: #e6f8f3; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7;
+  --lg-azgris: #3d5a6c; --lg-gris-lag: #2d4c5e;
+  --lg-sobre-osc: #d3f2f0;                       /* texto secundario sobre la laguna oscura */
+  --lg-fluor: #46f0d2; --lg-fluor-h: #6af4dc;   /* el único flúor */
+  --lg-fluor-txt: var(--lg-fluor);               /* flúor como texto sobre oscuro */
+  --lg-sobre-fluor: var(--lg-azul);              /* texto sobre un relleno flúor */
+  /* estados: fijos, nunca de marca */
+  --lg-mal: #b3261e;
+  --lg-curva: cubic-bezier(.22, .61, .36, 1);
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* ---------- Con los colores del sindicato (la tabla del afiliado) ---------- */
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--marca-base);
+  --lg-azul2: color-mix(in oklab, var(--marca-base) 45%, var(--marca-primario-relleno, var(--marca-primario)));
+  --lg-noche: color-mix(in oklab, var(--marca-base) 78%, black);
+  --lg-turq: var(--marca-primario-relleno, var(--marca-primario));
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 80%, black);
+  --lg-lag: var(--marca-apoyo);
+  --lg-agua: color-mix(in oklab, var(--marca-apoyo) 45%, white);
+  --lg-agua-m: color-mix(in oklab, var(--marca-apoyo) 11%, white);
+  --lg-agua-f: color-mix(in oklab, var(--marca-apoyo) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--marca-apoyo) 7%, white);
+  --lg-azgris: color-mix(in oklab, var(--marca-base) 72%, white);
+  --lg-gris-lag: color-mix(in oklab, var(--marca-base) 84%, white);
+  --lg-sobre-osc: color-mix(in oklab, var(--marca-apoyo) 16%, white);
+  --lg-fluor: var(--marca-acento);
+  --lg-fluor-h: color-mix(in oklab, var(--marca-acento) 86%, white);
+  /* Ya corregidos por el servidor (temas.paleta_legible). */
+  --lg-fluor-txt: var(--marca-acento-txt, var(--marca-acento));
+  --lg-sobre-fluor: var(--marca-tinta-acento, var(--marca-base));
+}
+
+/* ---------- La página: clara, sobre agua ---------- */
+html[data-tema="laguna"] body {
+  --sobre-base: var(--lg-azul); --sobre-base-mute: var(--lg-azgris);
+  --tinta: var(--lg-azul); --gris: var(--lg-gris-lag);
+  --linea: color-mix(in oklab, var(--lg-azul) 12%, transparent);
+  --papel: var(--lg-claro);
+  font-family: var(--lg-fuente); color: var(--lg-azul); letter-spacing: .005em;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(180deg, var(--lg-agua-f) 0, var(--lg-agua-f) 600px, var(--lg-agua-m) 60%, var(--lg-agua-f2) 100%);
+}
+/* Ni el grano ni la trama de colmena del diseño viejo. */
+html[data-tema="laguna"] .grano::before, html[data-tema="laguna"] .pt-ambiente { display: none; }
+html[data-tema="laguna"] :is(a, button, input, select, textarea, label):focus-visible { outline: 2px solid var(--lg-negro); outline-offset: 2px; }
+
+/* ---------- La laguna: el gremio y la empresa ---------- */
+html[data-tema="laguna"] .pt-gremio { overflow: hidden; background: var(--lg-azul); isolation: isolate; }
+html[data-tema="laguna"] .pt-gremio-media { display: block; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(180deg, var(--lg-azul2) 0%, var(--lg-turq) 42%, var(--lg-lag) 62%, var(--lg-agua) 100%);
+  animation: lg-respira 28s ease-in-out infinite alternate; }
+/* La foto viene en gris de la biblioteca; el color se lo da la laguna de atrás. */
+html[data-tema="laguna"] .pt-gremio-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: luminosity; opacity: .9; }
+html[data-tema="laguna"] .pt-gremio::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--lg-azul) 97%, transparent) 0%,
+    color-mix(in oklab, var(--lg-azul) 92%, transparent) 62%,
+    color-mix(in oklab, color-mix(in oklab, var(--lg-azul2) 60%, var(--lg-turq)) 55%, transparent) 74%,
+    color-mix(in oklab, var(--lg-lag) 14%, transparent) 82%,
+    color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 82%, transparent) 88%,
+    var(--lg-agua-f) 100%); }
+html[data-tema="laguna"] .pt-gremio:not(.con-foto)::after { opacity: .8; }
+html[data-tema="laguna"] .pt-gremio .marca-enc { position: relative; z-index: 3; }
+html[data-tema="laguna"] .pt-gremio .marca-barra { background: transparent; border-bottom: 0; color: #fff; padding: 14px 16px 10px;
+  padding-top: calc(14px + env(safe-area-inset-top)); }
+html[data-tema="laguna"] .pt-gremio .marca-nombre { color: #fff; border-right-color: var(--lg-fluor); }
+html[data-tema="laguna"] .pt-gremio.con-foto { min-height: 300px; display: flex; flex-direction: column; }
+html[data-tema="laguna"] .pt-gremio.con-foto .pt-gremio-hola { margin-top: auto; width: 100%; box-sizing: border-box; }
+html[data-tema="laguna"] .pt-gremio.con-foto::after {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--lg-azul) 90%, transparent) 0%,
+    color-mix(in oklab, var(--lg-azul) 46%, transparent) 26%,
+    color-mix(in oklab, var(--lg-azul) 62%, transparent) 44%,
+    color-mix(in oklab, var(--lg-azul) 90%, transparent) 70%,
+    color-mix(in oklab, var(--lg-azul) 86%, transparent) 80%,
+    color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 80%, transparent) 93%,
+    var(--lg-agua-f) 100%); }
+html[data-tema="laguna"] .pt-gremio-hola { z-index: 2; padding: 16px 24px 72px; }
+html[data-tema="laguna"] .pt-gremio .hola { margin-top: 8px; font-family: var(--lg-fuente); font-size: 30px; font-weight: 500;
+  letter-spacing: -.005em; line-height: 1.15; color: #fff; overflow-wrap: anywhere; }
+html[data-tema="laguna"] .pt-gremio .hola em { font-weight: 700; color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .pt-gremio .pt-hola-baj { margin-top: 5px; font-size: 13px; line-height: 1.4; color: var(--lg-sobre-osc);
+  font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .pt-gremio .fila-hola { align-items: center; gap: 14px; }
+html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 52px; height: 52px; flex: none; color: var(--lg-azul); background: var(--lg-agua);
+  border: 1.5px solid var(--lg-fluor); box-shadow: 0 0 0 4px color-mix(in oklab, var(--lg-fluor) 18%, transparent); }
+html[data-tema="laguna"] .pt-gremio .circulo-acento svg { stroke: var(--lg-azul); width: 24px; height: 24px; }
+html[data-tema="laguna"] .pt-gremio .circulo-acento img { filter: grayscale(1) contrast(1.05) brightness(1.04); mix-blend-mode: luminosity; }
+html[data-tema="laguna"] .pt-gremio .circulo-acento:focus-visible { outline-color: var(--lg-fluor-txt); }
+/* entrada: el saludo sube */
+html[data-tema="laguna"] .pt-gremio-hola .fila-hola > div > * { animation: lg-sube .9s var(--lg-curva) both; }
+html[data-tema="laguna"] .pt-gremio-hola .hola { animation-delay: .12s; }
+html[data-tema="laguna"] .pt-gremio-hola .pt-hola-baj, html[data-tema="laguna"] .pt-gremio .circulo-acento { animation: lg-sube .9s .24s var(--lg-curva) both; }
+
+/* ---------- El cuerpo ---------- */
+html[data-tema="laguna"] .pad.pt-cuerpo { padding: 0 24px; }
+html[data-tema="laguna"] .pt-portada { gap: 34px; margin-top: 28px; }
+
+/* Títulos de sección: versalitas con el subrayado de laguna solo bajo el texto. */
+html[data-tema="laguna"] h2.pt-riel-tit { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 6px;
+  font-family: var(--lg-fuente); font-size: 12.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--lg-azul); }
+html[data-tema="laguna"] h2.pt-riel-tit::after { display: none; }
+html[data-tema="laguna"] h2.pt-riel-tit > span { padding-bottom: 4px; box-shadow: inset 0 -2px 0 var(--lg-lag); }
+html[data-tema="laguna"] h2.pt-riel-tit a { font-family: var(--lg-fuente); font-size: 13px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--lg-turq-osc); border-bottom: 1px solid var(--lg-lag); padding-bottom: 1px; }
+
+/* Los últimos mensajes: renglones con su ícono, sin tarjeta */
+html[data-tema="laguna"] .pt-nov-lista { margin-top: 14px; border-top: 1px solid var(--linea); }
+html[data-tema="laguna"] .pt-nov { gap: 14px; margin: 0; padding: 14px 0; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0;
+  background: none; backdrop-filter: none; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-nov:last-child { border-bottom: 0; }
+html[data-tema="laguna"] .pt-nov:hover { transform: none; }
+html[data-tema="laguna"] .pt-vid::after { display: none; }
+html[data-tema="laguna"] .pt-nov .pt-mini-ico { width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
+  background: rgba(255, 255, 255, .75); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-lag) 35%, transparent); }
+html[data-tema="laguna"] .pt-nov .pt-mini-ico svg { width: 20px; height: 20px; stroke: var(--lg-turq-osc); stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-nov.no-leida .pt-mini-ico { background: var(--lg-turq); box-shadow: none; }
+html[data-tema="laguna"] .pt-nov.no-leida .pt-mini-ico svg { stroke: #fff; }
+html[data-tema="laguna"] .pt-nov .f { font-family: var(--lg-fuente); font-size: 11.5px; letter-spacing: .06em; color: var(--lg-azgris);
+  font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .pt-nov .t { font-size: 15px; font-weight: 600; margin-top: 3px; }
+html[data-tema="laguna"] .pt-nov .t .nl { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .pt-nov .b { font-size: 13px; color: var(--lg-gris-lag); }
+
+/* Los accesos: una lista de renglones, no tarjetas */
+html[data-tema="laguna"] .pt-filas { grid-template-columns: 1fr; gap: 0; margin-top: 6px; }
+html[data-tema="laguna"] .pt-fila { gap: 14px; padding: 13px 0; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0;
+  background: none; backdrop-filter: none; box-shadow: none; color: var(--lg-azul); }
+html[data-tema="laguna"] .pt-filas > .acceso-badge-wrap:last-child .pt-fila { border-bottom: 0; }
+html[data-tema="laguna"] .pt-fila:hover { transform: none; }
+html[data-tema="laguna"] .pt-filas .pt-pastilla { width: 40px; height: 40px; border-radius: 50%; border: 0; color: var(--lg-turq-osc);
+  background: rgba(255, 255, 255, .75); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-lag) 35%, transparent); }
+html[data-tema="laguna"] .pt-filas .pt-pastilla svg { width: 20px; height: 20px; stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-filas .pt-fila-t { font-family: var(--lg-fuente); font-size: 15px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; line-height: 1.25; }
+html[data-tema="laguna"] .pt-filas .pt-fila-e { margin-top: 2px; font-size: 13px; color: var(--lg-azgris); }
+html[data-tema="laguna"] .pt-fila-f { color: var(--lg-azgris); opacity: 1; transition: transform .3s var(--lg-curva); }
+html[data-tema="laguna"] .pt-fila-f svg { stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: translateX(3px); }
+/* El globo va sobre el círculo del ícono, como en el mockup. */
+html[data-tema="laguna"] .pt-filas .badge-noleidas { top: 4px; left: -6px; right: auto; min-width: 22px; height: 22px; padding: 0 5px;
+  font-size: 12px; background: var(--lg-mal); border: 2px solid var(--lg-agua-f); }
+
+html[data-tema="laguna"] .vacio-sec { margin-top: 10px; background: rgba(255, 255, 255, .6); border: 1px dashed var(--lg-linea2);
+  border-radius: 8px; color: var(--lg-gris-lag); }
+
+/* Salir: la pastilla azul que flota abajo */
+html[data-tema="laguna"] .pt-sesion { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+html[data-tema="laguna"] .pt-salir { height: 46px; padding: 0 19px 0 16px; border: 0; background: var(--lg-azul); color: #fff;
+  font-family: var(--lg-fuente); font-weight: 600;
+  box-shadow: 0 14px 28px -14px color-mix(in oklab, var(--lg-azul) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .08);
+  transition: background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .pt-salir:hover { opacity: 1; background: color-mix(in oklab, var(--lg-azul) 88%, white); }
+html[data-tema="laguna"] .pt-salir svg { stroke: var(--lg-fluor-txt); stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-salir:focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* ---------- La hoja del perfil ---------- */
+html[data-tema="laguna"] .overlay { background: color-mix(in oklab, var(--lg-noche) 62%, transparent); }
+html[data-tema="laguna"] .modal-notif-caja { border-radius: 18px 18px 0 0; font-family: var(--lg-fuente);
+  box-shadow: 0 -18px 40px -24px color-mix(in oklab, var(--lg-azul) 70%, transparent); }
+/* Encabezado: azul liso con el filete flúor ABAJO (nunca una barra al costado). */
+html[data-tema="laguna"] .modal-notif-enc { border-left: 0; border-radius: 18px 18px 0 0; padding: 18px 18px 16px 20px;
+  background: var(--lg-azul); background-image: none; color: #fff; box-shadow: inset 0 -3px 0 var(--lg-fluor); }
+html[data-tema="laguna"] .modal-notif-enc::before { display: none; }
+html[data-tema="laguna"] .modal-notif-enc .modal-k { font-size: 11.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-agua); }
+html[data-tema="laguna"] .modal-notif-enc h3 { margin-top: 4px; font-family: var(--lg-fuente); font-size: 22px;
+  font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.2; color: #fff; }
+html[data-tema="laguna"] .modal-cerrar-clara { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .12); opacity: 1; }
+html[data-tema="laguna"] .modal-cerrar-clara svg { width: 17px; height: 17px; }
+html[data-tema="laguna"] .modal-cerrar-clara:focus-visible { outline-color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .modal-notif-body { padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
+html[data-tema="laguna"] .perfil-foto-circulo { isolation: isolate; border: 2px solid var(--lg-lag); background: linear-gradient(135deg, var(--lg-turq), var(--lg-agua)); }
+html[data-tema="laguna"] .perfil-foto-circulo img { filter: grayscale(1) contrast(1.05) brightness(1.04); mix-blend-mode: luminosity; }
+html[data-tema="laguna"] .perfil-foto-circulo svg { stroke: #fff; }
+html[data-tema="laguna"] .perfil-foto-lapiz { background: var(--lg-turq); }
+html[data-tema="laguna"] .perfil-campo label { font-size: 11px; font-weight: 600; letter-spacing: .14em; color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .perfil-campo input, html[data-tema="laguna"] .perfil-campo select { height: 44px; padding: 0 14px; border: 1px solid var(--lg-linea2);
+  border-radius: 4px; background: #fff; font-size: 14px; color: var(--lg-azul);
+  transition: border-color .3s var(--lg-curva), background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .perfil-campo input:focus, html[data-tema="laguna"] .perfil-campo select:focus { border-color: var(--lg-negro); outline: none; }
+html[data-tema="laguna"] .perfil-campo input:disabled { background: var(--lg-claro2); color: var(--lg-gris-lag); border-color: transparent; }
+html[data-tema="laguna"] .perfil-guardar-btn { height: 44px; padding: 0 24px; border-radius: 999px; background: var(--lg-turq); color: #fff;
+  font-family: var(--lg-fuente); font-size: 14px; font-weight: 600; letter-spacing: .02em; text-transform: none;
+  transition: background-color .33s var(--lg-curva); }
+html[data-tema="laguna"] .perfil-guardar-btn:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .perfil-guardar-msg { color: var(--lg-turq-osc); }
+/* Apariencia */
+html[data-tema="laguna"] .ap-sec h4 { margin-bottom: 4px; font-family: var(--lg-fuente); font-size: 12px; font-weight: 700;
+  letter-spacing: .18em; color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .ap-bajada, html[data-tema="laguna"] .ap-paleta { color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .ap-paleta { background: var(--lg-agua-f2); border-color: var(--linea); }
+html[data-tema="laguna"] .ap-nombre { font-family: var(--lg-fuente); font-size: 14.5px; letter-spacing: 0; text-transform: none; color: var(--lg-azul); }
+html[data-tema="laguna"] .ap-desc { color: var(--lg-gris-lag); }
+html[data-tema="laguna"] .overlay-foto-grande { background: color-mix(in oklab, var(--lg-noche) 82%, transparent); }
+
+/* ---------- Escritorio ---------- */
+@media (min-width: 900px) {
+  /* El encabezado sobre la misma grilla que el contenido (1320 px). */
+  html[data-tema="laguna"] .pt-gremio .marca-barra { box-sizing: border-box; width: 100%; max-width: 1320px; margin: 0 auto; padding: 16px 26px 10px; }
+  html[data-tema="laguna"] .pt-gremio-hola { padding: 14px 26px 56px; }
+  html[data-tema="laguna"] .pt-gremio::after {
+    background: linear-gradient(180deg,
+      color-mix(in oklab, var(--lg-azul) 97%, transparent) 0%,
+      color-mix(in oklab, var(--lg-azul) 92%, transparent) 64%,
+      color-mix(in oklab, color-mix(in oklab, var(--lg-azul2) 60%, var(--lg-turq)) 60%, transparent) 78%,
+      color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 82%, transparent) 92%,
+      var(--lg-agua-f) 100%); }
+  /* Con foto: el saludo pegado al encabezado, la foto despejada a la
+     derecha y el velo detrás del saludo, a la izquierda. */
+  html[data-tema="laguna"] .pt-gremio.con-foto { min-height: 0; }
+  html[data-tema="laguna"] .pt-gremio.con-foto .pt-gremio-hola { margin-top: 0; padding-top: 22px; padding-bottom: 64px; }
+  html[data-tema="laguna"] .pt-gremio.con-foto::after {
+    background:
+      linear-gradient(180deg,
+        color-mix(in oklab, var(--lg-azul) 78%, transparent) 0%,
+        transparent 22%, transparent 76%,
+        color-mix(in oklab, color-mix(in oklab, var(--lg-agua) 50%, var(--lg-agua-f)) 80%, transparent) 92%,
+        var(--lg-agua-f) 100%),
+      linear-gradient(90deg,
+        color-mix(in oklab, var(--lg-azul) 94%, transparent) 0%,
+        color-mix(in oklab, var(--lg-azul) 84%, transparent) 30%,
+        color-mix(in oklab, var(--lg-azul) 38%, transparent) 58%,
+        color-mix(in oklab, var(--lg-azul) 12%, transparent) 82%); }
+  html[data-tema="laguna"] .pt-gremio .hola { font-size: 40px; }
+  html[data-tema="laguna"] .pt-gremio .pt-hola-baj { font-size: 14px; }
+  /* La foto de perfil, grande y pegada al saludo. */
+  html[data-tema="laguna"] .pt-gremio .circulo-acento { width: 96px; height: 96px; border-width: 2.5px;
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--lg-fluor) 18%, transparent); }
+  html[data-tema="laguna"] .pt-gremio .circulo-acento:has(img) { width: 120px; height: 120px; }
+  html[data-tema="laguna"] .pt-gremio .circulo-acento svg { width: 36px; height: 36px; }
+  html[data-tema="laguna"] .pt-gremio .fila-hola { gap: 24px; }
+  html[data-tema="laguna"] .pad.pt-cuerpo { padding: 0 26px; }
+}
+@media (min-width: 1040px) {
+  /* Mensajes y Tus cosas, 60/40. */
+  html[data-tema="laguna"] .pt-dos.pt-portada { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: 48px; row-gap: 40px; }
+}
+
+/* ---------- Movimiento ---------- */
+@keyframes lg-respira { from { transform: scale(1); } to { transform: scale(1.07); } }
+@keyframes lg-sube { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .pt-gremio-media,
+  html[data-tema="laguna"] .pt-gremio-hola .fila-hola > div > *,
+  html[data-tema="laguna"] .pt-gremio-hola .pt-hola-baj,
+  html[data-tema="laguna"] .pt-gremio .circulo-acento { animation: none; }
+  html[data-tema="laguna"] .pt-fila-f, html[data-tema="laguna"] .pt-salir, html[data-tema="laguna"] .perfil-guardar-btn { transition: none; }
+  html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: none; }
+}
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ---------- */
+html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuente); font-weight: 800; font-size: 30px; line-height: 1.05;
+  letter-spacing: -.015em; text-transform: none; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-inline-end: 0; padding-inline-end: 0; }
+}

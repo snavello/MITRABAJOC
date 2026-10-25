@@ -3958,6 +3958,22 @@ async def api_actualizar_perfil_empleador(request: Request, razon_social: str = 
     return {"ok": True, "razon_social": perfil["razon_social"] if perfil else razon_social}
 
 
+@app.post("/api/empresa/apariencia")
+def api_apariencia_empresa(request: Request, tema: str = Form("")):
+    """La empresa elige su modelo de diseño (PLAN_TEMAS.md, D2), como el
+    afiliado en "Tu perfil". Se guarda en su CUENTA (CuentaEmpleador, una por
+    CUIT): lo ve igual en cualquier aparato y en cualquier sindicato. Vacío
+    vuelve al que el sindicato eligió para sus afiliados. Un modelo que no
+    existe no se guarda."""
+    ses = sesion_actual(request, "empleador")
+    cuit = _cuit_seguro(request)
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    if not db.guardar_tema_persona(cuit, tema, "empresa"):
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"ok": True, "tema": temas.tema_valido(tema) or ""}
+
+
 @app.post("/api/empresa/perfil/foto")
 async def api_subir_foto_perfil_empresa(request: Request, foto: UploadFile = File(...)):
     """Foto de perfil, una por CUIT (no por sindicato). Mismo criterio que
@@ -4470,6 +4486,8 @@ def encuesta_resultados_pagina(request: Request, encuesta_id: int):
     return templates.TemplateResponse("encuesta_resultados.html", {
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        # El modelo de diseño del operador, el mismo que en /admin.
+        "apariencia": db.apariencia_de(sid, rol="panel", uid=ses.get("uid", 0)),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "encuesta_id": encuesta_id, "titulo_encuesta": e["titulo"],
         "encuestas_cortes": encuestas.CORTES,
@@ -4835,6 +4853,12 @@ def pantalla_notificaciones(request: Request):
         "sindicato": marca["nombre"],
         "marca": marca,
         "marca_plataforma": db.marca_plataforma(),
+        # El modelo de diseño de la persona (PLAN_TEMAS.md): es una pantalla
+        # más de la app del afiliado y tiene que verse como /app.
+        "apariencia": db.apariencia_de(sid, cuil),
+        # "Hoy" y "Ayer" de la línea de tiempo los dice el servidor (hora de
+        # Buenos Aires), no el reloj del teléfono.
+        "hoy": fechas.hoy_texto(),
     })
 
 
@@ -4930,6 +4954,9 @@ def pantalla_convenio(request: Request):
         "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
         "marca_plataforma": db.marca_plataforma(),   # lo pide el encabezado común
+        "apariencia": db.apariencia_de(sid, cuil),   # el modelo de diseño de la persona
+        # El estado vacío ofrece preguntar por un trámite: solo si existe.
+        "tiene_tramites": db.modulo_habilitado(sid, "tramites"),
         "convenios": [c for c in db.convenios_del_sindicato(sid, solo_activos=True)
                       if c["fragmentos_vigentes"] > 0],
     })
@@ -9128,15 +9155,27 @@ def empresa_inicio(request: Request):
 
     marca = db.marca_sindicato(sid_activo)
     perfil = db.perfil_empleador(cuit, sid_activo)
+    # El modelo de diseño (PLAN_TEMAS.md): el que eligió la empresa en su
+    # perfil o, si no eligió, el que el sindicato eligió para sus afiliados.
+    apariencia = db.apariencia_de(sid_activo, cuit, rol="empresa")
+    # Una sola lectura de los mensajes: de ahí salen el globo, la línea de
+    # estado del acceso y los últimos tres que se muestran en la portada.
+    notificaciones = db.notificaciones_de_empleador(cuit, sid_activo)
+    tramites = db.tramites_de_empresa(cuit, sid_activo)
     return templates.TemplateResponse("empresa_portada.html", {
         "request": request, "sindicato": marca["nombre"], "marca": marca,
+        "apariencia": apariencia,
+        "foto_portada": _url_foto_portada(sid_activo, apariencia["tema"]),
         "marca_plataforma": db.marca_plataforma(),
         "cuit": cuit, "razon_social": perfil["razon_social"] if perfil else "",
         "iniciales": _iniciales_sindicato(marca["nombre"]),
         "perfil": perfil, "provincias": db.PROVINCIAS_AR,
         "tiene_foto_perfil": bool(db.foto_empleador(cuit)),
-        "notificaciones_no_leidas": db.contar_notificaciones_no_leidas_empleador(cuit, sid_activo),
-        "tramites_novedades": db.contar_tramites_empleador_con_novedades(cuit, sid_activo),
+        "notificaciones_no_leidas": sum(1 for n in notificaciones if not n["leida_en"]),
+        "ultimas_notificaciones": [{**n, "fecha_hora": _fmt_fecha_hora_corta(n["enviado_en"])}
+                                   for n in notificaciones[:3]],
+        "tramites_novedades": sum(1 for t in tramites if t["novedad"]),
+        "tramites_en_curso": sum(1 for t in tramites if t["estado"] != "terminado"),
     })
 
 
@@ -9167,8 +9206,12 @@ def app_empresa(request: Request):
         with db.get_session() as s:
             empleador = s.exec(select(Empleador).where(
                 Empleador.sindicato_id == sid_activo, Empleador.cuit == cuit)).first()
+        # Afuera del `with`: apariencia_de abre su propia sesión, y un request
+        # nunca tiene dos conexiones del pool tomadas a la vez.
+        apariencia = db.apariencia_de(sid_activo, cuit, rol="empresa")
         return templates.TemplateResponse("empresa.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "apariencia": apariencia,
             "marca_plataforma": db.marca_plataforma(),
             "iniciales": _iniciales_sindicato(marca["nombre"]),
             "cuit": cuit, "razon_social": empleador.razon_social if empleador else "",

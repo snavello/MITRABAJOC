@@ -778,6 +778,10 @@ class CuentaEmpleador(SQLModel, table=True):
     # La puso el admin del sindicato al restablecer la clave: el primer
     # ingreso obliga a cambiarla.
     clave_temporal: bool = Field(default=False)
+    # El modelo de diseño que eligió para su app (PLAN_TEMAS.md, D2), como el
+    # afiliado: vive en la cuenta y no en el navegador. "" = no eligió: vale
+    # el que el sindicato eligió para sus afiliados (Sindicato.tema_afiliados).
+    tema: str = ""
 
 
 class Empleador(SQLModel, table=True):
@@ -3254,22 +3258,36 @@ def marca_sindicato(sindicato_id: int) -> dict:
         }
 
 
+def _cuenta_con_tema(rol: str):
+    """La tabla y la columna que identifican a la persona de cada rol con su
+    modelo de diseño guardado: el afiliado y el operador por CUIL, la empresa
+    por CUIT."""
+    if rol == "panel":
+        return CuentaPanel, CuentaPanel.cuil
+    if rol == "empresa":
+        return CuentaEmpleador, CuentaEmpleador.cuit
+    return CuentaTrabajador, CuentaTrabajador.cuil
+
+
 def apariencia_de(sindicato_id, cuil: str = "", rol: str = "afiliado", uid=None) -> dict:
     """El modelo de diseño y la paleta con que se pinta una página
-    (PLAN_TEMAS.md). `rol` es "afiliado" o "panel": cada uno tiene su propia
-    elección guardada y su propio default en el sindicato. Abre su sesión: la
-    llaman las rutas de página, que no tienen una abierta."""
+    (PLAN_TEMAS.md). `rol` es "afiliado", "panel" o "empresa": cada uno tiene
+    su propia elección guardada en su cuenta. El default del panel es
+    `Sindicato.tema_panel`; el del afiliado y el de la empresa (un actor
+    externo, con una app que se parece a la del afiliado) es
+    `Sindicato.tema_afiliados`. Para la empresa, `cuil` es su CUIT. Abre su
+    sesión: la llaman las rutas de página, que no tienen una abierta."""
     import temas
     with Session(engine) as s:
         sind = s.get(Sindicato, sindicato_id) if sindicato_id else None
         defecto = (sind.tema_panel if rol == "panel" else sind.tema_afiliados) if sind else None
         propio = ""
-        if not cuil and uid:
+        if not cuil and uid and rol == "panel":
             usuario = s.get(UsuarioSindicato, uid)
             cuil = usuario.cuil if usuario else ""
         if cuil:
-            modelo = CuentaPanel if rol == "panel" else CuentaTrabajador
-            cuenta = s.exec(select(modelo).where(modelo.cuil == cuil)).first()
+            modelo, columna = _cuenta_con_tema(rol)
+            cuenta = s.exec(select(modelo).where(columna == cuil)).first()
             propio = cuenta.tema if cuenta else ""
         return {
             "tema": temas.resolver_tema(propio, defecto),
@@ -3282,14 +3300,15 @@ def apariencia_de(sindicato_id, cuil: str = "", rol: str = "afiliado", uid=None)
 def guardar_tema_persona(cuil: str, tema: str, rol: str = "afiliado") -> bool:
     """Guarda en la CUENTA el modelo que eligió la persona (D2). "" vuelve al
     del sindicato. False si el modelo no existe o la persona no tiene cuenta:
-    nunca se guarda un valor fuera del catálogo."""
+    nunca se guarda un valor fuera del catálogo. Para `rol="empresa"`, `cuil`
+    es el CUIT de la cuenta del empleador."""
     import temas
     valor = "" if tema in ("", None) else temas.tema_valido(tema)
     if valor is None:
         return False
-    modelo = CuentaPanel if rol == "panel" else CuentaTrabajador
+    modelo, columna = _cuenta_con_tema(rol)
     with Session(engine) as s:
-        cuenta = s.exec(select(modelo).where(modelo.cuil == cuil)).first()
+        cuenta = s.exec(select(modelo).where(columna == cuil)).first()
         if not cuenta:
             return False
         cuenta.tema = valor
@@ -5277,7 +5296,14 @@ def notificacion_destinatarios(notificacion_id: int, usuario_id: Optional[int] =
 
 def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
     """Notificaciones que le llegaron a este CUIL en este sindicato, más
-    nuevas primero -- para el modal de la portada."""
+    nuevas primero -- para la portada y la bandeja del afiliado.
+
+    "Más nueva" es por FECHA DE ENVÍO, no por id: un aviso programado o
+    cargado con fecha tiene un id que no dice cuándo salió, y la bandeja es
+    una línea de tiempo que muestra esa fecha -- ordenada por id saltaba
+    para atrás y para adelante (29/09, 16/08, 06/08, 01/09...). El id
+    desempata dos avisos del mismo minuto. `enviado_en` es texto
+    "AAAA-MM-DD HH:MM", que ordena igual que la fecha."""
     with Session(engine) as s:
         dests = s.exec(select(NotificacionDestinatario).where(
             NotificacionDestinatario.cuil == cuil)).all()
@@ -5286,7 +5312,7 @@ def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
         por_id = {d.notificacion_id: d for d in dests}
         notifs = s.exec(select(Notificacion).where(
             Notificacion.id.in_(por_id.keys()), Notificacion.sindicato_id == sindicato_id)
-            .order_by(Notificacion.id.desc())).all()
+            .order_by(Notificacion.enviado_en.desc(), Notificacion.id.desc())).all()
         # el ícono "completá los datos" solo se muestra si el formulario
         # referido sigue siendo un tipo activo del sindicato
         forms_ref = {n.formulario_id for n in notifs if n.formulario_id}
