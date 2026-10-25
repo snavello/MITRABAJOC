@@ -49,7 +49,7 @@ html[data-tema="laguna"] {
   --lg-fluor: #46f0d2; --lg-fluor-h: #6af4dc; --lg-fluor-txt: var(--lg-fluor); --lg-sobre-fluor: var(--lg-azul);
   /* estados: fijos, nunca de marca */
   --lg-ok: #367519; --lg-ok-f: #eef5e7; --lg-ok-t: #24520f;
-  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3;
+  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3; --lg-amb-t: #6a3f06;
   --lg-mal: #b3261e; --lg-mal-f: #fbeceb; --lg-mal-t: #8c1d17;
 
   /* Las variables de la plantilla, con los roles del modelo */
@@ -139,6 +139,10 @@ html[data-tema="laguna"] body.mesa.franja .titulo-pagina + p,
 html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .sub { color: var(--lg-gris); }
 html[data-tema="laguna"] .sub { font-size: 14px; color: var(--lg-gris); line-height: 1.5; margin-top: 8px; }
 html[data-tema="laguna"] .sub2 { color: var(--lg-gris2); }
+/* R1-03: cuántos avisos faltan leer, como la bandeja del afiliado; la
+   bajada del remitente, debajo y más chica. */
+html[data-tema="laguna"] #tp-notificaciones .notif-cant { margin-top: 10px; font-size: 14px; color: var(--lg-tinta); }
+html[data-tema="laguna"] #tp-notificaciones .notif-cant + .sub { margin-top: 2px; font-size: 13px; color: var(--lg-gris); }
 
 /* ---------- pastillas (botones) ---------- */
 html[data-tema="laguna"] .btn {
@@ -199,7 +203,9 @@ html[data-tema="laguna"] .nh-hito span { font-family: var(--lg-fuente); font-siz
 /* El color de cada remitente llega en línea desde el JS: en el modelo, uno solo. */
 html[data-tema="laguna"] .nh-av { background: var(--lg-turq-osc) !important; box-shadow: 0 0 0 3px #fff;
   font-family: var(--lg-fuente); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
-html[data-tema="laguna"] .notif-item.no-leida .nh-av::after { background: var(--lg-mal); border-color: #fff; animation: none; }
+/* R1-02: lo no leído en el turquesa del modelo, como en la bandeja del
+   afiliado; el rojo queda para el globo con el número de la tira. */
+html[data-tema="laguna"] .notif-item.no-leida .nh-av::after { background: var(--lg-turq); border-color: #fff; animation: none; }
 html[data-tema="laguna"] .nh-bur { border: 0; border-radius: 4px 10px 10px 10px; background: #fff;
   box-shadow: 0 0 0 1px var(--lg-linea); padding: 10px 12px 11px; transition: box-shadow .3s var(--lg-curva); }
 html[data-tema="laguna"] .notif-item:hover .nh-bur { box-shadow: 0 0 0 1px var(--lg-linea2), 0 10px 22px -18px color-mix(in oklab, var(--lg-azul) 60%, transparent); }
@@ -290,6 +296,17 @@ html[data-tema="laguna"] #trx-lista > .tx-r:last-child { border-bottom: 0; }
 html[data-tema="laguna"] .tx-r .tit { font-size: 14.5px; font-weight: 700; }
 html[data-tema="laguna"] .tx-r .exp { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
 html[data-tema="laguna"] .tx-tag { height: 24px; display: inline-flex; align-items: center; padding: 0 9px; font-size: 11.5px; }
+/* R1-04: los estados de un trámite con los colores de estado del modelo,
+   los mismos que en la app del afiliado (laguna-app.css, G3-05). */
+html[data-tema="laguna"] {
+  --est-ini-f: transparent; --est-ini-t: var(--lg-tinta);
+  --est-tra-f: var(--lg-amb-f); --est-tra-t: var(--lg-amb-t);
+  --est-res-f: var(--lg-ok-f); --est-res-t: var(--lg-ok-t);
+  --est-esp-f: var(--lg-mal-f); --est-esp-t: var(--lg-mal-t);
+  --est-ter-f: var(--lg-claro); --est-ter-t: var(--lg-gris2);
+}
+html[data-tema="laguna"] .tag.est { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; }
 html[data-tema="laguna"] .tx-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 11px; }
 html[data-tema="laguna"] .tx-prog i { height: 4px; background: var(--lg-linea); }
 html[data-tema="laguna"] .tx-prog i.on { background: var(--lg-turq); }
@@ -421,21 +438,30 @@ html[data-tema="laguna"] .flota-sal a { font-family: var(--lg-fuente); transitio
 html[data-tema="laguna"] .flota-sal .flota-ini svg { stroke: var(--lg-fluor-txt); }
 html[data-tema="laguna"] .flota-sal a:focus-visible { outline-color: var(--lg-fluor-txt); }
 
-/* escritorio: la columna sigue siendo la del teléfono (la misma decisión de
-   SDN para el afiliado); la tira se agrupa al centro y la pastilla de
-   Inicio/Salir va afuera de la columna, a la derecha */
+/* escritorio (G1-18, R1-06, R1-07): la columna mide --emp-col (la de la
+   plantilla); la razón social y el CUIT caen en los mismos bordes que el
+   título y las tarjetas; la tira mide lo mismo que la columna, con borde
+   solo arriba y a los costados; Inicio/Salir, en la esquina del Salir de
+   la portada (la plantilla decide cuándo sube por encima de la tira). */
 @media (min-width: 761px) {
-  html[data-tema="laguna"] .cont { max-width: 520px; }
-  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 260px)); }
-  html[data-tema="laguna"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 120px)); justify-content: center; gap: 4px; }
+  html[data-tema="laguna"] .cont { max-width: var(--emp-col); }
+  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - var(--emp-col) / 2 + 20px)); }
+  html[data-tema="laguna"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 120px)); justify-content: center; gap: 4px;
+    max-width: var(--emp-col); margin: 0 auto; border: 1px solid var(--lg-linea); border-bottom: 0; border-radius: 14px 14px 0 0; }
   html[data-tema="laguna"] .tabbar button { font-size: 12px; }
-  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 470px)); }
+  html[data-tema="laguna"] .flota-sal { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
+}
+@media (min-width: 761px) and (max-width: 1159px) {
+  html[data-tema="laguna"] .flota-sal { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 /* En el teléfono Inicio y Salir van en la barra de la identidad: sin sombra
-   de cosa que flota. */
+   de cosa que flota, y cada uno con sus 44 px de alto (R1-05). */
 @media (max-width: 760px) {
   html[data-tema="laguna"] .ident { align-items: center; padding-block: 8px; }
-  html[data-tema="laguna"] .ident .flota-sal { box-shadow: none; }
+  html[data-tema="laguna"] .ident .flota-sal { box-shadow: none; padding: 0; gap: 0; overflow: hidden; }
+  /* Sin el aire de la pastilla que flota, cada mitad va recta: el filete
+     entre Inicio y Salir queda derecho y no como un arco. */
+  html[data-tema="laguna"] .ident .flota-sal a { height: 44px; padding: 0 12px; font-size: 13px; border-radius: 0; }
 }
 
 /* El distintivo de entorno (_entorno.html, estilos en línea): arriba de la

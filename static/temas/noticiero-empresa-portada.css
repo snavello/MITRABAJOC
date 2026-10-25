@@ -136,10 +136,13 @@ html[data-tema="noticiero"] .pt-gremio img.marca-colmena[src="/logo-plataforma-o
 html[data-tema="noticiero"] .pt-gremio-hola { position: static; z-index: 2; width: 100%; margin-top: auto; padding: 0 18px 30px; }
 html[data-tema="noticiero"] .pt-gremio-hola .fila-hola { position: static; display: block; }
 html[data-tema="noticiero"] .pt-gremio .hola { position: relative; margin-top: 0; padding-right: 58px; font-family: var(--nt-f-tit); font-weight: 400;
-  font-size: 38px; line-height: .95; letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta); overflow-wrap: anywhere; }
-/* La razón social, con el resaltador detrás (texto en tinta encima). */
+  font-size: 38px; line-height: 1.06; letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta); overflow-wrap: anywhere; }
+/* La razón social, con el resaltador detrás (texto en tinta encima). R1-01:
+   una razón social larga va en dos o tres renglones; con el interlineado
+   de 1.06 y la banda entre el 62% y el 88% de cada renglón, la banda queda
+   dentro de su renglón y no pisa las letras del de abajo. */
 html[data-tema="noticiero"] .pt-gremio .hola em { font-style: normal; color: var(--nt-tinta); padding: 0 .05em;
-  background: linear-gradient(180deg, transparent 56%, var(--nt-resalta) 56%, var(--nt-resalta) 90%, transparent 90%);
+  background: linear-gradient(180deg, transparent 62%, var(--nt-resalta) 62%, var(--nt-resalta) 88%, transparent 88%);
   -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 html[data-tema="noticiero"] .pt-gremio .pt-hola-baj { position: relative; margin-top: 10px; font-family: var(--nt-f-cond); font-weight: 700;
   font-size: 15px; letter-spacing: .5px; line-height: 1.4; color: var(--nt-tinta-1); }
@@ -211,7 +214,8 @@ html[data-tema="noticiero"] .vacio-sec { margin-top: 14px; padding: 18px 14px; b
   background: var(--nt-carta); text-align: center; font-size: 13.5px; color: var(--nt-tinta-2); }
 
 /* Salir: la pastilla índigo que flota abajo, con el ícono en coral */
-html[data-tema="noticiero"] .pt-sesion { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+/* R1-07: la misma esquina que Inicio/Salir en las pestañas (16 px). */
+html[data-tema="noticiero"] .pt-sesion { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
 html[data-tema="noticiero"] .pt-salir { height: 44px; gap: 8px; padding: 0 16px; border: 0; background: var(--nt-indigo); color: var(--nt-marfil);
   font-family: var(--nt-f-txt); font-stretch: 108%; font-size: 12.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-carta) 18%, transparent),
