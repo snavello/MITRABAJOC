@@ -1,0 +1,469 @@
+/* ============================================================
+   Modelo LAGUNA (el 162, el por defecto) — app de la empresa (/empresa)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md, llevado a la app del empleador. La empresa es un actor
+   externo y su app se parece a la del afiliado: esta hoja toma el idioma de
+   laguna-app.css (el interior liviano y blanco, el turquesa solo en el
+   botón principal, la pestaña activa y el filete de arriba de cada caja; lo
+   que se tiene que destacar, "Necesita tu atención", en la laguna oscura
+   con el flúor como único brillo) y lo aplica a las clases propias de
+   empresa.html (tx-, tramx-, nh-), que no se comparten con el afiliado por
+   la regla de aislamiento entre los dos sistemas.
+
+   Reglas de esta hoja (las mismas que las del afiliado):
+   - Todo selector empieza con html[data-tema="laguna"].
+   - No toca contenido ni estructura: viste las clases que ya tiene
+     empresa.html y las que arma su JS. Nada de lo que hoy se ve se esconde.
+   - La paleta va en variables --lg-*; con la paleta del sindicato se
+     derivan de --gremio-* (los cuatro colores crudos que la plantilla copia
+     y nunca se pisan) y de los ya corregidos por temas.paleta_legible.
+   - Los colores de estado (verde, ámbar, rojo, violeta) son fijos.
+   - Ninguna selección se marca con una barra de color a un costado.
+   - Sin la trama de colmena de fondo: es el diseño viejo.
+   - Tipografía: Manrope, vendoreada (la CSP no deja CDN).
+   ============================================================ */
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- LA PALETA ---------- */
+html[data-tema="laguna"] {
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-mono: ui-monospace, "SF Mono", Consolas, monospace;
+  --lg-curva: cubic-bezier(.22, .61, .36, 1);
+  /* neutros */
+  --lg-negro: #171a20; --lg-tinta: #171a20; --lg-gris: #393c41; --lg-gris2: #5c5e62;
+  --lg-claro: #f4f4f4; --lg-claro2: #eeeeee;
+  --lg-linea: #e3e4e5; --lg-linea2: #d0d1d2;
+  /* la laguna */
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-noche: #0a1a2b;
+  --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7;
+  --lg-sobre-osc: #d3f2f0;
+  /* el único flúor: relleno (--lg-fluor, con --lg-sobre-fluor encima) y texto sobre oscuro (--lg-fluor-txt) */
+  --lg-fluor: #46f0d2; --lg-fluor-h: #6af4dc; --lg-fluor-txt: var(--lg-fluor); --lg-sobre-fluor: var(--lg-azul);
+  /* estados: fijos, nunca de marca */
+  --lg-ok: #367519; --lg-ok-f: #eef5e7; --lg-ok-t: #24520f;
+  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3;
+  --lg-mal: #b3261e; --lg-mal-f: #fbeceb; --lg-mal-t: #8c1d17;
+
+  /* Las variables de la plantilla, con los roles del modelo */
+  --fuente: var(--lg-fuente);
+  --fuente-display: var(--lg-fuente);
+  --fuente-num: var(--lg-mono);
+  --tinta: var(--lg-tinta);
+  --gris: var(--lg-gris2);
+  --linea: var(--lg-linea);
+  --papel: var(--lg-claro);
+  --card: #fff;
+  --agua: var(--lg-ok);
+  --alerta: var(--lg-mal);
+  --marca-base: var(--lg-azul);
+  --marca-primario: var(--lg-turq-osc);
+  --marca-acento: var(--lg-turq);
+  --marca-apoyo: var(--lg-turq-osc);
+}
+
+/* ---------- con los colores del sindicato (la misma tabla que el afiliado) ---------- */
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--gremio-base);
+  --lg-azul2: color-mix(in oklab, var(--gremio-base) 45%, var(--gremio-primario-relleno, var(--gremio-primario)));
+  --lg-noche: color-mix(in oklab, var(--gremio-base) 78%, black);
+  --lg-turq: var(--gremio-primario-relleno, var(--gremio-primario));
+  --lg-turq-h: color-mix(in oklab, var(--gremio-primario-relleno, var(--gremio-primario)) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--gremio-primario-relleno, var(--gremio-primario)) 80%, black);
+  --lg-lag: var(--gremio-apoyo);
+  --lg-agua: color-mix(in oklab, var(--gremio-apoyo) 45%, white);
+  --lg-agua-f: color-mix(in oklab, var(--gremio-apoyo) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--gremio-apoyo) 7%, white);
+  --lg-sobre-osc: color-mix(in oklab, var(--gremio-apoyo) 16%, white);
+  --lg-fluor: var(--gremio-acento);
+  --lg-fluor-h: color-mix(in oklab, var(--gremio-acento) 86%, white);
+  --lg-fluor-txt: var(--gremio-acento-txt);
+  --lg-sobre-fluor: var(--gremio-tinta-acento);
+}
+
+/* ---------- la página: blanca y lisa, sin mesa, sin franja ni colmena ---------- */
+html[data-tema="laguna"] body {
+  font-family: var(--lg-fuente); color: var(--lg-tinta); background: #fff;
+  -webkit-font-smoothing: antialiased; letter-spacing: .005em;
+}
+html[data-tema="laguna"] body.mesa { background: #fff; }
+html[data-tema="laguna"] body.mesa::before,
+html[data-tema="laguna"] body.mesa.franja::after { display: none; }
+html[data-tema="laguna"] :is(a, button, input, select, textarea, label):focus-visible {
+  outline: 2px solid var(--lg-negro); outline-offset: 2px;
+}
+html[data-tema="laguna"] .cont { padding: 24px 20px 40px; padding-bottom: 150px; }
+
+/* ---------- encabezado: blanco, con el filete turquesa arriba ---------- */
+html[data-tema="laguna"] .marca-enc.fija { z-index: 20; }
+html[data-tema="laguna"] .marca-barra {
+  background: rgba(255, 255, 255, .95); background-image: none;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  color: var(--lg-tinta); border-bottom: 0;
+  box-shadow: inset 0 3px 0 var(--lg-turq), 0 1px 0 var(--lg-linea);
+  padding: 13px 16px 10px; padding-top: calc(13px + env(safe-area-inset-top));
+}
+/* El grano del esquema "Hilo" que la plantilla le pone a la barra: fuera. */
+html[data-tema="laguna"] .marca-barra::before { display: none; }
+html[data-tema="laguna"] .marca-logo { height: 64px; max-width: 320px; }
+html[data-tema="laguna"] .marca-nombre { color: var(--lg-tinta); border-right-color: var(--lg-turq); }
+html[data-tema="laguna"] .marca-colmena { height: 34px; max-width: 160px; content: var(--logo-colmena-claro, normal); }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 192px; }
+  html[data-tema="laguna"] .marca-colmena { height: 19px; }
+}
+
+/* La identidad: la razón social a la izquierda, el CUIT a la derecha. */
+html[data-tema="laguna"] .ident { align-items: baseline; padding: 11px 20px; background: #fff; border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] .ident-nombre { font-size: 14.5px; font-weight: 600; color: var(--lg-tinta); }
+html[data-tema="laguna"] .ident-cuit { font-size: 12.5px; color: var(--lg-gris2); }
+
+/* ---------- títulos y textos ---------- */
+html[data-tema="laguna"] h1,
+html[data-tema="laguna"] .titulo-pagina,
+html[data-tema="laguna"] body.mesa .titulo-pagina,
+html[data-tema="laguna"] #tp-tramites h1 {
+  font-family: var(--lg-fuente); font-size: 30px; font-weight: 500; line-height: 1.1;
+  letter-spacing: -.005em; text-transform: none; color: var(--lg-tinta);
+}
+/* Sin franja oscura detrás: el título y su bajada en tinta también en escritorio. */
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina { color: var(--lg-tinta); }
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + p,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .sub { color: var(--lg-gris); }
+html[data-tema="laguna"] .sub { font-size: 14px; color: var(--lg-gris); line-height: 1.5; margin-top: 8px; }
+html[data-tema="laguna"] .sub2 { color: var(--lg-gris2); }
+
+/* ---------- pastillas (botones) ---------- */
+html[data-tema="laguna"] .btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 11px 24px; border-radius: 999px; border: 0;
+  background: var(--lg-turq); color: #fff;
+  font-family: var(--lg-fuente); font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: .02em;
+  transition: background-color .33s var(--lg-curva), transform .2s var(--lg-curva);
+}
+html[data-tema="laguna"] .btn:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .btn:active { transform: scale(.98); }
+html[data-tema="laguna"] .btn.sec { background: #fff; color: var(--lg-tinta); border: 0; box-shadow: inset 0 0 0 1px var(--lg-linea2); }
+html[data-tema="laguna"] .btn.sec:hover { background: var(--lg-claro); }
+
+/* ---------- campos ---------- */
+html[data-tema="laguna"] .tramx-input,
+html[data-tema="laguna"] .tram-msg-responder textarea {
+  min-height: 44px; border: 1px solid transparent; border-radius: 4px; background: var(--lg-claro);
+  padding: 11px 14px; font-family: inherit; font-size: 14px; color: var(--lg-tinta);
+  transition: border-color .3s var(--lg-curva), background-color .3s var(--lg-curva);
+}
+html[data-tema="laguna"] .tramx-input::placeholder,
+html[data-tema="laguna"] .tram-msg-responder textarea::placeholder { color: var(--lg-gris2); }
+html[data-tema="laguna"] .tramx-input:focus,
+html[data-tema="laguna"] .tram-msg-responder textarea:focus { background: #fff; border-color: var(--lg-negro); outline: none; }
+html[data-tema="laguna"] .campo-tramx label { font-size: 12.5px; font-weight: 600; color: var(--lg-gris); }
+html[data-tema="laguna"] .campo-tramx-opcion input,
+html[data-tema="laguna"] .campo-tramx-bool input { accent-color: var(--lg-turq); }
+html[data-tema="laguna"] .campo-tramx-separador { border-top-color: var(--lg-linea2); }
+html[data-tema="laguna"] .archivo-nombre { font-size: 12.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .spin { border-color: var(--lg-linea); border-top-color: var(--lg-turq); }
+
+/* ---------- errores: la tarjeta blanca con un filo rojo fino ---------- */
+html[data-tema="laguna"] :is(.msg.err, .banner.mal) { background: #fff; color: var(--lg-tinta);
+  border: 0; border-radius: 10px; padding-left: 46px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-mal) 30%, transparent), 0 10px 24px -20px color-mix(in oklab, var(--lg-mal) 60%, transparent); }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal)::before { background: var(--lg-mal); left: 16px; }
+html[data-tema="laguna"] :is(.msg.err, .banner.mal) :is(b, strong) { color: var(--lg-mal-t); }
+
+/* ---------- estado vacío ---------- */
+html[data-tema="laguna"] .vacio-tab { border: 0; border-radius: 10px; background: var(--lg-agua-f2);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 18%, transparent); }
+html[data-tema="laguna"] .vacio-ico { background: #fff; color: var(--lg-turq-osc);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-lag) 35%, transparent); }
+html[data-tema="laguna"] .vacio-ico svg { stroke-width: 1.5; }
+html[data-tema="laguna"] .vacio-t { font-weight: 700; color: var(--lg-tinta); }
+html[data-tema="laguna"] .vacio-x { color: var(--lg-gris); }
+html[data-tema="laguna"] .notif-vacio { text-align: left; padding: 22px 0; color: var(--lg-gris2); }
+
+/* ============================================================
+   NOTIFICACIONES: el hilo, en el idioma de la laguna — blanco,
+   hairlines, el avatar en turquesa (el mismo de Novedades del afiliado)
+   ============================================================ */
+html[data-tema="laguna"] .notif-item, html[data-tema="laguna"] .notif-item.no-leida { background: none; border: 0; }
+html[data-tema="laguna"] .nh-hilo::before { background: var(--lg-linea); }
+html[data-tema="laguna"] .nh-hito i svg { fill: #fff; stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .nh-hito span { font-family: var(--lg-fuente); font-size: 11.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-gris2); }
+/* El color de cada remitente llega en línea desde el JS: en el modelo, uno solo. */
+html[data-tema="laguna"] .nh-av { background: var(--lg-turq-osc) !important; box-shadow: 0 0 0 3px #fff;
+  font-family: var(--lg-fuente); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+html[data-tema="laguna"] .notif-item.no-leida .nh-av::after { background: var(--lg-mal); border-color: #fff; animation: none; }
+html[data-tema="laguna"] .nh-bur { border: 0; border-radius: 4px 10px 10px 10px; background: #fff;
+  box-shadow: 0 0 0 1px var(--lg-linea); padding: 10px 12px 11px; transition: box-shadow .3s var(--lg-curva); }
+html[data-tema="laguna"] .notif-item:hover .nh-bur { box-shadow: 0 0 0 1px var(--lg-linea2), 0 10px 22px -18px color-mix(in oklab, var(--lg-azul) 60%, transparent); }
+html[data-tema="laguna"] .notif-item.no-leida .nh-bur { background: var(--lg-agua-f2);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-turq) 35%, transparent); }
+html[data-tema="laguna"] .notif-item .notif-remitente { font-size: 13px; font-weight: 700; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .notif-item.no-leida .notif-remitente { color: var(--lg-tinta); }
+html[data-tema="laguna"] .notif-item .notif-fecha { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .notif-item.no-leida .notif-fecha { color: var(--lg-tinta); }
+html[data-tema="laguna"] .notif-item .notif-snippet { font-size: 13.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .notif-item.no-leida .notif-snippet { color: var(--lg-tinta); }
+html[data-tema="laguna"] .notif-texto-full { font-size: 14px; line-height: 1.55; color: var(--lg-tinta); }
+html[data-tema="laguna"] .notif-texto-full a { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .notif-item .notif-adjunto { min-height: 36px; border: 0; border-radius: 999px; padding: 0 14px;
+  background: #fff; color: var(--lg-turq-osc); box-shadow: inset 0 0 0 1px var(--lg-linea2); font-weight: 600; }
+html[data-tema="laguna"] .notif-item .cta-form { min-height: 36px; border: 0; border-radius: 999px; padding: 0 14px;
+  background: var(--lg-turq); color: #fff; font-weight: 600; }
+
+/* ============================================================
+   TRÁMITES
+   ============================================================ */
+/* "Necesita tu atención": la laguna oscura, con trama de puntos y un halo */
+html[data-tema="laguna"] .tx-aten {
+  margin-top: 18px; border-radius: 10px; padding: 16px; border-left: 0; color: #fff;
+  background: var(--lg-azul); background-image: none;
+}
+html[data-tema="laguna"] .tx-aten::before {
+  opacity: .22; mix-blend-mode: normal;
+  background-image: radial-gradient(rgba(255, 255, 255, .35) 1px, transparent 1.2px); background-size: 4px 4px;
+}
+html[data-tema="laguna"] .tx-aten::after {
+  content: ""; position: absolute; right: -50px; bottom: -60px; width: 180px; height: 180px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--lg-lag) 50%, transparent), color-mix(in oklab, var(--lg-lag) 0%, transparent));
+}
+html[data-tema="laguna"] .tx-aten .k { font-size: 11.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-fluor-txt); gap: 8px; }
+html[data-tema="laguna"] .tx-punto { background: var(--lg-fluor); animation: lg-late 1.6s ease-in-out infinite; }
+html[data-tema="laguna"] .tx-aten .tit { font-family: var(--lg-fuente); font-size: 20px; font-weight: 600; text-transform: none;
+  letter-spacing: 0; line-height: 1.25; margin-top: 8px; }
+html[data-tema="laguna"] .tx-aten .exp { font-family: var(--lg-fuente); font-size: 12.5px; color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .tx-aten .msg { margin-top: 14px; padding: 12px; border: 0; border-radius: 8px;
+  background: rgba(255, 255, 255, .1); font-size: 14px; color: #fff; }
+html[data-tema="laguna"] .tx-aten .bts { gap: 8px; margin-top: 14px; }
+html[data-tema="laguna"] .tx-aten .bts button {
+  flex: 0 1 auto; height: 40px; padding: 0 18px; border-radius: 999px; border: 0;
+  font-family: var(--lg-fuente); font-size: 13.5px; font-weight: 600; letter-spacing: .02em; text-transform: none;
+  background: rgba(255, 255, 255, .12); color: #fff;
+}
+html[data-tema="laguna"] .tx-aten .bts button.cta { background: var(--lg-fluor); color: var(--lg-sobre-fluor); }
+html[data-tema="laguna"] .tx-aten .bts button.cta:hover { background: var(--lg-fluor-h); }
+html[data-tema="laguna"] .tx-aten :is(button, a):focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* los dos accesos: el principal en turquesa, el otro blanco */
+html[data-tema="laguna"] .tx-acc { gap: 10px; margin-top: 14px; }
+html[data-tema="laguna"] .tx-tile {
+  gap: 6px; padding: 14px; min-height: 104px; border: 0; border-radius: 8px; background: #fff;
+  box-shadow: 0 0 0 1px var(--lg-linea2); color: var(--lg-tinta);
+  transition: background-color .3s var(--lg-curva), transform .2s var(--lg-curva);
+}
+html[data-tema="laguna"] .tx-tile svg,
+html[data-tema="laguna"] .tx-tile:not(.cta) svg { stroke: var(--lg-turq-osc); stroke-width: 1.5; }
+html[data-tema="laguna"] .tx-tile b { font-family: var(--lg-fuente); font-size: 14.5px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; line-height: 1.3; }
+html[data-tema="laguna"] .tx-tile small { font-size: 12.5px; color: var(--lg-gris2); line-height: 1.35; }
+html[data-tema="laguna"] .tx-tile.cta { background: var(--lg-turq); color: #fff; box-shadow: none; }
+html[data-tema="laguna"] .tx-tile.cta:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .tx-tile.cta svg { stroke: #fff; }
+html[data-tema="laguna"] .tx-tile.cta small { color: #fff; }
+html[data-tema="laguna"] .tx-tile:active { transform: scale(.98); }
+html[data-tema="laguna"] .tx-buscar { margin-top: 12px; padding: 0; border: 0; background: none; }
+html[data-tema="laguna"] #trx-buscar-btn { height: 44px; min-height: 44px; }
+
+/* filtros por estado: pastillas, la elegida rellena (nunca una barra al costado) */
+html[data-tema="laguna"] .tx-fil { gap: 8px; margin-top: 20px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+html[data-tema="laguna"] .tx-fil button {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--lg-linea2); background: #fff; font-size: 13px; font-weight: 600; color: var(--lg-gris); white-space: nowrap;
+}
+html[data-tema="laguna"] .tx-fil button i { font-family: var(--lg-fuente); font-size: 12px; opacity: .85; margin-left: 0; font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .tx-fil button.activo { background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; font-weight: 700; }
+
+/* la bandeja: una sola lista blanca, con divisiones */
+html[data-tema="laguna"] #trx-lista:has(> .tx-r) { margin-top: 12px; background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px var(--lg-linea); overflow: hidden; }
+html[data-tema="laguna"] .tx-r { padding: 14px 14px 12px; border: 1px solid var(--lg-linea); border-radius: 10px; transition: background-color .2s var(--lg-curva); }
+html[data-tema="laguna"] .tramx-item { background: #fff !important; }
+html[data-tema="laguna"] .tramx-item:hover { background: var(--lg-agua-f2) !important; }
+html[data-tema="laguna"] #trx-lista > .tx-r { margin: 0; border: 0; border-radius: 0; border-bottom: 1px solid var(--lg-linea); }
+html[data-tema="laguna"] #trx-lista > .tx-r:last-child { border-bottom: 0; }
+html[data-tema="laguna"] .tx-r .tit { font-size: 14.5px; font-weight: 700; }
+html[data-tema="laguna"] .tx-r .exp { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .tx-tag { height: 24px; display: inline-flex; align-items: center; padding: 0 9px; font-size: 11.5px; }
+html[data-tema="laguna"] .tx-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 11px; }
+html[data-tema="laguna"] .tx-prog i { height: 4px; background: var(--lg-linea); }
+html[data-tema="laguna"] .tx-prog i.on { background: var(--lg-turq); }
+html[data-tema="laguna"] .tx-prog i.cur { background: linear-gradient(90deg, var(--lg-turq) 50%, var(--lg-linea) 50%); }
+html[data-tema="laguna"] .tx-prog i.al { background: var(--lg-mal); }
+html[data-tema="laguna"] .tx-r .pie { margin-top: 9px; font-size: 12.5px; color: var(--lg-gris); }
+html[data-tema="laguna"] .tx-r .pie b.nov,
+html[data-tema="laguna"] .tx-r .pie b.esp { color: var(--lg-mal); }
+html[data-tema="laguna"] .tramx-item .punto-novedad { background: var(--lg-mal); }
+
+/* las cajas (elegir el tipo, el formulario, el detalle): blancas, con el
+   filete turquesa arriba; el formulario, con la carátula de la laguna */
+html[data-tema="laguna"] .tramx-box { margin-top: 18px; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .tramx-box-enc { padding: 16px; background: #fff; background-image: none;
+  border-bottom: 1px solid var(--lg-linea); box-shadow: inset 0 3px 0 var(--lg-turq); }
+html[data-tema="laguna"] .tramx-box-enc .tit { font-family: var(--lg-fuente); font-size: 19px; font-weight: 600; color: var(--lg-tinta); letter-spacing: 0; }
+html[data-tema="laguna"] .tramx-box-enc .sub { margin-top: 3px; font-size: 13px; color: var(--lg-gris); }
+html[data-tema="laguna"] #trx-det-expediente { font-family: var(--lg-mono); font-weight: 600; letter-spacing: .02em; }
+html[data-tema="laguna"] #trx-form .tramx-box-enc { position: relative; overflow: hidden; background: var(--lg-azul); border-bottom: 0;
+  box-shadow: inset 0 -3px 0 var(--lg-fluor); }
+html[data-tema="laguna"] #trx-form .tramx-box-enc::after {
+  content: ""; position: absolute; right: -30px; top: -30px; width: 130px; height: 130px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--lg-fluor) 30%, transparent), color-mix(in oklab, var(--lg-fluor) 0%, transparent));
+}
+html[data-tema="laguna"] #trx-form .tramx-box-enc .tit { font-size: 21px; color: #fff; }
+html[data-tema="laguna"] #trx-form .tramx-box-enc .sub { display: inline-block; margin-top: 8px; padding: 3px 9px; border-radius: 999px;
+  font-family: var(--lg-mono); font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  background: var(--lg-fluor); color: var(--lg-sobre-fluor); }
+html[data-tema="laguna"] #trx-form .tramx-box-enc .sub:empty { display: none; }
+html[data-tema="laguna"] .tramx-box-body { padding: 16px; }
+html[data-tema="laguna"] #trx-tipos .tramx-box-body { padding: 0; }
+/* Los tipos llegan como botones con estilos en línea
+   (cargarTiposTramiteEmpresa): acá pasan a ser filas con el ícono en verde
+   agua a la izquierda, el código en monoespaciada y la flecha a la derecha. */
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item {
+  position: relative; display: block; margin: 0 !important; border: 0 !important; border-radius: 0;
+  border-bottom: 1px solid var(--lg-linea) !important; padding: 14px 40px 14px 64px !important;
+  color: var(--lg-tinta); font-size: 14.5px;
+}
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item:last-child { border-bottom: 0 !important; }
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item::before {
+  content: ""; position: absolute; left: 16px; top: 50%; width: 36px; height: 36px; margin-top: -18px; border-radius: 8px;
+  background: var(--lg-agua-f);
+}
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item::after {
+  content: ""; position: absolute; left: 24px; top: 50%; width: 20px; height: 20px; margin-top: -10px;
+  background: var(--lg-turq-osc);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h4'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item b { font-weight: 700; }
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item .sub2 {
+  display: inline-block; margin-top: 1px; font-family: var(--lg-mono); font-size: 11.5px !important; letter-spacing: .1em; color: var(--lg-gris2);
+}
+/* la flecha: un chevrón dibujado con dos bordes */
+html[data-tema="laguna"] #trx-tipos-lista > .tramx-item b::after {
+  content: ""; position: absolute; right: 18px; top: 50%; width: 7px; height: 7px; margin-top: -4px;
+  border-top: 1.5px solid var(--lg-gris2); border-right: 1.5px solid var(--lg-gris2); transform: rotate(45deg);
+}
+html[data-tema="laguna"] #trx-tipos-lista > .sub2 { padding: 16px; }
+
+/* el detalle y el chat del trámite */
+html[data-tema="laguna"] #trx-det-contenido .fila { border-top-color: var(--lg-linea); font-size: 14px; }
+html[data-tema="laguna"] #trx-det-contenido h2 { font-family: var(--lg-fuente) !important; font-size: 11px !important; font-weight: 700 !important;
+  letter-spacing: .18em !important; color: var(--lg-gris2) !important; border-top-color: var(--lg-linea) !important; }
+html[data-tema="laguna"] #trx-det-contenido a { color: var(--lg-turq-osc); text-decoration: none; border-bottom: 1px solid var(--lg-lag); }
+html[data-tema="laguna"] .tram-chat { margin: 6px -16px 12px; padding: 12px 12px 14px; background: var(--lg-claro); }
+html[data-tema="laguna"] .tram-chat-sistema { font-size: 12px; color: var(--lg-gris); background: #fff; border: 0; box-shadow: 0 0 0 1px var(--lg-linea);
+  border-radius: 999px; padding: 6px 12px; line-height: 1.4; }
+html[data-tema="laguna"] .tram-chat-fila.ajeno .tram-chat-burbuja { background: #fff; border: 0; border-radius: 12px 12px 12px 3px; box-shadow: 0 1px 0 rgba(0, 0, 0, .05); }
+html[data-tema="laguna"] .tram-chat-fila.propio .tram-chat-burbuja { background: var(--lg-agua-f); border-radius: 12px 12px 3px 12px; }
+html[data-tema="laguna"] .tram-chat-remitente { font-size: 11.5px; font-weight: 700; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-fila.propio .tram-chat-remitente { color: var(--lg-azul); }
+html[data-tema="laguna"] .tram-chat-texto { font-size: 13.5px; line-height: 1.45; }
+html[data-tema="laguna"] .tram-chat-meta { font-size: 11px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-chat-avatar { border: 0; box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .tram-chat-avatar-fallback { background: #fff !important; border: 0 !important; box-shadow: 0 0 0 1px var(--lg-linea);
+  color: var(--lg-turq-osc) !important; }
+html[data-tema="laguna"] .tram-chat-avatar-fallback svg { stroke: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-form { border: 0; border-radius: 8px; background: var(--lg-agua-f2);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 25%, transparent); }
+html[data-tema="laguna"] .tram-chat-form .tcf-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tram-chat-form .tcf-btn { height: 34px; border-radius: 999px; background: var(--lg-turq); color: #fff; font-weight: 600; }
+html[data-tema="laguna"] .tram-chat-form.inactivo { box-shadow: inset 0 0 0 1px var(--lg-linea); background: #fff; color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-chat-vacio { color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-chat-responder { height: 48px; padding: 0 16px; border-radius: 999px; border: 0; background: #fff;
+  box-shadow: 0 0 0 1px var(--lg-linea2); font-size: 14px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .tram-msg-adjunto { color: var(--lg-turq-osc); }
+
+/* el modal de un mensaje: azul liso con el filete flúor ABAJO */
+html[data-tema="laguna"] .modal-recibo-overlay { background: color-mix(in oklab, var(--lg-noche) 62%, transparent); }
+html[data-tema="laguna"] .modal-recibo { border-radius: 18px; font-family: var(--lg-fuente);
+  box-shadow: 0 30px 60px -30px color-mix(in oklab, var(--lg-azul) 70%, transparent); }
+html[data-tema="laguna"] .modal-recibo-enc { border-radius: 18px 18px 0 0; padding: 16px 18px; background: var(--lg-azul);
+  box-shadow: inset 0 -3px 0 var(--lg-fluor); }
+html[data-tema="laguna"] .modal-recibo-enc h3 { font-family: var(--lg-fuente); font-size: 18px; font-weight: 600; }
+html[data-tema="laguna"] .modal-recibo-cerrar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .12); }
+html[data-tema="laguna"] .modal-recibo-cerrar:focus-visible { outline-color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .modal-recibo-card { background: var(--lg-agua-f2); border-radius: 8px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-turq) 18%, transparent); }
+
+/* ============================================================
+   la tira de pestañas + Inicio y Salir flotando sobre ella
+   ============================================================ */
+html[data-tema="laguna"] .tabbar {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); padding: 6px 2px calc(12px + env(safe-area-inset-bottom));
+  background: #fff; border-top: 1px solid var(--lg-linea);
+  box-shadow: 0 -10px 24px -20px color-mix(in oklab, var(--lg-azul) 45%, transparent);
+}
+html[data-tema="laguna"] .tabbar button {
+  position: relative; padding: 0 1px; gap: 3px; color: var(--lg-gris2);
+  font-family: var(--lg-fuente); font-size: 11px; font-weight: 500; letter-spacing: .01em; line-height: 1.15;
+}
+html[data-tema="laguna"] .tabbar button .picon { width: 42px; height: 28px; border-radius: 999px; transition: background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .tabbar button svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.5; }
+html[data-tema="laguna"] .tabbar button.activa { color: var(--lg-turq-osc); font-weight: 700; }
+html[data-tema="laguna"] .tabbar button.activa .picon { background: var(--lg-turq); }
+html[data-tema="laguna"] .tabbar button.activa svg { stroke: #fff; }
+html[data-tema="laguna"] .tab-badge {
+  top: -5px; right: auto; left: 50%; margin-left: 7px; min-width: 19px; height: 19px; padding: 0 5px;
+  background: var(--lg-mal); border: 2px solid #fff; font-size: 11px; font-variant-numeric: tabular-nums;
+}
+html[data-tema="laguna"] .flota-sal {
+  bottom: calc(80px + env(safe-area-inset-bottom)); border: 0; background: var(--lg-azul);
+  box-shadow: 0 14px 28px -14px color-mix(in oklab, var(--lg-azul) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+html[data-tema="laguna"] .flota-sal a { font-family: var(--lg-fuente); transition: background-color .3s var(--lg-curva); }
+html[data-tema="laguna"] .flota-sal .flota-ini svg { stroke: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .flota-sal a:focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* escritorio: la columna sigue siendo la del teléfono (la misma decisión de
+   SDN para el afiliado); la tira se agrupa al centro y la pastilla de
+   Inicio/Salir va afuera de la columna, a la derecha */
+@media (min-width: 761px) {
+  html[data-tema="laguna"] .cont { max-width: 520px; }
+  html[data-tema="laguna"] .ident { padding-inline: max(20px, calc(50% - 260px)); }
+  html[data-tema="laguna"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 120px)); justify-content: center; gap: 4px; }
+  html[data-tema="laguna"] .tabbar button { font-size: 12px; }
+  html[data-tema="laguna"] .flota-sal { right: max(14px, calc(50% - 470px)); }
+}
+/* En el teléfono Inicio y Salir van en la barra de la identidad: sin sombra
+   de cosa que flota. */
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .ident { align-items: center; padding-block: 8px; }
+  html[data-tema="laguna"] .ident .flota-sal { box-shadow: none; }
+}
+
+/* El distintivo de entorno (_entorno.html, estilos en línea): arriba de la
+   fila de Inicio/Salir, a la izquierda, para que no tape la tira. */
+html[data-tema="laguna"] #distintivo-entorno { bottom: calc(126px + env(safe-area-inset-bottom)) !important; left: 14px !important; }
+
+/* Con los colores del sindicato, el encabezado va en el color base del
+   gremio con el filete en su acento (la misma decisión que en el afiliado). */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
+  background: var(--gremio-base-relleno, var(--gremio-base)); color: #fff;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: inset 0 3px 0 var(--gremio-acento);
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-nombre { color: #fff; border-right-color: var(--gremio-acento); }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { content: normal; }
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ---------- */
+html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuente); font-weight: 800; font-size: 30px; line-height: 1.05;
+  letter-spacing: -.015em; text-transform: none; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-inline-end: 0; padding-inline-end: 0; }
+}
+
+/* ---------- movimiento ---------- */
+@keyframes lg-late { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .tx-punto { animation: none; }
+  html[data-tema="laguna"] :is(.btn, .tx-tile, .tx-r, .nh-bur, .flota-sal a, .tabbar .picon) { transition: none; }
+}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Panel de empleador — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
   /* La condensada y las variables de fuente viven en marca.css, que ESTA
      plantilla no carga (tiene su propio CSS). Se declaran acá para que los
@@ -25,6 +26,25 @@
     --marca-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
     --marca-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
     --marca-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
+    /* Copia cruda de los cuatro colores del gremio (PLAN_TEMAS.md, D4),
+       como en trabajador.html: el modelo de diseño
+       (static/temas/<modelo>-empresa.css) redefine --marca-* con sus colores
+       por función y, con la paleta del sindicato, los deriva de ESTOS, que
+       nunca se pisan. */
+    --gremio-base: {{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --gremio-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --gremio-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
+    --gremio-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
+    {#- Texto SOBRE un relleno de acento, el acento COMO texto y los demás
+        derivados que CSS no sabe calcular solo, ya corregidos para que se
+        lean (temas.paleta_legible, la misma que la prueba de lectura). #}
+    {{ variables_legibles('gremio', marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238'), marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238'), (marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e')) or '#b23a2e', marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b')) }}
+    {#- El logo de Colm3na para fondo CLARO: el encabezado lo pone en su
+        versión para fondo oscuro, y un modelo con encabezado claro lo cambia
+        por esta (content: var(--logo-colmena-claro)). #}
+    {%- if marca_plataforma and marca_plataforma.logo %}
+    --logo-colmena-claro: url("/logo-plataforma");
+    {%- endif %}
   }
   * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
   html { -webkit-text-size-adjust:100%; }
@@ -32,28 +52,50 @@
     line-height:1.5; min-height:100dvh; padding-bottom:env(safe-area-inset-bottom); }
   /* El encabezado (cinta + barra) vive entero en marca.css. */
   .marca-enc.fija { z-index:10; }
-  .btn-flotante { position:fixed; bottom:84px; right:18px; width:42px; height:42px; border-radius:50%;
-    background:var(--marca-base); display:flex; align-items:center; justify-content:center;
-    text-decoration:none; border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
-  .btn-flotante svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
-  .btn-flotante:hover { opacity:.85; }
-  .btn-home { right:68px; }
-  .btn-home svg { stroke-width:2.2; }
-  .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; padding-bottom:98px; }
+  /* Inicio + Salir juntos, con rótulo (pauta de SDN para los dos modelos,
+     la misma pastilla que en trabajador.html): la cruz sola se leía como
+     "cerrar esta pantalla" y no como salir de la cuenta. Arriba de 760 px
+     flota abajo, sobre la tira de pestañas; en el teléfono va quieta en la
+     barra de la identidad (.ident), junto a la razón social. */
+  .flota-sal { position:fixed; right:14px; bottom:calc(80px + env(safe-area-inset-bottom)); z-index:40;
+    display:inline-flex; align-items:center; gap:2px; padding:4px; border-radius:999px;
+    background:var(--marca-base); border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 10px 24px -10px rgba(0,0,0,.45); }
+  .flota-sal a { display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 15px 0 12px;
+    border-radius:999px; color:#fff; text-decoration:none; font-size:14px; font-weight:600;
+    letter-spacing:.02em; transition:background-color .2s ease; }
+  .flota-sal a:hover { background:rgba(255,255,255,.1); }
+  .flota-sal a + a { box-shadow:-1px 0 0 rgba(255,255,255,.16); }
+  .flota-sal a:focus-visible { outline:2px solid var(--gremio-acento-txt, var(--marca-acento)); outline-offset:2px; }
+  .flota-sal svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .flota-sal .flota-ini svg { stroke:var(--gremio-acento-txt, var(--marca-acento)); }
+  /* La identidad: la razón social y el CUIT, chicos, en una barra propia
+     (antes la razón social era el título más grande de cada pestaña, y la
+     persona ya sabe cómo se llama su empresa). */
+  .ident { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 18px;
+    background:#fff; border-bottom:1px solid var(--linea); }
+  .ident-nombre { font-weight:600; font-size:14px; color:var(--tinta); }
+  .ident-cuit { font-size:12.5px; color:var(--gris); font-variant-numeric:tabular-nums; }
+  @media (max-width:760px) {
+    .ident { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px; row-gap:1px; }
+    .ident-nombre, .ident-cuit { grid-column:1; min-width:0; }
+    .ident .flota-sal { grid-column:2; grid-row:1 / span 2; align-self:center; position:static; box-shadow:none; }
+    .ident .flota-sal a { height:34px; padding:0 12px 0 10px; font-size:13px; }
+  }
+  .cont { max-width:520px; margin:0 auto; padding:22px 20px 40px; padding-bottom:150px; }
   h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
   .sub { color:var(--gris); margin-top:6px; font-size:15px; }
-  /* El título y su bajada caen sobre la franja de marca, que es oscura (ver
-     static/interior.css): en tinta sobre ese degradé no se leen. Solo en
-     escritorio, porque en teléfono la franja no se dibuja. */
-  @media (min-width:761px) {
-    body.franja .cont > h1 { color:#fff; }
-    body.franja .cont > .sub { color:rgba(255,255,255,.75); }
-    /* El estado vacío ("todavía no tenés…") es lo único que queda en texto
-       suelto arriba de todo cuando no hay nada cargado: con contenido real,
-       ahí van tarjetas claras. */
-    body.franja #notif-lista > .notif-vacio { color:rgba(255,255,255,.7); }
-  }
+  /* Una pestaña sin nada todavía: un estado vacío que dice qué va a
+     aparecer y qué hacer, no una línea suelta (mismo patrón que
+     .vacio-tab de trabajador.html). */
+  .vacio-tab { display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;
+    margin:18px 0 8px; padding:30px 22px; border:1px dashed var(--linea); border-radius:14px; background:#fff; }
+  .vacio-ico { display:grid; place-items:center; width:46px; height:46px; margin-bottom:4px; border-radius:50%;
+    background:color-mix(in srgb, var(--marca-acento) 16%, transparent); color:var(--tinta); }
+  .vacio-ico svg { width:22px; height:22px; stroke:currentColor; stroke-width:1.7; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .vacio-t { font-weight:650; font-size:15px; color:var(--tinta); }
+  .vacio-x { margin:0; max-width:36ch; font-size:13px; line-height:1.5; color:var(--gris); }
   .card { background:var(--card); border:1px solid var(--linea); border-radius:12px; padding:16px 18px; margin-top:16px; }
   .tpanel { display:none; }
   .tpanel.activo { display:block; }
@@ -72,9 +114,18 @@
     display:flex; align-items:center; justify-content:center; transition:background .15s; }
   .tabbar button svg { width:22px; height:22px; stroke-width:1.7; fill:none;
     stroke:#8a887f; transition:stroke .15s; }
-  .tabbar button.activa { color:var(--marca-acento); }
+  /* La activa: el acento corregido para leerse sobre blanco (un ámbar
+     crudo daba 1,8:1); el fondo de la píldora sigue en el acento. */
+  .tabbar button.activa { color:var(--gremio-acento-oscuro, var(--marca-acento)); }
   .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-acento) 15%, transparent); }
-  .tabbar button.activa svg { stroke:var(--marca-acento); }
+  .tabbar button.activa svg { stroke:var(--gremio-acento-oscuro, var(--marca-acento)); }
+  /* Escritorio: la tira de abajo del teléfono no se estira a todo el ancho:
+     las dos pestañas van juntas al centro, como en la app del afiliado. */
+  @media (min-width:761px) {
+    .tabbar { justify-content:center; gap:4px; }
+    .tabbar button { flex:0 0 120px; font-size:12px; }
+    .flota-sal { right:max(14px, calc(50% - 470px)); }
+  }
   .tabbar button { position:relative; }
   .tab-badge { position:absolute; top:2px; right:14px; background:#e5484d; color:#fff;
     font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:999px;
@@ -88,7 +139,7 @@
     background:color-mix(in srgb, var(--marca-acento) 7%, var(--papel)); }
   .notif-cab { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
   .notif-remitente { font-size:12.5px; font-weight:650; color:var(--marca-primario); }
-  .notif-item.no-leida .notif-remitente { color:var(--marca-acento); }
+  .notif-item.no-leida .notif-remitente { color:var(--tinta); }
   .notif-fecha { font-size:10.5px; color:var(--gris); white-space:nowrap; }
   .notif-snippet { font-size:12.5px; color:var(--gris); margin-top:4px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -122,7 +173,7 @@
   .tramx-input { display:block; width:100%; padding:11px 12px;
     border:1px solid color-mix(in srgb, var(--marca-primario) 35%, var(--linea)); border-radius:10px;
     font-family:inherit; font-size:14px; background:color-mix(in srgb, var(--marca-primario) 8%, #fff); color:var(--tinta); }
-  #tramx-form-campos { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
+  #trx-form-campos { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
   .tp-completo { grid-column:span 12; }
   .tp-mitad { grid-column:span 6; }
   .tp-tercio { grid-column:span 4; }
@@ -233,7 +284,6 @@
      trabajador. ============ */
   /* Cromo "Hilo" sobre el encabezado normalizado: el filo ámbar abarca la
      cinta y la barra; el degradé y el grano, solo la barra del sindicato. */
-  .marca-enc { border-left:5px solid var(--marca-acento); }
   .marca-barra { position:relative; overflow:hidden; border-bottom:none;
     background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
   .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
@@ -247,6 +297,9 @@
   .nh-hito i svg { width:18px; height:18px; fill:var(--papel); stroke:var(--gris); stroke-width:1.6; }
   .nh-hito span { font-family:var(--fuente-display); font-weight:700; font-size:14px; letter-spacing:1.6px; text-transform:uppercase; color:var(--gris); }
   .notif-item { display:flex; gap:8px; margin-bottom:9px; background:none; border:none; padding:0; position:relative; }
+  /* El "no leída" lo dice la burbuja, no la fila entera (antes quedaba un
+     fondo teñido y un filo de color detrás del avatar). */
+  .notif-item.no-leida { background:none; border:none; }
   .nh-av { width:34px; height:34px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
     font-family:var(--fuente-display); font-size:13px; font-weight:700; letter-spacing:.5px; color:#fff;
     box-shadow:0 0 0 3px var(--papel); margin-top:2px; position:relative; background:var(--marca-primario); }
@@ -269,7 +322,6 @@
   /* --- inicio de Trámites --- */
   #tp-tramites h1, #tp-tramites h2 { font-family:var(--fuente-display); font-weight:700; letter-spacing:.005em; }
   .tx-aten { position:relative; overflow:hidden; margin-top:16px; color:#fff; border-radius:14px; padding:13px 14px;
-    border-left:5px solid var(--marca-acento);
     background:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
   .tx-aten::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .tx-aten > * { position:relative; z-index:1; }
@@ -316,18 +368,36 @@
   @media (prefers-reduced-motion:reduce) { .tx-punto, .notif-item.no-leida .nh-av::after { animation:none; } }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño (PLAN_TEMAS.md): su hoja va DESPUÉS de todo lo de
+   arriba y cada selector empieza con html[data-tema="<modelo>"]. Solo se
+   carga la del modelo que se está viendo. #}
+{% if apariencia and apariencia.tema in ('laguna', 'noticiero') %}
+<link rel="stylesheet" href="/static/temas/{{ apariencia.tema }}-empresa.css?v={{ sello_static('temas/' ~ apariencia.tema ~ '-empresa.css') }}">
+{% endif %}
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}
 
+<div class="ident">
+  <div class="ident-nombre">{{ razon_social or 'Tu empresa' }}</div>
+  <div class="ident-cuit">CUIT {{ cuit }}</div>
+  {# Inicio y Salir: UNA pastilla con el rótulo a la vista (pauta de SDN).
+     Va adentro de .ident: en el teléfono queda en esta barra; arriba de
+     760 px flota abajo, sobre la tira de pestañas. #}
+  <nav class="flota-sal" aria-label="Inicio y salida">
+    <a class="flota-ini" href="/empresa/inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-home"/></svg>Inicio</a>
+    <a class="flota-salir" href="/empresa/salir"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-salir"/></svg>Salir</a>
+  </nav>
+</div>
+
 <div class="cont mesa-cont">
-  <h1>{{ razon_social or cuit }}</h1>
-  <div class="sub">CUIT {{ cuit }} · {{ sindicato }}</div>
 
   <!-- ============ PESTAÑA: NOTIFICACIONES ============ -->
   <div class="tpanel activo" data-mov-vista id="tp-notificaciones">
+    <h1 class="titulo-pagina">Notificaciones</h1>
+    <p class="sub">Los avisos que te manda {{ sindicato }}.</p>
     <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
   </div>
 
@@ -335,8 +405,8 @@
   <div class="tpanel" id="tp-tramites" data-mov-vista>
 
     <div id="trx-inicio" data-mov-vista>
-      <h1>Trámites</h1>
-      <p class="sub2">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
+      <h1 class="titulo-pagina">Trámites</h1>
+      <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
 
       <!-- "Necesita tu atención": el trámite con novedad más reciente (lo llena renderTramitesTrx) -->
       <div id="trx-aten"></div>
@@ -407,7 +477,7 @@
   </div>
 </div>
 
-<nav class="tabbar">
+<nav class="tabbar" aria-label="Secciones de la app">
   <button class="tab-t activa" data-tp="notificaciones">
     <span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
     Notificaciones
@@ -416,12 +486,6 @@
   <button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites<span class="tab-badge" id="badge-tramites-emp" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades or '' }}</span></button>
 </nav>
 
-<a class="btn-flotante btn-home" href="/empresa/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
-</a>
-<a class="btn-flotante" href="/empresa/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
-</a>
 
 <!-- Modal: detalle completo de un mensaje del chat de Trámites + responder -->
 <div class="modal-recibo-overlay" id="modal-recibo-overlay" onclick="if (event.target === this) cerrarModalRecibo()">
@@ -445,6 +509,8 @@
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+    <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
+    <g id="ic-salir"><path d="M14 4.5H6.5v15H14"/><path d="M11 12h9"/><path d="m17 8.5 3.5 3.5-3.5 3.5"/></g>
     <g id="ic-clip"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></g>
   </defs>
 </svg>
@@ -491,7 +557,11 @@ async function cargarNotificacionesEmpresa() {
 function renderNotificacionesEmpresa(items) {
   const lista = document.getElementById('notif-lista');
   if (!items.length) {
-    lista.innerHTML = '<div class="notif-vacio">Todavía no tenés notificaciones.</div>';
+    lista.innerHTML = `<div class="vacio-tab notif-vacio-tab">
+      <span class="vacio-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+      <span class="vacio-t">Todavía no tenés notificaciones</span>
+      <p class="vacio-x">Cuando tu sindicato te mande un aviso, lo vas a ver acá.</p>
+    </div>`;
     return;
   }
   // Hilo (esquema 2026-09-03): un hito por día, una burbuja por aviso con
@@ -657,7 +727,14 @@ if (document.getElementById('tp-tramites')) {
   window.filtrarTramitesTrx = function (k) { filtroTrx = k; renderFiltrosTrx(); renderListaTrx(); };
   function renderListaTrx() {
     const cont = document.getElementById('trx-lista');
-    if (!tramitesTrxCache.length) { cont.innerHTML = '<p class="sub2" style="margin-top:14px;">Todavía no presentaste ningún trámite.</p>'; return; }
+    if (!tramitesTrxCache.length) {
+      cont.innerHTML = `<div class="vacio-tab">
+        <span class="vacio-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+        <span class="vacio-t">Todavía no presentaste ningún trámite</span>
+        <p class="vacio-x">Tocá «Iniciar un trámite» para elegir un formulario de tu sindicato.</p>
+      </div>`;
+      return;
+    }
     const visibles = tramitesTrxCache.filter(t =>
       filtroTrx === 'todos' || (filtroTrx === 'curso' ? t.estado !== 'terminado' : t.estado === 'terminado'));
     if (!visibles.length) { cont.innerHTML = '<p class="sub2" style="margin-top:14px;">Nada que mostrar con este filtro.</p>'; return; }
@@ -1056,5 +1133,6 @@ if (document.getElementById('tp-tramites')) {
 }
 </script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 </body>
 </html>
