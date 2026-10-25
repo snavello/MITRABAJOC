@@ -152,7 +152,7 @@
       <a class="pt-fila pt-vid" href="/admin#reportes">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Reportes</span>
-          <span class="pt-fila-e">Recibos verificados, enviados y anónimos</span></span>
+          {% if estado_accesos and estado_accesos.get('reportes') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['reportes'] }}</span>{% else %}<span class="pt-fila-e">Recibos verificados, enviados y anónimos</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -168,7 +168,7 @@
       <a class="pt-fila pt-vid" href="/admin#conceptos">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Conceptos</span>
-          <span class="pt-fila-e">Catálogo del recibo</span></span>
+          {% if estado_accesos and estado_accesos.get('conceptos') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['conceptos'] }}</span>{% else %}<span class="pt-fila-e">Catálogo del recibo</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -193,7 +193,7 @@
       <a class="pt-fila pt-vid" href="/admin#trabajadores">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Trabajadores</span>
-          <span class="pt-fila-e">Alta, baja y datos de afiliados</span></span>
+          {% if estado_accesos and estado_accesos.get('trabajadores') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['trabajadores'] }}</span>{% else %}<span class="pt-fila-e">Alta, baja y datos de afiliados</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -202,7 +202,7 @@
         <a class="pt-fila pt-vid" href="/admin#tramites">
           <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
           <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
-            <span class="pt-fila-e">Formularios y seguimiento</span></span>
+            {% if estado_accesos and estado_accesos.get('tramites') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['tramites'] }}</span>{% else %}<span class="pt-fila-e">Formularios y seguimiento</span>{% endif %}</span>
           <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
         </a>
         {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
@@ -213,7 +213,7 @@
         <a class="pt-fila pt-vid" href="/admin#empleadores">
           <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg></span>
           <span class="pt-fila-txt"><span class="pt-fila-t">Empleadores</span>
-            <span class="pt-fila-e">Empresas, notificaciones y trámites</span></span>
+            {% if estado_accesos and estado_accesos.get('empleadores') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['empleadores'] }}</span>{% else %}<span class="pt-fila-e">Empresas, notificaciones y trámites</span>{% endif %}</span>
           <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
         </a>
         {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
@@ -223,7 +223,7 @@
       <a class="pt-fila pt-vid" href="/admin#listas">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-listas"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Listas</span>
-          <span class="pt-fila-e">Planillas que consultan los trámites</span></span>
+          {% if estado_accesos and estado_accesos.get('listas') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['listas'] }}</span>{% else %}<span class="pt-fila-e">Planillas que consultan los trámites</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -240,7 +240,7 @@
       <a class="pt-fila pt-vid" href="/admin#noticias">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Noticias</span>
-          <span class="pt-fila-e">Novedades para los afiliados</span></span>
+          {% if estado_accesos and estado_accesos.get('noticias') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['noticias'] }}</span>{% else %}<span class="pt-fila-e">Novedades para los afiliados</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -248,7 +248,7 @@
       <a class="pt-fila pt-vid" href="/admin#beneficios">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Beneficios</span>
-          <span class="pt-fila-e">Descuentos para afiliados</span></span>
+          {% if estado_accesos and estado_accesos.get('beneficios') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['beneficios'] }}</span>{% else %}<span class="pt-fila-e">Descuentos para afiliados</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -264,7 +264,7 @@
       <a class="pt-fila pt-vid" href="/admin#encuestas">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Encuestas</span>
-          <span class="pt-fila-e">Preguntar y leer los resultados</span></span>
+          {% if estado_accesos and estado_accesos.get('encuestas') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['encuestas'] }}</span>{% else %}<span class="pt-fila-e">Preguntar y leer los resultados</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -289,7 +289,7 @@
       <a class="pt-fila pt-vid" href="/admin#seccionales">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Seccionales</span>
-          <span class="pt-fila-e">Sedes y delegaciones</span></span>
+          {% if estado_accesos and estado_accesos.get('seccionales') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['seccionales'] }}</span>{% else %}<span class="pt-fila-e">Sedes y delegaciones</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -297,7 +297,7 @@
       <a class="pt-fila pt-vid" href="/admin#administradores">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Áreas y Usuarios</span>
-          <span class="pt-fila-e">Quién entra y qué puede tocar</span></span>
+          {% if estado_accesos and estado_accesos.get('usuarios') %}<span class="pt-fila-e pt-fila-dato">{{ estado_accesos['usuarios'] }}</span>{% else %}<span class="pt-fila-e">Quién entra y qué puede tocar</span>{% endif %}</span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}

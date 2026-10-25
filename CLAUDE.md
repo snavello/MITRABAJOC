@@ -112,6 +112,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
   `test_fechas.py` recorriendo los archivos con `ast`.
+- formato_ar.py — los números en formato argentino (miles con punto, decimales
+  con coma), puro; filtros de Jinja `miles`/`pesos`/`porcentaje`/`periodo_corto`/
+  `cuil` y su espejo `static/numeros_ar.js` (un test compara que den lo mismo).
 - cuit.py — el dígito verificador del CUIL/CUIT (módulo 11 de AFIP), ÚNICA
   implementación: `es_valido`, `normalizar`, `corregir`, `siguiente_libre`.
   Puro. `test_cuit.py` falla si otro .py escribe los pesos; `static/cuit.js`

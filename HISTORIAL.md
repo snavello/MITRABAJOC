@@ -8937,3 +8937,47 @@ quita los acentos de la sigla (salía «UNIÓF…») y el buscador encuentra el
 número con o sin tilde. Los ya cargados no se reescriben. Queda el mismo
 problema en el código de credencial (`db.generar_codigo_credencial`). Tests:
 `test_auditoria_afiliado.py`.
+
+**Bloque 5c, el panel desde Noticias hasta Apariencia** (Admin 0.73.01), 36
+de los 37 hallazgos aceptados (G5-11 era un error de los datos de prueba).
+Lo que más cambia: la bandeja de Trámites abre en «Sin terminar» con lo que
+más espera arriba y pastillas por a quién le toca, con el nombre de la
+persona (`tramites_del_sindicato` lo trae de `CuentaTrabajador` en una sola
+consulta) y un color por estado (ámbar lleno lo que le toca al sindicato,
+contorno lo que espera al afiliado, verde lo terminado); el constructor de
+Encuestas pasa a la hoja de trabajo del de Trámites (riel, «?», guardar al
+pie, vista del afiliado fija) sin cambiar lo que guarda, y el modo arranca
+sin elegir: `POST /admin/encuesta` rechaza una encuesta nueva sin modo, que
+antes nacía nominal sin avisar. Además: en la lista de encuestas, Resultados
+como acción principal y Cerrar/Borrar aparte con confirmación, cerradas en
+gris, «3.ª toma de …» y participación con porcentaje y barra; destino y
+leídos de Notificaciones en lenguaje de persona; beneficios con miniatura;
+Empleadores sin la columna Estado y con estados vacíos que invitan a actuar;
+Listas en filas con la clave dentro de la pastilla; en Usuarios la matriz de
+permisos plegada con un resumen de lo que cambia; y en Apariencia un botón de
+guardar al pie de cada formulario con aviso de cambios sin guardar, la prueba
+de lectura con muestras de color en vez de números y los interruptores en el
+color del modelo. Tests: `test_auditoria_panel_b.py`.
+
+**Bloque 5b, el panel desde la portada hasta Aprendizaje** (Admin 0.73.01),
+los 29 hallazgos aceptados. Lo que más cambia: **el padrón se pagina en el
+servidor** (`db.pagina_del_padron`, `GET /admin/trabajadores/lista`, que
+devuelve las filas ya dibujadas con `_padron_filas.html`; busca por CUIL o
+nombre sin importar tildes y el recorte por seccional sigue en la consulta,
+`db._consulta_padron`), las acciones de cada fila se agrupan en un menú
+«Más» y la ubicación repetida dejó de mostrarse; **la carga masiva tiene
+ensayo** (`/admin/trabajador/masivo` con `ensayo=1` recorre la lista con el
+mismo código sin escribir y devuelve cada línea que quedaría afuera con su
+motivo); y **la portada del panel dice el estado de cada acceso**
+(`db.estado_portada_panel`, contado en SQL con el mismo recorte por
+seccional, cláusula, área y permiso que las pestañas). Los números salen en
+formato argentino en un solo lugar (`formato_ar.py`, filtros de Jinja
+`miles`/`pesos`/`porcentaje`/`periodo_corto`/`cuil`, y su espejo
+`static/numeros_ar.js`, comparado por un test). Además: fechas de Reportes
+con «desde» y «hasta», el contador junto al título, «Enviado» solo cuando
+puede haber no enviados, paginación arriba y abajo; Reglas con título de
+alta y vigencias en castellano; Conceptos con leyenda visible; los formularios
+de alta con rótulos y grupos (estructura en `static/panel_formularios.css`);
+Aprendizaje con zona de carga visible y el porqué del botón deshabilitado.
+G4-04 junta el círculo de perfil con el saludo (72 px), lo que deshace el
+agrandado del 2026-10-23. Tests: `test_auditoria_panel_a.py`.

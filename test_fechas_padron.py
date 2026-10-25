@@ -116,7 +116,8 @@ def test_la_pantalla_del_admin_tiene_los_dos_campos_y_los_precarga():
     assert 'name="fecha_afiliacion" id="trab-fecha-afiliacion" type="date"' in html
     assert 'name="fecha_nacimiento" id="trab-fecha-nacimiento" type="date"' in html
     assert '"fecha_afiliacion":' in html and '"fecha_nacimiento":' in html, "el botón Editar las lleva"
-    assert "afiliado desde 2021-06-30" in html
+    # Al mostrar, en dd/mm/aaaa (auditoría de diseño G4-35); se guarda ISO.
+    assert "afiliado desde 30/06/2021" in html
     assert "fecha_afiliacion, fecha_nacimiento</p>" in html, "el orden del alta masiva las nombra"
 
 

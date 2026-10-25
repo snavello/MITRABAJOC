@@ -431,3 +431,29 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
 /* Auditoría G4-30: lugar al pie para la pastilla Inicio/Salir, así al
    llegar al final no tapa la última fila de accesos. */
 html[data-tema="laguna"] .pad.pt-accesos { padding-bottom: 96px; }
+
+/* Bloque 5b: panel A (auditoría 2026-10) */
+/* G4-01: la línea de cada acceso dice un dato real contado en el servidor
+   («206 activos · 38 sin registrar»). Números tabulares y un punto más de
+   tinta que la descripción fija, para que se lea como estado. */
+html[data-tema="laguna"] .pt-fila-e.pt-fila-dato,
+html[data-tema="laguna"] body.claro .pt-fila-e.pt-fila-dato {
+  color: var(--lg-gris); font-weight: 600; font-variant-numeric: tabular-nums lining-nums;
+}
+/* G4-04: en escritorio el círculo de perfil vuelve junto al saludo, en la
+   misma fila y alineado a su centro, a 72 px: a 650 px del «Hola» y con
+   130 px pesaba más que el saludo y no se entendía de quién era. */
+@media (min-width: 1040px) {
+  html[data-tema="laguna"] .fila-hola {
+    display: flex; grid-column: 1; grid-row: 1; justify-content: flex-start; align-items: center;
+    gap: 22px; margin: 20px 0 28px;
+  }
+  html[data-tema="laguna"] .fila-hola > div { margin: 0; }
+  html[data-tema="laguna"] .circulo-acento,
+  html[data-tema="laguna"] .circulo-acento:has(img) {
+    grid-column: auto; grid-row: auto; justify-self: auto; align-self: center; flex: none;
+    width: 72px; height: 72px; border-width: 2px;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--lg-fluor-txt) 16%, transparent);
+  }
+  html[data-tema="laguna"] .circulo-acento svg { width: 30px; height: 30px; }
+}
