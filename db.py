@@ -3895,42 +3895,105 @@ def padron_del_sindicato(s: Session, sindicato_id: int, alcance=None) -> list:
     así que lo que no entra acá no viaja a ninguna pantalla."""
     if alcance is not None and not alcance:
         return []
+    filas = s.exec(_consulta_padron(sindicato_id, alcance)
+                   .order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
+    return [_fila_padron(t, c) for t, c in filas]
+
+
+def _consulta_padron(sindicato_id: int, alcance=None):
+    """El SELECT del padrón con la persona unida por CUIL y el recorte de
+    seccional EN LA CONSULTA. Lo comparten el padrón entero y su página
+    (`pagina_del_padron`): un solo lugar donde se recorta."""
     q = (select(Trabajador, CuentaTrabajador)
          .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
          .where(Trabajador.sindicato_id == sindicato_id))
     if alcance is not None:
-        q = q.where(Trabajador.seccional_id.in_(list(alcance)))
-    filas = s.exec(q.order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
-    salida = []
+        q = q.where(Trabajador.seccional_id.in_(list(alcance) or [-1]))
+    return q
+
+
+# Tildes y eñes afuera para buscar por nombre en el SQL, como normTexto() del
+# panel: "Pérez" se encuentra escribiendo "perez".
+_CON_TILDE, _SIN_TILDE = "áéíóúüñàèìòù", "aeiouunaeiou"
+
+
+def pagina_del_padron(s: Session, sindicato_id: int, alcance=None, cuil: str = "",
+                      nombre: str = "", declarados: bool = False,
+                      pagina: int = 1, por_pagina: int = 50) -> dict:
+    """Una página del padrón para la pestaña Trabajadores (auditoría G4-19):
+    el listado ya no dibuja los miles de un gremio real juntos. Busca en el
+    servidor (CUIL por dígitos, nombre sin tildes ni mayúsculas palabra por
+    palabra, y los "declarados sin recibo") y pagina con LIMIT/OFFSET.
+
+    El recorte por seccional es el mismo de `padron_del_sindicato`
+    (`_consulta_padron`). Devuelve además `activos` y `sin_registrar` del
+    alcance entero, sin los filtros: son los números del título."""
+    from sqlalchemy import func
+    vacio = {"filas": [], "total": 0, "pagina": 1, "paginas": 1, "por_pagina": por_pagina,
+             "activos": 0, "sin_registrar": 0}
+    if alcance is not None and not alcance:
+        return vacio
+    base = _consulta_padron(sindicato_id, alcance)
+    q = base
+    digitos = "".join(ch for ch in (cuil or "") if ch.isdigit())
+    if digitos:
+        q = q.where(Trabajador.cuil.contains(digitos))
+    for palabra in _sin_tildes(nombre).split():
+        q = q.where(func.translate(func.lower(func.coalesce(CuentaTrabajador.nombre, "")),
+                                   _CON_TILDE, _SIN_TILDE).contains(palabra, autoescape=True))
+    if declarados:
+        q = q.where(func.coalesce(CuentaTrabajador.clave_hash, "") != "",
+                    CuentaTrabajador.nivel_fiabilidad == 2,
+                    CuentaTrabajador.nivel_origen == "mail_declarado")
+    total = s.exec(select(func.count()).select_from(q.subquery())).one()
+    paginas = max(1, -(-total // por_pagina))
+    pagina = min(max(1, pagina), paginas)
+    filas = s.exec(q.order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre, Trabajador.id)
+                   .offset((pagina - 1) * por_pagina).limit(por_pagina)).all()
+    sub = base.subquery()
+    activos, sin_registrar = s.exec(select(
+        func.count().filter(sub.c.activo),
+        func.count().filter(sub.c.activo & ~sub.c.registrado))).one()
+    return {"filas": [_fila_padron(t, c) for t, c in filas], "total": total,
+            "pagina": pagina, "paginas": paginas, "por_pagina": por_pagina,
+            "activos": activos or 0, "sin_registrar": sin_registrar or 0}
+
+
+def _sin_tildes(texto: str) -> str:
+    """Minúsculas y sin tildes, para comparar nombres (ver _CON_TILDE)."""
+    t = (texto or "").lower()
+    return t.translate(str.maketrans(_CON_TILDE, _SIN_TILDE))
+
+
+def _fila_padron(t: "Trabajador", c: Optional["CuentaTrabajador"]) -> dict:
+    """Una fila del padrón: el empadronamiento y la persona, en un dict."""
     vacios = {campo: "" for campo in ("nombre", *geo.CAMPOS_DOMICILIO)}
     vacios.update({"latitud": None, "longitud": None, "precision_geo": "sin_geo",
                    "telefono": "", "mail": "", "fecha_nacimiento": None})
-    for t, c in filas:
-        # Un afiliado sin fila de persona no debería existir (la crea el
-        # alta), pero si alguna vez pasara la pantalla tiene que mostrar la
-        # fila igual, vacía, y no romperse: un padrón que no se puede abrir
-        # es peor que un renglón incompleto.
-        fila = dict(_dict_personales(c) if c else vacios)
-        fila.update({
-            "id": t.id, "cuil": t.cuil, "sindicato_id": t.sindicato_id,
-            "registrado": t.registrado, "activo": t.activo,
-            "codigo_credencial": t.codigo_credencial,
-            "vigencia_credencial": t.vigencia_credencial,
-            "fecha_afiliacion": t.fecha_afiliacion,
-            "seccional_id": t.seccional_id,
-            "es_empleado_sindicato": t.es_empleado_sindicato,
-            "cuit_empleador": t.cuit_empleador,
-            # Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): solo tiene
-            # sentido si la persona ya eligió clave.
-            "tiene_cuenta": bool(c and c.clave_hash),
-            # ¿Este sindicato responde por esa cuenta? (ver `responde_por`).
-            # Si no, la pantalla no muestra su nivel ni sus botones.
-            "responde": responde_por(bool(c and c.clave_hash), t.registrado),
-            "nivel_fiabilidad": (c.nivel_fiabilidad or 1) if c else 1,
-            "nivel_origen": (c.nivel_origen or "") if c else "",
-        })
-        salida.append(fila)
-    return salida
+    # Un afiliado sin fila de persona no debería existir (la crea el
+    # alta), pero si alguna vez pasara la pantalla tiene que mostrar la
+    # fila igual, vacía, y no romperse: un padrón que no se puede abrir
+    # es peor que un renglón incompleto.
+    fila = dict(_dict_personales(c) if c else vacios)
+    fila.update({
+        "id": t.id, "cuil": t.cuil, "sindicato_id": t.sindicato_id,
+        "registrado": t.registrado, "activo": t.activo,
+        "codigo_credencial": t.codigo_credencial,
+        "vigencia_credencial": t.vigencia_credencial,
+        "fecha_afiliacion": t.fecha_afiliacion,
+        "seccional_id": t.seccional_id,
+        "es_empleado_sindicato": t.es_empleado_sindicato,
+        "cuit_empleador": t.cuit_empleador,
+        # Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): solo tiene
+        # sentido si la persona ya eligió clave.
+        "tiene_cuenta": bool(c and c.clave_hash),
+        # ¿Este sindicato responde por esa cuenta? (ver `responde_por`).
+        # Si no, la pantalla no muestra su nivel ni sus botones.
+        "responde": responde_por(bool(c and c.clave_hash), t.registrado),
+        "nivel_fiabilidad": (c.nivel_fiabilidad or 1) if c else 1,
+        "nivel_origen": (c.nivel_origen or "") if c else "",
+    })
+    return fila
 
 
 # ---------- ¿Este sindicato responde por la cuenta de esta persona? ----------
@@ -6279,6 +6342,127 @@ def contar_tramites_nuevos(sindicato_id: int, usuario_id: Optional[int] = None) 
                                   Tramite.estado == "iniciado")
         q = _recortar_tramites(s, q, sindicato_id, usuario_id)
         return len(s.exec(q).all())
+
+
+def estado_portada_panel(sindicato_id: int, usuario_id: int, modulos, permisos,
+                         tramites_nuevos: int = 0) -> dict:
+    """La línea de estado de cada acceso de la portada del panel (auditoría
+    de diseño 2026-10, G4-01): un dato real en vez de una descripción fija
+    -- «206 activos · 38 sin registrar», «3 vigentes». El operador entra
+    todos los días y tiene que enterarse de algo sin abrir cada pestaña.
+
+    Cada número se cuenta con el MISMO recorte que la pestaña a la que lleva
+    (alcance de seccional, área de los trámites, cláusula de Reportes): un
+    número que no coincide con lo que se ve al entrar es peor que ninguno.
+    Solo se cuenta lo que la persona puede abrir (módulo y permiso); un
+    acceso sin dato (Reglas, Convenio...) no aparece y la portada deja su
+    descripción. Todo son COUNT en SQL; los trámites usan la misma ruta que
+    el globo (`_recortar_tramites`)."""
+    import formato_ar as fa
+    from sqlalchemy import func
+
+    def puede(*x):
+        return any(p in permisos for p in x)
+
+    alcance = alcance_seccional(usuario_id)
+    super_admin = es_super_admin(usuario_id)
+    hoy = fechas.hoy_texto()
+    sal: dict = {}
+    recibos = "recibos" in modulos
+    with Session(engine) as s:
+        if recibos and puede("reportes"):
+            sind = s.get(Sindicato, sindicato_id)
+            q = select(func.count(), func.count().filter(ReciboVerificado.estado != "OK")) \
+                .select_from(ReciboVerificado).where(ReciboVerificado.sindicato_id == sindicato_id)
+            if not (sind and sind.clausula_confidencialidad):
+                q = q.where(ReciboVerificado.enviado_sindicato == True)  # noqa: E712
+            if alcance is not None:
+                cuiles = select(Trabajador.cuil).where(
+                    Trabajador.sindicato_id == sindicato_id,
+                    Trabajador.seccional_id.in_(list(alcance) or [-1]))
+                q = q.where(ReciboVerificado.cuil.in_(cuiles))
+            total, con_dif = s.exec(q).one()
+            sal["reportes"] = (fa.contar(total, "recibo", "recibos") + " · "
+                               + fa.porcentaje(round(100 * con_dif / total)) + " con diferencias"
+                               ) if total else "Todavía no hay recibos verificados"
+        if recibos and puede("conceptos"):
+            total, pend = s.exec(select(func.count(), func.count().filter(Concepto.pendiente_revision))
+                                 .where(Concepto.sindicato_id == sindicato_id)).one()
+            sal["conceptos"] = (fa.contar(total, "concepto", "conceptos")
+                                + (f" · {fa.miles(pend)} por revisar" if pend else "")
+                                ) if total else "El catálogo está vacío"
+        if puede("trabajadores"):
+            sub = _consulta_padron(sindicato_id, alcance).subquery() \
+                if alcance is None or alcance else None
+            if sub is None:
+                activos = sin_reg = 0
+            else:
+                activos, sin_reg = s.exec(select(
+                    func.count().filter(sub.c.activo),
+                    func.count().filter(sub.c.activo & ~sub.c.registrado))).one()
+            sal["trabajadores"] = (fa.contar(activos, "activo", "activos")
+                                   + (f" · {fa.miles(sin_reg)} sin registrar" if sin_reg
+                                      else ", todos registrados")
+                                   ) if activos else "Todavía no hay afiliados cargados"
+        for clave, modelo, sing, plur in (("noticias", Noticia, "vigente", "vigentes"),
+                                          ("beneficios", Beneficio, "vigente", "vigentes")):
+            if clave in modulos and puede(clave):
+                n = sum(1 for x in s.exec(select(modelo).where(
+                            modelo.sindicato_id == sindicato_id,
+                            modelo.fecha_desde <= hoy, modelo.fecha_hasta >= hoy)).all()
+                        if publicacion_visible(x.destino_seccionales or [], alcance))
+                ninguna = "Ninguna vigente" if clave == "noticias" else "Ninguno vigente"
+                sal[clave] = fa.contar(n, sing, plur) if n else ninguna
+        if "encuestas" in modulos and puede("encuestas", "encuestas_resultados"):
+            q = select(Encuesta).where(Encuesta.sindicato_id == sindicato_id,
+                                       Encuesta.publicada == True)  # noqa: E712
+            if alcance is not None:
+                q = q.where(or_(Encuesta.seccional_id.in_(list(alcance) or [-1]),
+                                Encuesta.seccional_id == None))   # noqa: E711
+            abiertas = sum(1 for e in s.exec(q).all() if encuestas.estado(
+                e.publicada, e.fecha_desde, e.fecha_hasta, hoy, e.cerrada_en) == encuestas.ABIERTA)
+            sal["encuestas"] = fa.contar(abiertas, "abierta", "abiertas") if abiertas \
+                else "Ninguna abierta"
+        if puede("seccionales"):
+            q = select(func.count(), func.count().filter(
+                Seccional.precision_geo.not_in(list(geo.PRECISIONES_SECCIONAL)))) \
+                .where(Seccional.sindicato_id == sindicato_id)
+            if alcance is not None:
+                q = q.where(Seccional.id.in_(list(alcance) or [-1]))
+            total, sin_ubicar = s.exec(q).one()
+            if total:
+                sal["seccionales"] = (fa.contar(total, "seccional", "seccionales")
+                                      + (f" · {fa.miles(sin_ubicar)} sin ubicar" if sin_ubicar else ""))
+        if puede("listas"):
+            q = select(func.count()).select_from(ListaSindicato).where(
+                ListaSindicato.sindicato_id == sindicato_id)
+            if alcance is not None:
+                q = q.where(ListaSindicato.seccional_id.in_(list(alcance) or [-1]))
+            n = s.exec(q).one()
+            sal["listas"] = fa.contar(n, "lista cargada", "listas cargadas") if n \
+                else "Ninguna lista cargada"
+        if "empleadores" in modulos and puede("emp_empresas"):
+            n = s.exec(select(func.count()).select_from(Empleador).where(
+                Empleador.sindicato_id == sindicato_id, Empleador.activo == True)).one()  # noqa: E712
+            sal["empleadores"] = fa.contar(n, "empresa activa", "empresas activas") if n \
+                else "Ninguna empresa cargada"
+        if super_admin:
+            n = s.exec(select(func.count()).select_from(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sindicato_id,
+                UsuarioSindicato.activo == True)).one()  # noqa: E712
+            sal["usuarios"] = fa.contar(n, "usuario activo", "usuarios activos")
+    if "tramites" in modulos and puede("tramites_recibidos"):
+        with Session(engine) as s:
+            q = select(Tramite.estado).where(Tramite.sindicato_id == sindicato_id,
+                                             Tramite.estado.not_in(["iniciado", "terminado"]))
+            en_curso = len(s.exec(_recortar_tramites(s, q, sindicato_id, usuario_id)).all())
+        partes = []
+        if tramites_nuevos:
+            partes.append(f"{fa.miles(tramites_nuevos)} sin leer")
+        if en_curso:
+            partes.append(f"{fa.miles(en_curso)} en curso")
+        sal["tramites"] = " · ".join(partes) or "Nada pendiente"
+    return sal
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:

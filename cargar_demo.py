@@ -63,7 +63,7 @@ SINDICATOS = [
         ],
         "formulas": [
             ("JUB", "Jubilación = 11% del remunerativo", "0.11 * base_remunerativa", 1.0),
-            ("SINDMET", "Cuota UOM = 2.5% del remunerativo", "0.025 * base_remunerativa", 1.0),
+            ("SINDMET", "Cuota UOM = 2,5% del remunerativo", "0.025 * base_remunerativa", 1.0),
         ],
         # (nombre, ve_todas, domicilio). Sede Central es la única con
         # ve_todas: sus usuarios alcanzan a todo el país, los de una

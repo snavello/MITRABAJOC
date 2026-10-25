@@ -502,3 +502,24 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
 /* Auditoría G4-30: lugar al pie para la pastilla Inicio/Salir, así al
    llegar al final no tapa la última fila de accesos. */
 html[data-tema="noticiero"] .pad.pt-accesos { padding-bottom: 96px; }
+
+/* Bloque 5b: panel A (auditoría 2026-10) */
+/* G4-01: la línea de cada acceso dice un dato real contado en el servidor. */
+html[data-tema="noticiero"] .pt-fila-e.pt-fila-dato,
+html[data-tema="noticiero"] body.claro .pt-fila-e.pt-fila-dato {
+  color: var(--nt-tinta-1); font-weight: 600; font-variant-numeric: tabular-nums lining-nums;
+}
+/* G4-05: en el teléfono el saludo se parte en dos y, con interlineado .92,
+   la coma de «HOLA,» tocaba la línea de abajo. */
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .hola,
+  html[data-tema="noticiero"] body.claro .hola { line-height: 1.02; }
+}
+/* G4-06: en escritorio la tarjeta del Panel Sindical va a la columna
+   izquierda, pegada debajo del saludo: quedaba abajo a la derecha con un
+   hueco de 600 × 200 px en el medio y parecía un aviso secundario. La foto
+   respira a la derecha. */
+@media (min-width: 1040px) {
+  html[data-tema="noticiero"] .fila-hola { padding-bottom: 30px; }
+  html[data-tema="noticiero"] .pt-hero { margin: 0; width: min(640px, 100%); }
+}

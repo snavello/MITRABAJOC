@@ -777,3 +777,60 @@ html[data-tema="laguna"] .emptram-subtab:hover { color: var(--lg-tinta); backgro
 html[data-tema="laguna"] .emptram-subtab.activa {
   background: transparent; color: var(--lg-tinta); font-weight: 700; box-shadow: inset 0 -2px 0 var(--lg-azul);
 }
+
+/* Bloque 5b: panel A (auditoría 2026-10) */
+/* La estructura está en static/panel_formularios.css; acá, el color y la
+   letra de Laguna para Reportes, Reglas, Conceptos, Trabajadores y
+   Aprendizaje. */
+html[data-tema="laguna"] .f-campo > span { font: 600 12.5px/1.2 var(--lg-fuente); color: var(--lg-gris); }
+html[data-tema="laguna"] .wrap .filtros-rotulados .f-campo input[type=text] { min-width: 170px; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .wrap .filtros-rotulados .f-campo { flex: 1 1 140px; }
+  html[data-tema="laguna"] .wrap .filtros-rotulados .f-campo input[type=text] { flex: none; min-width: 0; }
+  html[data-tema="laguna"] .wrap .filtros-rotulados .f-campo :is(input, select) { width: 100%; min-width: 0; }
+}
+html[data-tema="laguna"] .lista-total { font: 700 14px/1.3 var(--lg-fuente); color: var(--lg-tinta); }
+html[data-tema="laguna"] .alta-titulo,
+html[data-tema="laguna"] .form-grupos .alta-grupo > legend { font-family: var(--lg-fuente); color: var(--lg-tinta); }
+/* El ejemplo gris del campo no tiene que parecer un dato ya cargado (G4-23). */
+html[data-tema="laguna"] :is(#panel-reportes, #panel-formulas, #panel-conceptos, #panel-trabajadores) :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--lg-gris2) 62%, #fff);
+}
+/* Pastillas: el tipo del concepto (G4-13) y las neutras (G4-14). */
+html[data-tema="laguna"] .tag.tag-ingreso { color: var(--lg-turq-osc); background: var(--lg-agua-f); }
+html[data-tema="laguna"] .tag.tag-descuento,
+html[data-tema="laguna"] .tag.tag-neutro { color: var(--lg-gris); background: var(--lg-claro); box-shadow: none; }
+html[data-tema="laguna"] .tag.tag-neutro-fuerte { color: var(--lg-tinta); }
+/* Sin el tinte de fila por tipo: la pastilla ya lo dice. */
+html[data-tema="laguna"] .wrap tr.fila-concepto:not(.pend) > td { background: transparent; }
+/* El padrón: una sola línea de botones por fila (G4-15). */
+html[data-tema="laguna"] .wrap .fila-trabajador > td.col-acciones { white-space: nowrap !important; min-width: 0; }
+html[data-tema="laguna"] .wrap details.menu-mas > summary {
+  font: 600 12.5px/1 var(--lg-fuente); padding: 7px 12px; background: #fff; color: var(--lg-tinta);
+  box-shadow: inset 0 0 0 1px var(--lg-linea2);
+  transition: box-shadow var(--mov-rapido, 180ms) var(--lg-curva), background-color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .wrap details.menu-mas > summary:hover,
+html[data-tema="laguna"] .wrap details.menu-mas[open] > summary { background: var(--lg-claro); box-shadow: inset 0 0 0 1px var(--lg-gris2); }
+html[data-tema="laguna"] .wrap .menu-mas-lista { border-color: var(--lg-linea); border-radius: 8px; }
+html[data-tema="laguna"] .wrap .menu-mas-lista .menu-mas-item {
+  font: 500 13px/1.3 var(--lg-fuente); color: var(--lg-tinta); background: none; box-shadow: none; margin: 0; height: auto;
+}
+html[data-tema="laguna"] .wrap .menu-mas-lista .menu-mas-item:hover { background: var(--lg-claro); }
+html[data-tema="laguna"] .wrap .menu-mas-lista .menu-mas-item.peligro-txt { color: var(--lg-mal); }
+html[data-tema="laguna"] .wrap .menu-mas-lista .menu-mas-item.peligro-txt:hover { background: var(--lg-mal-f); }
+/* El alta manual: la ayuda del CUIL y los grupos. */
+html[data-tema="laguna"] .campo-ayuda { color: var(--lg-gris2); }
+html[data-tema="laguna"] .form-grupos .alta-grupo + .alta-grupo { padding-top: 22px; border-top: 1px solid var(--lg-linea); }
+/* El ejemplo de la carga masiva, apagado y afuera del cuadro (G4-25). */
+html[data-tema="laguna"] .masivo-ejemplo { background: var(--lg-suave); border-color: var(--lg-linea2); color: var(--lg-gris2); }
+/* La zona para subir recibos (G4-27) y el botón apagado legible (G4-29). */
+html[data-tema="laguna"] .drop.drop-recibos { border: 1.5px dashed var(--lg-linea2); border-radius: 8px; background: #fff; }
+html[data-tema="laguna"] .drop.drop-recibos:hover,
+html[data-tema="laguna"] .drop.drop-recibos.arrastrando { border-color: var(--lg-turq); background: var(--lg-agua-f2); }
+html[data-tema="laguna"] .drop-recibos .drop-ico { stroke: var(--lg-turq); }
+html[data-tema="laguna"] .drop-recibos .drop-t { font-family: var(--lg-fuente); color: var(--lg-tinta); }
+html[data-tema="laguna"] #ap-btn:disabled { color: var(--lg-gris) !important; background: var(--lg-claro2) !important; }
+html[data-tema="laguna"] .ap-falta { color: var(--lg-gris); }
+html[data-tema="laguna"] :is(#form-masivo, #form-aprender) .oculto { display: none !important; }
+html[data-tema="laguna"] .wrap textarea.masivo-lista { font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
