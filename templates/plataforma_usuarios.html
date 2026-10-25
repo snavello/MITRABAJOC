@@ -1,60 +1,131 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Colm3na — Usuarios de plataforma</title>
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
+{% set _primario = marca_plataforma.color_primario if marca_plataforma else '#152238' %}
+{% set _acento = marca_plataforma.color_acento if marca_plataforma else '#b23a2e' %}
+{% set _apoyo = marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' %}
 <style>
+  /* Usuarios de plataforma, dentro del sistema (2026-10-25): el mismo
+     encabezado, el mismo riel y los mismos flotantes que /plataforma, y la
+     hoja del modelo (static/temas/<modelo>-plataforma.css). Antes era una
+     página suelta con fondo oscuro propio y fuera de la tira de pestañas. */
   :root {
-    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
-    --acento: {{ marca_plataforma.color_acento if marca_plataforma else '#E5188F' }};
-    --ok: #3ecfae; --alerta: #ff8c42;
+    --marca-base: {{ _primario }};
+    --marca-primario: {{ _primario }};
+    --marca-acento: {{ _acento }};
+    --marca-apoyo: {{ _apoyo }};
+    {{ variables_legibles('marca', _primario, _primario, _acento, _apoyo) }}
+    --tinta: {{ _primario }};
+    --papel:#faf9f6; --linea:#e2ded5; --gris:#5c5a54;
   }
-  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
-  body { min-height:100vh; padding:26px 16px 60px; color:#fff;
-    background:linear-gradient(160deg, #0d1626 20%, var(--tinta) 80%); }
-  .pagina { max-width:1000px; margin:0 auto; }
-  a.volver { color:rgba(255,255,255,.6); font-size:13px; text-decoration:none; }
-  h1 { font-size:24px; margin:6px 0 4px; }
-  .lede { font-size:13.5px; color:rgba(255,255,255,.6); margin-bottom:20px; }
-  .aviso { padding:10px 14px; border-radius:10px; margin-bottom:16px; font-size:13.5px;
-    border:1px solid var(--ok); background:color-mix(in srgb, var(--ok) 14%, transparent); }
-  .aviso.mal { border-color:var(--alerta); background:color-mix(in srgb, var(--alerta) 14%, transparent); }
-  .caja { background:rgba(9,15,26,.5); border:1px solid rgba(255,255,255,.12); border-radius:16px;
-    padding:18px 18px; margin-bottom:20px; }
-  .caja h2 { font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--acento); margin-bottom:14px; }
-  label { display:block; font-size:11px; letter-spacing:.5px; text-transform:uppercase;
-    color:rgba(255,255,255,.5); margin:0 0 4px; }
-  input, select { width:100%; padding:9px 11px; border-radius:9px; border:1px solid rgba(255,255,255,.18);
-    background:rgba(255,255,255,.06); color:#fff; font-size:14px; }
-  .fila { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
-  .fila > div { flex:1; min-width:130px; }
-  button { padding:9px 15px; border:0; border-radius:9px; cursor:pointer; font-size:13.5px; font-weight:600; }
-  .primario { background:var(--acento); color:#fff; }
-  .chico { padding:6px 10px; font-size:12px; background:rgba(255,255,255,.12); color:#fff; }
-  .peligro { background:color-mix(in srgb, var(--alerta) 30%, #3a2a1a); color:#ffd8bf; }
-  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:4px; }
-  th { text-align:left; font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
-    color:rgba(255,255,255,.45); padding:7px 8px; border-bottom:1px solid rgba(255,255,255,.15); }
-  td { padding:9px 8px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top; }
-  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; }
-  .pill.superadmin { background:var(--acento); color:#fff; }
-  .pill.admin { background:rgba(255,255,255,.18); color:#fff; }
-  .pill.inactivo { background:#555; color:#ccc; }
-  .pill.pend { background:#ffd23f; color:#1b1508; }
-  .sub { font-size:11px; color:rgba(255,255,255,.45); }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:system-ui,sans-serif; background:#fff; color:#1b1b1b; line-height:1.5;
+    min-height:100vh; display:flex; flex-direction:column; }
+  .app-bar-fija { position:sticky; top:0; z-index:21; }
+  .flota-sesion { position:fixed; right:20px; bottom:20px; z-index:40; display:flex; align-items:center; gap:8px; }
+  .btn-cerrar, .btn-home { display:flex; align-items:center; justify-content:center; gap:7px;
+    height:42px; padding:0 16px 0 13px; border-radius:999px; text-decoration:none;
+    background:var(--marca-base); color:#fff; font-size:13.5px; font-weight:600; }
+  .btn-cerrar svg, .btn-home svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.9; fill:none;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .wrap { width:100%; max-width:1000px; margin:0 auto; padding:24px 22px 110px; flex:1 0 auto; }
+  .nav-strip { display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    padding:10px 14px; background:#fff; border-bottom:1px solid var(--linea); }
+  .ptab { display:flex; align-items:center; gap:6px; flex-shrink:0; padding:7px 11px; border-radius:9px;
+    color:var(--gris); font-size:13px; background:#fff; border:1px solid var(--linea); white-space:nowrap; text-decoration:none; }
+  .ptab svg { display:none; }
+  .ptab.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  .bajada { margin:0 0 16px; max-width:760px; }
+  .muted { color:var(--gris); font-size:13px; }
+  .ayuda { display:block; color:var(--gris); font-size:12.5px; line-height:1.45; }
+  .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-bottom:14px; }
+  .msg.ok { background:#eef5e7; color:#2b5d14; }
+  .msg.err { position:relative; padding-left:44px; background:#fff; color:#2b1d1b; border:1px solid color-mix(in srgb, #b3261e 32%, transparent); }
+  .msg.err::before { content:""; position:absolute; left:15px; top:13px; width:18px; height:18px; background:#b3261e;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .card { background:#fff; border:1px solid var(--linea); border-radius:12px; padding:18px; margin-top:14px; }
+  .card h3 { font-size:15px; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; align-items:end; }
+  .campo { display:flex; flex-direction:column; gap:4px; }
+  label { font-size:12.5px; color:var(--gris); }
+  input, select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; width:100%; background:#fff; }
+  button { padding:10px 18px; background:var(--tinta); color:#fff; border:none; border-radius:7px; cursor:pointer;
+    font-size:14px; font-weight:600; font-family:inherit; margin-top:6px; }
+  button.sec { background:#fff; color:var(--tinta); border:1px solid var(--linea); }
+  button.mini { padding:5px 11px; font-size:12.5px; margin:0; background:#fff; color:var(--tinta);
+    border:1px solid var(--linea); border-radius:999px; }
+  button.mini.borrar { background:none; color:#b3261e; border-color:transparent; }
+  .tabla-ancha { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; min-width:680px; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid #eee; vertical-align:top; }
+  th { font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--gris); }
+  .nowrap { white-space:nowrap; }
+  .sub { font-size:12.5px; color:var(--gris); }
+  /* Rol y estado: palabra + color fijo de estado, no la marca. */
+  .pill { display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+  .pill.superadmin { background:#e7ecf3; color:#1b2a44; }
+  .pill.admin { background:#eeeeee; color:#393c41; }
+  .pill.activo { background:#eef5e7; color:#2b5d14; }
+  .pill.inactivo { background:#eeeeee; color:#5c5e62; }
+  .pill.pend { background:#fbf2e3; color:#8a5208; }
+  /* Las acciones de la fila: Editar y Resetear clave abren su formulario
+     debajo de la fila; Desactivar es texto rojo y pide confirmar. */
   .acciones { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-  .acciones input { width:120px; padding:5px 8px; font-size:12px; }
-  details summary { cursor:pointer; color:var(--acento); font-size:12px; }
-  details .cont { margin-top:8px; }
+  .acciones form { display:inline; }
+  .fila-form td { background:#fafafa; }
+  .fila-form .acciones input, .fila-form .acciones select { width:auto; min-width:180px; }
+  .fila-form .acciones button { margin-top:0; }
+  .acerca-pie { margin-top:auto; text-align:center; padding:0 0 24px; }
+  .btn-acerca { background:none; border:none; margin:0; padding:6px; cursor:pointer; color:var(--gris);
+    font-size:12.5px; font-family:inherit; text-decoration:underline; text-underline-offset:4px; }
+  #acerca-box { display:none; position:fixed; inset:0; background:rgba(8,12,20,.45); z-index:200; align-items:center; justify-content:center; padding:16px; }
+  #acerca-box.abierto { display:flex; }
+  .acerca-caja { background:#fff; border-radius:12px; padding:22px 24px; max-width:300px; width:100%; }
+  .acerca-caja h3 { margin-bottom:12px; font-size:16px; }
+  .acerca-fila { display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13.5px; }
+  @media (max-width:760px) {
+    .grid { grid-template-columns:minmax(0, 1fr); }
+    .acerca-pie { padding-bottom:84px; }
+    .nav-strip.mas-derecha { -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+      mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  }
 </style>
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-plataforma.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+{% endif %}
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 </head>
 <body>
-<div class="pagina">
-  <a class="volver" href="/plataforma/inicio">← Volver al panel</a>
-  <h1>Usuarios de plataforma</h1>
-  <p class="lede">Quién puede entrar a la administración y a Entornos. Solo un superadmin gestiona esta lista; cada acción queda registrada.</p>
+{% include "_entorno.html" %}
+<div class="app-bar-fija">
+{% set enc_plataforma = True %}
+{% with marca_plataforma = (dict(marca_plataforma, logo_oscuro=False) if marca_plataforma and marca_plataforma.logo else marca_plataforma) %}
+{% include "_encabezado.html" %}
+{% endwith %}
+<div class="flota-sesion">
+<a class="btn-home" href="/plataforma/inicio" title="Inicio">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+  <span class="btn-rot">Inicio</span>
+</a>
+<a class="btn-cerrar" href="/plataforma/salir" title="Salir">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg>
+  <span class="btn-rot">Salir</span>
+</a>
+</div>
+{% set nav_pagina = 'usuarios' %}
+{% include "_plataforma_nav.html" %}
+</div>
+
+<div class="wrap">
+  <h1 class="titulo-pagina">Usuarios de plataforma</h1>
+  <p class="muted bajada">Quién puede entrar a la administración y a Entornos. Solo un superadmin gestiona esta lista; cada acción queda registrada.</p>
 
   {% set avisos = {
     'creado': ('ok', 'Usuario creado. La clave es transitoria: al primer ingreso deberá cambiarla y completar sus datos.'),
@@ -67,70 +138,76 @@
     'ultimo': ('mal', 'No se puede: es el último superadmin activo.'),
   } %}
   {% if aviso and aviso in avisos %}
-    <div class="aviso {{ 'mal' if avisos[aviso][0]=='mal' else '' }}">{{ avisos[aviso][1] }}</div>
+    <div class="msg {{ 'err' if avisos[aviso][0]=='mal' else 'ok' }}" role="status">{{ avisos[aviso][1] }}</div>
   {% endif %}
 
-  <div class="caja">
-    <h2>Crear usuario</h2>
+  <div class="card">
+    <h3>Crear usuario</h3>
     <form method="post" action="/plataforma/usuarios">
-      <div class="fila">
-        <div><label>Usuario</label><input name="usuario" placeholder="jperez" required></div>
-        <div><label>Nombre</label><input name="nombre" placeholder="Juan Pérez"></div>
-        <div><label>Rol</label>
-          <select name="rol"><option value="admin">Admin</option><option value="superadmin">Superadmin</option></select>
+      <div class="grid">
+        <div class="campo"><label for="nu-usuario">Usuario</label><input id="nu-usuario" name="usuario" placeholder="Ej.: jperez" required></div>
+        <div class="campo"><label for="nu-nombre">Nombre</label><input id="nu-nombre" name="nombre" placeholder="Ej.: Juan Pérez"></div>
+        <div class="campo"><label for="nu-rol">Rol</label>
+          <select id="nu-rol" name="rol"><option value="admin">Admin</option><option value="superadmin">Superadmin</option></select>
         </div>
-        <div><label>Clave transitoria</label><input name="clave_transitoria" type="text" placeholder="mín. 8" required></div>
-        <div style="flex:0;"><button class="primario" type="submit">Crear</button></div>
+        <div class="campo"><label for="nu-clave">Clave transitoria</label><input id="nu-clave" name="clave_transitoria" type="text" minlength="8" required></div>
       </div>
-      <p class="sub" style="margin-top:8px;">La clave transitoria dura 7 días. Pasásela a la persona por un canal seguro; al entrar la cambia y carga sus datos.</p>
+      <span class="ayuda" style="margin-top:8px;">Al menos 8 caracteres y dura 7 días. Pasásela a la persona por un canal seguro; al entrar la cambia y carga sus datos.</span>
+      <button type="submit" style="margin-top:12px;">Crear usuario</button>
     </form>
   </div>
 
-  <div class="caja">
-    <h2>Usuarios ({{ usuarios|length }})</h2>
+  <h2 class="lista-tit">Usuarios ({{ usuarios|length }})</h2>
+  {# Una fecha AAAA-MM-DD HH:MM pasa a DD/MM/AAAA HH:MM. #}
+  {% macro fecha_ar(t) %}{% set p = (t or '').split(' ') %}{% set d = p[0].split('-') %}{% if d|length == 3 %}{{ d[2] }}/{{ d[1] }}/{{ d[0] }}{% if p|length > 1 %} {{ p[1] }}{% endif %}{% else %}{{ t }}{% endif %}{% endmacro %}
+  <div class="tabla-ancha">
     <table>
       <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Alta</th><th>Acciones</th></tr></thead>
       <tbody>
       {% for u in usuarios %}
         <tr>
           <td><b>{{ u.usuario }}</b><div class="sub">{{ u.nombre or '—' }}{% if u.email %} · {{ u.email }}{% endif %}</div></td>
-          <td><span class="pill {{ u.rol }}">{{ u.rol }}</span></td>
+          <td><span class="pill {{ u.rol }}">{{ 'Superadmin' if u.rol == 'superadmin' else 'Admin' }}</span></td>
           <td>
-            {% if not u.activo %}<span class="pill inactivo">inactivo</span>
-            {% elif u.debe_cambiar_clave or u.debe_completar_datos %}<span class="pill pend">pendiente</span>
-            {% else %}<span class="pill admin">activo</span>{% endif %}
-            {% if u.clave_vence %}<div class="sub">clave vence {{ u.clave_vence }}</div>{% endif %}
+            {% if not u.activo %}<span class="pill inactivo">Inactivo</span>
+            {% elif u.debe_cambiar_clave or u.debe_completar_datos %}<span class="pill pend">Pendiente</span>
+            {% else %}<span class="pill activo">Activo</span>{% endif %}
+            {% if u.clave_vence %}<div class="sub">La clave vence el {{ fecha_ar(u.clave_vence) }}</div>{% endif %}
           </td>
-          <td class="sub">{{ u.creado_por or '—' }}<br>{{ u.creado_en or '' }}</td>
+          <td class="sub nowrap">{{ 'Alta inicial' if u.creado_por == 'semilla' else (u.creado_por or '—') }}<br>{{ fecha_ar(u.creado_en) }}</td>
           <td>
             <div class="acciones">
-              <form method="post" action="/plataforma/usuarios/{{ u.id }}/activar">
+              <button class="mini" type="button" aria-expanded="false" aria-controls="ed-{{ u.id }}" onclick="abrirFila(this, 'ed-{{ u.id }}')">Editar</button>
+              <button class="mini" type="button" aria-expanded="false" aria-controls="rs-{{ u.id }}" onclick="abrirFila(this, 'rs-{{ u.id }}')">Resetear clave</button>
+              <form method="post" action="/plataforma/usuarios/{{ u.id }}/activar"
+                    {% if u.activo %}onsubmit="return confirm('¿Desactivar a {{ u.usuario }}? No va a poder entrar hasta que lo actives.')"{% endif %}>
                 <input type="hidden" name="activo" value="{{ '0' if u.activo else '1' }}">
-                <button class="chico {{ 'peligro' if u.activo else '' }}" type="submit">{{ 'Desactivar' if u.activo else 'Activar' }}</button>
+                <button class="mini {{ 'borrar' if u.activo else '' }}" type="submit">{{ 'Desactivar' if u.activo else 'Activar' }}</button>
               </form>
-              <details>
-                <summary>Resetear clave</summary>
-                <div class="cont">
-                  <form method="post" action="/plataforma/usuarios/{{ u.id }}/resetear" class="acciones">
-                    <input name="clave_transitoria" type="text" placeholder="nueva transitoria" required>
-                    <button class="chico" type="submit">Resetear</button>
-                  </form>
-                </div>
-              </details>
-              <details>
-                <summary>Editar</summary>
-                <div class="cont">
-                  <form method="post" action="/plataforma/usuarios/{{ u.id }}/editar" class="acciones">
-                    <input name="nombre" value="{{ u.nombre }}" placeholder="nombre">
-                    <select name="rol" style="width:auto;">
-                      <option value="admin" {{ 'selected' if u.rol=='admin' }}>Admin</option>
-                      <option value="superadmin" {{ 'selected' if u.rol=='superadmin' }}>Superadmin</option>
-                    </select>
-                    <button class="chico" type="submit">Guardar</button>
-                  </form>
-                </div>
-              </details>
             </div>
+          </td>
+        </tr>
+        <tr class="fila-form" id="ed-{{ u.id }}" hidden>
+          <td colspan="5">
+            <form method="post" action="/plataforma/usuarios/{{ u.id }}/editar" class="acciones">
+              <label class="sub" for="ed-nombre-{{ u.id }}">Nombre</label>
+              <input id="ed-nombre-{{ u.id }}" name="nombre" value="{{ u.nombre }}">
+              <label class="sub" for="ed-rol-{{ u.id }}">Rol</label>
+              <select id="ed-rol-{{ u.id }}" name="rol">
+                <option value="admin" {{ 'selected' if u.rol=='admin' }}>Admin</option>
+                <option value="superadmin" {{ 'selected' if u.rol=='superadmin' }}>Superadmin</option>
+              </select>
+              <button type="submit">Guardar</button>
+            </form>
+          </td>
+        </tr>
+        <tr class="fila-form" id="rs-{{ u.id }}" hidden>
+          <td colspan="5">
+            <form method="post" action="/plataforma/usuarios/{{ u.id }}/resetear" class="acciones">
+              <label class="sub" for="rs-clave-{{ u.id }}">Nueva clave transitoria</label>
+              <input id="rs-clave-{{ u.id }}" name="clave_transitoria" type="text" minlength="8" required>
+              <button type="submit">Resetear</button>
+            </form>
           </td>
         </tr>
       {% endfor %}
@@ -138,5 +215,32 @@
     </table>
   </div>
 </div>
+
+{% include "_plataforma_acerca.html" %}
+
+<script>
+/* Editar y Resetear clave abren su formulario debajo de la fila; uno por vez. */
+function abrirFila(btn, id) {
+  const fila = document.getElementById(id);
+  const abrir = fila.hidden;
+  document.querySelectorAll('.fila-form').forEach(f => { f.hidden = true; });
+  document.querySelectorAll('.acciones [aria-expanded]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  fila.hidden = !abrir;
+  btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  if (abrir) { const campo = fila.querySelector('input:not([type=hidden])'); if (campo) campo.focus(); }
+}
+/* En el teléfono la tira es deslizable: Usuarios, a la vista. */
+(function () {
+  const tira = document.querySelector('.nav-strip');
+  const activa = tira && tira.querySelector('.ptab.activa');
+  if (!tira || !activa) return;
+  const marcar = () => tira.classList.toggle('mas-derecha', tira.scrollLeft + tira.clientWidth < tira.scrollWidth - 4);
+  if (getComputedStyle(tira).flexDirection !== 'column')
+    tira.scrollTo({left: Math.max(0, activa.offsetLeft - (tira.clientWidth - activa.offsetWidth) / 2)});
+  tira.addEventListener('scroll', marcar, {passive: true});
+  marcar();
+})();
+</script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 </body>
 </html>

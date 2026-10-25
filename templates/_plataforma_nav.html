@@ -1,0 +1,57 @@
+{# ============================================================
+   Las secciones del panel de plataforma: la tira de pestañas, que los dos
+   modelos de diseño pasan a riel lateral en escritorio (PLAN_TEMAS.md, las
+   hojas static/temas/<modelo>-plataforma.css). Un solo lugar para la lista,
+   porque la dibujan dos pantallas:
+
+   - /plataforma (plataforma.html): botones con `data-pp`, que el JS de esa
+     pantalla usa para cambiar de pestaña sin recargar;
+   - /plataforma/usuarios (plataforma_usuarios.html, `nav_pagina = 'usuarios'`):
+     las mismas secciones como enlaces a /plataforma#<sección>, y Usuarios
+     marcada como la actual.
+
+   Usuarios es una página aparte (solo superadmin) y va como enlace en las
+   dos. Los íconos no se dibujan en ningún modelo: quedan para el lector de
+   pantalla y por si un modelo nuevo los quiere.
+   ============================================================ #}
+{% set _secciones = [
+  ('lista', 'Sindicatos', 'ic-sindicatos'),
+  ('nuevo', 'Nuevo sindicato', 'ic-nuevo-sind'),
+  ('admin', 'Nuevo admin', 'ic-nuevo-admin'),
+  ('usuarios', 'Usuarios', 'ic-usuarios'),
+  ('clave', 'Cambiar clave', 'ic-clave'),
+  ('marca', 'Marca', 'ic-marca'),
+  ('fotos', 'Fotos', 'ic-fotos'),
+  ('config', 'Configuración', 'ic-config-legal'),
+  ('usoia', 'Uso de IA', 'ic-usoia'),
+  ('sospechosos', 'Recibos con alerta', 'ic-sospechosos'),
+  ('topes', 'Topes de aportes', 'ic-topes'),
+] %}
+<nav class="nav-strip" aria-label="Secciones de plataforma">
+{%- for clave, rotulo, icono in _secciones %}
+  {%- if clave == 'usuarios' %}
+    {%- if es_superadmin %}
+  <a class="ptab ptab-pagina{% if nav_pagina == 'usuarios' %} activa{% endif %}" href="/plataforma/usuarios"{% if nav_pagina == 'usuarios' %} aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#{{ icono }}"/></svg><span>{{ rotulo }}</span></a>
+    {%- endif %}
+  {%- elif nav_pagina == 'usuarios' %}
+  <a class="ptab" href="/plataforma#{{ clave }}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#{{ icono }}"/></svg><span>{{ rotulo }}</span></a>
+  {%- else %}
+  <button type="button" class="ptab{% if loop.first %} activa{% endif %}" data-pp="{{ clave }}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#{{ icono }}"/></svg><span>{{ rotulo }}</span></button>
+  {%- endif %}
+{%- endfor %}
+</nav>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <g id="ic-sindicatos"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><path d="M9 21v-7"/><path d="M15 21v-7"/></g>
+    <g id="ic-nuevo-sind"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><line x1="12" y1="13" x2="12" y2="18"/><line x1="9.5" y1="15.5" x2="14.5" y2="15.5"/></g>
+    <g id="ic-nuevo-admin"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><line x1="18" y1="7" x2="18" y2="13"/><line x1="15" y1="10" x2="21" y2="10"/></g>
+    <g id="ic-usuarios"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.3 14.5c2.1.5 3.7 2.4 3.9 4.8"/></g>
+    <g id="ic-clave"><circle cx="7" cy="16" r="3"/><path d="m9.5 13.5 8-8"/><path d="m14 9 2.5 2.5"/><path d="m16.5 6.5 2.5 2.5"/></g>
+    <g id="ic-marca"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.9 1.9-1.9H16a5 5 0 0 0 5-5c0-3.9-4-6.5-9-6.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17" cy="10.5" r="1.1" fill="currentColor" stroke="none"/></g>
+    <g id="ic-fotos"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></g>
+    <g id="ic-config-legal"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 13a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></g>
+    <g id="ic-usoia"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="6" y1="10" x2="3" y2="10"/><line x1="6" y1="14" x2="3" y2="14"/><line x1="18" y1="10" x2="21" y2="10"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="10" y1="6" x2="10" y2="3"/><line x1="14" y1="6" x2="14" y2="3"/><line x1="10" y1="18" x2="10" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/></g>
+    <g id="ic-sospechosos"><path d="M12 4 3 20h18z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></g>
+    <g id="ic-topes"><path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="16" y2="10"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></g>
+  </defs>
+</svg>

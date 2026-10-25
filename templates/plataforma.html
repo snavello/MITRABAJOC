@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,81 +7,93 @@
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
 <link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
 <script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
   :root {
     /* La plataforma no tiene un 4to color propio (no tiene portada oscura):
-       el fondo oscuro del encabezado sale del primario, como siempre. */
+       el fondo oscuro sale del primario, como siempre. Los modelos de diseño
+       pintan con su propia paleta (la de Colm3na, PLAN_TEMAS.md): estas
+       variables quedan para lo que no es del modelo. */
     --marca-base: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --marca-primario: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --marca-acento: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
     --marca-apoyo: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    {{ variables_legibles('marca', marca_plataforma.color_primario if marca_plataforma else '#152238', marca_plataforma.color_primario if marca_plataforma else '#152238', marca_plataforma.color_acento if marca_plataforma else '#b23a2e', marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }}
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
     --papel:#faf9f6; --linea:#e2ded5; --gris:#5c5a54;
   }
-  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
-  body { background:var(--papel); color:#1b1b1b; line-height:1.5; }
-  /* El header y la tira de pestañas se pegan juntos como un solo bloque --
-     así la barra de navegación nunca se scrolea fuera de vista, sin tener
-     que calcular a mano la altura del header. */
+  * { box-sizing:border-box; margin:0; }
+  /* El cuerpo es una columna: así el pie con "Acerca de" queda siempre abajo
+     aunque la pestaña sea corta. */
+  body { font-family:system-ui,sans-serif; background:#fff; color:#1b1b1b; line-height:1.5;
+    min-height:100vh; display:flex; flex-direction:column; }
+  /* El encabezado y la tira de pestañas se pegan juntos como un solo bloque. */
   .app-bar-fija { position:sticky; top:0; z-index:21; }
-  /* El encabezado (cinta + barra) vive entero en marca.css. */
-  .btn-cerrar, .btn-home { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
-    background:var(--marca-base); display:flex; align-items:center; justify-content:center;
-    text-decoration:none; border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
-  .btn-cerrar { right:20px; }
-  .btn-home { right:74px; }
-  .btn-cerrar svg, .btn-home svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
-  .btn-home svg { stroke-width:2.2; }
-  .btn-cerrar:hover, .btn-home:hover { opacity:.85; }
-  .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
-  h2 { font-size:17px; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
-  /* Tira de pestañas: una sola línea deslizable, ícono + texto chico,
-     pegada debajo del header (mismo criterio que admin.html). */
+  /* Inicio y Salir flotan juntos abajo a la derecha, con su rótulo a la
+     vista (pauta común a los dos modelos, PLAN_TEMAS.md D7): una × sola no
+     dice "salir". flota.js los corre al bajar para que no tapen nada. */
+  .flota-sesion { position:fixed; right:20px; bottom:20px; z-index:40; display:flex; align-items:center; gap:8px; }
+  .btn-cerrar, .btn-home { display:flex; align-items:center; justify-content:center; gap:7px;
+    height:42px; padding:0 16px 0 13px; border-radius:999px; text-decoration:none;
+    background:var(--marca-base); color:#fff; font-size:13.5px; font-weight:600;
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 2px 10px rgba(0,0,0,.25); }
+  .btn-cerrar svg, .btn-home svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.9; fill:none;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .btn-cerrar:hover, .btn-home:hover { opacity:.88; }
+  /* Lo último de cada pestaña nunca queda debajo de los flotantes. */
+  .wrap { width:100%; max-width:1000px; margin:0 auto; padding:24px 22px 110px; flex:1 0 auto; }
+  h2 { font-size:17px; margin:30px 0 12px; color:var(--tinta); }
   .nav-strip { display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch;
     padding:10px 14px; background:#fff; border-bottom:1px solid var(--linea); }
-  .ptab { display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;
-    padding:7px 11px; border-radius:9px; color:var(--gris); font-size:10.5px;
-    font-weight:500; background:#fff; border:1px solid var(--linea);
-    cursor:pointer; font-family:inherit; white-space:nowrap; }
-  .ptab svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.7; fill:none; }
-  .ptab:hover { background:#f0eee8; }
+  .ptab { display:flex; align-items:center; gap:6px; flex-shrink:0; padding:7px 11px; border-radius:9px;
+    color:var(--gris); font-size:13px; font-weight:500; background:#fff; border:1px solid var(--linea);
+    cursor:pointer; font-family:inherit; white-space:nowrap; text-decoration:none; margin-top:0; }
+  .ptab svg { display:none; }
   .ptab.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
   .ppanel { display:none; }
   .ppanel.activo { display:block; }
   .ppanel h2:first-child { margin-top:0; }
   h2:first-of-type { margin-top:0; }
-  table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; border:1px solid var(--linea); border-radius:8px; overflow:hidden; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; }
   th,td { text-align:left; padding:10px 12px; border-bottom:1px solid #eee; vertical-align:middle; }
-  th { background:#f2f0ea; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.3px; }
-  tr:last-child td { border-bottom:none; }
+  th { font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--gris); }
   .chip-color { display:inline-block; width:16px; height:16px; border-radius:4px; vertical-align:-3px; margin-right:2px; border:1px solid rgba(0,0,0,.1); }
-  .link-num { background:none; border:none; color:var(--agua); font-weight:600; font-size:14px; cursor:pointer; text-decoration:underline; font-family:inherit; }
-  button.mini { padding:5px 11px; font-size:12.5px; margin-left:4px; background:var(--tinta); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; }
-  button.mini.borrar { background:#fff; color:var(--alerta); border:1px solid #e0c4c0; }
-  .admin-item { padding:8px 0; border-bottom:1px solid #f0eee8; font-size:14px; }
+  /* Los números de admins y trabajadores abren la lista: en tinta con
+     subrayado punteado, no en un color que se lea como alerta. */
+  .link-num { background:none; border:none; padding:0; margin:0; color:var(--tinta); font-weight:600; font-size:14px;
+    cursor:pointer; text-decoration:underline dotted; text-underline-offset:4px; font-family:inherit;
+    font-variant-numeric:tabular-nums; }
+  button.mini { padding:5px 11px; font-size:12.5px; margin:0 0 0 4px; background:#fff; color:var(--tinta);
+    border:1px solid var(--linea); border-radius:999px; cursor:pointer; font-family:inherit; }
+  button.mini.borrar { background:none; color:#b3261e; border-color:transparent; }
+  .admin-item { padding:8px 0; border-bottom:1px solid var(--linea); font-size:14px; }
   .admin-item:last-child { border-bottom:none; }
   .card { background:#fff; border:1px solid var(--linea); border-radius:12px; padding:18px; margin-top:14px; }
-  .card h3 { font-size:14px; color:var(--tinta); margin-bottom:14px; }
+  .card h3 { font-size:15px; color:var(--tinta); margin-bottom:14px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .campo { display:flex; flex-direction:column; gap:4px; }
-  .check-modulos { display:flex; flex-wrap:wrap; gap:4px 14px; padding:9px 11px;
-    border:1px solid #ccc; border-radius:7px; background:#fbfaf7; }
-  .chk-modulo { display:flex; align-items:center; gap:5px; font-size:13px; font-weight:400;
+  .campo + .campo { margin-top:12px; }
+  .grid > .campo + .campo, .dos-col > .campo + .campo { margin-top:0; }
+  .check-modulos { display:flex; flex-wrap:wrap; gap:6px 16px; padding:10px 12px;
+    border:1px solid var(--linea); border-radius:8px; background:#fff; }
+  .chk-modulo { display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:400;
     color:#333; cursor:pointer; }
   .chk-modulo input { width:auto; padding:0; }
   .campo.full { grid-column:1 / -1; }
   label { font-size:12.5px; color:var(--gris); }
-  input, textarea, select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; width:100%; }
-  input:focus, textarea:focus, select:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
+  input, textarea, select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; width:100%; background:#fff; }
   .colores { display:flex; gap:18px; flex-wrap:wrap; margin-top:4px; }
-  .col-item { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+  .col-item { display:flex; flex-direction:column; gap:4px; align-items:flex-start; max-width:190px; }
   input[type=color] { width:54px; height:38px; padding:2px; cursor:pointer; }
-  button { padding:10px 18px; background:var(--tinta); color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:14px; font-weight:500; font-family:inherit; margin-top:6px; }
+  button { padding:10px 18px; background:var(--tinta); color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:14px; font-weight:600; font-family:inherit; margin-top:6px; }
   button:hover { opacity:.92; }
   .muted { color:var(--gris); font-size:13px; }
+  /* Las ayudas de un campo: debajo, legibles (12,5 px), nunca en 11. */
+  .ayuda { display:block; color:var(--gris); font-size:12.5px; line-height:1.45; }
   .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-bottom:14px; }
+  .msg.ok { background:#eef5e7; color:#2b5d14; }
+  .msg.aviso { background:#fbf2e3; color:#8a5208; }
   /* Un error no es un cartel rosa (SDN, 2026-10-23): la superficie de la
      pantalla, un filo rojo fino y el ícono de alerta; el texto, en tinta. */
   .msg.err, .banner.mal, .enq-error { position:relative; padding-left:44px; background:#fff; color:#2b1d1b;
@@ -91,94 +103,138 @@
     width:18px; height:18px; background:#b3261e;
     -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E") center / contain no-repeat; }
   .msg.err b, .msg.err strong, .banner.mal b, .enq-error b { color:#8e1e17; }
-  .badge { font-size:11px; background:#e3f2ee; color:var(--agua); padding:2px 8px; border-radius:8px; }
+  .badge { display:inline-block; font-size:11px; padding:2px 9px; border-radius:20px; font-weight:700; white-space:nowrap; }
   details { margin-top:14px; }
-  summary { cursor:pointer; font-size:14px; color:var(--tinta); font-weight:500; padding:6px 0; }
-  button.sec { background:#fff; color:var(--gris); border:1px solid var(--linea); }
+  summary { cursor:pointer; font-size:14px; color:var(--tinta); font-weight:600; padding:6px 0; }
+  button.sec { background:#fff; color:var(--tinta); border:1px solid var(--linea); }
   .oculto { display:none; }
-  .chip-estado { display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; text-transform:capitalize; white-space:nowrap; }
-  .chip-estado.verificado { background:#e3f2ee; color:#0f6e56; }
+  .chip-estado { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+  .chip-estado.verificado { background:#eef5e7; color:#2b5d14; }
   .chip-estado.derivado { background:#e2eef7; color:#1a5f8a; }
-  .chip-estado.por_verificar { background:#fdf3e7; color:#8a5a1a; }
-  .chip-estado.sospechoso { background:#f8e5e2; color:#b23a2e; }
+  .chip-estado.por_verificar { background:#fbf2e3; color:#8a5208; }
+  .chip-estado.sospechoso { background:#fbeceb; color:#b3261e; }
 
-  /* Uso de IA: tres sub-pestañas con namespace propio (mismo criterio que
+  /* Uso de IA: cuatro sub-pestañas con namespace propio (mismo criterio que
      .enc-subtab en admin.html -- no comparten listener con nada). */
   .subtabs { display:flex; gap:5px; margin:14px 0 18px; flex-wrap:wrap; }
-  .ia-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
-    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
-  .ia-subtab.activa { background:var(--agua); color:#fff; border-color:var(--agua); }
+  .ia-subtab { padding:6px 14px; border-radius:20px; font-size:13px; font-weight:600;
+    background:#fff; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; margin-top:0; }
+  .ia-subtab.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
   .ia-subpanel { display:none; }
   .ia-subpanel.activo { display:block; }
-  /* La tabla de consumo tiene nueve columnas: en un teléfono se desliza
-     sola en vez de desbordar la página. */
-  .tabla-ancha { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .tabla-ancha table { min-width:860px; }
+  /* Una tabla ancha se desliza adentro de su lugar, nunca la página entera. */
+  .tabla-ancha { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+  .tabla-ancha > table { min-width:640px; }
+  .tabla-ancha.t9 > table, .tabla-ancha > table.tabla-topes { min-width:860px; }
+  .tabla-topes td:nth-child(5) { min-width:240px; }
+  .nowrap { white-space:nowrap; }
   /* Filtro del banco de pruebas: esconder las líneas que todos leyeron igual.
      La cabecera no lleva la clase, así que no se esconde. */
   .solo-dif tr.linea-igual { display:none; }
   /* Los números se leen en columna, así que van en monoespaciada y a la
-     derecha: alineados, el que se sale del orden salta a la vista. */
+     derecha: alineados, el que se sale del orden salta a la vista. El
+     encabezado de esas columnas va en la letra de los demás. */
   .num { text-align:right; font-variant-numeric:tabular-nums;
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; white-space:nowrap; }
-  th.num { text-align:right; }
+  th.num { text-align:right; font-family:inherit; font-size:11px; }
   .ia-tot { display:flex; flex-wrap:wrap; gap:10px 26px; align-items:baseline; }
   .ia-tot > div { display:flex; flex-direction:column; gap:2px; }
   .ia-tot .cifra { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:20px;
-    font-weight:600; color:var(--tinta); }
+    font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums; }
   .ia-tot .rotulo { font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.6px; }
+  /* Los siete indicadores del enmascarado, en una fila pareja. */
+  .ia-tot.siete { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:14px; }
   .estimado { color:var(--gris); font-style:italic; }
-  .aviso-caja { background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px;
-    padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a; }
-
-  /* ============ Esquema "Hilo" (2026-09-03): cromo común del panel ============
-     Solo CSS sobre el marcado existente: encabezado con degradé + grano +
-     filo ámbar, pestañas y sub-pestañas en condensada, títulos de sección
-     como hitos (condensada + línea), botón principal en acento, tablas con
-     cabecera en tracking. El contenido de cada sección no cambia. */
-  /* Cromo "Hilo" sobre el encabezado normalizado: el filo ámbar abarca la
-     cinta y la barra; el degradé y el grano, solo la barra del sindicato. */
-  .marca-enc { border-left:5px solid var(--marca-acento); }
-  .marca-barra { position:relative; overflow:hidden; border-bottom:none;
-    background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
-  .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
-    mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .marca-barra > * { position:relative; z-index:1; }
-  /* La misma tira que /admin (SDN, 2026-10-19, hoja de trabajo de
-     Impeccable): pastillas de texto solo, sin íconos, la activa en blanco. */
-  .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:0 14px 12px; gap:6px; }
-  .ptab { flex-direction:row; gap:6px; padding:8px 12px; border-radius:9px;
-    background:color-mix(in srgb, var(--marca-base) 82%, #fff); border-color:rgba(255,255,255,.14); color:#c9d3e3;
-    font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px; text-transform:uppercase;
-    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
-  .ptab svg { display:none; }
-  .ptab:hover { background:color-mix(in srgb, var(--marca-base) 70%, #fff); color:#fff; }
-  .ptab:active { scale:.97; }
-  .ptab.activa { background:#fff; color:var(--marca-base); border-color:#fff; }
-  h2 { font-family:var(--fuente-display); font-weight:700; font-size:22px; letter-spacing:.4px; text-transform:uppercase;
-    line-height:1.05; border-bottom:none; padding-bottom:0; display:flex; align-items:center; gap:12px; color:var(--tinta); }
-  h2::after { content:""; flex:1; height:1px; background:var(--linea); }
-  h2 .badge, h2 .tag, h2 small { font-family:var(--fuente); letter-spacing:0; text-transform:none; }
-  .subtab, .ia-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
-    text-transform:uppercase; background:#fff; border-radius:20px; }
-  th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.ia-subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.btn-ayuda):not(.link-num):not(.ft-subtab):not(.ft-foto) {
-    font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
-    background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
-  button.mini { border-radius:7px; }
-  .card { border-radius:12px; }
-
-  /* ============ Esquema "Hilo", parte 3 (2026-09-03): chips como píldoras,
-     subtítulos como hitos, detalles plegables en condensada. Las tablas
-     siguen siendo tablas (mismo criterio que en /admin). ============ */
-  .badge, .chip-estado { display:inline-block; border-radius:20px; padding:2px 9px; font-size:10.5px; font-weight:700; white-space:nowrap; }
-  .card h3 { font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1.4px;
-    text-transform:uppercase; color:var(--gris); display:flex; align-items:center; gap:10px; }
-  .card h3::after { content:""; flex:1; height:1px; background:var(--linea); }
-  summary { font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--gris); }
-  .link-num { font-family:var(--fuente-num); font-variant-numeric:tabular-nums; }
-  .msg { border-radius:10px; }
-
+  .aviso-caja { background:#fbf2e3; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13.5px; color:#6b3f06; }
+  /* Una línea de estado con pastillas (gris = apagado, verde = activo, ámbar =
+     a mirar): reemplaza a dos avisos ámbar seguidos para decir "apagado". */
+  .estado-linea { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; font-size:13.5px; margin-bottom:14px; }
+  .pild { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:999px;
+    font-size:12px; font-weight:700; background:#eeeeee; color:#393c41; }
+  .pild::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; opacity:.7; }
+  .pild.on { background:#eef5e7; color:#2b5d14; }
+  .pild.ojo { background:#fbf2e3; color:#8a5208; }
+  /* Los filtros arriba de lo que filtran, en una sola fila. */
+  .filtros { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0 0 16px; }
+  .filtros select { width:220px; }
+  .filtros button { margin-top:0; }
+  .filtros .f-cant { margin-left:auto; font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--gris); }
+  /* Las secciones de un formulario largo, con su subtítulo y aire arriba. */
+  .form-secc { font-size:16px; font-weight:700; color:var(--tinta); margin:28px 0 12px; }
+  .form-secc:first-of-type { margin-top:0; }
+  /* Elegir un archivo: un botón y el nombre al lado, en vez del campo crudo
+     del navegador. El <input type=file> sigue ahí (mismo name), escondido a
+     la vista pero no al teclado. */
+  .zarch { position:relative; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px;
+    border:1.5px dashed #c9c4b8; border-radius:10px; background:#fff; cursor:pointer; }
+  .zarch input[type=file] { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .zarch-btn { display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 14px; border-radius:999px;
+    border:1px solid var(--linea); background:#fff; color:var(--tinta); font-size:13px; font-weight:600; }
+  .zarch-btn svg { width:15px; height:15px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .zarch-nombre { font-size:13px; color:var(--gris); overflow-wrap:anywhere; }
+  .zarch.elegido .zarch-nombre { color:var(--tinta); font-weight:600; }
+  .zarch:focus-within { outline:2px solid var(--tinta); outline-offset:2px; }
+  .zarch-vista { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .zarch-vista img { height:40px; max-width:180px; object-fit:contain; border:1px solid var(--linea); border-radius:6px; padding:3px; background:#fff; }
+  .zarch-vista img.sobre-oscuro { background:var(--marca-base); }
+  .zarch-vista.oculto { display:none; }
+  .dos-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+  /* El punto del semáforo delante de su rótulo: colores de estado, fijos. */
+  .punto { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:1px; }
+  .punto.verde { background:#367519; } .punto.ambar { background:#c98a1e; }
+  /* La tabla de modelos del banco de pruebas: casilla + modelo y los dos precios. */
+  .tabla-modelos td, .tabla-modelos th { padding:7px 10px; }
+  .tabla-modelos label { display:flex; align-items:center; gap:8px; font-size:13.5px; color:#1b1b1b; cursor:pointer; }
+  .tabla-modelos input { width:auto; }
+  /* La barra al pie mientras hay modelos cambiados sin guardar. */
+  .barra-guardar { position:static; z-index:5; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    width:fit-content; max-width:100%; margin-top:16px; padding:10px 14px; border-radius:12px; background:#fff;
+    border:1px solid var(--linea); }
+  /* Mientras haya un cambio sin guardar, la barra queda fija al pie. */
+  .con-cambios .barra-guardar { position:sticky; bottom:64px; box-shadow:0 12px 26px -18px rgba(0,0,0,.4); }
+  .barra-guardar button { margin-top:0; }
+  .barra-guardar .bg-cambios { font-size:13px; color:var(--gris); }
+  .barra-guardar .bg-cambios:empty { display:none; }
+  /* El pie con "Acerca de": siempre abajo, legible. */
+  .acerca-pie { margin-top:auto; text-align:center; padding:0 0 24px; }
+  .btn-acerca { background:none; border:none; margin:0; padding:6px; cursor:pointer; color:var(--gris);
+    font-size:12.5px; font-family:inherit; text-decoration:underline; text-underline-offset:4px; }
+  #acerca-box { display:none; position:fixed; inset:0; background:rgba(8,12,20,.45); z-index:200; align-items:center; justify-content:center; padding:16px; }
+  #acerca-box.abierto { display:flex; }
+  .acerca-caja { background:#fff; border-radius:12px; padding:22px 24px; max-width:300px; width:100%; }
+  .acerca-caja h3 { margin-bottom:12px; font-size:16px; }
+  .acerca-fila { display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13.5px; }
+  /* La bajada del título: un renglón corto, en gris, sobre el fondo de la página. */
+  .bajada { margin:0 0 16px; max-width:760px; }
+  .sind-cel { display:flex; align-items:center; gap:10px; min-width:200px; }
+  .sind-logo { height:28px; max-width:72px; object-fit:contain; flex:none; }
+  .caja-lista-cab { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+  .plegable summary { list-style:none; display:flex; align-items:center; gap:8px; }
+  .plegable summary::-webkit-details-marker { display:none; }
+  .plegable summary::before { content:""; width:8px; height:8px; flex:none; border-right:1.8px solid currentColor;
+    border-bottom:1.8px solid currentColor; rotate:-45deg; transition:rotate var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .plegable[open] summary::before { rotate:45deg; }
+  .con-sufijo { position:relative; }
+  .con-sufijo input { padding-right:30px; }
+  .con-sufijo .sufijo { position:absolute; right:11px; top:50%; translate:0 -50%; color:var(--gris); font-size:14px; pointer-events:none; }
+  .vacio p { font-size:14px; }
+  .txt-ambar { color:#8a5208; }
+  .ayuda-q { display:inline-grid; place-items:center; width:15px; height:15px; border-radius:50%;
+    border:1px solid currentColor; font-size:10px; text-decoration:none; cursor:help; vertical-align:1px; }
+  @media (max-width:760px) {
+    /* La tira deslizable avisa con un degradé si queda algo a la derecha. */
+    .nav-strip.mas-derecha { -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+      mask-image:linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  }
+  @media (max-width:760px) {
+    .grid, .dos-col { grid-template-columns:minmax(0,1fr); }
+    .ia-tot.siete { grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); }
+    .filtros select { width:auto; flex:1 1 160px; }
+    .filtros .f-cant { margin-left:0; }
+    .con-cambios .barra-guardar { bottom:72px; }
+    /* El pie queda arriba de los flotantes de Inicio y Salir. */
+    .acerca-pie { padding-bottom:84px; }
+  }
   /* ============ Biblioteca de fotos de los modelos (PLAN_TEMAS.md, D5) ============
      Lo elegido se marca con relleno de color, nunca con una barra o corchete
      a un costado (D6, regla de SDN). Las sub-pestañas por modelo tienen su
@@ -188,13 +244,13 @@
     font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px; text-transform:uppercase;
     transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
   .ft-subtab:hover { background:#f2f0ea; opacity:1; }
-  .ft-subtab.activa { background:var(--agua); color:#fff; border-color:var(--agua); }
+  .ft-subtab.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
   .ft-zona { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
     padding:26px 16px; border:1.5px dashed #c9c4b8; border-radius:12px; background:#fbfaf7;
     text-align:center; cursor:pointer; color:var(--tinta); font-size:14px;
     transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), border-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
-  .ft-zona svg { width:26px; height:26px; stroke:currentColor; stroke-width:1.7; fill:none; color:var(--agua); }
-  .ft-zona:hover, .ft-zona:focus-within, .ft-zona.encima { background:color-mix(in srgb, var(--agua) 10%, #fff); border-color:var(--agua); }
+  .ft-zona svg { width:26px; height:26px; stroke:currentColor; stroke-width:1.7; fill:none; color:var(--tinta); }
+  .ft-zona:hover, .ft-zona:focus-within, .ft-zona.encima { background:color-mix(in srgb, var(--tinta) 10%, #fff); border-color:var(--tinta); }
   .ft-zona strong { font-weight:600; }
   .ft-zona .muted { font-size:12px; }
   .ft-zona input[type=file] { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
@@ -219,17 +275,21 @@
     transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), border-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
   .ft-foto:hover { background:#f6f4ef; opacity:1; }
   .ft-foto:active { scale:.98; }
-  .ft-foto.elegida { background:color-mix(in srgb, var(--agua) 16%, #fff); border-color:var(--agua); }
+  .ft-foto.elegida { background:color-mix(in srgb, var(--tinta) 16%, #fff); border-color:var(--tinta); }
   .ft-foto img { width:100%; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; display:block; background:#eee; }
   .ft-foto .ft-desc { color:#333; line-height:1.35; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; min-height:2.7em; }
-  .ft-foto .ft-desc.vacia { color:var(--gris); font-style:italic; }
+  .ft-foto .ft-desc:empty { display:none; }
+  .ft-chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .ft-accion { margin-top:auto; font-size:12.5px; font-weight:700; color:var(--tinta); text-decoration:underline; text-underline-offset:3px; }
+  /* El nombre del modelo, en la misma letra que el resto del título. */
+  #ft-modelo-subir, #ft-modelo-lista { font:inherit; }
   .ft-foto .ft-alcance { color:var(--gris); font-size:11.5px; }
   .ft-chip-pub { background:#e3f2ee; color:#0f6e56; }
   .ft-chip-borr { background:#fdf3e7; color:#8a5a1a; }
   .ft-editor h3 { margin-bottom:10px; }
   .ft-lienzo { position:relative; display:block; cursor:crosshair; border-radius:9px; overflow:hidden;
     border:1px solid var(--linea); background:#eee; touch-action:manipulation; }
-  .ft-lienzo:focus-visible { outline:2px solid var(--agua); outline-offset:2px; }
+  .ft-lienzo:focus-visible { outline:2px solid var(--tinta); outline-offset:2px; }
   .ft-lienzo img { width:100%; display:block; user-select:none; -webkit-user-drag:none; }
   .ft-punto { position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
     background:color-mix(in srgb, var(--marca-acento) 70%, transparent); border:3px solid #fff;
@@ -246,8 +306,8 @@
     font-size:13px; color:var(--gris);
     transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
   .ft-seg input { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
-  .ft-seg label:has(input:checked) { background:var(--agua); color:#fff; }
-  .ft-seg label:has(input:focus-visible) { outline:2px solid var(--agua); outline-offset:2px; }
+  .ft-seg label:has(input:checked) { background:var(--tinta); color:#fff; }
+  .ft-seg label:has(input:focus-visible) { outline:2px solid var(--tinta); outline-offset:2px; }
   .ft-sinds { margin-top:8px; max-height:180px; overflow:auto; }
   .ft-sinds .chk-modulo:has(input:checked) { color:var(--tinta); font-weight:600; }
   .ft-acciones { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:16px; }
@@ -265,91 +325,84 @@
 .prueba-lectura .pl-par{display:inline-flex;align-items:center;gap:4px;margin-left:6px;vertical-align:middle}
 .prueba-lectura .pl-par i{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.18);display:inline-block}
 </style>
-{% include "_fondo_interior.html" %}
+{# La hoja del modelo (static/temas/<modelo>-plataforma.css), DESPUÉS de los
+   estilos de la plantilla. Solo si el archivo existe: el sello sale vacío
+   cuando no está. Sin la mesa ni su trama de colmena: los dos modelos van
+   sobre su propio fondo. #}
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-plataforma.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+{% endif %}
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 </head>
-<body class="mesa franja">
+<body>
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
-{# Acá la marca principal ES la plataforma: el logo grande es el de Colm3na. #}
+{# Acá la marca principal ES la plataforma: el logo grande es el de Colm3na.
+   Los dos modelos ponen el encabezado claro, así que va el logo para fondo
+   claro (el parcial elige el de fondo oscuro si está cargado). #}
 {% set enc_plataforma = True %}
+{% with marca_plataforma = (dict(marca_plataforma, logo_oscuro=False) if marca_plataforma and marca_plataforma.logo else marca_plataforma) %}
 {% include "_encabezado.html" %}
-<a class="btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+{% endwith %}
+<div class="flota-sesion">
+<a class="btn-home" href="/plataforma/inicio" title="Inicio">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+  <span class="btn-rot">Inicio</span>
 </a>
-<a class="btn-home" href="/plataforma/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+<a class="btn-cerrar" href="/plataforma/salir" title="Salir">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg>
+  <span class="btn-rot">Salir</span>
 </a>
-
-<nav class="nav-strip">
-  <button class="ptab activa" data-pp="lista"><svg viewBox="0 0 24 24"><use href="#ic-sindicatos"/></svg><span>Sindicatos</span></button>
-  <button class="ptab" data-pp="nuevo"><svg viewBox="0 0 24 24"><use href="#ic-nuevo-sind"/></svg><span>Nuevo sindicato</span></button>
-  <button class="ptab" data-pp="admin"><svg viewBox="0 0 24 24"><use href="#ic-nuevo-admin"/></svg><span>Nuevo admin</span></button>
-  <button class="ptab" data-pp="clave"><svg viewBox="0 0 24 24"><use href="#ic-clave"/></svg><span>Cambiar clave</span></button>
-  <button class="ptab" data-pp="marca"><svg viewBox="0 0 24 24"><use href="#ic-marca"/></svg><span>Marca</span></button>
-  <button class="ptab" data-pp="fotos"><svg viewBox="0 0 24 24"><use href="#ic-fotos"/></svg><span>Fotos</span></button>
-  <button class="ptab" data-pp="config"><svg viewBox="0 0 24 24"><use href="#ic-config-legal"/></svg><span>Config. legal</span></button>
-  <button class="ptab" data-pp="usoia"><svg viewBox="0 0 24 24"><use href="#ic-usoia"/></svg><span>Uso de IA</span></button>
-  <button class="ptab" data-pp="sospechosos"><svg viewBox="0 0 24 24"><use href="#ic-sospechosos"/></svg><span>Con alerta</span></button>
-  <button class="ptab" data-pp="topes"><svg viewBox="0 0 24 24"><use href="#ic-topes"/></svg><span>Topes SS</span></button>
-</nav>
 </div>
 
-<!-- Íconos SVG de línea (mismos que plataforma_portada.html, + 2 propios) -->
-<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <g id="ic-sindicatos"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><path d="M9 21v-7"/><path d="M15 21v-7"/></g>
-    <g id="ic-nuevo-sind"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><line x1="12" y1="13" x2="12" y2="18"/><line x1="9.5" y1="15.5" x2="14.5" y2="15.5"/></g>
-    <g id="ic-nuevo-admin"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><line x1="18" y1="7" x2="18" y2="13"/><line x1="15" y1="10" x2="21" y2="10"/></g>
-    <g id="ic-clave"><circle cx="7" cy="16" r="3"/><path d="m9.5 13.5 8-8"/><path d="m14 9 2.5 2.5"/><path d="m16.5 6.5 2.5 2.5"/></g>
-    <g id="ic-marca"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.9 1.9-1.9H16a5 5 0 0 0 5-5c0-3.9-4-6.5-9-6.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17" cy="10.5" r="1.1" fill="currentColor" stroke="none"/></g>
-    <g id="ic-config-legal"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 13a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></g>
-    <g id="ic-usoia"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="6" y1="10" x2="3" y2="10"/><line x1="6" y1="14" x2="3" y2="14"/><line x1="18" y1="10" x2="21" y2="10"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="10" y1="6" x2="10" y2="3"/><line x1="14" y1="6" x2="14" y2="3"/><line x1="10" y1="18" x2="10" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/></g>
-    <g id="ic-sospechosos"><path d="M12 4 3 20h18z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></g>
-    <g id="ic-fotos"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></g>
-    <g id="ic-topes"><path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="16" y2="10"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></g>
-  </defs>
-</svg>
+{% include "_plataforma_nav.html" %}
+</div>
 
-<div class="wrap mesa-cont">
+<div class="wrap">
   {% set reset = request.query_params.get('reset') %}
-  {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
+  {% if reset == 'ok' %}<div class="msg ok" role="status">Clave cambiada correctamente.</div>
   {% elif reset == 'nohay' %}<div class="msg err">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
-  {% if request.query_params.get('config') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Configuración actualizada.</div>{% endif %}
-  {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
-  {% if request.query_params.get('error') == 'guardado' %}<div style="background:#fdf3e7; border:1px solid #e8d9b0; color:#8a5a1a; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
+  {% if request.query_params.get('config') == 'ok' %}<div class="msg ok" role="status">Configuración actualizada.</div>{% endif %}
+  {% if request.query_params.get('error') == 'tope' %}<div class="msg err">No se guardó: el tope sindical tiene que ser un número, por ejemplo 2 o 2,5.</div>{% endif %}
+  {% if request.query_params.get('marca') == 'ok' %}<div class="msg ok" role="status">Marca de la plataforma actualizada.</div>{% endif %}
+  {% if request.query_params.get('error') == 'guardado' %}<div class="msg aviso">No se pudo guardar: probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small>Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
 
   <div class="ppanel activo" data-mov-vista id="pp-lista">
   <h2 class="titulo-pagina">Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
+  <div class="tabla-ancha">
   <table>
-    <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabaj.</th><th></th></tr>
+    <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th class="num">Admins</th><th class="num">Trabajadores</th><th></th></tr>
     {% for i in sindicatos %}
     <tr>
       <td>
-        {% if i.s.logo %}<img src="/logo/{{ i.s.id }}?v={{ i.s.logo_datos|length if i.s.logo_datos else 0 }}" alt="" style="height:24px; vertical-align:-6px; margin-right:6px;">{% endif %}
-        <strong>{{ i.s.nombre }}</strong><br><span class="muted">{{ i.s.descripcion }}</span>
+        <div class="sind-cel">
+          {% if i.s.logo %}<img class="sind-logo" src="/logo/{{ i.s.id }}?v={{ i.s.logo_datos|length if i.s.logo_datos else 0 }}" alt="">{% endif %}
+          <div><strong>{{ i.s.nombre }}</strong>{% if i.s.descripcion %}<br><span class="muted">{{ i.s.descripcion }}</span>{% endif %}</div>
+        </div>
       </td>
-      <td>{{ i.s.cuit or '—' }}</td>
-      <td>
+      <td class="nowrap">{{ i.s.cuit or '—' }}</td>
+      <td class="nowrap">
         <span class="chip-color" style="background:{{ i.s.color_base }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_primario }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_acento }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
       </td>
-      <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
-      <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
-      <td style="white-space:nowrap; text-align:right;">
+      <td class="num"><button type="button" class="link-num" title="Ver los administradores" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
+      <td class="num"><button type="button" class="link-num" title="Ver los trabajadores" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
+      <td class="nowrap" style="text-align:right;">
         <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="6" class="muted">No hay sindicatos cargados todavía. Creá el primero abajo.</td></tr>
+    <tr><td colspan="6" class="muted">No hay sindicatos cargados todavía. Creá el primero en «Nuevo sindicato».</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <!-- Panel de admins (se llena al clickear el número) -->
-  <div id="admins-box" style="display:none; margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+  <div id="admins-box" class="card caja-lista" style="display:none;">
+    <div class="caja-lista-cab">
       <strong id="admins-titulo"></strong>
       <button type="button" class="mini" onclick="document.getElementById('admins-box').style.display='none'">Cerrar</button>
     </div>
@@ -361,14 +414,15 @@
      vista muestra en qué sindicatos trabaja cada una y si ya eligió su
      clave. Antes solo existía la lista de un sindicato, escondida en el
      número de la tabla. #}
-  <details style="margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:12px 16px;">
-    <summary style="cursor:pointer; font-weight:700;">Usuarios de los paneles ({{ operadores|length }} personas)</summary>
-    <p class="muted" style="font-size:12.5px; margin:8px 0 10px;">Una persona tiene una sola clave para todos los sindicatos en los que trabaja y, si son varios, elige a cuál entra después del login. «Clave inicial» es la que puso quien la dio de alta; «sin clave» no puede entrar hasta que se le restablezca.</p>
+  <details class="card plegable">
+    <summary>Usuarios de los paneles de los sindicatos ({{ operadores|length }} personas)</summary>
+    <p class="ayuda" style="margin:8px 0 10px;">Una persona tiene una sola clave para todos los sindicatos en los que trabaja y, si son varios, elige a cuál entra después del login. «Clave inicial» es la que puso quien la dio de alta; «sin clave» no puede entrar hasta que se le restablezca.</p>
+    <div class="tabla-ancha">
     <table>
       <tr><th>CUIL</th><th>Nombre</th><th>Sindicatos y rol</th><th>Clave</th></tr>
       {% for o in operadores %}
       <tr>
-        <td><code>{{ o.cuil }}</code></td>
+        <td class="nowrap"><code>{{ o.cuil }}</code></td>
         <td>{{ o.nombre or '—' }}</td>
         <td>{% for x in o.sindicatos %}<div{% if not x.activo %} class="muted" style="text-decoration:line-through;"{% endif %}>{{ x.sindicato }} · {{ x.rol }}</div>{% endfor %}</td>
         <td>{{ o.cuenta }}</td>
@@ -377,11 +431,12 @@
       <tr><td colspan="4" class="muted">No hay usuarios de panel cargados.</td></tr>
       {% endfor %}
     </table>
+    </div>
   </details>
 
   <!-- Panel de trabajadores (se llena al clickear el número) -->
-  <div id="trabajadores-box" style="display:none; margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+  <div id="trabajadores-box" class="card caja-lista" style="display:none;">
+    <div class="caja-lista-cab">
       <strong id="trabajadores-titulo"></strong>
       <button type="button" class="mini" onclick="document.getElementById('trabajadores-box').style.display='none'">Cerrar</button>
     </div>
@@ -412,42 +467,46 @@
     {% endif %}
     <form method="post" action="/plataforma/sindicato" enctype="multipart/form-data" id="form-sind">
       <input type="hidden" name="id" id="sind-id">
+      {# Cuatro grupos con su subtítulo (antes era una sola tira de campos):
+         lo que identifica al gremio, cómo se ve, qué contrató y lo que firmó. #}
+      <h3 class="form-secc">Datos del gremio</h3>
       <div class="grid">
         <div class="campo"><label>Nombre *</label><input name="nombre" required></div>
-        <div class="campo"><label>CUIT</label><input name="cuit" data-cuit="empresa" placeholder="30-12345678-1"></div>
-        <div class="campo full"><label>Descripción</label><input name="descripcion" placeholder="Breve descripción del gremio"></div>
+        <div class="campo"><label>CUIT</label><input name="cuit" data-cuit="empresa" placeholder="Ej.: 30-12345678-1"></div>
+        <div class="campo full"><label>Descripción</label><input name="descripcion" placeholder="Ej.: Sindicato de trabajadores bancarios"></div>
         <div class="campo"><label>Mail</label><input name="mail" type="email"></div>
         <div class="campo"><label>Teléfonos</label><input name="telefonos"></div>
         <div class="campo full"><label>Dirección</label><input name="direccion"></div>
-        <div class="campo"><label>Autoridad</label><input name="autoridad" placeholder="Nombre del referente"></div>
-        <div class="campo"><label>Cargo de la autoridad</label><input name="cargo_autoridad" placeholder="Secretario General"></div>
+        <div class="campo"><label>Autoridad</label><input name="autoridad" placeholder="Ej.: María Gómez"></div>
+        <div class="campo"><label>Cargo de la autoridad</label><input name="cargo_autoridad" placeholder="Ej.: Secretaria General"></div>
       </div>
 
+      <h3 class="form-secc">Marca</h3>
       <div class="colores">
         <div class="col-item">
           <label>Color base *</label>
           <input type="color" name="color_base" value="#0f1b2d" required>
-          <span class="muted" style="font-size:11px;">portada del trabajador y encabezados — tiene que ser oscuro</span>
+          <span class="ayuda">Portada del trabajador y encabezados: tiene que ser oscuro.</span>
         </div>
         <div class="col-item">
           <label>Color primario *</label>
           <input type="color" name="color_primario" value="#152238">
-          <span class="muted" style="font-size:11px;">identidad: bordes, detalles</span>
+          <span class="ayuda">Identidad: bordes y detalles.</span>
         </div>
         <div class="col-item">
           <label>Color acento</label>
           <input type="color" name="color_acento" value="#b23a2e">
-          <span class="muted" style="font-size:11px;">acción: botón principal, pestaña activa</span>
+          <span class="ayuda">Acción: botón principal y pestaña activa.</span>
         </div>
         <div class="col-item">
           <label>Color de apoyo</label>
           <input type="color" name="color_secundario" value="#1a7a6b">
-          <span class="muted" style="font-size:11px;">chips, fondos suaves</span>
+          <span class="ayuda">Chips y fondos suaves.</span>
         </div>
         <div class="col-item">
           <label>Color destacado</label>
           <input type="color" name="color_destacado" value="#E5188F">
-          <span class="muted" style="font-size:11px;">Panel Sindical: SOLO selecciones y filtros activos</span>
+          <span class="ayuda">Panel Sindical: solo selecciones y filtros activos.</span>
         </div>
       </div>
       <!-- Prueba de lectura (PLAN_TEMAS.md, D4): si el sindicato elige ver la app
@@ -458,69 +517,84 @@
         <ul id="prueba-lectura-avisos"></ul>
       </div>
 
-      <div class="campo" style="margin-top:14px;">
-        <label>Logo del sindicato (PNG, JPG o similar)</label>
-        <div id="sind-logo-preview" class="oculto" style="margin-bottom:8px;">
-          <img id="sind-logo-preview-img" src="" alt="Logo actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;">
-          <span class="muted" style="font-size:11px; margin-left:6px;">Logo actual -- subí uno nuevo para reemplazarlo.</span>
+      <div class="dos-col" style="margin-top:16px;">
+        <div class="campo">
+          <label>Logo del sindicato</label>
+          <div id="sind-logo-preview" class="oculto zarch-vista">
+            <img id="sind-logo-preview-img" src="" alt="Logo actual">
+            <span class="ayuda">Logo actual: subí uno nuevo para reemplazarlo.</span>
+          </div>
+          <label class="zarch">
+            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+            <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
+            <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
+          </label>
+          <span class="ayuda">PNG, JPG, WEBP, GIF o SVG. Se muestra en el encabezado de la app de los trabajadores.</span>
         </div>
-        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-        <span class="muted" style="font-size:11px;">Se mostrará en el encabezado de la app de los trabajadores.</span>
+
+        <div class="campo">
+          <label>Firma de la autoridad</label>
+          <div id="sind-firma-preview" class="oculto zarch-vista">
+            <img id="sind-firma-preview-img" src="" alt="Firma actual">
+            <span class="ayuda">Firma actual: subí una nueva para reemplazarla.</span>
+          </div>
+          <label class="zarch">
+            <input type="file" name="firma" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+            <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
+            <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
+          </label>
+          <span class="ayuda">Ideal: PNG con fondo transparente. Aparece en la credencial sindical del trabajador, debajo del nombre de la autoridad.</span>
+        </div>
       </div>
 
-      <div class="campo" style="margin-top:14px;">
-        <label>Firma de la autoridad (PNG con fondo transparente, ideal)</label>
-        <div id="sind-firma-preview" class="oculto" style="margin-bottom:8px;">
-          <img id="sind-firma-preview-img" src="" alt="Firma actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;">
-          <span class="muted" style="font-size:11px; margin-left:6px;">Firma actual -- subí una nueva para reemplazarla.</span>
-        </div>
-        <input type="file" name="firma" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-        <span class="muted" style="font-size:11px;">Aparece en la credencial sindical del trabajador, debajo del nombre de la autoridad.</span>
+      <div class="campo" style="margin-top:16px;">
+        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" id="sind-portada-clara"> Portada clara (trabajador)</label>
+        <span class="ayuda">Por defecto la portada del trabajador es oscura. Tildado: fondo claro (el encabezado sigue oscuro, con el color base).</span>
       </div>
 
-      <div class="campo" style="margin-top:14px;">
-        <label>Módulos habilitados</label>
+      <div class="campo">
+        <label class="chk-modulo"><input type="checkbox" name="admin_portada_clara" value="true" id="sind-admin-portada-clara"> Portada clara (admin)</label>
+        <span class="ayuda">Independiente de la del trabajador: por ejemplo, se puede dejar oscura para el trabajador y clara para el admin.</span>
+      </div>
+
+      <h3 class="form-secc">Módulos</h3>
+      <div class="campo">
         <div class="check-modulos" id="sind-modulos">
           {% for clave, nombre in catalogo_modulos.items() %}
           <label class="chk-modulo"><input type="checkbox" name="modulos_habilitados" value="{{ clave }}" {% if clave in modulos_iniciales %}checked{% endif %}> {{ nombre }}</label>
           <input type="hidden" name="modulos_ofrecidos" value="{{ clave }}">
           {% endfor %}
         </div>
-        <span class="muted" style="font-size:11px;">Qué tarjetas ve el trabajador y qué pestañas ve el admin de este sindicato. Tildado = disponible.</span>
+        <span class="ayuda">Qué tarjetas ve el trabajador y qué pestañas ve el admin de este sindicato. Tildado = disponible.</span>
       </div>
 
-      <div class="campo" style="margin-top:14px;">
-        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" id="sind-portada-clara"> Portada clara (trabajador)</label>
-        <span class="muted" style="font-size:11px;">Por defecto la portada del trabajador es oscura. Tildado: fondo claro (el encabezado sigue oscuro, con el color base).</span>
-      </div>
-
-      <div class="campo" style="margin-top:8px;">
-        <label class="chk-modulo"><input type="checkbox" name="admin_portada_clara" value="true" id="sind-admin-portada-clara"> Portada clara (admin)</label>
-        <span class="muted" style="font-size:11px;">Independiente de la del trabajador -- por ejemplo, se puede dejar oscura para el trabajador y clara para el admin.</span>
-      </div>
-
-      <div class="campo" style="margin-top:14px;">
-        <label>Contrato / convenio firmado con el sindicato (PDF o imagen)</label>
-        <div id="sind-contrato-actual" class="oculto" style="margin-bottom:8px; font-size:12.5px;">
+      <h3 class="form-secc">Contrato y políticas</h3>
+      <div class="campo">
+        <label>Contrato o convenio firmado con el sindicato</label>
+        <div id="sind-contrato-actual" class="oculto" style="margin-bottom:8px; font-size:13px;">
           Cargado: <a id="sind-contrato-link" href="#" target="_blank" rel="noopener"></a>
-          <span class="muted" style="font-size:11px; margin-left:6px;">-- subí otro para reemplazarlo.</span>
+          <span class="ayuda" style="display:inline; margin-left:6px;">Subí otro para reemplazarlo.</span>
         </div>
-        <input type="file" name="contrato" accept="application/pdf,image/png,image/jpeg,image/webp">
-        <span class="muted" style="font-size:11px;">El documento por el que el sindicato acepta la responsabilidad sobre los datos que recibe. Solo lo ve plataforma.</span>
+        <label class="zarch">
+          <input type="file" name="contrato" accept="application/pdf,image/png,image/jpeg,image/webp">
+          <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
+          <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
+        </label>
+        <span class="ayuda">PDF o imagen, hasta 15 MB. Es el documento por el que el sindicato acepta la responsabilidad sobre los datos que recibe. Solo lo ve plataforma.</span>
       </div>
 
-      <div class="campo" style="margin-top:8px;">
+      <div class="campo">
         <label class="chk-modulo"><input type="checkbox" name="clausula_confidencialidad" value="true" id="sind-clausula"> Aceptó la cláusula de confidencialidad</label>
-        <span class="muted" style="font-size:11px;">Tildado: en Reportes y en el explorador del Panel Sindical ve también los recibos que los afiliados verificaron y NO enviaron, siempre anonimizados (sin nombre, CUIL ni empresa). Sin tildar, ve solo los enviados. Exige el contrato cargado.</span>
-        <span class="muted" id="sind-clausula-quien" style="font-size:11px; display:block;"></span>
+        <span class="ayuda">Tildado: en Reportes y en el explorador del Panel Sindical ve también los recibos que los afiliados verificaron y NO enviaron, siempre anonimizados (sin nombre, CUIL ni empresa). Sin tildar, ve solo los enviados. Exige el contrato cargado.</span>
+        <span class="ayuda" id="sind-clausula-quien"></span>
       </div>
 
-      <div class="campo" style="margin-top:8px;">
+      <div class="campo">
         <label class="chk-modulo"><input type="checkbox" name="acepta_mail_declarado" value="true" id="sind-acepta-mail-declarado" checked> Acepta registro con mail declarado</label>
-        <span class="muted" style="font-size:11px;">Tildado: el afiliado que no tiene mail cargado en el padrón puede registrarse declarando uno propio (queda en nivel 2, marcado como "mail declarado"). Sin tildar, solo puede registrarse con el mail que el sindicato cargó.</span>
+        <span class="ayuda">Tildado: el afiliado que no tiene mail cargado en el padrón puede registrarse declarando uno propio (queda en nivel 2, marcado como «mail declarado»). Sin tildar, solo puede registrarse con el mail que el sindicato cargó.</span>
       </div>
 
-      <button type="submit">Crear sindicato</button>
+      <button type="submit" style="margin-top:20px;">Crear sindicato</button>
     </form>
   </div>
 
@@ -530,10 +604,12 @@
   <h2 class="titulo-pagina">Crear un administrador de sindicato</h2>
   <div class="card">
     {% if request.query_params.get('error') == 'cuil' %}
-    <div class="msg err">No se creó el administrador: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+    <div class="msg err">No se creó el administrador: el CUIL no es válido. Revisá los 11 números.<br><small>Código E-IDENT-01</small></div>
     {% endif %}
     {% if sindicatos %}
     <form method="post" action="/plataforma/usuario" id="form-nuevo-admin" onsubmit="return confirmarClaves(this, 'na-clave', 'na-repetir', 'na-error')">
+      {# Sindicato y CUIL arriba, el nombre a todo el ancho y las dos claves
+         juntas, en la misma fila. #}
       <div class="grid">
         <div class="campo">
           <label>Sindicato *</label>
@@ -543,12 +619,13 @@
             {% endfor %}
           </select>
         </div>
-        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="20123456786"></div>
-        <div class="campo"><label>Nombre</label><input name="nombre"></div>
-        <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
+        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="Ej.: 20-12345678-6"></div>
+        <div class="campo full"><label>Nombre</label><input name="nombre"></div>
+        <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required>
+          <span class="ayuda">La persona la cambia en su primer ingreso.</span></div>
         <div class="campo"><label>Repetir clave inicial *</label><input id="na-repetir" required></div>
       </div>
-      <div class="muted" id="na-error" style="color:#b23a2e; display:none;">Las claves no coinciden.</div>
+      <div class="msg err" id="na-error" style="display:none; margin-top:12px;">Las claves no coinciden.</div>
       <button type="submit">Crear administrador</button>
     </form>
     {% else %}
@@ -560,7 +637,7 @@
   <div class="ppanel" data-mov-vista id="pp-clave">
   <h2 class="titulo-pagina">Cambiar la clave de un usuario</h2>
   <div class="card">
-    <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
+    <div class="aviso-caja">
       <strong>Opción transitoria para pruebas.</strong> Permite resetear la clave de cualquier
       administrador de sindicato o trabajador. Antes de usar la plataforma en producción,
       conviene quitar esta opción o reemplazarla por un mecanismo de recuperación seguro.
@@ -570,16 +647,16 @@
         <div class="campo">
           <label>Tipo de usuario *</label>
           <select name="tipo" required>
-            <option value="sindicato">Administrador de sindicato (login en /admin)</option>
-            <option value="trabajador">Trabajador (login en /ingresar)</option>
+            <option value="sindicato">Administrador de sindicato (entra por /admin)</option>
+            <option value="trabajador">Trabajador (entra por /ingresar)</option>
           </select>
-          <span class="muted" style="font-size:11px;">Son cuentas separadas aunque compartan CUIT/CUIL: elegí la que corresponda al login que querés cambiar.</span>
+          <span class="ayuda">Son cuentas separadas aunque compartan CUIT/CUIL: elegí la del ingreso que querés cambiar.</span>
         </div>
-        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456786"></div>
+        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="Ej.: 20-12345678-6"></div>
         <div class="campo"><label>Nueva clave *</label><input id="rc-clave" name="clave_nueva" required></div>
         <div class="campo"><label>Repetir nueva clave *</label><input id="rc-repetir" required></div>
       </div>
-      <div class="muted" id="rc-error" style="color:#b23a2e; display:none;">Las claves no coinciden.</div>
+      <div class="msg err" id="rc-error" style="display:none; margin-top:12px;">Las claves no coinciden.</div>
       <button type="submit">Cambiar clave</button>
     </form>
   </div>
@@ -588,44 +665,60 @@
   <div class="ppanel" data-mov-vista id="pp-marca">
   <h2 class="titulo-pagina">Marca de la plataforma</h2>
   <div class="card">
-    <p class="muted" style="margin-bottom:14px;">Es la marca de Colm3na en sí — el logo y los colores de las pantallas de login y de este panel, antes de entrar a un sindicato en particular. La marca de cada sindicato se edita aparte, desde "Sindicatos".</p>
+    <p class="muted" style="margin-bottom:16px;">Es la marca de Colm3na en sí: el logo y los colores de las pantallas de ingreso, antes de entrar a un sindicato en particular. Los paneles se pintan con su modelo de diseño (Laguna o Noticiero). La marca de cada sindicato se edita aparte, desde «Sindicatos».</p>
     <form method="post" action="/plataforma/marca" enctype="multipart/form-data">
+      <h3 class="form-secc">Colores</h3>
       <div class="colores">
         <div class="col-item">
           <label>Color primario</label>
           <input type="color" name="color_primario" value="{{ marca_plataforma.color_primario if marca_plataforma else '#152238' }}">
-          <span class="muted" style="font-size:11px;">encabezado y botones principales</span>
+          <span class="ayuda">En las pantallas de ingreso: botones y títulos.</span>
         </div>
         <div class="col-item">
           <label>Color secundario</label>
           <input type="color" name="color_secundario" value="{{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }}">
-          <span class="muted" style="font-size:11px;">enlaces y acentos</span>
+          <span class="ayuda">En las pantallas de ingreso: enlaces.</span>
         </div>
         <div class="col-item">
           <label>Color acento</label>
           <input type="color" name="color_acento" value="{{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }}">
-          <span class="muted" style="font-size:11px;">reservado</span>
+          <span class="ayuda">En las pantallas de ingreso: avisos de error.</span>
         </div>
       </div>
-      <div class="campo" style="margin-top:14px; max-width:360px;">
-        <label>Logo para fondo claro (logins)</label>
-        {% if marca_plataforma and marca_plataforma.logo %}
-        <div style="margin-bottom:8px;"><img src="/logo-plataforma" alt="Logo actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;"></div>
-        {% endif %}
-        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-        <span class="muted" style="font-size:11px;">Se muestra en los logins (fondo gris claro). Si no subís uno nuevo, se mantiene el actual.</span>
+
+      <h3 class="form-secc">Logos</h3>
+      {# Los dos logos lado a lado, cada uno con su vista previa sobre el fondo
+         en el que se usa. En el teléfono, uno debajo del otro. #}
+      <div class="dos-col">
+        <div class="campo">
+          <label>Para fondo claro</label>
+          {% if marca_plataforma and marca_plataforma.logo %}
+          <div class="zarch-vista"><img src="/logo-plataforma" alt="Logo actual para fondo claro"><span class="ayuda">El actual.</span></div>
+          {% endif %}
+          <label class="zarch">
+            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+            <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
+            <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
+          </label>
+          <span class="ayuda">Va en los ingresos y en los encabezados claros de los paneles. Si no subís uno nuevo, se mantiene el actual.</span>
+        </div>
+        <div class="campo">
+          <label>Para fondo oscuro</label>
+          {% if marca_plataforma and marca_plataforma.logo_oscuro %}
+          <div class="zarch-vista"><img class="sobre-oscuro" src="/logo-plataforma-oscuro" alt="Logo actual para fondo oscuro"><span class="ayuda">El actual.</span></div>
+          {% endif %}
+          <label class="zarch">
+            <input type="file" name="logo_oscuro" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+            <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
+            <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
+          </label>
+          <span class="ayuda">Va en los encabezados oscuros (las portadas y las apps de cada sindicato). Si no se carga, se usa el de fondo claro.</span>
+        </div>
       </div>
-      <div class="campo" style="margin-top:14px; max-width:360px;">
-        <label>Logo para fondo oscuro (encabezados)</label>
-        {% if marca_plataforma and marca_plataforma.logo_oscuro %}
-        <div style="margin-bottom:8px;"><img src="/logo-plataforma-oscuro" alt="Logo actual" style="height:36px; background:#152238; border:1px solid var(--linea); border-radius:6px; padding:3px;"></div>
-        {% endif %}
-        <input type="file" name="logo_oscuro" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-        <span class="muted" style="font-size:11px;">Se muestra en los encabezados de admin/trabajador/empresa/plataforma (fondo oscuro). Si no se carga, esos encabezados usan el logo de fondo claro.</span>
-      </div>
-      <div class="campo" style="margin-top:14px;">
+
+      <div class="campo" style="margin-top:16px;">
         <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" {% if marca_plataforma and marca_plataforma.portada_clara %}checked{% endif %}> Portada clara</label>
-        <span class="muted" style="font-size:11px;">Para la portada de /plataforma (ver "Inicio"). Por defecto oscura. Tildado: fondo claro con el color primario tal cual (acá no hay un color de base aparte, asegurate de que sea oscuro si dejás esta opción sin marcar).</span>
+        <span class="ayuda">Sin tildar, la portada de plataforma («Inicio») va en oscuro. Tildado, va en claro.</span>
       </div>
       <button type="submit">Guardar marca</button>
     </form>
@@ -727,9 +820,11 @@
   </div>
 
   <div class="ppanel" data-mov-vista id="pp-config">
-  <h2 class="titulo-pagina">Configuración legal</h2>
+  <h2 class="titulo-pagina">Configuración</h2>
+  <p class="muted bajada">Parámetros que valen para todos los sindicatos a la vez.</p>
   <div class="card">
-    <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
+    <h3>Límite legal</h3>
+    <div class="aviso-caja">
       <strong>Límite de ley nacional.</strong> El tope sindical es el límite global del
       2% a las cargas de convenio (cuota solidaria, fondos convencionales) que fija el
       art. 133 de la Ley 27.802 y su Dto. 407/2026. No incluye la cuota de afiliación.
@@ -737,34 +832,39 @@
     </div>
     <form method="post" action="/plataforma/config">
       <div class="campo" style="max-width:220px;">
-        <label>Tope sindical (%)</label>
-        <input type="number" name="tope_sindical_pct" step="0.1" min="0" required
-               value="{{ tope_sindical_pct }}">
+        <label for="cfg-tope">Tope sindical</label>
+        {# Con coma, como se escribe en Argentina; el servidor acepta coma o punto. #}
+        <div class="con-sufijo">
+          <input type="text" inputmode="decimal" id="cfg-tope" name="tope_sindical_pct" required
+                 pattern="[0-9]+([,.][0-9]+)?" value="{{ ('%g' % tope_sindical_pct)|replace('.', ',') if '.' in ('%g' % tope_sindical_pct) else ('%g' % tope_sindical_pct) ~ ',0' }}">
+          <span class="sufijo" aria-hidden="true">%</span>
+        </div>
       </div>
       <button type="submit">Guardar</button>
     </form>
   </div>
-  <h2 style="margin-top:22px;">Panel Sindical</h2>
   <div class="card">
-    <p class="muted" style="margin-bottom:14px; max-width:640px;">Parámetros del dashboard
-      del admin de sindicato, iguales para todas las organizaciones. El semáforo de aportes
-      pinta cada empresa según los días desde su último depósito informado: verde hasta el
-      primer umbral, amarillo hasta el segundo, rojo después.</p>
+    <h3>Panel Sindical</h3>
+    <p class="muted" style="margin-bottom:14px; max-width:640px;">Parámetros del Panel Sindical de
+      cada sindicato. El semáforo de aportes pinta cada empresa según los días desde su último
+      depósito informado: verde hasta el primer umbral, amarillo hasta el segundo, rojo después.</p>
     <form method="post" action="/plataforma/config-dashboard">
-      <div class="campo" style="max-width:260px;">
-        <label>Semáforo: verde hasta (días)</label>
-        <input type="number" name="semaforo_verde_hasta_dias" min="1" required
-               value="{{ config_dashboard.semaforo_verde_hasta_dias }}">
+      <div class="grid" style="max-width:540px;">
+        <div class="campo">
+          <label for="cfg-verde"><span class="punto verde" aria-hidden="true"></span>Semáforo: verde hasta (días)</label>
+          <input type="number" id="cfg-verde" name="semaforo_verde_hasta_dias" min="1" required
+                 value="{{ config_dashboard.semaforo_verde_hasta_dias }}">
+        </div>
+        <div class="campo">
+          <label for="cfg-amarillo"><span class="punto ambar" aria-hidden="true"></span>Semáforo: amarillo hasta (días)</label>
+          <input type="number" id="cfg-amarillo" name="semaforo_amarillo_hasta_dias" min="2" required
+                 value="{{ config_dashboard.semaforo_amarillo_hasta_dias }}">
+        </div>
       </div>
-      <div class="campo" style="max-width:260px;">
-        <label>Semáforo: amarillo hasta (días)</label>
-        <input type="number" name="semaforo_amarillo_hasta_dias" min="2" required
-               value="{{ config_dashboard.semaforo_amarillo_hasta_dias }}">
-      </div>
-      <div class="campo" style="margin-top:10px;">
+      <div class="campo" style="margin-top:14px;">
         <label class="chk-modulo"><input type="checkbox" name="dashboard_consultas_bot_habilitado" value="true"
-               {% if config_dashboard.consultas_bot_habilitado %}checked{% endif %}> Habilitar "Consultas al asistente" en el dashboard</label>
-        <span class="muted" style="font-size:11px;">Dejarlo apagado hasta que el bot de consultas clasifique por tema: con esto apagado, el carril entero no aparece en ningún dashboard.</span>
+               {% if config_dashboard.consultas_bot_habilitado %}checked{% endif %}> Habilitar «Consultas al asistente» en el Panel Sindical</label>
+        <span class="ayuda">Dejarlo apagado hasta que el bot de consultas clasifique por tema: apagado, ese carril no aparece en ningún panel.</span>
       </div>
       <button type="submit">Guardar</button>
     </form>
@@ -784,11 +884,38 @@
             onclick="cambiarSubIA('enmascarado')">Enmascarado ({{ enmascarado_registros|length }})</button>
   </div>
 
+  {# La fuente de los precios: la URL de la página y la fecha en que se leyó. #}
+  {% set _fuente_url = (precios_ia.fuente or '').split(' ')[0] %}
+  {% set _leido = (precios_ia.leido or '').split('-') %}
+  {% set _leido_txt = (_leido[2] ~ '/' ~ _leido[1] ~ '/' ~ _leido[0]) if _leido|length == 3 else precios_ia.leido %}
+
   {# ---------------- Consumo y costo ---------------- #}
   <div class="ia-subpanel activo" data-mov-vista id="ia-sub-consumo">
-  <p class="muted" style="margin-bottom:14px; max-width:700px;">Una fila por cada llamada real a la API de Anthropic, con los tokens que devolvió la propia respuesta, lo que tardó y lo que costó. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo. El costo sale de los tokens por el precio del modelo <strong>que regía en ese momento</strong>: actualizar la lista de precios no reescribe el gasto de los meses anteriores.</p>
+  {% if uso_ia %}
+  {# Los filtros arriba de todo lo que filtran: los totales y las dos tablas. #}
+  <div class="filtros">
+    <select id="f-usoia-sindicato" onchange="filtrarUsoIA()" aria-label="Sindicato">
+      <option value="">Todos los sindicatos</option>
+      {% for sn in sindicatos_uso_ia %}<option value="{{ sn }}">{{ sn }}</option>{% endfor %}
+    </select>
+    <select id="f-usoia-modelo" onchange="filtrarUsoIA()" aria-label="Modelo">
+      <option value="">Todos los modelos</option>
+      {% for mid, mnom in modelos_uso_ia %}<option value="{{ mid }}">{{ mnom }}</option>{% endfor %}
+    </select>
+    <select id="f-usoia-tipo" onchange="filtrarUsoIA()" aria-label="Tipo de lectura">
+      <option value="">Todos los tipos</option>
+      <option value="recibo">Recibo</option>
+      <option value="aportes">Aportes (ARCA)</option>
+      <option value="aprendizaje">Aprendizaje</option>
+      <option value="prueba">Banco de pruebas</option>
+      <option value="herramienta">Herramientas (Entornos)</option>
+    </select>
+    <button type="button" class="sec" onclick="limpiarFiltroUsoIA()">Limpiar</button>
+    <span class="f-cant" id="f-usoia-cant"></span>
+  </div>
 
-  <div class="card">
+  <div class="card" style="margin-top:0;">
+    <p class="muted" style="margin-bottom:16px; max-width:760px;">Una fila por cada llamada real a la API de Anthropic, con los tokens que devolvió la propia respuesta, lo que tardó y lo que costó. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo. El costo sale de los tokens por el precio del modelo <strong>que regía en ese momento</strong>: actualizar la lista de precios no reescribe el gasto de los meses anteriores.</p>
     <div class="ia-tot" id="usoia-totales"></div>
     <div class="tabla-ancha" style="margin-top:16px;">
       <table>
@@ -798,34 +925,13 @@
         <tbody id="usoia-por-modelo"></tbody>
       </table>
     </div>
-    <p class="muted" style="margin-top:12px; font-size:12px;">
-      {% if precios_ia.modelos %}Precios de <strong>{{ precios_ia.fuente }}</strong>, leídos el {{ precios_ia.leido }}. Son los de la API estándar, sin descuentos de cache ni Batch.{% else %}<strong>No se encontró data/precios_ia.json</strong>: sin catálogo no se puede calcular ningún costo.{% endif %}
-      Los totales acompañan a los filtros de abajo.
+    <p class="ayuda" style="margin-top:12px;">
+      {% if precios_ia.modelos %}Precios de la <a href="{{ _fuente_url }}" target="_blank" rel="noopener">página de precios de Anthropic</a>, leídos el <time datetime="{{ precios_ia.leido }}"><strong>{{ _leido_txt }}</strong></time>. Son los de la API estándar, sin descuentos de cache ni Batch.{% else %}<strong>No se encontró data/precios_ia.json</strong>: sin catálogo no se puede calcular ningún costo.{% endif %}
       Un costo con <span class="estimado">asterisco</span> es una llamada anterior a que se
       guardara el precio del momento: se muestra con los precios de hoy.</p>
   </div>
 
-  <div class="filtros" style="margin-top:18px;">
-    <select id="f-usoia-sindicato" onchange="filtrarUsoIA()">
-      <option value="">Todos los sindicatos</option>
-      {% for sn in sindicatos_uso_ia %}<option value="{{ sn }}">{{ sn }}</option>{% endfor %}
-    </select>
-    <select id="f-usoia-modelo" onchange="filtrarUsoIA()">
-      <option value="">Todos los modelos</option>
-      {% for mid, mnom in modelos_uso_ia %}<option value="{{ mid }}">{{ mnom }}</option>{% endfor %}
-    </select>
-    <select id="f-usoia-tipo" onchange="filtrarUsoIA()">
-      <option value="">Todos los tipos</option>
-      <option value="recibo">Recibo</option>
-      <option value="aportes">Aportes (ARCA)</option>
-      <option value="aprendizaje">Aprendizaje</option>
-      <option value="prueba">Banco de pruebas</option>
-      <option value="herramienta">Herramientas (/entornos)</option>
-    </select>
-    <button type="button" class="sec mini" onclick="limpiarFiltroUsoIA()">Limpiar</button>
-    <span class="f-cant" id="f-usoia-cant"></span>
-  </div>
-  <div class="tabla-ancha">
+  <div class="tabla-ancha t9" style="margin-top:18px;">
   <table>
     <tr><th>Fecha</th><th>Sindicato</th><th>Tipo</th><th>Modelo</th><th>CUIL</th>
         <th class="num">Tokens entrada</th><th class="num">Tokens salida</th>
@@ -835,17 +941,22 @@
         data-entrada="{{ u.tokens_entrada }}" data-salida="{{ u.tokens_salida }}"
         data-ms="{{ u.duracion_ms }}" data-costo="{% if u.costo is not none %}{{ u.costo }}{% endif %}"
         data-nombre="{{ u.modelo_nombre }}">
-      <td>{{ u.fecha }}</td><td>{{ u.sindicato }}</td><td>{{ u.tipo }}</td><td>{{ u.modelo_nombre }}</td>
-      <td>{{ u.cuil or '—' }}</td><td class="num">{{ u.tokens_entrada }}</td><td class="num">{{ u.tokens_salida }}</td>
+      <td class="nowrap">{{ u.fecha }}</td><td>{{ u.sindicato }}</td><td>{{ u.tipo }}</td><td>{{ u.modelo_nombre }}</td>
+      <td class="nowrap">{{ u.cuil or '—' }}</td><td class="num">{{ u.tokens_entrada }}</td><td class="num">{{ u.tokens_salida }}</td>
       <td class="num">{{ u.duracion_txt }}</td>
       <td class="num{% if not u.costo_exacto %} estimado{% endif %}"
           {% if u.costo is not none and not u.costo_exacto %}title="Estimado con los precios de hoy: esta llamada es anterior a que se guardara el precio del momento."{% endif %}>{{ u.costo_txt }}{% if u.costo is not none and not u.costo_exacto %} *{% endif %}</td>
     </tr>
-    {% else %}
-    <tr><td colspan="9" class="muted">Todavía no hay consumo registrado.</td></tr>
     {% endfor %}
   </table>
   </div>
+  {% else %}
+  {# Un solo vacío para toda la solapa (antes eran dos mensajes distintos). #}
+  <div class="card vacio">
+    <p>Todavía no hubo lecturas de recibos. Se registran solas cuando un afiliado sube uno; para probar un modelo, usá el <a href="#usoia-probar" onclick="cambiarSubIA('probar'); return false;">Banco de pruebas</a>.</p>
+    {% if precios_ia.modelos %}<p class="ayuda" style="margin-top:8px;">Precios de la <a href="{{ _fuente_url }}" target="_blank" rel="noopener">página de precios de Anthropic</a>, leídos el <time datetime="{{ precios_ia.leido }}"><strong>{{ _leido_txt }}</strong></time>.</p>{% endif %}
+  </div>
+  {% endif %}
   </div>
 
   {# ---------------- Modelos: qué modelo usa cada parte ---------------- #}
@@ -856,52 +967,87 @@
     acá, pero si el modelo más barato lee mal el recibo el ahorro no existe: antes de bajar de
     modelo, pasalo por el banco de pruebas con un recibo de verdad.
   </div>
-  <form method="post" action="/plataforma/modelos-ia">
+  <form method="post" action="/plataforma/modelos-ia" id="form-modelos-ia">
     {% for uso, info in usos_ia.items() %}
     <div class="card">
       <h3>{{ info.nombre }}</h3>
       <p class="muted" style="margin-bottom:12px; max-width:660px;">{{ info.detalle }}</p>
-      <div class="campo" style="max-width:480px;">
-        <label>Modelo</label>
-        <select name="modelo_{{ uso }}">
+      <div class="campo" style="max-width:640px;">
+        <label for="modelo-{{ uso }}">Modelo</label>
+        <select name="modelo_{{ uso }}" id="modelo-{{ uso }}" data-original="{{ modelos_ia[uso] }}">
           {% for m in precios_ia.modelos %}
-          <option value="{{ m.id }}" {% if modelos_ia[uso] == m.id %}selected{% endif %}>{{ m.nombre }} — {{ m.precio_txt }}{% if m.id == info.default %} · el de origen{% endif %}</option>
+          <option value="{{ m.id }}" {% if modelos_ia[uso] == m.id %}selected{% endif %}>{{ m.nombre }} · {{ m.precio_txt|replace(' de tokens', '') }}{% if m.id == info.default %} · por defecto{% endif %}</option>
           {% endfor %}
         </select>
       </div>
     </div>
     {% endfor %}
-    <button type="submit">Guardar</button>
+    <div class="barra-guardar">
+      <button type="submit">Guardar los {{ {1: 'un', 2: 'dos', 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis'}.get(usos_ia|length, usos_ia|length) }} modelos</button>
+      <span class="bg-cambios" id="modelos-cambios" aria-live="polite"></span>
+    </div>
   </form>
-  <p class="muted" style="margin-top:10px; font-size:12px;">La lectura del convenio escaneado (OCR
+  <p class="ayuda" style="margin-top:10px;">La lectura del convenio escaneado (OCR
     al indexar un PDF) sigue usando el modelo de origen del extractor y no cambia acá: es una
     operación puntual del alta de un convenio, no del uso diario.</p>
   </div>
 
   {# ---------------- Enmascarado ---------------- #}
+  {% set _con_imagenes = enmascarado_registros|selectattr('con_imagenes')|list|length %}
   <div class="ia-subpanel" data-mov-vista id="ia-sub-enmascarado">
-  <p class="muted" style="margin-bottom:10px; max-width:760px;">Cada recibo, comprobante de ARCA o aprendizaje que pasa por el enmascarado deja una fila: si se tapó lo que identifica a la persona antes de mandarlo a la IA, por qué camino y, si no se pudo, por qué. <strong>Es mejor esfuerzo:</strong> si algo no se tapa, el recibo se analiza igual y queda anotado acá. Las filas no tienen ningún dato personal.</p>
-  <div class="aviso-caja" style="margin-bottom:14px;">
-    Modo en este servidor: <strong>{{ enmascarado_modo }}</strong>
-    {% if enmascarado_modo == "sombra" %}— se calcula todo y se anota, pero a la IA le llega el original: la columna dice si <em>se habría</em> tapado.
-    {% elif enmascarado_modo == "activo" %}— a la IA le llega el documento tapado.
-    {% else %}— no se tapa ni se anota nada. Se prende con la variable <code>ENMASCARADO</code> del servicio (<code>sombra</code> o <code>activo</code>).{% endif %}
-    Lector de fotos: <strong>{{ "listo" if enmascarado_ocr else "no disponible (solo se tapa el PDF con texto)" }}</strong>.
-  </div>
-  {% if enmascarado_diag_entorno %}
-  <div class="aviso-caja" style="margin-bottom:14px; border-color:#b8860b;">
-    <strong>Diagnóstico (transitorio, solo Pruebas):</strong>
-    {% if enmascarado_diagnostico %}se guardan la imagen original y la que recibió la IA de cada documento, para verlas con «Ver» en la lista. <strong>La original tiene datos personales</strong>: se borran solas a los {{ enmascarado_dias }} días.
-    {% else %}apagado. Se prende con <code>ENMASCARADO_GUARDAR_IMAGENES=1</code> en el servicio de Pruebas.{% endif %}
-    <form method="post" action="/plataforma/enmascarado/imagenes/borrar" style="display:inline; margin-left:8px;"
-          onsubmit="return confirm('¿Borrar todas las imágenes de diagnóstico guardadas? No se puede deshacer.');">
-      <button type="submit" class="mini borrar">Borrar todas las imágenes</button>
+  <div class="card" style="margin-top:0;">
+    <p class="muted" style="margin-bottom:12px; max-width:760px;">Cada recibo, comprobante de ARCA o aprendizaje que pasa por el enmascarado deja una fila: si se tapó lo que identifica a la persona antes de mandarlo a la IA, por qué camino y, si no se pudo, por qué. <strong>Es mejor esfuerzo:</strong> si algo no se tapa, el recibo se analiza igual y queda anotado acá. Las filas no tienen ningún dato personal.</p>
+    {# Una sola línea de estado con pastillas: gris apagado, verde activo y
+       ámbar solo para lo que hay que mirar (modo sombra, lector que falta). #}
+    <div class="estado-linea">
+      <span class="pild {{ 'on' if enmascarado_modo == 'activo' else ('ojo' if enmascarado_modo == 'sombra' else '') }}">Modo en este servidor: <strong>{{ enmascarado_modo }}</strong></span>
+      <span class="pild {{ 'on' if enmascarado_ocr else 'ojo' }}">Lector de fotos: {{ "listo" if enmascarado_ocr else "no disponible" }}</span>
+      {% if enmascarado_diag_entorno %}<span class="pild {{ 'ojo' if enmascarado_diagnostico else '' }}">Diagnóstico: {{ "prendido" if enmascarado_diagnostico else "apagado" }}</span>{% endif %}
+    </div>
+    <p class="ayuda">
+      {% if enmascarado_modo == "sombra" %}En sombra se calcula todo y se anota, pero a la IA le llega el original: la columna dice si <em>se habría</em> tapado.
+      {% elif enmascarado_modo == "activo" %}A la IA le llega el documento tapado.
+      {% else %}No se tapa ni se anota nada. Se prende con la variable <code>ENMASCARADO</code> del servicio (<code>sombra</code> o <code>activo</code>).{% endif %}
+      {% if not enmascarado_ocr %}Sin lector de fotos, solo se tapa el PDF con texto.{% endif %}
+      {% if enmascarado_diag_entorno %}
+        {% if enmascarado_diagnostico %}Diagnóstico (transitorio, solo Pruebas): se guardan la imagen original y la que recibió la IA de cada documento, para verlas con «Ver» en la lista. <strong>La original tiene datos personales</strong>: se borran solas a los {{ enmascarado_dias }} días.
+        {% else %}El diagnóstico (transitorio, solo Pruebas) se prende con <code>ENMASCARADO_GUARDAR_IMAGENES=1</code> en el servicio de Pruebas.{% endif %}
+      {% endif %}
+    </p>
+    {% if enmascarado_diag_entorno and _con_imagenes %}
+    <form method="post" action="/plataforma/enmascarado/imagenes/borrar" style="margin-top:10px;"
+          onsubmit="return confirm('¿Borrar las {{ _con_imagenes }} imágenes de diagnóstico guardadas? No se puede deshacer.');">
+      <button type="submit" class="mini borrar" style="margin-left:0;">Borrar {{ 'la imagen guardada' if _con_imagenes == 1 else 'las ' ~ _con_imagenes ~ ' imágenes guardadas' }}</button>
     </form>
+    {% endif %}
   </div>
-  {% endif %}
 
-  <div class="card">
-    <div class="ia-tot" id="enm-totales"></div>
+  <div class="filtros" style="margin-top:18px;">
+    <select id="f-enm-tipo" onchange="filtrarEnmascarado()" aria-label="Documento">
+      <option value="">Todos los documentos</option>
+      <option value="recibo">Recibos</option>
+      <option value="aportes">Comprobantes de ARCA</option>
+      <option value="aprendizaje">Aprendizaje</option>
+      <option value="prueba">Banco de pruebas</option>
+      <option value="herramienta">Herramientas (Entornos)</option>
+    </select>
+    <select id="f-enm-camino" onchange="filtrarEnmascarado()" aria-label="Camino">
+      <option value="">Todos los caminos</option>
+      <option value="pdf_texto">PDF con texto</option>
+      <option value="pdf_imagen">PDF escaneado</option>
+      <option value="foto">Foto</option>
+    </select>
+    <select id="f-enm-resultado" onchange="filtrarEnmascarado()" aria-label="Resultado">
+      <option value="">Todos los resultados</option>
+      <option value="tapados">Tapados (o se habrían tapado)</option>
+      <option value="sin_tapar">Sin tapar</option>
+      <option value="fugas">Con fugas</option>
+    </select>
+    <span class="f-cant" id="f-enm-cant"></span>
+  </div>
+
+  <div class="card" style="margin-top:0;">
+    <div class="ia-tot siete" id="enm-totales"></div>
     <div class="tabla-ancha" style="margin-top:16px;">
       <table>
         <tr><th>Camino</th><th class="num">Documentos</th><th class="num">Tapados</th>
@@ -918,30 +1064,7 @@
     </div>
   </div>
 
-  <div class="filtros" style="margin-top:16px;">
-    <select id="f-enm-tipo" onchange="filtrarEnmascarado()">
-      <option value="">Todos los documentos</option>
-      <option value="recibo">Recibos</option>
-      <option value="aportes">Comprobantes de ARCA</option>
-      <option value="aprendizaje">Aprendizaje</option>
-      <option value="prueba">Banco de pruebas</option>
-      <option value="herramienta">Herramientas (/entornos)</option>
-    </select>
-    <select id="f-enm-camino" onchange="filtrarEnmascarado()">
-      <option value="">Todos los caminos</option>
-      <option value="pdf_texto">PDF con texto</option>
-      <option value="pdf_imagen">PDF escaneado</option>
-      <option value="foto">Foto</option>
-    </select>
-    <select id="f-enm-resultado" onchange="filtrarEnmascarado()">
-      <option value="">Todos los resultados</option>
-      <option value="tapados">Tapados (o se habrían tapado)</option>
-      <option value="sin_tapar">Sin tapar</option>
-      <option value="fugas">Con fugas</option>
-    </select>
-    <span class="f-cant" id="f-enm-cant"></span>
-  </div>
-  <div class="tabla-ancha">
+  <div class="tabla-ancha t9" style="margin-top:18px;">
     <table>
       <tr><th>Fecha</th><th>Sindicato</th><th>Documento</th><th>Camino</th><th>Resultado</th>
           <th class="num">Zonas</th><th class="num">Fugas</th><th class="num">Espera</th><th class="num">Total</th>
@@ -950,11 +1073,11 @@
       <tr class="fila-enm" data-tipo="{{ r.tipo }}" data-camino="{{ r.camino }}" data-resultado="{{ r.resultado }}"
           data-motivo="{{ r.motivo }}" data-fugas="{{ r.fugas }}" data-pertenece="{{ '' if r.pertenece is none else ('si' if r.pertenece else 'no') }}"
           data-espera="{{ r.espera_ms }}" data-total="{{ r.total_ms }}"{% if loop.index > 300 %} data-sobra="1"{% endif %}>
-        <td>{{ r.fecha }}</td><td>{{ r.sindicato }}</td><td>{{ r.tipo }}</td>
+        <td class="nowrap">{{ r.fecha }}</td><td>{{ r.sindicato }}</td><td>{{ r.tipo }}</td>
         <td class="enm-camino">{{ r.camino }}</td>
         <td class="enm-resultado">{{ r.resultado }}</td>
         <td class="num">{{ r.cajas }}</td>
-        <td class="num">{% if r.fugas %}<strong style="color:#b8860b;">{{ r.fugas }}</strong>{% else %}0{% endif %}</td>
+        <td class="num">{% if r.fugas %}<strong class="txt-ambar">{{ r.fugas }}</strong>{% else %}0{% endif %}</td>
         <td class="num">{{ r.espera_ms }} ms</td><td class="num">{{ r.total_ms }} ms</td>
         {% if enmascarado_diag_entorno %}<td>{% if r.con_imagenes %}<a href="/plataforma/enmascarado/{{ r.id }}" target="_blank" rel="noopener">Ver</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
       </tr>
@@ -962,7 +1085,7 @@
       <tr><td colspan="10" class="muted">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</td></tr>
       {% endfor %}
     </table>
-    <p class="muted" style="font-size:12px; margin-top:8px;">Se listan las 300 más recientes que cumplen el filtro; los números de arriba cuentan todas las que llegaron a esta pantalla (hasta 3.000).</p>
+    <p class="ayuda" style="margin-top:8px;">Se listan las 300 más recientes que cumplen el filtro; los números de arriba cuentan todas las que llegaron a esta pantalla (hasta 3.000).</p>
   </div>
   </div>
 
@@ -976,28 +1099,43 @@
   <div class="card">
     <div class="grid">
       <div class="campo">
-        <label>Recibo de sueldo o comprobante de ARCA (imagen o PDF)</label>
-        <input type="file" id="prueba-archivo" accept="image/*,application/pdf">
+        <label>Recibo de sueldo o comprobante de ARCA</label>
+        <label class="zarch">
+          <input type="file" id="prueba-archivo" accept="image/*,application/pdf">
+          <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
+          <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
+        </label>
+        <span class="ayuda">Imagen o PDF.</span>
       </div>
       <div class="campo">
-        <label>Qué es el archivo</label>
+        <label for="prueba-tipo">Qué es el archivo</label>
         <select id="prueba-tipo">
           <option value="recibo">Un recibo de sueldo</option>
           <option value="aportes">Un comprobante de aportes de ARCA</option>
         </select>
       </div>
-      <div class="campo full">
-        <label>Modelos a comparar</label>
-        <div class="check-modulos">
-          {% for m in precios_ia.modelos %}
-          <label class="chk-modulo"><input type="checkbox" class="prueba-modelo" value="{{ m.id }}"
-                 {% if m.id == modelos_ia.recibos %}checked{% endif %}> {{ m.nombre }} <span class="muted" style="font-size:11px;">({{ m.precio_txt }})</span></label>
-          {% endfor %}
-        </div>
-      </div>
     </div>
-    <label class="chk-modulo" style="margin:4px 0 12px;"><input type="checkbox" id="prueba-tapado">
-      Comparar también con el documento tapado <span class="muted" style="font-size:11px;">(cada modelo lee dos veces: el original y la versión con los datos personales tapados)</span></label>
+    {# Una tabla chica: casilla y modelo, y los dos precios alineados en
+       columna (US$ por millón de tokens), del más caro al más barato como
+       vienen en el catálogo. #}
+    <h3 class="form-secc">Modelos a comparar</h3>
+    <div class="tabla-ancha">
+      <table class="tabla-modelos" style="min-width:0; max-width:560px;">
+        <tr><th>Modelo</th><th class="num">Entrada</th><th class="num">Salida</th></tr>
+        {% for m in precios_ia.modelos %}
+        <tr>
+          <td><label><input type="checkbox" class="prueba-modelo" value="{{ m.id }}"
+                 {% if m.id == modelos_ia.recibos %}checked{% endif %}> {{ m.nombre }}</label></td>
+          <td class="num">US$ {{ ('%.2f' % m.entrada)|replace('.', ',') }}</td>
+          <td class="num">US$ {{ ('%.2f' % m.salida)|replace('.', ',') }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <p class="ayuda" style="margin-top:6px;">Precios en dólares por millón de tokens.</p>
+    <label class="chk-modulo" style="margin:14px 0 4px;"><input type="checkbox" id="prueba-tapado">
+      Comparar también con el documento tapado</label>
+    <span class="ayuda" style="margin-bottom:12px;">Cada modelo lee dos veces: el original y la versión con los datos personales tapados.</span>
     <button type="button" id="prueba-btn" onclick="correrPrueba()">Probar con los modelos tildados</button>
     <span class="muted" id="prueba-estado" style="margin-left:10px;"></span>
   </div>
@@ -1008,13 +1146,14 @@
 
   <div class="ppanel" data-mov-vista id="pp-sospechosos">
   <h2 class="titulo-pagina">Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
-  <p class="muted" style="margin-bottom:14px; max-width:640px;">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador — solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
+  <p class="muted bajada">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador: solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
+  <div class="tabla-ancha">
   <table>
     <tr><th>Fecha</th><th>Sindicato</th><th>CUIL</th><th>Período</th><th>Motivo</th><th></th></tr>
     {% for rs in recibos_sospechosos %}
     <tr>
-      <td>{{ rs.fecha }}</td><td>{{ rs.sindicato }}</td><td>{{ rs.cuil }}</td>
-      <td>{{ rs.periodo or '—' }}</td><td class="muted">{{ rs.motivo or '—' }}</td>
+      <td class="nowrap">{{ rs.fecha }}</td><td>{{ rs.sindicato }}</td><td class="nowrap">{{ rs.cuil }}</td>
+      <td class="nowrap">{{ rs.periodo or '—' }}</td><td class="muted">{{ rs.motivo or '—' }}</td>
       <td style="text-align:right;"><button type="button" class="mini" onclick="window.open('/plataforma/recibos-sospechosos/{{ rs.id }}/archivo', '_blank')">Ver archivo</button></td>
     </tr>
     {% else %}
@@ -1022,29 +1161,68 @@
     {% endfor %}
   </table>
   </div>
+  </div>
 
+  {# Los importes en formato argentino ($ 4.594.798,23), como peso() de /app.
+     El campo de carga sigue sin puntos de miles (el servidor rechaza el
+     punto para no confundir miles con decimales). #}
+  {% macro peso(n) %}$ {{ '{:,.2f}'.format(n)|replace(',', '·')|replace('.', ',')|replace('·', '.') }}{% endmacro %}
   <div class="ppanel" data-mov-vista id="pp-topes">
-  <h2 class="titulo-pagina">Topes de la seguridad social ({{ topes|length }})</h2>
-  <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. Ordenados del período más nuevo al más viejo; el estado (chip de color) indica cuánto se puede confiar en cada valor. <strong>Los montos van sin punto de separador de miles, con coma para los decimales</strong> (ej. 4594798,23).</p>
+  <h2 class="titulo-pagina">Topes de aportes de la seguridad social ({{ topes|length }})</h2>
+  <p class="muted bajada">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241). Se actualizan todos los meses por resolución de ANSES. Del período más nuevo al más viejo; el estado dice cuánto se puede confiar en cada valor.</p>
   {% if request.query_params.get('error') == 'topebajo' %}
-  <div class="msg err">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
+  <div class="msg err">El valor que intentaste guardar es menor al del período anterior, y eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
   {% elif request.query_params.get('error') == 'topeduplicado' %}
   <div class="msg err">Ya existe un tope cargado para ese período. Para cambiarlo, editá el existente en vez de agregar otro.</div>
   {% elif request.query_params.get('error') == 'topenoexiste' %}
   <div class="msg err">No se encontró el tope que intentabas editar.</div>
   {% elif request.query_params.get('error') == 'topeformato' %}
-  <div class="msg err">El tope máximo y la base mínima van sin punto de separador de miles — usá coma para los decimales (ej. 4594798,23).</div>
+  <div class="msg err">El tope máximo y la base mínima van sin punto de separador de miles: usá coma para los decimales (ej. 4594798,23).</div>
   {% endif %}
-  <table>
-    <tr><th>Vigencia</th><th>Tope máximo</th><th>Base mínima</th><th>Estado</th><th>Fuente</th><th></th></tr>
+
+  {# Agregar el mes que sigue va arriba, no debajo de setenta filas: abre el
+     formulario precargado con los valores del último mes. #}
+  {% if topes %}
+  <button type="button" id="t-siguiente" class="sec" onclick="agregarSiguienteTope()" style="margin:0 0 14px;">Agregar el tope del mes siguiente</button>
+  {% endif %}
+
+  <div class="card" id="card-tope"{% if topes and not (request.query_params.get('error') or '').startswith('tope') %} hidden{% endif %} style="margin-top:0; margin-bottom:18px;">
+    <h3 id="form-tope-titulo">Agregar un tope</h3>
+    <form method="post" action="/plataforma/tope" id="form-tope" onsubmit="return prepararEnvioTope(this)">
+      <input type="hidden" name="id" id="t-id">
+      <input type="hidden" name="confirmado" id="t-confirmado" value="">
+      <div class="grid">
+        <div class="campo"><label for="t-vigencia">Vigencia desde *</label><input type="text" inputmode="numeric" name="vigencia_desde" id="t-vigencia" required placeholder="AAAA-MM" pattern="[0-9]{4}-(0[1-9]|1[0-2])" title="Año y mes, por ejemplo 2026-09"></div>
+        <div class="campo">
+          <label for="t-estado">Estado</label>
+          <select name="estado" id="t-estado">
+            <option value="por_verificar">Por verificar</option>
+            <option value="verificado">Verificado</option>
+            <option value="derivado">Derivado</option>
+            <option value="SOSPECHOSO">Sospechoso</option>
+          </select>
+        </div>
+        <div class="campo"><label for="t-maximo">Tope máximo *</label><input type="text" inputmode="decimal" pattern="[0-9]+([,][0-9]{1,2})?" placeholder="Ej.: 4594798,23" name="tope_maximo" id="t-maximo" required>
+          <span class="ayuda">Sin puntos de miles, con coma para los decimales.</span></div>
+        <div class="campo"><label for="t-minima">Base mínima *</label><input type="text" inputmode="decimal" pattern="[0-9]+([,][0-9]{1,2})?" placeholder="Ej.: 141380,42" name="base_minima" id="t-minima" required></div>
+        <div class="campo full"><label for="t-fuente">Fuente</label><input name="fuente" id="t-fuente" placeholder="Ej.: Res. ANSES 38/2026"></div>
+      </div>
+      <button type="submit" id="t-btn">Agregar tope</button>
+      <button type="button" class="sec{% if not topes %} oculto{% endif %}" id="t-cancel" onclick="resetTopeForm()">Cancelar</button>
+    </form>
+  </div>
+
+  <div class="tabla-ancha">
+  <table class="tabla-topes">
+    <tr><th>Vigencia</th><th class="num">Tope máximo</th><th class="num">Base mínima</th><th>Estado</th><th>Fuente</th><th></th></tr>
     {% for t in topes %}
     <tr>
       <td><code>{{ t.vigencia_desde }}</code></td>
-      <td class="num">${{ '%.2f'|format(t.tope_maximo)|replace('.', ',') }}</td>
-      <td class="num">${{ '%.2f'|format(t.base_minima)|replace('.', ',') }}</td>
-      <td><span class="chip-estado {{ 'sospechoso' if t.estado == 'SOSPECHOSO' else t.estado }}">{{ t.estado.replace('_', ' ') }}</span></td>
+      <td class="num">{{ peso(t.tope_maximo) }}</td>
+      <td class="num">{{ peso(t.base_minima) }}</td>
+      <td><span class="chip-estado {{ 'sospechoso' if t.estado == 'SOSPECHOSO' else t.estado }}">{{ t.estado.replace('_', ' ')|lower|capitalize }}</span></td>
       <td class="muted">{{ t.fuente or '—' }}</td>
-      <td class="acc" style="white-space:nowrap; text-align:right;">
+      <td class="acc nowrap" style="text-align:right;">
         <button class="mini" type="button"
           onclick='editarTope({{ {"id":t.id,"vigencia_desde":t.vigencia_desde,"tope_maximo":t.tope_maximo,"base_minima":t.base_minima,"estado":t.estado,"fuente":t.fuente} | tojson }})'>Editar</button>
         <form method="post" action="/plataforma/tope/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar el tope de {{ t.vigencia_desde }}?')">
@@ -1057,53 +1235,43 @@
     <tr><td colspan="6" class="muted">No hay topes cargados todavía.</td></tr>
     {% endfor %}
   </table>
-
-  <div class="card">
-    <h3 id="form-tope-titulo">Agregar un tope</h3>
-    <form method="post" action="/plataforma/tope" id="form-tope" onsubmit="return prepararEnvioTope(this)">
-      <input type="hidden" name="id" id="t-id">
-      <input type="hidden" name="confirmado" id="t-confirmado" value="">
-      <div class="grid">
-        <div class="campo"><label>Vigencia desde *</label><input type="month" name="vigencia_desde" id="t-vigencia" required></div>
-        <div class="campo"><label>Tope máximo *</label><input type="text" inputmode="decimal" pattern="[0-9]+([,][0-9]{1,2})?" placeholder="4594798,23" name="tope_maximo" id="t-maximo" required></div>
-        <div class="campo"><label>Base mínima *</label><input type="text" inputmode="decimal" pattern="[0-9]+([,][0-9]{1,2})?" placeholder="141380,42" name="base_minima" id="t-minima" required></div>
-        <div class="campo">
-          <label>Estado</label>
-          <select name="estado" id="t-estado">
-            <option value="por_verificar">Por verificar</option>
-            <option value="verificado">Verificado</option>
-            <option value="derivado">Derivado</option>
-            <option value="SOSPECHOSO">Sospechoso</option>
-          </select>
-        </div>
-        <div class="campo full"><label>Fuente</label><input name="fuente" id="t-fuente" placeholder="Ej: Res. ANSES 38/2026"></div>
-      </div>
-      <button type="submit" id="t-btn">Agregar tope</button>
-      <button type="button" class="sec oculto" id="t-cancel" onclick="resetTopeForm()">Cancelar</button>
-    </form>
   </div>
   </div>
 </div>
 
-<div style="text-align:center; padding:0 0 20px;">
-  <button type="button" onclick="document.getElementById('acerca-box').style.display='flex'" style="background:none; border:none; color:var(--gris); opacity:.45; font-size:10.5px; cursor:pointer; padding:6px;">Acerca de</button>
-</div>
-
-<div id="acerca-box" style="display:none; position:fixed; inset:0; background:rgba(8,12,20,.45); z-index:200; align-items:center; justify-content:center;" onclick="if (event.target === this) this.style.display='none'">
-  <div style="background:#fff; border-radius:12px; padding:22px 24px; max-width:280px; width:90%;">
-    <h3 style="margin-bottom:12px;">Acerca de</h3>
-    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Versión</span><strong>{{ version }}</strong></div>
-    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Fecha</span><strong>{{ fecha_version }}</strong></div>
-{% if entorno %}    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Entorno</span><strong>{{ entorno }}</strong></div>
-{% endif %}    <button type="button" class="mini" style="margin-top:10px;" onclick="document.getElementById('acerca-box').style.display='none'">Cerrar</button>
-  </div>
-</div>
+{% include "_plataforma_acerca.html" %}
 
 <script>
 function activarTab(dest) {
-  document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
+  document.querySelectorAll('.ptab[data-pp]').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
+  llevarPestanaALaVista();
 }
+
+/* En el teléfono la tira es horizontal y deslizable: la pestaña elegida
+   tiene que quedar a la vista (si no, entrando por /plataforma#topes se
+   veían las cuatro primeras y ninguna marcada). En escritorio es el riel y
+   no hace falta. El degradé del borde dice si queda algo por deslizar. */
+function llevarPestanaALaVista() {
+  const tira = document.querySelector('.nav-strip');
+  const activa = tira && tira.querySelector('.ptab.activa');
+  if (!tira || !activa || getComputedStyle(tira).flexDirection === 'column') return;
+  const izq = activa.offsetLeft - (tira.clientWidth - activa.offsetWidth) / 2;
+  tira.scrollTo({left: Math.max(0, izq)});
+  marcarDesborde();
+}
+function marcarDesborde() {
+  const tira = document.querySelector('.nav-strip');
+  if (!tira) return;
+  tira.classList.toggle('mas-derecha', tira.scrollLeft + tira.clientWidth < tira.scrollWidth - 4);
+}
+(function () {
+  const tira = document.querySelector('.nav-strip');
+  if (!tira) return;
+  tira.addEventListener('scroll', marcarDesborde, {passive: true});
+  window.addEventListener('resize', marcarDesborde);
+  marcarDesborde();
+})();
 
 /* ---------- Uso de IA: tres sub-pestañas con namespace propio ---------- */
 function cambiarSubIA(dest) {
@@ -1238,16 +1406,18 @@ function filtrarEnmascarado() {
   const totales = vis.map(d => Number(d.total));
   const caja = document.getElementById('enm-totales');
   if (caja) {
-    const bloque = (cifra, rotulo) =>
-      '<div><span class="cifra">' + cifra + '</span><span class="rotulo">' + rotulo + '</span></div>';
+    const bloque = (cifra, rotulo, ayuda) =>
+      '<div' + (ayuda ? ' title="' + escHTML(ayuda) + '"' : '') + '><span class="cifra">' + cifra +
+      '</span><span class="rotulo">' + rotulo + (ayuda ? ' <abbr class="ayuda-q" aria-label="' + escHTML(ayuda) + '">?</abbr>' : '') +
+      '</span></div>';
     caja.innerHTML = [
       bloque(vis.length.toLocaleString('es-AR'), 'Documentos'),
-      bloque(pct(tapados, vis.length), 'Tapados (o se habrían tapado)'),
+      bloque(pct(tapados, vis.length), 'Tapados', 'Incluye los que se habrían tapado en modo sombra.'),
       bloque((vis.length - tapados).toLocaleString('es-AR'), 'Sin tapar'),
       bloque(vis.filter(d => Number(d.fugas) > 0).length.toLocaleString('es-AR'), 'Con fugas'),
-      bloque(vis.filter(d => d.pertenece === 'no').length.toLocaleString('es-AR'), 'Recibos ajenos detectados'),
+      bloque(vis.filter(d => d.pertenece === 'no').length.toLocaleString('es-AR'), 'Recibos ajenos'),
       bloque(totales.length ? segTxt(medianaDe(totales)) : '—', 'Tiempo mediano'),
-      bloque(totales.length ? segTxt(percentil(totales, 0.95)) : '—', 'Tiempo p95'),
+      bloque(totales.length ? segTxt(percentil(totales, 0.95)) : '—', 'Tiempo P95', 'El 95% de los documentos tardó menos que esto.'),
     ].join('');
   }
 
@@ -1458,7 +1628,7 @@ function resetSindForm() {
   document.getElementById('sind-clausula-quien').textContent = '';
 }
 
-document.querySelectorAll('.ptab').forEach(btn => {
+document.querySelectorAll('.ptab[data-pp]').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.dataset.pp === 'nuevo') resetSindForm();
     activarTab(btn.dataset.pp);
@@ -1601,7 +1771,7 @@ function formatoTopeAr(n) {
 }
 
 function editarTope(t) {
-  const f = document.getElementById('form-tope');
+  document.getElementById('card-tope').hidden = false;
   document.getElementById('t-id').value = t.id;
   document.getElementById('t-vigencia').value = t.vigencia_desde;
   document.getElementById('t-maximo').value = formatoTopeAr(t.tope_maximo);
@@ -1613,8 +1783,35 @@ function editarTope(t) {
   document.getElementById('t-btn').textContent = 'Guardar cambios';
   document.getElementById('t-cancel').classList.remove('oculto');
   activarTab('topes');
-  window.scrollTo(0, 0);
+  document.getElementById('card-tope').scrollIntoView({block: 'start'});
+  document.getElementById('t-maximo').focus({preventScroll: true});
 }
+
+/* "Agregar el tope de AAAA-MM": el mes siguiente al último cargado, con los
+   valores de ese mes para editar (cambian poco de un mes al otro). */
+function siguienteMes(aaaamm) {
+  const [a, m] = aaaamm.split('-').map(Number);
+  return m === 12 ? (a + 1) + '-01' : a + '-' + String(m + 1).padStart(2, '0');
+}
+function agregarSiguienteTope() {
+  if (!TOPES_TODOS.length) return;
+  const ultimo = TOPES_TODOS.reduce((a, b) => a.vigencia_desde > b.vigencia_desde ? a : b);
+  resetTopeForm();
+  document.getElementById('card-tope').hidden = false;
+  document.getElementById('t-vigencia').value = siguienteMes(ultimo.vigencia_desde);
+  document.getElementById('t-maximo').value = formatoTopeAr(ultimo.tope_maximo);
+  document.getElementById('t-minima').value = formatoTopeAr(ultimo.base_minima);
+  document.getElementById('form-tope-titulo').textContent = 'Agregar el tope de ' + siguienteMes(ultimo.vigencia_desde);
+  document.getElementById('t-cancel').classList.remove('oculto');
+  document.getElementById('t-maximo').focus();
+}
+(function () {
+  const b = document.getElementById('t-siguiente');
+  if (b && TOPES_TODOS.length) {
+    const ultimo = TOPES_TODOS.reduce((a, c) => a.vigencia_desde > c.vigencia_desde ? a : c);
+    b.textContent = 'Agregar el tope de ' + siguienteMes(ultimo.vigencia_desde);
+  }
+})();
 
 function resetTopeForm() {
   const f = document.getElementById('form-tope');
@@ -1624,6 +1821,9 @@ function resetTopeForm() {
   document.getElementById('form-tope-titulo').textContent = 'Agregar un tope';
   document.getElementById('t-btn').textContent = 'Agregar tope';
   document.getElementById('t-cancel').classList.add('oculto');
+  // Con topes cargados, el formulario vuelve a esconderse: se abre de nuevo
+  // con "Agregar el tope de…" o con "Editar".
+  if (TOPES_TODOS.length) document.getElementById('card-tope').hidden = true;
 }
 
 // Antes de mandar el form, busca el tope con vigencia_desde más reciente
@@ -1749,9 +1949,16 @@ function ftPintarGrilla() {
     img.style.objectPosition = (ftEntre01(f.foco_x) * 100) + '% ' + (ftEntre01(f.foco_y) * 100) + '%';
     const chip = ftEl('span', 'chip-estado ' + (f.publicada ? 'ft-chip-pub' : 'ft-chip-borr'),
                       f.publicada ? 'Publicada' : 'Borrador');
-    chip.style.alignSelf = 'flex-start';
-    const desc = ftEl('span', 'ft-desc' + (f.descripcion ? '' : ' vacia'), f.descripcion || 'Sin descripción');
-    b.append(img, chip, desc, ftEl('span', 'ft-alcance', ftAlcanceTxt(f)));
+    const chips = ftEl('span', 'ft-chips');
+    chips.append(chip);
+    // Sin descripción, la foto no tiene texto alternativo: se avisa como
+    // falta (chip ámbar), no como un texto en itálica que parece contenido.
+    if (!f.descripcion) chips.append(ftEl('span', 'chip-estado ft-chip-borr', 'Falta descripción'));
+    const desc = ftEl('span', 'ft-desc', f.descripcion || '');
+    // La acción, a la vista; la ficha entera sigue siendo el botón.
+    const accion = ftEl('span', 'ft-accion', f.publicada ? 'Editar' : 'Editar y publicar');
+    accion.setAttribute('aria-hidden', 'true');
+    b.append(img, chips, desc, ftEl('span', 'ft-alcance', ftAlcanceTxt(f)), accion);
     b.addEventListener('click', () => ftAbrir(f));
     g.append(b);
   }
@@ -1987,6 +2194,38 @@ async function ftBorrar() {
   });
 })();
 /* ---------- fin de la Biblioteca de fotos ---------- */
+
+/* Elegir un archivo (.zarch): el nombre del elegido al lado del botón. Un
+   solo listener delegado; al reiniciar el formulario vuelve a "Ningún
+   archivo elegido". */
+function pintarArchivo(inp) {
+  const caja = inp.closest('.zarch');
+  if (!caja) return;
+  const nombre = caja.querySelector('.zarch-nombre');
+  const f = inp.files && inp.files[0];
+  caja.classList.toggle('elegido', !!f);
+  if (nombre) nombre.textContent = f ? f.name : (nombre.dataset.vacio || '');
+}
+document.addEventListener('change', e => {
+  if (e.target.matches && e.target.matches('.zarch input[type=file]')) pintarArchivo(e.target);
+});
+document.addEventListener('reset', e => {
+  setTimeout(() => e.target.querySelectorAll('.zarch input[type=file]').forEach(pintarArchivo), 0);
+}, true);
+
+/* Modelos de IA: cuántos se cambiaron sin guardar, en la barra del pie. */
+(function () {
+  const form = document.getElementById('form-modelos-ia');
+  const txt = document.getElementById('modelos-cambios');
+  if (!form || !txt) return;
+  const contar = () => {
+    const n = [...form.querySelectorAll('select[data-original]')].filter(s => s.value !== s.dataset.original).length;
+    txt.textContent = n ? (n === 1 ? 'Cambiaste 1 modelo sin guardar.' : 'Cambiaste ' + n + ' modelos sin guardar.') : '';
+    form.classList.toggle('con-cambios', n > 0);
+  };
+  form.addEventListener('change', contar);
+  contar();
+})();
 
 // Si la URL trae un ancla (ej. #marca desde una tarjeta de /plataforma/inicio,
 // o #topes tras un alta) o un error de topes, abrir esa pestaña -- mismo

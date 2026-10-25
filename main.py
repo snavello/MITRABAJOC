@@ -6069,6 +6069,8 @@ def plataforma(request: Request):
         "recibos_sospechosos": db.recibos_sospechosos_listado(),
         "catalogo_modulos": MODULOS, "modulos_iniciales": MODULOS_INICIALES,
         "topes": topes, "topes_json": topes_json,
+        "es_superadmin": _es_superadmin_plataforma(request),
+        "apariencia": _apariencia_plataforma(request),
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
 
@@ -6080,9 +6082,15 @@ def plataforma_inicio(request: Request):
             "request": request, "marca_plataforma": db.marca_plataforma()})
     if _pendiente_de_completar(request):
         return RedirectResponse("/plataforma/completar", status_code=303)
+    usuario = _usuario_plataforma_de_sesion(request)
     return templates.TemplateResponse("plataforma_portada.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
         "es_superadmin": _es_superadmin_plataforma(request),
+        # "Tu cuenta" y "Tu modelo": el genérico de transición (uid 0) no
+        # tiene cuenta propia, así que no ve el selector.
+        "usuario_plataforma": usuario,
+        "apariencia": _apariencia_plataforma(request),
+        "temas_catalogo": temas.TEMAS,
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
 
@@ -6280,6 +6288,28 @@ def _quien_plataforma(request: Request) -> str:
     return u.usuario if u else "generico"
 
 
+def _apariencia_plataforma(request: Request) -> dict:
+    """El modelo de diseño con que se pinta el panel de plataforma para quien
+    mira (PLAN_TEMAS.md): el suyo o el por defecto, y siempre la paleta de
+    Colm3na."""
+    ses = sesion_actual(request, "plataforma") or {}
+    return db.apariencia_plataforma(ses.get("uid"))
+
+
+@app.post("/plataforma/apariencia/mia")
+def plataforma_apariencia_mia(request: Request, tema: str = Form("")):
+    """El usuario de plataforma elige su modelo de diseño: vive en su fila de
+    UsuarioPlataforma. "" vuelve al por defecto. El genérico de transición no
+    tiene fila donde guardarlo."""
+    exigir_plataforma(request)
+    ses = sesion_actual(request, "plataforma") or {}
+    if not ses.get("uid"):
+        raise HTTPException(400, "El usuario genérico no guarda un modelo propio.")
+    if not db.guardar_tema_plataforma(ses["uid"], tema):
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"ok": True, "tema": temas.tema_valido(tema) or ""}
+
+
 @app.get("/plataforma/usuarios", response_class=HTMLResponse)
 def plataforma_usuarios(request: Request):
     if not sesion_actual(request, "plataforma"):
@@ -6290,6 +6320,9 @@ def plataforma_usuarios(request: Request):
         raise HTTPException(403, "Solo un superadmin puede ver esta sección.")
     return templates.TemplateResponse("plataforma_usuarios.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
+        "es_superadmin": True,
+        "apariencia": _apariencia_plataforma(request),
+        "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
         "usuarios": db.listar_usuarios_plataforma(),
         "aviso": request.query_params.get("aviso", ""),
     })
@@ -6427,9 +6460,15 @@ def plataforma_usuarios_resetear(uid: int, request: Request, clave_transitoria: 
 
 
 @app.post("/plataforma/config")
-def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
+def plataforma_config(request: Request, tope_sindical_pct: str = Form(...)):
+    """El tope sindical se escribe con coma, como en Argentina ("2,5"); se
+    acepta también con punto. Algo que no es un número no se guarda."""
     exigir_plataforma(request)
-    db.set_tope_sindical(tope_sindical_pct)
+    try:
+        valor = float((tope_sindical_pct or "").strip().replace(",", "."))
+    except ValueError:
+        return RedirectResponse("/plataforma?error=tope#config", status_code=303)
+    db.set_tope_sindical(valor)
     return RedirectResponse("/plataforma?config=ok", status_code=303)
 
 

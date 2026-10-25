@@ -91,6 +91,7 @@ FUNCIONALIDADES = [
     ("Plataforma", "Uso de IA", r"^/plataforma/(modelos-ia|probar-modelos|enmascarado)", "plataforma.html"),
     ("Plataforma", "Recibos con alerta", r"^/plataforma/recibos-sospechosos", "plataforma.html"),
     ("Plataforma", "Trabajadores de la plataforma", r"^/plataforma/trabajadores", "plataforma.html"),
+    ("Plataforma", "Apariencia (modelo de diseño propio)", r"^/plataforma/apariencia", "plataforma_portada.html"),
 
     ("Entornos", "Acceso y versión", r"^/(entornos/(login|pin|salir)$|api/version)", None),
     ("Entornos", "Página de la landing (carga inicial)", r"^/entornos$", None),
