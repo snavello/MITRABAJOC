@@ -19,10 +19,8 @@
   }
   body { min-height: 100vh; }
   body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
-  body.claro { background: var(--papel); }
   .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 30px; letter-spacing: .002em;
     color: var(--sobre-base); margin-top: 6px; }
-  body.claro .hola { color: var(--tinta); }
   .hola em { font-style: normal; color: var(--marca-acento); }
 
   /* El wrap (no la tarjeta .acceso, que tiene overflow:hidden para el brillo
@@ -36,7 +34,6 @@
 
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
-  body.claro .btn-acerca { color: var(--gris); }
 
   .tag-new { display: inline-block; vertical-align: middle; margin-left: 5px; padding: 1px 6px;
     border-radius: 99px; background: var(--marca-acento); color: var(--marca-base);
@@ -90,7 +87,7 @@
 {% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
 {% endif %}
 </head>
-<body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
+<body class="oscuro grano grano-osc">
 {% include "_entorno.html" %}
 
 <div class="pt-ambiente" aria-hidden="true">

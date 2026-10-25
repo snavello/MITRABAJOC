@@ -76,8 +76,7 @@ html[data-tema="laguna"][data-paleta="sindicato"] {
 
 /* ---------- Página ---------- */
 html[data-tema="laguna"] body,
-html[data-tema="laguna"] body.oscuro,
-html[data-tema="laguna"] body.claro {
+html[data-tema="laguna"] body.oscuro {
   font-family: var(--lg-fuente); color: var(--lg-azul); -webkit-font-smoothing: antialiased;
   background: linear-gradient(180deg, var(--lg-agua-f) 0, var(--lg-agua-f) 60%, var(--lg-agua-f2) 100%);
 }
@@ -136,8 +135,7 @@ html[data-tema="laguna"] .fila-hola {
   animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards;
   animation-delay: var(--mov-escalon);
 }
-html[data-tema="laguna"] .hola,
-html[data-tema="laguna"] body.claro .hola {
+html[data-tema="laguna"] .hola {
   margin: 0; font-family: var(--lg-fuente); font-size: 30px; font-weight: 500;
   letter-spacing: -.005em; line-height: 1.15; color: #fff;
 }
@@ -145,12 +143,10 @@ html[data-tema="laguna"] .hola em {
   font-style: normal; font-weight: 700; color: var(--lg-fluor-t); background: var(--lg-fluor);
   padding: 0 7px; border-radius: 3px;
 }
-html[data-tema="laguna"] .pt-hola-baj,
-html[data-tema="laguna"] body.claro .pt-hola-baj {
+html[data-tema="laguna"] .pt-hola-baj {
   margin: 9px 0 0; font-size: 14px; color: var(--lg-agua-txt); letter-spacing: .02em;
 }
-html[data-tema="laguna"] .pt-cambiar,
-html[data-tema="laguna"] body.claro .pt-cambiar {
+html[data-tema="laguna"] .pt-cambiar {
   display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; color: #fff;
   text-decoration: underline; text-decoration-color: var(--lg-fluor-txt); text-underline-offset: 4px;
 }
@@ -222,8 +218,7 @@ html[data-tema="laguna"] .pt-filas > * {
 }
 html[data-tema="laguna"] .pt-filas > :nth-child(3n+2) { animation-delay: calc(var(--mov-escalon) / 2); }
 html[data-tema="laguna"] .pt-filas > :nth-child(3n+3) { animation-delay: var(--mov-escalon); }
-html[data-tema="laguna"] .pt-fila,
-html[data-tema="laguna"] body.claro .pt-fila {
+html[data-tema="laguna"] .pt-fila {
   height: 100%; gap: 14px; padding: 16px 18px; border: 0; border-radius: 8px;
   color: var(--lg-azul); background: rgba(255, 255, 255, .84);
   -webkit-backdrop-filter: none; backdrop-filter: none;
@@ -234,8 +229,7 @@ html[data-tema="laguna"] body.claro .pt-fila {
 }
 html[data-tema="laguna"] .pt-vid::after { display: none; }
 html[data-tema="laguna"] .pt-fila:hover { transform: translateY(-2px); background: #fff; }
-html[data-tema="laguna"] .pt-pastilla,
-html[data-tema="laguna"] body.claro .pt-pastilla {
+html[data-tema="laguna"] .pt-pastilla {
   width: 42px; height: 42px; border-radius: 50%; border: 0;
   background: var(--lg-agua-f); color: var(--lg-turq-osc);
 }
@@ -244,12 +238,10 @@ html[data-tema="laguna"] .pt-fila-t {
   font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0;
   text-transform: none; line-height: 1.3;
 }
-html[data-tema="laguna"] .pt-fila-e,
-html[data-tema="laguna"] body.claro .pt-fila-e {
+html[data-tema="laguna"] .pt-fila-e {
   margin-top: 2px; font-size: 12.5px; line-height: 1.35; color: var(--lg-azgris);
 }
-html[data-tema="laguna"] .pt-fila-f,
-html[data-tema="laguna"] body.claro .pt-fila-f {
+html[data-tema="laguna"] .pt-fila-f {
   color: var(--lg-azgris); opacity: 1; transition: transform var(--mov-medio) var(--ease-salida);
 }
 html[data-tema="laguna"] .pt-fila-f svg { width: 15px; height: 15px; stroke-width: 1.6; }
@@ -265,8 +257,7 @@ html[data-tema="laguna"] .badge-noleidas {
 html[data-tema="laguna"] .pt-pie {
   margin-top: 42px; padding: 24px 48px 74px; background: var(--lg-azul); text-align: center;
 }
-html[data-tema="laguna"] .btn-acerca,
-html[data-tema="laguna"] body.claro .btn-acerca {
+html[data-tema="laguna"] .btn-acerca {
   opacity: 1; padding: 0 0 1px; border-radius: 0; font-family: inherit; font-size: 12px;
   color: var(--lg-agua-txt); border-bottom: 1px solid var(--lg-fluor-txt);
 }
@@ -324,27 +315,6 @@ html[data-tema="laguna"] .tm-op.activa {
    La laguna arranca en papel y el saludo va en tinta; el resto no cambia.
    La barra del encabezado conserva el azul: los logos del gremio y de
    Colm3na se cargan para fondo oscuro. */
-html[data-tema="laguna"] body.claro .pt-heroe { background: #fff; }
-html[data-tema="laguna"] body.claro .pt-heroe .marca-enc { background: var(--lg-azul); }
-html[data-tema="laguna"] body.claro .pt-media {
-  background: linear-gradient(180deg, #fff 0%, var(--lg-agua-f2) 40%, var(--lg-agua) 100%);
-}
-html[data-tema="laguna"] body.claro .pt-media img { opacity: .45; }
-html[data-tema="laguna"] body.claro .pt-heroe::after {
-  background: linear-gradient(180deg,
-    color-mix(in srgb, #fff 96%, transparent) 0%,
-    color-mix(in srgb, #fff 86%, transparent) 38%,
-    color-mix(in srgb, var(--lg-agua-f2) 40%, transparent) 62%,
-    color-mix(in srgb, var(--lg-agua-f) 94%, transparent) 95%,
-    var(--lg-agua-f) 100%);
-}
-html[data-tema="laguna"] body.claro .hola { color: var(--lg-azul); }
-html[data-tema="laguna"] body.claro .pt-hola-baj { color: var(--lg-azgris); }
-html[data-tema="laguna"] body.claro .pt-cambiar {
-  color: var(--lg-azul); text-decoration-color: var(--lg-turq);
-}
-html[data-tema="laguna"] body.claro .fila-hola a:focus-visible,
-html[data-tema="laguna"] body.claro .fila-hola button:focus-visible { outline-color: var(--lg-azul); }
 
 /* ---------- Teléfono ---------- */
 @media (max-width: 760px) {
@@ -353,8 +323,7 @@ html[data-tema="laguna"] body.claro .fila-hola button:focus-visible { outline-co
   html[data-tema="laguna"] .pt-heroe .marca-barra { min-height: 0; padding-left: 16px; padding-right: 16px; }
   html[data-tema="laguna"] .pt-heroe > .pad { padding: 0 16px 24px; }
   html[data-tema="laguna"] .fila-hola { margin-top: 14px; gap: 14px; }
-  html[data-tema="laguna"] .hola,
-  html[data-tema="laguna"] body.claro .hola { font-size: 26px; }
+  html[data-tema="laguna"] .hola { font-size: 26px; }
   html[data-tema="laguna"] .pt-hola-baj { font-size: 13px; }
   html[data-tema="laguna"] .pt-hero { padding: 20px 20px 22px; }
   html[data-tema="laguna"] .pt-hero.pt-hero-chico .pt-hero-t { font-size: 23px; gap: 10px; }
@@ -436,8 +405,7 @@ html[data-tema="laguna"] .pad.pt-accesos { padding-bottom: 96px; }
 /* G4-01: la línea de cada acceso dice un dato real contado en el servidor
    («206 activos · 38 sin registrar»). Números tabulares y un punto más de
    tinta que la descripción fija, para que se lea como estado. */
-html[data-tema="laguna"] .pt-fila-e.pt-fila-dato,
-html[data-tema="laguna"] body.claro .pt-fila-e.pt-fila-dato {
+html[data-tema="laguna"] .pt-fila-e.pt-fila-dato {
   color: var(--lg-gris); font-weight: 600; font-variant-numeric: tabular-nums lining-nums;
 }
 /* G4-04: en escritorio el círculo de perfil vuelve junto al saludo, en la

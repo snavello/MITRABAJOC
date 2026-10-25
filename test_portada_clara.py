@@ -131,10 +131,24 @@ def test_ningun_codigo_escribe_ni_lee_la_opcion():
     """Fuera de la declaración de las columnas (db.py) y de este test, nada
     de Python ni de las plantillas de plataforma nombra la opción."""
     for archivo in ("main.py", "cargar_marca_plataforma.py", "templates/plataforma.html",
-                    "templates/plataforma_portada.html"):
+                    "templates/plataforma_portada.html", "templates/portada.html",
+                    "templates/admin_portada.html"):
         assert "portada_clara" not in Path(archivo).read_text(encoding="utf-8"), archivo
     db_py = Path("db.py").read_text(encoding="utf-8")
     usos = [l.strip() for l in db_py.splitlines() if "portada_clara" in l and not l.strip().startswith("#")]
     assert usos == ["portada_clara: bool = Field(default=False)",
                     "admin_portada_clara: bool = Field(default=False)",
                     "portada_clara: bool = Field(default=False)"], usos
+
+
+def test_no_quedan_estilos_de_la_portada_clara():
+    """Ninguna hoja ni plantilla conserva reglas para `body.claro`: sin la
+    opción, nadie pone esa clase y serían reglas muertas."""
+    archivos = [*Path("static").glob("*.css"), *Path("static/temas").glob("*.css"),
+                *Path("templates").glob("*.html")]
+    for f in archivos:
+        texto = re.sub(r"/\*.*?\*/", "", f.read_text(encoding="utf-8"), flags=re.S)
+        assert not re.search(r"body\.claro\b", texto), f
+    for nombre in ("portada", "admin_portada"):
+        html = Path(f"templates/{nombre}.html").read_text(encoding="utf-8")
+        assert '<body class="oscuro grano grano-osc">' in html, nombre
