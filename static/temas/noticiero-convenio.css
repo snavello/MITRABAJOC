@@ -164,7 +164,7 @@ html[data-tema="noticiero"] .cargando { color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .spin { border-color: var(--nt-linea); border-top-color: var(--nt-indigo); }
 
 /* el vacío: el de Encuestas en /app */
-html[data-tema="noticiero"] .sin-convenio { border: 1.5px dashed var(--nt-linea-2); border-radius: 2px; background: var(--nt-carta); }
+html[data-tema="noticiero"] .sin-convenio { border: 1px solid var(--nt-linea-2); border-radius: 2px; background: var(--nt-carta); }
 html[data-tema="noticiero"] .vacio-ico { background: var(--nt-coral-suave); color: var(--nt-tinta); }
 html[data-tema="noticiero"] .vacio-t { font-family: var(--nt-f-tit); font-weight: 400; font-size: 21px; letter-spacing: .2px;
   text-transform: uppercase; color: var(--nt-tinta); }

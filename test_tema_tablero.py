@@ -224,3 +224,116 @@ def test_g7_21_el_aviso_de_movimiento_se_pliega_y_no_vuelve():
 def test_g7_22_sin_celda_huerfana_en_los_indicadores_chicos():
     css = _sin_comentarios((PANEL / "panel.css").read_text(encoding="utf-8"))
     assert ".v2-minis > .v2-mini:last-child:nth-child(odd) { grid-column: 1 / -1; }" in css
+
+
+# ---------------------------------------------------------------- segunda auditoría (R4)
+
+def _css_panel(comentarios=False):
+    css = (PANEL / "panel.css").read_text(encoding="utf-8")
+    return css if comentarios else _sin_comentarios(css)
+
+
+def test_r4_01_volver_al_panel():
+    """Se entra desde la tira de /admin: «Volver al panel» lleva ahí en un
+    paso, a la izquierda de la fecha."""
+    for tema in ("laguna", "noticiero"):
+        html = _operador(tema).get("/admin/dashboard").text
+        assert re.search(r'<a class="marca-volver" href="/admin">', html), tema
+        assert html.index('id="hoy-fecha"') < html.index('class="marca-volver"')  # el parcial la pone después...
+    css = _css_panel()
+    assert ".marca-barra .marca-volver { order: 1;" in css          # ...y el CSS la lleva antes
+    assert ".marca-barra .marca-fecha { order: 2;" in css
+    assert '.marca-barra .marca-volver::after { content: "al panel"; }' in css
+    # sobre el blanco de los dos modelos, en tinta
+    for tema, hoja in HOJAS.items():
+        assert re.search(rf'html\[data-tema="{tema}"\] \.marca-volver \{{[^}}]*color: var\(--\w+-tinta\)',
+                         _sin_comentarios(hoja.read_text(encoding="utf-8"))), tema
+
+
+def test_r4_02_numeros_en_argentino_en_ejes_y_cuil(tmp_path):
+    import shutil
+    import subprocess
+    html = _operador("laguna").get("/admin/dashboard").text
+    sello = main._sello_static("numeros_ar.js")
+    assert f'src="/static/numeros_ar.js?v={sello}"' in html
+    assert html.index("/static/numeros_ar.js") < html.index('<script type="module" src="/static/panel_v2/app.js')
+    js = _sin_comentarios(_js("graficos.js"))
+    assert 'Chart.defaults.locale = "es-AR"' in js
+    assert "fmtMEje(v)" in js and "fmtEje(v)" in js
+    assert '+ "k"' not in js and '"M" :' not in js
+    exp = _sin_comentarios(_js("explorador.js"))
+    assert "fCuil(r.trabajador_cuil)" in exp and "${r.trabajador_cuil ||" not in exp
+    node = shutil.which("node")
+    if not node:
+        return
+    (tmp_path / "formato.mjs").write_text(_js("formato.js"), encoding="utf-8")
+    (tmp_path / "numeros_ar.js").write_text(Path("static/numeros_ar.js").read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / "prueba.mjs").write_text("""
+import fs from "node:fs";
+globalThis.window = globalThis;
+(0, eval)(fs.readFileSync(new URL("./numeros_ar.js", import.meta.url), "utf8"));
+const { fmtEje, fmtMEje, fCuil } = await import("./formato.mjs");
+console.log(JSON.stringify({ eje: [fmtEje(1000), fmtEje(2500), fmtEje(0)],
+  monto: [fmtMEje(0), fmtMEje(500000), fmtMEje(1500000), fmtMEje(2000000), fmtMEje(750)],
+  cuil: [fCuil("20660000048"), fCuil(""), fCuil("123")] }));
+""", encoding="utf-8")
+    import json
+    r = json.loads(subprocess.run([node, str(tmp_path / "prueba.mjs")], capture_output=True, text=True,
+                                  check=True).stdout)
+    assert r["eje"] == ["1.000", "2.500", "0"]
+    assert r["monto"] == ["$ 0", "$ 500 mil", "$ 1,5 M", "$ 2 M", "$ 750"]
+    assert r["cuil"] == ["20-66000004-8", "—", "123"]
+
+
+def test_r4_03_ficha_compacta_y_pestana_corta_en_el_telefono():
+    exp = _sin_comentarios(_js("explorador.js"))
+    # las cuatro tablas con "Ver" marcan su ficha: título, valor, renglón gris y "Ver" estirado
+    assert exp.count('<tr class="ficha">') == 4
+    assert exp.count('class="f-ver"') == 4 and exp.count("${meta(") == 4
+    assert 'notificaciones: "Notif."' in exp and 'class="t-corto"' in exp
+    css = _css_panel()
+    crudo = _css_panel(comentarios=True)
+    ficha = crudo[crudo.index("R4-03: el explorador"):]
+    assert ".tabla-exp td.f-meta, .tab-d .t-corto { display: none; }" in css
+    assert ".tabla-exp tr.ficha td { display: none; }" in ficha
+    assert "min-height: 44px" in ficha
+    assert ".tabla-exp tr.ficha td.f-ver { display: block; position: absolute; inset: 0;" in ficha
+    # las fichas arrancan en 760 px, como el resto de la pantalla
+    assert "@media (max-width: 760px) {\n  .tabs-datos {" in css
+
+
+def test_r4_04_controles_del_periodo_a_44_px():
+    crudo = _css_panel(comentarios=True)
+    bloque = crudo[crudo.index("R4-04: los controles"):]
+    assert ".v2-barra .v2-chip, .v2-barra .v2-btn-filtros { min-height: 44px; }" in bloque
+    assert ".v2-barra .v2-reiniciar { padding: 12px 4px; min-height: 44px; }" in bloque
+    assert ".v2-presets { gap: 8px; }" in bloque
+
+
+def test_r4_10_un_solo_encuadre_para_los_dos_mapas():
+    mapa = _sin_comentarios(Path("static/mapa.js").read_text(encoding="utf-8"))
+    assert "function encuadrarTablero(mapa, puntos)" in mapa
+    assert "padding: [56, 56], maxZoom: 7" in mapa
+    assert "function separarBurbujas(mapa, capa)" in mapa
+    assert "encuadrarTablero: encuadrarTablero" in mapa and "separarBurbujas: separarBurbujas" in mapa
+    # la burbuja sabe su lugar real y su diámetro, para correrla y trazar la guía
+    assert "marca._lugar = L.latLng(lat, lon);" in mapa and "L.polyline([m._lugar" in mapa
+    graf = _sin_comentarios(_js("graficos.js"))
+    enc = _sin_comentarios(Path("static/encuesta_resultados.js").read_text(encoding="utf-8"))
+    for nombre, js in (("panel", graf), ("encuesta", enc)):
+        assert "MapaMT.encuadrarTablero(" in js and "MapaMT.separarBurbujas(" in js, nombre
+        assert "fitBounds" not in js and ".encuadrar(" not in js, nombre
+    # en el teléfono el + y el − no tapan burbujas: se acerca con dos dedos
+    assert ".mapa-panel .leaflet-control-zoom { display: none; }" in _css_panel()
+
+
+def test_r4_11_laguna_rotula_los_indicadores_como_resultados():
+    css = _sin_comentarios(HOJAS["laguna"].read_text(encoding="utf-8"))
+    m = re.search(r'html\[data-tema="laguna"\] :is\(\.v2-kicker, \.v2-hero \.et, \.v2-mini \.et\) \{([^}]*)\}', css)
+    assert m, "los nueve rótulos de indicador van juntos"
+    assert "700 11px" in m.group(1) and "letter-spacing: .12em" in m.group(1) and "uppercase" in m.group(1)
+    enc = _sin_comentarios(Path("static/temas/laguna-encuesta-resultados.css").read_text(encoding="utf-8"))
+    secc = re.search(r'html\[data-tema="laguna"\] h2\.secc \{([^}]*)\}', enc).group(1)
+    assert "font-size: 17px" in secc and "text-transform: none" in secc
+    kpi = re.search(r'html\[data-tema="laguna"\] \.kpi \.et \{([^}]*)\}', enc).group(1)
+    assert "letter-spacing: .12em" in kpi and "uppercase" in kpi

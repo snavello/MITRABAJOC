@@ -54,6 +54,10 @@
 {% include "_entorno.html" %}
 
 {% set enc_fecha = True %}
+{# Se entra desde la tira del panel, en la misma pestaña: "Volver al panel"
+   lleva de vuelta ahí en un paso (R4-01). panel.css lo pone a la izquierda
+   de la fecha y le suma "al panel". #}
+{% set enc_volver = '/admin' %}
 {% include "_encabezado.html" %}
 {% if apariencia and apariencia.tema == 'laguna' %}
 {# Laguna pone el encabezado en blanco: ahí va el logo de Colm3na para fondo
@@ -97,6 +101,9 @@
 <script src="/static/chart.umd.min.js?v={{ sello_static('chart.umd.min.js') }}"></script>
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
+{# Los números en formato argentino (window.NumAR), el espejo de
+   formato_ar.py: panel/formato lo usa para los ejes y el CUIL (R4-02). #}
+<script src="/static/numeros_ar.js?v={{ sello_static('numeros_ar.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 <script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 
