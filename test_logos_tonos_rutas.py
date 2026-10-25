@@ -60,3 +60,8 @@ def test_ruta_de_sindicato_con_tono():
     assert c.getpixel((c.width // 2, c.height // 2)) == (255, 255, 255, 255)
     orig = Image.open(BytesIO(client.get(f"/logo/{sid}").content)).convert("RGBA")
     assert orig.getpixel((orig.width // 2, orig.height // 2))[:3] == (230, 160, 20)
+
+
+def test_encabezado_claro_pide_el_logo_oscuro_en_los_dos_modelos():
+    src = open("templates/_encabezado.html", encoding="utf-8").read()
+    assert "in ('laguna', 'noticiero')" in src

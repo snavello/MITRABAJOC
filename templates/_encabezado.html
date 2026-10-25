@@ -52,11 +52,11 @@
    plataforma, demo anónima sin sindicato), la derecha no repite el logo:
    quedaría Colm3na dos veces en la misma línea. #}
 {% set _marca_es_plataforma = enc_plataforma or not sindicato %}
-{# Laguna con la paleta de Colm3na pinta este encabezado de BLANCO: un logo
+{# Laguna (blanco) y Noticiero (gris claro), con la paleta de Colm3na, pintan este encabezado en CLARO: un logo
    pensado para fondo oscuro (blanco o casi) desaparece. En esas pantallas
    (`enc_fondo_claro`, opt-in) se pide la silueta en el color más oscuro de la
    marca: /logo/{id}?tono=oscuro. #}
-{% set _logo_tono = 'tono=oscuro&' if enc_fondo_claro and apariencia and apariencia.tema == 'laguna' and apariencia.paleta != 'sindicato' else '' %}
+{% set _logo_tono = 'tono=oscuro&' if enc_fondo_claro and apariencia and apariencia.tema in ('laguna', 'noticiero') and apariencia.paleta != 'sindicato' else '' %}
 <div class="marca-enc{% if enc_fija %} fija{% endif %}">
   <header class="marca-barra">
     {% if _marca_es_plataforma %}
