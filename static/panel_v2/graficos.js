@@ -30,18 +30,52 @@ import { menosMovimiento, ms, alEntrar } from "panel/movimiento";
 const TOPE_ENTRADA = 900;
 
 let PALETA = null;
-/* Los colores salen de las variables CSS, como en la v1: la marca del
-   sindicato y los de estado, que nunca toman la marca. */
+/* Los colores salen de las variables CSS: la marca del sindicato y los de
+   estado, que nunca toman la marca. Cada modelo de diseño (PLAN_TEMAS.md)
+   puede decirle a los gráficos con qué pintar sin tocar este archivo: la
+   hoja static/temas/<modelo>-tablero.css define `--graf-*` y, si no lo
+   hace, vale la variable de siempre. Chart.js no lee CSS solo: el texto de
+   los ejes y su tipografía también se toman de acá. */
 export function colores() {
   if (!PALETA) {
     const css = getComputedStyle(document.documentElement);
     const v = (n) => css.getPropertyValue(n).trim();
-    PALETA = { destacado: v("--destacado"), primario: v("--marca-primario"), acento: v("--marca-acento"),
-      apoyo: v("--marca-apoyo"), ok: v("--ok"), error: v("--error"), aviso: v("--aviso"),
-      gris: v("--gris"), linea: v("--linea"), base: v("--marca-base"), num: v("--fuente-num") };
+    const g = (n, defecto) => v("--graf-" + n) || v(defecto);
+    PALETA = { destacado: g("destacado", "--destacado"), primario: g("primario", "--marca-primario"),
+      acento: g("acento", "--marca-acento"), apoyo: g("apoyo", "--marca-apoyo"), ok: g("ok", "--ok"),
+      error: g("error", "--error"), aviso: g("aviso", "--aviso"), gris: g("gris", "--gris"),
+      linea: g("linea", "--linea"), base: g("tooltip", "--marca-base"), num: v("--fuente-num"),
+      neutro: v("--graf-neutro") || "#b9c0cc", texto: v("--graf-texto") || v("--gris"),
+      fuente: v("--graf-fuente"), relleno: v("--graf-relleno") || "#ffffff" };
     estiloTooltips(PALETA);
+    if (window.Chart) {
+      if (PALETA.texto) window.Chart.defaults.color = PALETA.texto;
+      if (PALETA.fuente) window.Chart.defaults.font.family = PALETA.fuente;
+    }
   }
   return PALETA;
+}
+
+/* Un eje que cuenta cosas: sin decimales que no existen (0,1 … 0,9) y, si
+   todo es cero, igual con un tope razonable. */
+const CONTEO = { beginAtZero: true, suggestedMax: 5, ticks: { precision: 0 } };
+
+/* Si un panel no tiene nada que mostrar, el texto que lo dice (o null). Lo
+   usa la raíz para dibujar el estado vacío en lugar de una grilla en cero
+   (G7-01): ejes de 0 a 1 y diez «$0k» se leían como una pantalla rota. */
+const suma = (filas, campos) => filas.reduce((t, f) => t + campos.reduce((x, c) => x + (+f[c] || 0), 0), 0);
+export function vacioDe(nombre, d) {
+  if (!d) return null;
+  switch (nombre) {
+    case "serie": return suma(d.serie || [], ["cantidad"]) ? null : "No hay recibos en este período.";
+    case "validacion": return (+d.ok || 0) + (+d.con_diferencias || 0) ? null : "No hay recibos validados en este período.";
+    case "tramites": return suma(d.seccionales || [], ESTADOS) ? null : "No hay trámites en este período.";
+    case "notif": return +d.enviadas ? null : "No se enviaron notificaciones en este período.";
+    case "empresas": return (d.empresas || []).length ? null : "Ninguna empresa con diferencias en este período.";
+    case "bot": return (d.temas || []).length ? null : "No hubo consultas al asistente en este período.";
+    case "formato": return suma(d.semanas || [], ["clasico", "nuevo"]) ? null : "No hay recibos en este período.";
+    default: return null;
+  }
 }
 
 /* Los tooltips con el estilo de la casa (una vez por página): fondo con la
@@ -68,6 +102,7 @@ const conCursor = (opciones) => Object.assign({ onHover: (e, el) => {
 export function mezcla(hex, pct) {
   const n = parseInt(String(hex).replace("#", ""), 16);
   const f = (x) => Math.round(x * pct + 255 * (1 - pct));
+  if (isNaN(n)) return hex;
   return "rgb(" + f(n >> 16) + "," + f((n >> 8) & 255) + "," + f(n & 255) + ")";
 }
 
@@ -170,7 +205,8 @@ function useGrafico(tipo, armar, deps) {
    de una lista, `forma="lista"`), en vez de un bloque gris. Y al cambiar un
    filtro no se apaga: una línea fina corre por arriba mientras llega lo
    nuevo. */
-export function Panel({ nombre, titulo, sub, clase = "", estado = {}, reintentar, forma = "grafico", children }) {
+export function Panel({ nombre, titulo, sub, subVacio, clase = "", estado = {}, reintentar, forma = "grafico",
+  vacio = null, ampliar = null, children }) {
   const caja = useRef(null);
   const [vista, setVista] = useState(() => (menosMovimiento() ? { visto: true, retraso: 0, desde: 0 }
     : { visto: false, retraso: 0, desde: 0 }));
@@ -178,11 +214,14 @@ export function Panel({ nombre, titulo, sub, clase = "", estado = {}, reintentar
   const conError = estado.error !== undefined && estado.error !== null;
   const esperando = !estado.datos && !conError;
   const cls = "panel " + clase + (estado.cargando ? " cargando" : "") + (conError ? " con-error" : "")
-    + (vista.visto ? " visto" : "") + (esperando ? " esperando" : "");
+    + (vista.visto ? " visto" : "") + (esperando ? " esperando" : "") + (vacio ? " vacio" : "");
+  const bajada = vacio && subVacio !== undefined ? subVacio : sub;
   return html`<div class=${cls} data-panel=${nombre} aria-busy=${!!estado.cargando} ref=${caja}
       style=${{ "--retraso": vista.retraso + "ms" }}>
-    <h3>${titulo}</h3>${sub && html`<div class="sub">${sub}</div>`}
+    <h3>${titulo}</h3>${bajada && html`<div class="sub">${bajada}</div>`}
     <${Vista.Provider} value=${vista}>${children}<//>
+    ${vacio && html`<div class="v2-vacio" role="status"><p>${vacio}</p>
+      ${ampliar && html`<button type="button" class="v2-vacio-btn" onClick=${ampliar.hacer}>${ampliar.txt}</button>`}</div>`}
     ${esperando && html`<div class=${"v2-armando " + forma} aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) =>
       html`<i style=${{ animationDelay: vista.retraso + i * 110 + "ms" }}></i>`)}</div>`}
     <div class="panel-error"><span>${estado.error || "No se pudo cargar este panel."}</span>
@@ -204,7 +243,7 @@ export function Serie({ datos }) {
       } }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: UNA_SERIE },
       scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 9, maxRotation: 0 } },
-        y: { beginAtZero: true, grid: { color: C.linea } } } },
+        y: Object.assign({ grid: { color: C.linea } }, CONTEO) } },
     // La línea sube desde el cero, de izquierda a derecha.
     entrada: animEntrada(4, 0, menosMovimiento() ? {} : { animations: { y: { duration: ms("--mov-datos") * 0.65, easing: "easeOutCubic",
       from: (c) => (c.type === "data" ? c.chart.scales.y.getPixelForValue(0) : undefined),
@@ -223,7 +262,7 @@ export function Validacion({ datos, estado, despachar }) {
   const lienzo = useGrafico("doughnut", () => datos && {
     data: { labels: ["Correctos", "Con diferencias"], datasets: [{ data: [datos.ok, datos.con_diferencias],
       offset: valores.map((v) => (estado.resultado === v ? 14 : 0)),
-      borderColor: valores.map((v) => (estado.resultado === v ? C.destacado : "#fff")),
+      borderColor: valores.map((v) => (estado.resultado === v ? C.destacado : C.relleno)),
       backgroundColor: valores.map((v, i) => {
         const base = [C.ok, C.error][i];
         return (estado.resultado && estado.resultado !== v) ? mezcla(base, 0.3) : base;
@@ -266,10 +305,17 @@ export function Tramites({ datos, estado, despachar }) {
         despachar([{ tipo: "tramiteSeccional", seccional: fila.seccional_id, estado: ESTADOS[el[0].datasetIndex] },
           { tipo: "tab", valor: "tramites" }]);
       },
-      plugins: { legend: Object.assign({}, LEYENDA, { onClick: (e, item) => despachar([
+      plugins: { legend: Object.assign({}, LEYENDA, {
+        /* El color de cada barra se arma por fila (un arreglo): Chart.js
+           toma el de la primera para la muestra, que puede estar apagada o
+           no existir. La leyenda va con el color del ESTADO, fijo (G7-05). */
+        labels: Object.assign({}, LEYENDA.labels, { generateLabels: (ch) =>
+          window.Chart.defaults.plugins.legend.labels.generateLabels(ch).map((it, i) => Object.assign(it,
+            { fillStyle: [C.aviso, C.apoyo, C.ok][i], strokeStyle: [C.aviso, C.apoyo, C.ok][i], lineWidth: 0 })) }),
+        onClick: (e, item) => despachar([
         { tipo: "alternarValor", campo: "estadoTramite", valor: ESTADOS[item.datasetIndex] },
         { tipo: "tab", valor: "tramites" }]) }) },
-      scales: { x: { stacked: true, grid: { color: C.linea } }, y: { stacked: true, grid: { display: false } } } }),
+      scales: { x: Object.assign({ stacked: true, grid: { color: C.linea } }, CONTEO), y: { stacked: true, grid: { display: false } } } }),
     entrada: animEntrada(110, 160),
   }, [datos, elegidas.join(","), estado.estadoTramite]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
@@ -294,7 +340,7 @@ export function Notificaciones({ datos, estado, despachar }) {
           { tipo: "tab", valor: "notificaciones" }]);
       },
       plugins: { legend: LEYENDA },
-      scales: { x: { stacked: true, grid: { color: C.linea } }, y: { stacked: true, grid: { display: false } } } }),
+      scales: { x: Object.assign({ stacked: true, grid: { color: C.linea } }, CONTEO), y: { stacked: true, grid: { display: false } } } }),
     entrada: animEntrada(120, 180),
   }, [datos, estado.tipoNotif]);
   return html`
@@ -346,7 +392,7 @@ export function Consultas({ datos, estado, despachar }) {
           { tipo: "tab", valor: "consultas" }]);
       },
       plugins: { legend: { display: false }, tooltip: UNA_SERIE },
-      scales: { x: { grid: { color: C.linea } }, y: { grid: { display: false } } } }),
+      scales: { x: Object.assign({ grid: { color: C.linea } }, CONTEO), y: { grid: { display: false } } } }),
     entrada: animEntrada(110, 0),
   }, [datos, estado.tema]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
@@ -358,12 +404,12 @@ export function Formato({ datos }) {
   const semanas = datos ? datos.semanas : [];
   const lienzo = useGrafico("bar", () => datos && {
     data: { labels: semanas.map((s) => fCorta(s.semana)), datasets: [
-      { label: "Formato anterior", data: semanas.map((s) => s.clasico), backgroundColor: "#b9c0cc", borderRadius: 5, maxBarThickness: 30 },
+      { label: "Formato anterior", data: semanas.map((s) => s.clasico), backgroundColor: C.neutro, borderRadius: 5, maxBarThickness: 30 },
       { label: "Nuevo (Ley 27.802)", data: semanas.map((s) => s.nuevo), backgroundColor: C.acento, borderRadius: 5, maxBarThickness: 30 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "circle", padding: 14 } } },
       scales: { x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
-        y: { stacked: true, grid: { color: C.linea } } } },
+        y: Object.assign({ stacked: true, grid: { color: C.linea } }, CONTEO) } },
     entrada: animEntrada(70, 120),
   }, [datos]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
@@ -380,7 +426,7 @@ export function Semaforo({ datos }) {
     <div class="sem-resumen" id="sem-resumen">${["verde", "amarillo", "rojo"].map((k) => html`
       <span><i class="punto" style=${{ background: "var(" + ESTADO_SEM[k][0] + ")" }}></i>${datos.resumen[k]} ${ESTADO_SEM[k][1]}</span>`)}
     </div>
-    <div class="sem-lista" id="sem-lista">${datos.empresas.length ? datos.empresas.map((e, i) => html`
+    <div class=${"sem-lista" + (datos.empresas.length > 5 ? " sigue" : "")} id="sem-lista">${datos.empresas.length ? datos.empresas.map((e, i) => html`
       <div class=${"sem-item" + (vista.visto ? " v2-aparece" : "")}
         style=${{ "--lc": "var(" + ESTADO_SEM[e.estado][0] + ")", animationDelay: vista.retraso + Math.min(i * 70, 700) + "ms" }}>
         <span class="luz"></span>
@@ -389,7 +435,8 @@ export function Semaforo({ datos }) {
         <span class="dias">${e.dias} d</span>
       </div>`)
       : html`<div style=${{ color: "var(--gris)", fontSize: "12.5px", padding: "14px 0" }}>Sin datos de depósitos para los filtros actuales.</div>`}
-    </div>`;
+    </div>
+    ${datos.empresas.length > 5 && html`<div class="sem-mas">${datos.empresas.length} empresas · deslizá la lista para ver todas</div>`}`;
 }
 
 /* ---------------- Mapa de seccionales ----------------
@@ -425,7 +472,11 @@ export function MapaSeccionales({ datos, estado, despachar, logo }) {
   const maximo = Math.max(0, ...lista.map((s) => s[metrica] || 0));
   useEffect(() => {
     if (!datos || !window.L || !window.MapaMT || !caja.current) return;
-    if (!mapa.current) mapa.current = window.MapaMT.crear(caja.current, { rueda: false });
+    if (!mapa.current) {
+      mapa.current = window.MapaMT.crear(caja.current, { rueda: false });
+      // El + y el − arriba a la izquierda tapaban una seccional (G7-10).
+      if (mapa.current && mapa.current.mapa.zoomControl) mapa.current.mapa.zoomControl.setPosition("bottomright");
+    }
     if (!mapa.current) return;
     if (capa.current) mapa.current.mapa.removeLayer(capa.current);
     capa.current = window.L.layerGroup().addTo(mapa.current.mapa);

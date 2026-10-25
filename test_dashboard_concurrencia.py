@@ -44,7 +44,7 @@ HOY = fechas.hoy()
 REFRESCOS = 20
 TECHO_SEGUNDOS = 10
 
-# Los mismos endpoints que dispara refrescar() en static/dashboard.js.
+# Los mismos endpoints que dispara la ronda del panel (static/panel_v2/app.js).
 ENDPOINTS = ["kpis", "serie-recibos", "validacion", "diferencias-empresa",
              "tramites-seccional", "notificaciones", "formato-semana",
              "seccionales-geo", "semaforo", "explorador/recibos",

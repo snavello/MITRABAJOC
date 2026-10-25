@@ -64,10 +64,9 @@ def test_pantallas_por_quien_llama_de_verdad():
     assert "p:portada.html" in por_nombre[("Afiliado", "Perfil y domicilio")]
     # Ni el login que se muestra sin sesión, ni un parcial citado por nombre,
     # ni un .js nombrado en un comentario del encabezado.
-    # La v2 del panel (PLAN_DASHBOARD_V2.md) es la misma funcionalidad, con su
-    # propia pantalla mientras conviven.
-    assert por_nombre[("Sindicato", "Panel Sindical")] == {"p:dashboard.html",
-                                                          "p:dashboard_v2.html"}
+    # El Panel Sindical es una sola pantalla desde que la v2 reemplazó a la v1
+    # (2026-10-25).
+    assert por_nombre[("Sindicato", "Panel Sindical")] == {"p:dashboard_v2.html"}
     # La pestaña transitoria de plataforma queda a la vista con nombre propio.
     assert any(a == "Plataforma" and n.startswith("Cambiar clave") for a, n in por_nombre)
 

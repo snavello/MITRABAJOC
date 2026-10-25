@@ -387,7 +387,7 @@ async def sin_cache_en_paneles(request: Request, call_next):
     if respuesta.headers.get("content-type", "").startswith("text/html"):
         respuesta.headers["Cache-Control"] = "no-store, must-revalidate"
     elif request.url.path.startswith("/static/"):
-        # Assets vendoreados (Chart.js, dashboard.js, marca.css, fuentes):
+        # Assets vendoreados (Chart.js, panel_v2/, marca.css, fuentes):
         # cache de una hora + sello ?v= en la URL para romperlo al deployar
         # -- mismo patrón que /logo/{id} (docs/DASHBOARD.md §5.8).
         respuesta.headers["Cache-Control"] = "public, max-age=3600"
@@ -1408,9 +1408,8 @@ PERMISOS_RUTAS = {
 # panel en vez de tirar 403. Su permiso se chequea adentro del handler, con
 # el mismo criterio -- una pantalla que redirige es mejor que un 403 seco.
 # Sus endpoints de datos (/admin/dashboard/*) sí están todos gateados.
-# /admin/dashboard-v2 (PLAN_DASHBOARD_V2.md) está por la misma razón: es la
-# misma página en su versión nueva, con el mismo chequeo adentro, y pide sus
-# datos a los mismos endpoints gateados.
+# /admin/dashboard-v2 (la dirección del piloto de la v2) solo redirige a
+# /admin/dashboard, que es la que chequea.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
                            "/admin/dashboard", "/admin/dashboard-v2",
                            "/admin/elegir", "/admin/cambiar-sindicato",
@@ -1739,51 +1738,12 @@ def admin(request: Request):
     })
 
 
-@app.get("/admin/dashboard", response_class=HTMLResponse)
-def admin_dashboard_pagina(request: Request):
-    """Página del Panel Sindical (docs/DASHBOARD.md, Fase 2). Los datos NO
-    viajan acá: los pide static/dashboard.js a los endpoints de agregados.
-    Sin sesión -> login; sin módulo -> de vuelta al panel."""
-    ses = sesion_actual(request, "sindicato")
-    if not ses:
-        return templates.TemplateResponse("admin_login.html", {
-            "request": request, "marca_plataforma": db.marca_plataforma()})
-    sid = ses.get("sid", 0)
-    # Módulo Y sección: el módulo dice qué contrató el sindicato, la sección
-    # quién de adentro puede entrar. Redirige en vez de tirar 403 porque es
-    # una pantalla, no un endpoint -- mismo criterio que la falta de módulo.
-    if not db.modulo_habilitado(sid, "dashboard") \
-            or not db.tiene_permiso(ses.get("uid", 0), "dashboard"):
-        return RedirectResponse("/admin", status_code=303)
-    marca = db.marca_sindicato(sid)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request, "sindicato": marca.get("nombre", ""),
-        "marca": marca, "marca_plataforma": db.marca_plataforma(),
-        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
-        # El carril de consultas se decide en el SERVIDOR: con el flag
-        # apagado, ni el KPI ni el panel ni la pestaña llegan al HTML.
-        "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
-        # Asistente del Panel (docs/ASISTENTE_PANEL.md): sin API key en el
-        # entorno, ni el botón ni el cajón llegan al HTML.
-        "asistente": asistente.disponible(),
-        # **El "hoy" del panel sale de acá y no del reloj del navegador**
-        # (2026-09-13). El JS lo armaba con `new Date()`, y el servidor valida
-        # el rango contra la hora de Buenos Aires (`dashboard.parsear_filtros`
-        # rechaza un `hasta` futuro): cualquier dispositivo adelantado -- uno
-        # al este de Argentina, o con el reloj en UTC entre las 21 y la
-        # medianoche -- pedía "mañana", cada endpoint devolvía 422 y el panel
-        # se quedaba con todos los indicadores en "—" sin decir nada. Es la
-        # misma regla que `fechas.py` impone en el backend, del lado del
-        # cliente: la fecha la decide el servidor.
-        "hoy": fechas.hoy_texto(),
-        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
-    })
-
-
-# ---------- Panel Sindical v2 (PLAN_DASHBOARD_V2.md) ----------
-# La v2 del panel, hecha con Preact + htm sin build, convive con la v1 mientras
-# dura el piloto. Usa los MISMOS endpoints /admin/dashboard/* (línea roja 1 del
-# plan: el backend no se toca), así que acá solo vive la página.
+# ---------- Panel Sindical (PLAN_DASHBOARD_V2.md) ----------
+# Desde el 2026-10-25 (decisión de SDN) la v2, hecha con Preact + htm sin
+# build, ES el Panel Sindical: reemplazó a la v1 (dashboard.html +
+# dashboard.js, borrados) y existe en todos los entornos. Pide sus datos a
+# los endpoints /admin/dashboard/* de siempre (línea roja 1 del plan: el
+# backend no se tocó), así que acá solo vive la página.
 
 # Las librerías vendoreadas, por el nombre con que las importa el código.
 # `hooks.module.js` importa "preact" por nombre: sin esta entrada no carga.
@@ -1795,7 +1755,7 @@ _VENDOR_PANEL_V2 = {
 
 
 def _importmap_panel_v2() -> str:
-    """El importmap de la v2 (D3): cada módulo se importa POR NOMBRE y el mapa
+    """El importmap del panel (D3): cada módulo se importa POR NOMBRE y el mapa
     lo traduce a su archivo de /static CON su sello `?v=`. Un `import
     "./filtros.js"` saldría sin sello y quedaría cacheado una hora después de
     un deploy: la página nueva con un módulo viejo. Los módulos propios salen
@@ -1817,20 +1777,20 @@ def _precarga_panel_v2() -> list:
     return list(json.loads(_importmap_panel_v2())["imports"].values())
 
 
-@app.get("/admin/dashboard-v2", response_class=HTMLResponse)
-def admin_dashboard_v2_pagina(request: Request):
-    """Página del Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Mismas puertas que
-    la v1 (sesión, módulo y permiso de la sección "dashboard") y, mientras dure
-    el piloto, solo donde hay distintivo de entorno: en demo y prod no existe
-    (D4), igual que /entornos. MUESTRA_DISTINTIVO se lee por request para que
-    un test pueda simular la demo."""
-    if not entorno.MUESTRA_DISTINTIVO:
-        raise HTTPException(404, "No existe en este entorno")
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+def admin_dashboard_pagina(request: Request):
+    """Página del Panel Sindical (docs/DASHBOARD.md, PLAN_DASHBOARD_V2.md). Los
+    datos NO viajan acá: los pide static/panel_v2/ a los endpoints de
+    agregados. Sin sesión -> login; sin módulo o sin permiso -> de vuelta al
+    panel."""
     ses = sesion_actual(request, "sindicato")
     if not ses:
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
     sid = ses.get("sid", 0)
+    # Módulo Y sección: el módulo dice qué contrató el sindicato, la sección
+    # quién de adentro puede entrar. Redirige en vez de tirar 403 porque es
+    # una pantalla, no un endpoint -- mismo criterio que la falta de módulo.
     if not db.modulo_habilitado(sid, "dashboard") \
             or not db.tiene_permiso(ses.get("uid", 0), "dashboard"):
         return RedirectResponse("/admin", status_code=303)
@@ -1839,13 +1799,38 @@ def admin_dashboard_v2_pagina(request: Request):
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        # El modelo de diseño y la paleta del operador, como el resto del
+        # panel (PLAN_TEMAS.md): el tablero se pinta igual que /admin.
+        "apariencia": db.apariencia_de(sid, rol="panel", uid=ses.get("uid", 0)),
+        # El carril de consultas se decide en el SERVIDOR: con el flag
+        # apagado, ni el KPI ni el panel ni la pestaña llegan al HTML.
         "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
+        # Asistente del Panel (docs/ASISTENTE_PANEL.md): sin API key en el
+        # entorno, ni el botón ni el cajón llegan al HTML.
         "asistente": asistente.disponible(),
+        # **El "hoy" del panel sale de acá y no del reloj del navegador**
+        # (2026-09-13). El JS lo armaba con `new Date()`, y el servidor valida
+        # el rango contra la hora de Buenos Aires (`dashboard.parsear_filtros`
+        # rechaza un `hasta` futuro): cualquier dispositivo adelantado -- uno
+        # al este de Argentina, o con el reloj en UTC entre las 21 y la
+        # medianoche -- pedía "mañana", cada endpoint devolvía 422 y el panel
+        # se quedaba con todos los indicadores en "—" sin decir nada. Es la
+        # misma regla que `fechas.py` impone en el backend, del lado del
+        # cliente: la fecha la decide el servidor.
         "hoy": fechas.hoy_texto(),
         "importmap": _importmap_panel_v2(),
         "precarga": _precarga_panel_v2(),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
+
+
+@app.get("/admin/dashboard-v2")
+def admin_dashboard_v2_pagina(request: Request):
+    """La dirección del piloto de la v2. Desde que la v2 es EL Panel Sindical
+    redirige a /admin/dashboard con los mismos filtros, para no romper los
+    enlaces guardados. Las puertas las pone la página de destino."""
+    destino = "/admin/dashboard" + (("?" + request.url.query) if request.url.query else "")
+    return RedirectResponse(destino, status_code=303)
 
 
 @app.get("/admin/inicio", response_class=HTMLResponse)
@@ -6928,7 +6913,7 @@ def _exigir_dashboard_detalle(request: Request) -> int:
 
 
 # Cupo del Panel Sindical: cuántos endpoints de agregados corren a la vez en
-# este proceso. Cada refresco del panel dispara ~13 requests (dashboard.js) y el
+# este proceso. Cada refresco del panel dispara ~13 requests (static/panel_v2/) y el
 # navegador solo cancela del lado del cliente: el servidor termina cada query
 # igual. Sin cupo, una ráfaga de filtros ocupaba los 40 hilos del threadpool
 # -- que comparten el login, la app del trabajador y todo lo demás -- y la app

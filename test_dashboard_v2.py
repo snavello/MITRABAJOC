@@ -1,10 +1,13 @@
-"""Panel Sindical v2, bloque 1: el andamio (PLAN_DASHBOARD_V2.md).
+"""Panel Sindical: la página y su andamio (PLAN_DASHBOARD_V2.md, bloque 1).
 
-Lo que se verifica:
+Desde el 2026-10-25 la v2 ES el Panel Sindical, en /admin/dashboard y en
+todos los entornos; la v1 se retiró. Lo que se verifica:
 
-- **Las puertas son las de la v1**: sin sesión, el login; sin el módulo o sin
-  el permiso de la sección "dashboard", de vuelta al panel. Y además, D4:
-  **en demo y prod no existe** (404), igual que /entornos.
+- **Las puertas**: sin sesión, el login; sin el módulo o sin el permiso de la
+  sección "dashboard", de vuelta al panel. **Existe también en demo y prod**
+  (durante el piloto daba 404 donde no había distintivo).
+- **La dirección del piloto**, /admin/dashboard-v2, redirige al panel con
+  los mismos filtros: un enlace guardado no se rompe.
 - **El importmap (D3)**: cada módulo sale con su sello `?v=`, y TODO `import`
   de la v2 y de las librerías vendoreadas resuelve a una entrada del mapa.
   Un import por ruta ("./html.js") saldría sin sello y quedaría cacheado una
@@ -13,7 +16,7 @@ Lo que se verifica:
   lo que pinta, y eso deja de valer en cuanto alguien usa innerHTML.
 - **Las librerías vendoreadas son las registradas**: el SHA-256 de cada
   archivo tiene que coincidir con `static/vendor/preact/ORIGEN.md`.
-- **El enlace de la v1 a la v2 (D6)** aparece solo donde hay distintivo.
+- **No queda rastro de la v1**: ni sus archivos ni el enlace entre versiones.
 
 Correr con: .venv/bin/python -m pytest test_dashboard_v2.py -q
 """
@@ -66,7 +69,8 @@ with db.get_session() as s:
 
 @pytest.fixture(autouse=True)
 def con_distintivo(monkeypatch):
-    """Por defecto, un entorno con distintivo (local/pruebas): ahí vive la v2."""
+    """Por defecto, un entorno con distintivo (local/pruebas). La demo se
+    prueba aparte: el panel tiene que andar igual."""
     monkeypatch.setattr(entorno, "MUESTRA_DISTINTIVO", True)
     monkeypatch.setitem(main.templates.env.globals, "distintivo_entorno", True)
 
@@ -98,34 +102,48 @@ _IMPORTA = re.compile(r"""(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']""")
 # Las puertas
 # ---------------------------------------------------------------------------
 def test_sin_sesion_muestra_el_login():
-    r = TestClient(main.app).get("/admin/dashboard-v2", follow_redirects=False)
+    r = TestClient(main.app).get("/admin/dashboard", follow_redirects=False)
     assert r.status_code == 200
     assert 'name="usuario"' in r.text and "importmap" not in r.text
 
 
 def test_sin_el_modulo_vuelve_al_panel():
-    r = _cliente("20300000024").get("/admin/dashboard-v2", follow_redirects=False)
+    r = _cliente("20300000024").get("/admin/dashboard", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/admin"
 
 
 def test_sin_el_permiso_vuelve_al_panel():
-    r = _cliente("20300000032").get("/admin/dashboard-v2", follow_redirects=False)
+    r = _cliente("20300000032").get("/admin/dashboard", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/admin"
 
 
-def test_en_demo_y_prod_no_existe(monkeypatch):
-    """D4: mientras dura el piloto, la v2 no existe donde no hay distintivo,
-    ni con sesión ni sin ella. Una versión a medio hacer no aparece delante de
-    un sindicato."""
+def test_en_demo_y_prod_tambien_existe(monkeypatch):
+    """Durante el piloto (D4) la v2 daba 404 donde no había distintivo. Desde
+    que reemplazó a la v1 es EL panel: en la demo se ve igual."""
     c = _cliente("20300000016")
     monkeypatch.setattr(entorno, "MUESTRA_DISTINTIVO", False)
-    assert c.get("/admin/dashboard-v2", follow_redirects=False).status_code == 404
-    assert TestClient(main.app).get("/admin/dashboard-v2",
-                                    follow_redirects=False).status_code == 404
+    monkeypatch.setitem(main.templates.env.globals, "distintivo_entorno", False)
+    r = c.get("/admin/dashboard", follow_redirects=False)
+    assert r.status_code == 200 and "importmap" in r.text
+    r = TestClient(main.app).get("/admin/dashboard", follow_redirects=False)
+    assert r.status_code == 200 and 'name="usuario"' in r.text
+
+
+def test_la_direccion_del_piloto_redirige_con_los_filtros():
+    c = _cliente("20300000016")
+    r = c.get("/admin/dashboard-v2?desde=2026-10-01&hasta=2026-10-12&seccionales=3",
+              follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/admin/dashboard?desde=2026-10-01&hasta=2026-10-12&seccionales=3"
+    r = c.get("/admin/dashboard-v2", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/admin/dashboard"
+    # Sin sesión también redirige: la puerta la pone la página de destino.
+    r = TestClient(main.app).get("/admin/dashboard-v2", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/admin/dashboard"
 
 
 def test_con_todo_abre_con_la_fecha_del_servidor_y_el_importmap():
-    r = _cliente("20300000016").get("/admin/dashboard-v2")
+    r = _cliente("20300000016").get("/admin/dashboard")
     assert r.status_code == 200, r.text
     assert f'data-hoy="{fechas.hoy_texto()}"' in r.text
     mapa = _importmap(r.text)
@@ -207,10 +225,14 @@ def test_las_librerias_vendoreadas_son_las_de_origen_md():
 
 
 # ---------------------------------------------------------------------------
-# El enlace de la v1 a la v2 (D6)
+# La v1 se fue entera
 # ---------------------------------------------------------------------------
-def test_la_v1_ofrece_la_v2_solo_con_distintivo(monkeypatch):
-    c = _cliente("20300000016")
-    assert 'href="/admin/dashboard-v2"' in c.get("/admin/dashboard").text
-    monkeypatch.setitem(main.templates.env.globals, "distintivo_entorno", False)
-    assert "/admin/dashboard-v2" not in c.get("/admin/dashboard").text
+def test_no_queda_rastro_de_la_v1():
+    assert not Path("templates/dashboard.html").exists()
+    assert not Path("static/dashboard.js").exists()
+    html = _cliente("20300000016").get("/admin/dashboard").text
+    assert "dashboard.js" not in html and "dashboard-v2" not in html
+    assert "versión actual" not in html and "versión nueva" not in html
+    # Ningún módulo del panel ofrece volver a otra versión.
+    for p in PANEL.glob("*.js"):
+        assert "/admin/dashboard-v2" not in p.read_text(encoding="utf-8"), p.name

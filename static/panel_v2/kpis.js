@@ -51,9 +51,22 @@ function Valor({ id, valor, formato, clase = "val num", esperando }) {
   return html`<div class=${clase} id=${"v-" + id}>${texto}</div>`;
 }
 
-export function Kpis({ datos, consultas, error, reintentar }) {
+/* La variación contra el período anterior: la cifra en la tipografía de los
+   números y la frase en la del texto (la monoespaciada es para cifras). Con
+   "Hoy" no se compara un día a medio andar contra uno entero, que siempre
+   daba una caída en rojo: se dice cuántos hubo ayer (G7-09). */
+function Delta({ actual, anterior, esHoy }) {
+  if (esHoy) {
+    return html`<div class="delta neu" id="d-recibos">ayer: <span class="cifra">${fmtN(anterior || 0)}</span></div>`;
+  }
+  const d = deltaRecibos(actual, anterior);
+  const m = /^(\S+ \d+%)(.*)$/.exec(d.texto);
+  return html`<div class=${"delta " + d.clase} id="d-recibos">${m
+    ? html`<span class="cifra">${m[1]}</span><span class="frase">${m[2]}</span>` : d.texto}</div>`;
+}
+
+export function Kpis({ datos, consultas, error, reintentar, esHoy = false }) {
   const a = datos ? datos.actual : {};
-  const delta = datos ? deltaRecibos(a.recibos, datos.anterior.recibos) : null;
   const n = (v) => fmtN(Math.round(v));
   const pct = (final) => (v) => fmtPct(unDecimal(v, final));
   const total = a.padron_total;
@@ -72,7 +85,7 @@ export function Kpis({ datos, consultas, error, reintentar }) {
       <div class="v2-hero grande">
         <div class="v2-kicker">Recibos analizados</div>
         <${Valor} id="recibos" valor=${a.recibos} formato=${n} esperando=${esperando} />
-        ${delta && html`<div class=${"delta " + delta.clase} id="d-recibos">${delta.texto}</div>`}
+        ${datos && html`<${Delta} actual=${a.recibos} anterior=${datos.anterior.recibos} esHoy=${esHoy} />`}
       </div>
       <div class="v2-hero"><div class="et">% con diferencias</div>
         <${Valor} id="pdif" valor=${a.pct_con_diferencias} formato=${pct(a.pct_con_diferencias)} esperando=${esperando} /></div>

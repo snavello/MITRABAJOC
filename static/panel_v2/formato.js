@@ -1,6 +1,6 @@
 /* Panel Sindical v2: cómo se escriben los números y las fechas.
 
-   Las mismas reglas que la v1 (static/dashboard.js): números en es-AR, "—"
+   Las mismas reglas que la v1 (static/dashboard.js, retirada el 2026-10-25): números en es-AR, "—"
    cuando no hay dato (nunca un 0 inventado), plata redondeada a pesos y
    fechas dd/mm/aaaa. Puro: Node lo prueba. */
 

@@ -49,8 +49,8 @@ def test_hay_plantillas_con_modales():
     """Baranda del propio test: si el regex dejara de encontrar cajas, los dos
     tests de abajo pasarían recorriendo una lista vacía."""
     nombres = [n for n, _ in _con_modales()]
-    assert len(nombres) >= 8, nombres
-    for esperada in ("portada.html", "admin.html", "dashboard.html", "trabajador.html"):
+    assert len(nombres) >= 7, nombres
+    for esperada in ("portada.html", "admin.html", "trabajador.html"):
         assert esperada in nombres, f"{esperada} tiene modales y el test no la ve"
     print(f"OK  test_hay_plantillas_con_modales ({len(nombres)} plantillas)")
 
@@ -113,9 +113,10 @@ def test_la_tarjeta_de_contenido_no_es_un_modal():
 # que no pase que tres modales entren con movimiento y el cuarto aparezca de
 # golpe. Lo que se prueba acá es la cobertura; cómo se ve, los robots.
 
-# La v1 del Panel recibe solo arreglos mientras SDN decide D9: su "Ver" queda
-# como está, a propósito.
-SIN_MOVIMIENTO = {"dashboard.html"}
+# Pantallas con modales que, a propósito, no cargan el movimiento común. Era
+# la v1 del Panel (dashboard.html), que se retiró el 2026-10-25: el panel de
+# hoy arma sus modales con Preact y su propio movimiento.
+SIN_MOVIMIENTO = set()
 
 
 def test_todas_las_pantallas_con_modales_cargan_el_movimiento():

@@ -4,12 +4,10 @@
    (test_dashboard_v2_nucleo.py). Un solo objeto de estado, con la misma forma
    que el `S` de la v1, y una sola función que lo cambia (`crearReductor`).
 
-   La regla que manda acá es la línea roja 3 del plan: **los mismos parámetros
-   que la v1**. Una dirección de la v1 abre igual en la v2, y la v2 le pide al
-   servidor exactamente lo mismo. Por eso las reglas de saneo copian las de
-   `estadoDeParams` de static/dashboard.js, con sus rarezas incluidas, y el
-   test las compara contra la v1 con miles de direcciones al azar. Una rareza
-   de la v1 que convenga corregir se corrige en las DOS (D10), no solo acá.
+   Nació con la línea roja 3 del plan: **los mismos parámetros que la v1**,
+   rarezas incluidas, para que una dirección guardada de la v1 abra igual. La
+   v1 ya no existe (2026-10-25): test_dashboard_v2_nucleo.py fija ahora esos
+   parámetros con casos escritos a mano y con miles de direcciones al azar.
 
    Diferencias de forma con la v1, que no cambian ningún pedido:
    - Las fechas son texto "AAAA-MM-DD", no objetos Date: se comparan como
@@ -56,9 +54,15 @@ export function restarDias(iso, dias) {
 
 /* ---------------- Estado ---------------- */
 
+/* El período con que abre el panel y al que vuelve "Reiniciar": los últimos
+   30 días contando hoy (G7-02). Abría en "Hoy" y, a media mañana, la primera
+   vista de la función estrella era todo cero. Un enlace con su período
+   explícito sigue mandando. */
+export const DIAS_INICIALES = 30;
+
 export function estadoInicial(hoy) {
   return {
-    desde: hoy, hasta: hoy,
+    desde: restarDias(hoy, DIAS_INICIALES - 1), hasta: hoy,
     seccionales: [], empresas: [],
     formato: "", salMin: null, salMax: null,
     resultado: "", estadoTramite: "", tipoNotif: "", tema: "",
@@ -300,8 +304,8 @@ export function crearReductor({ hoy, consultas = false }) {
         return tabs.indexOf(a.valor) < 0 ? e : Object.assign({}, e, { tab: a.valor, paginas: 1 });
       case "verMas":
         return Object.assign({}, e, { paginas: e.paginas + 1 });
-      case "reiniciar":           // Hoy, sin filtros, pestaña Recibos
-        return Object.assign(sinFiltros(e, a.lim), { desde: hoy, hasta: hoy });
+      case "reiniciar":           // los últimos 30 días, sin filtros, pestaña Recibos
+        return Object.assign(sinFiltros(e, a.lim), { desde: restarDias(hoy, DIAS_INICIALES - 1), hasta: hoy });
       case "aplicar": {
         /* Reemplaza TODO el estado por otro en forma de params (el Asistente,
            o una foto previa al "Volver"), como `aplicarEstado` de la v1: se

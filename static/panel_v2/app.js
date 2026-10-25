@@ -20,14 +20,15 @@
 import { render } from "preact";
 import { useCallback, useEffect, useReducer, useRef, useState } from "preact/hooks";
 import { html } from "panel/html";
-import { crearReductor, desdeParams, aParams, aDireccion, limitesSalario, tabsDisponibles } from "panel/estado";
+import { crearReductor, desdeParams, aParams, aDireccion, limitesSalario, tabsDisponibles, presetActivo,
+  filtrosActivos } from "panel/estado";
 import { crearPedir, enCola, MAX_EN_VUELO } from "panel/api";
-import { fFecha, fechaLarga } from "panel/formato";
+import { fFecha, fCorta, fechaLarga } from "panel/formato";
 import { BarraFiltros, Cajon } from "panel/filtros";
 import { Kpis } from "panel/kpis";
 import { Capa } from "panel/capa";
 import { Panel, Serie, Validacion, Tramites, Notificaciones, Empresas, Consultas, Formato, Semaforo,
-  MapaSeccionales } from "panel/graficos";
+  MapaSeccionales, vacioDe } from "panel/graficos";
 import { Explorador, Detalle } from "panel/explorador";
 import { Asistente, BotonAsistente } from "panel/asistente";
 import { menosMovimiento } from "panel/movimiento";
@@ -47,6 +48,20 @@ const ESPERA_MS = 400;
 const reducir = crearReductor({ hoy: HOY, consultas: CONSULTAS });
 const pedir = crearPedir();
 
+/* El aviso de "reducir movimiento" se cierra una vez y no vuelve en ese
+   navegador (G7-21). Es una comodidad de quien mira: si el almacenamiento
+   no anda (ventana privada, sitio bloqueado), vuelve a aparecer y listo. */
+const AVISO_MOV = "panel-sindical.aviso-movimiento";
+function avisoMovCerrado() {
+  try { return window.localStorage.getItem(AVISO_MOV) === "cerrado"; } catch (e) { return false; }
+}
+function cerrarAvisoMov() {
+  try { window.localStorage.setItem(AVISO_MOV, "cerrado"); } catch (e) { /* sin almacenamiento */ }
+}
+
+/* Con un panel vacío, el período más amplio que conviene ofrecer (G7-01). */
+const AMPLIAR = { hoy: "30", 7: "30", 30: "90" };
+
 /* Los paneles de la ronda, en el orden de la v1 (nombre del panel, ruta). */
 const PANELES = [["serie", "serie-recibos"], ["validacion", "validacion"], ["tramites", "tramites-seccional"],
   ["notif", "notificaciones"], ["empresas", "diferencias-empresa"], ["semaforo", "semaforo"],
@@ -65,7 +80,7 @@ function PanelSindical() {
   const [detalle, setDetalle] = useState(null);
   const [asist, setAsist] = useState("cerrado");          // "cerrado", "abierto" o "mini" (celular)
   const [reducido, setReducido] = useState(menosMovimiento);
-  const [avisoCerrado, setAvisoCerrado] = useState(false);
+  const [avisoCerrado, setAvisoCerrado] = useState(avisoMovCerrado);
   const ronda = useRef(null);
   const soloExplorador = useRef(null);
   const primera = useRef(true);
@@ -214,13 +229,29 @@ function PanelSindical() {
   // El encabezado común muestra la fecha de hoy y el rango que contestó el servidor.
   useEffect(() => {
     const h = document.getElementById("hoy-fecha");
-    if (h) h.textContent = fechaLarga(HOY);
+    // Solo la primera letra en mayúscula: "Sábado, 24 de octubre de 2026"
+    // (un text-transform: capitalize escribía "De Octubre De", G7-03).
+    const larga = fechaLarga(HOY);
+    if (h) h.textContent = larga.charAt(0).toUpperCase() + larga.slice(1);
   }, []);
   const kpis = paneles.kpis && paneles.kpis.datos;
+  /* El rango que contestó el servidor. En el teléfono es lo único que queda
+     del encabezado (sin la fecha larga) y va corto, sin el año: entra en la
+     misma línea que los dos logos. Un solo día se dice una vez. */
+  const [angosto, setAngosto] = useState(() => window.matchMedia("(max-width: 600px)").matches);
+  useEffect(() => {
+    const m = window.matchMedia("(max-width: 600px)");
+    const cambio = () => setAngosto(m.matches);
+    m.addEventListener("change", cambio);
+    return () => m.removeEventListener("change", cambio);
+  }, []);
   useEffect(() => {
     const r = document.getElementById("rango-texto");
-    if (r && kpis && kpis.rango) r.textContent = fFecha(kpis.rango.desde) + " – " + fFecha(kpis.rango.hasta);
-  }, [kpis]);
+    if (!r || !kpis || !kpis.rango) return;
+    const { desde, hasta } = kpis.rango;
+    const f = angosto ? fCorta : fFecha;
+    r.textContent = desde === hasta ? f(desde) : f(desde) + " – " + f(hasta);
+  }, [kpis, angosto]);
 
   const registrarAfiliado = (it) => setAfiliados((x) => Object.assign({}, x, { [it.id]: it }));
   const elegirAfiliado = (it) => {
@@ -233,6 +264,19 @@ function PanelSindical() {
   const graf = { estado, despachar };
   const reintentar = () => refrescar();
   const kpi = p("kpis");
+  const preset = presetActivo(estado, HOY);
+  const conFiltros = filtrosActivos(estado, { catalogo: catalogo || {}, lim }).length > 0;
+  // Un rango elegido a mano (con el calendario o un enlace) también ofrece
+  // volver a los últimos 30 días: es el período con que abre el panel.
+  const siguiente = preset ? AMPLIAR[preset] : "30";
+  const ampliar = siguiente ? { txt: "Ver los últimos " + siguiente + " días",
+    hacer: () => despachar({ tipo: "preset", valor: siguiente }) }
+    : (conFiltros ? { txt: "Quitar los filtros", hacer: () => despachar({ tipo: "reiniciar", lim }) } : null);
+  /* Las props del estado vacío de un panel: el texto, y qué hacer. */
+  const vacio = (nombre) => {
+    const txt = vacioDe(nombre, datos(nombre));
+    return txt ? { vacio: conFiltros ? txt.replace(/\.$/, " con estos filtros.") : txt, ampliar } : {};
+  };
 
   return html`<div class="v2">
     <div class="v2-cabeza">
@@ -240,40 +284,44 @@ function PanelSindical() {
         <h1 class="titulo-pagina">Panel Sindical</h1>
         <p class="v2-bajada">Lo que pasó en tu sindicato en el período elegido.</p>
       </div>
-      <div class="v2-acciones">
-        ${ASISTENTE && html`<${BotonAsistente} modo=${asist} setModo=${setAsist} colmena=${COLMENA} />`}
-        <a class="v2-volver" href="/admin/dashboard"
-          onClick=${(ev) => { ev.preventDefault(); location.href = "/admin/dashboard" + location.search; }}>Ver en la versión actual</a>
-      </div>
+      ${ASISTENTE && html`<div class="v2-acciones">
+        <${BotonAsistente} modo=${asist} setModo=${setAsist} colmena=${COLMENA} />
+      </div>`}
     </div>
     ${reducido && !avisoCerrado && html`<div class="v2-aviso-mov" role="note">
-      <span><b>Tu equipo tiene activado «reducir movimiento».</b> El panel muestra solo fundidos suaves. Para ver las
-        animaciones completas, desactivalo en el sistema: en Windows, Configuración → Accesibilidad → Efectos visuales →
-        Efectos de animación; en iPhone y Mac, Accesibilidad → Reducir movimiento; en Android, Accesibilidad → Quitar animaciones.</span>
-      <button type="button" aria-label="Cerrar el aviso" onClick=${() => setAvisoCerrado(true)}>✕</button></div>`}
+      <details>
+        <summary>Tu equipo tiene «reducir movimiento» activado: el panel muestra solo fundidos. <span class="v2-aviso-mas">Cómo cambiarlo</span></summary>
+        <ul>
+          <li><b>Windows:</b> Configuración → Accesibilidad → Efectos visuales → Efectos de animación.</li>
+          <li><b>iPhone y Mac:</b> Accesibilidad → Reducir movimiento.</li>
+          <li><b>Android:</b> Accesibilidad → Quitar animaciones.</li>
+        </ul>
+      </details>
+      <button type="button" aria-label="Cerrar el aviso y no volver a mostrarlo"
+        onClick=${() => { cerrarAvisoMov(); setAvisoCerrado(true); }}>✕</button></div>`}
     ${aviso && html`<div class="aviso-error" role="alert">${aviso}</div>`}
     <section class=${"v2-tablero" + (kpi.cargando ? " cargando" : "")} data-panel="kpis" aria-busy=${!!kpi.cargando}>
       <span class="v2-cargador" aria-hidden="true"></span>
       <${BarraFiltros} ...${comun} afiliados=${afiliados} abrirCajon=${() => setCajon(true)} />
-      <${Kpis} datos=${kpi.datos || null} consultas=${CONSULTAS}
+      <${Kpis} datos=${kpi.datos || null} consultas=${CONSULTAS} esHoy=${preset === "hoy"}
         error=${kpi.error !== undefined && kpi.error !== null} reintentar=${reintentar} />
     </section>
 
     <div class="grid v2-grid">
       <${Panel} nombre="serie" titulo="Recibos procesados por día" sub="Volumen de recibos analizados por el validador"
-        clase="span8" estado=${p("serie")} reintentar=${reintentar}><${Serie} datos=${datos("serie")} /><//>
-      <${Panel} nombre="validacion" titulo="Resultado de validación" sub="Tocá un segmento para filtrar"
-        clase="span4" estado=${p("validacion")} reintentar=${reintentar}><${Validacion} datos=${datos("validacion")} ...${graf} /><//>
+        clase="span8" ...${vacio("serie")} estado=${p("serie")} reintentar=${reintentar}><${Serie} datos=${datos("serie")} /><//>
+      <${Panel} nombre="validacion" titulo="Resultado de validación" sub="Tocá un segmento para filtrar" subVacio=""
+        clase="span4" ...${vacio("validacion")} estado=${p("validacion")} reintentar=${reintentar}><${Validacion} datos=${datos("validacion")} ...${graf} /><//>
       <${Panel} nombre="tramites" titulo="Trámites por seccional y estado" sub="Tocá un segmento para filtrar seccional y estado a la vez"
-        clase="span4" estado=${p("tramites")} reintentar=${reintentar}><${Tramites} datos=${datos("tramites")} ...${graf} /><//>
+        subVacio="Abiertos, en proceso y resueltos, por seccional" clase="span4" ...${vacio("tramites")} estado=${p("tramites")} reintentar=${reintentar}><${Tramites} datos=${datos("tramites")} ...${graf} /><//>
       <${Panel} nombre="empresas" titulo="Diferencias detectadas por empresa" sub="Top 6 · monto total observado · tocá para sumar al filtro"
-        clase="span4" estado=${p("empresas")} reintentar=${reintentar}><${Empresas} datos=${datos("empresas")} ...${graf} /><//>
+        subVacio="Top 6 · monto total observado" clase="span4" ...${vacio("empresas")} estado=${p("empresas")} reintentar=${reintentar}><${Empresas} datos=${datos("empresas")} ...${graf} /><//>
       <${Panel} nombre="notif" titulo="Notificaciones · leídas vs. no leídas" sub="Tocá una barra para ver el detalle de ese tipo"
-        clase="span4" estado=${p("notif")} reintentar=${reintentar}><${Notificaciones} datos=${datos("notif")} ...${graf} /><//>
+        subVacio="" clase="span4" ...${vacio("notif")} estado=${p("notif")} reintentar=${reintentar}><${Notificaciones} datos=${datos("notif")} ...${graf} /><//>
       ${CONSULTAS && html`<${Panel} nombre="bot" titulo="Consultas al asistente" sub="Temas más consultados por los afiliados"
-        estado=${p("bot")} reintentar=${reintentar}><${Consultas} datos=${datos("bot")} ...${graf} /><//>`}
+        ...${vacio("bot")} estado=${p("bot")} reintentar=${reintentar}><${Consultas} datos=${datos("bot")} ...${graf} /><//>`}
       <${Panel} nombre="formato" titulo="Adopción del nuevo formato (Ley 27.802)" sub="Recibos por formato, semana a semana"
-        clase="span7" estado=${p("formato")} reintentar=${reintentar}><${Formato} datos=${datos("formato")} /><//>
+        clase="span7" ...${vacio("formato")} estado=${p("formato")} reintentar=${reintentar}><${Formato} datos=${datos("formato")} /><//>
       <${Panel} nombre="semaforo" forma="lista" titulo="Semáforo de aportes"
         sub="Días desde el último depósito que imprime el recibo (formato Ley 27.802 — todavía son pocos recibos en relación al total, tomalo como indicativo)"
         clase="span5" estado=${p("semaforo")} reintentar=${reintentar}><${Semaforo} datos=${datos("semaforo")} /><//>

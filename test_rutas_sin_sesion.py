@@ -79,7 +79,6 @@ DEVUELVEN_LOGIN = {
     "/admin": "/admin/login",
     "/admin/inicio": "/admin/login",
     "/admin/dashboard": "/admin/login",
-    "/admin/dashboard-v2": "/admin/login",   # la v2 del panel (PLAN_DASHBOARD_V2.md)
     "/admin/encuesta/{encuesta_id}/resultados": "/admin/login",
     "/plataforma": "/plataforma/login",
     "/plataforma/inicio": "/plataforma/login",
@@ -102,6 +101,12 @@ ADJUNTOS = {
 # entornos o a una portada (que a su vez manda al ingreso).
 DESTINOS_VALIDOS = {"/admin", "/plataforma", "/plataforma/inicio", "/ingresar",
                     "/ingresar-empresa", "/app/inicio", "/empresa/inicio", "/entornos"}
+
+# Direcciones viejas que solo redirigen a otra pantalla, que es la que pone
+# la puerta (y que figura arriba en DEVUELVEN_LOGIN). /admin/dashboard-v2 fue
+# la dirección del piloto de la v2 del panel; desde el 2026-10-25 la v2 es
+# /admin/dashboard.
+ALIAS = {"/admin/dashboard-v2": "/admin/dashboard"}
 
 COOKIES_FALSAS = {
     "cuil_trab": "20111111119", "cuit_emp": "30111222339",
@@ -174,7 +179,9 @@ def _problema(ruta, metodo, r):
         return None
     if s in (302, 303, 307):
         destino = r.headers.get("location", "").split("?")[0].split("#")[0]
-        return None if destino in DESTINOS_VALIDOS else f"redirige a {destino!r}"
+        if destino in DESTINOS_VALIDOS or ALIAS.get(ruta.path) == destino:
+            return None
+        return f"redirige a {destino!r}"
     if s == 404 and ruta.path in ADJUNTOS:
         return None
     if s == 200 and metodo == "GET" and ruta.path in DEVUELVEN_LOGIN:

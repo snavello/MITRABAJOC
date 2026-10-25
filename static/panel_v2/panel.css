@@ -1,10 +1,9 @@
-/* Panel Sindical v2 (PLAN_DASHBOARD_V2.md).
+/* Panel Sindical (PLAN_DASHBOARD_V2.md).
 
-   Arranca como COPIA de los estilos de la v1 (el <style> de
-   templates/dashboard.html, sin el bloque :root, que lleva los colores del
-   sindicato y queda en la plantilla). Es una copia y no un archivo
-   compartido a propósito (D7): la v2 mejora su estética (D5) sin mover la
-   v1. Si la v2 reemplaza a la v1, esta pasa a ser la única. */
+   Nació como copia de los estilos de la v1; desde el 2026-10-25 la v2 es EL
+   Panel Sindical y esta es la única hoja. Es la "Sala de mando" de base: cada
+   modelo de diseño (PLAN_TEMAS.md) la adapta con su propia hoja,
+   static/temas/<modelo>-tablero.css, que se carga después. */
 
 body { background: var(--papel); }
 
@@ -387,8 +386,6 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .v2-cabeza { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .v2-cabeza .titulo-pagina { margin: 0 0 4px; }
 .v2-bajada { margin: 0; font-size: 14px; color: #d6dee8; }
-.v2-volver { display: inline-block; background: rgba(255,255,255,.94); color: var(--marca-primario); border-radius: 99px;
-  padding: 5px 13px; font-weight: 700; font-size: 12.5px; text-decoration: none; }
 .v2 .aviso-error { margin: 0 0 12px; }
 
 .v2-tablero { position: relative; border-radius: 16px; padding: 18px 18px 18px 21px; color: #fff; overflow: hidden;
@@ -652,14 +649,22 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 }
 @keyframes v2-solo-funde { from { opacity: 0; } }
 
-/* El aviso de que el sistema pide reducir el movimiento (solo en la v2, que
-   hoy existe solo en local y Pruebas): sin él, quien tiene la opción
-   prendida ve todo quieto y no sabe por qué. */
-.v2-aviso-mov { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 9px 14px; border-radius: 12px;
-  background: rgba(255,255,255,.94); color: var(--tinta); font-size: 12.5px; line-height: 1.4;
+/* El aviso de que el sistema pide reducir el movimiento: sin él, quien tiene
+   la opción prendida ve todo quieto y no sabe por qué. Una línea; el camino
+   de cada sistema, plegado (G7-21). Cerrado, no vuelve en ese navegador. */
+.v2-aviso-mov { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 12px; padding: 8px 12px 8px 14px; border-radius: 12px;
+  background: rgba(255,255,255,.94); color: var(--tinta); font-size: 12.5px; line-height: 1.45;
   box-shadow: 0 6px 18px -10px rgba(8,12,20,.35); }
-.v2-aviso-mov b { color: var(--marca-primario); }
-.v2-aviso-mov button { margin-left: auto; flex: none; border: 0; background: none; color: var(--gris); font-size: 15px; cursor: pointer; }
+.v2-aviso-mov details { flex: 1; min-width: 0; }
+.v2-aviso-mov summary { cursor: pointer; list-style: none; padding: 2px 0; }
+.v2-aviso-mov summary::-webkit-details-marker { display: none; }
+.v2-aviso-mas { color: var(--marca-primario); font-weight: 700; white-space: nowrap; }
+.v2-aviso-mas::after { content: " ›"; }
+.v2-aviso-mov details[open] .v2-aviso-mas::after { content: " ⌄"; }
+.v2-aviso-mov ul { margin: 6px 0 2px; padding-left: 18px; color: var(--gris); }
+.v2-aviso-mov button { margin-left: auto; flex: none; border: 0; background: none; color: var(--gris); font-size: 15px;
+  cursor: pointer; width: 28px; height: 28px; border-radius: 50%; }
+.v2-aviso-mov button:hover { background: var(--papel); }
 
 /* ---------- Esperando datos: el panel se ARMA, no se apaga ----------
    Primera carga: se trazan las líneas de la grilla de un gráfico (o los
@@ -710,3 +715,97 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 [data-panel="semaforo"] .v2-armando { top: 96px; }
 [data-panel="seccionales-geo"] .v2-armando { top: 124px; }
 [data-panel="explorador"] .v2-armando { top: 140px; }
+
+/* ================= El panel como pantalla del panel del sindicato =================
+   Desde que la v2 es EL Panel Sindical (2026-10-25). */
+
+/* La fecha del encabezado (G7-03). La escribe el JS ya armada en minúsculas,
+   así que nada de capitalize ("De Octubre De"). En el teléfono queda solo el
+   rango, en una línea: con la fecha larga el encabezado crecía a cinco
+   renglones. encabezado.css se carga después: de ahí la especificidad. */
+.marca-barra .marca-fecha strong { text-transform: none; }
+.marca-barra .marca-fecha span { white-space: nowrap; }
+@media (max-width: 600px) {
+  .marca-barra .marca-fecha strong { display: none; }
+  .marca-barra .marca-fecha { font-size: 11px; }
+}
+/* El logo de Colm3na para fondo claro: solo lo muestra el modelo que pone el
+   encabezado en blanco (static/temas/laguna-tablero.css). */
+.enc-c3-claro { display: none; }
+
+/* Inicio y Salir flotan juntos abajo a la derecha, con su rótulo, como en
+   /admin (PLAN_TEMAS.md D7). flota.js los corre al bajar. Lo de abajo del
+   panel deja lugar para que la pastilla no tape el final. */
+main { padding-bottom: 110px; }
+.flota-sesion { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: flex; align-items: center; gap: 8px; }
+.flota-sesion a { display: flex; align-items: center; gap: 7px; height: 44px; padding: 0 16px 0 13px; border-radius: 999px;
+  background: var(--marca-base); color: #fff; text-decoration: none; font-size: 13.5px; font-weight: 600;
+  border: 1px solid rgba(255,255,255,.14); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.flota-sesion a:hover { opacity: .85; }
+.flota-sesion svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 760px) { .flota-sesion { right: 12px; bottom: 12px; } }
+
+/* Un gráfico sin datos dice qué pasa y ofrece la próxima acción, en vez de
+   dibujar su grilla en cero (G7-01). El lienzo queda montado e invisible:
+   Chart.js sigue siendo el mismo gráfico cuando vuelvan los datos. */
+.panel.vacio .c-wrap, .panel.vacio .notif-resumen { visibility: hidden; }
+.v2-vacio { position: absolute; left: 16px; right: 16px; top: 56px; bottom: 14px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; text-align: center; pointer-events: none; }
+.v2-vacio p { margin: 0; max-width: 34ch; font-size: 14px; color: var(--gris); line-height: 1.45; }
+.v2-vacio-btn { pointer-events: auto; border: 1px solid var(--linea); background: var(--blanco); color: var(--tinta);
+  border-radius: 999px; padding: 6px 14px; font: 600 12.5px var(--fuente); cursor: pointer; }
+.v2-vacio-btn:hover { border-color: var(--marca-primario); }
+.v2-grid > .panel.vacio { min-height: 200px; }
+
+/* La variación de "Recibos analizados": la cifra en la de los números, la
+   frase en la del texto (G7-09). */
+.v2-hero .delta { font-family: var(--fuente); }
+.v2-hero .delta .cifra { font-family: var(--fuente-num); }
+
+/* Semáforo: cuando hay más empresas de las que entran, la lista se funde
+   abajo y lo dice (G7-06): la quinta cortada al medio parecía un error. */
+.sem-lista.sigue { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent); padding-bottom: 18px; }
+.sem-mas { margin-top: 6px; font-size: 11.5px; color: var(--gris); text-align: center; }
+
+/* El explorador sin filas: un párrafo a todo el ancho, no una celda centrada
+   en una tabla que se sale de la pantalla. */
+p.vacio-exp { margin: 0; padding: 22px 8px; font-size: 13px; }
+
+/* En el teléfono, los indicadores chicos van de a dos: si son impares, el
+   último ocupa la fila entera en vez de dejar una celda vacía de otro color
+   (G7-22). */
+@media (max-width: 760px) {
+  .v2-minis > .v2-mini:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* El explorador en el teléfono (G7-04): cada fila es una ficha con el nombre
+   de cada columna arriba de su valor (data-et lo pone explorador.js), en dos
+   columnas; nada se sale de la pantalla. Las pestañas se deslizan y un
+   fundido a la derecha avisa que siguen. */
+@media (max-width: 600px) {
+  .tabs-datos { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); padding-right: 28px; }
+  .tabla-scroll { margin: 0; padding: 0; overflow: visible; }
+  table.tabla-exp { min-width: 0; display: block; }
+  .tabla-exp thead { display: none; }
+  .tabla-exp tbody { display: flex; flex-direction: column; gap: 10px; }
+  .tabla-exp tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; padding: 12px;
+    border: 1px solid var(--linea); border-radius: 12px; background: var(--blanco); }
+  .tabla-exp td { display: block; padding: 0; border: 0; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+  .tabla-exp td::before { content: attr(data-et); display: block; font: 700 10px/1.3 var(--fuente, system-ui); letter-spacing: .5px;
+    text-transform: uppercase; color: var(--gris); margin-bottom: 2px; }
+  .tabla-exp td:not([data-et])::before, .tabla-exp td[data-et=""]::before { display: none; }
+  .tabla-exp td:last-child:not([data-et]), .tabla-exp td[data-et=""] { grid-column: 1 / -1; }
+  .tabla-exp tr:hover td { background: none; }
+  .v2-tabs ~ .tabla-scroll .tabla-exp tr:hover td:first-child { box-shadow: none; }
+  .pie-tabla { flex-wrap: wrap; gap: 6px; }
+}
+
+/* "Adopción del nuevo formato" comparte fila con el semáforo, que es más
+   alto: el gráfico crece hasta el pie de la tarjeta en vez de dejar un hueco
+   blanco debajo de la leyenda. */
+@media (min-width: 761px) {
+  .v2-grid > .panel[data-panel="formato"] { display: flex; flex-direction: column; }
+  .v2-grid > .panel[data-panel="formato"] .c-wrap { flex: 1 1 auto; min-height: 200px; height: auto; }
+}
