@@ -951,3 +951,40 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
   html[data-tema="laguna"] .ident { align-items: center; padding-block: 8px; }
   html[data-tema="laguna"] .ident .flota-sal { box-shadow: none; }
 }
+
+/* Bloque 5a: afiliado (auditoría 2026-10) */
+/* G2-08: en el teléfono angosto cada paso dice solo el verbo; la bajada
+   repetía el título del panel y partía la tira en renglones desparejos. */
+@media (max-width: 420px) {
+  html[data-tema="laguna"] .rc-paso { align-items: center; }
+  html[data-tema="laguna"] .rc-paso i { grid-row: auto; }
+  html[data-tema="laguna"] .rc-paso small { display: none; }
+}
+/* G2-12: «Leer» en el color de enlace del modelo. */
+html[data-tema="laguna"] .nv-leer { font-family: var(--lg-fuente); font-weight: 600; color: var(--lg-turq-osc); }
+/* G3-05: los estados de un trámite con los colores de estado del modelo. */
+html[data-tema="laguna"] {
+  --est-ini-f: transparent; --est-ini-t: var(--lg-tinta);
+  --est-tra-f: var(--lg-amb-f); --est-tra-t: var(--lg-amb-t);
+  --est-res-f: var(--lg-ok-f); --est-res-t: var(--lg-ok-t);
+  --est-esp-f: var(--lg-mal-f); --est-esp-t: var(--lg-mal-t);
+  --est-ter-f: var(--lg-claro); --est-ter-t: var(--lg-gris2);
+}
+html[data-tema="laguna"] .tag.est { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; }
+/* G3-06: la fecha junto a la pastilla y la columna de Trámites más ancha
+   en escritorio (la fila del nombre la acompaña). */
+html[data-tema="laguna"] .th-r .cuando { font-family: var(--lg-fuente); font-size: 12px; color: var(--lg-gris2); font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .th-r .pie.msg { margin-top: 8px; }
+@media (min-width: 1200px) {
+  html[data-tema="laguna"] body:has(#tp-tramites.activo) .ident { padding-inline: max(20px, calc(50% - 360px)); }
+  html[data-tema="laguna"] body:has(#tp-tramites.activo) .flota-sal { right: max(14px, calc(50% - 560px)); }
+}
+/* G3-07: los nombres de los cuatro tramos. */
+html[data-tema="laguna"] .th-prog-n { font-family: var(--lg-fuente); font-size: 11px; color: var(--lg-gris2); }
+html[data-tema="laguna"] .th-prog-n span.aqui { color: var(--lg-tinta); }
+html[data-tema="laguna"] .th-aten .th-prog i { background: rgba(255, 255, 255, .18); }
+html[data-tema="laguna"] .th-aten .th-prog i.on { background: var(--lg-fluor); }
+html[data-tema="laguna"] .th-aten .th-prog i.cur { background: linear-gradient(90deg, var(--lg-fluor) 50%, rgba(255, 255, 255, .18) 50%); }
+html[data-tema="laguna"] .th-aten .th-prog-n { color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .th-aten .th-prog-n span.aqui { color: #fff; }

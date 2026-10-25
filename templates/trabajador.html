@@ -353,6 +353,39 @@
   .th-r .pie { display:flex; justify-content:space-between; gap:10px; margin-top:6px; font-size:11.5px; color:var(--gris); }
   .th-r .pie > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   .th-r .pie > span:last-child { white-space:nowrap; flex:none; }
+  /* Auditoría G3-06: la fecha sube junto a la pastilla y el último mensaje
+     se lee en dos renglones (lo que te pidieron está en la segunda mitad). */
+  .th-r .fila-t { align-items:flex-start; }
+  .th-r .der { flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+  .th-r .cuando { font-family:var(--fuente-num); font-size:11px; color:var(--gris); white-space:nowrap; }
+  .th-r .pie.msg { display:block; }
+  .th-r .pie.msg > span:first-child { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    white-space:normal; overflow:hidden; line-height:1.4; }
+  /* Auditoría G3-07: la barra de cuatro tramos lleva sus nombres; solo va en
+     "Necesita tu atención" y en el detalle (en la lista alcanza la pastilla). */
+  .th-prog-n { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); column-gap:8px; margin-top:5px; font-size:11px;
+    line-height:1.2; color:var(--gris); }
+  .th-prog-n span.aqui { color:var(--tinta); font-weight:700; }
+  .th-aten .th-prog-n { color:rgba(255,255,255,.62); }
+  .th-aten .th-prog-n span.aqui { color:#fff; }
+  .th-aten .th-prog i { background:rgba(255,255,255,.18); }
+  .tram-det-prog { padding:0 0 14px; }
+  /* Auditoría G3-05: cada estado con su color, en variables que cada modelo
+     ajusta. Respondido (hay novedad) en verde; terminado, cerrado, en gris;
+     en tratamiento en ámbar; iniciado, solo el contorno. */
+  :root {
+    --est-ini-f: transparent; --est-ini-t: var(--tinta);
+    --est-tra-f: #faf0d7; --est-tra-t: #7a4f06;
+    --est-res-f: #e3f2ee; --est-res-t: var(--agua);
+    --est-esp-f: #f8e5e2; --est-esp-t: var(--alerta);
+    --est-ter-f: var(--papel); --est-ter-t: var(--gris);
+  }
+  .est { background:var(--est-f); color:var(--est-t); }
+  .est-iniciado { --est-f:var(--est-ini-f); --est-t:var(--est-ini-t); box-shadow:inset 0 0 0 1px currentColor; }
+  .est-en_tratamiento { --est-f:var(--est-tra-f); --est-t:var(--est-tra-t); }
+  .est-respondido { --est-f:var(--est-res-f); --est-t:var(--est-res-t); }
+  .est-espera_info { --est-f:var(--est-esp-f); --est-t:var(--est-esp-t); }
+  .est-terminado { --est-f:var(--est-ter-f); --est-t:var(--est-ter-t); }
   .th-r .pie b { color:var(--marca-primario); font-weight:600; }
   .th-r .pie b.nov { color:var(--marca-acento); }
   .th-r .pie b.esp { color:var(--alerta); }
@@ -425,6 +458,16 @@
   .nv-tit { font-size:13.5px; font-weight:700; line-height:1.3; }
   .nv-h { font-family:var(--fuente-num); font-size:10.5px; color:#98a2b3; white-space:nowrap; }
   .nv-baj { display:block; font-size:12.5px; color:var(--gris); margin-top:3px; line-height:1.4; }
+  /* Auditoría G2-11: sin foto no hay segundo nodo; la tarjeta arranca
+     pegada a la línea del hilo. */
+  .nv-m.sin-foto { padding-left:26px; }
+  /* Auditoría G2-12: cada novedad dice que se abre. */
+  .nv-leer { display:inline-flex; align-items:center; gap:2px; margin-top:6px; font-size:13px; font-weight:650;
+    color:var(--marca-primario); }
+  .nv-leer svg { width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  /* Texto solo para lectores de pantalla. */
+  .solo-lector { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap; border:0; }
   .tram-item { position:relative; overflow:hidden;
     background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
@@ -895,6 +938,12 @@
   .tabbar button.activa svg { stroke:var(--marca-acento); }
   .tpanel { display:none; }
   .tpanel.activo { display:block; }
+  /* Auditoría G3-06: la lista de trámites es para recorrer, no un texto de
+     lectura: en escritorio ancho la columna se abre a 720 px (desde 1200 px,
+     para que la pastilla de Inicio/Salir siga afuera de la columna). */
+  @media (min-width: 1200px) {
+    .cont:has(#tp-tramites.activo) { max-width:720px; }
+  }
   .proximamente { text-align:center; padding:60px 24px; color:var(--gris); }
   .proximamente .ic { font-size:44px; opacity:.5; }
   .proximamente .ic-grande svg { width:52px; height:52px; stroke:var(--marca-apoyo); stroke-width:1.5; fill:none; opacity:.55; }
@@ -1202,11 +1251,15 @@
         {% if loop.first or n.fecha_hora[:5] != loop.previtem.fecha_hora[:5] %}
         <div class="nv-hito"><i><svg viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/></svg></i><span>{{ n.fecha_hora[:5] }}</span></div>
         {% endif %}
-        <button type="button" class="nv-m" onclick="abrirNoticia({{ n.id }})">
-          <span class="nv-av">{% if n.tiene_imagen1 %}<img src="/noticia-imagen/{{ n.id }}/1" alt="">{% else %}<svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg>{% endif %}</span>
+        {# Auditoría G2-11: un solo nodo por entrada (el hexágono del día); el
+           círculo va solo si la noticia tiene foto, y muestra la foto.
+           G2-12: «Leer» dice que la tarjeta se abre. #}
+        <button type="button" class="nv-m{% if not n.tiene_imagen1 %} sin-foto{% endif %}" onclick="abrirNoticia({{ n.id }})">
+          {% if n.tiene_imagen1 %}<span class="nv-av"><img src="/noticia-imagen/{{ n.id }}/1" alt=""></span>{% endif %}
           <span class="nv-bur">
             <span class="nv-cab"><span class="nv-tit">{{ n.titulo }}</span><span class="nv-h">{{ n.fecha_hora[6:] }}</span></span>
             {% if n.bajada %}<span class="nv-baj">{{ n.bajada }}</span>{% endif %}
+            <span class="nv-leer">Leer<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
           </span>
         </button>
       {% endfor %}
@@ -1227,8 +1280,9 @@
     <h1 class="titulo-pagina">Mis aportes</h1>
     <div class="sem-card">
       <div class="th-head">
+        {# Auditoría G2-13: «Mis aportes» ya es el título; la tarjeta dice el
+           rótulo y lo que mide, una sola vez. #}
         <div class="k">Semáforo</div>
-        <h2 class="tit">Estado de tus aportes</h2>
         <div class="sub">Jubilación y obra social · últimos 12 meses</div>
       </div>
       <div id="sem-cuerpo"></div>
@@ -2085,9 +2139,9 @@ function semApagado() {
     <div class="sem-acciones">
       <div class="sem-paso"><b>Cómo funciona:</b> abrí ARCA, resolvé el "no soy un robot" y guardá la captura de la tabla. Después subila acá y armamos tu semáforo.</div>
       <div class="th-acc">
-        <a class="th-tile cta" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
-          <b>1 · Consultar en ARCA ↗</b></a>
+        <a class="th-tile cta externo" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+          <b>1 · Consultar en ARCA<span class="solo-lector"> (se abre en otra pestaña)</span></b></a>
         <label class="th-tile" for="arca-file">
           <svg viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>
           <b>2 · Subir captura de ARCA</b></label>
@@ -2219,14 +2273,12 @@ if (document.getElementById('tp-tramites')) {
       document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
     });
   };
-  const ESTADO_TAG_COLOR = {
-    iniciado: ['#fdf3e7', '#8a5a1a'], en_tratamiento: ['#e8def5', '#5b3d8a'],
-    respondido: ['#e3f2ee', 'var(--agua)'], espera_info: ['#f8e5e2', 'var(--alerta)'],
-    terminado: ['#e3f2ee', 'var(--agua)'],
-  };
+  // Auditoría G3-05: el color de cada estado sale de las clases est-* (y
+  // sus variables, que cada modelo ajusta), no de estilos en línea.
+  const ESTADOS_TRAM = ['iniciado', 'en_tratamiento', 'respondido', 'espera_info', 'terminado'];
+  const claseEstado = (estado) => 'est est-' + (ESTADOS_TRAM.includes(estado) ? estado : 'iniciado');
   function tagEstado(estado, label) {
-    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
-    return `<span class="tag" style="background:${c[0]}; color:${c[1]};">${label}</span>`;
+    return `<span class="tag ${claseEstado(estado)}">${escTram(label)}</span>`;
   }
   function escTram(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
@@ -2273,8 +2325,26 @@ if (document.getElementById('tp-tramites')) {
   };
   const ETIQUETA_CORTA = { espera_info: 'Esperan tu respuesta' };
   function tagEstadoTh(estado, label) {
-    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
-    return `<span class="th-tag" style="background:${c[0]}; color:${c[1]};">${escTram(ETIQUETA_CORTA[estado] || label)}</span>`;
+    return `<span class="th-tag ${claseEstado(estado)}">${escTram(ETIQUETA_CORTA[estado] || label)}</span>`;
+  }
+  // Auditoría G3-07: la barra con el nombre de cada tramo debajo. Solo en
+  // "Necesita tu atención" y en el detalle; en la lista alcanza la pastilla.
+  const TRAMOS = ['Iniciado', 'En tratamiento', 'Respondido', 'Terminado'];
+  const TRAMO_ACTUAL = { iniciado: 0, en_tratamiento: 1, espera_info: 1, respondido: 2, terminado: 3 };
+  function progresoTram(estado) {
+    const seg = (PROGRESO_TRAM[estado] || PROGRESO_TRAM.iniciado).map(c => `<i class="${c}"></i>`).join('');
+    const aqui = TRAMO_ACTUAL[estado] ?? 0;
+    const nombres = TRAMOS.map((n, k) => `<span${k === aqui ? ' class="aqui"' : ''}>${n}</span>`).join('');
+    return `<div class="th-prog" aria-hidden="true">${seg}</div><div class="th-prog-n" aria-hidden="true">${nombres}</div>`;
+  }
+  // Auditoría G3-04: primero lo que te toca mirar (novedad del sindicato,
+  // respondido o esperan tu respuesta) y, adentro de cada grupo, por la
+  // fecha del último movimiento, la misma que muestra cada fila: la más
+  // nueva arriba.
+  function ordenarTramites(lista) {
+    const pide = t => (t.novedad || t.estado === 'respondido' || t.estado === 'espera_info') ? 0 : 1;
+    const cuando = t => t.actualizado || t.creado || '';
+    return lista.slice().sort((a, b) => pide(a) - pide(b) || cuando(b).localeCompare(cuando(a)));
   }
   // "AAAA-MM-DD HH:MM" -> "hoy 07:40" / "ayer 16:20" / "26/08"
   function fmtCuando(s) {
@@ -2319,6 +2389,7 @@ if (document.getElementById('tp-tramites')) {
         <div class="k"><i class="th-punto"></i>Necesita tu atención</div>
         <div class="tit">${escTram(t.tipo_titulo)}</div>
         <div class="exp">${escTram(t.numero_expediente)} · ${escTram(t.estado_label)}</div>
+        ${progresoTram(t.estado)}
         ${msg}
         <div class="bts">
           ${puedeResponder ? `<button type="button" class="cta" onclick="responderTramiteDesdeInicio('${escTram(t.numero_expediente)}')">Responder</button>` : ''}
@@ -2349,7 +2420,6 @@ if (document.getElementById('tp-tramites')) {
       filtroTram === 'todos' || (filtroTram === 'curso' ? t.estado !== 'terminado' : t.estado === 'terminado'));
     if (!visibles.length) { cont.innerHTML = '<p class="muted" style="margin-top:14px;">Nada que mostrar con este filtro.</p>'; return; }
     cont.innerHTML = visibles.map(t => {
-      const seg = (PROGRESO_TRAM[t.estado] || PROGRESO_TRAM.iniciado).map(c => `<i class="${c}"></i>`).join('');
       const u = t.ultimo_mensaje;
       let pie;
       if (t.novedad) pie = '<b class="nov">Hay novedades del sindicato</b>';
@@ -2361,10 +2431,9 @@ if (document.getElementById('tp-tramites')) {
           <div class="fila-t">
             <div style="flex:1; min-width:0;"><div class="tit">${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}${escTram(t.tipo_titulo)}</div>
               <div class="exp">${escTram(t.numero_expediente)}</div></div>
-            ${tagEstadoTh(t.estado, t.estado_label)}
+            <div class="der">${tagEstadoTh(t.estado, t.estado_label)}<span class="cuando">${fmtCuando(t.actualizado || t.creado)}</span></div>
           </div>
-          <div class="th-prog">${seg}</div>
-          <div class="pie"><span>${pie}</span><span>${fmtCuando(t.actualizado || t.creado)}</span></div>
+          <div class="pie msg"><span>${pie}</span></div>
         </div>`;
     }).join('');
   }
@@ -2376,7 +2445,7 @@ if (document.getElementById('tp-tramites')) {
     try {
       const r = await fetch('/api/tramites/mios');
       const data = await r.json();
-      tramitesCache = data.tramites || [];
+      tramitesCache = ordenarTramites(data.tramites || []);
       renderTramites();
     } catch (e) {
       cont.innerHTML = '<div class="banner mal">No pudimos cargar tus trámites.</div>';
@@ -2973,6 +3042,7 @@ if (document.getElementById('tp-tramites')) {
 
       document.getElementById('tram-det-contenido').innerHTML = `
         <div class="fila" style="border:none; padding:0 0 14px;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
+        <div class="tram-det-prog">${progresoTram(d.estado)}</div>
         <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; padding:14px 0 8px; border-top:1px solid #f0eee8;">Datos presentados</h2>
         <div>${respuestasHtml}</div>
         <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Conversación</h2>

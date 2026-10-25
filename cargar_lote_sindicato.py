@@ -301,7 +301,9 @@ def contexto_lote(sid: int, nombre: str) -> dict:
     # sale del código del tipo: si dos sindicatos usan el mismo código
     # ("F01"), sus expedientes chocan (hallazgo anotado en BACKLOG.md). Los
     # tipos del lote llevan la sigla del sindicato para no pisarse.
-    sigla = "".join(ch for ch in nombre.upper() if ch.isalnum())[:4] or f"S{sid}"
+    # Sin tildes: la sigla termina en el número de expediente, que la gente
+    # tipea y dicta ("UNIÓ" daba "UNIÓF04-…", auditoría G3-08).
+    sigla = "".join(ch for ch in db.sin_tildes(nombre).upper() if ch.isalnum())[:4] or f"S{sid}"
     # Perfil de recibo propio del sindicato (opcional): una función
     # (rnd, trabajador, conceptos, fecha) -> lista de líneas de ingreso, para
     # armar recibos fieles a SU convenio en vez del genérico. Lo registran

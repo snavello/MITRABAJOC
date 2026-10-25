@@ -1126,3 +1126,39 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
   html[data-tema="noticiero"] .ident .flota-sal { height: 36px; box-shadow: none; }
   html[data-tema="noticiero"] .ident .flota-sal a { height: 36px; padding: 0 12px; letter-spacing: .8px; font-size: 12px; }
 }
+
+/* Bloque 5a: afiliado (auditoría 2026-10) */
+/* G2-12: «Leer» en el color de enlace del modelo. */
+html[data-tema="noticiero"] .nv-leer { font-family: var(--nt-f-cond); font-size: 14px; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--nt-indigo-2); }
+/* G2-14: el acceso a ARCA ya lleva el ícono de enlace externo; el chevrón
+   sobra. */
+html[data-tema="noticiero"] a.th-tile.externo { padding-right: 14px; }
+html[data-tema="noticiero"] a.th-tile.externo::after { display: none; }
+/* G3-05: los estados de un trámite con los colores de estado del modelo. */
+html[data-tema="noticiero"] {
+  --est-ini-f: transparent; --est-ini-t: var(--nt-tinta);
+  --est-tra-f: var(--nt-amb-fondo); --est-tra-t: var(--nt-amb);
+  --est-res-f: var(--nt-ok-fondo); --est-res-t: var(--nt-ok);
+  --est-esp-f: var(--nt-mal-fondo); --est-esp-t: var(--nt-mal);
+  --est-ter-f: var(--nt-hoja); --est-ter-t: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .tag.est { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 700; }
+/* G3-06: la fecha junto a la pastilla, el mensaje en el texto de siempre
+   (no en la monoespaciada de la fecha) y la columna de Trámites más ancha
+   en escritorio. */
+html[data-tema="noticiero"] .th-r .cuando { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .th-r .pie.msg > span { font-family: inherit; font-size: 12.5px; color: var(--nt-tinta-1); }
+@media (min-width: 1200px) {
+  html[data-tema="noticiero"] body:has(#tp-tramites.activo) .ident { padding-inline: max(16px, calc(50% - 360px)); }
+  html[data-tema="noticiero"] body:has(#tp-tramites.activo) .flota-sal { right: max(14px, calc(50% - 600px)); }
+}
+/* G3-07: los nombres de los cuatro tramos. */
+html[data-tema="noticiero"] .th-prog-n { font-family: var(--nt-f-cond); font-size: 12px; font-weight: 700; letter-spacing: .4px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .th-prog-n span.aqui { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .th-aten .th-prog i { background: color-mix(in oklab, var(--nt-marfil) 22%, transparent); }
+html[data-tema="noticiero"] .th-aten .th-prog i.on { background: var(--nt-marfil); }
+html[data-tema="noticiero"] .th-aten .th-prog i.cur { background: var(--nt-coral-ind); }
+html[data-tema="noticiero"] .th-aten .th-prog-n { color: var(--nt-marfil-2); }
+html[data-tema="noticiero"] .th-aten .th-prog-n span.aqui { color: var(--nt-marfil); }

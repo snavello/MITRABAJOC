@@ -470,3 +470,38 @@ html[data-tema="laguna"] .pt-cumple-t em { font-weight: 800; color: var(--lg-flu
 
 /* Auditoría G2-04: en pantallas anchas, afuera de la columna. */
 @media (min-width: 1600px) { html[data-tema="laguna"] .pt-sesion { right: max(14px, calc(50% - 790px)); } }
+
+/* Bloque 5a: afiliado (auditoría 2026-10) */
+/* G2-01: un beneficio sin foto es una lámina tipográfica sobre el azul de la
+   laguna (el rubro en grande arriba, el texto abajo), no una caja de 300 px
+   con un degradé. */
+html[data-tema="laguna"] .car-sl.sin-foto { height: auto; min-height: 150px; background: var(--lg-azul); }
+html[data-tema="laguna"] .car-sl.sin-foto .car-txt { padding: 20px 20px 22px; }
+html[data-tema="laguna"] .car-sl.sin-foto .car-k { height: auto; padding: 0; background: none; color: var(--lg-fluor-txt);
+  font-size: 26px; font-weight: 600; line-height: 1.1; letter-spacing: -.01em; }
+html[data-tema="laguna"] .car-sl.sin-foto .car-t { font-size: 18px; }
+@media (min-width: 761px) {
+  html[data-tema="laguna"] .car-sl.sin-foto { min-height: 190px; }
+  html[data-tema="laguna"] .car-sl.sin-foto .car-txt { padding-inline: 62px; }
+}
+/* G2-02: puntos con 44 px de área (el punto visible sigue chico), contador
+   «3 de 20» y, en el teléfono, las flechas en el pie. */
+html[data-tema="laguna"] .car-puntos { gap: 0; }
+html[data-tema="laguna"] .car-punto, html[data-tema="laguna"] .car-punto.on { width: 44px; height: 44px; border-radius: 0; background: none; }
+html[data-tema="laguna"] .car-punto::before { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px;
+  border-radius: 4px; translate: -50% -50%; background: var(--lg-linea2); transition: width .3s, background-color .3s; }
+html[data-tema="laguna"] .car-punto.on::before { width: 20px; background: var(--lg-azul); }
+html[data-tema="laguna"] .car-cont { font-family: var(--lg-fuente); font-size: 13px; color: var(--lg-azgris); }
+html[data-tema="laguna"] .car-cont b { font-weight: 700; color: var(--lg-azul); }
+html[data-tema="laguna"] .car-pf { background: #fff; color: var(--lg-azul); box-shadow: 0 0 0 1px var(--lg-linea2); }
+html[data-tema="laguna"] .car-pf:active { background: var(--lg-agua-f); }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .car-marco .car-flecha { display: none; }
+  html[data-tema="laguna"] .car-pie { gap: 10px; }
+}
+/* G2-03: las máximas de los próximos días dicen de qué día son. */
+html[data-tema="laguna"] .pt-dia-esc .pt-dia-pron-d { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; color: var(--lg-sobre-osc); }
+/* G2-05: el botón de Mis recibos va abajo del dato en todos los anchos (en el
+   teléfono, al costado, el dato quedaba en tres renglones). */
+html[data-tema="laguna"] .pt-sec-tus .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { html[data-tema="laguna"] .car-punto::before { transition: none; } }
