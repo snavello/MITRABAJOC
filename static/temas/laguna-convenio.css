@@ -1,0 +1,158 @@
+/* ============================================================
+   Modelo LAGUNA — consultas sobre el convenio del afiliado (/app/convenio)
+   ------------------------------------------------------------
+   Una pantalla más de la app del afiliado: tiene que verse como /app
+   (laguna-app.css). Esta hoja copia de ahí SOLO lo común que la pantalla
+   necesita (la paleta, la página y el encabezado), con las mismas reglas:
+   - Todo selector empieza con html[data-tema="laguna"].
+   - La paleta va en --lg-*; con la del sindicato se deriva de --gremio-*.
+   - Sin mesa ni franja ni trama de colmena: el interior es blanco y liso.
+   ============================================================ */
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- LA PALETA (copia de laguna-app.css) ---------- */
+html[data-tema="laguna"] {
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-curva: cubic-bezier(.22, .61, .36, 1);
+  --lg-negro: #171a20; --lg-tinta: #171a20; --lg-gris: #393c41; --lg-gris2: #5c5e62;
+  --lg-claro: #f4f4f4; --lg-claro-h: #e6e6e6;
+  --lg-linea: #e3e4e5; --lg-linea2: #d0d1d2;
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e;
+  --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7;
+  --lg-fluor: #46f0d2; --lg-fluor-txt: var(--lg-fluor); --lg-sobre-fluor: var(--lg-azul);
+
+  --fuente: var(--lg-fuente);
+  --fuente-display: var(--lg-fuente);
+  --tinta: var(--lg-tinta);
+  --gris: var(--lg-gris2);
+  --linea: var(--lg-linea);
+  --papel: #fff;
+  --marca-base: var(--lg-azul);
+  --marca-primario: var(--lg-turq-osc);
+  --marca-acento: var(--lg-turq);
+  --marca-apoyo: var(--lg-turq-osc);
+
+  /* Lo que la plantilla espera del modelo. */
+  --cv-sup: #fff;
+  --cv-sel: var(--lg-turq);
+  --cv-sel-txt: #fff;
+  accent-color: var(--lg-turq);
+}
+
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--gremio-base);
+  --lg-azul2: color-mix(in oklab, var(--gremio-base) 45%, var(--gremio-primario-relleno, var(--gremio-primario)));
+  --lg-turq: var(--gremio-primario-relleno, var(--gremio-primario));
+  --lg-turq-h: color-mix(in oklab, var(--gremio-primario-relleno, var(--gremio-primario)) 84%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--gremio-primario-relleno, var(--gremio-primario)) 80%, black);
+  --lg-lag: var(--gremio-apoyo);
+  --lg-agua-f: color-mix(in oklab, var(--gremio-apoyo) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--gremio-apoyo) 7%, white);
+  --lg-fluor: var(--gremio-acento);
+  --lg-fluor-txt: var(--gremio-acento-txt);
+  --lg-sobre-fluor: var(--gremio-tinta-acento);
+}
+
+/* ---------- la página: blanca, sin mesa, franja ni colmena ---------- */
+html[data-tema="laguna"] body {
+  font-family: var(--lg-fuente); color: var(--lg-tinta); background: #fff;
+  -webkit-font-smoothing: antialiased; letter-spacing: .005em;
+}
+html[data-tema="laguna"] body.mesa { background: #fff; }
+html[data-tema="laguna"] body.mesa::before,
+html[data-tema="laguna"] body.mesa.franja::after { display: none; }
+html[data-tema="laguna"] :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--lg-negro); outline-offset: 2px;
+}
+html[data-tema="laguna"] ::selection { background: var(--lg-agua-f); color: var(--lg-tinta); }
+
+/* ---------- encabezado: blanco, con el filete turquesa arriba ---------- */
+html[data-tema="laguna"] .marca-barra {
+  background: rgba(255, 255, 255, .95); color: var(--lg-tinta); border-bottom: 0;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: inset 0 3px 0 var(--lg-turq), 0 1px 0 var(--lg-linea);
+  padding: 13px 16px 10px; padding-top: calc(13px + env(safe-area-inset-top));
+}
+html[data-tema="laguna"] .marca-logo { height: 64px; max-width: 320px; }
+html[data-tema="laguna"] .marca-colmena { height: 34px; max-width: 160px; content: var(--logo-colmena-claro, normal); }
+html[data-tema="laguna"] .marca-volver { color: var(--lg-tinta); font-weight: 600; font-size: 14px;
+  min-height: 44px; padding: 0 6px; }
+html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuente); font-weight: 800; font-size: 30px;
+  line-height: 1.05; letter-spacing: -.015em; text-transform: none; color: var(--lg-tinta); border-right-color: var(--lg-turq); }
+/* Con los colores del sindicato, el encabezado va en su color base con el
+   filete en su acento (igual que /app). */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
+  background: var(--gremio-base-relleno, var(--gremio-base)); color: #fff;
+  -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 3px 0 var(--gremio-acento);
+}
+html[data-tema="laguna"][data-paleta="sindicato"] :is(.marca-nombre, .marca-volver) { color: #fff; }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-nombre { border-right-color: var(--gremio-acento); }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { content: normal; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 192px; }
+  html[data-tema="laguna"] .marca-colmena { height: 19px; }
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; }
+}
+
+/* ---------- el título: el mismo de /app ---------- */
+html[data-tema="laguna"] body.mesa .titulo-pagina,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina {
+  font-family: var(--lg-fuente); font-size: 30px; font-weight: 500; line-height: 1.1;
+  letter-spacing: -.005em; text-transform: none; color: var(--lg-tinta);
+}
+
+/* ---------- la consulta ---------- */
+html[data-tema="laguna"] .intro,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .intro { font-size: 14px; color: var(--lg-gris); }
+html[data-tema="laguna"] .campo label { font-size: 12.5px; font-weight: 600; color: var(--lg-gris); }
+html[data-tema="laguna"] :is(select, textarea) {
+  min-height: 44px; border: 1px solid transparent; border-radius: 4px; background: var(--lg-claro);
+  padding: 11px 14px; font-family: var(--lg-fuente); font-size: 15px; color: var(--lg-tinta);
+  transition: border-color .3s var(--lg-curva), background-color .3s var(--lg-curva);
+}
+html[data-tema="laguna"] textarea::placeholder { color: var(--lg-gris2); }
+html[data-tema="laguna"] :is(select, textarea):focus { background: #fff; border-color: var(--lg-negro); outline: none; }
+html[data-tema="laguna"] .sug { border: 0; box-shadow: inset 0 0 0 1px var(--lg-linea2); color: var(--lg-gris);
+  font-family: var(--lg-fuente); transition: background-color .3s var(--lg-curva), color .3s var(--lg-curva); }
+html[data-tema="laguna"] .sug:hover { background: var(--lg-agua-f2); color: var(--lg-tinta); }
+html[data-tema="laguna"] .btn { font-family: var(--lg-fuente); font-size: 14px; letter-spacing: .02em;
+  transition: background-color .33s var(--lg-curva), transform .2s var(--lg-curva); }
+html[data-tema="laguna"] .btn:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .btn:active { transform: scale(.98); }
+html[data-tema="laguna"] .btn:disabled { opacity: .6; }
+html[data-tema="laguna"] .respuesta { border: 0; border-radius: 10px; box-shadow: 0 0 0 1px var(--lg-linea),
+  0 14px 30px -24px color-mix(in oklab, var(--lg-azul) 50%, transparent); }
+html[data-tema="laguna"] .respuesta.vacia { box-shadow: 0 0 0 1px var(--lg-linea2); background: var(--lg-claro); }
+html[data-tema="laguna"] .fuentes { border-top-color: var(--lg-linea); }
+html[data-tema="laguna"] .fuentes .lbl { font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--lg-gris2); }
+html[data-tema="laguna"] .chip { border: 0; background: var(--lg-agua-f); color: var(--lg-turq-osc); font-weight: 600; }
+html[data-tema="laguna"] .chip.obs { background: var(--lg-claro); color: var(--lg-gris); }
+html[data-tema="laguna"] .aviso { border-top-color: var(--lg-linea); color: var(--lg-gris2); }
+html[data-tema="laguna"] .cargando { color: var(--lg-gris); }
+html[data-tema="laguna"] .spin { border-color: var(--lg-linea); border-top-color: var(--lg-turq); }
+
+/* el vacío: el de Encuestas en /app */
+html[data-tema="laguna"] .sin-convenio { border: 1px dashed var(--lg-linea2); border-radius: 10px; background: #fff; }
+html[data-tema="laguna"] .vacio-ico { background: var(--lg-agua-f); color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .vacio-t { font-size: 17px; font-weight: 600; color: var(--lg-tinta); }
+html[data-tema="laguna"] .vacio-x { color: var(--lg-gris); }
+html[data-tema="laguna"] .vacio-acc { font-family: var(--lg-fuente); transition: background-color .33s var(--lg-curva); }
+html[data-tema="laguna"] .vacio-acc:hover { background: var(--lg-turq-h); }
+
+@media (min-width: 761px) {
+  html[data-tema="laguna"] .cuerpo { padding-top: 34px; }
+}
+@media (max-width: 760px) {
+  html[data-tema="laguna"] body.mesa .titulo-pagina { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] :is(.sug, .btn, .vacio-acc, select, textarea) { transition: none; }
+}

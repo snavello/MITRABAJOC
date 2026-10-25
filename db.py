@@ -5277,7 +5277,14 @@ def notificacion_destinatarios(notificacion_id: int, usuario_id: Optional[int] =
 
 def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
     """Notificaciones que le llegaron a este CUIL en este sindicato, más
-    nuevas primero -- para el modal de la portada."""
+    nuevas primero -- para la portada y la bandeja del afiliado.
+
+    "Más nueva" es por FECHA DE ENVÍO, no por id: un aviso programado o
+    cargado con fecha tiene un id que no dice cuándo salió, y la bandeja es
+    una línea de tiempo que muestra esa fecha -- ordenada por id saltaba
+    para atrás y para adelante (29/09, 16/08, 06/08, 01/09...). El id
+    desempata dos avisos del mismo minuto. `enviado_en` es texto
+    "AAAA-MM-DD HH:MM", que ordena igual que la fecha."""
     with Session(engine) as s:
         dests = s.exec(select(NotificacionDestinatario).where(
             NotificacionDestinatario.cuil == cuil)).all()
@@ -5286,7 +5293,7 @@ def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
         por_id = {d.notificacion_id: d for d in dests}
         notifs = s.exec(select(Notificacion).where(
             Notificacion.id.in_(por_id.keys()), Notificacion.sindicato_id == sindicato_id)
-            .order_by(Notificacion.id.desc())).all()
+            .order_by(Notificacion.enviado_en.desc(), Notificacion.id.desc())).all()
         # el ícono "completá los datos" solo se muestra si el formulario
         # referido sigue siendo un tipo activo del sindicato
         forms_ref = {n.formulario_id for n in notifs if n.formulario_id}
