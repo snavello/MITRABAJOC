@@ -259,8 +259,7 @@ html[data-tema="laguna"] .pt-pie .btn-acerca { opacity: 1; padding: 0 0 2px; fon
   letter-spacing: .04em; color: var(--lg-sobre-osc); border-bottom: 1px solid var(--lg-fluor); }
 html[data-tema="laguna"] .pt-pie .btn-acerca:focus-visible { outline-color: var(--lg-fluor-txt); }
 
-/* Salir: la pastilla azul que flota abajo */
-html[data-tema="laguna"] .pt-sesion { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+/* Salir: la pastilla azul, arriba y quieta */
 html[data-tema="laguna"] .pt-salir { height: 46px; padding: 0 19px 0 16px; border: 0; background: var(--lg-azul); color: #fff;
   font-family: var(--lg-fuente); font-weight: 600;
   box-shadow: 0 14px 28px -14px color-mix(in oklab, var(--lg-azul) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .08);
