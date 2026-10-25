@@ -1,0 +1,397 @@
+/* ============================================================
+   Modelo 162 · Laguna — portada del panel de plataforma (/plataforma/inicio)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md, llevado a plataforma (2026-10-25). Es la misma portada que
+   la del panel del sindicato (static/temas/laguna-panel-portada.css): la
+   laguna arriba (azul profundo, turquesa, verde agua) con el saludo y
+   «Sindicatos» como tarjeta principal, y los accesos en tarjetas blancas
+   sobre el agua. Plataforma no tiene foto de portada ni sindicato: va el
+   degradé del modelo y SIEMPRE la paleta de Colm3na.
+
+   Reglas de esta hoja:
+   - Todo selector empieza con html[data-tema="laguna"]: la plantilla la
+     carga solo con ese modelo, y aun así no pisa nada del otro.
+   - Todo color sale de las variables --lg-*, declaradas UNA vez. Los
+     estados (el rojo del globo) no cambian nunca.
+   - Duraciones y curvas: los tokens de movimiento.css, nunca un número.
+   - La selección se pinta entera, nunca con una barra al costado (D6).
+   - Sin la trama de colmena ni las manchas de luz del modelo anterior.
+   - Tipografía: Manrope, vendoreada en static/fonts (la CSP no deja cargar
+     fuentes de afuera); si no carga, la sans del sistema.
+   ============================================================ */
+
+/* Manrope (SIL OFL), vendoreada en static/fonts: la del mockup del modelo Laguna. */
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Paleta del modelo (la de Colm3na) ---------- */
+html[data-tema="laguna"] {
+  --lg-tinta: #171a20; --lg-gris: #393c41; --lg-gris2: #5c5e62; --lg-linea: #e3e4e5;
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-turq: #0a7f8c; --lg-turq-h: #086e79;
+  --lg-turq-osc: #08636d; --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-f: #dff6f1;
+  --lg-agua-f2: #eefaf7; --lg-azgris: #3d5a6c;
+  --lg-fluor: #46f0d2; --lg-fluor-h: #6af4dc; --lg-fluor-t: var(--lg-azul); --lg-fluor-txt: var(--lg-fluor);
+  --lg-agua-txt: #d3f2f0; --lg-sombra: #051423;
+  /* estado: fijo, no toma la paleta */
+  --lg-mal: #b3261e;
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------- Página ---------- */
+html[data-tema="laguna"] body,
+html[data-tema="laguna"] body.oscuro,
+html[data-tema="laguna"] body.claro {
+  font-family: var(--lg-fuente); color: var(--lg-azul); -webkit-font-smoothing: antialiased;
+  background: linear-gradient(180deg, var(--lg-agua-f) 0, var(--lg-agua-f) 60%, var(--lg-agua-f2) 100%);
+}
+/* El grano y las manchas de luz son del modelo de antes: la laguna no los usa. */
+html[data-tema="laguna"] body.grano::before,
+html[data-tema="laguna"] .pt-ambiente { display: none; }
+html[data-tema="laguna"] a:focus-visible,
+html[data-tema="laguna"] button:focus-visible { outline: 2px solid var(--lg-azul); outline-offset: 2px; }
+html[data-tema="laguna"] .pt-heroe a:focus-visible,
+html[data-tema="laguna"] .pt-heroe button:focus-visible,
+html[data-tema="laguna"] .pt-pie button:focus-visible { outline-color: var(--lg-fluor-txt); }
+
+/* ---------- La laguna (encabezado + saludo + Panel Sindical) ---------- */
+html[data-tema="laguna"] .pt-heroe {
+  position: relative; z-index: 1; overflow: hidden; min-height: 440px;
+  display: flex; flex-direction: column; background: var(--lg-azul);
+}
+/* Sin el Panel Sindical (un usuario de área sin ese permiso) la laguna se
+   acorta: no queda un hueco de foto vacío. */
+html[data-tema="laguna"] .pt-heroe:not(:has(.pt-hero)) { min-height: 260px; }
+html[data-tema="laguna"] .pt-media {
+  display: block; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(180deg, var(--lg-azul2) 0%, var(--lg-turq) 44%, var(--lg-lag) 66%, var(--lg-agua) 100%);
+  animation: lg-adm-respira 28s ease-in-out infinite alternate;
+}
+/* La foto llega en gris desde la biblioteca; igual se normaliza acá, por si
+   alguna no: el color se lo pone el degradé de abajo (duotono). */
+html[data-tema="laguna"] .pt-media img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: luminosity; opacity: .9;
+}
+html[data-tema="laguna"] .pt-heroe::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--lg-azul) 97%, transparent) 0%,
+    color-mix(in srgb, var(--lg-azul) 90%, transparent) 32%,
+    color-mix(in srgb, color-mix(in srgb, var(--lg-azul2) 65%, var(--lg-turq)) 46%, transparent) 50%,
+    color-mix(in srgb, var(--lg-lag) 14%, transparent) 64%,
+    color-mix(in srgb, var(--lg-agua) 30%, transparent) 78%,
+    color-mix(in srgb, var(--lg-agua-f) 94%, transparent) 95%,
+    var(--lg-agua-f) 100%);
+}
+html[data-tema="laguna"] .pt-heroe > :not(.pt-media) { position: relative; z-index: 2; }
+
+/* El encabezado de siempre, sin su franja: flota sobre la laguna. */
+html[data-tema="laguna"] .pt-heroe .marca-barra {
+  background: transparent; border-bottom: 0; max-width: 1320px; margin: 0 auto;
+  min-height: 100px; padding-left: 26px; padding-right: 26px;
+}
+
+html[data-tema="laguna"] .pt-heroe > .pad {
+  flex: 1; display: flex; flex-direction: column; width: 100%; padding: 0 26px 44px;
+}
+html[data-tema="laguna"] .fila-hola {
+  margin-top: 20px; margin-bottom: 28px; gap: 20px;
+  animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards;
+  animation-delay: var(--mov-escalon);
+}
+html[data-tema="laguna"] .hola,
+html[data-tema="laguna"] body.claro .hola {
+  margin: 0; font-family: var(--lg-fuente); font-size: 30px; font-weight: 500;
+  letter-spacing: -.005em; line-height: 1.15; color: #fff;
+}
+html[data-tema="laguna"] .hola em {
+  font-style: normal; font-weight: 700; color: var(--lg-fluor-t); background: var(--lg-fluor);
+  padding: 0 7px; border-radius: 3px;
+}
+html[data-tema="laguna"] .pt-hola-baj,
+html[data-tema="laguna"] body.claro .pt-hola-baj {
+  margin: 9px 0 0; font-size: 14px; color: var(--lg-agua-txt); letter-spacing: .02em;
+}
+html[data-tema="laguna"] .pt-cambiar,
+html[data-tema="laguna"] body.claro .pt-cambiar {
+  display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; color: #fff;
+  text-decoration: underline; text-decoration-color: var(--lg-fluor-txt); text-underline-offset: 4px;
+}
+
+/* Círculo de perfil: turquesa con aro flúor; la foto, en duotono. */
+html[data-tema="laguna"] .circulo-acento {
+  width: 44px; height: 44px; background: var(--lg-turq); color: #fff;
+  border: 2px solid var(--lg-fluor-txt);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--lg-fluor-txt) 16%, transparent);
+}
+html[data-tema="laguna"] .circulo-acento svg { stroke: #fff; stroke-width: 1.6; }
+html[data-tema="laguna"] .circulo-acento img {
+  filter: grayscale(1) contrast(1.05) brightness(1.04); mix-blend-mode: luminosity;
+}
+
+/* Panel Sindical: la tarjeta de vidrio azul al pie de la laguna. */
+html[data-tema="laguna"] .pt-hero {
+  margin-top: auto; max-width: 740px; padding: 26px 96px 30px 30px; border-radius: 10px;
+  color: #fff; background: color-mix(in srgb, var(--lg-azul) 86%, transparent);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 3px 0 var(--lg-fluor-txt),
+    0 26px 50px -26px color-mix(in srgb, var(--lg-azul) 75%, transparent);
+  transition: transform var(--mov-medio) var(--ease-salida);
+  animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards;
+  animation-delay: calc(var(--mov-escalon) * 3);
+}
+html[data-tema="laguna"] .pt-hero::before { display: none; }
+html[data-tema="laguna"] .pt-hero:hover { transform: translateY(-2px); }
+html[data-tema="laguna"] .pt-hero-k {
+  font-size: 11.5px; font-weight: 600; letter-spacing: .2em; color: var(--lg-fluor-txt); opacity: 1;
+}
+html[data-tema="laguna"] .pt-hero.pt-hero-chico .pt-hero-t {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 8px;
+  font-family: var(--lg-fuente); font-size: 28px; font-weight: 600; letter-spacing: -.005em;
+  text-transform: none; line-height: 1.2;
+}
+html[data-tema="laguna"] .tag-new {
+  margin-left: 0; padding: 4px 8px; border-radius: 999px; line-height: 1;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .14em;
+  background: var(--lg-fluor); color: var(--lg-fluor-t);
+}
+html[data-tema="laguna"] .pt-hero-e {
+  margin-top: 9px; max-width: 520px; font-size: 14.5px; line-height: 1.55;
+  color: var(--lg-agua-txt); opacity: 1;
+}
+html[data-tema="laguna"] .pt-hero-cta {
+  margin-top: 18px; height: 40px; padding: 0 22px; gap: 8px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
+  background: var(--lg-fluor); color: var(--lg-fluor-t);
+  transition: background-color var(--mov-medio) var(--ease-salida);
+}
+html[data-tema="laguna"] .pt-hero:hover .pt-hero-cta { background: var(--lg-fluor-h); }
+html[data-tema="laguna"] .pt-hero-cta svg { width: 15px; height: 15px; stroke-width: 1.8; }
+html[data-tema="laguna"] .pt-hero-ico {
+  right: 32px; top: 50%; bottom: auto; transform: translateY(-50%); opacity: 1;
+}
+/* Chico, como se ve en el mockup aprobado: una seña a la derecha, no un
+   dibujo de fondo. */
+html[data-tema="laguna"] .pt-hero.pt-hero-chico .pt-hero-ico svg {
+  width: 20px; height: 20px; stroke: var(--lg-fluor-txt); stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ---------- Accesos: tarjetas blancas sobre el agua ---------- */
+html[data-tema="laguna"] .pad.pt-accesos { padding-top: 30px; }
+html[data-tema="laguna"] .pt-filas { margin-top: 0; gap: 12px; }
+html[data-tema="laguna"] .pt-filas > * {
+  animation: lg-adm-sube var(--mov-lento) var(--ease-entrada) backwards;
+}
+html[data-tema="laguna"] .pt-filas > :nth-child(3n+2) { animation-delay: calc(var(--mov-escalon) / 2); }
+html[data-tema="laguna"] .pt-filas > :nth-child(3n+3) { animation-delay: var(--mov-escalon); }
+html[data-tema="laguna"] .pt-fila,
+html[data-tema="laguna"] body.claro .pt-fila {
+  height: 100%; gap: 14px; padding: 16px 18px; border: 0; border-radius: 8px;
+  color: var(--lg-azul); background: rgba(255, 255, 255, .84);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lg-lag) 28%, transparent),
+    0 8px 22px -16px color-mix(in srgb, var(--lg-azul) 45%, transparent);
+  transition: transform var(--mov-medio) var(--ease-salida),
+    background-color var(--mov-medio) var(--ease-salida);
+}
+html[data-tema="laguna"] .pt-vid::after { display: none; }
+html[data-tema="laguna"] .pt-fila:hover { transform: translateY(-2px); background: #fff; }
+html[data-tema="laguna"] .pt-pastilla,
+html[data-tema="laguna"] body.claro .pt-pastilla {
+  width: 42px; height: 42px; border-radius: 50%; border: 0;
+  background: var(--lg-agua-f); color: var(--lg-turq-osc);
+}
+html[data-tema="laguna"] .pt-pastilla svg { width: 19px; height: 19px; stroke-width: 1.5; }
+html[data-tema="laguna"] .pt-fila-t {
+  font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; line-height: 1.3;
+}
+html[data-tema="laguna"] .pt-fila-e,
+html[data-tema="laguna"] body.claro .pt-fila-e {
+  margin-top: 2px; font-size: 12.5px; line-height: 1.35; color: var(--lg-azgris);
+}
+html[data-tema="laguna"] .pt-fila-f,
+html[data-tema="laguna"] body.claro .pt-fila-f {
+  color: var(--lg-azgris); opacity: 1; transition: transform var(--mov-medio) var(--ease-salida);
+}
+html[data-tema="laguna"] .pt-fila-f svg { width: 15px; height: 15px; stroke-width: 1.6; }
+html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: translateX(3px); }
+/* El globo rojo de trámites nuevos: color de estado, fijo. */
+html[data-tema="laguna"] .badge-noleidas {
+  top: -7px; right: -7px; min-width: 22px; height: 22px; padding: 0 6px;
+  font-size: 11.5px; font-variant-numeric: tabular-nums;
+  background: var(--lg-mal); color: #fff; border: 0; box-shadow: 0 0 0 2px #fff;
+}
+
+/* ---------- Pie y Salir ---------- */
+html[data-tema="laguna"] .pt-pie {
+  margin-top: 42px; padding: 24px 48px 74px; background: var(--lg-azul); text-align: center;
+}
+html[data-tema="laguna"] .btn-acerca,
+html[data-tema="laguna"] body.claro .btn-acerca {
+  opacity: 1; padding: 0 0 1px; border-radius: 0; font-family: inherit; font-size: 12px;
+  color: var(--lg-agua-txt); border-bottom: 1px solid var(--lg-fluor-txt);
+}
+/* Salir: la pastilla azul dentro de un aro flúor, abajo a la derecha. */
+html[data-tema="laguna"] .pt-flota {
+  right: 18px; bottom: 14px; padding: 5px; gap: 4px; border-radius: 999px; background: var(--lg-fluor);
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--lg-azul) 60%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--lg-azul) 12%, transparent);
+}
+html[data-tema="laguna"] .pt-salir {
+  height: 38px; padding: 0 16px; gap: 7px; border: 0; border-radius: 999px; box-shadow: none;
+  background: var(--lg-azul); color: #fff; font-family: var(--lg-fuente);
+  transition: background-color var(--mov-rapido) var(--ease-salida);
+}
+html[data-tema="laguna"] .pt-salir:hover { opacity: 1; background: var(--lg-azul2); }
+html[data-tema="laguna"] .pt-salir svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.6; }
+html[data-tema="laguna"] .pt-salir:focus-visible { outline: 2px solid var(--lg-azul); outline-offset: 3px; }
+
+/* ---------- Tu cuenta / Acerca de ---------- */
+html[data-tema="laguna"] .overlay {
+  background: color-mix(in srgb, var(--lg-azul) 46%, transparent);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
+}
+html[data-tema="laguna"] .modal-hoja {
+  padding: 0 22px calc(22px + env(safe-area-inset-bottom)); border: 0; border-radius: 10px 10px 0 0;
+  background: #fff; color: var(--lg-tinta); font-family: var(--lg-fuente);
+  box-shadow: 0 34px 70px -24px color-mix(in srgb, var(--lg-sombra) 60%, transparent);
+}
+html[data-tema="laguna"] .overlay-centro .modal-hoja { border-radius: 10px !important; padding-bottom: 22px; }
+/* El encabezado del modal: la franja azul con el filete flúor arriba. */
+html[data-tema="laguna"] .modal-hoja h3 {
+  margin: 0 -22px 14px; padding: 15px 56px 15px 22px; font-size: 17px; font-weight: 600;
+  letter-spacing: .005em; line-height: 1.3; color: #fff; background: var(--lg-azul);
+  box-shadow: inset 0 3px 0 var(--lg-fluor-txt);
+}
+html[data-tema="laguna"] .modal-cerrar { top: 12px; right: 14px; color: #fff; }
+html[data-tema="laguna"] .modal-cerrar:focus-visible { outline-color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] .modal-fila { font-size: 13.5px; border-bottom-color: var(--lg-linea); }
+html[data-tema="laguna"] .modal-fila .k { color: var(--lg-gris2); }
+html[data-tema="laguna"] .modal-fila .v { color: var(--lg-tinta); }
+/* Tu modelo: la opción elegida se pinta entera en el turquesa (D6). */
+html[data-tema="laguna"] .tm-bloque { border-top-color: var(--lg-linea); }
+html[data-tema="laguna"] .tm-t,
+html[data-tema="laguna"] .tm-nota { color: var(--lg-gris2); }
+html[data-tema="laguna"] .tm-op {
+  border-color: var(--lg-linea); color: var(--lg-tinta); background: #fff;
+  transition: background-color var(--mov-rapido) var(--ease-salida);
+}
+html[data-tema="laguna"] .tm-op:hover { background: var(--lg-agua-f2); }
+html[data-tema="laguna"] .tm-op.activa {
+  background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; font-weight: 600;
+}
+
+/* ---------- Portada clara (opción del sindicato) ----------
+   La laguna arranca en papel y el saludo va en tinta; el resto no cambia.
+   La barra del encabezado conserva el azul: los logos del gremio y de
+   Colm3na se cargan para fondo oscuro. */
+html[data-tema="laguna"] body.claro .pt-heroe { background: #fff; }
+html[data-tema="laguna"] body.claro .pt-heroe .marca-enc { background: var(--lg-azul); }
+html[data-tema="laguna"] body.claro .pt-media {
+  background: linear-gradient(180deg, #fff 0%, var(--lg-agua-f2) 40%, var(--lg-agua) 100%);
+}
+html[data-tema="laguna"] body.claro .pt-media img { opacity: .45; }
+html[data-tema="laguna"] body.claro .pt-heroe::after {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #fff 96%, transparent) 0%,
+    color-mix(in srgb, #fff 86%, transparent) 38%,
+    color-mix(in srgb, var(--lg-agua-f2) 40%, transparent) 62%,
+    color-mix(in srgb, var(--lg-agua-f) 94%, transparent) 95%,
+    var(--lg-agua-f) 100%);
+}
+html[data-tema="laguna"] body.claro .hola { color: var(--lg-azul); }
+html[data-tema="laguna"] body.claro .pt-hola-baj { color: var(--lg-azgris); }
+html[data-tema="laguna"] body.claro .pt-cambiar {
+  color: var(--lg-azul); text-decoration-color: var(--lg-turq);
+}
+html[data-tema="laguna"] body.claro .fila-hola a:focus-visible,
+html[data-tema="laguna"] body.claro .fila-hola button:focus-visible { outline-color: var(--lg-azul); }
+
+/* ---------- Teléfono ---------- */
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .pt-heroe { min-height: 470px; }
+  html[data-tema="laguna"] .pt-heroe:not(:has(.pt-hero)) { min-height: 280px; }
+  html[data-tema="laguna"] .pt-heroe .marca-barra { min-height: 0; padding-left: 16px; padding-right: 16px; }
+  html[data-tema="laguna"] .pt-heroe > .pad { padding: 0 16px 24px; }
+  html[data-tema="laguna"] .fila-hola { margin-top: 14px; gap: 14px; }
+  html[data-tema="laguna"] .hola,
+  html[data-tema="laguna"] body.claro .hola { font-size: 26px; }
+  html[data-tema="laguna"] .pt-hola-baj { font-size: 13px; }
+  html[data-tema="laguna"] .pt-hero { padding: 20px 20px 22px; }
+  html[data-tema="laguna"] .pt-hero.pt-hero-chico .pt-hero-t { font-size: 23px; gap: 10px; }
+  html[data-tema="laguna"] .pt-hero-e { font-size: 13.5px; }
+  html[data-tema="laguna"] .pt-hero-cta { width: 100%; justify-content: center; }
+  html[data-tema="laguna"] .pt-hero-ico { top: 18px; right: 16px; transform: none; }
+  html[data-tema="laguna"] .pad.pt-accesos { padding: 22px 16px 0; }
+  html[data-tema="laguna"] .pt-filas { gap: 10px; }
+  html[data-tema="laguna"] .pt-fila { padding: 14px 16px; }
+  html[data-tema="laguna"] .pt-pie { margin-top: 32px; padding: 22px 16px 86px; }
+  html[data-tema="laguna"] .pt-flota { right: 14px; bottom: 14px; }
+}
+
+/* ---------- Movimiento ---------- */
+@keyframes lg-adm-respira { from { transform: scale(1); } to { transform: scale(1.07); } }
+@keyframes lg-adm-sube { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes lg-adm-funde { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .pt-media { animation: none; }
+  html[data-tema="laguna"] .fila-hola,
+  html[data-tema="laguna"] .pt-hero,
+  html[data-tema="laguna"] .pt-filas > * {
+    animation: lg-adm-funde var(--mov-medio) ease backwards; animation-delay: 0s;
+  }
+  html[data-tema="laguna"] .pt-hero,
+  html[data-tema="laguna"] .pt-hero-cta,
+  html[data-tema="laguna"] .pt-fila,
+  html[data-tema="laguna"] .pt-fila-f,
+  html[data-tema="laguna"] .pt-salir,
+  html[data-tema="laguna"] .tm-op { transition: none; }
+  html[data-tema="laguna"] .pt-hero:hover,
+  html[data-tema="laguna"] .pt-fila:hover,
+  html[data-tema="laguna"] .pt-fila:hover .pt-fila-f { transform: none; }
+}
+
+/* ---------- Los grupos de accesos (SDN, 2026-10-23): sin título a la vista ---------- */
+
+/* ---------- Sin logo: el nombre del gremio es el logotipo ----------
+   Del mismo peso visual que un logo (64 px de alto en escritorio, 46 en el
+   teléfono) y el mismo en las cuatro pantallas. En el teléfono baja a dos
+   renglones antes que cortarse con puntos. */
+html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuente); font-weight: 800; font-size: 30px; line-height: 1.05;
+  letter-spacing: -.015em; text-transform: none; }
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
+    border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
+}
+
+/* ---------- Escritorio: la foto de perfil, grande, al lado del Panel Sindical ----------
+   SDN, 2026-10-23: a la derecha de la tarjeta quedaba un hueco enorme y la
+   foto de perfil era un círculo de 44 px. En escritorio el saludo y la
+   tarjeta van en la columna izquierda y el círculo de perfil ocupa la
+   derecha (la fila del saludo se disuelve en la grilla). */
+@media (min-width: 1040px) {
+  html[data-tema="laguna"] .pt-heroe > .pad {
+    display: grid; grid-template-columns: minmax(0, 740px) minmax(0, 1fr); grid-template-rows: auto 1fr;
+    column-gap: 40px;
+  }
+  html[data-tema="laguna"] .fila-hola { display: contents; }
+  html[data-tema="laguna"] .fila-hola > div { grid-column: 1; grid-row: 1; margin: 20px 0 28px;
+    animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards; animation-delay: var(--mov-escalon); }
+  html[data-tema="laguna"] .pt-hero { grid-column: 1; grid-row: 2; align-self: end; }
+  html[data-tema="laguna"] .circulo-acento { grid-column: 2; grid-row: 1 / span 2; justify-self: center; align-self: center;
+    width: 132px; height: 132px; border-width: 3px; box-shadow: 0 0 0 10px color-mix(in srgb, var(--lg-fluor-txt) 14%, transparent);
+    animation: lg-adm-sube var(--mov-entrada) var(--ease-entrada) backwards; animation-delay: calc(var(--mov-escalon) * 2); }
+  html[data-tema="laguna"] .circulo-acento:has(img) { width: 220px; height: 220px; }
+  html[data-tema="laguna"] .circulo-acento svg { width: 48px; height: 48px; }
+}
+@media (min-width: 1040px) and (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .fila-hola > div, html[data-tema="laguna"] .circulo-acento { animation: none; }
+}

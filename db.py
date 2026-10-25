@@ -540,6 +540,10 @@ class UsuarioPlataforma(SQLModel, table=True):
     telefono: str = ""
     creado_en: str = ""                         # AAAA-MM-DD HH:MM (BA)
     creado_por: str = ""                        # usuario del superadmin, o "semilla"
+    # El modelo de diseño que eligió para el panel de plataforma (PLAN_TEMAS.md,
+    # D2). "" = no eligió: vale el por defecto (laguna). Plataforma no tiene
+    # sindicato, así que no hay un default intermedio ni paleta propia.
+    tema: str = ""
 
 
 class LogPlataforma(SQLModel, table=True):
@@ -3294,6 +3298,44 @@ def guardar_tema_persona(cuil: str, tema: str, rol: str = "afiliado") -> bool:
             return False
         cuenta.tema = valor
         s.add(cuenta)
+        s.commit()
+        return True
+
+
+def apariencia_plataforma(uid) -> dict:
+    """El modelo y la paleta del panel de plataforma para el usuario `uid`
+    (PLAN_TEMAS.md). La paleta es SIEMPRE la de Colm3na: plataforma no tiene
+    sindicato. El genérico de transición (uid 0) no tiene cuenta propia y ve
+    el modelo por defecto. Abre su sesión: la llaman las rutas de página
+    después de cerrar la suya."""
+    import temas
+    propio = ""
+    if uid:
+        with Session(engine) as s:
+            u = s.get(UsuarioPlataforma, uid)
+            propio = u.tema if u else ""
+    return {
+        "tema": temas.resolver_tema(propio),
+        "paleta": temas.PALETA_DEFECTO,
+        "elegido": temas.tema_valido(propio) or "",
+        "defecto": temas.TEMA_DEFECTO,
+    }
+
+
+def guardar_tema_plataforma(uid, tema: str) -> bool:
+    """Guarda el modelo que eligió un usuario de plataforma. "" vuelve al por
+    defecto. False si el modelo no existe o el usuario no está: nunca se
+    guarda un valor fuera del catálogo."""
+    import temas
+    valor = "" if tema in ("", None) else temas.tema_valido(tema)
+    if valor is None or not uid:
+        return False
+    with Session(engine) as s:
+        u = s.get(UsuarioPlataforma, uid)
+        if not u:
+            return False
+        u.tema = valor
+        s.add(u)
         s.commit()
         return True
 
