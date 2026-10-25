@@ -29,7 +29,6 @@ import db
 COLOR_PRIMARIO = "#0a1421"
 COLOR_SECUNDARIO = "#a0030b"
 COLOR_ACENTO = "#7776a7"
-PORTADA_CLARA = False
 
 DIR_MARCA = Path("static/marca")
 LOGO_CLARO = DIR_MARCA / "logo_plataforma_claro.png"
@@ -65,7 +64,6 @@ def main():
         color_primario=COLOR_PRIMARIO,
         color_secundario=COLOR_SECUNDARIO,
         color_acento=COLOR_ACENTO,
-        portada_clara=PORTADA_CLARA,
         logo_datos=claro, logo_mime=mime_claro, logo_flag=nombre_claro,
         logo_datos_oscuro=oscuro, logo_mime_oscuro=mime_oscuro, logo_oscuro_flag=nombre_oscuro,
     )

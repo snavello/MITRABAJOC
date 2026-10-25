@@ -66,7 +66,9 @@
     font-variant-numeric:tabular-nums; }
   button.mini { padding:5px 11px; font-size:12.5px; margin:0 0 0 4px; background:#fff; color:var(--tinta);
     border:1px solid var(--linea); border-radius:999px; cursor:pointer; font-family:inherit; }
-  button.mini.borrar { background:none; color:#b3261e; border-color:transparent; }
+  /* Borrar es un botón como Editar, del mismo alto, con el rojo de estado
+     (auditoría R2-09): la acción más peligrosa no va con el objetivo más chico. */
+  button.mini.borrar { background:#fff; color:#b3261e; border-color:color-mix(in srgb, #b3261e 40%, #e2ded5); }
   .admin-item { padding:8px 0; border-bottom:1px solid var(--linea); font-size:14px; }
   .admin-item:last-child { border-bottom:none; }
   .card { background:#fff; border:1px solid var(--linea); border-radius:12px; padding:18px; margin-top:14px; }
@@ -83,8 +85,10 @@
   .campo.full { grid-column:1 / -1; }
   label { font-size:12.5px; color:var(--gris); }
   input, textarea, select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; width:100%; background:#fff; }
-  .colores { display:flex; gap:18px; flex-wrap:wrap; margin-top:4px; }
-  .col-item { display:flex; flex-direction:column; gap:4px; align-items:flex-start; max-width:190px; }
+  /* Los colores en una grilla (auditoría R2-10): cinco columnas parejas en
+     escritorio y dos en el teléfono, con la ayuda al ancho de su columna. */
+  .colores { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:16px; margin-top:4px; }
+  .col-item { display:flex; flex-direction:column; gap:4px; align-items:flex-start; min-width:0; }
   input[type=color] { width:54px; height:38px; padding:2px; cursor:pointer; }
   button { padding:10px 18px; background:var(--tinta); color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:14px; font-weight:600; font-family:inherit; margin-top:6px; }
   button:hover { opacity:.92; }
@@ -125,6 +129,15 @@
   /* Una tabla ancha se desliza adentro de su lugar, nunca la página entera. */
   .tabla-ancha { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
   .tabla-ancha > table { min-width:640px; }
+  /* Si queda tabla a la derecha, el borde se desvanece: avisa que se puede
+     deslizar (auditoría R3-12, G7-26). La clase la pone marcarTablas(). */
+  .tabla-ancha.mas-derecha { -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+    mask-image:linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  /* Topes: en escritorio la tabla entra entera y su encabezado acompaña al
+     bajar (auditoría R3-10); para eso el contenedor no puede recortar. */
+  @media (min-width:761px) { .tabla-ancha.th-fijo { overflow:visible; } }
+  .t-anio td { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; font-weight:700;
+    letter-spacing:.08em; color:var(--gris); padding-top:16px; }
   .tabla-ancha.t9 > table, .tabla-ancha > table.tabla-topes { min-width:860px; }
   .tabla-topes td:nth-child(5) { min-width:240px; }
   .nowrap { white-space:nowrap; }
@@ -162,6 +175,11 @@
   /* Las secciones de un formulario largo, con su subtítulo y aire arriba. */
   .form-secc { font-size:16px; font-weight:700; color:var(--tinta); margin:28px 0 12px; }
   .form-secc:first-of-type { margin-top:0; }
+  /* Un subtítulo que viene después de campos, aunque sea el primero de su
+     tarjeta, lleva el aire de arriba (auditoría R3-08). */
+  .form-secc.secc-sep { margin-top:28px; }
+  /* Dos campos que son un par se alinean por abajo (auditoría R3-02). */
+  .grid.al-pie { align-items:end; }
   /* Elegir un archivo: un botón y el nombre al lado, en vez del campo crudo
      del navegador. El <input type=file> sigue ahí (mismo name), escondido a
      la vista pero no al teclado. */
@@ -228,6 +246,38 @@
   }
   @media (max-width:760px) {
     .grid, .dos-col { grid-template-columns:minmax(0,1fr); }
+    .colores { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    /* Casillas de 44 px de alto y los módulos a dos columnas (auditoría R2-04). */
+    .check-modulos { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0 12px; }
+    .chk-modulo { min-height:44px; }
+    /* Las tablas que siguen deslizándose: la primera columna queda fija, así
+       se sabe de qué fila es lo que se ve a la derecha, y el vacío no se
+       corta a mitad de frase (auditoría R3-12). */
+    .tabla-ancha > table:not(.tabla-fichas) tr > :first-child { position:sticky; left:0; z-index:1;
+      background:var(--fondo-fijo, #fff); }
+    .vacio-fijo { display:block; position:sticky; left:12px; max-width:calc(100vw - 72px); white-space:normal; }
+    /* Sindicatos y Topes: cada fila, una ficha apilada con su rótulo, y las
+       acciones al pie (auditoría R3-12, G7-26). La cabecera no hace falta. */
+    .tabla-ancha:has(> .tabla-fichas) { overflow:visible; }
+    .tabla-ancha > table.tabla-fichas { min-width:0; }
+    .tabla-fichas, .tabla-fichas > tbody { display:block; }
+    .tabla-fichas tr:has(> th) { display:none; }
+    .tabla-fichas tr { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px 16px;
+      padding:16px 2px; border-bottom:1px solid var(--linea); }
+    .tabla-fichas tr[hidden] { display:none; }
+    .tabla-fichas td { display:block; min-width:0 !important; padding:0 !important; border:0 !important;
+      background:none !important; text-align:left !important; }
+    .tabla-fichas td[data-r]::before { content:attr(data-r); display:block; margin-bottom:3px;
+      font-family:inherit; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); }
+    .tabla-fichas td.acc { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px; }
+    .tabla-fichas td.acc button.mini { margin:0; min-height:40px; padding:0 16px; }
+    .tabla-fichas td[colspan] { grid-column:1 / -1; }
+    .fichas-sind td:first-child { grid-column:1 / -1; }
+    .fichas-topes tr { grid-template-areas:"v e" "m b" "f f" "a a"; }
+    .fichas-topes td:nth-child(1) { grid-area:v; } .fichas-topes td:nth-child(2) { grid-area:m; }
+    .fichas-topes td:nth-child(3) { grid-area:b; } .fichas-topes td:nth-child(4) { grid-area:e; justify-self:end; }
+    .fichas-topes td:nth-child(5) { grid-area:f; } .fichas-topes td:nth-child(6) { grid-area:a; }
+    .fichas-topes tr.t-anio { display:block; padding:18px 2px 4px; border-bottom:0; }
     .ia-tot.siete { grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); }
     .filtros select { width:auto; flex:1 1 160px; }
     .filtros .f-cant { margin-left:0; }
@@ -368,9 +418,9 @@
   {% if request.query_params.get('error') == 'guardado' %}<div class="msg aviso">No se pudo guardar: probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small>Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
 
   <div class="ppanel activo" data-mov-vista id="pp-lista">
-  <h2 class="titulo-pagina">Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
+  <h2 class="titulo-pagina">Sindicatos en la plataforma&nbsp;({{ sindicatos|length }})</h2>
   <div class="tabla-ancha">
-  <table>
+  <table class="tabla-fichas fichas-sind">
     <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th class="num">Admins</th><th class="num">Trabajadores</th><th></th></tr>
     {% for i in sindicatos %}
     <tr>
@@ -380,17 +430,17 @@
           <div><strong>{{ i.s.nombre }}</strong>{% if i.s.descripcion %}<br><span class="muted">{{ i.s.descripcion }}</span>{% endif %}</div>
         </div>
       </td>
-      <td class="nowrap">{{ i.s.cuit or '—' }}</td>
-      <td class="nowrap">
+      <td class="nowrap" data-r="CUIT">{{ i.s.cuit or '—' }}</td>
+      <td class="nowrap" data-r="Marca">
         <span class="chip-color" style="background:{{ i.s.color_base }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_primario }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_acento }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
       </td>
-      <td class="num"><button type="button" class="link-num" title="Ver los administradores" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
-      <td class="num"><button type="button" class="link-num" title="Ver los trabajadores" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
-      <td class="nowrap" style="text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
+      <td class="num" data-r="Admins"><button type="button" class="link-num" title="Ver los administradores" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
+      <td class="num" data-r="Trabajadores"><button type="button" class="link-num" title="Ver los trabajadores" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
+      <td class="acc nowrap" style="text-align:right;">
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -482,6 +532,9 @@
       </div>
 
       <h3 class="form-secc">Marca</h3>
+      {# «Portada clara» del trabajador y del admin, fuera (auditoría R2-03):
+         con los dos modelos de diseño la casilla no cambiaba nada. #}
+      <p class="ayuda" style="margin:-4px 0 12px;">La portada la define el modelo de diseño (Laguna o Noticiero) que elige cada persona; estos colores se usan si el sindicato elige ver la app con los suyos.</p>
       <div class="colores">
         <div class="col-item">
           <label>Color base *</label>
@@ -545,16 +598,6 @@
           </label>
           <span class="ayuda">Ideal: PNG con fondo transparente. Aparece en la credencial sindical del trabajador, debajo del nombre de la autoridad.</span>
         </div>
-      </div>
-
-      <div class="campo" style="margin-top:16px;">
-        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" id="sind-portada-clara"> Portada clara (trabajador)</label>
-        <span class="ayuda">Por defecto la portada del trabajador es oscura. Tildado: fondo claro (el encabezado sigue oscuro, con el color base).</span>
-      </div>
-
-      <div class="campo">
-        <label class="chk-modulo"><input type="checkbox" name="admin_portada_clara" value="true" id="sind-admin-portada-clara"> Portada clara (admin)</label>
-        <span class="ayuda">Independiente de la del trabajador: por ejemplo, se puede dejar oscura para el trabajador y clara para el admin.</span>
       </div>
 
       <h3 class="form-secc">Módulos</h3>
@@ -665,7 +708,7 @@
   <div class="ppanel" data-mov-vista id="pp-marca">
   <h2 class="titulo-pagina">Marca de la plataforma</h2>
   <div class="card">
-    <p class="muted" style="margin-bottom:16px;">Es la marca de Colm3na en sí: el logo y los colores de las pantallas de ingreso, antes de entrar a un sindicato en particular. Los paneles se pintan con su modelo de diseño (Laguna o Noticiero). La marca de cada sindicato se edita aparte, desde «Sindicatos».</p>
+    <p class="muted" style="margin-bottom:16px;">Es la marca de Colm3na en sí: el logo y los colores de las pantallas de ingreso, antes de entrar a un sindicato en particular. Los paneles y sus portadas se pintan con el modelo de diseño (Laguna o Noticiero) que elige cada persona. La marca de cada sindicato se edita aparte, desde «Sindicatos».</p>
     <form method="post" action="/plataforma/marca" enctype="multipart/form-data">
       <h3 class="form-secc">Colores</h3>
       <div class="colores">
@@ -682,7 +725,7 @@
         <div class="col-item">
           <label>Color acento</label>
           <input type="color" name="color_acento" value="{{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }}">
-          <span class="ayuda">En las pantallas de ingreso: avisos de error.</span>
+          <span class="ayuda">En el primer ingreso de un usuario de plataforma: subtítulos y botón. Los avisos de error van siempre en rojo.</span>
         </div>
       </div>
 
@@ -716,11 +759,7 @@
         </div>
       </div>
 
-      <div class="campo" style="margin-top:16px;">
-        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" {% if marca_plataforma and marca_plataforma.portada_clara %}checked{% endif %}> Portada clara</label>
-        <span class="ayuda">Sin tildar, la portada de plataforma («Inicio») va en oscuro. Tildado, va en claro.</span>
-      </div>
-      <button type="submit">Guardar marca</button>
+      <button type="submit" style="margin-top:20px;">Guardar marca</button>
     </form>
   </div>
   </div>
@@ -849,14 +888,14 @@
       cada sindicato. El semáforo de aportes pinta cada empresa según los días desde su último
       depósito informado: verde hasta el primer umbral, amarillo hasta el segundo, rojo después.</p>
     <form method="post" action="/plataforma/config-dashboard">
-      <div class="grid" style="max-width:540px;">
+      <div class="grid al-pie" style="max-width:540px;">
         <div class="campo">
-          <label for="cfg-verde"><span class="punto verde" aria-hidden="true"></span>Semáforo: verde hasta (días)</label>
+          <label for="cfg-verde"><span class="punto verde" aria-hidden="true"></span>Verde hasta (días)</label>
           <input type="number" id="cfg-verde" name="semaforo_verde_hasta_dias" min="1" required
                  value="{{ config_dashboard.semaforo_verde_hasta_dias }}">
         </div>
         <div class="campo">
-          <label for="cfg-amarillo"><span class="punto ambar" aria-hidden="true"></span>Semáforo: amarillo hasta (días)</label>
+          <label for="cfg-amarillo"><span class="punto ambar" aria-hidden="true"></span>Amarillo hasta (días)</label>
           <input type="number" id="cfg-amarillo" name="semaforo_amarillo_hasta_dias" min="2" required
                  value="{{ config_dashboard.semaforo_amarillo_hasta_dias }}">
         </div>
@@ -976,9 +1015,13 @@
         <label for="modelo-{{ uso }}">Modelo</label>
         <select name="modelo_{{ uso }}" id="modelo-{{ uso }}" data-original="{{ modelos_ia[uso] }}">
           {% for m in precios_ia.modelos %}
-          <option value="{{ m.id }}" {% if modelos_ia[uso] == m.id %}selected{% endif %}>{{ m.nombre }} · {{ m.precio_txt|replace(' de tokens', '') }}{% if m.id == info.default %} · por defecto{% endif %}</option>
+          <option value="{{ m.id }}" {% if modelos_ia[uso] == m.id %}selected{% endif %}>{{ m.nombre }} · {{ m.precio_txt|replace(' por millón de tokens', '')|replace(' / ', '/') }}</option>
           {% endfor %}
         </select>
+        {# La opción va corta para que entre entera en el teléfono; cuál es el
+           modelo por defecto se dice debajo (auditoría G8-21). #}
+        {% set _def = precios_ia.modelos|selectattr('id', 'equalto', info.default)|first %}
+        <span class="ayuda">Precios en dólares por millón de tokens (entrada/salida).{% if _def %} Por defecto: {{ _def.nombre }}.{% endif %}</span>
       </div>
     </div>
     {% endfor %}
@@ -1082,7 +1125,7 @@
         {% if enmascarado_diag_entorno %}<td>{% if r.con_imagenes %}<a href="/plataforma/enmascarado/{{ r.id }}" target="_blank" rel="noopener">Ver</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
       </tr>
       {% else %}
-      <tr><td colspan="10" class="muted">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</td></tr>
+      <tr><td colspan="10" class="muted"><span class="vacio-fijo">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</span></td></tr>
       {% endfor %}
     </table>
     <p class="ayuda" style="margin-top:8px;">Se listan las 300 más recientes que cumplen el filtro; los números de arriba cuentan todas las que llegaron a esta pantalla (hasta 3.000).</p>
@@ -1118,7 +1161,7 @@
     {# Una tabla chica: casilla y modelo, y los dos precios alineados en
        columna (US$ por millón de tokens), del más caro al más barato como
        vienen en el catálogo. #}
-    <h3 class="form-secc">Modelos a comparar</h3>
+    <h3 class="form-secc secc-sep">Modelos a comparar</h3>
     <div class="tabla-ancha">
       <table class="tabla-modelos" style="min-width:0; max-width:560px;">
         <tr><th>Modelo</th><th class="num">Entrada</th><th class="num">Salida</th></tr>
@@ -1145,8 +1188,8 @@
   </div>
 
   <div class="ppanel" data-mov-vista id="pp-sospechosos">
-  <h2 class="titulo-pagina">Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
-  <p class="muted bajada">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador: solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
+  <h2 class="titulo-pagina">Recibos con alerta&nbsp;({{ recibos_sospechosos|length }})</h2>
+  <p class="muted bajada">De posible adulteración. La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador: solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
   <div class="tabla-ancha">
   <table>
     <tr><th>Fecha</th><th>Sindicato</th><th>CUIL</th><th>Período</th><th>Motivo</th><th></th></tr>
@@ -1168,7 +1211,7 @@
      punto para no confundir miles con decimales). #}
   {% macro peso(n) %}$ {{ '{:,.2f}'.format(n)|replace(',', '·')|replace('.', ',')|replace('·', '.') }}{% endmacro %}
   <div class="ppanel" data-mov-vista id="pp-topes">
-  <h2 class="titulo-pagina">Topes de aportes de la seguridad social ({{ topes|length }})</h2>
+  <h2 class="titulo-pagina">Topes de aportes de la seguridad social&nbsp;({{ topes|length }})</h2>
   <p class="muted bajada">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241). Se actualizan todos los meses por resolución de ANSES. Del período más nuevo al más viejo; el estado dice cuánto se puede confiar en cada valor.</p>
   {% if request.query_params.get('error') == 'topebajo' %}
   <div class="msg err">El valor que intentaste guardar es menor al del período anterior, y eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
@@ -1212,16 +1255,21 @@
     </form>
   </div>
 
-  <div class="tabla-ancha">
-  <table class="tabla-topes">
+  {# En escritorio el encabezado queda fijo al bajar y cada año abre con su
+     renglón; en el teléfono cada fila es una ficha (auditoría R3-10, R3-12). #}
+  <div class="tabla-ancha th-fijo">
+  <table class="tabla-topes tabla-fichas fichas-topes">
     <tr><th>Vigencia</th><th class="num">Tope máximo</th><th class="num">Base mínima</th><th>Estado</th><th>Fuente</th><th></th></tr>
     {% for t in topes %}
+    {% if loop.first or t.vigencia_desde[:4] != loop.previtem.vigencia_desde[:4] %}
+    <tr class="t-anio"><td colspan="6">{{ t.vigencia_desde[:4] }}</td></tr>
+    {% endif %}
     <tr>
       <td><code>{{ t.vigencia_desde }}</code></td>
-      <td class="num">{{ peso(t.tope_maximo) }}</td>
-      <td class="num">{{ peso(t.base_minima) }}</td>
+      <td class="num" data-r="Tope máximo">{{ peso(t.tope_maximo) }}</td>
+      <td class="num" data-r="Base mínima">{{ peso(t.base_minima) }}</td>
       <td><span class="chip-estado {{ 'sospechoso' if t.estado == 'SOSPECHOSO' else t.estado }}">{{ t.estado.replace('_', ' ')|lower|capitalize }}</span></td>
-      <td class="muted">{{ t.fuente or '—' }}</td>
+      <td class="muted" data-r="Fuente">{{ t.fuente or '—' }}</td>
       <td class="acc nowrap" style="text-align:right;">
         <button class="mini" type="button"
           onclick='editarTope({{ {"id":t.id,"vigencia_desde":t.vigencia_desde,"tope_maximo":t.tope_maximo,"base_minima":t.base_minima,"estado":t.estado,"fuente":t.fuente} | tojson }})'>Editar</button>
@@ -1246,6 +1294,7 @@ function activarTab(dest) {
   document.querySelectorAll('.ptab[data-pp]').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
   llevarPestanaALaVista();
+  if (typeof marcarTablas === 'function') marcarTablas();
 }
 
 /* En el teléfono la tira es horizontal y deslizable: la pestaña elegida
@@ -1273,10 +1322,34 @@ function marcarDesborde() {
   marcarDesborde();
 })();
 
+/* Una tabla que se desliza avisa con el borde desvanecido si le queda algo a
+   la derecha (auditoría R3-12). Se recalcula al deslizarla, al cambiar de
+   pestaña o de tamaño, y cuando el JS dibuja una tabla nueva. */
+let _tablasPend = false;
+function marcarTablas() {
+  if (_tablasPend) return;
+  _tablasPend = true;
+  requestAnimationFrame(() => {
+    _tablasPend = false;
+    document.querySelectorAll('.tabla-ancha').forEach(t =>
+      t.classList.toggle('mas-derecha', t.scrollLeft + t.clientWidth < t.scrollWidth - 4));
+  });
+}
+document.addEventListener('scroll', e => {
+  if (e.target.classList && e.target.classList.contains('tabla-ancha')) marcarTablas();
+}, {capture: true, passive: true});
+window.addEventListener('resize', marcarTablas);
+(function () {
+  const wrap = document.querySelector('.wrap');
+  if (wrap && window.MutationObserver) new MutationObserver(marcarTablas).observe(wrap, {childList: true, subtree: true});
+  marcarTablas();
+})();
+
 /* ---------- Uso de IA: tres sub-pestañas con namespace propio ---------- */
 function cambiarSubIA(dest) {
   document.querySelectorAll('.ia-subtab').forEach(b => b.classList.toggle('activa', b.dataset.iaSub === dest));
   document.querySelectorAll('.ia-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'ia-sub-' + dest));
+  marcarTablas();
 }
 
 const escHTML = s => String(s === null || s === undefined ? '' : s)
@@ -1697,8 +1770,6 @@ function editarSind(s) {
   document.querySelectorAll('#sind-modulos input[type=checkbox]').forEach(chk => {
     chk.checked = modulosSet.has(chk.value);
   });
-  document.getElementById('sind-portada-clara').checked = !!s.portada_clara;
-  document.getElementById('sind-admin-portada-clara').checked = !!s.admin_portada_clara;
   document.getElementById('sind-clausula').checked = !!s.clausula;
   document.getElementById('sind-acepta-mail-declarado').checked = s.acepta_mail_declarado !== false;
   document.getElementById('sind-clausula-quien').textContent = s.clausula

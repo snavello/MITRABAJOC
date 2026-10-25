@@ -170,13 +170,27 @@ html[data-tema="noticiero"] .btn-home svg,
 html[data-tema="noticiero"] .btn-cerrar svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.8; }
 html[data-tema="noticiero"] .btn-cerrar svg { stroke: var(--nt-coral); stroke-width: 2.1; }
 html[data-tema="noticiero"] :is(.btn-home, .btn-cerrar):focus-visible { outline: 2px solid var(--nt-coral); outline-offset: 2px; }
+/* En escritorio, al pie del índice (auditoría R2-01), igual que el panel del
+   sindicato: flotando a la derecha tapaban la Prueba de lectura, campos y la
+   columna de acciones. El riel ya reserva 96 px abajo. Quieta: flota.js no
+   la esconde al bajar. En el teléfono sigue flotando y se corre al bajar. */
+@media (min-width: 761px) {
+  html[data-tema="noticiero"] .flota-sesion {
+    --flota-quieta: 1; left: 10px; right: auto; bottom: 14px; width: calc(var(--nt-riel) - 20px); justify-content: center;
+  }
+  html[data-tema="noticiero"] .flota-sesion :is(.btn-home, .btn-cerrar) { flex: 1 1 0; justify-content: center; padding: 0 8px; }
+}
 
 /* ============================================================
    5. Títulos y textos
    ============================================================ */
 html[data-tema="noticiero"] .titulo-pagina {
-  font-family: var(--nt-f-tit); font-size: 44px; font-weight: 400; line-height: .95;
+  font-family: var(--nt-f-tit); font-size: 44px; font-weight: 400; line-height: 1.04;
   letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta); margin: 0 0 10px;
+  /* Equilibrado (auditoría R2-06): sin una palabra sola en el segundo
+     renglón. Y con interlineado que deja lugar a la tilde de una mayúscula
+     cuando parte en dos (R3-09). */
+  text-wrap: balance;
 }
 html[data-tema="noticiero"] .bajada { color: var(--nt-tinta-2); font-size: 14.5px; line-height: 1.5; margin-bottom: 18px; }
 html[data-tema="noticiero"] h2:not(.titulo-pagina) {
@@ -195,6 +209,7 @@ html[data-tema="noticiero"] .form-secc {
 }
 html[data-tema="noticiero"] .form-secc { margin: 30px 0 12px; padding-top: 12px; border-top: 1px solid var(--nt-tinta); }
 html[data-tema="noticiero"] .form-secc:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+html[data-tema="noticiero"] .form-secc.secc-sep { margin-top: 30px; padding-top: 12px; border-top: 1px solid var(--nt-tinta); }
 html[data-tema="noticiero"] code {
   font-family: var(--nt-f-mono); font-size: 12.5px; letter-spacing: .2px;
   background: color-mix(in srgb, var(--nt-indigo) 7%, transparent); color: var(--nt-tinta); border-radius: 2px; padding: 1px 4px;
@@ -232,11 +247,15 @@ html[data-tema="noticiero"] button.mini {
   transition: box-shadow var(--mov-rapido, 180ms) var(--nt-curva);
 }
 html[data-tema="noticiero"] button.mini:hover { box-shadow: inset 0 0 0 1.5px var(--nt-tinta); opacity: 1; }
-/* Borrar y Desactivar: texto rojo, sin caja, que no compita con los datos. */
+/* Borrar y Desactivar: del mismo tamaño que Editar, con el borde y el texto
+   en el rojo de estado, igual que en el panel del sindicato (auditoría R2-09). */
 html[data-tema="noticiero"] button.mini.borrar,
-html[data-tema="noticiero"] button.ft-borrar { color: var(--nt-mal); background: transparent; box-shadow: none; border: 0; }
+html[data-tema="noticiero"] button.ft-borrar {
+  color: var(--nt-mal); background: var(--nt-carta); border: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-mal) 45%, var(--nt-linea-2));
+}
 html[data-tema="noticiero"] button.mini.borrar:hover,
-html[data-tema="noticiero"] button.ft-borrar:hover { background: var(--nt-mal-f); box-shadow: none; }
+html[data-tema="noticiero"] button.ft-borrar:hover { background: var(--nt-mal-f); box-shadow: inset 0 0 0 1.5px var(--nt-mal); }
 html[data-tema="noticiero"] button:disabled {
   background: var(--nt-hoja) !important; color: var(--nt-tinta-3) !important; box-shadow: none !important; filter: none !important; opacity: 1;
 }
@@ -268,7 +287,8 @@ html[data-tema="noticiero"] .ft-seg label:has(input:focus-visible) { outline-col
    8. Formularios: campos de papel con borde fino, rótulos espaciados
    ============================================================ */
 html[data-tema="noticiero"] .campo > label:not(.chk-modulo):not(.zarch),
-html[data-tema="noticiero"] .grid label:not(.chk-modulo):not(.zarch) {
+html[data-tema="noticiero"] .grid label:not(.chk-modulo):not(.zarch),
+html[data-tema="noticiero"] .col-item > label {
   font-size: 11px; font-weight: 700; font-stretch: 108%; letter-spacing: 1.4px; text-transform: uppercase; color: var(--nt-tinta-2);
 }
 html[data-tema="noticiero"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=hidden]), select, textarea) {
@@ -340,6 +360,21 @@ html[data-tema="noticiero"] .wrap tr:hover > td { background: var(--nt-carta); }
 html[data-tema="noticiero"] .num { font-family: var(--nt-f-mono); }
 html[data-tema="noticiero"] .wrap th.num { font-family: var(--nt-f-txt); }
 html[data-tema="noticiero"] .fila-form td { background: var(--nt-carta) !important; }
+/* El papel detrás de la primera columna que queda fija en el teléfono. */
+html[data-tema="noticiero"] .wrap { --fondo-fijo: var(--nt-fondo); }
+html[data-tema="noticiero"] .card { --fondo-fijo: var(--nt-carta); }
+/* Topes: el encabezado acompaña al bajar, debajo del encabezado de la
+   página, y cada año abre con su renglón (auditoría R3-10). */
+@media (min-width: 761px) {
+  html[data-tema="noticiero"] .tabla-topes th {
+    position: sticky; top: var(--nt-top); z-index: 2; background: var(--nt-fondo);
+  }
+}
+html[data-tema="noticiero"] .wrap .t-anio td,
+html[data-tema="noticiero"] .wrap tr.t-anio:hover > td {
+  font: 400 20px/1 var(--nt-f-tit); letter-spacing: .4px; color: var(--nt-tinta);
+  background: transparent; border-bottom: 1.5px solid var(--nt-tinta); padding-top: 18px; padding-bottom: 6px;
+}
 
 /* ============================================================
    11. Estados (palabra + color fijo), avisos y hojas
@@ -373,7 +408,9 @@ html[data-tema="noticiero"] .card {
 html[data-tema="noticiero"] .card.plegable { padding: 14px 22px; }
 html[data-tema="noticiero"] .plegable summary { font: 700 15px/1.2 var(--nt-f-cond); letter-spacing: 1px; text-transform: uppercase; color: var(--nt-tinta); }
 html[data-tema="noticiero"] .ia-tot .cifra { font-family: var(--nt-f-tit); font-weight: 400; font-size: 26px; color: var(--nt-tinta); }
-html[data-tema="noticiero"] .ia-tot .rotulo { font: 700 11px/1.3 var(--nt-f-cond); letter-spacing: 1.4px; color: var(--nt-tinta-2); }
+/* El rótulo de cada indicador, en la letra de los encabezados de tabla y a
+   12 px (auditoría R3-06): en la condensada a 11 px se leía como de 9. */
+html[data-tema="noticiero"] .ia-tot .rotulo { font: 700 12px/1.3 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.2px; color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .estimado { color: var(--nt-tinta-3); }
 html[data-tema="noticiero"] .prueba-lectura { border: 0; border-radius: 8px; background: var(--nt-amb-f); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-amb) 35%, transparent); }
 html[data-tema="noticiero"] .prueba-lectura.ok { background: var(--nt-ok-f); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt-ok) 35%, transparent); }
@@ -416,7 +453,7 @@ html[data-tema="noticiero"] .acerca-caja h3 { margin: 0 -20px 12px; padding: 16p
     background: var(--nt-hoja); border-bottom: 1px solid var(--nt-linea-2); padding: 8px 12px; gap: 4px; counter-reset: nt-sec;
   }
   html[data-tema="noticiero"] .ptab {
-    flex-direction: row; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0;
+    flex-direction: row; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border: 0;
     border-radius: 99px; background: transparent; color: var(--nt-tinta-2);
     font: 700 14px/1 var(--nt-f-cond); letter-spacing: .7px; text-transform: uppercase;
   }
@@ -429,6 +466,15 @@ html[data-tema="noticiero"] .acerca-caja h3 { margin: 0 -20px 12px; padding: 16p
   html[data-tema="noticiero"] .btn-home,
   html[data-tema="noticiero"] .btn-cerrar { padding: 0 14px; }
   html[data-tema="noticiero"] .card { padding: 18px 16px; }
+  /* 16 px en los campos: con menos, el iPhone agranda la página al tocarlos
+     (auditoría R2-05). */
+  html[data-tema="noticiero"] .wrap :is(input, select, textarea) { font-size: 16px; }
+  html[data-tema="noticiero"] .wrap .filtros select { height: 44px; font-size: 16px; }
+  html[data-tema="noticiero"] .chk-modulo { font-size: 14px; }
+  /* Las fichas de las tablas: la línea entre una y otra, del modelo. */
+  html[data-tema="noticiero"] .tabla-fichas tr { border-bottom-color: var(--nt-linea-2); }
+  html[data-tema="noticiero"] .tabla-fichas td[data-r]::before { font-family: var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.3px; color: var(--nt-tinta-2); }
+  html[data-tema="noticiero"] .wrap .fichas-topes tr.t-anio td { padding: 0 0 6px !important; border-bottom: 1.5px solid var(--nt-tinta) !important; }
 }
 
 /* ============================================================
