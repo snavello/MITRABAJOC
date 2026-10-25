@@ -45,6 +45,13 @@
     return { h: h, f: DIAS[d.getUTCDay()] + ' ' + d.getUTCDate() + '/' + (d.getUTCMonth() + 1) };
   }
 
+  // El servidor dice "mañana" para el día siguiente y "lun", "mar"… para los
+  // demás: acá van todos con la misma abreviatura de la fecha ("DOM").
+  function diaCorto(dia) {
+    if (dia === 'mañana') return DIAS[(ahoraBA().getUTCDay() + 1) % 7];
+    return String(dia || '').toUpperCase();
+  }
+
   function construir(aside) {
     var esc = aside.classList.contains('pt-dia-esc');
     aside.classList.remove('cargando');
@@ -63,9 +70,13 @@
       var ic = el('span', 'pt-dia-ico'); ic.appendChild(ico('clima-' + (c.icono || 'nublado')));
       if (datos.alerta) { var punto = el('span', 'pt-dia-punto'); punto.appendChild(ico('alerta')); ic.appendChild(punto); }
       btnC.append(ic, el('span', 'pt-dia-temp', c.temp + '°'));
+      // Auditoría G2-03: cada máxima lleva su día escrito («DOM 20°»), como
+      // la fecha de la hora; en un title no lo ve nadie con el dedo.
       if (esc) (c.pronostico || []).forEach(function (p) {
-        var x = el('span', 'pt-dia-pron'); x.title = p.dia;
-        x.append(ico('clima-' + p.icono), document.createTextNode(p.max + '°')); btnC.appendChild(x);
+        var x = el('span', 'pt-dia-pron');
+        x.append(el('span', 'pt-dia-pron-d', diaCorto(p.dia)), ico('clima-' + p.icono),
+                 document.createTextNode(p.max + '°'));
+        btnC.appendChild(x);
       });
       btnC.addEventListener('click', function () { volverA = btnC; abrirClima(); });
       aside.appendChild(btnC);

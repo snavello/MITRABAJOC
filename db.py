@@ -5813,6 +5813,37 @@ def _log_tramite(s: Session, tramite_id: int, evento: str, detalle: str) -> None
     ))
 
 
+def sin_tildes(texto: str) -> str:
+    """El texto sin tildes ni diéresis (Ó -> O, Ñ -> N), para lo que una
+    persona tiene que tipear o dictar: un código no lleva vocales acentuadas."""
+    import unicodedata
+    return unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode("ascii")
+
+
+def prefijo_expediente(codigo_tipo: str) -> str:
+    """El prefijo del número de expediente, sacado del código del tipo de
+    trámite: mayúsculas, letras y números y SIN TILDES (auditoría G3-08: la
+    sigla de "Unión…" daba "UNIÓF04-2026-000384", un código que hay que
+    tipear en "Buscar expediente" o dictar por teléfono)."""
+    return "".join(ch for ch in sin_tildes(codigo_tipo).upper() if ch.isalnum()) or "TRAM"
+
+
+def _buscar_por_expediente(s: Session, modelo, numero: str):
+    """La fila con ese número de expediente. Si no está tal cual, prueba sin
+    tildes de los dos lados: así encuentra "UNIOF04-2026-000384" (como lo
+    tipea la gente) aunque el número viejo se haya emitido con la Ó, y al
+    revés. Los candidatos salen del correlativo, que no lleva tildes."""
+    fila = s.exec(select(modelo).where(modelo.numero_expediente == numero)).first()
+    if fila or not numero or "-" not in numero:
+        return fila
+    buscado = sin_tildes(numero).upper()
+    cola = numero.split("-", 1)[1]
+    for cand in s.exec(select(modelo).where(modelo.numero_expediente.like(f"%-{cola}"))).all():
+        if sin_tildes(cand.numero_expediente).upper() == buscado:
+            return cand
+    return None
+
+
 def _proximo_numero_expediente(s: Session, modelo, prefijo: str, anio: str) -> str:
     """Siguiente correlativo LIBRE para ese prefijo+año, mirando los números
     que YA existen (no la cantidad de trámites del tipo).
@@ -5847,7 +5878,7 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         tipo = s.get(TipoTramite, tipo_tramite_id)
         if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
             return None
-        prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
+        prefijo = prefijo_expediente(tipo.codigo)
         anio = fechas.ahora().strftime("%Y")
         ahora = fechas.ahora_texto()
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
@@ -6282,11 +6313,14 @@ def contar_tramites_nuevos(sindicato_id: int, usuario_id: Optional[int] = None) 
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
-    """Los trámites que presentó ESTE trabajador en ESTE sindicato, más
-    recientes primero -- para "Mis trámites"."""
+    """Los trámites que presentó ESTE trabajador en ESTE sindicato, con el
+    último movimiento más nuevo primero -- para "Mis trámites". Es la fecha
+    que muestra cada fila: ordenar por alta hacía que las fechas saltaran
+    (auditoría G3-04)."""
     with Session(engine) as s:
         tramites = s.exec(select(Tramite).where(
-            Tramite.cuil == cuil, Tramite.sindicato_id == sindicato_id).order_by(Tramite.id.desc())).all()
+            Tramite.cuil == cuil, Tramite.sindicato_id == sindicato_id).order_by(
+                Tramite.actualizado.desc(), Tramite.id.desc())).all()
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
         # último mensaje de cada hilo, en una sola consulta (ordenada por id:
@@ -6420,7 +6454,7 @@ def tramite_detalle(tramite_id: int, usuario_id: Optional[int] = None) -> Option
 
 def tramite_por_numero_expediente(numero_expediente: str) -> Optional[dict]:
     with Session(engine) as s:
-        tr = s.exec(select(Tramite).where(Tramite.numero_expediente == numero_expediente)).first()
+        tr = _buscar_por_expediente(s, Tramite, numero_expediente)
         return _tramite_detalle_completo(s, tr) if tr else None
 
 
@@ -6570,7 +6604,7 @@ def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, 
         tipo = s.get(TipoTramiteEmpleador, tipo_tramite_id)
         if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
             return None
-        prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
+        prefijo = prefijo_expediente(tipo.codigo)
         anio = fechas.ahora().strftime("%Y")
         ahora = fechas.ahora_texto()
         # Mismo criterio que crear_tramite (ver _proximo_numero_expediente):
@@ -6755,8 +6789,7 @@ def tramite_empleador_detalle(tramite_id: int) -> Optional[dict]:
 
 def tramite_empleador_por_numero_expediente(numero_expediente: str) -> Optional[dict]:
     with Session(engine) as s:
-        tr = s.exec(select(TramiteEmpleador).where(
-            TramiteEmpleador.numero_expediente == numero_expediente)).first()
+        tr = _buscar_por_expediente(s, TramiteEmpleador, numero_expediente)
         return _tramite_empleador_detalle_completo(s, tr) if tr else None
 
 

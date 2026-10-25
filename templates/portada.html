@@ -99,6 +99,31 @@
   body.claro .pt-tapa-t { color: var(--tinta); }
   body.claro .pt-tapa-b { color: var(--gris); }
   .pt-nov-lista { margin-top: 14px; }
+  /* Auditoría G2-01/G2-02: lámina sin foto, contador y flechas del pie. */
+  .car-sl.sin-foto { display: flex; flex-direction: column; aspect-ratio: auto; min-height: 150px; }
+  .car-sl.sin-foto .car-velo { display: none; }
+  .car-sl.sin-foto .car-txt { position: static; flex: 1; display: flex; flex-direction: column; align-items: flex-start; }
+  .car-sl.sin-foto .car-k { margin-bottom: 12px; }
+  .car-sl.sin-foto .car-k + * { margin-top: auto; }
+  .car-sl.sin-foto .car-t { -webkit-line-clamp: 4; text-shadow: none; }
+  .car-cont { display: none; flex: none; font-family: var(--fuente-num); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .car-pie.muchos .car-cont { display: inline; }
+  .car-pf { display: none; flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0;
+    align-items: center; justify-content: center; cursor: pointer; font: inherit; }
+  .car-pf svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .car-pf-izq svg { transform: rotate(180deg); }
+  .car-punto { position: relative; }
+  @media (max-width: 760px) {
+    .car-marco .car-flecha { display: none; }
+    .car-pf { display: inline-flex; }
+    .car-puntos { display: none; }
+    .car-cont { display: inline; order: 0; margin-right: auto; }
+    .car-barra { order: 1; }
+    .car-pf-izq { order: 2; }
+    .car-pf-der { order: 3; }
+    .car-t { -webkit-line-clamp: 3; }
+  }
   .pt-mini-marco { display: block; flex-shrink: 0; line-height: 0; }
 
   /* Mis recibos, chica y neutra: cuántos verificó este año, nada más. */
@@ -480,9 +505,10 @@
       {% if noticias|length > 1 %}
       <div class="pt-nov-lista">
         {% for n in noticias[1:] %}
-        <button class="pt-nov pt-vid" onclick="abrirNoticia({{ n.id }})">
-          {% if n.tiene_imagen1 %}<span class="pt-mini-marco"><img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt=""></span>
-          {% else %}<span class="pt-mini pt-mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
+        {# Auditoría G2-01: sin foto no hay miniatura de relleno (un cuadrado
+           con renglones no dice nada); el texto toma el ancho. #}
+        <button class="pt-nov pt-vid{% if not n.tiene_imagen1 %} sin-foto{% endif %}" onclick="abrirNoticia({{ n.id }})">
+          {% if n.tiene_imagen1 %}<span class="pt-mini-marco"><img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt=""></span>{% endif %}
           <span class="pt-txt">
             <span class="f">{{ n.fecha_hora }}</span>
             <span class="t">{{ n.titulo }}</span>
@@ -593,7 +619,9 @@
         <div class="car-marco">
           <div class="car-pista" id="car-pista">
             {% for b in beneficios %}
-            <button type="button" class="car-sl" onclick="abrirBeneficio({{ b.id }})">
+            {# Auditoría G2-01: sin foto, la lámina es tipográfica (el rubro en
+               grande sobre el plano de la marca), como la nota de tapa. #}
+            <button type="button" class="car-sl{% if not b.tiene_imagen %} sin-foto{% endif %}" onclick="abrirBeneficio({{ b.id }})">
               {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
               <span class="car-velo"></span>
               <span class="car-txt">
@@ -610,13 +638,22 @@
           {% endif %}
         </div>
         {% if beneficios|length > 1 %}
-        <div class="car-pie">
+        {# Auditoría G2-02: con más de seis, un contador «3 de 20» en vez de
+           veinte puntos que no se aciertan con el dedo. En el teléfono las
+           flechas bajan acá, al lado del contador (car-pf), y no tapan el
+           rubro. #}
+        <div class="car-pie{% if beneficios|length > 6 %} muchos{% endif %}">
+          <button type="button" class="car-pf car-pf-izq" onclick="carMover(-1)" aria-label="Anterior"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
           <span class="car-barra"><i id="car-barra"></i></span>
+          {% if beneficios|length <= 6 %}
           <span class="car-puntos">
             {% for b in beneficios %}
             <button type="button" class="car-punto{% if loop.first %} on{% endif %}" onclick="carIr({{ loop.index0 }})" aria-label="Beneficio {{ loop.index }}"></button>
             {% endfor %}
           </span>
+          {% endif %}
+          <span class="car-cont num" aria-live="polite"><b id="car-n">1</b> de {{ beneficios|length }}</span>
+          <button type="button" class="car-pf car-pf-der" onclick="carMover(1)" aria-label="Siguiente"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
         </div>
         {% endif %}
       </div>
@@ -1114,6 +1151,7 @@ let carIr = function () {}, carMover = function () {};
   const slides = Array.from(car.querySelectorAll('.car-sl'));
   const puntos = Array.from(car.querySelectorAll('.car-punto'));
   const barra = document.getElementById('car-barra');
+  const contador = document.getElementById('car-n');
   const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const MS = 5400;
   let i = 0, reloj = null;
@@ -1123,6 +1161,7 @@ let carIr = function () {}, carMover = function () {};
     pista.style.transform = 'translateX(' + (-i * 100) + '%)';
     slides.forEach((s, k) => s.classList.toggle('on', k === i));
     puntos.forEach((p, k) => p.classList.toggle('on', k === i));
+    if (contador) contador.textContent = i + 1;
     arrancar();
   };
   carMover = function (delta) { carIr(i + delta); };
