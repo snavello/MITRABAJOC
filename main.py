@@ -4486,6 +4486,8 @@ def encuesta_resultados_pagina(request: Request, encuesta_id: int):
     return templates.TemplateResponse("encuesta_resultados.html", {
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        # El modelo de diseño del operador, el mismo que en /admin.
+        "apariencia": db.apariencia_de(sid, rol="panel", uid=ses.get("uid", 0)),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "encuesta_id": encuesta_id, "titulo_encuesta": e["titulo"],
         "encuestas_cortes": encuestas.CORTES,
@@ -4851,6 +4853,12 @@ def pantalla_notificaciones(request: Request):
         "sindicato": marca["nombre"],
         "marca": marca,
         "marca_plataforma": db.marca_plataforma(),
+        # El modelo de diseño de la persona (PLAN_TEMAS.md): es una pantalla
+        # más de la app del afiliado y tiene que verse como /app.
+        "apariencia": db.apariencia_de(sid, cuil),
+        # "Hoy" y "Ayer" de la línea de tiempo los dice el servidor (hora de
+        # Buenos Aires), no el reloj del teléfono.
+        "hoy": fechas.hoy_texto(),
     })
 
 
@@ -4946,6 +4954,9 @@ def pantalla_convenio(request: Request):
         "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
         "marca_plataforma": db.marca_plataforma(),   # lo pide el encabezado común
+        "apariencia": db.apariencia_de(sid, cuil),   # el modelo de diseño de la persona
+        # El estado vacío ofrece preguntar por un trámite: solo si existe.
+        "tiene_tramites": db.modulo_habilitado(sid, "tramites"),
         "convenios": [c for c in db.convenios_del_sindicato(sid, solo_activos=True)
                       if c["fragmentos_vigentes"] > 0],
     })

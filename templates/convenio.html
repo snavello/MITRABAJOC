@@ -1,26 +1,47 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="{{ marca.color_base if marca else '#152238' }}">
 <title>Convenio — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
+  /* Consultas sobre el convenio: una pantalla más de la app del afiliado,
+     pintada con el modelo de diseño de la persona (PLAN_TEMAS.md) por la
+     hoja static/temas/<modelo>-convenio.css. Acá va la estructura; los
+     colores y las letras los pone el modelo. */
   :root {
     --marca-base: {{ marca.color_base if marca else '#152238' }};
     --marca-primario: {{ marca.color_primario if marca else '#1a3d6b' }};
     --marca-acento: {{ marca.color_acento if marca else '#2fa88f' }};
     --marca-apoyo: {{ marca.color_secundario if marca else '#e8b84b' }};
+    /* Copia cruda de los colores del gremio, que el modelo no pisa (igual
+       que en /app), y los derivados legibles de temas.paleta_legible. */
+    --gremio-base: {{ marca.color_base if marca else '#152238' }};
+    --gremio-primario: {{ marca.color_primario if marca else '#1a3d6b' }};
+    --gremio-acento: {{ marca.color_acento if marca else '#2fa88f' }};
+    --gremio-apoyo: {{ marca.color_secundario if marca else '#e8b84b' }};
+    {{ variables_legibles('gremio', marca.color_base if marca else '#152238', marca.color_primario if marca else '#1a3d6b', (marca.color_acento if marca else '#2fa88f') or '#2fa88f', marca.color_secundario if marca else '#e8b84b') }}
+    {%- if marca_plataforma and marca_plataforma.logo %}
+    --logo-colmena-claro: url("/logo-plataforma");
+    {%- endif %}
     --tinta:#152238; --gris:#5b6478; --linea:#e4e7ec; --papel:#f6f7f9;
     --alerta:#c0392b; --verde:#0d7a5f;
+    /* Lo que define el modelo: la tarjeta y el relleno de lo elegido. */
+    --cv-sup: #fff;
+    --cv-sel: var(--marca-base);
+    --cv-sel-txt: #fff;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   body { background:var(--papel); color:var(--tinta); min-height:100vh; }
 
   /* El encabezado es el parcial común (marca.css): acá no se define. */
 
-  .cuerpo { max-width:660px; margin:0 auto; padding:18px 15px 60px; }
-  .intro { font-size:13.5px; color:var(--gris); line-height:1.55; margin-bottom:16px; }
+  .cuerpo { max-width:600px; margin:0 auto; padding:24px 16px 60px; }
+  .cuerpo .titulo-pagina { margin:0 0 8px; }
+  .intro { font-size:14px; color:var(--gris); line-height:1.55; margin:0 0 18px; }
 
   .campo { margin-bottom:12px; }
   .campo label { display:block; font-size:12.5px; color:var(--gris); font-weight:500; margin-bottom:5px; }
@@ -31,18 +52,18 @@
 
   /* display/width explícitos: desde que esta pantalla carga marca.css (por
      el encabezado normalizado), el .btn de ahí es block al 100% de ancho. */
-  .btn { display:inline-block; width:auto;
-         background:var(--marca-acento); color:#fff; border:none; border-radius:9px;
-         padding:12px 20px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; width:auto; min-height:44px; margin-top:12px;
+         background:var(--cv-sel); color:var(--cv-sel-txt); border:none; border-radius:999px;
+         padding:0 24px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
   .btn:disabled { opacity:.5; cursor:default; }
 
-  .sugerencias { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
-  .sug { background:color-mix(in srgb, var(--marca-apoyo) 20%, #fff);
-         border:1px solid color-mix(in srgb, var(--marca-apoyo) 45%, #fff);
-         color:var(--tinta); border-radius:20px; padding:6px 12px; font-size:12.5px;
-         cursor:pointer; font-family:inherit; }
+  .sugerencias { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+  /* Las sugerencias son blancos táctiles: 40 px de alto. */
+  .sug { background:var(--cv-sup); border:1px solid var(--linea);
+         color:var(--tinta); border-radius:999px; min-height:40px; padding:0 14px; font-size:13px;
+         cursor:pointer; font-family:inherit; text-align:left; }
 
-  .respuesta { background:#fff; border:1px solid var(--linea); border-radius:12px;
+  .respuesta { background:var(--cv-sup); border:1px solid var(--linea); border-radius:12px;
                padding:16px 17px; margin-top:18px; }
   .respuesta.vacia { border-style:dashed; }
   .texto { font-size:15px; line-height:1.62; white-space:pre-wrap; }
@@ -62,10 +83,35 @@
           border-top-color:var(--marca-acento); border-radius:50%; animation:g .8s linear infinite; }
   @keyframes g { to { transform:rotate(360deg); } }
 
-  .sin-convenio { background:#fff; border:1px dashed var(--linea); border-radius:12px;
-                  padding:24px 18px; text-align:center; color:var(--gris); font-size:14px; line-height:1.55; }
+  /* El vacío: el mismo patrón que Encuestas en /app -- ícono, qué pasa y
+     una salida útil, no una línea suelta. */
+  .sin-convenio { display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px;
+                  margin-top:18px; padding:32px 22px; border:1px dashed var(--linea); border-radius:14px; }
+  .vacio-ico { display:grid; place-items:center; width:48px; height:48px; margin-bottom:4px; border-radius:50%;
+               background:color-mix(in srgb, var(--marca-acento) 16%, transparent); color:var(--tinta); }
+  .vacio-ico svg { width:22px; height:22px; stroke:currentColor; stroke-width:1.7; fill:none;
+                   stroke-linecap:round; stroke-linejoin:round; }
+  .vacio-t { font-weight:700; font-size:16px; color:var(--tinta); margin:0; }
+  .vacio-x { margin:0; max-width:38ch; font-size:14px; line-height:1.55; color:var(--gris); }
+  .vacio-acc { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px;
+               margin-top:10px; padding:0 20px; border-radius:999px; text-decoration:none; font-weight:600;
+               font-size:14px; background:var(--cv-sel); color:var(--cv-sel-txt); }
+  /* En el teléfono "Volver" queda en la flecha sola (sigue diciendo
+     "Volver" para el lector de pantalla): con el texto, el encabezado no
+     entra y Colm3na queda cortado. */
+  @media (max-width:420px) {
+    .marca-volver { font-size:0 !important; min-width:44px; justify-content:center; }
+    .marca-volver svg { width:22px; height:22px; }
+  }
+  .vacio-acc svg { width:16px; height:16px; stroke:currentColor; stroke-width:1.9; fill:none;
+                   stroke-linecap:round; stroke-linejoin:round; }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño (PLAN_TEMAS.md): su hoja va DESPUÉS de todo lo de
+   arriba. Solo si el archivo existe: el sello sale vacío cuando no está. #}
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-convenio.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+{% endif %}
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
@@ -74,12 +120,23 @@
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}
 
-<div class="cuerpo mesa-cont">
+<main class="cuerpo mesa-cont">
+
+{# Se llega por un enlace (la pantalla no está en el menú): el título dice
+   qué es. #}
+<h1 class="titulo-pagina">Tu convenio</h1>
 
 {% if not convenios %}
   <div class="sin-convenio">
-    Tu sindicato todavía no cargó el convenio acá.<br>
-    Cuando lo cargue, vas a poder hacer consultas en esta pantalla.
+    <span class="vacio-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+    <p class="vacio-t">Todavía no está tu convenio</p>
+    <p class="vacio-x">Tu sindicato todavía no lo cargó acá. Cuando lo cargue, vas a poder
+      hacer consultas en esta pantalla.</p>
+    {% if tiene_tramites %}
+    <a class="vacio-acc" href="/app?tab=tramites">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      Hacé tu consulta como trámite</a>
+    {% endif %}
   </div>
 {% else %}
 
@@ -114,13 +171,13 @@
     <button type="button" class="sug" onclick="usarSugerencia(this)">¿Qué pasa si me jubilo?</button>
   </div>
 
-  <button class="btn" id="btn-preguntar" onclick="preguntar()" style="margin-top:8px;">Preguntar</button>
+  <button type="button" class="btn" id="btn-preguntar" onclick="preguntar()">Preguntar</button>
 
   <div id="salida"></div>
 
 {% endif %}
 
-</div>
+</main>
 
 <script>
 {% if convenios %}

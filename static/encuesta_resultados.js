@@ -13,7 +13,7 @@ let DATOS = null;
 // estado de los botones cada vez era la fuente de todos los desfasajes.
 const FILTRO = { seccional: [], provincia: [], empleador: [], desde: "", hasta: "" };
 const VISTA = {};          // cómo se dibuja cada pregunta: barras | torta | tabla
-let CAL = { mes: null, eligiendo: false };
+let CAL = { mes: null, eligiendo: false, abierto: false, previo: { desde: '', hasta: '' } };
 
 function esc(t) {
   return String(t == null ? '' : t).replace(/[<>&"]/g, c =>
@@ -23,6 +23,18 @@ function esc(t) {
 function css(nombre) {
   return getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
 }
+
+// Los números en castellano de acá: coma decimal ("54,7") y el % con un
+// espacio fino delante ("54,7 %"), como la app ya escribe los importes.
+const FORMATO = { 1: new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 }),
+                  2: new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }) };
+function num(x, decimales = 1) {
+  if (x === null || x === undefined || x === '') return '—';
+  const n = Number(x);
+  return Number.isFinite(n) ? FORMATO[decimales].format(n) : String(x);
+}
+function pct(x) { return x === null || x === undefined ? '—' : num(x) + '\u202f%'; }
+function dif(x) { return (x > 0 ? '+' : '') + num(x); }
 
 function diaCorto(iso) {
   const p = String(iso || '').split('-');
@@ -66,6 +78,7 @@ function limpiarFiltros() {
   ['seccional', 'provincia', 'empleador'].forEach(c => { FILTRO[c] = []; });
   FILTRO.desde = FILTRO.hasta = '';
   CAL.eligiendo = false;
+  CAL.abierto = false;
   cerrarCruce();
   cargar();
 }
@@ -90,6 +103,7 @@ async function cargar() {
 function pintar() {
   const d = DATOS;
   $('enc-titulo').textContent = d.encuesta.titulo;
+  pintarBajada(d);
   pintarFiltros(d);
   pintarDescarga(d);
   pintarIndicadores(d);
@@ -97,6 +111,22 @@ function pintar() {
   pintarUmbral(d);
   pintarPreguntas(d);
   pintarHistorial(d);
+}
+
+// Debajo del título, qué es esta encuesta en una línea: modo, estado y
+// ventana ("Anónima · abierta del 16/10 al 06/11/2026").
+function pintarBajada(d) {
+  const e = d.encuesta, estado = (d.indicadores || {}).estado || '';
+  const modo = e.modo === 'anonima' ? 'Anónima' : e.modo === 'nominal' ? 'Nominal' : '';
+  const corto = iso => fechaLegible(iso).slice(0, 5);
+  let cuando = '';
+  if (e.fecha_desde && e.fecha_hasta) {
+    const verbo = estado === 'cerrada' ? 'cerrada' : estado === 'abierta' ? 'abierta'
+      : estado === 'programada' ? 'programada' : estado;
+    cuando = `${verbo} del ${corto(e.fecha_desde)} al ${fechaLegible(e.fecha_hasta)}`;
+    if (e.cerrada_en) cuando = `cerrada a mano el ${fechaLegible(e.cerrada_en)}`;
+  } else if (estado) cuando = estado;
+  $('enc-bajada').textContent = [modo, cuando].filter(Boolean).join(' · ');
 }
 
 function pintarFiltros(d) {
@@ -133,12 +163,20 @@ function pintarFiltros(d) {
       </div>`;
   });
   // El calendario solo si la encuesta duró más de un día: para una ventana
-  // de un día es un control que no puede filtrar nada.
+  // de un día es un control que no puede filtrar nada. Va plegado en un
+  // botón que dice el rango: abierto, estiraba la caja hasta 400 px.
   const [vIni, vFin] = d.filtros.ventana || ['', ''];
   if (vIni && vFin && vIni !== vFin) {
-    html += `<div class="f-grupo">
-        <span class="f-label">Cuándo respondieron</span>
-        <div class="cal" id="cal"></div>
+    html += `<div class="f-grupo f-cuando">
+        <span class="f-label" id="cal-rotulo">Cuándo respondieron</span>
+        <button type="button" class="cal-boton ${FILTRO.desde ? 'act' : ''}" id="cal-boton"
+                aria-expanded="${CAL.abierto ? 'true' : 'false'}" aria-controls="cal-globo"
+                aria-describedby="cal-rotulo" onclick="alternarCalendario()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+          <span>${textoRango()}</span>
+          <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="cal-globo" id="cal-globo" ${CAL.abierto ? '' : 'hidden'}><div class="cal" id="cal"></div></div>
       </div>`;
   }
   if (!cortes.length) {
@@ -171,10 +209,42 @@ function pintarFiltros(d) {
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
                'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
+function textoRango() {
+  if (!FILTRO.desde) return 'Todo el período';
+  if (CAL.eligiendo) return `Desde el ${fechaLegible(FILTRO.desde)}…`;
+  if (FILTRO.desde === FILTRO.hasta) return `El ${fechaLegible(FILTRO.desde)}`;
+  return `${fechaLegible(FILTRO.desde).slice(0, 5)} → ${fechaLegible(FILTRO.hasta)}`;
+}
+
+function alternarCalendario(abrir) {
+  const globo = $('cal-globo');
+  if (!globo) return;
+  const quiere = abrir === undefined ? globo.hidden : abrir;
+  if (!quiere && CAL.eligiendo) {
+    // Se cerró con un solo día tocado: vuelve el rango de antes, no queda
+    // un filtro a medio armar que la pantalla no consultó.
+    FILTRO.desde = CAL.previo.desde; FILTRO.hasta = CAL.previo.hasta;
+    CAL.eligiendo = false;
+  }
+  CAL.abierto = quiere;
+  globo.hidden = !quiere;
+  $('cal-boton').setAttribute('aria-expanded', quiere ? 'true' : 'false');
+  $('cal-boton').querySelector('span').textContent = textoRango();
+  if (quiere) pintarCalendario(DATOS);
+}
+
+document.addEventListener('click', (ev) => {
+  if (CAL.abierto && !ev.target.closest('.f-cuando')) alternarCalendario(false);
+});
+
 function pintarCalendario(d) {
   const [vIni, vFin] = d.filtros.ventana;
-  const conRespuesta = new Set((d.indicadores.ritmo || []).map(x => x.dia));
-  if (!CAL.mes) CAL.mes = (FILTRO.desde || vFin).slice(0, 7);
+  const ritmo = d.indicadores.ritmo || [];
+  const conRespuesta = new Set(ritmo.map(x => x.dia));
+  // Abre en el mes de la última respuesta, no en el del cierre: una
+  // encuesta abierta hasta noviembre mostraba un mes vacío.
+  const ultima = ritmo.length ? ritmo[ritmo.length - 1].dia : vFin;
+  if (!CAL.mes) CAL.mes = (FILTRO.desde || ultima || vFin).slice(0, 7);
   const [anio, mes] = CAL.mes.split('-').map(Number);
   const primero = new Date(anio, mes - 1, 1);
   const arranque = (primero.getDay() + 6) % 7;           // lunes primero
@@ -198,9 +268,9 @@ function pintarCalendario(d) {
   const siguiente = `${anio}-${String(mes).padStart(2, '0')}-${dias}` < vFin;
   $('cal').innerHTML = `
     <div class="cal-nav">
-      <button type="button" onclick="moverMes(-1)" ${anterior ? '' : 'disabled'}>‹</button>
+      <button type="button" onclick="moverMes(-1)" ${anterior ? '' : 'disabled'} aria-label="Mes anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <b>${MESES[mes - 1]} ${anio}</b>
-      <button type="button" onclick="moverMes(1)" ${siguiente ? '' : 'disabled'}>›</button>
+      <button type="button" onclick="moverMes(1)" ${siguiente ? '' : 'disabled'} aria-label="Mes siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </div>
     <div class="cal-grid">
       ${['lu', 'ma', 'mi', 'ju', 'vi', 'sá', 'do'].map(x => `<span class="cal-dow">${x}</span>`).join('')}
@@ -221,12 +291,15 @@ function moverMes(paso) {
 
 function clicDia(iso) {
   if (!CAL.eligiendo) {
+    CAL.previo = { desde: FILTRO.desde, hasta: FILTRO.hasta };
     FILTRO.desde = FILTRO.hasta = iso;
     CAL.eligiendo = true;
     pintarCalendario(DATOS);
+    $('cal-boton').querySelector('span').textContent = textoRango();
     return;                       // todavía no consulto: falta el segundo clic
   }
   CAL.eligiendo = false;
+  CAL.abierto = false;            // con el rango armado, el globo se cierra
   if (iso < FILTRO.desde) { FILTRO.hasta = FILTRO.desde; FILTRO.desde = iso; }
   else FILTRO.hasta = iso;
   cerrarCruce();
@@ -262,20 +335,20 @@ function pintarDescarga(d) {
 function pintarIndicadores(d) {
   const i = d.indicadores;
   const p = i.participacion;
-  $('k-part').textContent = `${p.respondieron} de ${p.padron}`;
+  $('k-part').textContent = `${num(p.respondieron)} de ${num(p.padron)}`;
   $('k-part-barra').style.width = Math.min(p.porcentaje, 100) + '%';
-  $('k-part-pie').textContent = `${p.porcentaje}% del padrón respondió`;
+  $('k-part-pie').textContent = `${pct(p.porcentaje)} del padrón respondió`;
 
   const a = i.avisos;
-  $('k-leidos').textContent = a.enviados ? `${a.leidos} de ${a.enviados}` : 'Sin avisos';
+  $('k-leidos').textContent = a.enviados ? `${num(a.leidos)} de ${num(a.enviados)}` : 'Sin avisos';
   $('k-leidos-barra').style.width = Math.min(a.porcentaje, 100) + '%';
   $('k-leidos-pie').textContent = a.enviados
-    ? `${a.porcentaje}% leyó · ${a.cantidad} envío${a.cantidad === 1 ? '' : 's'}`
+    ? `${pct(a.porcentaje)} leyó · ${a.cantidad} envío${a.cantidad === 1 ? '' : 's'}`
     : 'Todavía no le avisaste a nadie';
 
   const total = (i.ritmo || []).reduce((s, x) => s + x.cantidad, 0);
   const ultimo = (i.ritmo || [])[i.ritmo.length - 1];
-  $('k-ritmo').textContent = total || '—';
+  $('k-ritmo').textContent = total ? num(total) : '—';
   $('k-ritmo-pie').textContent = ultimo
     ? `respuestas · última el ${fechaLegible(ultimo.dia)}`
     : 'sin respuestas todavía';
@@ -295,13 +368,13 @@ function pintarIndicadores(d) {
     nota.textContent = 'Nadie recibió el aviso todavía: la participación de arriba no mide'
       + ' interés, mide que la encuesta no se comunicó.';
   } else if (a.porcentaje >= 60 && p.porcentaje < 30) {
-    nota.textContent = `Leyeron el ${a.porcentaje}% y respondió el ${p.porcentaje}%: el aviso`
+    nota.textContent = `Leyeron el ${pct(a.porcentaje)} y respondió el ${pct(p.porcentaje)}: el aviso`
       + ' llegó y no engancha. Un recordatorio más no lo arregla — lo que falla es la encuesta.';
   } else if (a.porcentaje < 40) {
-    nota.textContent = `Solo leyó el aviso el ${a.porcentaje}%: el problema es el canal, no la`
+    nota.textContent = `Solo leyó el aviso el ${pct(a.porcentaje)}: el problema es el canal, no la`
       + ' encuesta. Un recordatorio a los que faltan sí mueve la aguja.';
   } else {
-    nota.textContent = `Leyeron el ${a.porcentaje}% y respondió el ${p.porcentaje}% del padrón.`;
+    nota.textContent = `Leyeron el ${pct(a.porcentaje)} y respondió el ${pct(p.porcentaje)} del padrón.`;
   }
 }
 
@@ -344,7 +417,13 @@ function pintarMapa(d) {
 
   if (window.L && lista.length) {
     caja.hidden = false;
-    if (!MAPA) MAPA = MapaMT.crear('mapa-seccionales', { rueda: false });
+    if (!MAPA) {
+      MAPA = MapaMT.crear('mapa-seccionales', { rueda: false });
+      // El + y el − abajo a la derecha: arriba a la izquierda tapaban una
+      // burbuja (en el teléfono, la de Córdoba).
+      if (MAPA && MAPA.mapa.zoomControl) MAPA.mapa.zoomControl.setPosition('bottomright');
+      if (MAPA) MAPA.mapa.on('zoomend', () => separarBurbujas());
+    }
     if (MAPA) {
       if (CAPA_SECC) MAPA.mapa.removeLayer(CAPA_SECC);
       CAPA_SECC = L.layerGroup().addTo(MAPA.mapa);
@@ -369,6 +448,8 @@ function pintarMapa(d) {
         if (!m.impuesto) {
           burbuja.on('click', () => { POPUP_SECC = sec.id; alternar('seccional', String(sec.id)); });
         }
+        burbuja._lugar = L.latLng(sec.lat, sec.lon);
+        burbuja._diametro = MapaMT.diametroBurbuja(sec.respondieron, maxResp);
         burbuja.addTo(CAPA_SECC);
         if (POPUP_SECC === sec.id) burbuja.openPopup();
         puntos.push([sec.lat, sec.lon]);
@@ -376,15 +457,21 @@ function pintarMapa(d) {
       MAPA.refrescar();
       // Se encuadra una sola vez: reencuadrar en cada filtro le movería el
       // mapa abajo de los dedos a quien está mirando una zona.
-      if (!MAPA._encuadrado && puntos.length) { MAPA.encuadrar(puntos); MAPA._encuadrado = true; }
+      if (!MAPA._encuadrado && puntos.length) {
+        // 40 px de aire alrededor de las burbujas: con 30 la más grande
+        // quedaba cortada contra el borde.
+        MAPA.mapa.fitBounds(L.latLngBounds(puntos), { padding: [40, 40], maxZoom: 15 });
+        MAPA._encuadrado = true;
+      }
+      separarBurbujas();
     }
   } else {
     caja.hidden = true;
   }
 
   $('mapa-leyenda').innerHTML = lista.length
-    ? '<span>0%</span>' + MapaMT.ESCALA.map(c => `<i style="background:${c}"></i>`).join('')
-      + '<span>100%</span><span style="margin-left:10px;">el tamaño es cuánta gente respondió</span>'
+    ? '<span>0\u202f%</span>' + MapaMT.ESCALA.map(c => `<i style="background:${c}"></i>`).join('')
+      + '<span>100\u202f%</span><span style="margin-left:10px;">el tamaño es cuánta gente respondió</span>'
     : '';
   pintarSinUbicar(m);
 
@@ -400,14 +487,44 @@ function pintarMapa(d) {
   $('mapa-nota').textContent = partes.join(' ');
 }
 
+/* Dos seccionales vecinas (las del conurbano) caen casi en el mismo punto y
+   una burbuja tapa a la otra. Se corren apenas, en píxeles y solo en la
+   pantalla, hasta que se toquen sin pisarse; el dato de la seccional no se
+   mueve. Se recalcula al hacer zoom, porque lo que se pisa depende de la
+   escala. */
+function separarBurbujas() {
+  if (!MAPA || !CAPA_SECC) return;
+  const mapa = MAPA.mapa;
+  const marcas = CAPA_SECC.getLayers().filter(m => m._lugar);
+  const pos = marcas.map(m => mapa.latLngToLayerPoint(m._lugar));
+  for (let vuelta = 0; vuelta < 6; vuelta++) {
+    let movio = false;
+    for (let i = 0; i < marcas.length; i++) {
+      for (let j = i + 1; j < marcas.length; j++) {
+        const minimo = (marcas[i]._diametro + marcas[j]._diametro) / 2 + 2;
+        let dx = pos[j].x - pos[i].x, dy = pos[j].y - pos[i].y;
+        let d = Math.hypot(dx, dy);
+        if (d >= minimo) continue;
+        if (d < .5) { dx = Math.cos(j); dy = Math.sin(j); d = 1; }
+        const empuje = (minimo - d) / 2;
+        pos[i] = pos[i].subtract(L.point(dx / d * empuje, dy / d * empuje));
+        pos[j] = pos[j].add(L.point(dx / d * empuje, dy / d * empuje));
+        movio = true;
+      }
+    }
+    if (!movio) break;
+  }
+  marcas.forEach((m, i) => m.setLatLng(mapa.layerPointToLatLng(pos[i])));
+}
+
 function popupSeccional(sec) {
   const fila = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
   return `<div class="mapa-pop"><b>${esc(sec.nombre)}</b>` +
-    (sec.direccion_texto ? `<div style="font-size:11.5px;color:#5b6478;">${esc(sec.direccion_texto)}</div>` : '') +
+    (sec.direccion_texto ? `<div class="mapa-pop-dir">${esc(sec.direccion_texto)}</div>` : '') +
     '<table>' +
     fila('Respondieron', sec.respondieron) +
     fila('Padrón de la encuesta', sec.convocados) +
-    fila('Participación', (sec.porcentaje === null ? '—' : sec.porcentaje + '%')) +
+    fila('Participación', pct(sec.porcentaje)) +
     '</table></div>';
 }
 
@@ -517,11 +634,11 @@ function cuerpoDe(p) {
   if (p.tipo_dato === 'escala') {
     const e = p.escala;
     const resumen = `<div class="resumen-escala">
-        <div class="destaca"><b>${e.promedio === null ? '—' : e.promedio}</b>promedio</div>
-        <div><b>${e.mediana === null ? '—' : e.mediana}</b>mediana</div>
-        <div><b>${e.altos.porcentaje}%</b>en los más altos${e.etiqueta_max
+        <div class="destaca"><b>${num(e.promedio, 2)}</b>promedio</div>
+        <div><b>${num(e.mediana, 2)}</b>mediana</div>
+        <div><b>${pct(e.altos.porcentaje)}</b>en los más altos${e.etiqueta_max
           ? ` (${esc(e.etiqueta_max)})` : ''}</div>
-        <div><b>${e.bajos.porcentaje}%</b>en los más bajos${e.etiqueta_min
+        <div><b>${pct(e.bajos.porcentaje)}</b>en los más bajos${e.etiqueta_min
           ? ` (${esc(e.etiqueta_min)})` : ''}</div>
       </div>`;
     if (vista === 'tabla') return resumen + tablaDe(p, e.distribucion.map(x =>
@@ -532,9 +649,9 @@ function cuerpoDe(p) {
   if (p.tipo_dato === 'numero') {
     const n = p.numero;
     return `<div class="resumen-escala">
-      <div class="destaca"><b>${n.promedio === null ? '—' : n.promedio}</b>promedio</div>
-      <div><b>${n.minimo === null ? '—' : n.minimo}</b>mínimo</div>
-      <div><b>${n.maximo === null ? '—' : n.maximo}</b>máximo</div></div>`;
+      <div class="destaca"><b>${num(n.promedio, 2)}</b>promedio</div>
+      <div><b>${num(n.minimo, 2)}</b>mínimo</div>
+      <div><b>${num(n.maximo, 2)}</b>máximo</div></div>`;
   }
   if (p.tipo_dato === 'texto') {
     if (!p.textos.length) return '<div class="sub">Sin respuestas.</div>';
@@ -562,9 +679,9 @@ function tablaDe(p, filas) {
     <tr><th>Respuesta</th><th class="num">Cantidad</th><th class="num">%</th></tr>
     ${filas.map(x => `<tr class="clicable" onclick="abrirCruce(${p.id}, '${esc(x.clave)}')">
         <td>${esc(x.texto)}</td>
-        <td class="num">${x.cantidad}</td>
-        <td class="num">${x.porcentaje === null
-          ? Math.round(x.cantidad * 1000 / total) / 10 : x.porcentaje}%</td>
+        <td class="num">${num(x.cantidad)}</td>
+        <td class="num">${pct(x.porcentaje === null
+          ? Math.round(x.cantidad * 1000 / total) / 10 : x.porcentaje)}</td>
       </tr>`).join('')}
   </table>`;
 }
@@ -574,7 +691,7 @@ function tablaRanking(p) {
     <tr><th>Opción</th><th class="num">Pos. promedio</th><th class="num">1.ª</th></tr>
     ${p.ranking.map(x => `<tr class="clicable" onclick="abrirCruce(${p.id}, '${x.indice}')">
         <td>${esc(x.texto)}</td>
-        <td class="num">${x.promedio === null ? '—' : x.promedio}</td>
+        <td class="num">${num(x.promedio, 2)}</td>
         <td class="num">${x.primeras}</td>
       </tr>`).join('')}
   </table>`;
@@ -587,14 +704,24 @@ function alturaDe(p) {
 
 /* ---------- Chart.js ---------- */
 
+// Los colores de los gráficos los pone el modelo de diseño (--gr-*): con la
+// paleta de Colm3na son los del modelo; con la del sindicato, su marca.
 function paleta() {
   return {
-    apoyo: css('--marca-apoyo') || '#2fa88f',
-    acento: css('--marca-acento') || '#e8a33d',
-    primario: css('--marca-primario') || '#1a3d6b',
+    apoyo: css('--gr-1') || css('--marca-apoyo') || '#2fa88f',
+    acento: css('--gr-2') || css('--marca-acento') || '#e8a33d',
+    primario: css('--gr-3') || css('--marca-primario') || '#1a3d6b',
     linea: css('--linea') || '#e4e7ec',
-    gris: css('--gris') || '#5b6478',
+    gris: css('--gr-texto') || css('--gris') || '#5b6478',
   };
+}
+
+// Una sola vez: los números de los ejes con coma decimal y las letras del
+// modelo en todos los gráficos.
+if (window.Chart) {
+  Chart.defaults.locale = 'es-AR';
+  Chart.defaults.font.family = css('--gr-fuente') || Chart.defaults.font.family;
+  Chart.defaults.color = css('--gr-texto') || css('--gris') || Chart.defaults.color;
 }
 
 // Serie de colores para la torta: la marca primero, después variaciones
@@ -647,7 +774,7 @@ function dibujar(p) {
           legend: { display: false },
           tooltip: { callbacks: { label: (x) => {
             const f = filas[x.dataIndex];
-            return `posición promedio ${f.promedio} de ${n} · ${f.primeras} la pusieron primera`;
+            return `posición promedio ${num(f.promedio, 2)} de ${n} · ${f.primeras} la pusieron primera`;
           } } },
         },
         scales: {
@@ -682,7 +809,7 @@ function dibujar(p) {
         plugins: {
           legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } },
           tooltip: { callbacks: { label: (x) =>
-            ` ${ops[x.dataIndex].cantidad} · ${ops[x.dataIndex].porcentaje}%` } },
+            ` ${num(ops[x.dataIndex].cantidad)} · ${pct(ops[x.dataIndex].porcentaje)}` } },
         },
       },
     });
@@ -716,7 +843,7 @@ function opciones({ horizontal, filas, c, pregunta, claves }) {
         const fila = filas && filas[x.dataIndex];
         const valor = x.parsed[horizontal ? 'x' : 'y'];
         return fila && fila.porcentaje !== undefined && fila.porcentaje !== null
-          ? ` ${valor} · ${fila.porcentaje}%` : ` ${valor}`;
+          ? ` ${num(valor)} · ${pct(fila.porcentaje)}` : ` ${num(valor)}`;
       } } },
     },
     scales: {
@@ -737,7 +864,7 @@ function dibujarRitmo(serie) {
       labels: serie.map(x => diaCorto(x.dia)),
       datasets: [{
         data: serie.map(x => x.cantidad),
-        borderColor: css('--marca-primario') || '#1a3d6b',
+        borderColor: css('--gr-3') || css('--marca-primario') || '#1a3d6b',
         backgroundColor: 'transparent', tension: .3, pointRadius: serie.length > 20 ? 0 : 2,
         borderWidth: 2,
       }],
@@ -784,7 +911,7 @@ function pintarCruce(d) {
   $('cr-opcion').textContent = d.opcion;
   $('cr-cuantos').textContent = d.oculto
     ? `${d.elegidos} de ${d.total}`
-    : `${d.elegidos} de ${d.total} respuestas · ${d.porcentaje}%`;
+    : `${d.elegidos} de ${d.total} respuestas · ${pct(d.porcentaje)}`;
 
   if (d.oculto) {
     $('cr-cuerpo').innerHTML = `<div class="cr-nota">
@@ -803,7 +930,7 @@ function pintarCruce(d) {
     if (bloque.filas.length < 2) return;
     html += `<h4>Por ${esc(nombre.toLowerCase())}</h4>
       <div class="sub">Qué porcentaje eligió «${esc(d.opcion)}» en cada uno.
-        El general es ${bloque.general}%.</div>`;
+        El general es ${pct(bloque.general)}.</div>`;
     let avisoChicos = false;
     bloque.filas.forEach(f => {
       // Un grupo de una o dos personas se muestra, pero sin el chip de
@@ -814,9 +941,9 @@ function pintarCruce(d) {
       if (f.poco) avisoChicos = true;
       html += `<div class="cr-fila ${f.poco ? 'flojo' : ''}">
           <span class="nom">${esc(f.etiqueta)}<small>${f.cantidad} de ${f.base} respuestas</small></span>
-          <span class="pct">${f.dentro}%</span>
+          <span class="pct">${pct(f.dentro)}</span>
           <span class="cr-dif ${signo}">${f.poco ? 'pocas'
-            : (f.diferencia > 0 ? '+' : '') + f.diferencia}</span>
+            : dif(f.diferencia)}</span>
           <span class="cr-barra"><i style="width:${Math.min(f.dentro, 100)}%"></i></span>
         </div>`;
     });
@@ -839,12 +966,12 @@ function pintarCruce(d) {
     d.preguntas.forEach(p => {
       html += `<div style="margin-bottom:12px;"><b style="font-size:13px;">${esc(p.etiqueta)}</b>`;
       if (p.tipo_dato === 'escala') {
-        html += `<div class="sub">promedio ${p.promedio === null ? '—' : p.promedio}</div>`;
+        html += `<div class="sub">promedio ${num(p.promedio, 2)}</div>`;
       } else {
         p.opciones.filter(o => o.cantidad).slice(0, 4).forEach(o => {
           html += `<div class="cr-fila">
             <span class="nom">${esc(o.texto)}</span>
-            <span class="pct">${o.porcentaje}%</span><span></span>
+            <span class="pct">${pct(o.porcentaje)}</span><span></span>
             <span class="cr-barra"><i style="width:${Math.min(o.porcentaje, 100)}%"></i></span>
           </div>`;
         });
@@ -912,7 +1039,11 @@ async function cargarEvolucion() {
   } catch (e) { /* la evolución es un extra: si falla, el dashboard sigue */ }
 }
 
-const COLORES_EV = ['--marca-apoyo', '--marca-acento', '--marca-primario', '--gris'];
+// Cuatro colores del modelo; de la quinta línea en adelante el color se
+// repite PUNTEADO y con otra forma de punto: con cinco opciones la quinta
+// salía igual que la primera y no se sabía cuál era cuál.
+const COLORES_EV = ['--gr-1', '--gr-2', '--gr-3', '--gr-4'];
+const PUNTOS_EV = ['circle', 'rect', 'triangle', 'rectRot'];
 
 function dibujarEvolucion(i, p, tomas) {
   const cv = document.getElementById('ev-' + i);
@@ -925,7 +1056,10 @@ function dibujarEvolucion(i, p, tomas) {
         label: l.nombre,
         data: l.valores,
         borderColor: css(COLORES_EV[n % COLORES_EV.length]) || '#2fa88f',
-        backgroundColor: 'transparent', tension: .25, borderWidth: 2, pointRadius: 3,
+        pointBackgroundColor: css(COLORES_EV[n % COLORES_EV.length]) || '#2fa88f',
+        borderDash: n >= COLORES_EV.length ? [6, 4] : [],
+        pointStyle: PUNTOS_EV[Math.floor(n / COLORES_EV.length) % PUNTOS_EV.length],
+        backgroundColor: 'transparent', tension: .25, borderWidth: 2, pointRadius: 3.5,
         // Una toma por debajo del umbral no aporta punto; la línea sigue de
         // largo en vez de cortarse y hacer pensar que ahí no hubo encuesta.
         spanGaps: true,
@@ -934,9 +1068,13 @@ function dibujarEvolucion(i, p, tomas) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
+        // La leyenda dibuja la línea (llena o punteada), no un cuadradito.
         legend: { display: p.lineas.length > 1, position: 'bottom',
-                  labels: { boxWidth: 10, font: { size: 11 } } },
-        tooltip: { callbacks: { title: (c) => tomas[c[0].dataIndex].titulo } },
+                  labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 26, font: { size: 12 } } },
+        tooltip: { callbacks: {
+          title: (c) => tomas[c[0].dataIndex].titulo,
+          label: (x) => ` ${x.dataset.label}: ${p.tipo_dato === 'escala' || p.tipo_dato === 'ranking'
+            ? num(x.parsed.y, 2) : pct(x.parsed.y)}` } },
       },
       scales: {
         x: { grid: { display: false } },
