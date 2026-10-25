@@ -8,8 +8,13 @@
   var SEL = '.flota-sal, .flota-sesion, .pt-sesion, .pt-flota';
   // Solo las que flotan: en el teléfono la de la app va quieta en la barra
   // del nombre (ver trabajador.html).
+  // Tampoco la que va anclada al pie del riel del panel (--flota-quieta):
+  // ahí no tapa nada.
   var pastillas = Array.prototype.slice.call(document.querySelectorAll(SEL))
-    .filter(function (p) { return getComputedStyle(p).position === 'fixed'; });
+    .filter(function (p) {
+      var c = getComputedStyle(p);
+      return c.position === 'fixed' && c.getPropertyValue('--flota-quieta').trim() !== '1';
+    });
   if (!pastillas.length) return;
   var quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   pastillas.forEach(function (p) {

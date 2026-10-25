@@ -125,6 +125,13 @@
 
   /* Salir, flotando abajo con su rótulo (sin Inicio: ya estás en el inicio). */
   .pt-sesion { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 40; }
+  /* Auditoría G2-04: en el teléfono flotaba encima de las novedades. Va
+     quieta arriba, debajo del saludo, como en /app; en pantallas anchas se
+     corre afuera de la columna cuando hay lugar. */
+  @media (max-width: 760px) {
+    .pt-sesion { position: static; display: flex; justify-content: flex-end; padding: 10px 15px 0; }
+  }
+  @media (min-width: 1600px) { .pt-sesion { right: max(16px, calc(50% - 790px)); } }
   .pt-salir { display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 17px 0 13px;
     border-radius: 99px; background: var(--marca-base); color: var(--sobre-base); text-decoration: none;
     font-size: 13.5px; font-weight: 650; letter-spacing: .02em;

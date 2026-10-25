@@ -8822,3 +8822,30 @@ donde se había perdido; (3) Apariencia muestra el bloque SIEMPRE, con un
 sello Prendido / Apagado y, apagado, un aviso de que los afiliados no lo ven
 y lo prende Colm3na, con los controles quietos. Regla de SDN: un módulo que
 no aparece no se puede adivinar.
+
+## Auditoría de diseño y plan de mejoras (2026-10-24)
+
+Ocho revisores (agentes) miraron las 61 pantallas en escritorio y teléfono,
+en los dos modelos, contra Impeccable y las reglas de la casa: 228 hallazgos
+en un informe interactivo (https://claude.ai/artifact/3AjvDVA5Xe3oZHMCMiNiP1)
+donde SDN decidió cada uno (110 aceptados, 18 sin cambios, 16 con otro
+cambio). El método quedó escrito para repetirlo en "Método de auditoría de
+diseño con revisores" (https://claude.ai/artifact/V2phdzEfFUjZ6cQn2qHYXj).
+Orden acordado: migrar primero (empresa, plataforma, las pantallas que
+quedaron viejas y el Panel Sindical v2, que reemplaza a la v1) y arreglar
+después.
+
+**Bloque 1, componentes compartidos** (Trabajador 0.52.02, Admin 0.70.03,
+Plataforma 0.56.03): en el panel, Inicio/Salir va al pie del riel lateral en
+escritorio y deja de tapar la columna de acciones (`--flota-quieta`, que
+`flota.js` respeta); en la portada del afiliado, Salir va quieto arriba en el
+teléfono; las tablas del teléfono llevan una sombra en el borde que avisa que
+la fila sigue; las explicaciones del panel a 72 caracteres; un solo estilo de
+campo en Laguna (blanco con borde de 3:1); «Acerca de» legible y al pie; el
+segundo nivel de pestañas (Empleadores > Trámites) como pestañas de texto con
+subrayado. En los ingresos: el `body` dejaba sin scroll el registro largo
+(`overflow:hidden`, ahora `overflow-x`, y `align-items: safe center`), las
+pestañas y «Olvidé mi clave» a 44 px, la banda tipo pasaporte con
+`aria-hidden`, «Tu CUIL» en el ingreso del panel y la recuperación con sus
+tres pasos y la salida para quien no tiene mail en el sindicato. Tests:
+`test_componentes_compartidos.py`, un test por hallazgo.

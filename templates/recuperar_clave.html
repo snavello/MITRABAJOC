@@ -12,6 +12,7 @@
 {% block mrz %}RECUPERAR{% endblock %}
 
 {% block cuerpo %}
+    <div class="reg-pasos" id="pasos" aria-label="Paso 1 de 3"><span class="on">1</span> · <span>2</span> · <span>3</span></div>
     <h1>Recuperar mi clave</h1>
 
     <div class="error" id="error" hidden></div>
@@ -23,7 +24,8 @@
       <input name="{{ campo }}" inputmode="numeric" placeholder="{{ '30123456781' if rol == 'empleador' else '20123456786' }}" required>
       {% include "_captcha.html" %}
       <button class="enviar" type="submit">Mandarme el código</button>
-      <div class="ayuda"><a href="{{ login }}">Volver a ingresar</a></div>
+      <div class="ayuda">¿Tu sindicato no tiene tu mail? Pedile que te dé una clave temporal desde su panel.</div>
+      <div class="ayuda"><a class="volver" href="{{ login }}">Volver a ingresar</a></div>
     </form>
 
     <form class="paso" id="paso-2" autocomplete="off">
@@ -53,6 +55,9 @@
 
   function ir(n) {
     [1, 2, 3].forEach(function (i) { $('paso-' + i).classList.toggle('activo', i === n); });
+    var pasos = $('pasos');
+    pasos.setAttribute('aria-label', 'Paso ' + n + ' de 3');
+    Array.prototype.forEach.call(pasos.querySelectorAll('span'), function (s, i) { s.classList.toggle('on', i === n - 1); });
     if (n === 2) $('codigo').focus();
   }
   function error(txt, codigo) {

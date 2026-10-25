@@ -427,3 +427,7 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
 @media (min-width: 1040px) and (prefers-reduced-motion: reduce) {
   html[data-tema="laguna"] .fila-hola > div, html[data-tema="laguna"] .circulo-acento { animation: none; }
 }
+
+/* Auditoría G4-30: lugar al pie para la pastilla Inicio/Salir, así al
+   llegar al final no tapa la última fila de accesos. */
+html[data-tema="laguna"] .pad.pt-accesos { padding-bottom: 96px; }

@@ -209,6 +209,15 @@ html[data-tema="noticiero"] img.marca-colmena[src="/logo-plataforma-oscuro"] {
     max-width: 1280px; margin: 0 0 0 var(--nt-riel); padding: 30px 40px 110px;
   }
   html[data-tema="noticiero"] .acerca-pie { margin-left: var(--nt-riel); }
+  /* Auditoría G4-38: «Acerca de» al pie aunque la sección sea corta. */
+  html[data-tema="noticiero"] .wrap { min-height: calc(100vh - var(--nt-top) - 44px); }
+  /* Inicio + Salir al pie del riel (auditoría G4-30): flotando a la derecha
+     tapaban la columna de acciones de las tablas. Quieta: flota.js no la
+     esconde al bajar. */
+  html[data-tema="noticiero"] .flota-sesion {
+    --flota-quieta: 1; left: 10px; right: auto; bottom: 14px; width: calc(var(--nt-riel) - 20px); justify-content: center;
+  }
+  html[data-tema="noticiero"] .flota-sesion :is(.btn-home, .btn-cerrar) { flex: 1 1 0; justify-content: center; padding: 0 8px; }
 }
 /* El número de la sección: un contador, no un texto en la plantilla. */
 html[data-tema="noticiero"] .tab-btn { counter-increment: nt-sec; }
@@ -283,6 +292,9 @@ html[data-tema="noticiero"] h2:not(.titulo-pagina) {
 html[data-tema="noticiero"] h2:not(.titulo-pagina)::after { background: var(--nt-linea-2); }
 html[data-tema="noticiero"] .muted { color: var(--nt-tinta-3); font-size: 13.5px; line-height: 1.55; }
 html[data-tema="noticiero"] .panel > p.muted { color: var(--nt-tinta-2); max-width: 820px; }
+/* Auditoría G4-34: las explicaciones, a un largo de línea que se lee (72 caracteres). */
+html[data-tema="noticiero"] .wrap :is(.panel, .subpanel, .tramite-subpanel, .emp-subpanel, .emptram-subpanel, .enc-subpanel, .au-subpanel) > p.muted,
+html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + p { max-width: 72ch; }
 html[data-tema="noticiero"] b,
 html[data-tema="noticiero"] strong { color: inherit; }
 html[data-tema="noticiero"] .card h3,
@@ -474,7 +486,9 @@ html[data-tema="noticiero"] .wrap th {
   text-transform: uppercase; color: var(--nt-tinta-2); padding: 9px 8px;
   border-bottom: 1.5px solid var(--nt-tinta); white-space: nowrap; vertical-align: bottom;
 }
-html[data-tema="noticiero"] .wrap td { padding: 11px 8px; border-bottom: 1px solid var(--nt-linea); color: var(--nt-tinta-1); vertical-align: top; }
+html[data-tema="noticiero"] .wrap td { padding: 11px 8px; border-bottom: 1px solid var(--nt-linea); color: var(--nt-tinta-1); vertical-align: middle; }
+/* Auditoría G4-37: los botones chicos sin margen vertical, así el borde de la fila no hace escalón. */
+html[data-tema="noticiero"] .wrap tr:not(.fila-trabajador) > td > :is(.mini, button, form) { margin-top: 0; margin-bottom: 0; }
 html[data-tema="noticiero"] .wrap tr:last-child td { border-bottom: 1px solid var(--nt-linea); }
 html[data-tema="noticiero"] .wrap tbody tr { transition: background-color var(--mov-rapido, 180ms) var(--nt-curva); }
 html[data-tema="noticiero"] .wrap tbody tr:nth-child(even) > td,
@@ -836,6 +850,9 @@ html[data-tema="noticiero"] .acerca-pie button {
   /* Un listado ancho se desliza solo, nunca la página entera. */
   html[data-tema="noticiero"] .wrap :is(.panel, .subpanel, .tramite-subpanel, .emp-subpanel, .emptram-subpanel, .enc-subpanel, .au-subpanel) > table {
     display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch;
+    /* Auditoría G4-31: una sombra en el borde derecho avisa que la fila
+       sigue (el veredicto y las acciones quedan a la derecha). */
+    box-shadow: inset -14px 0 12px -12px color-mix(in srgb, var(--nt-tinta) 45%, transparent);
   }
 }
 
@@ -899,4 +916,20 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
   html[data-tema="noticiero"] .marca-barra .marca-nombre { font-size: 25px; white-space: normal;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
     border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
+}
+
+/* Auditoría G6-05: el segundo nivel de pestañas (Ver trámites / Crear o
+   editar formularios, dentro de Empleadores > Trámites) no puede verse
+   igual que el primero. Pestañas de texto con subrayado, sin pastilla. */
+html[data-tema="noticiero"] .subtabs:has(> .emptram-subtab) {
+  display: flex; gap: 22px; padding: 0; margin: 6px 0 16px; border-radius: 0; background: transparent;
+  box-shadow: inset 0 -1px 0 var(--nt-linea);
+}
+html[data-tema="noticiero"] .emptram-subtab {
+  height: 36px; padding: 0 2px; border-radius: 0; background: transparent; box-shadow: none;
+  color: var(--nt-tinta-2); font: 600 13.5px/1 var(--nt-f-txt); letter-spacing: 0; text-transform: none;
+}
+html[data-tema="noticiero"] .emptram-subtab:hover { color: var(--nt-tinta); background: transparent; box-shadow: none; }
+html[data-tema="noticiero"] .emptram-subtab.activa {
+  background: transparent; color: var(--nt-tinta); font-weight: 700; box-shadow: inset 0 -2px 0 var(--nt-indigo);
 }
