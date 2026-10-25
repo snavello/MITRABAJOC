@@ -1289,7 +1289,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     portada del afiliado sin diferencias ni faltantes, recibo con menos peso,
     la última noticia como nota de tapa, accesos y tira de /app en el orden
     acordado, Inicio fuera de las portadas y Salir flotando con rótulo junto a
-    Inicio, importes en formato argentino (`peso()` de /app), y el panel con
+    Inicio (en la portada del afiliado Salir va arriba y quieto, no flota: SDN 2026-10-25), importes en formato argentino (`peso()` de /app), y el panel con
     **riel lateral** (la misma `nav.nav-strip`, solo CSS). Tipografías nuevas
     vendoreadas: Manrope, Anton y Archivo (`static/fonts/licencias/`). Tests
     `test_tema_laguna_*.py`. **Modelo Noticiero en las cuatro pantallas
