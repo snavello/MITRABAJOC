@@ -369,6 +369,7 @@
    encuesta NO es el nombre de la pantalla (es qué encuesta estás mirando):
    va al cuerpo, con el mismo id que actualiza encuesta_resultados.js. #}
 {% set enc_volver = '/admin#encuestas' %}
+{% set enc_fondo_claro = True %}
 {% include "_encabezado.html" %}
 
 <main class="mesa-cont" data-hoy="{{ hoy }}">
@@ -436,7 +437,7 @@
         <div class="mapa-leyenda" id="mapa-leyenda"></div>
       </div>
       <div class="mapa-panel" id="mapa-seccionales"
-           data-logo="{{ ('/logo/' ~ marca.id ~ '?v=' ~ marca.logo_v) if marca.logo else '' }}"></div>
+           data-logo="{{ ('/logo/' ~ marca.id ~ '?tono=oscuro&v=' ~ marca.logo_v) if marca.logo else '' }}"></div>
       <div class="mapa-sin-ubicar" id="mapa-sin-ubicar"></div>
       <div class="f-nota" id="mapa-nota" style="margin-top:10px;"></div>
     </div>

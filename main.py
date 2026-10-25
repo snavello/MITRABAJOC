@@ -558,15 +558,26 @@ async def readyz():
 
 
 @app.get("/logo/{sindicato_id}")
-def servir_logo(sindicato_id: int):
-    """Sirve el logo de un sindicato guardado en la base (Opción B)."""
+def servir_logo(sindicato_id: int, tono: str = ""):
+    """Sirve el logo de un sindicato guardado en la base (Opción B).
+
+    `?tono=oscuro` lo devuelve como silueta del color más oscuro de la marca
+    (para fondos claros: burbujas del mapa, encabezados claros) y
+    `?tono=claro` como silueta blanca. Se derivan del mismo archivo, sin
+    guardar nada más; si no se puede sacar la silueta sale el logo original."""
     with db.get_session() as s:
         sind = s.get(Sindicato, sindicato_id)
         if not sind or not sind.logo_datos:
             raise HTTPException(404, "Sin logo")
         # Sin el margen vacío que traiga el archivo (logos.py): si no, un logo
         # con mucho aire se ve diminuto en su caja.
-        datos, mime = logos.recortado(("sindicato", sindicato_id), sind.logo_datos, sind.logo_mime)
+        if tono in ("oscuro", "claro"):
+            color = "#ffffff" if tono == "claro" else logos.color_mas_oscuro(
+                [sind.color_base, sind.color_primario, sind.color_acento, sind.color_secundario])
+            datos, mime = logos.monocromo_recortado(("sindicato", sindicato_id), sind.logo_datos,
+                                                    sind.logo_mime, color)
+        else:
+            datos, mime = logos.recortado(("sindicato", sindicato_id), sind.logo_datos, sind.logo_mime)
         return BinResponse(
             content=datos,
             media_type=mime or "application/octet-stream",
@@ -6875,6 +6886,26 @@ async def plataforma_marca(
     logo_datos_osc, logo_mime_osc, logo_flag_osc = (None, "", "")
     if logo_oscuro and logo_oscuro.filename:
         logo_datos_osc, logo_mime_osc, logo_flag_osc = _leer_logo(logo_oscuro)
+    # Se sube UNA versión a color y el sistema arma la otra (silueta blanca para
+    # fondo oscuro, silueta del color más oscuro de la marca para fondo claro).
+    # Solo reemplaza lo que él mismo generó antes ("auto…") o lo que está vacío:
+    # una versión subida a mano nunca se pisa.
+    actual = db.marca_plataforma() or {}
+    oscuro_de_marca = logos.color_mas_oscuro([color_primario, color_secundario, color_acento])
+
+    def _reemplazable(flag: str) -> bool:
+        return not flag or flag.startswith("auto")
+
+    if logo_datos and not logo_datos_osc and _reemplazable(actual.get("logo_oscuro") or ""):
+        base = logos.recortar(logo_datos, logo_mime)
+        gen = logos.monocromo(*base, "#ffffff")
+        if gen[0] is not base[0]:
+            logo_datos_osc, logo_mime_osc, logo_flag_osc = gen[0], gen[1], "auto.png"
+    elif logo_datos_osc and not logo_datos and _reemplazable(actual.get("logo") or ""):
+        base = logos.recortar(logo_datos_osc, logo_mime_osc)
+        gen = logos.monocromo(*base, oscuro_de_marca)
+        if gen[0] is not base[0]:
+            logo_datos, logo_mime, logo_flag = gen[0], gen[1], "auto.png"
     db.set_marca_plataforma(color_primario, color_secundario, color_acento,
                              logo_datos, logo_mime, logo_flag,
                              logo_datos_oscuro=logo_datos_osc, logo_mime_oscuro=logo_mime_osc,

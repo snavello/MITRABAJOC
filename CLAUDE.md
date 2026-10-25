@@ -644,6 +644,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `_recibo_propio`); antes un afiliado podía marcar como enviado el recibo de
   otro. Detalle en HISTORIAL.md.
 
+- **Todo cambio visual aplica a los DOS modelos de diseño, salvo indicación
+  en contrario** (SDN, 2026-10-25). Si se ofrecen `laguna` y `noticiero`, los
+  dos se mantienen al día: un ajuste de encabezado, botón, logo, color o
+  espaciado se resuelve en ambos (hoja de cada modelo en `static/temas/`) y se
+  revisa en ambos antes de dar el trabajo por hecho. Una condición escrita
+  para uno solo (`apariencia.tema == 'laguna'`) es una señal de alarma. Ej.:
+  el logo en tono oscuro de `_encabezado.html` se había hecho solo para
+  Laguna y Noticiero (encabezado gris claro) seguía con el logo invisible.
+
 - **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
   (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
   (147); cada persona cambia el suyo (afiliado: `CuentaTrabajador.tema`;
@@ -1281,7 +1290,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     portada del afiliado sin diferencias ni faltantes, recibo con menos peso,
     la última noticia como nota de tapa, accesos y tira de /app en el orden
     acordado, Inicio fuera de las portadas y Salir flotando con rótulo junto a
-    Inicio, importes en formato argentino (`peso()` de /app), y el panel con
+    Inicio (en la portada del afiliado Salir va arriba y quieto, no flota: SDN 2026-10-25), importes en formato argentino (`peso()` de /app), y el panel con
     **riel lateral** (la misma `nav.nav-strip`, solo CSS). Tipografías nuevas
     vendoreadas: Manrope, Anton y Archivo (`static/fonts/licencias/`). Tests
     `test_tema_laguna_*.py`. **Modelo Noticiero en las cuatro pantallas
