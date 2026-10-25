@@ -9050,3 +9050,21 @@ Quedan versionados el inventario de 60 pantallas, el contexto para los
 revisores y los consolidados de las dos vueltas, que son el punto de partida
 de la próxima. Probado de punta a punta en local: capturas, hoja, brief,
 informe y decisiones. Tests: `test_xsd.py`.
+
+**XSD en su propio repositorio** (2026-10-25, mismo día, pedido de SDN). El
+kit se mudó a `snavello/xsanders-design-kit`, armado como mercado de plugins
+de Claude Code con dos: `xsd`, la skill, y `avance-agentes`, el mod de la
+ventana, que es opcional. Tiene sus propios tests y CI.
+
+La decisión de diseño fue poner TODO lo genérico adentro de la carpeta de la
+skill (`METODO.md`, `plantillas/`, `herramientas/`, `informe/`) y nombrarlo
+como `<kit>`, la «Base directory» que Claude Code da al cargar una skill. Así
+la misma skill funciona instalada como plugin o copiada a `.claude/skills/xsd/`.
+Lo de cada proyecto queda en el proyecto, en `xsd/proyectos/<p>/`.
+
+En este repositorio no se instaló el plugin: se copió la skill, fijada a un
+commit (`ORIGEN.md`), con el mismo criterio que Impeccable. La razón es que el
+repo del kit es privado y `/xsd` tiene que andar en cualquier sesión, también
+en la nube, sin depender de llegar a otro repositorio. `test_xsd.py` compara
+el SHA-256 de cada archivo de la copia contra los de `ORIGEN.md`, para que
+nadie la edite acá y se separe del kit.

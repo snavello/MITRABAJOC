@@ -1,6 +1,6 @@
 // XSD: captura cada pantalla del inventario en cada vista, para una variante.
 //
-//   node xsd/herramientas/capturar.cjs <ficha.json> <variante> <sesiones.json> <carpeta> [ids,separados,por,coma]
+//   node <kit>/herramientas/capturar.cjs <ficha.json> <variante> <sesiones.json> <carpeta> [ids,separados,por,coma]
 //
 // - <variante>: una de `variantes.con_variantes` (captura las pantallas con
 //   `temas: true`) o `variantes.sin_variantes` (las que no tienen variantes).

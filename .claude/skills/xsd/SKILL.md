@@ -5,20 +5,33 @@ description: XSANDERS Design Kit — auditoría de diseño de una app entera con
 
 # XSD: cómo guiar cada fase
 
-Leé primero `xsd/METODO.md` (el método y las lecciones) y, si existe,
-`xsd/proyectos/<proyecto>/historial.md` (qué se hizo antes). Las piezas
-mecánicas están en `xsd/herramientas/xsd.py`: usalas, no reimplementes el
-formato del informe ni el de los hallazgos.
+**`<kit>` es la carpeta de esta skill** (la «Base directory» que te da
+Claude Code al cargarla): ahí están `METODO.md`, `herramientas/`,
+`plantillas/` e `informe/`. Lo que es del proyecto vive en el proyecto, en
+`xsd/proyectos/<proyecto>/` (ficha, inventario, contexto, historial), y los
+archivos de trabajo en `xsd-trabajo/`, que no se versiona.
 
-En este repositorio el proyecto por defecto es `mitrabajo`, con ficha
-`xsd/proyectos/mitrabajo/ficha.json`.
+Leé primero `<kit>/METODO.md` (el método y las lecciones) y, si existe,
+`xsd/proyectos/<proyecto>/historial.md` (qué se hizo antes). Las piezas
+mecánicas están en `<kit>/herramientas/xsd.py`: usalas, no reimplementes el
+formato del informe ni el de los hallazgos. Si en `xsd/proyectos/` hay una
+sola carpeta, ese es el proyecto; si hay varias, preguntá cuál.
+
+**Antes de la fase 1 verificá lo que hace falta**, y si algo falta decí cómo
+conseguirlo en vez de seguir a medias:
+- la referencia de diseño que nombra la ficha (`referencia`, por defecto la
+  skill Impeccable en `.claude/skills/impeccable/`, de
+  https://github.com/pbakaus/impeccable, Apache 2.0);
+- Python 3 con Pillow, y Node con Playwright y Chromium
+  (`XSD_CHROMIUM=/ruta` si el navegador está en otro lugar);
+- `xsd-trabajo/` en el `.gitignore` del proyecto.
 
 ## Pedidos
 
 | Pedido | Qué hacer |
 |---|---|
 | `/xsd`, «revisá el diseño con XSD» | Si no hay ficha, fase 0. Después fases 1 a 3: capturas, hoja de contacto, grupos, brief, revisores en paralelo, informe publicado y el link a la persona. |
-| `/xsd ficha` | Solo la fase 0: ficha, inventario, script de sesiones y contexto. |
+| `/xsd ficha` | Solo la fase 0: ficha (desde `<kit>/plantillas/ficha.json`), inventario, script de sesiones y contexto. |
 | `/xsd seguir`, «ya decidí» | Bajar las decisiones (`ArtifactData list` con `out_dir`), correr `xsd.py decisiones`, armar el plan en unas diez líneas y **esperar el visto bueno** antes de tocar código. |
 | `/xsd aplicar` | Con el visto bueno, fase 4: bloques en orden (base → compartido → puntual), agentes en worktrees, integración, tests y PR. |
 | `/xsd segunda vuelta` | Fase 5, sobre lo tocado: previos, brief de segunda vuelta, revisores, informe nuevo. |
@@ -54,9 +67,10 @@ En este repositorio el proyecto por defecto es `mitrabajo`, con ficha
 - **Revisores**: agentes comunes, en segundo plano, todos en el mismo
   mensaje. Cada uno recibe su grupo, la ruta del brief y su salida.
 - **Equipo que aplica**: agentes con `isolation: "worktree"`, que reciben
-  `xsd/plantillas/brief_equipo.md` completado con su encargo, sus archivos,
+  `<kit>/plantillas/brief_equipo.md` completado con su encargo, sus archivos,
   su puerto y su `quien`.
 - **Integración**: la hace la sesión principal, a medida que llegan los
   reportes.
-- **Avance**: durante todo el proceso, `xsd.py avance` mantiene al día la
-  ventana del mod `avance-agentes`.
+- **Avance**: durante todo el proceso, `xsd.py avance` mantiene al día
+  `xsd-trabajo/avance.json`, que muestra la ventana del plugin
+  `avance-agentes` si está instalado (es opcional).

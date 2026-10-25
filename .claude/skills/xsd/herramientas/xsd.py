@@ -1,20 +1,20 @@
 """XSD (XSANDERS Design Kit): las piezas mecánicas de la auditoría de diseño.
 
-El método está en `xsd/METODO.md`; esto solo hace lo que no requiere
+El método está en `METODO.md`, en la carpeta de la skill; esto solo hace lo que no requiere
 criterio: capturar, armar la hoja de contacto, renderizar los encargos,
 armar el informe, consolidar las decisiones y preparar los encargos de la
 siguiente vuelta. El criterio (agrupar, revisar, planificar) lo pone Claude.
 
 Uso (desde la raíz del proyecto):
 
-    python xsd/herramientas/xsd.py capturar   --ficha F --corrida C [--variantes a,b] [--solo id1,id2] [--quien Q]
-    python xsd/herramientas/xsd.py hoja       --ficha F --corrida C
-    python xsd/herramientas/xsd.py brief      --ficha F --corrida C [--vuelta 2]
-    python xsd/herramientas/xsd.py informe    --ficha F --corrida C [--vuelta 2] [--titulo T]
-    python xsd/herramientas/xsd.py decisiones --ficha F --corrida C --desde DIR
-    python xsd/herramientas/xsd.py previos    --ficha F --corrida C --consolidado X.json
-    python xsd/herramientas/xsd.py encargos   --ficha F --corrida C
-    python xsd/herramientas/xsd.py avance     [--titulo T] [--nota N] [--bloque id=estado:nombre|detalle ...]
+    python <kit>/herramientas/xsd.py capturar   --ficha F --corrida C [--variantes a,b] [--solo id1,id2] [--quien Q]
+    python <kit>/herramientas/xsd.py hoja       --ficha F --corrida C
+    python <kit>/herramientas/xsd.py brief      --ficha F --corrida C [--vuelta 2]
+    python <kit>/herramientas/xsd.py informe    --ficha F --corrida C [--vuelta 2] [--titulo T]
+    python <kit>/herramientas/xsd.py decisiones --ficha F --corrida C --desde DIR
+    python <kit>/herramientas/xsd.py previos    --ficha F --corrida C --consolidado X.json
+    python <kit>/herramientas/xsd.py encargos   --ficha F --corrida C
+    python <kit>/herramientas/xsd.py avance     [--titulo T] [--nota N] [--bloque id=estado:nombre|detalle ...]
 
 Una corrida es una carpeta `<trabajo>/<corrida>/` (la ficha dice dónde está
 `trabajo`; no se versiona). Adentro:

@@ -12,3 +12,5 @@ Cada corrida deja acá su línea: cuándo fue, qué se miró, qué salió y dón
 | 2026-10-25 | 2 | Lo migrado: ingresos y empresa, plataforma, Panel Sindical v2 y pantallas viejas; 28 pantallas, 4 revisores (R1–R4) | De lo pedido en la vuelta 1: 63 resueltos y 7 parciales. 42 hallazgos nuevos; SDN: 36 aceptar, 1 cambio, 5 dejar | https://claude.ai/artifact/TUWmGHT2R8FwNqhohuzvAu |
 
 Las dos vueltas se aplicaron en los PR #167 a #171. La narrativa completa está en `HISTORIAL.md`, sección «Auditoría de diseño y plan de mejoras».
+
+Desde el 2026-10-25 el kit vive en `snavello/xsanders-design-kit`; la skill de este repositorio es su copia fijada a un commit (`.claude/skills/xsd/ORIGEN.md`).

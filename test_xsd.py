@@ -1,15 +1,17 @@
-"""XSD (XSANDERS Design Kit, `xsd/`): las piezas mecánicas de la auditoría
-de diseño funcionan con una corrida armada a mano, sin navegador ni base.
+"""XSD (XSANDERS Design Kit): la copia de la skill en `.claude/skills/xsd/`
+es la del commit que dice su `ORIGEN.md`, la ficha de Colm3na
+(`xsd/proyectos/mitrabajo/`) apunta a archivos que existen, y las piezas
+mecánicas funcionan con una corrida armada a mano, sin navegador ni base.
 
-Lo que se cuida acá es lo que se rompería en silencio al llevar el kit a otro
-proyecto: que la ficha de Colm3na apunte a archivos que existen, que el
-encargo no deje marcadores sin reemplazar, y que el informe, las decisiones,
-los antecedentes de la segunda vuelta y los encargos del equipo se armen con
-el formato que espera la página del informe.
+El kit vive en su propio repositorio (snavello/xsanders-design-kit), con sus
+propios tests; los de la corrida falsa se repiten acá porque es esta copia la
+que corre en este repositorio.
 
 Correr con: .venv/bin/python -m pytest test_xsd.py -q
 """
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,7 +20,8 @@ import pytest
 from PIL import Image
 
 RAIZ = Path(__file__).resolve().parent
-sys.path.insert(0, str(RAIZ / "xsd" / "herramientas"))
+KIT = RAIZ / ".claude" / "skills" / "xsd"
+sys.path.insert(0, str(KIT / "herramientas"))
 import xsd  # noqa: E402
 
 FICHA_COLM3NA = RAIZ / "xsd" / "proyectos" / "mitrabajo" / "ficha.json"
@@ -30,7 +33,7 @@ def test_la_ficha_de_colm3na_apunta_a_archivos_que_existen():
         assert (RAIZ / ficha[clave]).exists(), clave
     assert (RAIZ / ficha["referencia"] / "SKILL.md").exists()
     assert "{variante}" in ficha["sesiones"]["comando"] and "{quien}" in ficha["sesiones"]["comando"]
-    plantilla = json.loads((RAIZ / "xsd" / "plantillas" / "ficha.json").read_text(encoding="utf-8"))
+    plantilla = json.loads((KIT / "plantillas" / "ficha.json").read_text(encoding="utf-8"))
     assert set(plantilla) <= set(ficha) | {"base_url"}, "la plantilla tiene claves que Colm3na no usa"
 
 
@@ -45,16 +48,18 @@ def test_el_inventario_tiene_ids_unicos_y_roles_de_la_ficha():
         assert "-" in p["id"], "el id va después de <variante>-<vista>- en el nombre de la captura"
 
 
-def test_la_skill_y_el_mod_estan():
-    skill = (RAIZ / ".claude" / "skills" / "xsd" / "SKILL.md").read_text(encoding="utf-8")
-    assert skill.startswith("---\nname: xsd\n")
-    mod = RAIZ / "xsd" / "mod" / "avance-agentes"
-    assert json.loads((mod / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["name"] == "avance-agentes"
-    assert "xsd-trabajo/avance.json" in (mod / "hooks" / "register.tsx").read_text(encoding="utf-8")
+def test_la_copia_de_la_skill_es_la_del_commit_fijado():
+    origen = (KIT / "ORIGEN.md").read_text(encoding="utf-8")
+    assert re.search(r"Commit: `[0-9a-f]{40}`", origen)
+    fijados = dict(re.findall(r"- `([^`]+)`: `([0-9a-f]{64})`", origen))
+    copia = {p.relative_to(KIT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+             for p in KIT.rglob("*") if p.is_file() and p.name != "ORIGEN.md" and "__pycache__" not in p.parts}
+    assert copia == fijados, "la skill se edita en su repositorio y se vuelve a copiar (ver ORIGEN.md)"
+    assert (KIT / "SKILL.md").read_text(encoding="utf-8").startswith("---\nname: xsd\n")
 
 
 def test_el_informe_no_trae_nada_propio_de_un_proyecto():
-    pagina = (RAIZ / "xsd" / "informe" / "index.html").read_text(encoding="utf-8")
+    pagina = (KIT / "informe" / "index.html").read_text(encoding="utf-8")
     for palabra in ("Colm3na", "Bancaria", "PRUEBAS", "laguna", "noticiero"):
         assert palabra not in pagina, palabra
     assert pagina.startswith('<meta charset="utf-8">')
@@ -104,7 +109,6 @@ def _args(c, **extra):
 def test_el_encargo_no_deja_marcadores(corrida):
     xsd.brief(_args(corrida))
     texto = (corrida.dir / "brief.md").read_text(encoding="utf-8")
-    import re
     assert not re.search(r"\{[A-Z_]+\}", texto)
     assert "Una app de prueba." in texto and "REGLAS.md" in texto
 
