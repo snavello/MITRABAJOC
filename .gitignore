@@ -56,3 +56,6 @@ backup_regularizacion_*
 .impeccable/build/
 .impeccable/critique/
 .claude/settings.local.json
+
+# Archivos de trabajo de XSD (capturas, hallazgos, informes): pesan y se regeneran.
+xsd-trabajo/

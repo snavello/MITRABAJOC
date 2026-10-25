@@ -1,0 +1,493 @@
+[
+ {
+  "id": "pub-inicio",
+  "app": "Ingresos",
+  "nombre": "Puerta de entrada (/)",
+  "url": "/",
+  "rol": "ninguno",
+  "temas": false
+ },
+ {
+  "id": "pub-ingresar",
+  "app": "Ingresos",
+  "nombre": "Ingreso del afiliado",
+  "url": "/ingresar",
+  "rol": "ninguno",
+  "temas": false
+ },
+ {
+  "id": "pub-ingresar-empresa",
+  "app": "Ingresos",
+  "nombre": "Ingreso de la empresa",
+  "url": "/ingresar-empresa",
+  "rol": "ninguno",
+  "temas": false
+ },
+ {
+  "id": "pub-recuperar",
+  "app": "Ingresos",
+  "nombre": "Recuperar clave (afiliado)",
+  "url": "/ingresar/recuperar",
+  "rol": "ninguno",
+  "temas": false
+ },
+ {
+  "id": "pub-admin-login",
+  "app": "Ingresos",
+  "nombre": "Ingreso al panel del sindicato",
+  "url": "/admin",
+  "rol": "ninguno",
+  "temas": false
+ },
+ {
+  "id": "pub-plataforma-login",
+  "app": "Ingresos",
+  "nombre": "Ingreso de plataforma",
+  "url": "/plataforma",
+  "rol": "ninguno",
+  "temas": false
+ },
+ {
+  "id": "afi-portada",
+  "app": "Afiliado",
+  "nombre": "Portada del afiliado",
+  "url": "/app/inicio",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-recibo",
+  "app": "Afiliado",
+  "nombre": "Tu recibo",
+  "url": "/app?tab=recibo",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-credencial",
+  "app": "Afiliado",
+  "nombre": "Credencial",
+  "url": "/app?tab=credencial",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-novedades",
+  "app": "Afiliado",
+  "nombre": "Novedades",
+  "url": "/app?tab=novedades",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-aportes",
+  "app": "Afiliado",
+  "nombre": "Mis aportes (semáforo)",
+  "url": "/app?tab=aportes",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-capacitacion",
+  "app": "Afiliado",
+  "nombre": "Capacitación",
+  "url": "/app?tab=capacitacion",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-tramites",
+  "app": "Afiliado",
+  "nombre": "Trámites",
+  "url": "/app?tab=tramites",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-encuestas",
+  "app": "Afiliado",
+  "nombre": "Encuestas",
+  "url": "/app?tab=encuestas",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-notificaciones",
+  "app": "Afiliado",
+  "nombre": "Notificaciones",
+  "url": "/app/notificaciones",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "afi-convenio",
+  "app": "Afiliado",
+  "nombre": "Consultas sobre el convenio",
+  "url": "/app/convenio",
+  "rol": "trabajador",
+  "temas": true
+ },
+ {
+  "id": "pan-portada",
+  "app": "Panel del sindicato",
+  "nombre": "Portada del panel",
+  "url": "/admin/inicio",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-reportes",
+  "app": "Panel del sindicato",
+  "nombre": "Reportes",
+  "url": "/admin#reportes",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-formulas",
+  "app": "Panel del sindicato",
+  "nombre": "Reglas",
+  "url": "/admin#formulas",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-conceptos",
+  "app": "Panel del sindicato",
+  "nombre": "Conceptos",
+  "url": "/admin#conceptos",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-trabajadores",
+  "app": "Panel del sindicato",
+  "nombre": "Trabajadores · listado",
+  "url": "/admin#trabajadores",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-trab-manual",
+  "app": "Panel del sindicato",
+  "nombre": "Trabajadores · alta manual",
+  "url": "/admin#trabajadores",
+  "js": "document.querySelector('.subtab[data-sub=manual]').click()",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-trab-masivo",
+  "app": "Panel del sindicato",
+  "nombre": "Trabajadores · carga masiva",
+  "url": "/admin#trabajadores",
+  "js": "document.querySelector('.subtab[data-sub=masivo]').click()",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-aprendizaje",
+  "app": "Panel del sindicato",
+  "nombre": "Aprendizaje",
+  "url": "/admin#aprendizaje",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-noticias",
+  "app": "Panel del sindicato",
+  "nombre": "Noticias",
+  "url": "/admin#noticias",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-beneficios",
+  "app": "Panel del sindicato",
+  "nombre": "Beneficios",
+  "url": "/admin#beneficios",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-notificaciones",
+  "app": "Panel del sindicato",
+  "nombre": "Notificaciones",
+  "url": "/admin#notificaciones",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-tramites",
+  "app": "Panel del sindicato",
+  "nombre": "Trámites · recibidos",
+  "url": "/admin#tramites",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-tramites-tipos",
+  "app": "Panel del sindicato",
+  "nombre": "Trámites · constructor de formularios",
+  "url": "/admin#tramites",
+  "js": "cambiarSubTramite('tipos')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-encuestas",
+  "app": "Panel del sindicato",
+  "nombre": "Encuestas · lista",
+  "url": "/admin#encuestas",
+  "js": "cambiarSubEncuesta('lista')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-encuestas-nueva",
+  "app": "Panel del sindicato",
+  "nombre": "Encuestas · crear",
+  "url": "/admin#encuestas",
+  "js": "cambiarSubEncuesta('nueva')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-encuesta-resultados",
+  "app": "Panel del sindicato",
+  "nombre": "Resultados de una encuesta",
+  "url": "/admin/encuesta/3/resultados",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-empleadores",
+  "app": "Panel del sindicato",
+  "nombre": "Empleadores · empresas",
+  "url": "/admin#empleadores",
+  "js": "cambiarSubEmpleador('empresas')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-empleadores-notif",
+  "app": "Panel del sindicato",
+  "nombre": "Empleadores · notificaciones",
+  "url": "/admin#empleadores",
+  "js": "cambiarSubEmpleador('notificaciones')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-empleadores-tram",
+  "app": "Panel del sindicato",
+  "nombre": "Empleadores · trámites",
+  "url": "/admin#empleadores",
+  "js": "cambiarSubEmpleador('tramites')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-convenio",
+  "app": "Panel del sindicato",
+  "nombre": "Convenio",
+  "url": "/admin#convenio",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-seccionales",
+  "app": "Panel del sindicato",
+  "nombre": "Seccionales",
+  "url": "/admin#seccionales",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-listas",
+  "app": "Panel del sindicato",
+  "nombre": "Listas",
+  "url": "/admin#listas",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-areas",
+  "app": "Panel del sindicato",
+  "nombre": "Áreas y usuarios · áreas",
+  "url": "/admin#administradores",
+  "js": "cambiarSubAU('areas')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-usuarios",
+  "app": "Panel del sindicato",
+  "nombre": "Áreas y usuarios · usuarios",
+  "url": "/admin#administradores",
+  "js": "cambiarSubAU('usuarios')",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-apariencia",
+  "app": "Panel del sindicato",
+  "nombre": "Apariencia",
+  "url": "/admin#apariencia",
+  "rol": "sindicato",
+  "temas": true
+ },
+ {
+  "id": "pan-dashboard",
+  "app": "Panel del sindicato",
+  "nombre": "Panel Sindical (v1)",
+  "url": "/admin/dashboard",
+  "rol": "sindicato",
+  "temas": true,
+  "espera": 3500
+ },
+ {
+  "id": "emp-portada",
+  "app": "Empresa",
+  "nombre": "Portada de la empresa",
+  "url": "/empresa/inicio",
+  "rol": "empleador",
+  "temas": true
+ },
+ {
+  "id": "emp-notificaciones",
+  "app": "Empresa",
+  "nombre": "Notificaciones",
+  "url": "/empresa#notificaciones",
+  "rol": "empleador",
+  "temas": true
+ },
+ {
+  "id": "emp-tramites",
+  "app": "Empresa",
+  "nombre": "Trámites",
+  "url": "/empresa#tramites",
+  "rol": "empleador",
+  "temas": true
+ },
+ {
+  "id": "pla-portada",
+  "app": "Plataforma",
+  "nombre": "Portada de plataforma",
+  "url": "/plataforma/inicio",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-lista",
+  "app": "Plataforma",
+  "nombre": "Sindicatos",
+  "url": "/plataforma#lista",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-nuevo",
+  "app": "Plataforma",
+  "nombre": "Nuevo sindicato",
+  "url": "/plataforma#nuevo",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-admin",
+  "app": "Plataforma",
+  "nombre": "Admins de sindicatos",
+  "url": "/plataforma#admin",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-clave",
+  "app": "Plataforma",
+  "nombre": "Cambiar clave",
+  "url": "/plataforma#clave",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-marca",
+  "app": "Plataforma",
+  "nombre": "Marca de Colm3na",
+  "url": "/plataforma#marca",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-fotos",
+  "app": "Plataforma",
+  "nombre": "Fotos de los modelos",
+  "url": "/plataforma#fotos",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-config",
+  "app": "Plataforma",
+  "nombre": "Configuración",
+  "url": "/plataforma#config",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-usoia",
+  "app": "Plataforma",
+  "nombre": "Uso de IA · consumo",
+  "url": "/plataforma#usoia",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-usoia-modelos",
+  "app": "Plataforma",
+  "nombre": "Uso de IA · modelos",
+  "url": "/plataforma#usoia-modelos",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-usoia-enmascarado",
+  "app": "Plataforma",
+  "nombre": "Uso de IA · enmascarado",
+  "url": "/plataforma#usoia-enmascarado",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-usoia-probar",
+  "app": "Plataforma",
+  "nombre": "Uso de IA · banco de pruebas",
+  "url": "/plataforma#usoia-probar",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-sospechosos",
+  "app": "Plataforma",
+  "nombre": "Recibos con alerta",
+  "url": "/plataforma#sospechosos",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-topes",
+  "app": "Plataforma",
+  "nombre": "Topes de base imponible",
+  "url": "/plataforma#topes",
+  "rol": "plataforma",
+  "temas": true
+ },
+ {
+  "id": "pla-usuarios",
+  "app": "Plataforma",
+  "nombre": "Usuarios de los paneles",
+  "url": "/plataforma/usuarios",
+  "rol": "plataforma",
+  "temas": true
+ }
+]

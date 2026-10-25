@@ -1,0 +1,55 @@
+{
+  "proyecto": "mitrabajo",
+  "nombre": "Colm3na",
+  "idioma": "castellano rioplatense",
+  "locale": "es-AR",
+  "servidor": {
+    "comando": ".venv/bin/uvicorn main:app --port {puerto}",
+    "puerto": 8077,
+    "salud": "/healthz",
+    "nota": "Postgres local levantado (docker compose up -d o el hook de la nube) y alembic upgrade head."
+  },
+  "sesiones": {
+    "comando": ".venv/bin/python xsd/proyectos/mitrabajo/sesiones.py {variante} {quien}",
+    "dominio": "localhost",
+    "vencen_en_minutos": 15
+  },
+  "roles": [
+    "ninguno",
+    "trabajador",
+    "sindicato",
+    "empleador",
+    "plataforma"
+  ],
+  "variantes": {
+    "con_variantes": [
+      "laguna",
+      "noticiero"
+    ],
+    "sin_variantes": "base"
+  },
+  "vistas": {
+    "d": {
+      "ancho": 1440,
+      "alto": 900,
+      "tope": 5000
+    },
+    "m": {
+      "ancho": 390,
+      "alto": 844,
+      "escala": 2,
+      "movil": true,
+      "tope": 7000
+    }
+  },
+  "pantallas": "xsd/proyectos/mitrabajo/pantallas.json",
+  "contexto": "xsd/proyectos/mitrabajo/contexto.md",
+  "lecturas": [
+    "PRODUCT.md",
+    ".claude/skills/diseno-mi-trabajo/SKILL.md",
+    "CLAUDE.md (secciones «Decisiones tomadas» y punto 38 de «Estado actual»)"
+  ],
+  "referencia": ".claude/skills/impeccable",
+  "trabajo": "xsd-trabajo/mitrabajo",
+  "aviso_capturas": "El distintivo amarillo «PRUEBAS» es del entorno, no del diseño."
+}
