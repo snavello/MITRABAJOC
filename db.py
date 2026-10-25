@@ -6094,7 +6094,18 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
         tramites = s.exec(q.order_by(Tramite.id.desc())).all()
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
-        return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
+        # El nombre de la persona, de su cuenta (el dueño de los datos
+        # personales), en UNA consulta para toda la bandeja: el operador
+        # busca y recuerda por nombre, no por CUIL (auditoría G5-15).
+        cuils = list({tr.cuil for tr in tramites})
+        nombres = dict(s.exec(select(CuentaTrabajador.cuil, CuentaTrabajador.nombre).where(
+            CuentaTrabajador.cuil.in_(cuils))).all()) if cuils else {}
+        salida = []
+        for tr in tramites:
+            r = _tramite_resumen(s, tr, titulos_tipo)
+            r["nombre"] = nombres.get(tr.cuil) or ""
+            salida.append(r)
+        return salida
 
 
 # ---------- Pase entre áreas (decisión N8) ----------

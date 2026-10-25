@@ -933,3 +933,49 @@ html[data-tema="noticiero"] .emptram-subtab:hover { color: var(--nt-tinta); back
 html[data-tema="noticiero"] .emptram-subtab.activa {
   background: transparent; color: var(--nt-tinta); font-weight: 700; box-shadow: inset 0 -2px 0 var(--nt-indigo);
 }
+
+/* Bloque 5c: panel B (auditoría 2026-10) */
+/* ============================================================
+   Noticias a Apariencia: los estados que no son un semáforo, las
+   pastillas de filtro de una bandeja, la acción principal de una fila y
+   las de todos los días como texto.
+   ============================================================ */
+/* Gris neutro: vencida, cerrada, dada de baja. No es un error (G5-21). */
+html[data-tema="noticiero"] .tag-neutra { color: var(--nt-tinta-2); background: var(--nt-hoja); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+/* Ámbar de contorno: el próximo paso es del otro (G5-14). */
+html[data-tema="noticiero"] .tag-espera { color: var(--nt-amb); background: transparent; box-shadow: inset 0 0 0 1.5px var(--nt-amb-p); }
+/* El rol de un usuario es un dato, no un estado (G6-17). */
+html[data-tema="noticiero"] .tag-rol { color: var(--nt-tinta); background: var(--nt-hoja); box-shadow: inset 0 0 0 1px var(--nt-linea-2); font-weight: 600; }
+html[data-tema="noticiero"] .tag-rol.fuerte { font-weight: 800; }
+/* Pastillas de la bandeja de trámites (G5-13): la elegida, en índigo. */
+html[data-tema="noticiero"] button.sec.lst-pastilla { height: 34px; padding: 0 12px; border-radius: 2px; }
+html[data-tema="noticiero"] button.sec.lst-pastilla .n { font-family: var(--nt-f-mono); letter-spacing: 0; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] button.sec.lst-pastilla.activa { background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
+html[data-tema="noticiero"] button.sec.lst-pastilla.activa .n { color: var(--nt-marfil-2); }
+/* Una acción principal por fila (G5-20). */
+html[data-tema="noticiero"] a.btn-mini.pri { background: var(--nt-coral); color: var(--nt-coral-tinta); box-shadow: none; font-weight: 700; }
+html[data-tema="noticiero"] a.btn-mini.pri:hover { box-shadow: none; filter: brightness(1.05); }
+html[data-tema="noticiero"] button.mini.lnk {
+  background: none; box-shadow: none; padding: 6px; color: var(--nt-tinta-1);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--nt-linea-2);
+}
+html[data-tema="noticiero"] button.mini.lnk:hover { background: none; box-shadow: none; text-decoration-color: currentColor; }
+html[data-tema="noticiero"] .lst-barra { background: var(--nt-hoja); }
+html[data-tema="noticiero"] .lst-barra > i { background: var(--nt-indigo); }
+html[data-tema="noticiero"] .lst-vacio { background: var(--nt-carta); border-color: var(--nt-linea-2); border-radius: 2px; }
+html[data-tema="noticiero"] .lst-cab { border-bottom-color: var(--nt-tinta); }
+html[data-tema="noticiero"] .pl-col { background: var(--nt-carta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); font-family: var(--nt-f-mono); border-radius: 2px; }
+html[data-tema="noticiero"] .ap-sucio { color: var(--nt-amb); }
+/* El rótulo del área que recibe un trámite: corto, y la fila alineada
+   abajo para que los dos selects queden a la misma altura (G5-18). */
+html[data-tema="noticiero"] #tt-paso-2 .grid2 { align-items: end; }
+/* «Probar con el CUIL de» (G5-16). */
+html[data-tema="noticiero"] .ttp-cuil label { font: 700 11px/1.3 var(--nt-f-txt); letter-spacing: 1px; text-transform: uppercase; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .chk-suelta { font-family: var(--nt-f-txt); color: var(--nt-tinta); }
+html[data-tema="noticiero"] .chk-suelta input { accent-color: var(--nt-indigo); }
+/* El botón principal del riel entra en un renglón (G5-27): en mayúsculas
+   espaciadas «Crear encuesta» se partía en dos. La regla del botón
+   principal (sección 6) encadena quince :not() de clase; el :not(#riel) le
+   suma peso de id para poder ganarle sin !important. */
+html[data-tema="noticiero"] .ct-riel-estado button.pri-riel:not(#riel) { white-space: nowrap; font-size: 11.5px; font-stretch: 100%; letter-spacing: .3px; padding-left: 6px; padding-right: 6px; }
+html[data-tema="noticiero"] .titulo-pagina .lst-de { font: 600 17px/1 var(--nt-f-txt); letter-spacing: 0; color: var(--nt-tinta-2); }

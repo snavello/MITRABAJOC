@@ -777,3 +777,49 @@ html[data-tema="laguna"] .emptram-subtab:hover { color: var(--lg-tinta); backgro
 html[data-tema="laguna"] .emptram-subtab.activa {
   background: transparent; color: var(--lg-tinta); font-weight: 700; box-shadow: inset 0 -2px 0 var(--lg-azul);
 }
+
+/* Bloque 5c: panel B (auditoría 2026-10) */
+/* ============================================================
+   Noticias a Apariencia: los estados que no son un semáforo, las
+   pastillas de filtro de una bandeja, la acción principal de una fila y
+   las de todos los días como texto, y los interruptores en el azul.
+   ============================================================ */
+/* Gris neutro: vencida, cerrada, dada de baja. No es un error (G5-21). */
+html[data-tema="laguna"] .tag-neutra { color: var(--lg-gris); background: var(--lg-claro2); }
+/* Ámbar de contorno: el próximo paso es del otro (G5-14). */
+html[data-tema="laguna"] .tag-espera { color: var(--lg-amb); background: #fff; box-shadow: inset 0 0 0 1px var(--lg-amb-p); }
+/* El rol de un usuario es un dato, no un estado (G6-17). */
+html[data-tema="laguna"] .tag-rol { color: var(--lg-tinta); background: var(--lg-claro); font-weight: 600; }
+html[data-tema="laguna"] .tag-rol.fuerte { font-weight: 800; }
+/* Pastillas de la bandeja de trámites (G5-13): la elegida, en azul. */
+html[data-tema="laguna"] button.sec.lst-pastilla {
+  height: 34px; padding: 0 14px; font-size: 13px; color: var(--lg-gris); box-shadow: inset 0 0 0 1px var(--lg-linea2);
+}
+html[data-tema="laguna"] button.sec.lst-pastilla .n { font-family: var(--lg-mono); color: var(--lg-gris2); }
+html[data-tema="laguna"] button.sec.lst-pastilla.activa { background: var(--lg-azul); color: #fff; box-shadow: none; }
+html[data-tema="laguna"] button.sec.lst-pastilla.activa .n { color: color-mix(in srgb, #fff 75%, transparent); }
+/* Una acción principal por fila (G5-20). */
+html[data-tema="laguna"] a.btn-mini.pri { background: var(--lg-turq); color: #fff; box-shadow: none; }
+html[data-tema="laguna"] a.btn-mini.pri:hover { background: var(--lg-turq-h); box-shadow: none; }
+html[data-tema="laguna"] button.mini.lnk {
+  background: none; box-shadow: none; padding: 6px; color: var(--lg-tinta);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--lg-linea2);
+}
+html[data-tema="laguna"] button.mini.lnk:hover { background: none; box-shadow: none; text-decoration-color: currentColor; }
+html[data-tema="laguna"] .lst-barra { background: var(--lg-claro2); }
+html[data-tema="laguna"] .lst-barra > i { background: var(--lg-azul); }
+html[data-tema="laguna"] .lst-vacio { border-color: var(--lg-linea2); border-radius: 8px; }
+html[data-tema="laguna"] .lst-cab { border-bottom: 0; }
+html[data-tema="laguna"] .pl-col { background: var(--lg-suave); box-shadow: inset 0 0 0 1px var(--lg-linea); font-family: var(--lg-mono); }
+/* Los interruptores de Tu día, prendidos en el azul del modelo (G6-21). */
+html[data-tema="laguna"] .td-llave:checked { background: var(--lg-azul); }
+html[data-tema="laguna"] .td-llave:focus-visible { outline-color: var(--lg-negro); }
+html[data-tema="laguna"] .td-fijos div { background: var(--lg-suave); box-shadow: inset 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] .ap-sucio { color: var(--lg-amb); }
+/* «Probar con el CUIL de», un campo que se ve como campo (G5-16). */
+html[data-tema="laguna"] .ttp-cuil label { font: 600 11.5px/1.3 var(--lg-fuente); color: var(--lg-gris); }
+html[data-tema="laguna"] .wrap .ttp-cuil input { height: 40px; border: 1px solid var(--lg-linea2); background: #fff; border-radius: 4px; font-family: var(--lg-mono); font-size: 13px; }
+/* La casilla de alcance de una seccional: casilla y rótulo, sin caja (G6-10). */
+html[data-tema="laguna"] .chk-suelta { font-family: var(--lg-fuente); color: var(--lg-tinta); }
+html[data-tema="laguna"] .chk-suelta input { accent-color: var(--lg-azul); }
+html[data-tema="laguna"] .grupo-cab b { font-family: var(--lg-fuente); }

@@ -1686,6 +1686,141 @@
 
   {% endif %}
 
+  {# Bloque 5c: panel B (auditoría 2026-10). Lo común a las pestañas de
+     Noticias a Apariencia: la fecha corta de las listas, los estados que no
+     son un semáforo (gris neutro y ámbar de contorno), las pastillas de
+     filtro, los estados vacíos que invitan a actuar y los enlaces de texto
+     de una fila. Va acá, en un <style> propio, y no al final del de arriba:
+     así no se pisa con lo que suma el bloque de la portada y Reportes. #}
+  {# El color de un trámite dice de quién es el próximo paso (G5-14): ámbar
+     lleno, le toca al sindicato; ámbar de contorno, espera al otro; verde,
+     terminado. #}
+  {% set CLASE_ESTADO_TRAMITE = {'iniciado': 'tag-pend', 'en_tratamiento': 'tag-pend', 'respondido': 'tag-espera', 'espera_info': 'tag-espera', 'terminado': 'tag-si'} %}
+  {% macro fecha_corta(f) %}{% if f and f|length >= 10 %}<span class="lst-fecha" title="{{ f }}">{{ f[8:10] }}/{{ f[5:7] }}/{{ f[2:4] }}</span>{% else %}{{ f or '—' }}{% endif %}{% endmacro %}
+  <style>
+  /* Bloque 5c: panel B (auditoría 2026-10) */
+  .lst-fecha, .lst-nowrap { white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .lst-dest > span { white-space:nowrap; }
+  .tag-neutra { background:#eef0f3; color:#5b6478; }
+  .tag-espera { background:transparent; color:#8a6d1f; box-shadow:inset 0 0 0 1px #c9a94e; }
+  .lst-pct { color:var(--gris); font-size:12px; white-space:nowrap; }
+  .filtros input.f-ancho { width:auto; min-width:200px; flex:1.5 1 200px; }
+  .lst-barra { display:block; width:60px; height:4px; margin-top:5px; border-radius:2px; background:var(--linea); overflow:hidden; }
+  .lst-barra > i { display:block; height:100%; background:var(--marca-primario); border-radius:2px; }
+  /* Beneficios: miniatura del carrusel y la primera línea de la descripción. */
+  .ben-fila { display:flex; align-items:center; gap:12px; min-width:0; }
+  .ben-mini { flex:none; width:40px; height:40px; border-radius:7px; object-fit:cover; background:var(--papel); box-shadow:inset 0 0 0 1px var(--linea); }
+  .ben-mini.vacia { display:inline-flex; align-items:center; justify-content:center; color:var(--gris); }
+  .ben-mini.vacia svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.7; opacity:.6; }
+  .ben-fila .lst-baja { display:block; color:var(--gris); font-size:12.5px; max-width:62ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Pastillas de filtro arriba de una bandeja. */
+  .lst-pastillas { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px; }
+  button.sec.lst-pastilla { display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 13px; border-radius:999px; border:1px solid var(--linea);
+    background:#fff; color:var(--tinta); font:inherit; font-size:13px; font-weight:600; cursor:pointer; margin:0; }
+  button.sec.lst-pastilla .n { font-family:var(--fuente-num); font-size:11.5px; color:var(--gris); font-weight:600; }
+  button.sec.lst-pastilla.activa { background:var(--marca-base); border-color:var(--marca-base); color:#fff; }
+  button.sec.lst-pastilla.activa .n { color:rgba(255,255,255,.75); }
+  .titulo-pagina .lst-de { font-size:.55em; color:var(--gris); letter-spacing:0; margin-left:8px; text-transform:none; }
+  /* Estados vacíos: una frase que dice cómo se llena y, si hay, la acción. */
+  .lst-vacio { padding:22px 20px; border:1px dashed var(--linea); border-radius:10px; background:#fff; font-size:14px; line-height:1.5; color:var(--tinta); max-width:70ch; }
+  .lst-vacio p { margin:0 0 10px; } .lst-vacio p:last-child { margin:0; }
+  /* Una acción de fila que no compite: texto subrayado, sin caja. */
+  button.mini.lnk { background:none; border:0; box-shadow:none; padding:4px 6px; color:var(--tinta); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--linea); }
+  button.mini.lnk:hover { text-decoration-color:currentColor; background:none; }
+  a.btn-mini.pri { background:var(--marca-acento); color:var(--marca-tinta-acento, var(--marca-base)); border-color:transparent; font-weight:700; }
+  .enc-acc { display:flex; align-items:center; justify-content:flex-end; gap:4px; flex-wrap:nowrap; }
+  .enc-acc .sep { flex:0 0 14px; }
+  /* Encabezado de una lista con su acción secundaria a la derecha. */
+  .lst-cab { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
+  .lst-cab h2 { margin:0; padding:0; border:0; }
+  .lst-cab form { display:flex; align-items:center; gap:6px; margin:0; }
+  /* Una casilla suelta con su explicación (alcance de una seccional). */
+  .chk-suelta { display:flex; align-items:center; gap:10px; margin:14px 0 4px; font-size:14px; font-weight:400; color:var(--tinta); cursor:pointer; width:fit-content; }
+  .chk-suelta input { width:18px; height:18px; margin:0; flex:none; }
+  .chk-suelta-ayuda { margin:2px 0 12px 28px; max-width:70ch; font-size:12.5px; color:var(--gris); line-height:1.45; }
+  /* Listas: las plantillas como filas, no tarjetas dentro de la tarjeta. */
+  .pl-filas { display:flex; flex-direction:column; }
+  .pl-fila { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 18px; align-items:center; padding:14px 0; border-top:1px solid var(--linea); }
+  .pl-fila:first-child { border-top:0; padding-top:4px; }
+  .pl-fila b { font-size:15px; }
+  .pl-fila p { margin:3px 0 8px; }
+  .pl-cols { display:flex; flex-wrap:wrap; gap:6px; }
+  .pl-col { display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:999px; background:var(--papel); box-shadow:inset 0 0 0 1px var(--linea);
+    font-family:var(--fuente-num); font-size:12px; color:var(--tinta); white-space:nowrap; }
+  .pl-col .clave { font-family:inherit; color:var(--gris); }
+  @media (max-width:640px) { .pl-fila { grid-template-columns:1fr; } }
+  .card > h3.lst-h3 { margin:0 0 16px; }
+  /* Áreas: el grupo es un subtítulo con su enlace de marcar todas. */
+  .grupo-cab { display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  .grupo-cab b { font-size:14px; font-weight:700; color:var(--tinta); }
+  .grupo-cab button.mini.lnk { font-size:12px; color:var(--gris); }
+  /* Usuarios: la matriz de ajustes, plegada. */
+  .usu-ajustes > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 0; }
+  .usu-ajustes > summary::-webkit-details-marker { display:none; }
+  .usu-ajustes > summary .usu-res { font-size:13.5px; color:var(--tinta); }
+  .usu-ajustes > summary .usu-abrir { font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; color:var(--tinta); }
+  .usu-ajustes .usu-abrir .cerrar, .usu-ajustes[open] .usu-abrir .abrir { display:none; }
+  .usu-ajustes[open] .usu-abrir .cerrar { display:inline; }
+  .usu-matriz { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .usu-matriz input[type=checkbox] { width:20px; height:20px; margin:0; }
+  .usu-matriz table.sin-area .col-area { display:none; }
+  .usu-matriz label.toque { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+  .campo label .ct-help { margin-left:6px; vertical-align:middle; }
+  @media (max-width:760px) {
+    .usu-matriz table { font-size:12.5px; }
+    .usu-matriz th, .usu-matriz td { padding:8px 6px; }
+    .usu-matriz th:not(:first-child), .usu-matriz td:not(:first-child) { width:64px !important; }
+    .usu-matriz label.toque { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; }
+  }
+  .tag-rol { background:#eef0f3; color:var(--tinta); font-weight:600; }
+  .tag-rol.fuerte { font-weight:800; }
+  /* Apariencia: los dos públicos lado a lado; la prueba de lectura sin números. */
+  .ap-dos { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 24px; }
+  .ap-dos .ap-grupo { grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); }
+  @media (max-width:900px) { .ap-dos { grid-template-columns:minmax(0,1fr); } }
+  .ap-guardar { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid var(--linea); }
+  .ap-guardar button { margin:0; }
+  .ap-sucio { font-size:12.5px; font-weight:600; color:#8a5a1a; }
+  .ap-sucio[hidden] { display:none; }
+  .ap-lectura li { margin:6px 0 10px; }
+  .ap-cambio { display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap; margin-top:6px; font-size:12.5px; }
+  .ap-cambio > span:not(:last-child) { white-space:nowrap; }
+  .ap-cambio i { width:24px; height:24px; border-radius:6px; display:inline-block; box-shadow:inset 0 0 0 1px rgba(0,0,0,.15); }
+  .ap-cambio .flecha { color:currentColor; opacity:.7; }
+  .td-fijos-cab { display:flex; align-items:baseline; gap:10px; margin:14px 0 0; }
+  .td-fijos-cab + .td-fijos { margin-top:8px; }
+  .td-extra.td-sub { padding-left:22px; gap:14px; cursor:pointer; }
+  .td-extra.td-sub > span { flex:1; color:var(--gris); }
+  .td-llave.td-chica { width:34px; height:20px; border-radius:10px; }
+  .td-llave.td-chica::after { width:14px; height:14px; }
+  .td-llave.td-chica:checked::after { transform:translateX(14px); }
+  /* Encuestas: la ayuda del modo cambia con lo elegido. */
+  .enc-modo-ayuda { display:block; font-size:12.5px; line-height:1.45; margin-top:6px; color:var(--gris); }
+  .enc-modo-ayuda b { color:var(--tinta); }
+  /* Las preguntas, en el ancho de la hoja: una fila que se acomoda, no los
+     controles apilados de la columna angosta de antes (G5-25). */
+  #enc-preguntas-lista .campo-tramite-fila { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 12px; }
+  #enc-preguntas-lista .campo-tramite-fila .ct-etiqueta { flex:3 1 260px; }
+  #enc-preguntas-lista .campo-tramite-fila .ct-tipo { flex:1 1 150px; }
+  #enc-preguntas-lista .campo-tramite-fila .ct-extra { flex:2 1 220px; }
+  #enc-preguntas-lista .campo-tramite-fila button { margin:0; }
+  .ttp-cuil { flex-direction:column; align-items:stretch; gap:4px; }
+  .ttp-cuil label { font-size:11.5px; font-weight:600; color:var(--gris); }
+  .ttp-cuil input { flex:none; height:40px; box-sizing:border-box; background:#fff; border:1px solid var(--linea); border-radius:6px; font-size:13px; }
+  .ttp-caratula .exp { font-family:inherit; font-size:11px; color:rgba(255,255,255,.85); }
+  /* Seccionales: «ubicada a mano» es una ubicación válida para una seccional
+     (alguien miró el mapa y responde por el punto): va en verde, como la
+     exacta. El ámbar queda para la aproximada, que no alcanza (G6-09). */
+  #panel-seccionales .geo-punto.manual i, #modal-seccional .geo-punto.manual i { background:#0d7a5f; }
+  .lst-pastillas.apagadas .lst-pastilla.activa { opacity:.5; }
+  /* En teléfono la bandeja se desliza adentro y el expediente no se parte. */
+  @media (max-width:760px) {
+    .lst-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .lst-scroll table { min-width:720px; }
+    .lst-scroll code { white-space:nowrap; }
+  }
+  </style>
+
   {% if 'noticias' in modulos %}
   {% if 'noticias' in permisos %}
   <div class="panel" data-mov-vista id="panel-noticias">
@@ -1787,10 +1922,10 @@
     {% for n in noticias %}
     <tr>
       <td>{{ n.titulo }}{% if n.bajada %}<br><span class="muted">{{ n.bajada }}</span>{% endif %}</td>
-      <td class="muted" style="white-space:nowrap;">{{ n.fecha_desde }} → {{ n.fecha_hasta }}</td>
-      <td>{% if n.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#5f6676;">vencida</span>{% elif n.fecha_desde > hoy %}<span class="tag tag-pend">próxima</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
-      <td class="muted">{% if n.destino_seccionales %}{% for sid in n.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
-      <td>{{ n.creada }}</td>
+      <td class="muted lst-nowrap">{{ fecha_corta(n.fecha_desde) }} → {{ fecha_corta(n.fecha_hasta) }}</td>
+      <td>{% if n.fecha_hasta < hoy %}<span class="tag tag-neutra">vencida</span>{% elif n.fecha_desde > hoy %}<span class="tag tag-pend">próxima</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
+      <td class="muted lst-dest">{% if n.destino_seccionales %}{% for sid in n.destino_seccionales %}<span>{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %},{% endif %}</span>{% if not loop.last %} {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
+      <td class="muted">{{ fecha_corta(n.creada) }}</td>
       <td style="white-space:nowrap; text-align:right;">
         {# Editar y borrar solo lo que cae entero en el alcance de quien mira
            (`propia`, db.publicacion_en_alcance); una publicación a todas o de
@@ -1905,11 +2040,14 @@
     <tr><th>Rubro</th><th>Vigencia</th><th>Estado</th><th>Destino</th><th>Cargado</th><th></th></tr>
     {% for b in beneficios %}
     <tr>
-      <td>{{ b.rubro }}</td>
-      <td class="muted" style="white-space:nowrap;">{{ b.fecha_desde }} → {{ b.fecha_hasta }}</td>
-      <td>{% if b.fecha_hasta < hoy %}<span class="tag" style="background:#eee;color:#5f6676;">vencido</span>{% elif b.fecha_desde > hoy %}<span class="tag tag-pend">próximo</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
-      <td class="muted">{% if b.destino_seccionales %}{% for sid in b.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
-      <td>{{ b.creada }}</td>
+      <td><div class="ben-fila">
+        {% if b.tiene_imagen %}<img class="ben-mini" src="/beneficio-imagen/{{ b.id }}" alt="" loading="lazy" width="40" height="40">{% else %}<span class="ben-mini vacia" aria-hidden="true" title="Sin imagen"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-5 4 4 3-3 4 4"/></svg></span>{% endif %}
+        <span style="min-width:0;">{{ b.rubro }}{% if b.descripcion %}<span class="lst-baja" title="{{ b.descripcion }}">{{ b.descripcion.split('\n')[0] }}</span>{% endif %}</span>
+      </div></td>
+      <td class="muted lst-nowrap">{{ fecha_corta(b.fecha_desde) }} → {{ fecha_corta(b.fecha_hasta) }}</td>
+      <td>{% if b.fecha_hasta < hoy %}<span class="tag tag-neutra">vencido</span>{% elif b.fecha_desde > hoy %}<span class="tag tag-pend">próximo</span>{% else %}<span class="tag tag-si">vigente</span>{% endif %}</td>
+      <td class="muted lst-dest">{% if b.destino_seccionales %}{% for sid in b.destino_seccionales %}<span>{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %},{% endif %}</span>{% if not loop.last %} {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
+      <td class="muted">{{ fecha_corta(b.creada) }}</td>
       <td style="white-space:nowrap; text-align:right;">
         {% if b.propia %}
         <button type="button" class="mini" onclick='editarBeneficio({{ b | tojson }})'>Editar</button>
@@ -2054,11 +2192,19 @@
     <tr><th>Fecha</th><th>Remitente</th><th>Mensaje</th><th>Destino</th><th>Leídos</th><th></th></tr>
     {% for n in notificaciones %}
     <tr>
-      <td class="muted">{{ n.enviado_en }}</td>
+      <td class="muted lst-nowrap">{{ n.enviado_en }}</td>
       <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#5f6676;">sistema</span>{% endif %}</td>
       <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
-      <td class="muted">{{ CRITERIO_LABELS.get(n.criterio, n.criterio) }}</td>
-      <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
+      {# Destino y leídos en el idioma de quien lee (auditoría G5-12): el
+         criterio dicho como a quién le llegó, y los leídos con su porcentaje. #}
+      {% set vals = n.criterio_valores or [] %}
+      <td class="muted lst-dest">{% if n.criterio == 'cuil' %}Personas puntuales ({{ vals|length }})
+        {%- elif n.criterio == 'cuit_empleador' %}{{ 'Una empresa' if vals|length == 1 else 'Empresas puntuales (%d)'|format(vals|length) }}
+        {%- elif n.criterio == 'seccional' %}{{ 'Seccional' if vals|length == 1 else 'Seccionales' }} {% for v in vals %}<span>{{ seccional_por_id.get(v|int, '?') }}{% if not loop.last %},{% endif %}</span>{% if not loop.last %} {% endif %}{% endfor %}
+        {%- elif n.criterio == 'provincia' %}{{ 'Provincia' if vals|length == 1 else 'Provincias' }} {{ vals|join(', ') }}
+        {%- elif n.criterio == 'todos' %}Todo el padrón
+        {%- else %}{{ CRITERIO_LABELS.get(n.criterio, n.criterio) }}{% endif %}</td>
+      <td class="lst-nowrap">{{ n.leidos }} de {{ n.cantidad_destinatarios }}{% if n.cantidad_destinatarios %} <span class="lst-pct">· {{ ((n.leidos * 100) / n.cantidad_destinatarios)|round|int }} %</span>{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick="verDestinatariosNotificacion({{ n.id }})">Ver</button>
       </td>
@@ -2100,32 +2246,52 @@
   <!-- Sub: TRÁMITES RECIBIDOS -->
   {% if 'tramites_recibidos' in permisos %}
   <div class="tramite-subpanel activo" data-mov-vista id="tramite-sub-recibidos">
-    <h2 class="titulo-pagina">Trámites recibidos ({{ tramites|length }})</h2>
+    {# Lo pendiente primero (auditoría G5-13): la bandeja abre en «Sin
+       terminar», con lo que más espera arriba; las pastillas separan de
+       quién es el próximo paso. Buscar por nombre, CUIL o expediente busca
+       en todos los estados. El orden y los grupos los arma el navegador
+       (filtrarTramites), sobre las mismas filas. #}
+    {% set tr_abiertos = tramites|rejectattr('estado', 'equalto', 'terminado')|sort(attribute='actualizado')|list %}
+    {% set tr_terminados = tramites|selectattr('estado', 'equalto', 'terminado')|list %}
+    {% set tr_sindicato = tr_abiertos|selectattr('estado', 'in', ['iniciado', 'en_tratamiento'])|list %}
+    <h2 class="titulo-pagina" id="tr-titulo">{% if tramites %}{{ '{:,}'.format(tr_abiertos|length).replace(',', '.') }} sin terminar <span class="lst-de">de {{ '{:,}'.format(tramites|length).replace(',', '.') }}</span>{% else %}Trámites recibidos{% endif %}</h2>
+    {% if tramites %}
+    <div class="lst-pastillas" id="tr-pastillas" role="group" aria-label="Qué trámites ver">
+      <button type="button" class="sec lst-pastilla activa" data-grupo="abiertos" aria-pressed="true" onclick="grupoTramites('abiertos')">Sin terminar <span class="n">{{ tr_abiertos|length }}</span></button>
+      <button type="button" class="sec lst-pastilla" data-grupo="sindicato" aria-pressed="false" onclick="grupoTramites('sindicato')">Le toca al sindicato <span class="n">{{ tr_sindicato|length }}</span></button>
+      <button type="button" class="sec lst-pastilla" data-grupo="afiliado" aria-pressed="false" onclick="grupoTramites('afiliado')">Esperando al afiliado <span class="n">{{ tr_abiertos|length - tr_sindicato|length }}</span></button>
+      <button type="button" class="sec lst-pastilla" data-grupo="terminados" aria-pressed="false" onclick="grupoTramites('terminados')">Terminados <span class="n">{{ tr_terminados|length }}</span></button>
+      <button type="button" class="sec lst-pastilla" data-grupo="todos" aria-pressed="false" onclick="grupoTramites('todos')">Todos <span class="n">{{ tramites|length }}</span></button>
+    </div>
     <div class="filtros">
-      <input type="text" id="f-tramites-cuit" placeholder="Buscar por CUIL" oninput="filtrarTramites()">
-      <input type="text" id="f-tramites-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramites()">
-      <select id="f-tramites-estado" onchange="filtrarTramites()">
+      <input type="text" id="f-tramites-cuit" class="f-ancho" placeholder="Nombre o CUIL" aria-label="Buscar por nombre o CUIL" oninput="filtrarTramites()">
+      <input type="text" id="f-tramites-nombre" placeholder="N° de expediente" aria-label="Buscar por número de expediente" oninput="filtrarTramites()">
+      <select id="f-tramites-estado" onchange="filtrarTramites()" aria-label="Estado">
         <option value="">Todos los estados</option>
-        {% for e in estados_tramite %}<option value="{{ e }}">{{ estados_tramite_label[e] }}</option>{% endfor %}
+        {% for e in estados_tramite %}<option value="{{ e }}">{{ 'Espera al afiliado' if e == 'espera_info' else estados_tramite_label[e] }}</option>{% endfor %}
       </select>
       <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
       <span class="f-cant" id="f-tramites-cant"></span>
     </div>
-    <table>
-      <tr><th>Expediente</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
-      {% for tr in tramites %}
-      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
+    <div class="lst-scroll">
+    <table id="tr-tabla">
+      <tr><th>Expediente</th><th>Nombre</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
+      {% for tr in tr_abiertos + tr_terminados %}
+      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-persona="{{ tr.nombre or '' }}" data-estado="{{ tr.estado }}" data-actualizado="{{ tr.actualizado }}"{% if tr.estado == 'terminado' %} style="display:none"{% endif %}>
         <td><code>{{ tr.numero_expediente }}</code></td>
-        <td>{{ tr.cuil }}</td>
+        <td>{{ tr.nombre or '—' }}</td>
+        <td class="lst-nowrap">{{ tr.cuil }}</td>
         <td>{{ tr.tipo_titulo }}</td>
-        <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
-        <td class="muted">{{ tr.actualizado }}</td>
+        <td><span class="tag {{ CLASE_ESTADO_TRAMITE.get(tr.estado, 'tag-pend') }}">{{ 'Espera al afiliado' if tr.estado == 'espera_info' else tr.estado_label }}</span></td>
+        <td class="muted lst-nowrap">{{ tr.actualizado }}</td>
         <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteDetalle({{ tr.id }})">Ver</button></td>
       </tr>
-      {% else %}
-      <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite.</td></tr>
       {% endfor %}
     </table>
+    </div>
+    {% else %}
+    <div class="lst-vacio"><p>Todavía no llegó ningún trámite. Los afiliados los inician desde la app, con los formularios activos que armes en «Crear / editar formularios».</p></div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -2182,7 +2348,8 @@
               <div class="ct-pasog-cab"><b>2</b><h3>Quién lo recibe</h3><i class="ob">obligatorio</i>
                 <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El trámite cae en un <b>área</b> del sindicato, que lo atiende por el chat. Las seccionales que no mapees abajo caen en el área por defecto, así una seccional nueva funciona desde el día uno."></button></div>
               <div class="grid2">
-                <div class="campo"><label>Área que lo recibe por defecto *</label>
+                <div class="campo"><label for="tt-area-default">Área que lo recibe *
+                    <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Es el área <b>por defecto</b>: le llegan los trámites de toda seccional que no mandes a otra en el mapa de abajo."></button></label>
                   <select name="area_destino_default_id" id="tt-area-default" required>
                     <option value="">— elegí un área —</option>
                     {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
@@ -2274,14 +2441,14 @@
               <div class="ttp-sello-overlay" id="tt-probar-sello"></div>
               <div class="ttp-caratula">
                 <div class="tit" id="tt-prev-titulo">Trámite</div>
-                <div class="meta"><span class="cod" id="tt-prev-codigo">—</span><span class="exp">EXP — se numera al enviar</span></div>
+                <div class="meta"><span class="cod" id="tt-prev-codigo">—</span><span class="exp">El expediente se numera al enviar</span></div>
               </div>
               <div class="ttp-cuerpo">
                 <div class="tram-preview-grid" id="tt-vista-previa"></div>
                 {# Las validaciones por función y los requisitos se prueban
                    contra un afiliado REAL del padrón: sin CUIL no se evalúan
                    y el resultado lo dice. #}
-                <div class="ttp-cuil"><input id="tt-cuil-prueba" inputmode="numeric" placeholder="CUIL de prueba (un afiliado del padrón)" title="Las validaciones por función y los requisitos se evalúan contra este afiliado"></div>
+                <div class="ttp-cuil"><label for="tt-cuil-prueba">Probar con el CUIL de</label><input id="tt-cuil-prueba" inputmode="numeric" placeholder="CUIL de un afiliado" title="Las validaciones por función y los requisitos se evalúan contra este afiliado del padrón"></div>
                 <button type="button" class="ttp-probar" onclick="probarFormularioTramite()">Probar el formulario</button>
                 <div class="ttp-resultado" id="tt-probar-res"></div>
               </div>
@@ -2369,87 +2536,105 @@
   {% if 'encuestas' in permisos %}
   <div class="enc-subpanel {% if not encuestas %}activo{% endif %}" data-mov-vista id="enc-sub-nueva">
   <h2 class="titulo-pagina" id="enc-h2">Nueva encuesta</h2>
-  <div class="card">
+  {# La HOJA DE TRABAJO de las altas del panel (auditoría G5-24; mismo patrón
+     que Noticias, Beneficios, Notificaciones y Trámites): riel de pasos con
+     su estado, la hoja sobre el área cuadriculada y lo que ve el afiliado
+     fijo a la derecha. Lo que se guarda no cambió: mismos campos, mismos
+     nombres, mismo POST. Las explicaciones viven en un «?»; lo único que
+     queda a la vista es la consecuencia del modo, que cambia con lo elegido
+     (G5-26), porque se tiene que leer antes de publicar. #}
+  <div class="card ct-card ct-ancho">
     <form method="post" action="/admin/encuesta" id="form-encuesta" onsubmit="return prepararEnvioEncuesta()">
       <input type="hidden" name="id" id="enc-id">
       <input type="hidden" name="preguntas_json" id="enc-preguntas-json">
+      <div class="ct-layout">
+      <aside class="ct-riel" id="enc-riel">
+        <a class="ct-riel-paso" href="#enc-paso-1" data-paso="1"><span class="num">1</span><span><b>La encuesta</b><small>título y modo</small></span></a>
+        <a class="ct-riel-paso" href="#enc-paso-2" data-paso="2"><span class="num">2</span><span><b>Cuándo</b><small>apertura y cierre</small></span></a>
+        <a class="ct-riel-paso" href="#enc-paso-3" data-paso="3"><span class="num">3</span><span><b>Preguntas</b><small>sin preguntas</small></span></a>
+        <a class="ct-riel-paso" href="#enc-paso-4" data-paso="4"><span class="num">4</span><span><b>Publicación</b><small>resultados al cerrar</small></span></a>
+        <div class="ct-riel-estado"><div id="enc-estado">Nueva · <b>sin guardar</b></div><button type="submit" class="pri-riel" id="enc-submit-riel">Crear encuesta</button><button type="button" class="sec" onclick="document.getElementById('enc-prev-titulo').scrollIntoView({behavior:'smooth', block:'center'})">Ver como el afiliado</button></div>
+      </aside>
+      <div class="ct-area"><div class="ct-izq ct-guia">
+      <div id="enc-congelada" class="enc-congelada oculto"></div>
 
-      <div class="grid2">
-        <div class="campo"><label>Título *</label>
-          <input name="titulo" id="enc-titulo" required maxlength="160"
-                 placeholder="Ej: Clima laboral 2026" oninput="renderVistaPreviaEncuesta()"></div>
-        <div class="campo"><label>¿Anónima o nominal? *</label>
-          <select name="modo" id="enc-modo" onchange="cambioModoEncuesta()">
-            {% for valor, etiqueta in encuestas_modos.items() %}
-            <option value="{{ valor }}">{{ etiqueta }}</option>
+      <section class="ct-pasog" id="enc-paso-1">
+        <div class="ct-pasog-cab"><b>1</b><h3>La encuesta</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El <b>título</b> y la <b>descripción</b> son lo primero que lee el afiliado en su tarjeta. El <b>modo</b> no se puede cambiar una vez que alguien respondió."></button></div>
+        <div class="grid2">
+          <div class="campo"><label for="enc-titulo">Título *</label>
+            <input name="titulo" id="enc-titulo" required maxlength="160"
+                   placeholder="Ej: Clima laboral 2026" oninput="renderVistaPreviaEncuesta()"></div>
+          <div class="campo"><label for="enc-modo">¿Anónima o nominal? *</label>
+            {# Sin valor por defecto (G5-26): es la decisión más delicada de la
+               encuesta y no puede salir elegida por no tocar nada. #}
+            <select name="modo" id="enc-modo" required onchange="cambioModoEncuesta()" aria-describedby="enc-modo-ayuda">
+              <option value="">Elegí una…</option>
+              {% for valor, etiqueta in encuestas_modos.items() %}
+              <option value="{{ valor }}">{{ etiqueta }}</option>
+              {% endfor %}
+            </select>
+            <span class="enc-modo-ayuda" id="enc-modo-ayuda">Elegilo antes de seguir: cambia qué se guarda de cada respuesta.</span>
+          </div>
+          <div class="campo full"><label for="enc-descripcion">Descripción</label>
+            <input name="descripcion" id="enc-descripcion" maxlength="400"
+                   placeholder="Una línea que explique de qué se trata y cuánto lleva"
+                   oninput="renderVistaPreviaEncuesta()"></div>
+        </div>
+        <div id="enc-cortes-caja" class="oculto" style="margin-top:14px;">
+          <label style="font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:6px; margin-bottom:6px;">¿Qué se guarda junto a cada respuesta?
+            <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Sin esto, los resultados son solo totales generales. Lo que tildes acá es lo único que se guarda —<b>nunca la identidad</b>— y es lo que después permite filtrar el tablero. Los grupos con menos de <b>{{ encuestas_umbral }}</b> respuestas no se muestran, para que nadie pueda deducir quién respondió qué. El texto que ve el afiliado se arma solo con lo que tildes."></button></label>
+          <div class="check-seccionales">
+            {% for valor, etiqueta in encuestas_cortes.items() %}
+            <label class="chk-seccional"><input type="checkbox" name="cortes" value="{{ valor }}"
+                   class="enc-corte" onchange="renderVistaPreviaEncuesta()"> {{ etiqueta }}</label>
             {% endfor %}
-          </select>
-          <span class="muted" style="font-size:11.5px;">En una anónima, la respuesta no se puede vincular con la persona: solo queda registrado que participó.</span>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="campo" style="margin-top:10px;"><label>Descripción</label>
-        <input name="descripcion" id="enc-descripcion" maxlength="400"
-               placeholder="Una línea que explique de qué se trata y cuánto lleva"
-               oninput="renderVistaPreviaEncuesta()"></div>
-
-      <div id="enc-cortes-caja" class="oculto" style="margin-top:14px;">
-        <h3 class="ct-secc">¿Qué se guarda junto a cada respuesta?</h3>
-        <p class="muted" style="font-size:11.5px; margin:0 0 8px;">
-          Sin esto, los resultados son solo totales generales. Lo que tildes acá es lo único
-          que se guarda —nunca la identidad— y es lo que después permite filtrar el tablero.
-          Los grupos con menos de <b>{{ encuestas_umbral }}</b> respuestas no se muestran,
-          para que nadie pueda deducir quién respondió qué. El texto que ve el afiliado
-          se arma solo con lo que tildes.</p>
-        <div class="check-seccionales">
-          {% for valor, etiqueta in encuestas_cortes.items() %}
-          <label class="chk-seccional"><input type="checkbox" name="cortes" value="{{ valor }}"
-                 class="enc-corte" onchange="renderVistaPreviaEncuesta()"> {{ etiqueta }}</label>
-          {% endfor %}
+      <section class="ct-pasog" id="enc-paso-2">
+        <div class="ct-pasog-cab"><b>2</b><h3>Cuándo</h3><i class="op">opcional</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="La encuesta se abre el día de <b>apertura</b> y cierra a las 23:59 del día de <b>cierre</b>, hora de Buenos Aires. Sin fechas, queda abierta desde que la publicás hasta que la cerrás a mano."></button></div>
+        <div class="grid2">
+          <div class="campo"><label for="enc-desde">Abre el</label>
+            <input type="date" name="fecha_desde" id="enc-desde"></div>
+          <div class="campo"><label for="enc-hasta">Cierra el</label>
+            <input type="date" name="fecha_hasta" id="enc-hasta"></div>
         </div>
-      </div>
+      </section>
 
-      <div class="grid2" style="margin-top:14px;">
-        <div class="campo"><label>Abre el</label>
-          <input type="date" name="fecha_desde" id="enc-desde"></div>
-        <div class="campo"><label>Cierra el</label>
-          <input type="date" name="fecha_hasta" id="enc-hasta">
-          <span class="muted" style="font-size:11.5px;">Cierra a las 23:59 de ese día, hora de Buenos Aires.</span></div>
-      </div>
+      <section class="ct-pasog" id="enc-paso-3">
+        <div class="ct-pasog-cab"><b>3</b><h3>Preguntas</h3><i class="ob">obligatorio</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Al menos una pregunta que se pueda responder. Arrastrá para reordenar; lo de la derecha muestra cómo la ve el afiliado. En una <b>anónima</b> no hay preguntas de archivo: un archivo lleva datos de quien lo subió."></button></div>
+        <div class="ct-ficha" id="enc-preguntas-lista"></div>
+        <div class="ct-pasog-pie"><button type="button" class="sec mini" id="enc-btn-agregar"
+                onclick="agregarPreguntaEncuesta()">+ Agregar pregunta</button></div>
+      </section>
 
-      <div style="margin-top:10px;">
+      <section class="ct-pasog" id="enc-paso-4">
+        <div class="ct-pasog-cab"><b>4</b><h3>Publicación</h3><i class="op">opcional</i><button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Guardar no la publica: queda como <b>borrador</b> en la lista y se publica desde ahí, que es donde se elige a quiénes les llega (el padrón se fija en ese momento). Los resultados para el afiliado son solo los totales generales, nunca los cortes por seccional o empresa: es por ahí por donde se identifica gente."></button></div>
         <label class="chk-seccional" style="width:fit-content;">
           <input type="checkbox" name="mostrar_resultados" id="enc-mostrar" value="1">
           Al cerrarse, mostrarle los resultados al afiliado
         </label>
-        <p class="muted" style="font-size:11.5px; margin:4px 0 0;">Solo los totales generales, nunca los cortes por seccional o empresa: es por ahí por donde se identifica gente.</p>
+      </section>
+
+      <div class="ct-guardar">
+        <button type="submit" id="enc-submit">Crear encuesta</button>
+        <button type="button" class="sec oculto" id="enc-cancel" onclick="cancelarEncuesta()">Cancelar edición</button>
+        <span class="ct-estado" id="enc-guardar-nota">Se guarda como borrador: la publicás desde la lista.</span>
       </div>
-
-      <div id="enc-congelada" class="enc-congelada oculto" style="margin-top:14px;"></div>
-
-      <div class="ct-layout">
-        <div class="ct-izq">
-          <h3 class="ct-secc">Preguntas</h3>
-          <div class="ct-ficha" id="enc-preguntas-lista"></div>
-          <button type="button" class="sec mini" style="margin-top:8px;" id="enc-btn-agregar"
-                  onclick="agregarPreguntaEncuesta()">+ Agregar pregunta</button>
-          <div style="margin-top:18px;">
-            <button type="submit" id="enc-submit">Crear encuesta</button>
-            <button type="button" class="sec oculto" id="enc-cancel" onclick="cancelarEncuesta()">Cancelar edición</button>
+      </div></div>
+      <div class="ct-der">
+        <h3 class="ct-secc">Lo que ve el afiliado</h3>
+        <div class="enc-marco">
+          <div class="enc-cab">
+            <div class="tit" id="enc-prev-titulo">Encuesta</div>
+            <div class="baja" id="enc-prev-baja"></div>
+            <div class="enc-avance"><i id="enc-prev-avance"></i></div>
           </div>
+          <div class="enc-cuerpo" id="enc-vista-previa"></div>
+          <div class="enc-pie" id="enc-prev-pie">Respondieron 0 de 0</div>
         </div>
-        <div class="ct-der">
-          <h3 class="ct-secc">Lo que ve el afiliado</h3>
-          <div class="enc-marco">
-            <div class="enc-cab">
-              <div class="tit" id="enc-prev-titulo">Encuesta</div>
-              <div class="baja" id="enc-prev-baja"></div>
-              <div class="enc-avance"><i id="enc-prev-avance"></i></div>
-            </div>
-            <div class="enc-cuerpo" id="enc-vista-previa"></div>
-            <div class="enc-pie" id="enc-prev-pie">Respondieron 0 de 0</div>
-          </div>
-        </div>
+      </div>
       </div>
     </form>
   </div>
@@ -2463,43 +2648,56 @@
     <tr><th>Título</th><th>Modo</th><th>Estado</th><th>Preguntas</th><th>Ventana</th><th>Respuestas</th><th></th></tr>
     {% for e in encuestas %}
     <tr>
-      <td>{{ e.titulo }}{% if e.origen_id %}<br><small class="muted">toma nueva de #{{ e.origen_id }}</small>{% endif %}</td>
+      {# La toma se dice por su número y el nombre de la primera, no por el
+         id de la base (auditoría G5-22). `origen_id` apunta siempre a la
+         raíz (duplicar_encuesta aplana el linaje). #}
+      <td>{{ e.titulo }}{% if e.origen_id %}{% set raiz = encuestas|selectattr('id', 'equalto', e.origen_id)|first %}{% set hermanas = encuestas|selectattr('origen_id', 'equalto', e.origen_id)|map(attribute='id')|sort|list %}<br><small class="muted">{{ hermanas.index(e.id) + 2 }}.ª toma de «{{ raiz.titulo if raiz else 'una encuesta anterior' }}»</small>{% endif %}</td>
       <td>{{ encuestas_modos.get(e.modo, e.modo) }}</td>
-      <td><span class="enc-chip {{ e.estado }}">{{ e.estado }}</span></td>
+      {# Cerrada es el final normal de una encuesta, no un error (G5-21). #}
+      <td><span class="tag {{ {'abierta': 'tag-si', 'programada': 'tag-pend'}.get(e.estado, 'tag-neutra') }}">{{ e.estado }}</span></td>
       <td class="muted">{{ e.preguntas|length }}</td>
       <td class="muted" style="white-space:nowrap;">{% if e.fecha_desde %}{{ e.fecha_desde|dia }} → {{ e.fecha_hasta|dia }}{% else %}sin fechas{% endif %}</td>
-      <td class="muted">{{ e.respuestas }}{% if e.cantidad_destinatarios %} de {{ e.cantidad_destinatarios }}{% endif %}</td>
-      <td style="white-space:nowrap; text-align:right;">
+      <td class="lst-nowrap">{{ e.respuestas }}{% if e.cantidad_destinatarios %} de {{ e.cantidad_destinatarios }}{% set pct = ((e.respuestas * 100) / e.cantidad_destinatarios)|round|int %} <span class="lst-pct">· {{ pct }} %</span><span class="lst-barra" aria-hidden="true"><i style="width:{{ [pct, 100]|min }}%"></i></span>{% endif %}</td>
+      <td>
+        {# Una acción principal por fila, las de todos los días como texto y
+           la que no tiene vuelta (cerrar, borrar) aparte, a la derecha
+           (auditoría G5-20). #}
+        <div class="enc-acc">
         {# Los resultados son OTRA sección (N17): un delegado puede leer el
            dashboard sin poder lanzar ni tocar nada. Y solo tienen sentido
            una vez publicada: antes no hay ni padrón ni respuestas. #}
         {% if e.publicada and 'encuestas_resultados' in permisos %}
-        <a class="btn-mini" href="/admin/encuesta/{{ e.id }}/resultados">Resultados</a>
+        <a class="btn-mini pri" href="/admin/encuesta/{{ e.id }}/resultados">Resultados</a>
         {% endif %}
         {# `propia` es False en una encuesta de sede central mirada por una
            seccional: la lee (N18) pero no la toca, y el servidor lo frena
            igual aunque alguien arme el POST a mano. #}
         {% if 'encuestas' in permisos and e.propia %}
-        <button type="button" class="mini" onclick='editarEncuesta({{ e | tojson }})'>Editar</button>
+        {% if not e.publicada %}
+        <button type="button" class="mini enc-publicar" onclick="abrirPublicar({{ e.id }})">Publicar</button>
+        {% endif %}
+        <button type="button" class="mini lnk" onclick='editarEncuesta({{ e | tojson }})'>Editar</button>
         <form method="post" action="/admin/encuesta/duplicar" style="display:inline;">
           <input type="hidden" name="id" value="{{ e.id }}">
-          <button class="sec mini" type="submit" title="Copia la estructura en un borrador nuevo, para relanzarla y poder comparar las dos tomas">Duplicar</button>
+          <button class="mini lnk" type="submit" title="Copia la estructura en un borrador nuevo, para relanzarla y poder comparar las dos tomas">Duplicar</button>
         </form>
         {% if not e.publicada %}
-        <button type="button" class="mini" onclick="abrirPublicar({{ e.id }})">Publicar</button>
-        <form method="post" action="/admin/encuesta/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este borrador?')">
+        <span class="sep" aria-hidden="true"></span>
+        <form method="post" action="/admin/encuesta/borrar" style="display:inline;" data-titulo="{{ e.titulo }}" onsubmit="return confirm('Borrar el borrador «' + this.dataset.titulo + '»: se pierden sus preguntas.')">
           <input type="hidden" name="id" value="{{ e.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
         </form>
         {% elif e.estado == 'abierta' or e.estado == 'programada' %}
-        <button type="button" class="mini" onclick="abrirAvisar({{ e.id }})">Avisos</button>
-        <form method="post" action="/admin/encuesta/cerrar" style="display:inline;"
-              onsubmit="return confirm('¿Cerrar la encuesta ahora? No se puede reabrir: si hace falta más gente, se duplica y se lanza otra ronda.')">
+        <button type="button" class="mini lnk" onclick="abrirAvisar({{ e.id }})">Avisos</button>
+        <span class="sep" aria-hidden="true"></span>
+        <form method="post" action="/admin/encuesta/cerrar" style="display:inline;" data-titulo="{{ e.titulo }}"
+              onsubmit="return confirm('Cerrar «' + this.dataset.titulo + '» ahora: nadie más va a poder responder. No se puede reabrir; si hace falta más gente, se duplica y se lanza otra ronda.')">
           <input type="hidden" name="id" value="{{ e.id }}">
-          <button class="sec mini" type="submit">Cerrar</button>
+          <button class="peligro mini" type="submit">Cerrar</button>
         </form>
         {% endif %}
         {% endif %}
+        </div>
       </td>
     </tr>
     {% else %}
@@ -2686,10 +2884,6 @@
       </form>
     </div>
 
-    <form method="post" action="/admin/empleador/importar-cuits" style="margin:14px 0;" onsubmit="return confirm('¿Importar los CUIT que ya aparecen en Conceptos y todavía no están cargados acá?');">
-      <button type="submit" class="sec mini">Importar CUITs de conceptos</button>
-    </form>
-
     {% if request.query_params.get('err') == 'sincuenta' %}
     <div class="msg err">Esa empresa todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
     {% elif request.query_params.get('err') == 'cuentaajena' %}
@@ -2697,17 +2891,26 @@
     {% elif request.query_params.get('ok') == 'identidad' %}
     <div class="msg ok">Identidad confirmada: la cuenta pasó a nivel 4.</div>
     {% endif %}
-    <h2>Empleadores cargados ({{ empleadores|length }})</h2>
+    {# La importación va con la lista que llena, como acción secundaria y
+       con su explicación en un «?» (auditoría G6-02). #}
+    <div class="lst-cab">
+      <h2>Empleadores cargados ({{ empleadores|length }})</h2>
+      <form method="post" action="/admin/empleador/importar-cuits" onsubmit="return confirm('¿Importar los CUIT que ya aparecen en Conceptos y todavía no están cargados acá?');">
+        <button type="submit" class="sec mini">Importar CUIT de Conceptos</button>
+        <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Suma como empresas los CUIT que ya aparecen en Conceptos (los conceptos propios de un empleador que se leyeron de los recibos). <b>No pisa</b> las que ya cargaste: solo agrega las que faltan, con el CUIT y nada más."></button>
+      </form>
+    </div>
+    {# Estado solo cuando dice algo: la baja (auditoría G6-01). Sin cuenta
+       en la app, el nivel lo dice con palabras y no con un guion. #}
     <table>
-      <tr><th>CUIT</th><th>Razón social</th><th>Provincia</th><th>Estado</th><th>Nivel</th><th></th></tr>
+      <tr><th>CUIT</th><th>Razón social</th><th>Provincia</th><th>Nivel</th><th></th></tr>
       {% for e in empleadores %}
       {% set cta = niveles_empleadores.get(e.cuit, {'tiene_cuenta': False, 'nivel_fiabilidad': 1, 'nivel_origen': ''}) %}
       <tr>
         <td><code>{{ e.cuit }}</code></td>
-        <td>{{ e.razon_social or '—' }}</td>
+        <td>{{ e.razon_social or '—' }}{% if not e.activo %} <span class="tag tag-neutra">dada de baja</span>{% endif %}</td>
         <td class="muted">{{ e.provincia or '—' }}</td>
-        <td>{% if e.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#5f6676;">inactivo</span>{% endif %}</td>
-        <td style="white-space:nowrap;">{{ nivel_cuenta(cta) }}</td>
+        <td style="white-space:nowrap;">{% if not cta.tiene_cuenta and cta.get('responde', True) != False %}<span class="muted" title="La empresa todavía no creó su cuenta en la app.">sin cuenta</span>{% else %}{{ nivel_cuenta(cta) }}{% endif %}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick='editarEmpleador({{ {"id":e.id,"cuit":e.cuit,"razon_social":e.razon_social,"domicilio":e.domicilio,"telefono":e.telefono,"provincia":e.provincia,"mail":e.mail} | tojson }})'>Editar</button>
           {% if cta.tiene_cuenta and cta.get('responde', True) %}
@@ -2749,8 +2952,9 @@
       <form method="post" action="/admin/notificacion-empresa" enctype="multipart/form-data" id="form-notificacion-emp">
         <div class="grid2">
           <div class="campo full"><label>Remitente</label><input name="remitente" id="notifemp-remitente" placeholder="Ej: Comisión Directiva"></div>
-          <div class="campo full"><label>Mensaje *</label>
-            <textarea name="texto" id="notifemp-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
+          <div class="campo full"><label for="notifemp-texto">Mensaje *</label>
+            <textarea name="texto" id="notifemp-texto" rows="5" required aria-describedby="notifemp-texto-ayuda"></textarea>
+            <span class="muted" id="notifemp-texto-ayuda" style="font-size:12px;">Podés pegar enlaces: se muestran como link.</span>
           </div>
           <div class="campo full"><label>Destinatarios *</label>
             <select name="criterio" id="notifemp-criterio" onchange="cambiarCriterioNotifEmp()">
@@ -2793,23 +2997,28 @@
     </div>
 
     <h2>Notificaciones enviadas ({{ notificaciones_empresa|length }})</h2>
+    {# Sin filas no se dibujan encabezados: una frase que dice cómo se llena
+       (auditoría G6-04). #}
+    {% if notificaciones_empresa %}
     <table>
       <tr><th>Fecha</th><th>Remitente</th><th>Mensaje</th><th>Destino</th><th>Leídos</th><th></th></tr>
       {% for n in notificaciones_empresa %}
+      {% set vals = n.criterio_valores or [] %}
       <tr>
         <td class="muted">{{ n.enviado_en }}</td>
-        <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#5f6676;">sistema</span>{% endif %}</td>
+        <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag tag-neutra">sistema</span>{% endif %}</td>
         <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
-        <td class="muted">{{ CRITERIO_LABELS_EMP.get(n.criterio, n.criterio) }}</td>
-        <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
+        <td class="muted">{% if n.criterio == 'cuit' %}{{ 'Una empresa' if vals|length == 1 else 'Empresas puntuales (%d)'|format(vals|length) }}{% elif n.criterio == 'todos' %}Todas las empresas activas{% elif n.criterio == 'provincia' %}{{ 'Provincia' if vals|length == 1 else 'Provincias' }} {{ vals|join(', ') }}{% else %}{{ CRITERIO_LABELS_EMP.get(n.criterio, n.criterio) }}{% endif %}</td>
+        <td class="lst-nowrap">{{ n.leidos }} de {{ n.cantidad_destinatarios }}{% if n.cantidad_destinatarios %} <span class="lst-pct">· {{ ((n.leidos * 100) / n.cantidad_destinatarios)|round|int }} %</span>{% endif %}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick="verDestinatariosNotificacionEmp({{ n.id }})">Ver</button>
         </td>
       </tr>
-      {% else %}
-      <tr><td colspan="6" class="muted">Todavía no enviaste ninguna notificación a empleadores.</td></tr>
       {% endfor %}
     </table>
+    {% else %}
+    <div class="lst-vacio"><p>Todavía no enviaste ninguna notificación a empleadores. Escribila arriba y mirá la vista previa antes de mandarla.</p></div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -2838,16 +3047,20 @@
   {% if 'emp_tramites_recibidos' in permisos %}
     <div class="emptram-subpanel activo" data-mov-vista id="emptram-sub-recibidos">
       <h2 class="titulo-pagina">Trámites recibidos ({{ tramites_empresa|length }})</h2>
+      {# Sin ningún trámite no hay nada que filtrar: se dice cómo llega uno
+         y se ofrece el paso que lo hace posible (auditoría G6-07). #}
+      {% if tramites_empresa %}
       <div class="filtros">
-        <input type="text" id="f-tramitesemp-cuit" placeholder="Buscar por CUIT" oninput="filtrarTramitesEmpresa()">
-        <input type="text" id="f-tramitesemp-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramitesEmpresa()">
+        <input type="text" id="f-tramitesemp-cuit" placeholder="CUIT" oninput="filtrarTramitesEmpresa()" aria-label="Buscar por CUIT">
+        <input type="text" id="f-tramitesemp-nombre" class="f-ancho" placeholder="N° de expediente" oninput="filtrarTramitesEmpresa()" aria-label="Buscar por número de expediente">
         <select id="f-tramitesemp-estado" onchange="filtrarTramitesEmpresa()">
           <option value="">Todos los estados</option>
-          {% for e in estados_tramite %}<option value="{{ e }}">{{ estados_tramite_label[e] }}</option>{% endfor %}
+          {% for e in estados_tramite %}<option value="{{ e }}">{{ 'Espera a la empresa' if e == 'espera_info' else estados_tramite_label[e] }}</option>{% endfor %}
         </select>
         <button type="button" class="sec mini" onclick="limpiarFiltroTramitesEmpresa()">Limpiar</button>
         <span class="f-cant" id="f-tramitesemp-cant"></span>
       </div>
+      <div class="lst-scroll">
       <table>
         <tr><th>Expediente</th><th>CUIT</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
         {% for tr in tramites_empresa %}
@@ -2855,14 +3068,19 @@
           <td><code>{{ tr.numero_expediente }}</code></td>
           <td>{{ tr.cuit }}</td>
           <td>{{ tr.tipo_titulo }}</td>
-          <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
-          <td class="muted">{{ tr.actualizado }}</td>
+          <td><span class="tag {{ CLASE_ESTADO_TRAMITE.get(tr.estado, 'tag-pend') }}">{{ 'Espera a la empresa' if tr.estado == 'espera_info' else tr.estado_label }}</span></td>
+          <td class="muted lst-nowrap">{{ tr.actualizado }}</td>
           <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteEmpresaDetalle({{ tr.id }})">Ver</button></td>
         </tr>
-        {% else %}
-        <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite de una empresa.</td></tr>
         {% endfor %}
       </table>
+      </div>
+      {% else %}
+      <div class="lst-vacio">
+        <p>Las empresas inician trámites desde los formularios externos que crees. Todavía no hay ninguno.</p>
+        {% if 'emp_tramites_formularios' in permisos %}<p><button type="button" onclick="abrirCrearFormulariosEmpresa()">Crear un formulario</button></p>{% endif %}
+      </div>
+      {% endif %}
     </div>
   {% endif %}
 
@@ -2909,7 +3127,7 @@
                 <div class="ttp-sello-overlay" id="te-probar-sello"></div>
                 <div class="ttp-caratula">
                   <div class="tit" id="te-prev-titulo">Trámite</div>
-                  <div class="meta"><span class="cod" id="te-prev-codigo">—</span><span class="exp">EXP — se numera al enviar</span></div>
+                  <div class="meta"><span class="cod" id="te-prev-codigo">—</span><span class="exp">El expediente se numera al enviar</span></div>
                 </div>
                 <div class="ttp-cuerpo">
                   <div class="tram-preview-grid" id="te-vista-previa"></div>
@@ -3153,11 +3371,13 @@
           <div class="campo"><label>Código postal</label><input name="codigo_postal" id="sec-cp"></div>
         </div>
         {% if es_super_admin %}
-        <label class="chk-seccional" style="margin-top:10px;">
-          <input type="checkbox" name="ve_todas" id="sec-ve-todas" value="1">
-          Sus usuarios ven <b>todas</b> las seccionales
+        {# Una casilla, no una caja con forma de campo (auditoría G6-10): es
+           una decisión de permisos y se tiene que leer como tal. #}
+        <label class="chk-suelta" for="sec-ve-todas">
+          <input type="checkbox" name="ve_todas" id="sec-ve-todas" value="1" aria-describedby="sec-ve-todas-ayuda">
+          <span>Sus usuarios ven <b>todas</b> las seccionales</span>
         </label>
-        <p class="muted" style="margin:4px 0 10px;">Es lo que hace que una sede sea "central". Tildalo también en una regional que supervise a otras. Sin el tilde, sus usuarios alcanzan solo a los trabajadores de esta seccional.</p>
+        <p class="chk-suelta-ayuda" id="sec-ve-todas-ayuda">Es lo que hace que una sede sea «central». Tildalo también en una regional que supervise a otras. Sin el tilde, sus usuarios alcanzan solo a los trabajadores de esta seccional.</p>
         {% endif %}
         {# Antes había acá un "Seguir sin ubicar". Se fue el 2026-09-13: la
            dirección de una seccional tiene que quedar en la puerta, porque el
@@ -3275,23 +3495,28 @@
   <p class="muted">Datos que el sindicato tiene en sus planillas y Colm3na no: el grupo familiar de cada afiliado, su fecha de afiliación, quiénes están en una lista. Se cargan por CSV y los usan las validaciones de los formularios de Trámites (por ejemplo, «el DNI del chico tiene que estar en el grupo familiar del afiliado»).
   {% if alcance_propio is not none %}<br>Las listas que cargues valen para <b>tu seccional</b>; una lista para todo el sindicato la carga el administrador general.{% endif %}</p>
 
+  {# Las plantillas como filas dentro de la tarjeta, no tarjetas adentro de
+     una tarjeta (auditoría G6-11), y una pastilla por columna con su marca
+     de clave adentro (G6-12). #}
   <div class="card">
-    <h3 style="margin-top:0;">Plantillas</h3>
+    <h3 class="lst-h3">Plantillas</h3>
     <p class="muted" style="margin-top:0;">Cada plantilla es un CSV con cabecera fija. Descargá el modelo, completalo (Excel lo abre y lo guarda como CSV) y subilo abajo. El CUIL va con dígito verificador; las fechas, como AAAA-MM-DD o DD/MM/AAAA.</p>
-    <div class="grid2">
+    <div class="pl-filas">
       {% for p in plantillas_listas %}
-      <div class="campo" style="border:1px solid var(--linea, #e4e7ec); border-radius:10px; padding:12px;">
-        <b>{{ p.nombre }}</b>
-        <p class="muted" style="margin:4px 0 8px;">{{ p.descripcion }}</p>
-        <div class="muted" style="font-size:12px;">Columnas: {% for c in p.columnas %}<code>{{ c.clave }}</code>{% if c.busqueda %} <span class="tag tag-si">clave {{ c.busqueda }}</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</div>
-        <div style="margin-top:8px;"><button type="button" class="sec mini" style="margin-left:0;" onclick="location.href='/admin/listas/modelo/{{ p.clave }}.csv'">Descargar modelo</button></div>
+      <div class="pl-fila">
+        <div>
+          <b>{{ p.nombre }}</b>
+          <p class="muted">{{ p.descripcion }}</p>
+          <div class="pl-cols" aria-label="Columnas del CSV">{% for c in p.columnas %}<span class="pl-col">{{ c.clave }}{% if c.busqueda %}<span class="clave">· clave {{ c.busqueda }}</span>{% endif %}</span>{% endfor %}</div>
+        </div>
+        <button type="button" class="sec mini" style="margin-left:0;" onclick="location.href='/admin/listas/modelo/{{ p.clave }}.csv'">Descargar modelo</button>
       </div>
       {% endfor %}
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin-top:0;">Subir una lista</h3>
+    <h3 class="lst-h3">Subir una lista</h3>
     <form id="form-lista" onsubmit="return false;">
       <div class="grid2">
         <div class="campo"><label>Plantilla *</label>
@@ -3299,9 +3524,9 @@
             {% for p in plantillas_listas %}<option value="{{ p.clave }}">{{ p.nombre }}</option>{% endfor %}
           </select>
         </div>
-        <div class="campo"><label>Nombre de la lista</label>
+        <div class="campo"><label for="lista-nombre">Nombre de la lista
+            <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Subir otra lista con el <b>mismo nombre</b> (y la misma plantilla y seccional) la reemplaza entera."></button></label>
           <input name="nombre" id="lista-nombre" placeholder="{{ plantillas_listas[0].nombre if plantillas_listas else '' }}" maxlength="80">
-          <small class="muted">Subir otra con el mismo nombre la reemplaza entera.</small>
         </div>
         <div class="campo"><label>Vale para</label>
           <select name="seccional_id" id="lista-seccional">
@@ -3324,6 +3549,7 @@
   </div>
 
   <h2>Listas cargadas ({{ listas|length }})</h2>
+  {% if listas %}
   <table>
     <tr><th>Lista</th><th>Plantilla</th><th>Vale para</th><th>Filas</th><th>Cargada</th><th></th></tr>
     {% for l in listas %}
@@ -3342,10 +3568,11 @@
         </form>
       </td>
     </tr>
-    {% else %}
-    <tr><td colspan="6" class="muted">Todavía no hay listas cargadas.</td></tr>
     {% endfor %}
   </table>
+  {% else %}
+  <div class="lst-vacio"><p>Todavía no hay listas cargadas. Elegí una plantilla, descargá el modelo, completalo y subilo arriba: primero se ensaya y recién al confirmar se guarda.</p></div>
+  {% endif %}
   <div id="lista-detalle" class="oculto" style="margin-top:12px;"></div>
   </div>
   {% endif %}
@@ -3399,10 +3626,14 @@
            loop.parent (eso es de Django), así que el loop de adentro no
            puede alcanzar el índice del de afuera de otra forma. #}
         {% set gidx = loop.index %}
-        <div class="grupo-permisos" style="margin-bottom:12px;">
-          <label style="font-weight:700; display:block; margin-bottom:6px;">
-            <input type="checkbox" class="chk-grupo" data-grupo="{{ gidx }}" onchange="tildarGrupo(this)"> {{ grupo }}
-          </label>
+        {# El grupo es un subtítulo, no otra casilla: marcarlo entero es un
+           enlace a su lado (auditoría G6-14). #}
+        <div class="grupo-permisos" style="margin-bottom:14px;" role="group" aria-labelledby="grupo-tit-{{ gidx }}">
+          <div class="grupo-cab">
+            <b id="grupo-tit-{{ gidx }}">{{ grupo }}</b>
+            <button type="button" class="mini lnk" data-grupo="{{ gidx }}" onclick="tildarGrupo(this, true)">Marcar todas</button>
+            <button type="button" class="mini lnk" data-grupo="{{ gidx }}" onclick="tildarGrupo(this, false)">Desmarcar</button>
+          </div>
           <div class="check-seccionales">
             {% for seccion, etiqueta in items %}
             <label class="chk-seccional"><input type="checkbox" name="secciones" value="{{ seccion }}" data-grupo="{{ gidx }}"> {{ etiqueta }}</label>
@@ -3530,23 +3761,33 @@
         tenga contratadas, así que no hay ajustes individuales que hacerle.
         Lo que lo acota es su <b>seccional</b>, no la lista de secciones.
       </p>
+      {# Plegada por defecto (auditoría G6-15): lo normal es no tocar nada, y
+         abierta empujaba la lista de usuarios casi 2.000 px hacia abajo. El
+         resumen dice en una línea si hay ajustes. En teléfono la tabla se
+         desliza adentro de la tarjeta y cada casilla tiene 44 px de toque
+         (G6-16). #}
       <div id="usu-permisos-caja" style="margin-top:16px;">
-        <label style="font-weight:700;">Ajustes sobre lo que hereda del área</label>
-        <p class="muted" style="margin:4px 0 10px;">Sin tildar nada, el usuario tiene exactamente lo del área. "Dar igual" suma algo que el área no tiene; "Bloquear" se lo quita aunque el área lo tenga -- el bloqueo siempre gana.</p>
-        <table style="font-size:13px;">
-          <tr><th>Sección</th><th style="width:90px;">Del área</th><th style="width:90px;">Dar igual</th><th style="width:90px;">Bloquear</th></tr>
-          {% for grupo, items in catalogo_permisos %}
-          <tr><td colspan="4" style="font-weight:700; background:#f6f6f6;">{{ grupo }}</td></tr>
-          {% for seccion, etiqueta in items %}
-          <tr>
-            <td>{{ etiqueta }}</td>
-            <td style="text-align:center;"><span class="del-area" data-seccion="{{ seccion }}" style="color:#888;">—</span></td>
-            <td style="text-align:center;"><input type="checkbox" name="agregar" value="{{ seccion }}"></td>
-            <td style="text-align:center;"><input type="checkbox" name="bloquear" value="{{ seccion }}"></td>
-          </tr>
-          {% endfor %}
-          {% endfor %}
-        </table>
+        <details class="usu-ajustes" id="usu-ajustes">
+          <summary><span class="usu-res" id="usu-ajustes-res">Sin ajustes: hereda todo del área.</span><span class="usu-abrir"><span class="abrir">Ajustar permisos</span><span class="cerrar">Cerrar los ajustes</span></span></summary>
+          <p class="muted" style="margin:0 0 10px; max-width:70ch;">Sin tildar nada, el usuario tiene exactamente lo del área. «Dar igual» suma algo que el área no tiene; «Bloquear» se lo quita aunque el área lo tenga: el bloqueo siempre gana.</p>
+          <p class="muted oculto" id="usu-sin-area" style="margin:0 0 10px;">Elegí un área para ver qué hereda.</p>
+          <div class="usu-matriz">
+          <table style="font-size:13px;" id="usu-matriz">
+            <tr><th scope="col">Sección</th><th scope="col" class="col-area" style="width:90px;">Del área</th><th scope="col" style="width:90px;">Dar igual</th><th scope="col" style="width:90px;">Bloquear</th></tr>
+            {% for grupo, items in catalogo_permisos %}
+            <tr><td colspan="4" style="font-weight:700; background:#f6f6f6;">{{ grupo }}</td></tr>
+            {% for seccion, etiqueta in items %}
+            <tr>
+              <td>{{ etiqueta }}</td>
+              <td class="col-area" style="text-align:center;"><span class="del-area" data-seccion="{{ seccion }}" style="color:#888;">—</span></td>
+              <td style="text-align:center;"><label class="toque"><input type="checkbox" name="agregar" value="{{ seccion }}" aria-label="Dar igual: {{ etiqueta }}"></label></td>
+              <td style="text-align:center;"><label class="toque"><input type="checkbox" name="bloquear" value="{{ seccion }}" aria-label="Bloquear: {{ etiqueta }}"></label></td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+          </table>
+          </div>
+        </details>
       </div>
 
       <button type="submit" id="usu-submit">Dar de alta</button>
@@ -3561,9 +3802,11 @@
     <tr {% if not u.activo %}style="opacity:.5;"{% endif %}>
       <td><code>{{ u.usuario }}</code></td>
       <td>{{ u.nombre or '—' }}</td>
-      <td>{% if u.es_super_admin %}<span class="tag tag-si">general</span>
-          {% elif u.es_admin_seccional %}<span class="tag tag-pend">de seccional</span>
-          {% else %}<span class="tag">de área</span>{% endif %}</td>
+      {# El rol es un dato, no un estado: la misma pastilla neutra para los
+         tres; el administrador general se distingue por el peso (G6-17). #}
+      <td>{% if u.es_super_admin %}<span class="tag tag-rol fuerte">general</span>
+          {% elif u.es_admin_seccional %}<span class="tag tag-rol">de seccional</span>
+          {% else %}<span class="tag tag-rol">de área</span>{% endif %}</td>
       <td>{{ u.area or '—' }}</td>
       <td>{{ u.seccional or '—' }}</td>
       {# El vínculo con el padrón se resuelve solo, por CUIL: no hay nada
@@ -3615,10 +3858,19 @@
   <div class="msg err">No se guardó: esa foto ya no está disponible para tu sindicato. Elegí otra o dejala en automática.</div>
   {% endif %}
 
-  <form method="post" action="/admin/apariencia">
+  {# Dos formularios porque son dos rutas (la apariencia y «Tu día»), pero
+     cada uno con su botón al pie de lo que guarda, abajo a la derecha, y un
+     aviso de cambios sin guardar junto al botón que corresponde: antes
+     «Guardar apariencia» flotaba entre tarjetas y quien tocaba el modelo y
+     un rubro y apretaba solo el de abajo perdía el de arriba sin aviso
+     (auditoría G6-18). #}
+  <form method="post" action="/admin/apariencia" id="ap-form" data-sucio-de="el modelo, la paleta o la foto">
   <div class="card">
     <h3 style="margin-top:0;">Modelo por defecto</h3>
+    {# Los dos públicos lado a lado (G6-20). #}
+    <div class="ap-dos">
     {% for grupo, campo, elegido in [("Para los afiliados", "tema_afiliados", ap.tema_afiliados), ("Para los operadores del panel", "tema_panel", ap.tema_panel)] %}
+    <div>
     <div class="ap-sub">{{ grupo }}</div>
     <div class="ap-grupo" role="radiogroup" aria-label="{{ grupo }}">
       {% for m in ap.modelos %}
@@ -3630,7 +3882,9 @@
       </label>
       {% endfor %}
     </div>
+    </div>
     {% endfor %}
+    </div>
   </div>
 
   <div class="card">
@@ -3651,9 +3905,13 @@
       </label>
       {% endfor %}
     </div>
+    {# La prueba de lectura le habla al Super Admin, no a un diseñador
+       (G6-19): qué pasa con su color y cómo se va a ver, con las dos
+       muestras grandes. Los números quedan en el title. #}
     {% if ap.prueba %}
     <div class="ap-lectura avisa"><b>Prueba de lectura de tus colores</b>
-      <ul>{% for a in ap.prueba %}<li>{{ a.aviso }}{% if a.contraste %} <span class="num">({{ ('%.2f' % a.contraste) | replace('.', ',') }}:1; hace falta {{ ('%.1f' % a.minimo) | replace('.', ',') }}:1)</span>{% endif %}{% if a.corregido and a.corregido != a.original %} <span class="ap-par" title="Original {{ a.original }} · corregido {{ a.corregido }}"><i style="background:{{ a.original }}"></i>→<i style="background:{{ a.corregido }}"></i></span>{% endif %}</li>{% endfor %}</ul>
+      <ul>{% for a in ap.prueba %}<li>{{ a.aviso }}{% if a.corregido and a.corregido != a.original %}
+        <span class="ap-cambio" title="{% if a.contraste %}Contraste {{ ('%.2f' % a.contraste) | replace('.', ',') }}:1; hace falta {{ ('%.1f' % a.minimo) | replace('.', ',') }}:1. {% endif %}Original {{ a.original }} · corregido {{ a.corregido }}"><i style="background:{{ a.original }}" aria-hidden="true"></i><span>Tu color</span><span class="flecha" aria-hidden="true">→</span><i style="background:{{ a.corregido }}" aria-hidden="true"></i><span>Así lo vamos a mostrar donde haga falta</span></span>{% endif %}</li>{% endfor %}</ul>
     </div>
     {% else %}
     <div class="ap-lectura pasa"><b>Tus colores pasan la prueba de lectura.</b> Todo el texto que va sobre ellos se lee bien.</div>
@@ -3663,7 +3921,9 @@
   <div class="card">
     <h3 style="margin-top:0;">Foto de portada</h3>
     <p class="muted" style="margin-top:0;">Cada modelo tiene su biblioteca. La foto toma los colores del modelo al mostrarse.</p>
+    <div class="ap-dos">
     {% for m in ap.modelos %}
+    <div>
     <div class="ap-sub">{{ m.nombre }}</div>
     {% if m.fotos %}
     <div class="ap-fotos" role="radiogroup" aria-label="Foto de portada de {{ m.nombre }}">
@@ -3684,10 +3944,14 @@
     {% else %}
     <p class="muted">Todavía no hay fotos para este modelo. Las carga Colm3na.</p>
     {% endif %}
+    </div>
     {% endfor %}
+    </div>
+    <div class="ap-guardar">
+      <span class="ap-sucio" id="ap-form-sucio" role="status" hidden>Tenés cambios sin guardar en el modelo, la paleta o la foto.</span>
+      <button type="submit">Guardar apariencia</button>
+    </div>
   </div>
-
-  <button type="submit">Guardar apariencia</button>
   </form>
   <p class="muted" style="margin-top:14px;">Tu propio modelo lo elegís desde <b>Tu cuenta</b>, en la portada del panel.</p>
 
@@ -3697,7 +3961,7 @@
   {% if request.query_params.get('ok') == 'tudia' %}
   <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Rubros de Tu día guardados.</div>
   {% endif %}
-  <form method="post" action="/admin/apariencia/tu-dia" class="card td-config" id="td-config">
+  <form method="post" action="/admin/apariencia/tu-dia" class="card td-config" id="td-config" data-sucio-de="los rubros de Tu día">
     <h3 style="margin-top:0;">Tu día en la portada <span class="td-estado {{ 'on' if td.habilitado else 'off' }}">{{ 'Prendido' if td.habilitado else 'Apagado' }}</span></h3>
     {% if not td.habilitado %}
     <div class="td-apagado" role="status">
@@ -3705,6 +3969,9 @@
     </div>
     {% endif %}
     <p class="muted">Una franja de una línea en la portada del afiliado. La hora y el clima de su localidad van siempre; al lado rota, de a uno, cada rubro que prendas. Ninguno lo escribe el sindicato: para eso están las Noticias. El día de su cumpleaños, cada afiliado ve un saludo una sola vez.</p>
+    {# Las tres fijas, rotuladas como tales: sin rótulo parecían campos
+       deshabilitados (G6-21). #}
+    <div class="td-fijos-cab"><span class="ap-sub" style="margin:0;">Van siempre</span><span class="muted" style="font-size:12.5px;">no se pueden apagar</span></div>
     <div class="td-fijos">
       <div><b>Hora y fecha</b><span>De Buenos Aires</span></div>
       <div><b>Clima</b><span>De la localidad del afiliado · MET Norway</span></div>
@@ -3718,12 +3985,17 @@
       <input type="checkbox" class="td-llave" name="rubros" value="{{ clave }}" {% if clave in td.config.rubros %}checked{% endif %}>
     </label>
     {% if clave == 'efemerides' %}
-    <label class="td-extra"><input type="checkbox" name="politicas" value="1" {% if td.config.politicas %}checked{% endif %}> Incluir fechas con carga política</label>
+    {# Un interruptor chico, sangrado bajo Efemérides: es un ajuste de ese
+       rubro, no otro rubro ni una casilla suelta (G6-21). #}
+    <label class="td-extra td-sub"><span>Incluir fechas con carga política</span><input type="checkbox" class="td-llave td-chica" name="politicas" value="1" {% if td.config.politicas %}checked{% endif %}></label>
     {% endif %}
     {% endfor %}
     <div class="td-pie">
       <label>Cambia cada <select name="intervalo">{% for n in td.intervalos %}<option value="{{ n }}" {% if n == td.config.intervalo %}selected{% endif %}>{{ n }} segundos</option>{% endfor %}</select></label>
-      <button type="submit">Guardar los rubros</button>
+      <span class="ap-guardar" style="margin:0; padding:0; border:0;">
+        <span class="ap-sucio" id="td-config-sucio" role="status" hidden>Tenés cambios sin guardar en los rubros.</span>
+        <button type="submit">Guardar los rubros</button>
+      </span>
     </div>
     </fieldset>
   </form>
@@ -3731,8 +4003,24 @@
   (function () {
     const f = document.getElementById('td-config'); if (!f) return;
     const cuenta = document.getElementById('td-cuenta');
-    const contar = () => { const l = f.querySelectorAll('.td-llave'); cuenta.textContent = [...l].filter(x => x.checked).length + ' de ' + l.length + ' prendidos'; };
+    const contar = () => { const l = f.querySelectorAll('.td-llave[name=rubros]'); cuenta.textContent = [...l].filter(x => x.checked).length + ' de ' + l.length + ' prendidos'; };
     f.addEventListener('change', contar); contar();
+  })();
+  // Cambios sin guardar (G6-18): cada formulario avisa junto a SU botón, y
+  // guardar uno con el otro tocado pregunta antes, porque la página se
+  // recarga y lo del otro se pierde.
+  (function () {
+    const forms = ['ap-form', 'td-config'].map(id => document.getElementById(id)).filter(Boolean);
+    const sucio = new Set();
+    forms.forEach(f => {
+      const marcar = () => { sucio.add(f.id); const a = document.getElementById(f.id + '-sucio'); if (a) a.hidden = false; };
+      f.addEventListener('change', marcar);
+      f.addEventListener('input', marcar);
+      f.addEventListener('submit', ev => {
+        const otro = forms.find(o => o !== f && sucio.has(o.id));
+        if (otro && !confirm('Tenés cambios sin guardar en ' + otro.dataset.sucioDe + '. Si seguís, se pierden. ¿Guardar solo esto?')) ev.preventDefault();
+      });
+    });
   })();
   </script>
   </div>
@@ -5541,27 +5829,79 @@ function cancelarTramiteTipo() {
 }
 if (document.getElementById('tt-campos-lista')) renderCamposTramite();
 
+// La bandeja abre en lo que falta terminar, lo que más espera arriba
+// (auditoría G5-13). Las pastillas agrupan por de quién es el próximo paso;
+// el texto (nombre, CUIL o expediente) busca en TODOS los estados, porque
+// quien busca un expediente puntual no sabe en qué estado quedó.
+const CLASE_ESTADO_TRAMITE = {{ CLASE_ESTADO_TRAMITE | tojson }};
+const GRUPOS_TRAMITE = {
+  abiertos: e => e !== 'terminado',
+  sindicato: e => e === 'iniciado' || e === 'en_tratamiento',
+  afiliado: e => e === 'respondido' || e === 'espera_info',
+  terminados: e => e === 'terminado',
+  todos: () => true,
+};
+let grupoTramitesActual = 'abiertos';
+function grupoTramites(g) {
+  grupoTramitesActual = g;
+  document.querySelectorAll('#tr-pastillas .lst-pastilla').forEach(b => {
+    const activa = b.dataset.grupo === g;
+    b.classList.toggle('activa', activa);
+    b.setAttribute('aria-pressed', activa ? 'true' : 'false');
+  });
+  const sel = document.getElementById('f-tramites-estado');
+  if (sel) sel.value = '';
+  ordenarTramites();
+  filtrarTramites();
+}
+function ordenarTramites() {
+  const tabla = document.getElementById('tr-tabla');
+  if (!tabla) return;
+  const cuerpo = tabla.tBodies[0];
+  const filas = [...cuerpo.querySelectorAll('.fila-tramite')];
+  // Lo abierto, el más viejo primero (es el que más espera); lo terminado,
+  // el más nuevo primero.
+  const viejoPrimero = grupoTramitesActual !== 'terminados' && grupoTramitesActual !== 'todos';
+  filas.sort((a, b) => {
+    const x = a.dataset.actualizado || '', y = b.dataset.actualizado || '';
+    return viejoPrimero ? x.localeCompare(y) : y.localeCompare(x);
+  });
+  filas.forEach(f => cuerpo.appendChild(f));
+}
 function filtrarTramites() {
-  const cuit = (document.getElementById('f-tramites-cuit').value || '').replace(/\D/g, '');
+  const quien = (document.getElementById('f-tramites-cuit').value || '').trim();
+  const digitos = quien.replace(/\D/g, '');
+  const texto = quien.toLowerCase();
   const nombre = (document.getElementById('f-tramites-nombre').value || '').toUpperCase().trim();
   const estado = document.getElementById('f-tramites-estado').value;
+  const buscando = !!(quien || nombre);
+  const enGrupo = GRUPOS_TRAMITE[grupoTramitesActual] || GRUPOS_TRAMITE.todos;
   let visibles = 0;
   document.querySelectorAll('.fila-tramite').forEach(fila => {
     let visible = true;
-    if (cuit && !fila.dataset.cuil.replace(/\D/g, '').includes(cuit)) visible = false;
+    if (quien) {
+      const porCuil = digitos && digitos.length === quien.replace(/[\s.-]/g, '').length;
+      visible = porCuil ? fila.dataset.cuil.replace(/\D/g, '').includes(digitos)
+                        : (fila.dataset.persona || '').toLowerCase().includes(texto);
+    }
     if (visible && nombre && !fila.dataset.nombre.toUpperCase().includes(nombre)) visible = false;
     if (visible && estado && fila.dataset.estado !== estado) visible = false;
+    if (visible && !buscando && !estado && !enGrupo(fila.dataset.estado)) visible = false;
     fila.style.display = visible ? '' : 'none';
     if (visible) visibles++;
   });
-  document.getElementById('f-tramites-cant').textContent = visibles + ' resultado' + (visibles === 1 ? '' : 's');
+  const past = document.getElementById('tr-pastillas');
+  if (past) past.classList.toggle('apagadas', buscando || !!estado);
+  document.getElementById('f-tramites-cant').textContent = visibles + ' resultado' + (visibles === 1 ? '' : 's')
+    + (buscando ? ' en todos los estados' : '');
 }
 function limpiarFiltroTramites() {
   document.getElementById('f-tramites-cuit').value = '';
   document.getElementById('f-tramites-nombre').value = '';
   document.getElementById('f-tramites-estado').value = '';
-  filtrarTramites();
+  grupoTramites('abiertos');
 }
+if (document.getElementById('tr-tabla')) filtrarTramites();
 
 // Advertencias de las validaciones "avisa" que disparó el envío: no
 // frenaron a quien lo presentó, pero el operador tiene que verlas primero.
@@ -5746,9 +6086,10 @@ function refrescarTramiteDetalle(id) {
     if (fila) {
       fila.dataset.estado = d.estado;
       const tag = fila.querySelector('.tag');
-      if (tag) { tag.textContent = d.estado_label; tag.className = 'tag ' + (d.estado === 'terminado' ? 'tag-si' : 'tag-pend'); }
+      if (tag) { tag.textContent = d.estado === 'espera_info' ? 'Espera al afiliado' : d.estado_label; tag.className = 'tag ' + (CLASE_ESTADO_TRAMITE[d.estado] || 'tag-pend'); }
+      fila.dataset.actualizado = d.actualizado || '';
       const celdas = fila.querySelectorAll('td');
-      if (celdas[4]) celdas[4].textContent = d.actualizado;
+      if (celdas[5]) celdas[5].textContent = d.actualizado;
     }
     mensajeTramiteCtx = { familia: 'trabajador', id: d.id, estado: d.estado, notas: d.notas };
   }).catch(() => {
@@ -6213,7 +6554,7 @@ function refrescarTramiteEmpresaDetalle(id) {
     if (fila) {
       fila.dataset.estado = d.estado;
       const tag = fila.querySelector('.tag');
-      if (tag) { tag.textContent = d.estado_label; tag.className = 'tag ' + (d.estado === 'terminado' ? 'tag-si' : 'tag-pend'); }
+      if (tag) { tag.textContent = d.estado === 'espera_info' ? 'Espera a la empresa' : d.estado_label; tag.className = 'tag ' + (CLASE_ESTADO_TRAMITE[d.estado] || 'tag-pend'); }
       const celdas = fila.querySelectorAll('td');
       if (celdas[4]) celdas[4].textContent = d.actualizado;
     }
@@ -7115,11 +7456,12 @@ function cambiarSubAU(dest) {
   document.querySelectorAll('.au-subpanel').forEach(pp => pp.classList.toggle('activo', pp.id === 'au-sub-' + dest));
 }
 
-function tildarGrupo(chk) {
-  // El check del título tilda el grupo entero: asignar "Recibos" completo
-  // sigue siendo un clic, aunque por dentro sean cinco secciones.
-  document.querySelectorAll('#area-permisos input[name="secciones"][data-grupo="' + chk.dataset.grupo + '"]')
-    .forEach(c => { c.checked = chk.checked; });
+function tildarGrupo(btn, valor) {
+  // «Marcar todas» al lado del título tilda el grupo entero: asignar
+  // "Recibos" completo sigue siendo un clic, aunque por dentro sean cinco
+  // secciones.
+  document.querySelectorAll('#area-permisos input[name="secciones"][data-grupo="' + btn.dataset.grupo + '"]')
+    .forEach(c => { c.checked = !!valor; });
 }
 
 function editarArea(a) {
@@ -7166,7 +7508,26 @@ function pintarPermisosDelArea() {
     sp.textContent = hay ? 'sí' : '—';
     sp.style.color = hay ? 'var(--marca-secundario)' : '#888';
   });
+  // Sin área elegida la columna sería una fila de guiones: se dice qué
+  // falta en vez de dibujarla (auditoría G6-15).
+  const matriz = document.getElementById('usu-matriz');
+  if (matriz) matriz.classList.toggle('sin-area', !area);
+  document.getElementById('usu-sin-area')?.classList.toggle('oculto', !!area);
+  resumenAjustesUsuario();
 }
+function resumenAjustesUsuario() {
+  const caja = document.getElementById('usu-permisos-caja');
+  const res = document.getElementById('usu-ajustes-res');
+  if (!caja || !res) return;
+  const mas = caja.querySelectorAll('input[name="agregar"]:checked').length;
+  const menos = caja.querySelectorAll('input[name="bloquear"]:checked').length;
+  if (!mas && !menos) { res.textContent = 'Sin ajustes: hereda todo del área.'; return; }
+  const partes = [];
+  if (mas) partes.push(mas + (mas === 1 ? ' sección de más' : ' secciones de más'));
+  if (menos) partes.push(menos + (menos === 1 ? ' bloqueada' : ' bloqueadas'));
+  res.textContent = 'Con ajustes: ' + partes.join(' y ') + ' sobre lo del área.';
+}
+document.getElementById('usu-permisos-caja')?.addEventListener('change', resumenAjustesUsuario);
 
 function cambioPermitePase() {
   // La lista de destinos solo tiene sentido con el pase habilitado:
@@ -7247,6 +7608,8 @@ function editarUsuario(u) {
   const bloqueados = new Set(u.bloqueados || []);
   f.querySelectorAll('input[name="agregar"]').forEach(c => { c.checked = agregados.has(c.value); });
   f.querySelectorAll('input[name="bloquear"]').forEach(c => { c.checked = bloqueados.has(c.value); });
+  // Si tiene ajustes, la matriz se abre: es lo que se viene a revisar.
+  document.getElementById('usu-ajustes').open = (agregados.size + bloqueados.size) > 0;
   pintarPermisosDelArea();
   cambioRolUsuario();
   f.action = '/admin/usuario/editar';
@@ -7268,6 +7631,7 @@ function cancelarUsuario() {
   document.getElementById('usuario-titulo').textContent = 'Dar de alta un usuario';
   document.getElementById('usu-submit').textContent = 'Dar de alta';
   document.getElementById('usu-cancel').classList.add('oculto');
+  document.getElementById('usu-ajustes').open = false;
   pintarPermisosDelArea();
   cambioRolUsuario();
 }
@@ -7725,9 +8089,43 @@ function renderVistaPreviaEncuesta() {
     (bloques || '<p class="muted" style="font-size:12px; grid-column:span 12;">Agregá preguntas para ver la vista previa.</p>');
   clearTimeout(tiempoDisclaimer);
   tiempoDisclaimer = setTimeout(pedirDisclaimer, 250);
+  rielEncuesta();
 }
+// El riel de la hoja de trabajo (auditoría G5-24): el mismo pintarRiel de
+// Noticias, Beneficios y Notificaciones.
+let encuestaEditando = null;
+function rielEncuesta() {
+  if (typeof pintarRiel !== 'function' || !document.getElementById('enc-riel')) return;
+  const g = id => document.getElementById(id);
+  const titulo = g('enc-titulo').value.trim(), modo = g('enc-modo');
+  const desde = g('enc-desde').value, hasta = g('enc-hasta').value;
+  const n = preguntasEncuestaActuales.filter(p => p.tipo_dato !== 'separador').length;
+  const fecha = f => f ? f.split('-').reverse().slice(0, 2).join('/') : '';
+  const cuando = desde || hasta ? `${desde ? 'desde el ' + fecha(desde) : 'desde que la publiques'}${hasta ? ' al ' + fecha(hasta) : ''}` : 'sin fechas: la cerrás a mano';
+  pintarRiel('enc', [
+    { hecho: !!(titulo && modo.value), texto: titulo ? `${titulo}${modo.value ? ' · ' + modo.selectedOptions[0].textContent.trim().toLowerCase() : ' · falta el modo'}` : 'título y modo' },
+    { hecho: !!(desde || hasta), opcional: true, texto: cuando },
+    { hecho: n > 0, texto: n ? `${n} pregunta${n === 1 ? '' : 's'}` : 'sin preguntas' },
+    { hecho: g('enc-mostrar').checked, opcional: true, texto: g('enc-mostrar').checked ? 'con resultados al cerrar' : 'sin resultados al cerrar' },
+  ], (encuestaEditando ? 'Editando' : 'Nueva') + ((hojaTocada.enc || !encuestaEditando) ? ' · <b>sin guardar</b>' : ' · guardada'));
+}
+(function initRielEncuesta() {
+  const f = document.getElementById('form-encuesta');
+  if (!f || !document.getElementById('enc-riel')) return;
+  const tocar = () => { hojaTocada.enc = true; rielEncuesta(); };
+  f.addEventListener('input', tocar);
+  f.addEventListener('change', tocar);
+  rielEncuesta();
+})();
 function pedirDisclaimer() {
   const modo = document.getElementById('enc-modo').value;
+  // Sin modo elegido no hay promesa que mostrar: el servidor caería en la
+  // nominal y la vista previa diría algo que nadie eligió.
+  if (!modo) {
+    const caja = document.getElementById('enc-prev-disc');
+    if (caja) { caja.innerHTML = ''; caja.classList.add('oculto'); }
+    return;
+  }
   const cortes = [...document.querySelectorAll('.enc-corte:checked')].map(c => c.value);
   const q = new URLSearchParams({modo}); cortes.forEach(c => q.append('cortes', c));
   fetch('/admin/encuesta/disclaimer?' + q.toString())
@@ -7785,8 +8183,19 @@ function htmlPreguntaPreview(p) {
 }
 
 /* ---------- Modo, edición y envío ---------- */
+// La consecuencia del modo, dicha antes de publicar (auditoría G5-26).
+const AYUDA_MODO_ENC = {
+  '': 'Elegilo antes de seguir: cambia qué se guarda de cada respuesta.',
+  nominal: '<b>Nominal:</b> vas a ver el nombre y el CUIL de cada respuesta.',
+  anonima: '<b>Anónima:</b> nadie, ni el sindicato, puede saber quién respondió qué. Solo queda registrado que participó.',
+};
+function ayudaModoEncuesta() {
+  const caja = document.getElementById('enc-modo-ayuda');
+  if (caja) caja.innerHTML = AYUDA_MODO_ENC[document.getElementById('enc-modo').value] || AYUDA_MODO_ENC[''];
+}
 function cambioModoEncuesta() {
   const anonima = document.getElementById('enc-modo').value === 'anonima';
+  ayudaModoEncuesta();
   document.getElementById('enc-cortes-caja').classList.toggle('oculto', !anonima);
   if (anonima) {
     // Un archivo adjunto lleva metadatos (modelo de teléfono, a veces GPS;
@@ -7826,9 +8235,11 @@ function editarEncuesta(e) {
   document.querySelectorAll('.enc-corte').forEach(c => { c.disabled = encuestaCongelada; });
   document.getElementById('enc-btn-agregar').disabled = encuestaCongelada;
   document.getElementById('enc-h2').textContent = 'Editar encuesta';
-  document.getElementById('enc-submit').textContent = 'Guardar cambios';
+  document.querySelectorAll('#form-encuesta button[type=submit]').forEach(b => b.textContent = 'Guardar cambios');
   document.getElementById('enc-cancel').classList.remove('oculto');
   document.getElementById('enc-cortes-caja').classList.toggle('oculto', e.modo !== 'anonima');
+  ayudaModoEncuesta();
+  encuestaEditando = e; hojaTocada.enc = false;
   renderPreguntasEncuesta();
   document.getElementById('panel-encuestas').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -7842,9 +8253,11 @@ function cancelarEncuesta() {
   document.querySelectorAll('.enc-corte').forEach(c => { c.disabled = false; c.checked = false; });
   document.getElementById('enc-btn-agregar').disabled = false;
   document.getElementById('enc-h2').textContent = 'Nueva encuesta';
-  document.getElementById('enc-submit').textContent = 'Crear encuesta';
+  document.querySelectorAll('#form-encuesta button[type=submit]').forEach(b => b.textContent = 'Crear encuesta');
   document.getElementById('enc-cancel').classList.add('oculto');
   document.getElementById('enc-cortes-caja').classList.add('oculto');
+  ayudaModoEncuesta();
+  encuestaEditando = null; hojaTocada.enc = false;
   renderPreguntasEncuesta();
   cambiarSubEncuesta('lista');
 }
