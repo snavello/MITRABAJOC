@@ -331,7 +331,10 @@ def test_apariencia_prueba_de_lectura_sin_jerga_y_tu_dia_rotulado():
 def _bloque(hoja: str) -> str:
     css = Path(f"static/temas/{hoja}").read_text(encoding="utf-8")
     assert "/* Bloque 5c: panel B (auditoría 2026-10) */" in css, hoja
-    return css[css.index("/* Bloque 5c: panel B (auditoría 2026-10) */"):]
+    desde = css.index("/* Bloque 5c: panel B (auditoría 2026-10) */")
+    # El bloque termina donde empieza el de otro (el 5b de panel A va después).
+    otro = css.find("/* Bloque 5", desde + 1)
+    return css[desde:otro if otro != -1 else None]
 
 
 def test_las_hojas_suman_su_bloque_y_cada_selector_es_de_su_modelo():
