@@ -275,7 +275,7 @@ TEMPLATES = [
                     ("notificaciones.html", "/app/notificaciones", "Bandeja tipo hilo"), ("convenio.html", "/app/convenio", "Consultas al convenio (piloto)"),
                     ("verificar_credencial.html", "/v/{token}", "Verificación pública de la credencial")]),
     ("Sindicato", [("admin_login.html", "/admin", "Login por CUIT"), ("admin_portada.html", "/admin/inicio", "Portada de tarjetas"),
-                   ("admin.html", "/admin", "Panel de quince pestañas; 244 KB, el archivo más grande del repo"), ("dashboard.html", "/admin/dashboard", "Panel Sindical con Asistente")]),
+                   ("admin.html", "/admin", "Panel de quince pestañas; 244 KB, el archivo más grande del repo"), ("dashboard_v2.html", "/admin/dashboard", "Panel Sindical con Asistente (Preact)")]),
     ("Empresa", [("empresa_login.html", "/ingresar-empresa", "Login y autorregistro"), ("elegir_sindicato_empresa.html", "/empresa/inicio", "Selector multisindicato"),
                  ("empresa_portada.html", "/empresa/inicio", "Portada"), ("empresa.html", "/empresa", "Panel de dos pestañas")]),
     ("Plataforma", [("plataforma_login.html", "/plataforma", "Login"), ("plataforma_portada.html", "/plataforma/inicio", "Portada"), ("plataforma.html", "/plataforma", "Panel de nueve pestañas")]),
@@ -283,7 +283,7 @@ TEMPLATES = [
 ]
 STATIC = [
     ("marca.css", "Sistema de diseño compartido: cuatro colores por sindicato, grises fijos, estados que nunca toman la marca, radios y logos a 76 px."),
-    ("dashboard.js", "Panel Sindical: estado de filtros, una ronda de fetches en paralelo por cambio, cross-filtering. Solo pinta."),
+    ("panel_v2/", "Panel Sindical en Preact + htm sin build: estado de filtros, una ronda de fetches en cola de a 4 por cambio, cross-filtering. Solo pinta."),
     ("pwa.js · sw.js · manifest.json", "PWA instalable. El service worker no cachea nada a propósito: con deploy en cada push, cachear dejaría al trabajador en una versión vieja."),
     ("chart.umd.min.js", "Chart.js 4.4.9 vendoreado; nunca CDN."),
     ("fonts/barlow-condensed-bold.woff2", "La display de títulos, alojada local."),

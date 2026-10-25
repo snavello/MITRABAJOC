@@ -1,26 +1,32 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="{{ marca.color_base }}">
 <title>Panel Sindical — {{ sindicato }}</title>
-{# Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Convive con la v1
-   (dashboard.html) mientras dura el piloto, y solo existe donde hay
-   distintivo de entorno (D4). Los datos no viajan acá: los pide la v2 a los
-   mismos endpoints que la v1 (línea roja 1). #}
+{# El Panel Sindical (PLAN_DASHBOARD_V2.md). Desde el 2026-10-25 la v2 es EL
+   panel: reemplazó a la v1 y existe en todos los entornos. Los datos no
+   viajan acá: los pide static/panel_v2/ a los endpoints /admin/dashboard/*
+   (línea roja 1 del plan). #}
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
 <link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
 <link rel="stylesheet" href="/static/panel_v2/panel.css?v={{ sello_static('panel_v2/panel.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
 <style>
-  {# Los colores del sindicato, igual que en la v1. Es lo único de estilo que
-     queda en la plantilla: el resto vive en panel.css (D7). #}
+  {# Los colores del sindicato y, como en /admin, los derivados que CSS no
+     sabe calcular (el texto ENCIMA del acento, el acento COMO texto, el
+     primario y la base como fondo de texto blanco), ya corregidos para que
+     se lean (temas.paleta_legible). Es lo único de estilo que queda en la
+     plantilla: el resto vive en panel.css y en la hoja del modelo. #}
   :root {
     --marca-base: {{ marca.color_base }};
     --marca-primario: {{ marca.color_primario }};
     --marca-acento: {{ marca.color_acento }};
     --marca-apoyo: {{ marca.color_secundario }};
+    --marca-secundario: {{ marca.color_secundario }};
+    {{ variables_legibles('marca', marca.color_base, marca.color_primario, marca.color_acento, marca.color_secundario) }}
     --destacado: {{ marca.color_destacado }};
     --destacado-suave: color-mix(in srgb, var(--destacado) 12%, white);
     --destacado-borde: color-mix(in srgb, var(--destacado) 45%, white);
@@ -28,6 +34,13 @@
   }
 </style>
 {% include "_fondo_interior.html" %}
+{# El modelo de diseño de quien mira (PLAN_TEMAS.md): una hoja por modelo,
+   cargada DESPUÉS de todo lo anterior (static/temas/<modelo>-tablero.css),
+   con su sello. Solo si el archivo existe: un modelo sin hoja todavía se ve
+   como la "Sala de mando" de siempre. #}
+{% if apariencia %}{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-tablero.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+{% endif %}
 {# Cada módulo se pide por nombre y el mapa lo traduce a su archivo CON su
    sello ?v= (D3). Lo arma main._importmap_panel_v2() recorriendo la carpeta:
    un archivo nuevo de static/panel_v2/ entra solo. Va en el <head>, antes de
@@ -42,12 +55,16 @@
 
 {% set enc_fecha = True %}
 {% include "_encabezado.html" %}
+{% if apariencia and apariencia.tema == 'laguna' %}
+{# Laguna pone el encabezado en blanco: ahí va el logo de Colm3na para fondo
+   CLARO, igual que en /admin (el del parcial es el de fondo oscuro). #}
+<img class="enc-c3-claro" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Colm3na">
+{% endif %}
 
-{# Lo mismo que lee la v1: la fecha de hoy SEGÚN EL SERVIDOR y si el carril
-   de consultas y el Asistente existen. Lo decide el servidor, no el JS. #}
-{# El logo del gremio va como dato para las burbujas del mapa (vacío sin logo),
-   igual que en la v1, y la colmena del Asistente también: la plantilla es la
-   que sabe el sello de versión de cada imagen. #}
+{# La fecha de hoy SEGÚN EL SERVIDOR y si el carril de consultas y el
+   Asistente existen: lo decide el servidor, no el JS. El logo del gremio va
+   como dato para las burbujas del mapa (vacío sin logo), y la colmena del
+   Asistente también: la plantilla es la que sabe el sello de cada imagen. #}
 <main class="mesa-cont" data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
       data-hoy="{{ hoy }}" data-logo="{{ ('/logo/' ~ marca.id ~ '?v=' ~ marca.logo_v) if marca.logo else '' }}"
       data-colmena="/static/colmena_dorada.webp?v={{ sello_static('colmena_dorada.webp') }}">
@@ -59,22 +76,29 @@
    adentro podría tapar el encabezado (static/panel_v2/capa.js). #}
 <div id="capas"></div>
 
-<a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
-  <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>
+{# Inicio y Salir, juntos y con su rótulo, como en el resto del panel
+   (PLAN_TEMAS.md D7). flota.js los corre al bajar para que no tapen nada. #}
+<div class="flota-sesion">
+<a class="btn-home" href="/admin/inicio" title="Inicio">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+  <span class="btn-rot">Inicio</span>
 </a>
-<a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
-  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+<a class="btn-cerrar" href="/admin/salir" title="Salir">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg>
+  <span class="btn-rot">Salir</span>
 </a>
+</div>
 
 <footer class="dash">Panel Sindical · versión {{ version }} · {{ fecha_version }}</footer>
 
-{# Chart.js, Leaflet, la capa de mapas y el arrastre de modales: los mismos
-   scripts comunes que la v1, con su sello. Los módulos de la v2 corren
+{# Chart.js, Leaflet, la capa de mapas, el arrastre de modales y la pastilla
+   de la sesión: scripts comunes, con su sello. Los módulos del panel corren
    después (los módulos esperan a que termine de leerse la página). #}
 <script src="/static/chart.umd.min.js?v={{ sello_static('chart.umd.min.js') }}"></script>
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script defer src="/static/flota.js?v={{ sello_static('flota.js') }}"></script>
 
 <script type="module" src="/static/panel_v2/app.js?v={{ sello_static('panel_v2/app.js') }}"></script>
 </body>

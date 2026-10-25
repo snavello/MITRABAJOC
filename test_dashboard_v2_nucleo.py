@@ -1,19 +1,24 @@
-"""Panel Sindical v2, bloque 2: el núcleo sin pantalla (PLAN_DASHBOARD_V2.md).
+"""Panel Sindical, el núcleo sin pantalla (PLAN_DASHBOARD_V2.md, bloque 2).
 
 `static/panel_v2/estado.js` y `api.js` no tocan el DOM, así que se prueban
-corriéndolos de verdad con Node. Lo central es la línea roja 3 del plan: la v2
-tiene que pedirle al servidor EXACTAMENTE lo mismo que la v1. Por eso no se
-compara la v2 contra lo que uno cree que hace la v1, sino **contra la v1
-misma**: se sacan de static/dashboard.js las funciones que arman y sanean el
-estado (como hace test_dashboard_cola_front.py con `enCola`), se corren al
-lado de las de la v2 con miles de direcciones al azar, rotas a propósito, y
-tienen que dar los mismos parámetros.
+corriéndolos de verdad con Node.
+
+Mientras la v1 existió, la línea roja 3 del plan se probaba **contra la v1
+misma**: se sacaban de static/dashboard.js las funciones que arman y sanean
+el estado y se corrían al lado de las de la v2 con miles de direcciones al
+azar. La v1 se retiró el 2026-10-25: los casos de abajo son **lo que la v1
+producía** para cada dirección (sacado corriéndola por última vez, con sus
+rarezas incluidas), con un solo cambio a propósito: el período por defecto y
+el de "Reiniciar" pasaron de "Hoy" a los últimos 30 días (G7-02). Una
+dirección guardada de la v1 sigue abriendo igual. Las direcciones al azar
+quedan para lo que no depende de un caso: que la salida sea siempre un
+período válido y que releerla dé lo mismo.
 
 Además: la cola nunca pasa de 4 en vuelo, el 503 se reintenta dos veces con
-la espera de la v1, el 403 manda a /admin, el 422 trae su motivo, y una ronda
-abortada corta también la espera del reintento.
+la espera de siempre, el 403 manda a /admin, el 422 trae su motivo, y una
+ronda abortada corta también la espera del reintento.
 
-Sin Node instalado, los tests se saltean (igual que test_dashboard_cola_front).
+Sin Node instalado, los tests se saltean.
 
 Correr con: .venv/bin/python -m pytest test_dashboard_v2_nucleo.py -q
 """
@@ -22,65 +27,18 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import parse_qsl
 
 import pytest
 
 RAIZ = Path(__file__).parent
-V1 = (RAIZ / "static" / "dashboard.js").read_text(encoding="utf-8")
 NODE = shutil.which("node")
 
 pytestmark = pytest.mark.skipif(NODE is None, reason="Node no está instalado")
 
 
-def _funcion_v1(nombre):
-    m = re.search(rf"  function {nombre}\(.*?\n  \}}\n", V1, re.S)
-    assert m, f"no encontré function {nombre} en dashboard.js"
-    return m.group(0)
-
-
-def _trozo_v1(patron, que):
-    m = re.search(patron, V1, re.S)
-    assert m, f"no encontré {que} en dashboard.js"
-    return m.group(0)
-
-
-def _v1_como_js(consultas: bool) -> str:
-    """Las piezas de la v1 que deciden qué parámetros viajan, con lo mínimo
-    alrededor para que corran fuera del navegador."""
-    s_inicial = _trozo_v1(r"  var S = \{.*?\n  \};\n", "el estado inicial S")
-    fiso = _trozo_v1(r"  var fISO = function \(d\) \{.*?\n  \};\n", "fISO")
-    deiso = _trozo_v1(r"  var deISO = [^\n]*\n", "deISO")
-    encaje = _trozo_v1(r"if \(S\.salMin === null\) \{[^\n]*\n\s*else \{[^\n]*\}",
-                       "el encaje del salario de initCatalogo")
-    funciones = "".join(_funcion_v1(n) for n in (
-        "paramsDeEstado", "estadoDeParams", "setPreset", "reiniciar",
-        "alternarSeccional", "aplicarEstado", "presetActivo", "estadoPlano"))
-    return f"""
-const V1 = (() => {{
-  var HOY = new Date(2026, 9, 12);
-  var CONSULTAS_ON = {str(consultas).lower()};
-  var LIM = {{ min: null, max: null }};
-  var calVista = null, calEligiendo = false;
-  function refrescar() {{}}  function cambio() {{}}  function etiquetarAfiliado() {{}}
-  {fiso}{deiso}
-  {s_inicial.replace("var S =", "var S; function nuevoS() { return", 1).rstrip().rstrip(";")} ; }}
-  {funciones}
-  function encajar() {{ if (LIM.min !== null && LIM.max !== null) {{ {encaje} }} }}
-  function salida() {{ return paramsDeEstado().toString() + "|tab=" + S.tab + "|preset=" + presetActivo(); }}
-  return {{
-    cargar(qs, lim) {{ S = nuevoS(); LIM = lim; estadoDeParams(new URLSearchParams(qs)); encajar(); return salida(); }},
-    preset(p) {{ setPreset(p); return salida(); }},
-    alternarSeccional(id) {{ alternarSeccional(id); return salida(); }},
-    reiniciar() {{ reiniciar(); return salida(); }},
-    aplicar(filtros) {{ aplicarEstado(filtros); return salida(); }},
-    plano() {{ return JSON.stringify(estadoPlano()); }},
-  }};
-}})();
-"""
-
-
 def _correr(js: str, tmp_path: Path, modulos=("estado", "api")) -> dict:
-    """Copia los módulos de la v2 como .mjs (así cualquier Node los toma como
+    """Copia los módulos del panel como .mjs (así cualquier Node los toma como
     módulos ES) y corre `js`, que tiene que imprimir un JSON."""
     for m in modulos:
         (tmp_path / f"{m}.mjs").write_text(
@@ -124,6 +82,76 @@ function direccion() {
 const LIMITES = [{ min: null, max: null }, { min: 1150, max: 3700 }, { min: 0, max: 50 }];
 """
 
+# Lo que la v1 armaba para cada dirección: (dirección, límites del slider de
+# salario, carril de consultas, parámetros|pestaña|período rápido). Hoy es el
+# 2026-10-12; sin un período válido, el panel abre en los últimos 30 días.
+CASOS_V1 = [
+    ('', None, False, 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30'),
+    ('desde=2026-10-01&hasta=2026-10-12', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-12&hasta=2026-10-12', None, False, 'desde=2026-10-12&hasta=2026-10-12|tab=recibos|preset=hoy'),
+    ('desde=2026-10-06&hasta=2026-10-12', None, False, 'desde=2026-10-06&hasta=2026-10-12|tab=recibos|preset=7'),
+    ('desde=2026-07-15&hasta=2026-10-12', None, False, 'desde=2026-07-15&hasta=2026-10-12|tab=recibos|preset=90'),
+    ('desde=2026-10-01&hasta=2026-10-13&seccionales=3', None, False, 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30'),
+    ('desde=2026-10-12&hasta=2026-10-01&seccionales=3', None, False, 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30'),
+    ('desde=2026-02-30&hasta=2026-10-12&formato=nuevo', None, False, 'desde=2026-03-02&hasta=2026-10-12&formato=nuevo|tab=recibos|preset=null'),
+    ('desde=abc&hasta=2026-10-12&seccionales=3', None, False, 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30'),
+    ('hasta=2026-10-12&empresas=4', None, False, 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30'),
+    ('desde=+2026-10-11&hasta=2026-10-12', None, False, 'desde=2026-10-11&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-1-5&hasta=2026-10-12', None, False, 'desde=2026-01-05&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=0026-01-01&hasta=2026-10-12', None, False, 'desde=1926-01-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&seccionales=3&seccionales=0&seccionales=abc&seccionales=-4&seccionales=1.5&seccionales=3&seccionales=', None, False, 'desde=2026-10-01&hasta=2026-10-12&seccionales=3&seccionales=-4&seccionales=1.5|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&empresas=9&empresas=0&empresas=2&empresas=9', None, False, 'desde=2026-10-01&hasta=2026-10-12&empresas=9&empresas=2|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&formato=nuevo', None, False, 'desde=2026-10-01&hasta=2026-10-12&formato=nuevo|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&formato=otro', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_min=1250000&sal_max=3000000', {'min': 1150, 'max': 3700}, False, 'desde=2026-10-01&hasta=2026-10-12&sal_min=1250000&sal_max=3000000|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_min=1250499', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_min=-50000&sal_max=9000000', {'min': 1150, 'max': 3700}, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_max=2000000', {'min': 1150, 'max': 3700}, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_min=abc&sal_max=2000000', {'min': 1150, 'max': 3700}, False, 'desde=2026-10-01&hasta=2026-10-12&sal_max=2000000|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_min=400&sal_max=0', {'min': 0, 'max': 50}, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&resultado=ok', None, False, 'desde=2026-10-01&hasta=2026-10-12&resultado=ok|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&resultado=x', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&estado_tramite=en_proceso', None, False, 'desde=2026-10-01&hasta=2026-10-12&estado_tramite=en_proceso|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&estado_tramite=cerrado', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tipo_notif=sistema', None, False, 'desde=2026-10-01&hasta=2026-10-12&tipo_notif=sistema|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tipo_notif=push', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tema=vacaciones+pagas', None, False, 'desde=2026-10-01&hasta=2026-10-12&tema=vacaciones+pagas|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&afiliado=12', None, False, 'desde=2026-10-01&hasta=2026-10-12&afiliado=12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&afiliado=abc', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&afiliado=-4', None, False, 'desde=2026-10-01&hasta=2026-10-12&afiliado=-4|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tab=tramites', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=tramites|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tab=consultas', None, False, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tab=consultas', None, True, 'desde=2026-10-01&hasta=2026-10-12|tab=consultas|preset=null'),
+    ('desde=2026-10-01&hasta=2026-10-12&tab=nada', None, True, 'desde=2026-10-01&hasta=2026-10-12|tab=recibos|preset=null'),
+    ('desde=2026-09-13&hasta=2026-10-12&seccionales=2&empresas=7&formato=viejo&sal_min=1200000&sal_max=3500000&resultado=con_diferencias&estado_tramite=abierto&tipo_notif=manual&tema=licencias&afiliado=3&tab=notificaciones', {'min': 1150, 'max': 3700}, False, 'desde=2026-09-13&hasta=2026-10-12&seccionales=2&empresas=7&formato=viejo&sal_min=1200000&sal_max=3500000&resultado=con_diferencias&estado_tramite=abierto&tipo_notif=manual&tema=licencias&afiliado=3|tab=notificaciones|preset=30'),
+]
+
+# Los cambios que la v1 tenía como función propia (período rápido, seccional,
+# reiniciar y aplicar filtros del Asistente), en orden, con lo que quedaba
+# después de cada uno. "Aplicar" con un período inválido conserva el anterior.
+SECUENCIAS_V1 = [
+    ('desde=2026-10-01&hasta=2026-10-12&seccionales=3&formato=nuevo', None, [
+        (['preset', '7'], 'desde=2026-10-06&hasta=2026-10-12&seccionales=3&formato=nuevo|tab=recibos|preset=7'),
+        (['seccional', 2], 'desde=2026-10-06&hasta=2026-10-12&seccionales=3&seccionales=2&formato=nuevo|tab=recibos|preset=7'),
+        (['seccional', 3], 'desde=2026-10-06&hasta=2026-10-12&seccionales=2&formato=nuevo|tab=recibos|preset=7'),
+        (['seccional', 2], 'desde=2026-10-06&hasta=2026-10-12&formato=nuevo|tab=recibos|preset=7'),
+        (['preset', 'hoy'], 'desde=2026-10-12&hasta=2026-10-12&formato=nuevo|tab=recibos|preset=hoy'),
+        (['reiniciar'], 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30')]),
+    ('desde=2026-10-01&hasta=2026-10-12&sal_min=1250000', {'min': 1150, 'max': 3700}, [
+        (['preset', '90'], 'desde=2026-07-15&hasta=2026-10-12&sal_min=1250000|tab=recibos|preset=90'),
+        (['aplicar', {'desde': '2026-09-01', 'hasta': '2026-09-30', 'seccionales': [4], 'resultado': 'ok', 'tab': 'tramites'}], 'desde=2026-09-01&hasta=2026-09-30&seccionales=4&resultado=ok|tab=tramites|preset=null'),
+        (['aplicar', {'seccionales': [2]}], 'desde=2026-09-01&hasta=2026-09-30|tab=recibos|preset=null'),
+        (['aplicar', {'desde': '2026-10-01', 'hasta': '2026-10-13', 'formato': 'nuevo'}], 'desde=2026-09-01&hasta=2026-09-30|tab=recibos|preset=null'),
+        (['aplicar', {'desde': '2026-10-05', 'hasta': '2026-10-12', 'sal_min': '', 'sal_max': 2000000, 'formato': 'x'}], 'desde=2026-10-05&hasta=2026-10-12&sal_max=2000000|tab=recibos|preset=null'),
+        (['reiniciar'], 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30')]),
+    ('', None, [
+        (['seccional', 5], 'desde=2026-09-13&hasta=2026-10-12&seccionales=5|tab=recibos|preset=30'),
+        (['preset', '30'], 'desde=2026-09-13&hasta=2026-10-12&seccionales=5|tab=recibos|preset=30'),
+        (['aplicar', {'desde': '2026-10-12', 'hasta': '2026-10-12', 'tab': 'consultas'}], 'desde=2026-10-12&hasta=2026-10-12|tab=recibos|preset=hoy'),
+        (['reiniciar'], 'desde=2026-09-13&hasta=2026-10-12|tab=recibos|preset=30')]),
+]
+
+
 _V2_IMPORTS = """
 import { desdeParams, conLimites, aDireccion, crearReductor, limitesSalario,
          estadoInicial, presetActivo, filtrosActivos, estadoPlano, comoParams } from "./estado.mjs";
@@ -134,84 +162,97 @@ function salidaV2(e, lim) {
 """
 
 
-@pytest.mark.parametrize("consultas", [False, True])
-def test_la_v2_arma_los_mismos_parametros_que_la_v1(tmp_path, consultas):
-    js = _V2_IMPORTS + _v1_como_js(consultas) + _AZAR + f"""
+def test_cada_direccion_arma_lo_que_armaba_la_v1(tmp_path):
+    js = _V2_IMPORTS + f"""
+const CASOS = {json.dumps(CASOS_V1)};
 const distintas = [];
-let casos = 0;
-for (let i = 0; i < 4000; i++) {{
-  const qs = direccion(), lim = uno(LIMITES);
-  const v1 = V1.cargar(qs, lim);
-  const v2 = salidaV2(conLimites(desdeParams(new URLSearchParams(qs), {{ hoy: HOY, consultas: {str(consultas).lower()} }}), lim), lim);
-  casos++;
-  if (v1 !== v2 && distintas.length < 5) distintas.push({{ qs, lim, v1, v2 }});
+for (const [qs, lim0, consultas, esperado] of CASOS) {{
+  const lim = lim0 || {{ min: null, max: null }};
+  const v2 = salidaV2(conLimites(desdeParams(new URLSearchParams(qs), {{ hoy: HOY, consultas }}), lim), lim);
+  if (v2 !== esperado) distintas.push({{ qs, lim0, consultas, esperado, v2 }});
 }}
-console.log(JSON.stringify({{ casos, distintas }}));
+console.log(JSON.stringify({{ casos: CASOS.length, distintas }}));
 """
     r = _correr(js, tmp_path, modulos=("estado",))
-    assert r["casos"] == 4000
-    assert not r["distintas"], "la v2 no arma lo mismo que la v1:\n" + json.dumps(r["distintas"], indent=1)
+    assert r["casos"] == len(CASOS_V1)
+    assert not r["distintas"], "una dirección no arma lo de siempre:\n" + json.dumps(r["distintas"], indent=1)
 
 
-def test_los_cambios_de_la_v2_dan_lo_mismo_que_los_de_la_v1(tmp_path):
-    """Después de cargar una dirección, una serie al azar de los cambios que
-    la v1 tiene como función propia: período rápido, seccional, reiniciar y
-    aplicar filtros (el Asistente). Tras cada paso, mismos parámetros y la
+def _foto_esperada(salida: str) -> dict:
+    """La foto que viaja al Asistente, armada de los parámetros (así la armaba
+    `estadoPlano` de la v1: de los mismos parámetros que van al servidor)."""
+    params, tab = salida.split("|")[0], salida.split("|")[1][len("tab="):]
+    q = parse_qsl(params, keep_blank_values=True)
+    uno = lambda k: next((v for c, v in q if c == k), "")
+    numero = lambda k: int(uno(k)) if uno(k) else None
+    return {"desde": uno("desde"), "hasta": uno("hasta"),
+            "seccionales": [float(v) if "." in v else int(v) for c, v in q if c == "seccionales"],
+            "empresas": [int(v) for c, v in q if c == "empresas"],
+            "formato": uno("formato"), "resultado": uno("resultado"),
+            "estado_tramite": uno("estado_tramite"), "tipo_notif": uno("tipo_notif"),
+            "sal_min": numero("sal_min"), "sal_max": numero("sal_max"),
+            "tema": uno("tema"), "afiliado": numero("afiliado"), "tab": tab}
+
+
+def test_los_cambios_dan_lo_que_daban_en_la_v1(tmp_path):
+    """Después de cargar una dirección, una serie de los cambios que la v1
+    tenía como función propia. Tras cada paso, los mismos parámetros y la
     misma foto del estado que viaja al Asistente."""
-    js = _V2_IMPORTS + _v1_como_js(False) + _AZAR + """
-const reducir = crearReductor({ hoy: HOY, consultas: false });
-function filtrosAzar() {
-  // Como los manda el Asistente: un objeto plano, a veces sin fechas.
-  const f = {};
-  if (azar() < 0.7) { f.desde = uno(FECHAS); f.hasta = uno(FECHAS); }
-  if (azar() < 0.5) f.seccionales = [Math.floor(azar() * 5)];
-  if (azar() < 0.4) f.formato = uno(["viejo", "nuevo", "x"]);
-  if (azar() < 0.4) f.sal_min = uno([null, "", 1250000, 900000]);
-  if (azar() < 0.4) f.sal_max = uno([null, 2000000, 9000000]);
-  if (azar() < 0.4) f.resultado = uno(["ok", "", "con_diferencias"]);
-  if (azar() < 0.3) f.tab = uno(["tramites", "notificaciones", "consultas"]);
-  return f;
-}
-const distintas = [];
-let pasos = 0;
-for (let i = 0; i < 600; i++) {
-  const qs = direccion(), lim = uno(LIMITES);
-  V1.cargar(qs, lim);
-  let e = conLimites(desdeParams(new URLSearchParams(qs), { hoy: HOY }), lim);
-  for (let j = 0; j < 6; j++) {
-    const op = uno(["preset", "seccional", "reiniciar", "aplicar"]);
-    let v1, nombre;
-    if (op === "preset") {
-      const p = uno(["hoy", "7", "30", "90"]); nombre = "preset " + p;
-      v1 = V1.preset(p); e = reducir(e, { tipo: "preset", valor: p });
-    } else if (op === "seccional") {
-      const id = 1 + Math.floor(azar() * 4); nombre = "seccional " + id;
-      v1 = V1.alternarSeccional(id); e = reducir(e, { tipo: "alternar", campo: "seccionales", id });
-    } else if (op === "reiniciar") {
-      nombre = "reiniciar";
-      v1 = V1.reiniciar(); e = reducir(e, { tipo: "reiniciar", lim });
-    } else {
-      const f = filtrosAzar(); nombre = "aplicar " + JSON.stringify(f);
-      v1 = V1.aplicar(f); e = reducir(e, { tipo: "aplicar", params: comoParams(f), lim });
-    }
-    pasos++;
-    const v2 = salidaV2(e, lim);
-    if (v1 !== v2 && distintas.length < 5) distintas.push({ qs, lim, paso: nombre, v1, v2 });
-    // La foto que viaja al Asistente con cada pregunta (y que vuelve con "Volver").
-    const p1 = V1.plano(), p2 = JSON.stringify(estadoPlano(e, lim));
-    if (p1 !== p2 && distintas.length < 5) distintas.push({ qs, lim, paso: nombre + " (foto)", v1: p1, v2: p2 });
+    js = _V2_IMPORTS + f"""
+const SEC = {json.dumps(SECUENCIAS_V1)};
+const reducir = crearReductor({{ hoy: HOY, consultas: false }});
+const pasos = [];
+for (const [qs, lim0, ops] of SEC) {{
+  const lim = lim0 || {{ min: null, max: null }};
+  let e = conLimites(desdeParams(new URLSearchParams(qs), {{ hoy: HOY }}), lim);
+  for (const [op, esperado] of ops) {{
+    if (op[0] === "preset") e = reducir(e, {{ tipo: "preset", valor: op[1] }});
+    else if (op[0] === "seccional") e = reducir(e, {{ tipo: "alternar", campo: "seccionales", id: op[1] }});
+    else if (op[0] === "reiniciar") e = reducir(e, {{ tipo: "reiniciar", lim }});
+    else e = reducir(e, {{ tipo: "aplicar", params: comoParams(op[1]), lim }});
+    pasos.push({{ qs, op, esperado, v2: salidaV2(e, lim), foto: estadoPlano(e, lim) }});
+  }}
+}}
+console.log(JSON.stringify({{ pasos }}));
+"""
+    r = _correr(js, tmp_path, modulos=("estado",))
+    assert len(r["pasos"]) == sum(len(ops) for _, _, ops in SECUENCIAS_V1)
+    for p in r["pasos"]:
+        assert p["v2"] == p["esperado"], p
+        assert p["foto"] == _foto_esperada(p["esperado"]), p
+
+
+def test_las_direcciones_al_azar_dan_siempre_un_periodo_valido(tmp_path):
+    """Miles de direcciones al azar, rotas a propósito: la salida es siempre
+    un período válido que no termina en el futuro, y abrir la dirección que
+    el panel escribe deja el panel igual (un enlace compartido abre lo mismo
+    que se estaba mirando), salvo el salario por la rareza de abajo."""
+    js = _V2_IMPORTS + _AZAR + """
+const malas = [];
+for (const consultas of [false, true]) {
+  for (let i = 0; i < 2000; i++) {
+    const qs = direccion(), lim = uno(LIMITES);
+    const e = conLimites(desdeParams(new URLSearchParams(qs), { hoy: HOY, consultas }), lim);
+    const iso = /^\\d{4}-\\d{2}-\\d{2}$/;
+    const valida = iso.test(e.desde) && iso.test(e.hasta) && e.desde <= e.hasta && e.hasta <= HOY;
+    const otra = conLimites(desdeParams(aDireccion(e, lim), { hoy: HOY, consultas }), lim);
+    /* El salario queda afuera de la comparación por la rareza de la v1 que
+       se conservó (BACKLOG.md, D10): sin `sal_min`, el `sal_max` se pierde al
+       releer. Se arregla en el núcleo, no acá. */
+    const sinSal = (x) => x.replace(/&?sal_(min|max)=[^&|]*/g, "");
+    if ((!valida || sinSal(salidaV2(otra, lim)) !== sinSal(salidaV2(e, lim))) && malas.length < 5)
+      malas.push({ qs, lim, una: salidaV2(e, lim), otra: salidaV2(otra, lim), valida });
   }
 }
-console.log(JSON.stringify({ pasos, distintas }));
+console.log(JSON.stringify({ malas }));
 """
     r = _correr(js, tmp_path, modulos=("estado",))
-    assert r["pasos"] == 3600
-    assert not r["distintas"], "un cambio da distinto en la v2:\n" + json.dumps(r["distintas"], indent=1)
+    assert not r["malas"], json.dumps(r["malas"], indent=1)
 
 
 def test_los_cambios_propios_de_los_graficos(tmp_path):
-    """Lo que en la v1 vive adentro de cada onClick de gráfico y no se puede
-    extraer como función: se prueba contra lo que dicen esos onClick."""
+    """Lo que en la v1 vivía adentro de cada onClick de gráfico: se prueba
+    contra lo que decían esos onClick."""
     js = _V2_IMPORTS + """
 const r = crearReductor({ hoy: HOY, consultas: false });
 let e = estadoInicial(HOY);
@@ -339,8 +380,8 @@ def test_el_nucleo_no_toca_el_dom():
 
 
 def test_las_pastillas_de_filtros_dicen_lo_mismo_que_en_la_v1(tmp_path):
-    """Los textos y el orden de `pintarChips` de la v1, y cada pastilla trae
-    la acción que la saca."""
+    """Los textos y el orden de `pintarChips` de la v1 (los de siempre), y
+    cada pastilla trae la acción que la saca."""
     js = _V2_IMPORTS + """
 const r = crearReductor({ hoy: HOY });
 const catalogo = { seccionales: [{ id: 3, nombre: "Córdoba" }], empresas: [{ id: 9, nombre: "Metalsur SA" }] };

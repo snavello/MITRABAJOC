@@ -635,8 +635,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
   (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
   (147); cada persona cambia el suyo (afiliado: `CuentaTrabajador.tema`;
-  operador: `CuentaPanel.tema`; empresa: `CuentaEmpleador.tema`, desde
-  2026-10-25), vacío = el que eligió su sindicato (`Sindicato.tema_afiliados`
+  operador: `CuentaPanel.tema`; empresa: `CuentaEmpleador.tema`, y usuario
+  de plataforma: `UsuarioPlataforma.tema`, los dos desde 2026-10-25; plataforma
+  va siempre con la paleta de Colm3na), vacío = el que eligió su sindicato (`Sindicato.tema_afiliados`
   / `tema_panel`; la empresa toma el de afiliados). La **paleta** (colores de
   Colm3na o del sindicato) la decide el sindicato, nunca la persona. Un valor
   fuera del catálogo no se guarda y, si aparece en la base, vale el por
@@ -767,8 +768,8 @@ borraron la UOM y la gastronómica viejas y se recargó la demo con
 `<base>_respaldo_20261023b` de cada servidor); en la Demo además se borró
 "Sindicato de Pruebas -- Carga", que en Pruebas sigue para los tests de carga. Con eso la demo quedó además con los
 CUIL/CUIT regularizados (cierra H-0020 en la práctica). La demo lleva
-`ENMASCARADO=activo` como Pruebas. **En demo, `/entornos`, `/entornos/xsanders`
-y la v2 del Panel responden 404 a propósito** (solo existen donde hay
+`ENMASCARADO=activo` como Pruebas. **En demo, `/entornos` y `/entornos/xsanders`
+responden 404 a propósito** (solo existen donde hay
 distintivo de entorno), y el login genérico de plataforma está apagado: se
 entra con usuario nominal. Detalle en BITACORA.md y en HISTORIAL.md
 ("La demo, copia de Pruebas").
@@ -1538,8 +1539,13 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     canal está apagado y el registro nace nivel 1. Después: smoke test del
     widget en Pruebas y H-0017 → Solucionado. Pendientes menores anotados en
     BACKLOG.md (bitácora de acciones del panel, teléfono como segundo canal).
-11. **Panel Sindical v2 con Preact** (2026-10-12, **completa en Pruebas,
-    falta la decisión D9**): [`PLAN_DASHBOARD_V2.md`](PLAN_DASHBOARD_V2.md). Primer piloto
+11. **Panel Sindical v2 con Preact** (2026-10-12; **D9 decidida el
+    2026-10-25: la v2 REEMPLAZA a la v1**, sirve `/admin/dashboard` en todos
+    los entornos, `/admin/dashboard-v2` redirige ahí con la misma query, y
+    `templates/dashboard.html` + `static/dashboard.js` se borraron; con los
+    dos modelos de diseño, hojas `static/temas/<modelo>-tablero.css`, y los
+    gráficos toman sus colores de las variables `--graf-*` del modelo. Lo que
+    sigue es la historia del piloto): [`PLAN_DASHBOARD_V2.md`](PLAN_DASHBOARD_V2.md). Primer piloto
     de una capa de componentes: Preact 10.29.8 + htm 3.1.1 vendoreados, sin
     build, en `/admin/dashboard-v2` (solo local y Pruebas) al lado de la v1,
     con los mismos endpoints y sin tocar el backend. Estética mejorada sobre
@@ -2122,8 +2128,8 @@ vigentes:
   mudo. Es la regla de `fechas.py` del lado del cliente. Y como red, **un
   rechazo del servidor se ve**: el `detail` del 422 se muestra en un cartel
   arriba de los KPIs y en cada panel, en vez de morir en un `catch`.
-- **UI**: página propia `GET /admin/dashboard` (`templates/dashboard.html` +
-  `static/dashboard.js`), linkeada desde la tira de /admin y la portada,
+- **UI**: página propia `GET /admin/dashboard` (`templates/dashboard_v2.html` +
+  los módulos Preact de `static/panel_v2/`, desde 2026-10-25), linkeada desde la tira de /admin y la portada,
   gateada por módulo. Chart.js 4.4.9 VENDOREADO en `static/chart.umd.min.js`
   (jamás CDN); `/static/` sale con `Cache-Control: public, max-age=3600` +
   sello `?v=` (mismo patrón que /logo). Estado de filtros serializado en la

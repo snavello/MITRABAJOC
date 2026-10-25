@@ -8883,3 +8883,57 @@ panel, y en el mapa el zoom abajo, más margen y las burbujas que se pisan
 corridas unos píxeles. El color de lo elegido en Resultados pasa a ser el del
 modelo y no el `color_destacado` del sindicato. Tests:
 `test_tema_pantallas_viejas.py`.
+
+**Bloque 4, el Panel Sindical v2 reemplaza a la v1** (Admin 0.72.01; cierra
+la decisión D9 de `PLAN_DASHBOARD_V2.md`, que SDN tomó al pedir el plan):
+`/admin/dashboard` sirve la v2 en todos los entornos, también la demo, con
+las mismas puertas que tenía la v1; `/admin/dashboard-v2` redirige ahí con la
+misma query; `templates/dashboard.html` y `static/dashboard.js` se borraron
+(los endpoints `/admin/dashboard/*` no cambiaron). Los dos modelos con
+`static/temas/<modelo>-tablero.css`, y los gráficos leen sus colores de
+`--graf-*` (los de estado nunca toman la marca). De la auditoría: un gráfico
+vacío dice qué pasa y ofrece ampliar el período o quitar filtros, ejes de
+conteo sin decimales, el panel abre en los últimos 30 días (antes «Hoy»), la
+fecha del encabezado sin mayúsculas en cada palabra y corta en el teléfono,
+el explorador como fichas en el teléfono, la leyenda de Trámites con los
+colores fijos de cada estado, el aviso de movimiento reducido en una línea y
+descartable, «ayer: N» en vez de una caída en rojo con «Hoy», el semáforo que
+avisa que la lista se desliza y el zoom del mapa abajo. El núcleo de estado
+(`test_dashboard_v2_nucleo.py`) ya no se compara contra la v1 viva: antes de
+borrarla se fijaron 38 direcciones y tres secuencias con lo que la v1
+producía. El robot de paridad e2e queda en skip. Tests: `test_tema_tablero.py`.
+
+**Bloque 2b, plataforma en los dos modelos** (Plataforma 0.57.01): la
+portada, el panel (con todas sus pestañas y las cuatro de Uso de IA) y
+Usuarios de plataforma dejan la mesa y la colmena y se ven en Laguna o
+Noticiero, **siempre con la paleta de Colm3na** (plataforma no tiene
+sindicato). Cada usuario elige su modelo (`UsuarioPlataforma.tema`, migración
+`b3e7f1a9c5d2`, `POST /plataforma/apariencia/mia`, «Tu modelo» en la portada;
+`db.apariencia_plataforma`); el genérico no tiene fila y no puede guardarlo.
+Hojas `static/temas/<modelo>-plataforma{,-portada}.css`; la tira sale de
+`_plataforma_nav.html` y va como riel en escritorio; Inicio/Salir con rótulo;
+botón «Elegir archivo» con el nombre del archivo en todas las cargas; las
+ayudas de Marca reescritas según lo que pintan hoy; en Modelos, una barra al
+pie solo mientras hay cambios sin guardar; en Enmascarado, el botón de
+borrar imágenes solo si hay; el tope sindical acepta coma o punto; y las
+explicaciones de Uso de IA sin nombres de archivos internos. Queda a medias
+G8-30: el campo de los topes sigue sin aceptar puntos de miles (lo exige
+`test_topes_base_imponible`), con la regla escrita al lado. Tests:
+`test_tema_plataforma.py`.
+
+**Bloque 5a, la app del afiliado** (Trabajador 0.54.01), los 14 hallazgos
+aceptados: un beneficio sin foto es una lámina tipográfica (no una caja
+vacía) y una novedad sin foto no lleva miniatura de relleno; el carrusel con
+más de seis beneficios dice «N de M» y en el teléfono tiene flechas de 44 px
+al pie; el pronóstico de «Tu día» escribe el día de cada máxima; en
+Novedades, un solo nodo por entrada y «Leer ›»; Mis aportes con un solo
+título y ARCA sin «↗» (con «se abre en otra pestaña» para lectores). En
+Trámites: primero lo que pide atención y después por último movimiento
+(`tramites_de_trabajador` por `actualizado` desc), un color por estado
+(terminado en gris, respondido en verde, en tratamiento en ámbar, iniciado
+con contorno), el último mensaje en dos renglones y la barra de cuatro tramos
+con sus nombres. Y el número de expediente sin tildes: `db.prefijo_expediente`
+quita los acentos de la sigla (salía «UNIÓF…») y el buscador encuentra el
+número con o sin tilde. Los ya cargados no se reescriben. Queda el mismo
+problema en el código de credencial (`db.generar_codigo_credencial`). Tests:
+`test_auditoria_afiliado.py`.

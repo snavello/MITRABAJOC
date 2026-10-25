@@ -1,0 +1,16 @@
+{# "Acerca de" de las pantallas interiores de plataforma (/plataforma y
+   /plataforma/usuarios): el pie, siempre abajo y legible, y su cuadrito con
+   la versión. Lo dibujan las hojas de cada modelo. #}
+<footer class="acerca-pie">
+  <button type="button" class="btn-acerca" onclick="document.getElementById('acerca-box').classList.add('abierto')">Acerca de</button>
+</footer>
+
+<div id="acerca-box" role="dialog" aria-labelledby="acerca-tit" onclick="if (event.target === this) this.classList.remove('abierto')">
+  <div class="acerca-caja">
+    <h3 id="acerca-tit">Acerca de</h3>
+    <div class="acerca-fila"><span class="muted">Versión</span><strong>{{ version }}</strong></div>
+    <div class="acerca-fila"><span class="muted">Fecha</span><strong>{{ fecha_version }}</strong></div>
+{% if entorno %}    <div class="acerca-fila"><span class="muted">Entorno</span><strong>{{ entorno }}</strong></div>
+{% endif %}    <button type="button" class="sec" style="margin-top:12px;" onclick="document.getElementById('acerca-box').classList.remove('abierto')">Cerrar</button>
+  </div>
+</div>

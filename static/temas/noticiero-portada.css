@@ -582,3 +582,37 @@ html[data-tema="noticiero"] .pt-cumple-t em { padding: 0 .05em; background: line
 
 /* Auditoría G2-04: en pantallas anchas, afuera de la columna. */
 @media (min-width: 1600px) { html[data-tema="noticiero"] .pt-sesion { right: max(14px, calc(50% - 790px)); } }
+
+/* Bloque 5a: afiliado (auditoría 2026-10) */
+/* G2-01: una novedad sin foto no lleva miniatura de relleno; el texto toma el
+   ancho. Un beneficio sin foto es una lámina tipográfica sobre la hoja: el
+   rubro en grande arriba y el texto abajo. */
+html[data-tema="noticiero"] .pt-nov.sin-foto { grid-template-columns: minmax(0, 1fr); }
+html[data-tema="noticiero"] .car-sl.sin-foto { height: auto; min-height: 150px; background: var(--nt-hoja); }
+html[data-tema="noticiero"] .car-sl.sin-foto::before { display: none; }
+html[data-tema="noticiero"] .car-sl.sin-foto .car-k { height: auto; padding: 0 0 6px; background: none; color: var(--nt-indigo);
+  border-bottom: 3px solid var(--nt-coral); font-family: var(--nt-f-tit); font-weight: 400; font-size: 30px; line-height: 1;
+  letter-spacing: 0; text-transform: uppercase; }
+html[data-tema="noticiero"] .car-sl.sin-foto .car-t { font-size: 21px; line-height: 1.05; }
+@media (min-width: 761px) {
+  html[data-tema="noticiero"] .car-sl.sin-foto { min-height: 190px; }
+  html[data-tema="noticiero"] .car-sl.sin-foto .car-txt { padding-inline: 62px; }
+}
+/* G2-02: puntos con 44 px de área (el punto visible sigue chico), contador
+   «3 de 20» y, en el teléfono, las flechas en el pie. */
+html[data-tema="noticiero"] .car-puntos { gap: 0; }
+html[data-tema="noticiero"] .car-punto, html[data-tema="noticiero"] .car-punto.on { width: 44px; height: 44px; border-radius: 0; background: none; }
+html[data-tema="noticiero"] .car-punto::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px;
+  translate: -50% -50%; background: var(--nt-linea-2); transition: width .3s, background-color .3s; }
+html[data-tema="noticiero"] .car-punto.on::before { width: 22px; background: var(--nt-indigo); }
+html[data-tema="noticiero"] .car-cont { font-family: var(--nt-f-cond); font-weight: 700; font-size: 15px; letter-spacing: .5px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .car-cont b { color: var(--nt-indigo); }
+html[data-tema="noticiero"] .car-pf { border-radius: 0; background: var(--nt-carta); color: var(--nt-tinta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .car-pf:active { background: var(--nt-hoja); }
+@media (max-width: 760px) {
+  html[data-tema="noticiero"] .car-marco .car-flecha { display: none; }
+  html[data-tema="noticiero"] .car-pie { gap: 10px; }
+}
+/* G2-03: las máximas de los próximos días dicen de qué día son. */
+html[data-tema="noticiero"] .pt-dia-esc .pt-dia-pron-d { font-size: 12px; letter-spacing: .8px; color: var(--nt-tinta-2); }
+@media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .car-punto::before { transition: none; } }

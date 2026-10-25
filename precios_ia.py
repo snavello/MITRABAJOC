@@ -47,19 +47,18 @@ USOS = {
         "detalle": "Responde la pregunta del afiliado con los ocho fragmentos "
                    "del convenio que se recuperaron. Usa el modelo más capaz a "
                    "propósito: la baranda de «no lo encontré» es el prompt y no "
-                   "un umbral (ver PLAN_RAG_CONVENIO.md).",
+                   "un umbral.",
         "default": "claude-opus-5",
     },
     "asistente": {
         "nombre": "Asistente del Panel Sindical",
         "detalle": "Traduce la pregunta del admin a los filtros del panel. "
-                   "Cambiarlo obliga a volver a correr el set de aceptación "
-                   "(probar_asistente.py): el prompt está medido contra ESTE "
-                   "modelo.",
+                   "Cambiarlo obliga a repetir la prueba de aceptación del "
+                   "Asistente: el prompt está medido contra este modelo.",
         "default": "claude-sonnet-5",
     },
     "asistente_tramites": {
-        "nombre": "Asistente de trámites (Herramientas de /entornos)",
+        "nombre": "Asistente de trámites (Herramientas de Entornos)",
         "detalle": "Lee el relato de un trámite que cuenta un sindicato y propone "
                    "respuestas, campos y dudas; el circuito y el formulario los "
                    "arma el servidor. Lo usa el implementador, no el afiliado: "

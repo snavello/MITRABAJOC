@@ -92,10 +92,10 @@ def test_admin_dashboard_carga_con_datos(page: Page, informe):
     recibos = page.locator("#v-recibos").inner_text()
     assert re.sub(r"[^0-9]", "", recibos), f"KPI sin número: {recibos!r}"
     informe.paso(f"El Panel Sindical cargó con datos vivos ({recibos} recibos analizados)")
-    informe.dato("Recibos analizados (hoy)", recibos)
+    informe.dato("Recibos analizados (últimos 30 días)", recibos)
 
     # La zona de filtros y los paneles principales están en pantalla.
-    expect(page.locator(".filtros-card")).to_be_visible()
+    expect(page.locator(".v2-barra")).to_be_visible()
     expect(page.locator('[data-panel="semaforo"]')).to_be_visible()
 
     # Cambiar el período serializa el estado en la URL (link compartible).
