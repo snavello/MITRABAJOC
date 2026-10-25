@@ -182,7 +182,8 @@ html[data-tema="laguna"] .vacio-sec { margin-top: 10px; background: rgba(255, 25
   border-radius: 8px; color: var(--lg-gris-lag); }
 
 /* Salir: la pastilla azul que flota abajo */
-html[data-tema="laguna"] .pt-sesion { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+/* R1-07: la misma esquina que Inicio/Salir en las pestañas (16 px). */
+html[data-tema="laguna"] .pt-sesion { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
 html[data-tema="laguna"] .pt-salir { height: 46px; padding: 0 19px 0 16px; border: 0; background: var(--lg-azul); color: #fff;
   font-family: var(--lg-fuente); font-weight: 600;
   box-shadow: 0 14px 28px -14px color-mix(in oklab, var(--lg-azul) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, .08);

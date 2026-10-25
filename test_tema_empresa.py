@@ -246,3 +246,129 @@ def test_la_portada_dice_el_estado_de_cada_acceso():
     assert "Sin mensajes nuevos" in portada
     assert "Ningún trámite en curso" in portada
     assert "Cuando tu sindicato te mande un aviso, lo vas a ver acá." in portada
+
+
+# ---------- segunda auditoría (R1-01 a R1-07, G1-18) ----------
+
+def _css(tema, hoja="empresa"):
+    css = Path(f"static/temas/{tema}-{hoja}.css").read_text(encoding="utf-8")
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+
+
+def _bloque_media(css, condicion):
+    """El cuerpo de cada `@media <condicion> { ... }` de la hoja, juntos."""
+    cuerpos = []
+    for m in re.finditer(r"@media\s*%s\s*\{" % re.escape(condicion), css):
+        nivel, i = 1, m.end()
+        while nivel:
+            nivel += (css[i] == "{") - (css[i] == "}")
+            i += 1
+        cuerpos.append(css[m.end():i - 1])
+    return "\n".join(cuerpos)
+
+
+def _regla(css, selector):
+    """Las declaraciones de las reglas cuyo selector termina en `selector`."""
+    return " ".join(re.findall(r"%s\s*\{([^{}]*)\}" % re.escape(selector), css))
+
+
+def test_r1_01_el_resaltador_de_la_razon_social_no_pisa_el_renglon_de_abajo():
+    css = _css("noticiero", "empresa-portada")
+    hola = _regla(css, '.pt-gremio .hola')
+    m = re.search(r"line-height:\s*([\d.]+)", hola)
+    assert m and float(m.group(1)) >= 1.06, hola
+    em = _regla(css, ".pt-gremio .hola em")
+    assert "transparent 62%, var(--nt-resalta) 62%, var(--nt-resalta) 88%, transparent 88%" in em
+    assert "box-decoration-break: clone" in em
+
+
+def test_r1_02_lo_no_leido_va_en_el_color_del_modelo_y_no_en_rojo():
+    laguna = _regla(_css("laguna"), ".notif-item.no-leida .nh-av::after")
+    assert "var(--lg-turq)" in laguna and "--lg-mal" not in laguna
+    noticiero_css = _css("noticiero")
+    punto = _regla(noticiero_css, ".notif-item.no-leida .nh-av::after")
+    assert "var(--nt-coral-ind)" in punto and "--nt-globo" not in punto
+    burbuja = _regla(noticiero_css, ".notif-item.no-leida .nh-bur")
+    assert "color-mix(in oklab, var(--nt-coral) 10%, var(--nt-carta))" in burbuja
+    assert "color-mix(in oklab, var(--nt-coral) 35%, transparent)" in burbuja
+    # El rojo sigue en el globo con el número de la tira.
+    assert "var(--lg-mal)" in _regla(_css("laguna"), ".tab-badge")
+    assert "var(--nt-globo)" in _regla(noticiero_css, ".tab-badge")
+
+
+def test_r1_03_la_bajada_dice_cuantos_avisos_faltan_leer():
+    app = _paginas("laguna")["/empresa"]
+    m = re.search(r'<h1 class="titulo-pagina">Notificaciones</h1>\s*'
+                  r'<p class="notif-cant" id="notif-cant" aria-live="polite" hidden></p>\s*'
+                  r'<p class="sub">Los avisos que te manda ', app)
+    assert m, "la línea de pendientes va entre el título y la bajada del remitente"
+    assert "<b>${pendientes} sin leer</b> de ${totalNotifEmpresa}" in app
+    assert "Estás al día" in app
+    # Se actualiza con el mismo número que el globo de la pestaña.
+    assert re.search(r"function actualizarBadgeNotifEmpresa\(n\) \{.*?actualizarCantNotifEmpresa\(n\);", app, re.S)
+    for tema in ("laguna", "noticiero"):
+        css = _css(tema)
+        assert _regla(css, "#tp-notificaciones .notif-cant"), tema
+        assert "font-size: 13px" in _regla(css, "#tp-notificaciones .notif-cant + .sub"), tema
+
+
+def test_r1_04_los_estados_del_tramite_con_el_codigo_de_colores_del_afiliado():
+    app = _paginas("laguna")["/empresa"]
+    # Sin colores en línea: las clases est-* (las mismas que el afiliado).
+    assert "ESTADO_TAG_COLOR" not in app
+    assert 'class="tx-tag ${claseEstadoTrx(estado)}"' in app
+    assert 'class="tag ${claseEstadoTrx(estado)}"' in app
+    assert "'est est-' + (ESTADOS_TRX.includes(estado) ? estado : 'iniciado')" in app
+    afiliado = Path("templates/trabajador.html").read_text(encoding="utf-8")
+    for estado in ("iniciado", "en_tratamiento", "respondido", "espera_info", "terminado"):
+        assert f".est-{estado} {{" in app and f".est-{estado} {{" in afiliado, estado
+    # Iniciado, solo el contorno, igual que el afiliado.
+    assert ".est-iniciado { --est-f:var(--est-ini-f); --est-t:var(--est-ini-t); box-shadow:inset 0 0 0 1px currentColor; }" in app
+    # Cada modelo pone los mismos colores de estado que en la app del afiliado.
+    for tema in ("laguna", "noticiero"):
+        def variables(css):
+            bloque = re.search(r'html\[data-tema="%s"\] \{\s*(--est-ini-f[^}]*)\}' % tema, css).group(1)
+            return dict(re.findall(r"(--est-[a-z-]+):\s*([^;]+);", bloque))
+        assert variables(_css(tema)) == variables(_css(tema, "app")), tema
+    assert "--lg-amb-t: #6a3f06;" in _css("laguna")
+
+
+def test_r1_05_inicio_y_salir_miden_44_px_en_el_telefono():
+    for tema in ("laguna", "noticiero"):
+        movil = _bloque_media(_css(tema), "(max-width: 760px)")
+        assert "height: 44px" in _regla(movil, ".ident .flota-sal a"), tema
+        assert "36px" not in _regla(movil, ".ident .flota-sal"), tema
+    app = _paginas("laguna")["/empresa"]
+    assert ".ident .flota-sal a { height:44px;" in app
+    assert re.search(r"\.ident \{ display:grid; grid-template-columns:minmax\(0,1fr\) auto;", app)
+
+
+def test_r1_06_y_g1_18_la_identidad_la_columna_y_la_tira_leen_el_mismo_ancho():
+    app = _paginas("laguna")["/empresa"]
+    assert "--emp-col:680px;" in app
+    escritorio_app = _bloque_media(re.sub(r"/\*.*?\*/", "", app, flags=re.S), "(min-width:761px)")
+    assert ".cont { max-width:var(--emp-col); }" in escritorio_app
+    assert "max-width:var(--emp-col); margin:0 auto;" in escritorio_app
+    for tema, aire in (("laguna", "20px"), ("noticiero", "16px")):
+        css = _css(tema)
+        # El aire de la columna es el mismo que suma la barra de la identidad.
+        assert re.search(r'html\[data-tema="%s"\] \.cont \{ padding: 24px %s ' % (tema, aire), css), tema
+        escritorio = _bloque_media(css, "(min-width: 761px)")
+        assert "max-width: var(--emp-col)" in _regla(escritorio, ".cont"), tema
+        assert f"padding-inline: max({aire}, calc(50% - var(--emp-col) / 2 + {aire}))" in _regla(escritorio, ".ident"), tema
+        tira = _regla(escritorio, ".tabbar")
+        assert "max-width: var(--emp-col)" in tira and "margin: 0 auto" in tira and "border-bottom: 0" in tira, tema
+
+
+def test_r1_07_salir_en_la_misma_esquina_en_la_portada_y_en_las_pestanas():
+    for tema in ("laguna", "noticiero"):
+        assert "right: 16px; bottom: calc(16px + env(safe-area-inset-bottom))" in _regla(_css(tema, "empresa-portada"), ".pt-sesion"), tema
+        escritorio = _bloque_media(_css(tema), "(min-width: 761px)")
+        assert "right: 16px; bottom: calc(16px + env(safe-area-inset-bottom))" in _regla(escritorio, ".flota-sal"), tema
+        # Mientras la tira llegue hasta la esquina, la pastilla sube por encima.
+        angosto = _bloque_media(_css(tema), "(min-width: 761px) and (max-width: 1159px)")
+        assert "bottom: calc(80px" in _regla(angosto, ".flota-sal"), tema
+        assert "calc(50% - 4" not in _css(tema), tema
+    paginas = _paginas("laguna")
+    assert ".pt-sesion { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));" in paginas["/empresa/inicio"]
+    assert ".flota-sal { right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); }" in paginas["/empresa"]

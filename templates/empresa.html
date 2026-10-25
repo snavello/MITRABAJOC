@@ -22,6 +22,11 @@
     --fuente-display:"Barlow Condensed","Arial Narrow",sans-serif;
     --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
+    /* El ancho de la columna en escritorio (auditoría G1-18 y R1-06): lo
+       leen el contenido, la barra de la identidad y la tira de pestañas,
+       para que los tres caigan en la misma vertical. El de la app del
+       afiliado en Trámites. */
+    --emp-col:680px;
     --marca-base: {{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
     --marca-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
     --marca-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
@@ -80,12 +85,20 @@
   @media (max-width:760px) {
     .ident { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px; row-gap:1px; }
     .ident-nombre, .ident-cuit { grid-column:1; min-width:0; }
-    .ident .flota-sal { grid-column:2; grid-row:1 / span 2; align-self:center; position:static; box-shadow:none; }
-    .ident .flota-sal a { height:34px; padding:0 12px 0 10px; font-size:13px; }
+    .ident .flota-sal { grid-column:2; grid-row:1 / span 2; align-self:center; position:static; box-shadow:none;
+      padding:0; gap:0; }
+    /* Auditoría R1-05: 44 px de alto, el piso de un objetivo táctil. */
+    .ident .flota-sal a { height:44px; padding:0 12px; font-size:13px; }
   }
   .cont { max-width:520px; margin:0 auto; padding:22px 20px 40px; padding-bottom:150px; }
   h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
   .sub { color:var(--gris); margin-top:6px; font-size:15px; }
+  /* Auditoría R1-03: cuántos avisos faltan leer, como en la bandeja del
+     afiliado; la bajada del remitente queda debajo, más chica. */
+  .notif-cant { margin-top:8px; font-size:14.5px; color:var(--tinta); font-variant-numeric:tabular-nums; }
+  .notif-cant[hidden] { display:none; }
+  .notif-cant b { font-weight:700; }
+  #tp-notificaciones .notif-cant + .sub { margin-top:2px; font-size:13px; }
   /* Una pestaña sin nada todavía: un estado vacío que dice qué va a
      aparecer y qué hacer, no una línea suelta (mismo patrón que
      .vacio-tab de trabajador.html). */
@@ -119,12 +132,23 @@
   .tabbar button.activa { color:var(--gremio-acento-oscuro, var(--marca-acento)); }
   .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-acento) 15%, transparent); }
   .tabbar button.activa svg { stroke:var(--gremio-acento-oscuro, var(--marca-acento)); }
-  /* Escritorio: la tira de abajo del teléfono no se estira a todo el ancho:
-     las dos pestañas van juntas al centro, como en la app del afiliado. */
+  /* Escritorio (auditoría G1-18): la tira de abajo del teléfono no cruza la
+     pantalla entera: mide lo mismo que la columna, centrada y con borde solo
+     arriba y a los costados, y las dos pestañas van juntas al centro. La
+     columna, la barra de la identidad y la tira leen --emp-col (R1-06).
+     Inicio y Salir (R1-07): en la misma esquina que el Salir de la portada,
+     abajo a la derecha a 16 px; mientras la tira llegue hasta ahí (menos de
+     1.160 px de ancho), sube por encima de ella. */
   @media (min-width:761px) {
-    .tabbar { justify-content:center; gap:4px; }
+    .cont { max-width:var(--emp-col); }
+    .ident { padding-inline:max(18px, calc(50% - var(--emp-col) / 2 + 20px)); }
+    .tabbar { justify-content:center; gap:4px; max-width:var(--emp-col); margin:0 auto;
+      border:1px solid var(--linea); border-bottom:0; border-radius:14px 14px 0 0; }
     .tabbar button { flex:0 0 120px; font-size:12px; }
-    .flota-sal { right:max(14px, calc(50% - 470px)); }
+    .flota-sal { right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); }
+  }
+  @media (min-width:761px) and (max-width:1159px) {
+    .flota-sal { bottom:calc(80px + env(safe-area-inset-bottom)); }
   }
   .tabbar button { position:relative; }
   .tab-badge { position:absolute; top:2px; right:14px; background:#e5484d; color:#fff;
@@ -355,6 +379,24 @@
   .tx-r .tit { font-weight:700; font-size:14px; flex:1; line-height:1.25; }
   .tx-r .exp { font-family:var(--fuente-num); font-size:11px; color:var(--gris); margin-top:2px; }
   .tx-tag { display:inline-block; border-radius:20px; padding:3px 9px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  /* Auditoría R1-04: el mismo código de colores que el afiliado (las clases
+     est-* y sus variables de trabajador.html, que cada modelo ajusta):
+     iniciado, solo el contorno; en tratamiento en ámbar; respondido en
+     verde; esperan tu respuesta en rojo; terminado en gris. Copiadas y no
+     compartidas, por la regla de aislamiento entre los dos sistemas. */
+  :root {
+    --est-ini-f: transparent; --est-ini-t: var(--tinta);
+    --est-tra-f: #faf0d7; --est-tra-t: #7a4f06;
+    --est-res-f: #e3f2ee; --est-res-t: var(--agua);
+    --est-esp-f: #f8e5e2; --est-esp-t: var(--alerta);
+    --est-ter-f: var(--papel); --est-ter-t: var(--gris);
+  }
+  .est { background:var(--est-f); color:var(--est-t); }
+  .est-iniciado { --est-f:var(--est-ini-f); --est-t:var(--est-ini-t); box-shadow:inset 0 0 0 1px currentColor; }
+  .est-en_tratamiento { --est-f:var(--est-tra-f); --est-t:var(--est-tra-t); }
+  .est-respondido { --est-f:var(--est-res-f); --est-t:var(--est-res-t); }
+  .est-espera_info { --est-f:var(--est-esp-f); --est-t:var(--est-esp-t); }
+  .est-terminado { --est-f:var(--est-ter-f); --est-t:var(--est-ter-t); }
   .tx-prog { display:flex; gap:3px; margin-top:10px; }
   .tx-prog i { flex:1; height:4px; border-radius:2px; background:var(--linea); }
   .tx-prog i.on { background:var(--marca-primario); }
@@ -397,6 +439,7 @@
   <!-- ============ PESTAÑA: NOTIFICACIONES ============ -->
   <div class="tpanel activo" data-mov-vista id="tp-notificaciones">
     <h1 class="titulo-pagina">Notificaciones</h1>
+    <p class="notif-cant" id="notif-cant" aria-live="polite" hidden></p>
     <p class="sub">Los avisos que te manda {{ sindicato }}.</p>
     <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
   </div>
@@ -554,8 +597,11 @@ async function cargarNotificacionesEmpresa() {
     lista.innerHTML = '<div class="notif-vacio">No se pudieron cargar las notificaciones.</div>';
   }
 }
+// Auditoría R1-03: cuántos avisos hay en total, para la línea "N sin leer de M".
+let totalNotifEmpresa = 0;
 function renderNotificacionesEmpresa(items) {
   const lista = document.getElementById('notif-lista');
+  totalNotifEmpresa = items.length;
   if (!items.length) {
     lista.innerHTML = `<div class="vacio-tab notif-vacio-tab">
       <span class="vacio-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
@@ -634,6 +680,18 @@ function actualizarBadgeNotifEmpresa(n) {
   if (!badge) return;
   if (n > 0) { badge.textContent = n; badge.style.display = 'flex'; }
   else { badge.style.display = 'none'; }
+  actualizarCantNotifEmpresa(n);
+}
+function actualizarCantNotifEmpresa(n) {
+  const cant = document.getElementById('notif-cant');
+  if (!cant) return;
+  const pendientes = Math.max(0, parseInt(n, 10) || 0);
+  // Sin avisos no hay nada que contar: el estado vacío ya lo dice.
+  if (!totalNotifEmpresa) { cant.hidden = true; return; }
+  cant.innerHTML = pendientes
+    ? `<b>${pendientes} sin leer</b> de ${totalNotifEmpresa}`
+    : `Estás al día · ${totalNotifEmpresa} en total`;
+  cant.hidden = false;
 }
 cargarNotificacionesEmpresa();
 
@@ -645,14 +703,12 @@ if (document.getElementById('tp-tramites')) {
       document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
     });
   };
-  const ESTADO_TAG_COLOR = {
-    iniciado: ['#fdf3e7', '#8a5a1a'], en_tratamiento: ['#e8def5', '#5b3d8a'],
-    respondido: ['#e3f2ee', 'var(--agua)'], espera_info: ['#f8e5e2', 'var(--alerta)'],
-    terminado: ['#e3f2ee', 'var(--agua)'],
-  };
+  // Auditoría R1-04: el color de cada estado sale de las clases est-* (las
+  // mismas que el afiliado), no de estilos en línea.
+  const ESTADOS_TRX = ['iniciado', 'en_tratamiento', 'respondido', 'espera_info', 'terminado'];
+  const claseEstadoTrx = (estado) => 'est est-' + (ESTADOS_TRX.includes(estado) ? estado : 'iniciado');
   function tagEstadoTrx(estado, label) {
-    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
-    return `<span class="tag" style="background:${c[0]}; color:${c[1]};">${label}</span>`;
+    return `<span class="tag ${claseEstadoTrx(estado)}">${escTrx(label)}</span>`;
   }
   function escTrx(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
@@ -677,8 +733,7 @@ if (document.getElementById('tp-tramites')) {
   };
   const ETIQUETA_CORTA_TRX = { espera_info: 'Esperan tu respuesta' };
   function tagEstadoTx(estado, label) {
-    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
-    return `<span class="tx-tag" style="background:${c[0]}; color:${c[1]};">${escTrx(ETIQUETA_CORTA_TRX[estado] || label)}</span>`;
+    return `<span class="tx-tag ${claseEstadoTrx(estado)}">${escTrx(ETIQUETA_CORTA_TRX[estado] || label)}</span>`;
   }
   function fmtCuandoTrx(s) {
     const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
