@@ -467,3 +467,6 @@ html[data-tema="laguna"] .pt-cumple-k { color: var(--lg-fluor-txt); opacity: 1; 
 html[data-tema="laguna"] .pt-cumple-t { font-weight: 500; }
 html[data-tema="laguna"] .pt-cumple-t em { font-weight: 800; color: var(--lg-fluor-txt); }
 @media (prefers-reduced-motion: reduce) { html[data-tema="laguna"] .pt-dia-esc { animation: none; } }
+
+/* Auditoría G2-04: en pantallas anchas, afuera de la columna. */
+@media (min-width: 1600px) { html[data-tema="laguna"] .pt-sesion { right: max(14px, calc(50% - 790px)); } }

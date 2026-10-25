@@ -498,3 +498,7 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
   html[data-tema="noticiero"] .circulo-acento { width: 96px; height: 96px; }
   html[data-tema="noticiero"] .circulo-acento svg { width: 32px; height: 32px; }
 }
+
+/* Auditoría G4-30: lugar al pie para la pastilla Inicio/Salir, así al
+   llegar al final no tapa la última fila de accesos. */
+html[data-tema="noticiero"] .pad.pt-accesos { padding-bottom: 96px; }

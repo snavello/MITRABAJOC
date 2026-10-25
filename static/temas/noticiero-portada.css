@@ -579,3 +579,6 @@ html[data-tema="noticiero"] .pt-cumple-k { font-family: var(--nt-f-cond); color:
 html[data-tema="noticiero"] .pt-cumple-t { font-family: var(--nt-f-tit); font-weight: 400; font-size: 40px; line-height: 1; text-transform: uppercase; }
 html[data-tema="noticiero"] .pt-cumple-t em { padding: 0 .05em; background: linear-gradient(180deg, transparent 56%, var(--nt-resalta) 56%, var(--nt-resalta) 90%, transparent 90%); }
 @media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .pt-dia-esc { animation: none; } }
+
+/* Auditoría G2-04: en pantallas anchas, afuera de la columna. */
+@media (min-width: 1600px) { html[data-tema="noticiero"] .pt-sesion { right: max(14px, calc(50% - 790px)); } }

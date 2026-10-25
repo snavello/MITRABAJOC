@@ -27,8 +27,8 @@
     --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
-  body { min-height:100vh; display:flex; align-items:center; justify-content:center;
-    padding:24px 18px; position:relative; overflow:hidden;
+  body { min-height:100vh; display:flex; align-items:safe center; justify-content:center;
+    padding:24px 18px; position:relative; overflow-x:hidden;
     background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 26%, transparent), transparent 62%),
                linear-gradient(160deg, #0d1626 20%, var(--tinta) 70%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
   .panal { position:fixed; pointer-events:none; z-index:0; animation:respira 9s ease-in-out infinite; }
@@ -75,6 +75,10 @@
     color:rgba(255,255,255,.85); font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.45; }
   .ayuda { font-size:12px; color:rgba(255,255,255,.5); margin-top:14px; line-height:1.5; text-align:center; }
   .ayuda a { color:var(--miel); }
+  /* Auditoría G1-04 y G1-15: los tres pasos a la vista y el enlace de volver con 44 px para el dedo. */
+  .reg-pasos { text-align:center; font-size:11px; letter-spacing:3px; color:rgba(255,255,255,.35); margin:0 0 14px; }
+  .reg-pasos .on { color:var(--miel); font-weight:700; }
+  .ayuda a.volver { display:inline-block; padding:12px 10px; font-size:14px; }
   .paso { display:none; } .paso.activo { display:block; }
   .mrz { margin-top:20px; border-top:1px dashed rgba(255,255,255,.18); padding-top:10px;
     font-family:ui-monospace,Consolas,monospace; font-size:9.5px; letter-spacing:2px;
@@ -101,7 +105,7 @@
     <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else url_static('logo_mitrabajo.svg')) }}" alt="Colm3na">
     <div class="chip-rol">{% block chip %}{% endblock %}</div>
     {% block cuerpo %}{% endblock %}
-    <div class="mrz">COLM3NA&lt;&lt;{% block mrz %}ACCESO{% endblock %}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+    <div class="mrz" aria-hidden="true">COLM3NA&lt;&lt;{% block mrz %}ACCESO{% endblock %}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
   </div>
 {% block scripts %}{% endblock %}

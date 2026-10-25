@@ -156,12 +156,22 @@ html[data-tema="laguna"] .enc-c3-claro {
     max-width: 1280px; margin: 0 0 0 var(--lg-riel); padding: 30px 34px 110px;
   }
   html[data-tema="laguna"] .acerca-pie { margin-left: var(--lg-riel); }
+  /* Auditoría G4-38: «Acerca de» al pie aunque la sección sea corta. */
+  html[data-tema="laguna"] .wrap { min-height: calc(100vh - var(--lg-top) - 44px); }
   /* El distintivo de entorno se corre al borde del contenido: abajo a la
      izquierda quedaría sobre el riel. */
   html[data-tema="laguna"] #distintivo-entorno {
     left: calc(var(--lg-riel) + 18px) !important; bottom: 26px !important;
     border-color: transparent !important; box-shadow: none !important;
   }
+  /* Inicio + Salir al pie del riel (auditoría G4-30): flotando a la derecha
+     tapaban la columna de acciones de las tablas. El riel ya reserva 96 px
+     abajo. Quieta: flota.js no la esconde al bajar. */
+  html[data-tema="laguna"] .flota-sesion {
+    --flota-quieta: 1; left: 10px; right: auto; bottom: 14px; width: calc(var(--lg-riel) - 20px);
+    justify-content: center; box-shadow: 0 0 0 1px color-mix(in srgb, var(--lg-negro) 8%, transparent);
+  }
+  html[data-tema="laguna"] .flota-sesion :is(.btn-home, .btn-cerrar) { flex: 1 1 0; justify-content: center; padding: 0 10px; }
 }
 /* Íconos del riel: no se dibujan (como hasta hoy); solo la flechita. */
 html[data-tema="laguna"] .tab-btn svg { display: none; }
@@ -222,6 +232,9 @@ html[data-tema="laguna"] h2:not(.titulo-pagina) {
 html[data-tema="laguna"] h2::after { display: none; }
 html[data-tema="laguna"] .muted { color: var(--lg-gris2); font-size: 13.5px; line-height: 1.55; }
 html[data-tema="laguna"] .panel > p.muted { color: var(--lg-gris); max-width: 820px; }
+/* Auditoría G4-34: las explicaciones, a un largo de línea que se lee (72 caracteres). */
+html[data-tema="laguna"] .wrap :is(.panel, .subpanel, .tramite-subpanel, .emp-subpanel, .emptram-subpanel, .enc-subpanel, .au-subpanel) > p.muted,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + p { max-width: 72ch; }
 html[data-tema="laguna"] .card h3,
 html[data-tema="laguna"] .ct-secc {
   font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0;
@@ -310,11 +323,14 @@ html[data-tema="laguna"] .subtabs .badge-noleidas {
 html[data-tema="laguna"] .campo label,
 html[data-tema="laguna"] .form-trab label { font-size: 12.5px; color: var(--lg-gris); font-weight: 600; }
 html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input) {
-  border: 1px solid transparent; border-radius: 4px; background-color: var(--lg-claro);
+  /* Un solo campo en todo el panel (auditoría G4-33): blanco, con borde que
+     se ve (3:1 contra el blanco). Antes convivían el relleno gris sin borde
+     de las altas y el blanco con borde de los filtros. */
+  border: 1px solid color-mix(in srgb, var(--lg-tinta) 58%, #fff); border-radius: 4px; background-color: #fff;
   color: var(--lg-tinta); font-family: inherit; font-size: 13.5px;
   transition: border-color var(--mov-medio, 320ms) var(--lg-curva), background-color var(--mov-medio, 320ms) var(--lg-curva);
 }
-html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):hover { border-color: var(--lg-linea2); }
+html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):hover { border-color: color-mix(in srgb, var(--lg-tinta) 80%, #fff); }
 html[data-tema="laguna"] .wrap :where(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.tram-input):not(.tramx-input):focus {
   background-color: #fff; border-color: var(--lg-negro); outline: none; box-shadow: none;
 }
@@ -354,7 +370,7 @@ html[data-tema="laguna"] .filtros {
   background: var(--lg-suave); border: 1px solid var(--lg-linea);
 }
 html[data-tema="laguna"] .wrap .filtros :is(input, select):not([type=checkbox]):not([type=radio]) {
-  height: 38px; padding-top: 0; padding-bottom: 0; background-color: #fff; border-color: var(--lg-linea); border-radius: 4px; font-size: 13px;
+  height: 38px; padding-top: 0; padding-bottom: 0; background-color: #fff; border-radius: 4px; font-size: 13px;
 }
 html[data-tema="laguna"] .wrap .filtros input[type=text] { min-width: 170px; }
 html[data-tema="laguna"] .filtros .f-cant {
@@ -680,6 +696,9 @@ html[data-tema="laguna"] .wrap input[type=file]:hover::file-selector-button { ba
   /* Un listado ancho se desliza solo, nunca la página entera. */
   html[data-tema="laguna"] .wrap :is(.panel, .subpanel, .tramite-subpanel, .emp-subpanel, .emptram-subpanel, .enc-subpanel, .au-subpanel) > table {
     display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch;
+    /* Auditoría G4-31: una sombra en el borde derecho avisa que la fila
+       sigue (el veredicto y las acciones quedan a la derecha). */
+    box-shadow: inset -14px 0 12px -12px color-mix(in srgb, var(--lg-tinta) 45%, transparent);
   }
 }
 html[data-tema="laguna"] .wrap .filtros button { margin: 0; }
@@ -691,7 +710,9 @@ html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]) {
 }
 html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) { background: var(--lg-azul); border-color: var(--lg-azul); color: #fff; font-weight: 700; }
 html[data-tema="laguna"] .filtros label:has(> input[type=checkbox]:checked) input { accent-color: #fff; }
-html[data-tema="laguna"] .wrap td { vertical-align: top; }
+html[data-tema="laguna"] .wrap td { vertical-align: middle; }
+/* Auditoría G4-37: los botones chicos sin margen vertical, así el borde de la fila no hace escalón. */
+html[data-tema="laguna"] .wrap tr:not(.fila-trabajador) > td > :is(.mini, button, form) { margin-top: 0; margin-bottom: 0; }
 
 /* ---------- Errores (SDN, 2026-10-23): nada de cartel rosa ----------
    La tarjeta blanca de siempre, un filo rojo fino y el ícono de alerta en
@@ -739,4 +760,20 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
   html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 62vw;
     border-inline-end: 0; padding-inline-end: 0; }  /* en dos renglones el filete quedaba suelto */
+}
+
+/* Auditoría G6-05: el segundo nivel de pestañas (Ver trámites / Crear o
+   editar formularios, dentro de Empleadores > Trámites) no puede verse
+   igual que el primero. Pestañas de texto con subrayado, sin pastilla. */
+html[data-tema="laguna"] .subtabs:has(> .emptram-subtab) {
+  display: flex; gap: 22px; padding: 0; margin: 6px 0 16px; border-radius: 0; background: transparent;
+  box-shadow: inset 0 -1px 0 var(--lg-linea);
+}
+html[data-tema="laguna"] .emptram-subtab {
+  height: 36px; padding: 0 2px; border-radius: 0; background: transparent; box-shadow: none;
+  color: var(--lg-gris); font: 600 13px/1 var(--lg-fuente); letter-spacing: 0; text-transform: none;
+}
+html[data-tema="laguna"] .emptram-subtab:hover { color: var(--lg-tinta); background: transparent; box-shadow: none; }
+html[data-tema="laguna"] .emptram-subtab.activa {
+  background: transparent; color: var(--lg-tinta); font-weight: 700; box-shadow: inset 0 -2px 0 var(--lg-azul);
 }
