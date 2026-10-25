@@ -8902,3 +8902,21 @@ avisa que la lista se desliza y el zoom del mapa abajo. El núcleo de estado
 (`test_dashboard_v2_nucleo.py`) ya no se compara contra la v1 viva: antes de
 borrarla se fijaron 38 direcciones y tres secuencias con lo que la v1
 producía. El robot de paridad e2e queda en skip. Tests: `test_tema_tablero.py`.
+
+**Bloque 2b, plataforma en los dos modelos** (Plataforma 0.57.01): la
+portada, el panel (con todas sus pestañas y las cuatro de Uso de IA) y
+Usuarios de plataforma dejan la mesa y la colmena y se ven en Laguna o
+Noticiero, **siempre con la paleta de Colm3na** (plataforma no tiene
+sindicato). Cada usuario elige su modelo (`UsuarioPlataforma.tema`, migración
+`b3e7f1a9c5d2`, `POST /plataforma/apariencia/mia`, «Tu modelo» en la portada;
+`db.apariencia_plataforma`); el genérico no tiene fila y no puede guardarlo.
+Hojas `static/temas/<modelo>-plataforma{,-portada}.css`; la tira sale de
+`_plataforma_nav.html` y va como riel en escritorio; Inicio/Salir con rótulo;
+botón «Elegir archivo» con el nombre del archivo en todas las cargas; las
+ayudas de Marca reescritas según lo que pintan hoy; en Modelos, una barra al
+pie solo mientras hay cambios sin guardar; en Enmascarado, el botón de
+borrar imágenes solo si hay; el tope sindical acepta coma o punto; y las
+explicaciones de Uso de IA sin nombres de archivos internos. Queda a medias
+G8-30: el campo de los topes sigue sin aceptar puntos de miles (lo exige
+`test_topes_base_imponible`), con la regla escrita al lado. Tests:
+`test_tema_plataforma.py`.

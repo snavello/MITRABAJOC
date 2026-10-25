@@ -635,8 +635,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
   (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
   (147); cada persona cambia el suyo (afiliado: `CuentaTrabajador.tema`;
-  operador: `CuentaPanel.tema`; empresa: `CuentaEmpleador.tema`, desde
-  2026-10-25), vacío = el que eligió su sindicato (`Sindicato.tema_afiliados`
+  operador: `CuentaPanel.tema`; empresa: `CuentaEmpleador.tema`, y usuario
+  de plataforma: `UsuarioPlataforma.tema`, los dos desde 2026-10-25; plataforma
+  va siempre con la paleta de Colm3na), vacío = el que eligió su sindicato (`Sindicato.tema_afiliados`
   / `tema_panel`; la empresa toma el de afiliados). La **paleta** (colores de
   Colm3na o del sindicato) la decide el sindicato, nunca la persona. Un valor
   fuera del catálogo no se guarda y, si aparece en la base, vale el por
