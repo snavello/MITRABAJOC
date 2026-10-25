@@ -337,3 +337,13 @@ html[data-tema="laguna"][data-paleta="sindicato"] .marca-volver:hover { backgrou
 @media (prefers-reduced-motion: reduce) {
   html[data-tema="laguna"] .flota-sesion a { transition: none !important; }
 }
+
+/* El botón del Asistente: la pastilla navy/dorada de la v1 desentonaba con
+   los demás controles de la barra. En Laguna es blanco con aro, igual que
+   las pastillas de período; la colmena sigue en vaivén. */
+html[data-tema="laguna"] .v2-acciones .btn-asist {
+  background: #fff; border: 0; box-shadow: inset 0 0 0 1px var(--lg-linea2); color: var(--lg-tinta);
+  font: 700 13px/1 var(--lg-fuente); letter-spacing: 0; text-transform: none; padding: 4px 16px 4px 8px;
+}
+html[data-tema="laguna"] .v2-acciones .btn-asist .palabra { background: none; color: var(--lg-tinta); -webkit-text-fill-color: currentColor; }
+html[data-tema="laguna"] .v2-acciones .btn-asist:hover { box-shadow: inset 0 0 0 1px var(--lg-turq), 0 0 0 3px color-mix(in srgb, var(--lg-turq) 18%, transparent); }

@@ -31,6 +31,8 @@
                     con los ids que escribe static/panel_v2/app.js.
      enc_fija       True donde el encabezado tiene que quedar pegado arriba
                     al scrollear (paneles internos; las portadas, no).
+     enc_fondo_claro True en las pantallas cuyo encabezado Laguna pinta de
+                    blanco (ver _logo_tono más abajo).
      enc_plataforma True cuando la marca principal ES la plataforma
                     (/plataforma): entonces el logo grande es el de Colm3na.
 
@@ -50,6 +52,11 @@
    plataforma, demo anónima sin sindicato), la derecha no repite el logo:
    quedaría Colm3na dos veces en la misma línea. #}
 {% set _marca_es_plataforma = enc_plataforma or not sindicato %}
+{# Laguna con la paleta de Colm3na pinta este encabezado de BLANCO: un logo
+   pensado para fondo oscuro (blanco o casi) desaparece. En esas pantallas
+   (`enc_fondo_claro`, opt-in) se pide la silueta en el color más oscuro de la
+   marca: /logo/{id}?tono=oscuro. #}
+{% set _logo_tono = 'tono=oscuro&' if enc_fondo_claro and apariencia and apariencia.tema == 'laguna' and apariencia.paleta != 'sindicato' else '' %}
 <div class="marca-enc{% if enc_fija %} fija{% endif %}">
   <header class="marca-barra">
     {% if _marca_es_plataforma %}
@@ -57,7 +64,7 @@
          principal es la de la plataforma, no un texto de respaldo. #}
       <img class="marca-logo" src="{{ _logo_plataforma }}" alt="Colm3na">
     {% elif marca and marca.logo %}
-      <img class="marca-logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
+      <img class="marca-logo" src="/logo/{{ marca.id }}?{{ _logo_tono }}v={{ marca.logo_v }}" alt="{{ sindicato }}">
     {% else %}
       <span class="marca-nombre">{{ sindicato }}</span>
     {% endif %}

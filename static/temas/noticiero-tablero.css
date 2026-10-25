@@ -418,3 +418,12 @@ html[data-tema="noticiero"][data-paleta="sindicato"] .marca-volver:hover { backg
 @media (prefers-reduced-motion: reduce) {
   html[data-tema="noticiero"] .flota-sesion a { transition: none !important; }
 }
+
+/* El botón del Asistente, con la voz de los demás controles de la barra:
+   condensada en mayúsculas, píldora de tinta. */
+html[data-tema="noticiero"] .v2-acciones .btn-asist {
+  background: var(--nt-tinta); border: 0; box-shadow: none; color: var(--nt-marfil);
+  font: 700 14px/1 var(--nt-f-cond); letter-spacing: .8px; text-transform: uppercase; padding: 4px 16px 4px 8px;
+}
+html[data-tema="noticiero"] .v2-acciones .btn-asist .palabra { background: none; color: var(--nt-marfil); -webkit-text-fill-color: currentColor; }
+html[data-tema="noticiero"] .v2-acciones .btn-asist:hover { filter: brightness(1.15); box-shadow: 0 0 0 3px var(--nt-linea-2); }
