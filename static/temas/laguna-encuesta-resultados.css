@@ -145,8 +145,11 @@ html[data-tema="laguna"] body.mesa.franja .titulo-pagina {
    pone en blanco arriba de 760 px). */
 html[data-tema="laguna"] .enc-bajada,
 html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .enc-bajada { color: var(--lg-gris); font-size: 14px; }
-html[data-tema="laguna"] h2.secc { font-family: var(--lg-fuente); font-size: 12.5px; font-weight: 700; letter-spacing: .16em;
-  text-transform: uppercase; color: var(--lg-tinta); margin: 34px 0 12px; }
+/* Los títulos de sección como los títulos de tarjeta del Panel Sindical
+   (R4-11): en minúscula, 17 px. Las mayúsculas espaciadas quedan para los
+   rótulos de los indicadores, en los dos tableros. */
+html[data-tema="laguna"] h2.secc { font-family: var(--lg-fuente); font-size: 17px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--lg-tinta); margin: 34px 0 12px; }
 html[data-tema="laguna"] h2.secc small { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--lg-gris2); font-weight: 400; }
 html[data-tema="laguna"] :is(.panel h3, .cruce-cuerpo h4) { font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0; color: var(--lg-tinta); }
 html[data-tema="laguna"] :is(.panel .sub, .cruce-cuerpo .sub, .f-nota, .nums div, .resumen-escala div) { color: var(--lg-gris2); }
@@ -184,7 +187,7 @@ html[data-tema="laguna"] .cal-ayuda { color: var(--lg-gris2); font-size: 11.5px;
    Indicadores y tarjetas de cada pregunta: blancas, hairline
    ============================================================ */
 html[data-tema="laguna"] :is(.kpi, .panel) { border: 1px solid var(--lg-linea); border-radius: 10px; background: #fff; }
-html[data-tema="laguna"] .kpi .et { font-size: 11px; letter-spacing: .14em; color: var(--lg-gris2); }
+html[data-tema="laguna"] .kpi .et { font: 700 11px/1.3 var(--lg-fuente); letter-spacing: .12em; text-transform: uppercase; color: var(--lg-gris2); }
 html[data-tema="laguna"] .kpi .val { font-family: var(--lg-fuente); font-size: 28px; font-weight: 600; letter-spacing: -.01em; color: var(--lg-tinta); }
 html[data-tema="laguna"] .kpi .pie { color: var(--lg-gris); }
 html[data-tema="laguna"] .barra { background: var(--lg-claro2); }
@@ -205,6 +208,8 @@ html[data-tema="laguna"] .g-ops button.act { background: var(--lg-azul); color: 
 html[data-tema="laguna"] :is(table.datos, table.hist) th { font-family: var(--lg-fuente); font-size: 11px; font-weight: 700; letter-spacing: .12em;
   color: var(--lg-gris2); border-bottom-color: var(--lg-linea2); }
 html[data-tema="laguna"] :is(table.datos, table.hist) td { border-bottom-color: var(--lg-linea); }
+/* El historial: la fecha y quién, en gris; el evento manda (R4-05). */
+html[data-tema="laguna"] table.hist td:is(.fecha, :nth-child(4)) { color: var(--lg-gris2); }
 html[data-tema="laguna"] table.datos tr.clicable:hover { background: var(--lg-agua-f2); }
 html[data-tema="laguna"] .lista-textos li { border-bottom-color: var(--lg-linea); }
 

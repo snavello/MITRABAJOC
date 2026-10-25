@@ -105,8 +105,7 @@ html[data-tema="noticiero"][data-paleta="sindicato"] {
 
 /* ---------- Página: todo sobre papel ---------- */
 html[data-tema="noticiero"] body,
-html[data-tema="noticiero"] body.oscuro,
-html[data-tema="noticiero"] body.claro {
+html[data-tema="noticiero"] body.oscuro {
   font-family: var(--nt-f-txt); font-size: 14.5px; line-height: 1.4; color: var(--nt-tinta);
   background: var(--nt-fondo); -webkit-font-smoothing: antialiased;
 }
@@ -183,8 +182,7 @@ html[data-tema="noticiero"] .fila-hola {
 html[data-tema="noticiero"] .pt-heroe:not(:has(.pt-hero)) .fila-hola { padding-bottom: 44px; }
 html[data-tema="noticiero"] .pt-media:not(:has(img)) ~ .pad .fila-hola { padding-top: 54px; }
 html[data-tema="noticiero"] .fila-hola > div:first-child { animation: nt-adm-sube var(--mov-entrada) var(--ease-entrada) backwards; }
-html[data-tema="noticiero"] .hola,
-html[data-tema="noticiero"] body.claro .hola {
+html[data-tema="noticiero"] .hola {
   margin: 0; font-family: var(--nt-f-tit); font-weight: 400; font-size: 52px; line-height: .92;
   letter-spacing: .2px; text-transform: uppercase; color: var(--nt-tinta);
 }
@@ -194,16 +192,14 @@ html[data-tema="noticiero"] .hola em {
   background: linear-gradient(180deg, transparent 56%, var(--nt-resaltador) 56%, var(--nt-resaltador) 90%, transparent 90%);
   -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
-html[data-tema="noticiero"] .pt-hola-baj,
-html[data-tema="noticiero"] body.claro .pt-hola-baj {
+html[data-tema="noticiero"] .pt-hola-baj {
   display: flex; align-items: center; gap: 8px; margin-top: 12px;
   font-size: 15px; font-weight: 600; color: var(--nt-tinta-1);
 }
 html[data-tema="noticiero"] .pt-hola-baj:not(.pt-cambiar)::before {
   content: ""; width: 20px; height: 2px; flex: none; background: var(--nt-coral);
 }
-html[data-tema="noticiero"] .pt-cambiar,
-html[data-tema="noticiero"] body.claro .pt-cambiar {
+html[data-tema="noticiero"] .pt-cambiar {
   display: inline-flex; margin-top: 10px; font-size: 13.5px; font-weight: 600; color: var(--nt-tinta);
   text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px;
   text-decoration-color: var(--nt-tinta-3);
@@ -236,7 +232,6 @@ html[data-tema="noticiero"] .pt-hero {
   animation: nt-adm-entra var(--mov-entrada) var(--ease-entrada) backwards;
   animation-delay: calc(var(--mov-escalon) * 2);
 }
-html[data-tema="noticiero"] body.claro .pt-hero { background: var(--nt-carta); }
 html[data-tema="noticiero"] .pt-hero::before { display: none; }
 html[data-tema="noticiero"] .pt-hero > * { grid-column: 1; }
 html[data-tema="noticiero"] .pt-hero-k {
@@ -287,8 +282,7 @@ html[data-tema="noticiero"] .pt-filas.pt-filas > * {
 }
 html[data-tema="noticiero"] .pt-filas > :nth-child(3n+2) { animation-delay: calc(var(--mov-escalon) / 2); }
 html[data-tema="noticiero"] .pt-filas > :nth-child(3n+3) { animation-delay: var(--mov-escalon); }
-html[data-tema="noticiero"] .pt-fila,
-html[data-tema="noticiero"] body.claro .pt-fila {
+html[data-tema="noticiero"] .pt-fila {
   height: 100%; min-height: 86px; gap: 14px; padding: 16px 18px 16px 20px;
   border: 0; border-radius: 0; color: var(--nt-tinta); background: transparent;
   -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
@@ -296,8 +290,7 @@ html[data-tema="noticiero"] body.claro .pt-fila {
 }
 html[data-tema="noticiero"] .pt-vid::after { display: none; }
 html[data-tema="noticiero"] .pt-fila:hover { transform: none; background: var(--nt-carta); }
-html[data-tema="noticiero"] .pt-pastilla,
-html[data-tema="noticiero"] body.claro .pt-pastilla {
+html[data-tema="noticiero"] .pt-pastilla {
   width: 44px; height: 44px; border: 0; border-radius: 0; background: transparent;
   color: var(--nt-indigo-2); box-shadow: inset 0 0 0 1px var(--nt-linea-2);
 }
@@ -306,12 +299,10 @@ html[data-tema="noticiero"] .pt-fila-t {
   font-family: var(--nt-f-tit); font-weight: 400; font-size: 22px; line-height: 1;
   letter-spacing: .3px; text-transform: uppercase;
 }
-html[data-tema="noticiero"] .pt-fila-e,
-html[data-tema="noticiero"] body.claro .pt-fila-e {
+html[data-tema="noticiero"] .pt-fila-e {
   margin-top: 5px; font-size: 13px; line-height: 1.3; color: var(--nt-tinta-2);
 }
-html[data-tema="noticiero"] .pt-fila-f,
-html[data-tema="noticiero"] body.claro .pt-fila-f {
+html[data-tema="noticiero"] .pt-fila-f {
   display: flex; align-items: center; gap: 14px; color: var(--nt-tinta-3); opacity: 1;
   transition: transform var(--mov-rapido) var(--ease-salida);
 }
@@ -342,8 +333,7 @@ html[data-tema="noticiero"] .badge-noleidas {
 
 /* ---------- Pie y Salir ---------- */
 html[data-tema="noticiero"] .pt-pie { padding: 30px 16px 100px; }
-html[data-tema="noticiero"] .btn-acerca,
-html[data-tema="noticiero"] body.claro .btn-acerca {
+html[data-tema="noticiero"] .btn-acerca {
   opacity: 1; padding: 4px; font: 600 12px var(--nt-f-txt); color: var(--nt-tinta-3);
   text-decoration: underline; text-underline-offset: 4px;
 }
@@ -429,8 +419,7 @@ html[data-tema="noticiero"] .tm-op.activa {
         transparent 26%, transparent 64%, var(--nt-fondo) 100%);
   }
   html[data-tema="noticiero"] .pt-media:not(:has(img)) ~ .pad .fila-hola { padding-top: 34px; }
-  html[data-tema="noticiero"] .hola,
-  html[data-tema="noticiero"] body.claro .hola { font-size: 40px; }
+  html[data-tema="noticiero"] .hola { font-size: 40px; }
   html[data-tema="noticiero"] .pt-hola-baj { font-size: 14px; }
   html[data-tema="noticiero"] .circulo-acento { width: 52px; height: 52px; margin-bottom: 4px; }
   html[data-tema="noticiero"] .pt-hero { grid-template-columns: minmax(0, 1fr); padding: 26px 18px 18px; }
@@ -505,15 +494,13 @@ html[data-tema="noticiero"] .pad.pt-accesos { padding-bottom: 96px; }
 
 /* Bloque 5b: panel A (auditoría 2026-10) */
 /* G4-01: la línea de cada acceso dice un dato real contado en el servidor. */
-html[data-tema="noticiero"] .pt-fila-e.pt-fila-dato,
-html[data-tema="noticiero"] body.claro .pt-fila-e.pt-fila-dato {
+html[data-tema="noticiero"] .pt-fila-e.pt-fila-dato {
   color: var(--nt-tinta-1); font-weight: 600; font-variant-numeric: tabular-nums lining-nums;
 }
 /* G4-05: en el teléfono el saludo se parte en dos y, con interlineado .92,
    la coma de «HOLA,» tocaba la línea de abajo. */
 @media (max-width: 760px) {
-  html[data-tema="noticiero"] .hola,
-  html[data-tema="noticiero"] body.claro .hola { line-height: 1.02; }
+  html[data-tema="noticiero"] .hola { line-height: 1.02; }
 }
 /* G4-06: en escritorio la tarjeta del Panel Sindical va a la columna
    izquierda, pegada debajo del saludo: quedaba abajo a la derecha con un

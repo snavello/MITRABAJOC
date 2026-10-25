@@ -24,7 +24,7 @@
 import { render, createContext } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { html } from "panel/html";
-import { fmtN, fmtM, fFecha, fCorta } from "panel/formato";
+import { fmtN, fmtM, fFecha, fCorta, fmtEje, fmtMEje } from "panel/formato";
 import { menosMovimiento, ms, alEntrar } from "panel/movimiento";
 
 const TOPE_ENTRADA = 900;
@@ -49,6 +49,9 @@ export function colores() {
       fuente: v("--graf-fuente"), relleno: v("--graf-relleno") || "#ffffff" };
     estiloTooltips(PALETA);
     if (window.Chart) {
+      // Los números de los ejes y los globos, en argentino ("1.000", no
+      // "1,000"), aunque el navegador esté en inglés (R4-02).
+      window.Chart.defaults.locale = "es-AR";
       if (PALETA.texto) window.Chart.defaults.color = PALETA.texto;
       if (PALETA.fuente) window.Chart.defaults.font.family = PALETA.fuente;
     }
@@ -58,7 +61,7 @@ export function colores() {
 
 /* Un eje que cuenta cosas: sin decimales que no existen (0,1 … 0,9) y, si
    todo es cero, igual con un tope razonable. */
-const CONTEO = { beginAtZero: true, suggestedMax: 5, ticks: { precision: 0 } };
+const CONTEO = { beginAtZero: true, suggestedMax: 5, ticks: { precision: 0, callback: (v) => fmtEje(v) } };
 
 /* Si un panel no tiene nada que mostrar, el texto que lo dice (o null). Lo
    usa la raíz para dibujar el estado vacío en lugar de una grilla en cero
@@ -369,8 +372,7 @@ export function Empresas({ datos, estado, despachar }) {
         despachar([{ tipo: "alternar", campo: "empresas", id: emp.empresa_id }, { tipo: "tab", valor: "recibos" }]);
       },
       plugins: { legend: { display: false }, tooltip: Object.assign({ callbacks: { label: (c) => fmtM(c.raw) } }, UNA_SERIE) },
-      scales: { x: { grid: { color: C.linea }, ticks: { callback: (v) => (v >= 1e6
-        ? "$" + (v / 1e6).toLocaleString("es-AR", { maximumFractionDigits: 1 }) + "M" : "$" + Math.round(v / 1000) + "k") } },
+      scales: { x: { grid: { color: C.linea }, ticks: { callback: (v) => fmtMEje(v), maxRotation: 0, maxTicksLimit: 5 } },
         y: { grid: { display: false } } } }),
     entrada: animEntrada(110, 0),
   }, [datos, elegidas.join(",")]);
@@ -476,6 +478,8 @@ export function MapaSeccionales({ datos, estado, despachar, logo }) {
       mapa.current = window.MapaMT.crear(caja.current, { rueda: false });
       // El + y el − arriba a la izquierda tapaban una seccional (G7-10).
       if (mapa.current && mapa.current.mapa.zoomControl) mapa.current.mapa.zoomControl.setPosition("bottomright");
+      // Lo que se pisa depende de la escala: al cambiar el zoom se vuelven a separar.
+      if (mapa.current) mapa.current.mapa.on("zoomend", () => window.MapaMT.separarBurbujas(mapa.current.mapa, capa.current));
     }
     if (!mapa.current) return;
     if (capa.current) mapa.current.mapa.removeLayer(capa.current);
@@ -497,8 +501,15 @@ export function MapaSeccionales({ datos, estado, despachar, logo }) {
       puntos.push([s.lat, s.lon]);
     });
     mapa.current.refrescar();
-    // Se encuadra solo la primera vez: después le movería el mapa a quien está mirando una zona.
-    if (!mapa.current._encuadrado && puntos.length) { mapa.current.encuadrar(puntos); mapa.current._encuadrado = true; }
+    /* Se encuadra solo la primera vez: después le movería el mapa a quien
+       está mirando una zona. La regla es la de MapaMT, la misma que el mapa
+       de Resultados de encuesta (R4-10): todas adentro, con aire, y las que
+       se pisan, corridas con una guía a su punto real. */
+    if (!mapa.current._encuadrado && puntos.length) {
+      window.MapaMT.encuadrarTablero(mapa.current.mapa, puntos);
+      mapa.current._encuadrado = true;
+    }
+    window.MapaMT.separarBurbujas(mapa.current.mapa, capa.current);
   }, [datos, metrica, estado.seccionales.join(",")]);
   useEffect(() => () => { if (mapa.current) mapa.current.mapa.remove(); }, []);
   const meta = METRICAS[metrica];

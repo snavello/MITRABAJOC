@@ -647,6 +647,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   defecto. Las fotos se normalizan al subirlas y el color lo pone el modelo.
   **La opción seleccionada de un menú no se marca con una barra o corchete de
   color a un costado** (SDN): se pinta en el color del modelo.
+  **No hay más «portada clara»** (2026-10-25): la portada la pinta el modelo,
+  las tres portadas van siempre `oscuro` y las columnas `portada_clara` /
+  `admin_portada_clara` quedaron en la base sin uso (`test_portada_clara.py`).
+  Los avisos de error de los ingresos van en rojo fijo, nunca en el acento.
 
 - **El CUIL/CUIT cumple el módulo 11 donde NACE, y no se cambia desde una
   edición** (2026-10-10, `PLAN_CUIT_MOD11.md`, primera medida de la serie

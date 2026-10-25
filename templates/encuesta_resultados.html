@@ -215,7 +215,13 @@
   .nums b { display: block; font-family: var(--fuente-display); font-size: 22px; color: var(--tinta); }
 
   /* ---------- Opciones de cada gráfico ---------- */
-  .panel-enc { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  /* La pregunta es lo que se viene a leer (R4-06): si el título y el
+     selector no entran juntos, el selector baja abajo del título en vez de
+     partir la pregunta en cuatro renglones. Lo decide el ancho del título:
+     por debajo de 260 px, baja. */
+  .panel-enc { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .panel-enc > div:first-child { flex: 1 1 260px; min-width: 0; }
+  .panel-enc { margin-bottom: 6px; }
   .g-ops { display: flex; gap: 3px; background: var(--papel); border: 1px solid var(--linea);
     border-radius: 9px; padding: 2px; flex: 0 0 auto; }
   .g-ops button { border: none; background: none; border-radius: 7px; min-height: 30px; padding: 0 11px;
@@ -316,6 +322,29 @@
        se apilaban en tres renglones. */
     h2.secc { flex-direction: column; align-items: flex-start; gap: 3px; }
     .flota-sesion { right: 12px; bottom: 12px; }
+    /* En el teléfono el selector va siempre abajo del título, a la izquierda. */
+    .panel-enc { flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    /* El + y el − no van en el teléfono: ahí se acerca con dos dedos, y en
+       un mapa angosto los botones tapaban una burbuja (G5-33). */
+    .mapa-panel .leaflet-control-zoom { display: none; }
+    .panel-enc > div:first-child { flex: none; width: 100%; }
+    /* El historial apilado (R4-05): cada evento es un bloque, con la fecha
+       arriba en gris, el evento en negrita con su detalle debajo y quién al
+       final. Con min-width de 460 px adentro de una tarjeta de 330 se cortaba
+       a mitad de palabra y la columna de quién desaparecía. */
+    .tabla-ancha { overflow-x: visible; }
+    table.hist { min-width: 0; }
+    table.hist, table.hist tbody { display: block; }
+    table.hist tr { display: grid; grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "fecha" "evento" "detalle" "quien"; gap: 2px;
+      padding: 10px 0; border-bottom: 1px solid var(--linea); }
+    table.hist tr:last-child { border-bottom: 0; }
+    table.hist td { display: block; padding: 0; border: 0; min-width: 0; overflow-wrap: anywhere; }
+    table.hist td:nth-child(1) { grid-area: fecha; font-size: 12px; }
+    table.hist td:nth-child(2) { grid-area: evento; font-size: 13.5px; }
+    table.hist td:nth-child(3) { grid-area: detalle; font-size: 13px; }
+    table.hist td:nth-child(4) { grid-area: quien; font-size: 12px; color: var(--gris); }
+    table.hist td:nth-child(4):empty { display: none; }
   }
   /* En el teléfono "Volver" queda en la flecha sola (sigue diciendo
      "Volver" para el lector de pantalla): con el texto, el encabezado no
@@ -342,7 +371,7 @@
 {% set enc_volver = '/admin#encuestas' %}
 {% include "_encabezado.html" %}
 
-<main class="mesa-cont">
+<main class="mesa-cont" data-hoy="{{ hoy }}">
   <div class="enc-cab">
     <h1 class="titulo-pagina" id="enc-titulo">{{ titulo_encuesta }}</h1>
     <p class="enc-bajada" id="enc-bajada"></p>

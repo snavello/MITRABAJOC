@@ -32,12 +32,10 @@
   }
   body { min-height: 100vh; }
   body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
-  body.claro { background: var(--papel); }
   .pt-aviso { margin-top: 18px; }
   .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 30px; letter-spacing: .002em;
     color: var(--sobre-base); margin-top: 6px; }
-  body.claro .hola { color: var(--tinta); }
   .hola em { font-style: normal; color: var(--marca-acento); }
 
   /* ---------- Estructura común de la portada (PLAN_TEMAS.md, bloque 4) ----------
@@ -95,9 +93,6 @@
     font-weight: 650; color: var(--marca-acento); }
   .pt-tapa-leer svg, .pt-rec-cta svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none;
     stroke-linecap: round; stroke-linejoin: round; }
-  body.claro .pt-tapa-f, body.claro .pt-tapa-leer { color: var(--marca-primario); }
-  body.claro .pt-tapa-t { color: var(--tinta); }
-  body.claro .pt-tapa-b { color: var(--gris); }
   .pt-nov-lista { margin-top: 14px; }
   /* Auditoría G2-01/G2-02: lámina sin foto, contador y flechas del pie. */
   .car-sl.sin-foto { display: flex; flex-direction: column; aspect-ratio: auto; min-height: 150px; }
@@ -140,10 +135,6 @@
   .pt-rec-cta { grid-column: 2; grid-row: 2 / span 2; display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; border-radius: 99px; font-size: 12.5px; font-weight: 650; white-space: nowrap;
     color: var(--marca-acento); border: 1px solid color-mix(in srgb, var(--marca-acento) 45%, transparent); }
-  body.claro .pt-rec { color: var(--tinta); }
-  body.claro .pt-rec-k, body.claro .pt-rec-e { color: var(--gris); }
-  body.claro .pt-rec-e b { color: var(--tinta); }
-  body.claro .pt-rec-cta { color: var(--marca-primario); border-color: color-mix(in srgb, var(--marca-primario) 35%, transparent); }
   @media (max-width: 380px) {
     .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
   }
@@ -182,7 +173,6 @@
 
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
-  body.claro .btn-acerca { color: var(--gris); }
 
   /* ---------- Notificaciones ---------- */
   /* El wrap (no la tarjeta .acceso, que tiene overflow:hidden para el brillo
@@ -395,7 +385,7 @@
 <link rel="stylesheet" href="/static/temas/{{ apariencia.tema }}-portada.css?v={{ sello_static('temas/' ~ apariencia.tema ~ '-portada.css') }}">
 {% endif %}
 </head>
-<body class="{{ 'claro' if marca.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.portada_clara else 'grano-osc' }}">
+<body class="oscuro grano grano-osc">
 {% include "_entorno.html" %}
 
 <div class="pt-ambiente" aria-hidden="true">

@@ -374,8 +374,9 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
    el ancho en vez de dejar hueco. Novedades y Beneficios suben al riel,
    donde se ven al entrar, en vez de quedar al final de un scroll largo.
 
-   Todo lleva su variante clara: `marca.portada_clara` es una opción POR
-   SINDICATO, no una preferencia del navegador. ---------- */
+   Las portadas van siempre oscuras: desde 2026-10-25 la variante clara
+   (`portada_clara`) se retiró, porque los dos modelos de diseño pintan la
+   portada por su cuenta. ---------- */
 .pad { max-width: 1320px; margin: 0 auto; padding: 22px 15px 100px; }
 @media (min-width: 900px) { .pad { padding: 26px 26px 100px; } }
 
@@ -391,9 +392,6 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
   background: var(--marca-acento); opacity: .16; filter: blur(120px); }
 .pt-ambiente .pt-reticula { position: absolute; inset: 0; opacity: .09;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E"); }
-body.claro .pt-ambiente .pt-blob { display: none; }
-body.claro .pt-ambiente .pt-reticula { opacity: .05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23152238' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E"); }
 
 .fila-hola { align-items: flex-start; }
 /* El saludo y el círculo de perfil en la misma línea. Estaba en el <style>
@@ -402,8 +400,6 @@ body.claro .pt-ambiente .pt-reticula { opacity: .05;
    del saludo. */
 .fila-hola { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .pt-hola-baj { font-size: 12.5px; color: var(--sobre-base-mute); margin-top: 4px; }
-body.claro .pt-hola-baj { color: var(--gris); }
-body.claro .pt-hola-baj { color: var(--gris); }
 
 .pt-dos { display: grid; grid-template-columns: 1fr; gap: 26px; margin-top: 20px; }
 @media (min-width: 1040px) { .pt-dos { grid-template-columns: minmax(0, 1fr) 352px; gap: 30px; } }
@@ -416,9 +412,6 @@ body.claro .pt-hola-baj { color: var(--gris); }
 .pt-vid::after { content: ""; position: absolute; top: -60%; left: -30%; width: 90%; height: 90%;
   background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
   transform: rotate(-18deg); pointer-events: none; }
-body.claro .pt-vid { background: linear-gradient(160deg, #ffffff, var(--papel));
-  border-color: var(--linea); box-shadow: 0 1px 0 rgba(20,15,5,.03); color: var(--tinta); }
-body.claro .pt-vid::after { display: none; }
 
 /* ---- La tarjeta principal. Dice un NÚMERO real (cuántos recibos
    verificó este año) y cómo salió el último: "Revisá tus aportes" no le
@@ -427,8 +420,6 @@ body.claro .pt-vid::after { display: none; }
   padding: 22px 24px; color: var(--marca-base); text-decoration: none;
   background: linear-gradient(140deg, color-mix(in srgb, var(--marca-acento) 95%, white),
     color-mix(in srgb, var(--marca-acento) 55%, var(--marca-base))); }
-body.claro .pt-hero { background: linear-gradient(140deg, color-mix(in srgb, var(--marca-acento) 96%, white),
-    color-mix(in srgb, var(--marca-acento) 58%, white)); }
 .pt-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
   background-image: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 1px, transparent 1px 6px); }
 .pt-hero > * { position: relative; }
@@ -468,19 +459,14 @@ body.claro .pt-hero { background: linear-gradient(140deg, color-mix(in srgb, var
   border: 1px solid color-mix(in srgb, var(--marca-acento) 30%, transparent); }
 .pt-pastilla svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.7; fill: none;
   stroke-linecap: round; stroke-linejoin: round; }
-body.claro .pt-pastilla { color: var(--marca-primario);
-  background: color-mix(in srgb, var(--marca-primario) 10%, transparent);
-  border-color: color-mix(in srgb, var(--marca-primario) 22%, transparent); }
 .pt-fila-txt { min-width: 0; }
 .pt-fila-t { display: block; font-family: var(--fuente-display); font-weight: 700; font-size: 19px;
   letter-spacing: .9px; text-transform: uppercase; line-height: 1.02; }
 .pt-fila-e { display: block; font-size: 12.5px; color: var(--sobre-base-mute); margin-top: 3px;
   line-height: 1.35; }
-body.claro .pt-fila-e { color: var(--gris); }
 .pt-fila-f { margin-left: auto; color: var(--sobre-base-mute); opacity: .55; flex-shrink: 0; }
 .pt-fila-f svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 2; fill: none;
   stroke-linecap: round; stroke-linejoin: round; }
-body.claro .pt-fila-f { color: var(--gris); }
 
 /* ---- El riel: novedades y beneficios, arriba y a la vista ---- */
 @media (min-width: 1040px) { .pt-riel { position: sticky; top: 18px; } }
@@ -490,9 +476,6 @@ body.claro .pt-fila-f { color: var(--gris); }
 .pt-riel-tit::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.16); }
 .pt-riel-tit a { font-family: var(--fuente); font-size: 11px; font-weight: 600; letter-spacing: 0;
   text-transform: none; color: var(--sobre-base-mute); text-decoration: none; }
-body.claro .pt-riel-tit { color: var(--tinta); }
-body.claro .pt-riel-tit::after { background: var(--linea); }
-body.claro .pt-riel-tit a { color: var(--gris); }
 .pt-riel .sec + .sec { margin-top: 22px; }
 
 /* La noticia CONSERVA su foto: es lo que la hace leerse como una novedad
@@ -510,15 +493,12 @@ body.claro .pt-riel-tit a { color: var(--gris); }
   background: color-mix(in srgb, var(--marca-primario) 70%, var(--marca-base)); }
 .pt-nov .pt-mini-ico svg { width: 24px; height: 24px; stroke: #fff; stroke-width: 1.8; fill: none;
   stroke-linecap: round; }
-body.claro .pt-nov .pt-mini-ico { background: var(--marca-primario); }
 .pt-nov .pt-txt { min-width: 0; }
 .pt-nov .f { display: block; font-family: var(--fuente-num); font-size: 10.5px;
   color: var(--marca-acento); letter-spacing: .4px; }
-body.claro .pt-nov .f { color: var(--marca-primario); }
 .pt-nov .t { display: block; font-size: 14px; font-weight: 650; line-height: 1.3; margin-top: 3px; }
 .pt-nov .b { display: block; font-size: 12px; color: var(--sobre-base-mute); line-height: 1.45;
   margin-top: 3px; }
-body.claro .pt-nov .b { color: var(--gris); }
 
 /* ---- Carrusel de beneficios ----
    Es la pieza de marketing de la portada, así que la imagen manda: va a
@@ -538,7 +518,6 @@ body.claro .pt-nov .b { color: var(--gris); }
 .car { position: relative; }
 .car-marco { position: relative; overflow: hidden; border-radius: 18px;
   border: 1px solid rgba(255,255,255,.16); box-shadow: 0 18px 40px rgba(0,0,0,.34); }
-body.claro .car-marco { border-color: var(--linea); box-shadow: 0 6px 20px rgba(20,15,5,.10); }
 .car-pista { display: flex; touch-action: pan-y;
   transition: transform .62s cubic-bezier(.22,.61,.36,1); }
 .car-pista.sin-anim { transition: none; }
@@ -576,13 +555,11 @@ body.claro .car-marco { border-color: var(--linea); box-shadow: 0 6px 20px rgba(
 .car-pie { display: flex; align-items: center; gap: 11px; margin-top: 10px; }
 .car-barra { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.18);
   overflow: hidden; }
-body.claro .car-barra { background: var(--linea); }
 .car-barra i { display: block; height: 100%; width: 0; border-radius: 2px;
   background: var(--marca-acento); }
 .car-puntos { display: flex; gap: 6px; }
 .car-punto { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.3);
   border: 0; padding: 0; cursor: pointer; transition: width .3s, background .3s; }
-body.claro .car-punto { background: var(--linea); }
 .car-punto.on { width: 18px; border-radius: 99px; background: var(--marca-acento); }
 @media (prefers-reduced-motion: reduce) {
   .car-pista { transition: none; }
@@ -590,7 +567,6 @@ body.claro .car-punto { background: var(--linea); }
   .car-barra { display: none; }
 }
 
-body.claro .vacio-sec { background: var(--papel); border-color: var(--linea); color: var(--gris); }
 
 /* El hero de las portadas sin cifra real (sindicato, plataforma): mismo
    marco, sin el bloque del número. No se inventa un indicador con tal de

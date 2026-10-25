@@ -8981,3 +8981,42 @@ de alta con rótulos y grupos (estructura en `static/panel_formularios.css`);
 Aprendizaje con zona de carga visible y el porqué del botón deshabilitado.
 G4-04 junta el círculo de perfil con el saludo (72 px), lo que deshace el
 agrandado del 2026-10-23. Tests: `test_auditoria_panel_a.py`.
+
+**Segunda vuelta de la auditoría y tanda 2** (Trabajador 0.54.02, Admin
+0.73.02, Plataforma 0.57.02). Con todo migrado se volvieron a capturar las
+pantallas y cuatro revisores miraron lo migrado contra lo pedido en la
+primera vuelta: de 70 hallazgos anteriores, 63 resueltos y 7 a medias; 42
+nuevos, ninguno grave (informe https://claude.ai/artifact/TUWmGHT2R8FwNqhohuzvAu,
+SDN aceptó 36, pidió 1 cambio y dejó 5). La tanda 2 los aplicó con tres
+agentes. **Empresa**: el sin leer en el color del modelo (el rojo solo en el
+globo), la línea «N sin leer de M», los estados de trámite con las mismas
+clases y colores que el afiliado (un test compara las dos hojas), Inicio/Salir
+de 44 px en el teléfono y en el mismo lugar que en la portada, y la barra de
+identidad y la tira alineadas con la columna (`--emp-col`). **Plataforma**:
+Inicio/Salir al pie del riel como en el panel, Sindicatos y Topes en fichas
+en el teléfono y las demás tablas con aviso de que se deslizan, encabezado
+fijo en Topes, campos de Laguna con borde de 3:1 y de 16 px en el teléfono,
+«Borrar» como botón, colores en grilla y el estado de un usuario que dice qué
+le falta. **Los avisos de error de los cuatro ingresos van en rojo fijo**
+(`--alerta: #c0392b`), ya no en el acento configurable. **Tableros**: «Volver
+al panel» en el Panel Sindical (`enc_volver`), números argentinos en los ejes
+y CUIL con guiones (`panel_v2/formato.js` sobre `numeros_ar.js`), el
+explorador del teléfono en fichas de dos renglones, un solo encuadre y
+separación de burbujas para los dos mapas (`MapaMT.encuadrarTablero` y
+`separarBurbujas`), y en Resultados el historial apilado en el teléfono, el
+Ritmo como respuestas de la última semana contado con la fecha del servidor
+y la leyenda de Evolución con la muestra real de cada línea.
+
+**Se retiró «Portada clara»** (R2-03; nota de SDN: «verificar que nada quede
+dependiendo de esta opción»). Con los dos modelos la portada la pinta el
+modelo y la casilla ya no hacía nada. Salió de Nuevo sindicato, de su edición
+y de Marca; las rutas ya no la reciben, `marca_sindicato()` y
+`marca_plataforma()` no la exponen, las portadas del afiliado, del panel y de
+plataforma van siempre `oscuro`, y se borraron las 69 reglas `body.claro` que
+quedaban muertas en `marca.css`, las hojas de portada del panel y tres
+plantillas. Las columnas (`Sindicato.portada_clara`, `admin_portada_clara`,
+`ConfiguracionPlataforma.portada_clara`) **siguen en la base, sin migración**:
+no las lee nadie (`test_portada_clara.py` lo verifica) y solo
+`medir_dashboard.py` las escribe al sembrar. Tests: `test_tema_empresa.py`,
+`test_tema_plataforma.py`, `test_portada_clara.py`, `test_tema_tablero.py`,
+`test_tema_pantallas_viejas.py`.

@@ -1,6 +1,6 @@
 """Portada de /plataforma con tarjetas (GET /plataforma/inicio), mismo
 patrón que la de /admin: login redirige ahí, 7 tarjetas (Sindicatos agrupa
-alta/nuevo admin), colores/portada_clara propios de la marca de plataforma
+alta/nuevo admin), colores propios de la marca de plataforma
 (ConfiguracionPlataforma, independiente de cualquier sindicato).
 
 Correr con: .venv/Scripts/python.exe -m pytest test_plataforma_portada.py -q
@@ -48,36 +48,23 @@ def test_muestra_las_7_tarjetas():
     print("OK  test_muestra_las_7_tarjetas")
 
 
-def test_marca_plataforma_expone_portada_clara_default_falso():
-    marca = db.marca_plataforma()
-    assert marca["portada_clara"] is False
-    print("OK  test_marca_plataforma_expone_portada_clara_default_falso")
-
-
-def test_marca_plataforma_guarda_portada_clara():
+def test_marca_plataforma_guarda_colores_sin_portada_clara():
+    """«Portada clara» se retiró (auditoría R2-03): la marca guarda los
+    colores y no expone ni escribe la opción. Ver test_portada_clara.py."""
     r = plataforma_client.post("/plataforma/marca", data={
         "color_primario": "#152238", "color_secundario": "#1a7a6b",
         "color_acento": "#b23a2e", "portada_clara": "true",
     }, follow_redirects=False)
     assert r.status_code == 303
     marca = db.marca_plataforma()
-    assert marca["portada_clara"] is True
-
-    # Sin tildar en un guardado posterior vuelve a False.
-    r = plataforma_client.post("/plataforma/marca", data={
-        "color_primario": "#152238", "color_secundario": "#1a7a6b",
-        "color_acento": "#b23a2e",
-    }, follow_redirects=False)
-    assert r.status_code == 303
-    marca = db.marca_plataforma()
-    assert marca["portada_clara"] is False
-    print("OK  test_marca_plataforma_guarda_portada_clara")
+    assert marca["color_acento"] == "#b23a2e"
+    assert "portada_clara" not in marca
+    print("OK  test_marca_plataforma_guarda_colores_sin_portada_clara")
 
 
 if __name__ == "__main__":
     test_sin_sesion_sirve_login()
     test_login_exitoso_redirige_a_inicio()
     test_muestra_las_7_tarjetas()
-    test_marca_plataforma_expone_portada_clara_default_falso()
-    test_marca_plataforma_guarda_portada_clara()
+    test_marca_plataforma_guarda_colores_sin_portada_clara()
     print("\nTodos los tests de plataforma_portada pasaron.")

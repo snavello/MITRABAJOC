@@ -175,6 +175,10 @@ html[data-tema="noticiero"] h2.secc { font-family: var(--nt-f-tit); font-size: 2
 html[data-tema="noticiero"] h2.secc small { font-family: var(--nt-f-txt); font-size: 13px; line-height: 1.4; letter-spacing: 0; text-transform: none; color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] :is(.panel h3, .cruce-cuerpo h4) { font-family: var(--nt-f-tit); font-size: 19px; font-weight: 400; letter-spacing: .3px;
   text-transform: uppercase; color: var(--nt-tinta); line-height: 1.05; }
+/* La pregunta de cada tarjeta suele ir en dos renglones: con la condensada
+   en mayúsculas, las tildes de MÁS y AÑO tocaban el renglón de arriba
+   (R4-06). Con 1,14 tienen aire. */
+html[data-tema="noticiero"] .panel .panel-enc h3 { line-height: 1.14; }
 html[data-tema="noticiero"] :is(.panel .sub, .cruce-cuerpo .sub, .f-nota, .nums div, .resumen-escala div) { color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .f-nota { font-size: 13px; line-height: 1.5; }
 
@@ -192,12 +196,14 @@ html[data-tema="noticiero"] .m-chip:hover:not(:disabled):not(.act),
 html[data-tema="noticiero"] .cal-boton:not(.act):hover { box-shadow: inset 0 0 0 1px var(--nt-tinta); color: var(--nt-tinta); }
 html[data-tema="noticiero"] :is(.m-chip.act, .cal-boton.act) { background: var(--nt-indigo); color: var(--nt-marfil); box-shadow: none; }
 html[data-tema="noticiero"] .m-chip .n { font-family: var(--nt-f-cond); font-size: 14px; font-weight: 700; }
+/* Bajar la planilla es secundario (R4-08): de contorno en tinta, como
+   «Limpiar». El coral lleno queda para la selección activa. */
 html[data-tema="noticiero"] a.btn-descargar {
-  border: 0; border-radius: 2px; background: var(--nt-coral); color: var(--nt-coral-tinta);
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--nt-indigo) 22%, transparent);
+  border: 0; border-radius: 2px; background: transparent; color: var(--nt-tinta);
+  box-shadow: inset 0 0 0 1.5px var(--nt-tinta);
   font: 700 12px/1 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.1px; text-transform: uppercase;
 }
-html[data-tema="noticiero"] a.btn-descargar:hover { filter: brightness(1.05) saturate(1.05); }
+html[data-tema="noticiero"] a.btn-descargar:hover { background: var(--nt-hoja-2); }
 html[data-tema="noticiero"] .btn-reiniciar { border: 0; border-radius: 2px; background: transparent; color: var(--nt-tinta);
   box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); font: 700 12px/1 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.1px; text-transform: uppercase; }
 html[data-tema="noticiero"] .btn-reiniciar:hover { background: transparent; color: var(--nt-tinta); box-shadow: inset 0 0 0 1.5px var(--nt-tinta); }
@@ -241,6 +247,8 @@ html[data-tema="noticiero"] .g-ops button.act { background: var(--nt-indigo); co
 html[data-tema="noticiero"] :is(table.datos, table.hist) th { font: 700 10.5px/1.3 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.3px;
   color: var(--nt-tinta-2); border-bottom: 1.5px solid var(--nt-tinta); }
 html[data-tema="noticiero"] :is(table.datos, table.hist) td { border-bottom-color: var(--nt-linea); color: var(--nt-tinta-1); }
+/* El historial: la fecha y quién, en gris; el evento manda (R4-05). */
+html[data-tema="noticiero"] table.hist td:is(.fecha, :nth-child(4)) { color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] table.datos tr.clicable:hover { background: var(--nt-hoja-2); }
 html[data-tema="noticiero"] .lista-textos li { border-bottom-color: var(--nt-linea); color: var(--nt-tinta-1); }
 

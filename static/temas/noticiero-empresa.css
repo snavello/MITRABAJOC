@@ -158,6 +158,11 @@ html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + p,
 html[data-tema="noticiero"] body.mesa.franja .titulo-pagina + .sub { color: var(--nt-tinta-1); }
 html[data-tema="noticiero"] .sub { font-size: 14.5px; color: var(--nt-tinta-1); line-height: 1.45; margin-top: 10px; }
 html[data-tema="noticiero"] .sub2 { color: var(--nt-tinta-2); }
+/* R1-03: cuántos avisos faltan leer, como la bandeja del afiliado; la
+   bajada del remitente, debajo y más chica. */
+html[data-tema="noticiero"] #tp-notificaciones .notif-cant { margin-top: 10px; font-size: 14.5px; color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] #tp-notificaciones .notif-cant b { color: var(--nt-tinta); }
+html[data-tema="noticiero"] #tp-notificaciones .notif-cant + .sub { margin-top: 2px; font-size: 13px; color: var(--nt-tinta-2); }
 
 /* ---------- botones: rectos, en mayúsculas ---------- */
 html[data-tema="noticiero"] .btn {
@@ -237,12 +242,14 @@ html[data-tema="noticiero"] .nh-hito span { font-family: var(--nt-f-cond); font-
 /* El color de cada remitente llega en línea desde el JS: en el modelo, uno solo. */
 html[data-tema="noticiero"] .nh-av { background: var(--nt-indigo) !important; color: var(--nt-marfil); box-shadow: 0 0 0 3px var(--nt-fondo);
   font-family: var(--nt-f-cond); font-size: 14px; }
-html[data-tema="noticiero"] .notif-item.no-leida .nh-av::after { background: var(--nt-globo); border-color: var(--nt-fondo); animation: none; }
+/* R1-02: lo no leído en el coral del modelo, como en la bandeja del
+   afiliado; el rojo queda para el globo con el número de la tira. */
+html[data-tema="noticiero"] .notif-item.no-leida .nh-av::after { background: var(--nt-coral-ind); border-color: var(--nt-fondo); animation: none; }
 html[data-tema="noticiero"] .nh-bur { border: 0; border-radius: 2px 12px 12px 12px; background: var(--nt-carta);
   box-shadow: inset 0 0 0 1px var(--nt-linea); padding: 10px 12px 11px; transition: box-shadow .2s var(--nt-curva); }
 html[data-tema="noticiero"] .notif-item:hover .nh-bur { box-shadow: inset 0 0 0 1px var(--nt-linea-2), 0 10px 22px -18px var(--nt-sombra); }
-html[data-tema="noticiero"] .notif-item.no-leida .nh-bur { background: color-mix(in oklab, var(--nt-indigo) 6%, var(--nt-carta));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-indigo) 30%, transparent); }
+html[data-tema="noticiero"] .notif-item.no-leida .nh-bur { background: color-mix(in oklab, var(--nt-coral) 10%, var(--nt-carta));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-coral) 35%, transparent); }
 html[data-tema="noticiero"] .notif-item .notif-remitente { font-size: 13px; font-weight: 700; color: var(--nt-tinta); }
 html[data-tema="noticiero"] .notif-item .notif-fecha { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .notif-item.no-leida .notif-fecha { color: var(--nt-tinta); }
@@ -290,6 +297,8 @@ html[data-tema="noticiero"] .tx-aten :is(button, a):focus-visible { outline-colo
 
 /* los dos accesos: uno debajo del otro; "Iniciar" en coral, "Buscar" en carta */
 html[data-tema="noticiero"] .tx-acc { grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
+/* G1-18: en la columna de escritorio (--emp-col) los dos accesos van lado a lado. */
+@media (min-width: 761px) { html[data-tema="noticiero"] .tx-acc { grid-template-columns: 1fr 1fr; } }
 html[data-tema="noticiero"] .tx-tile {
   position: relative; display: grid; grid-template-columns: 42px 1fr; column-gap: 12px; row-gap: 3px; align-items: center;
   padding: 14px 38px 14px 14px; min-height: 0; border: 0; border-radius: 0; background: var(--nt-carta);
@@ -342,6 +351,17 @@ html[data-tema="noticiero"] .tx-r .fila-t { align-items: flex-start; gap: 10px; 
 html[data-tema="noticiero"] .tx-r .tit { font-size: 15px; font-weight: 700; line-height: 1.25; }
 html[data-tema="noticiero"] .tx-r .exp { font-family: var(--nt-f-mono); font-size: 11.5px; color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .tx-tag { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+/* R1-04: los estados de un trámite con los colores de estado del modelo,
+   los mismos que en la app del afiliado (noticiero-app.css, G3-05). */
+html[data-tema="noticiero"] {
+  --est-ini-f: transparent; --est-ini-t: var(--nt-tinta);
+  --est-tra-f: var(--nt-amb-fondo); --est-tra-t: var(--nt-amb);
+  --est-res-f: var(--nt-ok-fondo); --est-res-t: var(--nt-ok);
+  --est-esp-f: var(--nt-mal-fondo); --est-esp-t: var(--nt-mal);
+  --est-ter-f: var(--nt-hoja); --est-ter-t: var(--nt-tinta-2);
+}
+html[data-tema="noticiero"] .tag.est { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 700; }
 html[data-tema="noticiero"] .tx-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 10px; }
 html[data-tema="noticiero"] .tx-prog i { height: 5px; border-radius: 0; background: var(--nt-linea); }
 html[data-tema="noticiero"] .tx-prog i.on { background: var(--nt-indigo); }
@@ -482,22 +502,33 @@ html[data-tema="noticiero"] .flota-sal a + a { box-shadow: none; }
 html[data-tema="noticiero"] .flota-sal .flota-ini svg { stroke: var(--nt-coral-ind); }
 html[data-tema="noticiero"] .flota-sal a:focus-visible { outline: 2px solid var(--nt-coral-ind); outline-offset: -3px; }
 
-/* escritorio: la columna del teléfono, un poco más ancha (la misma decisión
-   de SDN para el afiliado); la tira se agrupa al centro y la pastilla de
-   Inicio/Salir va afuera de la columna */
+/* escritorio (G1-18, R1-06, R1-07): la columna mide --emp-col (la de la
+   plantilla); la razón social y el CUIT caen en los mismos bordes que el
+   titular y las tarjetas; la tira mide lo mismo que la columna, con el
+   filete de tinta arriba y a los costados; Inicio/Salir, en la esquina del
+   Salir de la portada (sube por encima de la tira mientras la tira llegue
+   hasta ahí). */
 @media (min-width: 761px) {
-  html[data-tema="noticiero"] .cont { max-width: 540px; }
-  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - 270px)); }
-  html[data-tema="noticiero"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 120px)); justify-content: center; gap: 4px; }
+  html[data-tema="noticiero"] .cont { max-width: var(--emp-col); }
+  html[data-tema="noticiero"] .ident { padding-inline: max(16px, calc(50% - var(--emp-col) / 2 + 16px)); }
+  html[data-tema="noticiero"] .tabbar { grid-template-columns: repeat(auto-fit, minmax(0, 120px)); justify-content: center; gap: 4px;
+    max-width: var(--emp-col); margin: 0 auto; border: 1px solid var(--nt-tinta); border-bottom: 0; border-radius: 0; }
   html[data-tema="noticiero"] .tabbar button { font-size: 13.5px; }
-  html[data-tema="noticiero"] .flota-sal { right: max(14px, calc(50% - 480px)); }
+  html[data-tema="noticiero"] .flota-sal { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
-/* En el teléfono Inicio y Salir van en la barra de la identidad: más bajos
-   y sin sombra de cosa que flota. */
+@media (min-width: 761px) and (max-width: 1159px) {
+  html[data-tema="noticiero"] .flota-sal { bottom: calc(80px + env(safe-area-inset-bottom)); }
+}
+/* En el teléfono Inicio y Salir van en la barra de la identidad: sin sombra
+   de cosa que flota, y cada uno con sus 44 px de alto (R1-05). */
 @media (max-width: 760px) {
   html[data-tema="noticiero"] .ident { align-items: center; padding-block: 8px; }
-  html[data-tema="noticiero"] .ident .flota-sal { height: 36px; box-shadow: none; }
-  html[data-tema="noticiero"] .ident .flota-sal a { height: 36px; padding: 0 12px; letter-spacing: .8px; font-size: 12px; }
+  html[data-tema="noticiero"] .ident .flota-sal { height: 44px; box-shadow: none; }
+  html[data-tema="noticiero"] .ident .flota-sal a { height: 44px; padding: 0 11px; gap: 5px; letter-spacing: .3px; font-size: 13px; }
+  /* Que la razón social le gane el ancho a la pastilla: en un renglón si
+     entra («Metalúrgica del Sur SRL» entra en 390 px). */
+  html[data-tema="noticiero"] .ident { column-gap: 10px; }
+  html[data-tema="noticiero"] .ident-nombre { font-size: 14.5px; line-height: 1.3; }
 }
 
 /* El distintivo de entorno (_entorno.html, estilos en línea): arriba de la

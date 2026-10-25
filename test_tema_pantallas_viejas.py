@@ -240,3 +240,88 @@ def test_la_bandeja_recibe_el_hoy_del_servidor():
     import fechas
     html = _pagina("notificaciones", "laguna")
     assert f'data-hoy="{fechas.hoy_texto()}"' in html
+
+
+# ---------------------------------------------------------------- segunda auditoría
+
+def _sin_coment(txt):
+    return re.sub(r"/\*.*?\*/", "", txt, flags=re.S)
+
+
+def _leer(ruta):
+    return Path(ruta).read_text(encoding="utf-8")
+
+
+def test_r4_05_el_historial_se_apila_en_el_telefono():
+    txt = _leer("templates/encuesta_resultados.html")
+    tel = txt[txt.index("@media (max-width: 760px)"):]
+    assert "table.hist { min-width: 0; }" in tel
+    assert 'grid-template-areas: "fecha" "evento" "detalle" "quien"' in tel
+    for area in ("fecha", "evento", "detalle", "quien"):
+        assert f"grid-area: {area};" in tel, area
+    for tema in MODELOS:
+        css = _sin_coment(_leer(f"static/temas/{tema}-encuesta-resultados.css"))
+        assert f'html[data-tema="{tema}"] table.hist td:is(.fecha, :nth-child(4))' in css, tema
+
+
+def test_r4_06_el_selector_de_vista_no_aplasta_la_pregunta():
+    txt = _leer("templates/encuesta_resultados.html")
+    assert ".panel-enc { display: flex; flex-wrap: wrap;" in txt
+    assert ".panel-enc > div:first-child { flex: 1 1 260px; min-width: 0; }" in txt
+    tel = txt[txt.index("@media (max-width: 760px)"):]
+    assert ".panel-enc { flex-direction: column;" in tel
+    css = _sin_coment(_leer("static/temas/noticiero-encuesta-resultados.css"))
+    m = re.search(r'html\[data-tema="noticiero"\] \.panel \.panel-enc h3 \{ line-height: ([\d.]+); \}', css)
+    assert m and float(m.group(1)) >= 1.05
+
+
+def test_r4_07_ritmo_dice_la_semana_y_no_repite_el_total():
+    html = _pagina("encuesta-resultados", "laguna")
+    import fechas
+    assert f'<main class="mesa-cont" data-hoy="{fechas.hoy_texto()}">' in html
+    js = _sin_coment(_leer("static/encuesta_resultados.js"))
+    assert "function semanaDeRitmo(ritmo, enc)" in js
+    assert "'esta semana'" in js and "'en su última semana'" in js
+    assert "$('k-ritmo').textContent = !ultimo ? '—' : (sem.cantidad ? '+' + num(sem.cantidad) : '0');" in js
+    # la frase que repetía los dos porcentajes ya no existe
+    assert "del padrón.`" not in js
+    assert "nota.hidden = !nota.textContent;" in js
+
+
+def test_r4_08_descargar_csv_es_de_contorno_en_noticiero():
+    css = _sin_coment(_leer("static/temas/noticiero-encuesta-resultados.css"))
+    regla = re.search(r'html\[data-tema="noticiero"\] a\.btn-descargar \{([^}]*)\}', css).group(1)
+    assert "background: transparent" in regla and "inset 0 0 0 1.5px var(--nt-tinta)" in regla
+    assert "nt-coral" not in regla
+
+
+def test_r4_09_el_vacio_del_convenio_no_parece_una_zona_para_soltar():
+    for ruta in ("templates/convenio.html", "static/temas/laguna-convenio.css", "static/temas/noticiero-convenio.css"):
+        txt = _sin_coment(_leer(ruta))
+        regla = re.search(r"\.sin-convenio \{([^}]*)\}", txt).group(1)
+        assert "dashed" not in regla and "solid" in regla, ruta
+
+
+def test_g3_13_el_mes_partido_dice_antes():
+    txt = _leer("templates/notificaciones.html")
+    assert "`Antes, en ${nombre.toLowerCase()}" in txt
+    assert "const mesCorte = HOY ?" in txt
+
+
+def test_g3_15_los_avatares_de_noticiero_se_distinguen():
+    css = _sin_coment(_leer("static/temas/noticiero-notificaciones.css"))
+    av = dict(re.findall(r"--av-(\d): ([^;]+);", css))
+    assert av["1"] == "var(--nt-tinta)"
+    assert "var(--nt-coral) 70%" in av["2"]
+    assert "var(--nt-indigo)" in av["3"] and "var(--nt-fondo)" in av["3"]
+    assert len(set(av.values())) == 3
+    assert not any(re.search(r"#[0-9a-fA-F]{3,6}", v) for v in av.values())
+
+
+def test_g5_31_la_leyenda_dibuja_el_trazo_punteado():
+    js = _sin_coment(_leer("static/encuesta_resultados.js"))
+    assert "function muestraLinea(color, guion, punto)" in js
+    assert "g.setLineDash(guion || [])" in js
+    assert "generateLabels: leyendaDeLineas" in js
+    assert "pointStyle: muestraLinea(ds.borderColor, ds.borderDash, ds.pointStyle)" in js
+    assert "pointStyle: 'line'" not in js

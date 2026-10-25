@@ -346,11 +346,13 @@ function pintarIndicadores(d) {
     ? `${pct(a.porcentaje)} leyó · ${a.cantidad} envío${a.cantidad === 1 ? '' : 's'}`
     : 'Todavía no le avisaste a nadie';
 
-  const total = (i.ritmo || []).reduce((s, x) => s + x.cantidad, 0);
-  const ultimo = (i.ritmo || [])[i.ritmo.length - 1];
-  $('k-ritmo').textContent = total ? num(total) : '—';
+  // Ritmo dice algo PROPIO (R4-07): cuántas respuestas entraron en los
+  // últimos 7 días. El total ya lo dice Participación.
+  const sem = semanaDeRitmo(i.ritmo || [], d.encuesta);
+  const ultimo = (i.ritmo || [])[(i.ritmo || []).length - 1];
+  $('k-ritmo').textContent = !ultimo ? '—' : (sem.cantidad ? '+' + num(sem.cantidad) : '0');
   $('k-ritmo-pie').textContent = ultimo
-    ? `respuestas · última el ${fechaLegible(ultimo.dia)}`
+    ? `${sem.rotulo} · última el ${diaCorto(ultimo.dia)}`
     : 'sin respuestas todavía';
   dibujarRitmo(i.ritmo || []);
 
@@ -362,7 +364,8 @@ function pintarIndicadores(d) {
     : `${fechaLegible(d.encuesta.fecha_desde)} → ${fechaLegible(d.encuesta.fecha_hasta)}`;
 
   // La lectura de los dos primeros indicadores JUNTOS, que es de donde sale
-  // la decisión de mandar o no un recordatorio.
+  // la decisión de mandar o no un recordatorio. Solo cuando dice algo que
+  // las tarjetas no dicen (R4-07): repetir los dos porcentajes no aporta.
   const nota = $('lectura-vs-respuesta');
   if (!a.enviados) {
     nota.textContent = 'Nadie recibió el aviso todavía: la participación de arriba no mide'
@@ -374,8 +377,25 @@ function pintarIndicadores(d) {
     nota.textContent = `Solo leyó el aviso el ${pct(a.porcentaje)}: el problema es el canal, no la`
       + ' encuesta. Un recordatorio a los que faltan sí mueve la aguja.';
   } else {
-    nota.textContent = `Leyeron el ${pct(a.porcentaje)} y respondió el ${pct(p.porcentaje)} del padrón.`;
+    nota.textContent = '';
   }
+  nota.hidden = !nota.textContent;
+}
+
+/* Las respuestas de los últimos 7 días, contados hasta HOY según el
+   servidor (data-hoy) o, si la encuesta ya terminó, hasta su último día:
+   "esta semana" de una encuesta cerrada en agosto sería siempre cero. */
+function semanaDeRitmo(ritmo, enc) {
+  const hoy = (document.querySelector('main').dataset.hoy || '').slice(0, 10);
+  const fin = String((enc && (enc.cerrada_en || enc.fecha_hasta)) || '').slice(0, 10);
+  const cerrada = fin && hoy && fin < hoy;
+  const ref = cerrada ? fin : (hoy || (ritmo.length ? ritmo[ritmo.length - 1].dia : ''));
+  if (!ref) return { cantidad: 0, rotulo: 'esta semana' };
+  const [a, m, dd] = ref.split('-').map(Number);
+  const desde = new Date(Date.UTC(a, m - 1, dd - 6)).toISOString().slice(0, 10);
+  const cantidad = ritmo.filter(x => x.dia >= desde && x.dia <= ref)
+    .reduce((t, x) => t + x.cantidad, 0);
+  return { cantidad, rotulo: cerrada ? 'en su última semana' : 'esta semana' };
 }
 
 /* ---------- Mapa de participación por seccional ----------
@@ -448,8 +468,6 @@ function pintarMapa(d) {
         if (!m.impuesto) {
           burbuja.on('click', () => { POPUP_SECC = sec.id; alternar('seccional', String(sec.id)); });
         }
-        burbuja._lugar = L.latLng(sec.lat, sec.lon);
-        burbuja._diametro = MapaMT.diametroBurbuja(sec.respondieron, maxResp);
         burbuja.addTo(CAPA_SECC);
         if (POPUP_SECC === sec.id) burbuja.openPopup();
         puntos.push([sec.lat, sec.lon]);
@@ -458,9 +476,10 @@ function pintarMapa(d) {
       // Se encuadra una sola vez: reencuadrar en cada filtro le movería el
       // mapa abajo de los dedos a quien está mirando una zona.
       if (!MAPA._encuadrado && puntos.length) {
-        // 40 px de aire alrededor de las burbujas: con 30 la más grande
-        // quedaba cortada contra el borde.
-        MAPA.mapa.fitBounds(L.latLngBounds(puntos), { padding: [40, 40], maxZoom: 15 });
+        // La misma regla de encuadre que el mapa del Panel Sindical
+        // (MapaMT.encuadrarTablero): todas adentro, con aire, sin alejarse
+        // hasta mostrar medio continente.
+        MapaMT.encuadrarTablero(MAPA.mapa, puntos);
         MAPA._encuadrado = true;
       }
       separarBurbujas();
@@ -493,28 +512,7 @@ function pintarMapa(d) {
    mueve. Se recalcula al hacer zoom, porque lo que se pisa depende de la
    escala. */
 function separarBurbujas() {
-  if (!MAPA || !CAPA_SECC) return;
-  const mapa = MAPA.mapa;
-  const marcas = CAPA_SECC.getLayers().filter(m => m._lugar);
-  const pos = marcas.map(m => mapa.latLngToLayerPoint(m._lugar));
-  for (let vuelta = 0; vuelta < 6; vuelta++) {
-    let movio = false;
-    for (let i = 0; i < marcas.length; i++) {
-      for (let j = i + 1; j < marcas.length; j++) {
-        const minimo = (marcas[i]._diametro + marcas[j]._diametro) / 2 + 2;
-        let dx = pos[j].x - pos[i].x, dy = pos[j].y - pos[i].y;
-        let d = Math.hypot(dx, dy);
-        if (d >= minimo) continue;
-        if (d < .5) { dx = Math.cos(j); dy = Math.sin(j); d = 1; }
-        const empuje = (minimo - d) / 2;
-        pos[i] = pos[i].subtract(L.point(dx / d * empuje, dy / d * empuje));
-        pos[j] = pos[j].add(L.point(dx / d * empuje, dy / d * empuje));
-        movio = true;
-      }
-    }
-    if (!movio) break;
-  }
-  marcas.forEach((m, i) => m.setLatLng(mapa.layerPointToLatLng(pos[i])));
+  if (MAPA && CAPA_SECC) MapaMT.separarBurbujas(MAPA.mapa, CAPA_SECC);
 }
 
 function popupSeccional(sec) {
@@ -1045,6 +1043,35 @@ async function cargarEvolucion() {
 const COLORES_EV = ['--gr-1', '--gr-2', '--gr-3', '--gr-4'];
 const PUNTOS_EV = ['circle', 'rect', 'triangle', 'rectRot'];
 
+/* Una muestra de 30 × 12 px de una serie: su trazo (con el mismo
+   borderDash) y su punto en el medio. Es la imagen que la leyenda dibuja en
+   lugar del cuadradito de color. */
+function muestraLinea(color, guion, punto) {
+  const cv = document.createElement('canvas');
+  cv.width = 30; cv.height = 12;
+  const g = cv.getContext('2d');
+  g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 2;
+  g.setLineDash(guion || []);
+  g.beginPath(); g.moveTo(1, 6); g.lineTo(29, 6); g.stroke();
+  g.setLineDash([]);
+  g.beginPath();
+  if (punto === 'rect') g.rect(11.5, 2.5, 7, 7);
+  else if (punto === 'triangle') { g.moveTo(15, 2); g.lineTo(19, 9.5); g.lineTo(11, 9.5); g.closePath(); }
+  else if (punto === 'rectRot') { g.moveTo(15, 1.5); g.lineTo(19.5, 6); g.lineTo(15, 10.5); g.lineTo(10.5, 6); g.closePath(); }
+  else g.arc(15, 6, 3.5, 0, Math.PI * 2);
+  g.fill();
+  return cv;
+}
+
+function leyendaDeLineas(chart) {
+  const color = (chart.options.plugins.legend.labels || {}).color || Chart.defaults.color;
+  return chart.data.datasets.map((ds, i) => ({
+    text: ds.label, datasetIndex: i, hidden: !chart.isDatasetVisible(i), fontColor: color,
+    pointStyle: muestraLinea(ds.borderColor, ds.borderDash, ds.pointStyle),
+    fillStyle: ds.borderColor, strokeStyle: ds.borderColor, lineWidth: 0,
+  }));
+}
+
 function dibujarEvolucion(i, p, tomas) {
   const cv = document.getElementById('ev-' + i);
   if (!cv) return;
@@ -1068,9 +1095,13 @@ function dibujarEvolucion(i, p, tomas) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        // La leyenda dibuja la línea (llena o punteada), no un cuadradito.
+        // La leyenda dibuja la MUESTRA de cada línea: el trazo como es (lleno
+        // o punteado) con su forma de punto. Con pointStyle 'line' Chart.js
+        // dibujaba siempre un trazo lleno y la quinta serie (punteada) se veía
+        // igual que la primera (G5-31).
         legend: { display: p.lineas.length > 1, position: 'bottom',
-                  labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 26, font: { size: 12 } } },
+                  labels: { usePointStyle: true, pointStyleWidth: 32, boxHeight: 12, padding: 14,
+                            font: { size: 12 }, generateLabels: leyendaDeLineas } },
         tooltip: { callbacks: {
           title: (c) => tomas[c[0].dataIndex].titulo,
           label: (x) => ` ${x.dataset.label}: ${p.tipo_dato === 'escala' || p.tipo_dato === 'ranking'

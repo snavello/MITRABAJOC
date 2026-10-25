@@ -140,7 +140,7 @@ html[data-tema="laguna"] .cargando { color: var(--lg-gris); }
 html[data-tema="laguna"] .spin { border-color: var(--lg-linea); border-top-color: var(--lg-turq); }
 
 /* el vacío: el de Encuestas en /app */
-html[data-tema="laguna"] .sin-convenio { border: 1px dashed var(--lg-linea2); border-radius: 10px; background: #fff; }
+html[data-tema="laguna"] .sin-convenio { border: 1px solid var(--lg-linea); border-radius: 10px; background: #fff; }
 html[data-tema="laguna"] .vacio-ico { background: var(--lg-agua-f); color: var(--lg-turq-osc); }
 html[data-tema="laguna"] .vacio-t { font-size: 17px; font-weight: 600; color: var(--lg-tinta); }
 html[data-tema="laguna"] .vacio-x { color: var(--lg-gris); }

@@ -67,11 +67,14 @@ html[data-tema="noticiero"] {
   --bn-punto: var(--nt-coral);
   --bn-sel: var(--nt-indigo);
   --bn-sel-txt: var(--nt-marfil);
-  /* Los avatares: tres tintas del diario (de la marca, con la paleta del
-     sindicato), todas con blanco encima legible. */
-  --av-1: var(--nt-indigo);
-  --av-2: var(--nt-indigo-2);
-  --av-3: var(--nt-tinta-1);
+  /* Los avatares: la tinta, el coral mezclado con tinta y un índigo
+     agrisado (de la marca, con la paleta del sindicato), todos con blanco
+     encima legible. Los tres índigos de antes casi no se distinguían y los
+     remitentes se confundían (G3-15): ahora van separados por luz (tinta
+     oscura, índigo gris medio) y por tono (el coral). */
+  --av-1: var(--nt-tinta);
+  --av-2: color-mix(in oklab, var(--nt-coral) 70%, var(--nt-tinta));
+  --av-3: color-mix(in oklab, var(--nt-indigo) 75%, var(--nt-fondo));
   accent-color: var(--nt-indigo);
 }
 
