@@ -8920,3 +8920,20 @@ explicaciones de Uso de IA sin nombres de archivos internos. Queda a medias
 G8-30: el campo de los topes sigue sin aceptar puntos de miles (lo exige
 `test_topes_base_imponible`), con la regla escrita al lado. Tests:
 `test_tema_plataforma.py`.
+
+**Bloque 5a, la app del afiliado** (Trabajador 0.54.01), los 14 hallazgos
+aceptados: un beneficio sin foto es una lámina tipográfica (no una caja
+vacía) y una novedad sin foto no lleva miniatura de relleno; el carrusel con
+más de seis beneficios dice «N de M» y en el teléfono tiene flechas de 44 px
+al pie; el pronóstico de «Tu día» escribe el día de cada máxima; en
+Novedades, un solo nodo por entrada y «Leer ›»; Mis aportes con un solo
+título y ARCA sin «↗» (con «se abre en otra pestaña» para lectores). En
+Trámites: primero lo que pide atención y después por último movimiento
+(`tramites_de_trabajador` por `actualizado` desc), un color por estado
+(terminado en gris, respondido en verde, en tratamiento en ámbar, iniciado
+con contorno), el último mensaje en dos renglones y la barra de cuatro tramos
+con sus nombres. Y el número de expediente sin tildes: `db.prefijo_expediente`
+quita los acentos de la sigla (salía «UNIÓF…») y el buscador encuentra el
+número con o sin tilde. Los ya cargados no se reescriben. Queda el mismo
+problema en el código de credencial (`db.generar_codigo_credencial`). Tests:
+`test_auditoria_afiliado.py`.
