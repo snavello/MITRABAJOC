@@ -168,6 +168,11 @@ html[data-tema="noticiero"] .marca-fecha { color: var(--nt-tinta-3); font-family
 html[data-tema="noticiero"] .marca-fecha strong {
   color: var(--nt-tinta); font: 700 14px/1.3 var(--nt-f-cond); letter-spacing: 1px; text-transform: uppercase;
 }
+/* «Volver al panel» (R4-01): el mismo de Resultados de encuesta. */
+html[data-tema="noticiero"] .marca-volver {
+  color: var(--nt-tinta); font: 700 12.5px/1 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.1px; text-transform: uppercase;
+}
+html[data-tema="noticiero"] .marca-volver:hover { background: var(--nt-hoja-2); }
 
 /* ============================================================
    3. El título y la bajada
@@ -381,6 +386,8 @@ html[data-tema="noticiero"][data-paleta="sindicato"] .marca-barra .marca-nombre 
 html[data-tema="noticiero"][data-paleta="sindicato"] img.marca-colmena[src="/logo-plataforma-oscuro"] { content: normal; }
 html[data-tema="noticiero"][data-paleta="sindicato"] .marca-fecha { color: rgba(255, 255, 255, .72); }
 html[data-tema="noticiero"][data-paleta="sindicato"] .marca-fecha strong { color: #fff; }
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-volver { color: #fff; }
+html[data-tema="noticiero"][data-paleta="sindicato"] .marca-volver:hover { background: rgba(255, 255, 255, .1); }
 
 /* ============================================================
    9. Teléfono

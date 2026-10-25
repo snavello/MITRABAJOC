@@ -153,7 +153,7 @@
     // si algún día la arma otro y mete algo raro en el `url(...)`.
     var logo = o.logo ? '<i style="background-image:url(' +
                String(o.logo).replace(/["'\\()\s]/g, "") + ')"></i>' : "";
-    return L.marker([lat, lon], {
+    var marca = L.marker([lat, lon], {
       icon: L.divIcon({
         className: "mt-burbuja-wrap",
         html: '<span class="mt-burbuja' + (o.seleccionada ? " sel" : "") +
@@ -165,6 +165,88 @@
       // de 46 px tapa a la de 18 y no hay forma de tocarla.
       zIndexOffset: Math.round(1000 - d)
     });
+    // Dónde está de verdad y cuánto mide: lo que necesita `separarBurbujas`
+    // para correrla sin perder su lugar real.
+    marca._lugar = L.latLng(lat, lon);
+    marca._diametro = d;
+    return marca;
+  }
+
+  /* ---------- Encuadre de los mapas de tablero ----------
+
+     Una sola regla para los DOS mapas de burbujas (Panel Sindical y
+     Resultados de encuesta), así encuadran igual: todas las burbujas adentro,
+     con 56 px de aire (el radio de la más grande más un margen: con 30 la de
+     Córdoba quedaba cortada contra el borde) y nunca más cerca que zoom 7
+     (con dos seccionales en la misma ciudad, el mapa se iba a nivel de
+     barrio y se perdía dónde quedan).
+
+     El zoom va en pasos de un cuarto solo en estos mapas: con pasos enteros
+     el que cabía en el alto saltaba un nivel entero hacia afuera y entraban
+     Chile y el sur de Brasil con las burbujas chiquitas en el medio. Se mide
+     el contenedor ANTES de encuadrar: si Leaflet lo midió cuando estaba
+     oculto, encuadraría contra un tamaño que no es. */
+  function encuadrarTablero(mapa, puntos) {
+    if (!mapa || !puntos || !puntos.length) return;
+    mapa.options.zoomSnap = 0.25;
+    mapa.options.zoomDelta = 0.5;
+    mapa.invalidateSize(false);
+    mapa.fitBounds(L.latLngBounds(puntos), { padding: [56, 56], maxZoom: 7 });
+  }
+
+  /* Dos seccionales de la misma ciudad (o del conurbano) caen una arriba de
+     la otra y la de abajo no se puede tocar. Si dos burbujas se pisan en
+     pantalla, se corren en sentido opuesto hasta quedar separadas por 6 px,
+     y una línea fina las une con su punto real, que queda marcado con un
+     puntito: la burbuja se movió para poder tocarla, el lugar no.
+
+     `capa` es el layerGroup de las burbujas (hechas con `burbuja`, que les
+     anota `_lugar` y `_diametro`). Las guías van en una capa propia que se
+     rehace cada vez. Hay que llamarla de nuevo al terminar un zoom: en
+     píxeles, la distancia entre dos burbujas cambia con cada nivel. */
+  function separarBurbujas(mapa, capa) {
+    if (!mapa || !capa) return;
+    // Las guías viven en el MAPA y no en la capa: quien llama tira la capa
+    // vieja y arma otra en cada filtro, y unas guías colgadas de la vieja
+    // quedarían dibujadas para siempre.
+    if (mapa._mtGuias) { mapa.removeLayer(mapa._mtGuias); mapa._mtGuias = null; }
+    var marcas = capa.getLayers().filter(function (m) { return m._lugar; });
+    if (!marcas.length) return;
+    var real = marcas.map(function (m) { return mapa.latLngToLayerPoint(m._lugar); });
+    var pos = real.map(function (p) { return p.clone(); });
+    for (var vuelta = 0; vuelta < 12; vuelta++) {
+      var movio = false;
+      for (var i = 0; i < marcas.length; i++) {
+        for (var j = i + 1; j < marcas.length; j++) {
+          var minimo = (marcas[i]._diametro + marcas[j]._diametro) / 2 + 6;
+          var dx = pos[j].x - pos[i].x, dy = pos[j].y - pos[i].y;
+          var d = Math.sqrt(dx * dx + dy * dy);
+          if (d >= minimo) continue;
+          // Encimadas del todo: se abren en diagonal, siempre igual.
+          if (d < 0.5) { dx = 1; dy = -0.6; d = Math.sqrt(1.36); }
+          var empuje = (minimo - d) / 2;
+          var ex = dx / d * empuje, ey = dy / d * empuje;
+          pos[i] = L.point(pos[i].x - ex, pos[i].y - ey);
+          pos[j] = L.point(pos[j].x + ex, pos[j].y + ey);
+          movio = true;
+        }
+      }
+      if (!movio) break;
+    }
+    var guias = L.layerGroup();
+    // La tinta del modelo, no un color de marca: es una línea de lectura.
+    var tinta = getComputedStyle(document.documentElement).getPropertyValue("--tinta").trim() || "#1e2b3c";
+    marcas.forEach(function (m, k) {
+      var corrida = pos[k].distanceTo(real[k]) > 2;
+      m.setLatLng(corrida ? mapa.layerPointToLatLng(pos[k]) : m._lugar);
+      if (!corrida) return;
+      L.polyline([m._lugar, m.getLatLng()], { color: tinta, weight: 1, opacity: 0.55,
+        interactive: false }).addTo(guias);
+      L.circleMarker(m._lugar, { radius: 2.5, color: tinta, fillColor: tinta, weight: 0, fillOpacity: 0.7,
+        interactive: false }).addTo(guias);
+    });
+    guias.addTo(mapa);
+    mapa._mtGuias = guias;
   }
 
   /* Enlace "cómo llegar" según el teléfono.
@@ -214,6 +296,8 @@
   global.MapaMT = {
     crear: crear,
     burbuja: burbuja,
+    encuadrarTablero: encuadrarTablero,
+    separarBurbujas: separarBurbujas,
     colorEscala: colorEscala,
     diametroBurbuja: diametroBurbuja,
     ESCALA: ESCALA,

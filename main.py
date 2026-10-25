@@ -4568,6 +4568,9 @@ def encuesta_resultados_pagina(request: Request, encuesta_id: int):
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "encuesta_id": encuesta_id, "titulo_encuesta": e["titulo"],
         "encuestas_cortes": encuestas.CORTES,
+        # "Esta semana" del indicador Ritmo se cuenta contra el hoy del
+        # SERVIDOR (fechas.py), no contra el reloj del navegador.
+        "hoy": fechas.hoy_texto(),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 

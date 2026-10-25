@@ -782,8 +782,10 @@ p.vacio-exp { margin: 0; padding: 22px 8px; font-size: 13px; }
 /* El explorador en el teléfono (G7-04): cada fila es una ficha con el nombre
    de cada columna arriba de su valor (data-et lo pone explorador.js), en dos
    columnas; nada se sale de la pantalla. Las pestañas se deslizan y un
-   fundido a la derecha avisa que siguen. */
-@media (max-width: 600px) {
+   fundido a la derecha avisa que siguen. Desde 760 px (R4-03), como el
+   resto de la pantalla: entre 600 y 760 la tabla de diez columnas se
+   deslizaba de costado. */
+@media (max-width: 760px) {
   .tabs-datos { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
     mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); padding-right: 28px; }
   .tabla-scroll { margin: 0; padding: 0; overflow: visible; }
@@ -808,4 +810,71 @@ p.vacio-exp { margin: 0; padding: 22px 8px; font-size: 13px; }
 @media (min-width: 761px) {
   .v2-grid > .panel[data-panel="formato"] { display: flex; flex-direction: column; }
   .v2-grid > .panel[data-panel="formato"] .c-wrap { flex: 1 1 auto; min-height: 200px; height: auto; }
+}
+
+/* ---------- R4-01: «Volver al panel» ----------
+   El tablero se abre desde la tira del panel y vuelve a ella. El parcial del
+   encabezado pone "Volver" después de la fecha; acá va ANTES (a la
+   izquierda), y dice adónde vuelve. En el teléfono queda la flecha sola,
+   con el nombre para el lector de pantalla: con el texto no entra. */
+.marca-barra .marca-volver { order: 1; margin-left: auto; min-height: 44px; padding: 0 8px; border-radius: 999px; }
+.marca-barra .marca-volver::after { content: "al panel"; }
+.marca-barra .marca-volver + .marca-colmena,
+.marca-barra .marca-fecha + .marca-volver { margin-left: auto; }
+.marca-barra .marca-fecha { order: 2; margin-left: 14px; }
+.marca-barra .marca-colmena { order: 3; }
+@media (max-width: 600px) {
+  /* :root suma peso: la hoja del modelo le pone su tamaño de letra. */
+  :root .marca-barra a.marca-volver { font-size: 0; min-width: 44px; justify-content: center; padding: 0; }
+  :root .marca-barra a.marca-volver::after { content: none; }
+  :root .marca-barra a.marca-volver svg { width: 22px; height: 22px; }
+  /* Logo, flecha, rango y Colm3na en 358 px: el aire entre ellos se achica. */
+  :root .marca-barra { gap: 8px; }
+  :root .marca-barra .marca-fecha { margin-left: 0; }
+  :root .marca-barra .marca-logo { max-width: 140px; }
+}
+
+/* ---------- R4-03: el explorador en el teléfono, ficha compacta ----------
+   Cada fila marcada `.ficha` (explorador.js) se lee en tres renglones: lo
+   que se viene a buscar arriba (`.f-tit`, y a la derecha `.f-val`), y un
+   renglón gris con lo demás (`.f-meta`, que en escritorio no existe). El
+   resto de las celdas está en "Ver", que se estira sobre toda la ficha: se
+   toca en cualquier parte, con al menos 44 px de alto. */
+.tabla-exp td.f-meta, .tab-d .t-corto { display: none; }
+@media (max-width: 760px) {
+  .tabla-exp tr.ficha { position: relative; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px;
+    min-height: 44px; padding: 12px 14px; cursor: pointer; }
+  .tabla-exp tr.ficha td { display: none; }
+  .tabla-exp tr.ficha td::before { display: none; }
+  .tabla-exp tr.ficha td.f-tit { display: block; grid-column: 1; grid-row: 1; font-weight: 700; font-size: 14px; line-height: 1.3; }
+  .tabla-exp tr.ficha td.f-val { display: block; grid-column: 2; grid-row: 1; text-align: right; white-space: nowrap;
+    font-weight: 700; font-size: 14px; line-height: 1.3; }
+  .tabla-exp tr.ficha td.f-val .barra-lectura { width: 40px; }
+  .tabla-exp tr.ficha td.f-meta { display: block; grid-column: 1 / -1; grid-row: 2; font-size: 12.5px; line-height: 1.35;
+    color: var(--gris); }
+  .tabla-exp tr.ficha td.f-ver { display: block; position: absolute; inset: 0; padding: 0; z-index: 1; }
+  .tabla-exp tr.ficha td.f-ver .btn-ver,
+  .v2-tabs ~ .tabla-scroll .tabla-exp tr.ficha:hover td.f-ver .btn-ver {
+    display: block; width: 100%; height: 100%; padding: 0; border: 0 !important; border-radius: inherit;
+    background: transparent !important; color: transparent !important; font-size: 0; }
+  .tabla-exp tr.ficha td.f-ver .btn-ver:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+  .tabla-exp tr.ficha:active { background: var(--papel); }
+  /* La pestaña larga se acorta: «Notificacio» cortada no decía que había
+     más. Con "Notif." las tres entran. */
+  .tab-d { padding: 7px 11px; }
+  .tab-d .t-largo { display: none; }
+  .tab-d .t-corto { display: inline; }
+}
+
+/* El + y el − del mapa no van en el teléfono: ahí se acerca con dos dedos,
+   y en un mapa angosto los botones tapaban una burbuja (R4-10). */
+@media (max-width: 760px) {
+  .mapa-panel .leaflet-control-zoom { display: none; }
+}
+
+/* ---------- R4-04: los controles del período a 44 px en el teléfono ---------- */
+@media (max-width: 760px) {
+  .v2-presets { gap: 8px; }
+  .v2-barra .v2-chip, .v2-barra .v2-btn-filtros { min-height: 44px; }
+  .v2-barra .v2-reiniciar { padding: 12px 4px; min-height: 44px; }
 }

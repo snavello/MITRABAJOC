@@ -136,6 +136,9 @@ html[data-tema="laguna"] .enc-c3-claro {
 }
 html[data-tema="laguna"] .marca-fecha { margin-right: 186px; color: var(--lg-gris2); font-family: var(--lg-fuente); }
 html[data-tema="laguna"] .marca-fecha strong { color: var(--lg-tinta); font-weight: 700; }
+/* «Volver al panel» (R4-01): el mismo de Resultados de encuesta. */
+html[data-tema="laguna"] .marca-volver { color: var(--lg-tinta); font-weight: 600; font-size: 14px; font-family: var(--lg-fuente); }
+html[data-tema="laguna"] .marca-volver:hover { background: var(--lg-claro); }
 
 /* ============================================================
    3. El título y la bajada
@@ -160,7 +163,6 @@ html[data-tema="laguna"] .v2-tablero {
 }
 html[data-tema="laguna"] .v2-tablero::before,
 html[data-tema="laguna"] .v2-tablero::after { display: none; }
-html[data-tema="laguna"] .v2-kicker { color: var(--lg-turq-osc); font-family: var(--lg-fuente); letter-spacing: .14em; }
 html[data-tema="laguna"] .v2-tablero > .v2-cargador {
   background: linear-gradient(90deg, transparent, var(--lg-turq), transparent) no-repeat; background-size: 40% 100%;
 }
@@ -189,8 +191,12 @@ html[data-tema="laguna"] .v2-reiniciar {
 html[data-tema="laguna"] .v2-reiniciar:hover { background: transparent; text-decoration-color: var(--lg-tinta); }
 /* Los cuatro principales en tarjetas blancas; el resto en una tira. */
 html[data-tema="laguna"] .v2-hero { background: #fff; box-shadow: 0 0 0 1px var(--lg-linea); border-radius: 12px; padding: 16px; }
-html[data-tema="laguna"] .v2-hero .et,
-html[data-tema="laguna"] .v2-mini .et { color: var(--lg-gris); font-size: 12.5px; font-weight: 600; }
+/* Los nueve rótulos de indicador, iguales entre sí y a los de Resultados
+   de encuesta (R4-11): 11 px, mayúsculas espaciadas, en gris. Antes el
+   primero iba así y los otros ocho en minúscula. */
+html[data-tema="laguna"] :is(.v2-kicker, .v2-hero .et, .v2-mini .et) {
+  color: var(--lg-gris2); font: 700 11px/1.3 var(--lg-fuente); letter-spacing: .12em; text-transform: uppercase;
+}
 html[data-tema="laguna"] .v2-hero .val {
   font-family: var(--lg-fuente); font-weight: 600; letter-spacing: -.02em; color: var(--lg-tinta);
   font-variant-numeric: tabular-nums;
@@ -308,6 +314,8 @@ html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { display: bloc
 html[data-tema="laguna"][data-paleta="sindicato"] .enc-c3-claro { display: none; }
 html[data-tema="laguna"][data-paleta="sindicato"] .marca-fecha { margin-right: 0; color: rgba(255, 255, 255, .72); }
 html[data-tema="laguna"][data-paleta="sindicato"] .marca-fecha strong { color: #fff; }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-volver { color: #fff; }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-volver:hover { background: rgba(255, 255, 255, .1); }
 
 /* ============================================================
    9. Teléfono

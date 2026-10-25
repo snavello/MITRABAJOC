@@ -12,7 +12,7 @@
 import { cloneElement } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { html } from "panel/html";
-import { fmtN, fmtM, fFecha } from "panel/formato";
+import { fmtN, fmtM, fFecha, fCorta, fCuil } from "panel/formato";
 import { useCorrer } from "panel/kpis";
 
 const FORMATO = { nuevo: "Ley 27.802", clasico: "Anterior" };
@@ -20,21 +20,31 @@ const TAGS_TRAMITE = { resuelto: ["ok", "Resuelto"], en_proceso: ["proc", "En pr
 
 const ver = (abrir, det) => html`<button type="button" class="btn-ver" onClick=${() => abrir(det)}>Ver</button>`;
 
+/* En el teléfono cada fila es una ficha COMPACTA de tres renglones (R4-03):
+   arriba lo que se viene a leer (`f-tit`, y a la derecha `f-val`), abajo un
+   renglón gris con el resto (`f-meta`, una celda que en escritorio no se
+   ve) y el "Ver" estirado sobre toda la ficha, así se toca en cualquier
+   parte. Las demás celdas quedan para la tabla de escritorio y para "Ver".
+   Lo arma el CSS (panel.css); acá solo se marcan las celdas. */
+const meta = (...partes) => html`<td class="f-meta">${partes.filter((x) => x !== null && x !== undefined && x !== "").join(" · ")}</td>`;
+const diaCorto = (iso) => (iso ? fCorta(String(iso).slice(0, 10)) : "");
+
 /* Las cinco tablas de la v1: encabezado, fila y el texto del total. */
 export const TABLAS = {
   recibos: {
     sub: "Recibos con diferencias · ordenados por monto observado · identificados solo si el trabajador los envió",
     cols: ["Fecha", "Seccional", "Empresa", "Categoría", "Formato", "Bruto", "Dif. detectada", "Enviado", "Trabajador", "CUIL", ""],
     total: (n) => n + " recibos observados",
-    fila: (r, abrir) => html`<tr>
-      <td>${fFecha(r.fecha)}</td><td>${r.seccional}</td><td>${r.empresa}</td><td>${r.categoria}</td>
+    fila: (r, abrir) => html`<tr class="ficha">
+      <td>${fFecha(r.fecha)}</td><td>${r.seccional}</td><td class="f-tit">${r.empresa}</td><td>${r.categoria}</td>
       <td>${FORMATO[r.formato] || "—"}</td><td class="monto">${fmtM(r.bruto)}</td>
-      <td class="monto" style=${{ color: "var(--error)" }}>${fmtM(r.diferencia)}</td>
+      <td class="monto f-val" style=${{ color: "var(--error)" }}>${fmtM(r.diferencia)}</td>
       <td>${r.enviado ? "✓ Sí" : "—"}</td><td>${r.trabajador_nombre || "Anónimo"}</td>
-      <td class="monto">${r.trabajador_cuil || "—"}</td>
-      <td>${ver(abrir, { tipo: "recibo", ruta: "detalle/recibo/" + r.id, previa: { procesado_en: r.fecha,
+      <td class="monto">${fCuil(r.trabajador_cuil)}</td>
+      <td class="f-ver">${ver(abrir, { tipo: "recibo", ruta: "detalle/recibo/" + r.id, previa: { procesado_en: r.fecha,
         enviado: r.enviado, estado: r.diferencia > 0 ? "con_diferencias" : "ok", trabajador_nombre: r.trabajador_nombre,
-        trabajador_cuil: r.trabajador_cuil, empresa: r.empresa, categoria: r.categoria, formato: r.formato, bruto: r.bruto } })}</td></tr>`,
+        trabajador_cuil: r.trabajador_cuil, empresa: r.empresa, categoria: r.categoria, formato: r.formato, bruto: r.bruto } })}</td>
+      ${meta(diaCorto(r.fecha), r.seccional, r.trabajador_nombre || "Anónimo")}</tr>`,
   },
   tramites: {
     sub: "Detalle de trámites del período · respetando seccional y estado seleccionados",
@@ -42,34 +52,37 @@ export const TABLAS = {
     total: (n) => n + " trámites",
     fila: (t, abrir) => {
       const tg = TAGS_TRAMITE[t.estado] || ["rev", t.estado];
-      return html`<tr>
-        <td class="monto">${t.numero}</td><td>${fFecha(t.fecha_inicio)}</td><td>${t.seccional}</td><td>${t.tipo}</td>
-        <td><span class=${"tag " + tg[0]}>${tg[1]}</span></td>
+      return html`<tr class="ficha">
+        <td class="monto">${t.numero}</td><td>${fFecha(t.fecha_inicio)}</td><td>${t.seccional}</td><td class="f-tit">${t.tipo}</td>
+        <td class="f-val"><span class=${"tag " + tg[0]}>${tg[1]}</span></td>
         <td class="monto">${t.dias === null ? "—" : t.dias + " d" + (t.sigue ? " y sigue" : "")}</td>
-        <td>${ver(abrir, { tipo: "tramite", ruta: "detalle/tramite/" + t.id, previa: { numero_expediente: t.numero,
-          tipo_titulo: t.tipo, estado_label: tg[1], seccional: t.seccional, creado: t.fecha_inicio } })}</td></tr>`;
+        <td class="f-ver">${ver(abrir, { tipo: "tramite", ruta: "detalle/tramite/" + t.id, previa: { numero_expediente: t.numero,
+          tipo_titulo: t.tipo, estado_label: tg[1], seccional: t.seccional, creado: t.fecha_inicio } })}</td>
+        ${meta(t.numero, diaCorto(t.fecha_inicio), t.seccional, t.dias === null ? null : t.dias + " d" + (t.sigue ? " y sigue" : ""))}</tr>`;
     },
   },
   consultas: {
     sub: "Consultas de los afiliados al asistente · el tema seleccionado en el gráfico filtra esta lista",
     cols: ["Fecha", "Seccional", "Tema consultado", "Resolución", ""],
     total: (n) => n + " consultas",
-    fila: (c, abrir) => html`<tr>
-      <td>${fFecha(c.fecha)}</td><td>${c.seccional}</td><td>${c.tema}</td>
-      <td><span class=${"tag " + (c.resuelta_por_bot ? "ok" : "rev")}>${c.resuelta_por_bot ? "Resuelta por el bot" : "Derivada"}</span></td>
-      <td>${ver(abrir, { tipo: "consulta", ruta: "detalle/consulta/" + c.id, previa: { fecha: c.fecha,
-        seccional: c.seccional, tema: c.tema, resuelta_por_bot: c.resuelta_por_bot } })}</td></tr>`,
+    fila: (c, abrir) => html`<tr class="ficha">
+      <td>${fFecha(c.fecha)}</td><td>${c.seccional}</td><td class="f-tit">${c.tema}</td>
+      <td class="f-val"><span class=${"tag " + (c.resuelta_por_bot ? "ok" : "rev")}>${c.resuelta_por_bot ? "Resuelta por el bot" : "Derivada"}</span></td>
+      <td class="f-ver">${ver(abrir, { tipo: "consulta", ruta: "detalle/consulta/" + c.id, previa: { fecha: c.fecha,
+        seccional: c.seccional, tema: c.tema, resuelta_por_bot: c.resuelta_por_bot } })}</td>
+      ${meta(diaCorto(c.fecha), c.seccional)}</tr>`,
   },
   notificaciones: {
     sub: "Envíos diarios por seccional y tipo · el tipo seleccionado en el gráfico filtra esta lista",
     cols: ["Fecha", "Seccional", "Tipo", "Enviadas", "Leídas", "Sin leer", "Tasa de lectura", ""],
     total: (n) => n + " filas (día × seccional × tipo)",
-    fila: (n, abrir) => html`<tr>
-      <td>${fFecha(n.fecha)}</td><td>${n.seccional}</td><td>${n.etiqueta}</td>
+    fila: (n, abrir) => html`<tr class="ficha">
+      <td>${fFecha(n.fecha)}</td><td>${n.seccional}</td><td class="f-tit">${n.etiqueta}</td>
       <td class="monto">${fmtN(n.enviadas)}</td><td class="monto">${fmtN(n.leidas)}</td><td class="monto">${fmtN(n.sin_leer)}</td>
-      <td><span class="barra-lectura"><i style=${{ width: n.tasa_lectura + "%" }}></i></span><span class="monto">${n.tasa_lectura} %</span></td>
-      <td>${ver(abrir, { tipo: "notif", dia: n.fecha, ruta: "detalle/notificaciones?dia=" + encodeURIComponent(n.fecha) +
-        "&seccional_id=" + (n.seccional_id || 0) + "&tipo=" + encodeURIComponent(n.tipo) })}</td></tr>`,
+      <td class="f-val"><span class="barra-lectura"><i style=${{ width: n.tasa_lectura + "%" }}></i></span><span class="monto">${String(n.tasa_lectura).replace(".", ",")} %</span></td>
+      <td class="f-ver">${ver(abrir, { tipo: "notif", dia: n.fecha, ruta: "detalle/notificaciones?dia=" + encodeURIComponent(n.fecha) +
+        "&seccional_id=" + (n.seccional_id || 0) + "&tipo=" + encodeURIComponent(n.tipo) })}</td>
+      ${meta(diaCorto(n.fecha), n.seccional, fmtN(n.leidas) + " de " + fmtN(n.enviadas) + " leídas")}</tr>`,
   },
   // Con afiliado elegido el servidor manda una fila por notificación (modo "afiliado").
   notificaciones_afiliado: {
@@ -84,6 +97,11 @@ export const TABLAS = {
 };
 
 const NOMBRE_TAB = { recibos: "Recibos", tramites: "Trámites", consultas: "Consultas", notificaciones: "Notificaciones" };
+// En el teléfono, el rótulo corto (R4-03): "Notificacio" cortada no decía que había más.
+const CORTO_TAB = { consultas: "Consultas", notificaciones: "Notif." };
+const rotuloTab = (t) => (CORTO_TAB[t] && CORTO_TAB[t] !== NOMBRE_TAB[t]
+  ? html`<span class="t-largo">${NOMBRE_TAB[t]}</span><span class="t-corto">${CORTO_TAB[t]}</span>`
+  : NOMBRE_TAB[t]);
 
 function subDe(def, estado) {
   if (!estado.afiliado) return def.sub;
@@ -93,6 +111,8 @@ function subDe(def, estado) {
 }
 
 const SIN_FILAS = [];
+// La clase que trae la fila (la ficha del teléfono) más la de su entrada.
+const con = (tr, clase) => [tr.props.class, clase].filter(Boolean).join(" ");
 
 /* El total de una pestaña corre hasta su número, como los indicadores. */
 function Cuenta({ valor }) {
@@ -145,10 +165,10 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
     const tr = def.fila(it, abrirDetalle);
     if (desde >= 0) {
       return i >= desde
-        ? cloneElement(tr, { class: "v2-fila-nueva", style: { animationDelay: Math.min((i - desde) * 45, 450) + "ms" } })
+        ? cloneElement(tr, { class: con(tr, "v2-fila-nueva"), style: { animationDelay: Math.min((i - desde) * 45, 450) + "ms" } })
         : tr;
     }
-    return cloneElement(tr, { class: "v2-fila-arma", style: { animationDelay: Math.min(i * 45, 450) + "ms" } });
+    return cloneElement(tr, { class: con(tr, "v2-fila-arma"), style: { animationDelay: Math.min(i * 45, 450) + "ms" } });
   };
   /* En el teléfono cada fila es una ficha (G7-04): cada celda lleva el
      nombre de su columna para dibujarlo encima del valor. Se pone sobre el
@@ -169,7 +189,7 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
         style=${{ translate: ind.x + "px 0", width: ind.w + "px" }}></span>`}
       ${tabs.map((t) => html`
         <button type="button" role="tab" aria-selected=${estado.tab === t} class=${"tab-d" + (estado.tab === t ? " act" : "")} data-t=${t}
-          onClick=${() => despachar({ tipo: "tab", valor: t })}>${NOMBRE_TAB[t]}
+          onClick=${() => despachar({ tipo: "tab", valor: t })}>${rotuloTab(t)}
           <span class="cnt" id=${"cnt-" + t}><${Cuenta} valor=${contadores[t]} /></span></button>`)}
     </div>
     ${items.length || !datos ? html`<div class="tabla-scroll">
@@ -279,7 +299,7 @@ function DetRecibo({ d }) {
     <div class="det-sub" key="sub">${fFecha(d.procesado_en)}${d.periodo ? " · período " + d.periodo : ""}</div>
     ${!d.enviado && html`<div class="det-anonimo" key="anonimo">Recibo anonimizado: el trabajador no lo envió al sindicato, así que no se muestra ningún dato que lo identifique.</div>`}
     <${Fila} key="resultado" k="Resultado"><span class=${"tag " + (d.estado === "ok" ? "ok" : "dif")}>${d.estado === "ok" ? "Sin diferencias" : "Con diferencias"}</span><//>
-    ${d.trabajador_nombre && html`<${Fila} key="trabajador" k="Trabajador">${d.trabajador_nombre} · CUIL ${d.trabajador_cuil}<//>`}
+    ${d.trabajador_nombre && html`<${Fila} key="trabajador" k="Trabajador">${d.trabajador_nombre} · CUIL ${fCuil(d.trabajador_cuil)}<//>`}
     <${Fila} key="empresa" k="Empresa">${d.empresa}<//>
     <${Fila} key="categoria" k="Categoría">${d.categoria}<//>
     <${Fila} key="formato" k="Formato">${d.formato === "nuevo" ? "Ley 27.802 (Anexo III)" : "Anterior"}<//>
@@ -310,7 +330,7 @@ function DetTramite({ d }) {
     <h3 key="titulo">${d.numero_expediente}</h3>
     <div class="det-sub" key="sub">${d.tipo_titulo}</div>
     <${Fila} key="estado" k="Estado">${d.estado_label}<//>
-    ${d.cuil !== undefined && html`<${Fila} key="trabajador" k="Trabajador">${d.trabajador_nombre || "—"} · CUIL ${d.cuil}<//>`}
+    ${d.cuil !== undefined && html`<${Fila} key="trabajador" k="Trabajador">${d.trabajador_nombre || "—"} · CUIL ${fCuil(d.cuil)}<//>`}
     <${Fila} key="seccional" k="Seccional">${d.seccional}<//>
     <${Fila} key="iniciado" k="Iniciado">${fFecha(d.creado)}<//>
     ${d.actualizado !== undefined && html`<${Fila} key="actualizado" k="Última actualización">${fFecha(d.actualizado)}<//>`}
@@ -375,7 +395,7 @@ function Envio({ n }) {
       ${dest === "error" && html`<div class="det-sub">No se pudo cargar el listado.</div>`}
       ${dest && typeof dest === "object" && html`
         ${dest.items.length ? dest.items.map((p) => html`<div class="det-linea">
-          <span>${p.nombre} <span style=${{ color: "var(--gris)" }}>· ${p.cuil} · ${p.seccional}</span></span>
+          <span>${p.nombre} <span style=${{ color: "var(--gris)" }}>· ${fCuil(p.cuil)} · ${p.seccional}</span></span>
           <span class="imp" style=${{ color: p.leida_en ? "var(--ok)" : "var(--gris)" }}>${p.leida_en ? "✓ Leída " + fFecha(p.leida_en) : "Sin leer"}</span></div>`)
           : html`<div class="det-sub">Sin destinatarios.</div>`}
         ${dest.recortado && html`<div class="det-sub" style=${{ marginTop: "6px" }}>Mostrando ${dest.items.length} de ${fmtN(dest.total)} destinatarios.</div>`}`}

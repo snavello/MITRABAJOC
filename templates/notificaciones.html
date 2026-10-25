@@ -224,7 +224,17 @@ function grupoDe(fh) {
   if (dias === 0) return { clave: fecha, texto: 'Hoy', porMes: false };
   if (dias === 1) return { clave: fecha, texto: 'Ayer', porMes: false };
   if (dias >= 0 && dias <= 31) return { clave: fecha, texto: `${m[3]}/${m[2]}/${m[1]}`, porMes: false };
-  return { clave: `${m[1]}-${m[2]}`, texto: `${MESES[+m[2] - 1]} ${m[1]}`, porMes: true };
+  // El mes que queda partido por el corte de los 31 días (hoy 25/10: del
+  // 24/09 para atrás) ya tiene días sueltos arriba: un hito "Septiembre
+  // 2026" debajo de 30/09 y 26/09 parecía otro mes (G3-13). Ese dice
+  // "Antes, en septiembre".
+  const mesCorte = HOY ? new Date(Date.UTC(+HOY.slice(0, 4), +HOY.slice(5, 7) - 1, +HOY.slice(8, 10) - 31))
+    .toISOString().slice(0, 7) : '';
+  const nombre = MESES[+m[2] - 1];
+  const texto = `${m[1]}-${m[2]}` === mesCorte
+    ? `Antes, en ${nombre.toLowerCase()}${m[1] !== HOY.slice(0, 4) ? ' ' + m[1] : ''}`
+    : `${nombre} ${m[1]}`;
+  return { clave: `${m[1]}-${m[2]}`, texto, porMes: true };
 }
 function hora(fh) { const m = /(\d{2}:\d{2})$/.exec(fh || ''); return m ? m[1] : ''; }
 function diaCorto(fh) { const m = /^\d{4}-(\d{2})-(\d{2})/.exec(fh || ''); return m ? `${m[2]}/${m[1]}` : ''; }
