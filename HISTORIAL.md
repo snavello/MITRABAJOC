@@ -8849,3 +8849,17 @@ pestañas y «Olvidé mi clave» a 44 px, la banda tipo pasaporte con
 `aria-hidden`, «Tu CUIL» en el ingreso del panel y la recuperación con sus
 tres pasos y la salida para quien no tiene mail en el sindicato. Tests:
 `test_componentes_compartidos.py`, un test por hallazgo.
+
+**Bloque 2a, la app de la empresa en los dos modelos** (Trabajador 0.53.01):
+la portada y la app del empleador dejan la retícula de colmena y se ven en
+Laguna y en Noticiero, con hojas propias (`static/temas/<modelo>-empresa*.css`)
+calcadas de las del afiliado. La empresa elige su modelo como el afiliado
+(`CuentaEmpleador.tema`, migración `b3e7f1c9a2d5`, `POST /api/empresa/apariencia`,
+sección Apariencia del perfil); vacío = el modelo de afiliados de su sindicato
+(`Sindicato.tema_afiliados`), y `db.apariencia_de` acepta el rol `empresa`.
+La portada copia la estructura de la del afiliado y cada acceso dice su
+estado real (mensajes sin leer, trámites en curso) con los últimos tres
+mensajes debajo; cada pestaña tiene su `titulo-pagina`; Salir con rótulo;
+estados vacíos con qué hacer. De paso: el ancho «mitad»/«tercio» de los
+campos del formulario de trámite de empresa no funcionaba (el CSS apuntaba a
+un id que no existe). Tests: `test_tema_empresa.py`.
