@@ -1,0 +1,428 @@
+<meta charset="utf-8">
+<title>Auditoría de diseño</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mesa de revisión: lista de pantallas a la izquierda, la pantalla con sus capturas y sus hallazgos a la derecha. */
+:root {
+  --bg: #f3f4f7; --hoja: #ffffff; --tinta: #16203a; --gris: #5d6680; --linea: #dde1ea;
+  --acento: #d9821a; --acento-suave: #fdf1e1; --tinta-suave: #e8ebf3;
+  --alta: #c23b2b; --alta-suave: #fbe9e6; --media: #b7791f; --media-suave: #fcf3e2; --baja: #3d6fa8; --baja-suave: #e7eff9;
+  --ok: #1f7a55; --ok-suave: #e2f3ea; --dejar: #6b7280; --dejar-suave: #eef0f3; --cambio: #7b4bb3; --cambio-suave: #f1eafa;
+  --sombra: 0 1px 2px rgb(22 32 58 / .06), 0 4px 14px rgb(22 32 58 / .06);
+  --f-tit: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-txt: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10141f; --hoja: #181e2c; --tinta: #e7ebf5; --gris: #9aa3bb; --linea: #2b3347;
+  --acento: #f0a54a; --acento-suave: #3a2c19; --tinta-suave: #232b3d;
+  --alta: #f07a6a; --alta-suave: #3b1f1c; --media: #e5b25a; --media-suave: #3a2f19; --baja: #7fb0e8; --baja-suave: #1b2a3e;
+  --ok: #5cc596; --ok-suave: #173326; --dejar: #a3a9b6; --dejar-suave: #262b36; --cambio: #b892ec; --cambio-suave: #2b2140;
+  --sombra: 0 1px 2px rgb(0 0 0 / .3), 0 4px 14px rgb(0 0 0 / .25); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10141f; --hoja: #181e2c; --tinta: #e7ebf5; --gris: #9aa3bb; --linea: #2b3347;
+  --acento: #f0a54a; --acento-suave: #3a2c19; --tinta-suave: #232b3d;
+  --alta: #f07a6a; --alta-suave: #3b1f1c; --media: #e5b25a; --media-suave: #3a2f19; --baja: #7fb0e8; --baja-suave: #1b2a3e;
+  --ok: #5cc596; --ok-suave: #173326; --dejar: #a3a9b6; --dejar-suave: #262b36; --cambio: #b892ec; --cambio-suave: #2b2140;
+  --sombra: 0 1px 2px rgb(0 0 0 / .3), 0 4px 14px rgb(0 0 0 / .25); color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--tinta); font: 15px/1.5 var(--f-txt); }
+button, select, textarea, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.cab { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--hoja); border-bottom: 1px solid var(--linea);
+  padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--hoja); }
+.cab-fila { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; max-width: 1500px; margin: 0 auto; }
+.cab h1 { font: 700 26px/1 var(--f-tit); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.cab h1 span { color: var(--acento); }
+.cab .sub { color: var(--gris); font-size: 13px; }
+.avance { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 220px; }
+.avance-barra { flex: 1; height: 8px; border-radius: 4px; background: var(--tinta-suave); overflow: hidden; display: flex; }
+.avance-barra i { display: block; height: 100%; transition: width .3s ease; }
+.avance-txt { font: 500 13px var(--f-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.filtros { display: flex; flex-wrap: wrap; gap: 6px; max-width: 1500px; margin: 10px auto 0; align-items: center; }
+.filtros .et { font-size: 12px; color: var(--gris); text-transform: uppercase; letter-spacing: .08em; margin-right: 2px; }
+.chip { border: 1px solid var(--linea); background: var(--hoja); border-radius: 999px; padding: 4px 11px; font-size: 13px; line-height: 1.3; }
+.chip[aria-pressed="true"] { background: var(--tinta); color: var(--hoja); border-color: var(--tinta); }
+.filtros .sep { width: 1px; height: 20px; background: var(--linea); margin: 0 6px; }
+
+.mesa { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 20px; max-width: 1500px; margin: 0 auto;
+  padding-block: 20px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.indice { position: sticky; top: 130px; align-self: start; max-height: calc(100vh - 150px); overflow: auto; background: var(--hoja);
+  border: 1px solid var(--linea); border-radius: 10px; padding: 8px; }
+.indice h3 { font: 600 12px var(--f-txt); text-transform: uppercase; letter-spacing: .09em; color: var(--gris); margin: 12px 8px 4px; }
+.indice button { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; text-align: left; background: none; border: 0;
+  padding: 7px 8px; border-radius: 7px; }
+.indice button:hover { background: var(--tinta-suave); }
+.indice button[aria-current="true"] { background: var(--acento-suave); }
+.indice .nom { font-size: 14px; min-width: 0; }
+.indice .cuenta { font: 500 12px var(--f-mono); color: var(--gris); align-self: center; }
+.indice .cuenta b { color: var(--alta); font-weight: 500; }
+.indice .hecho { color: var(--ok); }
+.selector-tel { display: none; }
+
+.hoja { min-width: 0; display: grid; gap: 18px; }
+.ficha { background: var(--hoja); border: 1px solid var(--linea); border-radius: 12px; padding: 18px 20px; box-shadow: var(--sombra); }
+.ficha .kick { font: 600 12px var(--f-txt); color: var(--acento); text-transform: uppercase; letter-spacing: .1em; }
+.ficha h2 { font: 700 30px/1.05 var(--f-tit); margin: 4px 0 8px; text-wrap: balance; }
+.ficha .resumen { margin: 0; max-width: 72ch; }
+.nota { display: inline-flex; align-items: baseline; gap: 2px; font: 700 28px/1 var(--f-tit); float: right; margin-left: 14px; }
+.nota small { font: 500 13px var(--f-mono); color: var(--gris); }
+.fortalezas { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; color: var(--gris); font-size: 14px; }
+.fortalezas li::before { content: "＋ "; color: var(--ok); font-weight: 600; }
+.ruta { font: 400 12.5px var(--f-mono); color: var(--gris); }
+
+.visor, .h, .ficha { scroll-margin-top: 150px; }
+.visor { background: var(--hoja); border: 1px solid var(--linea); border-radius: 12px; overflow: hidden; box-shadow: var(--sombra); }
+.visor-barra { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--linea); }
+.visor-barra .grupo { display: inline-flex; border: 1px solid var(--linea); border-radius: 8px; overflow: hidden; }
+.visor-barra .grupo button { border: 0; background: none; padding: 5px 12px; font-size: 13px; }
+.visor-barra .grupo button + button { border-left: 1px solid var(--linea); }
+.visor-barra .grupo button[aria-pressed="true"] { background: var(--tinta); color: var(--hoja); }
+.visor-barra .aviso { font-size: 12.5px; color: var(--gris); margin-left: auto; }
+.lienzo { max-height: 72vh; overflow: auto; background: repeating-conic-gradient(var(--tinta-suave) 0 25%, transparent 0 50%) 0 0 / 18px 18px; display: flex; justify-content: center; }
+.lienzo .marco { position: relative; width: 100%; max-width: 1100px; }
+.lienzo.tel .marco { max-width: 420px; }
+.lienzo img { display: block; width: 100%; height: auto; }
+.zona { position: absolute; border: 3px solid var(--acento); border-radius: 6px; box-shadow: 0 0 0 9999px rgb(10 14 25 / .35); pointer-events: none;
+  transition: all .25s ease; }
+.zona b { position: absolute; top: -26px; left: -3px; background: var(--acento); color: #1b1203; font: 600 12px var(--f-mono); padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+
+.lista-h { display: grid; gap: 12px; }
+.h { background: var(--hoja); border: 1px solid var(--linea); border-left: 5px solid var(--c); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; }
+.h.alta { --c: var(--alta); } .h.media { --c: var(--media); } .h.baja { --c: var(--baja); }
+.h.decidido { opacity: .78; }
+.h-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.h-cab h4 { margin: 0; font: 600 17px/1.25 var(--f-txt); flex: 1 1 260px; min-width: 0; }
+.h-id { font: 500 12px var(--f-mono); color: var(--gris); }
+.etq { display: flex; flex-wrap: wrap; gap: 5px; }
+.etq span { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--tinta-suave); color: var(--gris); }
+.etq .sev { font-weight: 600; }
+.alta .etq .sev { background: var(--alta-suave); color: var(--alta); }
+.media .etq .sev { background: var(--media-suave); color: var(--media); }
+.baja .etq .sev { background: var(--baja-suave); color: var(--baja); }
+.h p { margin: 0; max-width: 80ch; }
+.h .lbl { font: 600 11.5px var(--f-txt); text-transform: uppercase; letter-spacing: .08em; color: var(--gris); display: block; margin-bottom: 1px; }
+.h .sug { background: var(--acento-suave); border-radius: 8px; padding: 9px 12px; }
+.h .arch { font: 400 12.5px var(--f-mono); color: var(--gris); overflow-wrap: anywhere; }
+.h .ver { border: 0; background: none; color: var(--acento); font-size: 13px; padding: 0; justify-self: start; text-decoration: underline; text-underline-offset: 3px; }
+.decide { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 4px; border-top: 1px dashed var(--linea); margin-top: 2px; }
+.decide button { border: 1px solid var(--linea); background: var(--hoja); border-radius: 8px; padding: 7px 14px; font-size: 14px; font-weight: 500; min-height: 40px; }
+.decide button[data-e="aceptar"][aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: #fff; }
+.decide button[data-e="dejar"][aria-pressed="true"] { background: var(--dejar); border-color: var(--dejar); color: #fff; }
+.decide button[data-e="cambio"][aria-pressed="true"] { background: var(--cambio); border-color: var(--cambio); color: #fff; }
+.decide .estado { font-size: 13px; color: var(--gris); margin-left: auto; }
+.cambio-caja { display: grid; gap: 6px; }
+.cambio-caja textarea { width: 100%; min-height: 70px; border: 1px solid var(--linea); border-radius: 8px; padding: 8px 10px; background: var(--bg); resize: vertical; }
+.cambio-caja .fila { display: flex; gap: 8px; align-items: center; }
+.cambio-caja .guardar { background: var(--cambio); color: #fff; border: 0; border-radius: 8px; padding: 7px 14px; font-weight: 500; }
+.nota-dada { font-size: 14px; background: var(--cambio-suave); border-radius: 8px; padding: 8px 12px; }
+.nada { color: var(--gris); padding: 18px; background: var(--hoja); border: 1px dashed var(--linea); border-radius: 10px; }
+.aviso-db { max-width: 1500px; margin: 10px auto 0; font-size: 13px; background: var(--media-suave); color: var(--tinta); border-radius: 8px; padding: 8px 12px; }
+.resumen-gral { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.resumen-gral div { background: var(--bg); border-radius: 10px; padding: 12px; }
+.resumen-gral b { display: block; font: 700 28px/1 var(--f-tit); font-variant-numeric: tabular-nums; }
+.resumen-gral span { font-size: 13px; color: var(--gris); }
+.exportar textarea { width: 100%; min-height: 120px; font: 12px var(--f-mono); border: 1px solid var(--linea); border-radius: 8px; padding: 8px; background: var(--bg); }
+
+@media (max-width: 860px) {
+  .cab { position: static; }
+  .visor, .h, .ficha { scroll-margin-top: 12px; }
+  .mesa { grid-template-columns: minmax(0, 1fr); }
+  .indice { display: none; }
+  .selector-tel { display: block; }
+  .selector-tel select { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--linea); background: var(--hoja); }
+  .avance { margin-left: 0; width: 100%; }
+  .ficha h2 { font-size: 26px; }
+  .lienzo { max-height: 62vh; }
+}
+.verif { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.verif li { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: baseline; }
+.verif .vid { font: 600 12px/1 ui-monospace, Menlo, monospace; color: var(--gris); }
+.verif .vres { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bg); white-space: nowrap; }
+.verif .vres.resuelto { color: var(--ok); } .verif .vres.sigue { color: #b42318; } .verif .vres.parcial { color: #8a5a00; }
+.verif-tit { margin: 16px 0 0; font-size: 13px; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .04em; }
+@media (max-width: 560px) { .verif li { grid-template-columns: auto 1fr; } .verif .vid { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="cab">
+  <div class="cab-fila">
+    <div>
+      <h1 id="titulo">Auditoría de diseño <span></span></h1>
+      <div class="sub" id="sub">Cargando los hallazgos…</div>
+    </div>
+    <div class="avance" aria-label="Avance de las decisiones">
+      <div class="avance-barra" id="barra"></div>
+      <span class="avance-txt" id="avance-txt">0 / 0</span>
+    </div>
+  </div>
+  <div class="filtros" id="filtros">
+    <span class="et">Gravedad</span>
+    <button class="chip" data-f="sev" data-v="alta" aria-pressed="true">Alta</button>
+    <button class="chip" data-f="sev" data-v="media" aria-pressed="true">Media</button>
+    <button class="chip" data-f="sev" data-v="baja" aria-pressed="true">Baja</button>
+    <span class="sep"></span>
+    <span class="et">Estado</span>
+    <button class="chip" data-f="est" data-v="pendiente" aria-pressed="true">Sin decidir</button>
+    <button class="chip" data-f="est" data-v="aceptar" aria-pressed="true">Aceptadas</button>
+    <button class="chip" data-f="est" data-v="dejar" aria-pressed="true">Quedan como están</button>
+    <button class="chip" data-f="est" data-v="cambio" aria-pressed="true">Con otro cambio</button>
+  </div>
+  <div class="aviso-db" id="aviso-db" hidden></div>
+</header>
+
+<div class="mesa">
+  <nav class="indice" id="indice" aria-label="Pantallas"></nav>
+  <main class="hoja" id="hoja">
+    <div class="selector-tel"><label for="sel-pantalla" class="ruta">Pantalla</label><select id="sel-pantalla"></select></div>
+    <div id="contenido"><div class="nada">Cargando…</div></div>
+  </main>
+</div>
+
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (tag, attrs = {}, ...hijos) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? '' : v);
+    }
+    for (const h of hijos.flat()) if (h != null) n.append(h.nodeType ? h : document.createTextNode(String(h)));
+    return n;
+  };
+  const SEV = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+  const EST = { aceptar: 'Aceptada', dejar: 'Queda como está', cambio: 'Otro cambio', pendiente: 'Sin decidir' };
+  const VISTA = { escritorio: 'Escritorio', telefono: 'Teléfono', ambas: 'Escritorio y teléfono' };
+  // Los nombres de las variantes llegan en datos.json (`variantes`); estos son los de respaldo.
+  let MODELO = { ambos: 'Todas las variantes', base: 'Sin variante' };
+  let CLAVE = 'xsd-decisiones';
+
+  let datos = null, decisiones = {}, db = null, actual = null;
+  const filtros = { sev: new Set(['alta', 'media', 'baja']), est: new Set(['pendiente', 'aceptar', 'dejar', 'cambio']) };
+  const visorEstado = { modelo: null, vista: 'd', zona: null };
+
+  // ---------- guardado: db del artifact, o el navegador si no hay db ----------
+  function guardarLocal() { try { localStorage.setItem(CLAVE, JSON.stringify(decisiones)); } catch (e) {} }
+  function leerLocal() { try { return JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { return {}; } }
+  async function guardar(id, cuerpo) {
+    decisiones[id] = cuerpo; pintarAvance(); pintarIndice();
+    if (db) {
+      try { await db.doc('decisiones/' + id).set(cuerpo); return true; }
+      catch (e) { avisoDb('No se pudo guardar en el informe (' + (e && e.code || 'error') + '). Queda guardado en este navegador.'); }
+    }
+    guardarLocal(); return false;
+  }
+  function avisoDb(t) { const a = $('#aviso-db'); a.textContent = t; a.hidden = false; }
+
+  function todos() { return datos.pantallas.flatMap(p => p.hallazgos.map(h => ({ ...h, _p: p }))); }
+  function estadoDe(id) { return (decisiones[id] && decisiones[id].estado) || 'pendiente'; }
+
+  function pintarAvance() {
+    const hs = todos(); const n = hs.length; const c = { aceptar: 0, dejar: 0, cambio: 0 };
+    hs.forEach(h => { const e = estadoDe(h.id); if (c[e] != null) c[e]++; });
+    const hechos = c.aceptar + c.dejar + c.cambio;
+    const barra = $('#barra'); barra.textContent = '';
+    [['aceptar', 'var(--ok)'], ['dejar', 'var(--dejar)'], ['cambio', 'var(--cambio)']].forEach(([k, col]) =>
+      barra.append(el('i', { style: `width:${n ? c[k] / n * 100 : 0}%;background:${col}`, title: EST[k] + ': ' + c[k] })));
+    $('#avance-txt').textContent = hechos + ' / ' + n + ' decididas';
+  }
+
+  function visibles(p) { return p.hallazgos.filter(h => filtros.sev.has(h.severidad) && filtros.est.has(estadoDe(h.id))); }
+
+  function pintarIndice() {
+    const nav = $('#indice'); nav.textContent = '';
+    const sel = $('#sel-pantalla'); sel.textContent = '';
+    nav.append(el('button', { 'aria-current': actual === '__resumen' ? 'true' : 'false', onclick: () => abrir('__resumen') },
+      el('span', { class: 'nom', text: 'Resumen y decisiones' }), el('span', { class: 'cuenta' })));
+    sel.append(el('option', { value: '__resumen', text: 'Resumen y decisiones' }));
+    let app = null, og = null;
+    for (const p of datos.pantallas) {
+      if (p.app !== app) { app = p.app; nav.append(el('h3', { text: app })); og = el('optgroup', { label: app }); sel.append(og); }
+      const pend = p.hallazgos.filter(h => estadoDe(h.id) === 'pendiente');
+      const altas = pend.filter(h => h.severidad === 'alta').length;
+      const cuenta = p.hallazgos.length === 0 ? el('span', { class: 'cuenta hecho', text: '✓' })
+        : pend.length === 0 ? el('span', { class: 'cuenta hecho', text: '✓ ' + p.hallazgos.length })
+        : el('span', { class: 'cuenta' }, altas ? el('b', { text: altas + '●  ' }) : null, pend.length + '');
+      nav.append(el('button', { 'aria-current': actual === p.id ? 'true' : 'false', onclick: () => abrir(p.id), title: pend.length + ' sin decidir' },
+        el('span', { class: 'nom', text: p.nombre }), cuenta));
+      og.append(el('option', { value: p.id, text: p.nombre + (pend.length ? '  (' + pend.length + ')' : '  ✓') }));
+    }
+    sel.value = actual || '__resumen';
+  }
+
+  function abrir(id) {
+    actual = id; visorEstado.zona = null;
+    const p = datos.pantallas.find(x => x.id === id);
+    if (p && p.capturas.length) {
+      const modelos = [...new Set(p.capturas.map(c => c.modelo))];
+      if (!modelos.includes(visorEstado.modelo)) visorEstado.modelo = modelos[0];
+      if (!p.capturas.some(c => c.vista === visorEstado.vista)) visorEstado.vista = p.capturas[0].vista;
+    }
+    try { history.replaceState(null, '', '#' + id); } catch (e) {}
+    pintarIndice(); pintar(); window.scrollTo({ top: 0 });
+  }
+
+  function pintar() {
+    const c = $('#contenido'); c.textContent = '';
+    if (actual === '__resumen') return pintarResumen(c);
+    const p = datos.pantallas.find(x => x.id === actual);
+    const ficha = el('section', { class: 'ficha' },
+      p.nota != null ? el('div', { class: 'nota', title: 'Nota del revisor' }, String(p.nota), el('small', { text: '/10' })) : null,
+      el('div', { class: 'kick', text: p.app }),
+      el('h2', { text: p.nombre }),
+      p.url ? el('div', { class: 'ruta', text: p.url }) : null,
+      el('p', { class: 'resumen', text: p.resumen || '' }),
+      p.fortalezas && p.fortalezas.length ? el('ul', { class: 'fortalezas' }, p.fortalezas.map(f => el('li', { text: f }))) : null,
+      p.verificacion && p.verificacion.length ? el('div', { class: 'verif-tit', text: 'Lo que se había pedido en la primera vuelta' }) : null,
+      p.verificacion && p.verificacion.length ? el('ul', { class: 'verif' }, p.verificacion.map(v => el('li', {},
+        el('span', { class: 'vid', text: v.id }),
+        el('span', { class: 'vres ' + String(v.resultado || '').split(' ')[0], text: v.resultado || '' }),
+        el('span', { text: (v.titulo ? v.titulo + ': ' : '') + (v.comentario || '') })))) : null);
+    c.append(ficha);
+    if (p.capturas.length) c.append(pintarVisor(p));
+    const hs = visibles(p);
+    const lista = el('section', { class: 'lista-h', 'aria-label': 'Hallazgos' });
+    if (!p.hallazgos.length) lista.append(el('div', { class: 'nada', text: 'El revisor no encontró nada importante en esta pantalla.' }));
+    else if (!hs.length) lista.append(el('div', { class: 'nada', text: 'Ningún hallazgo coincide con los filtros de arriba.' }));
+    hs.forEach(h => lista.append(pintarHallazgo(h, p)));
+    c.append(lista);
+  }
+
+  function capturaActual(p) { return p.capturas.find(x => x.modelo === visorEstado.modelo && x.vista === visorEstado.vista) || p.capturas[0]; }
+
+  function pintarVisor(p) {
+    const modelos = [...new Set(p.capturas.map(x => x.modelo))];
+    const vistas = [...new Set(p.capturas.map(x => x.vista))];
+    const cap = capturaActual(p);
+    const barra = el('div', { class: 'visor-barra' });
+    if (modelos.length > 1) barra.append(el('div', { class: 'grupo', role: 'group', 'aria-label': 'Modelo' },
+      modelos.map(m => el('button', { 'aria-pressed': String(m === cap.modelo), text: MODELO[m] || m, onclick: () => { visorEstado.modelo = m; visorEstado.zona = null; pintar(); } }))));
+    barra.append(el('div', { class: 'grupo', role: 'group', 'aria-label': 'Vista' },
+      vistas.map(v => el('button', { 'aria-pressed': String(v === cap.vista), text: v === 'd' ? 'Escritorio' : 'Teléfono', onclick: () => { visorEstado.vista = v; visorEstado.zona = null; pintar(); } }))));
+    if (datos.aviso_capturas) barra.append(el('span', { class: 'aviso', text: datos.aviso_capturas }));
+    const marco = el('div', { class: 'marco' }, el('img', { src: 'img/' + cap.archivo, alt: p.nombre + ', ' + (MODELO[cap.modelo] || '') + ', ' + (cap.vista === 'd' ? 'escritorio' : 'teléfono'), loading: 'lazy', width: cap.ancho, height: cap.alto }));
+    const z = visorEstado.zona;
+    if (z && z.archivo === cap.archivo && z.zona) {
+      const r = z.zona;
+      marco.append(el('div', { class: 'zona', style: `left:${r.x / cap.origAncho * 100}%;top:${r.y / cap.origAlto * 100}%;width:${r.w / cap.origAncho * 100}%;height:${r.h / cap.origAlto * 100}%` }, el('b', { text: z.id })));
+    }
+    const lienzo = el('div', { class: 'lienzo' + (cap.vista === 'm' ? ' tel' : ''), id: 'lienzo' }, marco);
+    if (z && z.archivo === cap.archivo && z.zona) requestAnimationFrame(() => {
+      const top = z.zona.y / cap.origAlto * marco.getBoundingClientRect().height;
+      lienzo.scrollTo({ top: Math.max(0, top - 80), behavior: 'smooth' });
+    });
+    return el('section', { class: 'visor', 'aria-label': 'Capturas' }, barra, lienzo);
+  }
+
+  function verEnCaptura(h, p) {
+    const cap = p.capturas.find(x => x.archivo === h.capturaJpg);
+    if (!cap) return;
+    visorEstado.modelo = cap.modelo; visorEstado.vista = cap.vista;
+    visorEstado.zona = { archivo: cap.archivo, zona: h.zona, id: h.id };
+    pintar(); const v = document.querySelector('.visor'); if (v) v.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function pintarHallazgo(h, p) {
+    const est = estadoDe(h.id);
+    const dec = decisiones[h.id] || {};
+    const art = el('article', { class: 'h ' + h.severidad + (est !== 'pendiente' ? ' decidido' : ''), id: 'h-' + h.id });
+    art.append(el('div', { class: 'h-cab' }, el('h4', { text: h.titulo }), el('span', { class: 'h-id', text: h.id })));
+    art.append(el('div', { class: 'etq' },
+      el('span', { class: 'sev', text: SEV[h.severidad] || h.severidad }),
+      el('span', { text: h.categoria }), el('span', { text: MODELO[h.modelo] || h.modelo }), el('span', { text: VISTA[h.vista] || h.vista }),
+      el('span', { text: 'Esfuerzo ' + h.esfuerzo }),
+      h._afecta ? el('span', { text: 'Afecta: ' + h._afecta }) : null));
+    art.append(el('p', {}, el('span', { class: 'lbl', text: 'Qué pasa' }), h.problema));
+    art.append(el('p', { class: 'sug' }, el('span', { class: 'lbl', text: 'Sugerencia' }), h.sugerencia));
+    if (h.archivos && h.archivos.length) art.append(el('div', { class: 'arch', text: h.archivos.join(' · ') }));
+    if (h.capturaJpg && p.capturas.some(x => x.archivo === h.capturaJpg))
+      art.append(el('button', { class: 'ver', onclick: () => verEnCaptura(h, p), text: h.zona ? 'Ver dónde está en la captura' : 'Ver la captura' }));
+
+    const caja = el('div', { class: 'cambio-caja', hidden: est !== 'cambio' || !!dec.nota ? true : null });
+    const ta = el('textarea', { id: 'ta-' + h.id, placeholder: 'Qué cambio querés en lugar de la sugerencia…' });
+    ta.value = dec.nota || '';
+    caja.append(ta, el('div', { class: 'fila' },
+      el('button', { class: 'guardar', onclick: async () => {
+        const t = ta.value.trim(); if (!t) { ta.focus(); return; }
+        await guardar(h.id, { estado: 'cambio', nota: t, hallazgo: h.titulo, pantalla: p.id, actualizado: new Date().toISOString() }); pintar();
+      } }, 'Guardar mi cambio')));
+    const notaDada = est === 'cambio' && dec.nota ? el('div', { class: 'nota-dada' }, el('span', { class: 'lbl', text: 'Tu cambio' }), dec.nota,
+      ' ', el('button', { class: 'ver', onclick: () => { notaDada.hidden = true; caja.hidden = false; ta.focus(); } }, 'Editar')) : null;
+    const boton = (e, txt) => el('button', { 'data-e': e, 'aria-pressed': String(est === e), onclick: async () => {
+      if (e === 'cambio') { caja.hidden = false; if (notaDada) notaDada.hidden = true; ta.focus(); return; }
+      if (est === e) await guardar(h.id, { estado: 'pendiente', pantalla: p.id, actualizado: new Date().toISOString() });
+      else await guardar(h.id, { estado: e, hallazgo: h.titulo, pantalla: p.id, actualizado: new Date().toISOString() });
+      pintar();
+    } }, txt);
+    art.append(el('div', { class: 'decide' }, boton('aceptar', 'Aceptar'), boton('dejar', 'Dejar como está'), boton('cambio', 'Sugerir otro cambio'),
+      el('span', { class: 'estado', text: est === 'pendiente' ? '' : EST[est] })));
+    if (notaDada) art.append(notaDada);
+    art.append(caja);
+    return art;
+  }
+
+  function pintarResumen(c) {
+    const hs = todos(); const cnt = { pendiente: 0, aceptar: 0, dejar: 0, cambio: 0 }; const sev = { alta: 0, media: 0, baja: 0 };
+    hs.forEach(h => { cnt[estadoDe(h.id)]++; sev[h.severidad] = (sev[h.severidad] || 0) + 1; });
+    const ficha = el('section', { class: 'ficha' },
+      el('div', { class: 'kick', text: 'Resumen' }),
+      el('h2', { text: datos.pantallas.filter(p => p.capturas.length).length + ' pantallas, ' + hs.length + ' hallazgos' }),
+      el('p', { class: 'resumen', text: datos.intro }),
+      el('div', { class: 'resumen-gral', style: 'margin-top:14px' },
+        [['Gravedad alta', sev.alta], ['Gravedad media', sev.media], ['Gravedad baja', sev.baja], ['Sin decidir', cnt.pendiente], ['Aceptadas', cnt.aceptar], ['Quedan como están', cnt.dejar], ['Con otro cambio', cnt.cambio]]
+          .map(([t, n]) => el('div', {}, el('b', { text: String(n) }), el('span', { text: t })))));
+    c.append(ficha);
+    const peores = datos.pantallas.filter(p => p.nota != null).sort((a, b) => a.nota - b.nota).slice(0, 8);
+    c.append(el('section', { class: 'ficha' }, el('div', { class: 'kick', text: 'Por dónde empezar' }),
+      el('h2', { text: 'Las pantallas con nota más baja' }),
+      el('ul', { class: 'fortalezas', style: 'color:var(--tinta)' }, peores.map(p => el('li', {},
+        el('button', { class: 'ver', onclick: () => abrir(p.id), text: p.app + ' · ' + p.nombre }), '  ' + p.nota + '/10, ' + p.hallazgos.length + ' hallazgos')))));
+    const ex = el('section', { class: 'ficha exportar' }, el('div', { class: 'kick', text: 'Tus decisiones' }),
+      el('p', { class: 'resumen', text: db ? 'Cada botón que tocás queda guardado en el informe y Claude lo lee desde ahí. Cuando termines, avisale en la conversación.' :
+        'Este navegador no pudo conectarse al guardado del informe. Tus decisiones quedan en este navegador: cuando termines, copiá este texto y pegalo en la conversación.' }));
+    if (!db) { const t = el('textarea', { readonly: true }); t.value = JSON.stringify(decisiones); ex.append(t,
+      el('button', { class: 'chip', onclick: async () => { try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); } } }, 'Copiar')); }
+    c.append(ex);
+  }
+
+  document.querySelectorAll('#filtros .chip').forEach(b => b.addEventListener('click', () => {
+    const s = filtros[b.dataset.f]; const v = b.dataset.v;
+    if (s.has(v)) s.delete(v); else s.add(v);
+    b.setAttribute('aria-pressed', String(s.has(v))); pintar();
+  }));
+  $('#sel-pantalla').addEventListener('change', e => abrir(e.target.value));
+
+  async function iniciar() {
+    datos = await (await fetch('datos.json')).json();
+    const nP = datos.pantallas.filter(p => p.capturas.length).length;
+    MODELO = Object.assign(MODELO, datos.variantes || {});
+    if (datos.clave) CLAVE = datos.clave;
+    if (datos.titulo) { document.title = datos.titulo; $('#titulo span').textContent = datos.sistema || ''; }
+    $('#sub').textContent = nP + ' pantallas · ' + (datos.subtitulo || 'escritorio y teléfono · revisado contra Impeccable y las reglas de diseño de la casa');
+    decisiones = leerLocal();
+    const h = (location.hash || '').slice(1);
+    actual = datos.pantallas.some(p => p.id === h) ? h : '__resumen';
+    pintarAvance(); pintarIndice(); pintar();
+    try {
+      db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    } catch (e) { db = null; }
+    if (!db) { avisoDb('Las decisiones se guardan en este navegador. Al terminar, copiá el texto de «Resumen y decisiones» y pegalo en la conversación.'); pintar(); return; }
+    db.collection('decisiones').onSnapshot(snap => {
+      const nuevas = {}; snap.docs.forEach(d => { nuevas[d.id] = d.data(); });
+      const locales = leerLocal();
+      for (const [k, v] of Object.entries(locales)) if (!nuevas[k]) nuevas[k] = v;
+      decisiones = nuevas; pintarAvance(); pintarIndice();
+      const activo = document.activeElement;
+      if (!(activo && activo.tagName === 'TEXTAREA')) pintar();
+    }, e => avisoDb('Se cortó la conexión con el guardado (' + e.code + '). Lo que marques queda en este navegador.'));
+  }
+  iniciar().catch(e => { $('#contenido').textContent = 'No se pudieron cargar los hallazgos: ' + e; });
+})();
+</script>

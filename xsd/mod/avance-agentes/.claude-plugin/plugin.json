@@ -1,0 +1,1 @@
+{ "name": "avance-agentes", "version": "0.1.0", "description": "Panel con el avance del plan y lo que hace cada agente", "types": "./types/index.d.ts" }

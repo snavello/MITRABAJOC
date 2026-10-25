@@ -1,0 +1,1058 @@
+[
+ {
+  "id": "R1-01",
+  "titulo": "En Noticiero, el resaltador de la razón social pisa el renglón de abajo",
+  "modelo": "noticiero",
+  "vista": "telefono",
+  "categoria": "tipografía",
+  "severidad": "media",
+  "problema": "En el teléfono, «METALÚRGICA DEL SUR SRL» ocupa dos renglones. El título tiene un interlineado de .95 y la banda coral del primer renglón baja hasta tocar la parte de arriba de «DEL SUR SRL». La banda del segundo renglón cae por debajo de la línea de base. Se ven dos franjas que se enciman con las letras, como un error de impresión. En el afiliado no pasa porque el saludo es un nombre de pila y entra en un renglón. Una razón social larga es lo normal en la empresa. Rompe la regla de typeset.md (el texto real tiene que funcionar en cada corte) y la de craft-floor («correr el texto real y arreglar lo que desborda»).",
+  "sugerencia": "En static/temas/noticiero-empresa-portada.css, subir `line-height` de `.pt-gremio .hola` a 1.06 solo en esta portada. Achicar la banda del `em` a `transparent 62%, coral 62%, coral 88%, transparent 88%` para que quede dentro de la caja de cada renglón. Probar con una razón social de tres renglones, por ejemplo «Cooperativa de Trabajo Metalúrgica del Sur Limitada».",
+  "archivos": [
+   "static/temas/noticiero-empresa-portada.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-m-emp-portada.png",
+  "zona": {
+   "x": 30,
+   "y": 290,
+   "w": 600,
+   "h": 160
+  },
+  "pantalla": "emp-portada",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R1-02",
+  "titulo": "Lo no leído se marca en rojo de error, no con el color del modelo",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "consistencia",
+  "severidad": "media",
+  "problema": "En la empresa, el punto de «sin leer» sobre el avatar es rojo: `--lg-mal` (#b3261e) en Laguna y `--nt-globo` en Noticiero. En la misma pantalla del afiliado ese punto va en el acento del modelo (turquesa o coral). Además, en Noticiero la burbuja sin leer de la empresa es gris frío (rgb 239,237,235) sobre el papel cálido, mientras que la del afiliado lleva un tinte coral. El rojo, en esta casa, es un color de estado (impago, diferencia, error): un aviso nuevo del sindicato se lee como un problema. También rompe «un sistema, no un rejunte»: la misma acción se ve distinta según la app.",
+  "sugerencia": "Copiar las reglas del afiliado (static/temas/*-notificaciones.css). En laguna-empresa.css línea 202, el `.nh-av::after` va con el turquesa del modelo en vez de `--lg-mal`. En noticiero-empresa.css, el punto (línea 240) va en `--nt-coral-ind`, y la burbuja sin leer (línea 244) en `color-mix(in oklab, var(--nt-coral) 10%, var(--nt-carta))` con borde coral al 35%. El rojo queda solo para el globo con el número de la barra de pestañas.",
+  "archivos": [
+   "static/temas/laguna-empresa.css",
+   "static/temas/noticiero-empresa.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-d-emp-notificaciones.png",
+  "zona": {
+   "x": 466,
+   "y": 270,
+   "w": 508,
+   "h": 185
+  },
+  "pantalla": "emp-notificaciones",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R1-03",
+  "titulo": "La bajada no dice cuántos avisos faltan leer",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "consistencia",
+  "severidad": "baja",
+  "problema": "El afiliado ve «20 sin leer de 47» y «Marcar todas leídas» debajo del título. La empresa solo ve «Los avisos que te manda Unión Obrera Metalúrgica.» y tiene que contar los puntos rojos. El servidor ya calcula `no_leidas` (sale en el globo de la pestaña). Es la heurística 1 de Impeccable (visibilidad del estado) y, otra vez, «un sistema, no un rejunte».",
+  "sugerencia": "Arriba del hilo, una línea como la del afiliado: «2 sin leer de 2», con el número en negrita. Si no hay pendientes: «Estás al día». Dejar la bajada del remitente debajo, a 13 px. «Marcar todas leídas» puede esperar hasta que una empresa tenga más de diez avisos.",
+  "archivos": [
+   "templates/empresa.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-emp-notificaciones.png",
+  "zona": {
+   "x": 480,
+   "y": 150,
+   "w": 480,
+   "h": 70
+  },
+  "pantalla": "emp-notificaciones",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R1-04",
+  "titulo": "«Iniciado» va en ámbar, el color que el afiliado usa para «En tratamiento»",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "consistencia",
+  "severidad": "baja",
+  "problema": "En la lista de la empresa, un expediente recién presentado lleva la pastilla «Iniciado» con fondo ámbar. En la misma lista del afiliado, «Iniciado» es una pastilla blanca con borde, y el ámbar queda para «En tratamiento». Quien usa las dos apps aprende un código de colores y en la otra le cambia. Además, el ámbar es color de estado («parcial») y sugiere que algo quedó a medias.",
+  "sugerencia": "Usar en empresa la misma clase de estado que el afiliado para cada uno de los cinco estados: «Iniciado» con contorno neutro, «En tratamiento» en ámbar, «Respondido» en verde y «Terminado» en gris. Mejor todavía: sacar el mapa estado→clase a un solo lugar que usen las dos plantillas.",
+  "archivos": [
+   "templates/empresa.html",
+   "static/temas/laguna-empresa.css",
+   "static/temas/noticiero-empresa.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-emp-tramites.png",
+  "zona": {
+   "x": 878,
+   "y": 424,
+   "w": 72,
+   "h": 26
+  },
+  "pantalla": "emp-tramites",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R1-05",
+  "titulo": "Inicio y Salir miden menos de 44 px en el teléfono",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "responsive",
+  "severidad": "media",
+  "problema": "En el teléfono, la pastilla «Inicio | Salir» va dentro de la barra de la razón social y se achica: 36 px de alto en Noticiero (`height:36px`, letra de 12 px) y unos 38-41 px en Laguna. El piso es 44 px (audit.md, objetivos táctiles), y la primera vuelta ya lo había llevado a 44 en los ingresos. En Noticiero, además, empuja la razón social a dos renglones («Metalúrgica del Sur / SRL») aunque entraría en uno. Afecta emp-notificaciones y emp-tramites.",
+  "sugerencia": "En el `@media` de teléfono de las dos hojas, dejar `.ident .flota-sal a` en `height:44px` con `padding:0 12px` y `font-size:13px`. Armar `.ident` como grilla: `grid-template-columns:minmax(0,1fr) auto; align-items:center`, con el nombre y el CUIT en la primera columna. Así la pastilla no le roba ancho al nombre más que lo justo.",
+  "archivos": [
+   "static/temas/noticiero-empresa.css",
+   "static/temas/laguna-empresa.css",
+   "templates/empresa.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-m-emp-notificaciones.png",
+  "zona": {
+   "x": 30,
+   "y": 140,
+   "w": 720,
+   "h": 150
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R1-06",
+  "titulo": "En escritorio, la barra de identidad no se alinea con la columna",
+  "modelo": "ambos",
+  "vista": "escritorio",
+  "categoria": "layout",
+  "severidad": "baja",
+  "problema": "La razón social arranca en x≈460 (Laguna) o x≈450 (Noticiero), y el título y las tarjetas en x≈480 o x≈466. El CUIT termina en x≈980 y la columna en x≈960. Son 15-20 px de diferencia, justo en el borde que el ojo usa para leer de arriba abajo. En el afiliado, el nombre y el título caen en la misma vertical. layout.md: una sola grilla.",
+  "sugerencia": "Calcular el padding de `.ident` con el mismo ancho que `.cont`: `padding-inline:max(20px, calc(50% - 240px))` en laguna-empresa.css línea 429, y el equivalente en noticiero-empresa.css línea 490. Si se ensancha la columna como pide G1-18, que los dos lean una sola variable (`--emp-col`).",
+  "archivos": [
+   "static/temas/laguna-empresa.css",
+   "static/temas/noticiero-empresa.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-emp-notificaciones.png",
+  "zona": {
+   "x": 440,
+   "y": 88,
+   "w": 560,
+   "h": 120
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R1-07",
+  "titulo": "En escritorio, Salir cambia de lugar entre la portada y las pestañas",
+  "modelo": "ambos",
+  "vista": "escritorio",
+  "categoria": "consistencia",
+  "severidad": "baja",
+  "problema": "En la portada, «Salir» flota en la esquina inferior derecha (a 16 px del borde). Al entrar a Notificaciones o Trámites, la pastilla «Inicio | Salir» aparece unos 250 px más adentro (x≈1007-1190, `right:calc(50% - 470px)`). Queda en un lugar vacío que no se alinea con la columna (termina en 960) ni con el borde. La persona tiene que volver a buscar la salida en cada pantalla. Modo Operate: los controles persistentes viven siempre en el mismo lugar.",
+  "sugerencia": "Elegir un solo lugar para las tres pantallas. Lo más simple es dejar `right:16px` también en las pestañas (como la portada). Si se prefiere pegada a la columna, que sea `right:calc(50% - var(--emp-col)/2)`, con el mismo cálculo en la portada.",
+  "archivos": [
+   "static/temas/laguna-empresa.css",
+   "static/temas/noticiero-empresa.css",
+   "templates/empresa_portada.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-emp-tramites.png",
+  "zona": {
+   "x": 1000,
+   "y": 770,
+   "w": 200,
+   "h": 55
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-01",
+  "titulo": "Inicio y Salir flotan sobre el contenido en vez de ir al pie del riel",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "consistencia",
+  "severidad": "media",
+  "problema": "En el panel del sindicato, Inicio y Salir ya van al pie del riel lateral (es uno de los cambios compartidos de esta vuelta). En plataforma siguen como una pastilla fija abajo a la derecha, en todas las pestañas interiores (Sindicatos, Nuevo sindicato, Nuevo admin, Cambiar clave, Marca, Fotos). Además tapa contenido: en Nuevo sindicato queda encima de la «Prueba de lectura» y del campo de la firma, y en el teléfono encima de los campos del formulario. Rompe «Un sistema, no un rejunte» (PRODUCT.md) y el piso de Impeccable de no tapar controles.",
+  "sugerencia": "Usar en `templates/plataforma.html` el mismo bloque de pie de riel que usa el panel (Inicio a la izquierda, Salir relleno a la derecha, debajo del último ítem del índice) y sacar `.flota-sesion` en escritorio. En teléfono, donde el riel es una tira, dejar la pastilla pero sumar al `.wrap` un `padding-bottom` de al menos 96 px para que el último campo nunca quede debajo.",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "medio",
+  "captura": "laguna-d-pla-nuevo.png",
+  "zona": {
+   "x": 1240,
+   "y": 835,
+   "w": 182,
+   "h": 52
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-02",
+  "titulo": "En Laguna los campos de texto casi no se ven sobre la tarjeta",
+  "modelo": "laguna",
+  "vista": "ambas",
+  "categoria": "accesibilidad",
+  "severidad": "media",
+  "problema": "Los campos son un bloque gris #f4f4f4 con borde transparente sobre una tarjeta blanca: medido, 1,1:1 contra el fondo. El borde aparece recién al pasar el mouse. En Nuevo admin y Cambiar clave el formulario se lee como franjas grises sueltas, y en el teléfono (sin mouse) nunca aparece el borde. El piso para el contorno de un control es 3:1 (craft-floor, «Contrast»; WCAG 1.4.11). Además no coincide con el panel en Laguna, donde los campos sí tienen borde.",
+  "sugerencia": "En la regla de «8. Formularios» de `laguna-plataforma.css`, cambiar `border: 1px solid transparent` por `border: 1px solid var(--lg-linea2)` y llevar `--lg-linea2` a un gris que dé 3:1 sobre blanco (por ejemplo #8f9296), o tomar tal cual la regla de campos de `laguna-panel.css` para que los dos paneles sean idénticos. El fondo puede quedar en blanco.",
+  "archivos": [
+   "static/temas/laguna-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-admin.png",
+  "zona": {
+   "x": 271,
+   "y": 212,
+   "w": 1062,
+   "h": 182
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-03",
+  "titulo": "Las casillas «Portada clara» ya no hacen nada con los dos modelos",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "textos",
+  "severidad": "media",
+  "problema": "Marca ofrece «Portada clara» («Sin tildar, la portada de plataforma va en oscuro. Tildado, va en claro.») y Nuevo sindicato ofrece «Portada clara (trabajador)» y «Portada clara (admin)». Pero las hojas de los dos modelos pintan `body.oscuro` y `body.claro` igual: la portada siempre es la del modelo. Quien tilde la casilla no ve ningún cambio y no sabe por qué. Clarify: un control tiene que hacer lo que dice; Operate: nada de opciones muertas.",
+  "sugerencia": "Sacar las tres casillas de `templates/plataforma.html` (alta, edición y Marca) mientras los dos modelos estén vigentes, y reemplazarlas por una línea que diga «La portada la define el modelo de diseño (Laguna o Noticiero) que elige cada persona». Si se quiere conservar el dato, ocultarlo en vez de borrarlo de la base.",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/temas/laguna-plataforma-portada.css",
+   "static/temas/noticiero-plataforma-portada.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-marca.png",
+  "zona": {
+   "x": 271,
+   "y": 636,
+   "w": 460,
+   "h": 40
+  },
+  "pantalla": "general",
+  "estado": "cambio",
+  "nota": "Aceptar, verificar que nada quede dependiendo de esta opcion"
+ },
+ {
+  "id": "R2-04",
+  "titulo": "En el teléfono, pestañas y casillas de módulos con objetivos chicos",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "responsive",
+  "severidad": "baja",
+  "problema": "En el teléfono el riel se vuelve una tira de pestañas de 34 px de alto en Laguna, y en Nuevo sindicato las quince casillas de Módulos van a ~26 px entre renglones. Quedan por debajo de los 44 px que se le pidieron a los ingresos (audit, «Touch targets»).",
+  "sugerencia": "Bajo 760 px: `.ptab { height: 44px }` en los dos modelos, y `.chk-modulo { min-height: 44px; display: flex; align-items: center }` con la grilla de módulos a dos columnas.",
+  "archivos": [
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css",
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-m-pla-nuevo.png",
+  "zona": {
+   "x": 0,
+   "y": 125,
+   "w": 780,
+   "h": 100
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-05",
+  "titulo": "Los campos van a 13,5–14 px: el iPhone hace zoom al tocarlos",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "responsive",
+  "severidad": "baja",
+  "problema": "Los campos de los formularios de plataforma van a 13,5 px (Laguna) y 14 px (Noticiero). Safari del iPhone agranda la página cuando se toca un campo de menos de 16 px, y después hay que achicarla a mano. Pasa en Nuevo sindicato, Nuevo admin, Cambiar clave y Fotos.",
+  "sugerencia": "En el bloque `@media (max-width: 760px)` de las dos hojas, poner `font-size: 16px` a `input`, `select` y `textarea` de `.wrap`.",
+  "archivos": [
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-m-pla-clave.png",
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-06",
+  "titulo": "En Noticiero, los títulos largos se cortan con una palabra sola",
+  "modelo": "noticiero",
+  "vista": "telefono",
+  "categoria": "tipografía",
+  "severidad": "baja",
+  "problema": "En 390 px «SINDICATOS EN LA PLATAFORMA» deja «(2)» solo en el segundo renglón, y «CAMBIAR LA CLAVE DE UN» deja «USUARIO» solo. Impeccable (craft-floor, «Type»: títulos equilibrados).",
+  "sugerencia": "Sumar `text-wrap: balance` a `.titulo-pagina` en `noticiero-plataforma.css` (y en Laguna, que no cuesta nada), y pegar el contador al sustantivo con un espacio duro: `plataforma&nbsp;({{ n }})`.",
+  "archivos": [
+   "static/temas/noticiero-plataforma.css",
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-m-pla-lista.png",
+  "zona": {
+   "x": 30,
+   "y": 260,
+   "w": 720,
+   "h": 130
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-07",
+  "titulo": "La cuenta y la tarjeta principal quedan fuera de lugar en los dos modelos",
+  "modelo": "ambos",
+  "vista": "escritorio",
+  "categoria": "layout",
+  "severidad": "media",
+  "problema": "En la portada del panel, el círculo de la cuenta va pegado al saludo (80 px) y la tarjeta principal debajo, alineada a la izquierda. En plataforma, como no hay foto, la composición se desarma: en Laguna el círculo crece a ~150 px y queda flotando solo a la derecha de la tarjeta, como si fuera lo principal; en Noticiero la tarjeta «Sindicatos» se corre a la derecha y deja un hueco de 600 × 200 px debajo del saludo. Impeccable (layout: la estructura sigue al contenido; jerarquía: lo secundario no puede ser lo más grande).",
+  "sugerencia": "Copiar la disposición de la portada del panel en `laguna-plataforma-portada.css` y `noticiero-plataforma-portada.css`: círculo de 80 px al lado del saludo (`.fila-hola` en fila, `gap: 20px`) y `.pt-hero` a la izquierda, debajo del saludo, con el ancho de la del panel (~740 px). Si sobra la mitad derecha, que la ocupe el degradé del modelo, no un elemento suelto.",
+  "archivos": [
+   "static/temas/laguna-plataforma-portada.css",
+   "static/temas/noticiero-plataforma-portada.css",
+   "templates/plataforma_portada.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-portada.png",
+  "zona": {
+   "x": 1030,
+   "y": 190,
+   "w": 160,
+   "h": 160
+  },
+  "pantalla": "pla-portada",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-08",
+  "titulo": "La sombra de la tarjeta principal se corta en línea recta (Laguna)",
+  "modelo": "laguna",
+  "vista": "escritorio",
+  "categoria": "roto",
+  "severidad": "baja",
+  "problema": "Debajo de la tarjeta «Sindicatos» la sombra termina de golpe en un borde horizontal (a la altura del fin de la franja de la laguna), y se ve un rectángulo más oscuro de 740 × 40 px. Parece un error de dibujo. Craft-floor, «Depth»: la sombra tiene que desvanecerse.",
+  "sugerencia": "Sacar `overflow: hidden` (o el `clip`) del contenedor `.pt-heroe` en `laguna-plataforma-portada.css`, o sumarle `padding-bottom: 48px` para que la sombra entre entera antes del corte.",
+  "archivos": [
+   "static/temas/laguna-plataforma-portada.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-portada.png",
+  "zona": {
+   "x": 86,
+   "y": 440,
+   "w": 740,
+   "h": 45
+  },
+  "pantalla": "pla-portada",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-09",
+  "titulo": "«Borrar» es un texto rojo suelto y en el panel es un botón",
+  "modelo": "ambos",
+  "vista": "escritorio",
+  "categoria": "componentes",
+  "severidad": "baja",
+  "problema": "En la tabla de sindicatos, «Editar» es un botón con borde y «Borrar» un texto rojo sin caja. En el panel del sindicato, en el mismo modelo, los dos son botones del mismo tamaño y «Borrar» lleva borde rojo. La acción más peligrosa queda con el objetivo más chico y distinta del resto de la app.",
+  "sugerencia": "Dar a «Borrar» la misma clase de botón que usa el panel (borde 1px rojo #c0392b, texto rojo, mismo alto y radio que «Editar»), en `templates/plataforma.html` y en las dos hojas del modelo.",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-lista.png",
+  "zona": {
+   "x": 1290,
+   "y": 215,
+   "w": 60,
+   "h": 95
+  },
+  "pantalla": "pla-lista",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-10",
+  "titulo": "Los cinco colores no siguen una grilla",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "layout",
+  "severidad": "baja",
+  "problema": "En escritorio, cada color toma el ancho de su ayuda, así que las cinco columnas arrancan a distancias distintas (208, 182, 208, 150 y 190 px) y la fila termina antes del borde de la tarjeta. En el teléfono van uno por renglón con la ayuda en 200 px, y el bloque Marca ocupa una pantalla y media. Impeccable (layout, «Grid»).",
+  "sugerencia": "Envolver los cinco en `display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px` en escritorio, y `repeat(2, 1fr)` bajo 760 px, con la ayuda al ancho de su columna.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-nuevo.png",
+  "zona": {
+   "x": 271,
+   "y": 635,
+   "w": 940,
+   "h": 120
+  },
+  "pantalla": "pla-nuevo",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-11",
+  "titulo": "Noticiero: rótulos en versalitas y en minúscula en el mismo formulario",
+  "modelo": "noticiero",
+  "vista": "ambas",
+  "categoria": "consistencia",
+  "severidad": "baja",
+  "problema": "En «Datos del gremio» los rótulos van en mayúsculas espaciadas («NOMBRE *», «CUIT»), igual que «LOGO DEL SINDICATO» y «CONTRATO O CONVENIO…». Pero los cinco colores («Color base *», «Color primario *»…) van en minúscula y en otro gris. El mismo papel del texto tiene dos voces. typeset.md: un rol, un estilo.",
+  "sugerencia": "En `noticiero-plataforma.css`, aplicar a los `<label>` del bloque de colores la misma regla que a `.campo > label` (mayúsculas, espaciado y color índigo de los otros rótulos).",
+  "archivos": [
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-d-pla-nuevo.png",
+  "zona": {
+   "x": 278,
+   "y": 640,
+   "w": 930,
+   "h": 20
+  },
+  "pantalla": "pla-nuevo",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R2-12",
+  "titulo": "El color de los avisos de error del ingreso es configurable",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "color",
+  "severidad": "media",
+  "problema": "La ayuda del «Color acento» dice «En las pantallas de ingreso: avisos de error», y es cierto: los ingresos toman `--alerta` de ese color. Hoy es un lila, así que una clave mal puesta se avisa en lila y no se lee como error; y cualquiera que cambie el acento cambia el color de los errores. Regla de la casa: los colores de estado son fijos y jamás toman la marca (rojo #c0392b).",
+  "sugerencia": "En los cuatro ingresos (`admin_login.html`, `plataforma_login.html`, `trabajador_login.html`, `empresa_login.html`), fijar `--alerta: #c0392b` y dejar de leer `color_acento` para eso. Darle al acento un uso de marca (por ejemplo, el foco de los campos y los enlaces secundarios) y cambiar la ayuda en `plataforma.html` a ese uso.",
+  "archivos": [
+   "templates/plataforma.html",
+   "templates/admin_login.html",
+   "templates/plataforma_login.html",
+   "templates/trabajador_login.html",
+   "templates/empresa_login.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-marca.png",
+  "zona": {
+   "x": 687,
+   "y": 285,
+   "w": 170,
+   "h": 95
+  },
+  "pantalla": "pla-marca",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-01",
+  "titulo": "Laguna: la bandeja de sub-pestañas se parte en dos filas en teléfono",
+  "modelo": "laguna",
+  "vista": "telefono",
+  "categoria": "responsive",
+  "severidad": "media",
+  "problema": "Las cuatro sub-pestañas de Uso de IA van dentro de una bandeja gris redondeada que, a 390 px, se parte en dos filas desparejas ('Consumo y costo (0) · Modelos' arriba y 'Banco de pruebas · Enmascarado (0)' abajo, con huecos distintos). Un control segmentado partido deja de leerse como un solo control y la pastilla activa queda flotando en una caja que no la contiene a ras. Pasa en las cuatro solapas de Uso de IA. layout.md: el componente tiene que sostenerse en todos los anchos.",
+  "sugerencia": "Debajo de 760 px, en Laguna: que la bandeja deslice horizontal en una sola fila (`flex-wrap:nowrap; overflow-x:auto; scroll-snap-type:x`), como ya hace la tira principal, o sacar la bandeja y dejar pastillas sueltas como en Noticiero. Acortar 'Consumo y costo (0)' a 'Consumo (0)' en teléfono.",
+  "archivos": [
+   "static/temas/laguna-plataforma.css",
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-m-pla-usoia.png",
+  "zona": {
+   "x": 30,
+   "y": 350,
+   "w": 720,
+   "h": 150
+  },
+  "pantalla": "pla-usoia",
+  "estado": "dejar",
+  "nota": null
+ },
+ {
+  "id": "R3-02",
+  "titulo": "En Noticiero el rótulo 'amarillo hasta (días)' parte y baja su campo",
+  "modelo": "noticiero",
+  "vista": "escritorio",
+  "categoria": "layout",
+  "severidad": "baja",
+  "problema": "En Noticiero los rótulos van en mayúsculas espaciadas; 'SEMÁFORO: AMARILLO HASTA (DÍAS)' no entra en su columna, se parte en dos renglones y empuja el campo '60' unos 16 px más abajo que el '35'. Dos campos que son un par quedan escalonados. layout.md: los elementos de una misma fila comparten línea de base.",
+  "sugerencia": "Acortar los rótulos a 'Verde hasta (días)' y 'Amarillo hasta (días)' (el título 'Semáforo' ya va en la bajada) o alinear la fila por abajo (`align-items:end` en la grilla de los dos campos).",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-d-pla-config.png",
+  "zona": {
+   "x": 270,
+   "y": 605,
+   "w": 560,
+   "h": 80
+  },
+  "pantalla": "pla-config",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-03",
+  "titulo": "'Guardar' dentro de una cápsula vacía, y en Noticiero con otro radio",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "componentes",
+  "severidad": "baja",
+  "problema": "Sin cambios pendientes, la barra del pie igual se dibuja: un marco redondeado con borde que envuelve solo al botón, como un botón dentro de otro botón. En Noticiero es peor: el botón coral es rectangular (con su sombra dura de abajo) y la cápsula que lo rodea es una píldora de 99 px de radio, así que las esquinas no acompañan. craft-floor: nada de cajas que no aportan; consistencia de radios dentro de un mismo componente.",
+  "sugerencia": "Sin cambios, no dibujar la cápsula (`.barra-guardar{border:0;background:none;padding:0}` y que el marco aparezca solo con `.con-cambios`, junto con el texto 'Cambiaste 1 modelo'). En Noticiero, darle a la barra el mismo radio que sus botones (0 o 2 px) en vez de 99 px.",
+  "archivos": [
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css",
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-d-pla-usoia-modelos.png",
+  "zona": {
+   "x": 250,
+   "y": 1180,
+   "w": 330,
+   "h": 50
+  },
+  "pantalla": "pla-usoia-modelos",
+  "estado": "dejar",
+  "nota": null
+ },
+ {
+  "id": "R3-04",
+  "titulo": "La tabla de registros quedó suelta, fuera de la tarjeta",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "consistencia",
+  "severidad": "media",
+  "problema": "Filtros, indicadores y las dos tablas de resumen van en tarjetas; la tercera tabla (Fecha · Sindicato · Documento…) quedó apoyada directo sobre el fondo, sin caja, con los encabezados a la altura de los flotantes. Antes de la migración estaba en su tarjeta. Se lee como un resto que se cayó del bloque de arriba. Principio del producto: 'Un sistema, no un rejunte'.",
+  "sugerencia": "Envolver la tabla de registros y su nota al pie ('Se listan las 300 más recientes…') en la misma `.card` que usan los bloques de arriba, con un título de sección 'Registros' encima.",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-usoia-enmascarado.png",
+  "zona": {
+   "x": 246,
+   "y": 830,
+   "w": 1112,
+   "h": 120
+  },
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "dejar",
+  "nota": null
+ },
+ {
+  "id": "R3-05",
+  "titulo": "Con cero documentos, el vacío dice 'todo lo que se pudo leer se tapó'",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "textos",
+  "severidad": "media",
+  "problema": "Sin ningún documento, la pantalla muestra tres vacíos distintos uno abajo del otro: 'Sin documentos para este filtro.', 'Ninguno: todo lo que se pudo leer se tapó.' y 'Todavía no hay registros…'. El segundo afirma un éxito que no ocurrió: no se leyó nada. Principio del producto 'Hechos, no adornos'; la casa pide que los vacíos digan una sola cosa y que inviten a actuar.",
+  "sugerencia": "Si el total es 0: esconder las tres tablas y mostrar un único vacío en la tarjeta de indicadores ('Todavía no pasó ningún documento por el enmascarado. Con el modo en apagado no se anota nada.'). 'Ninguno: todo lo que se pudo leer se tapó' solo cuando haya al menos un documento.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-usoia-enmascarado.png",
+  "zona": {
+   "x": 270,
+   "y": 620,
+   "w": 1065,
+   "h": 175
+  },
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "dejar",
+  "nota": null
+ },
+ {
+  "id": "R3-06",
+  "titulo": "En Noticiero los rótulos de los indicadores bajan a unos 9 px",
+  "modelo": "noticiero",
+  "vista": "ambas",
+  "categoria": "tipografía",
+  "severidad": "baja",
+  "problema": "'DOCUMENTOS', 'SIN TAPAR', 'RECIBOS AJENOS': en Noticiero van en condensada, mayúsculas y unos 9 px, más chicos que los encabezados de las tablas de abajo. Quedan por debajo del piso de la escala de la casa (11 px) y cuesta leerlos, que es lo único que dice qué es cada número.",
+  "sugerencia": "Subir el rótulo del indicador a 11 px como mínimo (mejor 12 px) en Noticiero, con la misma letra de los encabezados de tabla (la sans espaciada) en vez de la condensada.",
+  "archivos": [
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-d-pla-usoia-enmascarado.png",
+  "zona": {
+   "x": 275,
+   "y": 530,
+   "w": 1060,
+   "h": 55
+  },
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-07",
+  "titulo": "Las instrucciones nombran variables de entorno en la vista principal",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "textos",
+  "severidad": "baja",
+  "problema": "'Se prende con la variable ENMASCARADO del servicio (sombra o activo)… ENMASCARADO_GUARDAR_IMAGENES=1': ahora en cajitas de código, son lo más visible del bloque. Es el mismo criterio que se aceptó en Modelos (G8-22): el lenguaje del producto en la vista, lo técnico a un clic.",
+  "sugerencia": "Dejar a la vista 'No se tapa ni se anota nada mientras el modo esté apagado.' y llevar cómo prenderlo (variables y valores) a un '?' de ayuda junto a la pastilla de modo.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-usoia-enmascarado.png",
+  "zona": {
+   "x": 270,
+   "y": 365,
+   "w": 950,
+   "h": 40
+  },
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "dejar",
+  "nota": null
+ },
+ {
+  "id": "R3-08",
+  "titulo": "'Modelos a comparar' queda pegado a 'Imagen o PDF.'",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "espaciado",
+  "severidad": "baja",
+  "problema": "El título de sección arranca a 0-4 px de la ayuda del campo de archivo (y en teléfono, del desplegable 'Qué es el archivo'). Se lee como parte del campo de arriba. craft-floor: más aire arriba de un título que abajo.",
+  "sugerencia": "Dar `margin-top:24px` al título 'Modelos a comparar' (o separar el bloque de archivo y el de modelos con una línea fina), y dejar 'Imagen o PDF.' a 4 px de su campo.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-usoia-probar.png",
+  "zona": {
+   "x": 270,
+   "y": 420,
+   "w": 300,
+   "h": 40
+  },
+  "pantalla": "pla-usoia-probar",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-09",
+  "titulo": "En Noticiero, la tilde de 'ADULTERACIÓN' toca el renglón de arriba",
+  "modelo": "noticiero",
+  "vista": "telefono",
+  "categoria": "tipografía",
+  "severidad": "baja",
+  "problema": "El titular de dos renglones tiene un interlineado tan apretado que la tilde de la Ó se mete entre 'ALERTA' y 'DE' del renglón de arriba. Además el título es muy largo para teléfono. typeset.md: el interlineado de un titular en mayúsculas tiene que dejar lugar a los acentos. Puede repetirse en cualquier titular de Noticiero que parta en dos renglones con tildes.",
+  "sugerencia": "Subir el interlineado del título de Noticiero a 1,0–1,05 cuando parte en dos renglones, y acortar el título a 'Recibos con alerta (0)' dejando 'de posible adulteración' en la bajada.",
+  "archivos": [
+   "static/temas/noticiero-plataforma.css",
+   "templates/plataforma.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-m-pla-sospechosos.png",
+  "zona": {
+   "x": 30,
+   "y": 265,
+   "w": 640,
+   "h": 125
+  },
+  "pantalla": "pla-sospechosos",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-10",
+  "titulo": "En 78 filas, el encabezado de la tabla se va con el scroll",
+  "modelo": "ambos",
+  "vista": "escritorio",
+  "categoria": "componentes",
+  "severidad": "baja",
+  "problema": "La tabla mide más de 4.000 px; a partir de la décima fila ya no se ve qué columna es Tope máximo y cuál Base mínima, dos montos parecidos uno al lado del otro. mode-operate: tablas con columnas claras; en una tabla larga el encabezado acompaña.",
+  "sugerencia": "Fijar el encabezado (`thead th{position:sticky; top:0; background:<fondo de la tarjeta>}`) y, si se quiere, separar visualmente los años (una fila fina con '2025' antes de su diciembre).",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-topes.png",
+  "zona": {
+   "x": 246,
+   "y": 290,
+   "w": 1112,
+   "h": 40
+  },
+  "pantalla": "pla-topes",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-11",
+  "titulo": "'Pendiente' no dice qué falta",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "textos",
+  "severidad": "baja",
+  "problema": "El estado 'Pendiente' (ámbar) aparece cuando la persona todavía no cambió la clave transitoria o no cargó sus datos, pero la pastilla no lo dice. Quien gestiona no sabe si tiene que hacer algo él o esperar. clarify: el estado nombra la situación.",
+  "sugerencia": "Rotular 'Falta primer ingreso' (o 'Falta cambiar la clave' / 'Faltan sus datos', según el caso) y, si la clave transitoria vence a los 7 días, sumar 'vence el 30/10'.",
+  "archivos": [
+   "templates/plataforma_usuarios.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pla-usuarios.png",
+  "zona": {
+   "x": 610,
+   "y": 548,
+   "w": 80,
+   "h": 24
+  },
+  "pantalla": "pla-usuarios",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R3-12",
+  "titulo": "En teléfono las tablas cortan columnas y esconden las acciones",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "responsive",
+  "severidad": "media",
+  "problema": "En Topes, Usuarios y Enmascarado la tabla deriva a un scroll horizontal: a 390 px se ven dos o tres columnas, el estado queda cortado ('Verif…', 'Alta ir…') y Editar / Borrar / Desactivar quedan a la derecha, fuera de pantalla, sin ninguna señal de que hay más. En Topes además las filas tienen alturas distintas porque la columna Fuente, que no se ve, parte en renglones. Y el vacío de Enmascarado ('Todavía no hay registros. Aparecen cuando alguien sube…') queda cortado a mitad de frase. layout.md: estructura que siga al contenido en cada ancho; mode-operate: las acciones de la fila al alcance.",
+  "sugerencia": "Debajo de 760 px, pasar cada fila a una tarjeta apilada: en Topes 'vigencia + estado' arriba, los dos montos abajo y Editar/Borrar al pie; en Usuarios 'usuario + nombre', rol y estado en pastillas, y las tres acciones al pie. Si se mantiene la tabla, al menos fijar la primera columna (`position:sticky; left:0`), sumar un degradé a la derecha que avise el scroll, y que la celda de vacío (`colspan`) no scrollee (`position:sticky; left:0; white-space:normal`).",
+  "archivos": [
+   "templates/plataforma.html",
+   "templates/plataforma_usuarios.html",
+   "static/temas/laguna-plataforma.css",
+   "static/temas/noticiero-plataforma.css"
+  ],
+  "esfuerzo": "medio",
+  "captura": "laguna-m-pla-topes.png",
+  "zona": {
+   "x": 30,
+   "y": 760,
+   "w": 720,
+   "h": 300
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-01",
+  "titulo": "El Panel Sindical no tiene «Volver» al panel",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "componentes",
+  "severidad": "media",
+  "problema": "Se entra desde el riel del panel, en la misma pestaña, pero la página no tiene riel ni el «Volver» del encabezado. La única salida es «Inicio», que lleva a la portada: para volver a Trámites o a Reportes hay que dar dos pasos. Resultados de encuesta, Notificaciones y Convenio sí traen «Volver» con el mismo parcial. Rompe 'un sistema, no un rejunte' (PRODUCT.md) y la regla de la casa: las pantallas sin tira de pestañas se encabezan con enc_volver.",
+  "sugerencia": "En templates/dashboard_v2.html, antes del include del encabezado, agregar {% set enc_volver = '/admin' %}. Con la fecha del período al lado, que el enlace diga «Volver al panel» y quede a la izquierda de la fecha. No hace falta tocar la pastilla Inicio / Salir.",
+  "archivos": [
+   "templates/dashboard_v2.html",
+   "templates/_encabezado.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pan-dashboard.png",
+  "zona": {
+   "x": 1000,
+   "y": 0,
+   "w": 440,
+   "h": 88
+  },
+  "pantalla": "pan-dashboard",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-02",
+  "titulo": "Ejes con números en inglés: «1,000», «$0k» y CUIL sin guiones",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "textos",
+  "severidad": "media",
+  "problema": "El eje de «Notificaciones · leídas vs. no leídas» dice 1,000 · 1,500 · 2,000 · 2,500, con coma de miles; justo arriba, las tarjetas dicen 2.292 y 1.347. El de «Diferencias por empresa» dice $0k y $500k. En el explorador, el CUIL sale pegado (20660000048). La casa formatea todo en argentino (formato_ar.py y su espejo numeros_ar.js), y en la misma tarjeta el número cambia de idioma (clarify.md: el idioma del producto).",
+  "sugerencia": "En static/panel_v2/graficos.js, pasar el callback de los ticks por el formateador de formato.js (Intl.NumberFormat('es-AR')). Para montos usar «$ 0», «$ 500 mil», «$ 1,5 M». En el explorador, mostrar el CUIL con guiones (20-66000004-8), con la misma regla que el filtro cuil de Jinja.",
+  "archivos": [
+   "static/panel_v2/graficos.js",
+   "static/panel_v2/formato.js",
+   "static/panel_v2/explorador.js"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pan-dashboard.png",
+  "zona": {
+   "x": 1050,
+   "y": 1160,
+   "w": 260,
+   "h": 30
+  },
+  "pantalla": "pan-dashboard",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-03",
+  "titulo": "Explorador en el teléfono: fichas de 10 campos, 2.600 px de largo",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "responsive",
+  "severidad": "media",
+  "problema": "Bajo 760 px cada recibo pasa a una ficha con los diez campos al mismo peso (fecha, seccional, empresa, categoría, formato, bruto, diferencia, enviado, trabajador y CUIL). Diez fichas suman unos 2.600 px, y lo que importa (empresa y diferencia) no se distingue del resto. Además, la tira Recibos / Trámites / Notificaciones corta «Notificacio» sin señal de que se desliza, y «Ver» mide 22 px de alto. Impeccable, Operate: lo que se viene a leer va primero; audit: objetivos táctiles de 44 px.",
+  "sugerencia": "Ficha compacta de tres renglones: arriba, la empresa en negrita y la diferencia en rojo alineada a la derecha; abajo, «03/10 · La Matanza · Rubén Herrera» en gris. El resto va en «Ver». Toda la ficha es tocable, con min-height de 44 px. En la tira de pestañas, un degradé de 24 px al borde derecho (mask-image) o el rótulo corto «Notif.».",
+  "archivos": [
+   "static/panel_v2/explorador.js",
+   "static/panel_v2/panel.css",
+   "static/temas/laguna-tablero.css",
+   "static/temas/noticiero-tablero.css"
+  ],
+  "esfuerzo": "medio",
+  "captura": "laguna-m-pan-dashboard.png",
+  "zona": {
+   "x": 66,
+   "y": 7960,
+   "w": 650,
+   "h": 650
+  },
+  "pantalla": "pan-dashboard",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-04",
+  "titulo": "Período y «Más filtros» por debajo de 44 px en el teléfono",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "accesibilidad",
+  "severidad": "baja",
+  "problema": "Las pastillas Hoy / 7 / 30 / 90 días miden unos 31 px de alto, «Más filtros» 34 px y «Reiniciar» es texto suelto. Son los controles que más se tocan del tablero. El piso de la casa (ingresos, Notificaciones) ya es 44 px.",
+  "sugerencia": "Bajo 760 px: min-height de 44 px en .periodo button y en «Más filtros», con gap de 8 px. «Reiniciar» con padding de 12px 4px, para que el área llegue a 44 px sin cambiar cómo se ve.",
+  "archivos": [
+   "static/panel_v2/panel.css",
+   "static/temas/laguna-tablero.css",
+   "static/temas/noticiero-tablero.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-m-pan-dashboard.png",
+  "zona": {
+   "x": 60,
+   "y": 540,
+   "w": 660,
+   "h": 160
+  },
+  "pantalla": "pan-dashboard",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-05",
+  "titulo": "El historial se corta en el teléfono: «Padrón fijado: 10…»",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "roto",
+  "severidad": "media",
+  "problema": "table.hist tiene min-width de 460 px adentro de una tarjeta de unos 330 px. El texto se corta a mitad de palabra («Aviso a 106 afilia», «Padrón fijado: 10») y la columna de quién hizo cada cosa desaparece, sin ninguna señal de que se pueda deslizar. Es la única tabla de la pantalla que se ve rota (audit: responsive, sin desbordes ocultos).",
+  "sugerencia": "Bajo 760 px, sacar el min-width y apilar cada fila: la fecha arriba (12 px, gris), el evento en negrita con su detalle debajo y quién al final, en gris. Se puede hacer con display:grid en cada tr y grid-template-areas, sin tocar el JS.",
+  "archivos": [
+   "templates/encuesta_resultados.html",
+   "static/temas/laguna-encuesta-resultados.css",
+   "static/temas/noticiero-encuesta-resultados.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-m-pan-encuesta-resultados.png",
+  "zona": {
+   "x": 26,
+   "y": 10720,
+   "w": 728,
+   "h": 265
+  },
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-06",
+  "titulo": "Títulos de pregunta aplastados por Barras / Torta / Tabla",
+  "modelo": "ambos",
+  "vista": "telefono",
+  "categoria": "layout",
+  "severidad": "media",
+  "problema": "En el teléfono, el selector de vista ocupa la mitad derecha de la tarjeta y el título de la pregunta se parte en tres o cuatro renglones («¿QUÉ QUERÉS QUE / EL SINDICATO / EMPUJE ESTE / AÑO?»). En Noticiero, la condensada en mayúsculas va con un interlineado cercano a 0,9, así que las tildes de MÁS y AÑO tocan el renglón de arriba. En escritorio pasa lo mismo con la pregunta larga de la segunda fila. Es la pregunta lo que se viene a leer (typeset: interlineado de títulos de varios renglones).",
+  "sugerencia": "Bajo 760 px, que la cabecera de la tarjeta haga flex-wrap: el selector baja debajo del título, alineado a la izquierda y con 10 px de separación. En Noticiero, line-height de al menos 1,05 en los títulos de tarjeta (h3 de .preg) para que las tildes en mayúscula tengan aire.",
+  "archivos": [
+   "templates/encuesta_resultados.html",
+   "static/temas/noticiero-encuesta-resultados.css",
+   "static/temas/laguna-encuesta-resultados.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-m-pan-encuesta-resultados.png",
+  "zona": {
+   "x": 28,
+   "y": 4660,
+   "w": 724,
+   "h": 600
+  },
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-07",
+  "titulo": "«Ritmo» repite el 58 de Participación y la frase de abajo repite todo",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "jerarquía",
+  "severidad": "baja",
+  "problema": "La tarjeta Ritmo pone «58» en grande, el mismo número que «58 de 106» de Participación: dos tarjetas con el mismo dato principal. Debajo de las cuatro va además una frase suelta («Leyeron el 81,1 % y respondió el 54,7 % del padrón.») que repite lo que ya dicen las tarjetas. Hechos, no adornos (PRODUCT.md): cada número tiene que aportar algo.",
+  "sugerencia": "Que el número grande de Ritmo sea propio: las respuestas de los últimos 7 días («+6 esta semana»), con la curva y «última el 23/10» debajo. Borrar la frase suelta, o pasarla como bajada del título de la encuesta.",
+  "archivos": [
+   "static/encuesta_resultados.js",
+   "templates/encuesta_resultados.html"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pan-encuesta-resultados.png",
+  "zona": {
+   "x": 148,
+   "y": 418,
+   "w": 1144,
+   "h": 200
+  },
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-08",
+  "titulo": "En Noticiero, «Descargar CSV» es el botón más fuerte de la pantalla",
+  "modelo": "noticiero",
+  "vista": "ambas",
+  "categoria": "jerarquía",
+  "severidad": "baja",
+  "problema": "En Noticiero, «Descargar CSV» va en coral lleno, la única pieza de color sólido arriba de todo, y parece la acción principal de la página. En Laguna es un botón de contorno. La tarea de la pantalla es leer resultados; bajar la planilla es secundario (casa: el acento es para la acción principal).",
+  "sugerencia": "En noticiero-encuesta-resultados.css, dejarlo de contorno: borde de 1,5 px en tinta, fondo transparente y el mismo rótulo, como «Reiniciar» del tablero. El coral queda para la selección activa.",
+  "archivos": [
+   "static/temas/noticiero-encuesta-resultados.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "noticiero-d-pan-encuesta-resultados.png",
+  "zona": {
+   "x": 1093,
+   "y": 232,
+   "w": 184,
+   "h": 38
+  },
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-09",
+  "titulo": "La caja punteada del vacío parece una zona para soltar un archivo",
+  "modelo": "ambos",
+  "vista": "ambas",
+  "categoria": "componentes",
+  "severidad": "baja",
+  "problema": "El estado vacío va dentro de un recuadro de borde punteado. En toda la app, ese borde es la señal de «arrastrá o elegí un archivo acá» (el adjunto de notificaciones, la subida del recibo). Acá el afiliado no puede subir nada, así que la forma promete una acción que no existe (clarify: un estado vacío no tiene que confundir).",
+  "sugerencia": "Borde continuo de 1 px en el color de línea del modelo (--lg-linea en Laguna, el filete crema en Noticiero), o sin borde y con el bloque centrado sobre el fondo.",
+  "archivos": [
+   "templates/convenio.html",
+   "static/temas/laguna-convenio.css",
+   "static/temas/noticiero-convenio.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-afi-convenio.png",
+  "zona": {
+   "x": 436,
+   "y": 172,
+   "w": 568,
+   "h": 287
+  },
+  "pantalla": "afi-convenio",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-10",
+  "titulo": "Mapas mal encuadrados: burbujas en el borde o perdidas en el continente",
+  "modelo": "ambos",
+  "vista": "escritorio",
+  "categoria": "layout",
+  "severidad": "media",
+  "problema": "En el Panel Sindical, la burbuja de Córdoba queda cortada contra el borde de arriba. Las dos de Buenos Aires quedan abajo, pegadas al borde, y una tapa a la otra. Mientras tanto, la mitad derecha del mapa muestra Uruguay sin nada. En Resultados de encuesta pasa al revés: el mapa se aleja tanto que entran Chile y el sur de Brasil, y las burbujas quedan de 40 px en el medio. Un mapa de tablero es el selector (regla de la casa): una burbuja tapada no se puede tocar.",
+  "sugerencia": "En static/mapa.js, una sola regla de encuadre para los dos: fitBounds(límites, {padding:[56,56], maxZoom:7}). Si dos burbujas quedan a menos de un diámetro en pantalla, correrlas en sentido opuesto la mitad del diámetro, con una línea fina a su punto real. Así el Panel y Resultados encuadran igual.",
+  "archivos": [
+   "static/mapa.js",
+   "static/panel_v2/graficos.js",
+   "static/encuesta_resultados.js"
+  ],
+  "esfuerzo": "medio",
+  "captura": "laguna-d-pan-dashboard.png",
+  "zona": {
+   "x": 135,
+   "y": 1840,
+   "w": 1170,
+   "h": 435
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ },
+ {
+  "id": "R4-11",
+  "titulo": "Los dos tableros de Laguna rotulan distinto sus secciones e indicadores",
+  "modelo": "laguna",
+  "vista": "escritorio",
+  "categoria": "consistencia",
+  "severidad": "baja",
+  "problema": "Pasa en pan-dashboard y en pan-encuesta-resultados. En Resultados, las secciones son rótulos sueltos en mayúsculas espaciadas («PARTICIPACIÓN POR SECCIONAL», «RESPUESTAS»), con la bajada al lado, y todos los indicadores van en mayúsculas espaciadas. En el Panel Sindical, las secciones son títulos de tarjeta en minúscula («Mapa de seccionales») y los indicadores mezclan: «RECIBOS ANALIZADOS» en mayúsculas espaciadas y los otros ocho en minúscula («% con diferencias»). Son dos tableros del mismo panel y del mismo modelo (PRODUCT.md: un sistema, no un rejunte). En Noticiero los dos van parejos.",
+  "sugerencia": "En laguna-tablero.css, poner los nueve rótulos de indicador con el estilo de Resultados (11 px, 700, mayúsculas, letter-spacing .12em, gris). Dejar los títulos de tarjeta en minúscula en los dos: en laguna-encuesta-resultados.css, «Participación por seccional», «Respuestas» y «Evolución» pasan a 17 px, 600, sin mayúsculas.",
+  "archivos": [
+   "static/temas/laguna-tablero.css",
+   "static/temas/laguna-encuesta-resultados.css"
+  ],
+  "esfuerzo": "chico",
+  "captura": "laguna-d-pan-dashboard.png",
+  "zona": {
+   "x": 134,
+   "y": 322,
+   "w": 1172,
+   "h": 230
+  },
+  "pantalla": "general",
+  "estado": "aceptar",
+  "nota": null
+ }
+]

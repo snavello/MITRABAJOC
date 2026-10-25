@@ -9020,3 +9020,33 @@ no las lee nadie (`test_portada_clara.py` lo verifica) y solo
 `medir_dashboard.py` las escribe al sembrar. Tests: `test_tema_empresa.py`,
 `test_tema_plataforma.py`, `test_portada_clara.py`, `test_tema_tablero.py`,
 `test_tema_pantallas_viejas.py`.
+
+**XSD, el método convertido en kit** (2026-10-25, pedido de SDN: «que solo
+haya que decirle a Code "revisá mi proyecto con XSD"»). Lo que se usó en las
+dos vueltas vivía en el scratchpad de la sesión y se perdía con el contenedor.
+Ahora está en `xsd/`, como `xsk/`:
+- el método y sus lecciones (`METODO.md`);
+- los tres encargos como plantillas (revisor, segunda vuelta, equipo que
+  aplica);
+- `herramientas/xsd.py`, con capturar, hoja de contacto, brief, informe,
+  decisiones, previos, encargos y avance, y `capturar.cjs`, que lee todo de
+  una **ficha** por proyecto;
+- la página del informe sin nada de Colm3na adentro: título, variantes, aviso
+  y clave de guardado salen de `datos.json`;
+- el mod de la ventana de avance, que ahora lee `xsd-trabajo/avance.json` de
+  la raíz del proyecto;
+- la skill `/xsd`.
+
+Lo único propio de cada proyecto es la ficha y el script de sesiones. El de
+Colm3na (`xsd/proyectos/mitrabajo/sesiones.py`) resuelve lo que en las vueltas
+se hizo a mano:
+- elige el sindicato con más padrón, o el de `XSD_SINDICATO`;
+- da a cada `quien` su propio afiliado;
+- crea el operador de cada `quien` si no existe;
+- solo deja elegido el modelo de la empresa y de plataforma para quien
+  corresponde.
+
+Quedan versionados el inventario de 60 pantallas, el contexto para los
+revisores y los consolidados de las dos vueltas, que son el punto de partida
+de la próxima. Probado de punta a punta en local: capturas, hoja, brief,
+informe y decisiones. Tests: `test_xsd.py`.
