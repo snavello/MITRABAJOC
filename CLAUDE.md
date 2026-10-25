@@ -169,6 +169,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   hallazgos, corridas, avance). Todo Markdown con cabecera `clave: valor`,
   sin YAML ni tablas: versionado y portable. Lo sensible va en `.env`,
   nunca ahí. Ver "Estado actual" 26.
+- xsd/ — **XSANDERS Design Kit** (método en `xsd/METODO.md`, cómo llevarlo a
+  otro proyecto en `xsd/LEEME.md`, skill `xsd`): auditoría de diseño con
+  revisores en paralelo, informe interactivo donde SDN decide cada hallazgo,
+  aplicación con agentes y segunda vuelta. `herramientas/xsd.py` hace lo
+  mecánico (capturar, hoja, brief, informe, decisiones, previos, encargos,
+  avance); `proyectos/mitrabajo/` es la ficha, el inventario, las sesiones y el
+  historial de Colm3na. Los archivos de trabajo van en `xsd-trabajo/` (fuera
+  de git). Se pide con «revisá el diseño con XSD» o `/xsd`.
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
   natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).
   `probar_asistente.py` + `medicion_asistente/` = set de aceptación del

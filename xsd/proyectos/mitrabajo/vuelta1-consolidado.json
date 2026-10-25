@@ -1,0 +1,3587 @@
+[
+ {
+  "id": "G1-01",
+  "pantalla": "pub-inicio",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El fondo oscuro se corta a la altura de la pantalla",
+  "sugerencia": "Sacar el fondo del `body` y ponerlo en un `body::after` con `position:fixed; inset:0; z-index:-1` (el mismo degradé y el mismo radial), sin `background-attachment`. Así cubre siempre toda la ventana, scrollee lo que scrollee. Probar en un iPhone o en Safari de escritorio con la ventana angosta.",
+  "problema": "En la captura de página entera del teléfono el degradé oscuro termina a la altura de la primera pantalla y de ahí para abajo el fondo es blanco: la sombra de la última tarjeta se ve gris sobre blanco y el pie «Colm3na · Recibos · Trámites…» (blanco al 35%) desaparece. La causa es `background-attachment:fixed` en el `body`: el fondo se pinta solo del tamaño de la ventana, y Safari de iPhone ignora ese valor (ahí el degradé se repite con un corte). Rompe el piso de «lo que se ve roto» y la regla de la casa de verificar la pantalla al tamaño en que se usa.",
+  "archivos": [
+   "templates/inicio.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G1-02",
+  "pantalla": "pub-inicio",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En el teléfono la tercera puerta queda fuera de la primera vista",
+  "sugerencia": "Debajo de 600 px pasar cada puerta a una fila horizontal: ícono de 40 px a la izquierda, título 22 px y una sola línea de descripción, flecha a la derecha, con `padding:16px 18px`. Las tres entran en unos 330 px y quedan arriba del pliegue con el título. Mantener la tarjeta actual arriba de 820 px.",
+  "problema": "Cada tarjeta mide unos 230 px de alto en el teléfono (ícono de 48 px, rótulo, título, descripción de dos renglones y «Ingresar»), así que la de Empresa empieza justo en el borde inferior y no se ve que existe sin scrollear. En una puerta de elección la persona tiene que ver todas las opciones juntas para decidir (Impeccable, modo Operate: reconocer antes que recordar; layout.md: la densidad tiene que seguir a la tarea).",
+  "archivos": [
+   "templates/inicio.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G1-03",
+  "pantalla": "pub-recuperar",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Sin salida para quien no tiene mail cargado en el sindicato",
+  "sugerencia": "Agregar debajo del botón, en la línea de ayuda: «¿Tu sindicato no tiene tu mail? Pedile que te dé una clave temporal desde su panel.» Mantener la respuesta igual haya o no cuenta (no cambia lo que el servidor revela).",
+  "problema": "La bajada dice «si tu sindicato tiene un mail tuyo cargado, te mandamos un código», pero no dice qué hacer si no lo tiene. Esa persona va a esperar un mail que nunca llega. clarify.md: un mensaje tiene que dar el camino alternativo cuando la vía principal no aplica; regla de la casa: los errores explican cómo seguir.",
+  "archivos": [
+   "templates/recuperar_clave.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-04",
+  "pantalla": "pub-recuperar",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "No muestra los tres pasos como sí lo hace el registro",
+  "sugerencia": "Copiar el `.reg-pasos` del registro arriba del título (11 px, el paso actual en ámbar) y moverlo en `ir(n)`.",
+  "problema": "El recupero tiene tres pasos (número, código, clave nueva) en la misma página, igual que el registro, pero el registro muestra «1 · 2 · 3» y esta pantalla no. La persona no sabe cuánto le falta. Impeccable, heurística 1 (visibilidad del estado) y «un sistema, no un rejunte» de PRODUCT.md.",
+  "archivos": [
+   "templates/recuperar_clave.html",
+   "templates/_clave_base.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-05",
+  "pantalla": "pub-admin-login",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El operador que olvidó su clave no tiene ningún camino",
+  "sugerencia": "Cambiar la línea por: «¿Te olvidaste la clave? Pedile a quien administra tu sindicato que te la restablezca. Si sos el administrador, escribinos a Colm3na.» (o el canal real que corresponda). 12,5 px, mismo gris de `.ayuda`.",
+  "problema": "No hay «Olvidé mi clave» y la única ayuda dice «El alta de administradores la hace tu organización», que responde otra pregunta. Quien usa el panel todos los días y no puede entrar no sabe a quién recurrir. clarify.md: el texto de ayuda contesta la pregunta implícita del momento; heurística 9 (recuperarse de errores).",
+  "archivos": [
+   "templates/admin_login.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-06",
+  "pantalla": "pub-admin-login",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El rótulo «CUIT / CUIL» duda sobre qué número pedir",
+  "sugerencia": "Rotular «Tu CUIL» y dejar el ejemplo 20123456786. Si el campo tiene que aceptar CUIT por casos viejos, que lo acepte sin decirlo.",
+  "problema": "Quien entra al panel es una persona (la clave vive en su cuenta por CUIL) y el ejemplo es un CUIL (20…). «CUIT / CUIL» hace pensar que va el CUIT del sindicato. clarify.md: el mismo concepto se nombra siempre igual.",
+  "archivos": [
+   "templates/admin_login.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-07",
+  "pantalla": "pub-plataforma-login",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El ejemplo del campo repite el rótulo",
+  "sugerencia": "Poner el formato real como ejemplo (por ejemplo «snavello») o dejarlo vacío.",
+  "problema": "El campo USUARIO tiene de ejemplo «usuario». No agrega información y parece un valor ya cargado. clarify.md: el ejemplo de un campo muestra el formato, no repite el rótulo.",
+  "archivos": [
+   "templates/plataforma_login.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-01",
+  "pantalla": "afi-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Un beneficio sin foto deja una caja vacía de 300 px",
+  "sugerencia": "Sin `b.tiene_imagen`, poner en `.car-sl` una clase `sin-foto` que saque el alto fijo (`height:auto`, `aspect-ratio:auto`, unos 150 px de mínimo). El texto pasa a leerse sobre un fondo plano de la marca: `--marca-base` en Laguna, la hoja en Noticiero. Arriba va el rubro en grande, como en la tapa tipográfica. En los renglones de novedades sin foto, sacar `.nv-av`/la miniatura y que el texto ocupe el ancho.",
+  "problema": "Si el beneficio no tiene imagen, la diapositiva sigue con su alto completo (300 px en Laguna) y lo único que se ve es un degradé. El texto queda apretado en el tercio de abajo. La plantilla ya resolvió esto en la nota de tapa: lo dice su comentario («una caja vacía en el mejor lugar de la portada parece una pantalla sin terminar»). Al beneficio no se le aplicó. Rompe el principio «Hechos, no adornos» de PRODUCT.md y la regla de Impeccable contra los rectángulos que ocupan el lugar del contenido. Pasa algo parecido, en chico, con las miniaturas de las novedades sin foto: un cuadrado con un ícono de renglones.",
+  "archivos": [
+   "templates/portada.html",
+   "static/marca.css",
+   "static/temas/laguna-portada.css",
+   "static/temas/noticiero-portada.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-02",
+  "pantalla": "afi-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Carrusel: 20 puntos de 6 px y flechas que tapan el rubro",
+  "sugerencia": "Pasada cierta cantidad (más de 6), cambiar los puntos por un contador «3 de 20» en `--fuente-num`. Si se dejan, que cada punto tenga 44 px de área táctil con el punto visible chico adentro (padding). En teléfono (≤760 px), llevar las flechas a `.car-pie`, al lado del contador, con 44 × 44 px. Así no flotan sobre el texto (el deslizar con el dedo ya existe: `touch-action: pan-y`). Subir el corte de `.car-t` a 3 renglones en el teléfono.",
+  "problema": "Debajo del carrusel hay un punto por beneficio: veinte botones de 6 × 6 px con 6 px de separación. Son imposibles de acertar con el dedo y no dicen nada (el piso táctil de Impeccable es de 44 px). Las flechas miden 34–36 px y van centradas en la altura de la diapositiva. En Noticiero, en el teléfono, la flecha izquierda queda arriba de la pastilla «ÓPTICA 2» y la tapa. El texto de cada beneficio se corta a dos renglones con «…», justo en lo que dice el beneficio.",
+  "archivos": [
+   "templates/portada.html",
+   "static/marca.css",
+   "static/temas/noticiero-portada.css",
+   "static/temas/laguna-portada.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G2-03",
+  "pantalla": "afi-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Tu día: dos temperaturas sin rótulo («20° 20°»)",
+  "sugerencia": "En `tu_dia.js`, dentro de `.pt-dia-pron`, sumar antes del ícono el día abreviado en el mismo estilo que «SÁB 24/10» (por ejemplo «DOM 20°  LUN 20°»), en 10,5 px con `letter-spacing` y la tinta secundaria. Así queda claro que son máximas de los próximos días. Si no entra, mostrar solo el de mañana.",
+  "problema": "En escritorio, a la derecha de «14°» aparecen dos íconos con «20°» y «20°». No dice qué son: mañana y pasado, la máxima. El día solo está en un `title`, que en un teléfono no existe y con mouse hay que adivinar. Rompe «reconocer en vez de recordar» (heurística 6 de critique.md) y la regla de clarify: un número sin rótulo no se entiende.",
+  "archivos": [
+   "static/tu_dia.js",
+   "static/temas/laguna-portada.css",
+   "static/temas/noticiero-portada.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G2-04",
+  "pantalla": "afi-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Salir flota encima de las novedades en el teléfono",
+  "sugerencia": "Sin deshacer la decisión («Salir con su rótulo»), en el teléfono ponerlo en la portada igual que en /app: quieto, arriba, al lado del círculo de perfil o al pie, después de «Acerca de», con su rótulo. Si se quiere flotando, que aparezca solo al llegar al final (por ejemplo con IntersectionObserver sobre `.pt-pie`). En escritorio, correrlo afuera de la columna derecha (`right: max(14px, calc(50% - 760px))`), como hace `.flota-sal` en /app.",
+  "problema": "En la portada, el botón «Salir» queda fijo abajo a la derecha (46 px de alto, unos 180 px de ancho). Mientras se baja, tapa títulos y bajadas de las novedades. En escritorio tapa la flecha de «Capacitación». Además se contradice con /app: en el teléfono, ahí Inicio/Salir van quietos en la franja con el nombre y el CUIL. El mismo botón vive en dos lugares según la pantalla (heurística 4, consistencia).",
+  "archivos": [
+   "templates/portada.html",
+   "static/temas/laguna-portada.css",
+   "static/temas/noticiero-portada.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-05",
+  "pantalla": "afi-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Mis recibos» en el teléfono: el texto se aprieta a 3 renglones",
+  "sugerencia": "Aplicar también en teléfono la regla que ya existe para el riel de escritorio: `.pt-sec-tus .pt-rec-cta { grid-column: 1 / -1; justify-self: start; margin-top: 8px; }`, con `@media (max-width: 1039px)` o sin media query. El dato queda en un renglón y el botón abajo.",
+  "problema": "Debajo de 1040 px, el botón «Subir un recibo nuevo» se pone al costado del texto. En 390 px, «65 recibos verificados este año» queda en una columna de unos 110 px y se parte en tres renglones al lado de un botón ancho. La jerarquía se invierte: el botón pesa más que el dato.",
+  "archivos": [
+   "static/temas/laguna-portada.css"
+  ],
+  "modelo": "laguna",
+  "vista": "telefono"
+ },
+ {
+  "id": "G2-06",
+  "pantalla": "afi-portada",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La bajada del saludo repite el gremio en vez de la antigüedad",
+  "sugerencia": "Cambiar `{{ sindicato }}` por la antigüedad, sacada de `Trabajador.fecha_afiliacion` («Afiliada desde 2019», o «3 años en el gremio»). Si falta la fecha, dejar solo la seccional. El nombre del gremio queda en texto solo cuando no hay logo, como en el encabezado.",
+  "problema": "Debajo de «Hola, Sofía» dice «Seccional Córdoba · <nombre del gremio>». El logo de arriba ya dice el gremio. La skill de la casa pide para esa línea «seccional y antigüedad de afiliación», y la regla del encabezado dice que con logo no se escribe el nombre al lado. Además, la línea larga se parte en dos en el teléfono.",
+  "archivos": [
+   "templates/portada.html",
+   "main.py"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-07",
+  "pantalla": "afi-portada",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La foto de tapa muestra el borde de la película y una anotación",
+  "sugerencia": "En /plataforma → Fotos, mover el punto de interés de esa foto hacia la izquierda y abajo, o volver a subirla recortada sin el borde. A futuro, que `fotos_tema.py` recorte 2–3% de cada lado al normalizar, igual que ya recorta niveles.",
+  "problema": "La foto de archivo trae el borde del negativo. En escritorio, en el filo derecho de la tapa, se leen letras verticales («KODAK») y una franja negra. En el teléfono, arriba a la derecha, aparece un número escrito a mano («39 7016-5») justo al lado de Colm3na. Parecen restos de escaneo y ensucian el lugar de más jerarquía de la app.",
+  "archivos": [
+   "fotos_tema.py"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-08",
+  "pantalla": "afi-recibo",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La línea de pasos se parte en tres renglones en el teléfono",
+  "sugerencia": "En teléfono, dejar en cada paso solo el verbo («Subí», «Revisá», «Resultado») y esconder la bajada debajo de 420 px. Otra opción: bajarla a 11,5 px con `white-space: nowrap`. Hoy la bajada repite lo que ya dice el título del panel.",
+  "problema": "En 390 px, la bajada del paso 2 («lo que leímos») se corta en dos renglones y queda más alta que las otras dos. Las tres columnas pierden su línea de base común y la tira se ve despareja (ritmo, layout.md).",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css"
+  ],
+  "modelo": "laguna",
+  "vista": "telefono"
+ },
+ {
+  "id": "G2-09",
+  "pantalla": "afi-credencial",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El logo del gremio no se lee en la banda oscura de la credencial",
+  "sugerencia": "Sacar el logo de la banda oscura y ponerlo en la parte clara del carnet: arriba a la derecha de `.cred-body`, con `max-height: 40px` y `max-width: 160px`, sobre el blanco donde ya se lee bien (igual que en el encabezado de la app). En la banda oscura quedan solo «Credencial digital» y el nombre del gremio.",
+  "problema": "`.cred-logo` está topeado a 110 px de ancho. Un logo horizontal como el de La Bancaria queda de unos 20 px de alto, y sus partes azules («NUESTRO SINDICATO») desaparecen sobre `--marca-base`. Es la única pieza de identidad de un documento que se muestra en mano, y no pasa el contraste de 3:1 para gráficos. No se puede forzar un fondo blanco detrás («Logos sin fondo blanco forzado» es una decisión tomada).",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-10",
+  "pantalla": "afi-credencial",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Pendiente» se muestra como si fuera el número de credencial",
+  "sugerencia": "Sin `codigo_credencial`, mostrar en ese lugar una pastilla neutra «Sin generar todavía», en la letra de texto y en gris de tinta, no en mono ni en acento. Sin `marca.firma`, no dibujar `.cred-linea`: dejar solo nombre y cargo.",
+  "problema": "Sin código, `cred-val` escribe «Pendiente» con la misma letra monoespaciada y espaciada (y en Laguna, en el color de acento) que tendría el número. A primera vista se lee como un dato, no como un estado. Lo mismo pasa con la firma: si no hay imagen de firma, queda una raya vacía arriba del nombre de la autoridad, y parece un documento sin firmar (clarify: un estado vacío se dice como tal).",
+  "archivos": [
+   "templates/trabajador.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-11",
+  "pantalla": "afi-novedades",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Dos marcas por noticia en el hilo (hexágono y megáfono)",
+  "sugerencia": "Dejar un solo nodo por entrada: el hexágono con la fecha. El círculo `.nv-av` aparece solo si la noticia tiene foto, y entonces muestra la miniatura. Sin foto, la tarjeta arranca pegada a la línea.",
+  "problema": "Cada día lleva un hexágono con la fecha y cada noticia un círculo con un megáfono, uno abajo del otro sobre la misma línea. Como casi siempre hay una noticia por día, cada entrada tiene dos nodos, y el megáfono repite en todas la misma información («es una noticia»). Es ruido visual (critique.md, «visual noise floor»).",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-12",
+  "pantalla": "afi-novedades",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Nada indica que cada novedad se abre",
+  "sugerencia": "Sumar al pie de `.nv-bur` un «Leer ›» en 13 px y en el color de enlace del modelo, o un chevrón a la derecha de la hora, igual que los renglones de «Tus cosas».",
+  "problema": "Cada tarjeta es un botón que abre la nota completa, pero no tiene flecha ni «Leer», y en el teléfono no hay estado de paso del mouse. En la portada la misma noticia sí dice «Leer la nota ›». En la pestaña, quien la ve cree que ya leyó todo (heurística 6, reconocer en vez de recordar).",
+  "archivos": [
+   "templates/trabajador.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-13",
+  "pantalla": "afi-aportes",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Dos títulos para lo mismo: «Mis aportes» y «Estado de tus aportes»",
+  "sugerencia": "En la tarjeta, dejar el rótulo «Semáforo» y como título solo la bajada útil: «Jubilación y obra social · últimos 12 meses». Sacar el `<h2>` «Estado de tus aportes». El estado («Todavía no consultado») sube y queda más cerca del título.",
+  "problema": "Arriba dice «Mis aportes» y, en la tarjeta, «SEMÁFORO / Estado de tus aportes / Jubilación y obra social · últimos 12 meses». Son dos títulos y un rótulo para la misma idea antes de llegar al estado. Clarify: «Decí cada idea una vez».",
+  "archivos": [
+   "templates/trabajador.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-14",
+  "pantalla": "afi-aportes",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El botón de ARCA dice «sale afuera» tres veces, una con un carácter",
+  "sugerencia": "Sacar el «↗» del texto en `semCuerpo.innerHTML` (trabajador.html) y dejar el SVG de enlace externo. En Noticiero, esconder el chevrón de `.th-tile.cta` cuando ya tiene el ícono externo. Sumar «(se abre en otra pestaña)» en un texto solo para lectores de pantalla.",
+  "problema": "«1 · Consultar en ARCA» ya lleva el ícono SVG de enlace externo. Además el texto trae «↗» como carácter, y en Noticiero se suma un chevrón a la derecha. La casa y Impeccable prohíben los caracteres Unicode en lugar de íconos (se ven de distinto tamaño según la fuente del teléfono, igual que los ✓). Tres señales para lo mismo.",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-01",
+  "pantalla": "afi-capacitacion",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En Laguna los subtítulos son etiquetas grises de 11 px",
+  "sugerencia": "En laguna-app.css, para los subtítulos de la guía de Capacitación: 17 px, peso 700, color de tinta (--lg-tinta), sin mayúsculas ni espaciado, con 20 px arriba y 8 px abajo. Dejar el formato chico espaciado solo para el kicker 'GUÍA' de arriba.",
+  "problema": "'Las 4 secciones del recibo nuevo', 'Lo más importante: aporte vs. contribución' y 'Qué mirar para detectar un problema' son los títulos de cada parte, pero salen en mayúsculas espaciadas de 11 px, en gris, más chicos y más claros que el párrafo de 14 px que encabezan. La jerarquía queda al revés: al pasar la vista, el ojo no encuentra dónde empieza cada parte (Impeccable, typeset: 'heading, body y label se distinguen de un vistazo'). En Noticiero el mismo contenido sí se lee como título, así que además los dos modelos cuentan la guía distinto.",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-02",
+  "pantalla": "afi-capacitacion",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La regla 'neto = bruto − aportes' está escondida en un párrafo",
+  "sugerencia": "Sacarla a un renglón propio, con fondo suave del color de apoyo y la cuenta en la fuente de cifras: 'Neto = Bruto − Tus aportes'. El resto del párrafo ('el costo laboral total…') queda debajo como aclaración.",
+  "problema": "La frase que el afiliado tiene que llevarse ('tu neto = tu bruto − tus aportes') va en medio de un párrafo corrido, con el mismo peso que el resto. Es lo único que se puede verificar con el recibo en la mano y no se destaca (principio de la casa: 'el afiliado primero: el veredicto se entiende en segundos').",
+  "archivos": [
+   "templates/trabajador.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-03",
+  "pantalla": "afi-capacitacion",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La guía termina mandando a 'Mis Recibos' sin un botón",
+  "sugerencia": "Agregar al pie de la tarjeta un botón secundario 'Revisar mi recibo' que lleve a /app?tab=recibo.",
+  "problema": "El cierre dice 'conviene reportarlo desde la pestaña Mis Recibos', pero no hay enlace: la persona tiene que buscar la pestaña en la barra de abajo. Impeccable (clarify): cada estado dice cuál es la acción siguiente y la ofrece.",
+  "archivos": [
+   "templates/trabajador.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-04",
+  "pantalla": "afi-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La lista no sigue el orden de la fecha que muestra",
+  "sugerencia": "Ordenar por la fecha del último movimiento (la misma que se muestra), más nueva arriba. Si se prefiere mantener el orden por alta, mostrar esa fecha y no la de actualización. Mejor todavía: los 'Respondido' y 'Esperan tu respuesta' primero, como hace 'Necesita tu atención'.",
+  "problema": "Las fechas de la derecha saltan: 29/08, 13/09, 09/10, 16/08, 11/07, 06/10, 16/07… La lista viene ordenada por cuándo se creó el trámite, pero la fecha que se ve es la del último movimiento. Para encontrar 'lo último que me contestaron' hay que leer las 16 filas. Rompe 'hechos, no adornos' y el orden de lectura de Impeccable (layout: el orden de la página sigue la prioridad del usuario).",
+  "archivos": [
+   "templates/trabajador.html",
+   "main.py"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-05",
+  "pantalla": "afi-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "'Respondido' y 'Terminado' salen con el mismo verde",
+  "sugerencia": "Terminado: gris neutro (texto --gris sobre --papel), porque está cerrado. Respondido: el verde actual, que es lo que tiene novedad. En tratamiento: ámbar de estado (#b8860b sobre su tinte). Iniciado: contorno sin relleno en tinta. Pasar los colores a variables del modelo en vez de estilos en línea, así Laguna y Noticiero los pueden ajustar.",
+  "problema": "Las dos pastillas usan el mismo fondo verde claro y el mismo texto verde (ESTADO_TAG_COLOR). 'Respondido' significa que el sindicato contestó y quizás te toca a vos; 'Terminado', que no hay nada más que hacer. Pintarlos igual dice 'está todo bien' en los dos. Además 'En tratamiento' es violeta y 'Iniciado' marrón, dos colores fijos que no son ni de la marca ni de los de estado de la casa (verde, ámbar, rojo).",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-06",
+  "pantalla": "afi-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El último mensaje se corta en una línea, justo en lo importante",
+  "sugerencia": "Dejar el pie de cada fila en dos líneas (line-clamp: 2) en vez de una, con la fecha arriba a la derecha junto a la pastilla. En escritorio, subir el ancho de la columna de Trámites a 720 px (la lista es para recorrer, no un texto de lectura).",
+  "problema": "En el teléfono, 'Tu sindicato: Sí, acercá los últimos tres recibos…' y 'Tu sindicato: Ya podés retirar tu credencial en l…' quedan cortados en la mitad de la indicación. En escritorio pasa lo mismo con una columna de 480 px y 900 px de blanco a los costados. La persona tiene que abrir cada trámite para saber qué le pidieron.",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-07",
+  "pantalla": "afi-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La barra de cuatro tramos no dice qué es cada tramo",
+  "sugerencia": "Dejar la barra solo en la tarjeta 'Necesita tu atención' y en el detalle del trámite, con los cuatro nombres debajo en 11 px. En la lista alcanza con la pastilla.",
+  "problema": "Cada fila tiene una barra de cuatro tramos (iniciado → en tratamiento → respondido → terminado) sin ningún rótulo, y en 'Respondido' el tercer tramo aparece lleno a medias. Sin leyenda, la barra no agrega nada a la pastilla de estado y suma ruido: son 64 tramos en pantalla.",
+  "archivos": [
+   "templates/trabajador.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-08",
+  "pantalla": "afi-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El número de expediente lleva una Ó acentuada",
+  "sugerencia": "Al armar el prefijo de un tipo de trámite, sacar tildes (Ó → O) y aceptar en el buscador las dos formas.",
+  "problema": "Los expedientes salen como 'UNIÓF04-2026-000384'. Es un código que la persona tiene que tipear en 'Buscar expediente' o dictar por teléfono, y una vocal con tilde en un código es fuente segura de errores. Viene de la sigla que arma el lote con el nombre del sindicato.",
+  "archivos": [
+   "cargar_lote_sindicato.py",
+   "main.py"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-09",
+  "pantalla": "afi-notificaciones",
+  "estado": "cambio",
+  "nota": "acepto el cambio pero ademas , el fondo y la estetica no esta acorde a los cambios de ui hechos, quedo sin reconvertir",
+  "severidad": "alta",
+  "titulo": "La hora de cada aviso no se lee (1,8:1 y 2,6:1)",
+  "sugerencia": "Hora en 12 px y en --gris (#5b6478, 5,5:1) en todos los casos. Para marcar la no leída alcanzan el borde y el punto: no hace falta pintar la hora con el acento. Si se quiere color, usar el acento mezclado al 60% con la tinta (color-mix) y medir que pase 4,5:1.",
+  "problema": "La hora va en 10,5 px. En las no leídas está en el ámbar del acento sobre crema: contraste medido 1,8:1. En las leídas, gris #98a2b3 sobre blanco: 2,6:1. El piso de Impeccable (craft-floor) es 4,5:1 para texto chico; con 20 no leídas, la mitad de las horas de la pantalla son ilegibles, sobre todo al sol en el teléfono.",
+  "archivos": [
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-10",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La primera fecha desaparece sobre la franja",
+  "sugerencia": "Dar a la lista 40 px más de margen arriba en escritorio, para que el primer hito caiga ya sobre la mesa clara, o pintar los hitos que estén sobre la franja en blanco al 85% (como hace interior.css con el título).",
+  "problema": "En escritorio la franja oscura baja hasta la primera tarjeta, y la primera fecha ('29/09/2026', la más importante porque es la más nueva) queda gris sobre gris: contraste medido 1,3:1. Se lee como si el hito estuviera vacío. La casa lo dice: lo que queda arriba de todo sobre la franja se separa por luz, no por color.",
+  "archivos": [
+   "templates/notificaciones.html",
+   "static/interior.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G3-11",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La pantalla no tiene título",
+  "sugerencia": "Volver a poner 'Notificaciones' con la clase titulo-pagina arriba del contador '20 sin leer de 47', dentro de la franja oscura actual (va en blanco). El contador pasa a ser su bajada.",
+  "problema": "El comentario del código dice que el h1 'Notificaciones' se sacó porque 'el encabezado ya lo dice', pero el encabezado de una línea, por regla de la casa, NO escribe el nombre de la pantalla, y esta página no tiene barra de pestañas. Resultado: la persona llega a una lista sin nada que diga dónde está. Choca con la decisión 'el título de cada pantalla se escribe igual en las tres apps' (titulo-pagina).",
+  "archivos": [
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-12",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Las fechas de la línea de tiempo saltan para atrás y adelante",
+  "sugerencia": "Ordenar por enviado_en (más nuevo arriba) en db.notificaciones_de_trabajador, o en el cliente antes de agrupar por día.",
+  "problema": "La línea de tiempo se dibuja por orden de alta (id) pero muestra la fecha de envío: 29/09, 16/08, 06/08, 01/09, 14/07, 26/09… Una línea de tiempo que no va en orden pierde su sentido, y como nunca coinciden dos días seguidos, cada aviso lleva su propio hito. Con datos reales pasa con cualquier aviso programado o cargado con fecha.",
+  "archivos": [
+   "db.py",
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-14",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Filtros y 'Marcar todas' con blancos táctiles de 20 px",
+  "sugerencia": "Pastillas con padding 10px 14px (llegan a ~40 px) y gap de 8 px; la lupa, un círculo de 40 px. 'Marcar todas como leídas' como botón con padding 10px 0 y área mínima de 44 px de alto.",
+  "problema": "'Marcar todas como leídas' es texto de 11,5 px sin relleno (unos 16 px de alto para tocar) y las pastillas de filtro y la lupa miden unos 24 px de alto. El mínimo para un dedo es 44 px (Impeccable, audit: touch targets). En el colectivo, se toca 'No leídas' y se activa 'Todas'.",
+  "archivos": [
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G3-13",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "47 avisos de corrido: 6.300 px de scroll en el teléfono",
+  "sugerencia": "Una vez ordenado por fecha (G3-12), agrupar los hitos por día de verdad y mostrar los últimos 20, con un botón 'Ver anteriores' al pie. Los hitos de más de un mes atrás pueden ir por mes ('Agosto 2026').",
+  "problema": "La bandeja muestra todo de una vez, con un hito de fecha por aviso. En el teléfono son unos 6.300 px de alto: lo viejo empuja y la persona no tiene un final a la vista (Impeccable, layout: la densidad tiene que acompañar la frecuencia de uso).",
+  "archivos": [
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G3-15",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Avatares en violeta y marrón, fuera de la marca",
+  "sugerencia": "Sacar los dos fijos y rotar entre base, primario y apoyo, o variaciones de ellos con color-mix (primario 100%, primario mezclado 70% con base, apoyo mezclado 70% con base).",
+  "problema": "Los círculos de remitente rotan entre primario, apoyo y dos colores fijos (#5b3d8a violeta, #8a5a1a marrón). La regla de la casa es que los colores son siempre los cuatro de marca del sindicato; con otra paleta, el violeta va a desentonar o chocar.",
+  "archivos": [
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-16",
+  "pantalla": "afi-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Veinte puntos latiendo a la vez",
+  "sugerencia": "Que lata solo el punto del aviso más nuevo, y que lo haga tres veces al entrar y se quede quieto. El resto, punto fijo.",
+  "problema": "Cada no leída tiene un punto que late sin parar. Con 20 no leídas hay 20 animaciones infinitas en pantalla: deja de señalar algo y pasa a ser ruido (craft-floor: 'un momento de movimiento, no efectos sueltos').",
+  "archivos": [
+   "templates/notificaciones.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-17",
+  "pantalla": "afi-convenio",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Estado vacío sin título, sin ícono y sin salida",
+  "sugerencia": "Título titulo-pagina 'Tu convenio'. Debajo, el mismo bloque vacío de Encuestas: ícono de documento en pastilla, 'Todavía no está tu convenio' y la bajada actual. Agregar un enlace 'Hacé tu consulta como trámite' a /app?tab=tramites, que es hoy la vía para preguntar al gremio.",
+  "problema": "La persona llega desde un enlace (la pantalla no está en el menú, por decisión) y lo único que ve es 'Tu sindicato todavía no cargó el convenio acá'. No hay título que diga qué es esta pantalla ni nada para hacer después de leer eso. Encuestas, en la misma app, ya resuelve su vacío con ícono, título y bajada: son dos patrones para lo mismo (Impeccable, clarify: un estado vacío explica y ofrece la próxima acción útil).",
+  "archivos": [
+   "templates/convenio.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-01",
+  "pantalla": "pan-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los accesos describen, no informan: falta la línea de estado real",
+  "sugerencia": "Cambiar `.pt-fila-e` por un dato contado en el servidor en los accesos que lo tengan: Trámites «253 sin leer · 12 vencidos», Trabajadores «206 activos · 38 sin registrar», Reportes «1.583 recibos · 21% con diferencias», Noticias «3 vigentes», Encuestas «1 abierta». Donde no haya dato (Reglas, Convenio), dejar la descripción. El globo de Trámites puede quedar, pero el número también va en la línea.",
+  "problema": "Cada acceso lleva una descripción fija («Cálculo de cada aporte», «Alta, baja y datos de afiliados»). La regla de la casa para las portadas v2 es otra: una línea de estado real («12 de 12 al día»), no un rótulo. Solo Trámites dice algo vivo, y lo dice con un globo rojo «253» suelto en la esquina. El operador entra todos los días y no se entera de nada sin abrir cada pestaña.",
+  "archivos": [
+   "templates/admin_portada.html",
+   "static/marca.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-02",
+  "pantalla": "pan-portada",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La tarjeta principal no tiene ningún número",
+  "sugerencia": "Poner en `.pt-hero` un indicador real del Panel Sindical (por ejemplo «1.583 recibos verificados este mes · 21% con diferencias», en `--fuente-num` tabular) y sacar el sello «NUEVO» o atarlo a una fecha de vencimiento (30 días desde que se habilitó el módulo).",
+  "problema": "La regla de la casa dice que arriba de todo va la tarjeta principal (`.pt-hero`) «con un número de verdad». La del panel es un texto de venta («Indicadores y actividad en vivo…») con un sello «NUEVO» permanente: el Panel existe desde septiembre. Es el lugar más valioso de la pantalla y no dice nada que el operador no sepa.",
+  "archivos": [
+   "templates/admin_portada.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-03",
+  "pantalla": "pan-portada",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Laguna: el logo del gremio se pierde sobre la foto oscura",
+  "sugerencia": "Que la foto de la portada empiece debajo de la barra del encabezado, y que esa barra sea la misma superficie clara que usa el panel en Laguna (`--lg-suave` o blanco con su línea inferior). Así el logo queda igual en la portada y en el panel, con cualquier paleta y cualquier logo.",
+  "problema": "En Laguna el encabezado va encima de la foto teñida de azul oscuro. El logo de La Bancaria es azul y verde pensado para fondo claro: «NUESTRO SINDICATO», azul sobre azul, casi no se lee. En el resto del panel Laguna el mismo logo va sobre la barra clara y se lee perfecto. La casa dice que el gremio manda en el encabezado: acá es lo que menos se ve.",
+  "archivos": [
+   "static/temas/laguna-panel-portada.css",
+   "templates/_encabezado.html"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-04",
+  "pantalla": "pan-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Laguna escritorio: el círculo de perfil flota lejos del saludo",
+  "sugerencia": "En escritorio, ubicarlo a la derecha del saludo como en Noticiero (en la misma fila, alineado a su centro) y bajarlo a 72 px.",
+  "problema": "El círculo de perfil mide unos 130 px y queda en medio de la foto, a 650 px del «Hola, Administrador». Pesa más que el saludo y no se entiende a qué pertenece. En Noticiero y en el teléfono va pegado al saludo y se lee bien.",
+  "archivos": [
+   "static/temas/laguna-panel-portada.css"
+  ],
+  "modelo": "laguna",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-05",
+  "pantalla": "pan-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Noticiero: la coma de «HOLA,» pisa la línea de abajo",
+  "sugerencia": "Subir el interlineado del saludo (`line-height: .92` en noticiero-panel-portada.css, regla del título de 52 px) a 1 o 1,02 en el corte de teléfono.",
+  "problema": "En el teléfono el saludo se parte en dos líneas y, con interlineado 0,92, la coma de «HOLA,» toca la «M» de «ADMINISTRADOR». Se ve apretado y desprolijo.",
+  "archivos": [
+   "static/temas/noticiero-panel-portada.css"
+  ],
+  "modelo": "noticiero",
+  "vista": "telefono"
+ },
+ {
+  "id": "G4-06",
+  "pantalla": "pan-portada",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Noticiero escritorio: un hueco grande bajo el saludo",
+  "sugerencia": "Alinear el borde superior de la tarjeta con la línea de «Sede Central · Super Admin» y llevarla a la columna izquierda (unos 640 px de ancho), dejando la foto respirar a la derecha.",
+  "problema": "El saludo queda arriba a la izquierda y la tarjeta del Panel Sindical abajo a la derecha. Entre los dos queda un rectángulo vacío de unos 600 × 200 px sobre la foto, y la tarjeta principal termina pareciendo un aviso secundario.",
+  "archivos": [
+   "static/temas/noticiero-panel-portada.css"
+  ],
+  "modelo": "noticiero",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-07",
+  "pantalla": "pan-reportes",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los dos campos de fecha no dicen «desde» y «hasta»",
+  "sugerencia": "Poner un rótulo visible antes de cada campo: «Verificado desde» y «hasta», con el mismo estilo que «Desde/Hasta» de Reglas.",
+  "problema": "Hay dos campos de fecha iguales, uno al lado del otro, sin rótulo. El operador tiene que adivinar cuál es el inicio y cuál el fin, y si filtra por fecha de verificación o por período del recibo. Impeccable (clarify) pide que cada control diga qué es; en Reglas ya se usan «Desde» y «Hasta».",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-08",
+  "pantalla": "pan-reportes",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El contador «1583 recibos» queda suelto y en otra voz",
+  "sugerencia": "Llevar el total arriba a la izquierda de la tabla, en la fuente del texto con números tabulares: «1.583 recibos · página 1 de 32». En Noticiero, achicar los campos de búsqueda (200 px) para que «Limpiar» entre en la misma fila.",
+  "problema": "El total va en monoespaciada negrita, abajo a la derecha de la caja de filtros (en Noticiero, además, «Limpiar» cae solo a una segunda línea). Es el dato que dice si el filtro funcionó y queda en el rincón que menos se mira; además le falta el punto de miles.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-09",
+  "pantalla": "pan-reportes",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La columna «Enviado» dice «Sí» en todas las filas",
+  "sugerencia": "Mostrar la columna «Enviado» solo cuando hay filas anonimizadas (cláusula firmada), o cuando el filtro es «Enviados y no enviados» y hay de los dos.",
+  "problema": "Mientras el sindicato no firme la cláusula, solo se ven recibos enviados: la columna repite «Sí» cincuenta veces y le roba ancho a Nombre y Empresa. Información que nunca cambia es ruido (Impeccable, diseño mínimo).",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-10",
+  "pantalla": "pan-reportes",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La paginación está solo al pie, después de 50 filas",
+  "sugerencia": "Repetir «‹ Anterior · 1–50 de 1.583 · Siguiente ›» arriba a la derecha de la tabla, junto al total.",
+  "problema": "Con 32 páginas, para pasar a la siguiente hay que bajar hasta el final de la tabla. Tampoco dice qué tramo se ve.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-12",
+  "pantalla": "pan-formulas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El alta de una regla no tiene título y parece parte de la tabla",
+  "sugerencia": "Ponerle un título chico arriba de la caja («Agregar una regla», 16 px, tinta) y dejar 24 px entre la tabla y la caja. El detalle de los rótulos va en el hallazgo general.",
+  "problema": "Debajo de la tabla hay una caja gris con campos sueltos. No dice «Agregar una regla»: hay que deducir que es un formulario de alta. En el teléfono se apila en siete renglones sin rótulos.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-11",
+  "pantalla": "pan-formulas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«(sin inicio) → vigente» no es castellano de persona",
+  "sugerencia": "Escribir «Siempre» cuando no hay fechas, «Desde el 01/03/2026» cuando hay inicio y no fin, y «Del 01/03 al 31/12/2026» cuando hay las dos. Si ya venció, una pastilla gris «Vencida».",
+  "problema": "La columna Vigencia dice «(sin inicio) → vigente». Paréntesis y flecha son notación de programador; un operador no sabe si eso es bueno o malo. La casa pide voz rioplatense en segunda persona y estados que se entiendan.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-13",
+  "pantalla": "pan-conceptos",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La leyenda de colores no se ve y las filas teñidas no se distinguen",
+  "sugerencia": "Sacar el tinte de fila y mostrar el tipo como pastilla en la columna Tipo (ingreso, descuento, por revisar en ámbar), con su color. Si se quiere conservar el tinte, subirlo a 8–10% y los cuadros de la leyenda a 14 px con borde.",
+  "problema": "Debajo de la bajada hay una leyenda «ingreso / descuento / por revisar» con cuadraditos de 10 px casi blancos. Las filas de ingreso llevan un tinte verde tan suave que no se separa del blanco de las de descuento. Si el color es lo que dice el tipo, hoy no lo dice: la información queda solo en la palabra de la columna Tipo.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-14",
+  "pantalla": "pan-conceptos",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "«no» remunerativo en rojo parece un error",
+  "sugerencia": "Pintar «sí» y «no» como pastillas neutras (tinta sobre `--papel` y gris sobre `--papel`), sin rojo ni verde.",
+  "problema": "En la columna Remun., «sí» va en verde y «no» en rojo. Un concepto no remunerativo (viáticos) no es un problema. La casa reserva rojo y verde para estados con significado propio (diferencia / OK); usarlos acá hace que el operador vea alarmas donde no las hay.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-15",
+  "pantalla": "pan-trabajadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Hasta seis botones por fila: la columna de acciones manda",
+  "sugerencia": "Dejar a la vista solo «Editar» y llevar el resto a un menú «Más ▾» por fila (credencial, identidad, clave, usuario del panel, y «Baja» al final separada por una línea y en rojo). La fila baja a una sola línea de botones.",
+  "problema": "Cada fila trae Editar, Generar credencial, Confirmé su identidad, Restablecer clave, Dar usuario del panel y Baja, en dos a cuatro renglones. Impeccable (carga cognitiva) marca como problema más de cuatro opciones visibles en un punto de decisión; acá son seis por fila, por 206 filas. Las filas quedan de distinto alto y «Baja», que es destructiva, va pegada al resto.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-16",
+  "pantalla": "pan-trabajadores",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La ubicación repite «Ciudad Autónoma de Buenos Aires» dos veces",
+  "sugerencia": "Si localidad y provincia coinciden, mostrar una sola vez; y abreviar «Ciudad Autónoma de Buenos Aires» a «CABA» en la tabla (completo en el `title`).",
+  "problema": "Cuando localidad y provincia son iguales, la celda dice «Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de Buenos Aires» y ocupa seis renglones en una columna angosta. Es la fila más alta de la tabla por un dato repetido.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-19",
+  "pantalla": "pan-trabajadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Todo el padrón en una sola página, sin paginar",
+  "sugerencia": "Paginar de a 50 como Reportes, con «1–50 de 206» arriba, y que el buscador consulte al servidor.",
+  "problema": "La tabla dibuja los 206 trabajadores juntos (el corte de la captura llega a 5.000 px y sigue). En un gremio real son miles: la página se vuelve lenta y no hay forma de saber cuántos hay sin recorrerla. Reportes, en cambio, pagina en el servidor.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-17",
+  "pantalla": "pan-trabajadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Sin ubicar» en todas las filas es ruido",
+  "sugerencia": "Mostrar la marca solo cuando la persona SÍ está ubicada (punto verde «En el mapa»), o sumar un filtro «Sin ubicar» arriba con su cantidad.",
+  "problema": "Debajo de cada ubicación aparece un punto gris con «Sin ubicar». Si es el estado de casi todo el padrón, repetirlo 206 veces no informa y alarga cada fila.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-18",
+  "pantalla": "pan-trabajadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Nombre apretado en dos renglones mientras Estado sobra",
+  "sugerencia": "Dar a Nombre un ancho mínimo de 160 px (`white-space: nowrap` hasta 24 caracteres) y achicar Estado y Nivel a su contenido.",
+  "problema": "La columna Nombre mide unos 80 px y parte «Alberto / Correa» en dos líneas; Estado y Nivel tienen el doble de ancho para una pastilla corta. El nombre es lo que se busca con la vista.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-20",
+  "pantalla": "pan-trabajadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Confirmé su identidad» no nombra la acción",
+  "sugerencia": "Cambiar a «Confirmar identidad» (el diálogo de confirmación ya explica qué implica).",
+  "problema": "Un botón en primera persona y en pasado se lee como un estado («ya lo confirmé»), no como algo que se puede hacer. La casa pide que los botones digan la acción exacta.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-21",
+  "pantalla": "pan-trab-manual",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Quince campos sin grupos ni orden de importancia",
+  "sugerencia": "Partir en cuatro grupos con un subtítulo chico (14 px, tinta): «La persona» (CUIL, Nombre, Fecha de nacimiento), «Domicilio» (Provincia, Localidad, Calle, Número, Piso, CP, y el botón del mapa ahí), «Contacto» (Teléfono, Mail) y «En este sindicato» (Seccional, CUIT del empleador, Fecha de afiliación, Vigencia de credencial). 24 px antes de cada subtítulo.",
+  "problema": "Persona, domicilio, contacto y datos del sindicato van mezclados en una grilla de dos columnas. Los obligatorios (Provincia, Localidad) quedan en el medio, entre opcionales. Impeccable (layout) pide agrupar por significado y dar más aire antes de cada grupo.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-23",
+  "pantalla": "pan-trab-manual",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El ejemplo del CUIL parece un dato ya cargado",
+  "sugerencia": "Sacar el ejemplo del campo y ponerlo como ayuda debajo: «11 números, sin guiones. Ej.: 20-12345678-6». Si se deja de ejemplo, aclararlo a 45% de opacidad.",
+  "problema": "El campo CUIL trae «20123456786» en gris oscuro sobre gris: se confunde con un valor puesto. En Laguna los campos rellenos de gris hacen que texto de ejemplo y texto real casi no se distingan.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-22",
+  "pantalla": "pan-trab-manual",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Todos los campos miden 570 px, aunque el dato tenga 4 caracteres",
+  "sugerencia": "Dentro del grupo Domicilio, poner Calle ancha y Número, Piso y CP en una fila de tres campos de 120–160 px; CUIL a 200 px.",
+  "problema": "Número, Piso y Código postal ocupan lo mismo que Calle o Mail. El ancho de un campo le dice a la persona cuánto escribir; acá todos dicen lo mismo.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-24",
+  "pantalla": "pan-trab-manual",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Noticiero: rótulos de 11 px en mayúsculas espaciadas",
+  "sugerencia": "Dejar en mayúsculas solo el nombre del campo y escribir «(opcional)» en minúscula y peso normal; subir los rótulos a 12 px.",
+  "problema": "Todos los rótulos, incluido «(OPCIONAL)», van en mayúsculas de 11 px con mucho espaciado. Quince rótulos así se leen más lento que en minúscula, y el «(opcional)» pierde la diferencia de peso que tiene en Laguna.",
+  "archivos": [
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "noticiero",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-25",
+  "pantalla": "pan-trab-masivo",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El ejemplo dentro del cuadro parece una lista ya pegada",
+  "sugerencia": "Bajar el texto de ejemplo a 45% de opacidad y empezarlo con «Ejemplo:»; o mejor, sacarlo del cuadro y mostrarlo como bloque de código debajo de la lista de columnas.",
+  "problema": "El cuadro de texto trae dos líneas de ejemplo en monoespaciada casi negra. A primera vista parece que ya hay dos trabajadores cargados, y alguien puede apretar «Cargar lista» con eso adentro o pegar debajo.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-26",
+  "pantalla": "pan-trab-masivo",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "«Cargar lista» escribe sin un ensayo previo",
+  "sugerencia": "Agregar «Revisar antes de cargar», con el mismo ensayo que Listas: cuántas líneas entran, cuáles quedan afuera y por qué (con su número de línea), y recién ahí «Cargar 98 trabajadores».",
+  "problema": "Se pega una lista y se carga de una. Las líneas con error «quedan afuera y te decimos cuántas» recién después. La pestaña Listas del mismo panel ya hace un ensayo que muestra qué entra y qué no antes de escribir: acá no. Nielsen 5 (prevención de errores).",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-27",
+  "pantalla": "pan-aprendizaje",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La zona para subir no parece una zona para subir",
+  "sugerencia": "Subirla a 140 px de alto con un ícono de subir de 28 px en el color de acento, texto principal de 15 px «Arrastrá los recibos acá o hacé clic para elegirlos» (en teléfono, «Tocá para elegir…») y debajo, en gris, «Fotos o PDF · entre 3 y 10».",
+  "problema": "Es un rectángulo punteado de 1.160 × 90 px con dos líneas de texto chico y gris, sin ícono. En escritorio dice «Tocá», que es lenguaje de teléfono. Es la única acción de la pantalla y es lo que menos se ve.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-28",
+  "pantalla": "pan-aprendizaje",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Título de una oración: en Noticiero móvil ocupa medio teléfono",
+  "sugerencia": "Título «Aprendizaje» y bajada «Incorporá al catálogo los conceptos que aparecen en tus recibos. Subí entre 3 y 10…».",
+  "problema": "«Aprendizaje — incorporar conceptos desde recibos» como título de pantalla. En Noticiero, condensada y en mayúsculas, se parte en cuatro renglones de 60 px y empuja la acción a la mitad de la pantalla. La casa dice que el título de pantalla es uno solo y corto; la explicación va en la bajada.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "noticiero",
+  "vista": "telefono"
+ },
+ {
+  "id": "G4-29",
+  "pantalla": "pan-aprendizaje",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Leer recibos» deshabilitado sin decir por qué",
+  "sugerencia": "Debajo del botón, mientras esté deshabilitado: «Elegí al menos un recibo». Y subir el contraste del texto deshabilitado a 3:1 como mínimo.",
+  "problema": "El botón aparece gris claro sobre gris (en Noticiero, gris sobre beige) y no explica qué falta. El texto deshabilitado queda por debajo del contraste mínimo y el operador no sabe si la pantalla anda.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-09",
+  "pantalla": "pan-noticias",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Columnas de fecha y destino que se parten en dos renglones",
+  "sugerencia": "`white-space:nowrap` en Vigencia, Cargada y Destino, y quitar la hora de Cargada en la lista (va en el detalle). Con el formato DD/MM entra en 90 px.",
+  "problema": "En 'Noticias cargadas' la columna Cargada parte algunas horas a un segundo renglón ('2026-10-08 / 20:59') y otras no, y Destino parte 'Sede Central'. Las filas quedan de alto desparejo y la vista salta al recorrerlas (layout.md: ritmo estable en Operate).",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-10",
+  "pantalla": "pan-beneficios",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La lista de beneficios solo dice el rubro",
+  "sugerencia": "Agregar debajo del rubro la primera línea de la descripción en gris (como la bajada de Noticias) y una miniatura de 40×40 de la imagen del carrusel a la izquierda. Usar el hueco para que la columna Rubro crezca.",
+  "problema": "'Beneficios cargados' muestra rubro, vigencia, estado, destino y fecha, pero no la descripción ni la imagen. 'Óptica' y 'Óptica 2', 'Salud' y 'Salud 2' no se pueden distinguir sin abrir cada uno. Entre la columna Cargado y los botones queda un hueco de 150 px sin uso. Noticias sí muestra la bajada: las dos listas hermanas no se comportan igual.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-11",
+  "pantalla": "pan-notificaciones",
+  "estado": "cambio",
+  "nota": "esto es un error de datos  de prueba , no es problema",
+  "severidad": "media",
+  "titulo": "La vista previa firma con otro gremio",
+  "sugerencia": "Corregir el nombre del sindicato en la ficha de Pruebas. En la pantalla, si el operador escribió un remitente, mostrar ese en la vista previa y el nombre del sindicato abajo, más chico ('La Bancaria · Comisión Directiva').",
+  "problema": "En la vista del afiliado, el remitente por defecto dice 'UNIÓN OBRERA METALÚRGICA' al lado del logo de La Bancaria. Sale de `marca.nombre`: en la base de Pruebas este sindicato tiene ese nombre (también lo delatan los expedientes 'UNIÓF01-…'). Es un dato, no un error de la pantalla, pero en una demo se lee como que la app mezcla gremios, justo lo que promete el aislamiento total.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-12",
+  "pantalla": "pan-notificaciones",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Destino y leídos dichos en lenguaje de sistema",
+  "sugerencia": "Destino: 'Personas puntuales (1)', 'Seccional Rosario', 'Todo el padrón'. Leídos: '68 de 108 · 63 %' con el porcentaje en gris.",
+  "problema": "La columna Destino dice 'CUIL' o 'Seccional': 'CUIL' parece un número que falta, no un criterio. 'Leídos 68/108' obliga a hacer la cuenta para saber si fue mucho o poco. clarify.md: rótulos que dicen lo que pasó en el idioma de quien lee.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-13",
+  "pantalla": "pan-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Lo pendiente queda perdido entre 2.000 trámites",
+  "sugerencia": "Abrir con el filtro 'Sin terminar' puesto y ordenado por la última actualización, la más vieja primero (lo que más espera, arriba). Título: '253 sin terminar' y al lado, en gris, 'de 2.000'. Sumar pastillas rápidas encima de la tabla: 'Le toca al sindicato · Esperando al afiliado · Terminados'.",
+  "problema": "El título dice 'Trámites recibidos (2000)' y la pestaña '253', sin explicar qué es cada número. La lista abre con todos los estados mezclados, ordenada por número de expediente, y nueve de cada diez filas son 'Terminado'. Lo que el operador viene a hacer es atender lo abierto; para verlo tiene que descubrir el desplegable de estado. mode-operate.md: el primer dato que se lee es el que se usa.",
+  "archivos": [
+   "templates/admin.html",
+   "db.py"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-14",
+  "pantalla": "pan-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Cuatro estados distintos pintados igual",
+  "sugerencia": "Separar por de quién es el próximo paso, sin colores nuevos: 'Iniciado' y 'En tratamiento' en ámbar lleno; 'Respondido' y 'A la espera del afiliado' en contorno ámbar sin relleno (o gris neutro); 'Terminado' verde. Acortar 'A la espera de información del afiliado' a 'Espera al afiliado'.",
+  "problema": "Iniciado, En tratamiento, Respondido y A la espera de información del afiliado llevan la misma pastilla ámbar (`tag-pend` para todo lo que no es terminado). El operador no distingue de un vistazo los que le tocan a él de los que esperan al afiliado. El semáforo de la casa tiene significado fijo; acá el mismo color dice cuatro cosas.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-15",
+  "pantalla": "pan-tramites",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Buscador con el texto cortado y sin el nombre de la persona",
+  "sugerencia": "Placeholder 'Expediente' y ancho de 200 px; o un solo buscador 'Buscar por nombre, CUIL o expediente'. Sumar la columna Nombre (de CuentaTrabajador, por CUIL) antes del CUIL.",
+  "problema": "El segundo campo dice 'Buscar por N° de expedi' (el placeholder no entra) y la tabla identifica a la persona solo por CUIL: el operador busca y recuerda por nombre. clarify.md: los placeholders son ejemplos, no rótulos, y no pueden quedar cortados.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-16",
+  "pantalla": "pan-tramites-tipos",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En Laguna, el CUIL de prueba no parece un campo",
+  "sugerencia": "Darle borde de 1 px `--lg-linea`, fondo blanco y 40 px de alto, y acortar el placeholder a 'CUIL de un afiliado'. Poner el rótulo arriba: 'Probar con el CUIL de'.",
+  "problema": "En la vista del afiliado del constructor, el campo 'CUIL de prueba' no tiene borde ni fondo propio: se lee como texto gris suelto y el placeholder se corta ('…un afiliado del pac'). Justo arriba del botón 'Probar el formulario', así que la persona aprieta el botón sin saber que tenía que escribir algo. En Noticiero el mismo campo tiene borde y se entiende.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "templates/admin.html"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-17",
+  "pantalla": "pan-tramites-tipos",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Texto diminuto en la carátula de la vista previa",
+  "sugerencia": "Subirlo a 11 px, en la tipografía de texto (no mono, porque no es una cifra) y en blanco al 85 %.",
+  "problema": "'EXP — se numera al enviar' va en monoespaciada de unos 9 px sobre el degradé oscuro: no se lee. typeset.md y el piso de contraste del craft-floor (texto chico ≥ 4,5:1 y tamaño legible).",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-18",
+  "pantalla": "pan-tramites-tipos",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Rótulo largo que desalinea los dos selects en Noticiero",
+  "sugerencia": "Acortar el rótulo a 'Área que lo recibe *' y pasar 'por defecto' a la ayuda del '?', o alinear la fila por abajo (`align-items:end`).",
+  "problema": "'ÁREA QUE LO RECIBE POR DEFECTO *' en mayúsculas espaciadas ocupa dos renglones y baja su select unos 12 px respecto de 'Quién lo ve'. Dos campos de la misma fila quedan a distinta altura (layout.md: alineación y grilla).",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "noticiero",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-19",
+  "pantalla": "pan-tramites-tipos",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El botón 'Link' no dice qué hace",
+  "sugerencia": "'Copiar enlace', y al tocarlo que el botón diga 'Copiado' por 2 segundos.",
+  "problema": "En 'Tipos cargados' cada fila tiene 'Link' junto a 'Editar' y 'Borrar'. No queda claro si abre el formulario, lo copia o lo comparte. clarify.md: los botones nombran la acción exacta.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-20",
+  "pantalla": "pan-encuestas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Cinco botones iguales por fila, y 'Cerrar' entre ellos",
+  "sugerencia": "'Resultados' como botón principal de la fila (relleno del modelo). Editar, Duplicar y Avisos como enlaces de texto. 'Cerrar' separado a la derecha, con contorno de peligro y confirmación que nombre el efecto: 'Cerrar «Clima laboral (3)» ahora: nadie más va a poder responder'.",
+  "problema": "Cada encuesta abierta tiene Resultados, Editar, Duplicar, Avisos y Cerrar con el mismo peso. 'Cerrar' corta la encuesta antes de tiempo y no tiene vuelta, pero se ve igual que 'Duplicar'. 'Resultados', que es lo que más se usa, no se destaca. Heurísticas 5 (prevenir errores) y 8 (diseño mínimo) de critique.md.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-21",
+  "pantalla": "pan-encuestas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "'Cerrada' pintado en rojo, como si fuera un error",
+  "sugerencia": "Pastilla gris neutra para 'Cerrada' (la misma `.tag-neutra` de las vencidas), verde para 'Abierta' y ámbar para 'Programada' si existe.",
+  "problema": "Las encuestas cerradas llevan pastilla roja. En esta casa el rojo es un estado malo (impago, diferencia); una encuesta cerrada es el final normal de su vida. El operador lee alarma donde no la hay.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-22",
+  "pantalla": "pan-encuestas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "'toma nueva de #1' habla con un número interno",
+  "sugerencia": "'3.ª toma de «Clima laboral»' o 'Repite «Clima laboral» de marzo 2026'.",
+  "problema": "Debajo de 'Clima laboral (3)' dice 'toma nueva de #1'. El #1 es el id de la base: el operador no lo ve en ningún lado. clarify.md: nada de jerga interna.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-23",
+  "pantalla": "pan-encuestas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Respuestas sin porcentaje",
+  "sugerencia": "'32 de 106 · 30 %', con el porcentaje en gris, y una barra fina de 60 px debajo con el mismo dato.",
+  "problema": "'32 de 106' obliga a calcular si la encuesta va bien. Es el dato que decide si hay que mandar un recordatorio.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-24",
+  "pantalla": "pan-encuestas-nueva",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El constructor de encuestas no usa la hoja de trabajo",
+  "sugerencia": "Pasarla al mismo patrón: riel con 'La encuesta', 'Cuándo', 'Preguntas' y 'Publicación'; las ayudas a un '?'; 'Crear encuesta' en el pie de la hoja y en el riel; la vista del afiliado a la derecha, fija.",
+  "problema": "Noticias, Beneficios, Notificaciones y Trámites tienen la misma hoja de trabajo (riel de pasos con estado, hoja numerada, vista del afiliado a la derecha, ayudas en '?'). Encuestas es un formulario suelto de dos columnas con la ayuda siempre a la vista y el botón 'Crear encuesta' escondido en la columna de preguntas. CLAUDE.md fija `.ct-layout/.ct-riel/.ct-area/.ct-pasog/.ct-guardar` como el patrón de toda pantalla de alta del panel.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-25",
+  "pantalla": "pan-encuestas-nueva",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Columna vacía a la derecha y 'Preguntas' pegado al borde",
+  "sugerencia": "Dejar dos columnas (preguntas a la izquierda, 'Lo que ve el afiliado' a la derecha, 1fr / 1fr) y darle 16 px de margen interno a la columna de preguntas.",
+  "problema": "En Laguna la zona de preguntas se arma en tres columnas: la tercera es un recuadro vacío de 300 × 215 px con borde. Además 'Preguntas' y su texto quedan pegados al borde izquierdo de la caja, sin margen. Se ve a medio armar.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "templates/admin.html"
+  ],
+  "modelo": "laguna",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-26",
+  "pantalla": "pan-encuestas-nueva",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Anónima o nominal viene ya elegida en Nominal",
+  "sugerencia": "Sin valor por defecto ('Elegí una…') y obligatorio. Que la ayuda cambie con lo elegido: 'Nominal: vas a ver nombre y CUIL de cada respuesta' / 'Anónima: nadie, ni el sindicato, puede saber quién respondió qué'.",
+  "problema": "La decisión más delicada de la encuesta aparece preseleccionada en 'Nominal', y la ayuda de abajo explica la anónima. Quien no cambia nada publica una encuesta con nombre y CUIL creyendo, quizás, que era anónima. clarify.md: decir la consecuencia antes de que pase.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-27",
+  "pantalla": "pan-encuestas-nueva",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "'Crear encuesta' partido en dos renglones en Noticiero",
+  "sugerencia": "Moverlo al pie de la hoja, a lo ancho de su texto, como en las otras altas (ver el hallazgo de la hoja de trabajo).",
+  "problema": "El botón principal vive en una columna de 175 px y en Noticiero (mayúsculas espaciadas) se parte en 'CREAR / ENCUESTA'.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "noticiero",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-28",
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "alta",
+  "titulo": "El nombre de la encuesta no se lee: tinta sobre la franja oscura",
+  "sugerencia": "Usar la clase `titulo-pagina` en el h1 (y borrar la tipografía propia de `.titulo-encuesta`), o forzar `color:#fff` arriba de 760 px. Sumar debajo una bajada en blanco al 80 %: 'Anónima · abierta del 16/10 al 06/11/2026'.",
+  "problema": "El título 'Clima laboral (3)' va en tinta casi negra encima de la franja azul oscura que baja del encabezado: no se ve. Es lo único que dice qué encuesta se está mirando. La regla de la casa pide que el primer título lleve `titulo-pagina` y vaya en blanco arriba de 760 px por la franja; acá usa `.titulo-encuesta` propio, en tinta.",
+  "archivos": [
+   "templates/encuesta_resultados.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-29",
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "cambio",
+  "nota": "Transformar a los modelos estandar toda la pagina de de resultados de encuesta, es evidente que quedo con el estilo viejo.",
+  "severidad": "media",
+  "titulo": "Los resultados ignoran el modelo elegido y cambian de cara",
+  "sugerencia": "Marcar el `<html>` con `data-tema`/`data-paleta` como las otras cuatro páginas, cargar una hoja `temas/<modelo>-resultados.css` (o reutilizar la del panel) y usar la misma `.flota-sesion` con rótulos. La X sin rótulo pasa a 'Volver al panel'.",
+  "problema": "Con Laguna o con Noticiero la página es idéntica (las capturas solo difieren en las teselas del mapa): encabezado oscuro donde el panel lo tiene claro, otra tipografía, otros botones flotantes (un círculo con una casa y otro con una X, sin rótulo, donde el panel tiene la píldora 'Inicio / Salir'). Quien eligió Noticiero salta a otra app al tocar 'Resultados'. Rompe 'Un sistema, no un rejunte' (PRODUCT.md) y la elección de modelo que la persona hizo.",
+  "archivos": [
+   "templates/encuesta_resultados.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-30",
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La caja de filtros tiene 220 px vacíos",
+  "sugerencia": "Plegar el calendario en un botón 'Cuándo respondieron: todo el período' que abre el calendario en un globo, y que abra en el mes de la última respuesta. Así los indicadores suben unos 250 px.",
+  "problema": "Las pastillas de Seccional y Empleador ocupan dos renglones, pero el calendario de la derecha estira la caja hasta 400 px: queda un rectángulo vacío de ~820 × 220 px antes de los indicadores. Además el calendario abre en noviembre, donde no hay respuestas (la última fue el 23/10). layout.md: la densidad sigue al uso; el dato principal (participación) queda debajo del pliegue.",
+  "archivos": [
+   "templates/encuesta_resultados.html",
+   "static/encuesta_resultados.js"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-31",
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En Evolución dos opciones comparten el mismo color",
+  "sugerencia": "Desde la quinta serie, repetir el color con línea punteada (`borderDash:[6,4]`) o usar un tono mezclado de la marca (`color-mix(in srgb, var(--marca-apoyo) 55%, white)`). Mejor aún: rotular cada línea al final con su nombre y quitar la leyenda.",
+  "problema": "Los gráficos de evolución usan cuatro colores (`COLORES_EV`). Con cinco opciones el quinto repite el primero: en '¿Qué querés que el sindicato empuje?' Paritaria y Guardería son las dos verdes y no se puede saber cuál es cuál. Un gráfico que no se puede leer da una conclusión falsa.",
+  "archivos": [
+   "static/encuesta_resultados.js"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-32",
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Números con punto decimal en vez de coma",
+  "sugerencia": "Pasar todos los números por `toLocaleString('es-AR', {maximumFractionDigits:1})` y dejar un espacio fino antes del %.",
+  "problema": "'54.7% del padrón respondió', '81.1% leyó', promedio '3.67'. En Argentina se escribe 54,7 % y 3,67; la app ya formatea importes así en el afiliado. clarify.md: el idioma del producto.",
+  "archivos": [
+   "static/encuesta_resultados.js"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-33",
+  "pantalla": "pan-encuesta-resultados",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "En teléfono, títulos de sección en tres renglones y zoom sobre una burbuja",
+  "sugerencia": "Debajo de 760 px, poner la bajada debajo del título (columna). Mover el zoom del mapa abajo a la derecha y encuadrar el mapa con un margen de 40 px alrededor de las burbujas; separar las que se pisan con un leve corrimiento.",
+  "problema": "'Participación por seccional' se apila en tres renglones porque comparte la fila con su bajada larga, y los botones +/− del mapa tapan la burbuja de Córdoba. Las dos burbujas de Buenos Aires se superponen y una esconde a la otra.",
+  "archivos": [
+   "templates/encuesta_resultados.html",
+   "static/mapa.js"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G6-01",
+  "pantalla": "pan-empleadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Las columnas Estado y Nivel no dicen nada",
+  "sugerencia": "Escribir «sin cuenta» en vez de «—» en Nivel (es lo que significa), y mostrar Estado solo para las dadas de baja (ver el hallazgo de colores de estado). Con eso la razón social puede ganar ancho.",
+  "problema": "Las 12 filas dicen «activo» y «—». Ocupan unos 300 px que no ayudan a decidir nada, y el guion no aclara si falta el dato o si la empresa no tiene cuenta.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-02",
+  "pantalla": "pan-empleadores",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Importar CUITs de conceptos» queda suelto entre el formulario y la lista",
+  "sugerencia": "Moverlo al encabezado de «Empleadores cargados», alineado a la derecha, como botón secundario, con una ayuda «?» que diga «Suma como empresas los CUIT que ya aparecen en los recibos. No pisa las que ya cargaste».",
+  "problema": "El botón aparece solo, sin explicación cerca, entre la tarjeta del alta y la tabla. No se entiende si importa ahora, qué trae ni si pisa algo; en Noticiero además es una cajita de 11 px.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-03",
+  "pantalla": "pan-empleadores-notif",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La ayuda del mensaje vive en el texto de ejemplo y habla de usted",
+  "sugerencia": "Pasarla a una línea de ayuda debajo del campo: «Podés pegar enlaces: se muestran como link». Dejar el campo vacío o con un ejemplo real de mensaje.",
+  "problema": "«Puede incluir URLs, se muestran como link» está escrito como ejemplo dentro del campo: desaparece apenas se empieza a escribir, que es justo cuando hace falta. Además rompe el voseo de la casa.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-04",
+  "pantalla": "pan-empleadores-notif",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La tabla vacía muestra cinco encabezados para cero filas",
+  "sugerencia": "Con cero filas, ocultar los encabezados y dejar una línea: «Todavía no enviaste ninguna notificación a empleadores. Escribila arriba y mirá la vista previa antes de mandarla.»",
+  "problema": "«Notificaciones enviadas (0)» dibuja Fecha, Remitente, Mensaje, Destino y Leídos sobre una sola línea de texto. Los encabezados sin datos no informan y el estado vacío no invita a nada (regla de la casa: «los estados vacíos invitan a actuar»).",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-05",
+  "pantalla": "pan-empleadores-tram",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Pestañas y sub-pestañas se ven idénticas",
+  "sugerencia": "Dejar las pastillas para el primer nivel y dibujar el segundo como pestañas de texto de 13 px con subrayado de 2 px en el color del modelo en la activa, sin contenedor. Aplicarlo a toda sub-pestaña del panel (`.subtab`).",
+  "problema": "Empresas / Notificaciones / Trámites y debajo Ver trámites / Crear-editar formularios usan la misma pastilla, del mismo tamaño y peso (en Noticiero, las dos en mayúsculas condensadas con borde). No se distingue cuál manda sobre cuál: parecen dos menús hermanos.",
+  "archivos": [
+   "static/marca.css",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-06",
+  "pantalla": "pan-empleadores-tram",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El buscador por expediente corta su propio texto",
+  "sugerencia": "Acortar a «N° de expediente» o darle al campo `flex: 1.5`. Lo mismo para cualquier campo de filtro: el ancho sigue al texto más largo esperable.",
+  "problema": "El texto de ejemplo «Buscar por N° de expediente» se corta en «Buscar por N° de expedi»: el campo mide lo mismo que el de CUIT aunque el texto es el doble.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-07",
+  "pantalla": "pan-empleadores-tram",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El vacío no explica cómo llega un trámite y los filtros filtran nada",
+  "sugerencia": "Si el total es 0, ocultar filtros y encabezados y decir: «Las empresas inician trámites desde los formularios externos que crees. Todavía no hay ninguno.» con el botón «Crear un formulario» que abre la otra sub-pestaña.",
+  "problema": "Con cero trámites se muestran la barra de filtros completa y una tabla vacía con «Todavía no llegó ningún trámite de una empresa». El operador no sabe qué tiene que pasar para que llegue uno. Regla de la casa: los estados vacíos invitan a actuar.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-08",
+  "pantalla": "pan-convenio",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El vacío no anticipa los pasos siguientes",
+  "sugerencia": "Cambiarlo por: «Todavía no cargaste ningún convenio. Dalo de alta arriba y después subí el PDF y sus actas: leerlo lleva unos minutos y te avisamos cuando esté listo para consultas.»",
+  "problema": "«Todavía no cargaste ningún convenio.» no dice que después del alta hay que subir el PDF del convenio y sus actas, ni que leerlo tarda unos minutos. Quien da de alta el primero no sabe qué esperar.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-09",
+  "pantalla": "pan-seccionales",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "«Ubicada a mano» lleva el punto ámbar de una advertencia",
+  "sugerencia": "Pintar `manual` igual que `exacta` (verde `#0d7a5f`) y dejar el ámbar solo para `aproximada`, que en una seccional no alcanza.",
+  "problema": "Las cuatro seccionales muestran un punto ámbar, el mismo que «aproximada» (`.geo-punto.manual` = `#b8860b`). Pero para una seccional «manual» es una ubicación válida: alguien miró el mapa y responde por el punto. El ámbar, color de estado de la casa, le dice al operador que algo está a medias cuando no lo está.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-10",
+  "pantalla": "pan-seccionales",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La casilla de alcance parece un campo de texto",
+  "sugerencia": "Sacar la caja: casilla de 18 px + rótulo en 14 px, la palabra «todas» en negrita sin espacios extra, y la explicación debajo en gris, con `max-width: 70ch`.",
+  "problema": "«Sus usuarios ven todas las seccionales» va adentro de una caja con forma de campo (en Laguna, una pastilla de borde redondeado del ancho completo), con espacios de más alrededor de «todas», y su explicación corre debajo en un solo renglón de ~170 caracteres. Es una decisión de permisos importante y se lee como un input vacío.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-11",
+  "pantalla": "pan-listas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Tarjetas adentro de una tarjeta",
+  "sugerencia": "Dentro de la tarjeta, dibujar las tres plantillas como filas separadas por una línea fina (o tres columnas sin borde en escritorio): nombre en 15 px, descripción, columnas y «Descargar modelo» alineado a la derecha.",
+  "problema": "Las tres plantillas son tarjetas con borde dentro de la tarjeta «Plantillas». Impeccable (craft-floor) es tajante: las tarjetas anidadas siempre están mal. Suma bordes que no separan nada y deja un hueco grande a la derecha de «Lista simple».",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-12",
+  "pantalla": "pan-listas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Comas sueltas y pastillas «clave» separadas de su columna",
+  "sugerencia": "Una pastilla por columna sin comas, separadas por 6 px de espacio, y la marca de clave adentro de la misma pastilla («cuil · clave 1») con fondo neutro.",
+  "problema": "Las columnas se escriben como «cuil , clave 1 , dni , clave 2 , apellido_nombre ,»: las comas quedan flotando entre cajitas y la pastilla «clave 1» parece otra columna más. No se lee de un vistazo que el CSV tiene cinco columnas y cuáles son llaves.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-13",
+  "pantalla": "pan-listas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Subir una lista» pegado a su primer rótulo",
+  "sugerencia": "Dejar 16 px bajo el título de la tarjeta y poner la ayuda de «Nombre» en un globo «?» o bajo la fila completa, para que la grilla de dos columnas quede pareja.",
+  "problema": "El título de la tarjeta toca el rótulo «Plantilla *» sin aire, y la ayuda de «Nombre de la lista» empuja «Vale para» 50 px más abajo que un renglón normal.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-14",
+  "pantalla": "pan-areas",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La casilla de grupo está pegada a su título y sin estilo",
+  "sugerencia": "Escribir el nombre del grupo como subtítulo (14 px, 700) sin casilla y, a su derecha, un enlace chico «Marcar todas / Desmarcar». Si se mantiene la casilla, 8 px entre casilla y texto y el mismo `accent-color` que las demás.",
+  "problema": "«☐Recibos», «☐Padrón»: la casilla nativa del navegador va pegada a la letra, más chica que las casillas de las pastillas de abajo y con otro dibujo. No se entiende que tildarla marca todo el grupo; parece una opción más.",
+  "archivos": [
+   "templates/admin.html",
+   "static/marca.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-15",
+  "pantalla": "pan-usuarios",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "alta",
+  "titulo": "La matriz de permisos abierta empuja la lista a casi 2.000 px",
+  "sugerencia": "Plegar la matriz por defecto, con un resumen en una línea («Sin ajustes: hereda todo del área») y un botón «Ajustar permisos». Si no hay área elegida, en vez de 22 guiones decir «Elegí un área para ver qué hereda».",
+  "problema": "«Ajustes sobre lo que hereda del área» muestra 22 filas con dos casillas cada una, siempre abiertas, aunque lo normal es no tocar nada («sin tildar nada, el usuario tiene exactamente lo del área»). La lista de usuarios, que es lo que se consulta a diario, arranca recién a ~1.950 px. Además la columna «Del área» dice «—» en todas las filas hasta que se elige un área.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-16",
+  "pantalla": "pan-usuarios",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En teléfono la matriz se sale de la tarjeta",
+  "sugerencia": "Debajo de 760 px, cada sección como una fila con dos interruptores rotulados («Dar igual», «Bloquear») de 44 px de alto, o al menos `overflow-x: auto` dentro de la tarjeta y casillas de 22 px con área táctil de 44.",
+  "problema": "A 390 px la columna «Bloquear» se corta («BLOQUEA») y atraviesa el borde de la tarjeta, y las casillas miden unos 13 px, muy debajo de los 44 px tocables.",
+  "archivos": [
+   "templates/admin.html",
+   "static/marca.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G6-17",
+  "pantalla": "pan-usuarios",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La columna Rol mezcla tres tratamientos distintos",
+  "sugerencia": "Los tres roles con la misma pastilla neutra; si se quiere destacar al administrador, alcanza con el peso del texto.",
+  "problema": "«general» va en pastilla verde, «de seccional» en pastilla ámbar y «de área» como texto en negrita sin pastilla. Tres formas para un mismo dato hacen pensar que significan cosas de otra naturaleza, y el ámbar suena a advertencia.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-18",
+  "pantalla": "pan-apariencia",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Dos botones de guardar para una misma pantalla",
+  "sugerencia": "Si siguen siendo dos formularios: cada botón dentro de su tarjeta, alineado igual (abajo a la derecha), y un aviso «Tenés cambios sin guardar» junto al botón que corresponda cuando se toca algo. Mejor aún: un solo «Guardar cambios» al pie.",
+  "problema": "«Guardar apariencia» va suelto entre tarjetas y «Guardar los rubros» dentro de la última. Si alguien cambia el modelo y un rubro y aprieta solo el de abajo, pierde el cambio de arriba sin aviso.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-19",
+  "pantalla": "pan-apariencia",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La prueba de lectura habla en jerga técnica",
+  "sugerencia": "Decir: «Tu color de acento es muy claro para usarlo en texto. Donde haga falta lo vamos a oscurecer así:» y las dos muestras grandes (24 px). Dejar los números en el `title` de la muestra.",
+  "problema": "«(1,84:1; hace falta 4,5:1)» en monoespaciada le habla a un diseñador, no al Super Admin del gremio. Lo que necesita saber es si su marca se va a ver bien y qué va a hacer la app.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-20",
+  "pantalla": "pan-apariencia",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Las tarjetas de elección dejan media pantalla vacía",
+  "sugerencia": "Poner «Para los afiliados» y «Para los operadores» lado a lado (dos columnas de dos tarjetas). Lo mismo con las fotos de Laguna y Noticiero.",
+  "problema": "Modelo, Paleta y Foto de portada ocupan solo la mitad izquierda de tarjetas de 940 px; la derecha queda vacía y la página se alarga el doble.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-21",
+  "pantalla": "pan-apariencia",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Interruptores en negro y una casilla nativa entre ellos",
+  "sugerencia": "Pintar el interruptor prendido con el azul de Laguna (`--lg-azul`), pasar «Incluir fechas con carga política» a un interruptor chico sangrado bajo Efemérides, y rotular las tres cajas fijas con «Van siempre».",
+  "problema": "Los interruptores prendidos van en negro y no en el color del modelo, y «Incluir fechas con carga política» es una casilla del navegador en medio de una lista de interruptores. Las tres cajas grises (Hora y fecha, Clima, Cumpleaños) parecen campos deshabilitados.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "templates/admin.html"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-16",
+  "pantalla": "pan-dashboard",
+  "estado": "cambio",
+  "nota": "esta version de panel la vamos a reemplazar por la v2 en este plan de cambios",
+  "severidad": "media",
+  "titulo": "La v1 no tiene título de pantalla",
+  "sugerencia": "Agregar arriba de los filtros el mismo bloque que la v2: `<h1 class=\"titulo-pagina\">Panel Sindical</h1>` + «Lo que pasó en tu sindicato en el período elegido.», con «Probar la versión nueva» alineado a la derecha en la misma fila.",
+  "problema": "La v2 abre con «PANEL SINDICAL» y su bajada; la v1 arranca directo con «Filtros» y el botón «Probar la versión nueva» flotando solo. La regla de la casa es que el primer título de cada pantalla lleve `titulo-pagina` (condensada 31 px, mayúsculas, blanco sobre la franja). Sin él, quien llega no sabe en qué pantalla está.",
+  "archivos": [
+   "templates/dashboard.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-17",
+  "pantalla": "pan-dashboard",
+  "estado": "cambio",
+  "nota": "esta version de panel la vamos a reemplazar por la v2 en este plan de cambios",
+  "severidad": "media",
+  "titulo": "Nueve indicadores en fila de siete: dos huérfanos y números desalineados",
+  "sugerencia": "Agrupar como ya hace la v2: una fila de 4 principales (recibos, % con diferencias, monto, trámites sin resolver) y una de 5 secundarias más bajas. Dentro de cada tarjeta, `min-height: 2lh` al rótulo o `align-content: space-between` para que todos los números queden a la misma altura.",
+  "problema": "`repeat(auto-fit, minmax(148px, 1fr))` acomoda 7 tarjetas arriba y deja «Tasa de lectura» y «Afiliados registrados» solas abajo con 900 px vacíos al lado. Además «Enviados al sindicato» y «Trámites sin resolver» parten el rótulo en dos renglones y su número queda más abajo que el de las vecinas. Impeccable (layout): las tarjetas repetidas tienen que leerse como una grilla, no como un rejunte.",
+  "archivos": [
+   "templates/dashboard.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G7-19",
+  "pantalla": "pan-dashboard",
+  "estado": "cambio",
+  "nota": "esta version de panel la vamos a reemplazar por la v2 en este plan de cambios",
+  "severidad": "media",
+  "titulo": "En el teléfono, 1.300 px de filtros antes del primer número",
+  "sugerencia": "Bajo 760 px dejar a la vista solo Período y un botón «Más filtros (n)» que despliegue el resto, igual que la v2. Es un arreglo de pantalla, no toca la lógica de filtros.",
+  "problema": "En 390 px el bloque de filtros (período, formato, seccionales, afiliado, calendario completo, 12 empresas una por renglón y el deslizador) mide unos 1.300 px: hay que bajar más de dos pantallas para ver el primer indicador. Impeccable, Operate: lo que la persona viene a leer va primero. La v2 ya lo resolvió con «Más filtros».",
+  "archivos": [
+   "templates/dashboard.html",
+   "static/dashboard.js"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G7-18",
+  "pantalla": "pan-dashboard",
+  "estado": "cambio",
+  "nota": "esta version de panel la vamos a reemplazar por la v2 en este plan de cambios",
+  "severidad": "baja",
+  "titulo": "Franjas de color fijas en los indicadores: rojo aunque marque 0%",
+  "sugerencia": "Bajar la franja a 1 px neutra (`--linea`) y, si se quiere señal, pintar el número en rojo solo cuando el valor supere un umbral (por ejemplo, > 0 en monto observado). La marca del sindicato queda para la de «Recibos analizados».",
+  "problema": "Cada indicador lleva una franja de 3 px a la izquierda con un color fijo; «% con diferencias» y «Monto observado» van en rojo aunque marquen 0. El rojo es color de estado y la casa dice que tiene significado propio; prenderlo sin motivo lo gasta. Craft-floor además pide no usar bordes laterales de color de más de 1 px en tarjetas.",
+  "archivos": [
+   "templates/dashboard.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-20",
+  "pantalla": "pan-dashboard",
+  "estado": "cambio",
+  "nota": "esta version de panel la vamos a reemplazar por la v2 en este plan de cambios",
+  "severidad": "baja",
+  "titulo": "«Diferencias por empresa» a medio ancho con un hueco al lado",
+  "sugerencia": "Ponerla a todo el ancho (`grid-column: 1 / -1`) o reordenar para que forme par con «Adopción del nuevo formato», que hoy comparte fila con el semáforo.",
+  "problema": "Después del par Trámites / Notificaciones, «Diferencias detectadas por empresa» queda sola a la izquierda ocupando la mitad y deja 630 px de mesa vacía a la derecha. Parece que falta un gráfico.",
+  "archivos": [
+   "templates/dashboard.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G7-21",
+  "pantalla": "pan-dashboard-v2",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Aviso de «reducir movimiento»: 300 px en el teléfono y vuelve cada vez",
+  "sugerencia": "Dejarlo en una línea: «Tu equipo tiene «reducir movimiento» activado: el panel muestra solo fundidos. Cómo cambiarlo ›», con el camino de cada sistema dentro de un `<details>`. Guardar el cierre en `localStorage` (envuelto en try/catch) para no volver a mostrarlo en ese navegador.",
+  "problema": "El aviso es una decisión de la casa y tiene que estar, pero en el teléfono ocupa 300 px entre el título y los números, con todo el camino de configuración de cuatro sistemas escrito. Y cerrarlo no se recuerda (`useState(false)`): aparece en cada visita. Impeccable (clarify): «progressive disclosure para el detalle poco común».",
+  "archivos": [
+   "static/panel_v2/app.js",
+   "static/panel_v2/panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-22",
+  "pantalla": "pan-dashboard-v2",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Celda vacía de otro color en la grilla de indicadores del teléfono",
+  "sugerencia": "Que el último indicador ocupe las dos columnas cuando el total es impar (`.v2-chicos > :last-child:nth-child(odd) { grid-column: 1 / -1; }`), o que la celda sobrante tome el mismo fondo del contenedor.",
+  "problema": "En 390 px los cinco indicadores chicos van en dos columnas y el sexto lugar queda como un rectángulo de otro azul, más claro, al lado de «Afiliados registrados». Se ve como una tarjeta que no cargó.",
+  "archivos": [
+   "static/panel_v2/panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G1-08",
+  "pantalla": "emp-portada",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los accesos no dicen su estado real",
+  "sugerencia": "Cambiar la línea por el estado: «3 sin leer» / «Sin mensajes nuevos» y «1 expediente con respuesta» / «Ningún trámite abierto». Mantener el globo para el número.",
+  "problema": "Las filas dicen «Mensajes de tu sindicato» y «Formularios y seguimiento», que es la descripción fija de la sección. La regla de la casa para la portada es «una línea de estado real (12 de 12 al día), no Ver más», y el servidor ya calcula `notificaciones_no_leidas` y `tramites_novedades` (hoy solo salen como globo cuando son más de cero).",
+  "archivos": [
+   "templates/empresa_portada.html",
+   "main.py"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-09",
+  "pantalla": "emp-portada",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En escritorio dos filas y un vacío enorme debajo",
+  "sugerencia": "Limitar `.pad` a 760 px centrado en esta portada (o poner las dos filas en dos columnas de 360 px) y, debajo, mostrar los últimos 3 mensajes o el trámite con novedad más reciente con el mismo `.pt-fila`, que es lo que la empresa vino a mirar.",
+  "problema": "Con dos filas de 72 px a todo el ancho (1.270 px), el resto de la pantalla queda vacío: la portada no tiene peso ni foco. La pantalla de una empresa con dos funciones no necesita llenar el ancho (layout.md: la densidad sigue al contenido) y las filas tan anchas alejan la flecha del título.",
+  "archivos": [
+   "templates/empresa_portada.html",
+   "static/marca.css"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G1-10",
+  "pantalla": "emp-notificaciones",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El aviso vacío centrado bajo un título alineado a la izquierda",
+  "sugerencia": "Alinear `.notif-vacio` a la izquierda de la columna en escritorio (o centrar todo el bloque título + bajada + vacío). Ver además el hallazgo de estados vacíos en «general».",
+  "problema": "En escritorio el nombre de la empresa arranca en x=500 (columna de 480 px) y «Todavía no tenés notificaciones.» va centrado a la ventana. Dos ejes distintos en tres renglones; layout.md: una sola grilla.",
+  "archivos": [
+   "templates/empresa.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G1-11",
+  "pantalla": "emp-tramites",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "alta",
+  "titulo": "«Trámites» y su bajada no se leen sobre la franja",
+  "sugerencia": "Ampliar la regla del `@media (min-width:761px)` a `body.franja #trx-inicio > h1 { color:#fff }` y `body.franja #trx-inicio > .sub2 { color:rgba(255,255,255,.75) }`; mejor aún, darle a ese título la clase `titulo-pagina`, que ya resuelve el blanco en `interior.css`.",
+  "problema": "En escritorio el título «Trámites» queda en azul tinta sobre la parte oscura de la franja (contraste medido ≈3,3:1) y la bajada «Formularios de tu sindicato…» en gris sobre gris azulado (≈2:1), por debajo del 4,5:1 del piso de Impeccable. La regla de la casa dice que el primer título y su bajada van en blanco arriba de 760 px; la regla de empresa.html solo lo hace con `.cont > h1` (hijo directo), y este título está anidado dentro de `#trx-inicio`.",
+  "archivos": [
+   "templates/empresa.html",
+   "static/interior.css"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G7-23",
+  "pantalla": "pla-portada",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El texto del bloque «Sindicatos» se lee mal sobre el lila",
+  "sugerencia": "Para esta tarjeta, sacar las opacidades (.82 y .72 → 1) y aclarar el extremo oscuro del degradé (`color-mix(in srgb, var(--marca-acento) 80%, white)` en vez de 55% con la base), o usar el texto corregido de `temas.paleta_legible`. Medir de nuevo: tiene que dar ≥ 4,5:1 en la parte más oscura.",
+  "problema": "La bajada «Alta, edición, marca y módulos…» va en el color base al 82% sobre el degradé lila de Colm3na: medido, 3,3:1; el kicker «LO PRIMERO» al 72%, 2,8:1. El piso para texto de 13 px es 4,5:1 (craft-floor «Contrast»). Con la paleta de Colm3na el acento es un tono medio y el degradé `.pt-hero` lo oscurece todavía más hacia abajo.",
+  "archivos": [
+   "static/marca.css",
+   "templates/plataforma_portada.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-24",
+  "pantalla": "pla-portada",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Mismo ícono de llave para «Usuarios» y «Cambiar clave»",
+  "sugerencia": "Usar un ícono de personas (dos siluetas) para «Usuarios de plataforma» y dejar la llave para «Cambiar clave».",
+  "problema": "Las dos tarjetas de la primera fila usan la misma llave, así que el ícono no ayuda a distinguirlas; justo son las dos que tocan accesos.",
+  "archivos": [
+   "templates/plataforma_portada.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-25",
+  "pantalla": "pla-portada",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Subtítulo pegado a la tarjeta y «Topes SS» huérfano",
+  "sugerencia": "Bajar el aire entre título y subtítulo a 6 px y subir el de subtítulo a tarjeta a 22 px. Para los accesos, `grid-template-columns: repeat(4, 1fr)` en escritorio (dos filas de 4 y 3) o poner «Topes SS» junto a «Configuración legal».",
+  "problema": "«Administración de Colm3na · superadmin» queda a 11 px de la tarjeta grande y a 34 px del título: el subtítulo parece rótulo de la tarjeta y no del saludo. Abajo, siete accesos en tres columnas dejan «Topes SS» solo con dos huecos. Impeccable (craft-floor, «Spacing»): más aire arriba de un bloque que adentro del grupo.",
+  "archivos": [
+   "templates/plataforma_portada.html",
+   "static/marca.css"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G7-26",
+  "pantalla": "pla-lista",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En el teléfono la tabla se sale: Editar y Borrar quedan fuera",
+  "sugerencia": "Bajo 600 px, mostrar cada sindicato como una ficha: logo + nombre arriba, CUIT con `white-space: nowrap`, los cuatro colores y los dos números en una línea, y Editar / Borrar al pie. O al menos envolver la tabla en `overflow-x: auto` y dejar el CUIT sin cortes.",
+  "problema": "En 390 px la tabla de sindicatos desborda: no se ven «Trabaj.», ni Editar ni Borrar; el CUIT se parte en «30- / 11111111-8» y el nombre en cuatro renglones. Impeccable (audit, «Horizontal scroll»; adapt).",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G7-27",
+  "pantalla": "pla-lista",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los números de admins y trabajadores en rojo parecen errores",
+  "sugerencia": "Pintarlos en la tinta (`--tinta`) con subrayado punteado y, al pasar el mouse, en el acento de Colm3na. Si `--agua` tiene que ser verde, revisar por qué resuelve a rojo acá.",
+  "problema": "«9», «206», «2» y «99» van subrayados en rojo (`.link-num` usa `--agua`, que en esta pantalla resuelve a rojo). El rojo es el color de error y de diferencia en toda la plataforma; acá solo significa «tocá para ver la lista». Regla de la casa: los colores de estado tienen significado propio.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-28",
+  "pantalla": "pla-nuevo",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Formulario de alta largo y sin secciones; ayudas en 11 px",
+  "sugerencia": "Partir en cuatro grupos con un subtítulo de 16 px y 28 px de aire arriba: «Datos del gremio», «Marca» (colores + prueba de lectura + logo + firma), «Módulos» y «Contrato y políticas». Subir las ayudas a 12,5 px con `color: var(--gris)` (sacar el `style=\"font-size:11px\"` de cada una) y cambiar «--» por «—».",
+  "problema": "El alta mezcla en una sola tarjeta datos del gremio, cinco colores, la prueba de lectura, tres archivos, quince módulos y tres políticas legales, sin un solo subtítulo. Las ayudas van en 11 px gris (estilo en línea), con «--» en lugar de raya. Impeccable (layout, «Grouping»; typeset: 16 px como piso de lectura en formularios).",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-29",
+  "pantalla": "pla-nuevo",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Selectores de archivo nativos: «Choose File / No file chosen»",
+  "sugerencia": "Ocultar el input y usar un `<label>` con estilo de botón secundario «Elegir archivo» + el nombre del archivo elegido al lado (o «Ningún archivo»), con una miniatura cuando sea imagen.",
+  "problema": "Logo, firma y contrato usan el `<input type=file>` sin estilo: botón gris del navegador, en el idioma del navegador (en la captura, inglés), distinto de todo lo demás. Craft-floor («Browser surfaces»): lo que no se dibuja también lleva el diseño.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-30",
+  "pantalla": "pla-admin",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Las dos claves quedan separadas: «Repetir» cae debajo de «Nombre»",
+  "sugerencia": "Reordenar: Sindicato | CUIT; Nombre a todo el ancho; Clave inicial | Repetir clave inicial, en la misma fila. El botón a la izquierda debajo, como está.",
+  "problema": "El orden es Sindicato | CUIT, Nombre | Clave inicial, Repetir clave | (vacío). La confirmación de clave queda en otra fila y en la otra columna, lejos del campo que repite, y deja un hueco. Impeccable (layout, «Grouping»: lo que va junto, cerca).",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-11",
+  "pantalla": "pla-marca",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El acento dice 'reservado' pero pinta todos los botones",
+  "sugerencia": "Cambiar 'reservado' por 'botones de acción y pestañas activas' (y alinear G8-02 para que eso sea cierto).",
+  "problema": "Debajo de 'Color acento' dice 'reservado', como si no se usara; en la misma pantalla el botón 'Guardar marca' (y todos los botones principales del panel) es de ese color. Quien lo cambie para 'probar' cambia la acción de todo el panel sin saberlo. Clarify: el rótulo tiene que decir lo que hace.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-12",
+  "pantalla": "pla-marca",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Los dos logos van en una columna angosta y dejan media tarjeta vacía",
+  "sugerencia": "Poner los dos logos lado a lado en dos columnas iguales ('Para fondo claro' / 'Para fondo oscuro'), cada una con vista previa, zona de subida (G8-04) y ayuda. Debajo de 760 px, una sola columna.",
+  "problema": "Los logos para fondo claro y oscuro son dos versiones de lo mismo pero se apilan en una columna de 360 px, con la mitad derecha de la tarjeta vacía; para compararlos hay que bajar. layout.md: agrupar por significado y que la estructura siga al contenido.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-13",
+  "pantalla": "pla-marca",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La ayuda de 'Portada clara' es una frase difícil de seguir",
+  "sugerencia": "Reescribir: 'Sin tildar, la portada de plataforma usa el color primario de fondo: tiene que ser oscuro. Tildado, la portada va en claro.'",
+  "problema": "'Tildado: fondo claro con el color primario tal cual (acá no hay un color de base aparte, asegurate de que sea oscuro si dejás esta opción sin marcar)' mezcla las dos opciones y la advertencia en un paréntesis. Clarify: una idea por frase.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-14",
+  "pantalla": "pla-fotos",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Títulos que mezclan dos letras: 'SUBIR UNA FOTO A' + 'LAGUNA'",
+  "sugerencia": "Que el `<span id='ft-modelo-subir'>` y `ft-modelo-lista` hereden la letra del título (`font: inherit`). Si se quiere destacar el modelo, hacerlo con el color del acento, no con otra letra.",
+  "problema": "En 'Subir una foto a Laguna' y 'Fotos de Laguna (1)', el nombre del modelo sale en otra letra (más ancha, otro tamaño y otro espaciado) que el resto del título. Parece un error de carga, no un énfasis. typeset.md: pasos de escala y peso obvios, una sola voz por título; regla de la casa: títulos en Barlow Condensed.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-15",
+  "pantalla": "pla-fotos",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La ficha de foto no avisa que falta el texto alternativo",
+  "sugerencia": "Mostrar la falta como aviso: chip ámbar 'Falta descripción' en lugar del texto en itálica. Sumar al pie de la ficha un enlace 'Editar' (o 'Editar y publicar' en los borradores) para que se vea la acción; mantener la ficha entera cliqueable.",
+  "problema": "La foto publicada dice 'Sin descripción' en itálica gris, como dato neutro, cuando es un faltante de accesibilidad (texto alternativo de una foto que ven todos los afiliados). Y la ficha entera es un botón, pero nada lo dice: no hay 'Editar' ni cursor visible en la captura. Craft-floor, States y accesibilidad visible.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-16",
+  "pantalla": "pla-config",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "'Configuración legal' también guarda los parámetros del Panel Sindical",
+  "sugerencia": "Renombrar pestaña y título a 'Configuración' y dejar dos secciones: 'Límite legal' y 'Panel Sindical'.",
+  "problema": "La pestaña y el título dicen 'legal', pero la mitad de la pantalla son los días del semáforo y el interruptor de consultas al asistente, que no tienen nada de legal. Quien busque el semáforo no lo va a buscar acá. Clarify: el nombre tiene que cubrir el contenido.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-17",
+  "pantalla": "pla-config",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El segundo campo del semáforo queda pegado al primero",
+  "sugerencia": "Envolver cada par rótulo+campo en `.campo` (como en Topes) para que tomen el mismo margen. De paso, poner un punto verde y uno ámbar (colores fijos del semáforo) delante de cada rótulo.",
+  "problema": "'Semáforo: amarillo hasta (días)' arranca a 0 px del campo de arriba, mientras el resto de los campos del panel están separados ~12 px. Se lee como si el rótulo fuera del campo anterior. layout.md: grupos apretados adentro, separación clara entre grupos.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-18",
+  "pantalla": "pla-config",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El tope sindical se muestra con punto decimal ('2.0')",
+  "sugerencia": "Mostrar '2,0' y aceptar coma o punto al guardar, con el sufijo '%' dentro del campo.",
+  "problema": "En toda la app los decimales van con coma (Topes lo exige, Uso de IA muestra 'US$ 0,0000'), y acá el tope sale '2.0'. Es la cifra legal más delicada de la plataforma.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-19",
+  "pantalla": "pla-usoia",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La fuente de precios es una URL cruda en negrita, y 'pagina' sin tilde",
+  "sugerencia": "Poner un enlace 'página de precios de Anthropic' (con tilde, sin negrita) y destacar la fecha: 'Precios leídos el 11/10/2026'.",
+  "problema": "La nota al pie muestra 'https://platform.claude.com/docs/...' completa, en negrita, seguida de '(pagina de precios...)'. Es lo que más pesa del párrafo y no es lo importante (lo importante es la fecha de lectura). Clarify y voz de la casa.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-20",
+  "pantalla": "pla-usoia",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Dos mensajes distintos para el mismo vacío",
+  "sugerencia": "Un solo vacío para toda la solapa cuando no hay ninguna llamada: 'Todavía no hubo lecturas de recibos. Se registran solas cuando un afiliado sube uno; para probar un modelo, usá el Banco de pruebas.' con enlace a esa solapa. El mensaje 'para este filtro' solo cuando hay filtros puestos.",
+  "problema": "Sin consumo, la tabla de modelos dice 'Sin llamadas registradas para este filtro' y la de detalle 'Todavía no hay consumo registrado', con los filtros en 'Todos'. Además '0 resultados' sale más grande que el botón 'Limpiar'. La casa: los vacíos invitan a actuar y dicen lo mismo.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-21",
+  "pantalla": "pla-usoia-modelos",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El desplegable de modelo corta el texto ('el de origer')",
+  "sugerencia": "Llevar los desplegables al ancho de la tarjeta (`width:100%`, máximo 640 px) y acortar la opción: 'Claude Sonnet 4.6 · US$ 3 / 15 por millón · por defecto'.",
+  "problema": "En 'Lectura de recibos', el texto elegido no entra en los 480 px del desplegable y se ve 'el de origer'; en teléfono se corta en 'por mill'. Justo la parte que dice si es el modelo por defecto es la que se pierde.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-22",
+  "pantalla": "pla-usoia-modelos",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Las explicaciones nombran archivos internos del repositorio",
+  "sugerencia": "Reemplazar por lo que significan: 'cambiarlo obliga a repetir la prueba de aceptación del Asistente' y 'Herramientas de Entornos'. Si hace falta el archivo, llevarlo a un '?' de ayuda.",
+  "problema": "'(ver PLAN_RAG_CONVENIO.md)', 'probar_asistente.py', '/entornos': son nombres de archivo y rutas. El equipo de plataforma no siempre es el que programa, y no tiene esos archivos a mano. Clarify: el lenguaje del producto, no el del código.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-23",
+  "pantalla": "pla-usoia-modelos",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Un solo 'Guardar' afuera de cuatro tarjetas",
+  "sugerencia": "Rotularlo 'Guardar los cuatro modelos' y fijarlo en una barra al pie mientras haya un cambio sin guardar (con el texto 'Cambiaste 1 modelo').",
+  "problema": "El botón queda debajo de la última tarjeta, alineado con ella: parece que guarda solo 'Asistente de trámites'. Si alguien cambia el primer modelo y no baja, se va sin guardar.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-24",
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los indicadores no entran en una fila y 'Tiempo P95' queda solo abajo",
+  "sugerencia": "Grilla de siete columnas iguales (`grid-template-columns: repeat(7, 1fr)`; en pantallas angostas `repeat(auto-fit, minmax(120px,1fr))`) y rótulo corto 'TAPADOS', con la aclaración 'incluye los que se habrían tapado en modo sombra' en un '?'.",
+  "problema": "Son siete indicadores y el rótulo 'TAPADOS (O SE HABRÍAN TAPADO)' es tan largo que empuja el último a un segundo renglón, solo, debajo de 'Documentos'. Parece un error de armado. layout.md: estructura que siga al contenido, ritmo deliberado.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-25",
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "'Borrar todas las imágenes' a la vista aunque no haya ninguna",
+  "sugerencia": "Mostrarlo solo si hay imágenes guardadas, con la cantidad ('Borrar las 12 imágenes'), en rojo de texto y con confirmación. Con 0 imágenes, nada.",
+  "problema": "Con el diagnóstico apagado y 0 imágenes, el botón para borrarlas todas sigue ahí, con el mismo aspecto que un botón cualquiera, dentro del aviso. Una acción irreversible no tiene que estar disponible cuando no tiene sentido, ni parecerse a una inocua (craft-floor, States: deshabilitado; prevención de errores).",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-26",
+  "pantalla": "pla-usoia-enmascarado",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Dos avisos ámbar seguidos para decir 'está apagado'",
+  "sugerencia": "Juntarlos en una sola línea de estado dentro de la tarjeta: 'Enmascarado: apagado · Lector de fotos: listo · Diagnóstico: apagado', con pastillas (gris = apagado, verde = activo). El ámbar solo si el modo está en 'sombra' o el lector falla.",
+  "problema": "'Modo: apagado' y 'Diagnóstico: apagado' van en dos cajas ámbar iguales una arriba de la otra. El ámbar de advertencia, repetido para un estado informativo, deja de avisar.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-27",
+  "pantalla": "pla-usoia-probar",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La lista de modelos no se alinea y los precios son ilegibles",
+  "sugerencia": "Pasarla a una tabla chica de tres columnas: casilla + modelo | entrada | salida (US$ por millón, en monoespaciada alineada a la derecha). Ordenar por precio o por familia.",
+  "problema": "Los ocho modelos van en dos columnas que no arrancan en la misma vertical (cada renglón empuja la segunda columna según el largo del primero), y el precio va pegado al nombre en gris de 11 px. Comparar precios, que es para lo que está el banco, obliga a leer renglón por renglón. Operate pide tablas con columnas claras.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-28",
+  "pantalla": "pla-usoia-probar",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "En teléfono el archivo y el tipo quedan cortados",
+  "sugerencia": "Debajo de 760 px, una sola columna para 'Recibo' y 'Qué es el archivo', y el precio debajo del nombre del modelo.",
+  "problema": "Las dos columnas del formulario no se apilan: el campo de archivo muestra 'N…' y el desplegable 'Un recibo de su'. Cada casilla de modelo parte nombre y precio en cuatro renglones.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G8-29",
+  "pantalla": "pla-sospechosos",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El pie 'Acerca de' flota a mitad de la pantalla",
+  "sugerencia": "Hacer del cuerpo una columna flexible (`body{display:flex;flex-direction:column;min-height:100vh}` y `margin-top:auto` en el pie) para que el pie quede siempre abajo.",
+  "problema": "En las pantallas cortas (esta y el Banco de pruebas) el pie queda pegado al contenido, en el medio de la ventana, y debajo hay 450 px de nada. Se lee como un resto suelto.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-30",
+  "pantalla": "pla-topes",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Montos de millones sin separador de miles",
+  "sugerencia": "Mostrar `$ 4.594.798,23` en la tabla (el formato de `peso()` de /app). El campo de carga puede seguir aceptando sin puntos, pero que acepte también con puntos y los saque al guardar. Borrar de la bajada la frase sobre el formato.",
+  "problema": "'$4594798,23' contra '$4509567,41': para ver que el tope subió hay que contar dígitos. La bajada incluso explica, en negrita, que 'los montos van sin punto de separador de miles'. La casa pide importes en formato argentino (`peso()`), y el principio 'Hechos, no adornos' exige que el número se lea bien.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-31",
+  "pantalla": "pla-topes",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "78 botones 'Editar' negros compiten con los datos",
+  "sugerencia": "Pasar 'Editar' a botón de borde o de texto (como 'Borrar') y 'Borrar' a texto rojo. Si se quiere aún más calma, mostrarlos solo al pasar el mouse por la fila, dejando siempre visible el foco de teclado.",
+  "problema": "Cada fila lleva 'Editar' relleno en tinta y 'Borrar' con borde: en la columna derecha se ven 78 bloques negros, lo más fuerte de la pantalla. La acción de una fila no es la principal de la página. layout.md: jerarquía según prioridad.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-32",
+  "pantalla": "pla-topes",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "'Agregar un tope' está al final, debajo de 78 filas",
+  "sugerencia": "Poner arriba de la tabla un botón 'Agregar el tope de 2026-09' (el mes siguiente al último, ya completo) que abra el formulario en ese lugar, precargado con los valores del último mes para editar.",
+  "problema": "La tarea de todos los meses es cargar el tope nuevo, y el formulario está a casi 5.000 px de scroll, después de la fila de 2014. Quien entra a cargarlo tiene que bajar todo. Operate: lo que más se usa, primero.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-33",
+  "pantalla": "pla-topes",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El campo 'Vigencia desde' muestra guiones sueltos",
+  "sugerencia": "Usar un campo de mes (`type=month`) o texto con `placeholder='AAAA-MM'` y el patrón correspondiente.",
+  "problema": "El campo de fecha vacío se ve '---------- ----' con el ícono de calendario: no dice qué formato espera ni que es un mes. La vigencia de la tabla es AAAA-MM.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-34",
+  "pantalla": "pla-usuarios",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Usuarios queda fuera del sistema: sin encabezado común ni mesa",
+  "sugerencia": "Rearmar plataforma_usuarios.html sobre la cáscara de plataforma.html: `_encabezado.html` con `enc_plataforma`, `<body class='mesa franja'>`, `titulo-pagina` 'Usuarios de plataforma', tarjetas blancas `.card` y los botones de marca.css. Sumar una pestaña 'Usuarios' a la `nav-strip` de plataforma que lleve a /plataforma/usuarios, para no depender de la portada.",
+  "problema": "Es la única pantalla del panel de plataforma sin el encabezado de una línea con el logo de Colm3na, con un degradé oscuro propio en vez de la mesa clara, título en letra de sistema a 24 px en vez de `titulo-pagina`, y sus propios botones y pastillas. Tampoco está en la tira de pestañas: solo se llega desde la portada. La regla de la casa es explícita: 'ninguna plantilla escribe su encabezado', y las únicas excepciones son los ingresos y las herramientas de /entornos. Principio del producto: 'Un sistema, no un rejunte'.",
+  "archivos": [
+   "templates/plataforma_usuarios.html",
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-35",
+  "pantalla": "pla-usuarios",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "'Desactivar' es lo más llamativo de la fila y no pide confirmar",
+  "sugerencia": "Pasar 'Desactivar' a texto rojo y pedir confirmación ('¿Desactivar a arsantagati? No va a poder entrar hasta que lo actives'). 'Editar' y 'Resetear clave' como botones de borde que abren su formulario debajo de la fila, sin el triángulo del navegador (`summary{list-style:none}` y, si hace falta, un chevrón SVG).",
+  "problema": "El único botón relleno de la fila es 'Desactivar', en marrón, al lado de dos enlaces con el triángulo de sistema del `<details>` ('▶ Resetear clave ▶ Editar'). La acción que deja a alguien afuera es la que más llama, y el formulario la envía sin confirmar. Impeccable: los íconos son SVG de un sistema, no glifos del navegador; prevención de errores.",
+  "archivos": [
+   "templates/plataforma_usuarios.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-36",
+  "pantalla": "pla-usuarios",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "'semilla' en la columna Alta es jerga interna",
+  "sugerencia": "Mostrar 'Alta inicial' cuando `creado_por` sea la semilla, y la fecha en formato argentino (23/10/2026 16:06).",
+  "problema": "La columna Alta dice quién creó al usuario; para los dos sembrados por la migración dice 'semilla', que es una palabra del código. Clarify: el idioma del producto.",
+  "archivos": [
+   "templates/plataforma_usuarios.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-12",
+  "pantalla": "general-g1",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "alta",
+  "titulo": "El registro largo puede no scrollear: `overflow:hidden` en el body",
+  "sugerencia": "Cambiar `overflow:hidden` por `overflow-x:hidden` en el `body` de trabajador_login.html, empresa_login.html y _clave_base.html, y pasar `align-items:center` a `align-items:safe center` (o `margin:auto` en `.escena`) para que un formulario más alto que la pantalla arranque arriba. Ocultar `.pie` mientras la pestaña Registrarme está activa.",
+  "problema": "Los ingresos del afiliado y de la empresa ponen `overflow:hidden` en el `body` (también `_clave_base.html`). Ese valor pasa a la ventana entera, que deja de scrollear. El paso 3 del registro (clave, nombre, fecha, provincia, localidad, calle, altura, piso, código postal, teléfono y «Crear mi cuenta») mide bastante más que los 844 px de un teléfono: el botón final puede quedar inalcanzable, y además el pie `position:fixed` se monta encima del formulario. No se ve en la captura (muestra la pestaña Ingresar), sale del código: verificarlo en un teléfono real llegando al paso 3. Los robots no lo detectan porque Playwright scrollea por programa. Afecta pub-ingresar y pub-ingresar-empresa.",
+  "archivos": [
+   "templates/trabajador_login.html",
+   "templates/empresa_login.html",
+   "templates/_clave_base.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G1-13",
+  "pantalla": "general-g1",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Pie y ejemplos de los campos casi ilegibles",
+  "sugerencia": "Subir `input::placeholder` a `rgba(255,255,255,.5)` y el `.pie` a `rgba(255,255,255,.55)` con 11 px. En `@media (max-width:600px)` bajar el panal a `opacity` máxima .08 y moverlo fuera de la zona del pie y del logo (`.panal.a { top:-90px }`, `.panal.b { bottom:-140px }`), u ocultar el pie en teléfono.",
+  "problema": "El pie de las puertas (10 px, mayúsculas espaciadas, blanco al 35%) da ≈3,6:1, y los ejemplos dentro de los campos (blanco al 30%) ≈2,7:1; el piso de Impeccable pide 4,5:1 para texto chico y para ejemplos. Además, en el teléfono el pie cae sobre el panal de la esquina y las líneas de los hexágonos cruzan las letras; en la puerta de entrada el panal también cruza el chip «PLATAFORMA SINDICAL». Afecta las seis pantallas de ingreso.",
+  "archivos": [
+   "templates/inicio.html",
+   "templates/trabajador_login.html",
+   "templates/empresa_login.html",
+   "templates/admin_login.html",
+   "templates/plataforma_login.html",
+   "templates/_clave_base.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-14",
+  "pantalla": "general-g1",
+  "estado": "dejar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Ningún ingreso permite volver a la puerta de entrada",
+  "sugerencia": "Agregar arriba de la credencial, a la izquierda, un enlace «← Otro perfil» a `/` (13 px, blanco al 70%, área de toque de 44 px). En recuperar ya existe «Volver a ingresar»: dejarlo y sumar el mismo enlace.",
+  "problema": "La puerta «/» pregunta «¿Cómo querés ingresar?», pero ninguno de los cinco ingresos tiene un enlace para volver si la persona eligió mal (un empleador que tocó «Trabajador»). Solo queda el botón «atrás» del navegador, que en la app instalada no existe. Heurística 3 (control y libertad).",
+  "archivos": [
+   "templates/trabajador_login.html",
+   "templates/empresa_login.html",
+   "templates/admin_login.html",
+   "templates/plataforma_login.html",
+   "templates/_clave_base.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-15",
+  "pantalla": "general-g1",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "«Olvidé mi clave» y las pestañas, objetivos chicos en el teléfono",
+  "sugerencia": "Sacar «Olvidé mi clave» de la frase y ponerlo en su propia línea centrada, 14 px, con `display:inline-block; padding:12px 8px`. Dejar la ayuda como «¿Primera vez? Tocá Registrarme.». Subir `.tab` a `padding:12px` (≥44 px) y darle el mismo padding a los enlaces de `.ayuda`.",
+  "problema": "«Olvidé mi clave» va pegado al final de una frase de 12 px, se parte en dos renglones («Olvidé mi / clave») y mide unos 18 px de alto. Las pestañas «Ingresar / Registrarme» miden 34 px y «Volver a ingresar» en recuperar unos 16 px. El piso es 44 px (audit.md, objetivos táctiles). Es justo el enlace que busca alguien apurado y frustrado. Afecta pub-ingresar, pub-ingresar-empresa y pub-recuperar.",
+  "archivos": [
+   "templates/trabajador_login.html",
+   "templates/empresa_login.html",
+   "templates/_clave_base.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G1-18",
+  "pantalla": "general-g1",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En escritorio, la barra de abajo de teléfono estirada a 1.440 px",
+  "sugerencia": "Arriba de 761 px, esconder `.tabbar` y mostrar las dos secciones como la tira de pestañas en pastillas de los paneles (debajo del título, activa en blanco), o al menos limitar `.tabbar` a `max-width:480px; margin:0 auto; border-radius:14px 14px 0 0`. Subir `.cont` a `max-width:760px`.",
+  "problema": "Notificaciones y Trámites usan la barra inferior del teléfono a todo el ancho: dos pestañas de rótulo 11 px separadas 720 px, lejos de una columna de contenido de 480 px que deja vacíos dos tercios de la pantalla. En escritorio no se lee como navegación (modo Operate: los controles tienen que ser los que la persona espera en esa plataforma). Afecta emp-notificaciones y emp-tramites.",
+  "archivos": [
+   "templates/empresa.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G1-19",
+  "pantalla": "general-g1",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Pestaña activa en ámbar sobre blanco: 1,8:1",
+  "sugerencia": "Incluir `_paleta_legible.html` en empresa.html y empresa_portada.html y cambiar `color:var(--marca-acento)` / `stroke:var(--marca-acento)` de `.tabbar button.activa` (y los textos en acento) por la variable de acento-texto que esa plantilla define. El fondo de la píldora puede seguir en el acento al 15%.",
+  "problema": "El rótulo y el ícono de la pestaña activa usan `--marca-acento` directo sobre blanco; con el ámbar de este gremio da ≈1,8:1 (el piso es 4,5:1). El proyecto ya tiene la solución (`temas.paleta_legible` + `_paleta_legible.html`, que calcula el «acento como texto» corregido) y la usan admin, portada y trabajador, pero empresa.html y empresa_portada.html no la incluyen. Afecta emp-notificaciones y emp-tramites (y todo lo que en empresa usa el acento como texto, como `.notif-remitente` de una no leída).",
+  "archivos": [
+   "templates/empresa.html",
+   "templates/empresa_portada.html",
+   "templates/_paleta_legible.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-20",
+  "pantalla": "general-g1",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "«Salir» es una X sin rótulo, y cambia de estilo entre pantallas",
+  "sugerencia": "Reemplazar los dos círculos por pastillas con ícono y texto: «Inicio» y «Salir» (14 px, alto 44 px, mismo fondo `--marca-base`), iguales en las tres pantallas. En la portada, solo «Salir» con el mismo estilo.",
+  "problema": "La salida de la app de empresa es un círculo con una X: se lee como «cerrar esto», no como «cerrar sesión». En la portada es un círculo hueco; en las pestañas, uno oscuro relleno al lado de una casita también sin rótulo. La pauta acordada para los modelos es «Salir flotando con rótulo junto a Inicio», y clarify.md pide que un control solo con ícono tenga nombre visible cuando la acción no es obvia. Afecta emp-portada, emp-notificaciones y emp-tramites.",
+  "archivos": [
+   "templates/empresa.html",
+   "templates/empresa_portada.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-21",
+  "pantalla": "general-g1",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El título de cada pestaña no sigue la regla de la casa",
+  "sugerencia": "Pasar razón social y CUIT a una bajada chica (14 px, gris) arriba, y dar a cada pestaña su título con `class=\"titulo-pagina\"`: «NOTIFICACIONES» y «TRÁMITES». Así además el blanco sobre la franja lo resuelve interior.css.",
+  "problema": "Las dos pestañas abren con la razón social como `h1` (26 px, system-ui) y en Trámites aparece debajo un segundo `h1` «Trámites» más chico. La regla de la casa es un solo título por panel con `titulo-pagina` (condensada, 31 px, mayúsculas). Hoy lo más grande es el nombre de la empresa, que la persona ya conoce, y el nombre de la sección queda segundo. Afecta emp-notificaciones y emp-tramites.",
+  "archivos": [
+   "templates/empresa.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-16",
+  "pantalla": "general-g1",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La banda «COLM3NA<<TRABAJADOR<<<…» se lee en voz alta",
+  "sugerencia": "Agregar `aria-hidden=\"true\"` al `<div class=\"mrz\">` en las seis plantillas que lo tienen (incluida admin_elegir.html).",
+  "problema": "La banda tipo pasaporte del pie de cada credencial es decoración, pero es un `div` de texto común: un lector de pantalla la lee como «Colm3na menor menor trabajador menor menor…» veinte veces. audit.md: lo decorativo se esconde a la tecnología de asistencia.",
+  "archivos": [
+   "templates/trabajador_login.html",
+   "templates/empresa_login.html",
+   "templates/admin_login.html",
+   "templates/plataforma_login.html",
+   "templates/_clave_base.html",
+   "templates/admin_elegir.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-17",
+  "pantalla": "general-g1",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La app de empresa le agrega un filo ámbar al encabezado común",
+  "sugerencia": "Borrar esa línea (y revisar las vecinas `.marca-barra`/`::before` del mismo bloque) para que empresa use el encabezado exactamente como lo dibuja `static/encabezado.css`.",
+  "problema": "En Notificaciones y Trámites el encabezado lleva una franja ámbar de 5 px pegada al borde izquierdo que en la portada no está. Viene de `empresa.html` (`.marca-enc { border-left:5px solid var(--marca-acento) }`), y rompe dos reglas: la de la casa («ninguna pantalla escribe su propio encabezado»: el estilo vive en encabezado.css) y el piso de Impeccable (nada de borde de color de más de 1 px a un costado).",
+  "archivos": [
+   "templates/empresa.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G1-22",
+  "pantalla": "general-g1",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Los estados vacíos no dicen qué va a pasar ni qué hacer",
+  "sugerencia": "Notificaciones: «Cuando tu sindicato te mande un aviso, lo vas a ver acá.» Trámites: «Todavía no presentaste ningún trámite. Tocá Iniciar un trámite para elegir un formulario.» Con un ícono de línea de 40 px arriba, centrado en la columna.",
+  "problema": "«Todavía no tenés notificaciones.» y «Todavía no presentaste ningún trámite.» son correctos pero secos: no dicen qué va a aparecer ahí ni cómo empezar. Regla de la casa: los estados vacíos invitan a actuar; clarify.md: un vacío explica el estado y da la próxima acción. Afecta emp-notificaciones y emp-tramites.",
+  "archivos": [
+   "templates/empresa.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G2-15",
+  "pantalla": "general-g2",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Tira de pestañas: letra de 10 px y palabras partidas con guion",
+  "sugerencia": "Sin cambiar el orden acordado, acortar los rótulos de la tira a una palabra: «Recibos», «Credencial», «Trámites», «Novedades», «Encuestas», «Aportes», «Cursos» (o «Capacitación» si cabe). Sacar los `&shy;` y usar `white-space: nowrap`. Subir Laguna a 11 px con `letter-spacing: -.01em` y dejar al menos 6 px de aire a cada borde (`padding-inline: 6px` en `.tabbar`). El título de cada pantalla sigue diciendo el nombre largo.",
+  "problema": "La barra de abajo tiene siete secciones en 390 px (unos 55 px cada una). En Laguna los rótulos van a 10 px y se cortan con guion: «Nove-dades», «Capaci-tación», «Mis / Recibos», «Mis / Aportes». Unas quedan en uno y otras en dos renglones, y la tira pierde su línea de base. En Noticiero entran en un renglón, pero «Capacitación» queda a 4 px del borde. Además las mayúsculas cambian entre pantallas: «Mis Recibos» y «Mis Aportes» en la tira contra «Mis recibos» y «Mis aportes» en la portada y en el título (clarify: misma palabra, misma escritura). Es la navegación principal del dispositivo que más importa (afecta afi-recibo, afi-credencial, afi-novedades y afi-aportes).",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G2-16",
+  "pantalla": "general-g2",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "En escritorio, el nombre del afiliado no se alinea con la columna",
+  "sugerencia": "Que `.ident` use el mismo borde interno que `.cont`: `padding-inline: max(20px, calc(50% - 240px))` en Laguna, porque `.cont` mide 520 con 20 px de relleno. En Noticiero, lo equivalente a su ancho de columna. Así el nombre, el título y el borde izquierdo de las tarjetas quedan en la misma vertical.",
+  "problema": "La franja de identidad usa `padding-inline: calc(50% - 260px)`: el nombre empieza en x = 460. El contenido de la columna (título, tarjetas) empieza en x = 480 en Laguna (en Noticiero, 450 contra 466). Son 16–20 px de corrimiento justo entre los dos primeros bloques de la pantalla (layout.md: alineación a una sola grilla). Afecta afi-recibo, afi-credencial, afi-novedades y afi-aportes.",
+  "archivos": [
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G3-18",
+  "pantalla": "general-g3",
+  "estado": "cambio",
+  "nota": "formato viejo",
+  "severidad": "alta",
+  "titulo": "Notificaciones y Convenio ignoran el modelo y apagan el logo",
+  "sugerencia": "Marcar las dos plantillas como las de /app (html data-tema y data-paleta desde db.apariencia_de, include de _paleta_legible.html) y cargar temas/<modelo>-app.css, sumando ahí las reglas de .hilo, .bur, .hito, .top3 y .sin-convenio. Así el encabezado pasa a ser el claro del modelo y el logo vuelve a leerse. Sumar las dos rutas a los tests test_tema_laguna_* y test_tema_noticiero_*.",
+  "problema": "Las capturas de Laguna y de Noticiero de afi-notificaciones y afi-convenio son idénticas píxel por píxel: esas dos páginas no cargan data-tema, _paleta_legible ni las hojas de static/temas/. Desde /app, en Laguna (blanco) o en Noticiero (papel crema), se pasa a una barra casi negra con colmena y franja azul: parece otra aplicación (principio del producto: 'un sistema, no un rejunte'; CLAUDE.md, punto 38). Y el logo de La Bancaria, pensado para fondo claro, queda azul sobre casi negro: contraste medido 2,9:1, 'NUESTRO SINDICATO' casi no se lee.",
+  "archivos": [
+   "templates/notificaciones.html",
+   "templates/convenio.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css",
+   "main.py"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G3-19",
+  "pantalla": "general-g3",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Siete pestañas en 390 px: rótulos de 10 px y cortados",
+  "sugerencia": "Acortar los rótulos para que cada uno entre en un renglón a 11,5 px: 'Recibos', 'Credencial', 'Trámites', 'Novedades', 'Encuestas', 'Aportes' y 'Guía' (en lugar de 'Capacitación', a confirmar con SDN). Sacar los guiones manuales y poner white-space: nowrap también en Laguna.",
+  "problema": "La barra de abajo tiene siete pestañas en 390 px (unos 55 px cada una). En Laguna los rótulos van en 10 px y se parten en dos renglones con guion ('Nove-dades', 'Capaci-tación', 'Mis / Recibos'); en Noticiero entran en una línea pero en 11 px condensada y 'Capacitación' toca el borde. 10 px está debajo del piso de la escala de la casa (11 px) y un rótulo partido con guion se lee peor. Afecta a Capacitación, Trámites y Encuestas.",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G3-20",
+  "pantalla": "general-g3",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Nombre y CUIL no se alinean con la columna",
+  "sugerencia": "Dar a la tira el mismo max-width y padding que .cont (520 px en Laguna, el que corresponda en Noticiero), para que el nombre empiece y el CUIL termine en los bordes de la columna.",
+  "problema": "En escritorio, la tira de identidad pone el nombre unos 20 px a la izquierda de la columna de contenido y el CUIL unos 20 px más a la derecha (Laguna: nombre en x=460 y columna en 480; CUIL termina en 980 y la columna en 960). Son dos bordes que casi coinciden y no coinciden, lo que se ve como un descuido (Impeccable, layout: grilla alineada).",
+  "archivos": [
+   "templates/trabajador.html",
+   "static/temas/laguna-app.css",
+   "static/temas/noticiero-app.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-32",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "alta",
+  "titulo": "Formularios de alta sin rótulos: el ejemplo hace de etiqueta",
+  "sugerencia": "Poner un rótulo visible arriba de cada campo, como ya hace el alta manual de Trabajadores («Tolerancia ($)», «CUIT del empleador (opcional; vacío = vale para todos)», «Código genérico»), y dejar el gris solo para un ejemplo corto. Que los campos tengan el ancho de su contenido para que nada se corte.",
+  "problema": "Las altas en línea de Reglas y Conceptos no tienen rótulos: el texto gris del campo hace de etiqueta y desaparece al escribir. En Reglas hay un campo que dice solo «1.0» (es la tolerancia) y nadie puede saber qué es. En Conceptos los ejemplos se cortan: «CUIT empleador (vacío =», «Código genéricc», «Buscar por CUIT de emp». Impeccable (clarify, craft-floor: «los controles nombran lo que son») y accesibilidad: un lector de pantalla no tiene nombre para esos campos. Afecta a pan-formulas, pan-conceptos y los filtros de pan-reportes.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-30",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La barra flotante Inicio/Salir tapa la columna de acciones",
+  "sugerencia": "Mantenerla flotante (decisión tomada) pero, arriba de 760 px, anclarla al pie del riel izquierdo (que ya reserva 96 px abajo): `left: 16px; right: auto; width: calc(var(--lg-riel) - 32px)`. Así nunca cae sobre el contenido. En la portada, sumar `padding-bottom: 96px` al contenedor.",
+  "problema": "En escritorio la barra «? · Inicio · Salir» flota abajo a la derecha, justo encima de la última columna de las tablas: al desplazar tapa los «Ver» de Reportes y los «Dar usuario del panel / Baja» de Trabajadores; en la portada Noticiero, la flecha de Encuestas. Afecta a pan-portada, pan-reportes, pan-trabajadores, pan-formulas y pan-conceptos.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css",
+   "static/temas/laguna-panel-portada.css",
+   "static/temas/noticiero-panel-portada.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-31",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En el teléfono las tablas esconden el veredicto y las acciones",
+  "sugerencia": "Debajo de 760 px, pasar cada fila a una tarjeta de dos líneas (Nombre y veredicto arriba; fecha, CUIL y empresa abajo; acción a la derecha). Si no, como mínimo una sombra en el borde derecho del contenedor con scroll y la columna de acción fija.",
+  "problema": "En Reportes, Reglas, Conceptos y Trabajadores la tabla se corta a la derecha: se ven Fecha, CUIL y Nombre, pero Diferencias, Ver, Editar y Borrar quedan fuera de la pantalla, sin ninguna señal de que hay más. Lo más importante de cada fila es justo lo que no se ve.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css",
+   "static/interior.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G4-33",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Laguna: dos estilos de campo y los rellenos casi no se ven",
+  "sugerencia": "Unificar en Laguna un solo campo: fondo blanco, borde de 1 px en `--lg-linea2` (o más oscuro, hasta 3:1 contra el fondo) y foco en el color de acento. Aplicarlo a `input`, `select` y `textarea` del panel.",
+  "problema": "En la misma pantalla conviven campos blancos con borde (los filtros) y campos rellenos de gris sin borde (las altas de Reglas, Conceptos y Trabajadores). El relleno gris sobre blanco o sobre la caja gris tiene un contraste de borde muy por debajo de 3:1: no se ve dónde empieza cada campo. Afecta a pan-formulas, pan-conceptos y pan-trab-manual.",
+  "archivos": [
+   "static/temas/laguna-panel.css"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-34",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Explicaciones largas a todo el ancho",
+  "sugerencia": "Poner `max-width: 72ch` a `.muted` y a los párrafos de ayuda del panel. Dejar visible una sola frase y mover el resto a un «?» con globo, el patrón que ya usa el constructor de Trámites (`.ct-help`). En Trabajadores, mostrar la bajada larga solo en Listado.",
+  "problema": "Las bajadas y ayudas corren a todo el ancho: en Alta masiva cada línea tiene unos 170 caracteres, en Conceptos y Trabajadores unos 130. El piso de Impeccable es 65–75 caracteres por línea. Además la bajada de Trabajadores se repite en las tres sub-pestañas y en el teléfono ocupa toda la primera pantalla antes del formulario. Afecta a pan-trab-masivo, pan-conceptos, pan-trabajadores, pan-trab-manual y pan-formulas.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css",
+   "static/interior.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-35",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Números con formato de programador, no argentino",
+  "sugerencia": "Mostrar importes como «$ 1,00», porcentajes «2,5%», períodos «sep. 2026», miles con punto y el CUIL como «20-48000091-7» (solo al mostrar; se guarda igual).",
+  "problema": "Tolerancia «$1.0», «2.5% del remunerativo», período «2026-09», CUIL sin guiones y «1583 recibos» sin punto de miles. La app del afiliado ya usa formato argentino (`peso()`); el panel no. Afecta a pan-reportes, pan-formulas y pan-trabajadores.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-36",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Cargar aportes de ley» pegado al texto de arriba",
+  "sugerencia": "Llevarlo a la derecha del título (en la misma fila, alineado a la base) o dejarle 16 px arriba y abajo, alineado al mismo margen izquierdo que el texto.",
+  "problema": "En Reglas el botón queda a 4 px de la bajada y corrido 4 px del margen; en Conceptos queda entre el título y la explicación, como si fuera parte del título. Afecta a pan-formulas y pan-conceptos.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G4-37",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El borde de cada fila se quiebra en la celda de botones",
+  "sugerencia": "Alinear la celda de acciones con las demás (`vertical-align: middle` en todas las celdas y el mismo `padding` vertical; los botones `.mini` con `margin: 0`).",
+  "problema": "En Reglas y Conceptos la línea inferior de cada fila hace un escalón de 2–3 px al llegar a la columna de Editar/Borrar. Es chico, pero se ve como algo roto en una tabla de pocas filas.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G4-38",
+  "pantalla": "general-g4",
+  "estado": "aceptar",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Acerca de» casi invisible y flotando a media pantalla",
+  "sugerencia": "Subirlo a 12 px con el gris de texto secundario sin opacidad (4,5:1) y empujarlo al pie con el contenedor principal en `min-height` de la ventana menos el encabezado.",
+  "problema": "En Laguna el enlace va a 10,5 px y 45% de opacidad: contraste cerca de 2:1. En las pantallas cortas (Reglas, Aprendizaje) queda en el medio de la pantalla en vez de al pie. Afecta a todas las pantallas del panel.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-01",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Fechas en dos formatos distintos según la pantalla",
+  "sugerencia": "Un solo filtro de Jinja (por ejemplo `fecha_ar`) que escriba DD/MM/AAAA y, si hay hora, 'DD/MM/AAAA HH:MM', y usarlo en todas las columnas de fecha de admin.html. En la columna Vigencia, acortar el año repetido: '20/10 → 10/11/2026'.",
+  "problema": "Noticias, Beneficios, Notificaciones, Trámites recibidos y Tipos cargados muestran fechas en formato de sistema (2026-10-20 → 2026-11-10, 2026-10-08 20:59). Encuestas y Resultados usan el formato argentino (20/10/2026). La misma persona ve las dos formas en dos pestañas seguidas. Rompe 'Un sistema, no un rejunte' (PRODUCT.md) y la consistencia de términos de clarify.md; el formato ISO es lenguaje de base de datos, no del operador.",
+  "archivos": [
+   "templates/admin.html",
+   "main.py"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-02",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Listas largas sin orden por fecha ni paginado",
+  "sugerencia": "Notificaciones: ordenar por `enviado_en` descendente. En las tres listas, mostrar 50 filas y un botón 'Ver 50 más' (o paginado en el servidor, como ya hace Reportes con /admin/reportes/lista). En Noticias y Beneficios, mostrar primero vigentes y próximas, y las vencidas plegadas bajo 'Vencidas (18)'.",
+  "problema": "Notificaciones enviadas (204) está ordenada por número interno y no por fecha: arriba aparece 16/10, después 27/06, después 15/10 (db.notificaciones_del_sindicato ordena por id). Trámites recibidos dibuja las 2.000 filas de una vez y Noticias mezcla vencidas con vigentes en 30 filas. La página de Notificaciones pasa de 5.000 px. mode-operate pide que la persona encuentre lo que vino a hacer antes de notar el diseño; acá tiene que recorrer cientos de filas.",
+  "archivos": [
+   "db.py",
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-03",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Un botón rojo de Borrar en cada fila de cada lista",
+  "sugerencia": "Dejar 'Editar' como único botón visible de la fila. Pasar 'Borrar' a texto gris sin contorno que se pone rojo solo al pasar el mouse, o llevarlo adentro del formulario de edición, abajo a la izquierda. Mantener la confirmación y que nombre el objeto: '¿Borrar la noticia «Plenario de delegados»?'.",
+  "problema": "Noticias (30 filas), Beneficios (20) y Tipos cargados (7) llevan 'Borrar' con contorno rojo en cada renglón, al lado de 'Editar'. Son 57 manchas rojas que compiten con el contenido y con los estados (vigente/vencida). El rojo en esta casa significa problema (semáforo); usarlo como adorno repetido le quita fuerza, y una acción destructiva a 8 px de la más usada invita al error (heurística 5 de Nielsen, prevención de errores).",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-04",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La píldora fija de Inicio y Salir tapa filas y campos",
+  "sugerencia": "Sin cambiar la decisión (Salir flotando junto a Inicio): dar a `.mesa-cont` del panel un `padding-bottom` de 104 px en escritorio y 120 px en teléfono para que el final de la página nunca quede debajo. En teléfono, achicar la píldora a los dos íconos con rótulo de 12 px o esconderla mientras se escribe en un campo (al tener foco un input).",
+  "problema": "La píldora flotante queda fija abajo a la derecha y no se le reservó lugar. En escritorio tapa la fecha y el botón 'Ver' de la fila que pase por ahí (se ve en Trámites recibidos y Noticias); en teléfono cubre medio ancho de pantalla y tapa el título de la sección 2 y los campos del formulario en Noticias, Notificaciones y el constructor de trámites. layout.md: los elementos fijos no pueden esconder contenido ni objetivos táctiles.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G5-05",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En teléfono las tablas aprietan el título y esconden las acciones",
+  "sugerencia": "Debajo de 760 px, dibujar cada fila como una tarjeta: título y bajada arriba (bajada recortada a 2 renglones), en una segunda línea estado + fechas, y la acción principal (Editar o Ver) a la derecha, a 44 px de alto. Si se prefiere mantener la tabla, fijar la primera columna en 160 px, `white-space:nowrap` en fechas y expedientes, y una sombra en el borde derecho que avise que hay más.",
+  "problema": "En Noticias, Beneficios, Notificaciones, Trámites, Tipos y Encuestas la tabla se desliza de costado, pero nada lo indica: la columna Título queda de ~100 px, cada fila mide 400 px de alto (una bajada ocupa diez renglones) y Estado, Editar, Borrar y Ver quedan fuera de la pantalla. Los expedientes se cortan en tres renglones. El panel es de escritorio, pero el que entra desde el teléfono no encuentra la acción.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G5-06",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Riel de pasos de Laguna demasiado angosto: todo se parte en dos",
+  "sugerencia": "Subir el ancho del riel de Laguna a 196 px (el de Noticiero) o bajar el texto de los botones del riel a 13 px con `white-space:nowrap`. Revisar en Noticias, Beneficios, Notificaciones y Tipos de trámite.",
+  "problema": "En la hoja de trabajo de Laguna el riel mide unos 150 px útiles: 'Cuándo y a quién', 'Imágenes y formulario', 'Validar antes de abrir' y los botones 'Guardar beneficio', 'Ver como el afiliado' y 'Probar con un CUIL' se parten en dos renglones. En Noticiero el mismo riel entra en uno. Botones de dos renglones se leen como dos cosas (typeset.md: cortes de línea deliberados).",
+  "archivos": [
+   "static/temas/laguna-panel.css"
+  ],
+  "modelo": "laguna",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-07",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Emojis y colores sueltos fuera de la marca y del modelo",
+  "sugerencia": "Cambiar 📋, 📎, ✕, ✓ y ✗ por los SVG de línea que ya usa la app (stroke 1.7). Llevar `.ct-fn-mas` al color de enlace del modelo (`--lg-azul` / tinta índigo de Noticiero) y las pastillas 'vencida' y 'sistema' a una clase `.tag-neutra` definida en las dos hojas de tema.",
+  "problema": "Las vistas previas usan 📋 para el formulario asociado (Noticias, Beneficios, Notificaciones) y 📎 para adjuntos; el constructor quita con '✕' y marca con '✓/✗' de texto. La regla de la casa dice íconos SVG de línea, nunca emojis, y tildes en SVG porque los caracteres cambian de tamaño con la fuente. Además hay colores escritos a mano: el violeta #7a56b5 de 'Datos y funciones, con ejemplos', y el gris frío #eee/#5f6676 de las pastillas 'vencida' y 'sistema', que no siguen ningún modelo (en Noticiero desentonan con el papel).",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G5-08",
+  "pantalla": "general-g5",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Selector de archivo nativo, sin diseñar",
+  "sugerencia": "Ocultar el input y dibujar un botón propio 'Elegir imagen' (o 'Adjuntar archivo') con el nombre del archivo y una miniatura de 48 px cuando es imagen, más un 'Quitar'. Aclarar debajo el límite ('JPG o PNG, hasta 5 MB').",
+  "problema": "Los campos de imagen y adjunto muestran el control del navegador ('Choose File / No file chosen' en la captura, que salió de un navegador en inglés). Es el único control de la hoja que no tiene el estilo del modelo y no muestra qué se eligió (ni miniatura ni nombre legible). craft-floor.md: las superficies del navegador también llevan el diseño.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-22",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El botón principal queda pegado al último campo",
+  "sugerencia": "Darle a la fila de acciones de todo formulario del panel un margen superior fijo de 20 px (por ejemplo, `.card form > .btn:last-child, .acciones { margin-top: 20px }` en marca.css) y revisar que ningún modelo lo pise con su propia regla.",
+  "problema": "En Empleadores («Guardar empleador» toca el campo Mail), Notificaciones a empleadores («Vista previa» toca el adjunto), Áreas y Usuarios («Dar de alta» toca la última fila de la matriz) el botón arranca sin aire debajo del campo. Rompe la regla de Impeccable de ritmo («grupos apretados, separaciones generosas»): el botón se lee como parte del último campo y no como el cierre del formulario. En Noticiero, con el botón coral rectangular, se ve directamente encimado.",
+  "archivos": [
+   "static/marca.css",
+   "templates/admin.html",
+   "static/temas/noticiero-panel.css",
+   "static/temas/laguna-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-23",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "La bajada del título queda pegada a la tarjeta del formulario",
+  "sugerencia": "Dejar 24 px entre la bajada (`.titulo-pagina + p` / `.muted`) y la primera tarjeta, en las dos hojas de modelo. Una sola regla: `.titulo-pagina + p { margin-bottom: 24px }`.",
+  "problema": "En Empleadores, Convenio, Seccionales, Listas, Áreas y Usuarios y Apariencia, el párrafo que explica la pantalla termina a 5–10 px del borde de la tarjeta de abajo. Pasa lo contrario de lo que pide Impeccable (más aire alrededor de un cambio de bloque que adentro del bloque): la explicación parece el rótulo de la tarjeta y la pantalla se siente apretada justo en su comienzo.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css",
+   "static/interior.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-24",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El título nombra el alta y la lista que se usa a diario queda abajo",
+  "sugerencia": "Sin cambiar el orden de las secciones del panel: que el `titulo-pagina` diga el nombre de la sección con su cuenta («Empleadores (12)», «Seccionales (4)»), y que el formulario de alta arranque plegado detrás de un botón «Dar de alta un empleador» cuando ya hay registros (abierto solo si la lista está vacía o se está editando). Así la tabla queda en el primer vistazo.",
+  "problema": "En Empleadores, Convenio, Seccionales y en las dos sub-pestañas de Áreas y Usuarios, el título de la pantalla es «Dar de alta…» y lo primero es un formulario vacío; lo cargado (12 empresas, 4 seccionales, 9 usuarios) aparece recién después. En una pantalla de trabajo (modo Operate) lo que se consulta y se edita todos los días va primero; el alta se hace una vez. Además el título cambia de sentido entre pestañas: en Trámites dice «Trámites recibidos (0)», en Empresas dice una acción.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-25",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "En teléfono las tablas se cortan y las acciones quedan fuera de vista",
+  "sugerencia": "Debajo de 760 px pasar cada fila a una ficha apilada: el dato principal (razón social, nombre) arriba en 16 px, los demás como «rótulo: valor» en 13 px, y Editar / Baja en una fila de botones de 44 px al pie. Se puede resolver con CSS y un `data-rotulo` por celda, sin tocar el JS.",
+  "problema": "En Empleadores, Seccionales y Usuarios la tabla mantiene todas las columnas a 390 px: se ven tres y el resto (Estado, Nivel, Alcance, Editar, Baja) queda cortado al borde, sin ninguna señal de que hay más a la derecha. Las direcciones de Seccionales se parten en seis renglones. El panel se usa sobre todo en escritorio, pero un operador que lo abre desde el teléfono no puede editar ni dar de baja.",
+  "archivos": [
+   "templates/admin.html",
+   "static/marca.css",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G6-26",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El botón flotante Inicio/Salir tapa Editar y Baja de la fila que pasa por abajo",
+  "sugerencia": "Sin sacarla de flotante (es decisión del modelo): en escritorio anclarla abajo a la izquierda, sobre el riel lateral, que ya reserva 96 px abajo y no tiene acciones; y dejar `padding-bottom: 96px` en el contenido para que la última fila nunca quede debajo de ella.",
+  "problema": "En escritorio la pastilla Inicio/Salir flota abajo a la derecha, justo sobre la columna de acciones de todas las tablas (Empleadores, Seccionales, Áreas, Usuarios). En las capturas tapa los botones de la segunda fila; con scroll tapa siempre los de la fila que queda a esa altura. Un elemento fijo no puede esconder un control que la persona necesita.",
+  "archivos": [
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css",
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G6-27",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los ejemplos de los campos parecen datos ya cargados",
+  "sugerencia": "Escribir todos los ejemplos con el prefijo «Ej:» (como ya hacen Remitente y Convenio) y bajar el texto de ejemplo a la tinta secundaria en cursiva; en Laguna, darle a los campos un borde de 1 px `--lg-linea` además del relleno, para que el campo se vea como campo.",
+  "problema": "«30123456781» en CUIT, «20123456786» en CUIT/CUIL, «Secretaría Legal» en Nombre del área y «Grupo familiar» en Nombre de la lista tienen casi el mismo tono que un valor escrito, y en Laguna van sobre un relleno gris sin borde. Quien llega a la pantalla puede creer que el campo ya está completo. Impeccable (clarify) pide que el texto de ejemplo se distinga de un valor; además el contraste del ejemplo debe llegar a 4,5:1.",
+  "archivos": [
+   "templates/admin.html",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-28",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El selector de archivo sale en inglés y sin estilo",
+  "sugerencia": "Reusar el patrón que ya existe en la misma plantilla (`input type=file` con clase `oculto`, línea ~1677): un `label` con aspecto de botón secundario que diga «Elegir archivo» y al lado el nombre del archivo o «Ningún archivo elegido».",
+  "problema": "En Notificaciones a empleadores y en Listas el adjunto muestra el control del navegador: «Choose File» y «No file chosen». Es la única parte en inglés de una app escrita en voseo, y el botón no se parece a ninguno del sistema. Impeccable (craft-floor, «superficies del navegador») pide que esas piezas también lleven el diseño.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-29",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El verde de «todo bien» se usa para etiquetas que no son estados",
+  "sugerencia": "Usar una pastilla neutra (fondo `--linea`, texto `--tinta`) para categorías: rol, clave, alcance. Dejar el verde y el rojo solo para estados. En Estado, mostrar pastilla solo cuando la fila NO está activa («dado de baja» en gris); la fila activa no necesita marca.",
+  "problema": "Van en pastilla verde: «activo» (en todas las filas), «afiliado», el rol «general», «clave 1 / clave 2» de Listas, «ve todas» de Seccionales y «Prendido» de Tu día; el rol «de seccional» va en ámbar. La regla de la casa dice que los colores de estado tienen significado propio. Cuando todo es verde el verde deja de avisar algo, y un rol en ámbar se lee como una advertencia.",
+  "archivos": [
+   "templates/admin.html",
+   "static/marca.css",
+   "static/temas/laguna-panel.css",
+   "static/temas/noticiero-panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-30",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Explicaciones largas siempre a la vista",
+  "sugerencia": "Dejar una sola línea de bajada por pantalla (≤ 90 caracteres) y mover el resto al globo «?» (`.ct-help`, `data-ayuda`) junto al título o junto al campo que explica. Limitar todo párrafo de ayuda a `max-width: 70ch`.",
+  "problema": "Áreas y Usuarios abre con tres renglones de explicación, Usuarios suma otros tres, Seccionales y Listas también, y en Seccionales una ayuda corre en un solo renglón de unos 170 caracteres (Impeccable: 65–75 por renglón). Son textos útiles la primera vez, pero el operador los relee todos los días y empujan el trabajo hacia abajo. La casa ya resolvió esto en el constructor de Trámites: «ninguna explicación a la vista, viven en un «?»».",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-31",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Doble guion «--» en lugar de raya en los textos",
+  "sugerencia": "Reemplazar « -- » por « — » (raya con espacios) o cortar en dos oraciones. En admin.html hay unas 60 ocurrencias; revisar solo las que llegan a pantalla.",
+  "problema": "Las bajadas de Empleadores, Áreas y Usuarios y Usuarios escriben «de este sindicato -- cargalos», «a un área -- de donde hereda». Se ve como un error de tipeo en una pantalla que se muestra a sindicatos.",
+  "archivos": [
+   "templates/admin.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-32",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«Acerca de» casi no se lee en Laguna",
+  "sugerencia": "Subirlo a la tinta secundaria del modelo (`--lg-gris`) y a 12,5 px, con subrayado como en Noticiero.",
+  "problema": "El enlace del pie va en un gris muy claro y chico sobre blanco: queda lejos del 4,5:1 que pide el piso de contraste. Pasa en todas las pantallas del grupo.",
+  "archivos": [
+   "static/temas/laguna-panel.css"
+  ],
+  "modelo": "laguna",
+  "vista": "ambas"
+ },
+ {
+  "id": "G6-33",
+  "pantalla": "general-g6",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Muchos botones rojos repetidos en cada fila",
+  "sugerencia": "Dibujar la acción destructiva como texto gris y pasarla a rojo solo al pasar el mouse o con foco; la confirmación sigue diciendo qué se borra.",
+  "problema": "«Baja», «Borrar» y «Desactivar» van con borde y texto rojo en cada una de las filas (12 en Empleadores, 7 en Áreas, 9 en Usuarios). La columna roja es lo que más llama la atención de la tabla, aunque es la acción que menos se usa.",
+  "archivos": [
+   "templates/admin.html",
+   "static/marca.css"
+  ],
+  "modelo": "ambos",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G7-01",
+  "pantalla": "general-g7",
+  "estado": "cambio",
+  "nota": "este panel sera reemplazado por version 2.",
+  "severidad": "alta",
+  "titulo": "Gráficos vacíos sin estado vacío: ejes 0–1,0 y diez «$0k»",
+  "sugerencia": "Cuando un gráfico recibe cero filas, ocultar el lienzo y mostrar en su lugar, centrado y en gris de 14 px: «No hay recibos en este período» + botón chico «Ver últimos 30 días». En los ejes de conteo, `ticks.precision: 0` y `suggestedMax: 5` para que nunca aparezcan 0,1…0,9; en el eje de pesos, no dibujar ticks si el máximo es 0. Esconder la bajada «Tocá…» mientras el gráfico esté vacío.",
+  "problema": "Con el período sin datos, cada gráfico de los dos paneles dibuja su grilla vacía: ejes de 0 a 1,0 con decimales que no existen en un conteo, «$0k» repetido once veces en Diferencias por empresa, y la dona de Resultado de validación como 400 px de blanco con la leyenda abajo. Se lee como una pantalla rota. Impeccable (clarify, «Loading, empty and success states»; craft-floor «States: empty») pide que el estado vacío explique qué pasa y ofrezca la próxima acción. Además las bajadas siguen diciendo «Tocá un segmento para filtrar» cuando no hay nada que tocar.",
+  "archivos": [
+   "static/dashboard.js",
+   "static/panel_v2/graficos.js",
+   "templates/dashboard.html",
+   "static/panel_v2/panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-02",
+  "pantalla": "general-g7",
+  "estado": "cambio",
+  "nota": "este panel sera reemplazado por v2",
+  "severidad": "media",
+  "titulo": "El panel abre en «Hoy»: la primera vista es todo cero",
+  "sugerencia": "Abrir por defecto en «30 días» (y que «Reiniciar» vuelva a 30 días, no a Hoy). Si se quiere conservar «Hoy» como atajo, que quede como segunda pastilla. El enlace compartible con período explícito sigue mandando.",
+  "problema": "Los dos paneles arrancan con el período «Hoy» (`setPreset(\"hoy\")` y el reductor de la v2). A media mañana de un sábado, todos los indicadores están en 0, todos los gráficos vacíos y lo único con datos es el semáforo. Es la primera impresión de la «función estrella» ante un sindicato. Impeccable, modo Operate: «la información que el visitante lee primero» tiene que ser la que responde su pregunta; un día en curso casi nunca la responde.",
+  "archivos": [
+   "static/dashboard.js",
+   "static/panel_v2/estado.js"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-03",
+  "pantalla": "general-g7",
+  "estado": "cambio",
+  "nota": "este panel sera reemplazado por v2",
+  "severidad": "media",
+  "titulo": "En el teléfono la fecha del encabezado ocupa cinco renglones",
+  "sugerencia": "En `encabezado.css`, bajo 600 px: ocultar el `<strong>` de la fecha larga y dejar solo el rango corto (o «24/10» si desde = hasta), en una línea con `white-space: nowrap`. Sacar `text-transform: capitalize` y escribir la fecha ya armada en minúsculas desde el JS («sábado, 24 de octubre de 2026»), capitalizando solo la primera letra.",
+  "problema": "En 390 px, la fecha larga del Panel Sindical («Sábado, 24 De Octubre De 2026» + el rango) se parte en cinco renglones y el encabezado crece a ~100 px, el doble que en cualquier otra pantalla. Rompe la regla de la casa del encabezado de una sola línea. Además `text-transform: capitalize` pone «De» con mayúscula, que en castellano está mal.",
+  "archivos": [
+   "static/encabezado.css",
+   "static/dashboard.js",
+   "static/panel_v2/app.js"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G7-04",
+  "pantalla": "general-g7",
+  "estado": "cambio",
+  "nota": "este panel sera reemplazado por v2",
+  "severidad": "media",
+  "titulo": "Explorador de datos cortado en el teléfono",
+  "sugerencia": "Bajo 600 px, mostrar cada fila como una ficha de dos renglones (fecha · empresa arriba; diferencia y estado abajo) en vez de tabla; o, como mínimo, dejar la tabla dentro de un contenedor con `overflow-x: auto` y un degradé a la derecha que avise que sigue. Sacar el mensaje vacío de la tabla y ponerlo como párrafo debajo de las pastillas, a todo el ancho.",
+  "problema": "En 390 px la tabla del explorador se sale por la derecha: se ven Fecha, Seccional, Empresa y media «Formato»; el mensaje «Sin registros para los filtros a…» queda cortado porque está centrado en el ancho de la tabla, no de la pantalla; y la pastilla «Notificaciones» se corta sin indicar que se desliza. Impeccable (adapt / audit, «Horizontal scroll»): la estructura tiene que reacomodarse, no desbordar.",
+  "archivos": [
+   "templates/dashboard.html",
+   "static/dashboard.js",
+   "static/panel_v2/explorador.js",
+   "static/panel_v2/panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "telefono"
+ },
+ {
+  "id": "G7-05",
+  "pantalla": "general-g7",
+  "estado": "cambio",
+  "nota": "este panel sera reemplazado por v2",
+  "severidad": "media",
+  "titulo": "Leyenda de Trámites: los tres estados en el mismo gris",
+  "sugerencia": "Fijar el color de la leyenda aparte del de las barras: en `plugins.legend.labels.generateLabels`, devolver `[C.aviso, C.apoyo, C.ok]` por dataset, o dejar `backgroundColor` como color único cuando no hay filas. Mismo arreglo en la v1 y en la v2.",
+  "problema": "En «Trámites por seccional y estado» la leyenda pinta Abiertos, En proceso y Resueltos con el mismo punto gris. El color de cada barra se arma por fila (un arreglo), y con cero filas Chart.js no tiene de dónde sacar el color de la leyenda. La leyenda deja de servir para leer el gráfico (Impeccable, Operate: los colores de estado tienen que cargar significado).",
+  "archivos": [
+   "static/dashboard.js",
+   "static/panel_v2/graficos.js"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-07",
+  "pantalla": "general-g7",
+  "estado": "cambio",
+  "nota": "este panel sera reemplazado por v2",
+  "severidad": "media",
+  "titulo": "Los botones flotantes tapan contenido y la X no dice «Salir»",
+  "sugerencia": "Ponerle rótulo visible «Salir» al botón (pastilla de 42 px de alto con ícono de puerta + texto), como en las pantallas con modelo. Y dejar `padding-bottom: 96px` en el contenedor principal de estas pantallas para que lo último nunca quede debajo de los flotantes.",
+  "problema": "Inicio y Salir flotan fijos abajo a la derecha. En el teléfono tapan el calendario (v1), un indicador (v2), la flecha de «Uso de IA» en la portada de plataforma y la columna derecha de los formularios. Y Salir es una X sola: en toda interfaz una X significa «cerrar esto», no «cerrar sesión», así que invita a tocarla por error. CLAUDE.md, punto 38, ya acordó «Salir flotando con rótulo junto a Inicio» para las pantallas con modelo; acá no llegó.",
+  "archivos": [
+   "static/marca.css",
+   "templates/dashboard.html",
+   "templates/dashboard_v2.html",
+   "templates/plataforma_portada.html",
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-11",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Formularios de plataforma en dos columnas también en el teléfono",
+  "sugerencia": "Agregar `@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }` en `plataforma.html`.",
+  "problema": "La grilla `.grid` de plataforma es `1fr 1fr` sin corte para pantallas chicas. En 390 px el desplegable dice «Unión Obrera M», el ayudante de «Clave inicial» dice «La cambiará en el p», «Nombre del referer» se corta, y en Cambiar clave la ayuda del tipo de usuario se aprieta en cinco renglones. Afecta Nuevo sindicato, Nuevo admin y Cambiar clave. Impeccable (adapt): la estructura cambia con el ancho.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G7-12",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "El botón principal de plataforma no llega al contraste mínimo",
+  "sugerencia": "Usar el corrector que ya existe (`temas.paleta_legible`) para el texto sobre el acento, o fijarlo en blanco con el acento oscurecido un 15% (`color-mix(in srgb, var(--marca-acento) 85%, black)`), y subir el rótulo a 14 px.",
+  "problema": "«Crear sindicato», «Crear administrador» y «Cambiar clave» son tinta oscura sobre el lila de Colm3na: 4,2:1 medido, en condensada mayúscula de ~13 px. Para texto de ese tamaño el piso es 4,5:1 (craft-floor «Contrast»). Es el botón que cierra cada formulario.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-13",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "«Acerca de» casi invisible en todas las pantallas de plataforma",
+  "sugerencia": "Sacar la opacidad, usar `color: var(--gris)` (o `--sobre-base-mute` en la portada oscura) y 12,5 px. Afecta Portada, Sindicatos, Nuevo sindicato, Nuevo admin y Cambiar clave.",
+  "problema": "El enlace «Acerca de» va en 10,5–11 px con opacidad .45–.5: mide 1,9:1 sobre el fondo, lejos del 4,5:1 (craft-floor «Contrast»). Si está, tiene que poder leerse; si no hace falta, sobra.",
+  "archivos": [
+   "templates/plataforma.html",
+   "templates/plataforma_portada.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-06",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Semáforo: la quinta empresa queda cortada y no se ve que hay más",
+  "sugerencia": "Agregar al final de la caja con scroll un degradé de 24 px hacia el blanco (`mask-image`) y, debajo, «Ver las 11 empresas» que expanda la lista. O ajustar el alto para que corte entre dos filas, nunca en el medio de una.",
+  "problema": "El resumen dice «7 al día · 2 demoradas · 2 críticas» (11 empresas) pero la lista muestra 5 y la quinta queda cortada a la mitad, sin sombra ni texto que avise que la caja se desplaza. Parece un error de dibujo.",
+  "archivos": [
+   "templates/dashboard.html",
+   "static/panel_v2/graficos.js",
+   "static/panel_v2/panel.css"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-08",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Glifos de texto como íconos: ⟳, ‹ ›, ▲▼, ▶",
+  "sugerencia": "Reemplazarlos por SVG de línea (stroke 1.7) del mismo sistema que ya usan los botones flotantes: `#ic-reiniciar`, chevrones izquierda/derecha y flechas arriba/abajo de 12 px.",
+  "problema": "«⟳ Reiniciar», las flechas del calendario ‹ ›, el ▲/▼ del indicador y el ▶ del desplegable «Usuarios de los paneles» son caracteres, que cambian de tamaño y grosor según la fuente del sistema. La casa: «íconos SVG de línea, nunca caracteres»; craft-floor lo prohíbe igual.",
+  "archivos": [
+   "templates/dashboard.html",
+   "static/dashboard.js",
+   "static/panel_v2/filtros.js",
+   "static/panel_v2/formato.js",
+   "templates/plataforma.html"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-09",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "«▼ 100% vs período anterior» en rojo compara un día en curso",
+  "sugerencia": "Cuando el período es «Hoy», no mostrar la comparación o decir «ayer: 37». La frase, en la fuente de texto; solo el porcentaje en `--fuente-num`.",
+  "problema": "Con «Hoy» elegido, el indicador compara las horas que van del día contra el día anterior completo y avisa en rojo una caída del 100%. Es cierto pero alarma sin motivo, y además va en letra monoespaciada, que la casa reserva para cifras (craft-floor: monoespaciada como disfraz).",
+  "archivos": [
+   "static/dashboard.js",
+   "static/panel_v2/formato.js"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-10",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Mapa: burbujas superpuestas y el zoom tapa una seccional",
+  "sugerencia": "Al ajustar el encuadre, sumar `padding: [40, 40]` a `fitBounds` para que ninguna burbuja quede bajo los controles; mover el zoom a abajo a la derecha (`position: 'bottomright'`). Para las que se pisan, desplazar la de menor tamaño unos píxeles o agruparlas con un número.",
+  "problema": "La Matanza y Sede Central quedan una encima de la otra en Buenos Aires, y en el teléfono los botones + y − tapan la burbuja de Córdoba. El logo en marca de agua, a ese tamaño, es ilegible. Como el mapa ES el selector (regla de la casa), una burbuja tapada no se puede tocar.",
+  "archivos": [
+   "static/mapa.js",
+   "static/dashboard.js",
+   "static/panel_v2/graficos.js"
+  ],
+  "modelo": "ambos",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-14",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Placeholders que parecen datos o que esconden la instrucción",
+  "sugerencia": "Cambiar los ejemplos por «Ej.: 30-12345678-1» en gris más claro, y pasar «La cambiará en el primer ingreso» a una ayuda fija de 12,5 px debajo del campo «Clave inicial».",
+  "problema": "«30-12345678-1» en CUIT y «20123456786» en el CUIT del admin parecen números ya cargados; «La cambiará en el primer ingreso» es una instrucción que desaparece al escribir. Impeccable (clarify, «Forms»): «los placeholders son ejemplos, no rótulos», y la indicación va pegada al campo, persistente.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G7-15",
+  "pantalla": "general-g7",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "La tira de pestañas no se alinea con el contenido",
+  "sugerencia": "Poner la tira dentro del mismo contenedor de ancho máximo que el contenido (o darle `max-width: 956px; margin: 0 auto`), y dejar el desborde horizontal deslizable como está.",
+  "problema": "En plataforma las diez pestañas arrancan pegadas al borde izquierdo (x = 14) mientras el título y la tabla viven en una columna centrada de 956 px que arranca en x = 242. El ojo salta entre dos márgenes distintos (Impeccable, layout: «alineación y grilla»).",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-01",
+  "pantalla": "general-g8",
+  "estado": "cambio",
+  "nota": "formato viejo hay que aplicar a  nueva UI",
+  "severidad": "alta",
+  "titulo": "La bajada del título cae sobre el degradé de la franja y no se lee",
+  "sugerencia": "Dejar la bajada en UN renglón (90 caracteres como máximo) para que quede entera sobre el oscuro, y mudar el resto de la explicación adentro de la tarjeta blanca, como primer párrafo en gris (o detrás de un '?' como en el constructor de Trámites). En Uso de IA, poner el párrafo explicativo de cada solapa adentro de su tarjeta. Si se prefiere no tocar textos: subir `--mesa-franja` solo en plataforma para que el oscuro llegue hasta el final de la bajada más larga.",
+  "problema": "En Recibos con alerta, Fotos, Topes y las cuatro solapas de Uso de IA, la bajada de 3 o 4 renglones baja justo por donde la franja pasa de oscuro a claro. Medido en la captura: el texto blanco de la bajada da 4,4:1 en el primer renglón, 3,2:1 en el segundo y 2,4:1 en el tercero; en Uso de IA el párrafo va en tinta y arranca en 3:1. El piso de Impeccable (craft-floor, Contrast) pide 4,5:1 para texto chico, y la regla de la casa dice que lo que va sobre la franja se separa por luz: acá los últimos renglones no tienen ni luz ni contraste.",
+  "archivos": [
+   "templates/plataforma.html",
+   "static/interior.css"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-02",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Tres colores distintos para 'esto está elegido' y 'esto es la acción'",
+  "sugerencia": "Pintar `.ia-subtab.activa` y `.ft-subtab.activa` con el mismo tratamiento que la pestaña activa de la tira (relleno pleno, texto en `--marca-base`) o con el acento, nunca con `--agua`/secundario. Reservar el secundario para enlaces, como dice la ficha de Marca.",
+  "problema": "La pestaña activa de la tira va en blanco; la sub-pestaña activa (Uso de IA, Fotos) va en el rojo del color secundario; y todos los botones principales van en el lavanda del acento. En una misma pantalla (Banco de pruebas, Fotos) conviven el rojo marcando lo elegido y el lavanda marcando la acción, y el ojo no sabe cuál manda. La regla de la casa dice: 'botón principal en color de acento, pestaña activa marcada con acento'. Operate (mode-operate) pide que el color haga trabajos concretos y constantes.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-03",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los encabezados de columnas numéricas salen en otra letra",
+  "sugerencia": "Agregar `th.num { font-family: inherit; font-size: 10.5px; }` en plataforma.html: el encabezado queda alineado a la derecha pero en la misma letra que el resto. Las cifras de las celdas siguen en monoespaciada.",
+  "problema": "En las tablas de Uso de IA y Enmascarado, 'MODELO' va en la letra de sistema a 10,5 px y al lado 'LLAMADAS', 'TOKENS ENTRADA', 'COSTO' van en monoespaciada más ancha y más grande. La fila de encabezados parece de dos tablas distintas. Causa: `.num` (monoespaciada, 12,5 px) también se aplica a `th.num`. La monoespaciada es para las cifras, no para los rótulos (craft-floor: monoespaciada solo para datos y medidas).",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-04",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Campo de archivo crudo del navegador, en inglés",
+  "sugerencia": "Reusar la zona `.ft-zona` de Fotos (ícono de subir, 'Arrastrá el logo acá o hacé clic para elegirlo', formatos y tamaño debajo, nombre del archivo elegido al terminar) en los dos logos de Marca y en el Banco de pruebas.",
+  "problema": "En Marca (dos veces) y en el Banco de pruebas se ve el control crudo del navegador, en inglés y con su botón gris de sistema. Fotos, en la pantalla de al lado, ya tiene una zona propia para soltar o elegir el archivo. Rompe la voz rioplatense de la casa y el piso de Impeccable ('las superficies que no dibujaste también llevan el diseño').",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-05",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "media",
+  "titulo": "Los filtros van debajo de los totales y apilados a todo el ancho",
+  "sugerencia": "Subir los filtros arriba del todo de la solapa, en UNA fila: tres desplegables de 220 px con fondo blanco como el resto de los campos, 'Limpiar' como botón secundario del mismo alto (38 px) y el contador al final de la fila. Debajo, indicadores y tablas. Sacar la frase 'los totales acompañan a los filtros de abajo'.",
+  "problema": "En Consumo y costo y en Enmascarado, los tres desplegables (sindicato, modelo, tipo) ocupan cada uno el ancho completo, en gris, uno encima del otro, y quedan DEBAJO de los indicadores; el propio texto tiene que avisar 'los totales acompañan a los filtros de abajo'. 'Limpiar' es un botón diminuto y '0 resultados' / '0 documentos' quedan pegados a los desplegables. Operate pide los filtros arriba de lo que acotan (mode-operate, Comps) y layout.md pide agrupar por significado.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-06",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "En teléfono la pestaña activa queda fuera de la vista",
+  "sugerencia": "Al cargar y al cambiar de pestaña, llevar la activa a la vista (`scrollIntoView({inline:'center', block:'nearest'})`) y poner un degradé de 24 px en el borde derecho de `.nav-strip` mientras quede contenido por deslizar.",
+  "problema": "La tira de diez pestañas desliza de costado, pero siempre arranca en 'Sindicatos': estando en Marca, Uso de IA o Topes no se ve en qué pestaña estás y no hay nada que avise que hay más a la derecha (la última se corta a media palabra). Plataforma se usa en escritorio, por eso es baja.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G8-07",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "En teléfono las tablas se salen de su tarjeta",
+  "sugerencia": "Envolver cada tabla en `.tabla-ancha` con `overflow-x:auto` DENTRO de la tarjeta (que la tarjeta recorte, no la pantalla) y, en Topes y Usuarios, por debajo de 600 px pasar cada fila a una ficha de dos renglones con las acciones abajo.",
+  "problema": "En Topes, Uso de IA, Recibos con alerta y Usuarios la tabla se corta contra el borde derecho de la pantalla: en Topes 'Editar' y 'Borrar' quedan fuera de vista, y en Usuarios la tabla rompe el borde de su caja y los botones de acción se ven a la mitad ('De…', 'R…').",
+  "archivos": [
+   "templates/plataforma.html",
+   "templates/plataforma_usuarios.html"
+  ],
+  "modelo": "base",
+  "vista": "telefono"
+ },
+ {
+  "id": "G8-08",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Desplegables grises entre campos blancos",
+  "sugerencia": "Darles a los `select` el mismo fondo blanco, borde y radio que los `input` (una regla en el bloque de formularios de plataforma.html) y una flecha SVG propia.",
+  "problema": "Los `<select>` salen con el gris de sistema (Estado en Topes, 'Qué es el archivo' en el Banco de pruebas, los filtros de Uso de IA) mientras los campos de texto de al lado son blancos con borde. En un mismo formulario parece que el desplegable está deshabilitado.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "escritorio"
+ },
+ {
+  "id": "G8-09",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "El texto del botón principal no llega al contraste mínimo",
+  "sugerencia": "Pasar los colores de plataforma por la misma corrección que ya existe para los gremios (`temas.paleta_legible`, `_paleta_legible.html`): usar el 'texto sobre el acento' corregido en `button` y en `.pill.superadmin`.",
+  "problema": "Todos los botones principales llevan texto `--marca-base` sobre el lavanda del acento de Colm3na: medido, 4,3:1. A 15 px no cuenta como texto grande, así que queda debajo del 4,5:1 que pide el piso (craft-floor, Contrast). Lo mismo la pastilla 'superadmin' de Usuarios (blanco sobre lavanda, 4,3:1 a 11 px).",
+  "archivos": [
+   "templates/plataforma.html",
+   "templates/plataforma_usuarios.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ },
+ {
+  "id": "G8-10",
+  "pantalla": "general-g8",
+  "estado": "pendiente",
+  "nota": null,
+  "severidad": "baja",
+  "titulo": "Rótulos de pestañas abreviados que no dicen qué hay",
+  "sugerencia": "Renombrar: 'Configuración', 'Recibos con alerta', 'Topes de aportes'. Entran en la tira de escritorio (sobran ~220 px a la derecha).",
+  "problema": "'Config. legal' (que además tiene el Panel Sindical), 'Con alerta' (¿qué cosa?) y 'Topes SS' obligan a recordar qué hay detrás. Impeccable (clarify) pide rótulos que nombren lo que hay; reconocer antes que recordar.",
+  "archivos": [
+   "templates/plataforma.html"
+  ],
+  "modelo": "base",
+  "vista": "ambas"
+ }
+]

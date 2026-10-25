@@ -1,0 +1,48 @@
+{
+  "proyecto": "nombre-corto-sin-espacios",
+  "nombre": "Nombre que ve la gente",
+  "idioma": "castellano rioplatense",
+  "locale": "es-AR",
+  "servidor": {
+    "comando": "comando que levanta la app en {puerto}, por ejemplo: uvicorn main:app --port {puerto}",
+    "puerto": 8077,
+    "salud": "/ruta-que-responde-200-cuando-arrancó",
+    "nota": "Lo que hay que tener levantado antes (base de datos, migraciones, datos de prueba)."
+  },
+  "sesiones": {
+    "comando": "comando que imprime {rol: {cookie: valor}} para {variante} y {quien}",
+    "dominio": "localhost",
+    "vencen_en_minutos": 15
+  },
+  "roles": [
+    "ninguno"
+  ],
+  "variantes": {
+    "con_variantes": [],
+    "sin_variantes": "base"
+  },
+  "vistas": {
+    "d": {
+      "ancho": 1440,
+      "alto": 900,
+      "tope": 5000
+    },
+    "m": {
+      "ancho": 390,
+      "alto": 844,
+      "escala": 2,
+      "movil": true,
+      "tope": 7000
+    }
+  },
+  "pantallas": "xsd/proyectos/<proyecto>/pantallas.json",
+  "contexto": "xsd/proyectos/<proyecto>/contexto.md",
+  "lecturas": [
+    "Documento del producto (quién lo usa y para qué)",
+    "Reglas de diseño de la casa (mandan ante un choque con Impeccable)",
+    "Decisiones de diseño ya tomadas"
+  ],
+  "referencia": ".claude/skills/impeccable",
+  "aviso_capturas": "Lo que se ve en las capturas y no es diseño (un distintivo de entorno, por ejemplo). Vacío si no hay.",
+  "trabajo": "xsd-trabajo/<proyecto>"
+}
