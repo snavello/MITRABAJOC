@@ -281,3 +281,168 @@ def test_el_riel_es_fijo_en_escritorio_y_tira_en_telefono():
         assert f"margin: 0 0 0 var({var})" in escritorio
         telefono = css[css.index("@media (max-width: 760px)"):]
         assert "position: fixed" not in re.search(r"\.nav-strip \{([^}]*)\}", telefono).group(1)
+
+
+# ------------------------------------------- segunda auditoría (2026-10-25)
+
+def _hoja(modelo, pantalla="plataforma"):
+    return _sin_comentarios(HOJAS[(modelo, pantalla)].read_text(encoding="utf-8"))
+
+
+def _bloque_media(css, media):
+    """El contenido de TODOS los bloques @media con esa condición, juntos."""
+    partes, i = [], 0
+    while True:
+        i = css.find(media, i)
+        if i < 0:
+            return "\n".join(partes)
+        j = css.index("{", i) + 1
+        nivel, k = 1, j
+        while nivel:
+            nivel += {"{": 1, "}": -1}.get(css[k], 0)
+            k += 1
+        partes.append(css[j:k - 1])
+        i = k
+
+
+def test_r2_01_inicio_y_salir_al_pie_del_riel_en_escritorio():
+    for modelo, riel in (("laguna", "--lg-riel"), ("noticiero", "--nt-riel")):
+        escritorio = _bloque_media(_hoja(modelo), "@media (min-width: 761px)")
+        flota = re.search(r"\.flota-sesion \{([^}]*)\}", escritorio).group(1)
+        assert "--flota-quieta: 1" in flota and "left: 10px" in flota and f"var({riel})" in flota, modelo
+        # en el teléfono sigue flotando (no se la ancla al riel)
+        telefono = _bloque_media(_hoja(modelo), "@media (max-width: 760px)")
+        assert "--flota-quieta" not in telefono
+
+
+def test_r2_02_los_campos_de_laguna_tienen_borde_que_se_ve():
+    css = _hoja("laguna")
+    campo = re.search(r'textarea\) \{([^}]*)\}', css).group(1)
+    assert "border: 1px solid transparent" not in campo
+    assert "color-mix(in srgb, var(--lg-tinta) 58%, #fff)" in campo and "background-color: #fff" in campo
+
+
+def test_r2_04_y_r2_05_el_telefono_toca_y_no_agranda():
+    for modelo in temas.TEMAS:
+        telefono = _bloque_media(_hoja(modelo), "@media (max-width: 760px)")
+        assert re.search(r"\.ptab \{[^}]*height: 44px", telefono), modelo
+        assert re.search(r"\.wrap :is\(input, select, textarea\) \{ font-size: 16px; \}", telefono), modelo
+    html = Path("templates/plataforma.html").read_text(encoding="utf-8")
+    assert ".chk-modulo { min-height:44px; }" in html
+    assert ".check-modulos { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr));" in html
+
+
+def test_r2_06_titulos_equilibrados_y_contador_pegado():
+    for modelo in temas.TEMAS:
+        tit = re.search(r'\.titulo-pagina \{([^}]*)\}', _hoja(modelo)).group(1)
+        assert "text-wrap: balance" in tit, modelo
+    html = Path("templates/plataforma.html").read_text(encoding="utf-8")
+    for t in ("Sindicatos en la plataforma&nbsp;(", "Recibos con alerta&nbsp;(",
+              "Topes de aportes de la seguridad social&nbsp;("):
+        assert t in html, t
+
+
+def test_r2_07_y_r2_08_la_portada_como_la_del_panel():
+    lag = _hoja("laguna", "plataforma-portada")
+    escritorio = _bloque_media(lag, "@media (min-width: 1040px)")
+    assert re.search(r"\.circulo-acento:has\(img\) \{[^}]*width: 72px; height: 72px", escritorio)
+    assert re.search(r"\.fila-hola \{[^}]*display: flex", escritorio)
+    assert re.search(r"\.pt-heroe > \.pad \{[^}]*padding: 0 26px 64px", lag)      # la sombra entra entera
+    nt = _bloque_media(_hoja("noticiero", "plataforma-portada"), "@media (min-width: 1040px)")
+    assert re.search(r"\.pt-hero \{ margin: 0; width: min\(640px, 100%\); \}", nt)
+
+
+def test_r2_09_borrar_es_un_boton():
+    for modelo, mal in (("laguna", "--lg-mal"), ("noticiero", "--nt-mal")):
+        regla = re.search(r'button\.mini\.borrar,\s*html\[data-tema="%s"\] button\.ft-borrar \{([^}]*)\}' % modelo,
+                          _hoja(modelo)).group(1)
+        assert "box-shadow: none" not in regla and f"inset 0 0 0 1px color-mix(in srgb, var({mal})" in regla, modelo
+
+
+def test_r2_10_y_r2_11_los_colores_en_grilla_con_su_rotulo():
+    html = Path("templates/plataforma.html").read_text(encoding="utf-8")
+    assert ".colores { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:16px;" in html
+    assert ".colores { grid-template-columns:repeat(2, minmax(0, 1fr)); }" in html
+    assert re.search(r'\.col-item > label \{[^}]*text-transform: uppercase', _hoja("noticiero"))
+
+
+def test_r2_12_los_errores_de_los_ingresos_van_en_rojo_fijo():
+    for t in ("admin_login", "plataforma_login", "trabajador_login", "empresa_login", "_clave_base", "admin_elegir"):
+        html = Path(f"templates/{t}.html").read_text(encoding="utf-8")
+        assert "--alerta: #c0392b;" in html, t
+        assert "color_acento" not in html, t
+    c = _cliente(_usuario("tema-plat-r212"), "tema-plat-r212")
+    marca = c.get("/plataforma").text
+    assert "avisos de error." not in marca
+    assert "Los avisos de error van siempre en rojo." in marca
+    for ruta in ("/admin?error=1", "/ingresar?error=login", "/ingresar-empresa?error=login"):
+        r = TestClient(main.app).get(ruta)
+        assert "--alerta: #c0392b;" in r.text and 'class="error"' in r.text, ruta
+
+
+def test_r3_ajustes_de_uso_de_ia_config_y_alertas():
+    c = _cliente(_usuario("tema-plat-r3"), "tema-plat-r3")
+    html = c.get("/plataforma").text
+    # R3-02: rótulos cortos, alineados por abajo
+    assert "Verde hasta (días)" in html and "Amarillo hasta (días)" in html and "Semáforo: amarillo" not in html
+    assert 'class="grid al-pie"' in html
+    # R3-08: el subtítulo del banco de pruebas lleva aire arriba
+    assert '<h3 class="form-secc secc-sep">Modelos a comparar</h3>' in html
+    # R3-09: título corto, el resto en la bajada
+    assert "Recibos con alerta de posible adulteración" not in html
+    assert "De posible adulteración." in html
+    # G8-21: la opción va corta; «por defecto» se dice debajo
+    assert "· por defecto</option>" not in html and "(por defecto)</option>" not in html
+    assert "Por defecto: " in html and "por millón de tokens</option>" not in html
+    # R3-06: el rótulo de los indicadores de Noticiero, a 12 px y en la letra de las tablas
+    rot = re.search(r'\.ia-tot \.rotulo \{([^}]*)\}', _hoja("noticiero")).group(1)
+    assert "12px" in rot and "--nt-f-txt" in rot
+    # R3-09: interlineado de Noticiero que deja lugar a las tildes
+    tit = re.search(r'\.titulo-pagina \{([^}]*)\}', _hoja("noticiero")).group(1)
+    assert float(re.search(r"line-height: ([\d.]+)", tit).group(1)) >= 1
+
+
+def test_r3_10_el_encabezado_de_topes_acompana():
+    html = Path("templates/plataforma.html").read_text(encoding="utf-8")
+    assert '<div class="tabla-ancha th-fijo">' in html and ".tabla-ancha.th-fijo { overflow:visible; }" in html
+    assert '<tr class="t-anio">' in html
+    for modelo, top in (("laguna", "--lg-top"), ("noticiero", "--nt-top")):
+        escritorio = _bloque_media(_hoja(modelo), "@media (min-width: 761px)")
+        th = re.search(r"\.tabla-topes th \{([^}]*)\}", escritorio).group(1)
+        assert "position: sticky" in th and f"top: var({top})" in th, modelo
+
+
+def test_r3_11_el_estado_dice_que_falta():
+    html = Path("templates/plataforma_usuarios.html").read_text(encoding="utf-8")
+    assert ">Pendiente<" not in html
+    for t in ("Falta su primer ingreso", "Falta cambiar la clave", "Faltan sus datos"):
+        assert t in html
+    with db.get_session() as s:
+        u = s.exec(db.select(db.UsuarioPlataforma).where(db.UsuarioPlataforma.usuario == "tema-plat-r311")).first()
+        if not u:
+            u = db.UsuarioPlataforma(usuario="tema-plat-r311", nombre="Nuevo", rol="admin",
+                                     clave_hash=auth.hashear_clave("x" * 12), activo=True)
+        u.debe_cambiar_clave, u.debe_completar_datos = True, False
+        s.add(u); s.commit()
+    pagina = _cliente(_usuario("tema-plat-11"), "tema-plat-11").get("/plataforma/usuarios").text
+    assert "Falta cambiar la clave" in pagina
+
+
+def test_r3_12_y_g7_26_tablas_en_el_telefono():
+    html = Path("templates/plataforma.html").read_text(encoding="utf-8")
+    assert '<table class="tabla-fichas fichas-sind">' in html
+    assert '<table class="tabla-topes tabla-fichas fichas-topes">' in html
+    for r in ('data-r="CUIT"', 'data-r="Marca"', 'data-r="Admins"', 'data-r="Trabajadores"',
+              'data-r="Tope máximo"', 'data-r="Base mínima"', 'data-r="Fuente"'):
+        assert r in html, r
+    # las que siguen deslizándose: aviso de que hay más, primera columna fija
+    # y el vacío que no se corta
+    assert ".tabla-ancha.mas-derecha {" in html and "function marcarTablas()" in html
+    assert ".tabla-ancha > table:not(.tabla-fichas) tr > :first-child { position:sticky; left:0;" in html
+    assert '<span class="vacio-fijo">Todavía no hay registros.' in html
+    # una fila escondida (el formulario de editar) sigue escondida como ficha
+    assert ".tabla-fichas tr[hidden] { display:none; }" in html
+    us = Path("templates/plataforma_usuarios.html").read_text(encoding="utf-8")
+    assert '<table class="tabla-fichas">' in us and ".tabla-fichas tr[hidden] { display:none; }" in us
+    for r in ('data-r="Rol"', 'data-r="Estado"', 'data-r="Alta"'):
+        assert r in us, r

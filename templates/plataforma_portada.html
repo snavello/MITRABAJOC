@@ -71,7 +71,9 @@
 {% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
 {% endif %}
 </head>
-<body class="{{ 'claro' if marca_plataforma.portada_clara else 'oscuro' }}">
+{# Siempre «oscuro»: la portada la pinta el modelo de diseño del usuario.
+   «Portada clara» se retiró (auditoría R2-03, 2026-10-25). #}
+<body class="oscuro">
 {% include "_entorno.html" %}
 
 <section class="pt-heroe" aria-label="Portada">

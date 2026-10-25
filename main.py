@@ -6857,11 +6857,14 @@ async def plataforma_marca(
     color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"), logo: UploadFile = File(None),
     logo_oscuro: UploadFile = File(None),
-    portada_clara: bool = Form(False),
 ):
     """Marca de 'Mi Trabajo' (logins y panel de plataforma) — mismo patrón que
     la marca de un sindicato, pero para la plataforma misma. Dos logos: uno
-    para fondo claro (logins) y uno para fondo oscuro (encabezados)."""
+    para fondo claro (logins) y uno para fondo oscuro (encabezados).
+
+    Ya no recibe «Portada clara» (auditoría R2-03, 2026-10-25): con los dos
+    modelos de diseño la portada la define el modelo que elige cada persona,
+    y la casilla no cambiaba nada. La columna sigue en la base, sin uso."""
     exigir_plataforma(request)
     logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
@@ -6870,8 +6873,9 @@ async def plataforma_marca(
     if logo_oscuro and logo_oscuro.filename:
         logo_datos_osc, logo_mime_osc, logo_flag_osc = _leer_logo(logo_oscuro)
     db.set_marca_plataforma(color_primario, color_secundario, color_acento,
-                             logo_datos, logo_mime, logo_flag, portada_clara,
-                             logo_datos_osc, logo_mime_osc, logo_flag_osc)
+                             logo_datos, logo_mime, logo_flag,
+                             logo_datos_oscuro=logo_datos_osc, logo_mime_oscuro=logo_mime_osc,
+                             logo_oscuro_flag=logo_flag_osc)
     return RedirectResponse("/plataforma?marca=ok", status_code=303)
 
 
@@ -6895,8 +6899,6 @@ async def plataforma_alta_sindicato(
     color_destacado: str = Form("#E5188F"),
     logo: UploadFile = File(None), firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
-    portada_clara: bool = Form(False),
-    admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
     acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
@@ -6933,8 +6935,6 @@ async def plataforma_alta_sindicato(
             color_base=color_base,
             color_destacado=color_destacado or "#E5188F",
             modulos_habilitados=modulos_validos,
-            portada_clara=portada_clara,
-            admin_portada_clara=admin_portada_clara,
             acepta_mail_declarado=acepta_mail_declarado,
         )
         if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
@@ -7513,8 +7513,6 @@ async def plataforma_editar_sindicato(
     firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
     modulos_ofrecidos: list[str] = Form(default=[]),
-    portada_clara: bool = Form(False),
-    admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
     acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
@@ -7545,8 +7543,6 @@ async def plataforma_editar_sindicato(
             sind.color_destacado = color_destacado or "#E5188F"
             sind.modulos_habilitados = _modulos_tras_editar(
                 sind.modulos_habilitados, modulos_validos, modulos_ofrecidos)
-            sind.portada_clara = portada_clara
-            sind.admin_portada_clara = admin_portada_clara
             sind.acepta_mail_declarado = acepta_mail_declarado
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)

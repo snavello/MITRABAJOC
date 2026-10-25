@@ -22,7 +22,10 @@
   :root {
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
-    --alerta: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
+    /* El rojo de los avisos de error es un color de ESTADO, fijo: no toma la
+       marca (auditoría R2-12, 2026-10-25). Antes salía del acento de la
+       plataforma, y una clave mal puesta se avisaba en lila. */
+    --alerta: #c0392b;
     --miel:#f0a01e;
     --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   }

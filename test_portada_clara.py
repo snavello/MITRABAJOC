@@ -1,29 +1,34 @@
-"""Fase B del rediseño visual: Sindicato.portada_clara -- opción real por
-sindicato (elegida por el admin de plataforma), default False para que
-ningún sindicato existente cambie de aspecto el día del deploy.
+"""«Portada clara», retirada (auditoría R2-03, 2026-10-25).
 
-Correr con: .venv/Scripts/python.exe -m pytest test_portada_clara.py -q
+Fue una opción por sindicato (portada del trabajador y del admin) y de la
+plataforma. Con los dos modelos de diseño (PLAN_TEMAS.md) la portada la
+define el modelo que elige cada persona y la casilla no cambiaba nada, así
+que se sacó. Las columnas quedan en la base (sin migración), pero:
+
+- plataforma ya no ofrece las casillas (alta, edición y Marca);
+- ninguna ruta las escribe: un POST armado a mano con el campo no cambia nada,
+  ni para prender ni para apagar lo que ya estuviera guardado;
+- marca_sindicato() y marca_plataforma() no las exponen, así que ninguna
+  plantilla puede depender de ellas;
+- la portada de plataforma va siempre con el cuerpo «oscuro» (el modelo la
+  pinta) y sus hojas no tienen variante clara.
+
+Correr con: python -m pytest test_portada_clara.py -q
 """
 import os
+import re
+from pathlib import Path
 
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db
 from db import Sindicato
 import main
+import temas
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 db.crear_tablas()
-
-with db.get_session() as s:
-    # Sindicato dado de alta "a mano" (fuera del form de plataforma), como
-    # simulación de un sindicato que ya existía antes de esta fase -- debe
-    # quedar en False sin que nadie lo toque (grandfathering).
-    previo = Sindicato(nombre="Sindicato Previo Portada", slug="previo-portada",
-                        color_base="#0f1b2d")
-    s.add(previo); s.commit(); s.refresh(previo)
-    SID_PREVIO = previo.id
 
 plataforma_client = TestClient(main.app)
 plataforma_client.post("/plataforma/login", data={"cuit": "20000000000", "clave": "test-plataforma"})
@@ -40,108 +45,96 @@ def _datos_base(**overrides):
     return datos
 
 
-def test_grandfathering_sindicato_previo_queda_en_falso():
-    marca = db.marca_sindicato(SID_PREVIO)
-    assert marca["portada_clara"] is False
-    print("OK  test_grandfathering_sindicato_previo_queda_en_falso")
-
-
-def test_alta_sin_tildar_portada_clara_queda_en_falso():
-    r = plataforma_client.post("/plataforma/sindicato", data=_datos_base(), follow_redirects=False)
-    assert r.status_code == 303
+def _sindicato(nombre):
     with Session(db.engine) as s:
-        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Portada Clara")).first()
-        assert sind is not None
-        assert sind.portada_clara is False
-    print("OK  test_alta_sin_tildar_portada_clara_queda_en_falso")
+        return s.exec(select(Sindicato).where(Sindicato.nombre == nombre)).first()
 
 
-def test_alta_tildando_portada_clara_queda_en_true():
+def test_la_pantalla_no_ofrece_las_casillas():
+    html = plataforma_client.get("/plataforma").text
+    for nombre in ("portada_clara", "admin_portada_clara"):
+        assert f'name="{nombre}"' not in html, nombre
+    assert "sind-portada-clara" not in html and "sind-admin-portada-clara" not in html
+    assert "Portada clara" not in html
+    # el JSON de «Editar» tampoco las lleva
+    assert '"portada_clara"' not in html and "portada_clara" not in html
+    # en su lugar, una línea que dice quién define la portada
+    assert "La portada la define el modelo de diseño (Laguna o Noticiero)" in html
+
+
+def test_el_alta_ignora_el_campo():
     r = plataforma_client.post("/plataforma/sindicato", data=_datos_base(
-        nombre="Sindicato Test Portada Clara 2", portada_clara="true",
+        nombre="Sindicato Retiro Portada 1", portada_clara="true", admin_portada_clara="true",
     ), follow_redirects=False)
     assert r.status_code == 303
+    sind = _sindicato("Sindicato Retiro Portada 1")
+    assert sind is not None
+    assert sind.portada_clara is False and sind.admin_portada_clara is False
+
+
+def test_la_edicion_no_toca_lo_guardado():
+    """Ni prende ni apaga: un valor viejo queda como estaba (la columna no se
+    usa), y un POST con el campo no lo cambia."""
+    r = plataforma_client.post("/plataforma/sindicato", data=_datos_base(
+        nombre="Sindicato Retiro Portada 2"), follow_redirects=False)
+    assert r.status_code == 303
+    sid = _sindicato("Sindicato Retiro Portada 2").id
     with Session(db.engine) as s:
-        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Portada Clara 2")).first()
-        assert sind.portada_clara is True
-    print("OK  test_alta_tildando_portada_clara_queda_en_true")
-
-
-def test_edicion_cambia_portada_clara():
-    with Session(db.engine) as s:
-        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Portada Clara")).first()
-        sid = sind.id
-        assert sind.portada_clara is False
-
+        sind = s.get(Sindicato, sid)
+        sind.portada_clara, sind.admin_portada_clara = True, True
+        s.add(sind); s.commit()
     r = plataforma_client.post("/plataforma/sindicato/editar", data=_datos_base(
-        id=sid, nombre="Sindicato Test Portada Clara", portada_clara="true",
-    ), follow_redirects=False)
+        id=sid, nombre="Sindicato Retiro Portada 2"), follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         sind = s.get(Sindicato, sid)
-        assert sind.portada_clara is True
-
-    # Destildar en una edición posterior vuelve a False (el checkbox no
-    # tildado no manda el campo -- Form(False) cubre la ausencia).
-    r = plataforma_client.post("/plataforma/sindicato/editar", data=_datos_base(
-        id=sid, nombre="Sindicato Test Portada Clara",
-    ), follow_redirects=False)
-    assert r.status_code == 303
-    with Session(db.engine) as s:
-        sind = s.get(Sindicato, sid)
-        assert sind.portada_clara is False
-    print("OK  test_edicion_cambia_portada_clara")
+        assert sind.portada_clara is True and sind.admin_portada_clara is True
 
 
-def test_marca_sindicato_expone_portada_clara():
-    with Session(db.engine) as s:
-        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Portada Clara 2")).first()
-        sid = sind.id
+def test_la_marca_no_la_expone():
+    sid = _sindicato("Sindicato Retiro Portada 2").id     # tiene las dos en True
     marca = db.marca_sindicato(sid)
-    assert marca["portada_clara"] is True
-    print("OK  test_marca_sindicato_expone_portada_clara")
+    assert "portada_clara" not in marca and "admin_portada_clara" not in marca
+    assert "portada_clara" not in db.marca_plataforma()
 
 
-# ---------- admin_portada_clara: independiente de portada_clara ----------
-
-def test_admin_portada_clara_independiente_de_la_del_trabajador():
-    # Trabajador oscuro (no tildado), admin claro (tildado) en la misma alta.
-    r = plataforma_client.post("/plataforma/sindicato", data=_datos_base(
-        nombre="Sindicato Test Admin Portada Clara", admin_portada_clara="true",
-    ), follow_redirects=False)
+def test_la_marca_de_plataforma_ignora_el_campo():
+    r = plataforma_client.post("/plataforma/marca", data={
+        "color_primario": "#152238", "color_secundario": "#1a7a6b",
+        "color_acento": "#b23a2e", "portada_clara": "true",
+    }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
-        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Admin Portada Clara")).first()
-        assert sind.portada_clara is False        # trabajador: sin tocar
-        assert sind.admin_portada_clara is True    # admin: tildado
-    marca = db.marca_sindicato(sind.id)
-    assert marca["admin_portada_clara"] is True
-    print("OK  test_admin_portada_clara_independiente_de_la_del_trabajador")
+        cfg = s.get(db.ConfiguracionPlataforma, 1)
+        assert cfg.portada_clara is False
 
 
-def test_edicion_cambia_admin_portada_clara_sin_tocar_la_del_trabajador():
+def test_la_portada_de_plataforma_va_siempre_con_el_modelo():
     with Session(db.engine) as s:
-        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Admin Portada Clara")).first()
-        sid = sind.id
+        cfg = s.get(db.ConfiguracionPlataforma, 1) or db.ConfiguracionPlataforma(id=1)
+        cfg.portada_clara = True                     # un valor viejo en la base
+        s.add(cfg); s.commit()
+    try:
+        html = plataforma_client.get("/plataforma/inicio").text
+        assert '<body class="oscuro">' in html
+    finally:
+        with Session(db.engine) as s:
+            cfg = s.get(db.ConfiguracionPlataforma, 1)
+            cfg.portada_clara = False
+            s.add(cfg); s.commit()
+    for modelo in temas.TEMAS:
+        css = Path(f"static/temas/{modelo}-plataforma-portada.css").read_text(encoding="utf-8")
+        assert not re.search(r"body\.claro", re.sub(r"/\*.*?\*/", "", css, flags=re.S)), modelo
 
-    # Edición: tilda portada_clara (trabajador) pero destilda admin_portada_clara.
-    r = plataforma_client.post("/plataforma/sindicato/editar", data=_datos_base(
-        id=sid, nombre="Sindicato Test Admin Portada Clara", portada_clara="true",
-    ), follow_redirects=False)
-    assert r.status_code == 303
-    with Session(db.engine) as s:
-        sind = s.get(Sindicato, sid)
-        assert sind.portada_clara is True
-        assert sind.admin_portada_clara is False
-    print("OK  test_edicion_cambia_admin_portada_clara_sin_tocar_la_del_trabajador")
 
-
-if __name__ == "__main__":
-    test_grandfathering_sindicato_previo_queda_en_falso()
-    test_alta_sin_tildar_portada_clara_queda_en_falso()
-    test_alta_tildando_portada_clara_queda_en_true()
-    test_edicion_cambia_portada_clara()
-    test_marca_sindicato_expone_portada_clara()
-    test_admin_portada_clara_independiente_de_la_del_trabajador()
-    test_edicion_cambia_admin_portada_clara_sin_tocar_la_del_trabajador()
-    print("Todos los tests de portada_clara pasaron.")
+def test_ningun_codigo_escribe_ni_lee_la_opcion():
+    """Fuera de la declaración de las columnas (db.py) y de este test, nada
+    de Python ni de las plantillas de plataforma nombra la opción."""
+    for archivo in ("main.py", "cargar_marca_plataforma.py", "templates/plataforma.html",
+                    "templates/plataforma_portada.html"):
+        assert "portada_clara" not in Path(archivo).read_text(encoding="utf-8"), archivo
+    db_py = Path("db.py").read_text(encoding="utf-8")
+    usos = [l.strip() for l in db_py.splitlines() if "portada_clara" in l and not l.strip().startswith("#")]
+    assert usos == ["portada_clara: bool = Field(default=False)",
+                    "admin_portada_clara: bool = Field(default=False)",
+                    "portada_clara: bool = Field(default=False)"], usos
