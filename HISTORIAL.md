@@ -9063,8 +9063,10 @@ la misma skill funciona instalada como plugin o copiada a `.claude/skills/xsd/`.
 Lo de cada proyecto queda en el proyecto, en `xsd/proyectos/<p>/`.
 
 En este repositorio no se instaló el plugin: se copió la skill, fijada a un
-commit (`ORIGEN.md`), con el mismo criterio que Impeccable. La razón es que el
-repo del kit es privado y `/xsd` tiene que andar en cualquier sesión, también
-en la nube, sin depender de llegar a otro repositorio. `test_xsd.py` compara
+commit (`ORIGEN.md`), con el mismo criterio que Impeccable. La razón es que
+`/xsd` tiene que andar en cualquier sesión, también en la nube, sin depender
+de instalar nada ni de llegar a otro repositorio. El repo del kit nació
+privado y SDN lo hizo **público** el mismo día, para que cualquiera lo
+instale con los dos comandos de `/plugin` sin pedir acceso. `test_xsd.py` compara
 el SHA-256 de cada archivo de la copia contra los de `ORIGEN.md`, para que
 nadie la edite acá y se separe del kit.
