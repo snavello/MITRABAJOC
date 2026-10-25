@@ -122,6 +122,10 @@ def test_las_hojas_usan_los_corregidos_con_la_paleta_del_sindicato():
     """Con la paleta del sindicato, el primario (Laguna: botones con texto
     blanco) y la base (Noticiero: la tinta y sus mezclas) salen corregidos."""
     for hoja in Path("static/temas").glob("*.css"):
+        if "-plataforma" in hoja.name:
+            # Plataforma no tiene sindicato: va siempre con la paleta de Colm3na
+            # (db.apariencia_plataforma), así que sus hojas no traen ese bloque.
+            continue
         css = hoja.read_text(encoding="utf-8")
         bloques = re.findall(r'\[data-paleta="sindicato"\] \{(.*?)\n\}', css, re.S)
         assert bloques, hoja.name
