@@ -1,0 +1,156 @@
+/* ============================================================
+   Panel del sindicato — formularios, listados y padrón
+   ------------------------------------------------------------
+   Auditoría de diseño 2026-10, bloque 5b (panel A): Reportes, Reglas,
+   Conceptos, Trabajadores y Aprendizaje. Esta hoja tiene la ESTRUCTURA
+   común a los dos modelos (rótulos a la vista, paginado arriba de la
+   tabla, menú «Más» del padrón, grupos del alta, zona para subir). Los
+   colores salen de las variables que los dos modelos ya redefinen
+   (--tinta, --linea, --gris, --papel); cada modelo la termina de pintar en
+   su hoja (static/temas/<modelo>-panel.css), que se carga después.
+   ============================================================ */
+
+/* ---------- Números: cifras tabulares (G4-35) ---------- */
+.num, td.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* ---------- Filtros con rótulo (G4-07, G4-32) ----------
+   Cada control dice qué es con un rótulo arriba; el gris queda para un
+   ejemplo corto. Un lector de pantalla también tiene su nombre. */
+.filtros.filtros-rotulados { align-items: flex-end; }
+.f-campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; margin: 0; }
+.f-campo > span { font-size: 12px; font-weight: 600; line-height: 1.2; color: var(--gris); }
+.f-campo .opc { font-weight: 400; }
+.filtros-rotulados .f-campo input[type=date] { min-width: 150px; }
+
+/* ---------- La cabeza de un listado (G4-08, G4-10) ----------
+   El total a la izquierda («1.583 recibos · página 1 de 32») y el paso de
+   página a la derecha, ARRIBA de la tabla: es lo primero que se mira. */
+.lista-cabeza { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 16px; margin: 4px 0 8px; min-height: 30px; }
+.lista-total { font-size: 14px; font-weight: 600; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.lista-total:empty { display: none; }
+.lista-paginas { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end;
+  font-size: 12.5px; color: var(--gris); font-variant-numeric: tabular-nums; }
+.lista-paginas:empty { display: none; }
+.lista-paginas button.mini { margin: 0; }
+.lista-tramo { white-space: nowrap; }
+/* Reportes: la columna «Enviado» solo cuando puede decir algo (G4-09). */
+table.sin-col-enviado .col-enviado { display: none; }
+#rep-tabla td.num, #padron-tabla td.num { white-space: nowrap; }
+
+/* ---------- «Cargar aportes de ley» (G4-36) ---------- */
+form.acc-ley { margin: 16px 0; }
+form.acc-ley button.mini { margin-left: 0; }
+
+/* ---------- Altas en línea con título y rótulos (G4-12, G4-32) ---------- */
+.alta-titulo { font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--tinta);
+  margin: 24px 0 8px; padding: 0; border: 0; text-transform: none; letter-spacing: 0; }
+form.form-alta { display: flex; flex-wrap: wrap; gap: 14px 16px; align-items: flex-end; margin-top: 0; }
+form.form-alta .f-campo :is(input, select) { width: 100%; }
+@media (min-width: 761px) { form.form-alta .f-campo > span { white-space: nowrap; } }
+.f-ancho-s { flex: 0 1 130px; }
+.f-ancho-m { flex: 0 1 190px; }
+.f-ancho-l { flex: 1 1 230px; }
+.f-ancho-xl { flex: 2 1 300px; }
+.f-check { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; font-size: 13px; color: var(--tinta); }
+.f-check input { width: auto; margin: 0; }
+.f-acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.f-acciones button { margin: 0; }
+
+/* ---------- Pastillas neutras (G4-13, G4-14) ----------
+   El rojo y el verde quedan para los estados con significado (diferencia,
+   OK). Lo que solo clasifica -- remunerativo sí/no, tipo, una regla vencida
+   -- va en pastillas neutras. */
+.tag.tag-neutro { background: var(--papel); color: var(--gris); box-shadow: inset 0 0 0 1px var(--linea); }
+.tag.tag-neutro-fuerte { color: var(--tinta); font-weight: 700; }
+.tag.tag-tipo { margin-left: 0; }
+
+/* ---------- Padrón (G4-15, G4-17, G4-18) ---------- */
+#padron-tabla .col-nombre { min-width: 160px; white-space: nowrap; }
+#padron-tabla .col-cuil { white-space: nowrap; }
+#padron-tabla .col-ajustada { width: 1%; white-space: nowrap; }
+#padron-tabla .col-acciones { width: 1%; white-space: nowrap; text-align: right; }
+#padron-tabla tr[data-baja] > td:not(.col-acciones) { opacity: .55; }
+#padron-cuerpo[aria-busy="true"] { opacity: .5; transition: opacity var(--mov-rapido, 180ms) ease; }
+
+details.menu-mas { position: relative; display: inline-block; margin-left: 4px; vertical-align: middle; }
+details.menu-mas > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--tinta);
+  background: #fff; box-shadow: inset 0 0 0 1px var(--linea); user-select: none; }
+details.menu-mas > summary::-webkit-details-marker { display: none; }
+details.menu-mas > summary::after { content: ""; width: 5px; height: 5px; margin-top: -3px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); }
+details.menu-mas[open] > summary::after { margin-top: 2px; transform: rotate(-135deg); }
+/* La lista la ubica el script con position: fixed (static/panel_padron.js),
+   para que ninguna tabla con desplazamiento la recorte; sin script queda
+   debajo del botón. */
+.menu-mas-lista { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 220px;
+  display: flex; flex-direction: column; padding: 6px; text-align: left; white-space: nowrap;
+  background: #fff; border: 1px solid var(--linea); border-radius: 8px;
+  box-shadow: 0 14px 30px -12px rgba(10, 14, 24, .28); }
+.menu-mas-lista form { display: block; margin: 0; }
+.menu-mas-lista .menu-mas-item { display: block; width: 100%; margin: 0; padding: 9px 11px; text-align: left;
+  border: 0; border-radius: 5px; background: none; box-shadow: none; color: var(--tinta);
+  font: inherit; font-size: 13px; font-weight: 500; text-decoration: none; cursor: pointer; }
+.menu-mas-lista .menu-mas-item:hover,
+.menu-mas-lista .menu-mas-item:focus-visible { background: var(--papel); }
+.menu-mas-lista .menu-mas-item.peligro-txt { color: var(--alerta, #b3261e); }
+.menu-mas-sep { border: 0; border-top: 1px solid var(--linea); margin: 6px 4px; }
+
+/* ---------- Alta manual en cuatro grupos (G4-21, G4-22, G4-23) ---------- */
+.form-grupos .alta-grupo { border: 0; padding: 0; margin: 0; min-width: 0; }
+.form-grupos .alta-grupo + .alta-grupo { margin-top: 24px; }
+/* El título del grupo flota adentro del fieldset (si no, el navegador lo
+   monta sobre el borde y el filete de un modelo lo cruzaría). */
+.form-grupos .alta-grupo > legend { float: left; width: 100%; padding: 0; margin: 0 0 10px; font-size: 14px;
+  font-weight: 700; color: var(--tinta); letter-spacing: 0; text-transform: none; }
+.form-grupos .alta-grupo > legend + * { clear: both; }
+.fila-campos { display: flex; flex-wrap: wrap; gap: 14px 16px; }
+.fila-campos + .fila-campos { margin-top: 14px; }
+/* Sin ayuda debajo, los campos se alinean por abajo: un rótulo que se parte
+   en dos renglones no desacomoda la fila. */
+.fila-campos:not(:has(.campo-ayuda)) { align-items: flex-end; }
+.fila-campos > .campo { flex: 1 1 240px; }
+.fila-campos > .campo.w-cuil { flex: 0 1 200px; }
+.fila-campos > .campo.w-s { flex: 0 1 178px; }
+@media (min-width: 761px) { .fila-campos > .campo > label { white-space: nowrap; } }
+.fila-campos > .campo.w-m { flex: 0 1 230px; }
+.fila-campos > .campo.w-l { flex: 1 1 260px; max-width: 440px; }
+.fila-campos > .campo.w-xl { flex: 2 1 340px; }
+.campo-ayuda { display: block; font-size: 12px; line-height: 1.35; color: var(--gris); }
+.alta-mapa { margin-top: 14px; }
+.alta-acciones { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 760px) {
+  .fila-campos > .campo,
+  .fila-campos > .campo.w-cuil, .fila-campos > .campo.w-m,
+  .fila-campos > .campo.w-l, .fila-campos > .campo.w-xl { flex: 1 1 100%; max-width: none; }
+  /* Número, piso y código postal siguen en una fila de tres: son cortos. */
+  .fila-campos > .campo.w-s { flex: 1 1 calc(33.333% - 11px); min-width: 0; }
+}
+
+/* ---------- Alta masiva: ejemplo afuera y ensayo (G4-25, G4-26) ---------- */
+.masivo-ejemplo { margin: 0 0 14px; padding: 10px 12px; border: 1px dashed var(--linea); border-radius: 6px;
+  background: var(--papel); color: var(--gris); font: 12.5px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+textarea.masivo-lista { display: block; width: 100%; min-height: 150px; padding: 10px;
+  font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.masivo-ensayo { margin-top: 14px; }
+.ensayo-sub { font-size: 14px; font-weight: 700; color: var(--tinta); margin: 14px 0 6px; }
+.ensayo-tabla td code { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---------- Aprendizaje: una zona para subir que se ve (G4-27, G4-29) ---------- */
+.drop.drop-recibos { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 140px; padding: 20px; text-align: center; cursor: pointer; }
+.drop.drop-recibos.arrastrando { border-style: solid; }
+.drop-recibos .drop-ico { width: 28px; height: 28px; fill: none; stroke: var(--tinta); stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+.drop-recibos .drop-t { font-size: 15px; font-weight: 600; color: var(--tinta); }
+.drop-recibos .drop-e { font-size: 12.5px; color: var(--gris); }
+.solo-telefono { display: none; }
+@media (hover: none), (max-width: 760px) {
+  .solo-escritorio { display: none; }
+  .solo-telefono { display: inline; }
+}
+.ap-acciones { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ap-acciones button { margin: 0; }
+.ap-falta { margin: 6px 0 0; font-size: 12.5px; color: var(--gris); }

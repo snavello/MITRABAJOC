@@ -57,6 +57,7 @@ import telegram
 import precios_ia
 import resultados_encuesta
 import fechas
+import formato_ar
 import temas
 import fotos_tema
 import logos
@@ -725,6 +726,14 @@ templates.env.globals["captcha_site_key"] = captcha.site_key()
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
 templates.env.filters["periodo"] = fechas.periodo_legible
+# Números del panel en formato argentino (auditoría de diseño G4-35): «$ 1,00»,
+# «2,5%», «1.583», «sep. 2026», el CUIL con guiones. Solo al mostrar.
+templates.env.filters["miles"] = formato_ar.miles
+templates.env.filters["pesos"] = formato_ar.pesos
+templates.env.filters["porcentaje"] = formato_ar.porcentaje
+templates.env.filters["periodo_corto"] = formato_ar.periodo_corto
+templates.env.filters["cuil"] = formato_ar.cuil
+templates.env.globals["vigencia_texto"] = formato_ar.vigencia
 
 
 @app.on_event("startup")
@@ -1263,6 +1272,7 @@ PERMISOS_RUTAS = {
     "/admin/trabajador/alta-logica":        "trabajadores",
     "/admin/trabajador/confirmar-identidad": "trabajadores",
     "/admin/trabajador/restablecer-clave":  "trabajadores",
+    "/admin/trabajadores/lista":            "trabajadores",
 
     # La gestión de usuarios es del Super Admin y de nadie más: no es una
     # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
@@ -1573,8 +1583,13 @@ def admin(request: Request):
         # Viene como dicts con el empadronamiento y la persona ya unidos
         # (db.padron_del_sindicato): el nombre y el domicilio son de la
         # persona, no de esta fila.
-        trabajadores = db.padron_del_sindicato(s, sid, alcance_propio) \
-            if puede("trabajadores") else []
+        #
+        # Paginado en el servidor (auditoría de diseño G4-19): la página trae
+        # solo los primeros 50; buscar y pasar de página lo hace
+        # /admin/trabajadores/lista con el mismo recorte.
+        padron = db.pagina_del_padron(s, sid, alcance_propio) \
+            if puede("trabajadores") else None
+        trabajadores = padron["filas"] if padron else []
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
                              .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
             if puede("emp_empresas") else []
@@ -1667,7 +1682,7 @@ def admin(request: Request):
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
         "rubro_visto": rubro_visto,
         "formulas": formulas,
-        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
+        "trabajadores": trabajadores, "padron": padron, "provincias": db.PROVINCIAS_AR,
         "niveles_empleadores": niveles_empleadores,
         # Sobre qué seccionales opera quien mira: None = todas, {id} = esa,
         # set() = ninguna. Los botones de cuenta solo se dibujan dentro.
@@ -1876,7 +1891,12 @@ def admin_inicio(request: Request):
                 area_admin = a["nombre"]
                 break
     apariencia = db.apariencia_de(sid, cuil_admin, rol="panel")
+    # La línea de estado de cada acceso (auditoría de diseño G4-01): un dato
+    # contado en el servidor, con el mismo recorte que la pestaña.
+    estado_accesos = db.estado_portada_panel(sid, ses.get("uid", 0), modulos, permisos,
+                                             tramites_nuevos=tramites_nuevos)
     return templates.TemplateResponse("admin_portada.html", {
+        "estado_accesos": estado_accesos,
         "permisos": permisos, "es_super_admin": es_super_admin,
         "apariencia": apariencia,
         "foto_portada": _url_foto_portada(sid, apariencia["tema"]),
@@ -2168,7 +2188,7 @@ def admin_generar_credencial(request: Request, id: int = Form(...)):
 
 
 @app.post("/admin/trabajador/masivo")
-def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
+def admin_trabajador_masivo(request: Request, lista: str = Form(...), ensayo: str = Form("")):
     """Alta masiva: una línea por trabajador, campos separados por coma.
     Orden: cuil, nombre, calle, numero, piso, localidad, provincia, telefono,
     mail, CP, seccional, fecha_afiliacion, fecha_nacimiento. Obligatorios los
@@ -2216,9 +2236,23 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     única vía del gremio para cargar el mail de quienes ya se registraron. Sin
     mail, el CUIL repetido sigue yendo a `omitidas`. En una alta nueva, un
     mail en blanco no borra el `mail_padron` que otro gremio ya hubiera cargado.
+
+    **Ensayo** (`ensayo=1`, auditoría de diseño G4-26): la MISMA pasada por
+    la lista, con las mismas reglas, pero sin escribir nada; devuelve JSON con
+    cuántas líneas entran y, de las que quedan afuera, su número de línea, el
+    texto y el motivo. Es lo que hace la pestaña Listas antes de cargar: así
+    lo que el ensayo muestra es exactamente lo que la carga escribe, porque
+    es el mismo código (cada escritura está detrás de `if not es_ensayo`).
     """
     sid = exigir_sindicato(request)
+    es_ensayo = ensayo in ("1", "si", "true")
+    afuera = []              # (línea, texto, motivo): lo que el ensayo le muestra a la persona
+
+    def queda_afuera(n, texto, motivo):
+        afuera.append({"linea": n, "texto": texto.strip()[:80], "motivo": motivo})
+
     altas = 0
+    lineas_leidas = lineas_actualizan = 0
     mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
     fechas_actualizadas = 0  # CUIL ya en el padrón cuya línea trajo fecha de afiliación
     datos_ajenos = 0         # líneas cuya persona ya tenía cuenta antes de este padrón: sin tocar sus datos
@@ -2240,9 +2274,10 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
         # el empadronamiento y NO escribe nombre, domicilio, contacto ni mails.
         con_clave = db.cuiles_con_clave(s, {
             _norm_cuil(ln.split(",")[0]) for ln in lista.strip().splitlines() if ln.strip()})
-        for linea in lista.strip().splitlines():
+        for n_linea, linea in enumerate(lista.strip().splitlines(), start=1):
             if not linea.strip():
                 continue
+            lineas_leidas += 1
             campos = [c.strip() for c in linea.split(",")]
             cuil = _norm_cuil(campos[0]) if campos else ""
             nombre = campos[1] if len(campos) > 1 else ""
@@ -2251,6 +2286,7 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             f_nacimiento = _fecha_formulario(campo(12))
             if f_afiliacion is None or f_nacimiento is None:
                 omitidas.append(linea.strip()[:60])
+                queda_afuera(n_linea, linea, "Una de las fechas no se entiende (AAAA-MM-DD o DD/MM/AAAA).")
                 continue
             if len(cuil) == 11 and cuil in existentes and (campo(8) or f_afiliacion):
                 # Ya está en el padrón de este sindicato (quizá ya registrado):
@@ -2259,18 +2295,25 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
                 # el resto de los datos de la persona se tocan.
                 if f_afiliacion:
-                    propios[cuil].fecha_afiliacion = f_afiliacion
-                    s.add(propios[cuil])
+                    if not es_ensayo:
+                        propios[cuil].fecha_afiliacion = f_afiliacion
+                        s.add(propios[cuil])
                     fechas_actualizadas += 1
                 if campo(8):
                     if db.responde_por(cuil in con_clave, propios[cuil].registrado):
-                        db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
+                        if not es_ensayo:
+                            db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
                         mails_actualizados += 1
                     else:
                         datos_ajenos += 1
+                lineas_actualizan += 1   # una vez por línea, aunque traiga mail y fecha
                 continue
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
+                queda_afuera(n_linea, linea,
+                             "El CUIL ya está en el padrón (y la línea no trae mail ni fecha de afiliación para actualizar)."
+                             if len(cuil) == 11 and cuil in existentes
+                             else "Falta el CUIL (11 números) o el nombre.")
                 continue
             # Un CUIL cuyo verificador no cierra: la línea queda afuera y se
             # cuenta aparte, con el número a la vista. Si entrara, el padrón
@@ -2278,9 +2321,11 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             # también lo exige) y nadie sabría por qué.
             if _cuil_mal(cuil):
                 cuil_invalidos.append(campos[0][:20])
+                queda_afuera(n_linea, linea, "El CUIL no es válido: revisá los 11 números.")
                 continue
             if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
                 omitidas.append(linea.strip()[:60])
+                queda_afuera(n_linea, linea, "Falta la localidad o la provincia.")
                 continue
             sec_linea = por_nombre.get(geo._norm(campo(10)))
             if alcance is not None:
@@ -2289,23 +2334,30 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 if not _en_alcance(alcance, sec_linea):
                     fuera_de_alcance += 1
                     omitidas.append(linea.strip()[:60])
+                    queda_afuera(n_linea, linea, "La seccional no es la tuya: cargás solo en tu seccional.")
                     continue
             domicilio = geo.campos_para_guardar({
                 "calle": campo(2), "numero": campo(3), "piso_depto": campo(4),
                 "localidad": campo(5), "provincia": campo(6),
                 "codigo_postal": campo(9)}, precision="sin_geo")
-            s.add(Trabajador(
-                sindicato_id=sid, cuil=cuil,
-                seccional_id=sec_linea,
-                fecha_afiliacion=f_afiliacion or None))
+            if not es_ensayo:
+                s.add(Trabajador(
+                    sindicato_id=sid, cuil=cuil,
+                    seccional_id=sec_linea,
+                    fecha_afiliacion=f_afiliacion or None))
             if cuil in con_clave:
                 datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
-            else:
+            elif not es_ensayo:
                 db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
                                             telefono=campo(7), mail=campo(8),
                                             mail_padron=campo(8) or None,
                                             fecha_nacimiento=f_nacimiento or None)
             existentes.add(cuil); altas += 1
+        if es_ensayo:
+            s.rollback()
+            return {"lineas": lineas_leidas, "altas": altas,
+                    "actualizaciones": lineas_actualizan, "datos_ajenos": datos_ajenos,
+                    "afuera_total": len(afuera), "afuera": afuera[:50]}
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
     # patrón (casi siempre es la misma columna que falta en todas) sin armar
@@ -2329,6 +2381,37 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             muestra += f" y {len(cuil_invalidos) - 10} más"
         destino += (f"&cuilinvalidos={len(cuil_invalidos)}&cuilmuestra=" + quote(muestra))
     return RedirectResponse(destino + "#trabajadores", status_code=303)
+
+
+@app.get("/admin/trabajadores/lista")
+def admin_trabajadores_lista(request: Request, cuil: str = "", nombre: str = "",
+                             declarados: str = "", pagina: int = 1):
+    """Una página del padrón para la pestaña Trabajadores (auditoría de
+    diseño G4-19): de a 50 y con el buscador consultando al servidor, en vez
+    de dibujar el padrón entero en el HTML (en un gremio real son miles).
+
+    Devuelve las filas ya dibujadas con la MISMA plantilla que usa la página
+    (`_padron_filas.html`): los botones de cada fila dependen del alcance y
+    de si este sindicato responde por la cuenta, y esa lógica no se duplica
+    en JavaScript. El recorte por seccional es el de siempre
+    (`db.pagina_del_padron` → `_consulta_padron`)."""
+    sid = exigir_sindicato(request)
+    uid = _uid_sesion(request)
+    alcance = db.alcance_seccional(uid)
+    administra = db.administra_areas_y_usuarios(uid)
+    seccional_por_id = {sec["id"]: sec["nombre"] for sec in db.seccionales_del_sindicato(sid)}
+    with db.get_session() as s:
+        p = db.pagina_del_padron(s, sid, alcance, cuil=cuil[:20], nombre=nombre[:80],
+                                 declarados=declarados in ("1", "si", "true"),
+                                 pagina=max(1, pagina))
+    html = templates.get_template("_padron_filas.html").render(
+        trabajadores=p["filas"], alcance_propio=alcance, administra_areas=administra,
+        seccional_por_id=seccional_por_id, etiquetas_precision=geo.ETIQUETAS_PRECISION,
+        vacio_texto=("Nadie del padrón coincide con esa búsqueda."
+                     if (cuil.strip() or nombre.strip() or declarados) else None))
+    return {"html": html, "total": p["total"], "pagina": p["pagina"],
+            "paginas": p["paginas"], "por_pagina": p["por_pagina"],
+            "activos": p["activos"], "sin_registrar": p["sin_registrar"]}
 
 
 @app.post("/admin/trabajador/georreferenciar-pendientes")

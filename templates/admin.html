@@ -1,19 +1,6 @@
-{# Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): lo dice el origen,
-     no solo el número, porque un nivel 2 puede ser mail del padrón (lo cargó
-     el sindicato) o declarado (lo dio la persona, sin que nadie lo avale).
-     Una fila sin cuenta no tiene nivel: no hay nada que acreditar.
-     Si la cuenta es anterior al empadronamiento en ESTE sindicato (`responde`
-     en falso), tampoco se muestra: el nivel y el origen de la cuenta de una
-     persona que este padrón no tenía al registrarse no son asunto suyo. -#}
-  {% macro nivel_cuenta(c) %}
-    {% if c.get('responde', True) == False %}<span class="muted" title="cuenta creada antes de este empadronamiento">—</span>
-    {% elif not c.tiene_cuenta %}<span class="muted">—</span>
-    {% elif c.nivel_fiabilidad >= 4 %}<span class="tag tag-si" title="Una persona del sindicato confirmó su identidad en persona.">4 · confirmado</span>
-    {% elif c.nivel_fiabilidad == 3 %}<span class="tag tag-si" title="Subió un recibo propio y la IA leyó su CUIL.">3 · recibo</span>
-    {% elif c.nivel_fiabilidad == 2 and c.nivel_origen == 'mail_declarado' %}<span class="tag tag-pend" title="Confirmó un mail que declaró ella misma al registrarse: nadie del sindicato lo avala y todavía no verificó ningún recibo.">2 · mail declarado</span>
-    {% elif c.nivel_fiabilidad == 2 %}<span class="tag tag-si" title="Confirmó el mail que el sindicato tiene cargado en el padrón.">2 · mail padrón</span>
-    {% else %}<span class="tag tag-pend" title="Solo acreditó que su CUIL está en el padrón (el CUIL es un dato público).">1 · CUIL</span>{% endif %}
-  {% endmacro -%}
+{# La macro vive en su parcial: la usan esta página y las filas del padrón
+   que devuelve /admin/trabajadores/lista (_padron_filas.html). -#}
+{% from "_nivel_cuenta.html" import nivel_cuenta -%}
 <!DOCTYPE html>
 <html lang="es" data-tema="{{ apariencia.tema if apariencia else 'laguna' }}" data-paleta="{{ apariencia.paleta if apariencia else 'colm3na' }}">
 <head>
@@ -1063,6 +1050,13 @@
   .ap-fotos .ap-op-t { font-size:12.5px; font-weight:600; }
 </style>
 {% include "_fondo_interior.html" %}
+{# Auditoría de diseño 2026-10, bloque 5b (panel A): rótulos de los filtros y
+   de las altas, paginado arriba de las tablas, menú «Más» del padrón, zona
+   para subir recibos. Estructura común a los dos modelos; cada modelo la
+   pinta en su hoja, que va después. Y los números en formato argentino. #}
+<link rel="stylesheet" href="/static/panel_formularios.css?v={{ sello_static('panel_formularios.css') }}">
+<script src="/static/numeros_ar.js?v={{ sello_static('numeros_ar.js') }}"></script>
+<script src="/static/panel_padron.js?v={{ sello_static('panel_padron.js') }}"></script>
 {# El modelo de diseño de quien mira (PLAN_TEMAS.md): una hoja por modelo,
    cargada DESPUÉS de todo lo anterior (static/temas/<modelo>-panel.css).
    Solo si el archivo existe: el sello sale vacío cuando no está, y un
@@ -1191,30 +1185,45 @@
   <h2 class="titulo-pagina" id="reportes">Reportes</h2>
   <p class="muted">Todos los recibos que verificaron los afiliados. Los que el afiliado <strong>envió</strong> al sindicato se ven con sus datos; los que verificó y <strong>no envió</strong> se ven anonimizados, sin nombre, CUIL ni empresa.</p>
   <div class="aviso oculto" id="rep-aviso-clausula"></div>
-  <div class="filtros">
-    <input type="text" id="f-rep-cuil" placeholder="Buscar por CUIL" oninput="repFiltrarPronto()">
-    <input type="text" id="f-rep-nombre" placeholder="Buscar por nombre" oninput="repFiltrarPronto()">
-    <input type="date" id="f-rep-desde" title="Desde" onchange="repCargar(1)">
-    <input type="date" id="f-rep-hasta" title="Hasta" onchange="repCargar(1)">
-    <select id="f-rep-resultado" onchange="repCargar(1)">
-      <option value="">Con y sin diferencias</option>
-      <option value="con_diferencias">Con diferencias</option>
-      <option value="ok">Sin diferencias</option>
-    </select>
-    <select id="f-rep-enviado" onchange="repCargar(1)">
-      <option value="">Enviados y no enviados</option>
-      <option value="si">Enviados</option>
-      <option value="no">No enviados</option>
-    </select>
+  {# Cada filtro con su rótulo a la vista (auditoría G4-07, G4-32): dos
+     campos de fecha iguales sin rótulo obligaban a adivinar cuál era el
+     inicio, y el gris del campo desaparece al escribir. #}
+  <div class="filtros filtros-rotulados">
+    <label class="f-campo"><span>CUIL</span>
+      <input type="text" id="f-rep-cuil" inputmode="numeric" placeholder="Ej.: 20-12345678-6" oninput="repFiltrarPronto()"></label>
+    <label class="f-campo"><span>Nombre</span>
+      <input type="text" id="f-rep-nombre" placeholder="Ej.: Pérez" oninput="repFiltrarPronto()"></label>
+    <label class="f-campo"><span>Verificado desde</span>
+      <input type="date" id="f-rep-desde" onchange="repCargar(1)"></label>
+    <label class="f-campo"><span>hasta</span>
+      <input type="date" id="f-rep-hasta" onchange="repCargar(1)"></label>
+    <label class="f-campo"><span>Resultado</span>
+      <select id="f-rep-resultado" onchange="repCargar(1)">
+        <option value="">Con y sin diferencias</option>
+        <option value="con_diferencias">Con diferencias</option>
+        <option value="ok">Sin diferencias</option>
+      </select></label>
+    <label class="f-campo"><span>Envío al sindicato</span>
+      <select id="f-rep-enviado" onchange="repCargar(1)">
+        <option value="">Enviados y no enviados</option>
+        <option value="si">Enviados</option>
+        <option value="no">No enviados</option>
+      </select></label>
     <button type="button" class="sec mini" onclick="repLimpiar()">Limpiar</button>
-    <span class="f-cant" id="f-rep-cant"></span>
   </div>
   <p class="muted" style="font-size:12px; margin:-6px 0 10px;">La búsqueda por CUIL o por nombre encuentra solo recibos enviados: los otros no llevan datos de la persona.</p>
-  <table>
-    <thead><tr><th>Fecha</th><th>CUIL</th><th>Nombre</th><th>Empresa</th><th>Período</th><th style="text-align:center;">Diferencias</th><th>Enviado</th><th></th></tr></thead>
+  {# El total y el paso de página, ARRIBA de la tabla (G4-08, G4-10): es el
+     dato que dice si el filtro funcionó, y con 32 páginas no se puede
+     obligar a bajar 50 filas para pasar a la siguiente. #}
+  <div class="lista-cabeza">
+    <span class="lista-total" id="f-rep-cant" aria-live="polite"></span>
+    <div class="lista-paginas" id="rep-paginas-arriba"></div>
+  </div>
+  <table id="rep-tabla">
+    <thead><tr><th>Fecha</th><th>CUIL</th><th>Nombre</th><th>Empresa</th><th>Período</th><th style="text-align:center;">Diferencias</th><th class="col-enviado">Enviado</th><th></th></tr></thead>
     <tbody id="rep-cuerpo"><tr><td colspan="8" class="muted">Cargando…</td></tr></tbody>
   </table>
-  <div class="rep-paginas" id="rep-paginas"></div>
+  <div class="rep-paginas lista-paginas" id="rep-paginas"></div>
 
   </div>
   {% endif %}
@@ -1238,18 +1247,21 @@
   {% elif request.query_params.get('universales') == 'nada' %}
   <div class="msg" style="background:#f2f0ea;color:var(--gris);">Ya tenías cargados los 3 (jubilación, PAMI, obra social) — no se agregó nada nuevo.</div>
   {% endif %}
-  <form method="post" action="/admin/conceptos-universales" style="margin-bottom:14px;"
+  {# Con aire arriba y abajo y en el mismo margen que el texto (G4-36): a
+     4 px de la bajada parecía parte del párrafo. #}
+  <form method="post" action="/admin/conceptos-universales" class="acc-ley"
         onsubmit="return confirm('¿Cargar los conceptos y fórmulas de jubilación (11%), PAMI (3%) y obra social (3%)? No duplica los que ya tengas.');">
     <button type="submit" class="sec mini">Cargar aportes de ley (jubilación, PAMI, obra social)</button>
   </form>
   <table>
-    <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th>Vigencia</th><th>Tope</th><th></th></tr>
+    <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tolerancia</th><th>Vigencia</th><th>Tope</th><th></th></tr>
     {% for f in formulas %}
     <tr>
       <td><code>{{ f.target }}</code>{% if f.target not in codigos_efectivos %}<span class="tag" style="background:#f8e5e2; color:var(--alerta);" title="Ningún concepto tiene este código: esta fórmula nunca va a matchear.">⚠ código inexistente</span>{% endif %}</td>
       <td>{{ f.descripcion }}</td>
-      <td><code>{{ f.expr }}</code></td><td>${{ f.tolerancia }}</td>
-      <td class="muted">{{ f.fecha_desde or '(sin inicio)' }} → {{ f.fecha_hasta or 'vigente' }}</td>
+      <td><code>{{ f.expr }}</code></td><td class="num">{{ f.tolerancia|pesos }}</td>
+      {# En castellano de persona (G4-11), no «(sin inicio) → vigente». #}
+      <td>{{ vigencia_texto(f.fecha_desde, f.fecha_hasta) }}{% if f.fecha_hasta and f.fecha_hasta < hoy %} <span class="tag tag-neutro">Vencida</span>{% endif %}</td>
       <td>{% if f.sujeto_a_tope %}<span class="tag tag-si">Sí</span>{% else %}<span class="muted">No</span>{% endif %}</td>
       <td class="acc">
         <button class="sec mini" type="button"
@@ -1262,24 +1274,36 @@
     </tr>
     {% endfor %}
   </table>
-  <form class="linea" method="post" action="/admin/formula" id="form-formula">
+  {# El alta con su título y cada campo con su rótulo (G4-12, G4-32): sin
+     eso, la caja gris parecía parte de la tabla y el «1.0» suelto no decía
+     que era la tolerancia. El ancho de cada campo dice cuánto escribir. #}
+  <h3 class="alta-titulo" id="f-titulo">Agregar una regla</h3>
+  <form class="linea form-alta" method="post" action="/admin/formula" id="form-formula">
     <input type="hidden" name="id" id="f-id">
-    <select name="target" id="f-target" required style="min-width:220px;">
-      <option value="" disabled selected>Elegí un concepto…</option>
-      {% for c in genericos %}
-      <option value="{{ c.codigo }}">{{ c.codigo }} — {{ c.nombre }}</option>
-      {% endfor %}
-    </select>
-    <input name="descripcion" id="f-desc" placeholder="Descripción" required style="flex:1; min-width:180px;">
-    <input name="expr" id="f-expr" placeholder="0.015 * base_remunerativa" required style="min-width:200px;">
-    <input name="tolerancia" id="f-tol" type="number" step="0.01" value="1.0" style="width:80px;">
-    <label class="muted" style="display:flex; align-items:center; gap:4px;">Desde<input name="fecha_desde" id="f-desde" type="date"></label>
-    <label class="muted" style="display:flex; align-items:center; gap:4px;">Hasta<input name="fecha_hasta" id="f-hasta" type="date" title="Vacío = vigente"></label>
-    <label class="muted" style="display:flex; align-items:center; gap:4px;" title="Aplica el tope máximo y el piso mínimo de la seguridad social antes de calcular">
-      <input type="checkbox" name="sujeto_a_tope" id="f-tope" value="true" style="width:auto;">Sujeto a tope
+    <label class="f-campo f-ancho-l"><span>Concepto</span>
+      <select name="target" id="f-target" required>
+        <option value="" disabled selected>Elegí un concepto…</option>
+        {% for c in genericos %}
+        <option value="{{ c.codigo }}">{{ c.codigo }} — {{ c.nombre }}</option>
+        {% endfor %}
+      </select></label>
+    <label class="f-campo f-ancho-xl"><span>Descripción</span>
+      <input name="descripcion" id="f-desc" placeholder="Ej.: Jubilación = 11% del remunerativo" required></label>
+    <label class="f-campo f-ancho-l"><span>Expresión</span>
+      <input name="expr" id="f-expr" placeholder="Ej.: 0.015 * base_remunerativa" required></label>
+    <label class="f-campo f-ancho-s"><span>Tolerancia ($)</span>
+      <input name="tolerancia" id="f-tol" type="number" step="0.01" value="1.0" inputmode="decimal"></label>
+    <label class="f-campo f-ancho-m"><span>Desde <span class="opc">(opcional)</span></span>
+      <input name="fecha_desde" id="f-desde" type="date"></label>
+    <label class="f-campo f-ancho-m"><span>Hasta <span class="opc">(vacío = sigue vigente)</span></span>
+      <input name="fecha_hasta" id="f-hasta" type="date"></label>
+    <label class="f-check" title="Aplica el tope máximo y el piso mínimo de la seguridad social antes de calcular">
+      <input type="checkbox" name="sujeto_a_tope" id="f-tope" value="true">Sujeto a tope de la seguridad social
     </label>
-    <button type="submit" id="f-btn">Agregar fórmula</button>
-    <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
+    <div class="f-acciones">
+      <button type="submit" id="f-btn">Agregar regla</button>
+      <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
+    </div>
   </form>
   {% if not genericos %}<p class="muted">Primero dá de alta al menos un concepto genérico (pestaña "Conceptos", sin CUIT de empleador) para poder elegirlo acá.</p>{% endif %}
 
@@ -1302,10 +1326,6 @@
   {% elif request.query_params.get('universales') == 'nada' %}
   <div class="msg" style="background:#f2f0ea;color:var(--gris);">Ya tenías cargados los 3 (jubilación, PAMI, obra social) — no se agregó nada nuevo.</div>
   {% endif %}
-  <form method="post" action="/admin/conceptos-universales" style="margin-bottom:14px;"
-        onsubmit="return confirm('¿Cargar los conceptos y fórmulas de jubilación (11%), PAMI (3%) y obra social (3%)? No duplica los que ya tengas.');">
-    <button type="submit" class="sec mini">Cargar aportes de ley (jubilación, PAMI, obra social)</button>
-  </form>
   {% if provisorios %}
   <div class="msg err">
     <strong>{{ provisorios|length }} concepto(s) con código provisorio.</strong>
@@ -1359,30 +1379,37 @@
     <b>descuento</b>, no como ingreso: el mes que venga con el signo contrario, el sistema la toma
     como reintegro (no suma al bruto ni lleva aportes). El reintegro de gastos o de guardería que
     va entre los haberes, en cambio, es un ingreso no remunerativo.</p>
-  <p class="muted" style="font-size:12.5px;">
-    <span class="ref-cuadro" style="background:#f2f8fb;"></span> ingreso
-    <span class="ref-cuadro" style="background:#f1efec; margin-left:10px;"></span> descuento
-    <span class="ref-cuadro" style="background:#fdf6e8; margin-left:10px;"></span> por revisar
-  </p>
-  <div class="filtros">
-    <input type="text" id="f-conc-cuit" placeholder="Buscar por CUIT de empleador" oninput="aplicarFiltro('conc','.fila-concepto')">
-    <input type="text" id="f-conc-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('conc','.fila-concepto')">
+  {# Debajo de la explicación y en su mismo margen (G4-36): entre el título
+     y el texto parecía parte del título. #}
+  <form method="post" action="/admin/conceptos-universales" class="acc-ley"
+        onsubmit="return confirm('¿Cargar los conceptos y fórmulas de jubilación (11%), PAMI (3%) y obra social (3%)? No duplica los que ya tengas.');">
+    <button type="submit" class="sec mini">Cargar aportes de ley (jubilación, PAMI, obra social)</button>
+  </form>
+  {# Sin leyenda de colores ni filas teñidas (G4-13): el tinte no se
+     distinguía del blanco. El tipo va como pastilla en su columna. #}
+  <div class="filtros filtros-rotulados">
+    <label class="f-campo"><span>CUIT del empleador</span>
+      <input type="text" id="f-conc-cuit" inputmode="numeric" placeholder="Ej.: 30-12345678-9" oninput="aplicarFiltro('conc','.fila-concepto')"></label>
+    <label class="f-campo"><span>Nombre</span>
+      <input type="text" id="f-conc-nombre" placeholder="Ej.: Antigüedad" oninput="aplicarFiltro('conc','.fila-concepto')"></label>
     <button type="button" class="sec mini" onclick="limpiarFiltro('conc','.fila-concepto')">Limpiar</button>
     <span class="f-cant" id="f-conc-cant"></span>
   </div>
   <table>
     <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Categoría sindical</th><th>Empleador</th><th>Alias</th><th></th></tr>
     {% for c in conceptos %}
-    <tr class="fila-concepto {{ 'pend' if c.pendiente_revision else ('es-ingreso' if c.tipo=='ingreso' else 'es-descuento') }}"
+    <tr class="fila-concepto{{ ' pend' if c.pendiente_revision }}"
         data-cuil="{{ c.cuit_empleador or '' }}" data-nombre="{{ c.nombre }}">
       <td><code>{{ c.codigo }}</code></td>
-      <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
+      <td>{{ c.nombre }}</td>
       {% set rv = rubro_visto.get(c.id) %}
-      <td>{{ c.tipo }}{% if rv and rv.tipo != c.tipo %}<span class="tag {{ 'tag-pend' if c.pendiente_revision else 'tag-no' }}"
+      <td>{% if c.pendiente_revision %}<span class="tag tag-pend" title="Se detectó en un recibo y todavía nadie lo revisó.">{{ c.tipo }} · por revisar</span>{% else %}<span class="tag tag-tipo tag-{{ c.tipo }}">{{ c.tipo }}</span>{% endif %}{% if rv and rv.tipo != c.tipo %}<span class="tag {{ 'tag-pend' if c.pendiente_revision else 'tag-no' }}"
           title="La IA lo leyó {{ rv.veces }} de {{ rv.total }} veces entre los {{ 'descuentos' if rv.tipo=='descuento' else 'haberes' }} de los recibos de este sindicato.">en los recibos: {{ rv.tipo }}</span>{% endif %}</td>
-      <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
-      <td>{% if c.tipo=='descuento' and c.categoria_sindical %}<span class="tag tag-si">{{ 'convenio' if c.categoria_sindical=='convenio' else 'afiliación' }}</span>{% else %}—{% endif %}</td>
-      <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% endif %}</td>
+      {# Remunerativo sí/no en pastillas neutras (G4-14): un no remunerativo
+         no es un error; el rojo y el verde quedan para los estados. #}
+      <td>{% if c.tipo=='ingreso' %}<span class="tag tag-neutro{{ ' tag-neutro-fuerte' if c.remunerativo }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
+      <td>{% if c.tipo=='descuento' and c.categoria_sindical %}<span class="tag tag-neutro">{{ 'convenio' if c.categoria_sindical=='convenio' else 'afiliación' }}</span>{% else %}—{% endif %}</td>
+      <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador|cuil }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
         {% set cambia = rv and (rv.tipo != c.tipo or (c.pendiente_revision and rv.tipo == 'ingreso' and rv.remunerativo != c.remunerativo)) %}
@@ -1408,23 +1435,36 @@
     </tr>
     {% endfor %}
   </table>
-  <form class="linea" method="post" action="/admin/concepto" id="form-concepto">
+  {# Cada campo con su rótulo (G4-32): los ejemplos hacían de etiqueta y se
+     cortaban («CUIT empleador (vacío =», «Código genéricc»). #}
+  <h3 class="alta-titulo" id="c-titulo">Agregar un concepto</h3>
+  <form class="linea form-alta" method="post" action="/admin/concepto" id="form-concepto">
     <input type="hidden" name="id" id="c-id">
-    <input name="codigo" id="c-codigo" placeholder="Código" required style="width:100px;">
-    <input name="nombre" id="c-nombre" placeholder="Nombre" required style="flex:1; min-width:160px;">
-    <select name="tipo" id="c-tipo" title="Una devolución que figura entre los descuentos (Ganancias, aportes) se carga como descuento: el sistema la reconoce como reintegro por el signo."><option value="ingreso">ingreso</option><option value="descuento">descuento</option></select>
-    <select name="remunerativo" id="c-remun"><option value="si">remunerativo: sí</option><option value="no">remunerativo: no</option></select>
-    <select name="categoria_sindical" id="c-sindical" title="Convenio: cuota solidaria / fondos convencionales, sujeta al tope legal del 2% (Ley 27.802). Afiliación: cuota de afiliación, no cuenta para el tope pero sí se envía al sindicato como prueba de afiliado cotizante.">
-      <option value="">categoría sindical: no aplica</option>
-      <option value="convenio">categoría sindical: cuota de convenio</option>
-      <option value="afiliacion">categoría sindical: cuota de afiliación</option>
-    </select>
-    <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
-    <input name="cuit_empleador" id="c-cuit" data-cuit="cualquiera" placeholder="CUIT empleador (vacío = genérico)" style="width:170px;">
-    <input name="codigo_generico" id="c-generico" placeholder="Código genérico" list="dl-genericos" style="width:140px;">
+    <label class="f-campo f-ancho-s"><span>Código</span>
+      <input name="codigo" id="c-codigo" placeholder="Ej.: ANTIG" required></label>
+    <label class="f-campo f-ancho-xl"><span>Nombre</span>
+      <input name="nombre" id="c-nombre" placeholder="Ej.: Antigüedad" required></label>
+    <label class="f-campo f-ancho-m"><span>Tipo</span>
+      <select name="tipo" id="c-tipo" title="Una devolución que figura entre los descuentos (Ganancias, aportes) se carga como descuento: el sistema la reconoce como reintegro por el signo."><option value="ingreso">Ingreso</option><option value="descuento">Descuento</option></select></label>
+    <label class="f-campo f-ancho-m"><span>Remunerativo</span>
+      <select name="remunerativo" id="c-remun"><option value="si">Sí</option><option value="no">No</option></select></label>
+    <label class="f-campo f-ancho-l"><span>Categoría sindical</span>
+      <select name="categoria_sindical" id="c-sindical" title="Convenio: cuota solidaria / fondos convencionales, sujeta al tope legal del 2% (Ley 27.802). Afiliación: cuota de afiliación, no cuenta para el tope pero sí se envía al sindicato como prueba de afiliado cotizante.">
+        <option value="">No aplica</option>
+        <option value="convenio">Cuota de convenio</option>
+        <option value="afiliacion">Cuota de afiliación</option>
+      </select></label>
+    <label class="f-campo f-ancho-l"><span>Alias <span class="opc">(separados por coma)</span></span>
+      <input name="alias" id="c-alias" placeholder="Ej.: Antig., Años de servicio"></label>
+    <label class="f-campo f-ancho-l"><span>CUIT del empleador <span class="opc">(vacío = vale para todos)</span></span>
+      <input name="cuit_empleador" id="c-cuit" data-cuit="cualquiera" inputmode="numeric" placeholder="Ej.: 30-12345678-9"></label>
+    <label class="f-campo f-ancho-m"><span>Código genérico <span class="opc">(opcional)</span></span>
+      <input name="codigo_generico" id="c-generico" list="dl-genericos" placeholder="Ej.: ANTIG"></label>
     <datalist id="dl-genericos">{% for g in genericos %}<option value="{{ g.codigo }}">{% endfor %}</datalist>
-    <button type="submit" id="c-btn">Agregar concepto</button>
-    <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
+    <div class="f-acciones">
+      <button type="submit" id="c-btn">Agregar concepto</button>
+      <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
+    </div>
   </form>
 
   </div>
@@ -1433,7 +1473,7 @@
   {% if 'trabajadores' in permisos %}
   <div class="panel" data-mov-vista id="panel-trabajadores">
   <!-- ============ TRABAJADORES ============ -->
-  <h2 class="titulo-pagina" id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
+  <h2 class="titulo-pagina" id="trabajadores">Trabajadores ({{ (padron.activos if padron else 0)|miles }} activos)</h2>
   <p class="muted">Los trabajadores cargados acá pueden registrarse en la app con su CUIL. Podés darlos de alta de a uno o pegar una lista.</p>
   {# Que esto se diga acá y no se descubra después: el nombre, el domicilio
      y el contacto son de la PERSONA (una fila por CUIL), no de la ficha de
@@ -1485,93 +1525,61 @@
   </div>
 
   <!-- Sub-panel: LISTADO -->
+  {# Paginado en el servidor y con el buscador consultando al servidor
+     (auditoría G4-19): el padrón de un gremio real son miles de filas. Las
+     filas las dibuja _padron_filas.html, la misma plantilla que devuelve
+     /admin/trabajadores/lista (static/panel_padron.js). #}
   <div class="subpanel activo" data-mov-vista id="sub-listado">
-    <div class="filtros">
-      <input type="text" id="f-trab-cuit" placeholder="Buscar por CUIL" oninput="aplicarFiltro('trab','.fila-trabajador')">
-      <input type="text" id="f-trab-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('trab','.fila-trabajador')">
+    <div class="filtros filtros-rotulados">
+      <label class="f-campo"><span>CUIL</span>
+        <input type="text" id="f-trab-cuit" inputmode="numeric" placeholder="Ej.: 20-12345678-6" oninput="Padron.buscarPronto()"></label>
+      <label class="f-campo"><span>Nombre</span>
+        <input type="text" id="f-trab-nombre" placeholder="Ej.: Pérez" oninput="Padron.buscarPronto()"></label>
       <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px;" title="Cuentas cuyo único respaldo es un mail que la propia persona declaró: ni el sindicato lo cargó ni subió un recibo propio.">
-        <input type="checkbox" id="f-trab-declarados" onchange="aplicarFiltro('trab','.fila-trabajador')"> Declarados sin recibo
+        <input type="checkbox" id="f-trab-declarados" onchange="Padron.cargar(1)"> Declarados sin recibo
       </label>
-      <button type="button" class="sec mini" onclick="limpiarFiltro('trab','.fila-trabajador')">Limpiar</button>
-      <span class="f-cant" id="f-trab-cant"></span>
+      <button type="button" class="sec mini" onclick="Padron.limpiar()">Limpiar</button>
     </div>
-    <table>
-      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>CUIT empleador</th><th>Estado</th><th>Nivel</th><th>Credencial</th><th></th></tr>
-      {% for t in trabajadores %}
-      <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" data-declarado="{{ 1 if (t.tiene_cuenta and t.nivel_fiabilidad == 2 and t.nivel_origen == 'mail_declarado') else 0 }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
-        <td><code>{{ t.cuil }}</code></td>
-        <td>{{ t.nombre or '—' }}</td>
-        <td class="muted">{{ t.localidad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}
-          {% if t.localidad %}<br><span class="geo-punto {{ t.precision_geo }}" style="font-size:11px;"><i></i>{{ etiquetas_precision.get(t.precision_geo, 'Sin ubicar') }}</span>{% endif %}</td>
-        <td class="muted">{{ seccional_por_id.get(t.seccional_id, '—') }}</td>
-        <td class="muted">{{ t.cuit_empleador or '—' }}</td>
-        <td>
-          {% if not t.activo %}<span class="tag" style="background:#eee;color:#5f6676;">baja</span>
-          {% elif t.registrado %}<span class="tag tag-si">registrado</span>
-          {% else %}<span class="muted">sin registrar</span>{% endif %}
-          {# La marca no se edita acá: la prende y la apaga el alta o la
-             baja de su usuario del panel (ver "Áreas y Usuarios"). Que sea
-             de solo lectura es a propósito -- si se pudiera tildar a mano,
-             habría padrones diciendo "empleado" sin nadie que pueda entrar. #}
-          {% if t.es_empleado_sindicato %}<br><span class="tag tag-pend" title="Además opera el panel del sindicato">empleado del sindicato</span>{% endif %}
-          {% if t.fecha_afiliacion %}<br><span class="muted" style="font-size:11px;">afiliado desde {{ t.fecha_afiliacion }}</span>{% endif %}
-        </td>
-        <td style="white-space:nowrap;">{{ nivel_cuenta(t) }}</td>
-        <td class="muted" style="white-space:nowrap;">
-          {% if t.codigo_credencial %}
-          <code>{{ t.codigo_credencial }}</code>{% if t.vigencia_credencial %}<br>vence {{ t.vigencia_credencial }}{% endif %}
-          {% else %}sin generar{% endif %}
-        </td>
-        <td style="white-space:nowrap; text-align:right;">
-          <button type="button" class="mini"
-            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso_depto":t.piso_depto,"localidad":t.localidad,"provincia":t.provincia,"codigo_postal":t.codigo_postal,"latitud":t.latitud,"longitud":t.longitud,"precision_geo":t.precision_geo,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador,"fecha_afiliacion":t.fecha_afiliacion,"fecha_nacimiento":t.fecha_nacimiento} | tojson }})'>Editar</button>
-          <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
-            <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
-          </form>
-          {# Los botones de cuenta: solo si este sindicato responde por ella y
-             la fila cae dentro del alcance de seccional de quien mira (el
-             servidor igual rechaza el resto). #}
-          {% if t.tiene_cuenta and t.responde and (alcance_propio is none or t.seccional_id in alcance_propio) %}
-          {% if t.nivel_fiabilidad < 4 %}
-          <form method="post" action="/admin/trabajador/confirmar-identidad" style="display:inline;" onsubmit="return confirm('¿Confirmás que verificaste en persona la identidad de esta persona? La cuenta pasa a nivel 4.');">
-            <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini">Confirmé su identidad</button>
-          </form>
-          {% endif %}
-          <form method="post" action="/admin/trabajador/restablecer-clave" style="display:inline;" onsubmit="return confirm('¿Restablecer la clave de esta persona? La clave actual deja de servir y se muestra una clave temporal UNA sola vez. La clave es una sola por persona: vale para todos los sindicatos donde esté empadronada.');">
-            <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini">Restablecer clave</button>
-          </form>
-          {% endif %}
-          {# Un afiliado que además trabaja en el gremio: de acá a darle usuario
-             del panel con el CUIL, el nombre y la seccional ya puestos. Solo
-             para quien administra usuarios y dentro de su alcance; si ya es
-             empleado, el usuario ya existe. #}
-          {% if administra_areas and t.activo and not t.es_empleado_sindicato and (alcance_propio is none or t.seccional_id in alcance_propio) %}
-          <a class="mini" style="display:inline-block; text-decoration:none;" href="/admin?sub=usuarios&cuil={{ t.cuil }}&nombre={{ t.nombre | urlencode }}&seccional={{ t.seccional_id or '' }}#administradores">Dar usuario del panel</a>
-          {% endif %}
-          {% if t.activo %}
-          <form method="post" action="/admin/trabajador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este trabajador? Se puede reactivar después.');">
-            <input type="hidden" name="id" value="{{ t.id }}"><button class="mini borrar">Baja</button>
-          </form>
-          {% else %}
-          <form method="post" action="/admin/trabajador/alta-logica" style="display:inline;">
-            <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">Reactivar</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="9" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
-      {% endfor %}
+    <div class="lista-cabeza">
+      <span class="lista-total" id="f-trab-cant" aria-live="polite">{% if padron %}{{ padron.total|miles }} {{ 'trabajador' if padron.total == 1 else 'trabajadores' }}{% if padron.paginas > 1 %} · página 1 de {{ padron.paginas|miles }}{% endif %}{% endif %}</span>
+      <div class="lista-paginas" id="padron-paginas-arriba"></div>
+    </div>
+    <table id="padron-tabla" data-total="{{ padron.total if padron else 0 }}" data-paginas="{{ padron.paginas if padron else 1 }}" data-por-pagina="{{ padron.por_pagina if padron else 50 }}">
+      <thead><tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>CUIT empleador</th><th>Estado</th><th>Nivel</th><th>Credencial</th><th></th></tr></thead>
+      <tbody id="padron-cuerpo">
+{% include "_padron_filas.html" %}
+      </tbody>
     </table>
+    <div class="rep-paginas lista-paginas" id="padron-paginas"></div>
   </div>
 
   <!-- Sub-panel: ALTA MANUAL -->
+  {# Cuatro grupos por significado (auditoría G4-21): la persona, su
+     domicilio, el contacto y lo que es de este sindicato. Antes eran quince
+     campos mezclados en dos columnas, con los obligatorios en el medio. El
+     ancho de cada campo dice cuánto escribir (G4-22), y el ejemplo del CUIL
+     va como ayuda debajo, no adentro del campo, donde parecía un dato ya
+     cargado (G4-23). #}
   <div class="subpanel" data-mov-vista id="sub-manual">
-    <form method="post" action="/admin/trabajador" class="form-trab">
+    <form method="post" action="/admin/trabajador" class="form-trab form-grupos">
       <input type="hidden" name="id" id="trab-id">
-      <div class="grid2">
-        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required data-cuit="persona" placeholder="20123456786"></div>
-        <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
+      <fieldset class="alta-grupo">
+        <legend>La persona</legend>
+        <div class="fila-campos">
+          <div class="campo w-cuil"><label for="trab-cuil">CUIL *</label>
+            <input name="cuil" id="trab-cuil" required data-cuit="persona" inputmode="numeric" aria-describedby="trab-cuil-ayuda">
+            <small class="campo-ayuda" id="trab-cuil-ayuda">11 números. Ej.: 20-12345678-6</small></div>
+          <div class="campo w-xl"><label for="trab-nombre">Nombre *</label><input name="nombre" id="trab-nombre" required autocomplete="off"></div>
+          {# Las dos fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4): la de
+             nacimiento es de la persona (la puede cargar ella desde su perfil);
+             la de afiliación es de ESTE gremio, va con "En este sindicato".
+             Hechos, no derivados: la edad y la antigüedad se calculan donde
+             hacen falta. #}
+          <div class="campo w-m"><label for="trab-fecha-nacimiento">Fecha de nacimiento <span class="opc">(opcional)</span></label><input name="fecha_nacimiento" id="trab-fecha-nacimiento" type="date"></div>
+        </div>
+      </fieldset>
+      <fieldset class="alta-grupo">
+        <legend>Domicilio</legend>
         {# Del domicilio, provincia y localidad son OBLIGATORIAS y el resto no
            (geo.OBLIGATORIOS_AFILIADO): sin esos dos campos el sindicato no
            puede agrupar a su gente ni dirigir nada por zona, y exigirle la
@@ -1579,57 +1587,67 @@
            de que invente. El "(opcional)" va solo en los campos del
            domicilio: es ahí donde la distinción importa y donde el afiliado
            ve la misma marca en su perfil. #}
-        <div class="campo"><label>Calle <span class="opc">(opcional)</span></label><input name="calle" id="trab-calle"></div>
-        <div class="campo"><label>Número <span class="opc">(opcional)</span></label><input name="numero" id="trab-numero"></div>
-        <div class="campo"><label>Piso / Depto <span class="opc">(opcional)</span></label><input name="piso_depto" id="trab-piso"></div>
-        <div class="campo"><label>Localidad *</label>
-          <input name="localidad" id="trab-localidad" list="trab-localidades" autocomplete="off"
-                 oninput="trabLocalidades()" required>
-          <datalist id="trab-localidades"></datalist>
+        <div class="fila-campos">
+          <div class="campo w-m"><label for="trab-provincia">Provincia *</label>
+            <select name="provincia" id="trab-provincia" onchange="trabLocalidades()" required>
+              <option value="">—</option>
+              {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo w-l"><label for="trab-localidad">Localidad *</label>
+            <input name="localidad" id="trab-localidad" list="trab-localidades" autocomplete="off"
+                   oninput="trabLocalidades()" required>
+            <datalist id="trab-localidades"></datalist>
+          </div>
         </div>
-        <div class="campo"><label>Provincia *</label>
-          <select name="provincia" id="trab-provincia" onchange="trabLocalidades()" required>
-            <option value="">—</option>
-            {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
-          </select>
+        <div class="fila-campos">
+          <div class="campo w-xl"><label for="trab-calle">Calle <span class="opc">(opcional)</span></label><input name="calle" id="trab-calle"></div>
+          <div class="campo w-s"><label for="trab-numero">Número <span class="opc">(opcional)</span></label><input name="numero" id="trab-numero" inputmode="numeric"></div>
+          <div class="campo w-s"><label for="trab-piso">Piso / Depto <span class="opc">(opcional)</span></label><input name="piso_depto" id="trab-piso"></div>
+          <div class="campo w-s"><label for="trab-cp">Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" id="trab-cp"></div>
         </div>
-        <div class="campo"><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" id="trab-cp"></div>
-        <div class="campo"><label>Teléfono <span class="opc">(opcional)</span></label><input name="telefono" id="trab-telefono"></div>
-        <div class="campo"><label>Mail <span class="opc">(opcional)</span></label><input name="mail" id="trab-mail" type="email"></div>
-        <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
-        {# Las dos fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4): la de
-           afiliación es de ESTE gremio y la carga solo el sindicato; la de
-           nacimiento es de la persona (la puede cargar ella desde su perfil).
-           Hechos, no derivados: la antigüedad y la edad se calculan donde
-           hacen falta. #}
-        <div class="campo"><label>Fecha de afiliación <span class="opc">(opcional)</span></label><input name="fecha_afiliacion" id="trab-fecha-afiliacion" type="date"></div>
-        <div class="campo"><label>Fecha de nacimiento <span class="opc">(opcional)</span></label><input name="fecha_nacimiento" id="trab-fecha-nacimiento" type="date"></div>
-        <div class="campo"><label>Seccional</label>
-          <select name="seccional_id" id="trab-seccional">
-            {# Un admin acotado solo carga en su seccional: no se le ofrecen
-               las otras ni "sin asignar" (el servidor lo fuerza igual). #}
-            {% if alcance_propio is none %}<option value="">Sin asignar</option>{% endif %}
-            {% for sec in seccionales_visibles %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
-          </select>
+        <input type="hidden" name="latitud" id="trab-lat">
+        <input type="hidden" name="longitud" id="trab-lon">
+        <input type="hidden" name="precision_geo" id="trab-precision" value="sin_geo">
+        <div class="alta-mapa">
+          <button type="button" class="sec" onclick="trabBuscar()" id="trab-btn-buscar">Ubicar el domicilio en el mapa</button>
+          <span class="muted" id="trab-geo-estado" style="font-size:12px; margin-left:8px;"></span>
         </div>
-        <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" data-cuit="cualquiera" placeholder="Para notificar por empresa"></div>
-      </div>
-      <input type="hidden" name="latitud" id="trab-lat">
-      <input type="hidden" name="longitud" id="trab-lon">
-      <input type="hidden" name="precision_geo" id="trab-precision" value="sin_geo">
-      <div style="margin-top:12px;">
-        <button type="button" class="sec" onclick="trabBuscar()" id="trab-btn-buscar">Ubicar el domicilio en el mapa</button>
-        <span class="muted" id="trab-geo-estado" style="font-size:12px; margin-left:8px;"></span>
-      </div>
-      <div id="trab-geo-caja" class="oculto" style="margin-top:10px;">
-        <div class="geo-ayuda sin_geo" id="trab-ayuda"></div>
-        <div class="geo-con-lista">
-          <div class="geo-mapa" id="trab-mapa"></div>
-          <div class="geo-candidatos" id="trab-candidatos"></div>
+        <div id="trab-geo-caja" class="oculto" style="margin-top:10px;">
+          <div class="geo-ayuda sin_geo" id="trab-ayuda"></div>
+          <div class="geo-con-lista">
+            <div class="geo-mapa" id="trab-mapa"></div>
+            <div class="geo-candidatos" id="trab-candidatos"></div>
+          </div>
+          <p class="muted" style="font-size:12px; margin:8px 0 0;">Arrastrá el globo si el domicilio no quedó bien ubicado.</p>
         </div>
-        <p class="muted" style="font-size:12px; margin:8px 0 0;">Arrastrá el globo si el domicilio no quedó bien ubicado.</p>
-      </div>
-      <div style="margin-top:12px;">
+      </fieldset>
+      <fieldset class="alta-grupo">
+        <legend>Contacto</legend>
+        <div class="fila-campos">
+          <div class="campo w-m"><label for="trab-telefono">Teléfono <span class="opc">(opcional)</span></label><input name="telefono" id="trab-telefono" type="tel"></div>
+          <div class="campo w-l"><label for="trab-mail">Mail <span class="opc">(opcional)</span></label><input name="mail" id="trab-mail" type="email"></div>
+        </div>
+      </fieldset>
+      <fieldset class="alta-grupo">
+        <legend>En este sindicato</legend>
+        <div class="fila-campos">
+          <div class="campo w-m"><label for="trab-seccional">Seccional</label>
+            <select name="seccional_id" id="trab-seccional">
+              {# Un admin acotado solo carga en su seccional: no se le ofrecen
+                 las otras ni "sin asignar" (el servidor lo fuerza igual). #}
+              {% if alcance_propio is none %}<option value="">Sin asignar</option>{% endif %}
+              {% for sec in seccionales_visibles %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo w-m"><label for="trab-cuit-empleador">CUIT del empleador <span class="opc">(opcional)</span></label>
+            <input name="cuit_empleador" id="trab-cuit-empleador" data-cuit="cualquiera" inputmode="numeric" aria-describedby="trab-cuit-emp-ayuda">
+            <small class="campo-ayuda" id="trab-cuit-emp-ayuda">Sirve para notificar por empresa.</small></div>
+          <div class="campo w-m"><label for="trab-fecha-afiliacion">Fecha de afiliación <span class="opc">(opcional)</span></label><input name="fecha_afiliacion" id="trab-fecha-afiliacion" type="date"></div>
+          <div class="campo w-m"><label for="trab-vigencia">Vigencia de credencial <span class="opc">(opcional)</span></label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
+        </div>
+      </fieldset>
+      <div class="alta-acciones">
         <button type="submit" id="trab-submit">Agregar trabajador</button>
         <button type="button" class="sec" id="trab-cancelar" onclick="resetTrab()" style="display:none;">Cancelar edición</button>
       </div>
@@ -1641,10 +1659,23 @@
     <p class="muted">Pegá una línea por trabajador, con los campos separados por coma, en este orden:</p>
     <p class="muted" style="font-family:Consolas,monospace; font-size:12.5px; background:#f4f2ec; padding:8px 10px; border-radius:6px;">
       cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional, fecha_afiliacion, fecha_nacimiento</p>
-    <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera y te decimos cuántas. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar. Las dos <b>fechas</b> van al final, como AAAA-MM-DD o DD/MM/AAAA, y son opcionales; una fecha que no se entiende deja la línea afuera. En un CUIL que ya está cargado, la línea actualiza su mail del padrón y su fecha de afiliación.</p>
-    <form method="post" action="/admin/trabajador/masivo">
-      <textarea name="lista" rows="6" placeholder="20123456786, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654320, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
-      <button type="submit" style="margin-top:10px;">Cargar lista</button>
+    <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera: antes de cargar, «Revisar» te muestra cuáles y por qué. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar. Las dos <b>fechas</b> van al final, como AAAA-MM-DD o DD/MM/AAAA, y son opcionales; una fecha que no se entiende deja la línea afuera. En un CUIL que ya está cargado, la línea actualiza su mail del padrón y su fecha de afiliación.</p>
+    {# El ejemplo va afuera del cuadro, como bloque aparte (G4-25): adentro,
+       en monoespaciada casi negra, parecía una lista ya pegada. #}
+    <p class="muted" style="margin:10px 0 4px;">Por ejemplo:</p>
+    <pre class="masivo-ejemplo">20123456786, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario
+27987654320, Ana López, , , , Córdoba, Córdoba</pre>
+    {# Primero se revisa y después se carga (G4-26): el ensayo dice qué
+       líneas entran y cuáles quedan afuera, con su número y su motivo, sin
+       escribir nada; recién ahí aparece el botón que carga. #}
+    <form method="post" action="/admin/trabajador/masivo" id="form-masivo">
+      <label class="f-campo f-campo-lleno" for="masivo-lista"><span>Tu lista</span></label>
+      <textarea name="lista" id="masivo-lista" rows="7" class="masivo-lista" spellcheck="false"></textarea>
+      <div class="f-acciones" style="margin-top:10px;">
+        <button type="button" id="masivo-revisar" onclick="masivoEnsayar()">Revisar antes de cargar</button>
+        <button type="submit" id="masivo-cargar" class="oculto">Cargar lista</button>
+      </div>
+      <div id="masivo-ensayo" class="oculto masivo-ensayo" aria-live="polite"></div>
     </form>
 
     {# Nadie se geocodifica en el alta: cien direcciones a un pedido por
@@ -1665,20 +1696,27 @@
   {% if 'aprendizaje' in permisos %}
   <div class="panel" data-mov-vista id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
-  <h2 class="titulo-pagina" id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
+  {# El título es uno solo y corto; la explicación va en la bajada (G4-28):
+     en Noticiero, condensado y en mayúsculas, ocupaba medio teléfono. #}
+  <h2 class="titulo-pagina" id="aprendizaje">Aprendizaje</h2>
   {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
-  <p class="muted">Subí varios recibos del mismo convenio (lo ideal es entre 3 y 10, de distintos empleados o meses). El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
+  <p class="muted">Incorporá al catálogo los conceptos que aparecen en tus recibos. Subí entre 3 y 10 recibos del mismo convenio, de distintos empleados o meses: el sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
 
   <form id="form-aprender" style="margin-top:14px;">
-    <label class="drop" for="ap-files" id="ap-drop">
-      Tocá para elegir los recibos<br>
-      <span class="muted">Podés seleccionar varios a la vez · fotos o PDF · 3 a 10 recomendado</span>
+    {# Que parezca una zona para subir (G4-27): más alta, con ícono y un
+       texto que dice qué hacer en cada aparato -- «Tocá» es del teléfono. #}
+    <label class="drop drop-recibos" for="ap-files" id="ap-drop">
+      <svg class="drop-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <span class="drop-t"><span class="solo-escritorio">Arrastrá los recibos acá o hacé clic para elegirlos</span><span class="solo-telefono">Tocá para elegir los recibos</span></span>
+      <span class="drop-e">Fotos o PDF · entre 3 y 10 · podés elegir varios a la vez</span>
     </label>
     <input type="file" id="ap-files" accept="image/*,application/pdf" multiple class="oculto">
-    <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
-      <button type="submit" id="ap-btn" disabled>Leer recibos</button>
+    <div class="ap-acciones">
+      <button type="submit" id="ap-btn" disabled aria-describedby="ap-falta">Leer recibos</button>
       <span class="muted" id="ap-count"></span>
     </div>
+    {# Mientras el botón está apagado, la razón a la vista (G4-29). #}
+    <p class="ap-falta" id="ap-falta">Elegí al menos un recibo.</p>
   </form>
   <div id="ap-resultado"></div>
   </div>
@@ -4442,32 +4480,38 @@ async function repCargar(pagina) {
     return;
   }
   const anon = '<span class="rep-anon">anónimo</span>';
+  // Números en formato argentino (G4-35): CUIL con guiones, período «sep.
+  // 2026», miles con punto. Solo al mostrar (static/numeros_ar.js).
   cuerpo.innerHTML = d.items.length ? d.items.map(x =>
     '<tr class="fila-rep">' +
-      '<td>' + escH(x.fecha) + '</td>' +
-      '<td>' + (x.enviado ? escH(x.cuil) : anon) + '</td>' +
+      '<td class="num">' + escH(x.fecha) + '</td>' +
+      '<td class="num">' + (x.enviado ? escH(NumAR.cuil(x.cuil)) : anon) + '</td>' +
       '<td>' + (x.enviado ? escH(x.nombre || '—') : anon) + '</td>' +
       '<td>' + (x.enviado ? escH(x.empresa || '—') : anon) + '</td>' +
-      '<td>' + escH(x.periodo || '—') + '</td>' +
+      '<td>' + escH(x.periodo ? NumAR.periodo(x.periodo) : '—') + '</td>' +
       '<td style="text-align:center;">' + (x.con_diferencias
         ? '<span class="rep-tilde dif" title="Con diferencias">✗</span>'
         : '<span class="rep-tilde ok" title="Sin diferencias">✓</span>') + '</td>' +
-      '<td>' + (x.enviado ? '<span class="tag tag-si">Sí</span>' : '<span class="tag tag-pend">No</span>') + '</td>' +
+      '<td class="col-enviado">' + (x.enviado ? '<span class="tag tag-si">Sí</span>' : '<span class="tag tag-pend">No</span>') + '</td>' +
       '<td style="text-align:right;"><button type="button" class="mini" onclick="verReporte(' + x.id + ')">Ver</button></td>' +
     '</tr>').join('')
     : '<tr><td colspan="8" class="muted">No hay recibos con esos filtros.</td></tr>';
   pintarZebra('.fila-rep');
-  document.getElementById('f-rep-cant').textContent = d.total + (d.total === 1 ? ' recibo' : ' recibos');
+  // La columna «Enviado» solo cuando puede decir algo distinto de «Sí»
+  // (G4-09): sin la cláusula firmada no se listan los no enviados, y con el
+  // filtro puesto en uno de los dos todas las filas dicen lo mismo.
+  const filtroEnviado = document.getElementById('f-rep-enviado')?.value || '';
+  document.getElementById('rep-tabla')?.classList.toggle('sin-col-enviado', !(d.clausula && !filtroEnviado));
   const paginas = Math.max(1, Math.ceil(d.total / d.page_size));
-  document.getElementById('rep-paginas').innerHTML = paginas > 1
-    ? '<button type="button" class="sec mini" ' + (pagina <= 1 ? 'disabled' : '') + ' onclick="repCargar(' + (pagina - 1) + ')">‹ Anterior</button>' +
-      '<span>Página ' + pagina + ' de ' + paginas + '</span>' +
-      '<button type="button" class="sec mini" ' + (pagina >= paginas ? 'disabled' : '') + ' onclick="repCargar(' + (pagina + 1) + ')">Siguiente ›</button>'
-    : '';
+  document.getElementById('f-rep-cant').textContent = NumAR.contar(d.total, 'recibo', 'recibos') +
+    (paginas > 1 ? ' · página ' + NumAR.miles(pagina) + ' de ' + NumAR.miles(paginas) : '');
+  const pasos = NumAR.paginador(pagina, paginas, d.total, d.page_size, 'repCargar');
+  document.getElementById('rep-paginas').innerHTML = pasos;
+  document.getElementById('rep-paginas-arriba').innerHTML = pasos;
   const aviso = document.getElementById('rep-aviso-clausula');
   if (!d.clausula && d.ocultos_sin_clausula > 0) {
     const n = d.ocultos_sin_clausula;
-    aviso.textContent = 'Hay ' + n + ' recibo' + (n === 1 ? '' : 's') + ' que los afiliados verificaron sin enviar. ' +
+    aviso.textContent = 'Hay ' + NumAR.contar(n, 'recibo', 'recibos') + ' que los afiliados verificaron sin enviar. ' +
       'Se van a ver acá, anonimizados, cuando el sindicato firme la cláusula de confidencialidad con Colm3na.';
     aviso.classList.remove('oculto');
   } else {
@@ -6805,13 +6849,15 @@ function editarFormula(id, target, desc, expr, tol, fechaDesde, fechaHasta, suje
   document.getElementById('f-hasta').value = fechaHasta || '';
   document.getElementById('f-tope').checked = !!sujetoATope;
   document.getElementById('f-btn').textContent = 'Guardar cambios';
+  document.getElementById('f-titulo').textContent = 'Editar la regla';
   document.getElementById('f-cancel').classList.remove('oculto');
   document.getElementById('form-formula').scrollIntoView({behavior:'smooth', block:'center'});
 }
 function cancelarFormula() {
   document.getElementById('form-formula').reset();
   document.getElementById('f-id').value = '';
-  document.getElementById('f-btn').textContent = 'Agregar fórmula';
+  document.getElementById('f-btn').textContent = 'Agregar regla';
+  document.getElementById('f-titulo').textContent = 'Agregar una regla';
   document.getElementById('f-cancel').classList.add('oculto');
 }
 
@@ -6828,6 +6874,7 @@ function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindica
   document.getElementById('c-generico').value = codigoGenerico || '';
   if (window.CuitMT) CuitMT.limpiar(document.getElementById('form-concepto'));   // sin marcas de un número anterior
   document.getElementById('c-btn').textContent = 'Guardar cambios';
+  document.getElementById('c-titulo').textContent = 'Editar el concepto';
   document.getElementById('c-cancel').classList.remove('oculto');
   document.getElementById('form-concepto').scrollIntoView({behavior:'smooth', block:'center'});
 }
@@ -6835,6 +6882,7 @@ function cancelarConcepto() {
   document.getElementById('form-concepto').reset();
   document.getElementById('c-id').value = '';
   document.getElementById('c-btn').textContent = 'Agregar concepto';
+  document.getElementById('c-titulo').textContent = 'Agregar un concepto';
   document.getElementById('c-cancel').classList.add('oculto');
 }
 
@@ -7729,8 +7777,23 @@ document.getElementById('ap-drop').onclick = () => apFiles.click();
 apFiles.onchange = () => {
   const n = apFiles.files.length;
   apBtn.disabled = n === 0;
-  apCount.textContent = n ? `${n} recibo(s) seleccionado(s)` : '';
+  apCount.textContent = n ? NumAR.contar(n, 'recibo elegido', 'recibos elegidos') : '';
+  document.getElementById('ap-falta').classList.toggle('oculto', n > 0);
 };
+// Arrastrar y soltar sobre la zona (lo que dice el texto en escritorio).
+(function () {
+  const zona = document.getElementById('ap-drop');
+  ['dragenter', 'dragover'].forEach(ev => zona.addEventListener(ev, e => {
+    e.preventDefault(); zona.classList.add('arrastrando');
+  }));
+  ['dragleave', 'drop'].forEach(ev => zona.addEventListener(ev, () => zona.classList.remove('arrastrando')));
+  zona.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    apFiles.files = e.dataTransfer.files;
+    apFiles.onchange();
+  });
+})();
 
 document.getElementById('form-aprender').onsubmit = async (e) => {
   e.preventDefault();

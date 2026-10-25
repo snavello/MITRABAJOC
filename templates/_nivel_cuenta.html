@@ -1,0 +1,16 @@
+{# Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): lo dice el origen,
+     no solo el número, porque un nivel 2 puede ser mail del padrón (lo cargó
+     el sindicato) o declarado (lo dio la persona, sin que nadie lo avale).
+     Una fila sin cuenta no tiene nivel: no hay nada que acreditar.
+     Si la cuenta es anterior al empadronamiento en ESTE sindicato (`responde`
+     en falso), tampoco se muestra: el nivel y el origen de la cuenta de una
+     persona que este padrón no tenía al registrarse no son asunto suyo. -#}
+  {% macro nivel_cuenta(c) %}
+    {% if c.get('responde', True) == False %}<span class="muted" title="cuenta creada antes de este empadronamiento">—</span>
+    {% elif not c.tiene_cuenta %}<span class="muted">—</span>
+    {% elif c.nivel_fiabilidad >= 4 %}<span class="tag tag-si" title="Una persona del sindicato confirmó su identidad en persona.">4 · confirmado</span>
+    {% elif c.nivel_fiabilidad == 3 %}<span class="tag tag-si" title="Subió un recibo propio y la IA leyó su CUIL.">3 · recibo</span>
+    {% elif c.nivel_fiabilidad == 2 and c.nivel_origen == 'mail_declarado' %}<span class="tag tag-pend" title="Confirmó un mail que declaró ella misma al registrarse: nadie del sindicato lo avala y todavía no verificó ningún recibo.">2 · mail declarado</span>
+    {% elif c.nivel_fiabilidad == 2 %}<span class="tag tag-si" title="Confirmó el mail que el sindicato tiene cargado en el padrón.">2 · mail padrón</span>
+    {% else %}<span class="tag tag-pend" title="Solo acreditó que su CUIL está en el padrón (el CUIL es un dato público).">1 · CUIL</span>{% endif %}
+  {% endmacro %}

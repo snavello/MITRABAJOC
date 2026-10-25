@@ -1,0 +1,89 @@
+{#- Las filas del padrón de la pestaña Trabajadores. Las dibuja la página
+    (/admin, la primera página) y /admin/trabajadores/lista (buscar y pasar de
+    página): una sola plantilla, así la lógica de qué botón va en cada fila
+    -- alcance de seccional, si este sindicato responde por la cuenta -- no
+    se duplica en JavaScript.
+
+    Auditoría de diseño 2026-10:
+    - G4-15: a la vista solo «Editar»; el resto va en un menú «Más» por fila,
+      con «Baja» al final, separada y en rojo. Antes eran hasta seis botones
+      en dos a cuatro renglones.
+    - G4-17: la marca del mapa solo cuando la persona SÍ está ubicada.
+    - G4-18: el nombre no se parte; Estado y Nivel, a su contenido.
+    - G4-20: «Confirmar identidad», la acción, no «Confirmé su identidad».
+    - G4-35: CUIL y CUIT con guiones (solo al mostrar).
+
+    Necesita: trabajadores, alcance_propio, administra_areas,
+    seccional_por_id, etiquetas_precision. -#}
+{% from "_nivel_cuenta.html" import nivel_cuenta %}
+{% for t in trabajadores %}
+      <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" data-declarado="{{ 1 if (t.tiene_cuenta and t.nivel_fiabilidad == 2 and t.nivel_origen == 'mail_declarado') else 0 }}"{% if not t.activo %} data-baja="1"{% endif %}>
+        <td class="num col-cuil"><code>{{ t.cuil|cuil }}</code></td>
+        <td class="col-nombre">{{ t.nombre or '—' }}</td>
+        <td class="muted">{{ t.localidad }}{% if t.provincia and t.provincia != t.localidad %}, {{ t.provincia }}{% endif %}
+          {% if t.localidad and t.precision_geo and t.precision_geo != 'sin_geo' %}<br><span class="geo-punto {{ t.precision_geo }}" style="font-size:11px;" title="{{ etiquetas_precision.get(t.precision_geo, '') }}"><i></i>En el mapa</span>{% endif %}</td>
+        <td class="muted">{{ seccional_por_id.get(t.seccional_id, '—') }}</td>
+        <td class="muted num">{{ (t.cuit_empleador|cuil) if t.cuit_empleador else '—' }}</td>
+        <td class="col-ajustada">
+          {% if not t.activo %}<span class="tag tag-neutro">baja</span>
+          {% elif t.registrado %}<span class="tag tag-si">registrado</span>
+          {% else %}<span class="muted">sin registrar</span>{% endif %}
+          {# La marca no se edita acá: la prende y la apaga el alta o la
+             baja de su usuario del panel (ver "Áreas y Usuarios"). Que sea
+             de solo lectura es a propósito -- si se pudiera tildar a mano,
+             habría padrones diciendo "empleado" sin nadie que pueda entrar. #}
+          {% if t.es_empleado_sindicato %}<br><span class="tag tag-pend" title="Además opera el panel del sindicato">empleado del sindicato</span>{% endif %}
+          {% if t.fecha_afiliacion %}<br><span class="muted" style="font-size:11px;">afiliado desde {{ t.fecha_afiliacion|dia }}</span>{% endif %}
+        </td>
+        <td class="col-ajustada">{{ nivel_cuenta(t) }}</td>
+        <td class="muted col-ajustada">
+          {% if t.codigo_credencial %}
+          <code>{{ t.codigo_credencial }}</code>{% if t.vigencia_credencial %}<br>vence {{ t.vigencia_credencial|dia }}{% endif %}
+          {% else %}sin generar{% endif %}
+        </td>
+        <td class="col-acciones">
+          <button type="button" class="mini"
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso_depto":t.piso_depto,"localidad":t.localidad,"provincia":t.provincia,"codigo_postal":t.codigo_postal,"latitud":t.latitud,"longitud":t.longitud,"precision_geo":t.precision_geo,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador,"fecha_afiliacion":t.fecha_afiliacion,"fecha_nacimiento":t.fecha_nacimiento} | tojson }})'>Editar</button>
+          <details class="menu-mas">
+            <summary class="mini" aria-label="Más acciones para {{ t.nombre or t.cuil }}">Más</summary>
+            <div class="menu-mas-lista" role="menu">
+              <form method="post" action="/admin/trabajador/generar-credencial" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
+                <input type="hidden" name="id" value="{{ t.id }}"><button class="mini menu-mas-item" role="menuitem">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
+              </form>
+              {# Los botones de cuenta: solo si este sindicato responde por ella y
+                 la fila cae dentro del alcance de seccional de quien mira (el
+                 servidor igual rechaza el resto). #}
+              {% if t.tiene_cuenta and t.responde and (alcance_propio is none or t.seccional_id in alcance_propio) %}
+              {% if t.nivel_fiabilidad < 4 %}
+              <form method="post" action="/admin/trabajador/confirmar-identidad" onsubmit="return confirm('¿Confirmás que verificaste en persona la identidad de esta persona? La cuenta pasa a nivel 4.');">
+                <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini menu-mas-item" role="menuitem">Confirmar identidad</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/admin/trabajador/restablecer-clave" onsubmit="return confirm('¿Restablecer la clave de esta persona? La clave actual deja de servir y se muestra una clave temporal UNA sola vez. La clave es una sola por persona: vale para todos los sindicatos donde esté empadronada.');">
+                <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini menu-mas-item" role="menuitem">Restablecer clave</button>
+              </form>
+              {% endif %}
+              {# Un afiliado que además trabaja en el gremio: de acá a darle usuario
+                 del panel con el CUIL, el nombre y la seccional ya puestos. Solo
+                 para quien administra usuarios y dentro de su alcance; si ya es
+                 empleado, el usuario ya existe. #}
+              {% if administra_areas and t.activo and not t.es_empleado_sindicato and (alcance_propio is none or t.seccional_id in alcance_propio) %}
+              <a class="mini menu-mas-item" role="menuitem" href="/admin?sub=usuarios&cuil={{ t.cuil }}&nombre={{ t.nombre | urlencode }}&seccional={{ t.seccional_id or '' }}#administradores">Dar usuario del panel</a>
+              {% endif %}
+              <hr class="menu-mas-sep">
+              {% if t.activo %}
+              <form method="post" action="/admin/trabajador/baja" onsubmit="return confirm('¿Dar de baja a este trabajador? Se puede reactivar después.');">
+                <input type="hidden" name="id" value="{{ t.id }}"><button class="mini menu-mas-item peligro-txt" role="menuitem">Dar de baja</button>
+              </form>
+              {% else %}
+              <form method="post" action="/admin/trabajador/alta-logica">
+                <input type="hidden" name="id" value="{{ t.id }}"><button class="mini menu-mas-item" role="menuitem">Reactivar</button>
+              </form>
+              {% endif %}
+            </div>
+          </details>
+        </td>
+      </tr>
+{% else %}
+      <tr class="padron-vacio"><td colspan="9" class="muted">{{ vacio_texto or 'No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".' }}</td></tr>
+{% endfor %}
