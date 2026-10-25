@@ -8937,3 +8937,24 @@ quita los acentos de la sigla (salía «UNIÓF…») y el buscador encuentra el
 número con o sin tilde. Los ya cargados no se reescriben. Queda el mismo
 problema en el código de credencial (`db.generar_codigo_credencial`). Tests:
 `test_auditoria_afiliado.py`.
+
+**Bloque 5c, el panel desde Noticias hasta Apariencia** (Admin 0.73.01), 36
+de los 37 hallazgos aceptados (G5-11 era un error de los datos de prueba).
+Lo que más cambia: la bandeja de Trámites abre en «Sin terminar» con lo que
+más espera arriba y pastillas por a quién le toca, con el nombre de la
+persona (`tramites_del_sindicato` lo trae de `CuentaTrabajador` en una sola
+consulta) y un color por estado (ámbar lleno lo que le toca al sindicato,
+contorno lo que espera al afiliado, verde lo terminado); el constructor de
+Encuestas pasa a la hoja de trabajo del de Trámites (riel, «?», guardar al
+pie, vista del afiliado fija) sin cambiar lo que guarda, y el modo arranca
+sin elegir: `POST /admin/encuesta` rechaza una encuesta nueva sin modo, que
+antes nacía nominal sin avisar. Además: en la lista de encuestas, Resultados
+como acción principal y Cerrar/Borrar aparte con confirmación, cerradas en
+gris, «3.ª toma de …» y participación con porcentaje y barra; destino y
+leídos de Notificaciones en lenguaje de persona; beneficios con miniatura;
+Empleadores sin la columna Estado y con estados vacíos que invitan a actuar;
+Listas en filas con la clave dentro de la pastilla; en Usuarios la matriz de
+permisos plegada con un resumen de lo que cambia; y en Apariencia un botón de
+guardar al pie de cada formulario con aviso de cambios sin guardar, la prueba
+de lectura con muestras de color en vez de números y los interruptores en el
+color del modelo. Tests: `test_auditoria_panel_b.py`.
