@@ -64,7 +64,7 @@ FUNCIONALIDADES = [
 
     ("Sindicato", "Ingreso y portada", r"^/admin/(login|salir|inicio)$", None),
     ("Sindicato", "Página del panel (carga inicial)", r"^/admin$", None),
-    ("Sindicato", "Panel Sindical", r"^/admin/dashboard", "dashboard.html"),
+    ("Sindicato", "Panel Sindical", r"^/admin/dashboard", "dashboard_v2.html"),
     ("Sindicato", "Reportes", r"^/admin/reportes", "admin.html"),
     ("Sindicato", "Reglas de control", r"^/admin/formula", "admin.html"),
     ("Sindicato", "Conceptos", r"^/admin/concepto", "admin.html"),

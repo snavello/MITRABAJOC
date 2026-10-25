@@ -126,6 +126,7 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
   const items = datos ? datos.items : SIN_FILAS;
   const total = datos ? datos.total : 0;
   const pestanas = useRef(null);
+  const cuerpo = useRef(null);
   const ind = useIndicador(pestanas, [estado.tab, tabs.map((t) => contadores[t]).join(",")]);
   /* Qué filas son nuevas. "Ver más" suma filas a las que ya estaban (las
      primeras son LOS MISMOS objetos), y esas entran escalonadas. Cualquier
@@ -149,6 +150,18 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
     }
     return cloneElement(tr, { class: "v2-fila-arma", style: { animationDelay: Math.min(i * 45, 450) + "ms" } });
   };
+  /* En el teléfono cada fila es una ficha (G7-04): cada celda lleva el
+     nombre de su columna para dibujarlo encima del valor. Se pone sobre el
+     DOM ya pintado (un atributo, nunca HTML): las filas las arman las cinco
+     tablas de arriba y así ninguna tiene que repetir sus encabezados. */
+  useLayoutEffect(() => {
+    if (!cuerpo.current) return;
+    cuerpo.current.querySelectorAll("tr").forEach((tr) => {
+      Array.prototype.forEach.call(tr.children, (td, i) => {
+        if (def.cols[i]) td.setAttribute("data-et", def.cols[i]); else td.removeAttribute("data-et");
+      });
+    });
+  });
   return html`
     <div class="sub" id="tabla-sub">${datos ? subDe(def, estado) : "El detalle responde a todos los filtros. Al tocar un gráfico, la pestaña correspondiente se abre sola."}</div>
     <div class="tabs-datos v2-tabs" id="tabs-datos" role="tablist" ref=${pestanas}>
@@ -159,15 +172,12 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
           onClick=${() => despachar({ tipo: "tab", valor: t })}>${NOMBRE_TAB[t]}
           <span class="cnt" id=${"cnt-" + t}><${Cuenta} valor=${contadores[t]} /></span></button>`)}
     </div>
-    <div class="tabla-scroll">
+    ${items.length || !datos ? html`<div class="tabla-scroll">
       <table class="tabla-exp">
         <thead id="tabla-head"><tr>${def.cols.map((c) => html`<th>${c}</th>`)}</tr></thead>
-        <tbody id="tabla-body" key=${version}>
-          ${items.length ? items.map(fila)
-            : html`<tr><td colspan=${def.cols.length} class="vacio-exp">Sin registros para los filtros actuales. Probá ampliar el período o quitar filtros.</td></tr>`}
-        </tbody>
+        <tbody id="tabla-body" key=${version} ref=${cuerpo}>${items.map(fila)}</tbody>
       </table>
-    </div>
+    </div>` : html`<p class="vacio-exp" id="tabla-vacia">Sin registros para los filtros actuales. Probá ampliar el período o quitar filtros.</p>`}
     <div class="pie-tabla">
       <span id="tabla-total">${datos ? "Mostrando " + fmtN(items.length) + " de " + fmtN(total) + " · " + def.total(fmtN(total)) : ""}</span>
       <button type="button" id="ver-mas" style=${{ visibility: items.length < total ? "visible" : "hidden" }}

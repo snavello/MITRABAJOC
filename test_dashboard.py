@@ -634,10 +634,18 @@ def test_pagina_dashboard():
     assert "chart.umd.min.js" in r.text          # vendoreado, jamás un CDN
     assert "cdn" not in r.text.lower()
     assert "#E5188F" in r.text                    # --destacado inyectado
-    # Flag del bot APAGADO: el carril entero no llega al HTML.
+    # Flag del bot APAGADO: el servidor le dice al panel que el carril no
+    # existe, y el panel no lo dibuja (static/panel_v2/app.js lee el dato).
+    assert 'data-consultas="0"' in r.text
     assert "Consultas al asistente" not in r.text
-    assert 'data-t="consultas"' not in r.text
     print("OK  test_pagina_dashboard")
+
+
+def _js_del_panel() -> str:
+    """Todo el JS del Panel Sindical (static/panel_v2/), sin comentarios."""
+    import pathlib
+    return "\n".join(_sin_comentarios(f.read_text(encoding="utf-8"))
+                     for f in sorted(pathlib.Path("static/panel_v2").glob("*.js")))
 
 
 def _sin_comentarios(js: str) -> str:
@@ -666,9 +674,9 @@ def test_la_pagina_le_da_al_navegador_la_fecha_del_servidor():
     # `new Date()` del CÓDIGO (sin comentarios: el de arriba de HOY explica
     # justamente este bug y lo nombra tres veces). Queda uno solo, el de la
     # red por si la plantilla no manda el dato.
-    js = _sin_comentarios(open("static/dashboard.js", encoding="utf-8").read())
+    js = _js_del_panel()
     assert "dataset.hoy" in js
-    assert js.count("new Date()") == 1, \
+    assert "new Date()" not in js, \
         "el panel volvió a sacar la fecha del reloj del navegador"
     print("OK  test_la_pagina_le_da_al_navegador_la_fecha_del_servidor")
 
@@ -682,10 +690,10 @@ def test_un_rango_rechazado_dice_por_que_y_la_pantalla_tiene_donde_decirlo():
                     params={"desde": _dia(0), "hasta": (HOY + timedelta(days=1)).isoformat()})
     assert r.status_code == 422
     assert "futura" in r.json()["detail"], r.json()
-    # El cartel donde se muestra, y el JS que lee el `detail`.
-    assert 'id="aviso-error"' in admin_a.get("/admin/dashboard").text
-    js = open("static/dashboard.js", encoding="utf-8").read()
-    assert "cuerpo.detail" in js and "avisoDeError" in js
+    # El JS que lee el `detail` y el cartel donde se muestra (lo dibuja el
+    # panel, static/panel_v2/: api.js lo guarda y app.js lo pone arriba).
+    js = _js_del_panel()
+    assert "cuerpo.detail" in js and 'class="aviso-error"' in js
     print("OK  test_un_rango_rechazado_dice_por_que_y_la_pantalla_tiene_donde_decirlo")
 
 
@@ -693,8 +701,7 @@ def test_pagina_dashboard_flag_prendido():
     db.set_config_dashboard(35, 60, True)
     try:
         r = admin_a.get("/admin/dashboard")
-        assert "Consultas al asistente" in r.text
-        assert 'data-t="consultas"' in r.text
+        assert 'data-consultas="1"' in r.text
     finally:
         db.set_config_dashboard(35, 60, False)
     print("OK  test_pagina_dashboard_flag_prendido")

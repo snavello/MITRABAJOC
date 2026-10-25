@@ -1,6 +1,6 @@
 /* Panel Sindical v2: el Asistente del Panel (docs/ASISTENTE_PANEL.md).
 
-   El mismo recorrido que la v1 (static/dashboard.js, "Asistente del Panel"):
+   El mismo recorrido que la v1 (static/dashboard.js, retirada el 2026-10-25, "Asistente del Panel"):
    - cada pregunta viaja con la foto del estado (`estadoPlano`) y los últimos
      cuatro intercambios; el historial vive SOLO en memoria, nunca en el
      navegador;

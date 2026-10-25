@@ -46,6 +46,12 @@ from playwright.sync_api import expect
 import fechas
 import paridad
 
+# La v1 del Panel (templates/dashboard.html + static/dashboard.js) se retiró el
+# 2026-10-25: la v2 es /admin/dashboard y no queda contra qué comparar. Se
+# conservan como registro de cómo se midió la paridad (PLAN_DASHBOARD_V2.md,
+# bloques 0 y 7) y por si se rescatan los que manejan solo la v2.
+pytestmark = pytest.mark.skip(reason="la v1 se retiró el 2026-10-25: no hay paridad v1/v2 que medir")
+
 
 def _preparar(page, nombre):
     paridad.entrar_como_admin(page)

@@ -3,7 +3,7 @@
    Dirección B, "Sala de mando" (elegida por SDN sobre el mockup de D5): el
    período y los filtros puestos van en una barra arriba de los números, y el
    resto de los filtros en un cajón que se abre con "Filtros". Cada control
-   se comporta como su par de la v1 (static/dashboard.js); el estado lo
+   se comporta como su par de la v1 (static/dashboard.js, retirada el 2026-10-25); el estado lo
    cambia SOLO el reductor de panel/estado (D8): acá nada lo toca directo. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { html } from "panel/html";

@@ -1,7 +1,7 @@
 /* Panel Sindical v2 (PLAN_DASHBOARD_V2.md): los pedidos al servidor.
 
    Sin DOM, así que Node lo prueba (test_dashboard_v2_nucleo.py). Cada regla
-   viene de la v1 (static/dashboard.js) y costó un incidente (§3.1 del plan):
+   viene de la v1 (static/dashboard.js, retirada el 2026-10-25) y costó un incidente (§3.1 del plan):
 
    - A lo sumo MAX_EN_VUELO pedidos a la vez (`enCola`). Doce simultáneos
      por refresco fueron lo que trabó Pruebas el 2026-09-18; el cupo del

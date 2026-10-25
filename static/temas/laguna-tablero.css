@@ -1,0 +1,331 @@
+/* ============================================================
+   Modelo 162 · Laguna — el Panel Sindical (/admin/dashboard)
+   ------------------------------------------------------------
+   PLAN_TEMAS.md. El tablero es una pantalla más del panel del sindicato y
+   se pinta igual que /admin con Laguna (static/temas/laguna-panel.css): el
+   encabezado blanco con el filete turquesa arriba, Manrope, blanco y grises,
+   el turquesa en la acción principal y el azul profundo en lo elegido.
+
+   La "Sala de mando" (static/panel_v2/panel.css) se aclara: la tarjeta de
+   los números deja de ser oscura y pasa a un papel apenas teñido de agua,
+   con los indicadores en tarjetas blancas. Los gráficos toman los colores
+   del modelo por las variables --graf-* (static/panel_v2/graficos.js).
+
+   Reglas de esta hoja (las mismas que las de laguna-panel.css):
+   - Todo selector empieza con html[data-tema="laguna"]; la plantilla la
+     carga solo con este modelo.
+   - Todo color sale de --lg-* (declaradas abajo, copia de laguna-panel.css,
+     que esta página no carga) o de los cuatro de marca. Con la paleta del
+     sindicato se redefinen desde --marca-*. Los estados no cambian nunca.
+   - Lo elegido se pinta entero (relleno), nunca con una barra al costado.
+   - Sin trama de colmena: es el diseño viejo.
+   ============================================================ */
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/static/fonts/manrope.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Paleta del modelo (la de Colm3na) ---------- */
+html[data-tema="laguna"] {
+  --lg-negro: #171a20; --lg-tinta: #171a20; --lg-gris: #393c41; --lg-gris2: #5c5e62;
+  --lg-claro: #f4f4f4; --lg-claro2: #eeeeee; --lg-claro-h: #e6e6e6;
+  --lg-linea: #e3e4e5; --lg-linea2: #d0d1d2; --lg-suave: #fafafa; --lg-suave2: #fbfbfb; --lg-fijo: #eef0f3;
+  --lg-azul: #0b2f4f; --lg-azul2: #0d4a6e; --lg-turq: #0a7f8c; --lg-turq-h: #086e79; --lg-turq-osc: #08636d;
+  --lg-lag: #13a3a0; --lg-agua: #8de6d4; --lg-agua-f: #dff6f1; --lg-agua-f2: #eefaf7; --lg-azgris: #3d5a6c;
+  --lg-fluor: #46f0d2; --lg-fluor-t: var(--lg-azul); --lg-fluor-txt: var(--lg-fluor);
+  --lg-globo-txt: #e9f7f5; --lg-sombra: #051423;
+  /* estados: fijos, nunca toman la paleta */
+  --lg-ok: #367519; --lg-ok-f: #eef5e7; --lg-ok-t: #2b5d14;
+  --lg-amb: #8a5208; --lg-amb-f: #fbf2e3; --lg-amb-p: #c98a1e;
+  --lg-mal: #b3261e; --lg-mal-f: #fbeceb; --lg-mal-t: #8e1e17;
+  --lg-violeta: #6b4aa3; --lg-violeta-f: #f5f1fb;
+  --lg-fuente: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --lg-curva: var(--ease-salida, cubic-bezier(.22, .61, .36, 1));
+  /* medidas del cromo */
+  --lg-riel: 212px;
+  --lg-top: 88px;
+  /* Los tokens de la plantilla también toman el modelo: así todo lo que ya
+     usaba --tinta, --linea, --gris o --papel se aliviana solo. */
+  --tinta: var(--lg-tinta); --linea: var(--lg-linea); --gris: var(--lg-gris2); --papel: var(--lg-suave);
+  accent-color: var(--lg-turq);
+  /* Al abrir /admin#seccion el navegador lleva el ancla arriba de todo: que
+     no quede escondida debajo del encabezado fijo. */
+  scroll-padding-top: calc(var(--lg-top) + 18px);
+}
+
+/* ---------- Paleta del sindicato ----------
+   La laguna pasa a ser base → primario → apoyo, y el flúor pasa a ser el
+   acento. El texto SOBRE el acento y el acento COMO texto sobre oscuro los
+   calcula la plantilla (--marca-tinta-acento, --marca-acento-txt), porque
+   dependen de qué tan oscuro es el acento de cada gremio. */
+html[data-tema="laguna"][data-paleta="sindicato"] {
+  --lg-azul: var(--marca-base);
+  --lg-azul2: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 70%, var(--marca-base));
+  --lg-turq: var(--marca-primario-relleno, var(--marca-primario));
+  --lg-turq-h: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 82%, black);
+  --lg-turq-osc: color-mix(in oklab, var(--marca-primario-relleno, var(--marca-primario)) 75%, var(--marca-base));
+  --lg-lag: var(--marca-apoyo, var(--marca-secundario));
+  --lg-agua: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 50%, white);
+  --lg-agua-f: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 14%, white);
+  --lg-agua-f2: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 6%, white);
+  --lg-azgris: color-mix(in oklab, var(--marca-base) 78%, white);
+  --lg-fluor: var(--marca-acento);
+  --lg-fluor-t: var(--marca-tinta-acento, var(--marca-base));
+  --lg-fluor-txt: var(--marca-acento-txt, var(--marca-acento));
+  --lg-globo-txt: color-mix(in oklab, var(--marca-apoyo, var(--marca-secundario)) 8%, white);
+  --lg-sombra: color-mix(in oklab, var(--marca-base) 55%, black);
+}
+
+/* Lo elegido en el tablero (períodos, pastillas, la pestaña del explorador,
+   la barra tocada de un gráfico) va en el azul del modelo. Con la paleta del
+   sindicato manda su color destacado, el que elige plataforma. */
+html[data-tema="laguna"]:not([data-paleta="sindicato"]) {
+  --destacado: var(--lg-azul);
+  --destacado-suave: var(--lg-agua-f2);
+  --destacado-borde: color-mix(in oklab, var(--lg-azul) 35%, white);
+  --destacado-osc: var(--lg-azul);
+}
+html[data-tema="laguna"] {
+  --blanco: #fff; --fuente: var(--lg-fuente); --fuente-display: var(--lg-fuente);
+  --ok: var(--lg-ok); --error: var(--lg-mal); --aviso: var(--lg-amb);
+  /* Los colores de los gráficos (graficos.js los lee una vez). */
+  --graf-primario: var(--lg-turq); --graf-acento: var(--lg-lag); --graf-apoyo: var(--lg-azgris);
+  --graf-ok: var(--lg-ok); --graf-error: var(--lg-mal); --graf-aviso: var(--lg-amb-p);
+  --graf-linea: var(--lg-linea); --graf-texto: var(--lg-gris2); --graf-neutro: var(--lg-linea2);
+  --graf-tooltip: var(--lg-azul); --graf-relleno: #fff; --graf-fuente: var(--lg-fuente);
+}
+
+/* ============================================================
+   1. La página: blanca, sin mesa, sin franja y sin colmena
+   ============================================================ */
+html[data-tema="laguna"] body,
+html[data-tema="laguna"] body.mesa {
+  background: #fff; color: var(--lg-tinta); font-family: var(--lg-fuente);
+  font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+}
+html[data-tema="laguna"] body.mesa::before,
+html[data-tema="laguna"] body.mesa.franja::after { display: none; }
+html[data-tema="laguna"] main { padding-left: 34px; padding-right: 34px; }
+
+/* ============================================================
+   2. Encabezado: el de /admin con Laguna (blanco, filete turquesa arriba)
+   ============================================================ */
+html[data-tema="laguna"] .marca-enc { border-left: 0; position: relative; }
+html[data-tema="laguna"] .marca-barra {
+  box-sizing: border-box; height: 88px; padding: 0 28px; gap: 14px;
+  background: #fff; background-image: none; color: var(--lg-tinta);
+  box-shadow: inset 0 3px 0 var(--lg-turq); border-bottom: 1px solid var(--lg-linea);
+}
+html[data-tema="laguna"] .marca-barra::before { display: none; }
+html[data-tema="laguna"] .marca-logo { height: 64px; max-width: 320px; }
+html[data-tema="laguna"] .marca-barra .marca-nombre {
+  font-family: var(--lg-fuente); font-weight: 800; font-size: 30px; line-height: 1.05; letter-spacing: -.015em;
+  text-transform: none; color: var(--lg-tinta); border-right: 0; padding-right: 0;
+}
+/* Colm3na: el de fondo claro (lo trae la plantilla) en lugar del oscuro. La
+   fecha le deja su lugar a la derecha. */
+html[data-tema="laguna"] .marca-colmena { display: none; }
+html[data-tema="laguna"] .enc-c3-claro {
+  display: block; position: absolute; right: 28px; top: 27px;
+  height: 34px; width: auto; max-width: 160px; object-fit: contain; z-index: 3;
+}
+html[data-tema="laguna"] .marca-fecha { margin-right: 186px; color: var(--lg-gris2); font-family: var(--lg-fuente); }
+html[data-tema="laguna"] .marca-fecha strong { color: var(--lg-tinta); font-weight: 700; }
+
+/* ============================================================
+   3. El título y la bajada
+   ============================================================ */
+html[data-tema="laguna"] .v2 { padding-top: 30px; }
+html[data-tema="laguna"] body.mesa .titulo-pagina,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina {
+  font-family: var(--lg-fuente); font-size: 30px; font-weight: 500; line-height: 1.15;
+  letter-spacing: -.005em; text-transform: none; color: var(--lg-tinta); margin-bottom: 8px;
+}
+html[data-tema="laguna"] body.mesa .titulo-pagina::after { display: none; }
+html[data-tema="laguna"] .v2-bajada,
+html[data-tema="laguna"] body.mesa.franja .titulo-pagina + .v2-bajada { color: var(--lg-gris); font-size: 14px; }
+html[data-tema="laguna"] .v2-cabeza { margin-bottom: 18px; }
+
+/* ============================================================
+   4. La tarjeta de los números: clara y teñida de agua
+   ============================================================ */
+html[data-tema="laguna"] .v2-tablero {
+  color: var(--lg-tinta); background: var(--lg-agua-f2); border-radius: 14px; padding: 18px 20px 20px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lg-lag) 22%, var(--lg-linea));
+}
+html[data-tema="laguna"] .v2-tablero::before,
+html[data-tema="laguna"] .v2-tablero::after { display: none; }
+html[data-tema="laguna"] .v2-kicker { color: var(--lg-turq-osc); font-family: var(--lg-fuente); letter-spacing: .14em; }
+html[data-tema="laguna"] .v2-tablero > .v2-cargador {
+  background: linear-gradient(90deg, transparent, var(--lg-turq), transparent) no-repeat; background-size: 40% 100%;
+}
+/* Período, filtros puestos y Reiniciar. */
+html[data-tema="laguna"] .v2-chip {
+  background: #fff; color: var(--lg-gris); border: 0; box-shadow: inset 0 0 0 1px var(--lg-linea2);
+  font: 600 13px/1 var(--lg-fuente); padding: 9px 14px;
+}
+html[data-tema="laguna"] .v2-chip:hover { color: var(--lg-tinta); box-shadow: inset 0 0 0 1px var(--lg-gris2); }
+html[data-tema="laguna"] .v2-chip.act { background: var(--destacado); color: #fff; box-shadow: none; font-weight: 700; }
+html[data-tema="laguna"] .v2-btn-filtros {
+  background: var(--lg-turq); color: #fff; border: 0; font: 700 13px/1 var(--lg-fuente); padding: 9px 15px;
+}
+html[data-tema="laguna"] .v2-btn-filtros:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .v2-num { background: #fff; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .v2-puesto {
+  background: #fff; color: var(--lg-azul); border: 0; box-shadow: inset 0 0 0 1px var(--destacado-borde);
+  font-family: var(--lg-fuente);
+}
+html[data-tema="laguna"] .v2-puesto button { background: var(--lg-claro2); color: var(--lg-tinta); }
+html[data-tema="laguna"] .v2-reiniciar {
+  background: transparent; color: var(--lg-tinta); border: 0; padding: 9px 4px;
+  font: 600 13px/1 var(--lg-fuente); text-decoration: underline; text-underline-offset: 4px;
+  text-decoration-color: var(--lg-linea2);
+}
+html[data-tema="laguna"] .v2-reiniciar:hover { background: transparent; text-decoration-color: var(--lg-tinta); }
+/* Los cuatro principales en tarjetas blancas; el resto en una tira. */
+html[data-tema="laguna"] .v2-hero { background: #fff; box-shadow: 0 0 0 1px var(--lg-linea); border-radius: 12px; padding: 16px; }
+html[data-tema="laguna"] .v2-hero .et,
+html[data-tema="laguna"] .v2-mini .et { color: var(--lg-gris); font-size: 12.5px; font-weight: 600; }
+html[data-tema="laguna"] .v2-hero .val {
+  font-family: var(--lg-fuente); font-weight: 600; letter-spacing: -.02em; color: var(--lg-tinta);
+  font-variant-numeric: tabular-nums;
+}
+html[data-tema="laguna"] .v2-hero.grande .val { font-weight: 700; color: var(--lg-azul); }
+html[data-tema="laguna"] .v2-hero .delta.up { color: var(--lg-ok); }
+html[data-tema="laguna"] .v2-hero .delta.down { color: var(--lg-mal); }
+html[data-tema="laguna"] .v2-hero .delta.neu { color: var(--lg-gris2); }
+html[data-tema="laguna"] .v2-minis { background: var(--lg-linea); box-shadow: 0 0 0 1px var(--lg-linea); border-radius: 12px; }
+html[data-tema="laguna"] .v2-mini { background: #fff; }
+html[data-tema="laguna"] .v2-mini .val { color: var(--lg-tinta); font-family: var(--lg-fuente); font-weight: 700; font-variant-numeric: tabular-nums; }
+html[data-tema="laguna"] .v2-mini .delta { color: var(--lg-gris2); }
+html[data-tema="laguna"] .v2-esq-num {
+  background: linear-gradient(90deg, var(--lg-claro2) 0%, var(--lg-suave) 45%, var(--lg-claro2) 90%); background-size: 220% 100%;
+}
+html[data-tema="laguna"] .v2-error-kpis { color: var(--lg-amb); }
+html[data-tema="laguna"] .v2-error-kpis button { color: var(--lg-amb); border-color: currentColor; }
+@media (hover: hover) and (pointer: fine) {
+  html[data-tema="laguna"] .v2-hero:hover { background: #fff; box-shadow: 0 0 0 1px var(--lg-linea2); }
+  html[data-tema="laguna"] .v2-mini:hover { background: var(--lg-suave); }
+}
+
+/* ============================================================
+   5. Los paneles, el explorador y los avisos
+   ============================================================ */
+html[data-tema="laguna"] .v2-grid { margin-top: 20px; gap: 16px; }
+html[data-tema="laguna"] .v2-grid .panel {
+  background: #fff; border: 1px solid var(--lg-linea); border-radius: 12px; padding: 18px 20px; box-shadow: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  html[data-tema="laguna"] .v2-grid > .panel.visto:not([data-panel="explorador"]):not([data-panel="seccionales-geo"]):hover {
+    border-color: var(--lg-linea2); box-shadow: 0 16px 32px -24px color-mix(in srgb, var(--lg-azul) 45%, transparent);
+  }
+}
+html[data-tema="laguna"] .panel h3 { font-family: var(--lg-fuente); font-size: 15px; font-weight: 700; letter-spacing: 0; color: var(--lg-tinta); }
+html[data-tema="laguna"] .panel .sub { color: var(--lg-gris2); font-size: 12.5px; margin: 2px 0 12px; }
+html[data-tema="laguna"] .v2-vacio p { color: var(--lg-gris); }
+html[data-tema="laguna"] .v2-vacio-btn { box-shadow: inset 0 0 0 1px var(--lg-linea2); border: 0; font-family: var(--lg-fuente); }
+html[data-tema="laguna"] .v2-vacio-btn:hover { background: var(--lg-claro); }
+html[data-tema="laguna"] .notif-caja { border-color: var(--lg-linea); border-radius: 10px; }
+html[data-tema="laguna"] .notif-caja .n { font-family: var(--lg-fuente); font-weight: 700; }
+html[data-tema="laguna"] .sem-item { border-color: var(--lg-linea); border-radius: 10px; }
+html[data-tema="laguna"] .tabs-datos { background: var(--lg-claro); border-radius: 999px; }
+html[data-tema="laguna"] .tab-d { font-family: var(--lg-fuente); border-radius: 999px; color: var(--lg-gris); }
+html[data-tema="laguna"] .tab-d.act { color: #fff; }
+html[data-tema="laguna"] .v2-indicador { border-radius: 999px; box-shadow: none; }
+html[data-tema="laguna"] .tab-d .cnt { background: #fff; color: var(--lg-gris); }
+html[data-tema="laguna"] .tabla-exp th { color: var(--lg-gris2); border-bottom: 1px solid var(--lg-linea2); letter-spacing: .12em; }
+html[data-tema="laguna"] .tabla-exp td { border-bottom-color: var(--lg-linea); }
+html[data-tema="laguna"] .btn-ver { color: var(--lg-tinta); border-color: var(--lg-linea2); }
+html[data-tema="laguna"] .v2-tabs ~ .tabla-scroll .tabla-exp tr:hover td { background: var(--lg-suave); }
+html[data-tema="laguna"] .v2-tabs ~ .tabla-scroll .tabla-exp tr:hover td:first-child { box-shadow: none; }
+html[data-tema="laguna"] .v2-tabs ~ .tabla-scroll .tabla-exp tr:hover .btn-ver { background: var(--lg-azul); border-color: var(--lg-azul); }
+html[data-tema="laguna"] .pie-tabla button { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .tag.ok { background: var(--lg-ok-f); color: var(--lg-ok-t); }
+html[data-tema="laguna"] .tag.dif { background: var(--lg-mal-f); color: var(--lg-mal-t); }
+html[data-tema="laguna"] .tag.rev { background: var(--lg-amb-f); color: var(--lg-amb); }
+html[data-tema="laguna"] .aviso-error { background: var(--lg-amb-f); border-color: color-mix(in oklab, var(--lg-amb-p) 40%, white); color: var(--lg-amb); }
+html[data-tema="laguna"] .v2-aviso-mov { background: var(--lg-suave); box-shadow: 0 0 0 1px var(--lg-linea); color: var(--lg-tinta); }
+html[data-tema="laguna"] .v2-aviso-mas { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .mapa-controles select { font-family: var(--lg-fuente); }
+html[data-tema="laguna"] footer.dash { color: var(--lg-gris2); }
+html[data-tema="laguna"] :focus-visible { outline-color: var(--lg-negro); }
+
+/* ============================================================
+   6. El cajón de filtros, el modal "Ver" y el Asistente
+   ============================================================ */
+html[data-tema="laguna"] .v2-cajon-enc {
+  background: #fff; color: var(--lg-tinta); box-shadow: inset 0 3px 0 var(--lg-turq), 0 1px 0 var(--lg-linea);
+}
+html[data-tema="laguna"] .v2-cajon-enc h2 { font-family: var(--lg-fuente); font-size: 18px; font-weight: 700; text-transform: none; letter-spacing: 0; }
+html[data-tema="laguna"] .v2-cerrar { background: var(--lg-claro); color: var(--lg-tinta); }
+html[data-tema="laguna"] .v2-listo { background: var(--lg-turq); color: #fff; font-family: var(--lg-fuente); border-radius: 999px; }
+html[data-tema="laguna"] .v2-listo:hover { background: var(--lg-turq-h); }
+html[data-tema="laguna"] .f-label { color: var(--lg-gris); letter-spacing: .14em; }
+html[data-tema="laguna"] .cal-nav b { font-family: var(--lg-fuente); font-weight: 700; }
+html[data-tema="laguna"] .cal-nav button { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .modal-det { border-radius: 12px; }
+html[data-tema="laguna"] .modal-det h3 { font-family: var(--lg-fuente); font-weight: 700; font-size: 18px; }
+html[data-tema="laguna"] .asist-cab,
+html[data-tema="laguna"] .asist-mini-bar { background: var(--lg-azul); background-image: none; }
+html[data-tema="laguna"] .asist-cab h2 { font-family: var(--lg-fuente); font-weight: 700; }
+html[data-tema="laguna"] .asist-cab .kicker,
+html[data-tema="laguna"] .asist-mini-bar .kicker { color: var(--lg-fluor-txt); }
+
+/* ============================================================
+   7. Inicio + Salir: la pastilla blanca de /admin con Laguna
+   ============================================================ */
+html[data-tema="laguna"] .flota-sesion {
+  right: 18px; bottom: 16px; gap: 4px; padding: 5px; border-radius: 999px;
+  background: rgba(255, 255, 255, .94); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--lg-azul) 45%, transparent),
+              0 0 0 1px color-mix(in srgb, var(--lg-negro) 8%, transparent);
+}
+html[data-tema="laguna"] .flota-sesion a {
+  height: 38px; border: 0; box-shadow: none; font: 600 13.5px/1 var(--lg-fuente);
+  transition: background-color var(--mov-rapido, 180ms) var(--lg-curva);
+}
+html[data-tema="laguna"] .flota-sesion .btn-home { background: transparent; color: var(--lg-tinta); }
+html[data-tema="laguna"] .flota-sesion .btn-home svg { stroke: currentColor; width: 16px; height: 16px; stroke-width: 1.7; }
+html[data-tema="laguna"] .flota-sesion .btn-home:hover { background: var(--lg-claro); opacity: 1; }
+html[data-tema="laguna"] .flota-sesion .btn-cerrar { background: var(--lg-azul); color: #fff; }
+html[data-tema="laguna"] .flota-sesion .btn-cerrar svg { width: 15px; height: 15px; }
+html[data-tema="laguna"] .flota-sesion .btn-cerrar:hover { background: var(--lg-azul2); opacity: 1; }
+
+/* ============================================================
+   8. Con los colores del sindicato, el encabezado en su base
+   ============================================================ */
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra {
+  background: var(--marca-base-relleno, var(--marca-base)); color: #fff;
+  box-shadow: inset 0 3px 0 var(--marca-acento); border-bottom-color: transparent;
+}
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-barra .marca-nombre { color: #fff; }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-colmena { display: block; }
+html[data-tema="laguna"][data-paleta="sindicato"] .enc-c3-claro { display: none; }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-fecha { margin-right: 0; color: rgba(255, 255, 255, .72); }
+html[data-tema="laguna"][data-paleta="sindicato"] .marca-fecha strong { color: #fff; }
+
+/* ============================================================
+   9. Teléfono
+   ============================================================ */
+@media (max-width: 760px) {
+  html[data-tema="laguna"] .marca-barra { height: 62px; padding: 0 16px; }
+  html[data-tema="laguna"] .marca-logo { height: 46px; max-width: 150px; }
+  html[data-tema="laguna"] .marca-barra .marca-nombre { font-size: 21px; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 52vw; }
+  html[data-tema="laguna"] .enc-c3-claro { right: 16px; top: 21px; height: 19px; }
+  html[data-tema="laguna"] .marca-fecha { margin-right: 92px; }
+  html[data-tema="laguna"] main { padding-left: 16px; padding-right: 16px; }
+  html[data-tema="laguna"] .v2 { padding-top: 20px; }
+  html[data-tema="laguna"] body.mesa .titulo-pagina { font-size: 24px; }
+  html[data-tema="laguna"] .v2-tablero { padding: 14px; }
+  html[data-tema="laguna"] .v2-grid .panel { padding: 16px; }
+  html[data-tema="laguna"] .flota-sesion { right: 12px; bottom: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] .flota-sesion a { transition: none !important; }
+}
