@@ -4286,7 +4286,7 @@ def _preguntas_del_formulario(preguntas_json: str, modo: str):
 def abm_encuesta(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), descripcion: str = Form(""),
-    modo: str = Form("nominal"), cortes: list[str] = Form(default=[]),
+    modo: str = Form(""), cortes: list[str] = Form(default=[]),
     fecha_desde: str = Form(""), fecha_hasta: str = Form(""),
     mostrar_resultados: str = Form(""), preguntas_json: str = Form("[]"),
 ):
@@ -4294,6 +4294,15 @@ def abm_encuesta(
     _exigir_modulo(sid, "encuestas")
     uid = _uid_sesion(request)
     if modo not in encuestas.MODOS:
+        # Una encuesta NUEVA no nace nominal por no haber elegido nada
+        # (auditoría G5-26): anónima o nominal es la decisión más delicada
+        # y la pantalla ya la pide. En una edición con respuestas el campo
+        # llega deshabilitado y editar_encuesta no toca el modo.
+        if not id:
+            return RedirectResponse(
+                "/admin?error=encuesta&motivo=" + quote("Elegí si la encuesta es anónima o "
+                                                        "nominal.") + "#encuestas",
+                status_code=303)
         modo = encuestas.NOMINAL
     preguntas, error = _preguntas_del_formulario(preguntas_json, modo)
     if error:
