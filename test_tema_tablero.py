@@ -233,21 +233,13 @@ def _css_panel(comentarios=False):
     return css if comentarios else _sin_comentarios(css)
 
 
-def test_r4_01_volver_al_panel():
-    """Se entra desde la tira de /admin: «Volver al panel» lleva ahí en un
-    paso, a la izquierda de la fecha."""
+def test_r4_01_sin_volver_ni_fecha_en_el_encabezado():
+    """2026-10-25: el encabezado del Panel Sindical queda con los dos logos
+    nada más; ni «Volver» ni la fecha de hoy."""
     for tema in ("laguna", "noticiero"):
         html = _operador(tema).get("/admin/dashboard").text
-        assert re.search(r'<a class="marca-volver" href="/admin">', html), tema
-        assert html.index('id="hoy-fecha"') < html.index('class="marca-volver"')  # el parcial la pone después...
-    css = _css_panel()
-    assert ".marca-barra .marca-volver { order: 1;" in css          # ...y el CSS la lleva antes
-    assert ".marca-barra .marca-fecha { order: 2;" in css
-    assert '.marca-barra .marca-volver::after { content: "al panel"; }' in css
-    # sobre el blanco de los dos modelos, en tinta
-    for tema, hoja in HOJAS.items():
-        assert re.search(rf'html\[data-tema="{tema}"\] \.marca-volver \{{[^}}]*color: var\(--\w+-tinta\)',
-                         _sin_comentarios(hoja.read_text(encoding="utf-8"))), tema
+        assert 'class="marca-volver"' not in html, tema
+        assert 'id="hoy-fecha"' not in html, tema
 
 
 def test_r4_02_numeros_en_argentino_en_ejes_y_cuil(tmp_path):

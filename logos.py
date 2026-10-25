@@ -89,8 +89,8 @@ def recortar(datos: bytes, mime: str) -> tuple[bytes, str]:
     return salida.getvalue(), "image/jpeg"
 
 
-def recortado(clave, datos: bytes, mime: str) -> tuple[bytes, str]:
-    """`recortar` con memoria por proceso. La clave lleva el largo de los
+def recortado(clave, datos: bytes, mime: str, funcion=None) -> tuple[bytes, str]:
+    """`recortar` (o `funcion(datos, mime)`) con memoria por proceso. La clave lleva el largo de los
     bytes, el mismo sello `?v=` de las plantillas: un logo nuevo es otra
     clave y nunca se sirve el recorte del anterior."""
     k = (clave, len(datos or b""))
@@ -100,8 +100,98 @@ def recortado(clave, datos: bytes, mime: str) -> tuple[bytes, str]:
     with _candado:
         if k in _cache:
             return _cache[k]
-        r = recortar(datos, mime)
+        r = (funcion or recortar)(datos, mime)
     _cache[k] = r
     if len(_cache) > _CACHE_MAX:
         _cache.popitem(last=False)
     return r
+
+
+# ---------------------------------------------------------------------------
+# Versiones claras y oscuras de un logo a color (2026-10-25)
+#
+# Un logo se sube UNA vez, pensado para el fondo oscuro del encabezado, y a
+# veces es casi blanco: sobre las burbujas del mapa o un encabezado claro no
+# se ve. De la silueta del dibujo (su alfa, o su diferencia con el fondo liso
+# si no tiene transparencia) se arma el mismo logo en un solo color: BLANCO
+# para fondo oscuro, o el color más oscuro de la marca para fondo claro.
+# Si el archivo no deja sacar una silueta (SVG, ilegible, fondo no liso) se
+# devuelve tal cual: nunca se deja de mostrar un logo por intentar mejorarlo.
+# ---------------------------------------------------------------------------
+
+def _luminancia(hexa: str) -> float:
+    h = (hexa or "").lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        return 255.0
+    return 0.299 * r + 0.587 * g + 0.114 * b
+
+
+def color_mas_oscuro(colores, por_defecto: str = "#152238") -> str:
+    """El más oscuro (por luminancia percibida) de los colores válidos."""
+    validos = [c for c in colores if isinstance(c, str) and len(c.lstrip("#")) in (3, 6)
+               and _luminancia(c) < 255.0]
+    return min(validos, key=_luminancia) if validos else por_defecto
+
+
+def _silueta(img: Image.Image):
+    """Canal alfa (modo L) con la forma del dibujo, o None si no se puede
+    distinguir del fondo."""
+    if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+        alfa = img.convert("RGBA").getchannel("A")
+        # Un PNG con canal alfa pero opaco entero se trata como fondo liso.
+        if alfa.getextrema()[0] < 250:
+            return alfa
+    rgb = img.convert("RGB")
+    esquinas = [rgb.getpixel(p) for p in ((0, 0), (img.width - 1, 0),
+                                          (0, img.height - 1), (img.width - 1, img.height - 1))]
+    ref = esquinas[0]
+    if any(max(abs(a - b) for a, b in zip(e, ref)) > TOLERANCIA_FONDO for e in esquinas):
+        return None
+    diff = ImageChops.difference(rgb, Image.new("RGB", rgb.size, ref)).convert("L")
+    # Rampa suave (no corte duro) para conservar el antialias del borde.
+    return diff.point(lambda v: 0 if v <= TOLERANCIA_FONDO else min(255, (v - TOLERANCIA_FONDO) * 6))
+
+
+def monocromo(datos: bytes, mime: str, color: str = "#ffffff") -> tuple[bytes, str]:
+    """El logo como silueta de un solo `color`. Devuelve (datos, mime) del
+    PNG; si no se puede, lo mismo que recibió."""
+    if not datos or "svg" in (mime or "").lower():
+        return datos, mime
+    try:
+        img = Image.open(BytesIO(datos))
+        if img.width * img.height > PIXELES_MAXIMOS:
+            return datos, mime
+        img.load()
+        alfa = _silueta(img)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError, ValueError):
+        return datos, mime
+    # Una "silueta" que cubre casi todo (o nada) es un logo sin fondo
+    # distinguible: pintarla de un color sería un rectángulo.
+    ext = alfa.getextrema() if alfa else None
+    if alfa is None or ext[1] < ALFA_MINIMO:
+        return datos, mime
+    cubierto = sum(alfa.point(lambda a: 255 if a > 128 else 0).histogram()[255:]) / (img.width * img.height)
+    if cubierto > 0.92:
+        return datos, mime
+    h = color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        rgb = tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        rgb = (255, 255, 255)
+    salida_img = Image.new("RGBA", img.size, rgb + (0,))
+    salida_img.putalpha(alfa)
+    salida = BytesIO()
+    salida_img.save(salida, "PNG", optimize=True)
+    return salida.getvalue(), "image/png"
+
+
+def monocromo_recortado(clave, datos: bytes, mime: str, color: str) -> tuple[bytes, str]:
+    """`monocromo` sobre el logo ya recortado, con la misma memoria por
+    proceso de `recortado` (la clave lleva tono y color)."""
+    return recortado((clave, "mono", color), datos, mime, lambda d, m: monocromo(*recortar(d, m), color))

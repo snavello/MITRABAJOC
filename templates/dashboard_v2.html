@@ -53,11 +53,7 @@
 <body class="mesa franja">
 {% include "_entorno.html" %}
 
-{% set enc_fecha = True %}
-{# Se entra desde la tira del panel, en la misma pestaña: "Volver al panel"
-   lleva de vuelta ahí en un paso (R4-01). panel.css lo pone a la izquierda
-   de la fecha y le suma "al panel". #}
-{% set enc_volver = '/admin' %}
+{% set enc_fondo_claro = True %}
 {% include "_encabezado.html" %}
 {% if apariencia and apariencia.tema == 'laguna' %}
 {# Laguna pone el encabezado en blanco: ahí va el logo de Colm3na para fondo
@@ -70,7 +66,7 @@
    como dato para las burbujas del mapa (vacío sin logo), y la colmena del
    Asistente también: la plantilla es la que sabe el sello de cada imagen. #}
 <main class="mesa-cont" data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
-      data-hoy="{{ hoy }}" data-logo="{{ ('/logo/' ~ marca.id ~ '?v=' ~ marca.logo_v) if marca.logo else '' }}"
+      data-hoy="{{ hoy }}" data-logo="{{ ('/logo/' ~ marca.id ~ '?tono=oscuro&v=' ~ marca.logo_v) if marca.logo else '' }}"
       data-colmena="/static/colmena_dorada.webp?v={{ sello_static('colmena_dorada.webp') }}">
   <div id="panel"></div>
   <noscript><p>El Panel Sindical necesita JavaScript.</p></noscript>
