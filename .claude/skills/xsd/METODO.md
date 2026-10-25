@@ -21,16 +21,21 @@ audita después.
 
 ## Las piezas
 
+`<kit>` es la carpeta de la skill `xsd` (la que Claude Code da como
+«Base directory for this skill» al cargarla). Lo que es de cada proyecto
+vive en el proyecto, en `xsd/proyectos/<p>/`.
+
+
 | Pieza | Dónde | Qué es |
 |---|---|---|
-| Ficha del proyecto | `xsd/proyectos/<p>/ficha.json` | Lo único que cambia de un proyecto a otro: cómo se levanta, cómo se entra, qué variantes y vistas, qué leer. Plantilla en `plantillas/ficha.json`. |
+| Ficha del proyecto | `xsd/proyectos/<p>/ficha.json` | Lo único que cambia de un proyecto a otro: cómo se levanta, cómo se entra, qué variantes y vistas, qué leer. Plantilla en `<kit>/plantillas/ficha.json`. |
 | Inventario | `xsd/proyectos/<p>/pantallas.json` | Una entrada por pantalla: `id`, `app`, `nombre`, `url`, `rol`, `temas` (si tiene variantes), `js` (cómo llegar a una sub-pestaña sin ruta), `espera` (ms). |
 | Contexto | `xsd/proyectos/<p>/contexto.md` | Qué es la app, qué NO es diseño en las capturas, decisiones que no se proponen deshacer. Va adentro del encargo. |
 | Sesiones | lo que diga `sesiones.comando` | Imprime `{rol: {cookie: valor}}` recién firmadas, para una `variante` y un `quien`. Es el único código propio del proyecto. |
-| Herramientas | `xsd/herramientas/` | `xsd.py` (capturar, hoja, brief, informe, decisiones, previos, encargos, avance) y `capturar.cjs`. |
-| Encargos | `xsd/plantillas/` | Revisor, segunda vuelta y equipo que aplica. |
-| Informe | `xsd/informe/index.html` | La página, sin librerías; los datos van en `datos.json`. |
-| Avance | `xsd/mod/avance-agentes/` | Mod de Claude Code: una ventana con el plan y lo que hace cada agente. |
+| Herramientas | `<kit>/herramientas/` | `xsd.py` (capturar, hoja, brief, informe, decisiones, previos, encargos, avance) y `capturar.cjs`. |
+| Encargos | `<kit>/plantillas/` | Revisor, segunda vuelta y equipo que aplica. |
+| Informe | `<kit>/informe/index.html` | La página, sin librerías; los datos van en `datos.json`. |
+| Avance | plugin `avance-agentes` | Mod de Claude Code (opcional): una ventana con el plan y lo que hace cada agente. |
 | Historial | `xsd/proyectos/<p>/historial.md` y `vueltaN-consolidado.json` | Qué se revisó, qué se decidió y dónde está el informe. Es lo que necesita la vuelta siguiente. |
 
 Los archivos de trabajo (capturas, hallazgos, informe, decisiones) van en
@@ -58,8 +63,8 @@ Los archivos de trabajo (capturas, hallazgos, informe, decisiones) van en
 ## Fase 1: capturas
 
 ```
-python xsd/herramientas/xsd.py capturar --ficha F --corrida AAAA-MM-DD-v1
-python xsd/herramientas/xsd.py hoja     --ficha F --corrida AAAA-MM-DD-v1
+python <kit>/herramientas/xsd.py capturar --ficha F --corrida AAAA-MM-DD-v1
+python <kit>/herramientas/xsd.py hoja     --ficha F --corrida AAAA-MM-DD-v1
 ```
 
 - Con la app levantada y datos de prueba **creíbles**: una pantalla vacía no
@@ -90,7 +95,7 @@ python xsd/herramientas/xsd.py hoja     --ficha F --corrida AAAA-MM-DD-v1
 ## Fase 3: informe y decisiones
 
 ```
-python xsd/herramientas/xsd.py informe --ficha F --corrida C
+python <kit>/herramientas/xsd.py informe --ficha F --corrida C
 ```
 
 - **Publicarlo con la herramienta Artifact**:
@@ -112,7 +117,7 @@ python xsd/herramientas/xsd.py informe --ficha F --corrida C
 
   ```
   ArtifactData list  url=<informe>  collection=decisiones  out_dir=<corrida>/decisiones
-  python xsd/herramientas/xsd.py decisiones --ficha F --corrida C --desde <corrida>/decisiones
+  python <kit>/herramientas/xsd.py decisiones --ficha F --corrida C --desde <corrida>/decisiones
   ```
 
   Eso deja `consolidado.json`, y las notas de «cambio» salen impresas.
@@ -141,7 +146,7 @@ entra, y «cambio» reemplaza la sugerencia por lo que escribió la persona.
      worktree.
      - Escribir `aplicar.json` (qué prefijos o ids van a cada agente) y
        correr `xsd.py encargos`.
-     - Cada agente recibe `plantillas/brief_equipo.md` completado, con sus
+     - Cada agente recibe `<kit>/plantillas/brief_equipo.md` completado, con sus
        archivos, su puerto y su `quien`.
      - Los archivos que tocan dos agentes a la vez se reparten por zonas, con
        bloques marcados al final de las hojas.

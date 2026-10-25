@@ -4,7 +4,7 @@ Esta es una **segunda vuelta**. Primero leé el encargo de la primera, que sigue
 `{BRIEF_ORIGINAL}`.
 
 Si ese archivo no existe en esta corrida, el encargo de la primera es
-`xsd/plantillas/brief_revisor.md`, con los datos de la ficha.
+`<kit>/plantillas/brief_revisor.md`, con los datos de la ficha.
 
 ## Qué cambió desde la primera vuelta
 
