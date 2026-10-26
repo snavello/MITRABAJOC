@@ -3228,9 +3228,11 @@ async def abm_noticia(
     imagen1: UploadFile = File(None), imagen2: UploadFile = File(None),
     destino_seccionales: list[str] = Form(default=[]),
     formulario_id: str = Form(""),
+    on_top: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "noticias")
+    arriba = bool(on_top)
     formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
         destinos = _destinos_de_publicacion(request, s, destino_seccionales, sid)
@@ -3242,6 +3244,7 @@ async def abm_noticia(
                 n.fecha_desde, n.fecha_hasta = fecha_desde, fecha_hasta
                 n.destino_seccionales = destinos
                 n.formulario_id = formulario
+                n.on_top = arriba
                 if imagen1 and imagen1.filename:
                     datos, mime, _ = _leer_logo(imagen1)
                     if datos:
@@ -3265,6 +3268,7 @@ async def abm_noticia(
                 imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
                 imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
                 destino_seccionales=destinos, formulario_id=formulario,
+                on_top=arriba,
             ))
         s.commit()
     return RedirectResponse("/admin#noticias", status_code=303)

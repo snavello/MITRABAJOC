@@ -83,10 +83,12 @@ def test_g2_01_beneficio_y_novedad_sin_foto():
     html = _get(MUCHOS, "/app/inicio")
     laminas = re.findall(r'<button type="button" class="(car-sl[^"]*)"', html)
     assert laminas and all("sin-foto" in c for c in laminas), laminas
-    # las novedades de la lista: sin foto no hay miniatura de relleno
+    # las dos notas de tapa: sin foto, tipográfica (sin caja de relleno);
+    # la tercera noticia ya no va en la portada
     assert "pt-mini-ico" not in html
-    assert re.search(r'class="pt-nov pt-vid sin-foto"', html)
-    assert re.search(r'class="pt-nov pt-vid"[^>]*>\s*<span class="pt-mini-marco">', html)
+    assert re.search(r'class="pt-tapa sin-foto"', html)
+    assert re.search(r'class="pt-tapa"[^>]*>\s*<span class="pt-tapa-foto">', html)
+    assert "Sin foto vieja" not in html.split('class="pt-tapas"', 1)[1].split("</section>", 1)[0]
     # con foto, la lámina no se marca
     html = _get(POCOS, "/app/inicio")
     laminas = re.findall(r'<button type="button" class="(car-sl[^"]*)"', html)

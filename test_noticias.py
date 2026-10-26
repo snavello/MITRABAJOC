@@ -214,3 +214,41 @@ if __name__ == "__main__":
     test_borrar_noticia()
     test_formulario_para_iniciar_en_noticia()
     print("\nTodo OK — noticias.")
+
+
+def test_on_top_va_primera_mientras_este_vigente():
+    """SDN, 2026-10-26: una noticia «On top» va primera mientras esté vigente;
+    las demás, de la más nueva a la más vieja. Sin ninguna marcada, en orden."""
+    with Session(db.engine) as s:
+        for titulo, creada, arriba, hasta in (
+            ("OT vieja", "2026-01-01 09:00", False, "2999-12-31"),
+            ("OT marcada", "2026-01-02 09:00", True, "2999-12-31"),
+            ("OT nueva", "2026-01-03 09:00", False, "2999-12-31"),
+            ("OT marcada vencida", "2026-01-04 09:00", True, "2001-12-31"),
+        ):
+            s.add(Noticia(sindicato_id=SID_FEGA, titulo=titulo, fecha_desde="2000-01-01",
+                          fecha_hasta=hasta, creada=creada, on_top=arriba))
+        s.commit()
+    titulos = [n["titulo"] for n in db.noticias_vigentes(SID_FEGA) if n["titulo"].startswith("OT ")]
+    assert titulos == ["OT marcada", "OT nueva", "OT vieja"]
+    with Session(db.engine) as s:
+        n = s.exec(select(Noticia).where(Noticia.titulo == "OT marcada")).one()
+        n.on_top = False
+        s.add(n); s.commit()
+    titulos = [n["titulo"] for n in db.noticias_vigentes(SID_FEGA) if n["titulo"].startswith("OT ")]
+    assert titulos == ["OT nueva", "OT marcada", "OT vieja"]
+
+
+def test_on_top_desde_el_alta_y_la_edicion():
+    datos = {"titulo": "OT desde el panel", "fecha_desde": "2020-01-01", "fecha_hasta": "2030-12-31"}
+    assert admin_client.post("/admin/noticia", data={**datos, "on_top": "1"},
+                             follow_redirects=False).status_code == 303
+    with Session(db.engine) as s:
+        n = s.exec(select(Noticia).where(Noticia.titulo == "OT desde el panel")).one()
+        assert n.on_top
+        nid = n.id
+    # editar sin la casilla la desmarca (un checkbox sin tildar no viaja)
+    admin_client.post("/admin/noticia", data={**datos, "id": str(nid)}, follow_redirects=False)
+    with Session(db.engine) as s:
+        assert not s.get(Noticia, nid).on_top
+    assert 'id="not-on-top"' in admin_client.get("/admin").text

@@ -233,6 +233,8 @@ html[data-tema="noticiero"] .pt-tapa-leer { align-self: flex-start; margin-top: 
   text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; text-decoration-color: var(--nt-tinta-3); }
 
 /* Las otras noticias: renglones con miniatura en duotono */
+/* La segunda nota de tapa, debajo de un filete de diario. */
+html[data-tema="noticiero"] .pt-tapa + .pt-tapa { margin-top: 24px; padding-top: 18px; border-top: 2px solid var(--nt-tinta); }
 html[data-tema="noticiero"] .pt-nov-lista { margin-top: 14px; }
 html[data-tema="noticiero"] .pt-nov { display: grid; grid-template-columns: 62px 1fr; gap: 14px; margin: 0; padding: 14px 0;
   border: 0; border-top: 1px solid var(--nt-linea); border-radius: 0; background: none; backdrop-filter: none; box-shadow: none;
@@ -513,6 +515,10 @@ html[data-tema="noticiero"] .overlay-foto-grande img { border-radius: 14px; bord
   html[data-tema="noticiero"] .pt-sec-tus .pt-filas { grid-template-columns: 1fr 1fr; }
   html[data-tema="noticiero"] .pt-sec-tus .pt-rec-cta { grid-column: 2 / -1; grid-row: auto; justify-self: start; margin-top: 9px; }
   html[data-tema="noticiero"] .pt-sec-tus .pt-rec-ico { align-self: start; }
+  /* Dos notas de tapa en la columna ancha: cada una un 20% más chica. */
+  html[data-tema="noticiero"] .pt-tapa-foto { aspect-ratio: auto; height: 272px; max-height: none; }
+  html[data-tema="noticiero"] .pt-tapa-t { font-size: 42px; }
+  html[data-tema="noticiero"] .pt-tapa-b { font-size: 15px; }
 }
 
 /* ---------- Movimiento ---------- */

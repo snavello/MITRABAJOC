@@ -143,14 +143,16 @@ def test_no_hay_inicio_y_salir_flota_con_su_rotulo():
     assert m and "<span>Salir</span>" in m.group(1)
 
 
-def test_la_ultima_noticia_va_como_nota_de_tapa():
+def test_las_dos_ultimas_noticias_van_como_notas_de_tapa():
     html = _cuerpo()
     tapa = html[html.index('class="pt-tapa"'):html.index("pt-tapa-leer")]
     assert "Nota de tapa" in tapa and "La más nueva" in tapa
     assert "/noticia-imagen/" in tapa and "Lo último" in tapa
     assert "Nota vieja" not in tapa
-    # la anterior sigue, en la lista de abajo
-    assert html.index("pt-tapa-leer") < html.index("Nota vieja")
+    # la anterior es la segunda nota de tapa, sin el chip
+    tapas = html.split('class="pt-tapas"', 1)[1].split("</section>", 1)[0]
+    assert tapas.count("pt-tapa-leer") == 2 and "Nota vieja" in tapas
+    assert tapas.count("pt-tapa-chip") == 1
 
 
 def test_la_foto_de_portada_se_usa_si_hay():
