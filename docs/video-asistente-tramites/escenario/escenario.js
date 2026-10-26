@@ -58,8 +58,18 @@ function transformDe(v) {
       let op = v.op == null ? 1 : v.op;
       if (sh.fade_in && t - sh.t0 < sh.fade_in) op *= (t - sh.t0) / sh.fade_in;
       if (sh.fade_out && sh.t1 - t < sh.fade_out) op *= (sh.t1 - t) / sh.fade_out;
-      f.planos.push({ id: sh.id, clase: sh.clase, src, w, h, t: tr, op, z: sh.z || 1, reflejo: sh.reflejo });
+      // destello especular: recorre el plano durante el primer 1,6 s de la toma
+      const espec = clamp((t - sh.t0) / 1.6, 0, 1);
+      f.planos.push({ id: sh.id, clase: sh.clase, src, w, h, t: tr, op, z: sh.z || 1, reflejo: sh.reflejo, espec: espec < 1 ? espec : null });
+      if (sh.suelo) f.suelo = { x: (v.tx || 0) * 0.6, y: (sh.h / 2) * 0.72 + (v.ty || 0), s: sh.suelo };
     }
+    // luz: halos en deriva lenta, rayos que giran, pulso al compás de la música (124 BPM), flare en cada corte
+    const bpm = (TL.musica && TL.musica.bpm) || 124; const beat = (t * bpm / 60) % 1;
+    const pulso = 1 + 0.035 * Math.exp(-beat * 6);
+    let flare = 0, fx = 50, fy = 50;
+    for (const sh of TL.shots) { const d = t - sh.t0; if (d >= 0 && d < 0.55 && sh.flare !== false) { flare = Math.max(flare, 0.9 * (1 - d / 0.55)); fx = sh.fx || 50; fy = sh.fy || 45; } }
+    f.luz = { ax: 960 + 520 * Math.sin(t * 0.21), ay: 420 + 260 * Math.cos(t * 0.17), bx: 960 + 640 * Math.cos(t * 0.13 + 1), by: 760 + 220 * Math.sin(t * 0.19 + 2), rot: t * 1.7, pulso, flare, fx, fy,
+      suelo: f.suelo ? f.suelo.s : 0, sx: f.suelo ? f.suelo.x : 0, sy: f.suelo ? f.suelo.y : 0, ss: f.suelo ? 1 : 0.5 };
     for (const r of TL.rotulos || []) {
       if (t >= r.t0 - 0.05 && t <= r.t1) {
         const kin = clamp((t - r.t0) / 0.5, 0, 1), kout = clamp((r.t1 - t) / 0.4, 0, 1);

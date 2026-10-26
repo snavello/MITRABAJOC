@@ -20,6 +20,17 @@ body{position:relative;font-family:Manrope,system-ui,sans-serif;color:#fff;
 .reflejo{position:absolute;left:0;top:100%;width:100%;height:60%;transform:scaleY(-1);opacity:.22;-webkit-mask-image:linear-gradient(to top, rgba(0,0,0,.9), transparent 70%);mask-image:linear-gradient(to top, rgba(0,0,0,.9), transparent 70%);pointer-events:none}
 .reflejo img{width:100%;height:auto;display:block}
 #brillo{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.07) 50%, transparent 60%);background-size:300% 100%;opacity:0}
+.halo{position:absolute;width:1400px;height:1400px;border-radius:50%;filter:blur(90px);pointer-events:none;mix-blend-mode:screen;will-change:transform}
+#haloA{background:radial-gradient(circle, rgba(78,178,210,.34), rgba(78,178,210,0) 60%)}
+#haloB{background:radial-gradient(circle, rgba(255,176,32,.26), rgba(255,176,32,0) 60%)}
+#rayos{position:absolute;left:50%;top:50%;width:4200px;height:4200px;margin:-2100px 0 0 -2100px;pointer-events:none;opacity:.16;mix-blend-mode:screen;
+  background:conic-gradient(from 0deg, transparent 0 7%, rgba(255,255,255,.35) 8%, transparent 9% 23%, rgba(255,255,255,.22) 24%, transparent 25% 46%, rgba(255,255,255,.3) 47%, transparent 48% 71%, rgba(255,255,255,.2) 72%, transparent 73% 100%);
+  -webkit-mask-image:radial-gradient(circle, rgba(0,0,0,.9) 0, transparent 60%);mask-image:radial-gradient(circle, rgba(0,0,0,.9) 0, transparent 60%);will-change:transform}
+#flare{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(700px 400px at var(--fx,50%) var(--fy,50%), rgba(255,255,255,.55), rgba(255,210,120,.18) 35%, transparent 70%);mix-blend-mode:screen}
+.plano .espec{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg, transparent 35%, rgba(255,255,255,.16) 48%, rgba(255,255,255,.05) 52%, transparent 65%);background-size:260% 100%;background-position:120% 0;mix-blend-mode:screen;border-radius:inherit}
+.plano.telefono .espec{border-radius:46px;inset:14px}
+.plano::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.22)}
+.suelo{position:absolute;left:50%;top:50%;width:900px;height:260px;margin:-130px 0 0 -450px;border-radius:50%;filter:blur(60px);pointer-events:none;background:radial-gradient(ellipse, rgba(78,178,210,.45), rgba(255,176,32,.12) 55%, transparent 72%);mix-blend-mode:screen;will-change:transform}
 /* rótulo: dos líneas */
 #rotulo{position:absolute;left:84px;bottom:76px;max-width:1100px;opacity:0;transform:translateY(30px)}
 #rotulo .h{font:700 54px/1 Barlow;letter-spacing:3px;text-transform:uppercase;color:#fff;padding:12px 22px 10px 24px;display:inline-block;background:rgba(13,22,38,.86);border-left:8px solid #ffb020;border-radius:0 10px 10px 0}
@@ -33,8 +44,11 @@ body{position:relative;font-family:Manrope,system-ui,sans-serif;color:#fff;
 #placa p{margin:0;font-size:30px;color:#c8d2e4;text-align:center;max-width:1300px;line-height:1.4}
 #negro{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 </style></head><body>
+<div class="halo" id="haloA"></div><div class="halo" id="haloB"></div><div id="rayos"></div>
 <div class="colmena"></div>
+<div class="suelo" id="suelo"></div>
 <div id="escena"></div>
+<div id="flare"></div>
 <div class="vineta"></div>
 <div id="brillo"></div>
 <div id="rotulo"><div class="h"></div><br><div class="s"></div></div>
@@ -51,12 +65,22 @@ function plano(id, clase, w, h) {
 }
 window.render = function (f) {
   // f: { planos: [{id, clase, src, w, h, t (transform), op, reflejo}], rotulo:{h,s,k}, placa:{h,s,k}, negro, brillo }
+  if (f.luz) {
+    const L = f.luz;
+    document.getElementById('haloA').style.transform = `translate(${L.ax - 700}px, ${L.ay - 700}px) scale(${L.pulso})`;
+    document.getElementById('haloB').style.transform = `translate(${L.bx - 700}px, ${L.by - 700}px) scale(${1.06 - 0.06 * (L.pulso - 1) * 10})`;
+    document.getElementById('rayos').style.transform = `rotate(${L.rot}deg)`;
+    const fl = document.getElementById('flare'); fl.style.opacity = L.flare || 0; fl.style.setProperty('--fx', (L.fx || 50) + '%'); fl.style.setProperty('--fy', (L.fy || 50) + '%');
+    const su = document.getElementById('suelo'); su.style.opacity = L.suelo == null ? 0 : L.suelo; su.style.transform = `translate(${L.sx || 0}px, ${L.sy || 0}px) scale(${L.ss || 1})`;
+  }
   const vivos = new Set();
   for (const d of f.planos || []) {
     vivos.add(d.id);
     const p = plano(d.id, d.clase, d.w, d.h);
     const img = p.querySelector('img'); if (img.getAttribute('src') !== d.src) img.src = d.src;
     p.style.transform = d.t; p.style.opacity = d.op == null ? 1 : d.op; p.style.zIndex = d.z || 1;
+    let es = p.querySelector('.espec'); if (!es) { es = document.createElement('div'); es.className = 'espec'; p.appendChild(es); }
+    es.style.backgroundPosition = (120 - 240 * (d.espec == null ? 0 : d.espec)) + '% 0'; es.style.opacity = d.espec == null ? 0 : 1;
     let r = p.querySelector('.reflejo');
     if (d.reflejo) { if (!r) { r = document.createElement('div'); r.className = 'reflejo'; r.innerHTML = '<img>'; p.appendChild(r); } const ri = r.querySelector('img'); if (ri.getAttribute('src') !== d.src) ri.src = d.src; r.style.opacity = d.reflejo; }
     else if (r) r.remove();

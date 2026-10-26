@@ -1,0 +1,645 @@
+{
+ "duracion": 60.61,
+ "shots": [
+  {
+   "id": "port",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 2.0,
+   "t1": 8.959999999999999,
+   "fade_in": 0.5,
+   "reflejo": 0.25,
+   "z": 2,
+   "suelo": 0.9,
+   "fx": 62,
+   "fy": 40,
+   "fuente": {
+    "dir": "portada",
+    "prefijo": "p",
+    "tramos": [
+     {
+      "u0": 0,
+      "u1": 0.35,
+      "i0": 40,
+      "i1": 125
+     },
+     {
+      "u0": 0.35,
+      "u1": 1.0,
+      "i0": 125,
+      "i1": 300
+     }
+    ]
+   },
+   "cam": [
+    {
+     "t": 2.0,
+     "tx": 160,
+     "ty": 60,
+     "tz": -560,
+     "rx": 8,
+     "ry": 36,
+     "rz": -4,
+     "s": 1
+    },
+    {
+     "t": 4.6,
+     "tx": 60,
+     "ty": 10,
+     "tz": -40,
+     "rx": 2,
+     "ry": 12,
+     "rz": 0,
+     "s": 1,
+     "e": "out"
+    },
+    {
+     "t": 8.959999999999999,
+     "tx": -10,
+     "ty": -10,
+     "tz": 50,
+     "rx": -1,
+     "ry": -9,
+     "rz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 8.959999999999999,
+   "t1": 16.400000000000002,
+   "fade_in": 0.4,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 0,
+    "i1": 378
+   },
+   "cam": [
+    {
+     "t": 8.959999999999999,
+     "tx": 140,
+     "ty": 30,
+     "tz": -700,
+     "rx": 6,
+     "ry": -26,
+     "rz": 2,
+     "s": 1
+    },
+    {
+     "t": 11.36,
+     "tx": 0,
+     "ty": 0,
+     "tz": -60,
+     "rx": 0,
+     "ry": -4,
+     "rz": 0,
+     "s": 1,
+     "e": "out"
+    },
+    {
+     "t": 16.400000000000002,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "ry": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 16.400000000000002,
+   "t1": 24.1,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 378,
+    "i1": 570
+   },
+   "cam": [
+    {
+     "t": 16.400000000000002,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "ry": 0,
+     "s": 1
+    },
+    {
+     "t": 24.1,
+     "tx": 0,
+     "ty": -10,
+     "tz": 40,
+     "ry": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 24.1,
+   "t1": 29.68,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 570,
+    "i1": 813
+   },
+   "cam": [
+    {
+     "t": 24.1,
+     "tx": 0,
+     "ty": 0,
+     "tz": -140,
+     "rx": 0,
+     "ry": 12,
+     "s": 1
+    },
+    {
+     "t": 26.1,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "ry": 0,
+     "s": 1,
+     "e": "out"
+    },
+    {
+     "t": 29.68,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 29.68,
+   "t1": 32.88,
+   "fade_out": 0.6,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 813,
+    "i1": 1095
+   },
+   "cam": [
+    {
+     "t": 29.68,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "rx": 0,
+     "s": 1
+    },
+    {
+     "t": 32.88,
+     "tx": 0,
+     "ty": 0,
+     "tz": -320,
+     "rx": 20,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "piso",
+   "clase": "piso",
+   "w": 3000,
+   "h": 476,
+   "t0": 32.28,
+   "t1": 36.36,
+   "fade_in": 0.7,
+   "imagen": "frames/diagrama.png",
+   "z": 3,
+   "suelo": 0.6,
+   "cam": [
+    {
+     "t": 32.28,
+     "tx": 1500,
+     "ty": 160,
+     "tz": -900,
+     "rx": 58,
+     "ry": 0,
+     "rz": 0,
+     "s": 1.3
+    },
+    {
+     "t": 33.88,
+     "tx": 1050,
+     "ty": 110,
+     "tz": -250,
+     "rx": 55,
+     "ry": 6,
+     "rz": -2,
+     "s": 1.42,
+     "e": "out"
+    },
+    {
+     "t": 35.16,
+     "tx": -1100,
+     "ty": 80,
+     "tz": -200,
+     "rx": 51,
+     "ry": -6,
+     "rz": 2,
+     "s": 1.42
+    },
+    {
+     "t": 36.36,
+     "tx": -1550,
+     "ty": 120,
+     "tz": -700,
+     "rx": 56,
+     "ry": -10,
+     "rz": 2,
+     "s": 1.3
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 36.36,
+   "t1": 38.76,
+   "fade_in": 0.4,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 1191,
+    "i1": 1275
+   },
+   "cam": [
+    {
+     "t": 36.36,
+     "tx": 0,
+     "ty": 0,
+     "tz": -200,
+     "ry": 8,
+     "s": 1
+    },
+    {
+     "t": 38.76,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "ry": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "cel",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 38.76,
+   "t1": 44.349999999999994,
+   "fade_in": 0.4,
+   "reflejo": 0.2,
+   "z": 2,
+   "suelo": 0.8,
+   "fuente": {
+    "dir": "movil2",
+    "prefijo": "m",
+    "tramos": [
+     {
+      "u0": 0,
+      "u1": 0.25,
+      "i0": 0,
+      "i1": 0
+     },
+     {
+      "u0": 0.25,
+      "u1": 0.6,
+      "i0": 0,
+      "i1": 39
+     },
+     {
+      "u0": 0.6,
+      "u1": 1.0,
+      "i0": 39,
+      "i1": 39
+     }
+    ]
+   },
+   "cam": [
+    {
+     "t": 38.76,
+     "tx": 0,
+     "ty": 20,
+     "tz": -260,
+     "rx": 4,
+     "ry": 24,
+     "s": 1
+    },
+    {
+     "t": 44.349999999999994,
+     "tx": 0,
+     "ty": 10,
+     "tz": -40,
+     "rx": 2,
+     "ry": 10,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "cel",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 44.349999999999994,
+   "t1": 48.74999999999999,
+   "reflejo": 0.2,
+   "z": 2,
+   "suelo": 0.8,
+   "fuente": {
+    "dir": "movil2",
+    "prefijo": "m",
+    "i0": 39,
+    "i1": 180
+   },
+   "cam": [
+    {
+     "t": 44.349999999999994,
+     "tx": 0,
+     "ty": 10,
+     "tz": -40,
+     "rx": 2,
+     "ry": 10,
+     "s": 1
+    },
+    {
+     "t": 45.949999999999996,
+     "tx": 400,
+     "ty": 0,
+     "tz": 50,
+     "rx": 0,
+     "ry": -14,
+     "rz": -2,
+     "s": 1
+    },
+    {
+     "t": 48.74999999999999,
+     "tx": 420,
+     "ty": 0,
+     "tz": 90,
+     "rx": 0,
+     "ry": 0,
+     "rz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "cel",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 48.74999999999999,
+   "t1": 51.349999999999994,
+   "z": 2,
+   "suelo": 0.8,
+   "flare": false,
+   "fuente": {
+    "dir": "movil2",
+    "prefijo": "m",
+    "tramos": [
+     {
+      "u0": 0,
+      "u1": 0.5,
+      "i0": 180,
+      "i1": 249
+     },
+     {
+      "u0": 0.5,
+      "u1": 1.0,
+      "i0": 270,
+      "i1": 360
+     }
+    ]
+   },
+   "cam": [
+    {
+     "t": 48.74999999999999,
+     "tx": 420,
+     "ty": 0,
+     "tz": 90,
+     "s": 1,
+     "zs": 1,
+     "zx": 0.5,
+     "zy": 0.5
+    },
+    {
+     "t": 49.54999999999999,
+     "tx": 420,
+     "ty": 0,
+     "tz": 120,
+     "s": 1,
+     "zs": 1.3,
+     "zx": 0.5,
+     "zy": 0.6,
+     "e": "out"
+    },
+    {
+     "t": 51.349999999999994,
+     "tx": 420,
+     "ty": 0,
+     "tz": 60,
+     "s": 1,
+     "zs": 1.05,
+     "zx": 0.5,
+     "zy": 0.55
+    }
+   ]
+  },
+  {
+   "id": "band",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 51.349999999999994,
+   "t1": 54.230000000000004,
+   "fade_in": 0.4,
+   "fuente": {
+    "dir": "bandeja",
+    "prefijo": "b",
+    "i0": 0,
+    "i1": 180
+   },
+   "cam": [
+    {
+     "t": 51.349999999999994,
+     "tx": 60,
+     "ty": 20,
+     "tz": -420,
+     "rx": 4,
+     "ry": -18,
+     "s": 1
+    },
+    {
+     "t": 54.230000000000004,
+     "tx": 0,
+     "ty": 0,
+     "tz": -80,
+     "rx": 0,
+     "ry": -6,
+     "s": 1
+    }
+   ]
+  }
+ ],
+ "rotulos": [
+  {
+   "t0": 2.6,
+   "t1": 8.659999999999998,
+   "h": "Más cerca de <b>los trabajadores</b>",
+   "s": "La app del afiliado, con la marca del sindicato: recibos, credencial, novedades y gestiones electrónicas."
+  },
+  {
+   "t0": 9.559999999999999,
+   "t1": 16.200000000000003,
+   "h": "Cualquier gestión, <b>en media hora</b>",
+   "s": "Contada en lenguaje natural por alguien del sindicato: sin programar, sin intervención técnica."
+  },
+  {
+   "t0": 16.900000000000002,
+   "t1": 23.900000000000002,
+   "h": "La IA <b>la entiende</b>",
+   "s": "Quién la pide, quién la revisa, qué datos lleva y cómo termina. Lo que propone, marcado como «IA»."
+  },
+  {
+   "t0": 24.6,
+   "t1": 29.48,
+   "h": "<b>Seis preguntas</b>",
+   "s": "Con la respuesta recomendada ya puesta: un clic por cada una, o se cambia."
+  },
+  {
+   "t0": 30.08,
+   "t1": 36.06,
+   "h": "Datos, controles <b>y circuito</b>",
+   "s": "El circuito completo, actor por actor, lo arma el asistente."
+  },
+  {
+   "t0": 36.86,
+   "t1": 44.14999999999999,
+   "h": "Publicada en la app, <b>minutos después</b>",
+   "s": "Con la marca del sindicato. Un ejemplo: el kit escolar."
+  },
+  {
+   "t0": 44.849999999999994,
+   "t1": 53.93000000000001,
+   "h": "Desde el celular <b>del afiliado</b>",
+   "s": "Expediente numerado, estado a la vista, y el pedido en la bandeja del área que lo atiende."
+  }
+ ],
+ "placas": [
+  {
+   "t0": 0.0,
+   "t1": 2.2,
+   "h": "Gestiones electrónicas <b>fáciles</b>",
+   "s": "Una herramienta de última tecnología para estar más cerca de los trabajadores"
+  },
+  {
+   "t0": 54.230000000000004,
+   "t1": 60.61,
+   "h": "Gestiones electrónicas <b>fáciles</b>",
+   "s": "Colm3na · de una necesidad en palabras a una gestión digital, en media hora"
+  }
+ ],
+ "negros": [
+  {
+   "t0": 0,
+   "t1": 0.5,
+   "a0": 1,
+   "a1": 0
+  },
+  {
+   "t0": 59.71,
+   "t1": 60.61,
+   "a0": 0,
+   "a1": 1
+  }
+ ],
+ "voces": [
+  {
+   "archivo": "v3/01_cerca.mp3",
+   "t": 0.8
+  },
+  {
+   "archivo": "v3/02_media_hora.mp3",
+   "t": 9.26
+  },
+  {
+   "archivo": "v3/03_entiende.mp3",
+   "t": 16.6
+  },
+  {
+   "archivo": "v3/04_preguntas.mp3",
+   "t": 24.3
+  },
+  {
+   "archivo": "v3/05_circuito.mp3",
+   "t": 29.88
+  },
+  {
+   "archivo": "v3/06_publicada.mp3",
+   "t": 36.76
+  },
+  {
+   "archivo": "v3/07_celular.mp3",
+   "t": 44.55
+  },
+  {
+   "archivo": "v3/08_cierre.mp3",
+   "t": 54.53
+  }
+ ],
+ "musica": {
+  "archivo": "tecno.wav",
+  "desde": 0.0,
+  "volumen": 0.85,
+  "bpm": 124,
+  "secciones": [
+   [
+    0,
+    8.959999999999999,
+    "intro"
+   ],
+   [
+    8.959999999999999,
+    32.28,
+    "drop"
+   ],
+   [
+    32.28,
+    36.36,
+    "break"
+   ],
+   [
+    36.36,
+    57.11,
+    "drop"
+   ]
+  ]
+ }
+}

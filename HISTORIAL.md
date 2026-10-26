@@ -9182,3 +9182,41 @@ video.
 
 Quedan en Pruebas seis expedientes LABAKIT de Josefina (cada toma envía uno
 de verdad). Plataforma 0.58.03.
+
+### Tercera versión: un minuto, la funcionalidad y no el trámite (2026-10-26)
+
+SDN corrigió el foco: "a partir de ahora el sindicato tiene una herramienta de
+última tecnología para acercarse a sus trabajadores; no digas cómo se hacía
+antes, no queremos ofender a como se hace hoy; no es del trámite del kit, es
+de la funcionalidad de gestiones electrónicas fáciles: una gestión se puede
+digitalizar en media hora y este es un ejemplo; Vivaldi no me cierra, mezcla
+de clásico y tecno; más efectos de iluminación; bajarlo a un minuto".
+
+**El guion** pasó a ocho líneas (52 s de voz) que no mencionan papel ni
+colas: la herramienta, "cualquier gestión se digitaliza en media hora", la IA,
+las preguntas, datos y circuito, "minutos después está en la app, por ejemplo
+el kit escolar", el afiliado desde el celular y la bandeja del área, y el
+cierre "Gestiones electrónicas fáciles. Colmena". Los rótulos dicen lo mismo
+en dos líneas. No hubo que refilmar: las tomas de la segunda versión se
+recortan y aceleran desde la línea de tiempo (`armar_timeline3.py`): el
+relato tipeado va a 1,7x, las preguntas a 1,45x, los datos son un barrido de
+2,6 s antes del vuelo.
+
+**La música** no se bajó: se fabricó. `tecno.py` toma la misma grabación CC
+de "La primavera", la estira de 97 a 124 BPM sin cambiar el tono (`atempo`),
+le saca los graves (`highpass` 120 Hz) y le suma, sintetizados en numpy, un
+bombo (seno con barrido de 208 a 48 Hz), hats cerrados y abiertos (ruido
+derivado), clap (tres ráfagas de ruido), subidas de ruido antes de cada
+cambio, un sub en mi (41 Hz, la tónica de la pieza) solo donde hay bombo, y el
+**bombeo de cadena lateral** sobre las cuerdas, que es lo que lo hace sonar a
+tecno. Las secciones salen de la línea de tiempo: intro sin bombo hasta el
+asistente, drop, corte durante el vuelo del circuito, drop hasta el golpe
+final. Después `mezclar.py` la agacha debajo de la voz como antes.
+
+**La luz.** En `stage.html`: dos halos de color (agua y ámbar) en deriva
+lenta con `mix-blend-mode: screen`, rayos cónicos que giran despacio, un pulso
+al compás (124 BPM, leído de la línea de tiempo) en el halo, un destello
+blanco en cada corte, un barrido especular que recorre cada plano en su
+primer segundo y medio, un filo de luz en el borde de los planos y un
+resplandor bajo los teléfonos. Nada de eso toca las capturas: son capas
+encima y debajo. Plataforma 0.58.04.
