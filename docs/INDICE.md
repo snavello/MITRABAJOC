@@ -102,6 +102,7 @@ a SDN. **No se escribe en ningún documento.**
 | Plan Maestro Colm3na | `recursos/colm3na-plan-maestro.html` |
 | Plan de implementación en el sindicato | `recursos/colm3na-plan-implementacion-sindicato.html` |
 | Video "Recibos y Trámites" | `recursos/mi-trabajo-recibos-tramites.mp4` |
+| Video "Asistente de trámites" (30 s) | `recursos/colm3na-asistente-tramites.mp4` ← scripts en `docs/video-asistente-tramites/` |
 
 ## 3. Proyecto Claude "Mitrabajo"
 

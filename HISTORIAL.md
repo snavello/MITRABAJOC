@@ -9070,3 +9070,61 @@ privado y SDN lo hizo **público** el mismo día, para que cualquiera lo
 instale con los dos comandos de `/plugin` sin pedir acceso. `test_xsd.py` compara
 el SHA-256 de cada archivo de la copia contra los de `ORIGEN.md`, para que
 nadie la edite acá y se separe del kit.
+
+## El video "Asistente de trámites": de la idea al celular en 30 segundos (2026-10-26)
+
+Pedido de SDN: un video "muy profesional y creativo" que muestre cómo el
+Asistente de trámites convierte una necesidad en una operación digital:
+entrar con la idea de digitalizar el pedido del kit escolar, pasar por la IA,
+ver cómo pregunta en lenguaje natural y cómo se va formando el formulario,
+con cambios de ritmo, zoom y navegación 3D sobre el diagrama, hasta que la
+afiliada lo completa en el celular. Treinta segundos, música clásica rítmica
+con los cambios al compás. SDN pidió "la skill de Higgsfield que ya usamos":
+no existe ni en el repo ni en el catálogo; los dos videos anteriores se
+hicieron con **HyperFrames** (filmación cuadro por cuadro de la página real)
+y este también. Está en Recursos (`video-asistente-tramites`).
+
+**Todo es real, nada es maqueta.** Se filma sobre Pruebas con las cuentas de
+prueba: la herramienta `/entornos/herramientas/asistente-tramites` con la IA
+de verdad (tres llamadas a `/entender` durante las pruebas y la final, a
+nombre de La Bancaria, en Uso de IA) y la app del afiliado con la CUIL
+27999999994. Para que el celular tuviera algo que completar hubo que crear
+antes en La Bancaria de Pruebas el área «Acción Social» (Sede Central) y el
+formulario «Kit escolar 2027» (código LABAKIT, los campos del JSON de ejemplo
+`docs/chat/2026-10-16-ejemplo-kit-escolar.colm3na.json`, publicado y global).
+El importador no existe (D7), así que se cargó por `POST /admin/tramite-tipo`
+con los campos del ejemplo. Cada toma envía un trámite de verdad: quedaron
+cuatro expedientes LABAKIT-2026-00000x de Josefina Nieves en Pruebas.
+
+**La música.** Vivaldi, "El verano" (RV 315), tercer movimiento, Presto, en
+la grabación de John Harrison con la Wichita State University Chamber Players
+(archive.org, `The_Four_Seasons_Vivaldi-10361`, CC BY-SA 3.0; la atribución
+va en la descripción del recurso). Se usa el final del movimiento: los
+últimos 30,3 s, para que el video termine con el acorde final y no con un
+fundido inventado, como en "Panel de Control". La grilla de compases no se
+supuso: se midió sobre el audio (flujo espectral con `numpy`, `grid.py`),
+compás de 1,147 s con fase 0,26 s sobre el tema, y cada corte de escena cae en
+un compás: apertura 2 compases, asistente 18, celular 5, cierre el resto.
+Loudness −11 LUFS con pico a −1,1 dB.
+
+**Cómo se filma.** `docs/video-asistente-tramites/lib.js` es el filmador:
+instala el reloj falso de Playwright (`page.clock`), así que temporizadores,
+`Date` y `requestAnimationFrame` avanzan solo cuando se pide un cuadro; las
+animaciones y transiciones CSS, que ese reloj no controla, se pausan y se
+ubican a mano en cada cuadro con la Web Animations API
+(`document.getAnimations()`, `currentTime`). Con eso la cámara lenta de la
+pregunta 2 y el acelerado del formulario son reales. La cámara es un
+`transform` sobre el `<body>` (zoom y paneo, con límites para no mostrar el
+borde de la página) y el vuelo 3D una `perspective` + `rotateX/rotateY` sobre
+`.diagrama`; el cursor se dibuja aparte. La respuesta de la IA se **retiene**
+con `page.route` hasta el compás del corte: la IA tarda lo que tarda, pero el
+paso 2 aparece exactamente en el golpe. La fecha del `<input type=date>` sale
+en formato inglés en el Chromium headless y `--lang` no la cambia: para la
+cámara se dibuja como texto "14/03/2018" y se restaura al enviar. Los waits de
+Playwright (`waitForFunction`) no sirven con el reloj congelado: se espera
+avanzando el reloj (`Filmador.esperar`). `componer.py` arma los 909 cuadros
+finales: el celular dentro de un marco sobre el fondo de marca con colmena,
+zoom al sello ENVIADO, los rótulos ("UNA IDEA." … "EN SU CELULAR.") que
+entran al compás, y el fundido final; `ffmpeg` codifica con la música
+(libx264 CRF 18, 1080p30, AAC). Las fuentes están en git porque son solo
+scripts (sin cuadros ni música, que se bajan: ver `LEEME.md`).

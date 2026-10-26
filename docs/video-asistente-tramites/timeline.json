@@ -1,0 +1,78 @@
+{
+ "duracion": 30.3,
+ "escenas": [
+  {
+   "dir": "apertura",
+   "prefijo": "a",
+   "t0": 0.0,
+   "t1": 2.272
+  },
+  {
+   "dir": "asistente",
+   "prefijo": "a",
+   "t0": 2.272,
+   "t1": 22.918
+  },
+  {
+   "dir": "movil",
+   "prefijo": "m",
+   "t0": 22.918,
+   "t1": 28.653,
+   "telefono": true,
+   "zooms": [
+    {
+     "t0": 22.918,
+     "t1": 24.294,
+     "z0": 1.0,
+     "z1": 1.1,
+     "foco": 0.42
+    },
+    {
+     "t0": 27.391,
+     "t1": 28.079,
+     "z0": 1.1,
+     "z1": 1.38,
+     "foco": 0.5
+    }
+   ]
+  },
+  {
+   "dir": "cierre",
+   "prefijo": "c",
+   "t0": 28.653,
+   "t1": 30.3
+  }
+ ],
+ "rotulos": [
+  {
+   "t": 2.5719999999999996,
+   "texto": "UNA IDEA.",
+   "dur": 2.6
+  },
+  {
+   "t": 8.057,
+   "texto": "LA IA ENTIENDE.",
+   "dur": 2.3
+  },
+  {
+   "t": 10.695,
+   "texto": "SEIS PREGUNTAS.",
+   "dur": 2.6
+  },
+  {
+   "t": 15.283000000000001,
+   "texto": "LOS DATOS.",
+   "dur": 2.3
+  },
+  {
+   "t": 18.38,
+   "texto": "EL CIRCUITO, SOLO.",
+   "dur": 2.6
+  },
+  {
+   "t": 23.018,
+   "texto": "EN SU CELULAR.",
+   "dur": 2.6
+  }
+ ]
+}

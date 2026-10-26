@@ -60,7 +60,9 @@ TIPOS = {
 # composición (HyperFrames) para regenerarlo; acá va solo el render. El
 # video "Panel de Control" (la Sala de mando en 20 s) se regenera desde
 # disenos/video-panel-control/ (fuera de git, ver su LEEME.md); acá va la
-# versión liviana del render. La
+# versión liviana del render. El video "Asistente de trámites" (30 s) se
+# regenera con los scripts de docs/video-asistente-tramites/ (en git, sin la
+# música ni los cuadros: ver su LEEME.md). La
 # documentación técnica se regenera con docs/generador/ (lee db.py, main.py
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
@@ -234,6 +236,20 @@ SEMILLA = [
         "fecha": date(2026, 9, 22),
         "archivo": "colm3na-panel-de-control.mp4",
         "miniatura": "colm3na-panel-de-control.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "video-asistente-tramites",
+        "titulo": "Video: Asistente de trámites, de la idea al celular del afiliado",
+        "descripcion": "El kit escolar de La Bancaria, de punta a punta en 30 segundos: el relato "
+                       "en lenguaje natural, la IA que entiende, las seis preguntas, el circuito "
+                       "por actor en vuelo 3D y el formulario que la afiliada completa en su "
+                       "celular. Filmado sobre Pruebas, con la IA real. Música: Vivaldi, "
+                       "«El verano» (Presto), grabación de John Harrison con la Wichita State "
+                       "University Chamber Players (CC BY-SA 3.0). Sin locución.",
+        "fecha": date(2026, 10, 26),
+        "archivo": "colm3na-asistente-tramites.mp4",
+        "miniatura": "colm3na-asistente-tramites.jpg",
         "fragmento": "",
     },
     {
