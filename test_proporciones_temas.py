@@ -35,8 +35,10 @@ def test_en_el_telefono_inicio_y_salir_van_en_la_barra_del_nombre():
     assert re.search(r"@media \(max-width:760px\) \{\s*\.ident \{ display:grid", html)
 
 
-def test_beneficios_bajo_las_novedades_en_escritorio():
-    assert 'grid-template-areas: "nov tus" "ben tus"' in _t("portada")
+def test_beneficios_bajo_tus_cosas_en_escritorio():
+    """SDN, 2026-10-26: dos notas de tapa a la izquierda; Tus cosas y
+    Beneficios, uno debajo del otro, a la derecha."""
+    assert 'grid-template-areas: "nov tus" "nov ben"' in _t("portada")
 
 
 def test_la_portada_sin_alto_fijo_y_con_la_foto_de_perfil_junto_al_saludo():

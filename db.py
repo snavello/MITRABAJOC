@@ -952,6 +952,9 @@ class Noticia(SQLModel, table=True):
     fecha_desde: str  # AAAA-MM-DD
     fecha_hasta: str  # AAAA-MM-DD
     creada: str = ""  # fecha y hora de alta ("AAAA-MM-DD HH:MM"), para ordenar y mostrar
+    # «On top»: mientras esté vigente va primera, antes que las más nuevas
+    # (ver noticias_vigentes). Varias marcadas: entre ellas, más nueva primero.
+    on_top: bool = False
     # Hasta 2 imágenes, mismo patrón que el logo del sindicato (bytes en la
     # base, Opción B -- ver Sindicato.logo_datos).
     imagen1_datos: Optional[bytes] = Field(default=None)
@@ -4337,6 +4340,7 @@ def _noticia_a_dict(n: "Noticia") -> dict:
         "id": n.id, "sindicato_id": n.sindicato_id, "titulo": n.titulo,
         "bajada": n.bajada, "texto_completo": n.texto_completo,
         "fecha_desde": n.fecha_desde, "fecha_hasta": n.fecha_hasta, "creada": n.creada,
+        "on_top": bool(n.on_top),
         "tiene_imagen1": bool(n.imagen1_datos), "tiene_imagen2": bool(n.imagen2_datos),
         "destino_seccionales": n.destino_seccionales or [],
         "formulario_id": n.formulario_id,
@@ -4385,11 +4389,14 @@ def noticias_del_sindicato(sindicato_id: int, alcance=None) -> list:
 
 def noticias_vigentes(sindicato_id: int, seccional_id: Optional[int] = None, limite: int = None) -> list:
     """Noticias vigentes HOY de un sindicato, dirigidas a la seccional del
-    trabajador (o a todas), más recientes primero."""
+    trabajador (o a todas): primero las marcadas «On top», después las demás,
+    y dentro de cada grupo las más recientes primero."""
     hoy = fechas.hoy_texto()
     todas = noticias_del_sindicato(sindicato_id)
     vigentes = [n for n in todas if noticia_vigente(n, hoy)
                 and visible_para_seccional(n["destino_seccionales"], seccional_id)]
+    # sorted es estable: conserva el orden cronológico dentro de cada grupo.
+    vigentes = sorted(vigentes, key=lambda n: not n["on_top"])
     return vigentes[:limite] if limite else vigentes
 
 

@@ -63,17 +63,19 @@
   .pad.pt-cuerpo { padding-top: 0; padding-bottom: 0; }
   .pt-portada > .pt-sec { margin-top: 0; min-width: 0; }
   h2.pt-riel-tit { margin: 0 0 12px; }
-  /* Escritorio: Novedades y Beneficios en la columna ancha, Tus cosas en el
-     riel. Con Beneficios en el riel, la columna ancha quedaba vacía debajo
-     de las tres noticias y el riel bajaba el doble. */
+  /* Escritorio: Novedades (dos notas de tapa) en la columna ancha; Tus cosas
+     y Beneficios, uno debajo del otro, en el riel. Con una sola tapa la
+     columna ancha quedaba corta y Beneficios tenía que bajar debajo de ella. */
   @media (min-width: 1040px) {
-    .pt-portada { grid-template-areas: "nov tus" "ben tus"; grid-template-rows: auto 1fr; align-items: start; }
+    .pt-portada { grid-template-areas: "nov tus" "nov ben"; grid-template-rows: auto 1fr; align-items: start; }
     .pt-portada:not(:has(.pt-sec-nov)) { grid-template-areas: "tus ben"; grid-template-rows: auto; }
     .pt-sec-nov { grid-area: nov; } .pt-sec-tus { grid-area: tus; } .pt-sec-ben { grid-area: ben; }
     .pt-sec-tus .pt-filas { grid-template-columns: 1fr; }
   }
 
-  /* La nota de tapa: la última noticia, grande. */
+  /* Las notas de tapa: las dos últimas noticias, grandes, con un filete entre una y otra. */
+  .pt-tapas { display: grid; gap: 0; }
+  .pt-tapa + .pt-tapa { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--linea, rgba(127,127,127,.22)); }
   .pt-tapa { display: block; width: 100%; text-align: left; border: 0; padding: 0; background: none;
     font: inherit; color: inherit; cursor: pointer; }
   .pt-tapa-foto { position: relative; display: block; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
@@ -93,7 +95,6 @@
     font-weight: 650; color: var(--marca-acento); }
   .pt-tapa-leer svg, .pt-rec-cta svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none;
     stroke-linecap: round; stroke-linejoin: round; }
-  .pt-nov-lista { margin-top: 14px; }
   /* Auditoría G2-01/G2-02: lámina sin foto, contador y flechas del pie. */
   .car-sl.sin-foto { display: flex; flex-direction: column; aspect-ratio: auto; min-height: 150px; }
   .car-sl.sin-foto .car-velo { display: none; }
@@ -119,7 +120,6 @@
     .car-pf-der { order: 3; }
     .car-t { -webkit-line-clamp: 3; }
   }
-  .pt-mini-marco { display: block; flex-shrink: 0; line-height: 0; }
 
   /* Mis recibos, chica y neutra: cuántos verificó este año, nada más. */
   .pt-rec { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
@@ -463,46 +463,40 @@
   {% endif %}
 
   {# Tres secciones en el orden en que se leen en el teléfono: Novedades
-     (con la última noticia como nota de tapa), Tus cosas y Beneficios. En
+     (con dos noticias como notas de tapa), Tus cosas y Beneficios. En
      escritorio, Novedades ocupa la columna ancha y las otras dos el riel. #}
   <div class="pt-dos pt-portada">
     {% if 'noticias' in modulos %}
     <section class="sec pt-sec pt-sec-nov" aria-labelledby="pt-t-nov">
       <h2 class="pt-riel-tit" id="pt-t-nov"><span>Novedades</span>{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</h2>
       {% if noticias %}
-      {% set tapa = noticias[0] %}
-      {# La última noticia va grande, como nota de tapa: foto, fecha, título y
-         bajada. Las que siguen, en renglones con su miniatura. #}
+      {# Las dos primeras noticias (las «On top» y después las más nuevas, ver
+         db.noticias_vigentes) van grandes, como notas de tapa: foto, fecha,
+         título y bajada. Dos y no una: con una sola, la columna de noticias
+         quedaba corta al lado de Tus cosas y Beneficios. Las demás, en
+         «Ver todas»; la tercera que llega es solo para la cinta de Noticiero. #}
       {# Sin foto, la tapa es tipográfica: una caja vacía en el mejor lugar de
          la portada parece una pantalla sin terminar. #}
+      {# El chip: «Destacada» en las «On top»; «Lo último» en la más nueva de
+         las demás (la primera sin la marca: las marcadas vienen antes). #}
+      {% set n_top = noticias|selectattr('on_top')|list|length %}
+      <div class="pt-tapas">
+      {% for tapa in noticias[:2] %}
+      {% set chip = 'Destacada' if tapa.on_top else ('Lo último' if loop.index0 == n_top else '') %}
       <button type="button" class="pt-tapa{% if not tapa.tiene_imagen1 %} sin-foto{% endif %}" onclick="abrirNoticia({{ tapa.id }})">
         {% if tapa.tiene_imagen1 %}
         <span class="pt-tapa-foto">
           <img class="pt-mini" src="/noticia-imagen/{{ tapa.id }}/1" alt="">
-          <span class="pt-tapa-chip">Lo último</span>
+          {% if chip %}<span class="pt-tapa-chip">{{ chip }}</span>{% endif %}
         </span>
-        {% else %}<span class="pt-tapa-chip">Lo último</span>{% endif %}
+        {% elif chip %}<span class="pt-tapa-chip">{{ chip }}</span>{% endif %}
         <span class="pt-tapa-f num">{{ tapa.fecha_hora }}</span>
         <span class="pt-tapa-t">{{ tapa.titulo }}</span>
         {% if tapa.bajada %}<span class="pt-tapa-b">{{ tapa.bajada }}</span>{% endif %}
         <span class="pt-tapa-leer">Leer la nota<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron"/></svg></span>
       </button>
-      {% if noticias|length > 1 %}
-      <div class="pt-nov-lista">
-        {% for n in noticias[1:] %}
-        {# Auditoría G2-01: sin foto no hay miniatura de relleno (un cuadrado
-           con renglones no dice nada); el texto toma el ancho. #}
-        <button class="pt-nov pt-vid{% if not n.tiene_imagen1 %} sin-foto{% endif %}" onclick="abrirNoticia({{ n.id }})">
-          {% if n.tiene_imagen1 %}<span class="pt-mini-marco"><img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt=""></span>{% endif %}
-          <span class="pt-txt">
-            <span class="f">{{ n.fecha_hora }}</span>
-            <span class="t">{{ n.titulo }}</span>
-            {% if n.bajada %}<span class="b">{{ n.bajada }}</span>{% endif %}
-          </span>
-        </button>
-        {% endfor %}
+      {% endfor %}
       </div>
-      {% endif %}
       {% else %}
       <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
       {% endif %}

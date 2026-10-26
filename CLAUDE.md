@@ -2219,7 +2219,10 @@ levantado. Playwright es dependencia de DESARROLLO (`requirements-dev.txt`),
 Modelo `Noticia` (db.py): título, bajada, texto completo (con auto-link de
 URLs), vigencia por fecha_desde/fecha_hasta (ambas obligatorias), hasta 2
 imágenes. Admin la carga en `/admin` → Noticias. El trabajador la ve en la
-portada (hasta 3) y en la pestaña Novedades — detalle en HISTORIAL.md.
+portada (dos, como notas de tapa; la cinta de Noticiero lleva tres) y en la
+pestaña Novedades — detalle en HISTORIAL.md. **«On top»** (`Noticia.on_top`,
+2026-10-26): la marcada va primera mientras esté vigente, en la portada y en
+Novedades; las demás, de la más nueva a la más vieja (`db.noticias_vigentes`).
 
 ## Beneficios (sindicato → trabajador)
 Modelo `Beneficio` (db.py): rubro, descripción, link opcional, vigencia

@@ -9099,3 +9099,31 @@ Cómo se hizo:
     por `;` rompía el enlace entero.
   - El capturador espera a que las fotos estén decodificadas antes de capturar.
   - El preview publicado guarda en su base qué estilos van.
+
+
+## Portada con dos notas de tapa y noticias «On top» (2026-10-26, Trabajador 0.55.01, Admin 0.74.01)
+
+Pedido de SDN para balancear la portada del afiliado en los dos modelos.
+
+- **Dos notas de tapa a la izquierda, Beneficios a la derecha.** En
+  escritorio (≥1040 px) la grilla pasa de `"nov tus" "ben tus"` a
+  `"nov tus" "nov ben"`: Novedades ocupa la columna ancha entera con las dos
+  primeras noticias grandes (foto, fecha, título, bajada), separadas por un
+  filete; Tus cosas y Beneficios van uno debajo del otro en el riel. La
+  tercera noticia, que iba en un renglón chico, ya no se dibuja (sigue en
+  «Ver todas»); la portada sigue pidiendo tres porque la cinta de Noticiero
+  las usa. En el teléfono el orden no cambia.
+- **Un 20% más chicas**, igual en los dos modelos: la foto de 340 a 272 px de
+  alto (ahora alto fijo y ancho entero: con `aspect-ratio` 2:1 y tope de alto,
+  en la columna ancha la foto no llegaba al borde derecho), el título de 34 a
+  28 px en Laguna y de 52 a 42 px en Noticiero.
+- **«On top»** (`Noticia.on_top`, migración `c4f8a2d6e1b9`): casilla en el
+  paso «Cuándo y a quién» del alta. Mientras la noticia está vigente va
+  primera; entre varias marcadas, la más nueva primero; las demás siguen en
+  orden cronológico. El orden lo pone `db.noticias_vigentes` (un `sorted`
+  estable sobre la lista cronológica), así que vale igual para la portada y
+  para la pestaña Novedades. El panel muestra la marca en la lista y la
+  sigue ordenando por fecha de carga. En la portada, la marcada lleva el chip
+  «Destacada» y «Lo último» pasa a la más nueva de las demás.
+- Tests: `test_noticias.py` (orden y alta/edición), `test_tema_laguna_portada.py`,
+  `test_auditoria_afiliado.py`, `test_proporciones_temas.py`.

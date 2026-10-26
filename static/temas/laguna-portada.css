@@ -176,6 +176,8 @@ html[data-tema="laguna"] .pt-tapa-leer { margin-top: 10px; font-weight: 600; col
   border-bottom: 1px solid var(--lg-lag); padding-bottom: 1px; }
 
 /* Las otras noticias: renglones con miniatura, sin tarjeta */
+/* La segunda nota de tapa, separada de la primera por un filete. */
+html[data-tema="laguna"] .pt-tapa + .pt-tapa { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--linea); }
 html[data-tema="laguna"] .pt-nov-lista { margin-top: 14px; border-top: 1px solid var(--linea); }
 html[data-tema="laguna"] .pt-nov { gap: 14px; margin: 0; padding: 14px 0; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0;
   background: none; backdrop-filter: none; color: var(--lg-azul); }
@@ -394,7 +396,11 @@ html[data-tema="laguna"] .overlay-foto-grande { background: color-mix(in oklab, 
 @media (min-width: 1040px) {
   /* Novedades y Tus cosas, 60/40: el riel de accesos tiene que leerse. */
   html[data-tema="laguna"] .pt-dos.pt-portada { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: 48px; row-gap: 40px; }
-  html[data-tema="laguna"] .car-sl { height: 320px; }
+  /* Dos notas de tapa en la columna ancha: cada una un 20% más chica. */
+  html[data-tema="laguna"] .pt-tapa-foto { aspect-ratio: auto; height: 272px; max-height: none; }
+  html[data-tema="laguna"] .pt-tapa-t { font-size: 28px; }
+  html[data-tema="laguna"] .pt-tapa-b { font-size: 14px; }
+  html[data-tema="laguna"] .car-sl { height: 280px; }
   /* En el riel, el botón de Mis recibos baja abajo del texto. */
   html[data-tema="laguna"] .pt-sec-tus .pt-rec-cta { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
 }
