@@ -1,0 +1,70 @@
+/* fuentes: Anton:wght@400; Barlow Condensed:wght@600;700;800; Barlow:wght@400;500;600; Source Serif 4:ital,opsz,wght@1,8..60,400 */
+/* foto: persona; edificio */
+/* Tapa (modelo 7). Documental llevado a tapa de revista: la foto a sangre en duotono (gris en luminosity sobre la base,
+   el acento en screen al 30%) con zoom lento, un velo de la base arriba y abajo, la sigla en Anton con filo del acento
+   y UN titular gigante en Anton. Abajo, el sumario de la edición sobre la base. */
+.e-tapa-revista-gigante {
+  --tr-base: #14213d; --tr-acen: #f4a259; --tr-coral: #ff8a7c;
+  --fondo: #f4f5f7; --sup: #ffffff; --tinta: #14161c; --suave: #5a6070; --linea: #e2e4ea;
+  --acento: #f4a259; --acento-tinta: #14213d; --acento2: #ff8a7c; --oscuro: #14213d; --sobre-oscuro: #ffffff;
+  --f-tit: "Anton", "Barlow Condensed", "Arial Narrow", sans-serif; --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-serif: "Source Serif 4", Georgia, serif; --f-txt: "Barlow", system-ui, sans-serif; --f-num: "Anton", sans-serif;
+  --radio: 12px; --radio-btn: 9px; --curva: cubic-bezier(.33,1,.68,1);
+  background: var(--tr-base);
+}
+/* encabezado de una línea, sobre la foto: sigla en Anton con filo del acento */
+.e-tapa-revista-gigante .m-cab { position: absolute; inset: 0 0 auto; color: #fff; padding: 14px 18px; align-items: flex-start; }
+.e-tapa-revista-gigante .m-logo { color: #fff; margin-top: 4px; }
+.e-tapa-revista-gigante .m-marca { font: 400 40px/.9 var(--f-tit); letter-spacing: 1px; gap: 6px; }
+.e-tapa-revista-gigante .m-marca::before { content: ""; order: 2; display: block; height: 3px; background: var(--tr-acen); }
+.e-tapa-revista-gigante .m-marca small { order: 3; font: 700 11px/1 var(--f-cond); letter-spacing: 2.2px; text-transform: uppercase; color: rgba(255,255,255,.88); }
+.e-tapa-revista-gigante .m-yo { margin-top: 4px; background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.45); font: 700 13px/1 var(--f-cond); letter-spacing: 1px; }
+
+/* la tapa: foto a sangre en duotono con zoom lento */
+.e-tapa-revista-gigante .m-heroe { margin: 0; padding: 0; height: 486px; border-radius: 0; background: var(--tr-base); color: #fff; isolation: isolate; }
+.e-tapa-revista-gigante .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -2; overflow: hidden; background: var(--tr-base); isolation: isolate; }
+.e-tapa-revista-gigante .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.2) brightness(1.08); mix-blend-mode: luminosity; opacity: .95; object-position: 66% 28%;
+  transform-origin: 62% 40%; animation: tr-zoom 22s var(--curva) infinite alternate; }
+.e-tapa-revista-gigante .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: var(--tr-acen); mix-blend-mode: screen; opacity: .3; pointer-events: none; }
+@keyframes tr-zoom { from { transform: scale(1.02); } to { transform: scale(1.16) translate(-2%, 1%); } }
+.e-tapa-revista-gigante .tr-velo { position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(20,33,61,.7) 0%, rgba(20,33,61,0) 20%, rgba(20,33,61,0) 40%, rgba(20,33,61,.88) 68%, #14213d 100%); }
+.e-tapa-revista-gigante .tr-cont { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 18px 18px; }
+.e-tapa-revista-gigante .m-kick { margin: 0; font: 800 24px/1 var(--f-cond); letter-spacing: .5px; text-transform: uppercase; opacity: 1; animation: tr-entra .7s var(--curva) both; }
+.e-tapa-revista-gigante .m-kick b { color: var(--tr-acen); font-weight: 800; }
+/* el titular gigante */
+.e-tapa-revista-gigante .m-tit { margin: 8px 0 0; font: 400 66px/.88 var(--f-tit); letter-spacing: -.5px; text-transform: uppercase; color: #fff; text-wrap: balance;
+  animation: tr-entra .7s var(--curva) both .1s; }
+.e-tapa-revista-gigante .m-det { margin: 10px 0 0; font: italic 400 17px/1.3 var(--f-serif); color: #eef0f5; opacity: 1; animation: tr-entra .7s var(--curva) both .2s; }
+.e-tapa-revista-gigante .tr-acc { display: flex; align-items: center; gap: 14px; margin-top: 14px; animation: tr-entra .7s var(--curva) both .3s; }
+.e-tapa-revista-gigante .m-btn { min-height: 46px; padding: 0 18px; border-radius: 9px; background: var(--tr-acen); color: #14213d;
+  font: 700 17px/1 var(--f-cond); letter-spacing: .6px; text-transform: uppercase; }
+.e-tapa-revista-gigante .m-cifra { margin: 0; gap: 8px; align-items: center; }
+.e-tapa-revista-gigante .m-cifra b { font: 400 44px/.9 var(--f-num); color: var(--tr-acen); }
+.e-tapa-revista-gigante .m-cifra span { max-width: 84px; font: 700 13px/1.05 var(--f-cond); letter-spacing: .6px; text-transform: uppercase; color: #dfe3ec; opacity: 1; }
+@keyframes tr-entra { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* sumario de la edición, sobre la base */
+.e-tapa-revista-gigante .m-novs { order: 1; padding: 4px 18px 0; gap: 0; background: var(--tr-base); color: #fff; }
+.e-tapa-revista-gigante .m-sec { padding: 8px 0 8px; border-top: 1px solid rgba(255,255,255,.18); font: 700 12.5px/1 var(--f-cond); letter-spacing: 2px; color: var(--tr-acen); }
+.e-tapa-revista-gigante .m-nov { grid-template-columns: 1fr; padding: 8px 0; border-top: 1px solid rgba(255,255,255,.14); }
+.e-tapa-revista-gigante .m-nov .m-fecha { grid-row: auto; order: 2; padding: 0; font: italic 400 12.5px/1.2 var(--f-serif); color: #c4cad8; }
+.e-tapa-revista-gigante .m-nov b { font: 700 21px/1 var(--f-cond); text-transform: uppercase; }
+.e-tapa-revista-gigante .m-nov p { display: none; }
+.e-tapa-revista-gigante .m-nov-tapa { grid-template-columns: 1fr 76px; gap: 2px 12px; align-items: center; border-top: 0; }
+.e-tapa-revista-gigante .m-nov-tapa b { grid-column: 1; grid-row: 1; font-size: 27px; color: var(--tr-acen); }
+.e-tapa-revista-gigante .m-nov-tapa .m-fecha { grid-column: 1; grid-row: 2; }
+.e-tapa-revista-gigante .m-nov-tapa .m-nov-foto { grid-column: 2; grid-row: 1 / span 2; width: 76px; height: 54px; border-radius: 8px; position: relative; background: var(--tr-base); }
+.e-tapa-revista-gigante .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.15); mix-blend-mode: luminosity; opacity: .92; }
+.e-tapa-revista-gigante .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: var(--tr-acen); mix-blend-mode: screen; opacity: .3; }
+.e-tapa-revista-gigante .m-nov:not(.m-nov-tapa) b { font-size: 19px; }
+.e-tapa-revista-gigante .m-nov:not(.m-nov-tapa) .m-fecha, .e-tapa-revista-gigante .m-nov:not(.m-nov-tapa) b { grid-column: 1; }
+
+/* accesos: una fila de cuatro, en blanco, al pie */
+.e-tapa-revista-gigante .m-accesos { order: 2; grid-template-columns: repeat(4, 1fr); gap: 0; padding: 10px 8px 14px; background: var(--sup); flex: 1; align-items: start; }
+.e-tapa-revista-gigante .m-acc { min-height: 0; padding: 4px 2px; gap: 4px; justify-items: center; text-align: center; background: none; border: 0; border-radius: 0; }
+.e-tapa-revista-gigante .m-acc + .m-acc { border-left: 1px solid var(--linea); }
+.e-tapa-revista-gigante .m-ico { width: 38px; height: 38px; margin: 0; border-radius: 10px; background: var(--tr-base); color: var(--tr-acen); }
+.e-tapa-revista-gigante .m-acc b { font: 700 13.5px/1.05 var(--f-cond); text-transform: uppercase; letter-spacing: .3px; color: var(--tinta); }
+.e-tapa-revista-gigante .m-acc span { display: none; }
+.e-tapa-revista-gigante .m-benef { display: none; }

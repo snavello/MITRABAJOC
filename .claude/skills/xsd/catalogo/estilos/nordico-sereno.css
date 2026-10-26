@@ -1,0 +1,63 @@
+/* fuentes: Manrope:wght@400..800; Barlow Condensed:wght@700 */
+/* foto: equipo; calle */
+/* Nórdico sereno (Colm3na 133, ronda 7). Blanco frío, gris piedra y mucho aire; el gremio solo en detalles: la raya
+   ámbar bajo el encabezado, el resaltador bajo el nombre, el anillo del perfil, el botón y la foto teñida apenas con
+   el primario dentro de la carta. Títulos en Barlow Condensed mayúscula, todo lo demás en Manrope. Colores de la UOM. */
+.e-nordico-sereno {
+  --fondo: #f3f5f7; --sup: #ffffff; --tinta: #1b2128; --suave: #535c66; --linea: #dfe3e7;
+  --acento: #183863; --acento-tinta: #ffffff; --acento2: #f6e3b7; --oscuro: #1b2128; --sobre-oscuro: #ffffff;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num: "Manrope", system-ui, sans-serif;
+  --radio: 20px; --radio-btn: 14px; --sombra: 0 1px 2px rgba(27,33,40,.04), 0 10px 26px -18px rgba(27,33,40,.22);
+  font-size: 14px; line-height: 1.5;
+}
+.e-nordico-sereno > * { flex-shrink: 0; }
+/* encabezado de una línea, blanco, con la raya del acento del gremio */
+.e-nordico-sereno .m-cab { padding: 11px 16px 11px 18px; background: #fff; border-bottom: 1px solid #dfe3e7; }
+.e-nordico-sereno .m-cab::after { content: ""; position: absolute; left: 18px; bottom: -1px; width: 38px; height: 2px; border-radius: 2px; background: #e8a33d; }
+.e-nordico-sereno .m-logo { color: #18365f; }
+.e-nordico-sereno .m-marca { font: 700 20px/1 var(--f-tit); letter-spacing: .03em; text-transform: uppercase; }
+.e-nordico-sereno .m-marca small { font: 600 11px/1 var(--f-txt); letter-spacing: .02em; color: #535c66; }
+.e-nordico-sereno .m-yo { width: 40px; height: 40px; background: #fff; border: 1px solid #dfe3e7; color: #18365f; font: 700 12.5px/1 var(--f-txt);
+  box-shadow: 0 0 0 3px #f3f5f7, 0 0 0 4px #f6e3b7; }
+/* el saludo, con el nombre resaltado */
+.e-nordico-sereno .m-heroe { margin: 0 16px; padding: 0; border-radius: 0; background: none; color: #1b2128; overflow: visible; }
+.e-nordico-sereno .m-kick { margin: 0; padding: 20px 4px 14px; font: 700 31px/1.12 var(--f-txt); letter-spacing: -.025em; text-transform: none; opacity: 1; }
+.e-nordico-sereno .m-kick b { font-weight: 800; color: #18365f; padding: 0 2px;
+  background: linear-gradient(transparent 62%, #f6e3b7 62%, #f6e3b7 92%, transparent 92%); }
+/* la carta "empezá por acá": foto chica teñida con el primario */
+.e-nordico-sereno .nd-carta { padding: 10px; background: #fff; border: 1px solid #dfe3e7; border-radius: 20px; box-shadow: var(--sombra); }
+.e-nordico-sereno .m-heroe-foto { display: block; position: relative; height: 118px; border-radius: 14px; overflow: hidden; background: #e7ecf2; }
+.e-nordico-sereno .m-heroe-foto .m-foto { filter: grayscale(1) contrast(.94) brightness(1.08); opacity: .92; object-position: 50% 40%; }
+.e-nordico-sereno .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: #1a3d6b; mix-blend-mode: color; opacity: .48; }
+.e-nordico-sereno .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, transparent 55%, rgba(27,33,40,.28)); }
+.e-nordico-sereno .nd-cuerpo { padding: 14px 8px 4px; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; }
+.e-nordico-sereno .m-tit, .e-nordico-sereno .m-det, .e-nordico-sereno .m-btn { grid-column: 1 / -1; }
+.e-nordico-sereno .m-tit { margin: 0; font: 700 30px/1 var(--f-tit); letter-spacing: .015em; text-transform: uppercase; color: #1b2128; }
+.e-nordico-sereno .m-det { margin-top: 7px; font-size: 14px; line-height: 1.45; color: #3a424b; opacity: 1; }
+.e-nordico-sereno .m-cifra { grid-column: 1 / -1; margin: 12px 0 14px; display: flex; align-items: center; gap: 8px; }
+.e-nordico-sereno .m-cifra b { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 12.5px/1 var(--f-num);
+  background: color-mix(in srgb, #1a3d6b 7%, #fff); border: 1px solid color-mix(in srgb, #1a3d6b 24%, #fff); color: #18365f; }
+.e-nordico-sereno .m-cifra span { font-size: 13px; font-weight: 700; color: #535c66; opacity: 1; }
+.e-nordico-sereno .m-btn { width: 100%; min-height: 48px; border-radius: 14px; background: #183863; color: #fff; font: 700 15.5px/1 var(--f-txt); }
+/* accesos: cartas blancas en dos columnas, con aire */
+.e-nordico-sereno .m-accesos { gap: 10px; padding: 0 16px; margin-top: 14px; }
+.e-nordico-sereno .m-acc { position: relative; min-height: 0; padding: 12px 13px 11px; gap: 2px; border-radius: 16px; background: #fff; border-color: #dfe3e7; box-shadow: var(--sombra); }
+.e-nordico-sereno .m-ico { position: absolute; right: 10px; top: 10px; width: 28px; height: 28px; border-radius: 9px; margin: 0; background: #f3f5f7; color: #18365f; }
+.e-nordico-sereno .m-ico svg { width: 16px; height: 16px; stroke-width: 1.7; }
+.e-nordico-sereno .m-acc b { padding-right: 30px; font: 700 14px/1.25 var(--f-txt); }
+.e-nordico-sereno .m-acc span { font-size: 12px; color: #535c66; }
+/* novedades: rótulo condensado, renglón con fecha tabular */
+.e-nordico-sereno .m-novs { padding: 18px 20px 0; gap: 4px; }
+.e-nordico-sereno .m-sec { font: 700 20px/1 var(--f-tit); letter-spacing: .015em; color: #1b2128; }
+.e-nordico-sereno .m-nov { border-top: 0; padding: 6px 0 0; }
+.e-nordico-sereno .m-nov .m-fecha { font: 700 11.5px/1.3 var(--f-num); color: #535c66; font-variant-numeric: tabular-nums; }
+.e-nordico-sereno .m-nov b { font: 700 14.5px/1.3 var(--f-txt); }
+.e-nordico-sereno .m-nov p { font-size: 13px; color: #535c66; }
+.e-nordico-sereno .m-nov:not(.m-nov-tapa), .e-nordico-sereno .m-benef { display: none; }
+/* la nota con su foto chica teñida apenas con el primario */
+.e-nordico-sereno .m-nov-tapa { grid-template-columns: 62px 1fr; gap: 0 14px; align-items: start; }
+.e-nordico-sereno .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 62px; height: 62px; border-radius: 12px; position: relative; background: #e7ecf2; }
+.e-nordico-sereno .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(.95) brightness(1.07); }
+.e-nordico-sereno .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: #1a3d6b; mix-blend-mode: color; opacity: .4; }
+.e-nordico-sereno .m-nov-tapa .m-fecha, .e-nordico-sereno .m-nov-tapa b, .e-nordico-sereno .m-nov-tapa p { grid-column: 2; grid-row: auto; }

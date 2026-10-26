@@ -1,6 +1,6 @@
 ---
 name: xsd
-description: XSANDERS Design Kit — auditoría de diseño de una app entera con revisores en paralelo, informe interactivo donde la persona decide cada mejora (Aceptar / Dejar como está / Otro cambio), plan, aplicación con agentes y segunda vuelta. Usar cuando pidan revisar o auditar el diseño de un proyecto o de varias pantallas, "pasarle XSD", seguir con las decisiones de un informe de XSD, o una segunda vuelta; y cuando el usuario diga /xsd.
+description: XSANDERS Design Kit — auditoría de diseño de una app entera con revisores en paralelo, informe interactivo donde la persona decide cada mejora (Aceptar / Dejar como está / Otro cambio), plan, aplicación con agentes y segunda vuelta; y un catálogo de 60 estilos de interfaz sobre una organización de ejemplo (ACME). Usar cuando pidan revisar o auditar el diseño de un proyecto o de varias pantallas, "pasarle XSD", seguir con las decisiones de un informe de XSD, o una segunda vuelta; cuando pidan ver el catálogo de estilos («mostrame el catálogo XSD»); y cuando el usuario diga /xsd.
 ---
 
 # XSD: cómo guiar cada fase
@@ -35,6 +35,7 @@ conseguirlo en vez de seguir a medias:
 | `/xsd seguir`, «ya decidí» | Bajar las decisiones (`ArtifactData list` con `out_dir`), correr `xsd.py decisiones`, armar el plan en unas diez líneas y **esperar el visto bueno** antes de tocar código. |
 | `/xsd aplicar` | Con el visto bueno, fase 4: bloques en orden (base → compartido → puntual), agentes en worktrees, integración, tests y PR. |
 | `/xsd segunda vuelta` | Fase 5, sobre lo tocado: previos, brief de segunda vuelta, revisores, informe nuevo. |
+| `/xsd catalogo`, «mostrame el catálogo XSD» | Correr `python <kit>/catalogo/armar.py` (deja `xsd-trabajo/catalogo/index.html` y `fotos/`), publicar el artifact con la página, `files` = `fotos/*.jpg` y capabilities `{"db": {}, "user": {}}`, y dar el link. Si la persona ya tiene uno publicado (`action: "list"`), actualizar ese. Lo que marca queda en la colección `preview`. Ver `<kit>/catalogo/LEEME.md`. |
 | `/xsd estado` | Leer `historial.md` y la corrida más nueva de `xsd-trabajo/`: qué fase, qué falta decidir, qué queda por aplicar. |
 
 ## Reglas que no se negocian

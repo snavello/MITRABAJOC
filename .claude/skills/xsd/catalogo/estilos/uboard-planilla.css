@@ -1,0 +1,67 @@
+/* fuentes: Archivo Narrow:wght@500; Archivo Narrow:wght@600; Public Sans:wght@400; Public Sans:wght@500; Public Sans:wght@600 */
+/* Planilla con tablero (UBOARD C). Papel crema con reglas de planilla, barra superior negra cálida, la cuenta como cinta de
+   cifras condensadas grandes dividida por reglas verticales, accesos como filas de planilla y un naranja quemado como única señal. */
+.e-uboard-planilla {
+  --fondo: #f7f4ee; --sup: #fffdf9; --tinta: #1f1d1a; --suave: #6f6a62; --linea: #d9d2c5;
+  --acento: #eb6834; --acento-tinta: #1f1d1a; --acento2: #b34a1c; --oscuro: #1f1d1a; --sobre-oscuro: #f7f4ee;
+  --regla: #ece7dd; --caja: #e8e2d6;
+  --f-tit: "Archivo Narrow", "Arial Narrow", sans-serif; --f-txt: "Public Sans", "Segoe UI", system-ui, sans-serif; --f-num: "Archivo Narrow", sans-serif;
+  --radio: 0; --radio-btn: 3px; --sombra: none;
+  font-size: 13px;
+}
+/* barra superior negra cálida de 48px, marca condensada, la pestaña activa subrayada en naranja */
+.e-uboard-planilla .m-cab { height: 48px; padding: 0 16px; background: #1f1d1a; color: #f7f4ee; gap: 10px; }
+.e-uboard-planilla .m-logo { color: #eb6834; width: 24px; }
+.e-uboard-planilla .m-logo svg { width: 22px; height: 22px; }
+.e-uboard-planilla .m-marca { display: flex; align-items: baseline; gap: 10px; font: 600 20px/1 var(--f-tit); letter-spacing: .02em; }
+.e-uboard-planilla .m-marca small { font: 400 12px/1 var(--f-txt); letter-spacing: 0; color: #b9b2a6; }
+.e-uboard-planilla .m-yo { width: 30px; height: 30px; border-radius: 3px; background: transparent; color: #f7f4ee; border: 1px solid #6f6a62; font: 500 12px/1 var(--f-txt); }
+
+/* héroe = barra de herramientas + cinta de cifras */
+.e-uboard-planilla .m-heroe { margin: 0; padding: 0; border-radius: 0; background: #fffdf9; color: #1f1d1a; border-bottom: 1px solid #d9d2c5;
+  display: grid; grid-template-columns: minmax(0, 1fr) 118px; grid-template-areas: "kick kick" "tit cifra" "det cifra" "btn btn"; }
+.e-uboard-planilla .m-kick { grid-area: kick; display: flex; align-items: center; height: 40px; padding: 0 16px; border-bottom: 1px solid #d9d2c5;
+  font: 500 13px/1 var(--f-txt); letter-spacing: 0; text-transform: none; opacity: 1; color: #1f1d1a; }
+.e-uboard-planilla .m-kick::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #eb6834; margin-right: 8px; }
+.e-uboard-planilla .m-tit { grid-area: tit; margin: 0; padding: 14px 12px 2px 16px; border-right: 1px solid #e8e2d6;
+  font: 600 27px/1.05 var(--f-tit); letter-spacing: .005em; text-transform: none; }
+.e-uboard-planilla .m-det { grid-area: det; padding: 4px 12px 14px 16px; border-right: 1px solid #e8e2d6; font-size: 12.5px; color: #6f6a62; opacity: 1; }
+.e-uboard-planilla .m-cifra { grid-area: cifra; margin: 0; padding: 14px 16px; flex-direction: column-reverse; justify-content: flex-end; align-items: flex-start; gap: 4px; }
+.e-uboard-planilla .m-cifra span { font: 400 11px/1.25 var(--f-txt); letter-spacing: .06em; text-transform: uppercase; color: #6f6a62; opacity: 1; }
+.e-uboard-planilla .m-cifra b { font: 600 46px/1 var(--f-num); color: #1f1d1a; }
+.e-uboard-planilla .m-btn { grid-area: btn; justify-self: stretch; margin: 0; min-height: 44px; border-radius: 0; border-top: 1px solid #d9d2c5;
+  background: #eb6834; color: #1f1d1a; font: 600 15px/1 var(--f-tit); letter-spacing: .04em; text-transform: uppercase; }
+
+/* accesos como filas de planilla: ícono, título, detalle a la derecha, reglas finas */
+.e-uboard-planilla .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 12px 16px 0; padding: 0; background: #fffdf9; border: 1px solid #e8e2d6; }
+.e-uboard-planilla .m-accesos::before { content: ""; display: block; height: 3px; background: #1f1d1a; }
+.e-uboard-planilla .m-acc { grid-template-columns: 24px 1fr; grid-template-rows: auto auto; gap: 0 10px; align-items: center; min-height: 0;
+  padding: 6px 12px; background: none; border: 0; border-radius: 0; border-bottom: 1px solid #ece7dd; }
+.e-uboard-planilla .m-acc:last-child { border-bottom: 0; }
+.e-uboard-planilla .m-ico { grid-row: span 2; width: 24px; height: 24px; margin: 0; border-radius: 0; color: #b34a1c; }
+.e-uboard-planilla .m-ico svg { width: 18px; height: 18px; stroke-width: 1.7; }
+.e-uboard-planilla .m-acc b { font: 500 14px/1.2 var(--f-txt); }
+.e-uboard-planilla .m-acc span { font-size: 12px; color: #6f6a62; font-variant-numeric: tabular-nums; }
+
+/* novedades: la sección como pestaña activa con subrayado naranja de 3px, filas con fecha tabular */
+.e-uboard-planilla .m-novs { margin: 12px 16px 0; padding: 0; gap: 0; background: #fffdf9; border: 1px solid #e8e2d6; }
+.e-uboard-planilla .m-sec { justify-self: start; margin: 0 0 0 12px; padding: 11px 4px 8px; border-bottom: 3px solid #eb6834;
+  font: 600 15px/1 var(--f-tit); letter-spacing: .04em; color: #1f1d1a; }
+.e-uboard-planilla .m-nov { grid-template-columns: 52px 1fr; gap: 0 10px; padding: 8px 12px; border-top: 1px solid #ece7dd; }
+.e-uboard-planilla .m-sec + .m-nov { border-top: 1px solid #d9d2c5; }
+.e-uboard-planilla .m-nov .m-fecha { font: 500 12px/1.3 var(--f-txt); font-variant-numeric: tabular-nums; color: #6f6a62; }
+.e-uboard-planilla .m-nov b { font: 500 13.5px/1.25 var(--f-txt); }
+.e-uboard-planilla .m-nov p { font-size: 12px; color: #6f6a62; }
+.e-uboard-planilla .m-nov:not(.m-nov-tapa) p { display: none; }
+.e-uboard-planilla .m-nov-tapa .m-nov-foto { display: none; }
+
+/* beneficio en caja de gráfico */
+.e-uboard-planilla .m-benef { margin: 12px 16px 0; padding: 10px 14px; border: 1px solid #e8e2d6; border-radius: 0; background: #fffdf9; }
+.e-uboard-planilla .m-rubro { font: 600 12px/1 var(--f-tit); letter-spacing: .06em; color: #b34a1c; }
+.e-uboard-planilla .m-benef b { font: 600 16px/1.15 var(--f-tit); text-transform: uppercase; letter-spacing: .02em; }
+.e-uboard-planilla .m-benef p { color: #6f6a62; }
+/* reglas de planilla horizontales tenues sobre el papel */
+.e-uboard-planilla .d1 { inset: 48px 0 0 0; background: repeating-linear-gradient(180deg, transparent 0 27px, #ece7dd 27px 28px); opacity: .7; }
+
+/* que nada se encoja: lo que no entra se ve, no se aplasta */
+.e-uboard-planilla > * { flex-shrink: 0; }

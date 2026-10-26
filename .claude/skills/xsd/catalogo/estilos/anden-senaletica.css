@@ -1,0 +1,92 @@
+/* fuentes: Archivo:wdth,wght@62..125,400..800; Barlow Condensed:wght@600; Barlow Condensed:wght@700 */
+/* Andén (señalética de subte). Cartel oscuro con la franja de línea de 8px, la cuenta como un recorrido con estaciones,
+   accesos con insignias redondas de línea y las novedades en un tablero de partidas que cae en split-flap. Colores de la UOM. */
+.e-anden-senaletica {
+  --fondo: #e9edf2; --sup: #ffffff; --tinta: #152238; --suave: #5b6478; --linea: #e4e7ec;
+  --acento: #e8b84b; --acento-tinta: #0f2240; --acento2: #2fa88f; --oscuro: #0e1f3b; --sobre-oscuro: #ffffff;
+  --base: #0f2240; --primario: #1a3d6b; --apoyo: #2fa88f; --ok: #0d7a5f;
+  --f-tit: "Barlow Condensed", "Archivo", sans-serif; --f-txt: "Archivo", system-ui, sans-serif; --f-num: "Archivo", system-ui, sans-serif;
+  --radio: 12px; --radio-btn: 9px;
+  font-variation-settings: "wdth" 100;
+}
+/* encabezado en base, barra vertical de acento junto a la sigla, firma angosta y espaciada */
+.e-anden-senaletica .m-cab { background: #0f2240; color: #fff; height: 58px; padding: 0 16px; gap: 9px; }
+.e-anden-senaletica .m-cab::before { content: ""; width: 5px; height: 30px; border-radius: 2px; background: #e8b84b; order: -1; }
+.e-anden-senaletica .m-logo { color: #e8b84b; width: 26px; }
+.e-anden-senaletica .m-marca { font: 700 25px/1 "Barlow Condensed", sans-serif; letter-spacing: .01em; gap: 3px; }
+.e-anden-senaletica .m-marca small { font: 700 10px/1 "Archivo", sans-serif; font-variation-settings: "wdth" 70; letter-spacing: 2.2px; text-transform: uppercase;
+  color: color-mix(in srgb, #fff 66%, #0f2240); }
+.e-anden-senaletica .m-yo { background: #2fa88f; color: #0f2240; border: 0; font: 700 14px/1 "Barlow Condensed", sans-serif; }
+
+/* héroe propio: cartel + tarjeta con el recorrido */
+.e-anden-senaletica .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-anden-senaletica .an-cartel { background: #0e1f3b; color: #fff; padding: 0 16px 28px; }
+.e-anden-senaletica .an-cartel::before { content: ""; display: block; height: 8px; margin: 0 -16px 12px; background: #1a3d6b;
+  box-shadow: inset 0 -2px 0 #122b4b; }
+.e-anden-senaletica .m-kick { font: 700 38px/.95 "Barlow Condensed", sans-serif; letter-spacing: .2px; text-transform: uppercase; opacity: 1; }
+.e-anden-senaletica .an-tarjeta { position: relative; margin: -18px 14px 0; background: #fff; border-radius: 12px; padding: 13px 16px 12px;
+  box-shadow: 0 1px 0 #d6dce4, 0 10px 24px -14px rgba(15,34,64,.35); }
+.e-anden-senaletica .m-tit { margin: 0; font: 700 29px/1 "Barlow Condensed", sans-serif; text-transform: uppercase; color: #152238; }
+.e-anden-senaletica .m-det { margin: 4px 0 0; font-size: 12.5px; color: #5b6478; opacity: 1; }
+.e-anden-senaletica .an-recorrido { position: relative; height: 26px; margin: 12px 0 10px; }
+.e-anden-senaletica .an-via { position: absolute; left: 10px; right: 10px; top: 9px; height: 6px; border-radius: 3px; background: #1a3d6b; }
+.e-anden-senaletica .an-est { position: absolute; top: 0; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #fff;
+  border: 3px solid #0d7a5f; display: grid; place-items: center; animation: e-an-flap .5s cubic-bezier(.33,1,.68,1) both; }
+.e-anden-senaletica .an-est svg { width: 13px; height: 13px; fill: none; stroke: #0d7a5f; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.e-anden-senaletica .an-term { background: #0f2240; border-color: #0f2240; }
+.e-anden-senaletica .an-fin { background: #0d7a5f; }
+.e-anden-senaletica .an-fin svg { stroke: #fff; }
+.e-anden-senaletica .an-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid #e4e7ec; }
+.e-anden-senaletica .m-cifra { margin: 0; gap: 6px; }
+.e-anden-senaletica .m-cifra b { font: 700 30px/1 "Barlow Condensed", sans-serif; color: #152238; }
+.e-anden-senaletica .m-cifra span { font-size: 12.5px; color: #5b6478; opacity: 1; max-width: 9ch; line-height: 1.15; }
+.e-anden-senaletica .m-btn { min-height: 42px; padding: 0 14px; font: 700 14.5px/1 "Archivo", sans-serif; gap: 8px; }
+.e-anden-senaletica .m-btn::after { content: ""; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+/* accesos: lista blanca con insignias de línea redondas y flecha en círculo */
+.e-anden-senaletica .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 10px 14px 0; padding: 0; background: #fff; border-radius: 12px;
+  overflow: hidden; box-shadow: 0 1px 0 #d6dce4; }
+.e-anden-senaletica .m-acc { grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0;
+  padding: 7px 12px; background: none; border: 0; border-radius: 0; }
+.e-anden-senaletica .m-acc + .m-acc { border-top: 1px solid #e4e7ec; }
+.e-anden-senaletica .m-ico { grid-row: span 2; width: 34px; height: 34px; margin: 0; border-radius: 50%; background: #1a3d6b; color: #fff; }
+.e-anden-senaletica .m-acc:nth-child(even) .m-ico { background: #2fa88f; color: #0f2240; }
+.e-anden-senaletica .m-ico svg { width: 18px; height: 18px; stroke-width: 1.9; }
+.e-anden-senaletica .m-acc b { font: 700 17px/1.05 "Barlow Condensed", sans-serif; text-transform: uppercase; }
+.e-anden-senaletica .m-acc span { font-size: 11.5px; color: #5b6478; }
+.e-anden-senaletica .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 26px; height: 26px; border-radius: 50%;
+  background: #eef1f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a3d6b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / 14px no-repeat; }
+
+/* novedades: tablero de partidas oscuro con subrayado de acento y filas que caen en split-flap */
+.e-anden-senaletica .m-novs { margin: 10px 14px 0; padding: 0; gap: 0; background: #0e1f3b; color: #fff; border-radius: 12px; overflow: hidden; perspective: 600px; }
+.e-anden-senaletica .m-sec { padding: 9px 14px 7px; border-bottom: 2px solid #e8b84b; font: 700 19px/1 "Barlow Condensed", sans-serif; letter-spacing: 0; color: #fff; }
+.e-anden-senaletica .m-nov { grid-template-columns: 26px 1fr 44px; gap: 0 10px; align-items: center; padding: 7px 14px; border-top: 1px solid #22324d;
+  transform-origin: 50% 0; animation: e-an-flap .5s cubic-bezier(.33,1,.68,1) both; }
+.e-anden-senaletica .m-sec + .m-nov { border-top: 0; }
+.e-anden-senaletica .m-nov:nth-of-type(2) { animation-delay: .17s; }
+.e-anden-senaletica .m-nov::before { grid-column: 1; grid-row: 1 / span 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 14px/1 "Barlow Condensed", sans-serif; background: #e8b84b; color: #0f2240; content: "A"; }
+.e-anden-senaletica .m-nov:not(.m-nov-tapa)::before { content: "N"; background: #2fa88f; color: #0f2240; }
+.e-anden-senaletica .m-nov-tapa .m-nov-foto { display: none; }
+.e-anden-senaletica .m-nov b { grid-column: 2; grid-row: 1; font: 600 13.5px/1.2 "Archivo", sans-serif; }
+.e-anden-senaletica .m-nov p { display: none; }
+.e-anden-senaletica .m-nov .m-fecha { grid-column: 3; grid-row: 1 / span 2; justify-self: end; min-width: 0; padding: 0; text-align: right;
+  font: 600 11.5px/1.1 "Archivo", sans-serif; font-variation-settings: "wdth" 75; color: #c2cad6; text-transform: uppercase; }
+@keyframes e-an-flap { from { opacity: 0; transform: rotateX(-80deg); } to { opacity: 1; transform: none; } }
+
+/* beneficio con banda de color por rubro */
+.e-anden-senaletica .m-benef { margin: 10px 14px 0; padding: 0 0 9px; border: 0; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 1px 0 #d6dce4; gap: 0; }
+.e-anden-senaletica .m-rubro { display: flex; align-items: center; height: 22px; padding: 0 12px; background: #2fa88f; color: #0f2240;
+  font: 800 9.5px/1 "Archivo", sans-serif; letter-spacing: 1.1px; margin-bottom: 6px; }
+.e-anden-senaletica .m-benef b, .e-anden-senaletica .m-benef p { padding: 0 12px; }
+.e-anden-senaletica .m-benef b { font: 700 13.5px/1.2 "Archivo", sans-serif; }
+.e-anden-senaletica .m-benef p { font-size: 11.5px; color: #5b6478; }
+/* franja de línea de 8px al pie */
+.e-anden-senaletica .d3 { inset: auto 0 0 0; height: 8px; background: #1a3d6b; z-index: 0; }
+@media (prefers-reduced-motion: reduce) { .e-anden-senaletica .m-nov, .e-anden-senaletica .an-est { animation: none; } }
+
+/* que nada se encoja: lo que no entra se ve, no se aplasta */
+.e-anden-senaletica > * { flex-shrink: 0; }
+.e-anden-senaletica .m-kick b { color: #e8b84b; font-weight: 700; }

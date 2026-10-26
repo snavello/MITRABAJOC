@@ -1,0 +1,93 @@
+/* fuentes: Barlow Condensed:wght@600;700; Hanken Grotesk:wght@400;500;600;700 */
+/* foto: equipo; calle */
+/* Movimiento sereno (modelo 66). Todo claro y quieto; al aparecer, cada pieza entra con un fundido y sube 8px,
+   80 ms después de la anterior. En la portada, el «video» del gremio: chico, silencioso y teñido dentro de una tarjeta
+   (acá la foto, con un acercamiento lento que no termina de detenerse). */
+.e-movimiento-sereno {
+  --fondo: #f0f1f1; --sup: #ffffff; --tinta: #171a21; --suave: #555c6b; --linea: #e3e5ea; --linea-2: #eef0f3;
+  --acento: #183863; --acento-tinta: #ffffff; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --marca-txt: #183762; --suave-marca: #eff1f5; --primario: #1a3d6b; --ok: #0d7a5f; --gris-2: #6a7180;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Hanken Grotesk", system-ui, sans-serif; --f-num: "Barlow Condensed", sans-serif;
+  --radio: 18px; --radio-btn: 12px;
+  --sombra: 0 1px 2px rgba(15,34,64,.06), 0 10px 24px -18px rgba(15,34,64,.3);
+  --ms-curva: cubic-bezier(.22,.61,.36,1);
+}
+/* encabezado claro de una línea con la pestañita de acento abajo a la izquierda */
+.e-movimiento-sereno .m-cab { background: #fff; box-shadow: inset 0 -1px 0 var(--linea); padding: 12px 18px; }
+.e-movimiento-sereno .m-cab::after { content: ""; position: absolute; left: 18px; bottom: 0; width: 46px; height: 3px; border-radius: 3px 3px 0 0; background: var(--acento2); }
+.e-movimiento-sereno .m-logo { color: var(--oscuro); }
+.e-movimiento-sereno .m-marca { font: 700 14.5px/1.2 var(--f-txt); letter-spacing: 0; }
+.e-movimiento-sereno .m-marca small { font: 600 13px/1.2 var(--f-txt); color: var(--suave); letter-spacing: 0; }
+.e-movimiento-sereno .m-yo { background: var(--suave-marca); color: var(--marca-txt); border: 0; font-weight: 700; }
+
+.e-movimiento-sereno .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-movimiento-sereno .m-kick { margin: 22px 20px 0; font: 700 42px/1 var(--f-tit); letter-spacing: .2px; text-transform: uppercase; opacity: 1; color: var(--tinta); }
+.e-movimiento-sereno .m-kick span { color: var(--marca-txt); }
+.e-movimiento-sereno .ms-carta { background: #fff; border-radius: 18px; box-shadow: var(--sombra); border: 1px solid var(--linea-2); }
+/* el clip: foto en gris teñida con el primario del gremio, dentro de la tarjeta */
+.e-movimiento-sereno .ms-clip-carta { margin: 16px 16px 0; padding: 10px; }
+.e-movimiento-sereno .m-heroe-foto { display: block; position: relative; height: 138px; border-radius: 12px; overflow: hidden; background: #d8dfe9; isolation: isolate; }
+.e-movimiento-sereno .m-heroe-foto .m-foto { position: absolute; inset: 0; filter: grayscale(1) contrast(.94) brightness(1.08); opacity: .92;
+  object-position: 50% 45%; transform-origin: 62% 40%; }
+.e-movimiento-sereno .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: var(--primario); mix-blend-mode: color; opacity: .5; }
+.e-movimiento-sereno .ms-clip-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 6px 3px; }
+.e-movimiento-sereno .m-tit { margin: 0; font: 700 15px/1.25 var(--f-txt); color: var(--tinta); }
+.e-movimiento-sereno .m-det { margin: 1px 0 0; font-size: 13px; color: var(--suave); opacity: 1; }
+.e-movimiento-sereno .ms-vivo { width: 7px; height: 7px; border-radius: 50%; background: var(--acento2); flex: none; margin-right: 6px;
+  box-shadow: 0 0 0 3px rgba(232,184,75,.22); }
+.e-movimiento-sereno .ms-recibo { margin: 12px 16px 0; padding: 14px 16px 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.e-movimiento-sereno .m-cifra { margin: 0; gap: 10px; align-items: baseline; }
+.e-movimiento-sereno .m-cifra b { font: 700 52px/.95 var(--f-num); font-variant-numeric: tabular-nums; color: var(--tinta); }
+.e-movimiento-sereno .m-cifra span { font-size: 15px; font-weight: 600; line-height: 1.2; color: var(--suave); opacity: 1; max-width: 92px; }
+.e-movimiento-sereno .m-btn { height: 42px; min-height: 0; padding: 0 16px; font: 700 14.5px/1 var(--f-txt); border-radius: 10px; transition: transform .14s var(--ms-curva); }
+.e-movimiento-sereno .m-btn:active { transform: scale(.98); }
+
+/* lo tuyo: una carta de filas */
+.e-movimiento-sereno .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 12px 16px 0; padding: 4px 0; background: #fff; border-radius: 18px;
+  box-shadow: var(--sombra); border: 1px solid var(--linea-2); }
+.e-movimiento-sereno .m-acc { grid-template-columns: 36px 1fr; grid-template-rows: auto auto; gap: 0 14px; align-items: center; min-height: 0;
+  padding: 8px 16px; background: none; border: 0; border-radius: 0; }
+.e-movimiento-sereno .m-acc + .m-acc { border-top: 1px solid var(--linea-2); }
+.e-movimiento-sereno .m-ico { grid-row: span 2; width: 36px; height: 36px; border-radius: 11px; margin: 0; background: var(--suave-marca); color: var(--marca-txt); }
+.e-movimiento-sereno .m-acc b { font: 700 15px/1.25 var(--f-txt); }
+.e-movimiento-sereno .m-acc span { font-size: 12.5px; color: var(--suave); display: flex; align-items: center; gap: 7px; }
+.e-movimiento-sereno .m-acc span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+.e-movimiento-sereno .m-acc:first-child span::before, .e-movimiento-sereno .m-acc:nth-child(2) span::before { background: var(--acento2); }
+.e-movimiento-sereno .m-novs { padding: 20px 16px 0; gap: 8px; }
+.e-movimiento-sereno .m-sec { margin: 0 4px; font: 700 22px/1 var(--f-tit); letter-spacing: .4px; text-transform: uppercase; color: var(--tinta); }
+.e-movimiento-sereno .m-nov { background: #fff; border: 1px solid var(--linea-2); border-radius: 18px; padding: 12px 14px; box-shadow: var(--sombra); grid-template-columns: 52px 1fr; }
+.e-movimiento-sereno .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 52px; height: 52px; border-radius: 10px; position: relative; isolation: isolate; }
+.e-movimiento-sereno .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(.94) brightness(1.08); }
+.e-movimiento-sereno .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: var(--primario); mix-blend-mode: color; opacity: .5; }
+.e-movimiento-sereno .m-nov-tapa .m-fecha { grid-column: 2; grid-row: auto; padding: 0; }
+.e-movimiento-sereno .m-nov-tapa b, .e-movimiento-sereno .m-nov-tapa p { grid-column: 2; }
+.e-movimiento-sereno .m-nov .m-fecha { color: var(--marca-txt); font: 700 12.5px/1.2 var(--f-txt); }
+.e-movimiento-sereno .m-nov b { font: 700 15px/1.25 var(--f-txt); }
+.e-movimiento-sereno .m-benef { margin: 10px 16px 16px; background: #fff; border: 1px solid var(--linea-2); border-radius: 18px; box-shadow: var(--sombra); }
+.e-movimiento-sereno .m-rubro { color: var(--marca-txt); }
+
+/* ——— el movimiento ——— */
+/* ambiente: el clip nunca está del todo quieto (acercamiento lento, 26 s ida y vuelta) y el punto del gremio respira */
+@keyframes e-movimiento-sereno-clip { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.16) translate(-2.5%, 1.5%); } }
+@keyframes e-movimiento-sereno-vivo { 0%, 100% { box-shadow: 0 0 0 3px rgba(232,184,75,.22); } 50% { box-shadow: 0 0 0 6px rgba(232,184,75,.06); } }
+.e-movimiento-sereno .m-heroe-foto .m-foto { animation: e-movimiento-sereno-clip 13s ease-in-out infinite alternate; }
+.e-movimiento-sereno .ms-vivo { animation: e-movimiento-sereno-vivo 3.2s ease-in-out infinite; }
+/* entrada: fundido y 8px hacia arriba, una pieza cada 80 ms */
+@keyframes e-movimiento-sereno-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .e-movimiento-sereno :is(.m-cab, .m-kick, .ms-clip-carta, .ms-recibo, .m-acc, .m-sec, .m-nov, .m-benef) { opacity: 0; transform: translateY(8px); }
+  .e-movimiento-sereno.en-vista :is(.m-cab, .m-kick, .ms-clip-carta, .ms-recibo, .m-acc, .m-sec, .m-nov, .m-benef) {
+    animation: e-movimiento-sereno-entra .72s var(--ms-curva) forwards; animation-delay: calc(var(--ms-i, 0) * 80ms + 60ms); }
+  .e-movimiento-sereno .m-kick { --ms-i: 1; } .e-movimiento-sereno .ms-clip-carta { --ms-i: 2; } .e-movimiento-sereno .ms-recibo { --ms-i: 3; }
+  .e-movimiento-sereno .m-acc:nth-child(1) { --ms-i: 4; } .e-movimiento-sereno .m-acc:nth-child(2) { --ms-i: 5; }
+  .e-movimiento-sereno .m-acc:nth-child(3) { --ms-i: 6; } .e-movimiento-sereno .m-acc:nth-child(4) { --ms-i: 7; }
+  .e-movimiento-sereno .m-sec { --ms-i: 8; } .e-movimiento-sereno .m-nov { --ms-i: 9; } .e-movimiento-sereno .m-nov + .m-nov { --ms-i: 10; }
+  .e-movimiento-sereno .m-benef { --ms-i: 11; }
+  /* el clip además se revela desde su centro, como un video que se enciende */
+  .e-movimiento-sereno .m-heroe-foto { clip-path: inset(18% 22% round 12px); }
+  .e-movimiento-sereno.en-vista .m-heroe-foto { animation: e-movimiento-sereno-revela 1.1s cubic-bezier(.16,1,.3,1) .3s forwards; }
+}
+@keyframes e-movimiento-sereno-revela { from { clip-path: inset(18% 22% round 12px); } to { clip-path: inset(0 0 round 12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .e-movimiento-sereno *, .e-movimiento-sereno *::before, .e-movimiento-sereno *::after { animation: none !important; transition: none !important; }
+}

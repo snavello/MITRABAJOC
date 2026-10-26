@@ -1,0 +1,116 @@
+/* fuentes: Barlow Condensed:wght@600;700; Work Sans:wght@400;500;600 */
+/* foto: tecnico; calle */
+/* Mosaico (baldosa calcárea). El piso del sindicato de barrio: cemento, losas claras separadas por la pastina
+   y la baldosa dibujada con los cuatro colores del gremio (UOM: base #0f2240, primario #1a3d6b, acento #e8b84b, apoyo #2fa88f).
+   El movimiento es el del colocador: la guarda se tiende de a una baldosa y la pared de doce meses se arma pieza por pieza
+   (las cuatro esquinas, el rombo, el punto del centro). */
+.e-mosaico-baldosa-calcarea {
+  --fondo: #e2e3e0; --sup: #f7f7f5; --tinta: #1d2330; --suave: #4f5766; --linea: #c9cac4;
+  --acento: #e8b84b; --acento-tinta: #0f2240; --acento2: #1a3d6b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --cemento: #e2e3e0; --cemento-2: #d5d6d1; --losa: #f7f7f5; --pastina: #c9cac4; --b-fondo: #dbe9e4; --primario: #1a3d6b;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Work Sans", system-ui, sans-serif; --f-num: "Barlow Condensed", sans-serif;
+  --radio: 12px; --radio-btn: 9px;
+  --mo-curva: cubic-bezier(.16,1,.3,1);
+}
+/* encabezado oscuro: sigla con subrayado de acento de 3px */
+.e-mosaico-baldosa-calcarea .m-cab { background: var(--oscuro); color: #fff; padding: 12px 18px 11px; }
+.e-mosaico-baldosa-calcarea .m-logo { color: var(--acento); }
+.e-mosaico-baldosa-calcarea .m-marca { font: 700 25px/1 var(--f-tit); letter-spacing: .6px; grid-auto-flow: column; align-items: end; gap: 10px; }
+.e-mosaico-baldosa-calcarea .m-marca::before { content: none; }
+.e-mosaico-baldosa-calcarea .m-marca { padding-bottom: 4px; background: linear-gradient(var(--acento), var(--acento)) 0 100% / 52px 3px no-repeat; }
+.e-mosaico-baldosa-calcarea .m-marca small { font: 500 10.5px/1.3 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; color: #b9c2d0; }
+.e-mosaico-baldosa-calcarea .m-yo { background: var(--acento); color: var(--acento-tinta); border: 0; font: 700 14px/1 var(--f-tit); letter-spacing: .5px; }
+
+/* banda oscura con el saludo y la losa clara del héroe apoyada encima */
+.e-mosaico-baldosa-calcarea .m-heroe { margin: 0; padding: 0 0 4px; border-radius: 0; color: var(--tinta);
+  background: linear-gradient(var(--oscuro) 0 118px, transparent 118px); overflow: visible; }
+.e-mosaico-baldosa-calcarea .mo-guarda { display: block; width: 100%; height: 14px; }
+.e-mosaico-baldosa-calcarea .m-kick { margin: 12px 18px 12px; font: 700 38px/1 var(--f-tit); letter-spacing: 0; text-transform: none; color: #fff; opacity: 1; }
+.e-mosaico-baldosa-calcarea .m-kick em { font-style: normal; color: var(--acento); }
+.e-mosaico-baldosa-calcarea .mo-losa { margin: 0 14px; padding: 14px 14px 14px; background: var(--losa); border-radius: 12px;
+  box-shadow: 0 10px 24px -12px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.6); }
+.e-mosaico-baldosa-calcarea .m-tit { margin: 0; font: 700 34px/1 var(--f-tit); color: var(--tinta); }
+.e-mosaico-baldosa-calcarea .m-det { margin: 4px 0 12px; font-size: 13px; color: var(--suave); opacity: 1; }
+/* la pared: doce baldosas sobre la pastina */
+.e-mosaico-baldosa-calcarea .mo-pared { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; padding: 3px;
+  background: var(--pastina); border-radius: 3px; }
+.e-mosaico-baldosa-calcarea .mo-cel { display: block; background: var(--cemento); }
+.e-mosaico-baldosa-calcarea .mo-b { display: block; width: 100%; aspect-ratio: 1; }
+.e-mosaico-baldosa-calcarea .mo-bf, .e-mosaico-baldosa-calcarea .mo-ri { fill: var(--b-fondo); }
+.e-mosaico-baldosa-calcarea .mo-q { fill: var(--primario); transform-box: view-box; }
+.e-mosaico-baldosa-calcarea .mo-q1 { transform-origin: 0 0; } .e-mosaico-baldosa-calcarea .mo-q2 { transform-origin: 40px 0; }
+.e-mosaico-baldosa-calcarea .mo-q3 { transform-origin: 40px 40px; } .e-mosaico-baldosa-calcarea .mo-q4 { transform-origin: 0 40px; }
+.e-mosaico-baldosa-calcarea .mo-r { fill: var(--acento); transform-box: view-box; transform-origin: 20px 20px; }
+.e-mosaico-baldosa-calcarea .mo-c { fill: var(--oscuro); transform-box: view-box; transform-origin: 20px 20px; }
+.e-mosaico-baldosa-calcarea .mo-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.e-mosaico-baldosa-calcarea .m-cifra { margin: 0; gap: 6px; }
+.e-mosaico-baldosa-calcarea .m-cifra b { font: 700 34px/1 var(--f-num); color: var(--tinta); }
+.e-mosaico-baldosa-calcarea .m-cifra span { font-size: 12.5px; line-height: 1.2; color: var(--suave); opacity: 1; max-width: 76px; }
+.e-mosaico-baldosa-calcarea .m-btn { min-height: 44px; padding: 0 18px; font-family: var(--f-txt); font-weight: 600; }
+
+/* accesos: cuatro losas separadas por la pastina */
+.e-mosaico-baldosa-calcarea .m-accesos { margin: 12px 14px 0; padding: 2px; gap: 2px; background: var(--pastina); border-radius: 12px; overflow: hidden; }
+.e-mosaico-baldosa-calcarea .m-acc { background: var(--losa); border: 0; border-radius: 0; min-height: 0; padding: 11px 12px; }
+.e-mosaico-baldosa-calcarea .m-ico { width: 30px; height: 30px; border-radius: 3px; background: var(--b-fondo); color: var(--primario); margin-bottom: 5px; }
+.e-mosaico-baldosa-calcarea .m-acc b { font: 700 18px/1.05 var(--f-tit); }
+.e-mosaico-baldosa-calcarea .m-acc span { font-size: 11.5px; color: var(--suave); }
+/* novedades: losas en una caja de pastina, con baldosita como marca */
+.e-mosaico-baldosa-calcarea .m-novs { padding: 14px 14px 0; gap: 8px; }
+.e-mosaico-baldosa-calcarea .m-sec { font: 700 21px/1 var(--f-tit); letter-spacing: .02em; text-transform: uppercase; color: var(--tinta); }
+.e-mosaico-baldosa-calcarea .m-nov { background: var(--losa); border: 0; padding: 11px 14px; border-radius: 12px; box-shadow: 0 0 0 2px var(--pastina); margin: 0 2px; }
+.e-mosaico-baldosa-calcarea .m-nov-tapa { border-radius: 12px 12px 0 0; }
+.e-mosaico-baldosa-calcarea .m-nov-tapa + .m-nov { border-radius: 0 0 12px 12px; margin-top: -6px; }
+.e-mosaico-baldosa-calcarea .m-nov-tapa .m-nov-foto { display: none; }
+.e-mosaico-baldosa-calcarea .m-nov .m-fecha { font: 700 15px/1.1 var(--f-num); color: var(--primario); text-transform: uppercase; min-width: 44px; }
+.e-mosaico-baldosa-calcarea .m-nov b { font: 600 14px/1.25 var(--f-txt); }
+.e-mosaico-baldosa-calcarea .m-nov p { color: var(--suave); }
+/* beneficio con la guarda de 46px como imagen */
+.e-mosaico-baldosa-calcarea .m-benef { margin: 12px 14px 16px; border: 0; background: var(--losa); box-shadow: 0 0 0 2px var(--pastina); padding: 11px 14px 11px 64px; }
+.e-mosaico-baldosa-calcarea .m-benef::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 50px; border-radius: 12px 0 0 12px;
+  background: conic-gradient(from 45deg at 50% 50%, var(--acento) 0 25%, var(--b-fondo) 0 50%, var(--acento) 0 75%, var(--b-fondo) 0) 50% 50% / 23px 23px,
+  var(--primario); }
+.e-mosaico-baldosa-calcarea .m-rubro { color: var(--primario); }
+.e-mosaico-baldosa-calcarea .m-benef p { color: var(--suave); }
+/* guarda fina al pie, como sobre la barra inferior */
+.e-mosaico-baldosa-calcarea .d3 { inset: auto 0 0 0; height: 6px; background: var(--oscuro); z-index: 0; }
+
+/* ——— el movimiento: el colocador ——— */
+@media (prefers-reduced-motion: no-preference) {
+  .e-mosaico-baldosa-calcarea .mo-guarda { clip-path: inset(0 100% 0 0); }
+  .e-mosaico-baldosa-calcarea .mo-cel { opacity: 0; transform: scale(.86); }
+  .e-mosaico-baldosa-calcarea .mo-q { transform: scale(0); }
+  .e-mosaico-baldosa-calcarea .mo-r { transform: rotate(-90deg) scale(.2); opacity: 0; }
+  .e-mosaico-baldosa-calcarea .mo-c { transform: scale(0); }
+  .e-mosaico-baldosa-calcarea .m-kick, .e-mosaico-baldosa-calcarea .mo-losa { opacity: 0; transform: translateY(8px); }
+  .e-mosaico-baldosa-calcarea .m-acc, .e-mosaico-baldosa-calcarea .m-nov, .e-mosaico-baldosa-calcarea .m-sec, .e-mosaico-baldosa-calcarea .m-benef,
+  .e-mosaico-baldosa-calcarea .m-cifra, .e-mosaico-baldosa-calcarea .m-btn { opacity: 0; transform: scale(.94); }
+  /* la guarda se tiende baldosa por baldosa (26 pasos de 14px) */
+  .e-mosaico-baldosa-calcarea.en-vista .mo-guarda { animation: e-mosaico-baldosa-calcarea-tiende .9s steps(26, end) forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-kick { animation: e-mosaico-baldosa-calcarea-sube .6s var(--mo-curva) .05s forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .mo-losa { animation: e-mosaico-baldosa-calcarea-sube .6s var(--mo-curva) .15s forwards; }
+  /* cada baldosa se apoya y se arma: esquinas, rombo, centro */
+  .e-mosaico-baldosa-calcarea.en-vista .mo-cel { --t: calc(.35s + var(--i) * 95ms);
+    animation: e-mosaico-baldosa-calcarea-poner .55s var(--mo-curva) var(--t) forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .mo-q { animation: e-mosaico-baldosa-calcarea-esquina .5s var(--mo-curva) calc(var(--t) + .1s) forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .mo-r { animation: e-mosaico-baldosa-calcarea-rombo .55s var(--mo-curva) calc(var(--t) + .2s) forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .mo-c { animation: e-mosaico-baldosa-calcarea-esquina .35s var(--mo-curva) calc(var(--t) + .38s) forwards; }
+  /* después, las losas de la casa se colocan de a una */
+  .e-mosaico-baldosa-calcarea.en-vista .m-cifra { animation: e-mosaico-baldosa-calcarea-poner .5s var(--mo-curva) 1.55s forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-btn { animation: e-mosaico-baldosa-calcarea-poner .5s var(--mo-curva) 1.65s forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-acc { animation: e-mosaico-baldosa-calcarea-poner .5s var(--mo-curva) 1.15s forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-acc:nth-child(2) { animation-delay: 1.25s; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-acc:nth-child(3) { animation-delay: 1.35s; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-acc:nth-child(4) { animation-delay: 1.45s; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-sec { animation: e-mosaico-baldosa-calcarea-poner .5s var(--mo-curva) 1.55s forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-nov { animation: e-mosaico-baldosa-calcarea-poner .5s var(--mo-curva) 1.65s forwards; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-nov + .m-nov { animation-delay: 1.75s; }
+  .e-mosaico-baldosa-calcarea.en-vista .m-benef { animation: e-mosaico-baldosa-calcarea-poner .5s var(--mo-curva) 1.85s forwards; }
+}
+@keyframes e-mosaico-baldosa-calcarea-tiende { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes e-mosaico-baldosa-calcarea-sube { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes e-mosaico-baldosa-calcarea-poner { from { opacity: 0; transform: scale(.86); } to { opacity: 1; transform: none; } }
+@keyframes e-mosaico-baldosa-calcarea-esquina { from { transform: scale(0); } to { transform: none; } }
+@keyframes e-mosaico-baldosa-calcarea-rombo { from { opacity: 0; transform: rotate(-90deg) scale(.2); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .e-mosaico-baldosa-calcarea *, .e-mosaico-baldosa-calcarea *::before, .e-mosaico-baldosa-calcarea *::after { animation: none !important; transition: none !important; }
+}

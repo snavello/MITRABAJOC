@@ -1,0 +1,1810 @@
+{
+  "fuentes": [
+    "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+    "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z"
+  ],
+  "estilos": [
+    {
+      "id": "impulso-voltio",
+      "nombre": "Impulso",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "97",
+        "archivos": [
+          "index.html#m97"
+        ]
+      },
+      "caracter": "Energía de alto rendimiento: palabras gigantes en itálica condensada, foto de la persona a sangre y un único verde voltio para la acción. Para portadas que tienen que empujar a hacer algo.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Archivo 900 itálica, font-stretch 62% (condensada), MAYÚSCULAS, line-height .86; muy grande: saludo 58px + nombre 96px, 'Mis recibos' 76px, 'diferencia' 84px, título de panel 72px",
+        "texto": "Archivo 100% (system-ui de respaldo), 16px/1.45; rótulos 12px 700 MAYÚSCULAS .16em",
+        "cifras": "Archivo con font-variant-numeric: tabular-nums"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f3f3f1",
+        "tinta": "#0a0a0a",
+        "tinta_suave": "#5e5e5e",
+        "acento": "#d4ff1f",
+        "acento_2": "#b9e000",
+        "oscuro": "#0a0a0a",
+        "linea": "#e2e2df"
+      },
+      "forma": {
+        "radio": "999px en botones y pastillas; 10-20px en tarjetas",
+        "bordes": "casi sin bordes; contorno inset 1.5px negro en botones secundarios",
+        "sombras": "una sola larga: 0 30px 50px -28px rgba(0,0,0,.6)",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "foto en blanco y negro duro (grayscale + contrast 1.35) a sangre",
+        "degradé negro sobre la foto",
+        "zoom lento (14s) de la foto",
+        "flecha que empuja en loop dentro del botón",
+        "rayado diagonal oscuro como relleno vacío",
+        "video en el héroe"
+      ],
+      "pantallas": {
+        "portada": "Encabezado negro de una línea; héroe de 470px con la foto a sangre, pastillas Inicio/Salir encima y 'HOLA, MARTÍN.' gigante en itálica; banda negra con 'Mis recibos' y el botón voltio a lo ancho (con círculo negro y flecha); luego accesos en lista, novedades con foto y beneficio grande.",
+        "operacion": "Evaluador: banda oscura con foto, pasos Subí/Revisá/Resultado, 'HAY 1 DIFERENCIA' en itálica gigante; tarjeta 'Lo que no cierra' con el faltante; lista de 5 controles con estado en palabras; totales; 'Que lo sepa tu sindicato.' + botón voltio. Alta de noticia: riel de 3 pasos, formulario y vista del afiliado (220px · 1fr · 300px).",
+        "listado": "Tabla 'Noticias cargadas' con título en itálica condensada y encabezados en mayúsculas espaciadas.",
+        "tablero": "Reportes: cifras de resumen en palabras ('2 recibos · 1 con diferencias'), tabla y un estado vacío con foto."
+      },
+      "firma": "Palabras (nunca números) en Archivo itálica condensada a 60-96px; el verde voltio #d4ff1f reservado SOLO a la acción principal; foto B/N a sangre con degradé negro.",
+      "cuidado": "El voltio sobre blanco no tiene contraste para texto (solo funciona como relleno con tinta negra encima). Los titulares gigantes ocupan media pantalla del teléfono y empujan el contenido; la propia ronda 7 pidió después 'sin números gigantes y títulos medidos'.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m97 .tel-pantalla, .m97 .pc-pantalla {\n --negro:#0a0a0a; --negro-2:#151515; --negro-3:#232323; --blanco:#fff; --hueso:#f3f3f1; --hueso-2:#e8e8e5; --gris:#5e5e5e; --gris-o:#a9a9a9;\n --linea:#e2e2df; --linea-o:#2b2b2b; --volt:#d4ff1f; --volt-hondo:#b9e000; --sobre-volt:#0a0a0a; --ok:#0f7a3d; --ok-o:#3fd884; --amb:#9a5600;\n --amb-o:#ffb547; --mal:#cf1d1d; --mal-o:#ff6b5e; --curva:cubic-bezier(.2,.8,.2,1); font-family:\"Archivo\", system-ui, sans-serif; font-stretch:100%;\n background:var(--blanco); color:var(--negro); font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;\n}\n.m97 .m97-grito { font-family:\"Archivo\", sans-serif; font-stretch:62%; font-weight:900; font-style:italic; text-transform:uppercase; line-height:.86; letter-spacing:-.005em; margin:0; }\n.m97 .m97-sub { font-family:\"Archivo\", sans-serif; font-stretch:62%; font-weight:800; font-style:italic; text-transform:uppercase; letter-spacing:.01em; line-height:1; margin:0; }\n.m97 .m97-go { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; border:0; border-radius:999px; background:var(--volt); color:var(--sobre-volt); cursor:pointer; font:inherit; font-weight:800; font-size:17px; padding:17px 22px 17px 26px; text-align:left; box-shadow:0 0 0 0 color-mix(in srgb, var(--volt) 60%, transparent); transition:transform .2s var(--curva), background .2s; }\n.m97 .m97-go .m97-flecha svg { animation:m97-empuje 2.4s var(--curva) infinite; }\n.m97 .m97-hero-media img, .m97 .m97-hero-media video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.35) brightness(.92); }\n.m97 .m97-hero::after { content:\"\"; position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,10,10,.55) 0%, rgba(10,10,10,0) 26%, rgba(10,10,10,0) 44%, rgba(10,10,10,.82) 72%, var(--negro) 100%); }\n.m97 .m97-hola .m97-nom { display:block; font-size:96px; animation:m97-entra .9s var(--curva) .15s both; }\n.m97 .m97-benef img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.25); animation:m97-zoom 16s var(--curva) both; }\n.m97 .m97-ev-hero .m97-franja img { width:100%; height:100%; object-fit:cover; object-position:center 40%; filter:grayscale(1) contrast(1.4) brightness(.85); animation:m97-zoom 12s var(--curva) both; }\n.m97 .m97-cab h1 { font-size:72px; animation:m97-entra .8s var(--curva) both; }\n.m97 .m97-mini-img { height:130px; background:repeating-linear-gradient(-45deg, #1b1b1b 0 10px, #222 10px 20px); color:#bdbdbd; display:grid; place-items:center; text-align:center; font-size:12px; font-weight:600; }"
+    },
+    {
+      "id": "electrico-configurador",
+      "nombre": "Eléctrico (configurador)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "98",
+        "archivos": [
+          "index.html#m98",
+          "index.html#m118"
+        ],
+        "lienzo_variantes": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z"
+      },
+      "caracter": "Minimalismo de configurador de auto eléctrico: blanco y casi negro, tipografía fina, foto-producto a pantalla completa y formularios como 'configurá tu modelo'. Para apps de trámite que quieren calma y orden.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Manrope 500 (Hanken Grotesk de respaldo), sin mayúsculas, 30-40px, tracking -.005em; rótulos de sección 12-13px 600 MAYÚSCULAS .2em",
+        "texto": "Manrope 400-500, letter-spacing .005em",
+        "cifras": "Manrope tabular"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f4f4f4",
+        "tinta": "#171a20",
+        "tinta_suave": "#5c5e62",
+        "acento": "#171a20",
+        "acento_2": "#393c41",
+        "oscuro": "#171a20",
+        "linea": "#e3e4e5"
+      },
+      "forma": {
+        "radio": "999px en pastillas y botones; 2-6px en campos",
+        "bordes": "campos rellenos sin borde; filetes de 1px #e3e4e5",
+        "sombras": "0 18px 30px -16px rgba(0,0,0,.28) bajo el 'producto'; sombra elíptica difuminada en el piso del escenario",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "foto B/N luminosa a pantalla completa (grayscale + brightness 1.07)",
+        "velos blancos arriba y abajo de la foto",
+        "escenario gris degradado (#fff → #f4f4f4 → #ebebeb) con sombra de piso",
+        "pastillas con vidrio claro (backdrop-filter blur 10-12px)",
+        "video en el héroe",
+        "sin color de marca: el gremio solo por su sello"
+      ],
+      "pantallas": {
+        "portada": "Héroe de 720px: la foto como producto, velos blancos, navegación en pastillas de vidrio encima, título fino de 40px y dos pastillas centradas; abajo saludo, aviso, lista de accesos, novedades y el beneficio como lámina con barra de avance.",
+        "operacion": "Evaluador como configurador: el recibo en un 'escenario' gris con la línea que falla marcada, veredicto en 32px, hallazgo, controles y totales, dos pastillas de acción. Alta de noticia: escenario (vista del afiliado) a la izquierda y columna de opciones de 460px a la derecha (1fr 460px).",
+        "listado": "Tabla de noticias limpia bajo un rótulo en mayúsculas espaciadas, con nota de estado vacío.",
+        "tablero": "Reportes: título fino de 40px, dos cifras de resumen que suben, filtros en campos y segmentos, tabla paginada, banda de cláusula y un 'otro estado' como lámina."
+      },
+      "firma": "Configurador: vista a un lado, opciones al otro; pastillas negras de radio 999px; foto-producto B/N luminosa con velos blancos.",
+      "cuidado": "Casi sin jerarquía de color: lo crítico depende del rojo de estado (#b3261e). Tipografía fina de 500 en gris puede quedar débil en pantallas malas. Solo la portada es llamativa; el resto puede verse vacío.",
+      "eleccion": "ELEGIDO: es el único de la ronda 6 que la persona pasó a la ronda 7. Lo que se tomó fueron sus formularios (configurador, pastillas, campos rellenos): reaparecen en 117, 118, 137, 144 y 146.",
+      "calidad": 5,
+      "variantes": [
+        {
+          "numero": "118",
+          "ronda": "7",
+          "diferencia": "Formulario eléctrico: misma paleta solo-logo (blanco, #171a20, grises), centrado en los formularios. El alta de noticia es la pantalla llamativa: el 'producto' (la noticia en el teléfono) en escenario gris, opciones en pastillas con casillas y radios reales, y un resumen de configuración pegado abajo; el evaluador se lee como resumen de pedido con una ficha de tres datos."
+        }
+      ],
+      "css_firma": ".m98 .tel-pantalla, .m98 .pc-pantalla {\n --negro:#171a20; --tinta:#171a20; --gris:#393c41; --gris2:#5c5e62; --claro:#f4f4f4; --claro2:#eeeeee; --linea:#e3e4e5; --linea2:#d0d1d2; --ok:#1d7a4c;\n --ok-f:#e9f4ee; --amb:#94590a; --amb-f:#fbf2e3; --mal:#b3261e; --mal-f:#fbeceb; --curva:cubic-bezier(.22,.61,.36,1);\n font-family:\"Manrope\",\"Hanken Grotesk\",system-ui,sans-serif; color:var(--tinta); background:#fff; -webkit-font-smoothing:antialiased;\n letter-spacing:.005em;\n}\n.m98 .e-pill { display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 26px;border-radius:999px; font:500 14px/1 inherit;font-family:inherit;letter-spacing:.02em;border:0;cursor:pointer;white-space:nowrap; transition:background-color .33s var(--curva),color .33s var(--curva),transform .2s var(--curva) }\n.m98 .e-mini { display:inline-flex;align-items:center;height:30px;padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:500;letter-spacing:.03em;color:var(--tinta);background:rgba(255,255,255,.66); -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px) }\n.m98 .e-hero { position:relative;height:720px;overflow:hidden;background:#dcdcdc;display:flex;flex-direction:column }\n.m98 .e-hero-txt h1 { margin:12px 0 0;font-size:40px;font-weight:500;letter-spacing:-.005em;line-height:1.05 }\n.m98 .e-escena { position:relative;margin-top:22px;height:280px;background:linear-gradient(180deg,#fff 0%,var(--claro) 55%,#ebebeb 100%);display:grid;place-items:center;overflow:hidden;perspective:900px }\n.m98 .e-escena::after { content:\"\";position:absolute;left:50%;bottom:26px;width:250px;height:22px;margin-left:-125px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.18),rgba(0,0,0,0));filter:blur(2px) }\n.m98 .e-conf { display:grid;grid-template-columns:1fr 460px;min-height:820px }\n.m98 .e-cab-rep h1 { margin:0;font-size:40px;font-weight:500;letter-spacing:-.005em }\n.m118 .f-pill { display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 26px;border-radius:999px; font-family:inherit;font-size:14px;font-weight:500;line-height:1;letter-spacing:.02em;border:0;cursor:pointer;white-space:nowrap; transition:background-color .33s var(--curva),color .33s var(--curva),transform .2s var(--curva) }\n.m118 .f-ficha { margin:22px 24px 0;display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--linea);border-bottom:1px solid var(--linea) }\n.m118 .f-conf { display:grid;grid-template-columns:1fr 480px;align-items:stretch }"
+    },
+    {
+      "id": "cupertino",
+      "nombre": "Cupertino",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "99",
+        "archivos": [
+          "index.html#m99"
+        ]
+      },
+      "caracter": "Página de producto de fabricante premium: gris muy claro, títulos grandes y apretados, listas agrupadas con íconos en squircle, vidrio translúcido y un solo azul para lo que se toca. Para apps que quieren verse impecables y familiares.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 700, tracking muy negativo (-.035 a -.04em), 36-46px, sin mayúsculas",
+        "texto": "Hanken Grotesk con font-feature-settings 'ss01', letter-spacing -.01em",
+        "cifras": "Hanken Grotesk tabular"
+      },
+      "colores": {
+        "fondo": "#f5f5f7",
+        "superficie": "#ffffff",
+        "tinta": "#1d1d1f",
+        "tinta_suave": "#6e6e73",
+        "acento": "#0071e3",
+        "acento_2": "#0066cc",
+        "oscuro": "#000000",
+        "linea": "#d2d2d7"
+      },
+      "forma": {
+        "radio": "980px en píldoras; 16-30px en tarjetas y tiles",
+        "bordes": "sin bordes; separadores #e8e8ed",
+        "sombras": "capas muy suaves: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px -14px rgba(0,0,0,.16)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "vidrio (backdrop-filter saturate(180%) blur(20px)) en el encabezado",
+        "tile negro de producto con video",
+        "íconos en squircle",
+        "degradé de texto azul→violeta→rosa",
+        "listas agrupadas"
+      ],
+      "pantallas": {
+        "portada": "Encabezado translúcido de una línea; saludo grande; tile negro de producto con el video y 'Mis recibos' en 40px; lista agrupada de accesos con squircles; novedades y carrusel de beneficios.",
+        "operacion": "Evaluador centrado: veredicto en 38px, hallazgo, controles en listas agrupadas y barra de acción inferior. Alta de noticia en tarjetas de radio grande con columna lateral de 340px.",
+        "listado": "Tabla dentro de tarjeta blanca de radio grande, título de 21px.",
+        "tablero": "Reportes: título de 46px, cifras en tarjetas, tabla agrupada y columna lateral de 300px."
+      },
+      "firma": "Gris #f5f5f7 + tarjetas blancas de radio grande + material translúcido + un único azul #0071e3 en lo tocable.",
+      "cuidado": "Muy derivativo de una marca concreta. El azul de sistema compite con los colores del gremio. Mucho blanco sobre gris claro: bajo contraste de superficies.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m99 .tel-pantalla, .m99 .pc-pantalla {\n --fondo:#f5f5f7; --carta:#ffffff; --tinta:#1d1d1f; --gris:#6e6e73; --gris-2:#86868b; --linea:#d2d2d7; --linea-2:#e8e8ed; --relleno:#f2f2f4;\n --azul:#0071e3; --azul-txt:#0066cc; --azul-s:#e8f1fc; --ok:#1b7a35; --ok-s:#e9f6ec; --amb:#a35200; --amb-s:#fdf1e3; --amb-v:#ff9f0a; --mal:#d70015;\n --mal-s:#fdecee; --negro:#000; --grafito:#1d1d1f; --vidrio:rgba(255,255,255,.72); --vidrio-o:rgba(29,29,31,.62); --curva:cubic-bezier(.28,.11,.32,1);\n --curva-r:cubic-bezier(.32,.72,0,1); font-family:\"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta);\n background:var(--fondo); -webkit-font-smoothing:antialiased; font-feature-settings:\"ss01\"; letter-spacing:-.01em;\n}\n.m99 .btn { display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:980px;font:inherit;font-weight:600;font-size:15px;letter-spacing:-.01em;padding:11px 20px;cursor:pointer;text-decoration:none;transition:transform .2s var(--curva),background-color .2s var(--curva) }\n.m99 .enc { display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--vidrio);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.08);position:relative;z-index:3 }\n.m99 .ini-hola h1 { font-size:36px;line-height:1.06;font-weight:700;letter-spacing:-.035em }\n.m99 .tile { margin:0 12px;border-radius:30px;background:var(--negro);color:#f5f5f7;overflow:hidden;position:relative;isolation:isolate;box-shadow:0 24px 50px -30px rgba(0,0,0,.6) }\n.m99 .chipv { position:absolute;left:16px;top:16px;z-index:2;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#fff;padding:7px 12px 7px 9px;border-radius:980px;background:rgba(40,40,44,.48);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border:1px solid rgba(255,255,255,.18) }\n.m99 .ev-hero h1 { font-size:38px;line-height:1.04;font-weight:700;letter-spacing:-.04em }\n.m99 .titulo-fila h1 { font-size:46px;line-height:1.04;font-weight:700;letter-spacing:-.04em;margin-top:6px }"
+    },
+    {
+      "id": "nucleo-verde",
+      "nombre": "Núcleo verde",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "100",
+        "archivos": [
+          "index.html#m100"
+        ]
+      },
+      "caracter": "Hardware de potencia: negro profundo, grilla técnica de 24px, esquinas cortadas a 45° y un verde lima como único color. Para tableros técnicos y públicos jóvenes.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Archivo 800, font-stretch 118% (ancha), tracking -.01em, 36-44px",
+        "texto": "Archivo 100%; rótulos 10.5-12px 700 MAYÚSCULAS .1-.16em, stretch 110-112%",
+        "cifras": "JetBrains Mono para cifras y datos"
+      },
+      "colores": {
+        "fondo": "#0b0d0a",
+        "superficie": "#121510",
+        "tinta": "#eef1ea",
+        "tinta_suave": "#aeb7a6",
+        "acento": "#8fd320",
+        "acento_2": "#a6e43f",
+        "oscuro": "#060705",
+        "linea": "#2a3025"
+      },
+      "forma": {
+        "radio": "0 con esquinas cortadas a 45° (clip-path, --c 12px); los estados en píldora redonda 999px",
+        "bordes": "inset 0 0 0 1px #2a3025 / #3b4334",
+        "sombras": "brillo lima 0 0 18px 2px rgba(143,211,32,.55) en lo activo",
+        "densidad": "media"
+      },
+      "recursos": [
+        "retícula técnica de 24px en el fondo",
+        "esquinas cortadas a 45° con clip-path",
+        "foto en grises multiplicada con lima",
+        "barrido de escáner sobre la foto",
+        "rayado diagonal en ranuras",
+        "regla de forma: acción = bloque lima con esquina cortada; estado = píldora redonda de contorno"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; héroe con foto a sangre teñida de lima y barrido de escáner; tarjetas de esquina cortada para 'Mis recibos', accesos con ícono en caja cortada, novedades y beneficio.",
+        "operacion": "Evaluador: pasos como segmentos cortados, título 40px, tarjeta de hallazgo con medidor, chequeo como lista técnica, totales y botón lima. Alta de noticia: riel numerado en mono, campos con rótulos en mayúsculas y zona de soltar rayada (212px · 1fr · 300px).",
+        "listado": "Tabla con encabezados en mayúsculas espaciadas sobre #060705.",
+        "tablero": "Reportes: banda de resumen, tabla y filtros con la misma gramática técnica."
+      },
+      "firma": "Clip-path de esquina cortada en todo lo accionable; retícula lima al 5,5% sobre negro; verde #8fd320 como único color.",
+      "cuidado": "Riesgo de parecer gamer. Texto chico en mayúsculas espaciadas sobre negro cansa. Muy derivativo de una marca de chips.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m100 .tel-pantalla, .m100 .pc-pantalla {\n --n0:#060705; --n1:#0b0d0a; --n2:#121510; --n3:#191d16; --n4:#21261d; --ln:#2a3025; --ln2:#3b4334; --t:#eef1ea; --t2:#aeb7a6; --t3:#8a9581;\n --v:#8fd320; --v2:#a6e43f; --v-osc:#1b2709; --on-v:#090b06; --ok:#4fd6a0; --ok-f:rgba(79,214,160,.10); --amb:#ffb63f; --amb-f:rgba(255,182,63,.10);\n --mal:#ff6a5c; --mal-f:rgba(255,106,92,.10); --grid:rgba(143,211,32,.055); --c:12px; --tit:\"Archivo\",\"Arial Narrow\",system-ui,sans-serif;\n --mono:\"JetBrains Mono\",ui-monospace,monospace; --curva:cubic-bezier(.2,.8,.2,1); font-family:\"Archivo\",system-ui,sans-serif; font-stretch:100%;\n color:var(--t); background-color:var(--n1);\n background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);\n background-size:24px 24px; -webkit-font-smoothing:antialiased;\n}\n.m100 h1, .m100 h2, .m100 h3 { margin:0; font-family:var(--tit); font-stretch:118%; font-weight:800; letter-spacing:-.01em; line-height:1.02; }\n.m100 .rot { font-family:var(--tit); font-stretch:112%; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--t3); line-height:1.2; }\n.m100 .cut { clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .card { position:relative; background:var(--n2); border:1px solid var(--ln); --bc:var(--ln); clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .btn { --c:9px; position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:10px; height:48px; padding:0 20px; border:0; cursor:pointer; white-space:nowrap; font-family:var(--tit); font-stretch:112%; font-weight:800; font-size:14px; letter-spacing:.08em; text-transform:uppercase; clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); transition:background .2s var(--curva), transform .15s var(--curva); }\n.m100 .est { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px 0 7px; border-radius:999px; font-family:var(--tit); font-stretch:110%; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; border:1px solid; }\n.m100 .foto::before { content:\"\"; position:absolute; inset:0; background:var(--v); mix-blend-mode:multiply; opacity:.62; pointer-events:none; }\n.m100 .sello { --c:8px; display:grid; place-items:center; width:60px; height:60px; flex:none; background:var(--n3); box-shadow:inset 0 0 0 1px var(--ln2); clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .mini { --c:6px; display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; background:var(--n3); color:var(--t2); box-shadow:inset 0 0 0 1px var(--ln2); font-family:var(--tit); font-stretch:110%; font-weight:700; font-size:11px; letter-spacing:.12em; text-transform:uppercase; clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .ranura { --c:6px; height:34px; display:flex; align-items:center; gap:6px; padding:0 8px; color:var(--t3); background:repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,255,.03) 5px 6px); box-shadow:inset 0 0 0 1px var(--ln); clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); font-size:11px; }\n.m100 .sec-h .lk { display:inline-flex; align-items:center; gap:4px; font-family:var(--tit); font-stretch:110%; font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--t); }\n.m100 .acc-i { --c:6px; width:36px; height:36px; display:grid; place-items:center; color:var(--v); background:var(--n0); box-shadow:inset 0 0 0 1px var(--ln2); clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .ben-ch { position:absolute; top:12px; left:12px; z-index:2; display:inline-flex; align-items:center; gap:6px; padding:5px 9px; background:rgba(6,7,5,.85); color:var(--t); font-family:var(--tit); font-stretch:110%; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; box-shadow:inset 0 0 0 1px var(--ln2); }\n.m100 .paso span { display:flex; align-items:center; gap:5px; font-family:var(--tit); font-stretch:110%; font-size:11.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); }\n.m100 .auto { display:inline-flex; align-items:center; gap:6px; font-family:var(--tit); font-stretch:110%; font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); padding:4px 8px; box-shadow:inset 0 0 0 1px var(--ln); }\n.m100 .tab { position:relative; padding:14px 11px 13px; font-family:var(--tit); font-stretch:104%; font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--t3); white-space:nowrap; transition:color .2s var(--curva); }\n.m100 .riel .n { --c:6px; width:30px; height:30px; display:grid; place-items:center; background:var(--n3); color:var(--t2); font-family:var(--mono); font-size:12px; box-shadow:inset 0 0 0 1px var(--ln2); clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .fld label { font-family:var(--tit); font-stretch:110%; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--t2); }\n.m100 .zona { height:76px; display:flex; align-items:center; justify-content:center; gap:10px; color:var(--t2); font-size:13px; border:1px dashed var(--ln2); background:repeating-linear-gradient(135deg, transparent 0 7px, rgba(255,255,255,.02) 7px 8px); }\n.m100 .tabla th { text-align:left; padding:11px 14px; font-family:var(--tit); font-stretch:110%; font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--t3); background:var(--n0); border-bottom:1px solid var(--ln2); white-space:nowrap; }\n.m100 .ib { --c:5px; display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; background:var(--n3); color:var(--t); box-shadow:inset 0 0 0 1px var(--ln2); font-family:var(--tit); font-stretch:108%; font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }\n.m100 .pag-b span { --c:5px; width:30px; height:30px; display:grid; place-items:center; color:var(--t3); box-shadow:inset 0 0 0 1px var(--ln); clip-path:polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }"
+    },
+    {
+      "id": "hipercoche",
+      "nombre": "Hipercoche",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "101",
+        "archivos": [
+          "index.html#m101"
+        ]
+      },
+      "caracter": "Lujo nocturno: azul medianoche casi negro, plata, mayúsculas finísimas muy espaciadas y filetes de un pelo. Transmite exclusividad y calma.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Archivo 300, font-stretch 125%, MAYÚSCULAS, letter-spacing .16em; 25-34px",
+        "texto": "Hanken Grotesk 14px/1.5; rótulos Archivo 112% 10.5px 500 MAYÚSCULAS .32em",
+        "cifras": "Archivo tabular, letter-spacing .02em"
+      },
+      "colores": {
+        "fondo": "#05080f",
+        "superficie": "#0f172b",
+        "tinta": "#c9cfd8",
+        "tinta_suave": "#8e97a8",
+        "acento": "#8fa6ff",
+        "acento_2": "#f1f3f6",
+        "oscuro": "#05080f",
+        "linea": "rgba(199,206,216,.15)"
+      },
+      "forma": {
+        "radio": "2px (botones casi rectos); 50% en círculos",
+        "bordes": "filetes de 1px en plata translúcida (.15/.34)",
+        "sombras": "halos azules 0 0 10px #8fa6ff; anillos concéntricos en el perfil",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "degradé radial azul desde arriba sobre negro",
+        "texto plateado con background-clip:text",
+        "botón de metal cepillado (degradé plata)",
+        "fotos B/N con brillo metálico que pasa",
+        "filete con luz al centro"
+      ],
+      "pantallas": {
+        "portada": "Encabezado con marca; héroe de 360px con foto B/N y destello; tarjetas finas para 'Mis recibos', accesos, beneficio; todo en mayúsculas espaciadas.",
+        "operacion": "Evaluador: pasos con índice, veredicto en 25px, hallazgo y acciones con botón plateado. Alta de noticia: riel, formulario y vista.",
+        "listado": "Tabla con encabezado 15px .24em y filetes plata.",
+        "tablero": "Reportes: cabecera con foto, filtros en fila de campos, tabla paginada y banda vacía."
+      },
+      "firma": "Mayúsculas de Archivo 300 ancha con .16-.32em de aire; plata metálica (gradiente #F7F8FA→#AFB6C1) en botón y texto; azul medianoche #05080f.",
+      "cuidado": "Gris plata #8e97a8 en 10.5px sobre casi negro roza el mínimo de contraste. Lo 'exclusivo' choca con una app gremial de uso masivo.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m101 .tel-pantalla,.m101 .pc-pantalla {\n --n0:#05080F; --n1:#0A101E; --n2:#0F172B; --n3:#16203A; --hilo:rgba(199,206,216,.15); --hilo2:rgba(199,206,216,.34); --plata:#C9CFD8;\n --blanco:#F1F3F6; --gris:#8E97A8; --azul:#8FA6FF; --ok:#55D7A2; --ambar:#EDBB62; --mal:#FF8585; --curva:cubic-bezier(.2,.7,.1,1);\n background:radial-gradient(120% 50% at 50% 0%,#0E1730 0%,var(--n0) 62%),var(--n0); color:var(--plata);\n font-family:\"Hanken Grotesk\",system-ui,sans-serif; font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;\n font-variant-numeric:tabular-nums;\n}\n.m101 .m101-ex { font-family:\"Archivo\",sans-serif;font-stretch:125%;font-weight:300;text-transform:uppercase;letter-spacing:.16em;color:var(--blanco);line-height:1.15;margin:0 }\n.m101 .m101-k { font-family:\"Archivo\",sans-serif;font-stretch:112%;font-size:10.5px;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:var(--gris);margin:0 }\n.m101 .m101-plata { background:linear-gradient(180deg,#FFFFFF 10%,#C3CAD5 55%,#AAB2BF 90%);-webkit-background-clip:text;background-clip:text;color:transparent }\n.m101 .m101-num { font-family:\"Archivo\",sans-serif;font-stretch:100%;font-variant-numeric:tabular-nums;letter-spacing:.02em }\n.m101 .m101-logo { width:46px;height:46px;border-radius:50%;object-fit:contain;flex:none; box-shadow:0 0 0 1px var(--hilo2),0 0 0 4px var(--n0),0 0 0 5px var(--hilo) }\n.m101 .m101-btn { position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:12px;height:50px;padding:0 24px;border:0;border-radius:2px;cursor:pointer; background:linear-gradient(180deg,#F7F8FA 0%,#C8CED6 47%,#AFB6C1 53%,#E2E6EB 100%);color:#05080F; font-family:\"Archivo\",sans-serif;font-stretch:115%;font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase; box-shadow:0 0 0 1px rgba(255,255,255,.4) inset,0 14px 34px -14px rgba(143,166,255,.55) }\n.m101 .m101-btn-f { display:inline-flex;align-items:center;justify-content:center;gap:10px;height:46px;padding:0 20px;border:1px solid var(--hilo2);border-radius:2px;background:transparent;color:var(--blanco);cursor:pointer; font-family:\"Archivo\",sans-serif;font-stretch:112%;font-size:10.5px;font-weight:500;letter-spacing:.26em;text-transform:uppercase;transition:border-color .4s,background .4s }\n.m101 .m101-foto::after { content:\"\";position:absolute;inset:-10% -40%;z-index:2;pointer-events:none;mix-blend-mode:screen; background:linear-gradient(105deg,transparent 42%,rgba(214,224,242,.22) 50%,transparent 58%); transform:translateX(-60%);animation:m101-brillo 11s cubic-bezier(.45,0,.2,1) infinite }\n.m101 .m101-gnom { font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--plata);line-height:1.45;max-width:150px }\n.m101 .m101-chip { display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border:1px solid var(--hilo2);border-radius:99px;background:rgba(5,8,15,.55);backdrop-filter:blur(6px); font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--blanco) }\n.m101 .m101-sec a { font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--azul) }\n.m101 .m101-acc-t { display:block;font-family:\"Archivo\",sans-serif;font-stretch:112%;font-size:11.5px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--blanco) }\n.m101 .m101-fecha { font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:10px;letter-spacing:.24em;color:var(--azul) }\n.m101 .m101-pasos li { border-top:1px solid var(--plata);padding-top:10px;display:flex;align-items:center;gap:7px; font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--plata) }\n.m101 .m101-tres small { display:block;font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gris) }\n.m101 .m101-tag { font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--plata);border:1px solid var(--hilo2);border-radius:99px;padding:4px 10px }\n.m101 .m101-tot .neto dt { font-family:\"Archivo\",sans-serif;font-stretch:112%;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase }\n.m101 .m101-tabs a { position:relative;padding:17px 0 16px;font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9.5px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--gris);white-space:nowrap;transition:color .4s }\n.m101 .m101-riel .n { font-family:\"Archivo\",sans-serif;font-stretch:125%;font-size:10px;letter-spacing:.24em;color:var(--gris) }\n.m101 .m101-riel b { display:block;font-family:\"Archivo\",sans-serif;font-stretch:112%;font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--blanco);margin:6px 0 4px }\n.m101 .m101-campo label,.m101 .m101-lab { font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9.5px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--plata) }\n.m101 .m101-mini-t h5 { font-family:\"Archivo\",sans-serif;font-stretch:115%;font-weight:400;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--blanco);line-height:1.35;margin:8px 0 10px }\n.m101 .m101-mini-t a { font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--azul);display:inline-flex;align-items:center;gap:6px }\n.m101 .m101-t th { text-align:left;font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--gris);padding:12px 14px;border-bottom:1px solid var(--hilo2) }\n.m101 .m101-pill { display:inline-flex;align-items:center;gap:8px;font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--blanco);border:1px solid var(--hilo2);border-radius:99px;padding:5px 11px }\n.m101 .m101-link { display:inline-flex;align-items:center;gap:6px;font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--plata);margin-left:18px;transition:color .4s }\n.m101 .m101-resumen { display:flex;align-items:center;gap:14px;margin-top:18px;font-family:\"Archivo\",sans-serif;font-stretch:110%;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--blanco) }"
+    },
+    {
+      "id": "precision",
+      "nombre": "Precisión",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "102",
+        "archivos": [
+          "index.html#m102"
+        ]
+      },
+      "caracter": "Ingeniería de catálogo técnico: grises de taller, grotesca sobria apenas ensanchada, grilla de filetes de 1px, esquinas de 2px y un rojo solo para lo crítico. Para herramientas serias y densas.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Archivo 600, font-stretch 106%, tracking -.02em; 28-36px",
+        "texto": "Archivo (Hanken Grotesk de respaldo) 15px/1.45",
+        "cifras": "JetBrains Mono para cifras y fechas"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f3f3f4",
+        "tinta": "#0e0f11",
+        "tinta_suave": "#575a60",
+        "acento": "#c8102e",
+        "acento_2": "#8d9096",
+        "oscuro": "#1a1b1e",
+        "linea": "#d8d9dc"
+      },
+      "forma": {
+        "radio": "2px",
+        "bordes": "filetes de 1px en grilla rigurosa",
+        "sombras": "ninguna (solo inset 0 -2px 0 negro en pestaña activa)",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "marcas de corte en las fotos",
+        "foto B/N dura de catálogo",
+        "filetes que se trazan como movimiento",
+        "medidor segmentado"
+      ],
+      "pantallas": {
+        "portada": "Encabezado + barra utilitaria; saludo con perfil; aviso; foto principal con marcas de corte; accesos y novedades en filas con filetes.",
+        "operacion": "Evaluador: pasos, veredicto, medidor de segmentos, hallazgo como ficha de especificación ('spec'), controles y totales, botones rectos. Alta de noticia en 220px · 1fr · 300px.",
+        "listado": "Tabla de filetes finos, encabezado tipo planilla.",
+        "tablero": "Reportes: cabecera, banda y tabla con columnas en grilla de 5."
+      },
+      "firma": "Grilla de filetes de 1px + esquinas de 2px + un único rojo #c8102e para la diferencia.",
+      "cuidado": "Puede leerse frío y burocrático; poco para la portada del afiliado.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m102 .tel-pantalla, .m102 .pc-pantalla {\n --negro:#0e0f11; --grafito:#1a1b1e; --grafito2:#26282c; --acero:#3a3d42; --gris:#575a60; --gris-claro:#b4b7bc; --aluminio:#8d9096; --linea:#d8d9dc;\n --linea2:#e8e9eb; --humo:#f3f3f4; --blanco:#fff; --rojo:#c8102e; --rojo-f:#fbeef0; --verde:#16704a; --verde-f:#ebf4ef; --ambar:#8a5900;\n --ambar-m:#d99a1e; --ambar-f:#fbf4e6; --f:\"Archivo\",\"Hanken Grotesk\",system-ui,sans-serif; --m:\"JetBrains Mono\",ui-monospace,monospace;\n --curva:cubic-bezier(.2,.7,.1,1); font-family:var(--f); color:var(--negro); background:var(--blanco); font-size:15px; line-height:1.45;\n -webkit-font-smoothing:antialiased;\n}\n.m102 .kick { font-size:11.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);font-stretch:108% }\n.m102 .filete::before { content:\"\";position:absolute;left:0;right:0;top:0;height:1px;background:var(--negro);transform-origin:left;animation:m102-trazo 1.1s var(--curva) both;animation-delay:var(--d,.1s) }\n.m102 .h1 { font-size:34px;line-height:1.02;font-weight:600;letter-spacing:-.02em;font-stretch:106% }\n.m102 .corte { position:absolute;width:14px;height:14px;border:0 solid rgba(255,255,255,.85);pointer-events:none }\n.m102 .btn { display:flex;align-items:center;justify-content:space-between;gap:12px;height:52px;padding:0 18px;border-radius:2px;font-weight:600;font-size:15px;letter-spacing:.01em;border:1px solid transparent;transition:background .25s var(--curva),color .25s var(--curva) }"
+    },
+    {
+      "id": "punto-rojo",
+      "nombre": "Punto rojo",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "103",
+        "archivos": [
+          "index.html#m103"
+        ]
+      },
+      "caracter": "Fotografía de autor: negro, plata y papel, foto B/N con líneas de telémetro y controles que evocan una cámara. Un único punto rojo marca 'acá'.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 300 (finísima), tracking -.025em, 34-38px; la palabra clave en 600 blanco",
+        "texto": "Hanken Grotesk (Public Sans de respaldo); epígrafes en Source Serif 4",
+        "cifras": "JetBrains Mono"
+      },
+      "colores": {
+        "fondo": "#f3f2ee",
+        "superficie": "#fbfbf9",
+        "tinta": "#121211",
+        "tinta_suave": "#56564f",
+        "acento": "#e1061b",
+        "acento_2": "#b4b4ae",
+        "oscuro": "#0b0b0b",
+        "linea": "#d4d3cc"
+      },
+      "forma": {
+        "radio": "2px",
+        "bordes": "filetes finos; placas negras con borde de cuerpo de cámara",
+        "sombras": "relieve de metal: inset 0 1px 0 #fff, 0 2px 0 #000; anillos concéntricos negros",
+        "densidad": "media"
+      },
+      "recursos": [
+        "líneas de encuadre de telémetro sobre la foto",
+        "moleteado (conic-gradient) en bordes",
+        "rótulos grabados",
+        "disparador cromado (degradé plata)",
+        "punto rojo redondo y chico (nunca un error)",
+        "la diferencia como cuadrado tachado en carmín"
+      ],
+      "pantallas": {
+        "portada": "Parte superior oscura como placa de cámara: encabezado, visor con la foto B/N y líneas de telémetro, saludo fino; luego la 'cámara' oscura con 'Mis recibos' y el disparador; novedades y beneficios sobre papel.",
+        "operacion": "Evaluador con encabezado placa y escalas grabadas; la diferencia con cuadrado tachado + texto en #ad1f16. Alta de noticia en una 'hoja' (210px · 1fr · 288px).",
+        "listado": "Listado en hoja de papel con cabecera de 19px.",
+        "tablero": "Reportes: hoja con filtros, banda, tabla y paginado."
+      },
+      "firma": "Un único punto rojo #e1061b que solo indica posición; foto B/N con líneas de telémetro; metal moleteado.",
+      "cuidado": "Mucho detalle ornamental (moleteado, escalas) que encarece el código. Titulares de 300 pueden quedar finos.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m103 .tel-pantalla, .m103 .pc-pantalla {\n --negro:#0b0b0b; --cuerpo:#151515; --grafito:#222220; --carbon:#2e2e2b; --plata:#b4b4ae; --plata-2:#d6d5cf; --plata-3:#e7e6e1; --papel:#f3f2ee;\n --hoja:#fbfbf9; --tinta:#121211; --gris:#56564f; --gris-2:#6b6b64; --linea:#d4d3cc; --linea-2:#e4e3dd; --punto:#e1061b; --dif:#ad1f16;\n --dif-claro:#f6e7e4; --ok:#2b6a4c; --ok-claro:#e5efe9; --amb:#875700; --amb-claro:#f5ecd9;\n --sans:\"Hanken Grotesk\", \"Public Sans\", system-ui, sans-serif; --serif:\"Source Serif 4\", Georgia, serif;\n --mono:\"JetBrains Mono\", ui-monospace, monospace; --curva:cubic-bezier(.22,.8,.24,1); font-family:var(--sans); color:var(--tinta);\n background:var(--papel); -webkit-font-smoothing:antialiased;\n}\n.m103 .punto { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--punto); vertical-align:middle; animation:m103-punto .7s .5s var(--curva) both; }\n.m103 .grabado { font-size:11px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--gris); }\n.m103 .visor { position:relative; overflow:hidden; background:#000; }\n.m103 .btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:48px; padding:0 22px; border-radius:2px; font-size:15.5px; font-weight:600; letter-spacing:.01em; border:1px solid var(--negro); background:var(--negro); color:#fff; box-shadow:inset 0 1px 0 #3a3a37, 0 1px 0 rgba(0,0,0,.25); transition:transform .15s var(--curva), background .2s; }\n.m103 .moleteado { height:7px; background:repeating-linear-gradient(90deg,#4a4a46 0 1px,#191918 1px 3px); border-top:1px solid #000; border-bottom:1px solid #000; }\n.m103 .saludo h1 { font-size:38px; line-height:1.02; font-weight:300; letter-spacing:-.025em; color:var(--plata-2); }\n.m103 .perfil::after { content:\"\"; position:absolute; inset:-5px; border-radius:50%; background:repeating-conic-gradient(from 0deg, transparent 0 4deg, rgba(255,255,255,.12) 4deg 5deg); -webkit-mask:radial-gradient(circle, transparent 29px, #000 30px); mask:radial-gradient(circle, transparent 29px, #000 30px); }\n.m103 .rollo .cuadros::before, .m103 .rollo .cuadros::after { content:\"\"; position:absolute; left:3px; right:3px; height:2px; background:repeating-linear-gradient(90deg,#4a4a46 0 3px,transparent 3px 6px); }\n.m103 .escala::before { content:\"\"; position:absolute; left:0; right:0; top:30px; height:8px; background:repeating-linear-gradient(90deg,var(--gris-2) 0 1px,transparent 1px 13px); opacity:.55; }\n.m103 .tachado { width:30px; height:30px; color:var(--dif); stroke-width:1.8; }\n.m103 .hallazgo::before { content:\"\"; position:absolute; left:0; top:0; bottom:0; width:7px; background:repeating-linear-gradient(135deg,var(--dif) 0 2px,transparent 2px 5px); }\n.m103 .pasos::before { content:\"\"; position:absolute; left:6px; top:8px; bottom:8px; width:6px; background:repeating-linear-gradient(180deg,var(--gris-2) 0 1px,transparent 1px 9px); opacity:.6; }\n.m103 .dial::after { content:\"\"; position:absolute; right:0; top:0; bottom:0; width:32px; border-left:1px solid #bdbcb5; background:repeating-linear-gradient(90deg,#9c9b95 0 1px,#ecebe6 1px 3px); }"
+    },
+    {
+      "id": "tecnico-terreno",
+      "nombre": "Técnico",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "104",
+        "archivos": [
+          "index.html#m104"
+        ]
+      },
+      "caracter": "Equipo técnico de montaña: blanco y negro, un tono tierra medido, fichas de especificación y foto 'en terreno'. Funcional y sin ruido.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Archivo 700, tracking -.02/-.025em, 28-34px",
+        "texto": "Archivo 14px/1.45; rótulos de sección 12px 700 MAYÚSCULAS .14em, stretch 115%",
+        "cifras": "Archivo tabular"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f4f3ef",
+        "tinta": "#111110",
+        "tinta_suave": "#5f5e59",
+        "acento": "#7b5636",
+        "acento_2": "#f3ece3",
+        "oscuro": "#111110",
+        "linea": "#dad8d2"
+      },
+      "forma": {
+        "radio": "0 (rectos)",
+        "bordes": "filetes #dad8d2; fila destacada con inset 3px a la izquierda",
+        "sombras": "ninguna",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "marcas de esquina blancas sobre la foto (crop marks con gradientes)",
+        "foto B/N en terreno",
+        "ficha de especificación con cabecera, cuerpo y pie",
+        "grilla de 6 tiles de acceso"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; barra utilitaria; foto 'en terreno' con marcas de esquina; saludo; ficha principal (spec) con 'Mis recibos'; grilla 3×2 de accesos; novedades en filas.",
+        "operacion": "Evaluador: pasos, título 34px, hallazgo con triángulo, chequeo como tabla técnica, totales. Alta de noticia con riel (190px · 1fr).",
+        "listado": "Tabla técnica de filetes.",
+        "tablero": "Reportes: resumen, banda, filtros, tabla y paginado."
+      },
+      "firma": "Fichas de especificación + tono tierra #7b5636 como único acento + marcas de esquina en la foto.",
+      "cuidado": "Sobrio hasta lo austero; el tierra puede chocar con los colores del gremio.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m104 .tel-pantalla,.m104 .pc-pantalla {\n --k:#111110; --p:#ffffff; --o:#f4f3ef; --l:#dad8d2; --l2:#ebe9e4; --m:#5f5e59; --t:#7b5636; --ts:#f3ece3; --ok:#2e6b3e; --okb:#e9f1eb; --wa:#8a5a00;\n --ko:#b0281f; --kob:#fbeceb; background:var(--p); color:var(--k); font-family:'Archivo',system-ui,sans-serif; font-stretch:100%; font-size:14px;\n line-height:1.45; -webkit-font-smoothing:antialiased; text-align:left;\n}\n.m104 .rot { font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-stretch:115%;color:var(--m);line-height:1.3 }\n.m104 .campo { position:relative;height:250px;overflow:hidden;background:#1d1d1b }\n.m104 .campo img { width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(1) contrast(1.18) brightness(.9);animation:m104-zoom 20s ease-out both }\n.m104 .spec { margin:0 16px;border:1px solid var(--k);background:#fff }\n.m104 .btn { display:flex;align-items:center;justify-content:center;gap:10px;height:50px;width:100%;background:var(--k);color:#fff;font-weight:650;font-size:15px;letter-spacing:.005em;transition:background .2s ease }\n.m104 .sh h2 { font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-stretch:115% }\n.m104 .tile { position:relative;padding:14px 12px;border-right:1px solid var(--l);border-bottom:1px solid var(--l);min-height:112px;display:flex;flex-direction:column;gap:5px;transition:background .2s ease }\n.m104 .tag { display:inline-flex;align-items:center;gap:5px;border:1px solid var(--k);padding:3px 7px;font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-stretch:112% }\n.m104 .chq th { text-align:left;font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;font-stretch:112%;color:var(--m);padding:7px 6px;border-top:1px solid var(--k);border-bottom:1px solid var(--k) }\n.m104 .hatch { height:140px;background:repeating-linear-gradient(135deg,var(--o) 0 7px,#fff 7px 14px);display:grid;place-items:center;border-bottom:1px solid var(--l) }\n.m104 .tb th { text-align:left;font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-stretch:112%;color:var(--m);font-weight:600;padding:9px 12px;border-top:1px solid var(--k);border-bottom:1px solid var(--k);white-space:nowrap }\n.m104 .filt .fld>span.lb { font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;font-stretch:112%;color:var(--m) }"
+    },
+    {
+      "id": "pagos-refinados",
+      "nombre": "Pagos refinados",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "105",
+        "archivos": [
+          "index.html#m105"
+        ]
+      },
+      "caracter": "Claridad de plataforma de pagos: lienzo blanco y gris frío, índigo como único acento, sombras en capas casi invisibles y diagramas prolijos que explican el circuito. Para herramientas con información densa pero elegante.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 650, tracking -.03em, 28-31px (Figtree de respaldo)",
+        "texto": "Hanken Grotesk con 'ss01','cv11'",
+        "cifras": "JetBrains Mono para importes, fechas, CUIL y rótulos técnicos"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f6f8fb",
+        "tinta": "#0d1b34",
+        "tinta_suave": "#5a6679",
+        "acento": "#4f3fe0",
+        "acento_2": "#3fa9e8",
+        "oscuro": "#0d1b34",
+        "linea": "#e3e8ef"
+      },
+      "forma": {
+        "radio": "6-12px",
+        "bordes": "1px #e3e8ef",
+        "sombras": "--sombra: 0 1px 1px rgba(13,27,52,.04), 0 2px 6px -2px rgba(50,50,93,.08), 0 12px 28px -14px rgba(50,50,93,.22)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "velo de luz pastel en diagonal que deriva (radiales violeta, celeste, durazno, rosa con blur)",
+        "foto B/N con baño índigo (mix-blend-mode color)",
+        "diagrama del circuito del recibo",
+        "píldoras de estado",
+        "degradé índigo→celeste en barras"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; héroe con el velo pastel que deriva y saludo de 31px con el nombre en índigo; tarjeta principal; diagrama animado de cómo se verifica un recibo; accesos y novedades.",
+        "operacion": "Evaluador en tarjetas: título, hallazgo con borde izquierdo rojo, controles, acciones. Alta de noticia con migas, bloques numerados en mono y tarjetas.",
+        "listado": "Tabla en tarjeta con sombra en capas.",
+        "tablero": "Reportes: cabecera, banda de cláusula, tarjeta con tabla y nota inferior."
+      },
+      "firma": "Sombra en capas casi invisible + índigo #4f3fe0 + velo pastel que deriva en la portada; diagramas del circuito.",
+      "cuidado": "El índigo compite con la marca del gremio; derivativo de una marca concreta.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m105 .tel-pantalla, .m105 .pc-pantalla {\n --tinta:#0d1b34; --tinta-2:#33415a; --gris:#5a6679; --gris-2:#6b7689; --linea:#e3e8ef; --linea-2:#d5dbe3; --lienzo:#f6f8fb; --lienzo-2:#eef2f7;\n --ind:#4f3fe0; --ind-osc:#3a2bc0; --ind-suave:#efedff; --ind-borde:#d9d4ff; --ok:#11734a; --ok-f:#dff6ea; --ok-b:#b6e6cb; --ok-v:#1f9d63;\n --amb:#8a5300; --amb-f:#fff1d6; --amb-v:#e6a019; --mal:#b4232a; --mal-f:#fdeef0; --mal-b:#f5c7cc; --mal-v:#df3b45;\n --sombra:0 1px 1px rgba(13,27,52,.04),0 2px 6px -2px rgba(50,50,93,.08),0 12px 28px -14px rgba(50,50,93,.22);\n --sombra-2:0 1px 1px rgba(13,27,52,.05),0 6px 14px -4px rgba(50,50,93,.14),0 24px 48px -20px rgba(50,50,93,.3); --curva:cubic-bezier(.22,1,.36,1);\n --mono:\"JetBrains Mono\",ui-monospace,monospace; font-family:\"Hanken Grotesk\",\"Figtree\",system-ui,-apple-system,\"Segoe UI\",sans-serif;\n color:var(--tinta); background:#fff; -webkit-font-smoothing:antialiased; font-feature-settings:\"ss01\",\"cv11\";\n}\n.m105 .pill { display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;line-height:1;padding:5px 8px 5px 7px;border-radius:6px;white-space:nowrap }\n.m105 .card { background:#fff;border:1px solid var(--linea);border-radius:14px;box-shadow:var(--sombra) }\n.m105 .btn { display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;font-size:14.5px;border-radius:9px;padding:11px 16px;cursor:pointer;border:1px solid transparent;transition:transform .2s var(--curva),box-shadow .2s var(--curva),background .2s }\n.m105 .foto::after { content:\"\";position:absolute;inset:0;background:linear-gradient(135deg,#5b4bea,#3fa9e8);mix-blend-mode:color;opacity:.55;pointer-events:none }\n.m105 .hero::before { content:\"\";position:absolute;inset:-70% -35% 10% -35%; background: radial-gradient(34% 40% at 24% 46%,rgba(118,96,255,.42),transparent 70%), radial-gradient(30% 36% at 66% 34%,rgba(64,190,245,.36),transparent 70%), radial-gradient(26% 32% at 52% 72%,rgba(255,165,128,.34),transparent 70%), radial-gradient(24% 30% at 88% 66%,rgba(242,128,214,.30),transparent 70%); filter:blur(6px);transform:skewY(-8deg);animation:m105-deriva 22s ease-in-out infinite alternate;z-index:0 }\n.m105 .flujo::before { content:\"\";position:absolute;left:17%;right:17%;top:30px;height:2px;background:repeating-linear-gradient(90deg,var(--ind-borde) 0 6px,transparent 6px 11px);background-size:22px 2px;animation:m105-corre 1.4s linear infinite }"
+    },
+    {
+      "id": "hospitalidad",
+      "nombre": "Hospitalidad",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "106",
+        "archivos": [
+          "index.html#m106"
+        ]
+      },
+      "caracter": "Calidez de plataforma de hospedaje: blanco, coral de acción, esquinas redondeadas, fotos amables y tipografía redondeada conversada. Todo invita a usar.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Figtree 800, tracking -.02em, 26-32px",
+        "texto": "Figtree sola",
+        "cifras": "Figtree tabular"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f7f7f7",
+        "tinta": "#222222",
+        "tinta_suave": "#5c5c5c",
+        "acento": "#cc4a2b",
+        "acento_2": "#b0143c",
+        "oscuro": "#222222",
+        "linea": "#ebebeb"
+      },
+      "forma": {
+        "radio": "12 / 16 / 24px (--r-s, --r, --r-l); 999px en pastillas",
+        "bordes": "1px #ebebeb",
+        "sombras": "0 6px 20px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05); botón coral con sombra teñida",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "fotos B/N calentadas (grayscale + sepia .34 + hue-rotate)",
+        "botón coral en degradé",
+        "barra de navegación inferior de 5 ítems",
+        "diferencia en frambuesa con cruz en círculo"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; saludo; aviso; héroe con foto amable; accesos en grilla; riel horizontal de novedades; beneficios; barra inferior fija de 5 accesos.",
+        "operacion": "Evaluador con tira de pasos, veredicto 32px, hallazgo, controles como cuenta, totales y 'reserva' de la acción. Alta de noticia en 220px · 1fr · 300px.",
+        "listado": "Tabla con cabecera propia.",
+        "tablero": "Reportes con buscador, filtros, banda y tabla."
+      },
+      "firma": "Coral #cc4a2b solo para acción + radios generosos + fotos B/N con calidez sepia.",
+      "cuidado": "Muy derivativo de una marca de hospedaje; el coral pelea con gremios de rojo o bordó.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m106 .tel-pantalla, .m106 .pc-pantalla {\n --tinta:#222222; --gris:#5c5c5c; --gris-2:#6c6c6c; --linea:#ebebeb; --linea-2:#cfcfcf; --nube:#f7f7f7; --crema:#fff8f4; --coral:#cc4a2b;\n --coral-osc:#b53d22; --coral-txt:#b3402a; --coral-ic:#e0553a; --coral-10:#fff1eb; --coral-20:#ffdccf; --ok:#0f7a4a; --ok-10:#e7f5ed; --amb:#8a5a00;\n --amb-10:#fff3d6; --mal:#b0143c; --mal-10:#fdedf1; --mal-20:#f4c5d1; --r-s:12px; --r:16px; --r-l:24px;\n --sombra:0 6px 20px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05); --sombra-alta:0 14px 34px rgba(0,0,0,.13), 0 2px 6px rgba(0,0,0,.05);\n --curva:cubic-bezier(.2,.8,.2,1); font-family:\"Figtree\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta); background:#fff;\n -webkit-font-smoothing:antialiased;\n}\n.m106 .foto img, .m106 .foto video { width:100%; height:100%; object-fit:cover; display:block; filter:grayscale(1) sepia(.34) saturate(1.45) hue-rotate(-12deg) brightness(1.05) contrast(1.02); transition:transform .6s var(--curva) }\n.m106 .foto::after { content:\"\"; position:absolute; inset:0; pointer-events:none; background:linear-gradient(165deg, rgba(255,176,140,.22), rgba(255,130,100,0) 60%); mix-blend-mode:soft-light }\n.m106 .btn { display:flex; align-items:center; justify-content:center; gap:10px; min-height:52px; padding:0 22px; border-radius:var(--r-s); font-size:17px; font-weight:700; border:0; text-decoration:none; position:relative; overflow:hidden; transition:transform .15s var(--curva), box-shadow .25s var(--curva) }\n.m106 .btn-coral { color:#fff; background:linear-gradient(100deg, var(--coral) 0%, var(--coral-osc) 100%); box-shadow:0 6px 16px -6px rgba(204,74,43,.55) }\n.m106 .barra { position:sticky; bottom:0; z-index:5; display:grid; grid-template-columns:repeat(5,1fr); background:rgba(255,255,255,.97); border-top:1px solid var(--linea); padding:8px 4px 12px }"
+    },
+    {
+      "id": "box-carrera",
+      "nombre": "Box",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "107",
+        "archivos": [
+          "index.html#m107"
+        ]
+      },
+      "caracter": "Transmisión de carrera: negro y blanco, rojo de largada, placas inclinadas, rótulos de sector y rayas de velocidad. Veloz sin perder claridad.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Archivo 800, font-stretch 125% (ancha), oblicua 10°, MAYÚSCULAS; 32-38px",
+        "texto": "Archivo 100%",
+        "cifras": "JetBrains Mono, como torre de tiempos"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f2f2f0",
+        "tinta": "#0b0b0d",
+        "tinta_suave": "#575b64",
+        "acento": "#d50b1e",
+        "acento_2": "#ff4d5a",
+        "oscuro": "#0b0b0d",
+        "linea": "#dcdde0"
+      },
+      "forma": {
+        "radio": "0; placas en paralelogramo (clip-path con el borde derecho recortado 6-12px)",
+        "bordes": "barra roja inset 3px a la izquierda en lo activo",
+        "sombras": "0 22px 40px -22px rgba(0,0,0,.6)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "placas inclinadas con clip-path",
+        "rayas finas de velocidad (repeating-linear-gradient 115°)",
+        "rótulos de sector",
+        "foto/video B/N duro",
+        "barrido de entrada"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; héroe con video, velo y rayas, placa inclinada con el saludo; tarjeta 'largada' para 'Mis recibos'; secciones con rótulo de transmisión.",
+        "operacion": "Evaluador con sectores (pasos) como en una vuelta, título oblicuo, hallazgo, totales, acciones. Alta de noticia con riel de sectores y vista del afiliado.",
+        "listado": "Tabla en caja con cabecera oblicua.",
+        "tablero": "Reportes: resumen como torre de tiempos, filtros y tabla."
+      },
+      "firma": "Archivo 125% oblicua en mayúsculas + placas en paralelogramo + rojo #d50b1e de largada.",
+      "cuidado": "Mucho clip-path y oblicuas: costoso y cansador en pantallas de trabajo. Derivativo de una categoría de deporte.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m107 .tel-pantalla, .m107 .pc-pantalla {\n --negro:#0b0b0d; --carbon:#151619; --grafito:#24262c; --acero:#3a3d45; --papel:#f2f2f0; --blanco:#fff; --linea:#dcdde0; --linea-osc:#2f3138;\n --tinta:#0b0b0d; --gris:#575b64; --gris-osc:#a9adb6; --rojo:#d50b1e; --rojo-txt:#ff4d5a; --rojo-claro:#fde9eb; --ok:#0b7f43; --ok-osc:#2bd67b;\n --ok-claro:#e3f4ea; --amb:#935700; --amb-osc:#ffb400; --amb-claro:#fff3d9; --curva:cubic-bezier(.2,.8,.2,1);\n font-family:\"Archivo\", system-ui, sans-serif; font-stretch:100%; color:var(--tinta); background:var(--blanco); line-height:1.45;\n}\n.m107 .ancha { font-stretch:125%;font-weight:800;text-transform:uppercase;letter-spacing:.01em }\n.m107 .mini { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;font-stretch:115%;text-transform:uppercase;letter-spacing:.06em; color:#fff;padding:6px 9px;border:1px solid var(--acero);clip-path:polygon(5px 0,100% 0,calc(100% - 5px) 100%,0 100%);background:var(--carbon);transition:background .2s }\n.m107 .rotulo { display:flex;align-items:center;gap:10px;margin:0 0 12px }\n.m107 .rotulo h2 { font-size:15px;font-stretch:125%;font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-style:oblique 10deg }\n.m107 .rayas { position:absolute;inset:0;pointer-events:none; background:repeating-linear-gradient(115deg,transparent 0 13px,color-mix(in srgb,var(--rojo) 70%,transparent) 13px 14px); -webkit-mask:linear-gradient(100deg,transparent 52%,#000 78%);mask:linear-gradient(100deg,transparent 52%,#000 78%); background-size:200% 100%;animation:m107-barrido 6s linear infinite }\n.m107 .hero video,.m107 .hero img { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; filter:grayscale(1) contrast(1.35) brightness(.85);animation:m107-zoom 14s ease-in-out infinite alternate }\n.m107 .chip-rubro { font-size:11px;font-weight:700;font-stretch:120%;text-transform:uppercase;letter-spacing:.08em;background:#fff;color:var(--negro);padding:5px 12px 5px 9px; clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);display:inline-flex;gap:7px;align-items:center }\n.m107 .placa { position:absolute;left:0;right:16px;bottom:18px }\n.m107 .placa-tag { display:inline-block;background:var(--rojo);color:#fff;font-size:11px;font-weight:800;font-stretch:120%;text-transform:uppercase;letter-spacing:.12em; padding:4px 16px 4px 16px;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);animation:m107-entra .5s var(--curva) both }\n.m107 .placa-nombre { background:#fff;color:var(--negro);font-size:31px;line-height:1;padding:10px 26px 9px 16px;display:inline-block; clip-path:polygon(0 0,100% 0,calc(100% - 16px) 100%,0 100%);animation:m107-entra .6s .12s var(--curva) both; font-stretch:125%;font-weight:800;text-transform:uppercase;font-style:oblique 10deg;letter-spacing:-.005em }\n.m107 .placa-sub { display:block;width:max-content;max-width:calc(100% - 4px);background:var(--negro);color:#e7e8ea;font-size:12.5px;font-weight:600;padding:7px 22px 7px 16px; clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%);animation:m107-entra .6s .24s var(--curva) both }\n.m107 .largada { position:relative;background:var(--negro);color:#fff;padding:20px 18px 18px;overflow:hidden; clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%) }\n.m107 .kicker { display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;font-stretch:120%;text-transform:uppercase;letter-spacing:.14em;color:var(--rojo-txt) }\n.m107 .largada h2 { font-size:36px;line-height:1;margin:10px 0 10px;font-stretch:125%;font-weight:800;text-transform:uppercase;font-style:oblique 10deg;position:relative }\n.m107 .btn { display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;font-weight:800;font-stretch:115%;text-transform:uppercase;letter-spacing:.05em;font-size:13.5px; padding:14px 26px 14px 20px;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%);transition:background .2s,transform .15s var(--curva) }\n.m107 .btn-borde { background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor;clip-path:none }\n.m107 .accesos .t b { display:block;font-size:14px;font-stretch:120%;font-weight:800;text-transform:uppercase;letter-spacing:.02em }\n.m107 .benef-rubro { display:inline-block;background:var(--rojo);font-size:11px;font-weight:800;font-stretch:120%;text-transform:uppercase;letter-spacing:.12em;padding:4px 14px 4px 10px;clip-path:polygon(0 0,100% 0,calc(100% - 7px) 100%,0 100%) }\n.m107 .sec .et { display:flex;align-items:center;gap:6px;margin-top:7px;font-size:11px;font-weight:700;font-stretch:115%;text-transform:uppercase;letter-spacing:.08em;color:var(--gris-osc) }\n.m107 .ev-tit h1 { font-size:38px;line-height:.98;margin:8px 0 10px;font-stretch:125%;font-weight:800;text-transform:uppercase;font-style:oblique 10deg;animation:m107-sube .5s var(--curva) both }\n.m107 .hallazgo-cab { display:flex;align-items:center;gap:8px;background:var(--rojo);color:#fff;font-size:12px;font-weight:800;font-stretch:120%;text-transform:uppercase;letter-spacing:.1em; padding:6px 22px 6px 12px;width:max-content;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%) }\n.m107 .p-gremio span { font-size:11.5px;font-weight:700;font-stretch:120%;text-transform:uppercase;letter-spacing:.12em;color:var(--gris-osc) }\n.m107 .tabs a { position:relative;padding:12px 13px 11px;font-size:11.5px;font-weight:700;font-stretch:112%;text-transform:uppercase;letter-spacing:.05em;color:var(--gris-osc);white-space:nowrap;transition:color .2s }\n.m107 .p-tit h1 { font-size:32px;line-height:1;font-stretch:125%;font-weight:800;text-transform:uppercase;font-style:oblique 10deg }\n.m107 .riel b { font-size:13px;font-stretch:118%;font-weight:800;text-transform:uppercase;letter-spacing:.03em }\n.m107 .bloque-cab .s { font-family:\"JetBrains Mono\",monospace;font-size:11px;font-weight:600;background:var(--negro);color:#fff;padding:3px 10px 3px 7px;clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%) }\n.m107 .tm-foto span { position:absolute;left:0;bottom:10px;background:var(--rojo);color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;padding:3px 12px 3px 10px;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%) }\n.m107 .ver { display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;background:var(--negro);color:#fff;padding:6px 14px 6px 10px;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);transition:background .2s }"
+    },
+    {
+      "id": "etiqueta-industrial",
+      "nombre": "Etiqueta",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "108",
+        "archivos": [
+          "index.html#m108"
+        ]
+      },
+      "caracter": "Streetwear irónico: textos entre comillas como etiquetas industriales, cinta de seguridad diagonal y un naranja industrial chico. Llamativo pero ordenado.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Archivo 800, MAYÚSCULAS, line-height .95, tracking -.02/-.025em; 38-46px; entre comillas",
+        "texto": "Archivo",
+        "cifras": "JetBrains Mono"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f3f3f1",
+        "tinta": "#0b0b0b",
+        "tinta_suave": "#575757",
+        "acento": "#ff5b14",
+        "acento_2": "#dcdcd8",
+        "oscuro": "#0b0b0b",
+        "linea": "#dcdcd8"
+      },
+      "forma": {
+        "radio": "0",
+        "bordes": "negros de 1.5px (avisos, íconos, perfil)",
+        "sombras": "sombra dura desplazada 4px 4px 0 naranja; 10px 10px 0 gris",
+        "densidad": "media"
+      },
+      "recursos": [
+        "cinta de seguridad diagonal naranja/negro animada",
+        "comillas tipográficas como marca (::before/::after)",
+        "sombra dura desplazada",
+        "rayado diagonal de relleno"
+      ],
+      "pantallas": {
+        "portada": "Encabezado + cinta; saludo; tarjeta con foto y banda; bloques con cabecera entre comillas (\"MIS RECIBOS\").",
+        "operacion": "Evaluador con etiqueta, pasos, título en mayúsculas, veredicto, hallazgo, chequeo y barra inferior. Alta de noticia en grilla 210px · 1fr · 290px.",
+        "listado": "Tabla bajo cabecera en mayúsculas de 22px.",
+        "tablero": "Reportes en grilla propia."
+      },
+      "firma": "\"COMILLAS\" en mayúsculas + cinta de seguridad + sombra dura naranja.",
+      "cuidado": "La ironía de moda puede no leerse en un gremio. Derivativo de una marca de moda.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m108 .tel-pantalla, .m108 .pc-pantalla {\n --n:#0b0b0b; --b:#ffffff; --g1:#f3f3f1; --g2:#dcdcd8; --sub:#575757; --nar:#ff5b14; --ok:#0a7a3c; --okf:#e4f2e9; --amb:#8a5300; --ambf:#fff0d4;\n --err:#c4122f; --errf:#fde7ea; background:var(--b); color:var(--n); font-family:\"Archivo\",system-ui,sans-serif; font-stretch:100%;\n -webkit-font-smoothing:antialiased;\n}\n.m108 .q::before { content:'\"' }\n.m108 .eti { font-family:\"Archivo\",sans-serif;font-stretch:118%;font-weight:600;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;line-height:1.3 }\n.m108 .tag { display:inline-block;background:var(--nar);color:var(--n);font-stretch:118%;font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 8px 4px;line-height:1 }\n.m108 .cinta { --c1:var(--n);--c2:var(--nar);height:10px;background:linear-gradient(-45deg,var(--c1) 25%,var(--c2) 25% 50%,var(--c1) 50% 75%,var(--c2) 75%);background-size:20px 20px;animation:m108-avanza 1.8s linear infinite }\n.m108 .mini a { display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--n);padding:6px 10px 5px;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-stretch:112% }\n.m108 .banda span { display:inline-block;font-weight:800;font-size:12px;letter-spacing:.09em;text-transform:uppercase;font-stretch:115%;animation:m108-corre 22s linear infinite }\n.m108 .tarj-h { margin:14px 0 10px;font-weight:800;font-size:40px;line-height:.95;letter-spacing:-.02em;text-transform:uppercase }\n.m108 .ev-h { margin:0;font-weight:800;font-size:38px;line-height:.98;letter-spacing:-.025em;text-transform:uppercase }\n.m108 .filas .est { display:block;font-family:\"Archivo\",sans-serif;font-stretch:115%;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:3px }\n.m108 .barra a { flex:none;color:#cfcfcf;font-weight:700;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:9px 10px 7px;border-bottom:3px solid transparent;font-stretch:108% }\n.m108 .pc-h { margin:0;font-weight:800;font-size:46px;line-height:.95;letter-spacing:-.025em;text-transform:uppercase }\n.m108 .riel li.on .n { background:var(--n);color:#fff;box-shadow:4px 4px 0 var(--nar) }\n.m108 .drop { height:104px;border:1.5px solid var(--n);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:repeating-linear-gradient(45deg,var(--g1) 0 8px,#fff 8px 16px) }\n.m108 .tb th { text-align:left;padding:10px 12px;border-top:2px solid var(--n);border-bottom:2px solid var(--n);font-stretch:115%;font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap }\n.m108 .vacio-cab { display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:repeating-linear-gradient(45deg,var(--g1) 0 8px,#fff 8px 16px);border-bottom:2px solid var(--n) }"
+    },
+    {
+      "id": "sintetizador",
+      "nombre": "Sintetizador",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "109",
+        "archivos": [
+          "index.html#m109"
+        ]
+      },
+      "caracter": "Aparato de sonido nórdico: chasis gris claro, módulos rotulados (A1, B2...), teclas de goma, perillas, LED y una pantallita LCD negra donde vive el estado. Juguetón e industrial.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 700, tracking -.02em, 27-34px",
+        "texto": "Hanken Grotesk 15px/1.45",
+        "cifras": "JetBrains Mono para cifras, fechas y códigos de módulo"
+      },
+      "colores": {
+        "fondo": "#dfdfdb",
+        "superficie": "#ededea",
+        "tinta": "#17171a",
+        "tinta_suave": "#4c4c52",
+        "acento": "#ff5a1f",
+        "acento_2": "#1f46d4",
+        "oscuro": "#131315",
+        "linea": "#b4b4ae"
+      },
+      "forma": {
+        "radio": "6-10px",
+        "bordes": "filos #c8c8c2",
+        "sombras": "teclas de goma: 0 2px 0 #a1a19b + inset 0 1px 0 #fff (se hunden al tocar)",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "teclas de goma con relieve",
+        "perillas (radial-gradient) con marca naranja",
+        "LED de estado",
+        "pantalla LCD negra con inset",
+        "parlante de agujeritos (radial-gradient repetido)",
+        "foto con trama de puntos (multiply)"
+      ],
+      "pantallas": {
+        "portada": "Grilla de módulos: saludo, aviso, 'el equipo' con LCD para 'Mis recibos', teclado de pads de accesos (B1), novedades (C1) y beneficio (C2), cada módulo con su código.",
+        "operacion": "Evaluador con LCD del veredicto, medidor y teclas de acción. Alta de noticia en rejilla de módulos (232px · 1fr · 300px).",
+        "listado": "Tabla dentro de un módulo.",
+        "tablero": "Reportes como rejilla de módulos con LED de estado."
+      },
+      "firma": "Módulos rotulados con código + teclas de goma y LED + LCD negra donde se dice el estado.",
+      "cuidado": "Muy ornamental y de nicho; el naranja y el azul compiten con la marca. Mucho detalle chico.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m109 .tel-pantalla, .m109 .pc-pantalla {\n --chasis:#dfdfdb; --panel:#ededea; --tecla:#f7f7f4; --hueco:#d6d6d1; --borde:#b4b4ae; --sombra:#a1a19b; --filo:#c8c8c2; --tinta:#17171a;\n --gris:#4c4c52; --naranja:#ff5a1f; --naranja-o:#b83a0d; --azul:#1f46d4; --azul-o:#122a8a; --azul-t:#1d40c4; --lcd:#131315; --lcd-t:#f0f0ea;\n --lcd-g:#a9a9a3; --lcd-n:#ff7a45; --ok:#11692c; --ok-led:#2fbf5b; --mal:#ad231a; --mal-led:#ff3b2e; --amb:#744e00; --amb-led:#ffb000;\n --mono:\"JetBrains Mono\",ui-monospace,Menlo,monospace; --curva:cubic-bezier(.2,.8,.2,1);\n font-family:\"Hanken Grotesk\",system-ui,-apple-system,\"Segoe UI\",sans-serif; color:var(--tinta); background:var(--chasis); font-size:15px;\n line-height:1.45; -webkit-font-smoothing:antialiased;\n}\n.m109 .tecla { display:inline-flex; align-items:center; justify-content:center; gap:8px; font:700 14px/1.1 \"Hanken Grotesk\",system-ui,sans-serif; color:var(--tinta); background:linear-gradient(#fbfbf8,#eeeeea); border:1px solid var(--borde); border-radius:8px; padding:11px 14px; box-shadow:0 3px 0 var(--sombra), inset 0 1px 0 #fff; cursor:pointer; text-decoration:none; transition:transform .12s var(--curva), box-shadow .12s var(--curva); white-space:nowrap; }\n.m109 .led { width:8px; height:8px; border-radius:50%; background:#a3a39d; flex:none; box-shadow:inset 0 1px 1px rgba(0,0,0,.35), 0 0 0 2px #cfcfc9; display:inline-block; }\n.m109 .lcd .led { box-shadow:0 0 0 2px #2a2a2e; }\n.m109 .perilla { width:36px; height:36px; border-radius:50%; position:relative; flex:none; background:radial-gradient(circle at 36% 30%,#ffffff 0,#e4e4df 45%,#bdbdb7 100%); border:1px solid #a2a29c; box-shadow:0 2px 0 #9b9b95, 0 5px 10px rgba(0,0,0,.12); }\n.m109 .perilla::before { content:\"\"; position:absolute; inset:5px; border-radius:50%; background:repeating-conic-gradient(from 0deg,rgba(0,0,0,.07) 0 4deg,transparent 4deg 12deg); }\n.m109 .lcd::after { content:\"\"; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px); }\n.m109 .parlante { background:radial-gradient(circle,#9f9f99 1.6px,transparent 2px) 0 0/9px 9px; border-radius:8px; }\n.m109 .foto { position:relative; overflow:hidden; background:#cfcfca; border-radius:8px; }\n.m109 .foto::after { content:\"\"; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; background:radial-gradient(circle,rgba(0,0,0,.22) .7px,transparent 1.1px) 0 0/3px 3px; }"
+    },
+    {
+      "id": "sin-marca-kraft",
+      "nombre": "Sin marca",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "110",
+        "archivos": [
+          "index.html#m110"
+        ]
+      },
+      "caracter": "No-marca japonesa: papel gris cálido, lino y kraft, una sola tinta, filetes finos y muchísimo aire. La tarjeta principal cuelga como una etiqueta de kraft con su ojal.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 400-500, tracking -.01em, 28-32px",
+        "texto": "Hanken Grotesk (Work Sans de respaldo), cifras tabulares por font-feature 'tnum'",
+        "cifras": "Hanken Grotesk tabular"
+      },
+      "colores": {
+        "fondo": "#f6f5f2",
+        "superficie": "#fcfbf9",
+        "tinta": "#2e2b27",
+        "tinta_suave": "#5f5950",
+        "acento": "#cbb590",
+        "acento_2": "#6e5a3b",
+        "oscuro": "#2e2b27",
+        "linea": "#d9d4cc"
+      },
+      "forma": {
+        "radio": "2px; la etiqueta con esquinas superiores cortadas (clip-path 18px)",
+        "bordes": "filetes finos #d9d4cc",
+        "sombras": "ninguna",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "textura de lino (repeating-linear-gradient 0/90deg al 2%)",
+        "textura de kraft con fibra",
+        "etiqueta colgante con ojal (::before redondo) que se balancea al entrar",
+        "foto chica enmarcada como catálogo, nunca a sangre",
+        "video chico"
+      ],
+      "pantallas": {
+        "portada": "Encabezado de una línea; saludo; foto chica con epígrafe; aviso; etiqueta kraft colgante con 'Mis recibos'; secciones de cuenta, novedades y beneficios en filas.",
+        "operacion": "Evaluador: pasos, veredicto con punto rojo, hallazgo, chequeo, totales, acciones. Alta de noticia: riel · hoja · vista (200px · 1fr · 290px).",
+        "listado": "Tabla en hoja de papel con filetes.",
+        "tablero": "Reportes: resumen, filtros, banda y tabla serena."
+      },
+      "firma": "Etiqueta de kraft con ojal + texturas de lino casi invisibles + una sola tinta.",
+      "cuidado": "Paleta muy apagada: los estados tienen poco peso. Puede parecer de tienda y no de gremio.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m110 .tel-pantalla, .m110 .pc-pantalla {\n --papel:#F6F5F2; --hoja:#FCFBF9; --lino:#ECE9E4; --lino-2:#E3DFD8; --filete:#D9D4CC; --filete-2:#C9C2B7; --kraft:#CBB590; --kraft-claro:#E4D8C3;\n --kraft-t:#6E5A3B; --tinta:#2E2B27; --tinta-2:#5F5950; --tinta-3:#6E675D; --ok:#3F6B45; --ok-f:#E3EBE1; --amb:#8A5A0E; --amb-f:#F1E6D2; --mal:#9E3A2E;\n --mal-f:#F3E1DC; --curva:cubic-bezier(.25,.8,.3,1); font-family:\"Hanken Grotesk\",\"Work Sans\",system-ui,sans-serif; color:var(--tinta);\n background:var(--papel); font-feature-settings:\"tnum\" 1;\n}\n.m110 .lino { background-color:var(--lino); background-image:repeating-linear-gradient(0deg, rgba(46,43,39,.022) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(46,43,39,.018) 0 1px, transparent 1px 4px); }\n.m110 .kraft { background-color:var(--kraft); background-image:repeating-linear-gradient(112deg, rgba(255,255,255,.07) 0 1px, transparent 1px 6px), repeating-linear-gradient(23deg, rgba(70,48,18,.05) 0 1px, transparent 1px 5px), radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), transparent 60%); }\n.m110 .foto { position:relative; overflow:hidden; background:var(--lino-2); }\n.m110 .etq { position:relative; padding:44px 26px 26px; color:var(--tinta); margin:0 0 12px; clip-path:polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%, 0 18px); transform-origin:50% 0; animation:m110-colgar 1.4s var(--curva) both .15s; }\n.m110 .etq::before { content:\"\"; position:absolute; top:16px; left:50%; width:12px; height:12px; margin-left:-6px; border-radius:50%; background:var(--papel); box-shadow:inset 0 0 0 2px rgba(110,90,59,.35); }"
+    },
+    {
+      "id": "esfera-relojeria",
+      "nombre": "Esfera",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "111",
+        "archivos": [
+          "index.html#m111"
+        ]
+      },
+      "caracter": "Relojería de alta gama: verde lacado profundo, oro viejo y marfil; los 5 controles del recibo son índices de una esfera y una aguja señala el que falla. Precisión y lujo.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Libre Caslon Text 400 (serif), 34px, itálica para el énfasis",
+        "texto": "Hanken Grotesk (Figtree de respaldo)",
+        "cifras": "Hanken Grotesk tabular"
+      },
+      "colores": {
+        "fondo": "#f4efe3",
+        "superficie": "#fbf8f0",
+        "tinta": "#1b201d",
+        "tinta_suave": "#545b56",
+        "acento": "#c7a465",
+        "acento_2": "#dcc390",
+        "oscuro": "#0b211b",
+        "linea": "#e9dcbf"
+      },
+      "forma": {
+        "radio": "10-18px",
+        "bordes": "filetes dobles de oro (inset 1px oro + anillos)",
+        "sombras": "0 6px 16px -8px rgba(11,33,27,.6); drop-shadow en la esfera",
+        "densidad": "media"
+      },
+      "recursos": [
+        "guilloché de rayos de sol (conic-gradient)",
+        "esfera con índices y aguja animada",
+        "indicación retrógrada para los 3 pasos",
+        "foto en duotono verde lacado (luminosity/soft-light) con luces de oro",
+        "escalas de minutos como reglas"
+      ],
+      "pantallas": {
+        "portada": "Tapa verde lacada con saludo; certificado en marfil para 'Mis recibos'; secciones con regla de minutos; accesos, novedades y beneficio.",
+        "operacion": "Evaluador (la pantalla llamativa): tapa verde con la esfera de 5 índices y la aguja que apunta a la cuota sindical, veredicto en serif, hallazgo, chequeo y totales. Alta de noticia en 230px · 1fr · 300px.",
+        "listado": "Tabla en caja con filetes de oro.",
+        "tablero": "Reportes: cabecera serif verde, resumen y tabla."
+      },
+      "firma": "Esfera con aguja que señala el control que falla + guilloché conic + oro #c7a465 sobre verde #0b211b.",
+      "cuidado": "Lujo poco afín a un gremio; serif de 34px y oro sobre marfil pueden perder contraste.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m111 .tel-pantalla, .m111 .pc-pantalla {\n --v9:#0b211b; --v8:#10302a; --v7:#173f34; --v6:#215243; --vl:#2c6150; --oro:#c7a465; --oro-c:#dcc390; --oro-t:#75581f; --oro-f:#e9dcbf;\n --marfil:#f4efe3; --papel:#fbf8f0; --tinta:#1b201d; --gris:#545b56; --gris-c:#cbc4b2; --ok:#256a40; --ok-o:#93d8ab; --amb:#87580a; --mal:#a2302a;\n --mal-o:#ffa597; --serif:\"Libre Caslon Text\",\"Source Serif 4\",Georgia,serif; --ui:\"Hanken Grotesk\",\"Figtree\",system-ui,sans-serif;\n --curva:cubic-bezier(.22,1,.36,1); font-family:var(--ui); color:var(--tinta); background:var(--marfil);\n}\n.m111 .kick { font:600 10.5px/1.2 var(--ui); letter-spacing:.2em; text-transform:uppercase; color:var(--oro-t); }\n.m111 .serif { font-family:var(--serif); }\n.m111 .duo img { width:100%; height:100%; object-fit:cover; display:block; filter:grayscale(1) contrast(1.12) brightness(1.02); mix-blend-mode:luminosity; opacity:.88; }\n.m111 .duo::after { content:\"\"; position:absolute; inset:0; background:linear-gradient(160deg,var(--oro) 0%,#8a6a2e 100%); mix-blend-mode:soft-light; opacity:.55; pointer-events:none; }\n.m111 .rayos::before { content:\"\"; position:absolute; inset:0; z-index:-1; pointer-events:none; background:repeating-conic-gradient(from 0deg at var(--cx,50%) var(--cy,50%), rgba(255,255,255,.045) 0deg .9deg, transparent .9deg 3deg); }\n.m111 .rayos.claro::before { background:repeating-conic-gradient(from 0deg at var(--cx,50%) var(--cy,50%), rgba(117,88,31,.07) 0deg .9deg, transparent .9deg 3deg); }\n.m111 .cert-esfera { position:absolute; right:-34px; top:-34px; width:150px; height:150px; opacity:.5; pointer-events:none; }\n.m111 .regla { height:7px; margin:0 2px 4px; background: repeating-linear-gradient(90deg, color-mix(in srgb,var(--oro-t) 55%,transparent) 0 1px, transparent 1px 8px) bottom/100% 4px no-repeat, repeating-linear-gradient(90deg, var(--oro-t) 0 1px, transparent 1px 40px) bottom/100% 7px no-repeat; opacity:.55; }\n.m111 .tabs::after { content:\"\"; position:absolute; left:0; right:0; bottom:0; height:6px; opacity:.5; pointer-events:none; background:repeating-linear-gradient(90deg, var(--oro-t) 0 1px, transparent 1px 6px) bottom/100% 3px no-repeat, repeating-linear-gradient(90deg, var(--oro-t) 0 1px, transparent 1px 30px) bottom/100% 6px no-repeat; }"
+    },
+    {
+      "id": "instructivo",
+      "nombre": "Instructivo",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "112",
+        "archivos": [
+          "index.html#m112"
+        ]
+      },
+      "caracter": "Manual de armado de mueble en kit: papel blanco, tinta negra, dibujos de línea que se trazan solos y personajes sin cara. Todo se explica con un dibujo.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Figtree 800, tracking -.02em, 30-34px",
+        "texto": "Figtree, cifras tabulares",
+        "cifras": "Figtree tabular"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f4f3ef",
+        "tinta": "#171717",
+        "tinta_suave": "#595959",
+        "acento": "#1d4f9c",
+        "acento_2": "#ffd23a",
+        "oscuro": "#171717",
+        "linea": "#d8d6cf"
+      },
+      "forma": {
+        "radio": "4-6px",
+        "bordes": "2px negro en la caja del kit",
+        "sombras": "ninguna (pulso amarillo en lo actual)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "ilustraciones de línea SVG que se dibujan (stroke-dasharray)",
+        "cota de plano para la medida que falta",
+        "etiqueta amarilla",
+        "personajes simples"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; saludo; caja del 'kit' con 'Mis recibos' y el dibujo de los 3 pasos; secciones de accesos y novedades.",
+        "operacion": "Evaluador con los pasos dibujados, título 34px, hallazgo con la cota que mide lo que falta, acciones. Alta de noticia (200px · 1fr · 286px) con la firma de la cláusula dibujada.",
+        "listado": "Tabla de cargadas con estado vacío dibujado (caja vacía).",
+        "tablero": "Reportes con intro dibujada y tabla."
+      },
+      "firma": "Dibujos de línea que se trazan + cota de plano + azul #1d4f9c y amarillo #ffd23a medidos.",
+      "cuidado": "Depende de ilustraciones a medida para cada pantalla; costoso de mantener.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m112 .tel-pantalla, .m112 .pc-pantalla {\n --tinta:#171717; --papel:#ffffff; --mesa:#f4f3ef; --filete:#d8d6cf; --gris:#595959; --borde:#6f6f6f; --azul:#1d4f9c; --azul-osc:#153b78;\n --azul-claro:#e9eff9; --amarillo:#ffd23a; --amarillo-suave:#fff7d6; --ok:#1b7a3d; --ok-claro:#e5f3ea; --amb:#8a5800; --amb-claro:#fff0c7;\n --mal:#bf2530; --mal-claro:#fbe8e9; background:var(--papel); color:var(--tinta); font-family:'Figtree', system-ui, sans-serif;\n font-variant-numeric:tabular-nums; line-height:1.4; -webkit-font-smoothing:antialiased;\n}\n.m112 .trazo { stroke-dasharray:1; stroke-dashoffset:1; animation:m112-trazo 1.3s cubic-bezier(.3,.7,.2,1) forwards }\n.m112 .etq-amar { display:inline-block; background:var(--amarillo); color:var(--tinta); font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:2px }\n.m112 .btn-azul { background:var(--azul); border-color:var(--azul); color:#fff }\n.m112 .kit { border:2px solid var(--tinta); border-radius:6px; padding:18px 16px 16px; background:#fff; animation:m112-entra .6s ease-out both }\n.m112 .cota { width:100%; height:auto }"
+    },
+    {
+      "id": "espacial-vidrio",
+      "nombre": "Espacial",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "113",
+        "archivos": [
+          "index.html#m113"
+        ]
+      },
+      "caracter": "Computación espacial: ventanas de vidrio esmerilado oscuro flotando sobre la foto del lugar de trabajo desenfocada y en penumbra, con auroras frías. Profundidad y capas.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Figtree 750, tracking -.025em, 34-38px, blanco",
+        "texto": "Figtree; JetBrains Mono para CUIL",
+        "cifras": "Figtree tabular"
+      },
+      "colores": {
+        "fondo": "#0a0d15",
+        "superficie": "rgba(22,25,34,.54)",
+        "tinta": "#ffffff",
+        "tinta_suave": "rgba(255,255,255,.74)",
+        "acento": "#a8e6ff",
+        "acento_2": "#cdbaff",
+        "oscuro": "#0a0d15",
+        "linea": "rgba(255,255,255,.16)"
+      },
+      "forma": {
+        "radio": "20-34px en ventanas; 999px en cápsulas",
+        "bordes": "aro de luz inset 0 0 0 1px rgba(255,255,255,.16)",
+        "sombras": "larga y suave: inset 0 1px 0 rgba(255,255,255,.32), 0 34px 64px -26px rgba(0,0,0,.75)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "vidrio esmerilado (backdrop-filter blur 20-34px saturate 1.5-1.6)",
+        "entorno: foto/video desenfocado (blur 26px, brightness .44)",
+        "auroras frías (radiales azul/violeta)",
+        "cápsula de 'agarre' bajo cada ventana",
+        "ventanas que llegan desde atrás en profundidad"
+      ],
+      "pantallas": {
+        "portada": "Entorno: video del gremio desenfocado; cápsula de encabezado; saludo; ventana principal con foto y 'Mis recibos'; accesos como apps en ventana; novedades; beneficio en vidrio.",
+        "operacion": "Evaluador en ventanas: resultado, chequeo, acciones y un toast flotante. Alta de noticia en ventanas (206px · 1fr · 292px).",
+        "listado": "Tabla en ventana de vidrio.",
+        "tablero": "Reportes en ventana sobre el entorno."
+      },
+      "firma": "Vidrio oscuro flotante con aro de luz + entorno fotográfico desenfocado + auroras frías.",
+      "cuidado": "Texto sobre vidrio depende del fondo: contraste variable. backdrop-filter pesado en teléfonos modestos.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m113 .tel-pantalla, .m113 .pc-pantalla {\n --t2: rgba(255,255,255,.84); --t3: rgba(255,255,255,.74); --aur:#a8e6ff; --vio:#cdbaff; --ok:#62e39c; --amb:#ffd166; --mal:#ff958b; --inf:#a3d2ff;\n --ok-f: rgba(70,210,130,.2); --amb-f: rgba(255,196,70,.18); --mal-f: rgba(255,110,100,.2); --inf-f: rgba(140,200,255,.16);\n --vid: linear-gradient(155deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 52%, rgba(255,255,255,.08)); --vid-base: rgba(22,25,34,.54);\n --aro: inset 0 0 0 1px rgba(255,255,255,.16);\n --sombra: inset 0 1px 0 rgba(255,255,255,.32), inset 0 0 0 1px rgba(255,255,255,.1), 0 34px 64px -26px rgba(0,0,0,.75), 0 10px 22px -10px rgba(0,0,0,.45);\n --ease: cubic-bezier(.22,1,.36,1); background:#0a0d15; color:#fff; font-family:\"Figtree\",system-ui,-apple-system,\"Segoe UI\",sans-serif;\n -webkit-font-smoothing:antialiased;\n}\n.m113 .amb { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; background:#0a0d15; }\n.m113 .amb img, .m113 .amb video { position:absolute; inset:-70px; width:calc(100% + 140px); height:calc(100% + 140px); object-fit:cover; display:block; filter:grayscale(1) blur(26px) brightness(.44) contrast(1.1); animation:m113-deriva 42s ease-in-out infinite alternate; }\n.m113 .cap { position:relative; z-index:1; }\n.m113 .v { position:relative; border-radius:28px; background:var(--vid), var(--vid-base); -webkit-backdrop-filter:blur(34px) saturate(1.6); backdrop-filter:blur(34px) saturate(1.6); box-shadow:var(--sombra); }\n.m113 .rd { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff; text-decoration:none; background:rgba(255,255,255,.14); box-shadow:var(--aro), 0 10px 22px -12px rgba(0,0,0,.7); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); transition:transform .35s var(--ease), background-color .3s; }\n.m113 .pil { display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 15px 0 12px; border-radius:999px; font-size:14px; font-weight:600; color:#fff; text-decoration:none; background:rgba(255,255,255,.13); box-shadow:var(--aro), 0 10px 22px -12px rgba(0,0,0,.7); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); transition:background-color .3s, transform .35s var(--ease); }\n.m113 .perfil { margin-left:auto; width:60px; height:60px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff; background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.34), rgba(255,255,255,.08) 62%); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), var(--aro), 0 14px 26px -12px rgba(0,0,0,.8); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); transition:transform .4s var(--ease); }\n.m113 .nov img { width:86px; height:86px; border-radius:20px; object-fit:cover; flex:none; filter:grayscale(1) contrast(1.05); box-shadow:0 10px 20px -10px rgba(0,0,0,.8); }\n.m113 .pasos { list-style:none; display:flex; gap:4px; margin:7px 0 0; padding:4px; border-radius:999px; background:rgba(255,255,255,.1); box-shadow:var(--aro); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); width:max-content; }"
+    },
+    {
+      "id": "aluminio",
+      "nombre": "Aluminio",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "114",
+        "archivos": [
+          "index.html#m114"
+        ]
+      },
+      "caracter": "Audio danés de lujo: aluminio cepillado y negro anodizado, controles redondos, tipografía fina y un champaña como luz de estado. Silencioso y caro.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 300, tracking -.02em, 34-40px",
+        "texto": "Hanken Grotesk 400/500; rótulos 13px 500 MAYÚSCULAS .16em",
+        "cifras": "Hanken Grotesk tabular"
+      },
+      "colores": {
+        "fondo": "#f3f3f1",
+        "superficie": "#fbfbfa",
+        "tinta": "#141415",
+        "tinta_suave": "#45474b",
+        "acento": "#d6be94",
+        "acento_2": "#72562a",
+        "oscuro": "#0c0c0d",
+        "linea": "#d6d7d9"
+      },
+      "forma": {
+        "radio": "14-24px; 999px en botones",
+        "bordes": "filetes de un pelo inset 0 0 0 1px #d6d7d9",
+        "sombras": "perilla torneada: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -2px 5px rgba(0,0,0,.16), 0 6px 14px rgba(0,0,0,.22)",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "aluminio cepillado en CSS (repeating-linear-gradient horizontal) con brillo que pasa",
+        "perilla torneada (conic-gradient) con anillo de luz champaña",
+        "negro anodizado con radial",
+        "dial del evaluador"
+      ],
+      "pantallas": {
+        "portada": "Negro anodizado: foto B/N, saludo fino de 38px, placa de aluminio con 'Mis recibos' y la perilla con anillo de luz; secciones con teclas.",
+        "operacion": "Evaluador: pasos, dial, hallazgo, chequeo, totales. Alta de noticia en papel gris (214px · 1fr · 262px).",
+        "listado": "Tabla en caja con filetes de un pelo.",
+        "tablero": "Reportes: descripción, filtros, tabla."
+      },
+      "firma": "Aluminio cepillado CSS + perilla torneada con luz champaña #d6be94.",
+      "cuidado": "Texturas metálicas que dependen de gradientes repetidos; poca carga de color para estados.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m114 .tel-pantalla, .m114 .pc-pantalla {\n --negro:#0c0c0d; --negro-2:#161618; --negro-3:#1f2022; --papel:#f3f3f1; --blanco:#fbfbfa; --tinta:#141415; --gris:#45474b; --gris-2:#5a5c61;\n --gris-o:#aeb0b4; --gris-o2:#8d9095; --filete:#d6d7d9; --filete-2:#e4e5e6; --filete-o:#2b2c2f; --champ:#d6be94; --bronce:#72562a; --ok:#21663d;\n --ok-o:#74d39c; --ok-f:#e6f1ea; --amb:#875100; --amb-o:#ecae4a; --amb-f:#f7eedd; --mal:#a8231a; --mal-o:#ff8d80; --mal-f:#f7e5e2;\n --curva:cubic-bezier(.22,.8,.2,1); --lenta:cubic-bezier(.45,0,.2,1);\n font-family:\"Hanken Grotesk\",\"Figtree\",system-ui,-apple-system,\"Segoe UI\",sans-serif; color:var(--tinta); background:var(--papel);\n font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;\n}\n.m114 .alu { position:relative; overflow:hidden; color:var(--tinta); background: repeating-linear-gradient(0deg, rgba(255,255,255,.30) 0 1px, rgba(0,0,0,.028) 1px 2px, rgba(255,255,255,0) 2px 3px), repeating-linear-gradient(0deg, rgba(0,0,0,.022) 0 1px, transparent 1px 9px), linear-gradient(90deg, rgba(255,255,255,.0) 0%, rgba(255,255,255,.35) 38%, rgba(255,255,255,0) 62%), linear-gradient(180deg, #e8e9ea 0%, #d5d7d9 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 0 rgba(0,0,0,.08); }\n.m114 .torneado { border-radius:50%; background: repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 0 1px, rgba(0,0,0,.045) 1px 2px), conic-gradient(from 25deg, #f3f3f3, #b6b8bb 22%, #ececec 47%, #aeb0b3 73%, #f3f3f3); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -2px 5px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.14), 0 6px 14px rgba(0,0,0,.22); color:var(--tinta); }\n.m114 .btn { display:inline-flex; align-items:center; gap:12px; height:48px; padding:0 8px 0 22px; border-radius:999px; font-size:15px; font-weight:500; letter-spacing:.01em; white-space:nowrap; transition:transform .3s var(--curva), box-shadow .3s var(--curva); }\n.m114 .placa { margin:18px 12px 0; border-radius:24px; padding:22px 20px 18px; animation:m114-entra .9s var(--curva) both .1s; }\n.m114 .perilla { position:relative; width:108px; height:108px; flex:none; margin-left:auto; margin-top:2px; }\n.m114 .eva h1 { font-size:38px; line-height:1.04; font-weight:300; letter-spacing:-.02em; margin-top:8px; }\n.m114 .titfila h1 { font-size:40px; line-height:1.05; font-weight:300; letter-spacing:-.02em; margin-top:6px; }"
+    },
+    {
+      "id": "cartelera",
+      "nombre": "Cartelera",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "115",
+        "archivos": [
+          "index.html#m115"
+        ]
+      },
+      "caracter": "Plataforma de series: negro, destacado a pantalla completa con el video del gremio y filas de tarjetas que se desplazan de costado. El rojo solo rellena.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Bebas Neue 400, MAYÚSCULAS; destacado 78px (teléfono) y 64px (panel), line-height .86-.9",
+        "texto": "Archivo (Hanken Grotesk de respaldo)",
+        "cifras": "Archivo"
+      },
+      "colores": {
+        "fondo": "#141414",
+        "superficie": "#1e1e1e",
+        "tinta": "#ffffff",
+        "tinta_suave": "#b3b3b3",
+        "acento": "#db1a2b",
+        "acento_2": "#ff6b6b",
+        "oscuro": "#000000",
+        "linea": "#2e2e2e"
+      },
+      "forma": {
+        "radio": "3-8px",
+        "bordes": "pocos; foco con anillo blanco 0 0 0 2px #fff",
+        "sombras": "0 14px 30px -10px #000",
+        "densidad": "media"
+      },
+      "recursos": [
+        "destacado a pantalla completa con video",
+        "filas de tarjetas con scroll horizontal",
+        "afiches de acceso",
+        "fotos B/N oscurecidas",
+        "la diferencia en contorno punteado + cruz + palabra (nunca relleno rojo)"
+      ],
+      "pantallas": {
+        "portada": "Destacado con video, velo, encabezado encima y título de 78px; aviso; filas horizontales de afiches (accesos, novedades) y beneficio a lo ancho.",
+        "operacion": "Evaluador: banda con pasos, título 40px, diferencia en contorno punteado, pila de chequeos, toast. Panel: 'billboard' con video y alta de noticia en grilla con vista.",
+        "listado": "Tabla de noticias bajo el billboard.",
+        "tablero": "Reportes: billboard, info y grilla con columna lateral."
+      },
+      "firma": "Destacado con video + filas de afiches que se deslizan + rojo #db1a2b solo como relleno.",
+      "cuidado": "Derivativo de una marca concreta; Bebas gigante y video cargan la página.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": ".m115 .tel-pantalla, .m115 .pc-pantalla {\n --negro:#141414; --sup:#1e1e1e; --sup-2:#262626; --sup-3:#333; --linea:#2e2e2e; --linea-2:#404040; --blanco:#fff; --gris:#b3b3b3; --gris-2:#8c8c8c;\n --rojo:#db1a2b; --ok:#46d369; --amb:#f5b83d; --dif:#ff6b6b; --curva:cubic-bezier(.22,1,.36,1);\n font-family:\"Archivo\", \"Hanken Grotesk\", system-ui, sans-serif; background:var(--negro); color:var(--blanco);\n}\n.m115 .mini-btn { font-size:12.5px; font-weight:600; font-stretch:90%; padding:6px 10px; border-radius:4px; background:#ffffff1f; color:#fff; border:1px solid #ffffff2e; backdrop-filter:blur(6px); }\n.m115 .hero-media video, .m115 .hero-media img { width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.15) brightness(.78); animation:m115-zoom 18s var(--curva) infinite alternate; }\n.m115 .titulo-hero { margin:0; font-size:78px; line-height:.86; text-transform:uppercase; text-shadow:0 4px 24px #0008; }\n.m115 .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:15px; padding:11px 18px; border-radius:5px; border:0; cursor:pointer; font-family:inherit; transition:transform .18s var(--curva), background .18s; }\n.m115 .fila { display:flex; gap:8px; overflow-x:auto; padding:2px 16px 10px; scroll-snap-type:x mandatory; scrollbar-width:none; animation:m115-empuja 1.6s var(--curva) 1.4s 1 both; }\n.m115 .afiche { width:124px; height:172px; border-radius:6px; position:relative; overflow:hidden; padding:12px 11px; display:flex; flex-direction:column; justify-content:flex-end; background:radial-gradient(130% 80% at 100% 0%, #3a3a3a 0%, #1f1f1f 55%, #181818 100%); border:1px solid #2c2c2c; transition:transform .25s var(--curva), box-shadow .25s; }\n.m115 .ev-banda img { width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.15) brightness(.6); animation:m115-zoom 20s var(--curva) infinite alternate; }\n.m115 .dif { border:1.5px dashed var(--dif); border-radius:8px; padding:14px; background:#ff6b6b0d; margin-bottom:16px; }\n.m115 .bill video, .m115 .bill img { position:absolute; right:0; top:0; width:70%; height:100%; object-fit:cover; z-index:-2; filter:grayscale(1) contrast(1.15) brightness(.7); animation:m115-zoom 20s var(--curva) infinite alternate; }\n.m115 .bill h1 { margin:0; font-size:64px; line-height:.9; text-transform:uppercase; }"
+    },
+    {
+      "id": "oro-sueco",
+      "nombre": "Oro sueco",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/ShfNweQzKRzTbSpgVj57bK",
+        "ronda": "6",
+        "numero": "116",
+        "archivos": [
+          "index.html#m116"
+        ]
+      },
+      "caracter": "Auto eléctrico escandinavo: blanco, piedra y grafito con un oro sobrio como único acento, geometría recta, hilos de 1px y foto a sangre B/N templada. Minimalismo cálido.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Hanken Grotesk 300, tracking -.03em, 34-46px; énfasis en oro 400",
+        "texto": "Hanken Grotesk, letter-spacing -.003em",
+        "cifras": "JetBrains Mono para datos"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#f4f3f0",
+        "tinta": "#141414",
+        "tinta_suave": "#66645e",
+        "acento": "#c6a15a",
+        "acento_2": "#7f6128",
+        "oscuro": "#1b1b1c",
+        "linea": "#d9d7d1"
+      },
+      "forma": {
+        "radio": "0 (botones rectos)",
+        "bordes": "hilos de 1px #d9d7d1; botón con borde 1px tinta",
+        "sombras": "casi ninguna",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "foto a sangre B/N templada con degradé",
+        "subrayado de oro en lo activo",
+        "entrada escalonada que sube",
+        "vidrio claro en controles sobre la foto"
+      ],
+      "pantallas": {
+        "portada": "Encabezado; héroe con foto, perfil y título fino de 46px con el nombre en oro; aviso; bloque principal; accesos; novedades; beneficios.",
+        "operacion": "Evaluador: subtítulo, pasos, título 40px, veredicto, hallazgo con medida, chequeo, totales, botones rectos. Alta de noticia (200px · 1fr · 290px).",
+        "listado": "Tabla con hilos.",
+        "tablero": "Reportes con cabecera con foto, filtros, info y grilla."
+      },
+      "firma": "Oro #c6a15a como único acento + títulos de 300 grandes + botones rectos sin radio.",
+      "cuidado": "El oro en texto (#7f6128) es el único que pasa contraste; el claro solo como filete.",
+      "eleccion": "No pasó a la ronda 7: la ronda 7 solo tomó el 98 de esta ronda (más modelos de rondas anteriores).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m116 .tel-pantalla, .m116 .pc-pantalla {\n --blanco:#ffffff; --niebla:#f4f3f0; --piedra:#e9e7e2; --hilo:#d9d7d1; --hilo-2:#c7c4bc; --tinta:#141414; --tinta-2:#4b4a46; --gris:#66645e;\n --grafito:#1b1b1c; --oro:#c6a15a; --oro-claro:#e3c98f; --oro-txt:#7f6128; --oro-velo:#f5eedf; --ok:#2a6a4b; --ok-f:#e7f0ea; --amb:#875900;\n --amb-f:#f6eedb; --mal:#a2272d; --mal-f:#f8e8e7; --curva:cubic-bezier(.22,1,.36,1);\n font-family:\"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta); background:var(--blanco); letter-spacing:-.003em;\n}\n.m116 .rot.oro { color:var(--oro-txt); }\n.m116 .btn { display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:52px; padding:0 18px; border:1px solid var(--tinta); font:inherit; font-size:15px; font-weight:600; cursor:pointer; transition:background .25s var(--curva), color .25s var(--curva), border-color .25s var(--curva); }\n.m116 .hero-foto { position:absolute; inset:0; }\n.m116 .hero-foto img { width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.06) brightness(.92); animation:m116-zoom 16s var(--curva) both; }\n.m116 .hero-foto::after { content:\"\"; position:absolute; inset:0; background: linear-gradient(180deg, rgba(20,20,20,.38) 0%, rgba(20,20,20,0) 30%, rgba(20,20,20,.25) 55%, rgba(16,16,16,.86) 100%), linear-gradient(90deg, color-mix(in srgb, var(--oro) 22%, transparent), transparent 70%); mix-blend-mode:normal; }\n.m116 .hero h1 { font-size:46px; font-weight:300; line-height:1; letter-spacing:-.03em; margin:10px 0 10px; }\n.m116 .benef img { width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.05) brightness(.9); animation:m116-deriva 14s ease-in-out infinite alternate; }\n.m116 .ev-tit h1 { font-size:40px; font-weight:300; letter-spacing:-.03em; line-height:1.02; }\n.m116 .medida-pista { position:relative; height:10px; background:repeating-linear-gradient(135deg, var(--mal-f) 0 5px, color-mix(in srgb, var(--mal) 28%, #fff) 5px 7px); border:1px solid color-mix(in srgb, var(--mal) 35%, #fff); }\n.m116 .p-tit h1 { font-size:42px; font-weight:300; letter-spacing:-.03em; line-height:1.05; margin-top:10px; }\n.m116 .r-cab h1 { font-size:42px; font-weight:300; letter-spacing:-.03em; margin:10px 0 12px; }\n.m116 .r-foto img { width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.05) brightness(.95); animation:m116-zoom 16s var(--curva) both; }"
+    },
+    {
+      "id": "cercano-paneles",
+      "nombre": "Cercano (paneles con tarjeta oscura)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "140",
+        "archivos": [
+          "index.html#m140",
+          "index.html#m117",
+          "index.html#m119",
+          "index.html#m143"
+        ]
+      },
+      "caracter": "Cercano y ordenado: tarjetas blancas de radio 20 sobre gris frío, Figtree, el oscuro del gremio en UNA sola tarjeta por pantalla con la foto adentro y un medidor de cinco tramos. Para apps del afiliado amables.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Figtree 800, tracking -.022/-.025em, 30-34px, sin mayúsculas",
+        "texto": "Figtree",
+        "cifras": "Figtree tabular, importes medidos (sin cifras gigantes)"
+      },
+      "colores": {
+        "fondo": "#f2f4f7",
+        "superficie": "#ffffff",
+        "tinta": "#131823",
+        "tinta_suave": "#4f5767",
+        "acento": "#C6FF3D",
+        "acento_2": "#e8b84b",
+        "oscuro": "#0f2240",
+        "linea": "#e2e6ec"
+      },
+      "colores_nota": "oscuro = var(--base) del gremio (UOM #0f2240); acento_2 = var(--acento) del gremio (UOM). El flúor #C6FF3D es propio de esta variante (140).",
+      "forma": {
+        "radio": "20px (--r) en tarjetas, 14px (--r-chico) en internas, 999px en botones",
+        "bordes": "inset 0 0 0 1px #e2e6ec",
+        "sombras": "0 1px 2px rgba(19,24,35,.05), 0 8px 24px -16px rgba(19,24,35,.22); la oscura: 0 20px 40px -22px base al 75%",
+        "densidad": "media"
+      },
+      "recursos": [
+        "una tarjeta oscura del gremio por pantalla con foto teñida (luminosity)",
+        "medidor de cinco tramos (vacío que late en Inicio, lleno en el evaluador)",
+        "subrayado-resaltador flúor con puntas en bisel, solo en la acción principal",
+        "degradé de la base a transparente sobre la foto"
+      ],
+      "pantallas": {
+        "portada": "Encabezado claro de una línea; saludo 32px; tarjeta oscura del gremio con la foto adentro, 'Mis recibos', el medidor de cinco esperando y el botón con trazo flúor; accesos en una carta; novedades con miniaturas; beneficio.",
+        "operacion": "Evaluador: pasos, título, el medidor de cinco lleno con el tramo que falla, hallazgo, controles en cartas, acciones (Reportar al sindicato con el flúor). Alta de noticia: riel · hoja · vista, con la vista del afiliado como la tarjeta oscura.",
+        "listado": "Tablas en cartas blancas de radio 20.",
+        "tablero": "Reportes: el panel oscuro con foto diciendo estados en palabras, filtros y tabla en carta."
+      },
+      "firma": "Una sola tarjeta oscura del gremio por pantalla + medidor de cinco tramos + cartas blancas de radio 20 sobre #f2f4f7.",
+      "cuidado": "El flúor sobre blanco no es legible como texto (por eso va como resaltador detrás o subrayado bajo tinta). Depende de que el --base del gremio sea oscuro.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 5,
+      "variantes": [
+        {
+          "numero": "117",
+          "ronda": "7",
+          "diferencia": "Configurador cercano (98 + 69): sin flúor; las opciones de los formularios en pastillas del 98, el alta de noticia como configurador (vista a la izquierda, opciones a la derecha, minmax(0,1fr) 520px), la foto del gremio como 'escenario' de Mis recibos."
+        },
+        {
+          "numero": "119",
+          "ronda": "7",
+          "diferencia": "Cercano en foto sutil (69 + 81): sin tarjeta oscura; el panel destacado es blanco con la foto en duotono CLARO (sombra = primario al 50% con blanco, foto gris en screen, luces casi blancas)."
+        },
+        {
+          "numero": "143",
+          "ronda": "7",
+          "diferencia": "Solo logo sereno (69 + 41 + 18): paleta propia neutra sin color del gremio (nieve #f3f4f5, grafito #1c2025, flúor #cbf33f), Manrope; la tarjeta es grafito y el flúor rellena la acción principal y marca un resaltador por pantalla."
+        }
+      ],
+      "css_firma": ".m140 .tel-pantalla, .m140 .pc-pantalla {\n --ok:#0d7a5f; --ok-txt:#0a6a52; --ok-claro:#4cc9a0; --amb:#b8860b; --amb-txt:#73540a; --mal:#c0392b; --mal-txt:#a42f22; --mal-claro:#ff8f82;\n --tinta:#131823; --gris:#4f5767; --gris-2:#687081; --fondo:#f2f4f7; --carta:#fff; --hundido:#f6f7f9; --linea:#e2e6ec; --linea-2:#eef1f4;\n --fluor:#C6FF3D; --fluor-suave:color-mix(in srgb, #C6FF3D 30%, transparent); --r:20px; --r-chico:14px;\n --sombra:0 1px 2px rgba(19,24,35,.05), 0 8px 24px -16px rgba(19,24,35,.22);\n --sombra-osc:0 20px 40px -22px color-mix(in srgb, var(--base) 75%, transparent); --curva:cubic-bezier(.33,1,.68,1);\n font-family:\"Figtree\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta); background:var(--fondo);\n}\n.m140 .flu { background-image:linear-gradient(100deg, transparent .16em, var(--fluor) .26em, var(--fluor) calc(100% - .12em), transparent calc(100% - .03em)); background-repeat:no-repeat; background-position:0 100%; background-size:100% .2em; padding:0 .1em .16em; margin:0 -.1em; -webkit-box-decoration-break:clone; box-decoration-break:clone; animation:m140-trazo .9s .55s var(--curva) both; }\n.m140 .btn-flu.claro .flu { background-size:100% .5em; background-position:0 82%; padding:0 .14em .02em; margin:0 -.14em; animation-name:m140-trazo-gordo; }\n.m140 .principal { position:relative; overflow:hidden; margin:16px 16px 0; border-radius:var(--r); padding:22px 20px 20px; color:#fff; background:var(--base); box-shadow:var(--sombra-osc); animation:m140-sube .7s var(--curva) both; isolation:isolate; }\n.m140 .principal .foto-fondo img { width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.05); mix-blend-mode:luminosity; opacity:.42; display:block; animation:m140-acerca 20s var(--curva) both; }\n.m140 .duo img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.04) brightness(1.1); mix-blend-mode:luminosity; opacity:.86; }\n.m140 .p-tit h1 { margin:0; font-size:40px; font-weight:800; letter-spacing:-.026em; line-height:1.04; }\n.m140 .resumen-osc .foto-fondo img { width:100%; height:100%; object-fit:cover; filter:grayscale(1); mix-blend-mode:luminosity; opacity:.34; display:block; }\n.m117 .carta { background:var(--carta);border-radius:var(--r);box-shadow:var(--sombra) }\n.m117 .tablado { position:relative;height:236px;display:grid;place-items:center;perspective:900px; background:linear-gradient(180deg,#fff 0%,var(--relleno) 58%,var(--relleno-2) 100%) }\n.m117 .conf { display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:22px;align-items:start }\n.m119 .duo { position:relative; overflow:hidden; background:var(--sombra-duo); isolation:isolate; }\n.m119 .duo img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.05) brightness(1.12); mix-blend-mode:screen; animation:m119-revela 1.2s var(--curva) both; }\n.m119 .principal { position:relative; overflow:hidden; margin:16px 16px 0; border-radius:var(--r); background:var(--carta); box-shadow:var(--sombra-alta); animation:m119-sube .7s var(--curva) both; }\n.m143 .flu { background-image:linear-gradient(100deg, transparent .1em, var(--fluor) .18em, var(--fluor) calc(100% - .1em), transparent); background-repeat:no-repeat; background-position:0 88%; background-size:100% .42em; padding:0 .08em; -webkit-box-decoration-break:clone; box-decoration-break:clone; animation:m143-trazo .9s .5s var(--curva) both; }\n.m143 .redondo.on { background:var(--grafito); color:#fff; box-shadow:none; }\n.m143 .medidor { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; margin:14px 0 7px; }"
+    },
+    {
+      "id": "sintesis-total",
+      "nombre": "Síntesis total",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "146",
+        "archivos": [
+          "index.html#m146"
+        ]
+      },
+      "caracter": "El sistema que suma lo elegido: tarjetas del 69 sobre tintes del primario, foto sutil, video chico, formularios de configurador y la línea móvil de novedades. Para una app completa y coherente con la marca del gremio.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700, MAYÚSCULAS, 38-44px (títulos de pantalla); secciones 24px",
+        "texto": "Figtree",
+        "cifras": "Figtree tabular; ninguna cifra es el foco"
+      },
+      "colores": {
+        "fondo": "#f6f7f9",
+        "superficie": "#ffffff",
+        "tinta": "#0c1c34",
+        "tinta_suave": "#576479",
+        "acento": "#e8b84b",
+        "acento_2": "#183863",
+        "oscuro": "#0f2240",
+        "linea": "#d6dce4"
+      },
+      "colores_nota": "Todo derivado del gremio con color-mix (valores calculados para UOM): fondo = primario 4% en blanco; tinta = base 82% con negro; línea = primario 18%; acento_2 = primario 82% con base (texto de marca).",
+      "forma": {
+        "radio": "20px tarjetas, 12px internas, 999px pastillas",
+        "bordes": "inset 0 0 0 1px tinte 18-26% del primario (nunca gris)",
+        "sombras": "0 1px 2px base 6%, 0 10px 26px -18px base 40%",
+        "densidad": "media"
+      },
+      "recursos": [
+        "tintes del primario como única escala",
+        "foto sutil en duotono claro (screen sobre primario 60%)",
+        "video chico teñido (mix-blend color) encabezando 'Empezá por acá'",
+        "línea móvil de novedades con máscara de bordes",
+        "medidor de cinco",
+        "pastillas del configurador"
+      ],
+      "pantallas": {
+        "portada": "Encabezado blanco sobre el tinte; la línea móvil de novedades corriendo debajo; saludo en Barlow Condensed; tarjeta 'Empezá por acá' con el video arriba y el medidor esperando; secciones con foto sutil.",
+        "operacion": "Evaluador sereno con el medidor lleno y controles en cartas. Alta de noticia como configurador del 98 (la vista a un lado, opciones al otro; campos rellenos sin borde y pastillas con el color del gremio).",
+        "listado": "Tablas en cartas con bordes tonales.",
+        "tablero": "Reportes: el oscuro del gremio en el resumen, filtros con los campos del 98 y tabla."
+      },
+      "firma": "Todo es tinte del primario (4-40%) + línea móvil de novedades + video chico teñido en la tarjeta de inicio.",
+      "cuidado": "Seis herencias en un sistema: riesgo de sumar demasiado movimiento (video + línea móvil + medidor que late). Con un primario claro, los tintes pierden la diferencia.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 5,
+      "variantes": [],
+      "css_firma": ".m146 .tel-pantalla, .m146 .pc-pantalla {\n --t4: color-mix(in srgb, var(--primario) 4%, #fff); --t6: color-mix(in srgb, var(--primario) 6%, #fff);\n --t10: color-mix(in srgb, var(--primario) 10%, #fff); --t14: color-mix(in srgb, var(--primario) 14%, #fff);\n --t18: color-mix(in srgb, var(--primario) 18%, #fff); --t26: color-mix(in srgb, var(--primario) 26%, #fff);\n --t40: color-mix(in srgb, var(--primario) 40%, #fff); --tinta: color-mix(in srgb, var(--base) 82%, #000);\n --gris: color-mix(in srgb, var(--base) 70%, #fff); --gris-2: color-mix(in srgb, var(--base) 58%, #fff);\n --marca-txt: color-mix(in srgb, var(--primario) 82%, var(--base)); --sombra-duo: color-mix(in srgb, var(--primario) 60%, #fff); --ok:#0d7a5f;\n --ok-txt:#0a6a52; --ok-f: color-mix(in srgb, #0d7a5f 10%, #fff); --ok-claro:#4cc9a0; --amb:#b8860b; --amb-txt:#6e5009;\n --amb-f: color-mix(in srgb, #b8860b 12%, #fff); --mal:#c0392b; --mal-txt:#a42f22; --mal-f: color-mix(in srgb, #c0392b 7%, #fff); --mal-claro:#ff8f82;\n --carta:#fff; --r:20px; --r-chico:12px;\n --sombra: 0 1px 2px color-mix(in srgb, var(--base) 6%, transparent), 0 10px 26px -18px color-mix(in srgb, var(--base) 40%, transparent);\n --sombra-osc: 0 22px 40px -24px color-mix(in srgb, var(--base) 75%, transparent); --curva: cubic-bezier(.33,1,.68,1);\n --cond: \"Barlow Condensed\", \"Arial Narrow\", sans-serif; font-family:\"Figtree\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta);\n background:var(--t4);\n}\n.m146 a:focus-visible, .m146 button:focus-visible, .m146 input:focus-visible, .m146 select:focus-visible, .m146 textarea:focus-visible, .m146 .cas:focus-within { outline:3px solid var(--t40); outline-offset:2px; }\n.m146 .linea { display:flex; align-items:stretch; height:36px; background:var(--t10); border-bottom:1px solid var(--t18); overflow:hidden; }\n.m146 .linea-v { flex:1; overflow:hidden; display:flex; align-items:center; -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 24px), transparent); mask-image:linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 24px), transparent); }\n.m146 .linea-pista { display:flex; gap:34px; white-space:nowrap; padding-left:18px; animation:m146-corre 30s linear infinite; font-size:14.5px; font-weight:600; color:var(--tinta); }\n.m146 h1.t1 { margin:0; font-family:var(--cond); font-size:40px; font-weight:700; line-height:1; text-transform:uppercase; letter-spacing:.005em; }\n.m146 .clip img, .m146 .clip video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(.94) brightness(1.08); opacity:.92; }\n.m146 .empezar-txt h2 { margin:6px 0 0; font-family:var(--cond); font-size:38px; font-weight:700; line-height:1; text-transform:uppercase; }\n.m146 .duo img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.08) brightness(1.06); mix-blend-mode:screen; animation:m146-revela 1.2s var(--curva) both; }\n.m146 .p-tit h1 { margin:0; font-family:var(--cond); font-size:44px; font-weight:700; line-height:1; text-transform:uppercase; letter-spacing:.005em; }\n.m146 .conf { display:grid; grid-template-columns:minmax(0, 1fr) 500px; overflow:hidden; }\n.m146 .resumen-osc .fondo img { width:100%; height:100%; object-fit:cover; filter:grayscale(1); mix-blend-mode:luminosity; opacity:.3; display:block; }"
+    },
+    {
+      "id": "tonal-primario",
+      "nombre": "Tonal",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "121",
+        "archivos": [
+          "index.html#m121",
+          "index.html#m134",
+          "index.html#m141",
+          "index.html#m144"
+        ]
+      },
+      "caracter": "Un solo tono: todo sale de tintes del primario del gremio (fondos 4-10%, bordes 18-30%, texto en la base), fotos incluidas. La profundidad es la jerarquía. Para gremios que quieren que la app sea 'su color' sin estridencia.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Figtree 800; saludo 40px tracking -.03em; título de pantalla 30px (38px en escritorio) en MAYÚSCULAS .005em",
+        "texto": "Figtree",
+        "cifras": "Figtree tabular"
+      },
+      "colores": {
+        "fondo": "#f6f7f9",
+        "superficie": "#e8ecf0",
+        "tinta": "#0f2240",
+        "tinta_suave": "#44536a",
+        "acento": "#183863",
+        "acento_2": "#bac5d3",
+        "oscuro": "#0f2240",
+        "linea": "#bac5d3"
+      },
+      "colores_nota": "Valores para UOM: fondo = primario 4% en blanco (--t4); superficie = --t10; línea = --t30; acento = --pt (primario 82% con base); tinta = var(--base). Cambian con cada gremio.",
+      "forma": {
+        "radio": "10-24px; 99/999px en botones",
+        "bordes": "inset 0 0 0 1px --t30",
+        "sombras": "0 22px 40px -28px base al 60%",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "escala tonal del primario (--t4 … --t55)",
+        "foto en el tono: escala de grises fundida con luminosity sobre el primario, aclarada",
+        "medidor de cinco tramos que respira vacío en la portada",
+        "pie de foto en píldora blanca"
+      ],
+      "pantallas": {
+        "portada": "Tope con encabezado y saludo grande; foto a sangre en el tono con la tarjeta principal montada encima; medidor esperando y botón; accesos en 6 ítems; novedades y beneficio con fotos tonales grandes.",
+        "operacion": "Evaluador sereno: cabecera con pasos y título en mayúsculas, resultado con el medidor y el hallazgo, chequeo de 5 controles, totales, acciones. Alta de noticia más ancha: riel · hoja · vista (228px · 1fr · 336px).",
+        "listado": "Lista en tarjetas con fotos tonales.",
+        "tablero": "Reportes: cabecera de pantalla, banda, dos cartas."
+      },
+      "firma": "Monocromo del primario del gremio en todas las superficies, bordes y fotos; medidor de cinco.",
+      "cuidado": "Sin un segundo color, los estados (verde/rojo fijos) cargan toda la señal. Con un primario muy saturado o muy claro la escala pierde legibilidad.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 5,
+      "variantes": [
+        {
+          "numero": "134",
+          "ronda": "7",
+          "diferencia": "Tonal con video (45 + 66): el tope de la portada al 22% con el video del gremio teñido en el primario (mix-blend color), más suave que la foto."
+        },
+        {
+          "numero": "141",
+          "ronda": "7",
+          "diferencia": "Tonal flúor (45 + 18): un único trazo de resaltador flúor #C6FF3D por pantalla sobre lo importante; nunca estado ni botón."
+        },
+        {
+          "numero": "144",
+          "ronda": "7",
+          "diferencia": "Síntesis serena (98 + 41 + 45): Manrope y la calma del nórdico, tintes en todo y el alta de noticia como configurador del 98 con pastillas en tinte; tope de la portada con un radial del tinte (radial-gradient 120% 70% at 50% 100%)."
+        }
+      ],
+      "css_firma": ".m121 .tel-pantalla, .m121 .pc-pantalla {\n --t4: color-mix(in srgb, var(--primario) 4%, #fff); --t6: color-mix(in srgb, var(--primario) 6%, #fff);\n --t10: color-mix(in srgb, var(--primario) 10%, #fff); --t14: color-mix(in srgb, var(--primario) 14%, #fff);\n --t18: color-mix(in srgb, var(--primario) 18%, #fff); --t22: color-mix(in srgb, var(--primario) 22%, #fff);\n --t30: color-mix(in srgb, var(--primario) 30%, #fff); --t55: color-mix(in srgb, var(--primario) 55%, #fff);\n --pt: color-mix(in srgb, var(--primario) 82%, var(--base)); --tx: var(--base); --tx2: color-mix(in srgb, var(--base) 78%, #fff); --ok:#0d7a5f;\n --ok-tx:#0a6a52; --ok-f: color-mix(in srgb, #0d7a5f 11%, #fff); --mal:#c0392b; --mal-tx:#a42f22; --mal-f: color-mix(in srgb, #c0392b 8%, #fff);\n --curva: cubic-bezier(.33,1,.68,1); --sombra: 0 22px 40px -28px color-mix(in srgb, var(--base) 60%, transparent);\n font-family:\"Figtree\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tx); background:var(--t4);\n}\n.m121 .tono { position:relative; overflow:hidden; background:var(--primario); isolation:isolate; }\n.m121 .tono img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.06) brightness(1.1); mix-blend-mode:luminosity; opacity:.86; }\n.m121 .tit-pant { margin:0; font-size:30px; font-weight:800; line-height:1.05; letter-spacing:.005em; text-transform:uppercase; text-wrap:balance; }\n.m121 .medidor { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; margin:0 0 7px; padding:0; list-style:none; }\n.m121 .saludo h1 { margin:0; font-size:40px; font-weight:800; line-height:1.02; letter-spacing:-.03em; }\n.m134 .tono { position:relative; overflow:hidden; background:var(--t10); isolation:isolate; }\n.m134 .tono img, .m134 .tono video { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(.95) brightness(1.06); opacity:.92; }\n.m134 .medidor { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; margin:14px 0 7px; }\n.m141 .flu { background-image:linear-gradient(100deg, transparent .1em, var(--fluor) .22em, var(--fluor) calc(100% - .14em), transparent calc(100% - .04em)); background-repeat:no-repeat; background-position:0 92%; background-size:100% .48em; padding:0 .1em; margin:0 -.04em; color:var(--tx); -webkit-box-decoration-break:clone; box-decoration-break:clone; animation:m141-trazo .95s .45s var(--curva) both; }\n.m141 .tono { position:relative; overflow:hidden; background:var(--t10); display:block; }\n.m144 .pill { display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 24px;border-radius:999px;border:0; font:600 15px/1 inherit;font-family:inherit;letter-spacing:.01em;cursor:pointer;white-space:nowrap; transition:background-color .3s var(--curva),transform .18s var(--curva) }\n.m144 .despues { margin-top:16px;padding:12px 14px;border-radius:14px;border:1px dashed var(--t30);background:var(--t4) }\n.m144 .conf { display:grid;grid-template-columns:1fr 480px;min-height:820px }"
+    },
+    {
+      "id": "tonal-nocturno",
+      "nombre": "Tonal nocturno",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "122",
+        "archivos": [
+          "index.html#m122"
+        ]
+      },
+      "caracter": "El tonal llevado a la noche: la base del gremio hundida en negro en cuatro escalones, Anton medida para títulos y una sola cosa encendida por pantalla. Para portadas oscuras con identidad de gremio.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Anton 400, MAYÚSCULAS, line-height .92-.95; ≤54px en teléfono y ≤64px en escritorio (saludo 54px, evaluador 46px)",
+        "texto": "Archivo",
+        "cifras": "Archivo tabular"
+      },
+      "colores": {
+        "fondo": "#091221",
+        "superficie": "#0e1d34",
+        "tinta": "#f1f3f6",
+        "tinta_suave": "#c1c6cd",
+        "acento": "#e8b84b",
+        "acento_2": "#a3b1c4",
+        "oscuro": "#091221",
+        "linea": "#353f4e"
+      },
+      "colores_nota": "Valores para UOM: --n0 base 44% con #050608 (fondo), --n2 base 76% (superficie), --pt primario 40% con blanco (acento_2); acento = --acento-txt del gremio (lo único encendido). Texto blanco apenas teñido.",
+      "forma": {
+        "radio": "8-18px",
+        "bordes": "inset 0 0 0 1px blanco 17% sobre --n1",
+        "sombras": "0 22px 40px -28px #000; brillos de estado 0 0 12px -2px",
+        "densidad": "media"
+      },
+      "recursos": [
+        "cuatro escalones de fondo (n0→n3): más importante, más alto y más tinte",
+        "foto en un solo tono de noche (mix-blend color, hundida en la base)",
+        "medidor de cinco como luces sobre la noche",
+        "vidrio leve (blur 6px) en controles sobre la foto"
+      ],
+      "pantallas": {
+        "portada": "Tapa con la foto en un solo tono a sangre, encabezado y saludo en Anton; aviso de cuenta; tarjeta principal con el medidor; accesos; novedades y beneficio.",
+        "operacion": "Evaluador sereno: cabecera con pasos, resultado con el medidor de luces, chequeo, totales y acciones. Alta de noticia: riel + hoja + vista.",
+        "listado": "Lista en hojas oscuras con esquina.",
+        "tablero": "Reportes: cabecera, banda y grilla."
+      },
+      "firma": "Escalones de la base del gremio hundidos en negro + Anton medida + una sola cosa en --acento-txt.",
+      "cuidado": "Si la base del gremio es muy saturada (bordó), toda la app queda teñida; Anton en párrafos largos no sirve.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".m122 .tel-pantalla, .m122 .pc-pantalla {\n --n0: color-mix(in srgb, var(--base) 44%, #050608); --n1: color-mix(in srgb, var(--base) 60%, #07080a);\n --n2: color-mix(in srgb, var(--base) 76%, #0b0c0f); --n3: color-mix(in srgb, var(--primario) 26%, var(--n2));\n --l1: color-mix(in srgb, #fff 9%, var(--n1)); --l2: color-mix(in srgb, #fff 17%, var(--n1)); --tx: color-mix(in srgb, #fff 94%, var(--primario));\n --tx2: color-mix(in srgb, #fff 74%, var(--base)); --pt: color-mix(in srgb, var(--primario) 40%, #fff);\n --pt-f: color-mix(in srgb, var(--primario) 30%, var(--n1)); --uno: var(--acento-txt); --ok:#3cc79a;\n --ok-f: color-mix(in srgb, #3cc79a 16%, var(--n1)); --amb:#e3ad36; --amb-f: color-mix(in srgb, #e3ad36 16%, var(--n1)); --mal:#ff7a6e;\n --mal-f: color-mix(in srgb, #ff6f61 15%, var(--n1)); --f-tit:\"Anton\",\"Bebas Neue\",\"Arial Narrow\",sans-serif;\n --f-txt:\"Archivo\",system-ui,-apple-system,\"Segoe UI\",sans-serif; --curva:cubic-bezier(.33,1,.68,1); --sombra: 0 22px 40px -28px #000;\n background:var(--n0); color:var(--tx); font-family:var(--f-txt); line-height:1.45;\n}\n.m122 .kick { font-stretch:112%; font-weight:700; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--pt); }\n.m122 .marca-nom { font-stretch:108%; font-weight:600; font-size:12px; letter-spacing:1.3px; text-transform:uppercase; color:var(--tx2); line-height:1.3; }\n.m122 .mini-b { display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 10px; border-radius:999px; font-size:12.5px; font-weight:600; text-decoration:none; color:var(--tx); background:color-mix(in srgb, var(--n0) 55%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, #fff 26%, transparent); backdrop-filter:blur(6px); transition:background-color .2s var(--curva); }\n.m122 .tono { position:relative; overflow:hidden; background:var(--n1); }\n.m122 .medidor { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin:0 0 8px; padding:0; list-style:none; }\n.m122 .saludo h1 { font-size:54px; line-height:.92; animation:m122-sube .8s .1s var(--curva) both; }\n.m122 .perfil > span:first-child { width:54px; height:54px; border-radius:50%; display:grid; place-items:center; background:color-mix(in srgb, var(--n0) 60%, transparent); backdrop-filter:blur(6px); box-shadow:inset 0 0 0 1.5px var(--pt); color:var(--pt); }\n.m122 .pest { position:relative; padding:14px 0 13px; font-stretch:108%; font-size:12px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--tx2); text-decoration:none; white-space:nowrap; transition:color .2s var(--curva); }\n.m122 .campo label, .m122 .lbl { display:block; font-stretch:108%; font-size:11.5px; font-weight:700; letter-spacing:1.3px; text-transform:uppercase; color:var(--tx2); margin-bottom:6px; padding:0; }\n.m122 .mini time { font-stretch:112%; font-size:11px; font-weight:700; letter-spacing:1.3px; text-transform:uppercase; color:var(--pt); }\n.m122 th { text-align:left; padding:10px 16px; font-stretch:108%; font-size:11px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--tx2); background:var(--n0); border-bottom:1px solid var(--l2); white-space:nowrap; }"
+    },
+    {
+      "id": "nordico-sereno",
+      "nombre": "Nórdico sereno",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "133",
+        "archivos": [
+          "index.html#m133",
+          "index.html#m127",
+          "index.html#m135"
+        ]
+      },
+      "caracter": "Calma nórdica: blanco frío, gris piedra, mucho aire, Manrope, el gremio solo en detalles (filete, resaltador del nombre, botón, pestaña) y piezas que llegan de a una. Para apps que no deben gritar.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 MAYÚSCULAS para títulos de pantalla (.015em) y secciones 22px; saludo en Manrope 700 31px (nombre 800 con resaltador)",
+        "texto": "Manrope",
+        "cifras": "Manrope tabular"
+      },
+      "colores": {
+        "fondo": "#f3f5f7",
+        "superficie": "#ffffff",
+        "tinta": "#1b2128",
+        "tinta_suave": "#535c66",
+        "acento": "#183863",
+        "acento_2": "#f6e3b7",
+        "oscuro": "#1b2128",
+        "linea": "#dfe3e7"
+      },
+      "colores_nota": "acento = --boton (primario 82% con base, UOM); acento_2 = --resalte (acento del gremio al 40% con blanco, UOM) usado como resaltador del nombre.",
+      "forma": {
+        "radio": "12-20px",
+        "bordes": "1px piedra #dfe3e7 / #c9cfd5",
+        "sombras": "0 1px 2px rgba(27,33,40,.04), 0 10px 26px -18px rgba(27,33,40,.22)",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "resaltador del acento del gremio bajo el nombre (gradiente 62%-92%)",
+        "entrada serena: fundido + sube 8px, escalonada",
+        "video chico, silencioso y teñido apenas con el primario dentro de la tarjeta 'Empezá por acá'",
+        "fotos chicas teñidas apenas"
+      ],
+      "pantallas": {
+        "portada": "Encabezado de una línea; saludo con el nombre resaltado; tarjeta 'Empezá por acá' con video chico; secciones con mucho aire.",
+        "operacion": "Evaluador quieto y medido; alta de noticia riel + hoja + vista.",
+        "listado": "Tablas en tarjetas blancas.",
+        "tablero": "Reportes medidos, sin cifras grandes."
+      },
+      "firma": "Blanco frío + gris piedra + resaltador del acento bajo el nombre del afiliado; entrada escalonada de a una pieza.",
+      "cuidado": "Tan sereno que la acción principal puede perderse; depende del botón en el color del gremio.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 5,
+      "variantes": [
+        {
+          "numero": "127",
+          "ronda": "7",
+          "diferencia": "Nórdico en movimiento (41 + 8): suma la línea de texto móvil de novedades, finita, en gris piedra (#eaedf0, texto #4a535d) con punto del acento que late y bordes que se desvanecen; sin video."
+        },
+        {
+          "numero": "135",
+          "ronda": "7",
+          "diferencia": "Nórdico con foto sutil (41 + 81): la foto en duotono claro (screen sobre primario 52% con blanco) arriba de la portada, fundida en la mesa, en la tarjeta de inicio, novedades y en la vista de Noticias que respira."
+        }
+      ],
+      "css_firma": ".m133 .tel-pantalla, .m133 .pc-pantalla {\n --nieve:#f3f5f7; --nieve-2:#eaedf0; --piedra:#dfe3e7; --piedra-2:#c9cfd5; --piedra-3:#8f99a3; --tinta:#1b2128; --gris:#535c66; --gris-2:#5f6872;\n --carta:#ffffff; --ok:#0d7a5f; --ok-txt:#0b6a53; --ok-suave:#e7f3ef; --amb:#b8860b; --amb-txt:#6f5106; --amb-suave:#f8f0dc; --mal:#c0392b;\n --mal-txt:#a32e1e; --mal-suave:#fbecea; --marca-txt: color-mix(in srgb, var(--primario) 80%, var(--base));\n --boton: color-mix(in srgb, var(--primario) 82%, var(--base)); --marca-suave: color-mix(in srgb, var(--primario) 7%, #fff);\n --marca-linea: color-mix(in srgb, var(--primario) 24%, #fff); --resalte: color-mix(in srgb, var(--acento) 40%, #fff);\n --sombra: 0 1px 2px rgba(27,33,40,.04), 0 10px 26px -18px rgba(27,33,40,.22); --curva: cubic-bezier(.33,1,.68,1);\n --cond: \"Barlow Condensed\", \"Arial Narrow\", sans-serif; font-family:\"Manrope\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta);\n background:var(--nieve);\n}\n.m133 .e { animation:m133-entra .72s var(--curva) both; animation-delay:calc(var(--i, 0) * 80ms + 60ms); }\n.m133 .clip img, .m133 .clip video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(.94) brightness(1.08); opacity:.92; }\n.m133 .saludo h1 b { font-weight:800; color:var(--marca-txt); background:linear-gradient(transparent 62%, var(--resalte) 62%, var(--resalte) 92%, transparent 92%); padding:0 2px; }\n.m127 .linea { display:flex; align-items:center; height:36px; background:var(--nieve-2); border-bottom:1px solid var(--piedra); color:var(--gris-linea); overflow:hidden; font-size:13px; text-decoration:none; }\n.m127 .linea-v { flex:1; min-width:0; height:100%; overflow:hidden; display:flex; align-items:center; -webkit-mask-image:linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 34px), transparent); mask-image:linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 34px), transparent); }\n.m127 .foto { position:relative; overflow:hidden; background:var(--nieve-2); display:block; }\n.m135 .foto img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.06) brightness(1.08); mix-blend-mode:screen; animation:m135-revela 1.2s var(--curva) both; }\n.m135 .saludo h1 b { font-weight:800; color:var(--marca); background:linear-gradient(transparent 62%, var(--resalte) 62%, var(--resalte) 92%, transparent 92%); padding:0 2px; }"
+    },
+    {
+      "id": "sereno-linea-movil",
+      "nombre": "Sereno con línea móvil",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "136",
+        "archivos": [
+          "index.html#m136",
+          "index.html#m124"
+        ]
+      },
+      "caracter": "Claro y quieto, con una franja de novedades que corre despacio bajo el encabezado y un video chico teñido. Para portadas informativas tranquilas.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 MAYÚSCULAS (--cond)",
+        "texto": "Hanken Grotesk",
+        "cifras": "Hanken Grotesk tabular"
+      },
+      "colores": {
+        "fondo": "#f0f1f1",
+        "superficie": "#ffffff",
+        "tinta": "#171a21",
+        "tinta_suave": "#555c6b",
+        "acento": "#e8b84b",
+        "acento_2": "#183762",
+        "oscuro": "#0f2240",
+        "linea": "#e3e5ea"
+      },
+      "colores_nota": "Valores para UOM: fondo = base 3% con #f7f7f6; acento_2 = --marca-txt (primario 78% con base); acento = var(--acento) del gremio en los rombos y el foco.",
+      "forma": {
+        "radio": "10-14px",
+        "bordes": "inset 0 0 0 1px #e3e5ea; filetes inferiores",
+        "sombras": "0 1px 2px base 6%, 0 10px 24px -18px base 30%",
+        "densidad": "media"
+      },
+      "recursos": [
+        "línea móvil de novedades (marquesina con mask-image de bordes, 34-42s, se frena al pasar el mouse)",
+        "entrada serena escalonada (fundido + 8px)",
+        "video chico teñido (mix-blend color) dentro de una tarjeta",
+        "medidor de cinco"
+      ],
+      "pantallas": {
+        "portada": "Encabezado claro; franja de novedades que corre; saludo en Barlow Condensed; tarjeta con video y 'Empezá por acá'; secciones.",
+        "operacion": "Evaluador sereno con medidor; alta de noticia riel · hoja · vista.",
+        "listado": "Tablas en cartas claras.",
+        "tablero": "Reportes serenos."
+      },
+      "firma": "La franja de novedades que corre (marquesina con bordes que se desvanecen) en clave clara.",
+      "cuidado": "El movimiento continuo distrae y hay que respetar reduce-motion; una marquesina no es accesible para leer entera.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "124",
+          "ronda": "7",
+          "diferencia": "Video con línea móvil (96 + 8): la tira lleva rótulo en el tinte del gremio y rombos de acento; video del 96 encabezando 'Empezá por acá'; títulos Barlow Condensed 36-40px."
+        }
+      ],
+      "css_firma": ".m136 .tel-pantalla, .m136 .pc-pantalla {\n --ok:#0d7a5f; --ok-txt:#0a6a52; --amb:#b8860b; --amb-txt:#7a5a06; --mal:#c0392b; --mal-txt:#a8321f; --tinta:#171a21; --gris:#555c6b; --gris-2:#6a7180;\n --linea:#e3e5ea; --linea-2:#eef0f3; --fondo:color-mix(in srgb, var(--base) 3%, #f7f7f6); --carta:#fff;\n --marca-txt:color-mix(in srgb, var(--primario) 78%, var(--base)); --boton:color-mix(in srgb, var(--primario) 80%, var(--base));\n --suave:color-mix(in srgb, var(--primario) 7%, #fff);\n --sombra:0 1px 2px color-mix(in srgb, var(--base) 6%, transparent), 0 10px 24px -18px color-mix(in srgb, var(--base) 30%, transparent);\n --curva:cubic-bezier(.33,1,.68,1); --cond:\"Barlow Condensed\", \"Arial Narrow\", sans-serif;\n font-family:\"Hanken Grotesk\", system-ui, -apple-system, \"Segoe UI\", sans-serif; color:var(--tinta); background:var(--fondo);\n}\n.m136 .tick-v { flex:1; min-width:0; height:100%; display:flex; align-items:center; overflow:hidden; -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 36px), transparent 100%); mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 36px), transparent 100%); }\n.m136 .tick-pista { display:flex; flex:none; white-space:nowrap; animation:m136-corre 42s linear infinite; }\n.m136 .saludo h1 { margin:0; font-family:var(--cond); font-size:42px; font-weight:700; line-height:1; text-transform:uppercase; letter-spacing:.2px; }\n.m136 .clip img, .m136 .clip video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(.94) brightness(1.08); opacity:.92; }\n.m136 .ev-cab h1 { margin:20px 0 0; font-family:var(--cond); font-size:36px; font-weight:700; text-transform:uppercase; line-height:1; letter-spacing:.3px; }\n.m136 .tit-fila h1 { margin:0; font-family:var(--cond); font-size:40px; font-weight:700; line-height:1; text-transform:uppercase; letter-spacing:.4px; }\n.m124 .linea { position:relative; display:flex; align-items:stretch; height:40px; background:#fff; border-top:1px solid var(--linea-2); box-shadow:inset 0 -1px 0 var(--linea); overflow:hidden; }\n.m124 .linea-v { flex:1; min-width:0; overflow:hidden; display:flex; align-items:center; -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 36px), transparent 100%); mask-image:linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 36px), transparent 100%); }\n.m124 .linea-pista { display:flex; width:max-content; animation:m124-corre var(--dur, 34s) linear infinite; }"
+    },
+    {
+      "id": "placas-funcion",
+      "nombre": "Placas de función",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "123",
+        "archivos": [
+          "index.html#m123",
+          "index.html#m130",
+          "index.html#m131",
+          "index.html#m138"
+        ]
+      },
+      "caracter": "Mesa gris neutra con placas blancas de sombra física, teclas, campos hundidos, LED y un punto de acento que dice dónde mirar. Funcional y táctil; en esta variante la foto sutil vive dentro de las tarjetas.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 MAYÚSCULAS, medida",
+        "texto": "Work Sans (voz de rótulo), cifras tabulares",
+        "cifras": "Work Sans tabular; JetBrains Mono en códigos"
+      },
+      "colores": {
+        "fondo": "#e8e8e5",
+        "superficie": "#f5f5f3",
+        "tinta": "#1c1c1a",
+        "tinta_suave": "#53534e",
+        "acento": "#e8b84b",
+        "acento_2": "#143053",
+        "oscuro": "#1c1c1a",
+        "linea": "#d6d5d0"
+      },
+      "colores_nota": "acento = punto indicador con var(--acento) del gremio (UOM); acento_2 = --pri-t (primario 78% con negro, UOM).",
+      "forma": {
+        "radio": "8-16px; 99/999px en teclas",
+        "bordes": "pocos: la profundidad la da la sombra",
+        "sombras": "placa: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(20,20,15,.06), 0 14px 28px -18px rgba(20,20,15,.34); tecla con relieve; campo hundido inset 0 1px 3px",
+        "densidad": "media"
+      },
+      "recursos": [
+        "placas con sombra física sobre mesa gris",
+        "teclas con relieve (degradé #fdfdfc → #efeeea)",
+        "campos hundidos",
+        "LED de estado siempre con texto",
+        "punto de acento (uno por pantalla)",
+        "foto sutil en duotono claro (screen) dentro de las placas, fundida al blanco"
+      ],
+      "pantallas": {
+        "portada": "Encabezado como placa; la tarjeta 'Mis recibos' con la foto que respira adentro y se funde en el blanco; accesos como teclas; novedades.",
+        "operacion": "Evaluador en placas con LED de estado. Alta de noticia con campos hundidos.",
+        "listado": "Tablas en placas blancas.",
+        "tablero": "Reportes en placas, con LED y punto de acento."
+      },
+      "firma": "Mesa #e8e8e5 + placas con sombra física + teclas y campos hundidos + un punto de acento por pantalla.",
+      "cuidado": "La profundidad por sombras sutiles se pierde en pantallas de bajo contraste; muchos micro-relieves.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "130",
+          "ronda": "7",
+          "diferencia": "Flúor claro (18 + 25): un trazo de resaltador flúor #C6FF3D por pantalla detrás de lo que hay que leer primero; Work Sans en todo; la llamativa es el Evaluador ('Hay 1 diferencia' resaltado)."
+        },
+        {
+          "numero": "131",
+          "ronda": "7",
+          "diferencia": "Tarjetas tonales (25 + 45): solo la tarjeta principal de cada pantalla va teñida en el primario (sombra tonal) con foto en un tono; títulos en Figtree 800; lo demás neutro."
+        },
+        {
+          "numero": "138",
+          "ronda": "7",
+          "diferencia": "Tablero en tarjetas (7 + 25): la portada como tablero con la tapa en duotono (luminosity + screen) dentro de una placa grande, saludo en Barlow Condensed 800 48px, epígrafes en Source Serif itálica."
+        }
+      ],
+      "css_firma": ".m123 .tel-pantalla, .m123 .pc-pantalla {\n --mesa:#e8e8e5; --placa:#f5f5f3; --blanco:#fff; --tinta:#1c1c1a; --gris:#53534e; --gris-2:#686862; --linea:#d6d5d0; --linea-2:#e7e6e2; --ok:#0d7a5f;\n --amb:#b8860b; --mal:#c0392b; --ok-t:#0b6a52; --amb-t:#7a5807; --mal-t:#a3301d; --pri-t: color-mix(in srgb, var(--primario) 78%, #000);\n --pri-b: color-mix(in srgb, var(--primario) 82%, var(--base)); --suave: color-mix(in srgb, var(--primario) 7%, #fff);\n --suave-2: color-mix(in srgb, var(--primario) 14%, #fff); --sombra-duo: color-mix(in srgb, var(--primario) 55%, #fff);\n --curva: cubic-bezier(.33,1,.68,1);\n --sombra-placa: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(20,20,15,.06), 0 14px 28px -18px rgba(20,20,15,.34);\n --sombra-tecla: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(20,20,15,.07), 0 1px 1px rgba(20,20,15,.15), 0 4px 9px -4px rgba(20,20,15,.2);\n --hundido: inset 0 1px 3px rgba(20,20,15,.16), inset 0 0 0 1px rgba(20,20,15,.05);\n font-family:\"Work Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif; font-variant-numeric:tabular-nums; color:var(--tinta);\n background:var(--mesa); line-height:1.45; -webkit-font-smoothing:antialiased;\n}\n.m123 .foto img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.06) brightness(1.08); mix-blend-mode:screen; animation:m123-revela 1.2s var(--curva) both; }\n.m123 .h1 { font-family:\"Barlow Condensed\", \"Arial Narrow\", sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.01em; line-height:1; text-wrap:balance; }\n.m123 .placa { background:var(--blanco); border-radius:16px; box-shadow:var(--sombra-placa); overflow:hidden; animation:m123-entra .65s var(--curva) both; }\n.m123 .tecla { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:34px; padding:0 13px; border:0; border-radius:999px; background:linear-gradient(#fdfdfc, #efeeea); box-shadow:var(--sombra-tecla); font:inherit; font-size:13px; font-weight:500; color:var(--tinta); cursor:pointer; text-decoration:none; white-space:nowrap; transition:transform .12s var(--curva); }\n.m123 .puntos { display:flex; justify-content:center; gap:6px; margin-top:12px; }\n.m130 .flu { --alto:.46em; background-image:linear-gradient(100deg, transparent .12em, var(--fluor) .2em, var(--fluor) calc(100% - .14em), transparent calc(100% - .04em)); background-repeat:no-repeat; background-position:0 92%; background-size:100% var(--alto); padding:0 .1em; margin:0 -.04em; -webkit-box-decoration-break:clone; box-decoration-break:clone; animation:m130-trazo .9s .45s var(--curva) both; }\n.m130 .tecla:active { transform:translateY(1px); box-shadow:var(--hundido); background:#ebeae6; }\n.m130 .led { display:inline-block; width:8px; height:8px; border-radius:50%; flex:none; background:var(--ok); box-shadow:0 0 0 2px color-mix(in srgb, var(--ok) 16%, transparent); }\n.m131 .led { display:inline-block; width:8px; height:8px; border-radius:50%; flex:none; background:var(--ok); box-shadow:0 0 0 2px color-mix(in srgb, var(--ok) 16%, transparent), 0 0 7px color-mix(in srgb, var(--ok) 60%, transparent); }\n.m131 .led.tono { background:var(--pt); box-shadow:0 0 0 2px var(--t18); }\n.m131 .placa { background:var(--blanco); border-radius:16px; box-shadow:var(--sombra-placa); animation:m131-entra .6s var(--curva) both; }\n.m138 .duo { position:relative; background:var(--base); overflow:hidden; }\n.m138 .led { display:inline-block; width:8px; height:8px; border-radius:50%; flex:none; background:var(--ok); box-shadow:0 0 0 2px color-mix(in srgb, var(--ok) 16%, transparent); }\n.m138 .placa { background:var(--blanco); border-radius:16px; box-shadow:var(--sombra-placa); animation:m138-entra .6s var(--curva) both; }"
+    },
+    {
+      "id": "contraluz-medido",
+      "nombre": "Contraluz",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "128",
+        "archivos": [
+          "index.html#m128",
+          "index.html#m129",
+          "index.html#m137"
+        ]
+      },
+      "caracter": "Negro, Anton condensada y fotos B/N de contraste duro, con títulos a escala de lectura y el color del gremio en UN solo detalle por pantalla. Para portadas con carácter.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Anton 400 MAYÚSCULAS, line-height .95; ≤56px teléfono (saludo 54px, evaluador 52px), ≤72px escritorio",
+        "texto": "Archivo",
+        "cifras": "Archivo tabular"
+      },
+      "colores": {
+        "fondo": "#000000",
+        "superficie": "#0b0b0b",
+        "tinta": "#ffffff",
+        "tinta_suave": "#ababab",
+        "acento": "#e8b84b",
+        "acento_2": "#3cc79a",
+        "oscuro": "#000000",
+        "linea": "#262626"
+      },
+      "colores_nota": "acento = --uno: var(--acento-txt) del gremio (UOM #e8b84b), un solo detalle por pantalla.",
+      "forma": {
+        "radio": "0",
+        "bordes": "inset 0 0 0 1px #3a3a3a; botones con contorno blanco 1.5px",
+        "sombras": "ninguna; anillos concéntricos en el perfil",
+        "densidad": "media"
+      },
+      "recursos": [
+        "fotos B/N duras (grayscale + contrast 1.4-1.45, brightness .85)",
+        "degradé negro sobre la foto",
+        "zoom lento",
+        "un solo detalle encendido en el color del gremio"
+      ],
+      "pantallas": {
+        "portada": "Foto B/N a sangre con degradé; saludo Anton 54px; tarjeta principal 40px; secciones 30px; beneficio con título Anton 28px.",
+        "operacion": "Evaluador con título Anton 52px y estados en luces (verde agua/ámbar/rojo). Alta de noticia: riel + hoja + vista en negro.",
+        "listado": "Tablas en negro con filetes #262626.",
+        "tablero": "Reportes en negro, serenos."
+      },
+      "firma": "Negro puro + Anton medida + B/N duro + un solo detalle en el color del gremio.",
+      "cuidado": "Negro puro y texto blanco largo cansan; los grises #8f8f8f en texto chico rozan el contraste.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "129",
+          "ronda": "7",
+          "diferencia": "Contraluz flúor (12 + 18): el subrayado-resaltador flúor #C6FF3D solo bajo la acción y el estado importante; tres capas de color que no se pisan (gremio en el nombre y filos, flúor en la acción, estados con ícono y palabra)."
+        },
+        {
+          "numero": "137",
+          "ronda": "7",
+          "diferencia": "Configurador nocturno (98 + 12): el configurador del 98 en negro y grafito (#0a0a0b, #161719), solo logo, con el escenario de la vista previa como contraluz (radial-gradient elíptico gris sobre negro) y pastillas."
+        }
+      ],
+      "css_firma": ".m128 .tel-pantalla, .m128 .pc-pantalla {\n --negro:#000; --hoja:#0b0b0b; --hoja-2:#121212; --hoja-3:#181818; --blanco:#fff; --gris-1:#d2d2d2; --gris-2:#ababab; --gris-3:#8f8f8f;\n --linea:#262626; --linea-2:#3a3a3a; --uno: var(--acento-txt); --ok-luz:#3cc79a; --amb-luz:#e3ad36; --mal-luz:#ff6f61;\n --f-tit:\"Anton\",\"Bebas Neue\",\"Arial Narrow\",sans-serif; --f-txt:\"Archivo\",system-ui,-apple-system,\"Segoe UI\",sans-serif;\n --curva:cubic-bezier(.33,1,.68,1); background:var(--negro); color:var(--blanco); font-family:var(--f-txt); line-height:1.45;\n}\n.m128 .kicker { font-family:var(--f-txt); font-stretch:112%; font-weight:700; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--gris-2); }\n.m128 .uno { color:var(--uno); animation:m128-enciende 1.2s .7s var(--curva) both; }\n.m128 .btn-uno { background:var(--uno); color:#000; animation:m128-enciende 1.2s .7s var(--curva) both; }\n.m128 .marca-nombre { font-stretch:108%; font-weight:600; font-size:11.5px; letter-spacing:1.3px; text-transform:uppercase; color:var(--gris-1); max-width:160px; line-height:1.25; }\n.m128 .foto img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.45) brightness(.85); animation:m128-zoom 16s var(--curva) both; }\n.m128 .btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; height:50px; padding:0 24px; border:0; border-radius:0; font-family:var(--f-txt); font-stretch:108%; font-weight:700; font-size:14px; letter-spacing:1.3px; text-transform:uppercase; text-decoration:none; cursor:pointer; transition:transform .15s var(--curva), background-color .2s var(--curva), box-shadow .2s var(--curva); }\n.m128 .hola { font-size:54px; }\n.m128 .pestanas a { position:relative; padding:15px 0 14px; font-stretch:108%; font-size:12px; font-weight:600; letter-spacing:1.1px; text-transform:uppercase; color:var(--gris-3); text-decoration:none; white-space:nowrap; }\n.m128 .campo > span, .m128 .campo legend, .m128 .f > span { font-stretch:108%; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--gris-2); padding:0; }\n.m128 th { text-align:left; font-stretch:108%; font-size:11px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--gris-2); padding:10px 12px; border-bottom:1px solid var(--blanco); white-space:nowrap; }\n.m129 :focus-visible { outline:3px solid var(--fluor); outline-offset:3px; }\n.m129 .flu { background-image:linear-gradient(100deg, transparent .16em, var(--fluor) .24em, var(--fluor) calc(100% - .1em), transparent calc(100% - .03em)); background-repeat:no-repeat; background-position:0 100%; background-size:100% .18em; padding:0 .05em .08em; -webkit-box-decoration-break:clone; box-decoration-break:clone; animation:m129-trazo .95s .5s var(--curva) both; }\n.m129 .est { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px 0 7px; font-size:12.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap; border:1.5px solid currentColor; line-height:1; }\n.m137 .n-escena { position:relative;margin-top:20px;height:250px;display:grid;place-items:center;overflow:hidden;perspective:900px; background:radial-gradient(ellipse 60% 70% at 50% 30%,#2a2c30 0%,#16171a 55%,var(--negro) 100%) }\n.m137 .n-escena::after { content:\"\";position:absolute;left:50%;bottom:22px;width:240px;height:20px;margin-left:-120px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.7),rgba(0,0,0,0)) }"
+    },
+    {
+      "id": "noticiero-oscuro",
+      "nombre": "Noticiero oscuro",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "145",
+        "archivos": [
+          "index.html#m145"
+        ]
+      },
+      "caracter": "Portada como tapa de diario en negro: foto del gremio a sangre, un tablero de accesos en grilla de diario, la línea móvil 'Último' con las novedades y el dato en un zócalo de noticiero. Medido.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Anton 400 MAYÚSCULAS; saludo 54px, evaluador 46px, secciones 30px, celdas del tablero 21px",
+        "texto": "Archivo con font-stretch 106-112% en rótulos (MAYÚSCULAS 1.1-2px de espaciado); Barlow Condensed 600 16.5px en la línea móvil y el zócalo",
+        "cifras": "Archivo tabular"
+      },
+      "colores": {
+        "fondo": "#0c0d10",
+        "superficie": "#11161e",
+        "tinta": "#f4f5f7",
+        "tinta_suave": "#a5aab4",
+        "acento": "#e8b84b",
+        "acento_2": "#3cc79a",
+        "oscuro": "#08090b",
+        "linea": "#262a31"
+      },
+      "colores_nota": "superficie = --hoja (base 18% con #111317, UOM); acento = --uno / --acento-txt del gremio (lomo del zócalo, contorno del perfil).",
+      "forma": {
+        "radio": "2px",
+        "bordes": "inset 0 0 0 1px #3a3f48; grilla del tablero con gap 1px sobre la línea",
+        "sombras": "zócalo blanco con 0 14px 30px -14px rgba(0,0,0,.7)",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "línea móvil 'Último' (marquesina 30s con máscara de bordes)",
+        "zócalo de noticiero: lomo vertical en el acento + caja blanca",
+        "tablero de accesos en grilla de diario (2 columnas, filetes de 1px)",
+        "fotos B/N duras con un dejo del gremio en las sombras (luminosity)",
+        "rayado diagonal en el fondo de ranuras"
+      ],
+      "pantallas": {
+        "portada": "Tapa: foto del gremio a sangre, saludo Anton 54px, zócalo con 'Mis recibos'; debajo la línea móvil con novedades y el tablero de accesos en grilla de diario; beneficio.",
+        "operacion": "Evaluador sereno: cabecera Anton 46px y el hallazgo en zócalo con lomo rojo. Alta de noticia en negro con campos de rótulo en mayúsculas.",
+        "listado": "Tabla con encabezados en Archivo ensanchado y mayúsculas espaciadas.",
+        "tablero": "Reportes: filtros en mayúsculas y tabla sobre hojas oscuras teñidas por la base."
+      },
+      "firma": "Zócalo de noticiero (lomo vertical en el acento + caja blanca) + línea móvil 'Último' + tablero en grilla de diario.",
+      "cuidado": "Mucho texto en mayúsculas espaciadas; la marquesina debe frenarse con reduce-motion. El zócalo blanco es el único plano claro: pesa mucho.",
+      "eleccion": "No consta en el lienzo (los elegidos se guardaban en el navegador). Dato externo al lienzo: el proyecto adoptó después un modelo 'noticiero' (147), del que este 145 parece antecedente por nombre y receta.",
+      "calidad": 5,
+      "variantes": [],
+      "css_firma": ".m145 .tel-pantalla, .m145 .pc-pantalla {\n --fondo:#0c0d10; --hoja:color-mix(in srgb, var(--base) 18%, #111317); --hoja-2:color-mix(in srgb, var(--base) 10%, #16181d); --campo:#08090b;\n --linea:#262a31; --linea-2:#3a3f48; --blanco:#f4f5f7; --gris-1:#cfd2d8; --gris-2:#a5aab4; --gris-3:#8b919c; --ok:#0d7a5f; --ok-luz:#3cc79a;\n --amb:#b8860b; --amb-luz:#e3ad36; --mal:#c0392b; --mal-luz:#ff7a6c; --uno:var(--acento-txt); --f-tit:\"Anton\",\"Bebas Neue\",\"Arial Narrow\",sans-serif;\n --f-cond:\"Barlow Condensed\",\"Arial Narrow\",sans-serif; --f-txt:\"Archivo\",system-ui,-apple-system,\"Segoe UI\",sans-serif;\n --curva:cubic-bezier(.33,1,.68,1); background:var(--fondo); color:var(--blanco); font-family:var(--f-txt); line-height:1.4;\n -webkit-font-smoothing:antialiased;\n}\n.m145 .kicker { font-family:var(--f-txt); font-stretch:112%; font-weight:700; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--gris-2); }\n.m145 .marca-nombre { font-stretch:108%; font-weight:600; font-size:11.5px; letter-spacing:1.3px; text-transform:uppercase; color:var(--gris-1); max-width:160px; line-height:1.25; }\n.m145 .foto img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.4) brightness(.92); mix-blend-mode:luminosity; opacity:.94; }\n.m145 .tick-v { flex:1; overflow:hidden; display:flex; align-items:center; -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 26px), transparent); mask-image:linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 26px), transparent); }\n.m145 .tick-pista { display:flex; gap:34px; white-space:nowrap; padding-left:16px; animation:m145-corre 30s linear infinite; font-family:var(--f-cond); font-weight:600; font-size:16.5px; letter-spacing:.3px; color:var(--blanco); }\n.m145 .zoc { display:flex; align-items:stretch; animation:m145-entra .8s .25s var(--curva) both; }\n.m145 .zoc-b { display:flex; align-items:center; padding:0 11px; background:var(--acento); color:var(--tinta-acento); font-family:var(--f-cond); font-weight:700; font-size:12.5px; letter-spacing:1.5px; text-transform:uppercase; white-space:nowrap; writing-mode:vertical-rl; transform:rotate(180deg); }\n.m145 .btn { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:48px; padding:0 22px; border:0; border-radius:2px; font-family:var(--f-txt); font-stretch:108%; font-weight:700; font-size:14px; letter-spacing:1.2px; text-transform:uppercase; text-decoration:none; cursor:pointer; transition:transform .15s var(--curva), filter .2s var(--curva); }\n.m145 .chip-n { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:99px; background:rgba(8,9,11,.55); box-shadow:inset 0 0 0 1px rgba(255,255,255,.22); font-size:12.5px; font-weight:600; color:var(--blanco); text-decoration:none; backdrop-filter:blur(6px); }\n.m145 .perfil { width:42px; height:42px; border-radius:50%; display:grid; place-items:center; background:rgba(8,9,11,.55); box-shadow:inset 0 0 0 1.5px var(--acento-txt); color:var(--blanco); backdrop-filter:blur(6px); }\n.m145 .hola { font-size:54px; line-height:.9; }\n.m145 .ini-zoc .kick-z { font-family:var(--f-txt); font-stretch:112%; font-weight:700; font-size:11.5px; letter-spacing:2px; text-transform:uppercase; color:#4a4f59; }\n.m145 .tablero { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--linea); border-bottom:1px solid var(--linea); }\n.m145 .pestanas a { position:relative; padding:15px 0 14px; font-stretch:106%; font-size:12px; font-weight:600; letter-spacing:1.1px; text-transform:uppercase; color:var(--gris-3); text-decoration:none; white-space:nowrap; }\n.m145 .campo > label, .m145 .campo > .rot, .m145 .campo legend { font-stretch:108%; font-size:11.5px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--gris-2); padding:0; }\n.m145 .slot-v { display:grid; place-items:center; height:84px; box-shadow:inset 0 0 0 1px var(--linea-2); background:repeating-linear-gradient(135deg, transparent 0 8px, rgba(255,255,255,.025) 8px 16px); color:var(--gris-3); cursor:pointer; border:0; width:100%; }\n.m145 th { text-align:left; font-stretch:108%; font-size:11px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--gris-2); padding:10px 12px; border-bottom:1px solid var(--blanco); white-space:nowrap; }\n.m145 .fil > span { font-stretch:108%; font-size:11px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--gris-2); }"
+    },
+    {
+      "id": "revista-gremio",
+      "nombre": "Revista",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "125",
+        "archivos": [
+          "index.html#m125",
+          "index.html#m120",
+          "index.html#m126"
+        ]
+      },
+      "caracter": "Revista seria del gremio: papel blanco con filetes, titulares condensados, bajadas en serif y foto B/N con velo del primario y folio. La portada es una tapa con tablero de accesos.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 MAYÚSCULAS",
+        "texto": "Barlow; bajadas y epígrafes en Source Serif 4",
+        "cifras": "Barlow tabular"
+      },
+      "colores": {
+        "fondo": "#ffffff",
+        "superficie": "#e9e9ed",
+        "tinta": "#16181d",
+        "tinta_suave": "#525863",
+        "acento": "#e8b84b",
+        "acento_2": "#1a3d6b",
+        "oscuro": "#0f2240",
+        "linea": "#c8ccd2"
+      },
+      "colores_nota": "Valores para UOM: línea = base 13% con #e4e5e8; superficie = base 5% con #f4f4f6; oscuro = var(--base) (degradé de la tapa); acento_2 = var(--primario) (velo multiply).",
+      "forma": {
+        "radio": "6-20px",
+        "bordes": "filetes inset 1px de revista",
+        "sombras": "ninguna",
+        "densidad": "media"
+      },
+      "recursos": [
+        "foto B/N con velo del primario en multiply y degradé a la base",
+        "folio y crédito de foto",
+        "tapa a sangre + tablero oscuro de accesos con estado en palabras",
+        "filetes de revista"
+      ],
+      "pantallas": {
+        "portada": "Tapa a sangre con la foto del gremio, folio y titular; debajo un tablero oscuro de accesos con su estado en palabras (sin números como titular).",
+        "operacion": "Evaluador en papel blanco con filetes de revista y la foto en dosis chicas.",
+        "listado": "Noticias como revista: nota con foto y breves.",
+        "tablero": "Reportes en papel blanco con filetes."
+      },
+      "firma": "Tapa con velo del primario en multiply + folio + titulares Barlow Condensed y bajadas en Source Serif.",
+      "cuidado": "Tres familias tipográficas; en el panel el lenguaje editorial puede chocar con la densidad de datos.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "120",
+          "ronda": "7",
+          "diferencia": "Revista con video (67 + 96): doble filete de cabecera, secciones con filete negro y trazo corto de acento; el video chico, silencioso y teñido suave como 'ventana' de la tapa; titular 52px con subrayado de acento."
+        },
+        {
+          "numero": "126",
+          "ronda": "7",
+          "diferencia": "Tapa medida (7): titulares en Anton (54-60px), la foto de la tapa en duotono base + acento (luminosity + screen) y el tablero como índice de revista en grilla 2 columnas con filetes."
+        }
+      ],
+      "css_firma": ".m125 .tel-pantalla, .m125 .pc-pantalla {\n --ok:#0d7a5f; --ok-t:#0a6a52; --amb:#b8860b; --amb-t:#7a5a08; --mal:#c0392b; --mal-t:#a8321f; --tinta:#16181d; --gris:#525863; --gris-2:#686e79;\n --linea:color-mix(in srgb, var(--base) 13%, #e4e5e8); --suave:color-mix(in srgb, var(--base) 5%, #f4f4f6); --curva:cubic-bezier(.33,1,.68,1);\n --tit:\"Barlow Condensed\",\"Arial Narrow\",sans-serif; --serif:\"Source Serif 4\",Georgia,serif; font-family:\"Barlow\",system-ui,sans-serif;\n color:var(--tinta); background:#fff;\n}\n.m125 .foto::before { content:\"\"; position:absolute; inset:0; z-index:1; background:var(--primario); mix-blend-mode:multiply; opacity:.22; pointer-events:none; }\n.m125 .tapa { position:relative; height:430px; color:#fff; }\n.m125 .folio { display:flex; justify-content:space-between; align-items:center; padding:0 16px; }\n.m125 .pild { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 13px; border-radius:20px; font-size:13.5px; font-weight:600; color:#fff; text-decoration:none; background:color-mix(in srgb, var(--base) 55%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, #fff 30%, transparent); backdrop-filter:blur(6px); }\n.m125 .hola h1 { margin:0; font-family:var(--tit); font-weight:800; font-size:48px; line-height:.95; letter-spacing:.01em; text-transform:uppercase; }\n.m125 .tablero { background:var(--base); color:#fff; padding:4px 12px 22px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }\n.m125 .princ h2 { margin:6px 0 0; font-family:var(--tit); font-weight:800; font-size:36px; line-height:1; text-transform:uppercase; letter-spacing:.01em; }\n.m125 .ev h1 { margin:6px 0 0; font-family:var(--tit); font-weight:800; font-size:46px; line-height:.96; text-transform:uppercase; letter-spacing:.01em; display:flex; align-items:center; gap:12px; }\n.m125 .tit-fila h1 { margin:6px 0 0; font-family:var(--tit); font-weight:800; font-size:56px; line-height:.95; text-transform:uppercase; letter-spacing:.01em; color:var(--tinta); }\n.m125 .banda-txt h1 { margin:0; font-family:var(--tit); font-weight:800; font-size:64px; line-height:.92; text-transform:uppercase; letter-spacing:.01em; }\n.m120 .foto::after { content:\"\"; position:absolute; inset:0; background:var(--primario); mix-blend-mode:multiply; opacity:.14; pointer-events:none; }\n.m120 .enc { position:relative; display:flex; align-items:center; gap:10px; padding:9px 16px; background:#fff; border-bottom:1px solid var(--linea); margin-bottom:4px; }\n.m120 .ventana img, .m120 .ventana video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(.94) brightness(1.08); opacity:.94; }\n.m126 .duo img { display:block;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.12);mix-blend-mode:luminosity;opacity:.9 }\n.m126 .tapa { position:relative;min-height:560px;color:#fff;display:flex;flex-direction:column;background:var(--base) }\n.m126 .tablero { display:grid;grid-template-columns:1fr 1fr;background:#fff;border-radius:0 0 12px 12px;box-shadow:0 1px 0 #e3e5ec }"
+    },
+    {
+      "id": "telon",
+      "nombre": "Telón",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/TzefjPgyWRMDC29ctVsX9z",
+        "ronda": "7",
+        "numero": "132",
+        "archivos": [
+          "index.html#m132",
+          "index.html#m139",
+          "index.html#m142"
+        ]
+      },
+      "caracter": "Teatral y tipográfico: Anton y Barlow Condensed, fotos en duotono del gremio que un telón con pliegues descubre al abrir la pantalla y titulares que suben desde su máscara. Medido.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Anton 400 MAYÚSCULAS, line-height .96; 48-54px en teléfono, 60-66px en escritorio",
+        "texto": "Barlow Condensed 500 para todo lo demás",
+        "cifras": "Barlow Condensed; importes a 18-20px"
+      },
+      "colores": {
+        "fondo": "#edece8",
+        "superficie": "#ffffff",
+        "tinta": "#15171d",
+        "tinta_suave": "#4f5562",
+        "acento": "#e8b84b",
+        "acento_2": "#0f2240",
+        "oscuro": "#0f2240",
+        "linea": "#c1c0bd"
+      },
+      "colores_nota": "Valores para UOM: papel = base 4% con #f6f4ef; línea = base 14% con #dedad1; el telón es un paño del color del gremio con ruedo del acento.",
+      "forma": {
+        "radio": "2-4px; 99px en píldoras",
+        "bordes": "1px línea; inset 2px base en botón secundario",
+        "sombras": "0 1px 0 línea, 0 18px 34px -24px base 45%",
+        "densidad": "media"
+      },
+      "recursos": [
+        "telón con pliegues (repeating-linear-gradient) y ruedo de acento que sube",
+        "titulares con clip-path inset que suben desde su máscara",
+        "foto en duotono base + acento (luminosity + screen)",
+        "ciclo de 14s"
+      ],
+      "pantallas": {
+        "portada": "Escena alta: la foto del gremio detrás del telón, que sube; titular Anton 54px; tarjeta principal 40px.",
+        "operacion": "Evaluador sereno (escena baja, el telón sube y queda quieto), título 48px.",
+        "listado": "Alta de Noticias llamativa: telón en la cabecera y en la vista del afiliado.",
+        "tablero": "Reportes serenos con escena baja."
+      },
+      "firma": "El telón del color del gremio que se levanta sobre la foto en duotono + titulares Anton que suben desde la máscara.",
+      "cuidado": "Tapar el contenido con un telón demora la lectura; ciclo animado repetido. Barlow Condensed en todo el texto largo cansa.",
+      "eleccion": "No consta en el lienzo: los elegidos de la ronda 7 se guardaban solo en el navegador (localStorage).",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "139",
+          "ronda": "7",
+          "diferencia": "Revista tipográfica (28 + 37): la voz del telón puesta en la tapa de revista (folio, degradé al oscuro del gremio, bajadas en Source Serif); el telón se levanta una sola vez; titulares 54/64px."
+        },
+        {
+          "numero": "142",
+          "ronda": "7",
+          "diferencia": "Video y telón (96 + 28): el video chico del 96 detrás del telón en la portada; el telón sube, a los 17s baja y vuelve a subir (ciclo 18s)."
+        }
+      ],
+      "css_firma": ".m132 .tel-pantalla, .m132 .pc-pantalla {\n --ok:#0d7a5f; --ok-tx:#0a6a52; --amb:#b8860b; --amb-tx:#755607; --mal:#c0392b; --mal-tx:#a8321f; --tinta:#15171d; --gris:#4f5562; --gris-2:#6b7180;\n --papel: color-mix(in srgb, var(--base) 4%, #f6f4ef); --carta:#fff; --linea: color-mix(in srgb, var(--base) 14%, #dedad1);\n --curva: cubic-bezier(.33,1,.68,1); --ciclo: 14s; font-family:\"Barlow Condensed\", \"Arial Narrow\", sans-serif; font-weight:500; color:var(--tinta);\n background:var(--papel);\n}\n.m132 .duo img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.12) brightness(1.05); mix-blend-mode:luminosity; opacity:.9; transform-origin:50% 60%; animation:m132-zoom var(--ciclo) cubic-bezier(.25,.6,.3,1) 0s infinite both; }\n.m132 .cortina { position:absolute; inset:0; z-index:3; pointer-events:none; background: linear-gradient(180deg, color-mix(in srgb, #000 34%, transparent) 0%, transparent 38%, transparent 82%, color-mix(in srgb, #000 22%, transparent) 100%), repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, #000 24%, transparent) 22px 27px, color-mix(in srgb, #000 8%, transparent) 27px 31px, color-mix(in srgb, #fff 9%, transparent) 31px 34px, transparent 34px 44px), color-mix(in srgb, var(--primario) 62%, var(--base)); box-shadow: inset 0 -5px 0 var(--acento), 0 14px 26px -8px rgba(0,0,0,.55); animation:m132-cortina var(--ciclo) var(--curva) 0s infinite both; }\n.m132 .pildoras a { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 13px; border-radius:99px; font-size:14px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; text-decoration:none; color:#fff; background:color-mix(in srgb, var(--base) 55%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, #fff 32%, transparent); backdrop-filter:blur(4px); }\n.m132 .perfil { width:46px; height:46px; border-radius:50%; display:grid; place-items:center; color:#fff; background:color-mix(in srgb, var(--base) 55%, transparent); box-shadow:inset 0 0 0 2px var(--acento); text-decoration:none; backdrop-filter:blur(4px); }\n.m132 .boleto::before { content:\"\"; position:absolute; inset:0; opacity:.55; background:repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, #000 24%, transparent) 22px 27px, color-mix(in srgb, #000 8%, transparent) 27px 31px, color-mix(in srgb, #fff 8%, transparent) 31px 34px, transparent 34px 44px); }\n.m132 .slot { height:92px; display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center; color:var(--gris); background:repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in srgb, var(--base) 6%, transparent) 8px 9px), var(--papel); font:inherit; font-size:15px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; border:0; cursor:pointer; box-shadow:inset 0 0 0 1.5px var(--linea); width:100%; }\n.m139 .duo img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.12) brightness(1.05); mix-blend-mode:luminosity; opacity:.9; }\n.m139 .tapa { position:relative; height:456px; overflow:hidden; background:var(--base); color:#fff; }\n.m139 .cortina { position:absolute; inset:0; z-index:5; pointer-events:none; background: linear-gradient(180deg, color-mix(in srgb, #000 30%, transparent) 0%, transparent 40%, transparent 84%, color-mix(in srgb, #000 20%, transparent) 100%), repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, #000 22%, transparent) 22px 27px, color-mix(in srgb, #000 8%, transparent) 27px 31px, color-mix(in srgb, #fff 9%, transparent) 31px 34px, transparent 34px 44px), color-mix(in srgb, var(--primario) 62%, var(--base)); box-shadow: inset 0 -6px 0 var(--acento); animation:m139-telon 1.15s var(--telon) .2s both; }\n.m142 .duo img { display:block; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.12) brightness(1.05); mix-blend-mode:luminosity; opacity:.9; }\n.m142 .escenario img, .m142 .escenario video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(.94) brightness(1.08); opacity:.94; }\n.m142 .cortina { position:absolute; inset:0; z-index:3; pointer-events:none; background: linear-gradient(180deg, color-mix(in srgb, #000 30%, transparent) 0%, transparent 40%, transparent 80%, color-mix(in srgb, #000 22%, transparent) 100%), repeating-linear-gradient(90deg, transparent 0 20px, color-mix(in srgb, #000 24%, transparent) 20px 25px, color-mix(in srgb, #000 8%, transparent) 25px 29px, color-mix(in srgb, #fff 10%, transparent) 29px 32px, transparent 32px 42px), color-mix(in srgb, var(--primario) 62%, var(--base)); box-shadow:inset 0 -6px 0 var(--acento), 0 14px 24px -8px rgba(0,0,0,.5); animation:m142-telon var(--ciclo) var(--curva) .5s infinite both; }"
+    }
+  ],
+  "notas": "Los dos lienzos no son de tipo Design: no tienen project/canvas.json ni project/*.dc.html. Cada uno es una sola página (index.html, 1,2 MB y 1,9 MB) con una 'sala' que muestra un modelo por vez; cada modelo es una <section class=\"modelo mNN\"> con su <style> propio y cuatro pantallas con el mismo contenido de Colm3na: Inicio del afiliado (teléfono 390px), Evaluador de recibos (teléfono), Noticias del panel del sindicato (escritorio 1240px: alta en riel · formulario · vista del afiliado + tabla de noticias cargadas) y Reportes (escritorio: resumen en palabras, filtros, banda de cláusula, tabla paginada, estado vacío). Hay casi nada de gráficos: el 'tablero' es Reportes. Se leyeron los 50 modelos (97-116 y 117-146) y el pie de cada sala. Los archivos de soporte son fotos B/N por gremio (fotos/*.webp), logos SVG de muestra y tres videos (video/*.mp4). El selector de sindicato cambia --base/--primario/--acento/--apoyo (UOM #0f2240/#1a3d6b/#e8b84b/#2fa88f; Bancaria #132a4a/#1d4e89/#e8b84b/#2f8f83; Gastronómica #2a0d12/#7a1f2b/#3d6b4a/#c19a3e) y calcula --tinta-acento y --acento-txt por luminancia. Ronda 6 (20 modelos, 'libres, solo el logo del gremio'): cada uno trae paleta propia inspirada en el lenguaje de una marca de referencia (Nike, Tesla, Apple, NVIDIA, Bugatti, Porsche Design, Leica, Arc'teryx, Stripe, Airbnb, F1, Off-White, Teenage Engineering, Muji, relojería suiza, IKEA, visionOS, B&O, Netflix, Polestar) sin usar sus logos ni nombres; el gremio solo aporta logo, textos y fotos. Criterio que se repite en las tesis: 'que lo focal siga siendo la acción o el estado en palabras'. Ronda 7 (30 variantes): según su pie, combina los modelos elegidos de rondas anteriores (7, 8, 12, 18, 25, 28, 37, 41, 45, 66, 67, 69, 75, 81, 96 y 98) 'con el contenido real y sin números gigantes'; de la ronda 6 solo pasó el 98. Cada variante declara en su CSS de qué modelos hereda y cuál es la pantalla llamativa (casi siempre Inicio; las demás 'serenas'). Reglas que la persona fue fijando y que atraviesan la ronda 7: títulos medidos (≤54-56px en teléfono), ninguna cifra como foco, un solo énfasis por pantalla, el flúor nunca es estado (los estados van con forma + palabra en verde #0d7a5f / ámbar #b8860b / rojo #c0392b fijos), la marca del gremio en detalles. Las variantes 'solo logo' (118, 137, 143) no usan colores del gremio. Los elegidos de cada ronda se guardaban solo en el navegador (localStorage), así que la elección de la ronda 7 no consta en el lienzo. Agrupé los 30 de la ronda 7 en 11 fichas por familia visual; 118 va como variante del 98. Los colores de la ronda 7 que salen del gremio por color-mix están calculados para UOM y explicados en colores_nota. Los css_firma son reglas reales copiadas del <style> de cada modelo (bloque de tokens + reglas distintivas; en las fichas con variantes, hasta tres reglas de cada variante al final)."
+}

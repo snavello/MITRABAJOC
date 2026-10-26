@@ -1,0 +1,147 @@
+/* fuentes: Libre Caslon Text:ital,wght@0,400;1,400; Hanken Grotesk:wght@400;500;600 */
+/* foto: herramientas; calle */
+/* Esfera (modelo 111, relojería): verde lacado, oro viejo y marfil. La firma en movimiento: los índices de la esfera se encienden en ronda,
+   la aguja de oro barre la esfera, se pasa apenas y se asienta sobre el 3; el segundero late a un paso por segundo y un brillo cruza el botón de oro. */
+.e-esfera-relojeria {
+  --fondo: #f4efe3; --sup: #fbf8f0; --tinta: #1b201d; --suave: #545b56; --linea: #e9dcbf;
+  --acento: #c7a465; --acento-tinta: #0b211b; --acento2: #dcc390; --oscuro: #0b211b; --sobre-oscuro: #f3ecdc;
+  --f-tit: "Libre Caslon Text", Georgia, serif; --f-txt: "Hanken Grotesk", system-ui, sans-serif; --f-num: "Hanken Grotesk", system-ui, sans-serif;
+  --radio: 14px; --radio-btn: 23px;
+  --v9: #0b211b; --v8: #10302a; --v7: #173f34; --oro: #c7a465; --oro-c: #dcc390; --oro-t: #75581f; --oro-f: #e9dcbf;
+  --c-ent: cubic-bezier(.22,1,.36,1);
+  background: #f4efe3;
+}
+
+/* encabezado sobre lacado verde con filete doble de oro */
+.e-esfera-relojeria .m-cab { background: var(--v9); color: #f3ecdc; padding: 13px 18px; }
+.e-esfera-relojeria .m-cab::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; opacity: .75;
+  background: linear-gradient(var(--oro), var(--oro)) top / 100% 1px no-repeat, linear-gradient(var(--oro), var(--oro)) bottom / 100% 1px no-repeat; }
+.e-esfera-relojeria .m-logo { width: 36px; height: 36px; border-radius: 50%; color: var(--oro-c); background: radial-gradient(circle at 35% 30%, #215243, var(--v9));
+  box-shadow: 0 0 0 1px var(--oro), 0 0 0 3px var(--v9), 0 0 0 4px rgba(199,164,101,.45); }
+.e-esfera-relojeria .m-logo svg { width: 20px; height: 20px; }
+.e-esfera-relojeria .m-marca { font: 400 19px/1 var(--f-tit); letter-spacing: .08em; }
+.e-esfera-relojeria .m-marca small { font: 600 9.5px/1 var(--f-txt); letter-spacing: .2em; text-transform: uppercase; color: var(--oro-c); }
+.e-esfera-relojeria .m-yo { background: radial-gradient(circle at 35% 30%, #215243, var(--v9)); color: var(--oro-c); border: 0;
+  box-shadow: 0 0 0 1px var(--oro), 0 0 0 4px var(--v9), 0 0 0 5px rgba(199,164,101,.4); font: 600 12px/1 var(--f-txt); letter-spacing: .06em; }
+
+/* héroe: la tapa verde con la foto en duotono verde y oro, y debajo el certificado de marfil con la esfera */
+.e-esfera-relojeria .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-esfera-relojeria .esf-tapa { position: relative; isolation: isolate; overflow: hidden; background: var(--v9); color: #f3ecdc; padding: 16px 20px 34px; }
+/* guilloché de rayos de sol desde la esquina */
+.e-esfera-relojeria .esf-tapa::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg at 100% 100%, rgba(255,255,255,.05) 0deg .9deg, transparent .9deg 3deg); }
+.e-esfera-relojeria .m-heroe-foto { display: block; position: absolute; inset: 0 0 0 26%; z-index: -2; overflow: hidden; background: var(--v8); }
+.e-esfera-relojeria .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.15) brightness(1.05); mix-blend-mode: luminosity; opacity: .9;
+  transform-origin: 70% 40%; animation: e-esfera-relojeria-zoom 18s ease-in-out infinite alternate; }
+.e-esfera-relojeria .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(160deg, var(--oro) 0%, #8a6a2e 100%);
+  mix-blend-mode: soft-light; opacity: .6; }
+.e-esfera-relojeria .esf-tapa::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(90deg, var(--v9) 26%, rgba(11,33,27,.72) 52%, rgba(11,33,27,.12) 100%); }
+.e-esfera-relojeria .m-kick { color: var(--oro-c); opacity: 1; font: 600 10.5px/1.2 var(--f-txt); letter-spacing: .2em; }
+.e-esfera-relojeria .m-tit { font: 400 30px/1.06 var(--f-tit); letter-spacing: -.005em; margin: 7px 0 7px; max-width: 220px; color: #f3ecdc; }
+.e-esfera-relojeria .m-tit em { font-style: italic; color: var(--oro-c); }
+.e-esfera-relojeria .m-det { color: #d9d2c0; opacity: 1; font-size: 13px; }
+
+.e-esfera-relojeria .esf-cert { position: relative; margin: -24px 16px 0; padding: 10px 14px 10px 10px; border-radius: 18px; background: var(--sup);
+  display: grid; grid-template-columns: 100px 1fr; grid-template-rows: 1fr auto; column-gap: 14px; align-items: center; z-index: 2;
+  box-shadow: inset 0 0 0 1px var(--oro), inset 0 0 0 5px var(--sup), inset 0 0 0 6px rgba(199,164,101,.55), 0 14px 28px -18px rgba(11,33,27,.55); }
+.e-esfera-relojeria .esf { grid-row: 1 / span 2; width: 100px; height: 100px; display: block; overflow: visible; filter: drop-shadow(0 10px 14px rgba(11,33,27,.35)); }
+.e-esfera-relojeria .m-cifra { margin: 0; gap: 8px; align-self: end; }
+.e-esfera-relojeria .m-cifra b { font: 400 44px/1 var(--f-tit); color: var(--v8); font-variant-numeric: lining-nums; }
+.e-esfera-relojeria .m-cifra span { font-size: 12.5px; line-height: 1.25; color: var(--suave); opacity: 1; max-width: 90px; }
+.e-esfera-relojeria .m-btn { position: relative; overflow: hidden; margin-top: 10px; min-height: 40px; padding: 0 16px; border-radius: 20px; align-self: start; margin-top: 6px;
+  background: linear-gradient(180deg, #d8bb80, #c3a062); color: var(--v9); font: 600 14px/1 var(--f-txt);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 6px 16px -8px rgba(11,33,27,.6); }
+
+/* la esfera: piezas SVG que giran sobre el centro */
+.e-esfera-relojeria .esf-aguja, .e-esfera-relojeria .esf-seg { transform-box: view-box; transform-origin: 150px 150px; }
+.e-esfera-relojeria .esf-aro { stroke-dasharray: 1; }
+
+/* accesos: cuatro placas de papel con filete de oro */
+.e-esfera-relojeria .m-accesos { gap: 8px; padding: 12px 16px 0; }
+.e-esfera-relojeria .m-acc { position: relative; grid-template-columns: 1fr; gap: 1px; align-content: start; min-height: 0; padding: 9px 40px 9px 12px;
+  background: var(--sup); border: 0; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--oro-f); }
+.e-esfera-relojeria .m-ico { position: absolute; top: 9px; right: 8px; width: 28px; height: 28px; margin: 0; border-radius: 50%; color: var(--v7);
+  background: radial-gradient(circle at 35% 30%, #fff, #efe7d4); box-shadow: inset 0 0 0 1px rgba(199,164,101,.6); }
+.e-esfera-relojeria .m-ico svg { width: 15px; height: 15px; stroke-width: 1.5; }
+.e-esfera-relojeria .m-acc b { font: 600 14px/1.2 var(--f-txt); }
+.e-esfera-relojeria .m-acc span { font-size: 11.5px; line-height: 1.3; color: var(--suave); }
+
+/* novedades: título serif y regla de minutos debajo */
+.e-esfera-relojeria .m-novs { padding: 12px 16px 0; gap: 0; }
+.e-esfera-relojeria .m-sec { font: 400 19px/1.2 var(--f-tit); letter-spacing: 0; text-transform: none; color: var(--v8); padding-bottom: 10px; position: relative; }
+.e-esfera-relojeria .m-sec::after { content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 7px; opacity: .6;
+  background: repeating-linear-gradient(90deg, rgba(117,88,31,.55) 0 1px, transparent 1px 8px) bottom / 100% 4px no-repeat,
+    repeating-linear-gradient(90deg, var(--oro-t) 0 1px, transparent 1px 40px) bottom / 100% 7px no-repeat; }
+.e-esfera-relojeria .m-nov { grid-template-columns: auto 1fr; gap: 0 12px; padding: 7px 0; border-top: 1px solid #e3dac4; }
+.e-esfera-relojeria .m-nov-tapa { border-top: 0; grid-template-columns: 52px 1fr; }
+.e-esfera-relojeria .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; height: 52px; border-radius: 12px; position: relative; background: var(--v8);
+  box-shadow: inset 0 0 0 1px rgba(199,164,101,.5); align-self: start; }
+.e-esfera-relojeria .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.12) brightness(1.05); mix-blend-mode: luminosity; opacity: .9; }
+.e-esfera-relojeria .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(160deg, var(--oro), #8a6a2e);
+  mix-blend-mode: soft-light; opacity: .6; }
+.e-esfera-relojeria .m-nov-tapa .m-fecha { grid-row: auto; grid-column: 2; }
+.e-esfera-relojeria .m-nov-tapa b, .e-esfera-relojeria .m-nov-tapa p { grid-column: 2; }
+.e-esfera-relojeria .m-nov .m-fecha { font: 600 10.5px/1.2 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; color: var(--oro-t); }
+.e-esfera-relojeria .m-nov b { font: 400 15.5px/1.25 var(--f-tit); }
+.e-esfera-relojeria .m-nov p { font-size: 12px; line-height: 1.3; color: var(--suave); }
+.e-esfera-relojeria .m-nov:not(.m-nov-tapa) .m-fecha { padding-top: 4px; }
+.e-esfera-relojeria .m-nov:not(.m-nov-tapa) p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* beneficio: placa verde con guilloché y chapa de oro */
+.e-esfera-relojeria .m-benef { margin: 4px 16px 14px; padding: 10px 16px; border: 0; border-radius: 16px; background: var(--v9); color: #f6efde; overflow: hidden; isolation: isolate; }
+.e-esfera-relojeria .m-benef::before { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: repeating-conic-gradient(from 0deg at 100% 0%, rgba(255,255,255,.05) 0deg .9deg, transparent .9deg 3deg); }
+.e-esfera-relojeria .m-rubro { justify-self: start; color: var(--v9); background: var(--oro-c); padding: 3px 9px; border-radius: 10px; letter-spacing: .18em; }
+.e-esfera-relojeria .m-benef b { font: 400 16px/1.2 var(--f-tit); margin-top: 3px; }
+.e-esfera-relojeria .m-benef p { color: var(--oro-f); }
+
+/* ---------- Movimiento ---------- */
+/* estado inicial (sin en-vista): texto abajo y transparente, índices apagados, aro sin dibujar, aguja en reposo antes del 12, regla sin trazar */
+.e-esfera-relojeria .esf-tapa > p, .e-esfera-relojeria .esf-tapa > h2, .e-esfera-relojeria .esf-cert,
+.e-esfera-relojeria .m-acc { opacity: 0; transform: translateY(14px); }
+.e-esfera-relojeria .esf-ind { opacity: 0; }
+.e-esfera-relojeria .esf-aro { stroke-dashoffset: 1; }
+.e-esfera-relojeria .esf-aguja { transform: rotate(-20deg); }
+.e-esfera-relojeria .m-sec::after { clip-path: inset(0 100% 0 0); }
+
+.e-esfera-relojeria.en-vista .esf-tapa > .m-kick { animation: e-esfera-relojeria-sube .7s var(--c-ent) .05s both; }
+.e-esfera-relojeria.en-vista .esf-tapa > .m-tit { animation: e-esfera-relojeria-sube .8s var(--c-ent) .15s both; }
+.e-esfera-relojeria.en-vista .esf-tapa > .m-det { animation: e-esfera-relojeria-sube .8s var(--c-ent) .25s both; }
+.e-esfera-relojeria.en-vista .esf-cert { animation: e-esfera-relojeria-sube .8s var(--c-ent) .3s both; }
+.e-esfera-relojeria.en-vista .esf-ind { animation: e-esfera-relojeria-enciende .45s ease-out calc(.5s + var(--i) * .06s) both; }
+.e-esfera-relojeria.en-vista .esf-aro { animation: e-esfera-relojeria-traza 1.2s var(--c-ent) .45s both; }
+/* la aguja: barre, se pasa seis grados y vuelve al 3, como un cronógrafo que se asienta */
+.e-esfera-relojeria.en-vista .esf-aguja { animation: e-esfera-relojeria-apunta 1.9s var(--c-ent) .55s both; }
+.e-esfera-relojeria.en-vista .m-acc { animation: e-esfera-relojeria-sube .7s var(--c-ent) both; }
+.e-esfera-relojeria.en-vista .m-acc:nth-child(1) { animation-delay: .7s; }
+.e-esfera-relojeria.en-vista .m-acc:nth-child(2) { animation-delay: .8s; }
+.e-esfera-relojeria.en-vista .m-acc:nth-child(3) { animation-delay: .9s; }
+.e-esfera-relojeria.en-vista .m-acc:nth-child(4) { animation-delay: 1s; }
+.e-esfera-relojeria.en-vista .m-sec::after { animation: e-esfera-relojeria-regla 1.1s var(--c-ent) 1.1s both; }
+
+/* ambiente: el segundero da un paso por segundo, el brillo cruza el botón de oro, la foto respira */
+.e-esfera-relojeria .esf-seg { animation: e-esfera-relojeria-tic 30s steps(30) infinite; }
+.e-esfera-relojeria .m-btn::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 45%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent); transform: translateX(-120%);
+  animation: e-esfera-relojeria-brillo 5.5s var(--c-ent) 2.4s infinite; }
+
+@keyframes e-esfera-relojeria-sube { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes e-esfera-relojeria-enciende { from { opacity: 0; } 60% { opacity: 1; filter: brightness(1.6); } to { opacity: 1; filter: none; } }
+@keyframes e-esfera-relojeria-traza { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes e-esfera-relojeria-apunta { from { transform: rotate(-20deg); } 72% { transform: rotate(96deg); } to { transform: rotate(90deg); } }
+@keyframes e-esfera-relojeria-regla { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes e-esfera-relojeria-tic { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes e-esfera-relojeria-brillo { 0% { transform: translateX(-120%); } 30%, 100% { transform: translateX(260%); } }
+@keyframes e-esfera-relojeria-zoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .e-esfera-relojeria *, .e-esfera-relojeria *::before, .e-esfera-relojeria *::after { animation: none !important; transition: none !important; }
+  .e-esfera-relojeria .esf-tapa > p, .e-esfera-relojeria .esf-tapa > h2, .e-esfera-relojeria .esf-cert, .e-esfera-relojeria .m-acc { opacity: 1; transform: none; }
+  .e-esfera-relojeria .esf-ind { opacity: 1; }
+  .e-esfera-relojeria .esf-aro { stroke-dashoffset: 0; }
+  .e-esfera-relojeria .esf-aguja { transform: rotate(90deg); }
+  .e-esfera-relojeria .esf-seg { transform: rotate(48deg); }
+  .e-esfera-relojeria .m-sec::after { clip-path: none; }
+  .e-esfera-relojeria .m-btn::after { display: none; }
+}

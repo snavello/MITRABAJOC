@@ -1,0 +1,101 @@
+/* fuentes: Source Serif 4:ital,opsz,wght@0,8..60,400;1,8..60,400..600; Barlow:wght@400;500;600; Barlow Condensed:wght@600;700;800 */
+/* foto: calle; tecnico */
+/* Cine (modelo 26, ronda 2). La foto del gremio en formato panorámico, en duotono (gris en luminosity sobre la base,
+   degradé acento → apoyo en screen, viñeta), entre dos franjas negras; lo que importa se dice como subtítulo de cine
+   en Source Serif itálica. Al entrar, el cuadro se abre desde una rendija, la foto avanza con un zoom lento y los
+   subtítulos aparecen uno detrás del otro, como cues. Los accesos son los títulos finales.
+   Colores de la UOM: base #0f2240, primario #1a3d6b, acento #e8b84b, apoyo #2fa88f. */
+.e-cine-subtitulo {
+  --cs-negro: #0a0a0b; --cs-base: #0f2240; --cs-acen: #e8b84b; --cs-apoyo: #2fa88f; --cs-enlace: #17355e; --cs-rojo: #ff9888;
+  --fondo: #eae9e6; --sup: #fffefa; --tinta: #15151a; --suave: #53545c; --linea: #c9c7c2;
+  --acento: #e8b84b; --acento-tinta: #15151a; --acento2: #2fa88f; --oscuro: #0a0a0b; --sobre-oscuro: #ffffff;
+  --f-tit: "Source Serif 4", Georgia, serif; --f-txt: "Barlow", system-ui, sans-serif; --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-num: "Barlow Condensed", sans-serif; --radio: 4px; --radio-btn: 4px;
+  --cs-entra: cubic-bezier(.16,1,.3,1);
+  background: var(--fondo);
+}
+/* franja negra superior = encabezado */
+.e-cine-subtitulo .m-cab { background: var(--cs-negro); color: #fff; padding: 12px 18px; }
+.e-cine-subtitulo .m-logo { color: var(--cs-acen); }
+.e-cine-subtitulo .m-marca { font: 700 19px/1 var(--f-cond); letter-spacing: .12em; }
+.e-cine-subtitulo .m-marca small { font: 600 11px/1 var(--f-cond); letter-spacing: .18em; text-transform: uppercase; color: #d6d6dc; }
+.e-cine-subtitulo .m-yo { background: #16161a; color: #fff; border-color: #3a3a42; font: 600 12.5px/1 var(--f-cond); letter-spacing: .1em; }
+
+/* EL CUADRO panorámico */
+.e-cine-subtitulo .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #fff; overflow: visible; }
+.e-cine-subtitulo .cs-cuadro { position: relative; height: 192px; overflow: hidden; isolation: isolate; background: var(--cs-negro); }
+.e-cine-subtitulo .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--cs-base); isolation: isolate; }
+.e-cine-subtitulo .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.18) brightness(.98); mix-blend-mode: luminosity; opacity: .94;
+  object-position: 50% 58%; transform-origin: 40% 55%; }
+.e-cine-subtitulo .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(115deg, var(--cs-acen), var(--cs-apoyo));
+  mix-blend-mode: screen; opacity: .3; }
+.e-cine-subtitulo .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  background: radial-gradient(130% 100% at 50% 40%, transparent 48%, rgba(0,0,0,.55) 100%), linear-gradient(rgba(0,0,0,.28), transparent 26%, transparent 46%, rgba(0,0,0,.74)); }
+/* el código de tiempo con el punto que graba */
+.e-cine-subtitulo .cs-tc { position: absolute; z-index: 3; top: 12px; left: 16px; display: flex; align-items: center; gap: 7px;
+  font: 600 12.5px/1 var(--f-cond); letter-spacing: .16em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+.e-cine-subtitulo .cs-rec { width: 7px; height: 7px; border-radius: 50%; background: var(--cs-rojo); }
+/* el subtítulo */
+.e-cine-subtitulo .cs-sub { position: absolute; z-index: 3; left: 16px; right: 16px; bottom: 16px; margin: 0; text-align: center;
+  font: italic 500 31px/1.12 var(--f-tit); letter-spacing: -.005em; text-transform: none; opacity: 1; color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,.65), 0 1px 2px rgba(0,0,0,.8); }
+.e-cine-subtitulo .cs-acc { color: var(--cs-acen); }
+
+/* franja negra inferior: el veredicto dicho como subtítulo */
+.e-cine-subtitulo .cs-franja { background: var(--cs-negro); text-align: center; padding: 20px 22px 22px; display: grid; justify-items: center; }
+.e-cine-subtitulo .m-tit { margin: 0; font: italic 600 34px/1.06 var(--f-tit); color: #fff; text-wrap: balance;
+  text-shadow: 0 2px 12px rgba(0,0,0,.65); }
+.e-cine-subtitulo .m-det { margin-top: 8px; font: italic 400 18px/1.35 var(--f-tit); color: #e4e4ea; opacity: 1; text-wrap: balance; }
+.e-cine-subtitulo .m-btn { margin-top: 18px; width: 100%; min-height: 48px; border-radius: 4px; background: var(--cs-acen); color: var(--tinta);
+  font: 700 17px/1 var(--f-cond); letter-spacing: .1em; text-transform: uppercase; }
+/* el número del año sobre la hoja */
+.e-cine-subtitulo .m-cifra { margin: 0 18px; padding: 18px 0 14px; gap: 14px; align-items: flex-end; border-bottom: 1px solid var(--linea); color: var(--tinta); }
+.e-cine-subtitulo .m-cifra b { font: 800 76px/.8 var(--f-num); color: var(--cs-base); }
+.e-cine-subtitulo .m-cifra span { font: italic 400 21px/1.15 var(--f-tit); color: var(--tinta); opacity: 1; padding-bottom: 2px; }
+
+/* los accesos como títulos finales: rol a la derecha, nombre en itálica a la izquierda */
+.e-cine-subtitulo .m-accesos { grid-template-columns: 1fr; gap: 0; padding: 4px 18px 0; }
+.e-cine-subtitulo .m-acc { grid-template-columns: 1fr 1fr; gap: 14px; align-items: baseline; min-height: 0; padding: 10px 0; background: none; border: 0;
+  border-radius: 0; border-bottom: 1px solid rgba(201,199,194,.7); }
+.e-cine-subtitulo .m-acc:last-child { border-bottom: 0; }
+.e-cine-subtitulo .m-ico { display: none; }
+.e-cine-subtitulo .m-acc b { text-align: right; font: 700 17px/1.1 var(--f-cond); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta); }
+.e-cine-subtitulo .m-acc span { font: italic 400 15.5px/1.3 var(--f-tit); color: var(--suave); }
+
+.e-cine-subtitulo .m-novs { padding-top: 16px; }
+.e-cine-subtitulo .m-sec { font: 600 13px/1 var(--f-cond); letter-spacing: .22em; color: var(--cs-enlace); }
+.e-cine-subtitulo .m-nov-tapa .m-nov-foto { height: 118px; margin-bottom: 8px; border-radius: 4px; background: var(--cs-base); position: relative; isolation: isolate; }
+.e-cine-subtitulo .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.15); mix-blend-mode: luminosity; opacity: .92; }
+.e-cine-subtitulo .m-nov .m-fecha { font: 600 12.5px/1.2 var(--f-cond); letter-spacing: .12em; text-transform: uppercase; color: var(--cs-enlace); }
+.e-cine-subtitulo .m-nov b { font: italic 600 18px/1.2 var(--f-tit); }
+.e-cine-subtitulo .m-nov p { font-size: 13px; }
+.e-cine-subtitulo .m-benef { border-radius: 4px; background: var(--cs-negro); color: #fff; border: 0; text-align: center; }
+.e-cine-subtitulo .m-benef .m-rubro { color: var(--cs-acen); letter-spacing: .22em; }
+.e-cine-subtitulo .m-benef b { font: italic 600 19px/1.2 var(--f-tit); }
+.e-cine-subtitulo .m-benef p { color: #c9c9d0; }
+
+/* EL MOVIMIENTO
+   entrada: el cuadro se abre desde una rendija horizontal, los subtítulos aparecen como cues (de borroso a nítido)
+   y los títulos finales suben uno por uno. ambiente: zoom lento de la foto y el punto rojo que graba. */
+.e-cine-subtitulo .m-heroe-foto .m-foto { animation: e-cine-subtitulo-zoom 26s cubic-bezier(.45,.05,.55,.95) infinite alternate; }
+.e-cine-subtitulo .cs-rec { animation: e-cine-subtitulo-titila 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: no-preference) {
+  .e-cine-subtitulo:not(.en-vista) .m-heroe-foto { clip-path: inset(46% 0 46% 0); }
+  .e-cine-subtitulo:not(.en-vista) .cs-cue { opacity: 0; }
+  .e-cine-subtitulo:not(.en-vista) .m-acc { opacity: 0; transform: translateY(14px); }
+  .e-cine-subtitulo.en-vista .m-heroe-foto { animation: e-cine-subtitulo-abre 1.2s cubic-bezier(.22,.61,.36,1) .05s both; }
+  .e-cine-subtitulo.en-vista .cs-cue { animation: e-cine-subtitulo-cue .8s var(--cs-entra) var(--d, .6s) both; }
+  .e-cine-subtitulo.en-vista .m-acc { animation: e-cine-subtitulo-credito .8s var(--cs-entra) both; }
+  .e-cine-subtitulo.en-vista .m-acc:nth-child(1) { animation-delay: 1.9s; }
+  .e-cine-subtitulo.en-vista .m-acc:nth-child(2) { animation-delay: 2.02s; }
+  .e-cine-subtitulo.en-vista .m-acc:nth-child(3) { animation-delay: 2.14s; }
+  .e-cine-subtitulo.en-vista .m-acc:nth-child(4) { animation-delay: 2.26s; }
+}
+@keyframes e-cine-subtitulo-abre { from { clip-path: inset(46% 0 46% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes e-cine-subtitulo-cue { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes e-cine-subtitulo-credito { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes e-cine-subtitulo-zoom { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.14) translate(-2.5%, 1%); } }
+@keyframes e-cine-subtitulo-titila { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) {
+  .e-cine-subtitulo *, .e-cine-subtitulo *::before, .e-cine-subtitulo *::after { animation: none !important; transition: none !important; }
+}

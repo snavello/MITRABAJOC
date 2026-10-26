@@ -1,0 +1,74 @@
+/* fuentes: Unbounded:wght@500;600;700;800; Familjen Grotesk:wght@400;500;600;700; JetBrains Mono:wght@400;500 */
+/* foto: equipo; acuerdo */
+/* Flúor (ronda 2, modelo 18): negro casi puro, la foto en duotono negro + el primario del gremio (UOM #1a3d6b), el nombre en el acento del
+   gremio (#e8b84b) y el flúor #C6FF3D solo para la acción y para el trazo de resaltador bajo la cifra clave. */
+.e-fluor-resaltador {
+  --fondo: #0a0b09; --sup: #131510; --tinta: #f2f4ee; --suave: #a7ac9f; --linea: #2b3027;
+  --acento: #C6FF3D; --acento-tinta: #0a0b09; --acento2: #4fd3a8; --oscuro: #0a0b09; --sobre-oscuro: #f2f4ee;
+  --f-tit: "Unbounded", "Archivo", system-ui, sans-serif; --f-txt: "Familjen Grotesk", system-ui, sans-serif; --f-num: "JetBrains Mono", ui-monospace, monospace;
+  --radio: 16px; --radio-btn: 999px;
+  background: #0a0b09;
+}
+/* encabezado negro con filete del acento del gremio */
+.e-fluor-resaltador .m-cab { padding: 11px 16px; background: #0a0b09; border-bottom: 2px solid #e8b84b; }
+.e-fluor-resaltador .m-logo { color: #e8b84b; }
+.e-fluor-resaltador .m-marca { font: 700 15px/1 var(--f-tit); letter-spacing: -.01em; }
+.e-fluor-resaltador .m-marca small { font-family: var(--f-txt); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: #a7ac9f; }
+.e-fluor-resaltador .m-yo { background: #1a1d17; border: 0; box-shadow: inset 0 0 0 1.5px #3a4035; color: #f2f4ee; font-family: var(--f-tit); font-size: 11px; }
+
+/* héroe en duotono: luminosidad de la foto + el primario del gremio en modo color, cayendo a negro */
+.e-fluor-resaltador .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #f2f4ee; overflow: visible; }
+.e-fluor-resaltador .fr-duo { position: relative; height: 150px; overflow: hidden; display: flex; align-items: flex-end; padding: 0 16px 14px; background: #000; }
+.e-fluor-resaltador .m-heroe-foto { display: block; overflow: hidden; position: absolute; inset: 0; z-index: 0; background: #000; }
+.e-fluor-resaltador .m-heroe-foto .m-foto { object-position: 50% 40%; filter: grayscale(1) contrast(1.18) brightness(.9); mix-blend-mode: luminosity; opacity: .78; }
+.e-fluor-resaltador .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: #1a3d6b; mix-blend-mode: color; opacity: .62; }
+.e-fluor-resaltador .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(180deg, rgba(10,11,9,.25) 0%, transparent 32%, rgba(10,11,9,.7) 72%, #0a0b09 100%); }
+.e-fluor-resaltador .fr-hola { display: block; position: relative; z-index: 3; margin: 0; font: 800 34px/.98 var(--f-tit); letter-spacing: -.035em; text-transform: uppercase; }
+.e-fluor-resaltador .fr-hola span { display: block; color: #e8b84b; }
+
+/* el tablero: tarjeta carbón con filete del gremio arriba y la cifra subrayada con resaltador flúor */
+.e-fluor-resaltador .fr-recibo { position: relative; margin: 4px 14px 0; padding: 16px 18px 14px; background: #131510; border-radius: 22px; border: 1px solid #2b3027; }
+.e-fluor-resaltador .fr-recibo::before { content: ""; position: absolute; left: 20px; right: 20px; top: 0; height: 2px; background: #e8b84b; opacity: .9; }
+.e-fluor-resaltador .m-tit { display: block; margin: 0; font: 700 15px/1.2 var(--f-tit); letter-spacing: .02em; text-transform: uppercase; color: #f2f4ee; }
+.e-fluor-resaltador .m-cifra { margin: 10px 0 2px; gap: 14px; align-items: flex-end; }
+.e-fluor-resaltador .m-cifra b { font: 800 66px/1.02 var(--f-tit); letter-spacing: -.05em; }
+.e-fluor-resaltador .m-cifra .fr-flu { display: inline-block; font: inherit; line-height: .8; letter-spacing: inherit; opacity: 1; padding: 0 .1em .1em; background-image: linear-gradient(100deg, transparent .18em, #C6FF3D .26em, #C6FF3D calc(100% - .12em), transparent calc(100% - .04em));
+  background-repeat: no-repeat; background-position: 0 100%; background-size: 100% .17em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.e-fluor-resaltador .m-cifra > span { max-width: 150px; padding-bottom: 4px; font: 600 17px/1.15 var(--f-tit); letter-spacing: -.02em; opacity: 1; color: #f2f4ee; }
+.e-fluor-resaltador .fr-pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2b3027; }
+.e-fluor-resaltador .m-det { font-size: 13.5px; line-height: 1.3; color: #a7ac9f; opacity: 1; }
+.e-fluor-resaltador .m-btn { flex: none; gap: 8px; min-height: 42px; padding: 0 16px; background: #C6FF3D; color: #0a0b09; font: 700 14.5px/1 var(--f-txt);
+  box-shadow: 0 0 0 6px rgba(198,255,61,.14); }
+.e-fluor-resaltador .m-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* accesos en filas con filete, a dos columnas */
+.e-fluor-resaltador .m-accesos { gap: 0 14px; margin-top: 10px; padding: 0 16px; }
+.e-fluor-resaltador .m-acc { grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 0; align-items: center; min-height: 0; padding: 7px 0;
+  background: none; border: 0; border-bottom: 1px solid #2b3027; border-radius: 0; }
+.e-fluor-resaltador .m-ico { grid-row: span 2; width: 34px; height: 34px; margin: 0; border-radius: 10px; background: #1a1d17; box-shadow: inset 0 0 0 1.5px #3a4035; color: #f2f4ee; }
+.e-fluor-resaltador .m-ico svg { width: 18px; height: 18px; }
+.e-fluor-resaltador .m-acc:first-child .m-ico { color: #C6FF3D; }
+.e-fluor-resaltador .m-acc b { font: 700 14px/1.15 var(--f-txt); }
+.e-fluor-resaltador .m-acc span { font-size: 11.5px; color: #a7ac9f; }
+
+/* novedades: título en Unbounded, foto en el mismo duotono */
+.e-fluor-resaltador .m-novs { padding: 10px 16px 0; gap: 0; }
+.e-fluor-resaltador .m-sec { margin-bottom: 8px; font: 700 15px/1 var(--f-tit); letter-spacing: -.01em; color: #f2f4ee; }
+.e-fluor-resaltador .m-nov { border-top: 1px solid #2b3027; padding: 8px 0; }
+.e-fluor-resaltador .m-nov .m-fecha { font: 700 11px/1.2 var(--f-tit); text-transform: uppercase; color: #a7ac9f; }
+.e-fluor-resaltador .m-nov b { font: 700 14.5px/1.25 var(--f-txt); }
+.e-fluor-resaltador .m-nov p { font-size: 12.5px; color: #a7ac9f; }
+.e-fluor-resaltador .m-nov-tapa { grid-template-columns: 112px 1fr; grid-template-rows: auto auto 1fr; column-gap: 12px; border-top: 0; padding-top: 0; }
+.e-fluor-resaltador .m-nov-tapa .m-nov-foto { overflow: hidden; grid-column: 1; grid-row: 1 / 4; height: 62px; border-radius: 14px; position: relative; background: #000; }
+.e-fluor-resaltador .m-nov-tapa .m-foto { filter: grayscale(1) contrast(1.18) brightness(.9); mix-blend-mode: luminosity; opacity: .85; }
+.e-fluor-resaltador .m-nov-tapa .m-nov-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: #1a3d6b; mix-blend-mode: color; opacity: .62; }
+.e-fluor-resaltador .m-nov-tapa .m-fecha { grid-row: auto; grid-column: 2; padding: 0; color: #e8b84b; }
+.e-fluor-resaltador .m-nov-tapa b, .e-fluor-resaltador .m-nov-tapa p { grid-column: 2; }
+.e-fluor-resaltador .m-nov:not(.m-nov-tapa) { display: none; }
+
+/* beneficio: tarjeta de carril con borde */
+.e-fluor-resaltador .m-benef { margin: 0 16px 0; padding: 10px 14px; background: #1a1d17; border: 0; box-shadow: inset 0 0 0 1.5px #3a4035; border-radius: 16px; }
+.e-fluor-resaltador .m-rubro { color: #a7ac9f; font-family: var(--f-txt); font-weight: 700; }
+.e-fluor-resaltador .m-benef b { font: 700 15px/1.2 var(--f-tit); letter-spacing: -.02em; }
+.e-fluor-resaltador .m-benef p { color: #a7ac9f; }

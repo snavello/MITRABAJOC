@@ -1,0 +1,59 @@
+/* Base de la portada de ACME: estructura y tokens neutros. Cada estilo pisa los tokens y agrega su firma bajo .e-<id>.
+   Nada de acá depende de un estilo; todo lo que un estilo no toque se ve correcto y sobrio. */
+.m {
+  --fondo: #ffffff; --sup: #f3f4f6; --tinta: #1d2330; --suave: #5f6675; --linea: #e3e6ec;
+  --acento: #2a6f97; --acento-tinta: #ffffff; --acento2: #f4a259; --oscuro: #14213d; --sobre-oscuro: #ffffff;
+  --ok: #1f7a55; --alerta: #b7791f; --mal: #c0392b;
+  --f-tit: system-ui, sans-serif; --f-txt: system-ui, sans-serif; --f-num: ui-monospace, monospace;
+  --radio: 12px; --radio-btn: 10px; --sombra: 0 1px 2px rgb(0 0 0 / .06), 0 6px 18px rgb(0 0 0 / .06);
+  position: relative; isolation: isolate; overflow: hidden;
+  width: 360px; height: 740px; background: var(--fondo); color: var(--tinta);
+  font: 14px/1.45 var(--f-txt); display: flex; flex-direction: column; text-align: left; letter-spacing: normal; text-transform: none;
+}
+.m * { box-sizing: border-box; }
+.m > * { flex-shrink: 0; }
+.m a { color: inherit; text-decoration: none; }
+.m .m-deco { position: absolute; pointer-events: none; z-index: -1; }
+.m .m-cab { display: flex; align-items: center; gap: 10px; padding: 14px 18px; position: relative; z-index: 2; }
+.m .m-logo { width: 30px; height: 30px; display: grid; place-items: center; color: var(--acento); }
+.m .m-logo svg { width: 26px; height: 26px; }
+.m .m-marca { font: 700 17px/1 var(--f-tit); letter-spacing: .04em; display: grid; gap: 2px; }
+.m .m-marca small { font: 500 10.5px/1 var(--f-txt); letter-spacing: .06em; color: var(--suave); text-transform: none; }
+.m .m-yo { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--sup);
+  font: 600 12px/1 var(--f-txt); color: var(--tinta); border: 1px solid var(--linea); }
+
+.m .m-heroe { position: relative; margin: 2px 16px 14px; padding: 18px; border-radius: var(--radio); background: var(--oscuro); color: var(--sobre-oscuro);
+  overflow: hidden; z-index: 1; }
+.m .m-heroe-foto { display: none; }
+.m .m-foto { display: block; width: 100%; height: 100%; object-fit: cover; }
+.m .m-kick { margin: 0; font: 600 11px/1.2 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; opacity: .8; }
+.m .m-tit { margin: 6px 0 4px; font: 700 26px/1.08 var(--f-tit); }
+.m .m-det { margin: 0; font-size: 13px; opacity: .8; }
+.m .m-cifra { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 14px; }
+.m .m-cifra b { font: 700 34px/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.m .m-cifra span { font-size: 12.5px; opacity: .8; }
+.m .m-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border-radius: var(--radio-btn);
+  background: var(--acento); color: var(--acento-tinta); font: 600 14px/1 var(--f-txt); }
+
+.m .m-accesos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px; position: relative; z-index: 1; }
+.m .m-acc { display: grid; gap: 2px; align-content: start; padding: 12px; min-height: 92px; border-radius: var(--radio); background: var(--sup);
+  border: 1px solid var(--linea); }
+.m .m-ico { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; color: var(--acento); margin-bottom: 4px; }
+.m .m-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.m .m-acc b { font: 600 14px/1.2 var(--f-tit); }
+.m .m-acc span { font-size: 11.5px; color: var(--suave); line-height: 1.3; }
+
+.m .m-novs { padding: 14px 16px 0; display: grid; gap: 8px; position: relative; z-index: 1; }
+.m .m-sec { margin: 0; font: 600 11px/1 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; color: var(--suave); }
+.m .m-nov { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; padding: 10px 0; border-top: 1px solid var(--linea); }
+.m .m-nov .m-fecha { grid-row: span 2; font: 500 11px/1.2 var(--f-num); color: var(--suave); padding-top: 2px; min-width: 42px; }
+.m .m-nov b { font: 600 14px/1.25 var(--f-tit); }
+.m .m-nov p { margin: 1px 0 0; font-size: 12px; color: var(--suave); grid-column: 2; }
+.m .m-nov-foto { display: none; }
+.m .m-nov-tapa .m-nov-foto { display: block; grid-column: 1 / -1; height: 0; overflow: hidden; }
+
+.m .m-benef { margin: 10px 16px 16px; padding: 12px 14px; border-radius: var(--radio); background: var(--sup); border: 1px solid var(--linea);
+  display: grid; gap: 2px; position: relative; z-index: 1; }
+.m .m-rubro { font: 600 10.5px/1 var(--f-txt); letter-spacing: .12em; text-transform: uppercase; color: var(--acento); }
+.m .m-benef b { font: 600 14px/1.25 var(--f-tit); }
+.m .m-benef p { margin: 0; font-size: 12px; color: var(--suave); }

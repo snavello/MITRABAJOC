@@ -1,0 +1,59 @@
+/* fuentes: Newsreader:opsz,wght@6..72,400;6..72,500; Source Sans 3:wght@400;600 */
+/* Informe editorial (UBoard B). Se lee como un informe impreso: papel crema, Newsreader con un número protagonista enorme,
+   filetes de periódico en lugar de tarjetas (negro bajo el encabezado y sobre la tabla, #e6e2d9 entre bloques, #f0ede6 entre filas),
+   chips en píldora negra y un único violeta #4a3aa7 para todo dato. */
+.e-uboard-informe-editorial {
+  --fondo: #fdfcf9; --sup: #fdfcf9; --tinta: #1c1a17; --suave: #6f6a62; --linea: #e6e2d9;
+  --acento: #4a3aa7; --acento-tinta: #fdfcf9; --acento2: #52514e; --oscuro: #1c1a17; --sobre-oscuro: #fdfcf9;
+  --f-tit: "Newsreader", Georgia, "Times New Roman", serif; --f-txt: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-num: "Newsreader", Georgia, serif;
+  --radio: 0; --radio-btn: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.e-uboard-informe-editorial > * { flex-shrink: 0; }
+/* encabezado: kicker arriba, el nombre en serif, filete negro abajo */
+.e-uboard-informe-editorial .m-cab { margin: 0 20px; padding: 16px 0 12px; border-bottom: 1px solid #1c1a17; align-items: flex-end; }
+.e-uboard-informe-editorial .m-logo { width: 26px; height: 30px; color: #1c1a17; align-self: center; }
+.e-uboard-informe-editorial .m-logo svg { width: 22px; height: 22px; }
+.e-uboard-informe-editorial .m-marca { display: flex; flex-direction: column-reverse; gap: 3px; font: 500 30px/1 var(--f-tit); letter-spacing: 0; }
+.e-uboard-informe-editorial .m-marca small { font: 400 11px/1 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; color: #6f6a62; }
+.e-uboard-informe-editorial .m-yo { width: auto; height: auto; padding: 6px 12px; border-radius: 999px; background: #1c1a17; border: 1px solid #1c1a17;
+  color: #fdfcf9; font: 600 12px/1 var(--f-txt); letter-spacing: .04em; align-self: center; }
+/* el héroe sin caja */
+.e-uboard-informe-editorial .m-heroe { margin: 0 20px; padding: 18px 0 0; border-radius: 0; background: none; color: #1c1a17; overflow: visible; }
+.e-uboard-informe-editorial .m-kick { font: 400 12px/1.2 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; opacity: 1; color: #6f6a62; }
+.e-uboard-informe-editorial .m-tit { margin: 6px 0 6px; font: 500 36px/1.05 var(--f-tit); letter-spacing: -.005em; color: #1c1a17; }
+.e-uboard-informe-editorial .m-det { margin: 0; font-size: 14px; opacity: 1; color: #6f6a62; }
+.e-uboard-informe-editorial .ue-bloque { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid #e6e2d9; }
+.e-uboard-informe-editorial .m-cifra { display: grid; gap: 4px; margin: 0; }
+.e-uboard-informe-editorial .m-cifra b { font: 400 72px/.9 var(--f-num); font-variant-numeric: tabular-nums; color: #1c1a17; }
+.e-uboard-informe-editorial .m-cifra span { font-size: 13px; opacity: 1; color: #6f6a62; }
+.e-uboard-informe-editorial .m-btn { min-height: 38px; padding: 0 16px; margin-bottom: 2px; border: 1px solid #1c1a17; border-radius: 999px; background: #1c1a17;
+  color: #fdfcf9; font: 600 14px/1 var(--f-txt); }
+/* accesos como la tabla del informe: filete negro arriba, filas separadas por #f0ede6, cifras a la derecha */
+.e-uboard-informe-editorial .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 20px 20px 0; padding: 0; border-top: 1px solid #1c1a17; }
+.e-uboard-informe-editorial .m-acc { grid-template-columns: 1fr auto; gap: 0 16px; align-items: baseline; min-height: 0; padding: 9px 0;
+  background: none; border: 0; border-bottom: 1px solid #f0ede6; border-radius: 0; }
+.e-uboard-informe-editorial .m-ico { display: none; }
+.e-uboard-informe-editorial .m-acc b { font: 600 14px/1.3 var(--f-txt); color: #1c1a17; }
+.e-uboard-informe-editorial .m-acc span { font-size: 13px; text-align: right; color: #6f6a62; }
+.e-uboard-informe-editorial .m-acc:last-child span { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+/* la barra violeta sobre #efece5: 2 de 3 solicitudes resueltas */
+.e-uboard-informe-editorial .m-acc:nth-child(2)::after { content: ""; grid-column: 1 / -1; height: 6px; margin-top: 7px; border-radius: 4px;
+  background: linear-gradient(90deg, #4a3aa7 0 66.6%, #efece5 66.6% 100%); }
+/* novedades: título de bloque en serif con el subrayado violeta de la navegación */
+.e-uboard-informe-editorial .m-novs { margin: 18px 20px 0; padding: 14px 0 0; gap: 0; border-top: 1px solid #e6e2d9; }
+.e-uboard-informe-editorial .m-sec { justify-self: start; margin: 0 0 6px; padding-bottom: 4px; border-bottom: 2px solid #4a3aa7;
+  font: 400 20px/1.1 var(--f-tit); letter-spacing: 0; text-transform: none; color: #1c1a17; }
+.e-uboard-informe-editorial .m-nov { grid-template-columns: 46px 1fr; padding: 8px 0; border-top: 0; border-bottom: 1px solid #f0ede6; }
+.e-uboard-informe-editorial .m-nov .m-fecha { padding-top: 3px; font: 400 13px/1.2 var(--f-num); color: #6f6a62; }
+.e-uboard-informe-editorial .m-nov b { font: 500 16px/1.25 var(--f-tit); color: #1c1a17; }
+.e-uboard-informe-editorial .m-nov p { font-size: 12.5px; color: #6f6a62; }
+.e-uboard-informe-editorial .m-nov-tapa .m-nov-foto { display: none; }
+.e-uboard-informe-editorial .m-nov:not(.m-nov-tapa) { display: none; }
+/* beneficio como un bloque más del informe */
+.e-uboard-informe-editorial .m-benef { margin: 14px 20px 18px; padding: 12px 0 0; background: none; border: 0; border-top: 1px solid #e6e2d9; border-radius: 0; }
+.e-uboard-informe-editorial .m-rubro { font: 400 11px/1 var(--f-txt); letter-spacing: .14em; color: #4a3aa7; }
+.e-uboard-informe-editorial .m-benef b { margin-top: 2px; font: 500 18px/1.2 var(--f-tit); }
+.e-uboard-informe-editorial .m-benef p { font-size: 12.5px; color: #6f6a62; }

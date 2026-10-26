@@ -1,0 +1,71 @@
+/* fuentes: Hanken Grotesk:wght@400;500;600;700 */
+/* foto: tecnico; equipo */
+/* Cupertino (Colm3na 99, ronda 6). Página de producto de fabricante premium: gris #f5f5f7, encabezado de vidrio translúcido,
+   saludo grande y apretado con el nombre en degradé azul→violeta→rosa, tile negro de producto con la foto en B/N que se funde
+   en negro, lista agrupada con íconos en squircle de color y un único azul #0071e3 para lo que se toca. */
+.e-cupertino {
+  --fondo: #f5f5f7; --sup: #ffffff; --tinta: #1d1d1f; --suave: #6e6e73; --linea: #e8e8ed;
+  --acento: #0071e3; --acento-tinta: #ffffff; --acento2: #0066cc; --oscuro: #000000; --sobre-oscuro: #f5f5f7;
+  --f-tit: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif; --f-txt: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+  --f-num: "Hanken Grotesk", system-ui, sans-serif;
+  --radio: 20px; --radio-btn: 980px; --sombra: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px -14px rgba(0,0,0,.16);
+  font-feature-settings: "ss01"; letter-spacing: -.01em; -webkit-font-smoothing: antialiased;
+}
+/* encabezado de vidrio de una línea */
+.e-cupertino .m-cab { padding: 10px 16px; background: rgba(255,255,255,.72); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0,0,0,.08); }
+.e-cupertino .m-logo { color: #1d1d1f; width: 26px; }
+.e-cupertino .m-logo svg { width: 22px; height: 22px; }
+.e-cupertino .m-marca { font: 600 15px/1.1 var(--f-tit); letter-spacing: -.015em; display: flex; align-items: baseline; gap: 7px; }
+.e-cupertino .m-marca small { font: 500 12.5px/1 var(--f-txt); letter-spacing: -.01em; color: #6e6e73; }
+.e-cupertino .m-yo { width: 34px; height: 34px; border: 0; color: #6e6e73; font: 600 12px/1 var(--f-txt); letter-spacing: 0;
+  background: linear-gradient(160deg, #e8e8ed, #d2d2d7); box-shadow: 0 0 0 2px #fff, 0 2px 10px rgba(0,0,0,.08); }
+/* saludo grande, apretado, con el nombre en degradé */
+.e-cupertino .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #1d1d1f; overflow: visible; }
+.e-cupertino .m-kick { margin: 0; padding: 14px 20px 12px; font: 700 36px/1.06 var(--f-tit); letter-spacing: -.035em; text-transform: none; opacity: 1; }
+.e-cupertino .cu-grad { background: linear-gradient(100deg, #0066cc 0%, #7a3cd6 52%, #c2276f 100%); -webkit-background-clip: text;
+  background-clip: text; color: transparent; padding-right: 2px; }
+/* el tile negro de producto */
+.e-cupertino .cu-tile { margin: 0 12px; border-radius: 30px; background: #000; color: #f5f5f7; overflow: hidden; position: relative;
+  isolation: isolate; box-shadow: 0 24px 50px -30px rgba(0,0,0,.6); }
+.e-cupertino .m-heroe-foto { display: block; position: relative; height: 132px; overflow: hidden; background: #111; }
+.e-cupertino .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.08) brightness(.92); object-position: 50% 35%; }
+.e-cupertino .m-heroe-foto::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 75%, #000 100%); }
+.e-cupertino .m-cifra { position: absolute; left: 14px; top: 14px; z-index: 2; margin: 0; display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px 5px 5px; border-radius: 980px; background: rgba(40,40,44,.48); -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px); border: 1px solid rgba(255,255,255,.18); color: #fff; }
+.e-cupertino .m-cifra b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #0071e3;
+  font: 700 12.5px/1 var(--f-num); }
+.e-cupertino .m-cifra span { font: 600 12.5px/1 var(--f-txt); opacity: 1; letter-spacing: -.01em; }
+.e-cupertino .cu-txt { position: relative; z-index: 2; margin-top: -30px; padding: 0 20px 18px; text-align: center; }
+.e-cupertino .m-tit { margin: 0; font: 700 32px/1.04 var(--f-tit); letter-spacing: -.04em; color: #f5f5f7; }
+.e-cupertino .m-det { margin: 6px auto 0; font-size: 14px; line-height: 1.4; color: #a1a1a6; opacity: 1; }
+.e-cupertino .m-btn { margin-top: 14px; min-height: 42px; padding: 0 24px; background: #0071e3; color: #fff; font: 600 15px/1 var(--f-txt); letter-spacing: -.01em; }
+/* accesos: lista agrupada con squircles de color */
+.e-cupertino .m-accesos { display: block; margin: 14px 16px 0; padding: 0; background: #fff; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.e-cupertino .m-acc { position: relative; display: grid; grid-template-columns: 30px 1fr 8px; column-gap: 13px; row-gap: 0; align-items: center;
+  min-height: 0; padding: 7px 18px 7px 14px; background: none; border: 0; border-radius: 0; }
+.e-cupertino .m-acc + .m-acc::before { content: ""; position: absolute; left: 57px; right: 0; top: 0; height: 1px; background: #e8e8ed; }
+.e-cupertino .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 7px; height: 7px; border: solid #b0b0b5;
+  border-width: 2px 2px 0 0; transform: rotate(45deg); margin-left: -4px; }
+.e-cupertino .m-ico { grid-column: 1; grid-row: 1 / span 2; width: 30px; height: 30px; margin: 0; border-radius: 8px; color: #fff; }
+.e-cupertino .m-ico svg { width: 17px; height: 17px; stroke-width: 2; }
+.e-cupertino .m-acc:nth-child(1) .m-ico { background: #0071e3; }
+.e-cupertino .m-acc:nth-child(2) .m-ico { background: #0a7f95; }
+.e-cupertino .m-acc:nth-child(3) .m-ico { background: #4b49c9; }
+.e-cupertino .m-acc:nth-child(4) .m-ico { background: #c81e57; }
+.e-cupertino .m-acc b { grid-column: 2; font: 600 15.5px/1.25 var(--f-tit); letter-spacing: -.015em; }
+.e-cupertino .m-acc span { grid-column: 2; font-size: 13px; color: #6e6e73; }
+/* novedades: título de sección de 22px y una nota con foto en squircle */
+.e-cupertino .m-novs { padding: 16px 16px 0; gap: 8px; }
+.e-cupertino .m-sec { padding-left: 4px; font: 700 22px/1 var(--f-tit); letter-spacing: -.025em; text-transform: none; color: #1d1d1f; }
+.e-cupertino .m-nov-tapa { grid-template-columns: 72px 1fr; grid-template-rows: auto auto 1fr; gap: 0 13px; padding: 12px; border: 0;
+  background: #fff; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.e-cupertino .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 72px; height: 72px; border-radius: 14px; overflow: hidden; background: #ddd; }
+.e-cupertino .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.05); }
+.e-cupertino .m-nov .m-fecha { grid-row: auto; grid-column: 2; padding: 0; min-width: 0; font: 500 12.5px/1.3 var(--f-txt); color: #6e6e73; }
+.e-cupertino .m-nov b { grid-column: 2; font: 600 15.5px/1.25 var(--f-tit); letter-spacing: -.018em; }
+.e-cupertino .m-nov p { font-size: 13px; line-height: 1.35; color: #6e6e73; margin-top: 2px; }
+.e-cupertino .m-nov:not(.m-nov-tapa), .e-cupertino .m-benef { display: none; }

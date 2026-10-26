@@ -1,0 +1,84 @@
+/* fuentes: Bricolage Grotesque:opsz,wght@12..96,400..800 */
+/* foto: calle; calle */
+/* Pop (modelo 21). La pantalla ES el color: campos planos con los cuatro colores de ACME, formas geométricas grandes
+   (medias lunas, cuartos de círculo, bolas) como ilustración y Bricolage Grotesque 800 enorme. Las bandas de acceso
+   son campos de color con su figura. */
+.e-pop-color-pleno {
+  --pp-base: #14213d; --pp-prim: #2a6f97; --pp-acen: #f4a259; --pp-apoyo: #8cb369;
+  --pp-sobre-apoyo: #102016; --pp-claro: #dfe4ee;
+  --fondo: #ffffff; --sup: #f5f5f1; --tinta: #14161d; --suave: #4f5462; --linea: #e3e5ea;
+  --acento: #f4a259; --acento-tinta: #14213d; --acento2: #8cb369; --oscuro: #14213d; --sobre-oscuro: #ffffff;
+  --f-tit: "Bricolage Grotesque", system-ui, sans-serif; --f-txt: "Bricolage Grotesque", system-ui, sans-serif; --f-num: "Bricolage Grotesque", system-ui, sans-serif;
+  --radio: 0; --radio-btn: 999px; --curva: cubic-bezier(.33,1,.68,1);
+  font-optical-sizing: auto;
+}
+/* encabezado sobre el campo de la base */
+.e-pop-color-pleno .m-cab { background: var(--pp-base); color: #fff; padding: 10px 20px 2px; }
+.e-pop-color-pleno .m-logo { color: var(--pp-acen); }
+.e-pop-color-pleno .m-marca { font-weight: 800; font-size: 19px; letter-spacing: -.01em; }
+.e-pop-color-pleno .m-marca small { color: var(--pp-claro); font-weight: 500; letter-spacing: 0; }
+.e-pop-color-pleno .m-yo { background: var(--pp-apoyo); color: var(--pp-sobre-apoyo); border: 0; font-weight: 800; }
+
+/* héroe: el campo de color con tres formas */
+.e-pop-color-pleno .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-pop-color-pleno .pp-cima { position: relative; overflow: hidden; background: var(--pp-base); color: #fff; padding: 2px 20px 58px; }
+.e-pop-color-pleno .m-kick { position: relative; z-index: 1; margin: 0; font: 700 26px/1 var(--f-tit); letter-spacing: -.025em; text-transform: none; opacity: 1; }
+.e-pop-color-pleno .m-kick b { display: block; margin-top: 2px; font-size: 66px; font-weight: 800; letter-spacing: -.055em; line-height: .86; color: var(--pp-acen);
+  animation: pp-sube .8s var(--curva) both; }
+.e-pop-color-pleno .pp-f { position: absolute; pointer-events: none; animation: pp-forma 1s var(--curva) both; }
+.e-pop-color-pleno .pp-luna { width: 196px; height: 98px; right: -30px; bottom: 0; border-radius: 999px 999px 0 0; background: var(--pp-acen); }
+.e-pop-color-pleno .pp-cuarto { width: 84px; height: 84px; left: 0; bottom: 0; border-radius: 0 100% 0 0; background: var(--pp-apoyo); animation-delay: .1s; }
+.e-pop-color-pleno .pp-bola { width: 58px; height: 58px; right: 96px; bottom: 74px; border-radius: 50%; background: var(--pp-prim); animation-delay: .2s; }
+@keyframes pp-forma { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes pp-sube { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+
+/* el veredicto en blanco */
+.e-pop-color-pleno .pp-ver { padding: 12px 20px 12px; background: #fff; }
+.e-pop-color-pleno .m-tit { margin: 0; font: 800 27px/1 var(--f-tit); letter-spacing: -.04em; color: var(--tinta); }
+.e-pop-color-pleno .m-det { margin: 5px 0 0; font-size: 14px; color: var(--suave); opacity: 1; }
+.e-pop-color-pleno .pp-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.e-pop-color-pleno .m-cifra { margin: 0; gap: 8px; align-items: center; }
+.e-pop-color-pleno .m-cifra b { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--pp-prim); color: #fff;
+  font: 800 30px/1 var(--f-num); letter-spacing: -.04em; }
+.e-pop-color-pleno .m-cifra span { max-width: 74px; font-size: 13px; font-weight: 600; line-height: 1.15; color: var(--suave); opacity: 1; }
+.e-pop-color-pleno .m-btn { min-height: 46px; padding: 0 20px; background: var(--pp-base); color: #fff; font: 700 15.5px/1 var(--f-txt); letter-spacing: -.01em; }
+
+/* accesos: bandas de color plenas, cada una con su figura */
+.e-pop-color-pleno .m-accesos { grid-template-columns: 1fr; gap: 0; padding: 0; }
+.e-pop-color-pleno .m-acc { position: relative; overflow: hidden; min-height: 0; padding: 7px 110px 7px 20px; gap: 1px; border: 0; border-radius: 0; background: var(--pp-acen); color: var(--pp-base); }
+.e-pop-color-pleno .m-acc b { position: relative; z-index: 1; font: 800 21px/1 var(--f-tit); letter-spacing: -.04em; }
+.e-pop-color-pleno .m-acc span { position: relative; z-index: 1; font-size: 13px; font-weight: 600; color: inherit; }
+.e-pop-color-pleno .m-ico { position: absolute; margin: 0; border-radius: 50%; width: 58px; height: 58px; right: 24px; top: -3px; background: var(--pp-base); color: var(--pp-acen);
+  animation: pp-forma 1s var(--curva) both; }
+.e-pop-color-pleno .m-ico svg { width: 26px; height: 26px; stroke-width: 2; }
+.e-pop-color-pleno .m-acc:nth-child(2) { background: var(--pp-apoyo); color: var(--pp-sobre-apoyo); }
+.e-pop-color-pleno .m-acc:nth-child(2) .m-ico { width: 52px; height: 84px; right: 0; top: -12px; border-radius: 999px 0 0 999px; background: var(--pp-prim); color: #fff; padding-left: 8px; }
+.e-pop-color-pleno .m-acc:nth-child(3) { background: var(--pp-base); color: #fff; }
+.e-pop-color-pleno .m-acc:nth-child(3) span { color: var(--pp-acen); }
+.e-pop-color-pleno .m-acc:nth-child(3) .m-ico { width: 74px; height: 74px; right: 0; top: auto; bottom: 0; border-radius: 100% 0 0 0; background: var(--pp-acen); color: var(--pp-base);
+  place-items: end; padding: 0 14px 12px 0; }
+.e-pop-color-pleno .m-acc:nth-child(4) { background: var(--pp-prim); color: #fff; }
+.e-pop-color-pleno .m-acc:nth-child(4) .m-ico { width: 84px; height: 84px; right: -12px; top: auto; bottom: -22px; background: var(--pp-apoyo); color: var(--pp-sobre-apoyo);
+  place-items: start; padding: 18px 0 0 22px; }
+
+/* novedades en blanco, con la foto en duotono dentro de un círculo */
+.e-pop-color-pleno .m-novs { padding: 10px 20px 0; gap: 0; }
+.e-pop-color-pleno .m-sec { font: 800 23px/1 var(--f-tit); letter-spacing: -.045em; text-transform: none; color: var(--tinta); margin-bottom: 6px; }
+.e-pop-color-pleno .m-nov { border-top: 1px solid var(--linea); padding: 6px 0; }
+.e-pop-color-pleno .m-nov-tapa { grid-template-columns: 66px 1fr; gap: 0 14px; align-items: center; border-top: 0; padding-top: 2px; }
+.e-pop-color-pleno .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; height: 66px; width: 66px; border-radius: 50%; position: relative;
+  background: var(--pp-base); overflow: hidden; }
+.e-pop-color-pleno .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.3) brightness(1.08); mix-blend-mode: luminosity; opacity: .94; }
+.e-pop-color-pleno .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: var(--pp-acen); mix-blend-mode: screen; opacity: .26; }
+.e-pop-color-pleno .m-nov .m-fecha { grid-row: auto; padding: 0; font: 700 11px/1.2 var(--f-txt); letter-spacing: .08em; text-transform: uppercase; color: var(--pp-prim); }
+.e-pop-color-pleno .m-nov-tapa .m-fecha, .e-pop-color-pleno .m-nov-tapa b, .e-pop-color-pleno .m-nov-tapa p { grid-column: 2; }
+.e-pop-color-pleno .m-nov b { font: 800 17px/1.1 var(--f-tit); letter-spacing: -.02em; }
+.e-pop-color-pleno .m-nov p { font-size: 12.5px; }
+.e-pop-color-pleno .m-nov:not(.m-nov-tapa) { display: none; }
+/* beneficio: otro campo de color con su forma */
+.e-pop-color-pleno .m-benef { margin: 6px 0 0; padding: 10px 92px 12px 20px; border: 0; border-radius: 0; background: var(--pp-apoyo); color: var(--pp-sobre-apoyo); overflow: hidden; flex: 1; }
+.e-pop-color-pleno .m-rubro { color: var(--pp-sobre-apoyo); font-weight: 800; }
+.e-pop-color-pleno .m-benef b { font: 800 17px/1.05 var(--f-tit); letter-spacing: -.03em; }
+.e-pop-color-pleno .m-benef p { color: var(--pp-sobre-apoyo); font-size: 12.5px; }
+.e-pop-color-pleno .m-benef::before { content: ""; position: absolute; right: -40px; top: 8px; width: 104px; height: 104px; border-radius: 50%; background: var(--pp-acen); }
+.e-pop-color-pleno .m-benef::after { content: ""; position: absolute; right: 40px; bottom: -34px; width: 64px; height: 64px; border-radius: 0 100% 0 0; background: var(--pp-prim); }

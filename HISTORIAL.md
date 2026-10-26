@@ -9070,3 +9070,32 @@ privado y SDN lo hizo **público** el mismo día, para que cualquiera lo
 instale con los dos comandos de `/plugin` sin pedir acceso. `test_xsd.py` compara
 el SHA-256 de cada archivo de la copia contra los de `ORIGEN.md`, para que
 nadie la edite acá y se separe del kit.
+
+**El catálogo de estilos de XSD** (2026-10-25/26, pedido de SDN). Es un
+complemento del kit: un catálogo estándar de estilos para mirar opciones de diseño
+antes de pedir un mockup o un plan. La segunda etapa (las otras tres pantallas,
+mockup del sistema de la persona, sugerencias y plan) queda para después.
+
+Cómo se hizo:
+- **Extracción.** Cinco agentes leyeron los lienzos del concurso (rondas 2 a 8,
+  la final y las seis familias del concurso principal) y otras propuestas
+  (Constructor, UBoard, Pádel, Oliva, notificaciones), y dejaron 113 fichas con
+  valores reales sacados del código: colores, tipografías, forma, recursos y las
+  reglas CSS que dan la firma. Las fichas quedan en
+  `xsd/proyectos/mitrabajo/catalogo/fuentes/`.
+- **Portada común.** Una sola portada de teléfono de ACME, una red de servicios
+  inventada, con ganchos libres para la firma de cada estilo. Cada estilo es una
+  hoja CSS bajo `.e-<id>`, más un héroe propio si lo necesita.
+- **Tres tandas, todas aprobadas por SDN:**
+  1. 20 estilos curados.
+  2. 20 más: muy claros, de color, grises con uno o dos colores, flúor y
+     fotográficos. El dibujo en gris se cambió por siete fotos reales CC0 de
+     StockSnap, buscadas en Openverse.
+  3. 20 con movimiento. Las entradas arrancan con la clase `en-vista` cuando la
+     portada aparece en pantalla, hay un botón para repetirlas y todos los
+     estilos respetan la opción de reducir movimiento.
+- **Pulido técnico:**
+  - Las fuentes se juntan en un solo enlace de Google Fonts. Un corte ingenuo
+    por `;` rompía el enlace entero.
+  - El capturador espera a que las fotos estén decodificadas antes de capturar.
+  - El preview publicado guarda en su base qué estilos van.

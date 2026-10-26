@@ -1,0 +1,77 @@
+{
+  "aviso": "ACME es una organización inventada para el catálogo de XSD. Todo lo que aparece acá es ficticio: nombres, cifras, sedes y operaciones.",
+  "organizacion": {
+    "nombre": "ACME",
+    "bajada": "Red de servicios",
+    "lema": "Todo lo que pedís, en un solo lugar",
+    "colores": {"base": "#14213D", "primario": "#2A6F97", "acento": "#F4A259", "apoyo": "#8CB369"}
+  },
+  "personas": {
+    "socia": {"nombre": "Lucía Ferraro", "iniciales": "LF", "numero": "S-048213", "desde": "2019"},
+    "operador": {"nombre": "Martín Ibarra", "iniciales": "MI", "area": "Atención · Sede Centro"}
+  },
+  "sedes": ["Centro", "Norte", "Puerto", "Oeste", "Lagos", "Sierra"],
+  "portada": {
+    "saludo": "Hola, Lucía",
+    "estado": {"titulo": "Tu cuenta está al día", "detalle": "Último pago acreditado el 3 de octubre", "cifra": "3", "cifra_rotulo": "solicitudes este año"},
+    "accesos": [
+      {"id": "nueva", "titulo": "Nueva solicitud", "bajada": "Pedí un servicio en tres pasos"},
+      {"id": "mias", "titulo": "Mis solicitudes", "bajada": "1 en curso, 2 resueltas"},
+      {"id": "pagos", "titulo": "Pagos", "bajada": "Comprobantes y vencimientos"},
+      {"id": "credencial", "titulo": "Credencial", "bajada": "Tu número de socia: S-048213"}
+    ],
+    "novedades": [
+      {"titulo": "Abre la sede Norte", "bajada": "Desde el lunes 2 atendemos de 8 a 20 en Av. del Parque 1200.", "fecha": "28 oct"},
+      {"titulo": "Nuevo turno nocturno", "bajada": "Las urgencias de instalación se toman hasta las 23.", "fecha": "21 oct"},
+      {"titulo": "Encuesta de servicio", "bajada": "Contanos cómo te fue en tu última solicitud. Son 2 minutos.", "fecha": "15 oct"}
+    ],
+    "beneficio": {"rubro": "Hogar", "titulo": "15% en materiales eléctricos", "bajada": "En comercios adheridos, hasta el 30 de noviembre."}
+  },
+  "operacion": {
+    "titulo": "Nueva solicitud de servicio",
+    "numero": "SOL-2026-0412",
+    "pasos": ["Qué necesitás", "Dónde y cuándo", "Revisá y enviá"],
+    "paso_actual": 2,
+    "campos": [
+      {"etiqueta": "Tipo de servicio", "tipo": "opciones", "opciones": ["Mantenimiento", "Instalación", "Consulta técnica"], "valor": "Instalación"},
+      {"etiqueta": "Dirección", "tipo": "texto", "valor": "Calle de los Álamos 845, 2.º B"},
+      {"etiqueta": "Sede que te atiende", "tipo": "lista", "valor": "Norte"},
+      {"etiqueta": "Fecha preferida", "tipo": "fecha", "valor": "12/11/2026"},
+      {"etiqueta": "Franja horaria", "tipo": "opciones", "opciones": ["Mañana", "Tarde"], "valor": "Mañana"},
+      {"etiqueta": "Contanos el problema", "tipo": "area", "valor": "Quiero instalar dos tomacorrientes nuevos en la cocina."},
+      {"etiqueta": "Foto o plano", "tipo": "archivo", "valor": "cocina.jpg · 1,2 MB"}
+    ],
+    "aviso": {"tipo": "info", "texto": "La sede Norte tiene turnos disponibles para esa fecha."},
+    "error": {"campo": "Teléfono de contacto", "texto": "Falta un número para coordinar la visita."},
+    "resumen": {"costo": "$ 18.500", "plazo": "48 h hábiles"}
+  },
+  "listado": {
+    "titulo": "Solicitudes",
+    "total": 1284,
+    "filtros": ["Este mes", "Todas las sedes", "Todos los estados"],
+    "estados": {"nueva": "Nueva", "curso": "En curso", "resuelta": "Resuelta", "demorada": "Demorada"},
+    "columnas": ["N.º", "Socio", "Servicio", "Sede", "Estado", "Fecha", "Importe"],
+    "filas": [
+      ["SOL-0412", "Lucía Ferraro", "Instalación", "Norte", "nueva", "28/10", "$ 18.500"],
+      ["SOL-0411", "Diego Salvatierra", "Mantenimiento", "Centro", "curso", "28/10", "$ 9.200"],
+      ["SOL-0409", "Ana Belén Quiroga", "Consulta técnica", "Puerto", "resuelta", "27/10", "$ 0"],
+      ["SOL-0406", "Ramiro Ocampo", "Instalación", "Oeste", "demorada", "25/10", "$ 41.000"],
+      ["SOL-0403", "Carla Mendieta", "Mantenimiento", "Lagos", "resuelta", "24/10", "$ 12.750"],
+      ["SOL-0398", "Tomás Ibáñez", "Instalación", "Sierra", "curso", "23/10", "$ 27.300"],
+      ["SOL-0394", "Valeria Sosa", "Consulta técnica", "Centro", "resuelta", "22/10", "$ 0"],
+      ["SOL-0390", "Julián Paredes", "Mantenimiento", "Norte", "nueva", "22/10", "$ 6.900"]
+    ]
+  },
+  "tablero": {
+    "titulo": "Operaciones de octubre",
+    "kpis": [
+      {"rotulo": "Solicitudes", "valor": "1.284", "delta": "+8%", "sentido": "bien"},
+      {"rotulo": "Tiempo medio de resolución", "valor": "2,4 días", "delta": "−0,3", "sentido": "bien"},
+      {"rotulo": "Satisfacción", "valor": "4,6 / 5", "delta": "+0,1", "sentido": "bien"},
+      {"rotulo": "Demoradas", "valor": "37", "delta": "+12", "sentido": "mal"}
+    ],
+    "serie_semanal": {"rotulo": "Solicitudes por semana", "semanas": ["S1", "S2", "S3", "S4", "S5"], "valores": [241, 268, 255, 302, 218]},
+    "por_sede": {"rotulo": "Por sede", "sedes": ["Centro", "Norte", "Puerto", "Oeste", "Lagos", "Sierra"], "valores": [412, 268, 187, 176, 141, 100]},
+    "por_estado": {"rotulo": "Estado", "valores": {"resuelta": 902, "curso": 241, "nueva": 104, "demorada": 37}}
+  }
+}

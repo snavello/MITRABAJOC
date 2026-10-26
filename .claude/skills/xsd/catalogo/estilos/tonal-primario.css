@@ -1,0 +1,75 @@
+/* fuentes: Figtree:wght@400;500;600;700;800 */
+/* foto: tecnico; calle */
+/* Tonal (modelo 121). Un solo tono: todo sale de tintes del primario del gremio (UOM #1a3d6b) — fondos al 4-10%, bordes al 18-30%,
+   la foto fundida en el primario y aclarada, el texto en la base. La profundidad es la jerarquía. */
+.e-tonal-primario {
+  --tp-prim: #1a3d6b; --tp-base: #0f2240;
+  --t4: #f6f7f9; --t6: #f2f4f7; --t10: #e8ecf0; --t14: #dfe4eb; --t18: #d6dce4; --t22: #cdd4de; --t30: #bac5d3; --t55: #8194ae;
+  --pt: #183863; --tx2: #44536a;
+  --fondo: var(--t4); --sup: #ffffff; --tinta: #0f2240; --suave: #44536a; --linea: var(--t18);
+  --acento: #183863; --acento-tinta: #ffffff; --acento2: #bac5d3; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --f-tit: "Figtree", system-ui, sans-serif; --f-txt: "Figtree", system-ui, sans-serif; --f-num: "Figtree", system-ui, sans-serif;
+  --radio: 22px; --radio-btn: 15px;
+  --tp-sombra: 0 22px 40px -28px rgba(15,34,64,.6);
+  font-variant-numeric: tabular-nums;
+}
+/* el tope en el tinte 22 con el encabezado transparente */
+.e-tonal-primario .m-cab { background: var(--t22); border-bottom: 1px solid var(--t30); padding: 10px 16px; }
+.e-tonal-primario .m-logo { color: var(--pt); }
+.e-tonal-primario .m-marca { font: 800 16px/1 var(--f-tit); letter-spacing: .005em; text-transform: uppercase; color: var(--tp-base); }
+.e-tonal-primario .m-marca small { font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--tx2); }
+.e-tonal-primario .m-yo { width: 40px; height: 40px; background: #fff; color: var(--pt); border: 0; font-weight: 800;
+  box-shadow: inset 0 0 0 1.5px var(--t30), 0 6px 14px -10px var(--tp-base); }
+.e-tonal-primario .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; isolation: isolate; }
+.e-tonal-primario .tp-saludo { position: relative; z-index: 1; padding: 14px 20px 96px; }
+.e-tonal-primario .m-kick { margin: 0; font: 800 40px/1.02 var(--f-tit); letter-spacing: -.03em; text-transform: none; opacity: 1; color: var(--tp-base); }
+.e-tonal-primario .m-kick em { font-style: normal; color: var(--pt); }
+/* la foto en el tono: grises fundidos con luminosity sobre el primario, aclarada con velo blanco */
+.e-tonal-primario .m-heroe-foto { display: block; position: absolute; inset: 0 0 auto 0; z-index: 0; height: 214px; overflow: hidden; isolation: isolate; background: var(--tp-prim); }
+.e-tonal-primario .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.1) brightness(1.1); mix-blend-mode: luminosity; opacity: .9; object-position: 50% 32%; }
+.e-tonal-primario .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: #fff; opacity: .12; }
+.e-tonal-primario .m-heroe-foto::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 112px; z-index: 1;
+  background: linear-gradient(to bottom, #cdd4de 0%, rgba(205,212,222,.84) 62%, transparent); }
+/* la tarjeta principal montada sobre la foto */
+.e-tonal-primario .tp-principal { position: relative; z-index: 2; margin: 0 12px; padding: 16px 18px 16px; background: #fff;
+  border: 1px solid var(--t18); border-radius: 28px; box-shadow: var(--tp-sombra); }
+.e-tonal-primario .m-tit { margin: 0; font: 800 27px/1.05 var(--f-tit); letter-spacing: -.02em; color: var(--tp-base); }
+.e-tonal-primario .m-det { margin: 6px 0 0; font-size: 14.5px; opacity: 1; color: var(--tx2); }
+.e-tonal-primario .tp-espera { margin-top: 12px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
+.e-tonal-primario .tp-espera .m-cifra { order: -1; }
+.e-tonal-primario .tp-medidor { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 0; padding: 0; list-style: none; }
+.e-tonal-primario .tp-medidor li { height: 10px; border-radius: 99px; background: var(--t10); box-shadow: inset 0 0 0 1.5px var(--t30);
+  animation: tp-respira 3.2s ease-in-out infinite; }
+.e-tonal-primario .tp-medidor li:nth-child(2) { animation-delay: .25s; } .e-tonal-primario .tp-medidor li:nth-child(3) { animation-delay: .5s; }
+.e-tonal-primario .tp-medidor li:nth-child(4) { animation-delay: .75s; } .e-tonal-primario .tp-medidor li:nth-child(5) { animation-delay: 1s; }
+@keyframes tp-respira { 0%, 100% { background: var(--t10); } 50% { background: var(--t22); } }
+.e-tonal-primario .m-cifra { margin: 0; gap: 6px; }
+.e-tonal-primario .m-cifra b { font: 800 15px/1 var(--f-num); color: var(--pt); }
+.e-tonal-primario .m-cifra span { font-size: 13px; font-weight: 600; opacity: 1; color: var(--tx2); }
+.e-tonal-primario .m-btn { display: flex; width: 100%; margin-top: 12px; height: 48px; border-radius: 15px; background: var(--pt); color: #fff;
+  font: 700 16px/1 var(--f-txt); }
+/* accesos: mosaico de 2 × 2 en blanco con borde del tinte 18 */
+.e-tonal-primario .m-accesos { gap: 10px; margin-top: 12px; padding: 0 12px; }
+.e-tonal-primario .m-acc { min-height: 0; padding: 10px 12px; gap: 1px 10px; grid-template-columns: 32px 1fr; align-content: center; background: #fff; border: 1px solid var(--t18); border-radius: 22px; }
+.e-tonal-primario .m-ico { width: 38px; height: 38px; border-radius: 13px; background: var(--t10); color: var(--pt); margin: 0; grid-row: 1 / span 2; align-self: start; width: 32px; height: 32px; border-radius: 11px; }
+.e-tonal-primario .m-ico svg { width: 18px; height: 18px; }
+.e-tonal-primario .m-acc b { font: 700 14.5px/1.2 var(--f-tit); color: var(--tp-base); }
+.e-tonal-primario .m-acc:last-child span { white-space: nowrap; }
+.e-tonal-primario .m-acc span { font-size: 12px; color: var(--tx2); }
+/* novedades: tarjeta con la foto tonal grande */
+.e-tonal-primario .m-novs { padding: 14px 12px 0; gap: 8px; }
+.e-tonal-primario .m-sec { margin: 0 6px; font: 800 20px/1 var(--f-tit); letter-spacing: -.015em; text-transform: none; color: var(--tp-base); }
+.e-tonal-primario .m-nov { border: 1px solid var(--t18); border-radius: 22px; background: #fff; padding: 10px 14px 10px 10px; overflow: hidden; }
+.e-tonal-primario .m-nov-tapa { grid-template-columns: 64px 1fr; gap: 0 12px; }
+.e-tonal-primario .m-nov-tapa .m-nov-foto { position: relative; grid-column: 1; grid-row: 1 / span 3; width: 64px; height: 64px; border-radius: 14px; background: var(--tp-prim); isolation: isolate; }
+.e-tonal-primario .m-nov-tapa .m-fecha, .e-tonal-primario .m-nov-tapa b, .e-tonal-primario .m-nov-tapa p { grid-column: 2; }
+.e-tonal-primario .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.06) brightness(1.1); mix-blend-mode: luminosity; opacity: .86; }
+.e-tonal-primario .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: #fff; opacity: .42; }
+.e-tonal-primario .m-nov .m-fecha { grid-row: auto; padding: 0; min-width: 0; font: 700 12px/1.3 var(--f-num); color: var(--pt); }
+.e-tonal-primario .m-nov b { font: 800 15px/1.25 var(--f-tit); color: var(--tp-base); }
+.e-tonal-primario .m-nov p { grid-column: auto; font-size: 12.5px; color: var(--tx2); }
+.e-tonal-primario .m-nov:not(.m-nov-tapa) { display: none; }
+.e-tonal-primario .m-benef { margin: 8px 12px 14px; background: var(--t10); border: 1px solid var(--t18); border-radius: 22px; padding: 10px 16px; }
+.e-tonal-primario .m-rubro { font: 800 11px/1 var(--f-txt); letter-spacing: .13em; color: var(--pt); }
+.e-tonal-primario .m-benef b { font: 800 15px/1.25 var(--f-tit); color: var(--tp-base); }
+.e-tonal-primario .m-benef p { color: var(--tx2); }

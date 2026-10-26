@@ -1,0 +1,86 @@
+/* fuentes: Figtree:wght@400;500;600;700;800 */
+/* foto: tecnico; calle */
+/* Cercano (paneles con tarjeta oscura, modelo 140). Cartas blancas de radio 20 sobre gris frío, una sola tarjeta oscura del gremio con la foto
+   adentro, el medidor de cinco tramos esperando y el trazo flúor solo bajo la acción principal. Colores del gremio: los de la UOM. */
+.e-cercano-paneles {
+  --fondo: #f2f4f7; --sup: #ffffff; --tinta: #131823; --suave: #4f5767; --linea: #e2e6ec;
+  --acento: #1a3d6b; --acento-tinta: #131823; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --f-tit: "Figtree", system-ui, sans-serif; --f-txt: "Figtree", system-ui, sans-serif; --f-num: "Figtree", system-ui, sans-serif;
+  --radio: 20px; --radio-btn: 999px;
+  --cp-fluor: #C6FF3D; --cp-hundido: #f6f7f9; --cp-linea2: #eef1f4; --cp-gris2: #687081;
+  --cp-sombra: 0 1px 2px rgba(19,24,35,.05), 0 8px 24px -16px rgba(19,24,35,.22);
+  --cp-sombra-osc: 0 20px 40px -22px rgba(15,34,64,.75);
+}
+/* encabezado claro de una línea */
+.e-cercano-paneles .m-cab { background: #fff; border-bottom: 1px solid var(--linea); padding: 10px 14px 10px 16px; }
+.e-cercano-paneles .m-logo { color: #1a3d6b; }
+.e-cercano-paneles .m-marca { font: 800 16px/1 var(--f-tit); letter-spacing: -.01em; color: #131823; }
+.e-cercano-paneles .m-marca small { font-weight: 700; font-size: 11.5px; letter-spacing: 0; color: #4f5767; }
+.e-cercano-paneles .m-yo { position: relative; width: 38px; height: 38px; background: #fff; color: #1a3d6b; border: 0;
+  box-shadow: inset 0 0 0 1px var(--linea), var(--cp-sombra); font-weight: 800; }
+.e-cercano-paneles .m-yo::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #e8b84b; opacity: .85; }
+/* saludo grande y la ÚNICA tarjeta oscura */
+.e-cercano-paneles .m-heroe { margin: 0; padding: 0; background: none; color: var(--tinta); border-radius: 0; overflow: visible; }
+.e-cercano-paneles .m-kick { margin: 0; padding: 12px 20px 0; font: 800 32px/1.06 var(--f-tit); letter-spacing: -.024em; text-transform: none; opacity: 1; color: #131823; }
+.e-cercano-paneles .cp-nombre { color: #1a3d6b; }
+.e-cercano-paneles .cp-principal { position: relative; overflow: hidden; isolation: isolate; margin: 10px 16px 0; padding: 16px 20px 14px;
+  border-radius: 20px; background: #0f2240; color: #fff; box-shadow: var(--cp-sombra-osc); }
+.e-cercano-paneles .cp-principal > :not(.m-heroe-foto) { position: relative; z-index: 1; }
+.e-cercano-paneles .m-heroe-foto { display: block; position: absolute; inset: 0 0 0 26%; z-index: 0; background: #0f2240; overflow: hidden; isolation: isolate; }
+.e-cercano-paneles .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.05); mix-blend-mode: luminosity; opacity: .62; object-position: 40% 30%; }
+.e-cercano-paneles .m-heroe-foto::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, #0f2240 0%, rgba(15,34,64,.62) 38%, rgba(15,34,64,.06) 100%); }
+.e-cercano-paneles .m-tit { margin: 0; font: 800 26px/1.06 var(--f-tit); letter-spacing: -.026em; white-space: nowrap; color: #fff; }
+.e-cercano-paneles .m-det { margin: 6px 0 0; font-size: 14.5px; opacity: 1; color: rgba(255,255,255,.88); }
+/* botón blanco con el trazo flúor bajo el texto (resaltador con puntas en bisel) */
+.e-cercano-paneles .m-btn { margin-top: 12px; height: 46px; padding: 0 22px; gap: 9px; background: #fff; color: #131823;
+  font: 800 16px/1 var(--f-txt); box-shadow: 0 10px 24px -12px rgba(0,0,0,.55); }
+.e-cercano-paneles .m-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.e-cercano-paneles .cp-flu { background-image: linear-gradient(100deg, transparent .16em, #C6FF3D .26em, #C6FF3D calc(100% - .12em), transparent calc(100% - .03em));
+  background-repeat: no-repeat; background-position: 0 82%; background-size: 100% .5em; padding: 0 .14em .02em; margin: 0 -.14em; }
+/* el medidor de cinco esperando */
+.e-cercano-paneles .cp-espera { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.14); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; }
+.e-cercano-paneles .m-cifra { margin: 0; gap: 6px; }
+.e-cercano-paneles .m-cifra b { font: 800 17px/1 var(--f-num); color: #fff; }
+.e-cercano-paneles .m-cifra span { font-size: 13.5px; opacity: 1; color: rgba(255,255,255,.8); }
+.e-cercano-paneles .cp-medidor { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 0; }
+.e-cercano-paneles .cp-medidor i { height: 8px; border-radius: 99px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.34); animation: cp-late 2.8s ease-in-out infinite; }
+.e-cercano-paneles .cp-medidor i:nth-child(2) { animation-delay: .25s; } .e-cercano-paneles .cp-medidor i:nth-child(3) { animation-delay: .5s; }
+.e-cercano-paneles .cp-medidor i:nth-child(4) { animation-delay: .75s; } .e-cercano-paneles .cp-medidor i:nth-child(5) { animation-delay: 1s; }
+@keyframes cp-late { 0%, 100% { background: transparent; } 50% { background: rgba(255,255,255,.12); } }
+/* accesos en una carta, renglones con ícono hundido y chevrón */
+.e-cercano-paneles .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 10px 16px 0; padding: 2px 0; background: #fff; border-radius: 20px; box-shadow: var(--cp-sombra); }
+.e-cercano-paneles .m-acc { grid-template-columns: 36px 1fr 12px; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0;
+  padding: 6px 16px; background: none; border: 0; border-radius: 0; }
+.e-cercano-paneles .m-acc + .m-acc { border-top: 1px solid var(--cp-linea2); }
+.e-cercano-paneles .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 7px; height: 7px; border: solid var(--cp-gris2);
+  border-width: 2px 2px 0 0; transform: rotate(45deg); }
+.e-cercano-paneles .m-ico { grid-row: 1 / span 2; width: 36px; height: 36px; margin: 0; border-radius: 12px; background: var(--cp-hundido);
+  color: #1a3d6b; box-shadow: inset 0 0 0 1px var(--linea); }
+.e-cercano-paneles .m-acc b { font: 700 15px/1.25 var(--f-tit); }
+.e-cercano-paneles .m-acc span { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #4f5767; }
+.e-cercano-paneles .m-acc span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; background: #b7bec9; }
+.e-cercano-paneles .m-acc:first-child span::before { background: #1a3d6b; }
+/* novedades en carta, con miniatura en el tono del gremio */
+.e-cercano-paneles .m-novs { margin: 0 16px; padding: 10px 0 0; gap: 8px; }
+.e-cercano-paneles .m-sec { margin: 0 4px; font: 800 19px/1 var(--f-tit); letter-spacing: -.015em; text-transform: none; color: #131823; }
+.e-cercano-paneles .m-nov { background: #fff; border: 0; border-radius: 20px; box-shadow: var(--cp-sombra); padding: 10px 14px; grid-template-columns: 1fr; }
+.e-cercano-paneles .m-nov-tapa { grid-template-columns: 54px 1fr; grid-template-rows: auto auto auto; gap: 0 12px; }
+.e-cercano-paneles .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 54px; height: 54px; border-radius: 14px; position: relative; background: #0f2240; overflow: hidden; }
+.e-cercano-paneles .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.04) brightness(1.1); mix-blend-mode: luminosity; opacity: .86; }
+.e-cercano-paneles .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: #e8b84b; mix-blend-mode: screen; opacity: .1; }
+.e-cercano-paneles .m-nov .m-fecha { grid-row: auto; grid-column: auto; padding: 0; font: 700 12px/1.3 var(--f-num); color: #1a3d6b; }
+.e-cercano-paneles .m-nov-tapa .m-fecha, .e-cercano-paneles .m-nov-tapa b, .e-cercano-paneles .m-nov-tapa p { grid-column: 2; }
+.e-cercano-paneles .m-nov b { font: 800 14.5px/1.25 var(--f-tit); letter-spacing: -.005em; }
+.e-cercano-paneles .m-nov p { grid-column: auto; font-size: 12.5px; color: #4f5767; }
+.e-cercano-paneles .m-nov:not(.m-nov-tapa) { display: none; }
+/* beneficio en carta con chip de marca */
+.e-cercano-paneles .m-benef { margin: 8px 16px 16px; background: #fff; border: 0; border-radius: 20px; box-shadow: var(--cp-sombra); padding: 10px 14px 10px 80px; min-height: 74px; }
+/* el beneficio con su foto teñida en la base, como las novedades */
+.e-cercano-paneles .m-benef::before { content: ""; position: absolute; left: 14px; top: 50%; width: 54px; height: 54px; margin-top: -27px; border-radius: 14px;
+  background: url(fotos/acuerdo.jpg) 30% 50% / cover, #0f2240; background-blend-mode: luminosity; filter: contrast(1.04) brightness(1.1); }
+.e-cercano-paneles .m-rubro { justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 999px;
+  background: #e8ecf0; color: #1a3d6b; font: 700 11.5px/1 var(--f-txt); letter-spacing: 0; text-transform: none; margin-bottom: 3px; }
+.e-cercano-paneles .m-rubro::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.e-cercano-paneles .m-benef b { font: 800 14.5px/1.25 var(--f-tit); }
+.e-cercano-paneles .m-benef p { color: #4f5767; }

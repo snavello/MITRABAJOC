@@ -1,0 +1,482 @@
+{
+ "electrico-laguna": {
+  "nombre": "Eléctrico laguna",
+  "origen": "modelo 162 · ronda 8",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Una portada que es una laguna (azul profundo, turquesa y verde agua con la foto fundida) y todo lo demás liviano y blanco con un filete turquesa; transmite frescura y confianza, sirve como modelo por defecto para una app de servicio que tiene que ser amable con cualquiera.",
+  "firma": "La portada en degradé de laguna con la foto fundida y un flúor agua; el resto blanco con un filete turquesa de 3px arriba; lo elegido pintado entero en azul profundo.",
+  "cuidado": "El flúor #46f0d2 solo se lee sobre el azul o como relleno con tinta azul, nunca como texto sobre blanco. El velo del héroe tiene que dejar el azul casi opaco donde va el texto: con una foto muy clara el blanco pierde contraste. El contraste entre la portada colorida y el resto liviano puede sentirse como dos apps si se pierde el filete turquesa. Con la paleta del sindicato todo se recalcula con color-mix (la app corrige el texto sobre el acento con temas.paleta_legible)."
+ },
+ "noticiero-indigo-claro": {
+  "nombre": "Noticiero índigo claro",
+  "origen": "modelo 147 · ronda 8",
+  "claro_u_oscuro": "claro",
+  "caracter": "La tapa de un diario impresa en papel marfil: titulares en Anton, tinta índigo y un solo coral; transmite noticia, institución y cercanía, sirve para una organización que comunica mucho y quiere verse seria sin ser fría.",
+  "firma": "Titulares en Anton mayúscula sobre papel marfil con reglas de diario; la línea móvil coral con rótulo índigo; fotos en duotono índigo que se funden en el papel.",
+  "cuidado": "El coral (#ff6a4d) no tiene contraste como texto sobre el papel: el propio código lo usa solo como relleno con tinta índigo encima, resaltador o filete. Anton en mayúsculas cansa en textos largos: se reserva a titulares y cifras. La línea móvil anima siempre (hay reducción de movimiento que la reemplaza por un fundido). El duotono depende de mix-blend-mode y el logo claro de Colm3na se cambia con content:url(), que en Firefox puede fallar."
+ },
+ "hilo": {
+  "nombre": "Hilo",
+  "origen": "modelo 3",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Lo que te espera, primero: una línea de tiempo con burbujas de mensaje y una tarjeta oscura de 'Necesita tu atención'; la más app, para afiliados que reciben avisos push.",
+  "firma": "Un hilo vertical con hitos hexagonales y burbujas de chat, encabezado por una tarjeta oscura de marca con filo ámbar que dice qué necesita tu atención.",
+  "cuidado": "Burbujas recortadas a 2 líneas esconden texto; animaciones de pulso permanentes (apagadas con prefers-reduced-motion). La línea de tiempo pierde sentido con pocos avisos."
+ },
+ "hoja-de-trabajo-colm3na": {
+  "nombre": "Hoja de trabajo",
+  "origen": "modelo A",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Herramienta de back-office densa y precisa sobre los cuatro colores del gremio: para operadores que arman formularios, noticias o avisos seguido y quieren ver el resultado al lado.",
+  "firma": "Franja oscura del gremio que se derrama sobre una mesa gris clara, títulos condensados en blanco y una hoja blanca con riel de pasos a un lado y el teléfono del afiliado al otro.",
+  "cuidado": "Muy denso: tipos de 10–12px en chips y rótulos y grises #8a93a6 sobre blanco quedan cerca del límite de contraste. El título blanco depende de que la franja esté detrás (en teléfono hay que volver a la tinta)."
+ },
+ "electrico-configurador": {
+  "nombre": "Eléctrico (configurador)",
+  "origen": "modelo 98 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Minimalismo de configurador de auto eléctrico: blanco y casi negro, tipografía fina, foto-producto a pantalla completa y formularios como 'configurá tu modelo'. Para apps de trámite que quieren calma y orden.",
+  "firma": "Configurador: vista a un lado, opciones al otro; pastillas negras de radio 999px; foto-producto B/N luminosa con velos blancos.",
+  "cuidado": "Casi sin jerarquía de color: lo crítico depende del rojo de estado (#b3261e). Tipografía fina de 500 en gris puede quedar débil en pantallas malas. Solo la portada es llamativa; el resto puede verse vacío."
+ },
+ "nordico-sereno": {
+  "nombre": "Nórdico sereno",
+  "origen": "modelo 133 · ronda 7",
+  "claro_u_oscuro": "claro",
+  "caracter": "Calma nórdica: blanco frío, gris piedra, mucho aire, Manrope, el gremio solo en detalles (filete, resaltador del nombre, botón, pestaña) y piezas que llegan de a una. Para apps que no deben gritar.",
+  "firma": "Blanco frío + gris piedra + resaltador del acento bajo el nombre del afiliado; entrada escalonada de a una pieza.",
+  "cuidado": "Tan sereno que la acción principal puede perderse; depende del botón en el color del gremio."
+ },
+ "cercano-paneles": {
+  "nombre": "Cercano (paneles con tarjeta oscura)",
+  "origen": "modelo 140 · ronda 7",
+  "claro_u_oscuro": "claro",
+  "caracter": "Cercano y ordenado: tarjetas blancas de radio 20 sobre gris frío, Figtree, el oscuro del gremio en UNA sola tarjeta por pantalla con la foto adentro y un medidor de cinco tramos. Para apps del afiliado amables.",
+  "firma": "Una sola tarjeta oscura del gremio por pantalla + medidor de cinco tramos + cartas blancas de radio 20 sobre #f2f4f7.",
+  "cuidado": "El flúor sobre blanco no es legible como texto (por eso va como resaltador detrás o subrayado bajo tinta). Depende de que el --base del gremio sea oscuro."
+ },
+ "tonal-primario": {
+  "nombre": "Tonal",
+  "origen": "modelo 121 · ronda 7",
+  "claro_u_oscuro": "claro",
+  "caracter": "Un solo tono: todo sale de tintes del primario del gremio (fondos 4-10%, bordes 18-30%, texto en la base), fotos incluidas. La profundidad es la jerarquía. Para gremios que quieren que la app sea 'su color' sin estridencia.",
+  "firma": "Monocromo del primario del gremio en todas las superficies, bordes y fotos; medidor de cinco.",
+  "cuidado": "Sin un segundo color, los estados (verde/rojo fijos) cargan toda la señal. Con un primario muy saturado o muy claro la escala pierde legibilidad."
+ },
+ "pagos-refinados": {
+  "nombre": "Pagos refinados",
+  "origen": "modelo 105 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Claridad de plataforma de pagos: lienzo blanco y gris frío, índigo como único acento, sombras en capas casi invisibles y diagramas prolijos que explican el circuito. Para herramientas con información densa pero elegante.",
+  "firma": "Sombra en capas casi invisible + índigo #4f3fe0 + velo pastel que deriva en la portada; diagramas del circuito.",
+  "cuidado": "El índigo compite con la marca del gremio; derivativo de una marca concreta."
+ },
+ "claridad-govuk": {
+  "nombre": "Claridad",
+  "origen": "modelo 34 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "claro",
+  "caracter": "Inspirado en GOV.UK: Public Sans 700, texto de 19px, componentes obvios, foco amarillo, y la respuesta primero en una frase grande, con la marca del gremio.",
+  "firma": "Cada pantalla abre con la respuesta en una frase grande; foco amarillo y botones con sombra inferior negra.",
+  "cuidado": "Puede parecer trámite estatal; botones planos sin marca."
+ },
+ "cupertino": {
+  "nombre": "Cupertino",
+  "origen": "modelo 99 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Página de producto de fabricante premium: gris muy claro, títulos grandes y apretados, listas agrupadas con íconos en squircle, vidrio translúcido y un solo azul para lo que se toca. Para apps que quieren verse impecables y familiares.",
+  "firma": "Gris #f5f5f7 + tarjetas blancas de radio grande + material translúcido + un único azul #0071e3 en lo tocable.",
+  "cuidado": "Muy derivativo de una marca concreta. El azul de sistema compite con los colores del gremio. Mucho blanco sobre gris claro: bajo contraste de superficies."
+ },
+ "oro-sueco": {
+  "nombre": "Oro sueco",
+  "origen": "modelo 116 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Auto eléctrico escandinavo: blanco, piedra y grafito con un oro sobrio como único acento, geometría recta, hilos de 1px y foto a sangre B/N templada. Minimalismo cálido.",
+  "firma": "Oro #c6a15a como único acento + títulos de 300 grandes + botones rectos sin radio.",
+  "cuidado": "El oro en texto (#7f6128) es el único que pasa contraste; el claro solo como filete."
+ },
+ "vidrio-claro": {
+  "nombre": "Vidrio claro",
+  "origen": "modelo C",
+  "claro_u_oscuro": "claro",
+  "caracter": "Una app clara y amable, de vidrio esmerilado blanco sobre manchas de color difuminadas; prolija y cercana al lenguaje de iOS, para un público amplio.",
+  "firma": "Tarjetas de vidrio blanco sobre un fondo verde grisáceo con manchas de luz de color difuminadas detrás.",
+  "cuidado": "Es el más genérico de los tres del lienzo. Texto blanco sobre el primario #4E6B2E está bien, pero el vidrio blanco sobre el fondo claro tiene poco contraste de borde; backdrop-filter pesa en teléfonos viejos."
+ },
+ "sintesis-total": {
+  "nombre": "Síntesis total",
+  "origen": "modelo 146 · ronda 7",
+  "claro_u_oscuro": "claro",
+  "caracter": "El sistema que suma lo elegido: tarjetas del 69 sobre tintes del primario, foto sutil, video chico, formularios de configurador y la línea móvil de novedades. Para una app completa y coherente con la marca del gremio.",
+  "firma": "Todo es tinte del primario (4-40%) + línea móvil de novedades + video chico teñido en la tarjeta de inicio.",
+  "cuidado": "Seis herencias en un sistema: riesgo de sumar demasiado movimiento (video + línea móvil + medidor que late). Con un primario claro, los tintes pierden la diferencia."
+ },
+ "pop-color-pleno": {
+  "nombre": "Pop",
+  "origen": "modelo 21 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "mixto",
+  "caracter": "La pantalla es el color: campos planos con los cuatro colores del gremio, formas geométricas grandes y Bricolage Grotesque 800 enorme.",
+  "firma": "Cuartos de círculo y círculos de los cuatro colores del gremio armando cada pantalla.",
+  "cuidado": "Contraste con colores del gremio claros; ruido visual alto."
+ },
+ "bloque-bauhaus": {
+  "nombre": "Bloque",
+  "origen": "modelo 15 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "claro",
+  "caracter": "Blanco, negro y gris con una sola forma geométrica de color por pantalla (círculo, domo), a la manera Bauhaus, que sostiene el número clave.",
+  "firma": "Una única forma Bauhaus del primario (círculo o domo) con la cifra en Unbounded 900 adentro.",
+  "cuidado": "Una sola forma por pantalla limita qué destacar; Unbounded ancho ocupa mucho en teléfono."
+ },
+ "expresivo-material": {
+  "nombre": "Expresivo",
+  "origen": "modelo 32 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "claro",
+  "caracter": "Inspirado en Material 3 Expressive: formas expresivas (galleta, trébol, muesca, sol) que contienen cada dato, colores tonales del gremio y movimiento con resorte.",
+  "firma": "Cada dato clave dentro de una forma expresiva distinta, en contenedores tonales del gremio.",
+  "cuidado": "Mucho juego de formas; clip-path complejo."
+ },
+ "instructivo": {
+  "nombre": "Instructivo",
+  "origen": "modelo 112 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Manual de armado de mueble en kit: papel blanco, tinta negra, dibujos de línea que se trazan solos y personajes sin cara. Todo se explica con un dibujo.",
+  "firma": "Dibujos de línea que se trazan + cota de plano + azul #1d4f9c y amarillo #ffd23a medidos.",
+  "cuidado": "Depende de ilustraciones a medida para cada pantalla; costoso de mantener."
+ },
+ "precision": {
+  "nombre": "Precisión",
+  "origen": "modelo 102 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Ingeniería de catálogo técnico: grises de taller, grotesca sobria apenas ensanchada, grilla de filetes de 1px, esquinas de 2px y un rojo solo para lo crítico. Para herramientas serias y densas.",
+  "firma": "Grilla de filetes de 1px + esquinas de 2px + un único rojo #c8102e para la diferencia.",
+  "cuidado": "Puede leerse frío y burocrático; poco para la portada del afiliado."
+ },
+ "funcion-rams": {
+  "nombre": "Función",
+  "origen": "modelo 25 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "claro",
+  "caracter": "Menos pero mejor, a la Dieter Rams: gris claro, Work Sans precisa, controles con forma física y un único punto de color que dice dónde mirar.",
+  "firma": "Un aparato Braun: placas con relieve, teclas físicas, rejilla de puntos y un solo LED del color del gremio.",
+  "cuidado": "Skeuomorfismo sutil puede verse viejo; gris sobre gris."
+ },
+ "sintetizador": {
+  "nombre": "Sintetizador",
+  "origen": "modelo 109 · ronda 6",
+  "claro_u_oscuro": "claro",
+  "caracter": "Aparato de sonido nórdico: chasis gris claro, módulos rotulados (A1, B2...), teclas de goma, perillas, LED y una pantallita LCD negra donde vive el estado. Juguetón e industrial.",
+  "firma": "Módulos rotulados con código + teclas de goma y LED + LCD negra donde se dice el estado.",
+  "cuidado": "Muy ornamental y de nicho; el naranja y el azul compiten con la marca. Mucho detalle chico."
+ },
+ "punto-rojo": {
+  "nombre": "Punto rojo",
+  "origen": "modelo 103 · ronda 6",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Fotografía de autor: negro, plata y papel, foto B/N con líneas de telémetro y controles que evocan una cámara. Un único punto rojo marca 'acá'.",
+  "firma": "Un único punto rojo #e1061b que solo indica posición; foto B/N con líneas de telémetro; metal moleteado.",
+  "cuidado": "Mucho detalle ornamental (moleteado, escalas) que encarece el código. Titulares de 300 pueden quedar finos."
+ },
+ "aluminio": {
+  "nombre": "Aluminio",
+  "origen": "modelo 114 · ronda 6",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Audio danés de lujo: aluminio cepillado y negro anodizado, controles redondos, tipografía fina y un champaña como luz de estado. Silencioso y caro.",
+  "firma": "Aluminio cepillado CSS + perilla torneada con luz champaña #d6be94.",
+  "cuidado": "Texturas metálicas que dependen de gradientes repetidos; poca carga de color para estados."
+ },
+ "uboard-informe-editorial": {
+  "nombre": "Informe editorial",
+  "origen": "modelo B",
+  "claro_u_oscuro": "claro",
+  "caracter": "Un reporte que se lee como un informe impreso: un número protagonista en serif y los gráficos en orden de lectura, para directivos que miran el resultado y no operan.",
+  "firma": "Un total de 72px en Newsreader sobre papel crema, filetes de periódico en lugar de tarjetas y un único violeta #4a3aa7 para todo dato.",
+  "cuidado": "La nota lo marca: menos denso, con muchos gráficos hay que scrollear. Un solo color de serie impide comparar categorías; serif en cifras chicas puede costar en pantallas de baja resolución."
+ },
+ "documental-duotono": {
+  "nombre": "Documental (duotono del gremio)",
+  "origen": "propuesta",
+  "claro_u_oscuro": "mixto",
+  "caracter": "El trabajo real fotografiado y teñido con los colores del gremio: el modelo más gráfico, con aire de revista y una portada que se mueve; sirve para gremios que quieren mostrar oficio y orgullo.",
+  "firma": "Fotos de trabajo en duotono automático (sombras = base del gremio, luces = acento o apoyo), con movimiento lento tipo Ken Burns, y la serif itálica como voz editorial frente a la condensada.",
+  "cuidado": "Depende de un banco de fotos por rubro con licencia y peso cuidado (~60 KB webp según la nota); con fotos genéricas parece sitio institucional. Texto sobre foto exige el velo. mix-blend-mode y el Ken Burns pesan en teléfonos modestos; respeta prefers-reduced-motion. La --luz cambia de color según la marca."
+ },
+ "uboard-planilla": {
+  "nombre": "Planilla con tablero",
+  "origen": "modelo C",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Para quien vive en Excel y quiere ver las filas: la tabla siempre a la vista, KPIs como cinta y filtros como barra de herramientas, con un aire de planilla de papel.",
+  "firma": "Reglas de planilla sobre papel crema, cinta de cifras condensadas grandes y un naranja quemado como única señal.",
+  "cuidado": "La nota lo dice: gráficos más chicos. Mucha regla fina puede volverse ruido; el gris #9c9588 de los filtros vacíos queda bajo en contraste."
+ },
+ "tinta-suizo": {
+  "nombre": "Tinta",
+  "origen": "modelo 13 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "claro",
+  "caracter": "Estilo tipográfico suizo: blanco puro, negro enorme y una grilla de seis columnas que se ve; el gremio solo en una franja fina y el botón.",
+  "firma": "Las seis columnas grises visibles detrás de todo y todo alineado a ellas; franja primario+acento arriba.",
+  "cuidado": "Muy austero; tamaños de 120–150px exigen recorte en teléfono."
+ },
+ "galeria-fotolibro": {
+  "nombre": "Galería",
+  "origen": "modelo 10 · ronda 2",
+  "claro_u_oscuro": "claro",
+  "caracter": "Documental silencioso de sala de exposición y fotolibro: mucho blanco, fotos en blanco y negro con paspartú y cada dato con su epígrafe en itálica; premium y calmo.",
+  "firma": "Lámina blanca con foto en B/N y epígrafe en Caslon itálica; rótulos condensados espaciados sobre filete negro.",
+  "cuidado": "Puede sentirse frío o lujoso para el afiliado; epígrafes 12.5–13.5px gris #5a616d al límite en teléfono."
+ },
+ "tapa-revista-gigante": {
+  "nombre": "Tapa",
+  "origen": "modelo 7 · ronda 2",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Documental llevado a tapa de revista: foto del gremio a sangre y un solo titular gigante por pantalla; para una portada que tiene que impactar.",
+  "firma": "Foto del gremio en duotono a sangre con un solo número o frase gigante en Anton; la sigla del gremio subrayada con el acento.",
+  "cuidado": "Texto blanco sobre foto depende del velo; Anton a 168px en teléfono domina todo (en la ronda 4 se pidió que ningún número ocupe tanto). Pesada en imágenes."
+ },
+ "anden-senaletica": {
+  "nombre": "Andén (señalética de subte)",
+  "origen": "propuesta",
+  "claro_u_oscuro": "mixto",
+  "caracter": "La señalética del subte y del colectivo, el idioma visual que el afiliado lee todos los días camino al trabajo: claro, directo y orientador.",
+  "firma": "El recibo como recorrido de una línea de subte (Bruto → aportes → Neto, la estación que falla en rojo) y las novedades en un tablero de partidas que cae como split-flap, con insignias de línea redondas.",
+  "cuidado": "Riesgo de disfrazar la app de cartel (la nota pide controles estándar). El tablero oscuro con texto chico en color-mix al 55-72% puede quedar bajo contraste. La animación rotateX es vistosa pero cansa si se repite; tiene reducción de movimiento."
+ },
+ "credencial-impresion-seguridad": {
+  "nombre": "Credencial (impresión de seguridad)",
+  "origen": "propuesta",
+  "claro_u_oscuro": "mixto",
+  "caracter": "El carnet gremial y el billete: un documento de valor, imposible de falsificar, que le da al afiliado la sensación de tener algo oficial y propio.",
+  "firma": "El sello circular estampado con el veredicto y la numeración en serie en cada pieza, sobre papel con guilloché, microtexto y trama de seguridad generados con la paleta del gremio.",
+  "cuidado": "La más familiar: si se apaga el color se acerca al 'trámite estatal' (lo dice la nota). El microtexto de 6px es puramente decorativo e ilegible; las tramas pueden ensuciar con paletas saturadas. Los SVG de rosetas con 1100-1500 puntos pesan en el DOM."
+ },
+ "talon-recibo-talonario": {
+  "nombre": "Talón (recibo y talonario)",
+  "origen": "propuesta",
+  "claro_u_oscuro": "claro",
+  "caracter": "El recibo de sueldo y el talonario: original para vos, duplicado para el gremio; papel, perforado y sellos de goma que dan sensación de comprobante real.",
+  "firma": "El talón troquelado (perforado + tijera) que convierte 'Enviar al sindicato' en cortar el duplicado, y los estados estampados como sellos de goma con borde doble y textura de tinta.",
+  "cuidado": "Papel y sellos pueden leerse retro (lo advierte la nota). Los sellos rotados con filtro de desplazamiento pierden nitidez en pantallas de baja densidad; el texto tachado de vencidas baja la legibilidad. Rótulos de 10px en mayúsculas al límite."
+ },
+ "nucleo-verde": {
+  "nombre": "Núcleo verde",
+  "origen": "modelo 100 · ronda 6",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Hardware de potencia: negro profundo, grilla técnica de 24px, esquinas cortadas a 45° y un verde lima como único color. Para tableros técnicos y públicos jóvenes.",
+  "firma": "Clip-path de esquina cortada en todo lo accionable; retícula lima al 5,5% sobre negro; verde #8fd320 como único color.",
+  "cuidado": "Riesgo de parecer gamer. Texto chico en mayúsculas espaciadas sobre negro cansa. Muy derivativo de una marca de chips."
+ },
+ "impulso-voltio": {
+  "nombre": "Impulso",
+  "origen": "modelo 97 · ronda 6",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Energía de alto rendimiento: palabras gigantes en itálica condensada, foto de la persona a sangre y un único verde voltio para la acción. Para portadas que tienen que empujar a hacer algo.",
+  "firma": "Palabras (nunca números) en Archivo itálica condensada a 60-96px; el verde voltio #d4ff1f reservado SOLO a la acción principal; foto B/N a sangre con degradé negro.",
+  "cuidado": "El voltio sobre blanco no tiene contraste para texto (solo funciona como relleno con tinta negra encima). Los titulares gigantes ocupan media pantalla del teléfono y empujan el contenido; la propia ronda 7 pidió después 'sin números gigantes y títulos medidos'."
+ },
+ "fluor-resaltador": {
+  "nombre": "Flúor",
+  "origen": "modelo 18 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Negro casi puro y verde flúor de plataforma para acciones y la cifra clave; el dato más importante va subrayado como con resaltador.",
+  "firma": "El trazo flúor de resaltador debajo del dato clave sobre negro; el flúor solo para acción y cifra, los estados siempre en contorno.",
+  "cuidado": "El flúor no es del gremio (rompe la regla de los cuatro colores de marca); vibra sobre negro."
+ },
+ "noticiero-oscuro-fluor": {
+  "nombre": "Noticiero de noche con flúor",
+  "origen": "modelo 151 · ronda 8",
+  "claro_u_oscuro": "mixto",
+  "caracter": "La misma tapa de diario pasada a un estudio de televisión nocturno: negro neutro, fotos en blanco y negro duro y un solo flúor lima; transmite urgencia y energía, sirve para una organización joven o combativa que quiere impacto.",
+  "firma": "Negro neutro con un solo lima flúor usado como relleno y resaltador; fotos en blanco y negro de alto contraste; listados sobre hojas claras con lomo vertical, como carpetas apoyadas sobre una mesa negra.",
+  "cuidado": "El lima #C6FF3D es ilegible como texto sobre claro: el código lo prohíbe y lo usa solo detrás de tinta negra o sobre negro. Sobre negro los textos grises (#8b919c) quedan justos en contraste. Mucha superficie negra cansa en sesiones largas de panel, por eso la ronda 9 movió los listados a hojas claras. El flúor pierde fuerza si se usa en más de tres lugares."
+ },
+ "electrico-sobrio-fluor": {
+  "nombre": "Eléctrico sobrio con un flúor",
+  "origen": "modelo 158 · ronda 8",
+  "claro_u_oscuro": "claro",
+  "caracter": "Un configurador de producto de marca técnica: gris claro, blanco, casi negro y un solo amarillo flúor en lo que se elige o se confirma; transmite precisión y orden, sirve para herramientas de trámite y formularios donde la calma importa más que la emoción.",
+  "firma": "Blanco y gris de catálogo técnico con pastillas redondas; un amarillo flúor que aparece solo donde se elige; el recibo como objeto en un escenario, en perspectiva.",
+  "cuidado": "El flúor #e6ff1f no se lee como texto ni como línea sobre claro: siempre relleno con texto negro y un filo oscuro (rgba(23,26,32,.16)) para que no se lave sobre blanco. Mucho gris con gris (#54575c sobre #e7e9ec) queda justo. La sobriedad puede sentirse genérica si se pierden la escena y el papel en perspectiva. Las animaciones (flota, entra, cursor, marca) tienen reducción de movimiento."
+ },
+ "marcador-deportivo": {
+  "nombre": "Marcador",
+  "origen": "modelo B",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Pantalla de estadio: negro, un verde lima eléctrico y un dato gigante que ordena cada pantalla; enérgica y sin tarjetas, para un público deportivo y joven.",
+  "firma": "Un número enorme en Anton sobre negro puro, una regla lima de 3px y filas separadas por hairlines; cero radios.",
+  "cuidado": "El lima #D8F32B sobre negro funciona, pero como texto chico cansa y vibra; el gris #9A9A92 en 13px es el límite. La marca de agua girada y el rayado son decorativos: con poco contenido la pantalla queda vacía."
+ },
+ "grafito-pro": {
+  "nombre": "Grafito",
+  "origen": "modelo 14 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Oscuro elegante de herramienta profesional: grises, bordes de 1px y el color del gremio solo en el foco y la acción, con un resplandor suave.",
+  "firma": "Grafito de cuatro grises con bordes de 1px y un resplandor suave del gremio/rojo detrás de lo que importa.",
+  "cuidado": "Grises #8e8e96 en texto chico; el resplandor exagerado parece neón."
+ },
+ "espacial-vidrio": {
+  "nombre": "Espacial",
+  "origen": "modelo 113 · ronda 6",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Computación espacial: ventanas de vidrio esmerilado oscuro flotando sobre la foto del lugar de trabajo desenfocada y en penumbra, con auroras frías. Profundidad y capas.",
+  "firma": "Vidrio oscuro flotante con aro de luz + entorno fotográfico desenfocado + auroras frías.",
+  "cuidado": "Texto sobre vidrio depende del fondo: contraste variable. backdrop-filter pesado en teléfonos modestos."
+ },
+ "pulso-minimal": {
+  "nombre": "Pulso (minimalismo de una tinta)",
+  "origen": "propuesta",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Aire, una sola tinta y el número que importa en grande: sobrio y contemporáneo, para quien quiere leer el veredicto sin ruido.",
+  "firma": "El pulso: líneas finas apiladas, una por mes o por día, donde el período con diferencia late en rojo; y el veredicto como un número gigante (92-104px) en condensada sobre una sola tinta.",
+  "cuidado": "Sin el pulso es genérico (lo dice la nota). Las líneas de 1px y los textos --tenue al 66-70% pueden quedar débiles; el estado depende del color (rojo/ámbar) con apoyo de un punto. Campos sin caja pueden no leerse como editables."
+ },
+ "mosaico-baldosa-calcarea": {
+  "nombre": "Mosaico (baldosa calcárea)",
+  "origen": "propuesta",
+  "claro_u_oscuro": "mixto",
+  "caracter": "El piso de mosaico calcáreo de la casa y del sindicato de barrio: cálido, popular y propio de cada gremio, porque la baldosa se dibuja con sus cuatro colores.",
+  "firma": "La baldosa calcárea dibujada con los cuatro colores del gremio, usada como unidad de dato (pared de 12 meses, 5 controles, 20 recibos) y la pastina de 2-3px como separador de todo.",
+  "cuidado": "Usado de más, el patrón se vuelve adorno (la nota lo advierte: va en guardas y en la pared, no de fondo). Con paletas de poco contraste la baldosa pierde lectura; el estado 'parcial' depende del ámbar #9a6f05 sobre cemento. Mucho SVG <use> repetido."
+ },
+ "vivo-micromovimiento": {
+  "nombre": "Vivo",
+  "origen": "modelo 27 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "claro",
+  "caracter": "App clara y quieta donde solo se mueve lo que importa: el número que corre, el medidor que se llena, la tilde que se dibuja, el punto que late.",
+  "firma": "Micro-movimientos solo en lo que importa, en un ciclo que deja el estado final quieto casi todo el tiempo.",
+  "cuidado": "Depende del movimiento; con reducir-movimiento pierde su firma."
+ },
+ "movimiento-sereno": {
+  "nombre": "Movimiento sereno",
+  "origen": "modelo 66 · ronda 4",
+  "claro_u_oscuro": "claro",
+  "caracter": "Todo claro y quieto; al aparecer, las piezas entran con un fundido y suben 8px escalonadas; en la portada el video del gremio chico, silencioso y teñido dentro de una tarjeta.",
+  "firma": "Entrada escalonada de 8px y un clip de video chico teñido dentro de una tarjeta.",
+  "cuidado": "Sin el movimiento queda un claro genérico."
+ },
+ "colmena-sutil": {
+  "nombre": "Colmena sutil",
+  "origen": "modelo 56 · ronda 4",
+  "claro_u_oscuro": "claro",
+  "caracter": "El hexágono de Colm3na como textura casi invisible en los fondos y como forma de íconos, avatares y del panal de los cinco controles; neutro y con identidad.",
+  "firma": "Panal de hexágonos casi invisible de fondo y el panal de los cinco controles.",
+  "cuidado": "La textura desaparece en pantallas malas; hexágonos chicos con texto."
+ },
+ "sereno-linea-movil": {
+  "nombre": "Sereno con línea móvil",
+  "origen": "modelo 136 · ronda 7",
+  "claro_u_oscuro": "claro",
+  "caracter": "Claro y quieto, con una franja de novedades que corre despacio bajo el encabezado y un video chico teñido. Para portadas informativas tranquilas.",
+  "firma": "La franja de novedades que corre (marquesina con bordes que se desvanecen) en clave clara.",
+  "cuidado": "El movimiento continuo distrae y hay que respetar reduce-motion; una marquesina no es accesible para leer entera."
+ },
+ "linea-de-tiempo": {
+  "nombre": "Línea de tiempo",
+  "origen": "modelo 48 · ronda 4",
+  "claro_u_oscuro": "claro",
+  "caracter": "La historia del afiliado como una línea vertical clara con hitos; en el panel, la vigencia de las noticias y los recibos del mes como líneas de tiempo.",
+  "firma": "El riel vertical con hitos: lo hecho lleno, lo que viene punteado.",
+  "cuidado": "Ocupa largo; la línea sola no explica estados."
+ },
+ "semaforo-lampara": {
+  "nombre": "Semáforo",
+  "origen": "modelo 50 · ronda 4",
+  "claro_u_oscuro": "claro",
+  "caracter": "El estado es el protagonista del color (verde, ámbar, rojo suaves de fondo y fuertes en el detalle); la marca del gremio queda en encabezado, logo, botones y pestaña activa.",
+  "firma": "Lámparas de semáforo con núcleo y halo; los estados ponen el color, no la marca.",
+  "cuidado": "Depende del verde/rojo: sumar forma o texto para daltonismo (lo hace con palabra)."
+ },
+ "senaletica-suave": {
+  "nombre": "Señalética suave",
+  "origen": "modelo 57 · ronda 4",
+  "claro_u_oscuro": "claro",
+  "caracter": "Pictogramas propios en el color del gremio sobre fondos claros y un recorrido ordenado: la claridad de una estación de tren moderna, sin disfrazarse de cartel.",
+  "firma": "La línea con paradas (como mapa de subte) para recorrer los cinco controles, con pictogramas en el color del gremio.",
+  "cuidado": "Recordará a Señal (20) en otra clave; pictogramas a mantener."
+ },
+ "revista-gremio": {
+  "nombre": "Revista",
+  "origen": "modelo 125 · ronda 7",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Revista seria del gremio: papel blanco con filetes, titulares condensados, bajadas en serif y foto B/N con velo del primario y folio. La portada es una tapa con tablero de accesos.",
+  "firma": "Tapa con velo del primario en multiply + folio + titulares Barlow Condensed y bajadas en Source Serif.",
+  "cuidado": "Tres familias tipográficas; en el panel el lenguaje editorial puede chocar con la densidad de datos."
+ },
+ "telon": {
+  "nombre": "Telón",
+  "origen": "modelo 132 · ronda 7",
+  "claro_u_oscuro": "claro",
+  "caracter": "Teatral y tipográfico: Anton y Barlow Condensed, fotos en duotono del gremio que un telón con pliegues descubre al abrir la pantalla y titulares que suben desde su máscara. Medido.",
+  "firma": "El telón del color del gremio que se levanta sobre la foto en duotono + titulares Anton que suben desde la máscara.",
+  "cuidado": "Tapar el contenido con un telón demora la lectura; ciclo animado repetido. Barlow Condensed en todo el texto largo cansa."
+ },
+ "cine-subtitulo": {
+  "nombre": "Cine",
+  "origen": "modelo 26 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "mixto",
+  "caracter": "El video del gremio de fondo en formato panorámico con franjas negras, y lo que importa dicho como subtítulo de cine.",
+  "firma": "El veredicto como subtítulo blanco en Source Serif itálica sobre video panorámico entre franjas negras.",
+  "cuidado": "Video pesado; subtítulo sobre video exige sombra fuerte."
+ },
+ "estadio-led": {
+  "nombre": "Estadio",
+  "origen": "modelo 23 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "De noche en la cancha: luces de estadio con los colores del gremio, números de pantalla LED con trama de puntos y un cartel perimetral que corre.",
+  "firma": "Las cifras como pantalla LED de puntos con brillo, bajo dos haces de luz del gremio.",
+  "cuidado": "Mucho movimiento y brillo; legibilidad de la trama LED en tamaños chicos."
+ },
+ "chaleco-reflectivo": {
+  "nombre": "Chaleco",
+  "origen": "modelo 19 · ronda 2–3 (grupo 12–36, sin rótulo de ronda)",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "El chaleco reflectivo del trabajo: amarillo-verde flúor y bandas plateadas con micro-prismas sobre negro; la banda es separador y barra de progreso.",
+  "firma": "Las bandas plateadas con micro-prismas y brillo que recorre, usadas como separador y barra.",
+  "cuidado": "Flúor fuera de la marca; mucho efecto en un panel administrativo."
+ },
+ "zocalo-noticiero": {
+  "nombre": "Zócalo",
+  "origen": "modelo 8 · ronda 2",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Documental con lenguaje de noticiero de TV: foto que se mueve, el dato importante en una franja inferior (zócalo) y un ticker de últimas.",
+  "firma": "El zócalo: rótulo condensado de color pleno pegado a una caja blanca con sombra, sobre foto en movimiento; ticker con rótulo rojo.",
+  "cuidado": "Puede sentirse sensacionalista; movimiento constante (ken burns, ticker) cansa y pide reducir-movimiento."
+ },
+ "esfera-relojeria": {
+  "nombre": "Esfera",
+  "origen": "modelo 111 · ronda 6",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Relojería de alta gama: verde lacado profundo, oro viejo y marfil; los 5 controles del recibo son índices de una esfera y una aguja señala el que falla. Precisión y lujo.",
+  "firma": "Esfera con aguja que señala el control que falla + guilloché conic + oro #c7a465 sobre verde #0b211b.",
+  "cuidado": "Lujo poco afín a un gremio; serif de 34px y oro sobre marfil pueden perder contraste."
+ },
+ "cartelera": {
+  "nombre": "Cartelera",
+  "origen": "modelo 115 · ronda 6",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Plataforma de series: negro, destacado a pantalla completa con el video del gremio y filas de tarjetas que se desplazan de costado. El rojo solo rellena.",
+  "firma": "Destacado con video + filas de afiches que se deslizan + rojo #db1a2b solo como relleno.",
+  "cuidado": "Derivativo de una marca concreta; Bebas gigante y video cargan la página."
+ },
+ "hipercoche": {
+  "nombre": "Hipercoche",
+  "origen": "modelo 101 · ronda 6",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Lujo nocturno: azul medianoche casi negro, plata, mayúsculas finísimas muy espaciadas y filetes de un pelo. Transmite exclusividad y calma.",
+  "firma": "Mayúsculas de Archivo 300 ancha con .16-.32em de aire; plata metálica (gradiente #F7F8FA→#AFB6C1) en botón y texto; azul medianoche #05080f.",
+  "cuidado": "Gris plata #8e97a8 en 10.5px sobre casi negro roza el mínimo de contraste. Lo 'exclusivo' choca con una app gremial de uso masivo."
+ },
+ "contraluz-medido": {
+  "nombre": "Contraluz",
+  "origen": "modelo 128 · ronda 7",
+  "claro_u_oscuro": "oscuro",
+  "caracter": "Negro, Anton condensada y fotos B/N de contraste duro, con títulos a escala de lectura y el color del gremio en UN solo detalle por pantalla. Para portadas con carácter.",
+  "firma": "Negro puro + Anton medida + B/N duro + un solo detalle en el color del gremio.",
+  "cuidado": "Negro puro y texto blanco largo cansan; los grises #8f8f8f en texto chico rozan el contraste."
+ },
+ "box-carrera": {
+  "nombre": "Box",
+  "origen": "modelo 107 · ronda 6",
+  "claro_u_oscuro": "mixto",
+  "caracter": "Transmisión de carrera: negro y blanco, rojo de largada, placas inclinadas, rótulos de sector y rayas de velocidad. Veloz sin perder claridad.",
+  "firma": "Archivo 125% oblicua en mayúsculas + placas en paralelogramo + rojo #d50b1e de largada.",
+  "cuidado": "Mucho clip-path y oblicuas: costoso y cansador en pantallas de trabajo. Derivativo de una categoría de deporte."
+ }
+}

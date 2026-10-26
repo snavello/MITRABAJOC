@@ -1,0 +1,138 @@
+/* fuentes: Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900; JetBrains Mono:wght@400;500;700 */
+/* foto: calle; tecnico */
+/* Box (modelo 107, transmisión de carrera): negro y blanco, rojo de largada, placas en paralelogramo, rayas de velocidad.
+   La firma en movimiento: las placas entran barriendo de izquierda a derecha, una detrás de la otra como autos que salen de la grilla;
+   las barras de sector se llenan, las rayas rojas corren sin parar sobre la foto y la luz de la placa titila como "en vivo". */
+.e-box-carrera {
+  --fondo: #ffffff; --sup: #f2f2f0; --tinta: #0b0b0d; --suave: #575b64; --linea: #dcdde0;
+  --acento: #d50b1e; --acento-tinta: #ffffff; --acento2: #ff4d5a; --oscuro: #0b0b0d; --sobre-oscuro: #ffffff;
+  --f-tit: "Archivo", system-ui, sans-serif; --f-txt: "Archivo", system-ui, sans-serif; --f-num: "JetBrains Mono", ui-monospace, monospace;
+  --radio: 0; --radio-btn: 0;
+  --negro: #0b0b0d; --carbon: #151619; --acero: #3a3d45; --rojo: #d50b1e; --rojo-txt: #ff4d5a; --gris-osc: #a9adb6;
+  --c-ent: cubic-bezier(.2,.8,.2,1);
+  background: #fff; color: var(--negro); font-stretch: 100%;
+}
+
+/* encabezado: barra negra de transmisión */
+.e-box-carrera .m-cab { background: var(--negro); color: #fff; padding: 11px 16px; }
+.e-box-carrera .m-logo { color: var(--rojo); }
+.e-box-carrera .m-marca { font: italic 800 19px/1 var(--f-tit); font-stretch: 125%; letter-spacing: .01em; text-transform: uppercase; }
+.e-box-carrera .m-marca small { font: 700 9.5px/1 var(--f-tit); font-stretch: 115%; letter-spacing: .08em; text-transform: uppercase; color: var(--gris-osc); }
+.e-box-carrera .m-yo { width: 40px; border-radius: 0; background: var(--carbon); color: #fff; border: 1px solid var(--acero);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); font: 800 12px/1 var(--f-tit); font-stretch: 115%; }
+
+/* héroe: foto B/N dura con velo, rayas de velocidad y placas inclinadas */
+.e-box-carrera .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #fff; overflow: visible; }
+.e-box-carrera .bx-foto { position: relative; height: 210px; overflow: hidden; isolation: isolate; background: var(--negro); }
+.e-box-carrera .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.e-box-carrera .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.35) brightness(.85); object-position: 50% 45%;
+  animation: e-box-carrera-zoom 14s ease-in-out infinite alternate; }
+.e-box-carrera .bx-foto::before { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(11,11,13,.45) 0%, rgba(11,11,13,0) 30%, rgba(11,11,13,.2) 55%, rgba(11,11,13,.92) 100%); }
+.e-box-carrera .bx-rayas { position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: repeating-linear-gradient(115deg, transparent 0 13px, rgba(213,11,30,.7) 13px 14px); background-size: 200% 100%;
+  -webkit-mask: linear-gradient(100deg, transparent 52%, #000 80%); mask: linear-gradient(100deg, transparent 52%, #000 80%);
+  animation: e-box-carrera-barrido 6s linear infinite; }
+.e-box-carrera .bx-placa { position: absolute; left: 0; right: 16px; bottom: 14px; display: grid; justify-items: start; gap: 0; }
+.e-box-carrera .m-kick { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 5px 20px 5px 16px; background: var(--rojo); color: #fff; opacity: 1;
+  font: 800 11px/1 var(--f-tit); font-stretch: 120%; letter-spacing: .12em; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+/* la luz "en vivo" de la placa */
+.e-box-carrera .m-kick::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: e-box-carrera-pulso 1.6s ease-in-out infinite; }
+.e-box-carrera .m-tit { margin: 0; max-width: 300px; padding: 9px 30px 8px 16px; background: #fff; color: var(--negro);
+  font: oblique 10deg 800 27px/1 var(--f-tit); font-stretch: 125%; text-transform: uppercase; letter-spacing: -.005em;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%); }
+.e-box-carrera .m-det { margin: 0; padding: 7px 22px 7px 16px; background: var(--negro); color: #e7e8ea; opacity: 1; font: 600 12px/1.2 var(--f-txt);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+
+/* la tarjeta de largada: negra con la esquina recortada */
+.e-box-carrera .bx-largada { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 16px 16px; background: var(--negro); color: #fff; overflow: hidden;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%); }
+.e-box-carrera .bx-sector { position: absolute; left: 0; right: 0; top: 0; height: 4px;
+  background: linear-gradient(90deg, var(--rojo) 0 34%, transparent 34% 36%, var(--rojo) 36% 62%, transparent 62% 64%, #fff 64% 100%); transform-origin: 0 50%; }
+.e-box-carrera .m-cifra { margin: 0; gap: 10px; align-items: center; }
+.e-box-carrera .m-cifra b { font: 700 40px/1 var(--f-num); color: #fff; }
+.e-box-carrera .m-cifra span { max-width: 84px; font: 700 10.5px/1.2 var(--f-tit); font-stretch: 115%; letter-spacing: .06em; text-transform: uppercase; color: var(--gris-osc); opacity: 1; }
+.e-box-carrera .m-btn { margin-left: auto; gap: 8px; min-height: 46px; padding: 0 24px 0 16px; background: var(--rojo); color: #fff; border-radius: 0;
+  font: 800 12.5px/1 var(--f-tit); font-stretch: 115%; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+.e-box-carrera .m-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; }
+
+/* accesos: placas claras recortadas, la primera con la barra roja de "activo" */
+.e-box-carrera .m-accesos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; padding: 12px 16px 0; }
+.e-box-carrera .m-acc { grid-template-columns: auto 1fr; gap: 1px 8px; align-items: center; min-height: 0; padding: 9px 16px 9px 10px; border: 0; border-radius: 0;
+  background: var(--sup); clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.e-box-carrera .m-acc:first-child { box-shadow: inset 3px 0 0 var(--rojo); }
+.e-box-carrera .m-ico { grid-row: span 2; width: 26px; height: 26px; margin: 0; border-radius: 0; background: var(--negro); color: #fff;
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); }
+.e-box-carrera .m-ico svg { width: 14px; height: 14px; stroke-width: 2; }
+.e-box-carrera .m-acc b { font: 800 11.5px/1.1 var(--f-tit); font-stretch: 100%; text-transform: uppercase; letter-spacing: .01em; }
+.e-box-carrera .m-acc span { font-size: 10.5px; line-height: 1.25; color: var(--suave); }
+
+/* rótulo de sector y novedades */
+.e-box-carrera .m-novs { padding: 12px 16px 0; gap: 0; }
+.e-box-carrera .m-sec { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; color: var(--negro);
+  font: oblique 10deg 800 15px/1 var(--f-tit); font-stretch: 125%; letter-spacing: .04em; }
+.e-box-carrera .m-sec::after { content: ""; flex: 1; height: 6px; transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--rojo) 0 34%, transparent 34% 36%, var(--rojo) 36% 38%, transparent 38%), repeating-linear-gradient(115deg, transparent 0 4px, #dcdde0 4px 5px); }
+.e-box-carrera .m-nov { grid-template-columns: 88px 1fr; gap: 1px 12px; padding: 7px 0; border-top: 1px solid var(--linea); }
+.e-box-carrera .m-nov-tapa { border-top: 0; }
+.e-box-carrera .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; height: 52px; position: relative; align-self: start;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+.e-box-carrera .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.3); }
+.e-box-carrera .m-nov-tapa .m-fecha, .e-box-carrera .m-nov-tapa b, .e-box-carrera .m-nov-tapa p { grid-column: 2; }
+.e-box-carrera .m-nov .m-fecha { grid-row: auto; justify-self: start; min-width: 0; padding: 3px 10px 3px 7px; background: var(--negro); color: #fff;
+  font: 600 10.5px/1.2 var(--f-num); text-transform: uppercase; clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 0 100%); }
+.e-box-carrera .m-nov:not(.m-nov-tapa) .m-fecha { grid-column: 1; grid-row: 1 / span 2; align-self: start; background: var(--rojo); }
+.e-box-carrera .m-nov b { font: 800 13.5px/1.2 var(--f-tit); font-stretch: 110%; text-transform: uppercase; margin-top: 3px; }
+.e-box-carrera .m-nov p { font-size: 12px; line-height: 1.3; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* beneficio */
+.e-box-carrera .m-benef { margin: 8px 16px 12px; padding: 9px 26px 10px 14px; border: 0; border-radius: 0; background: var(--negro); color: #fff;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); }
+.e-box-carrera .m-rubro { justify-self: start; padding: 4px 14px 4px 10px; background: var(--rojo); color: #fff; font: 800 10.5px/1 var(--f-tit); font-stretch: 120%; letter-spacing: .12em;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%); }
+.e-box-carrera .m-benef b { font: oblique 10deg 800 14px/1.15 var(--f-tit); font-stretch: 108%; text-transform: uppercase; margin-top: 5px; }
+.e-box-carrera .m-benef p { color: var(--gris-osc); }
+
+/* ---------- Movimiento ---------- */
+/* estado inicial: cada placa tapada desde la derecha (clip-path), las barras de sector vacías */
+.e-box-carrera .m-kick, .e-box-carrera .m-tit, .e-box-carrera .m-det, .e-box-carrera .bx-largada .m-cifra, .e-box-carrera .bx-largada .m-btn,
+.e-box-carrera .m-acc, .e-box-carrera .m-nov, .e-box-carrera .m-benef { opacity: 0; }
+.e-box-carrera .bx-sector, .e-box-carrera .m-sec::after { transform: scaleX(0); }
+
+/* la largada: placa roja, nombre y bajada barren en cascada */
+.e-box-carrera.en-vista .m-kick { animation: e-box-carrera-entra-8 .5s var(--c-ent) .05s both; }
+.e-box-carrera.en-vista .m-tit { animation: e-box-carrera-entra-18 .6s var(--c-ent) .17s both; }
+.e-box-carrera.en-vista .m-det { animation: e-box-carrera-entra-10 .6s var(--c-ent) .29s both; }
+.e-box-carrera.en-vista .bx-sector { animation: e-box-carrera-sector .7s var(--c-ent) .4s both; }
+.e-box-carrera.en-vista .bx-largada .m-cifra { animation: e-box-carrera-sube .5s var(--c-ent) .5s both; }
+.e-box-carrera.en-vista .bx-largada .m-btn { animation: e-box-carrera-entra-12 .55s var(--c-ent) .6s both; }
+/* los accesos salen de la grilla de a dos, como una fila de autos */
+.e-box-carrera.en-vista .m-acc { animation: e-box-carrera-entra-10 .55s var(--c-ent) both; }
+.e-box-carrera.en-vista .m-acc:nth-child(1) { animation-delay: .7s; }
+.e-box-carrera.en-vista .m-acc:nth-child(2) { animation-delay: .78s; }
+.e-box-carrera.en-vista .m-acc:nth-child(3) { animation-delay: .86s; }
+.e-box-carrera.en-vista .m-acc:nth-child(4) { animation-delay: .94s; }
+.e-box-carrera.en-vista .m-sec::after { animation: e-box-carrera-sector .55s var(--c-ent) 1s both; }
+.e-box-carrera.en-vista .m-nov { animation: e-box-carrera-sube .5s var(--c-ent) both; }
+.e-box-carrera.en-vista .m-nov-tapa { animation-delay: 1.05s; }
+.e-box-carrera.en-vista .m-nov:not(.m-nov-tapa) { animation-delay: 1.13s; }
+.e-box-carrera.en-vista .m-benef { animation: e-box-carrera-entra-14 .6s var(--c-ent) 1.2s both; }
+
+@keyframes e-box-carrera-entra-8 { from { opacity: 1; clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { opacity: 1; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); } }
+@keyframes e-box-carrera-entra-10 { from { opacity: 1; clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { opacity: 1; clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); } }
+@keyframes e-box-carrera-entra-12 { from { opacity: 1; clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { opacity: 1; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); } }
+@keyframes e-box-carrera-entra-14 { from { opacity: 1; clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { opacity: 1; clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); } }
+@keyframes e-box-carrera-entra-18 { from { opacity: 1; clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } to { opacity: 1; clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%); } }
+@keyframes e-box-carrera-sector { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes e-box-carrera-sube { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes e-box-carrera-barrido { from { background-position: 0 0; } to { background-position: -120px 0; } }
+@keyframes e-box-carrera-zoom { from { transform: scale(1.04); } to { transform: scale(1.12); } }
+@keyframes e-box-carrera-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .e-box-carrera *, .e-box-carrera *::before, .e-box-carrera *::after { animation: none !important; transition: none !important; }
+  .e-box-carrera .m-kick, .e-box-carrera .m-tit, .e-box-carrera .m-det, .e-box-carrera .bx-largada .m-cifra, .e-box-carrera .bx-largada .m-btn,
+  .e-box-carrera .m-acc, .e-box-carrera .m-nov, .e-box-carrera .m-benef { opacity: 1; }
+  .e-box-carrera .bx-sector, .e-box-carrera .m-sec::after { transform: none; }
+}

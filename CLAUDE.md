@@ -176,7 +176,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   de Claude Code); `.claude/skills/xsd/` es su copia textual fijada a un commit
   (`ORIGEN.md`, `test_xsd.py` compara los SHA-256): no se edita acá.
   `xsd/proyectos/mitrabajo/` es lo de Colm3na (ficha, inventario, sesiones,
-  contexto, historial). Los archivos de trabajo van en `xsd-trabajo/` (fuera
+  contexto, historial y las 113 fichas de estilo del catálogo). El kit trae
+  además el **catálogo de 60 estilos** sobre ACME (`/xsd catalogo`). Los archivos de trabajo van en `xsd-trabajo/` (fuera
   de git). Ver `xsd/LEEME.md`.
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
   natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).

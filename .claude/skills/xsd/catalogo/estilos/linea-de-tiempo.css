@@ -1,0 +1,109 @@
+/* fuentes: Barlow Condensed:wght@700;800; Public Sans:wght@400;500;600;700 */
+/* foto: tecnico; calle */
+/* Línea de tiempo (Colm3na 48/78, ronda 4). La historia como un riel vertical claro con hitos: lo hecho lleno, lo que viene
+   punteado. El movimiento ES el riel: se traza de arriba hacia abajo, cada hito se prende cuando la línea lo alcanza, y después
+   el tramo punteado de lo que viene sigue bajando despacio hacia «hoy». */
+.e-linea-de-tiempo {
+  --fondo: #edeff2; --sup: #ffffff; --tinta: #151a24; --suave: #525a68; --linea: #ced1d8;
+  --acento: #e8b84b; --acento-tinta: #151a24; --acento2: #1a3d6b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --riel: #9daabd; --ok: #0d7a5f;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Public Sans", system-ui, sans-serif; --f-num: "Public Sans", system-ui, sans-serif;
+  --radio: 14px; --radio-btn: 10px;
+  --curva: cubic-bezier(.22,.61,.36,1);
+  --sombra: 0 1px 2px rgb(15 34 64 / .08), 0 10px 24px -16px rgb(15 34 64 / .4);
+}
+/* encabezado del gremio con filete de acento */
+.e-linea-de-tiempo .m-cab { background: #0f2240; color: #fff; padding: 11px 18px; box-shadow: inset 0 -3px 0 #e8b84b; }
+.e-linea-de-tiempo .m-logo { color: #e8b84b; }
+.e-linea-de-tiempo .m-marca small { color: rgba(255,255,255,.72); }
+.e-linea-de-tiempo .m-yo { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.3); }
+
+.e-linea-de-tiempo .m-heroe { margin: 0; padding: 18px 16px 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-linea-de-tiempo .m-kick { margin: 4px 0 20px 4px; font: 800 44px/1 var(--f-tit); letter-spacing: .01em; text-transform: uppercase; opacity: 1; }
+.e-linea-de-tiempo .m-kick em { font-style: normal; color: #1a3d6b; box-shadow: inset 0 -5px 0 #e8b84b; }
+
+/* LA FIRMA: el riel con hitos */
+.e-linea-de-tiempo .ldt-riel { position: relative; list-style: none; margin: 0; padding: 0 0 0 34px; }
+.e-linea-de-tiempo .ldt-riel::before { content: ""; position: absolute; left: 11px; top: 6px; bottom: 0; width: 2px; border-radius: 2px; background: var(--riel); transform-origin: top; }
+.e-linea-de-tiempo .ldt-hecho::before { top: -24px; }
+.e-linea-de-tiempo .ldt-futura::before { top: 0; bottom: -16px; background: repeating-linear-gradient(to bottom, var(--riel) 0 5px, transparent 5px 10px); border-radius: 0; }
+.e-linea-de-tiempo .ldt-hito { position: relative; padding: 0 0 22px; }
+.e-linea-de-tiempo .ldt-hito::before { content: ""; position: absolute; left: -28px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px var(--riel); }
+.e-linea-de-tiempo .ldt-futuro::before { background: var(--fondo); box-shadow: none; border: 2px dashed var(--riel); left: -30px; top: 13px; width: 14px; height: 14px; }
+.e-linea-de-tiempo .ldt-futuro .m-btn { min-height: 42px; width: 100%; background: #fff; color: #1a3d6b; font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px var(--riel); border-radius: var(--radio-btn); }
+.e-linea-de-tiempo .ldt-futuro .m-btn::before { content: "+"; font-size: 20px; line-height: 1; margin-right: 8px; color: #b8860b; }
+.e-linea-de-tiempo .ldt-acento::before { left: -29px; top: 14px; width: 12px; height: 12px; background: #e8b84b; box-shadow: 0 0 0 3px var(--fondo), 0 0 0 4.5px #e8b84b; }
+.e-linea-de-tiempo .ldt-acento::after { content: ""; position: absolute; left: -35px; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: rgb(232 184 75 / .35); opacity: 0; }
+/* la marca de «hoy»: un nudo cuadrado del gremio y el filete que cruza */
+.e-linea-de-tiempo .ldt-hoy { z-index: 1; position: relative; display: flex; align-items: center; gap: 10px; height: 26px; margin: -4px 0 12px 5px; }
+.e-linea-de-tiempo .ldt-hoy i { width: 14px; height: 14px; border-radius: 3px; background: #0f2240; box-shadow: 0 0 0 3px var(--fondo); }
+.e-linea-de-tiempo .ldt-hoy::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, #0f2240, rgb(15 34 64 / .08)); transform-origin: left; }
+/* la tarjeta cuelga de la línea */
+.e-linea-de-tiempo .ldt-carta { background: #fff; border-radius: 16px; padding: 14px 16px 12px; border: 1px solid var(--linea); box-shadow: var(--sombra); }
+.e-linea-de-tiempo .m-tit { margin: 0 0 3px; font: 800 26px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .01em; color: var(--tinta); }
+.e-linea-de-tiempo .m-det { font-size: 13px; color: var(--suave); opacity: 1; }
+.e-linea-de-tiempo .m-cifra { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid #e5e7eb; gap: 8px; }
+.e-linea-de-tiempo .m-cifra b { font: 800 30px/1 var(--f-tit); color: #1a3d6b; }
+.e-linea-de-tiempo .m-cifra span { font-size: 13px; color: var(--suave); opacity: 1; }
+
+/* novedades y beneficio siguen sobre el mismo riel, llenos */
+.e-linea-de-tiempo .m-novs { order: 1; padding: 0 16px 0 50px; gap: 0; }
+.e-linea-de-tiempo .m-novs::before { content: ""; position: absolute; left: 27px; top: 0; bottom: 0; width: 2px; background: var(--riel); transform-origin: top; }
+.e-linea-de-tiempo .m-sec { position: relative; padding: 2px 0 8px; font: 800 16px/1 var(--f-tit); letter-spacing: .06em; color: var(--tinta); }
+.e-linea-de-tiempo .m-nov { position: relative; display: block; padding: 0 0 15px; border: 0; }
+.e-linea-de-tiempo .m-nov::before { content: ""; position: absolute; left: -28px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px var(--riel); }
+.e-linea-de-tiempo .m-nov-tapa::before { background: #1a3d6b; box-shadow: 0 0 0 3px var(--fondo), 0 0 0 4.5px #1a3d6b; left: -29px; width: 12px; height: 12px; }
+.e-linea-de-tiempo .m-nov .m-fecha { display: block; min-width: 0; padding: 0 0 1px; font: 700 11.5px/1.2 var(--f-txt); letter-spacing: .08em; text-transform: uppercase; color: var(--suave); }
+.e-linea-de-tiempo .m-nov b { display: block; font: 700 14.5px/1.25 var(--f-txt); }
+.e-linea-de-tiempo .m-nov p { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.e-linea-de-tiempo .m-nov-tapa .m-nov-foto { display: none; }
+.e-linea-de-tiempo .m-benef { order: 2; margin: 0 16px 0 16px; padding: 0 0 12px 34px; background: none; border: 0; border-radius: 0; }
+.e-linea-de-tiempo .m-benef::before { content: ""; position: absolute; left: 11px; top: 0; height: 22px; width: 2px; background: var(--riel); transform-origin: top; }
+.e-linea-de-tiempo .m-benef::after { content: ""; position: absolute; left: 6px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--fondo); }
+.e-linea-de-tiempo .m-rubro { color: var(--ok); font-weight: 700; }
+.e-linea-de-tiempo .m-benef b { font-weight: 700; font-size: 14.5px; }
+/* accesos al pie, en fila */
+.e-linea-de-tiempo .m-accesos { order: 3; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 14px 16px 0; }
+.e-linea-de-tiempo .m-acc { min-height: 0; padding: 10px 4px 9px; justify-items: center; text-align: center; background: #fff; border-color: var(--linea); border-radius: 12px; }
+.e-linea-de-tiempo .m-ico { margin: 0 0 3px; width: 32px; height: 32px; border-radius: 50%; background: #e9edf3; color: #1a3d6b; }
+.e-linea-de-tiempo .m-acc b { font: 700 13px/1.1 var(--f-tit); text-transform: uppercase; letter-spacing: .03em; }
+.e-linea-de-tiempo .m-acc span { display: none; }
+.e-linea-de-tiempo .d3 { inset: auto 0 0 0; height: 4px; background: #e8b84b; z-index: 0; }
+
+/* movimiento */
+@media (prefers-reduced-motion: no-preference) {
+  /* estado inicial: rieles sin trazar, hitos abajo y apagados */
+  .e-linea-de-tiempo .ldt-hecho::before, .e-linea-de-tiempo .m-novs::before, .e-linea-de-tiempo .m-benef::before { transform: scaleY(0); }
+  .e-linea-de-tiempo .ldt-futura::before { clip-path: inset(0 0 100% 0); }
+  .e-linea-de-tiempo .ldt-hoy::after { transform: scaleX(0); }
+  .e-linea-de-tiempo .ldt-sube, .e-linea-de-tiempo .m-nov, .e-linea-de-tiempo .m-benef, .e-linea-de-tiempo .m-sec, .e-linea-de-tiempo .m-acc { opacity: 0; }
+
+  .e-linea-de-tiempo.en-vista .ldt-sube { animation: e-linea-de-tiempo-sube .6s var(--curva) both; animation-delay: calc(var(--d, 0) * 160ms + 80ms); }
+  .e-linea-de-tiempo.en-vista .ldt-futura::before { animation: e-linea-de-tiempo-dibuja .5s var(--curva) .2s both, e-linea-de-tiempo-avanza 2.4s linear 1.6s infinite; }
+  .e-linea-de-tiempo.en-vista .ldt-hoy::after { animation: e-linea-de-tiempo-cruza .7s var(--curva) .45s both; }
+  .e-linea-de-tiempo.en-vista .ldt-hecho::before { animation: e-linea-de-tiempo-traza .6s var(--curva) .55s both; }
+  .e-linea-de-tiempo.en-vista .ldt-acento::before { animation: e-linea-de-tiempo-nudo .45s cubic-bezier(.16,1,.3,1) .6s both; }
+  .e-linea-de-tiempo.en-vista .ldt-acento::after { animation: e-linea-de-tiempo-halo 3.2s ease-out 1.6s infinite; }
+  .e-linea-de-tiempo.en-vista .m-novs::before { animation: e-linea-de-tiempo-traza .8s var(--curva) .95s both; }
+  .e-linea-de-tiempo.en-vista .m-sec { animation: e-linea-de-tiempo-sube .5s var(--curva) .95s both; }
+  .e-linea-de-tiempo.en-vista .m-nov { animation: e-linea-de-tiempo-sube .55s var(--curva) 1.1s both; }
+  .e-linea-de-tiempo.en-vista .m-nov + .m-nov { animation-delay: 1.3s; }
+  .e-linea-de-tiempo.en-vista .m-benef::before { animation: e-linea-de-tiempo-traza .35s var(--curva) 1.5s both; }
+  .e-linea-de-tiempo.en-vista .m-benef { animation: e-linea-de-tiempo-sube .55s var(--curva) 1.5s both; }
+  .e-linea-de-tiempo.en-vista .m-acc { animation: e-linea-de-tiempo-sube .55s var(--curva) both; }
+  .e-linea-de-tiempo.en-vista .m-acc:nth-child(1) { animation-delay: 1.65s; }
+  .e-linea-de-tiempo.en-vista .m-acc:nth-child(2) { animation-delay: 1.72s; }
+  .e-linea-de-tiempo.en-vista .m-acc:nth-child(3) { animation-delay: 1.79s; }
+  .e-linea-de-tiempo.en-vista .m-acc:nth-child(4) { animation-delay: 1.86s; }
+}
+@keyframes e-linea-de-tiempo-traza { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes e-linea-de-tiempo-dibuja { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes e-linea-de-tiempo-avanza { from { background-position: 0 0; } to { background-position: 0 10px; } }
+@keyframes e-linea-de-tiempo-cruza { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes e-linea-de-tiempo-sube { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes e-linea-de-tiempo-nudo { from { transform: scale(0); } 70% { transform: scale(1.25); } to { transform: scale(1); } }
+@keyframes e-linea-de-tiempo-halo { 0% { opacity: .9; transform: scale(.5); } 70%, 100% { opacity: 0; transform: scale(1.5); } }
+@media (prefers-reduced-motion: reduce) {
+  .e-linea-de-tiempo *, .e-linea-de-tiempo *::before, .e-linea-de-tiempo *::after { animation: none !important; transition: none !important; }
+}

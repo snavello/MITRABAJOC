@@ -1,0 +1,90 @@
+/* fuentes: Anton:wght@400; Archivo:wdth,wght@62..125,100..900; Barlow Condensed:wght@600; Barlow Condensed:wght@700; Barlow Condensed:wght@800 */
+/* foto: tecnico; calle */
+/* Noticiero índigo claro (Colm3na 147, modelo "noticiero" de la app). La tapa de un diario en papel marfil:
+   foto en duotono índigo que se funde en el papel, saludo en Anton con el nombre resaltado en coral, zócalo con
+   banda vertical, la línea móvil coral "Último" y el tablero de accesos de celdas separadas por filetes de 1px. */
+.e-noticiero-indigo-claro {
+  --fondo: #f5efe3; --sup: #fffcf6; --tinta: #1b1e4b; --suave: #4d5180; --linea: #dcd2c0;
+  --acento: #ff6a4d; --acento-tinta: #1b1e4b; --acento2: #ffd9cf; --oscuro: #1b1e4b; --sobre-oscuro: #f5efe3;
+  --f-tit: "Anton", "Bebas Neue", "Arial Narrow", sans-serif; --f-txt: "Archivo", system-ui, sans-serif;
+  --f-num: "Archivo", system-ui, sans-serif; --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --radio: 0; --radio-btn: 2px;
+  font-size: 14.5px; line-height: 1.4;
+}
+/* encabezado sobre la foto: cabezal de diario, chips de vidrio marfil y perfil con anillo coral */
+.e-noticiero-indigo-claro .m-cab { position: absolute; inset: 0 0 auto; padding: 12px 18px; }
+.e-noticiero-indigo-claro .m-logo { color: #1b1e4b; }
+.e-noticiero-indigo-claro .m-marca { font: 400 24px/1 var(--f-tit); letter-spacing: .04em; }
+.e-noticiero-indigo-claro .m-marca small { font: 700 10px/1 var(--f-txt); font-stretch: 112%; letter-spacing: .16em; text-transform: uppercase; color: #34386b; }
+.e-noticiero-indigo-claro .m-yo { width: 40px; height: 40px; background: rgba(255,252,246,.78); border: 0; box-shadow: inset 0 0 0 2px #ff6a4d;
+  color: #1b1e4b; backdrop-filter: blur(6px); font: 700 12px/1 var(--f-txt); font-stretch: 108%; letter-spacing: .06em; }
+/* la tapa a sangre */
+.e-noticiero-indigo-claro .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #1b1e4b; overflow: visible; }
+.e-noticiero-indigo-claro .m-heroe-foto { display: block; position: absolute; left: 0; right: 0; top: 0; height: 250px; z-index: -1;
+  background: #1b1e4b; overflow: hidden; isolation: isolate; }
+.e-noticiero-indigo-claro .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.25) brightness(1.04); mix-blend-mode: screen; object-position: 50% 30%;
+  transform: scale(1.08); transform-origin: 60% 40%; }
+.e-noticiero-indigo-claro .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: #f5efe3; mix-blend-mode: multiply; }
+.e-noticiero-indigo-claro .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(180deg, rgba(245,239,227,.86) 0%, rgba(245,239,227,.66) 17%, rgba(245,239,227,0) 30%, rgba(245,239,227,0) 46%, rgba(245,239,227,.88) 66%,
+    rgba(245,239,227,.96) 80%, #f5efe3 92%); }
+/* saludo en Anton con resaltador coral detrás del nombre */
+.e-noticiero-indigo-claro .m-kick { margin: 0; padding: 134px 18px 0; font: 400 54px/.9 var(--f-tit); letter-spacing: .2px; text-transform: uppercase;
+  color: #1b1e4b; opacity: 1; }
+.e-noticiero-indigo-claro .m-kick b { font-weight: 400; padding: 0 .05em;
+  background: linear-gradient(180deg, transparent 56%, #ff6a4d 56%, #ff6a4d 90%, transparent 90%); box-decoration-break: clone; }
+/* zócalo: banda índigo vertical + carta */
+.e-noticiero-indigo-claro .nt-zoc { display: flex; align-items: stretch; margin: 14px 14px 0 0; position: relative; z-index: 2; }
+.e-noticiero-indigo-claro .m-cifra { margin: 0; flex: none; width: 46px; display: flex; flex-direction: column-reverse; align-items: center;
+  justify-content: flex-end; gap: 6px; padding: 10px 0; background: #1b1e4b; color: #f5efe3; }
+.e-noticiero-indigo-claro .m-cifra b { font: 400 28px/1 var(--f-tit); color: #ff6a4d; }
+.e-noticiero-indigo-claro .m-cifra span { writing-mode: vertical-rl; transform: rotate(180deg); opacity: 1;
+  font: 700 11.5px/1 var(--f-cond); letter-spacing: 1.2px; text-transform: uppercase; white-space: nowrap; }
+.e-noticiero-indigo-claro .nt-zoc-t { flex: 1; min-width: 0; background: #fffcf6; padding: 12px 16px 12px;
+  box-shadow: 0 0 0 1px #dcd2c0, 0 16px 30px -16px rgba(27,30,75,.28); }
+.e-noticiero-indigo-claro .m-tit { margin: 0 0 10px; font: 400 32px/1 var(--f-tit); text-wrap: balance; letter-spacing: .2px; text-transform: uppercase; color: #1b1e4b; }
+.e-noticiero-indigo-claro .m-btn { width: 100%; min-height: 46px; border-radius: 2px; background: #ff6a4d; color: #1b1e4b;
+  font: 700 13.5px/1 var(--f-txt); font-stretch: 108%; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(27,30,75,.22); }
+/* la línea móvil "Último" */
+.e-noticiero-indigo-claro .m-det { display: flex; align-items: stretch; height: 36px; margin: 10px 0 0; opacity: 1; overflow: hidden;
+  background: #ff6a4d; border-top: 1px solid #1b1e4b; border-bottom: 1px solid #1b1e4b; color: #1b1e4b; }
+.e-noticiero-indigo-claro .nt-l { display: flex; align-items: center; gap: 7px; padding: 0 12px; background: #1b1e4b; color: #f5efe3;
+  font: 800 14px/1 var(--f-cond); letter-spacing: 1.6px; text-transform: uppercase; flex: none; }
+.e-noticiero-indigo-claro .nt-l::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #ff6a4d; }
+.e-noticiero-indigo-claro .nt-v { display: flex; align-items: center; gap: 10px; padding-left: 14px; white-space: nowrap;
+  font: 600 16.5px/1 var(--f-cond); letter-spacing: .3px; }
+.e-noticiero-indigo-claro .nt-v::before { content: ""; width: 6px; height: 6px; background: #1b1e4b; transform: rotate(45deg); flex: none; }
+/* tablero de accesos: celdas separadas por filetes de 1px, regla de tinta arriba */
+.e-noticiero-indigo-claro .m-accesos { gap: 1px; margin: 12px 18px 0; padding: 0; background: #dcd2c0; border-top: 2px solid #1b1e4b;
+  border-bottom: 1px solid #dcd2c0; }
+.e-noticiero-indigo-claro .m-acc { display: flex; flex-direction: column; gap: 3px; min-height: 0; padding: 10px 12px 9px; position: relative; border: 0; border-radius: 0;
+  background: #f5efe3; }
+.e-noticiero-indigo-claro .m-acc:first-child { box-shadow: inset 0 3px 0 #ff6a4d; }
+.e-noticiero-indigo-claro .m-ico { width: 20px; height: 20px; margin: 0; color: #2a2e66; place-items: start; }
+.e-noticiero-indigo-claro .m-ico svg { width: 20px; height: 20px; stroke-width: 1.7; }
+.e-noticiero-indigo-claro .m-acc b { font: 400 19px/1 var(--f-tit); letter-spacing: .3px; text-transform: uppercase; margin-top: 7px; }
+.e-noticiero-indigo-claro .m-acc span { font-size: 11.5px; font-stretch: 86%; color: #4d5180; white-space: nowrap; }
+/* novedades bajo regla de 2px */
+.e-noticiero-indigo-claro .m-novs { padding: 12px 18px 0; gap: 0; }
+.e-noticiero-indigo-claro .m-sec { font: 400 24px/1 var(--f-tit); letter-spacing: .2px; color: #1b1e4b; padding-bottom: 6px; border-bottom: 2px solid #1b1e4b; }
+.e-noticiero-indigo-claro .m-nov { border-top: 0; }
+.e-noticiero-indigo-claro .m-nov-tapa { grid-template-columns: 96px 1fr; grid-template-rows: auto auto 1fr; gap: 0 12px; padding: 8px 0 8px; }
+.e-noticiero-indigo-claro .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / 4; height: 62px; position: relative; overflow: hidden;
+  background: #1b1e4b; isolation: isolate; }
+.e-noticiero-indigo-claro .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.25) brightness(1.04); mix-blend-mode: screen; }
+.e-noticiero-indigo-claro .m-nov-tapa .m-nov-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: #f5efe3; mix-blend-mode: multiply; }
+.e-noticiero-indigo-claro .m-nov-tapa .m-fecha { grid-column: 1; grid-row: 3; align-self: end; justify-self: start; z-index: 2; position: relative;
+  min-width: 0; padding: 3px 8px; background: #ff6a4d; color: #1b1e4b; font: 700 13px/1 var(--f-cond); letter-spacing: 1px; text-transform: uppercase; }
+.e-noticiero-indigo-claro .m-nov-tapa b { grid-column: 2; font: 400 21px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .2px; }
+.e-noticiero-indigo-claro .m-nov-tapa p { grid-column: 2; margin-top: 5px; font-size: 12.5px; color: #34386b; }
+.e-noticiero-indigo-claro .m-nov:not(.m-nov-tapa) { display: none; }
+/* el beneficio queda bajo el pliegue: en 740px no entra sin apretar la tapa */
+.e-noticiero-indigo-claro .m-benef { display: none; }
+/* beneficio con raya coral en el rótulo y regla de 4px en tinta */
+.e-noticiero-indigo-claro .m-benef { margin: 0 18px 0; padding: 8px 14px 10px; border: 0; border-radius: 0; background: #fffcf6;
+  box-shadow: inset 0 4px 0 #1b1e4b, inset 0 0 0 1px #dcd2c0; }
+.e-noticiero-indigo-claro .m-rubro { display: inline-flex; align-items: center; gap: 8px; padding-top: 4px; color: #34386b;
+  font: 700 11.5px/1 var(--f-txt); font-stretch: 112%; letter-spacing: 2px; }
+.e-noticiero-indigo-claro .m-rubro::before { content: ""; width: 18px; height: 2px; background: #ff6a4d; }
+.e-noticiero-indigo-claro .m-benef b { font: 400 21px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .2px; margin-top: 3px; }
+.e-noticiero-indigo-claro .m-benef p { color: #4d5180; }

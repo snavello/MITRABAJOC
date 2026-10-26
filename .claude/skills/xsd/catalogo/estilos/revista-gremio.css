@@ -1,0 +1,105 @@
+/* fuentes: Barlow Condensed:wght@600;700;800; Barlow:wght@400;500;600; Source Serif 4:ital,wght@1,400 */
+/* foto: tecnico; acuerdo */
+/* Revista (Colm3na 125/120, ronda 7). La portada es una tapa: foto en blanco y negro a sangre, velo del primario en multiply
+   y degradé a la base del gremio, titulares Barlow Condensed y bajada en Source Serif. Al entrar el velo se levanta y la foto
+   se enfoca, y los titulares suben línea por línea desde atrás de su renglón, como en una tapa que se arma. Después la foto
+   sigue con un zoom muy lento, y debajo el tablero oscuro de accesos entra en cascada. */
+.e-revista-gremio {
+  --fondo: #ffffff; --sup: #f4f4f6; --tinta: #16181d; --suave: #525863; --linea: #dadce1;
+  --acento: #e8b84b; --acento-tinta: #16181d; --acento2: #1a3d6b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Barlow", system-ui, sans-serif; --f-num: "Barlow", system-ui, sans-serif;
+  --serif: "Source Serif 4", Georgia, serif;
+  --radio: 10px; --radio-btn: 6px;
+  --curva: cubic-bezier(.16,1,.3,1);
+}
+/* encabezado sobre la tapa, con doble filete de revista */
+.e-revista-gremio .m-cab { position: absolute; inset: 0 0 auto; color: #fff; padding: 12px 16px 11px; }
+.e-revista-gremio .m-cab::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 4px;
+  border-top: 1px solid rgb(255 255 255 / .55); border-bottom: 1px solid rgb(255 255 255 / .3); transform-origin: left; }
+.e-revista-gremio .m-logo { color: #e8b84b; }
+.e-revista-gremio .m-marca { font: 800 22px/1 var(--f-tit); letter-spacing: .08em; text-transform: uppercase; }
+.e-revista-gremio .m-marca small { color: rgb(255 255 255 / .82); font-family: var(--serif); font-style: italic; font-size: 12px; letter-spacing: 0; }
+.e-revista-gremio .m-yo { background: rgb(15 34 64 / .55); color: #fff; border-color: rgb(255 255 255 / .35); backdrop-filter: blur(6px); }
+
+/* LA FIRMA: la tapa a sangre */
+.e-revista-gremio .m-heroe { margin: 0; padding: 0 16px 16px; height: 440px; border-radius: 0; background: #0f2240; color: #fff;
+  display: flex; flex-direction: column; justify-content: flex-end; }
+.e-revista-gremio .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -1; overflow: hidden; background: #0f2240; isolation: isolate; }
+.e-revista-gremio .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.06); opacity: .94; object-position: 58% 20%; transform-origin: 55% 30%; transform: scale(1.04); }
+/* el velo del primario, en multiply */
+.e-revista-gremio .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: #1a3d6b; mix-blend-mode: multiply; opacity: .24; }
+/* el degradé a la base */
+.e-revista-gremio .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(180deg, rgb(15 34 64 / .72) 0%, rgb(15 34 64 / 0) 24%, rgb(15 34 64 / 0) 38%, rgb(15 34 64 / .9) 74%, #0f2240 100%); }
+.e-revista-gremio .rv-txt { position: relative; }
+.e-revista-gremio .m-kick { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font: 700 17px/1 var(--f-tit); letter-spacing: .14em; color: #e8b84b; opacity: 1; }
+.e-revista-gremio .m-kick::before { content: ""; width: 26px; height: 3px; background: #e8b84b; transform-origin: left; }
+.e-revista-gremio .m-kick span { color: #fff; }
+.e-revista-gremio .m-tit { margin: 0; font: 800 50px/.94 var(--f-tit); letter-spacing: .01em; text-transform: uppercase; }
+.e-revista-gremio .rv-linea { display: block; overflow: hidden; padding-bottom: 2px; }
+.e-revista-gremio .rv-linea > span { display: block; }
+.e-revista-gremio .m-det { margin: 10px 0 0; font: italic 400 16px/1.35 var(--serif); color: rgb(255 255 255 / .9); opacity: 1; }
+.e-revista-gremio .rv-pie { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.e-revista-gremio .m-btn { min-height: 46px; padding: 0 18px; font: 700 16px/1 var(--f-tit); letter-spacing: .08em; text-transform: uppercase; }
+.e-revista-gremio .m-cifra { margin: 0; gap: 7px; }
+.e-revista-gremio .m-cifra b { font: 800 36px/1 var(--f-tit); color: #fff; }
+.e-revista-gremio .m-cifra span { font: italic 400 13.5px/1.2 var(--serif); opacity: .85; max-width: 10ch; }
+
+/* el tablero oscuro de accesos, continuación de la tapa */
+.e-revista-gremio .m-accesos { background: #0f2240; padding: 2px 12px 18px; gap: 8px; }
+.e-revista-gremio .m-acc { min-height: 0; grid-template-columns: auto 1fr; gap: 1px 10px; align-items: center; padding: 10px 10px; background: #20314d; border: 0; border-radius: 10px; color: #fff;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); }
+.e-revista-gremio .m-ico { grid-row: span 2; width: 32px; height: 32px; border-radius: 50%; background: #2b3c58; color: #e8b84b; margin: 0; }
+.e-revista-gremio .m-ico svg { width: 17px; height: 17px; }
+.e-revista-gremio .m-acc b { font: 700 16px/1.02 var(--f-tit); letter-spacing: .02em; text-transform: uppercase; }
+.e-revista-gremio .m-acc span { font-size: 11.5px; line-height: 1.2; color: rgb(255 255 255 / .8); min-width: 0; }
+.e-revista-gremio .m-acc b { min-width: 0; }
+
+/* novedades en papel blanco: filete negro y trazo corto de acento */
+.e-revista-gremio .m-novs { padding: 18px 18px 0; gap: 0; }
+.e-revista-gremio .m-sec { padding: 0 0 8px; border-top: 2px solid var(--tinta); padding-top: 8px; font: 800 20px/1 var(--f-tit); letter-spacing: .04em; color: var(--tinta); position: relative; }
+.e-revista-gremio .m-sec::after { content: ""; position: absolute; left: 0; top: -2px; width: 34px; height: 4px; background: #e8b84b; }
+.e-revista-gremio .m-nov { padding: 10px 0; border-top-color: var(--linea); }
+.e-revista-gremio .m-nov-tapa { grid-template-columns: auto 1fr 92px; border-top: 0; }
+.e-revista-gremio .m-nov-tapa .m-nov-foto { grid-column: 3; grid-row: 1 / span 3; height: 70px; position: relative; isolation: isolate; }
+.e-revista-gremio .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.06); }
+.e-revista-gremio .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: #1a3d6b; mix-blend-mode: multiply; opacity: .16; }
+.e-revista-gremio .m-nov .m-fecha { font: 600 11.5px/1.2 var(--f-txt); text-transform: uppercase; letter-spacing: .06em; color: #1a3d6b; }
+.e-revista-gremio .m-nov b { font: 800 19px/1.05 var(--f-tit); text-transform: uppercase; letter-spacing: .01em; }
+.e-revista-gremio .m-nov p { font: italic 400 13px/1.3 var(--serif); color: var(--suave); margin-top: 3px; }
+.e-revista-gremio .m-nov-tapa p { grid-column: 2; }
+.e-revista-gremio .m-benef { display: none; }
+
+/* movimiento */
+@media (prefers-reduced-motion: no-preference) {
+  /* ambiente: la foto de la tapa con un zoom muy lento (24 s, ida y vuelta) */
+  .e-revista-gremio .m-heroe-foto .m-foto { animation: e-revista-gremio-zoom 24s ease-in-out infinite alternate; }
+  /* estado inicial: velo cerrado, foto desenfocada, titulares abajo de su renglón */
+  .e-revista-gremio .m-heroe-foto { filter: blur(8px) brightness(.7); }
+  .e-revista-gremio .m-heroe-foto::before { opacity: .9; }
+  .e-revista-gremio .rv-linea > span { transform: translateY(105%); }
+  .e-revista-gremio .rv-l, .e-revista-gremio .m-acc, .e-revista-gremio .m-novs { opacity: 0; }
+  .e-revista-gremio .m-cab::after, .e-revista-gremio .m-kick::before { transform: scaleX(0); }
+
+  .e-revista-gremio.en-vista .m-heroe-foto { animation: e-revista-gremio-enfoca 1.4s cubic-bezier(.22,.61,.36,1) both; }
+  .e-revista-gremio.en-vista .m-heroe-foto::before { animation: e-revista-gremio-velo 1.6s cubic-bezier(.22,.61,.36,1) .1s both; }
+  .e-revista-gremio.en-vista .m-cab::after { animation: e-revista-gremio-filete .9s var(--curva) .2s both; }
+  .e-revista-gremio.en-vista .rv-l { animation: e-revista-gremio-entra .8s var(--curva) both; animation-delay: calc(var(--d) * 140ms + 380ms); }
+  .e-revista-gremio.en-vista .m-kick::before { animation: e-revista-gremio-filete .6s var(--curva) .5s both; }
+  .e-revista-gremio.en-vista .rv-linea > span { animation: e-revista-gremio-titular .9s var(--curva) both; animation-delay: calc(var(--d) * 140ms + 420ms); }
+  .e-revista-gremio.en-vista .m-acc { animation: e-revista-gremio-entra .7s var(--curva) both; }
+  .e-revista-gremio.en-vista .m-acc:nth-child(1) { animation-delay: 1.05s; }
+  .e-revista-gremio.en-vista .m-acc:nth-child(2) { animation-delay: 1.13s; }
+  .e-revista-gremio.en-vista .m-acc:nth-child(3) { animation-delay: 1.21s; }
+  .e-revista-gremio.en-vista .m-acc:nth-child(4) { animation-delay: 1.29s; }
+  .e-revista-gremio.en-vista .m-novs { animation: e-revista-gremio-entra .8s var(--curva) 1.4s both; }
+}
+@keyframes e-revista-gremio-zoom { from { transform: scale(1.04); } to { transform: scale(1.14) translate(-2%, 1%); } }
+@keyframes e-revista-gremio-enfoca { from { filter: blur(8px) brightness(.7); } to { filter: blur(0) brightness(1); } }
+@keyframes e-revista-gremio-velo { from { opacity: .9; } to { opacity: .24; } }
+@keyframes e-revista-gremio-filete { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes e-revista-gremio-entra { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes e-revista-gremio-titular { from { transform: translateY(105%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .e-revista-gremio *, .e-revista-gremio *::before, .e-revista-gremio *::after { animation: none !important; transition: none !important; }
+}
