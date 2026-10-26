@@ -1,0 +1,59 @@
+/* fuentes: Anton:wght@400; Barlow Condensed:wght@500; Barlow Condensed:wght@600; Barlow Condensed:wght@700; Barlow:wght@400; Barlow:wght@500 */
+/* Marcador (pantalla de estadio): negro puro, lima eléctrico, un dato gigante en Anton, regla lima de 3px, filas con hairlines y cero radios. */
+.e-marcador-deportivo {
+  --fondo: #0B0A08; --sup: #0B0A08; --tinta: #F5F5F0; --suave: #9A9A92; --linea: #23221E;
+  --acento: #D8F32B; --acento-tinta: #0B0A08; --acento2: #FF4D1F; --oscuro: #0B0A08; --sobre-oscuro: #F5F5F0;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Barlow", system-ui, sans-serif; --f-num: "Anton", Impact, sans-serif;
+  --radio: 0; --radio-btn: 0;
+  background: #0B0A08; color: #F5F5F0; padding: 0 18px;
+}
+/* rayado diagonal a 72° y la marca de agua girada */
+.e-marcador-deportivo .d1 { inset: 0; background: repeating-linear-gradient(72deg, rgba(255,255,255,.035) 0 1px, rgba(0,0,0,0) 1px 9px); }
+.e-marcador-deportivo .d2 { right: -40px; top: 690px; }
+.e-marcador-deportivo .d2::before { content: "ACME"; display: block; font: 150px/.8 "Anton", Impact, sans-serif; letter-spacing: .02em; color: rgba(255,255,255,.045);
+  transform: rotate(90deg); transform-origin: right top; white-space: nowrap; }
+
+/* encabezado: nombre condensado espaciado + etiqueta lima */
+.e-marcador-deportivo .m-cab { padding: 10px 0 0; height: 50px; gap: 10px; }
+.e-marcador-deportivo .m-logo { width: 22px; height: 22px; color: #D8F32B; }
+.e-marcador-deportivo .m-logo svg { width: 20px; height: 20px; }
+.e-marcador-deportivo .m-marca { display: flex; align-items: center; gap: 10px; font: 700 17px/1 var(--f-tit); letter-spacing: .14em; }
+.e-marcador-deportivo .m-marca small { padding: 4px 8px 3px; font: 600 12px/1 var(--f-tit); letter-spacing: .12em; text-transform: uppercase; color: #0B0A08; background: #D8F32B; }
+.e-marcador-deportivo .m-yo { width: 36px; height: 36px; border-radius: 0; background: transparent; border: 1px solid #3A3934; color: #F5F5F0;
+  font: 700 14px/1 var(--f-tit); letter-spacing: .1em; }
+
+/* héroe: el dato gigante ordena la pantalla */
+.e-marcador-deportivo .m-heroe { margin: 0; padding: 12px 0 18px; border-radius: 0; background: transparent; color: #F5F5F0; overflow: visible; }
+.e-marcador-deportivo .m-heroe::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #D8F32B; }
+.e-marcador-deportivo .m-kick { font: 600 14px/1 var(--f-tit); letter-spacing: .2em; color: #D8F32B; opacity: 1; }
+.e-marcador-deportivo .m-cifra { margin: 10px 0 0; gap: 14px; align-items: flex-end; }
+.e-marcador-deportivo .m-cifra b { font: 400 102px/.74 "Anton", Impact, sans-serif; letter-spacing: -.03em; color: #D8F32B; }
+.e-marcador-deportivo .m-cifra span { max-width: 130px; font: 700 21px/1 var(--f-tit); letter-spacing: .06em; text-transform: uppercase; opacity: 1; color: #F5F5F0; padding-bottom: 2px; }
+.e-marcador-deportivo .m-tit { margin: 14px 0 0; font: 700 30px/1 var(--f-tit); letter-spacing: .02em; text-transform: uppercase; }
+.e-marcador-deportivo .m-det { margin-top: 7px; font-size: 14px; color: #9A9A92; opacity: 1; }
+.e-marcador-deportivo .m-btn { margin-top: 14px; width: 100%; justify-content: space-between; min-height: 48px; padding: 0 16px; border-radius: 0;
+  background: #D8F32B; color: #0B0A08; font: 700 18px/1 var(--f-tit); letter-spacing: .12em; text-transform: uppercase; }
+.e-marcador-deportivo .m-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* accesos: filas con hairlines, sin tarjetas */
+.e-marcador-deportivo .m-accesos { grid-template-columns: 1fr 1fr; gap: 0 12px; padding: 0; }
+.e-marcador-deportivo .m-acc { grid-template-columns: auto 1fr; gap: 1px 8px; align-items: start; min-height: 0; padding: 11px 0 10px; background: none; border: 0;
+  border-bottom: 1px solid #23221E; border-radius: 0; }
+.e-marcador-deportivo .m-ico { grid-row: span 2; width: 18px; height: 20px; margin: 0; border-radius: 0; color: #D8F32B; }
+.e-marcador-deportivo .m-acc b { font: 700 19px/1.02 var(--f-tit); letter-spacing: .03em; text-transform: uppercase; }
+.e-marcador-deportivo .m-acc span { grid-column: 2; font-size: 12.5px; line-height: 1.25; color: #9A9A92; }
+
+/* novedades: fecha condensada a la izquierda, la segunda como aviso en naranja */
+.e-marcador-deportivo .m-novs { padding: 14px 0 0; gap: 0; }
+.e-marcador-deportivo .m-sec { font: 600 14px/1 var(--f-tit); letter-spacing: .2em; color: #D8F32B; padding-bottom: 6px; }
+.e-marcador-deportivo .m-nov { grid-template-columns: 58px minmax(0,1fr); gap: 2px 14px; padding: 9px 0; border-top: 0; border-bottom: 1px solid #23221E; }
+.e-marcador-deportivo .m-nov .m-fecha { font: 700 22px/1 var(--f-tit); letter-spacing: .02em; text-transform: uppercase; color: #F5F5F0; padding-top: 0; }
+.e-marcador-deportivo .m-nov:not(.m-nov-tapa) .m-fecha { color: #FF4D1F; }
+.e-marcador-deportivo .m-nov b { font: 700 20px/1.05 var(--f-tit); letter-spacing: .03em; text-transform: uppercase; }
+.e-marcador-deportivo .m-nov p { font-size: 13px; line-height: 1.3; color: #9A9A92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* beneficio: bloque lima lleno con texto negro */
+.e-marcador-deportivo .m-benef { margin: 14px 0 0; padding: 12px 16px 13px; border: 0; border-radius: 0; background: #D8F32B; color: #0B0A08; gap: 3px; }
+.e-marcador-deportivo .m-rubro { font: 700 13px/1 var(--f-tit); letter-spacing: .2em; color: #0B0A08; }
+.e-marcador-deportivo .m-benef b { font: 400 23px/.98 "Anton", Impact, sans-serif; letter-spacing: -.005em; text-transform: uppercase; }
+.e-marcador-deportivo .m-benef p { font-size: 13.5px; font-weight: 500; color: #0B0A08; }

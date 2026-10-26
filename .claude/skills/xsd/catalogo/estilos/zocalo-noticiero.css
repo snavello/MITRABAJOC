@@ -1,0 +1,104 @@
+/* fuentes: Big Shoulders Display:wght@800;900; Barlow:wght@400;500;600; Barlow Condensed:wght@600;700;800 */
+/* foto: equipo; calle */
+/* Zócalo (modelo 8, ronda 2). Lenguaje de noticiero de TV: la foto del gremio en duotono (luminosity sobre la base,
+   el acento en screen) con un ken burns lento, el dato importante en un zócalo (rótulo condensado de color pleno pegado
+   a una caja blanca con sombra) y un ticker de novedades con rótulo rojo y punto que late. Al entrar, el rótulo se
+   corre desde la izquierda y una barra del acento barre la caja blanca y la deja escrita, como un zócalo al aire.
+   Colores de la UOM: base #0f2240, primario #1a3d6b, acento #e8b84b; rojo del ticker #c0392b. */
+.e-zocalo-noticiero {
+  --zn-base: #0f2240; --zn-prim: #1a3d6b; --zn-acen: #e8b84b; --zn-rojo: #c0392b;
+  --fondo: #f2f3f6; --sup: #ffffff; --tinta: #121722; --suave: #3b4252; --linea: #dfe2e8;
+  --acento: #e8b84b; --acento-tinta: #121722; --acento2: #c0392b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --f-tit: "Big Shoulders Display", "Barlow Condensed", sans-serif; --f-txt: "Barlow", system-ui, sans-serif;
+  --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif; --f-num: "Barlow Condensed", sans-serif;
+  --radio: 0; --radio-btn: 0; --zn-entra: cubic-bezier(.16,1,.3,1);
+  background: var(--fondo);
+}
+/* encabezado de la base, con la marca filetada del acento */
+.e-zocalo-noticiero .m-cab { background: var(--zn-base); color: #fff; padding: 8px 16px; }
+.e-zocalo-noticiero .m-logo { color: var(--zn-acen); }
+.e-zocalo-noticiero .m-marca { padding-left: 10px; border-left: 4px solid var(--zn-acen); font: 800 26px/1 var(--f-cond); letter-spacing: .03em; }
+.e-zocalo-noticiero .m-marca small { font: 600 11px/1 var(--f-cond); letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.8); }
+.e-zocalo-noticiero .m-yo { border-radius: 0; background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.3); font: 700 13px/1 var(--f-cond); letter-spacing: .1em; }
+
+/* la foto al aire */
+.e-zocalo-noticiero .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; overflow: visible; color: #fff; }
+.e-zocalo-noticiero .zn-duo { position: relative; height: 304px; overflow: hidden; isolation: isolate; background: var(--zn-base); }
+.e-zocalo-noticiero .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--zn-base); isolation: isolate; }
+.e-zocalo-noticiero .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.12); mix-blend-mode: luminosity; opacity: .88; transform-origin: 60% 40%; object-position: 50% 40%; }
+.e-zocalo-noticiero .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: var(--zn-acen); mix-blend-mode: screen; opacity: .32; }
+.e-zocalo-noticiero .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(180deg, rgba(15,34,64,.55) 0%, rgba(15,34,64,0) 30%, rgba(15,34,64,0) 45%, rgba(15,34,64,.92) 100%); }
+.e-zocalo-noticiero .zn-hola { position: absolute; z-index: 3; left: 16px; top: 16px; margin: 0; opacity: 1; letter-spacing: .01em;
+  font: 900 54px/.88 var(--f-tit); text-transform: uppercase; color: #fff; }
+.e-zocalo-noticiero .zn-hola b { display: block; font-weight: 900; color: var(--zn-acen); }
+
+/* EL ZÓCALO: rótulo de color pleno + caja blanca con sombra */
+.e-zocalo-noticiero .zn-zoc { position: absolute; z-index: 3; left: 0; right: 16px; bottom: 16px; display: flex; align-items: stretch; }
+.e-zocalo-noticiero .zn-zoc-b { flex: none; width: 82px; display: flex; align-items: center; justify-content: center; padding: 8px 6px; background: var(--zn-acen); color: var(--tinta); }
+.e-zocalo-noticiero .m-cifra { margin: 0; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.e-zocalo-noticiero .m-cifra b { font: 900 52px/.82 var(--f-tit); color: var(--tinta); }
+.e-zocalo-noticiero .m-cifra span { font: 700 11.5px/1.05 var(--f-cond); letter-spacing: .1em; text-transform: uppercase; opacity: 1; color: var(--tinta); }
+.e-zocalo-noticiero .zn-zoc-t { position: relative; flex: 1; min-width: 0; padding: 10px 14px 12px; background: #fff; color: var(--tinta); box-shadow: 0 6px 18px rgba(0,0,0,.18); overflow: hidden; }
+.e-zocalo-noticiero .zn-zoc-t::after { content: ""; position: absolute; inset: 0; z-index: 2; background: var(--zn-acen); transform: translateX(101%); pointer-events: none; }
+.e-zocalo-noticiero .m-tit { margin: 0; font: 800 27px/.95 var(--f-tit); text-transform: uppercase; letter-spacing: .01em; color: var(--tinta); }
+.e-zocalo-noticiero .m-det { margin-top: 5px; font-size: 13px; line-height: 1.3; color: var(--suave); opacity: 1; }
+.e-zocalo-noticiero .m-btn { margin-top: 10px; min-height: 36px; padding: 0 14px; background: var(--zn-base); color: #fff;
+  font: 700 15px/1 var(--f-cond); letter-spacing: .08em; text-transform: uppercase; }
+
+/* EL TICKER: rótulo rojo con punto que late y la pista que corre */
+.e-zocalo-noticiero .zn-tick { display: flex; align-items: stretch; height: 38px; overflow: hidden; background: var(--zn-base); color: #fff; }
+.e-zocalo-noticiero .zn-tick-l { position: relative; z-index: 1; flex: none; display: flex; align-items: center; gap: 7px; padding: 0 12px; background: var(--zn-rojo);
+  font: 800 15px/1 var(--f-cond); letter-spacing: .1em; text-transform: uppercase; box-shadow: 8px 0 12px -4px var(--zn-base); }
+.e-zocalo-noticiero .zn-tick-l i { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+.e-zocalo-noticiero .zn-tick-v { flex: 1; overflow: hidden; display: flex; align-items: center; }
+.e-zocalo-noticiero .zn-pista { display: flex; gap: 36px; width: max-content; padding-left: 16px; white-space: nowrap; font: 600 17px/1 var(--f-cond); letter-spacing: .02em; }
+.e-zocalo-noticiero .zn-pista span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 10px; vertical-align: middle; background: var(--zn-acen); transform: rotate(45deg); }
+
+/* accesos: rótulo de la base + caja blanca, como zócalos chicos */
+.e-zocalo-noticiero .m-accesos { grid-template-columns: 1fr; gap: 6px; padding: 16px 16px 0; }
+.e-zocalo-noticiero .m-acc { grid-template-columns: 50px 1fr; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0; padding: 0 12px 0 0;
+  background: #fff; border: 0; border-radius: 0; box-shadow: 0 1px 0 var(--linea); overflow: hidden; }
+.e-zocalo-noticiero .m-ico { grid-row: span 2; align-self: stretch; width: 50px; height: auto; min-height: 54px; margin: 0; border-radius: 0; background: var(--zn-base); color: var(--zn-acen); }
+.e-zocalo-noticiero .m-acc b { align-self: end; padding-top: 8px; font: 700 20px/1.05 var(--f-cond); text-transform: uppercase; letter-spacing: .02em; }
+.e-zocalo-noticiero .m-acc span { align-self: start; padding-bottom: 8px; font-size: 12.5px; color: var(--suave); }
+
+.e-zocalo-noticiero .m-novs { padding-top: 18px; }
+.e-zocalo-noticiero .m-sec { font: 800 22px/1 var(--f-cond); letter-spacing: .03em; color: var(--tinta); }
+.e-zocalo-noticiero .m-nov { border-top-color: var(--linea); }
+.e-zocalo-noticiero .m-nov .m-fecha { font: 700 13px/1.15 var(--f-cond); letter-spacing: .06em; text-transform: uppercase; color: var(--zn-prim); }
+.e-zocalo-noticiero .m-nov b { font: 700 19px/1.12 var(--f-cond); }
+.e-zocalo-noticiero .m-nov-tapa .m-nov-foto { height: 120px; margin-bottom: 8px; position: relative; background: var(--zn-base); isolation: isolate; }
+.e-zocalo-noticiero .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.12); mix-blend-mode: luminosity; opacity: .88; }
+.e-zocalo-noticiero .m-benef { border-radius: 0; background: #fff; border: 0; box-shadow: inset 4px 0 0 var(--zn-acen), 0 1px 0 var(--linea); }
+.e-zocalo-noticiero .m-benef .m-rubro { color: var(--zn-prim); }
+
+/* EL MOVIMIENTO
+   ambiente: ken burns de la foto (22 s), el ticker que corre (28 s) y el punto que late.
+   entrada: el saludo entra de costado, el rótulo del zócalo se abre desde la izquierda, la barra del acento barre la
+   caja blanca y la deja escrita. */
+.e-zocalo-noticiero .m-heroe-foto .m-foto { animation: e-zocalo-noticiero-ken 22s ease-in-out infinite alternate; }
+.e-zocalo-noticiero .zn-pista { animation: e-zocalo-noticiero-corre 28s linear infinite; }
+.e-zocalo-noticiero .zn-tick-l i { animation: e-zocalo-noticiero-late 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: no-preference) {
+  .e-zocalo-noticiero:not(.en-vista) .zn-hola { opacity: 0; transform: translateX(-28px); }
+  .e-zocalo-noticiero:not(.en-vista) .zn-zoc-b { clip-path: inset(0 100% 0 0); }
+  .e-zocalo-noticiero:not(.en-vista) .zn-zoc-t { clip-path: inset(0 100% 0 0); }
+  .e-zocalo-noticiero:not(.en-vista) .zn-zoc-t::after { transform: translateX(-101%); }
+  .e-zocalo-noticiero:not(.en-vista) .zn-tick { opacity: 0; }
+  .e-zocalo-noticiero.en-vista .zn-hola { animation: e-zocalo-noticiero-entra .8s var(--zn-entra) .15s both; }
+  .e-zocalo-noticiero.en-vista .zn-zoc-b { animation: e-zocalo-noticiero-abre .5s cubic-bezier(.22,.61,.36,1) .45s both; }
+  .e-zocalo-noticiero.en-vista .zn-zoc-t { animation: e-zocalo-noticiero-abre .45s cubic-bezier(.22,.61,.36,1) .8s both; }
+  .e-zocalo-noticiero.en-vista .zn-zoc-t::after { animation: e-zocalo-noticiero-barre 1s cubic-bezier(.22,.61,.36,1) .8s both; }
+  .e-zocalo-noticiero.en-vista .zn-tick { animation: e-zocalo-noticiero-funde .6s var(--zn-entra) 1.3s both; }
+}
+@keyframes e-zocalo-noticiero-entra { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes e-zocalo-noticiero-abre { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes e-zocalo-noticiero-barre { 0% { transform: translateX(-101%); } 45% { transform: translateX(0); } 100% { transform: translateX(101%); } }
+@keyframes e-zocalo-noticiero-funde { from { opacity: 0; } to { opacity: 1; } }
+@keyframes e-zocalo-noticiero-ken { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.16) translate(-3%, 2%); } }
+@keyframes e-zocalo-noticiero-corre { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes e-zocalo-noticiero-late { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) {
+  .e-zocalo-noticiero *, .e-zocalo-noticiero *::before, .e-zocalo-noticiero *::after { animation: none !important; transition: none !important; }
+}

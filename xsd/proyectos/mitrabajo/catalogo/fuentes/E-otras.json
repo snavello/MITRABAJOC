@@ -1,0 +1,840 @@
+{
+  "fuentes": [
+    "https://claude.ai/artifact/39fiNwNrpcyDXpGaQHqNnn",
+    "https://claude.ai/artifact/Em8uXB1miALaB8X76Gkftg",
+    "https://claude.ai/artifact/Gtvaq3TfV1949S8ux8STe4",
+    "https://claude.ai/artifact/2ih8uu1Vj79yUfuuSbZ7gq",
+    "https://claude.ai/artifact/Ejr9R8aD7BakQMDWz8JEgG",
+    "https://claude.ai/artifact/Tm7MUJCdzDVsGiKYRv2yai",
+    "https://claude.ai/artifact/XhWfeq2699PrRRrpncauU9",
+    "https://claude.ai/artifact/Ntwjy1L24a5hpbZU5ro1y8",
+    "https://claude.ai/artifact/VirxDnkXErHwdLzjZwiKDy"
+  ],
+  "estilos": [
+    {
+      "id": "hoja-de-trabajo-colm3na",
+      "nombre": "Hoja de trabajo",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/39fiNwNrpcyDXpGaQHqNnn",
+        "ronda": null,
+        "numero": "A",
+        "archivos": [
+          "project/Main.dc.html",
+          "project/B-Guia.dc.html",
+          "project/C-Lienzo.dc.html",
+          "project/Noticias.dc.html",
+          "project/Notificaciones.dc.html",
+          "project/Beneficios.dc.html"
+        ]
+      },
+      "caracter": "Herramienta de back-office densa y precisa sobre los cuatro colores del gremio: para operadores que arman formularios, noticias o avisos seguido y quieren ver el resultado al lado.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700, mayúsculas, h1 31px blanco sobre la franja oscura, h2 de sección 18px con letter-spacing .6px",
+        "texto": "system-ui / -apple-system / Segoe UI / Roboto, 14px, line-height 1.45; rótulos 12px 600 en #3a465b",
+        "cifras": "ui-monospace / Consolas para códigos, números de campo (01, 02…) y fórmulas"
+      },
+      "colores": {
+        "fondo": "#eef1f5",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478",
+        "acento": "#e8a33d",
+        "acento_2": "#2fa88f",
+        "oscuro": "#0f1b2d",
+        "linea": "#e4e7ec"
+      },
+      "forma": {
+        "radio": "12px hojas, 9px botones y pestañas, 8px campos, 4px pastillas",
+        "bordes": "1px #cfd6e0 en campos, 1px #e4e7ec entre filas; borde 1.5px dashed #9fb0c8 para adjuntos y 'agregar'",
+        "sombras": "--sombra: 0 1px 2px rgba(15,27,45,.06), 0 10px 28px -14px rgba(15,27,45,.28); el teléfono de vista previa con inset 0 1px 0 rgba(255,255,255,.12)",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "franja de marca que baja del encabezado y se desvanece (linear-gradient base→transparente en 220px)",
+        "área cuadriculada de construcción (retícula 24px al 5% del primario)",
+        "riel de pasos con estado (hecho en verde, activo en primario)",
+        "teléfono del afiliado como vista previa fija",
+        "sello girado -8° 'ENVIADO'",
+        "control segmentado tipo iOS sobre #eef1f5",
+        "pastillas de estado de color fijo (vigente/vencida/próxima)"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": "Grilla de tres columnas 184px | 1fr | 300px: a la izquierda el riel de pasos sticky (número en círculo, título condensado, estado abajo), al centro la hoja blanca con secciones separadas por línea y los campos como filas de una tabla (16px grip, 28px número, etiqueta, chips de tipo/ingreso, acciones), un solo campo abierto con su editor en rejilla 124px | 1fr (El dato, Ingreso con control segmentado, Validación con interruptor Bloquea/Avisa), pie gris con Guardar; a la derecha el teléfono oscuro con la carátula del trámite y el formulario en miniatura. Variante B: un paso por pantalla con barra de avance de 4 casillas sobre la franja y Anterior/Siguiente. Variante C: el formulario real sobre la mesa cuadriculada (560px) con inspector sticky de 376px a la derecha y una barra superior con título, código, área y acciones.",
+        "listado": "Tabla en tarjeta blanca con sombra: fila de cabecera gris #f6f7f9 en mayúsculas 11px, filas de 10px de alto con título y bajada truncados, chips de estado (vigente #e3f4ef/#0b5c48, vencida #fbe5e2/#a0281e, próxima #fff3d6/#7a5a0a) e íconos de acción de 26px. En Notificaciones, columna de leídas con barra de 4px en el color de apoyo.",
+        "tablero": null
+      },
+      "firma": "Franja oscura del gremio que se derrama sobre una mesa gris clara, títulos condensados en blanco y una hoja blanca con riel de pasos a un lado y el teléfono del afiliado al otro.",
+      "cuidado": "Muy denso: tipos de 10–12px en chips y rótulos y grises #8a93a6 sobre blanco quedan cerca del límite de contraste. El título blanco depende de que la franja esté detrás (en teléfono hay que volver a la tinta).",
+      "eleccion": "Las notas del lienzo no dicen cuál se eligió. Según el CLAUDE.md del proyecto, SDN eligió la dirección A el 2026-10-19 y la hoja (.ct-layout/.ct-riel/.ct-area) se volvió el patrón de toda pantalla de alta del panel; Noticias, Notificaciones y Beneficios del mismo lienzo ya la aplican.",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "A",
+          "diferencia": "Hoja de trabajo: todo en una pantalla, riel + filas compactas + teléfono fijo (la elegida)."
+        },
+        {
+          "numero": "B",
+          "diferencia": "Guía de a un paso: barra de avance de 4 pasos sobre la franja, columnas 236px lista | 1fr editor | 300px vista, Anterior/Siguiente al pie."
+        },
+        {
+          "numero": "C",
+          "diferencia": "El formulario como lo ve el afiliado: la carátula oscura y el formulario real sobre una mesa cuadriculada, campo seleccionado con borde ámbar y fondo #fffaf0, inspector a la derecha."
+        },
+        {
+          "numero": "Noticias",
+          "diferencia": "La hoja A aplicada al alta de noticias, con área cuadriculada, adjuntos punteados y pestaña Novedades del afiliado."
+        },
+        {
+          "numero": "Notificaciones",
+          "diferencia": "La hoja A con criterio de destinatarios segmentado, conteo de alcance en verde y la bandeja Hilo del afiliado a la derecha."
+        },
+        {
+          "numero": "Beneficios",
+          "diferencia": "La hoja A con la tarjeta del carrusel (degradé #1a3d6b→#2fa88f, velo, chip de rubro ámbar y barra de tiempo)."
+        }
+      ],
+      "css_firma": ":root{--base:#0f1b2d;--prim:#1a3d6b;--acento:#e8a33d;--apoyo:#2fa88f;--tinta:#152238;--gris:#5b6478;--linea:#e4e7ec;--papel:#f6f7f9;--ok:#0d7a5f;--err:#c0392b;--disp:\"Barlow Condensed\",\"Arial Narrow\",sans-serif;--mono:ui-monospace,Consolas,monospace;--sombra:0 1px 2px rgba(15,27,45,.06),0 10px 28px -14px rgba(15,27,45,.28)}\nbody{margin:0;background:#eef1f5;color:#152238;font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;font-size:14px;line-height:1.45}\n.enc{background:var(--base);color:#fff;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}\n.enc .gremio i{display:block;width:4px;height:30px;background:var(--acento);border-radius:2px}\n.tab{font-family:var(--disp);font-size:13px;letter-spacing:.8px;text-transform:uppercase;color:#c9d3e3;padding:8px 12px;border:1px solid #2a3b55;border-radius:9px;background:#152238}\n.tab.act{background:#fff;color:var(--base);border-color:#fff}\n.franja{background:linear-gradient(180deg,var(--base) 0,rgba(15,27,45,0) 220px)}\nh1{font-family:var(--disp);font-weight:700;font-size:31px;line-height:1;letter-spacing:.3px;text-transform:uppercase;color:#fff}\n.hoja{display:grid;grid-template-columns:184px minmax(0,1fr) 300px;gap:20px;align-items:start}\n.riel .paso.act{background:#fff;box-shadow:var(--sombra)}\n.riel .num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:#fff;border:1.5px solid #c8d0db;color:var(--gris)}\n.riel .paso.hecho .num{background:var(--ok);border-color:var(--ok);color:#fff}\n.riel .paso.act .num{background:var(--prim);border-color:var(--prim);color:#fff}\n.sheet{background:#fff;border-radius:12px;box-shadow:var(--sombra)}\n.area{background:repeating-linear-gradient(0deg,rgba(26,61,107,.05) 0 1px,transparent 1px 24px),repeating-linear-gradient(90deg,rgba(26,61,107,.05) 0 1px,transparent 1px 24px);border:1px solid #d6dce5;border-radius:12px;padding:20px}\n.fila{display:grid;grid-template-columns:16px 28px minmax(0,1fr) 88px 142px 86px 62px;align-items:center;gap:8px;padding:9px 10px;border-top:1px solid var(--linea);font-size:13px}\n.fila.cab{background:var(--papel);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#4b5567}\n.fila .n{font-family:var(--mono);font-size:12px;color:var(--prim);font-weight:700}\n.radios{display:flex;gap:4px;background:#eef1f5;padding:3px;border-radius:9px}\n.radios label.on{background:#fff;color:var(--tinta);font-weight:600;box-shadow:0 1px 2px rgba(15,27,45,.12)}\n.sw b.on{background:var(--err);color:#fff}\n.btn.pri{background:var(--acento);color:var(--base)}\n.phone{background:var(--base);border-radius:22px;padding:14px;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 14px 36px -16px rgba(15,27,45,.55);border:1px solid rgba(255,255,255,.14)}\n.sello{position:absolute;transform:rotate(-8deg);border:2px solid var(--ok);color:var(--ok);font-family:var(--disp);font-size:15px;letter-spacing:1.5px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.9)}"
+    },
+    {
+      "id": "uboard-tablero-bi",
+      "nombre": "Tablero de control BI",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Em8uXB1miALaB8X76Gkftg",
+        "ronda": null,
+        "numero": "A",
+        "archivos": [
+          "Tablero.dc.html"
+        ]
+      },
+      "caracter": "El tablero que espera quien viene de Tableau o Power BI: neutro, denso y sin sorpresas, para análisis diario con muchos filtros.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "IBM Plex Sans 600, 13–15px, sin mayúsculas; rótulo 'Filtros' 12px 600 mayúsculas con letter-spacing .06em",
+        "texto": "IBM Plex Sans 400/500, 13px",
+        "cifras": "IBM Plex Mono 500 con tabular-nums, KPIs a 26px"
+      },
+      "colores": {
+        "fondo": "#f3f4f6",
+        "superficie": "#ffffff",
+        "tinta": "#17202a",
+        "tinta_suave": "#6b7280",
+        "acento": "#2a78d6",
+        "acento_2": "#eb6834",
+        "oscuro": null,
+        "linea": "#e1e4e8"
+      },
+      "forma": {
+        "radio": "8px tarjetas, 6px campos y pestañas, 4px chips y barras",
+        "bordes": "1px #e1e4e8 en todas las tarjetas; campos 1px #d5d9df",
+        "sombras": "ninguna",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "barra lateral de filtros siempre visible",
+        "fichas de filtro activas en azul claro #e8f0fb",
+        "paleta de series apta para daltonismo (#2a78d6, #eb6834, #1baf7a, #eda100, #e87ba4)",
+        "cifras tabulares en monoespaciada"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": null,
+        "listado": "Tabla de 190px de alto al pie con pestañas subrayadas (Productos, Vendedores, Ventas, Pagos), grilla 2fr 1fr 1fr 1fr 1fr, importes en mono alineados a la derecha y conteo 'página 1 de 2' a la derecha.",
+        "tablero": "Encabezado blanco de 52px con marca, pestañas tipo píldora y organización; columna izquierda de 248px con los filtros apilados (período, sucursal, vendedor, categoría, medio de pago) y un pie '2 filtros activos · 1.418 ventas'; a la derecha una fila de 5 KPIs en tarjetas, una grilla 2x2 de gráficos (línea, barras horizontales, columnas, dona con leyenda) y la tabla abajo."
+      },
+      "firma": "Barra de filtros a la izquierda, cinco KPIs en monoespaciada arriba y grilla 2x2 de gráficos en azul sobre gris claro.",
+      "cuidado": "La propia nota lo dice: se parece a cualquier BI. Los gráficos chicos en 2x2 pierden lectura con muchas series; el gris #8a919c en textos auxiliares queda justo en contraste.",
+      "eleccion": "El lienzo no registra elección; la nota presenta las tres como bocetos para elegir dirección y marca el riesgo de A: 'se parece a cualquier BI'.",
+      "calidad": 3,
+      "variantes": [],
+      "css_firma": "body{margin:0;font-family:\"IBM Plex Sans\",\"Segoe UI\",system-ui,sans-serif;color:#17202a;background:#f3f4f6}\n.mono{font-family:\"IBM Plex Mono\",Consolas,monospace;font-variant-numeric:tabular-nums}\n.top{height:52px;background:#fff;border-bottom:1px solid #e1e4e8;display:flex;align-items:center;padding:0 20px;gap:16px}\n.top .tab.act{padding:6px 12px;border-radius:6px;background:#e8f0fb;color:#1c5cab;font-weight:500}\n.filtros{width:248px;background:#fff;border-right:1px solid #e1e4e8;padding:18px 16px;display:flex;flex-direction:column;gap:16px;font-size:13px}\n.filtros .tit{font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280}\n.campo{border:1px solid #d5d9df;border-radius:6px;padding:8px 10px;background:#fff}\n.ficha{background:#e8f0fb;color:#1c5cab;border-radius:4px;padding:2px 8px}\n.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}\n.card{background:#fff;border:1px solid #e1e4e8;border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}\n.card .k{font-size:12px;color:#6b7280}\n.card .v{font-family:\"IBM Plex Mono\",monospace;font-size:26px;font-weight:500;font-variant-numeric:tabular-nums}\n.graficos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\n.pest span.act{padding:12px 0 10px;border-bottom:2px solid #2a78d6;color:#1c5cab;font-weight:500}\n.serie-1{fill:#2a78d6}.serie-2{fill:#eb6834}.serie-3{fill:#1baf7a}.serie-4{fill:#eda100}.serie-5{fill:#e87ba4}"
+    },
+    {
+      "id": "uboard-informe-editorial",
+      "nombre": "Informe editorial",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Em8uXB1miALaB8X76Gkftg",
+        "ronda": null,
+        "numero": "B",
+        "archivos": [
+          "Editorial.dc.html"
+        ]
+      },
+      "caracter": "Un reporte que se lee como un informe impreso: un número protagonista en serif y los gráficos en orden de lectura, para directivos que miran el resultado y no operan.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Newsreader (serif óptica) 500, título de página 40px, títulos de gráfico 20px, sin mayúsculas; kicker 12px mayúsculas con letter-spacing .14em en Source Sans 3",
+        "texto": "Source Sans 3 400/600, 13–14px",
+        "cifras": "Newsreader 400 con tabular-nums: el total a 72px, los secundarios a 30px"
+      },
+      "colores": {
+        "fondo": "#fdfcf9",
+        "superficie": "#fdfcf9",
+        "tinta": "#1c1a17",
+        "tinta_suave": "#6f6a62",
+        "acento": "#4a3aa7",
+        "acento_2": "#52514e",
+        "oscuro": "#1c1a17",
+        "linea": "#e6e2d9"
+      },
+      "forma": {
+        "radio": "999px en chips de filtro, 4px en barras; el resto sin caja",
+        "bordes": "filetes de 1px: #1c1a17 bajo el encabezado y sobre la tabla, #e6e2d9 entre bloques, #f0ede6 entre filas",
+        "sombras": "ninguna",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "serif editorial",
+        "número protagonista gigante",
+        "chips de filtro en píldora negra (activo) o con borde #cfc9be",
+        "filetes de periódico en vez de tarjetas",
+        "grilla de 12 columnas con márgenes de 72px",
+        "barras de progreso horizontales en violeta sobre #efece5"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": null,
+        "listado": "Tabla sin caja bajo un filete negro: pestañas en texto (la activa en 600), cabecera en gris #6f6a62, grilla 2fr 1fr 1fr 1fr, filas de 14px separadas por #f0ede6 y cifras con tabular-nums a la derecha.",
+        "tablero": "Encabezado con kicker 'UBoard · Demo', título serif de 40px y navegación subrayada en violeta; fila de chips 'Mostrando…' con los filtros; cuerpo en grilla de 12 columnas: 4 columnas a la izquierda con el total a 72px, dos cifras secundarias a 30px y 'Cobros por medio de pago' como barras horizontales con porcentaje; 8 columnas a la derecha con la serie mensual a todo el ancho, dos gráficos lado a lado y la tabla al pie."
+      },
+      "firma": "Un total de 72px en Newsreader sobre papel crema, filetes de periódico en lugar de tarjetas y un único violeta #4a3aa7 para todo dato.",
+      "cuidado": "La nota lo marca: menos denso, con muchos gráficos hay que scrollear. Un solo color de serie impide comparar categorías; serif en cifras chicas puede costar en pantallas de baja resolución.",
+      "eleccion": "El lienzo no registra elección; la nota dice 'se lee como un informe' y su riesgo es la menor densidad.",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": "body{margin:0;font-family:\"Source Sans 3\",\"Segoe UI\",system-ui,sans-serif;color:#1c1a17;background:#fdfcf9}\n.serif{font-family:\"Newsreader\",Georgia,\"Times New Roman\",serif}\n.num{font-variant-numeric:tabular-nums}\n.enc{padding:22px 72px 0;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #1c1a17}\n.kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#6f6a62}\n.titulo{font-family:\"Newsreader\",serif;font-size:40px;font-weight:500;line-height:1.05}\n.nav .act{border-bottom:2px solid #4a3aa7;padding-bottom:4px}\n.filtros{padding:14px 72px;display:flex;gap:10px;align-items:center;font-size:14px;border-bottom:1px solid #e6e2d9}\n.chip{border:1px solid #cfc9be;border-radius:999px;padding:6px 14px;color:#6f6a62}\n.chip.on{border-color:#1c1a17;background:#1c1a17;color:#fdfcf9}\n.cuerpo{padding:28px 72px 0;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0 32px}\n.total{font-family:\"Newsreader\",serif;font-size:72px;line-height:1;font-weight:400;font-variant-numeric:tabular-nums}\n.bloque{border-top:1px solid #e6e2d9;padding-top:18px}\n.barra{flex:1;height:10px;background:#efece5;border-radius:4px;overflow:hidden}\n.barra>span{display:block;height:100%;background:#4a3aa7}\n.tabla{border-top:1px solid #1c1a17}\n.tabla .fila{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0 16px;font-size:14px;padding:7px 0;border-bottom:1px solid #f0ede6}"
+    },
+    {
+      "id": "uboard-planilla",
+      "nombre": "Planilla con tablero",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Em8uXB1miALaB8X76Gkftg",
+        "ronda": null,
+        "numero": "C",
+        "archivos": [
+          "Planilla.dc.html"
+        ]
+      },
+      "caracter": "Para quien vive en Excel y quiere ver las filas: la tabla siempre a la vista, KPIs como cinta y filtros como barra de herramientas, con un aire de planilla de papel.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Archivo Narrow 600, mayúsculas con letter-spacing .04em, títulos de gráfico 16px y pestañas 15px; marca 'UBOARD' 20px",
+        "texto": "Public Sans 400/500, 13px; rótulos de KPI 12px mayúsculas .06em",
+        "cifras": "Archivo Narrow 600 a 34px con tabular-nums en la cinta de KPIs; Public Sans tabular en la tabla"
+      },
+      "colores": {
+        "fondo": "#f7f4ee",
+        "superficie": "#fffdf9",
+        "tinta": "#1f1d1a",
+        "tinta_suave": "#6f6a62",
+        "acento": "#eb6834",
+        "acento_2": "#b34a1c",
+        "oscuro": "#1f1d1a",
+        "linea": "#d9d2c5"
+      },
+      "forma": {
+        "radio": "3px en los filtros, 0 en tarjetas y celdas",
+        "bordes": "1px #d9d2c5 como reglas de planilla; filtros activos con borde 1px #1f1d1a y los inactivos #d9d2c5; tarjetas de gráfico 1px #e8e2d6",
+        "sombras": "ninguna",
+        "densidad": "compacta"
+      },
+      "recursos": [
+        "barra superior negra cálida",
+        "cinta de KPIs dividida por reglas verticales",
+        "filtros como barra de herramientas con etiqueta + valor",
+        "explorador fijo a la derecha (5fr) con pestañas subrayadas en naranja",
+        "papel crema"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": null,
+        "listado": "Columna derecha de 5/12 a toda altura: pestañas condensadas en mayúsculas con subrayado naranja de 3px, cabecera 11px mayúsculas, filas de 13px con reglas #ece7dd, cifras alineadas a la derecha y pie 'Página 1 de 2 · ‹ ›'.",
+        "tablero": "Barra negra de 48px con marca condensada; barra de filtros blanca de 46px; cinta de 5 KPIs a lo ancho separados por reglas; debajo grilla 7fr | 5fr: a la izquierda 2x2 gráficos en cajas #fffdf9 con borde #e8e2d6 (serie en #eb6834, dona con la paleta de 5 colores), a la derecha la tabla."
+      },
+      "firma": "Reglas de planilla sobre papel crema, cinta de cifras condensadas grandes y un naranja quemado como única señal.",
+      "cuidado": "La nota lo dice: gráficos más chicos. Mucha regla fina puede volverse ruido; el gris #9c9588 de los filtros vacíos queda bajo en contraste.",
+      "eleccion": "El lienzo no registra elección; la nota la recomienda para quien vive en Excel.",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": "body{margin:0;font-family:\"Public Sans\",\"Segoe UI\",system-ui,sans-serif;color:#1f1d1a;background:#f7f4ee}\n.display{font-family:\"Archivo Narrow\",\"Arial Narrow\",sans-serif}\n.num{font-variant-numeric:tabular-nums}\n.top{height:48px;background:#1f1d1a;color:#f7f4ee;display:flex;align-items:center;padding:0 24px;gap:20px}\n.top .marca{font-family:\"Archivo Narrow\",sans-serif;font-size:20px;font-weight:600;letter-spacing:.02em}\n.top .act{border-bottom:2px solid #eb6834;padding-bottom:2px}\n.herr{height:46px;background:#fffdf9;border-bottom:1px solid #d9d2c5;display:flex;align-items:center;padding:0 24px;gap:8px;font-size:13px}\n.filtro{display:flex;gap:6px;border:1px solid #d9d2c5;border-radius:3px;padding:5px 10px}\n.filtro.on{border-color:#1f1d1a;background:#fff}\n.cinta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-bottom:1px solid #d9d2c5;background:#fffdf9}\n.cinta>div{padding:14px 24px;border-right:1px solid #e8e2d6}\n.cinta .k{font-size:12px;color:#6f6a62;text-transform:uppercase;letter-spacing:.06em}\n.cinta .v{font-family:\"Archivo Narrow\",sans-serif;font-size:34px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}\n.cuerpo{display:grid;grid-template-columns:7fr 5fr}\n.caja{background:#fffdf9;border:1px solid #e8e2d6;padding:12px 14px}\n.caja h3{font-family:\"Archivo Narrow\",sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}\n.pest .act{font-family:\"Archivo Narrow\",sans-serif;padding:12px 18px;font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:3px solid #eb6834}\n.fila{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0 10px;font-size:13px;padding:8px 18px;border-bottom:1px solid #ece7dd}"
+    },
+    {
+      "id": "vidrio-sobre-cancha",
+      "nombre": "Vidrio sobre cancha (Oliva)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Gtvaq3TfV1949S8ux8STe4",
+        "ronda": null,
+        "numero": "A · Oliva",
+        "archivos": [
+          "project/A4-Login.dc.html",
+          "project/Main.dc.html",
+          "project/A2-Club.dc.html",
+          "project/A3-Torneo.dc.html",
+          "project/M1-Login.dc.html…M4",
+          "project/P1-Login.dc.html…P4",
+          "project/G1-Login.dc.html…G4",
+          "project/MB1-Login.dc.html…MB4",
+          "project/LX1-Login.dc.html…LX4",
+          "project/CE1-Login.dc.html…CE4",
+          "project/EW1-Login.dc.html…EW4",
+          "project/BC1-Login.dc.html…BC4"
+        ]
+      },
+      "caracter": "App móvil cálida y deportiva: tarjetas de vidrio traslúcido sobre un fondo de color profundo con las líneas de una cancha dibujadas detrás; para socios que consultan su turno y para el club que gestiona el día.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 600/700; la hora del turno a 62px con line-height .85, la marca 'OLIVA' 40px con letter-spacing .28em, kickers 12–15px mayúsculas con letter-spacing .12–.16em",
+        "texto": "Barlow 400/500/600, 13–17px",
+        "cifras": "Barlow Condensed 700 (16:00 a 62px, 68% a 38px, días del calendario a 17px)"
+      },
+      "colores": {
+        "fondo": "#3C4726",
+        "superficie": "rgba(233,220,186,0.17)",
+        "tinta": "#F4EEDC",
+        "tinta_suave": "#CFC6A8",
+        "acento": "#D9C88C",
+        "acento_2": "#C8703C",
+        "oscuro": "#2A331A",
+        "linea": "rgba(233,220,186,0.30)"
+      },
+      "forma": {
+        "radio": "30px tarjeta de ingreso, 22px tarjetas principales, 16–18px secundarias, 14px botones de ícono, 999px pastillas",
+        "bordes": "1px rgba(233,220,186,.22–.38) en todas las tarjetas; borde punteado para la promo",
+        "sombras": "ingreso: 0 30px 60px rgba(20,26,10,.42) + inset 0 1px 0 rgba(247,241,222,.35); botón 0 12px 26px rgba(20,26,10,.34)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "vidrio (backdrop-filter blur 12–26px)",
+        "líneas de cancha de pádel dibujadas con bordes de 2px al 14%",
+        "rayado diagonal a 115° al 5% (repeating-linear-gradient 1px/6px)",
+        "degradé radial desde arriba",
+        "manchas difuminadas de color (blur 80–90px) en el ingreso",
+        "tarjeta fantasma rotada -3° detrás del ingreso",
+        "barra inferior de vidrio de 5 destinos"
+      ],
+      "pantallas": {
+        "portada": "Saludo con avatar de iniciales y campana con punto de aviso; tarjeta de vidrio grande con 'EN 40 MINUTOS', la hora a 62px, la cancha y la pastilla 'Confirmada'; dos tarjetas medianas lado a lado (próxima clase, tu torneo); lista 'MOVIMIENTOS' de filas de vidrio con punto de color de estado; promo punteada y barra inferior de vidrio.",
+        "operacion": "Ingreso: tarjeta de vidrio centrada de radio 30 con ícono en cuadro redondeado, marca espaciada, dos campos de 52px traslúcidos, botón 'INGRESAR' en el acento con texto oscuro y un acceso secundario de vidrio. En Club: tarjeta 'ESPERAN TU RESPUESTA' con contador en el color de aviso y botones Confirmar (lleno) / Rechazar (borde).",
+        "listado": "Torneo: llave con 4 pestañas subrayadas (Llave, Zonas, Parejas, Fotos) y fases Cuartos/Semis/Final; parejas en filas de vidrio y una tarjeta 'CARGAR RESULTADO' con el marcador.",
+        "tablero": "Panel del club: calendario mensual 7x5 en celdas de vidrio de 44px con barritas de ocupación (canchas en el acento, clases en verde #8FAE7E, punto de torneo #E2A93F), el día de hoy con borde del acento; tarjeta de ocupación con 68% grande y barras de 6px por cancha."
+      },
+      "firma": "La cancha de pádel dibujada en líneas finas detrás de tarjetas de vidrio arena, con la hora gigante en condensada y un rayado diagonal casi invisible.",
+      "cuidado": "backdrop-filter es caro en teléfonos viejos. Los textos #CFC6A8 sobre vidrio al 12–18% dependen del fondo; en Luxury hubo que subir el oro para que los botones pasen contraste sobre negro. Nueve paletas sobre el mismo molde: es una sola dirección.",
+      "eleccion": "El lienzo no dice cuál se eligió. Oliva es la base ('A · Oliva', página de arranque); el lienzo 'las 5 paletas de la referencia' la pone 'arriba de todo para comparar' y aclara en Luxury 'subí un punto el oro respecto de la muestra para que los botones pasen contraste sobre negro'.",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "Oliva",
+          "diferencia": "Base: fondo #3C4726, vidrio arena rgba(233,220,186), señal #D9C88C, aviso #C8703C, clases #8FAE7E."
+        },
+        {
+          "numero": "Marea",
+          "diferencia": "Azul profundo #12294A, vidrio celeste rgba(205,226,248), amarillo huevo #F5C64E como señal, coral #FF7A5C para lo que espera respuesta, violeta #A78BFA para torneos."
+        },
+        {
+          "numero": "Ciruela",
+          "diferencia": "Ciruela #2A1B33, vidrio lila rgba(232,214,245), menta #7FE3B2 como señal, durazno #FF9E6B para avisos. 'La más cálida'."
+        },
+        {
+          "numero": "Grafito",
+          "diferencia": "Grafito #1D2026, vidrio frío rgba(220,226,240), azul eléctrico #6C8CFF, naranja #FF8A4C. 'La más sobria y la que mejor aguanta pantallas grandes'."
+        },
+        {
+          "numero": "Modern Blue",
+          "diferencia": "Marino #14304D, vidrio casi blanco rgba(235,240,250), azul #3B8FE8; los avisos en blanco frío #EDF1F8."
+        },
+        {
+          "numero": "Luxury",
+          "diferencia": "Negro #0D0D0D, vidrio arena rgba(236,229,215), oro viejo #C89B2C, topo #D9CDBB para avisos. 'La más silenciosa'."
+        },
+        {
+          "numero": "Creative Energy",
+          "diferencia": "Negro #0D0D0D con resplandor #2A1140, vidrio lila rgba(244,238,255), ámbar #FFB400, fucsia #FF3B5C, violeta #7B2BF5 para clases. 'La más ruidosa'."
+        },
+        {
+          "numero": "Earthy & Warm",
+          "diferencia": "Verde bosque #1F2C17, vidrio crema rgba(252,246,220), tostado #D9A066, ladrillo #C4623A. 'Prima directa de Oliva, más cálida'."
+        },
+        {
+          "numero": "Bold Contrast",
+          "diferencia": "Marino #123057, vidrio menta rgba(232,244,238), celeste #93D2E0, rojo #E03A3A solo para lo que espera respuesta. 'El contraste más fuerte'."
+        }
+      ],
+      "css_firma": "/* lienzo de 390x844, estilos en línea pasados a clases */\nbody{margin:0;font-family:Barlow,system-ui,sans-serif;background:#3C4726;color:#F4EEDC}\na{color:#D9C88C;text-decoration:none}\n.fondo{position:absolute;inset:0;background:radial-gradient(120% 70% at 20% 0%,#5C6A33 0%,#3C4726 62%)}\n.cancha{position:absolute;left:-40px;top:120px;width:470px;height:560px;border:2px solid rgba(233,220,186,.14);border-radius:4px}\n.cancha-red{position:absolute;left:-40px;top:398px;width:470px;height:2px;background:rgba(233,220,186,.14)}\n.rayado{position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(240,232,205,.05) 0 1px,rgba(0,0,0,0) 1px 6px)}\n.mancha{position:absolute;width:320px;height:320px;border-radius:50%;background:#D9C88C;opacity:.30;filter:blur(90px)}\n.vidrio{border-radius:22px;padding:18px;background:rgba(233,220,186,.18);border:1px solid rgba(233,220,186,.34);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}\n.vidrio-2{border-radius:18px;padding:14px;background:rgba(233,220,186,.14);border:1px solid rgba(233,220,186,.26);backdrop-filter:blur(12px)}\n.ingreso{border-radius:30px;padding:30px 24px 26px;background:rgba(233,220,186,.17);border:1px solid rgba(233,220,186,.34);backdrop-filter:blur(26px);box-shadow:0 30px 60px rgba(20,26,10,.42),inset 0 1px 0 rgba(247,241,222,.35)}\n.fantasma{position:absolute;left:44px;right:44px;border-radius:30px;background:rgba(233,220,186,.10);border:1px solid rgba(233,220,186,.16);transform:rotate(-3deg)}\n.kicker{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.14em;color:#D9C88C}\n.hora{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:62px;line-height:.85;letter-spacing:-.01em}\n.marca{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:700;letter-spacing:.28em;margin-right:-.28em;color:#F7F1DE}\n.pastilla{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:#2A331A;background:#D9C88C}\n.campo{height:52px;padding:0 16px;border-radius:16px;background:rgba(233,220,186,.12);border:1px solid rgba(233,220,186,.30);color:#F7F1DE}\n.btn{height:56px;border-radius:18px;border:0;background:#D9C88C;color:#2A331A;font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;letter-spacing:.16em;box-shadow:0 12px 26px rgba(20,26,10,.34)}\n.dia{height:44px;border-radius:10px;background:rgba(233,220,186,.10);border:1px solid rgba(233,220,186,.16)}\n.dia.hoy{background:rgba(233,220,186,.26);border:1px solid #D9C88C}\n.dock{height:76px;background:rgba(60,71,38,.80);border-top:1px solid rgba(233,220,186,.26);backdrop-filter:blur(18px)}"
+    },
+    {
+      "id": "marcador-deportivo",
+      "nombre": "Marcador",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Gtvaq3TfV1949S8ux8STe4",
+        "ronda": null,
+        "numero": "B",
+        "archivos": [
+          "project/B1-Alumno.dc.html",
+          "project/B2-Club.dc.html",
+          "project/B3-Torneo.dc.html"
+        ]
+      },
+      "caracter": "Pantalla de estadio: negro, un verde lima eléctrico y un dato gigante que ordena cada pantalla; enérgica y sin tarjetas, para un público deportivo y joven.",
+      "claro_u_oscuro": "oscuro",
+      "tipografia": {
+        "titulos": "Anton para el dato protagonista (16:00 a 104px con line-height .78; '8' a 118px), Barlow Condensed 700 mayúsculas 20–30px para nombres y títulos, kickers 13–15px con letter-spacing .12–.2em",
+        "texto": "Barlow 400/500, 13–14px, gris #9A9A92 para lo secundario",
+        "cifras": "Anton (hora, contador, 68%) y Barlow Condensed 700 para horas en la lista"
+      },
+      "colores": {
+        "fondo": "#0B0A08",
+        "superficie": "#0B0A08",
+        "tinta": "#F5F5F0",
+        "tinta_suave": "#9A9A92",
+        "acento": "#D8F32B",
+        "acento_2": "#FF4D1F",
+        "oscuro": "#0B0A08",
+        "linea": "#23221E"
+      },
+      "forma": {
+        "radio": "0 en todo (cajas, botones, etiquetas); solo el botón de acción central del dock es círculo de 72px",
+        "bordes": "filetes de 1px #23221E entre filas; botón secundario con borde 1px #3A3934; regla de 3px en el acento bajo el dato principal",
+        "sombras": "ninguna",
+        "densidad": "media"
+      },
+      "recursos": [
+        "dato gigante en Anton",
+        "palabra 'PADEL' en Anton a 150px girada 90° como marca de agua al 4.5%",
+        "rayado diagonal a 72° al 3.5%",
+        "filas separadas por hairlines, sin tarjetas",
+        "bloque de acento lleno con texto negro",
+        "dock de 3 con acción central circular que sobresale"
+      ],
+      "pantallas": {
+        "portada": "Encabezado 'CLUB 1' + etiqueta rectangular en lima; bloque 'HOY · JUE 17 SEP' con la hora en Anton 104px, 'CANCHA 1' y etiqueta 'CONFIRMADA'; regla lima de 3px; agenda en filas (fecha+hora a la izquierda en 58px, título condensado) con la fila de aviso en naranja; bloque lima lleno 'TU TORNEO / CUARTOS DE FINAL'; dock con botón central redondo.",
+        "operacion": "En el club, cada solicitud es una fila con nombre condensado y dos botones cuadrados de 46px (confirmar lleno en lima, rechazar con borde).",
+        "listado": "Torneo: fases como pestañas de texto (ZONAS, CUARTOS, SEMIS, FINAL), contador '2 DE 4 JUGADOS', partidos QF1–QF4 en filas con parejas en mayúsculas, 'EN JUEGO' y 'CARGAR EL RESULTADO'.",
+        "tablero": "Panel del club: '8' en Anton 118px en lima con 'RESERVAS SIN RESPONDER' al lado; regla lima; lista de solicitudes; bloque 'SEMANA 21—27 SEP' con 68% en Anton y siete columnas rectangulares de 26px (domingo en gris #3A3934)."
+      },
+      "firma": "Un número enorme en Anton sobre negro puro, una regla lima de 3px y filas separadas por hairlines; cero radios.",
+      "cuidado": "El lima #D8F32B sobre negro funciona, pero como texto chico cansa y vibra; el gris #9A9A92 en 13px es el límite. La marca de agua girada y el rayado son decorativos: con poco contenido la pantalla queda vacía.",
+      "eleccion": "El lienzo no registra elección. La nota describe la navegación: 'dock de 3 elementos con una acción central grande… Sin tarjetas: filas separadas por hairlines y un dato gigante que ordena cada pantalla'.",
+      "calidad": 5,
+      "variantes": [
+        {
+          "numero": "B · props",
+          "diferencia": "El componente deja cambiar primario entre #D8F32B, #FF4D1F, #3DDC97, #F5F5F0 y acento entre #FF4D1F, #FF2D55, #D8F32B."
+        }
+      ],
+      "css_firma": "body{margin:0;font-family:Barlow,system-ui,sans-serif;background:#0B0A08;color:#F5F5F0}\na{color:#D8F32B;text-decoration:none}\n.rayado{position:absolute;inset:0;background:repeating-linear-gradient(72deg,rgba(255,255,255,.035) 0 1px,rgba(0,0,0,0) 1px 9px)}\n.agua{position:absolute;right:-46px;top:250px;font-family:Anton,sans-serif;font-size:150px;line-height:.8;letter-spacing:.02em;color:rgba(255,255,255,.045);transform:rotate(90deg);transform-origin:right top;white-space:nowrap}\n.club{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;letter-spacing:.14em}\n.etiqueta{padding:3px 8px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.12em;color:#0B0A08;background:#D8F32B}\n.kicker{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:.2em;color:#D8F32B}\n.dato{font-family:Anton,sans-serif;font-size:104px;line-height:.78;letter-spacing:-.02em}\n.contador{font-family:Anton,sans-serif;font-size:118px;line-height:.74;letter-spacing:-.03em;color:#D8F32B}\n.regla{height:3px;background:#D8F32B}\n.fila{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid #23221E}\n.fila .t{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;letter-spacing:.03em;line-height:1.05}\n.fila .s{font-size:13px;color:#9A9A92}\n.fila.aviso .hora{color:#FF4D1F}\n.bloque{padding:16px 16px 18px;background:#D8F32B;color:#0B0A08}\n.bloque .grande{font-family:Anton,sans-serif;font-size:34px;line-height:.95}\n.ok{width:46px;height:46px;border:0;background:#D8F32B;color:#0B0A08}\n.no{width:46px;height:46px;background:transparent;border:1px solid #3A3934;color:#F5F5F0}\n.dock{height:92px;border-top:1px solid #23221E;background:#0B0A08;display:flex;justify-content:space-between}\n.dock .central{margin-top:-22px;width:72px;height:72px;border-radius:50%;background:#D8F32B;color:#0B0A08}"
+    },
+    {
+      "id": "vidrio-claro",
+      "nombre": "Vidrio claro",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Gtvaq3TfV1949S8ux8STe4",
+        "ronda": null,
+        "numero": "C",
+        "archivos": [
+          "project/C1-Alumno.dc.html",
+          "project/C2-Club.dc.html",
+          "project/C3-Torneo.dc.html"
+        ]
+      },
+      "caracter": "Una app clara y amable, de vidrio esmerilado blanco sobre manchas de color difuminadas; prolija y cercana al lenguaje de iOS, para un público amplio.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Archivo 700 con letter-spacing negativo (-0.02em), 27px en el saludo; sin condensada ni mayúsculas",
+        "texto": "Archivo 400/500/600, 13–17px",
+        "cifras": "Archivo 700 con letter-spacing -0.035em (16:00 a 44px)"
+      },
+      "colores": {
+        "fondo": "#E9EDE3",
+        "superficie": "rgba(255,255,255,0.58)",
+        "tinta": "#171C14",
+        "tinta_suave": "#55604F",
+        "acento": "#4E6B2E",
+        "acento_2": "#2E7D77",
+        "oscuro": "#2A3D17",
+        "linea": "rgba(23,28,20,0.12)"
+      },
+      "forma": {
+        "radio": "26px tarjeta principal, 20px tarjetas de lista, 18px casillas de día, 12–14px botones y celdas, 999px pastillas",
+        "bordes": "1px rgba(255,255,255,.8–.9) en el vidrio; celdas libres con borde 1px dashed rgba(23,28,20,.18)",
+        "sombras": "0 10px 30px rgba(30,45,25,0.10) en las tarjetas grandes",
+        "densidad": "media"
+      },
+      "recursos": [
+        "vidrio blanco (backdrop-filter blur 14–20px)",
+        "manchas de color difuminadas (blur 70–80px, opacidad .18–.38) con primario, acento y #C9A227",
+        "rayado horizontal fino al 3.5% (1px cada 4px)",
+        "control segmentado en píldora",
+        "tira de días como casillas",
+        "grilla horaria por cancha"
+      ],
+      "pantallas": {
+        "portada": "Fecha chica + 'Hola, Angelina' a 27px y avatar circular de vidrio; tarjeta de vidrio 'Tu próximo turno' con 16:00 a 44px, pastilla 'Confirmada' en el primario y botón 'Ver detalle'; tira de 5 días (el de hoy lleno en primario); 'Lo que viene' en tarjetas de vidrio con cuadro de fecha en el acento.",
+        "operacion": "Las acciones van en una hoja inferior (según la nota del lienzo); el club decide solicitudes desde la grilla del día.",
+        "listado": "Torneo: selector de fase en vez de píldoras, partidos QF en tarjetas con 'Jugándose' y 'Cargar resultado', zonas con parejas y PJ/G.",
+        "tablero": "Club 'Hoy': segmentado Hoy/Semana/Mes y una tarjeta de vidrio con la grilla horaria 44px | cancha 1 | cancha 2: turnos llenos en primario, clases en el acento, 'Libre' punteado, rechazo en terracota rgba(192,73,43,.14) con borde #C0492B y 'Mantenimiento' en gris."
+      },
+      "firma": "Tarjetas de vidrio blanco sobre un fondo verde grisáceo con manchas de luz de color difuminadas detrás.",
+      "cuidado": "Es el más genérico de los tres del lienzo. Texto blanco sobre el primario #4E6B2E está bien, pero el vidrio blanco sobre el fondo claro tiene poco contraste de borde; backdrop-filter pesa en teléfonos viejos.",
+      "eleccion": "El lienzo no registra elección. La nota: 'dock flotante de píldora y hoja inferior para las acciones… El club abre en el día y no en el mes; el torneo elige la fase con un selector en vez de píldoras'.",
+      "calidad": 3,
+      "variantes": [
+        {
+          "numero": "C · props",
+          "diferencia": "Primario elegible entre #4E6B2E, #2E7D77, #1F5FA6, #8A4A2B; acento entre #2E7D77, #4E6B2E, #7A5AA8."
+        }
+      ],
+      "css_firma": "body{margin:0;font-family:Archivo,system-ui,sans-serif;background:#E9EDE3;color:#171C14}\na{color:#3C5722;text-decoration:none}\n.mancha-1{position:absolute;left:-70px;top:-60px;width:300px;height:300px;border-radius:50%;background:#4E6B2E;opacity:.38;filter:blur(70px)}\n.mancha-2{position:absolute;right:-90px;top:180px;width:280px;height:280px;border-radius:50%;background:#2E7D77;opacity:.30;filter:blur(80px)}\n.mancha-3{position:absolute;left:40px;bottom:-80px;width:320px;height:260px;border-radius:50%;background:#C9A227;opacity:.18;filter:blur(80px)}\n.rayado{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(23,28,20,.035) 0 1px,rgba(0,0,0,0) 1px 4px)}\n.saludo{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.1}\n.vidrio{border-radius:26px;padding:18px;background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.85);box-shadow:0 10px 30px rgba(30,45,25,.10);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}\n.vidrio-2{border-radius:20px;padding:14px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8);backdrop-filter:blur(14px)}\n.hora{font-size:44px;font-weight:700;letter-spacing:-.035em;line-height:1}\n.pastilla{padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;color:#fff;background:#4E6B2E}\n.dia{flex-grow:1;height:72px;border-radius:18px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8)}\n.dia.hoy{background:#4E6B2E;color:#fff}\n.seg{height:44px;border-radius:22px;padding:4px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8);display:flex;gap:4px}\n.seg .act{border-radius:18px;background:#4E6B2E;color:#fff;font-weight:600}\n.libre{height:44px;border-radius:12px;border:1px dashed rgba(23,28,20,.18);color:#55604F}\n.rechazo{border-radius:12px;background:rgba(192,73,43,.14);border:1px solid #C0492B;color:#8C3520}"
+    },
+    {
+      "id": "neomorfismo-claro",
+      "nombre": "Neomorfismo claro",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/Tm7MUJCdzDVsGiKYRv2yai",
+        "ronda": null,
+        "numero": "Neo",
+        "archivos": [
+          "Oliva — versión neomorfismo (página)",
+          "Pádel: project/NO1-Login.dc.html",
+          "project/NO2-Alumno.dc.html",
+          "project/NA1-Login.dc.html",
+          "project/NA2-Alumno.dc.html",
+          "project/NB1-Login.dc.html",
+          "project/NB2-Alumno.dc.html"
+        ]
+      },
+      "caracter": "Todo relieve sobre un fondo de color apagado, sin transparencias ni bordes: tarjetas que salen del fondo y campos que se hunden; táctil y calmo, para una app de consulta simple.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700; la hora a 60px, 'OLIVA' 42px con letter-spacing .3em, kickers 13–15px mayúsculas .14–.16em",
+        "texto": "Barlow 400/500/600, 13–18px",
+        "cifras": "Barlow Condensed 700"
+      },
+      "colores": {
+        "fondo": "#DDE0CE",
+        "superficie": "#DDE0CE",
+        "tinta": "#2E3324",
+        "tinta_suave": "#666B52",
+        "acento": "#5E6F33",
+        "acento_2": "#B4703F",
+        "oscuro": "#3A4126",
+        "linea": "#B2B89B"
+      },
+      "forma": {
+        "radio": "26px tarjeta principal y barra inferior, 22px tarjetas, 18–20px campos y botones, 50% avatares",
+        "bordes": "ninguno: la forma la da la sombra",
+        "sombras": "relieve doble: 9px 9px 20px #B2B89B, -9px -9px 20px #F2F4E6 (tarjeta grande), 5–7px en piezas chicas; hundido: inset 5px 5px 10px #B2B89B, inset -5px -5px 10px #F2F4E6 en campos, pastillas y pestaña activa",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "sombra neomórfica doble (oscura abajo-derecha, clara arriba-izquierda)",
+        "campos y estado activo hundidos (inset)",
+        "logo en doble anillo: disco elevado con disco hundido adentro",
+        "divisor hundido de 2px",
+        "íconos de estado en cuadro hundido"
+      ],
+      "pantallas": {
+        "portada": "Avatar y campana elevados; tarjeta elevada con 'EN 40 MINUTOS', la hora a 60px, pastilla hundida 'Confirmada' y botón elevado 'Ver detalle'; dos tarjetas elevadas lado a lado; 'MOVIMIENTOS' en tarjetas con ícono de estado en cuadro hundido; barra inferior elevada de radio 26 con la pestaña activa hundida.",
+        "operacion": "Ingreso: logo en disco de 112px elevado con disco de 82px hundido, marca espaciada, campos de 56px hundidos sin borde, botón 'INGRESAR' en el primario lleno con relieve, divisor hundido y acceso secundario elevado.",
+        "listado": null,
+        "tablero": null
+      },
+      "firma": "Nada tiene borde ni transparencia: todo sale o se hunde del mismo fondo apagado con sombras dobles.",
+      "cuidado": "Contraste bajo por definición: piezas del mismo color que el fondo, solo separadas por sombra; mal para baja visión y luz de día. Solo se dibujaron ingreso y alumno: no hay tablero ni listado.",
+      "eleccion": "La página dice: 'Fondo claro pero nunca blanco, sin transparencias ni bordes'. Arena tibia: 'la sombra es más suave, el relieve se siente más liviano'; Azul niebla: 'la más fría y la que mejor aguanta luz de día'. No registra elección.",
+      "calidad": 3,
+      "variantes": [
+        {
+          "numero": "Oliva claro",
+          "diferencia": "Salvia #DDE0CE, primario #5E6F33, aviso #B4703F, sombras #B2B89B / #F2F4E6."
+        },
+        {
+          "numero": "Arena tibia",
+          "diferencia": "Arena #E6DFD2, tabaco #8A6A3A, verde profundo #4E7A6A para lo confirmado, sombras #C2B7A4 / #F8F2E8, tinta #332C22."
+        },
+        {
+          "numero": "Azul niebla",
+          "diferencia": "Gris azulado #DCE2EC, azul #3A6EA8, terracota #D9734A, sombras #B0B9C9 / #F1F5FD, tinta #22293A."
+        }
+      ],
+      "css_firma": "body{margin:0;font-family:Barlow,system-ui,sans-serif;background:#DDE0CE;color:#2E3324}\na{color:#5E6F33;text-decoration:none}\n.elevado{background:#DDE0CE;box-shadow:5px 5px 11px #B2B89B,-5px -5px 11px #F2F4E6}\n.tarjeta{border-radius:26px;padding:20px;background:#DDE0CE;box-shadow:9px 9px 20px #B2B89B,-9px -9px 20px #F2F4E6}\n.tarjeta-2{border-radius:22px;padding:16px;background:#DDE0CE;box-shadow:7px 7px 15px #B2B89B,-7px -7px 15px #F2F4E6}\n.hundido{background:#DDE0CE;box-shadow:inset 3px 3px 7px #B2B89B,inset -3px -3px 7px #F2F4E6}\n.campo{height:56px;padding:0 18px;border:0;border-radius:18px;background:#DDE0CE;box-shadow:inset 5px 5px 10px #B2B89B,inset -5px -5px 10px #F2F4E6;color:#2E3324}\n.logo{width:112px;height:112px;border-radius:50%;background:#DDE0CE;box-shadow:10px 10px 22px #B2B89B,-10px -10px 22px #F2F4E6}\n.logo>span{width:82px;height:82px;border-radius:50%;box-shadow:inset 5px 5px 11px #B2B89B,inset -5px -5px 11px #F2F4E6}\n.marca{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:700;letter-spacing:.3em;margin-right:-.3em;color:#3A4126}\n.btn{height:60px;border:0;border-radius:20px;background:#5E6F33;color:#F4F6EA;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.16em;box-shadow:7px 7px 16px #B2B89B,-7px -7px 16px #F2F4E6}\n.divisor{height:2px;border-radius:1px;background:#DDE0CE;box-shadow:inset 1px 1px 2px #B2B89B,inset -1px -1px 2px #F2F4E6}\n.dock{height:78px;border-radius:26px;background:#DDE0CE;box-shadow:8px 8px 18px #B2B89B,-8px -8px 18px #F2F4E6}\n.dock .act{border-radius:20px;box-shadow:inset 4px 4px 8px #B2B89B,inset -4px -4px 8px #F2F4E6;color:#5E6F33}\n.hora{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:60px;line-height:.85}"
+    },
+    {
+      "id": "vidrio-y-grano-gremial",
+      "nombre": "Vidrio y grano gremial",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/XhWfeq2699PrRRrpncauU9",
+        "ronda": null,
+        "numero": "v2",
+        "archivos": [
+          "Portada en Dos Tonos (página)",
+          "Vidrio de Ingreso (página)"
+        ]
+      },
+      "caracter": "La identidad del gremio con textura de afiche: vidrio con brillo diagonal, grano de imprenta y un condensado firme a máximo contraste, sobre los cuatro colores del sindicato; para el afiliado en el teléfono.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Condensada variable ('Bahnschrift SemiBold Condensed', 'Barlow Semi Condensed', 'Arial Narrow') con font-variation-settings wght 700 / wdth 76: el saludo 'Hola, Juan' a 36–38px con line-height .96 y el nombre en el acento; en los ingresos, Barlow Condensed 700",
+        "texto": "system-ui / -apple-system / Segoe UI / Roboto, 10–13px en el teléfono",
+        "cifras": "ui-monospace / Consolas para números de expediente y CVU"
+      },
+      "colores": {
+        "fondo": "#0f1b2d",
+        "superficie": "rgba(255,255,255,0.14)",
+        "tinta": "#eef1f5",
+        "tinta_suave": "#93a4b8",
+        "acento": "#e8b84b",
+        "acento_2": "#2fa88f",
+        "oscuro": "#0f1b2d",
+        "linea": "rgba(255,255,255,0.14)"
+      },
+      "forma": {
+        "radio": "14px tarjetas, 12–13px filas, 10px logo, 22px pantalla",
+        "bordes": "1px rgba(255,255,255,.10–.14) en oscuro, 1px #e7e1d3 en claro; filo izquierdo de 2–3px en el color de apoyo en las filas",
+        "sombras": "sin sombra en las tarjetas (la profundidad sale del vidrio y el degradé, principio tomado de Nike); el teléfono con 0 22px 44px -18px rgba(20,15,5,.45)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "grano SVG feTurbulence (opacidad .07 overlay en oscuro, .05 multiply en claro)",
+        "vidrio con degradé de 3 paradas y brillo diagonal (::after rotado -18°)",
+        "degradé radial base→primario en la portada",
+        "tarjeta de acento con degradé del ámbar",
+        "filo de color de apoyo en las filas",
+        "halo radial del acento en el encabezado claro",
+        "barra inferior con blur"
+      ],
+      "pantallas": {
+        "portada": "Oscura: degradé radial del primario sobre la base, encabezado con logo cuadrado blanco y nombre del gremio, saludo condensado grande con el nombre en ámbar, grilla 2x2 de tarjetas de vidrio con ícono (la primera en ámbar lleno con texto oscuro, globo rojo #e5484d en Credencial), 'TRÁMITES' con una fila de vidrio con filo verde y barra inferior traslúcida. Clara: papel #fbf9f4, el mismo encabezado oscuro como banda con halo ámbar, tarjetas blancas a #faf6ec con borde #e7e1d3.",
+        "operacion": "Formulario de trámite claro: encabezado oscuro con título condensado y código en mono, campos en cajas de 11px de radio con degradé #ffffff→#f3ede1, adjunto con borde punteado del primario y botón 'Enviar trámite' en ámbar con brillo diagonal. Ingreso: tarjeta de vidrio gris con grano sobre un escenario oscuro, logo de 64px en el acento, título condensado centrado.",
+        "listado": "Mis trámites oscuro: encabezado interior con flecha y título condensado; ítems de vidrio con brillo diagonal, expediente en mono y etiqueta de estado translúcida (enviado verde #7fe0c9, en tratamiento ámbar, terminado gris #c7d0da).",
+        "tablero": null
+      },
+      "firma": "Tarjetas de vidrio con un brillo diagonal y grano de imprenta sobre el azul del gremio, con el saludo en un condensado pesado y el nombre en ámbar.",
+      "cuidado": "Textos de 9–11px en el teléfono; el gris #93a4b8 sobre vidrio oscuro queda justo. El grano y los brillos no deben tapar contenido (van en pseudo-elementos con pointer-events:none). La condensada variable cae a Arial Narrow sin Bahnschrift.",
+      "eleccion": "La página es la 'v2 — más profundidad' y lista lo que 'ya está aplicado' (vidrio en todas las tarjetas, condensado a máximo contraste, grano en las 4 pantallas, portada clara como familia). Según el CLAUDE.md del proyecto, este 'modelo Nike' se construyó (punto 6 de Estado actual) y después se reemplazó por los modelos Laguna y Noticiero. 'Vidrio de Ingreso' pide 'Decime cuál preferís': no registra respuesta.",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "oscura",
+          "diferencia": "Portada sobre degradé radial base→primario con grano overlay al 7%."
+        },
+        {
+          "numero": "clara",
+          "diferencia": "Portada en papel #fbf9f4 con el encabezado oscuro como banda y grano multiply al 5%; mismas tarjetas en blanco."
+        },
+        {
+          "numero": "Ingreso 01 · Vidrio sutil",
+          "diferencia": "Caja gris #a8ada8→#8d928c con brillo diagonal suave, título en tinta #22261f, botón en la base."
+        },
+        {
+          "numero": "Ingreso 02 · Vidrio con acento",
+          "diferencia": "Gris teñido con la base, barra superior de 5px acento→secundario, título en blanco mayúsculas con subrayado ámbar de 34px, botón en ámbar."
+        },
+        {
+          "numero": "Ingreso 03 · Vidrio oscuro",
+          "diferencia": "Gris a carbón #6b706b→#33362f, grano al 16%, brillo marcado, logo con halo rgba(232,184,75,.35), título 19px con text-shadow."
+        }
+      ],
+      "css_firma": ":root{--marca-base:#0f1b2d;--marca-primario:#1a3d6b;--marca-acento:#e8b84b;--marca-apoyo:#2fa88f;--display:\"Bahnschrift SemiBold Condensed\",\"Barlow Semi Condensed\",\"Arial Narrow\",sans-serif;--num:ui-monospace,Consolas,monospace}\n.grano{position:relative}\n.grano::before{content:\"\";position:absolute;inset:0;pointer-events:none;z-index:2;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")}\n.grano-osc::before{opacity:.07;mix-blend-mode:overlay}\n.grano-clara::before{opacity:.05;mix-blend-mode:multiply}\n.p-oscura{background:radial-gradient(circle at 30% -10%,color-mix(in srgb,var(--marca-primario) 55%,var(--marca-base)) 0%,var(--marca-base) 46%);color:#eef1f5}\n.saludo{font-family:var(--display);font-variation-settings:\"wght\" 700,\"wdth\" 76;font-size:38px;line-height:.96}\n.saludo em{color:var(--marca-acento);font-style:normal}\n.card{border-radius:14px;padding:13px 12px;min-height:84px;position:relative;overflow:hidden;background:linear-gradient(155deg,rgba(255,255,255,.14),rgba(255,255,255,.02) 55%,rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(3px) saturate(1.1)}\n.card::after{content:\"\";position:absolute;top:-60%;left:-30%;width:90%;height:90%;background:linear-gradient(120deg,rgba(255,255,255,.22),transparent 60%);transform:rotate(-18deg);pointer-events:none}\n.card.acento{background:linear-gradient(155deg,color-mix(in srgb,var(--marca-acento) 92%,white),color-mix(in srgb,var(--marca-acento) 60%,#7a4f10));color:var(--marca-base);border-color:transparent}\n.fila{border-radius:12px;padding:11px 12px;background:linear-gradient(155deg,rgba(255,255,255,.10),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.10);border-left:2px solid var(--marca-apoyo)}\n.barra{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);backdrop-filter:blur(6px)}\n.p-clara{background:#fbf9f4;color:var(--marca-base)}\n.p-clara .enc{background-image:linear-gradient(120deg,var(--marca-base),color-mix(in srgb,var(--marca-primario) 60%,var(--marca-base)));color:#fff}\n.p-clara .enc::after{content:\"\";position:absolute;right:-30px;top:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--marca-acento) 35%,transparent),transparent 70%)}\n.p-clara .card{background:linear-gradient(160deg,#ffffff,#faf6ec);border:1px solid #e7e1d3}\n.caja{border-radius:11px;padding:12px 13px;background:linear-gradient(160deg,#ffffff,#f3ede1);border:1px solid #e2d9c6}\n.btn{padding:13px;border-radius:12px;font-weight:700;background:linear-gradient(160deg,color-mix(in srgb,var(--marca-acento) 96%,white),color-mix(in srgb,var(--marca-acento) 65%,#7a4f10));color:var(--marca-base)}\n.tag.tratamiento{background:color-mix(in srgb,var(--marca-acento) 28%,transparent);color:var(--marca-acento)}"
+    },
+    {
+      "id": "casilla-del-gremio",
+      "nombre": "Casilla del gremio",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/VirxDnkXErHwdLzjZwiKDy",
+        "ronda": null,
+        "numero": "1",
+        "archivos": [
+          "Notificaciones y Trámites (página), opción 1"
+        ]
+      },
+      "caracter": "La bandeja como tablero de mando: el encabezado del gremio se estira en un héroe con la cifra que importa y debajo una lista clara con avatares por remitente; para el afiliado que quiere saber qué le espera de un vistazo.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 mayúsculas: título del héroe 30px, cifra 52px en el acento, KPIs 28px, separadores de día 13px con letter-spacing 1.6px",
+        "texto": "system-ui, 12.5–13.5px; remitente en 600 (750 si no está leída)",
+        "cifras": "ui-monospace con tabular-nums para horas y expedientes"
+      },
+      "colores": {
+        "fondo": "#f6f7f9",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478",
+        "acento": "#e8a33d",
+        "acento_2": "#2fa88f",
+        "oscuro": "#0f1b2d",
+        "linea": "#e4e7ec"
+      },
+      "forma": {
+        "radio": "12px tarjetas, 10–11px controles del héroe, 20px pastillas",
+        "bordes": "1px #e4e7ec; las no leídas con borde mezclado del acento y filo izquierdo de 4px",
+        "sombras": "no leídas 0 4px 14px rgba(21,34,56,.06); botón de acción 0 8px 20px del acento al 35%",
+        "densidad": "media"
+      },
+      "recursos": [
+        "héroe de marca con degradé base→primario",
+        "panal hexagonal en trazo que 'respira' (animación de opacidad 9s)",
+        "grano",
+        "segmentado y buscador en vidrio sobre el oscuro",
+        "avatares de remitente por color",
+        "riel de estado de 4 pasos con puntos",
+        "punto del acento que late (pulso)",
+        "estados de trámite en colores fijos"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": "Botón grande 'Iniciar un trámite nuevo' en el acento dentro del héroe y buscador por número de expediente en vidrio.",
+        "listado": "Notificaciones agrupadas por día con separador condensado y línea; cada aviso es una tarjeta blanca con avatar de 34px, remitente, hora en mono y texto truncado, adjuntos y formularios como pastillas. Trámites: tarjetas con título, expediente en mono, etiqueta de estado y un riel de 4 puntos unidos por líneas (hecho en primario, actual en acento, alerta en rojo).",
+        "tablero": "El héroe de Trámites lleva tres KPIs en vidrio (En curso, Con novedad en el acento, Terminados) a 28px; el de Notificaciones, la cifra de no leídas a 52px con el resumen al lado."
+      },
+      "firma": "El encabezado oscuro del gremio convertido en héroe con una cifra condensada enorme en ámbar y un panal que respira detrás.",
+      "cuidado": "Héroe alto: empuja la lista abajo en teléfonos chicos. Animaciones permanentes (respira, pulso): la página las apaga con prefers-reduced-motion. Textos de 10–10.5px en KPIs y horas.",
+      "eleccion": "La página la presenta como 'la que más dialoga con los logins nuevos y con el Panel Sindical', costo medio. Según el CLAUDE.md del proyecto se eligió la opción 3 (Hilo), no esta; el cierre sugiere combinar 'el hero con cifras de la 1 arriba de la línea de tiempo de la 3'.",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "UOM",
+          "diferencia": "base #0f1b2d, primario #1a3d6b, acento #e8a33d, apoyo #2fa88f."
+        },
+        {
+          "numero": "La Bancaria",
+          "diferencia": "base #101d33, primario #0a4f8c, acento #e5188f, apoyo #35a3d8."
+        }
+      ],
+      "css_firma": ".mock{--marca-base:#0f1b2d;--marca-primario:#1a3d6b;--marca-acento:#e8a33d;--marca-apoyo:#2fa88f;--tinta:#152238;--gris:#5b6478;--linea:#e4e7ec;--papel:#f6f7f9;--disp:\"Barlow Condensed\",\"Arial Narrow\",sans-serif;--mono:ui-monospace,Consolas,monospace}\n@keyframes pulso{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--marca-acento) 55%,transparent)}100%{box-shadow:0 0 0 9px transparent}}\n@keyframes respira{0%,100%{opacity:.10}50%{opacity:.22}}\n.o1 .hero{background:linear-gradient(150deg,var(--marca-base),color-mix(in srgb,var(--marca-primario) 60%,var(--marca-base)));color:#fff;padding:0 15px 16px;position:relative;overflow:hidden}\n.o1 .hero .panal{position:absolute;right:-70px;top:-50px;animation:respira 9s ease-in-out infinite}\n.o1 .hero h1{font-family:var(--disp);font-weight:700;font-size:30px;line-height:1;text-transform:uppercase;letter-spacing:.5px}\n.o1 .cifra b{font-family:var(--disp);font-size:52px;line-height:.9;color:var(--marca-acento)}\n.o1 .seg{display:flex;gap:3px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:3px;backdrop-filter:blur(6px)}\n.o1 .seg span.act{background:#fff;color:var(--marca-base)}\n.o1 .kpi{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:9px 10px;backdrop-filter:blur(6px)}\n.o1 .kpi b{display:block;font-family:var(--disp);font-size:28px;line-height:1}\n.o1 .cta{display:flex;align-items:center;justify-content:center;gap:9px;background:var(--marca-acento);color:var(--marca-base);border-radius:11px;padding:13px;font-family:var(--disp);font-size:18px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;box-shadow:0 8px 20px color-mix(in srgb,var(--marca-acento) 35%,transparent)}\n.o1 .dia{font-family:var(--disp);font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:var(--gris);display:flex;align-items:center;gap:10px}\n.o1 .dia::after{content:\"\";flex:1;height:1px;background:var(--linea)}\n.o1 .n{display:flex;gap:11px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 12px;position:relative;overflow:hidden}\n.o1 .n.nl{border-color:color-mix(in srgb,var(--marca-acento) 45%,var(--linea));box-shadow:0 4px 14px rgba(21,34,56,.06)}\n.o1 .n.nl::before{content:\"\";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--marca-acento)}\n.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:13px;font-weight:700;color:#fff;background:var(--marca-primario)}\n.o1 .riel i{width:9px;height:9px;border-radius:50%;background:var(--linea);border:2px solid #fff;box-shadow:0 0 0 1px var(--linea)}\n.o1 .riel i.on{background:var(--marca-primario);box-shadow:0 0 0 1px var(--marca-primario)}\n.o1 .riel i.cur{background:var(--marca-acento);width:11px;height:11px}\n.o1 .riel s{flex:1;height:2px;background:var(--linea)}.o1 .riel s.on{background:var(--marca-primario)}\n.punto{width:8px;height:8px;border-radius:50%;background:var(--marca-acento);animation:pulso 1.8s ease-out infinite}"
+    },
+    {
+      "id": "expediente-institucional",
+      "nombre": "Expediente",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/VirxDnkXErHwdLzjZwiKDy",
+        "ronda": null,
+        "numero": "2",
+        "archivos": [
+          "Notificaciones y Trámites (página), opción 2"
+        ]
+      },
+      "caracter": "Sobria e institucional, con el idioma de la oficina: fichas de papel, carpetas con pestaña, sellos de goma y líneas de formulario para completar; para gremios que quieren verse serios y ordenados.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 mayúsculas: carátula 26px, sellos 12.5–15px con letter-spacing 1.4–2px, cifras de la carátula 24px",
+        "texto": "system-ui 12–13.5px; asunto en 700",
+        "cifras": "ui-monospace 9.5–12.5px para 'DE: / HORA', legajos, expedientes y fechas en mayúsculas"
+      },
+      "colores": {
+        "fondo": "#f6f7f9",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478",
+        "acento": "#e8a33d",
+        "acento_2": "#1a3d6b",
+        "oscuro": "#0f1b2d",
+        "linea": "#e4e7ec"
+      },
+      "forma": {
+        "radio": "12px carátula y hoja, 10px carpetas, 9px 9px 0 0 pestañas de carpeta, 8px fichas, 3–5px sellos",
+        "bordes": "1px #e4e7ec; ficha con línea punteada vertical de 2px a la izquierda; pestaña activa con borde superior de 3px en el acento; separador punteado 1px dashed; línea de completar 1.5px en tinta",
+        "sombras": "solo la carpeta con novedad: 0 5px 16px rgba(21,34,56,.07)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "carátula con lomo de tinta de 10px y texto vertical en mono (::after con writing-mode)",
+        "sello girado que entra con golpe (animación scale 1.4→1, rotate -8°, mix-blend-mode multiply)",
+        "pestañas de carpeta",
+        "fichas de papel con degradé blanco→papel y línea punteada",
+        "sello 'Nuevo' girado -6°",
+        "línea de formulario para completar a mano",
+        "estados de trámite en colores fijos"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": "Debajo de la carátula, un botón ancho en el acento 'Iniciar un trámite' con subtítulo en mono y una ficha de búsqueda: rótulo 'N° DE EXPEDIENTE', línea con guiones bajos y botón con borde 'Consultar'.",
+        "listado": "Notificaciones: carátula con sello '3 sin leer', pestañas de carpeta (Todas / No leídas / Leídas) y una hoja con fichas agrupadas por día (contador en mono en un cuadrito). Trámites: cada expediente es una carpeta con pestaña de estado arriba a la izquierda (color fijo), título, expediente, 'INICIADO … · ÚLT. MOVIMIENTO …' en mono y un sello inclinado del estado abajo a la derecha.",
+        "tablero": "La carátula de Trámites resume en tres columnas con separador punteado: EN CURSO 03, CON NOVEDAD 01 (en el acento), TERMINADOS 02."
+      },
+      "firma": "Carátula con lomo de tinta y un sello de goma que entra girado; carpetas con pestaña de estado y datos en monoespaciada mayúscula.",
+      "cuidado": "Mucha monoespaciada chica (9–10px) cansa; el sello multiply sobre blanco necesita acento con fuerza. Muy estático para una app que se usa en el teléfono.",
+      "eleccion": "La página la propone como 'la misma estética que elegiste para el constructor de Trámites y para la carátula del formulario', 'la que menos mueve el resto de la app'. Según el CLAUDE.md, se eligió Hilo para las bandejas; la estética Expediente sí quedó en el constructor de Trámites (Fase 1).",
+      "calidad": 4,
+      "variantes": [
+        {
+          "numero": "UOM",
+          "diferencia": "Acento #e8a33d."
+        },
+        {
+          "numero": "La Bancaria",
+          "diferencia": "base #101d33, primario #0a4f8c, acento #e5188f, apoyo #35a3d8."
+        }
+      ],
+      "css_firma": "@keyframes sello{from{opacity:0;transform:rotate(-8deg) scale(1.4)}to{opacity:1;transform:rotate(-8deg) scale(1)}}\n.o2 .cara{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px 16px 14px 22px;position:relative;overflow:hidden}\n.o2 .cara::before{content:\"\";position:absolute;left:0;top:0;bottom:0;width:10px;background:var(--marca-base)}\n.o2 .cara::after{content:attr(data-n);position:absolute;left:0;top:0;bottom:0;width:10px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--mono);font-size:7px;color:rgba(255,255,255,.75);letter-spacing:1.2px}\n.o2 .cara h1{font-family:var(--disp);font-weight:700;font-size:26px;line-height:1;text-transform:uppercase;letter-spacing:.5px}\n.o2 .cara .meta{font-family:var(--mono);font-size:10px;color:var(--gris);letter-spacing:.3px}\n.o2 .sello{position:absolute;right:14px;top:12px;border:2.5px solid var(--marca-acento);color:var(--marca-acento);font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:2px;text-transform:uppercase;padding:3px 9px;border-radius:5px;transform:rotate(-8deg);animation:sello .5s .3s ease both;opacity:0;mix-blend-mode:multiply}\n.o2 .pest span{padding:7px 13px 6px;border:1px solid var(--linea);border-bottom:none;border-radius:9px 9px 0 0;font-size:12px;font-weight:600;color:var(--gris);background:#eef0f3}\n.o2 .pest span.act{background:#fff;color:var(--tinta);position:relative;top:1px;border-top:3px solid var(--marca-acento)}\n.o2 .hoja{background:#fff;border:1px solid var(--linea);border-radius:0 0 12px 12px;padding:6px 12px 12px}\n.o2 .f{position:relative;border:1px solid var(--linea);border-radius:8px;padding:9px 11px 9px 18px;background:linear-gradient(160deg,#fff,var(--papel))}\n.o2 .f::before{content:\"\";position:absolute;left:8px;top:6px;bottom:6px;border-left:2px dotted var(--linea)}\n.o2 .f.nl::before{border-left-color:var(--marca-acento)}\n.o2 .f .de{font-family:var(--mono);font-size:9.5px;color:var(--gris);display:flex;justify-content:space-between}\n.o2 .nuevo{position:absolute;right:9px;top:8px;border:1.5px solid var(--marca-acento);color:var(--marca-acento);font-family:var(--disp);font-size:10px;letter-spacing:1.5px;padding:0 5px;border-radius:3px;transform:rotate(-6deg)}\n.o2 .kv{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px dashed var(--linea);padding-top:10px}\n.o2 .kv b{display:block;font-family:var(--disp);font-size:24px;line-height:1}\n.o2 .ficha-b .lin{flex:1;border-bottom:1.5px solid var(--tinta);font-family:var(--mono);font-size:12.5px;color:#98a2b3}\n.o2 .carp .lab{position:absolute;top:-11px;left:12px;font-family:var(--disp);font-size:11px;letter-spacing:1.4px;text-transform:uppercase;padding:2px 9px;border-radius:6px 6px 0 0;font-weight:700}\n.o2 .sello.est{border-color:currentColor;font-size:12.5px;right:12px;bottom:12px;letter-spacing:1.4px;animation:none;opacity:.95;transform:rotate(-5deg)}\n.e-ini{background:#fdf3e7;color:#8a5a1a}.e-tra{background:#e8def5;color:#5b3d8a}.e-res{background:#e3f2ee;color:#0d7a5f}.e-esp{background:#f8e5e2;color:#b23a2e}"
+    },
+    {
+      "id": "hilo",
+      "nombre": "Hilo",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/VirxDnkXErHwdLzjZwiKDy",
+        "ronda": null,
+        "numero": "3",
+        "archivos": [
+          "Notificaciones y Trámites (página), opción 3"
+        ]
+      },
+      "caracter": "Lo que te espera, primero: una línea de tiempo con burbujas de mensaje y una tarjeta oscura de 'Necesita tu atención'; la más app, para afiliados que reciben avisos push.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 mayúsculas: título 30px, tarjeta de atención 20px, accesos 16px, hitos de día 13px con letter-spacing 1.6px",
+        "texto": "system-ui 12–13px, texto de burbuja recortado a 2 líneas",
+        "cifras": "ui-monospace para horas, expedientes y contadores de chips"
+      },
+      "colores": {
+        "fondo": "#f6f7f9",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478",
+        "acento": "#e8a33d",
+        "acento_2": "#2fa88f",
+        "oscuro": "#0f1b2d",
+        "linea": "#e4e7ec"
+      },
+      "forma": {
+        "radio": "burbujas 4px 14px 14px 14px (esquina de globo de chat), 14px tarjeta de atención, 12px accesos y filas, 20px chips",
+        "bordes": "1px #e4e7ec; tarjeta de atención con borde izquierdo de 5px en el acento; burbuja no leída con borde del acento al 50% y fondo al 5%",
+        "sombras": "anillo de 3px del color del papel alrededor del avatar; ninguna sombra difusa",
+        "densidad": "media"
+      },
+      "recursos": [
+        "línea de tiempo vertical de 2px",
+        "hitos de día con ícono hexagonal (guiño a la colmena)",
+        "burbujas de chat con avatar",
+        "punto que late sobre el avatar no leído",
+        "tarjeta oscura 'Necesita tu atención' con degradé base→primario",
+        "chips de filtro con contador en mono",
+        "barra de progreso segmentada por trámite",
+        "entrada con animación (translateY 12px)"
+      ],
+      "pantallas": {
+        "portada": null,
+        "operacion": "La tarjeta 'Necesita tu atención' trae el expediente con novedad, el último mensaje del sindicato en un recuadro de vidrio con avatar y dos botones (Responder en el acento, Abrir con borde). Debajo, dos accesos grandes en grilla 1fr 1fr: 'Iniciar' lleno en el acento y 'Buscar' en blanco.",
+        "listado": "Notificaciones: encabezado oscuro con título, conteo y chips de filtro (activo en el acento); el hilo con la línea vertical, hitos hexagonales por día y cada aviso como burbuja junto a su avatar de remitente. Trámites: chips por estado (activo en la base) y filas compactas con título, expediente, etiqueta y una barra de progreso de segmentos de 4px (hecho en primario, actual en acento, alerta en rojo #b23a2e).",
+        "tablero": null
+      },
+      "firma": "Un hilo vertical con hitos hexagonales y burbujas de chat, encabezado por una tarjeta oscura de marca con filo ámbar que dice qué necesita tu atención.",
+      "cuidado": "Burbujas recortadas a 2 líneas esconden texto; animaciones de pulso permanentes (apagadas con prefers-reduced-motion). La línea de tiempo pierde sentido con pocos avisos.",
+      "eleccion": "Elegida. Según el CLAUDE.md del proyecto (Estado actual 18), el esquema 'Hilo' nació en Notificaciones y Trámites del trabajador a partir de estas tres propuestas y después se extendió a toda la suite. La página la describe como 'la más dinámica, en la línea del modelo Nike… la que mejor conversa con el push'.",
+      "calidad": 5,
+      "variantes": [
+        {
+          "numero": "UOM",
+          "diferencia": "Acento #e8a33d."
+        },
+        {
+          "numero": "La Bancaria",
+          "diferencia": "base #101d33, primario #0a4f8c, acento #e5188f, apoyo #35a3d8."
+        }
+      ],
+      "css_firma": "@keyframes entra{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}\n.o3 .top3{background:var(--marca-base);padding:0 15px 12px;color:#fff;position:relative;overflow:hidden}\n.o3 .top3 h1{font-family:var(--disp);font-weight:700;font-size:30px;line-height:1;text-transform:uppercase;letter-spacing:.5px}\n.o3 .chip{border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:rgba(255,255,255,.75)}\n.o3 .chip.act{background:var(--marca-acento);color:var(--marca-base);border-color:var(--marca-acento)}\n.o3 .chip i{font-style:normal;font-family:var(--mono);font-size:10.5px;opacity:.75}\n.o3 .hilo{padding:6px 15px 90px;position:relative}\n.o3 .hilo::before{content:\"\";position:absolute;left:31px;top:0;bottom:60px;width:2px;background:var(--linea)}\n.o3 .hito i svg{width:18px;height:18px;fill:var(--papel);stroke:var(--gris);stroke-width:1.6}\n.o3 .hito span{font-family:var(--disp);font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:var(--gris)}\n.o3 .m .avatar{width:32px;height:32px;box-shadow:0 0 0 3px var(--papel);position:relative}\n.o3 .m.nl .avatar::after{content:\"\";position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;background:var(--marca-acento);border:2px solid var(--papel);animation:pulso 1.8s ease-out infinite}\n.o3 .bur{flex:1;background:#fff;border:1px solid var(--linea);border-radius:4px 14px 14px 14px;padding:9px 12px 10px}\n.o3 .m.nl .bur{border-color:color-mix(in srgb,var(--marca-acento) 50%,var(--linea));background:color-mix(in srgb,var(--marca-acento) 5%,#fff)}\n.o3 .bur .tx{font-size:12.5px;color:var(--gris);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}\n.o3 .aten{background:linear-gradient(150deg,var(--marca-base),color-mix(in srgb,var(--marca-primario) 55%,var(--marca-base)));color:#fff;border-radius:14px;padding:13px 14px;border-left:5px solid var(--marca-acento);animation:entra .5s ease both}\n.o3 .aten .k{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--marca-acento);font-weight:700}\n.o3 .aten .tit{font-family:var(--disp);font-size:20px;line-height:1.05;text-transform:uppercase}\n.o3 .aten .msg{display:flex;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px}\n.o3 .aten .bts span.cta{background:var(--marca-acento);border-color:var(--marca-acento);color:var(--marca-base)}\n.o3 .acc{display:grid;grid-template-columns:1fr 1fr;gap:8px}\n.o3 .acc div{border-radius:12px;padding:12px;border:1px solid var(--linea);background:#fff}\n.o3 .acc div.cta{background:var(--marca-acento);border-color:var(--marca-acento);color:var(--marca-base)}\n.o3 .fil span.act{background:var(--marca-base);border-color:var(--marca-base);color:#fff}\n.o3 .barra-p{display:flex;gap:3px}.o3 .barra-p i{flex:1;height:4px;border-radius:2px;background:var(--linea)}\n.o3 .barra-p i.on{background:var(--marca-primario)}.o3 .barra-p i.cur{background:var(--marca-acento)}.o3 .barra-p i.al{background:#b23a2e}"
+    }
+  ],
+  "notas": "Nueve lienzos, doce estilos. Constructor de Trámites (39fi…): un solo lenguaje visual (tokens de Colm3na sobre la marca UOM: #0f1b2d/#1a3d6b/#e8a33d/#2fa88f, Barlow Condensed + system-ui) en tres disposiciones A/B/C y aplicado a Noticias, Notificaciones y Beneficios; la A quedó como patrón del panel según el CLAUDE.md del proyecto. Dashboard UBoard (Em8u…): tres direcciones para un tablero BI ajeno a Colm3na, con la misma paleta de series apta para daltonismo (#2a78d6 #eb6834 #1baf7a #eda100 #e87ba4); la nota marca el riesgo de cada una y no registra elección. Suite Pádel (Gtva…): tres direcciones (A vidrio sobre cancha, B Marcador, C Vidrio claro) más nueve paletas sobre el molde A y una página de neomorfismo; los lienzos 'Oliva — las 5 paletas de la referencia' (2ih8…) y 'Oliva — cuatro paletas' (Ejr9…) son páginas que reproducen el mismo molde A con Modern Blue, Luxury, Creative Energy, Earthy & Warm, Bold Contrast y Marea, Ciruela, Grafito: se volcaron como variantes de 'vidrio-sobre-cancha'. 'Oliva — versión neomorfismo' (Tm7M…) coincide con las páginas NO/NA/NB del lienzo Pádel. 'Portada en Dos Tonos' (XhWf…) es la v2 del 'modelo Nike' de Colm3na (vidrio + grano + condensado, portada oscura y clara) y 'Vidrio de Ingreso' (Ntwj…) son tres logins del mismo lenguaje: se juntaron en 'vidrio-y-grano-gremial'. 'Notificaciones y Trámites' (Virx…) trae tres propuestas con conmutador UOM/La Bancaria; la 3 (Hilo) fue la elegida según el CLAUDE.md y su cierre propone combinar el héroe con cifras de la 1 con el hilo de la 3. Criterios que aparecen en las notas: el color reservado para señal y estados, los estados de trámite y el semáforo con colores fijos que nunca toman la marca, no mezclar geometrías en una pantalla, profundidad sin sombra (vidrio y degradé), y subir un acento cuando no pasa contraste (oro de Luxury). Ninguna página tiene ronda numerada: el campo ronda va null."
+}

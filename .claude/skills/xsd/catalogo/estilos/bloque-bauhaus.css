@@ -1,0 +1,62 @@
+/* fuentes: Unbounded:wght@700;800;900; Public Sans:wght@400;500;600;700 */
+/* foto: edificio; edificio */
+/* Bloque (modelo 15). Blanco, negro y gris; UNA sola forma de color por pantalla —un círculo del primario de ACME— que
+   sostiene la cifra en Unbounded 900. Composición asimétrica: la forma, un rectángulo gris detrás y una línea negra al pie.
+   Radio cero en todo lo demás; filetes negros de 2px. */
+.e-bloque-bauhaus {
+  --bb-forma: #2a6f97; --bb-humo: #f2f2f2;
+  --fondo: #ffffff; --sup: #ffffff; --tinta: #111111; --suave: #5a5a5a; --linea: #d6d6d6;
+  --acento: #2a6f97; --acento-tinta: #ffffff; --acento2: #f4a259; --oscuro: #111111; --sobre-oscuro: #ffffff;
+  --f-tit: "Unbounded", "Public Sans", sans-serif; --f-txt: "Public Sans", system-ui, sans-serif; --f-num: "Unbounded", sans-serif;
+  --radio: 0; --radio-btn: 0; --curva: cubic-bezier(.33,1,.68,1);
+}
+/* encabezado de una línea con filete negro */
+.e-bloque-bauhaus .m-cab { padding: 12px 20px; border-bottom: 2px solid var(--tinta); }
+.e-bloque-bauhaus .m-logo { color: var(--tinta); }
+.e-bloque-bauhaus .m-marca { font: 800 16px/1 var(--f-tit); letter-spacing: -.01em; text-transform: uppercase; }
+.e-bloque-bauhaus .m-marca small { font: 500 11px/1 var(--f-txt); letter-spacing: .02em; color: var(--suave); }
+.e-bloque-bauhaus .m-yo { border-radius: 0; background: #fff; border: 1.5px solid var(--tinta); font: 700 12px/1 var(--f-tit); }
+
+/* héroe: saludo + composición */
+.e-bloque-bauhaus .m-heroe { margin: 0; padding: 18px 20px 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-bloque-bauhaus .m-kick { margin: 0; font: 800 35px/1.02 var(--f-tit); letter-spacing: -.035em; text-transform: none; opacity: 1; }
+.e-bloque-bauhaus .m-kick span { color: var(--bb-forma); }
+.e-bloque-bauhaus .bb-compo { position: relative; height: 214px; margin-top: 12px; }
+.e-bloque-bauhaus .bb-gris { position: absolute; right: 0; top: 18px; width: 176px; height: 182px; background: var(--bb-humo); }
+.e-bloque-bauhaus .bb-linea { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--tinta); }
+.e-bloque-bauhaus .bb-forma { position: absolute; left: 0; top: 0; width: 192px; height: 192px; border-radius: 50%; background: var(--bb-forma); color: #fff;
+  display: grid; place-items: center; text-align: center; animation: bb-forma .9s var(--curva) both; }
+@keyframes bb-forma { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: none; } }
+.e-bloque-bauhaus .m-cifra { margin: 0; display: grid; justify-items: center; gap: 4px; }
+.e-bloque-bauhaus .m-cifra b { font: 900 104px/.86 var(--f-num); letter-spacing: -.04em; }
+.e-bloque-bauhaus .m-cifra span { max-width: 86px; font: 600 13px/1.2 var(--f-txt); opacity: 1; color: #fff; }
+.e-bloque-bauhaus .bb-lado { position: absolute; right: 12px; top: 30px; width: 116px; text-align: right; }
+.e-bloque-bauhaus .m-tit { margin: 0; font: 800 17px/1.12 var(--f-tit); letter-spacing: -.03em; color: var(--tinta); }
+.e-bloque-bauhaus .m-det { margin: 8px 0 0; font: 400 12.5px/1.35 var(--f-txt); color: var(--suave); opacity: 1; }
+.e-bloque-bauhaus .m-btn { position: absolute; right: 0; bottom: 14px; display: flex; width: 150px; min-height: 44px; padding: 0 12px; border: 2px solid var(--tinta); background: var(--tinta); color: #fff;
+  font: 700 14px/1 var(--f-txt); }
+
+/* accesos en filas: ícono en cuadrado de línea, filetes */
+.e-bloque-bauhaus .m-accesos { grid-template-columns: 1fr; gap: 0; margin-top: 4px; padding: 0 20px; }
+.e-bloque-bauhaus .m-acc { grid-template-columns: 38px 1fr; grid-template-rows: auto auto; gap: 0 14px; align-items: center; min-height: 0; padding: 7px 0;
+  background: none; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0; }
+.e-bloque-bauhaus .m-ico { grid-row: span 2; width: 38px; height: 38px; margin: 0; border-radius: 0; border: 1.5px solid var(--tinta); color: var(--tinta); }
+.e-bloque-bauhaus .m-ico svg { stroke-width: 1.7; }
+.e-bloque-bauhaus .m-acc b { font: 700 15px/1.2 var(--f-txt); }
+.e-bloque-bauhaus .m-acc span { font-size: 12.5px; color: var(--suave); }
+
+/* novedades: título Unbounded en mayúsculas sobre filete negro; foto en blanco y negro, cuadrada */
+.e-bloque-bauhaus .m-novs { padding: 14px 20px 0; gap: 0; }
+.e-bloque-bauhaus .m-sec { padding-bottom: 8px; border-bottom: 2px solid var(--tinta); font: 800 17px/1 var(--f-tit); letter-spacing: -.02em; color: var(--tinta); }
+.e-bloque-bauhaus .m-nov { border-top: 0; border-bottom: 0; padding: 10px 0 0; }
+.e-bloque-bauhaus .m-nov-tapa { grid-template-columns: 64px 1fr; gap: 0 14px; }
+.e-bloque-bauhaus .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 64px; height: 64px; }
+.e-bloque-bauhaus .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.15); }
+.e-bloque-bauhaus .m-nov .m-fecha { grid-row: auto; padding: 0; font: 700 11px/1.2 var(--f-tit); color: var(--tinta); }
+.e-bloque-bauhaus .m-nov-tapa .m-fecha, .e-bloque-bauhaus .m-nov-tapa b, .e-bloque-bauhaus .m-nov-tapa p { grid-column: 2; }
+.e-bloque-bauhaus .m-nov b { font: 700 15px/1.2 var(--f-txt); }
+.e-bloque-bauhaus .m-nov:not(.m-nov-tapa) { display: none; }
+.e-bloque-bauhaus .m-benef { margin: 12px 20px 0; padding: 8px 0 0; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline; border: 0; border-top: 2px solid var(--tinta); border-radius: 0; background: none; }
+.e-bloque-bauhaus .m-rubro { color: var(--suave); font-family: var(--f-tit); font-weight: 700; letter-spacing: .1em; }
+.e-bloque-bauhaus .m-benef b { font: 700 14.5px/1.2 var(--f-txt); }
+.e-bloque-bauhaus .m-benef p { grid-column: 1 / -1; }

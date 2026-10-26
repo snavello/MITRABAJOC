@@ -1,0 +1,77 @@
+/* fuentes: Anton:wght@400; Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900; Barlow Condensed:wght@600;700;800 */
+/* foto: calle; acuerdo */
+/* Noticiero de noche con flúor (ronda 8, modelo 151): la tapa de diario en un estudio de televisión nocturno. Negro neutro, fotos en
+   blanco y negro duro que caen a negro, saludo en Anton con el nombre resaltado en lima (tinta negra encima), zócalo blanco con banda gris,
+   tablero de accesos con filetes de 1px y la línea móvil con rótulo lima. */
+.e-noticiero-oscuro-fluor {
+  --fondo: #0c0d10; --sup: #141619; --tinta: #f4f5f7; --suave: #a5aab4; --linea: #262a31;
+  --acento: #C6FF3D; --acento-tinta: #0c0d10; --acento2: #d4d7dc; --oscuro: #050607; --sobre-oscuro: #f4f5f7;
+  --f-tit: "Anton", "Bebas Neue", "Arial Narrow", sans-serif; --f-txt: "Archivo", system-ui, sans-serif; --f-num: "Archivo", system-ui, sans-serif;
+  --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --radio: 0; --radio-btn: 2px;
+  background: #0c0d10; font-stretch: 100%;
+}
+/* encabezado sobre la foto */
+.e-noticiero-oscuro-fluor .m-cab { position: absolute; inset: 0 0 auto; padding: 12px 18px; color: #f4f5f7; }
+.e-noticiero-oscuro-fluor .m-logo { color: #f4f5f7; }
+.e-noticiero-oscuro-fluor .m-marca { font: 400 22px/1 var(--f-tit); letter-spacing: .04em; }
+.e-noticiero-oscuro-fluor .m-marca small { font: 600 10.5px/1 var(--f-txt); font-stretch: 108%; letter-spacing: .12em; text-transform: uppercase; color: #f4f5f7; }
+.e-noticiero-oscuro-fluor .m-yo { background: rgba(12,13,16,.5); border: 1px solid #3a3f48; color: #f4f5f7; font-family: var(--f-cond); font-weight: 700; font-size: 14px; letter-spacing: .06em; }
+
+/* la tapa: foto en blanco y negro duro, sin tinte, que cae a negro */
+.e-noticiero-oscuro-fluor .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #f4f5f7; overflow: visible; }
+.e-noticiero-oscuro-fluor .no-tapa { position: relative; height: 268px; overflow: hidden; display: flex; align-items: flex-end; padding: 0 18px 74px; background: #050607; }
+.e-noticiero-oscuro-fluor .m-heroe-foto { display: block; overflow: hidden; position: absolute; inset: 0; z-index: 0; background: #050607; }
+.e-noticiero-oscuro-fluor .m-heroe-foto .m-foto { object-position: 40% 50%; transform: scale(1.06); filter: grayscale(1) contrast(1.4) brightness(.92); mix-blend-mode: luminosity; opacity: .94; }
+.e-noticiero-oscuro-fluor .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(8,9,11,.82) 0%, rgba(8,9,11,.35) 18%, rgba(8,9,11,0) 30%, rgba(8,9,11,.1) 48%, #0c0d10 97%); }
+.e-noticiero-oscuro-fluor .no-hola { display: block; position: relative; z-index: 2; margin: 0; font: 400 54px/.9 var(--f-tit); text-transform: uppercase; letter-spacing: .2px; }
+.e-noticiero-oscuro-fluor .no-resalta { font-weight: 400; color: #0c0d10; padding: .16em .1em 0; margin-left: .02em;
+  background: linear-gradient(#C6FF3D, #C6FF3D) no-repeat; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* el zócalo: banda vertical gris clara + texto en tinta sobre blanco, montado sobre la foto */
+.e-noticiero-oscuro-fluor .no-zoc { position: relative; z-index: 2; display: flex; align-items: stretch; margin: -62px 16px 0; box-shadow: 0 14px 30px -14px rgba(0,0,0,.7); }
+.e-noticiero-oscuro-fluor .no-zoc-b { display: flex; align-items: center; justify-content: center; padding: 0 9px; background: #d4d7dc; color: #0c0d10;
+  writing-mode: vertical-rl; transform: rotate(180deg); }
+.e-noticiero-oscuro-fluor .m-cifra { margin: 0; gap: 6px; align-items: center; }
+.e-noticiero-oscuro-fluor .m-cifra b { font: 400 18px/1 var(--f-tit); }
+.e-noticiero-oscuro-fluor .m-cifra span { font: 700 11px/1 var(--f-cond); letter-spacing: 1px; text-transform: uppercase; opacity: 1; white-space: nowrap; }
+.e-noticiero-oscuro-fluor .no-zoc-t { flex: 1; min-width: 0; padding: 16px 16px 18px; background: #f4f5f7; color: #111318; }
+.e-noticiero-oscuro-fluor .m-tit { display: block; margin: 0 0 4px; font: 400 27px/.95 var(--f-tit); text-transform: uppercase; color: #111318; }
+.e-noticiero-oscuro-fluor .m-det { font-size: 13.5px; color: #30353d; opacity: 1; }
+.e-noticiero-oscuro-fluor .m-btn { margin-top: 12px; gap: 8px; min-height: 44px; padding: 0 18px; background: #C6FF3D; color: #0c0d10; border-radius: 2px;
+  font: 700 15px/1 var(--f-txt); box-shadow: inset 0 0 0 1px rgba(12,13,16,.18); }
+.e-noticiero-oscuro-fluor .m-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* el tablero de accesos 2×2 con filetes de 1px; la celda principal con filete blanco arriba */
+.e-noticiero-oscuro-fluor .m-accesos { gap: 1px; margin-top: 16px; padding: 0; background: #262a31; border-top: 1px solid #262a31; border-bottom: 1px solid #262a31; }
+.e-noticiero-oscuro-fluor .m-acc { position: relative; gap: 0; min-height: 0; padding: 38px 14px 10px; background: #0c0d10; border: 0; border-radius: 0; align-content: end; }
+.e-noticiero-oscuro-fluor .m-acc:first-child { box-shadow: inset 0 2px 0 #f4f5f7; }
+.e-noticiero-oscuro-fluor .m-acc::after { content: ""; position: absolute; right: 14px; top: 16px; width: 7px; height: 7px; border: solid #8b919c; border-width: 2px 2px 0 0; transform: rotate(45deg); }
+.e-noticiero-oscuro-fluor .m-ico { position: absolute; left: 12px; top: 9px; width: 24px; height: 24px; margin: 0; color: #cfd2d8; }
+.e-noticiero-oscuro-fluor .m-acc b { font: 400 20px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .3px; }
+.e-noticiero-oscuro-fluor .m-acc span { margin-top: 3px; font-size: 12px; color: #a5aab4; }
+
+/* novedades: título en Anton, nota con foto en blanco y negro duro y fecha en lima */
+.e-noticiero-oscuro-fluor .m-novs { padding: 10px 16px 0; gap: 0; }
+.e-noticiero-oscuro-fluor .m-sec { padding-bottom: 8px; font: 400 22px/1 var(--f-tit); letter-spacing: .2px; color: #f4f5f7; }
+.e-noticiero-oscuro-fluor .m-nov { border-top: 1px solid #262a31; padding: 9px 0; }
+.e-noticiero-oscuro-fluor .m-nov-tapa { grid-template-columns: 120px 1fr; grid-template-rows: auto 1fr; column-gap: 12px; position: relative; }
+.e-noticiero-oscuro-fluor .m-nov-tapa .m-nov-foto { overflow: hidden; grid-column: 1; grid-row: 1 / 3; height: 72px; position: relative; background: #050607; }
+.e-noticiero-oscuro-fluor .m-nov-tapa .m-foto { filter: grayscale(1) contrast(1.4) brightness(.92); }
+.e-noticiero-oscuro-fluor .m-nov-tapa .m-fecha { position: absolute; left: 0; top: 10px; z-index: 1; min-width: 0; padding: 4px 7px 3px; background: #C6FF3D; color: #0c0d10;
+  font: 800 12px/1 var(--f-cond); letter-spacing: 1px; text-transform: uppercase; }
+.e-noticiero-oscuro-fluor .m-nov b { grid-column: 2; font: 400 19px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .2px; }
+.e-noticiero-oscuro-fluor .m-nov p { grid-column: 2; margin-top: 4px; font-size: 12.5px; line-height: 1.35; color: #a5aab4; }
+.e-noticiero-oscuro-fluor .m-nov:not(.m-nov-tapa) { display: none; }
+
+/* el beneficio como línea móvil: rótulo lima, pista blanca sobre casi negro y rombos lima */
+.e-noticiero-oscuro-fluor .m-benef { margin: 0; padding: 0; height: 38px; display: flex; align-items: stretch; gap: 0; overflow: hidden; white-space: nowrap;
+  background: #050607; border: 0; border-top: 1px solid #262a31; border-bottom: 1px solid #262a31; border-radius: 0; }
+.e-noticiero-oscuro-fluor .m-rubro { display: flex; align-items: center; gap: 7px; padding: 0 12px; background: #C6FF3D; color: #0c0d10;
+  font: 800 14px/1 var(--f-cond); letter-spacing: 1.6px; }
+.e-noticiero-oscuro-fluor .m-rubro::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.e-noticiero-oscuro-fluor .m-benef b { display: flex; align-items: center; gap: 10px; padding-left: 14px; font: 600 16.5px/1 var(--f-cond); letter-spacing: .3px; color: #f4f5f7; }
+.e-noticiero-oscuro-fluor .m-benef b::before { content: ""; width: 6px; height: 6px; background: #C6FF3D; transform: rotate(45deg); flex: none; }
+.e-noticiero-oscuro-fluor .m-benef p { display: flex; align-items: center; padding-left: 12px; font: 600 12px/1 var(--f-txt); letter-spacing: .4px; color: #a5aab4;
+  -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent); mask-image: linear-gradient(90deg, #000 70%, transparent); }

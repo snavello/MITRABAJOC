@@ -1,0 +1,96 @@
+/* fuentes: Figtree:wght@400;500;600;700;800 */
+/* foto: tecnico; calle */
+/* Vivo (modelo 27). Una app clara y quieta donde solo se mueve lo que importa: la tilde que se dibuja, el número que corre,
+   el medidor que se llena tramo por tramo y el punto que late. Todo termina quieto: el estado final es el que queda. */
+@property --e-vivo-micromovimiento-n { syntax: '<integer>'; inherits: false; initial-value: 3; }
+.e-vivo-micromovimiento {
+  --fondo: #edeef2; --sup: #ffffff; --tinta: #121726; --suave: #535a6b; --linea: #d4d8df;
+  --acento: #0f2240; --acento-tinta: #ffffff; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --ok: #0d7a5f; --ok-txt: #0a6a52; --pista: #dadde4; --primario: #1a3d6b; --gris-2: #6b7282;
+  --f-tit: "Figtree", system-ui, sans-serif; --f-txt: "Figtree", system-ui, sans-serif; --f-num: "Figtree", system-ui, sans-serif;
+  --radio: 24px; --radio-btn: 999px;
+  --sombra: 0 1px 2px rgba(15,34,64,.08), 0 14px 32px -20px rgba(15,34,64,.34);
+  --vi-curva: cubic-bezier(.22,.61,.36,1); --vi-sale: cubic-bezier(.16,1,.3,1);
+  font-feature-settings: "ss01";
+}
+/* encabezado claro de una línea, con el filo del gremio arriba */
+.e-vivo-micromovimiento .m-cab { background: #fff; border-top: 4px solid var(--oscuro); box-shadow: 0 1px 0 var(--linea); padding: 10px 18px; }
+.e-vivo-micromovimiento .m-logo { color: var(--oscuro); }
+.e-vivo-micromovimiento .m-marca { font: 800 16px/1.1 var(--f-tit); letter-spacing: -.01em; }
+.e-vivo-micromovimiento .m-marca small { font: 600 12px/1.1 var(--f-txt); letter-spacing: 0; color: var(--suave); }
+.e-vivo-micromovimiento .m-yo { background: #e3e8f0; color: var(--primario); border: 0; font-weight: 800; }
+
+/* saludo grande y la tarjeta del veredicto, blanca */
+.e-vivo-micromovimiento .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-vivo-micromovimiento .m-kick { margin: 20px 20px 0; font: 800 38px/1 var(--f-tit); letter-spacing: -.035em; text-transform: none; opacity: 1; }
+.e-vivo-micromovimiento .m-kick em { font-style: normal; color: var(--primario); }
+.e-vivo-micromovimiento .vi-carta { margin: 16px 16px 0; padding: 18px 20px 18px; background: #fff; border-radius: 26px; box-shadow: var(--sombra); }
+.e-vivo-micromovimiento .m-tit { display: flex; align-items: center; gap: 10px; margin: 0; font: 700 15px/1.2 var(--f-tit); letter-spacing: .01em; color: var(--ok-txt); }
+.e-vivo-micromovimiento .vi-tilde { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: #e1efea; color: var(--ok); }
+.e-vivo-micromovimiento .vi-tilde svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.e-vivo-micromovimiento .vi-tilde path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.e-vivo-micromovimiento .m-cifra { margin: 10px 0 14px; gap: 12px; align-items: flex-end; }
+.e-vivo-micromovimiento .m-cifra b { font: 800 84px/.82 var(--f-num); letter-spacing: -.05em; font-variant-numeric: tabular-nums; color: var(--tinta); }
+.e-vivo-micromovimiento .vi-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.e-vivo-micromovimiento .vi-cnt { font-style: normal; display: inline-block; counter-reset: e-vivo-n var(--e-vivo-micromovimiento-n); }
+.e-vivo-micromovimiento .vi-cnt::after { content: counter(e-vivo-n); }
+.e-vivo-micromovimiento .m-cifra > span { font: 600 18px/1.15 var(--f-txt); color: var(--suave); opacity: 1; padding-bottom: 2px; max-width: 120px; }
+/* el medidor: doce meses, doce tramos */
+.e-vivo-micromovimiento .vi-medidor { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.e-vivo-micromovimiento .vi-tramo { height: 10px; border-radius: 99px; background: var(--pista); overflow: hidden; }
+.e-vivo-micromovimiento .vi-seg { display: block; height: 100%; border-radius: inherit; background: var(--ok); transform-origin: left center; }
+.e-vivo-micromovimiento .m-det { display: flex; align-items: center; gap: 12px; margin: 14px 0 0; padding: 11px 13px; border-radius: 16px;
+  background: #e8f2ef; color: var(--ok-txt); font-weight: 700; font-size: 13.5px; line-height: 1.3; opacity: 1; }
+.e-vivo-micromovimiento .vi-late { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); flex: none; }
+.e-vivo-micromovimiento .vi-late::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--ok); opacity: 0; }
+.e-vivo-micromovimiento .m-btn { margin-top: 14px; width: 100%; height: 48px; font-weight: 700; font-size: 15px; background: var(--oscuro); color: #fff;
+  transition: transform .12s var(--vi-curva); }
+.e-vivo-micromovimiento .m-btn:active { transform: scale(.97); }
+
+/* accesos: una sola tarjeta de renglones, no grilla de iguales */
+.e-vivo-micromovimiento .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 16px 16px 0; padding: 0; background: #fff; border-radius: 24px;
+  box-shadow: var(--sombra); overflow: hidden; }
+.e-vivo-micromovimiento .m-acc { grid-template-columns: 38px 1fr 12px; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0;
+  padding: 10px 16px; background: none; border: 0; border-radius: 0; }
+.e-vivo-micromovimiento .m-acc + .m-acc { border-top: 1px solid var(--linea); }
+.e-vivo-micromovimiento .m-ico { grid-row: span 2; width: 38px; height: 38px; border-radius: 12px; margin: 0; background: #e8ecf1; color: var(--primario); }
+.e-vivo-micromovimiento .m-acc b { font: 800 15px/1.2 var(--f-tit); letter-spacing: -.01em; }
+.e-vivo-micromovimiento .m-acc span { font-size: 12.5px; color: var(--suave); grid-column: 2; }
+.e-vivo-micromovimiento .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 7px; height: 7px; border: solid var(--gris-2);
+  border-width: 2px 2px 0 0; transform: rotate(45deg); }
+.e-vivo-micromovimiento .m-novs { padding: 22px 16px 0; gap: 10px; }
+.e-vivo-micromovimiento .m-sec { margin: 0 4px; font: 800 22px/1 var(--f-tit); letter-spacing: -.025em; text-transform: none; color: var(--tinta); }
+.e-vivo-micromovimiento .m-nov { background: #fff; border: 0; border-radius: 24px; padding: 14px 16px; box-shadow: var(--sombra); }
+.e-vivo-micromovimiento .m-nov-tapa { padding-top: 0; overflow: hidden; }
+.e-vivo-micromovimiento .m-nov-tapa .m-nov-foto { height: 120px; margin: 0 -16px 12px; position: relative; background: var(--oscuro); }
+.e-vivo-micromovimiento .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.05) brightness(1.1); mix-blend-mode: luminosity; opacity: .86; }
+.e-vivo-micromovimiento .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: #e8b84b; mix-blend-mode: screen; opacity: .2; }
+.e-vivo-micromovimiento .m-nov .m-fecha { color: var(--primario); font: 700 12px/1.2 var(--f-txt); }
+.e-vivo-micromovimiento .m-nov b { font: 800 16px/1.2 var(--f-tit); letter-spacing: -.01em; }
+.e-vivo-micromovimiento .m-benef { margin: 12px 16px 16px; background: #fff; border: 0; border-radius: 24px; box-shadow: var(--sombra); padding: 14px 16px; }
+.e-vivo-micromovimiento .m-rubro { color: #1f6f5f; }
+
+/* ——— el movimiento: solo en lo que importa, y termina quieto ——— */
+@keyframes e-vivo-micromovimiento-traza { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes e-vivo-micromovimiento-aro { from { transform: scale(.55); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes e-vivo-micromovimiento-cuenta { from { --e-vivo-micromovimiento-n: 0; } to { --e-vivo-micromovimiento-n: 3; } }
+@keyframes e-vivo-micromovimiento-llena { from { transform: scaleX(0); } to { transform: none; } }
+/* el punto late dos veces y se queda quieto el resto de un ciclo de 9 s */
+@keyframes e-vivo-micromovimiento-late { 0% { transform: scale(1); opacity: .5; } 9% { transform: scale(3.2); opacity: 0; } 10% { transform: scale(1); opacity: .5; }
+  19% { transform: scale(3.2); opacity: 0; } 100% { transform: scale(1); opacity: 0; } }
+.e-vivo-micromovimiento .vi-late::after { animation: e-vivo-micromovimiento-late 9s ease-out infinite; }
+@media (prefers-reduced-motion: no-preference) {
+  .e-vivo-micromovimiento .vi-tilde { opacity: 0; transform: scale(.55); }
+  .e-vivo-micromovimiento .vi-tilde path { stroke-dashoffset: 1; }
+  .e-vivo-micromovimiento .vi-cnt { --e-vivo-micromovimiento-n: 0; }
+  .e-vivo-micromovimiento .vi-seg { transform: scaleX(0); }
+  .e-vivo-micromovimiento.en-vista .vi-tilde { animation: e-vivo-micromovimiento-aro .45s var(--vi-sale) .15s forwards; }
+  .e-vivo-micromovimiento.en-vista .vi-tilde path { animation: e-vivo-micromovimiento-traza .5s var(--vi-curva) .4s forwards; }
+  .e-vivo-micromovimiento.en-vista .vi-cnt { animation: e-vivo-micromovimiento-cuenta 1.1s var(--vi-curva) .45s forwards; }
+  .e-vivo-micromovimiento.en-vista .vi-seg { animation: e-vivo-micromovimiento-llena .6s var(--vi-sale) calc(.65s + var(--i) * 70ms) forwards; }
+  .e-vivo-micromovimiento.en-vista .vi-late::after { animation: e-vivo-micromovimiento-late 9s ease-out 1.6s infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .e-vivo-micromovimiento *, .e-vivo-micromovimiento *::before, .e-vivo-micromovimiento *::after { animation: none !important; transition: none !important; }
+}

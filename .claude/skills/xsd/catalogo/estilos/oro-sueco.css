@@ -1,0 +1,70 @@
+/* fuentes: Hanken Grotesk:wght@300;400;500;600; JetBrains Mono:wght@400;500 */
+/* foto: edificio; calle */
+/* Oro sueco (Colm3na 116, ronda 6). Auto eléctrico escandinavo: blanco, piedra y grafito con un oro sobrio como único acento.
+   Foto a sangre en B/N templada con un velo de oro, título de 300 grande con el nombre en oro, hilos de 1px, botón grafito recto
+   con la marca de oro, rótulos y fechas en JetBrains Mono. Sin radios. */
+.e-oro-sueco {
+  --fondo: #ffffff; --sup: #f4f3f0; --tinta: #141414; --suave: #66645e; --linea: #d9d7d1;
+  --acento: #1b1b1c; --acento-tinta: #ffffff; --acento2: #c6a15a; --oscuro: #1b1b1c; --sobre-oscuro: #ffffff;
+  --f-tit: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif; --f-txt: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, monospace;
+  --radio: 0; --radio-btn: 0; --sombra: none;
+  letter-spacing: -.003em;
+}
+/* encabezado blanco con hilo; el perfil baja a la foto, en vidrio, con el punto de oro */
+.e-oro-sueco .m-cab { position: static; padding: 12px 20px; background: #fff; border-bottom: 1px solid #d9d7d1; }
+.e-oro-sueco .m-logo { color: #141414; }
+.e-oro-sueco .m-marca { font: 600 15px/1.1 var(--f-tit); letter-spacing: .02em; }
+.e-oro-sueco .m-marca small { font: 500 10px/1 var(--f-num); letter-spacing: .14em; text-transform: uppercase; color: #66645e; }
+.e-oro-sueco .m-yo { position: absolute; top: 70px; right: 16px; z-index: 3; width: 42px; height: 42px; color: #fff; background: rgba(20,20,20,.35);
+  border: 1px solid rgba(255,255,255,.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); font: 500 12px/1 var(--f-num); letter-spacing: .04em; }
+.e-oro-sueco .m-yo::after { content: ""; position: absolute; right: 0; bottom: 0; width: 9px; height: 9px; border-radius: 50%; background: #c6a15a;
+  border: 2px solid #1b1b1c; }
+/* la foto a sangre */
+.e-oro-sueco .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #141414; overflow: visible; }
+.e-oro-sueco .os-hero { position: relative; height: 250px; overflow: hidden; background: #1b1b1c; color: #fff; }
+.e-oro-sueco .m-heroe-foto { display: block; position: absolute; inset: 0; overflow: hidden; }
+.e-oro-sueco .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.06) brightness(.92); object-position: 50% 30%; transform: scale(1.04); }
+.e-oro-sueco .m-heroe-foto::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(20,20,20,.38) 0%, rgba(20,20,20,0) 30%, rgba(20,20,20,.25) 55%, rgba(16,16,16,.86) 100%),
+    linear-gradient(90deg, color-mix(in srgb, #c6a15a 22%, transparent), transparent 70%); }
+.e-oro-sueco .os-hero-txt { position: absolute; left: 20px; right: 20px; bottom: 22px; z-index: 2; }
+.e-oro-sueco .m-kick { margin: 0; font: 300 44px/1 var(--f-tit); letter-spacing: -.03em; text-transform: none; opacity: 1; color: #fff; }
+.e-oro-sueco .m-kick em { font-style: normal; font-weight: 400; color: #e3c98f; }
+.e-oro-sueco .m-det { margin: 10px 0 0; font-size: 14px; color: rgba(255,255,255,.88); opacity: 1; }
+.e-oro-sueco .os-linea { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #c6a15a; z-index: 2; }
+/* el bloque principal con la pestaña de oro */
+.e-oro-sueco .os-principal { position: relative; margin: 20px 20px 0; padding: 18px 18px 18px; border: 1px solid #d9d7d1; background: #fff; }
+.e-oro-sueco .os-principal::before { content: ""; position: absolute; left: -1px; top: -1px; width: 56px; height: 3px; background: #c6a15a; }
+.e-oro-sueco .m-cifra { margin: 0; gap: 6px; font: 500 11px/1 var(--f-num); letter-spacing: .14em; text-transform: uppercase; color: #7f6128; }
+.e-oro-sueco .m-cifra b { font: 500 11px/1 var(--f-num); }
+.e-oro-sueco .m-cifra span { font-size: 11px; opacity: 1; }
+.e-oro-sueco .m-tit { margin: 10px 0 16px; font: 300 30px/1.05 var(--f-tit); letter-spacing: -.025em; color: #141414; }
+.e-oro-sueco .m-btn { display: flex; justify-content: space-between; gap: 14px; width: 100%; min-height: 50px; padding: 0 18px; border: 1px solid #1b1b1c;
+  background: #1b1b1c; color: #fff; font: 600 15px/1 var(--f-txt); }
+.e-oro-sueco .m-btn > span { display: inline-flex; align-items: center; }
+.e-oro-sueco .os-marca { width: 8px; height: 8px; background: #c6a15a; display: inline-block; margin-right: 10px; }
+.e-oro-sueco .m-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+/* accesos: lista con hilos y cajas cuadradas */
+.e-oro-sueco .m-accesos { grid-template-columns: 1fr; gap: 0; padding: 0 20px; margin-top: 10px; }
+.e-oro-sueco .m-acc { display: grid; grid-template-columns: 36px 1fr 14px; column-gap: 14px; row-gap: 0; align-items: center; min-height: 0;
+  padding: 10px 0; background: none; border: 0; border-bottom: 1px solid #d9d7d1; border-radius: 0; }
+.e-oro-sueco .m-acc:last-child { border-bottom: 0; }
+.e-oro-sueco .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 7px; height: 7px; border: solid #66645e; border-width: 1.5px 1.5px 0 0; transform: rotate(45deg); }
+.e-oro-sueco .m-ico { grid-column: 1; grid-row: 1 / span 2; width: 36px; height: 36px; margin: 0; border-radius: 0; border: 1px solid #d9d7d1; color: #141414; }
+.e-oro-sueco .m-ico svg { width: 18px; height: 18px; stroke-width: 1.5; }
+.e-oro-sueco .m-acc:first-child .m-ico { border-color: #c6a15a; color: #7f6128; }
+.e-oro-sueco .m-acc b { grid-column: 2; font: 600 15px/1.25 var(--f-tit); }
+.e-oro-sueco .m-acc span { grid-column: 2; font-size: 13px; color: #66645e; }
+/* novedades con foto B/N */
+.e-oro-sueco .m-novs { padding: 18px 20px 0; gap: 6px; }
+.e-oro-sueco .m-sec { font: 400 22px/1 var(--f-tit); letter-spacing: -.015em; text-transform: none; color: #141414; }
+.e-oro-sueco .m-nov-tapa { grid-template-columns: 104px 1fr; gap: 0 14px; padding: 12px 0; border-top: 0; }
+.e-oro-sueco .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 104px; height: 78px; overflow: hidden; background: #e9e7e2; }
+.e-oro-sueco .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.05); }
+.e-oro-sueco .m-nov .m-fecha { grid-row: auto; grid-column: 2; padding: 0; font: 500 11.5px/1.3 var(--f-num); letter-spacing: .06em; color: #7f6128; }
+.e-oro-sueco .m-nov b { grid-column: 2; font: 600 15px/1.25 var(--f-tit); }
+.e-oro-sueco .m-nov p { font-size: 13px; color: #4b4a46; }
+.e-oro-sueco .m-novs, .e-oro-sueco .m-benef { display: none; }
+/* el pie: hilo y el oro como filete */
+.e-oro-sueco .d3 { inset: auto 20px 0 20px; height: 3px; background: linear-gradient(90deg, #c6a15a 0 56px, #d9d7d1 56px); z-index: 0; }

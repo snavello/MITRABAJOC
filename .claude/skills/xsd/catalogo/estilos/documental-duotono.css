@@ -1,0 +1,86 @@
+/* fuentes: Barlow Condensed:wght@600; Barlow Condensed:wght@700; Barlow Condensed:wght@800; Source Serif 4:ital,opsz,wght@0,8..60,400; Source Serif 4:ital,opsz,wght@0,8..60,600; Source Serif 4:ital,opsz,wght@1,8..60,400 */
+/* foto: tecnico; calle */
+/* Documental (duotono del gremio). La foto de oficio teñida: sombras = base, luces = --luz (acento claro de la UOM),
+   con Ken Burns lento, el encabezado flotando sobre la foto y la serif itálica como voz editorial frente a la condensada. */
+.e-documental-duotono {
+  --fondo: #eef0f3; --sup: #ffffff; --tinta: #152238; --suave: #566074; --linea: #dfe3ea;
+  --acento: #e8b84b; --acento-tinta: #0f2240; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --base: #0f2240; --primario: #1a3d6b; --luz: #e8b84b;
+  --cond: "Barlow Condensed", "Arial Narrow", sans-serif; --serif: "Source Serif 4", Georgia, serif;
+  --f-tit: var(--cond); --f-txt: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --f-num: var(--cond);
+  --radio: 12px; --radio-btn: 9px; --ease: cubic-bezier(.33,1,.68,1);
+}
+/* encabezado transparente sobre la foto, con la raya de 3px en --luz bajo la sigla */
+.e-documental-duotono .m-cab { position: absolute; inset: 0 0 auto; height: 64px; color: #fff; padding: 0 16px;
+  background: linear-gradient(to bottom, color-mix(in srgb, #0f2240 85%, transparent), transparent); }
+.e-documental-duotono .m-logo { color: #fff; }
+.e-documental-duotono .m-marca { font: 800 26px/1 var(--cond); letter-spacing: .02em; gap: 4px; }
+.e-documental-duotono .m-marca::after { content: ""; display: block; width: 28px; height: 3px; border-radius: 2px; background: var(--luz); order: 2; }
+.e-documental-duotono .m-marca small { display: none; }
+.e-documental-duotono .m-yo { background: color-mix(in srgb, #fff 16%, transparent); color: #fff; border-color: color-mix(in srgb, #fff 40%, transparent); }
+
+/* héroe a sangre: duotono + Ken Burns + velo */
+.e-documental-duotono .m-heroe { margin: 0; border-radius: 0; height: 340px; padding: 0 16px 16px; background: #0f2240;
+  display: flex; flex-direction: column; justify-content: flex-end; isolation: isolate; }
+.e-documental-duotono .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -2; overflow: hidden; background: var(--luz); isolation: isolate; }
+.e-documental-duotono .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.18) brightness(1.06); mix-blend-mode: multiply;
+  transform-origin: 62% 40%; animation: e-doc-kb 22s var(--ease) infinite alternate; }
+.e-documental-duotono .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: var(--base); mix-blend-mode: lighten; pointer-events: none; }
+@keyframes e-doc-kb { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.16) translate(-3%, -2%); } }
+.e-documental-duotono .m-heroe::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, #0f2240 8%, color-mix(in srgb, #0f2240 74%, transparent) 46%, transparent 76%); }
+.e-documental-duotono .m-kick { order: 1; font: 800 46px/.95 var(--cond); letter-spacing: 0; text-transform: uppercase; opacity: 1; color: #fff; margin: 0 0 10px; }
+/* el filete y el kicker en --luz arriba del veredicto */
+.e-documental-duotono .m-tit { order: 2; margin: 0; padding-top: 12px; border-top: 1px solid color-mix(in srgb, #fff 30%, transparent);
+  font: 700 34px/1 var(--cond); text-transform: uppercase; color: #fff; }
+.e-documental-duotono .m-det { order: 3; margin: 6px 0 0; font: italic 400 15px/1.35 var(--serif); opacity: 1; color: color-mix(in srgb, #fff 86%, transparent); }
+.e-documental-duotono .m-cifra { order: 4; margin: 14px 0 0; align-items: baseline; gap: 6px; }
+.e-documental-duotono .m-cifra b { font: 800 30px/1 var(--cond); color: var(--luz); }
+.e-documental-duotono .m-cifra span { font: 400 14px/1.2 var(--serif); opacity: 1; color: color-mix(in srgb, #fff 84%, transparent); }
+.e-documental-duotono .m-btn { order: 5; position: absolute; right: 16px; bottom: 16px; font: 650 15px/1 var(--f-txt); padding: 0 18px; gap: 6px; }
+.e-documental-duotono .m-btn::after { content: ""; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+/* accesos: lista en tarjeta blanca, íconos en cuadrado tintado de primario, títulos condensados */
+.e-documental-duotono .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 14px 16px 0; padding: 0; background: #fff; border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(21,34,56,.06), 0 8px 24px -14px rgba(21,34,56,.25); }
+.e-documental-duotono .m-acc { grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0;
+  padding: 5px 14px; background: none; border: 0; border-radius: 0; }
+.e-documental-duotono .m-acc + .m-acc { border-top: 1px solid #dfe3ea; }
+.e-documental-duotono .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 18px; height: 18px; background: #8a93a5;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.e-documental-duotono .m-ico { grid-row: span 2; width: 36px; height: 36px; margin: 0; border-radius: 10px; background: color-mix(in srgb, #1a3d6b 10%, #fff); color: #1a3d6b; }
+.e-documental-duotono .m-acc b { font: 700 18px/1.1 var(--cond); }
+.e-documental-duotono .m-acc span { font-size: 12.5px; color: #566074; }
+
+/* novedades: la primera con miniatura en duotono, títulos en serif 600 */
+.e-documental-duotono .m-novs { padding: 12px 16px 0; gap: 0; }
+.e-documental-duotono .m-nov:not(.m-nov-tapa) { display: none; }
+.e-documental-duotono .m-sec { font: 700 19px/1 var(--cond); letter-spacing: .02em; text-transform: uppercase; color: #152238; margin-bottom: 6px; }
+.e-documental-duotono .m-nov { grid-template-columns: 1fr; padding: 8px 0; border-top: 1px solid #dfe3ea; }
+.e-documental-duotono .m-nov b { font: 600 15px/1.2 var(--serif); order: 1; }
+.e-documental-duotono .m-nov .m-fecha { grid-row: auto; order: 3; font: italic 400 12px/1.2 var(--serif); color: #566074; padding: 2px 0 0; }
+.e-documental-duotono .m-nov p { display: none; }
+.e-documental-duotono .m-nov-tapa { grid-template-columns: 88px 1fr; grid-template-rows: auto auto 1fr; column-gap: 12px; align-items: start; }
+.e-documental-duotono .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; height: 56px; border-radius: 9px; position: relative; isolation: isolate;
+  background: var(--luz); overflow: hidden; }
+.e-documental-duotono .m-nov-tapa .m-foto { filter: grayscale(1) contrast(1.18) brightness(1.06); mix-blend-mode: multiply; }
+.e-documental-duotono .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: var(--base); mix-blend-mode: lighten; }
+.e-documental-duotono .m-nov-tapa b, .e-documental-duotono .m-nov-tapa .m-fecha, .e-documental-duotono .m-nov-tapa p { grid-column: 2; }
+.e-documental-duotono .m-nov-tapa b { grid-row: 1; }
+.e-documental-duotono .m-nov-tapa .m-fecha { grid-row: 2; }
+
+/* beneficio: tarjeta-foto en duotono con chip en --luz */
+.e-documental-duotono .m-benef { margin: 8px 16px 0; padding: 12px 14px; border: 0; border-radius: 10px; color: #fff; overflow: hidden; isolation: isolate;
+  background: linear-gradient(to top, #0f2240 18%, rgba(15,34,64,.62) 62%, rgba(15,34,64,.2)),
+    linear-gradient(#0f2240, #0f2240), linear-gradient(#e8b84b, #e8b84b), url(fotos/acuerdo.jpg) 50% 38% / cover, #fff;
+  background-blend-mode: normal, lighten, multiply, luminosity; padding-top: 22px; }
+.e-documental-duotono .m-rubro { justify-self: start; padding: 3px 8px; border-radius: 20px; background: var(--luz); color: #0f2240; font: 700 10px/1 var(--f-txt); letter-spacing: .06em; margin-bottom: 3px; }
+.e-documental-duotono .m-benef b { font: 700 17px/1.05 var(--cond); }
+.e-documental-duotono .m-benef p { color: color-mix(in srgb, #fff 82%, transparent); font: italic 400 12.5px/1.3 var(--serif); }
+@media (prefers-reduced-motion: reduce) { .e-documental-duotono .m-heroe-foto .m-foto { animation: none; } }
+
+/* que nada se encoja: lo que no entra se ve, no se aplasta */
+.e-documental-duotono > * { flex-shrink: 0; }

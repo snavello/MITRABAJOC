@@ -1,0 +1,119 @@
+/* fuentes: Barlow Condensed:wght@700; Public Sans:wght@400;500;600;700 */
+/* foto: tecnico; edificio */
+/* Señalética suave (Colm3na 57/87, ronda 4). La claridad de una estación de tren moderna: pictogramas propios en el color
+   del gremio y una línea con cinco paradas. El movimiento es el recorrido: la vía se llena de izquierda a derecha, una luz
+   la recorre y cada parada se enciende en verde cuando la luz pasa. Después la luz vuelve a pasar cada tanto, despacio. */
+.e-senaletica-suave {
+  --fondo: #eef0ef; --sup: #ffffff; --tinta: #161a21; --suave: #555b67; --linea: #e0e3e7; --linea-2: #eceef1;
+  --acento: #1a3d6b; --acento-tinta: #ffffff; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --ok: #0d7a5f; --marca-f: #eaedf2; --marca-l: #c3cdd8;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Public Sans", system-ui, sans-serif; --f-num: "Public Sans", system-ui, sans-serif;
+  --radio: 18px; --radio-btn: 11px;
+  --curva: cubic-bezier(.22,.61,.36,1);
+  --sombra: 0 12px 26px -20px rgba(18,22,30,.42), 0 1px 2px rgba(18,22,30,.05);
+}
+.e-senaletica-suave .m-cab { background: #fff; padding: 11px 16px; border-bottom: 1px solid var(--linea); box-shadow: inset 0 3px 0 #1a3d6b; }
+.e-senaletica-suave .m-logo { width: 34px; height: 34px; border-radius: 10px; background: #1a3d6b; color: #fff; }
+.e-senaletica-suave .m-logo svg { width: 20px; height: 20px; }
+.e-senaletica-suave .m-marca { font: 700 19px/1 var(--f-tit); letter-spacing: .05em; text-transform: uppercase; }
+.e-senaletica-suave .m-yo { background: var(--marca-f); color: #1a3d6b; border-color: var(--marca-l); }
+
+.e-senaletica-suave .m-heroe { margin: 0 0 14px; padding: 20px 16px 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+.e-senaletica-suave .m-kick { margin: 0 0 14px 2px; font: 700 40px/1 var(--f-tit); letter-spacing: .012em; text-transform: uppercase; opacity: 1; }
+.e-senaletica-suave .m-kick span { color: #1a3d6b; }
+
+/* el cartel */
+.e-senaletica-suave .ses-cartel { background: #fff; border: 1px solid var(--linea); border-radius: 18px; padding: 16px 16px 14px; box-shadow: var(--sombra); }
+.e-senaletica-suave .ses-top { display: flex; align-items: center; gap: 12px; }
+.e-senaletica-suave .ses-pic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #1a3d6b; color: #fff; }
+.e-senaletica-suave .ses-pic svg, .e-senaletica-suave .m-ico svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.e-senaletica-suave .m-tit { margin: 0 0 2px; font: 700 24px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .012em; }
+.e-senaletica-suave .m-det { font-size: 13px; color: var(--suave); opacity: 1; line-height: 1.3; }
+
+/* LA FIRMA: la línea con cinco paradas */
+.e-senaletica-suave .ses-l5 { position: relative; margin: 16px 0 2px; height: 26px; }
+.e-senaletica-suave .ses-l5::before { content: ""; position: absolute; left: 10%; right: 10%; top: 11px; height: 4px; border-radius: 4px; background: var(--marca-l); }
+.e-senaletica-suave .ses-via { position: absolute; left: 10%; right: 10%; top: 11px; height: 4px; border-radius: 4px; background: #1a3d6b; transform-origin: left center; }
+.e-senaletica-suave .ses-carro { position: absolute; left: 10%; right: 10%; top: 0; height: 26px; pointer-events: none; opacity: 0; z-index: 2; }
+.e-senaletica-suave .ses-carro i { position: absolute; left: -13px; top: 0; width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle closest-side, #fff 0 22%, rgb(232 184 75 / .9) 38%, rgb(232 184 75 / .35) 64%, transparent 100%); }
+.e-senaletica-suave .ses-l5 ol { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(5, 1fr); margin: 0; padding: 0; list-style: none; }
+.e-senaletica-suave .ses-l5 li { position: relative; display: grid; place-items: center; }
+.e-senaletica-suave .ses-l5 li i { position: relative; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--ok); color: #fff; box-shadow: 0 0 0 3px #fff; }
+.e-senaletica-suave .ses-l5 li i svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+.e-senaletica-suave .ses-l5 li i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--marca-l); opacity: 0; }
+.e-senaletica-suave .ses-l5 li::after { content: ""; position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+  background: radial-gradient(circle closest-side, rgb(13 122 95 / .38), rgb(13 122 95 / .12) 60%, transparent); opacity: 0; z-index: -1; }
+.e-senaletica-suave .ses-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--linea-2); }
+.e-senaletica-suave .m-cifra { margin: 0; gap: 7px; }
+.e-senaletica-suave .m-cifra b { font: 700 30px/1 var(--f-tit); color: #1a3d6b; }
+.e-senaletica-suave .m-cifra span { font-size: 12.5px; color: var(--suave); opacity: 1; max-width: 10ch; line-height: 1.2; }
+.e-senaletica-suave .m-btn { min-height: 42px; padding: 0 16px; font-weight: 700; }
+.e-senaletica-suave .m-btn::after { content: ""; width: 7px; height: 7px; margin-left: 10px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(45deg); }
+
+/* directorio de accesos con pictogramas */
+.e-senaletica-suave .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 0 16px; padding: 0; background: #fff; border: 1px solid var(--linea); border-radius: 16px; box-shadow: var(--sombra); overflow: hidden; }
+.e-senaletica-suave .m-acc { grid-template-columns: 40px 1fr 14px; gap: 0 14px; align-items: center; min-height: 0; padding: 10px 14px; border: 0; border-radius: 0; background: none; }
+.e-senaletica-suave .m-acc + .m-acc { border-top: 1px solid var(--linea-2); }
+.e-senaletica-suave .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 8px; height: 8px; border-right: 2px solid #6a707b; border-top: 2px solid #6a707b; transform: rotate(45deg); }
+.e-senaletica-suave .m-ico { grid-row: span 2; margin: 0; width: 40px; height: 40px; border-radius: 11px; background: var(--marca-f); color: #1a3d6b; }
+.e-senaletica-suave .m-acc:first-child .m-ico { background: #1a3d6b; color: #fff; }
+.e-senaletica-suave .m-acc b { font-size: 15px; font-weight: 700; }
+.e-senaletica-suave .m-acc span { font-size: 12px; }
+
+/* novedades: título con pictograma, nota de tapa con foto */
+.e-senaletica-suave .m-novs { padding-top: 16px; gap: 6px; }
+.e-senaletica-suave .m-sec { display: flex; align-items: center; gap: 9px; font: 700 20px/1 var(--f-tit); letter-spacing: .02em; color: var(--tinta); }
+.e-senaletica-suave .m-sec::before { content: ""; width: 26px; height: 26px; border-radius: 8px; background-color: #1a3d6b;
+  background-image: linear-gradient(#fff, #fff), linear-gradient(#fff, #fff), linear-gradient(#fff, #fff);
+  background-size: 12px 2px, 12px 2px, 8px 2px; background-position: 7px 7px, 7px 12px, 7px 17px; background-repeat: no-repeat; }
+.e-senaletica-suave .m-nov { grid-template-columns: 1fr auto; gap: 0 10px; padding: 10px 12px; background: #fff; border: 1px solid var(--linea); border-radius: 14px; }
+.e-senaletica-suave .m-nov .m-fecha { grid-row: auto; grid-column: 2; order: 2; min-width: 0; padding: 0; font: 600 11.5px/1.2 var(--f-txt); color: #1a3d6b; }
+.e-senaletica-suave .m-nov b { grid-column: 1; grid-row: 1; font-size: 14px; font-weight: 700; }
+.e-senaletica-suave .m-nov p { grid-column: 1 / -1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.e-senaletica-suave .m-nov-tapa { grid-template-columns: 52px 1fr auto; box-shadow: inset 0 3px 0 #1a3d6b; }
+.e-senaletica-suave .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 2; height: 52px; border-radius: 10px; }
+.e-senaletica-suave .m-nov-tapa .m-nov-foto .m-foto { filter: saturate(.75); }
+.e-senaletica-suave .m-nov-tapa b { grid-column: 2; }
+.e-senaletica-suave .m-nov-tapa .m-fecha { grid-column: 3; grid-row: 1; }
+.e-senaletica-suave .m-nov-tapa p { grid-column: 2 / -1; grid-row: 2; }
+.e-senaletica-suave .m-benef { display: none; }
+
+/* movimiento */
+@media (prefers-reduced-motion: no-preference) {
+  .e-senaletica-suave .ses-e, .e-senaletica-suave .m-acc, .e-senaletica-suave .m-novs { opacity: 0; }
+  .e-senaletica-suave .ses-via { transform: scaleX(0); }
+  .e-senaletica-suave .ses-l5 li i { transform: scale(.6); }
+  .e-senaletica-suave .ses-l5 li i::after { opacity: 1; }
+  .e-senaletica-suave .m-acc .m-ico { transform: scale(.6); }
+
+  .e-senaletica-suave.en-vista .ses-e { animation: e-senaletica-suave-entra .6s var(--curva) both; }
+  .e-senaletica-suave.en-vista .ses-cartel { animation-delay: .1s; }
+  /* la vía se llena y la luz la recorre; las paradas se encienden a su paso */
+  .e-senaletica-suave.en-vista .ses-via { animation: e-senaletica-suave-llena 1.25s cubic-bezier(.45,.05,.35,1) .6s both; }
+  .e-senaletica-suave.en-vista .ses-carro { animation: e-senaletica-suave-recorre 1.25s cubic-bezier(.45,.05,.35,1) .6s both,
+    e-senaletica-suave-vuelve 9s cubic-bezier(.45,.05,.35,1) 4.6s infinite; }
+  .e-senaletica-suave.en-vista .ses-l5 li i { animation: e-senaletica-suave-parada .5s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(.62s + var(--k) * .29s); }
+  .e-senaletica-suave.en-vista .ses-l5 li i::after { animation: e-senaletica-suave-prende .3s ease-out both; animation-delay: calc(.62s + var(--k) * .29s); }
+  .e-senaletica-suave.en-vista .ses-l5 li::after { animation: e-senaletica-suave-destello .9s ease-out both, e-senaletica-suave-destello-ciclo 9s ease-out infinite;
+    animation-delay: calc(.62s + var(--k) * .29s), calc(4.65s + var(--k) * .3s); }
+  .e-senaletica-suave.en-vista .m-acc { animation: e-senaletica-suave-entra .55s var(--curva) both; }
+  .e-senaletica-suave.en-vista .m-acc .m-ico { animation: e-senaletica-suave-pic .5s cubic-bezier(.16,1,.3,1) both; }
+  .e-senaletica-suave.en-vista .m-acc:nth-child(1), .e-senaletica-suave.en-vista .m-acc:nth-child(1) .m-ico { animation-delay: 1.1s; }
+  .e-senaletica-suave.en-vista .m-acc:nth-child(2), .e-senaletica-suave.en-vista .m-acc:nth-child(2) .m-ico { animation-delay: 1.2s; }
+  .e-senaletica-suave.en-vista .m-acc:nth-child(3), .e-senaletica-suave.en-vista .m-acc:nth-child(3) .m-ico { animation-delay: 1.3s; }
+  .e-senaletica-suave.en-vista .m-acc:nth-child(4), .e-senaletica-suave.en-vista .m-acc:nth-child(4) .m-ico { animation-delay: 1.4s; }
+  .e-senaletica-suave.en-vista .m-novs { animation: e-senaletica-suave-entra .6s var(--curva) 1.55s both; }
+}
+@keyframes e-senaletica-suave-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes e-senaletica-suave-llena { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes e-senaletica-suave-recorre { 0% { opacity: 0; transform: translateX(0); } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(100%); } }
+@keyframes e-senaletica-suave-vuelve { 0% { opacity: 0; transform: translateX(0); } 2% { opacity: 1; } 13% { opacity: 1; } 15%, 100% { opacity: 0; transform: translateX(100%); } }
+@keyframes e-senaletica-suave-parada { from { transform: scale(.6); } 60% { transform: scale(1.18); } to { transform: none; } }
+@keyframes e-senaletica-suave-prende { from { opacity: 1; } to { opacity: 0; } }
+@keyframes e-senaletica-suave-destello { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes e-senaletica-suave-destello-ciclo { 0% { opacity: 0; transform: scale(.5); } 3% { opacity: 1; transform: scale(1); } 10%, 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes e-senaletica-suave-pic { from { transform: scale(.6); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .e-senaletica-suave *, .e-senaletica-suave *::before, .e-senaletica-suave *::after { animation: none !important; transition: none !important; }
+}

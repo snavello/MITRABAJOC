@@ -1,0 +1,79 @@
+/* fuentes: Archivo:wdth,wght@62..125,400..900 */
+/* Tinta (estilo tipográfico suizo, modelo 13). Blanco puro, negro enorme y seis columnas grises dibujadas detrás de todo;
+   todo cae en esas columnas. El gremio (UOM) solo en la franja de 6px de arriba y en el botón. Radio cero, sin sombras. */
+.e-tinta-suizo {
+  --fondo: #ffffff; --sup: #fafafa; --tinta: #111111; --suave: #565656; --linea: #d6d6d6;
+  --acento: #e8b84b; --acento-tinta: #0f2240; --acento2: #1a3d6b; --oscuro: #111111; --sobre-oscuro: #ffffff;
+  --gris2: #6b6b6b; --tenue: #8a8a8a; --guia: #e9e9e9; --mal: #c0392b;
+  --f-tit: "Archivo", "Helvetica Neue", Arial, sans-serif; --f-txt: "Archivo", "Helvetica Neue", Arial, sans-serif; --f-num: "Archivo", sans-serif;
+  --radio: 0; --radio-btn: 0; --sombra: none;
+  --pad: 20px; --gap: 10px; --curva: cubic-bezier(.33,1,.68,1);
+  font-variant-numeric: tabular-nums;
+}
+/* LA FIRMA: seis columnas de 45px con su filo, detrás de todo */
+.e-tinta-suizo .d1 { inset: 0; z-index: 0; padding: 0 var(--pad);
+  background: linear-gradient(90deg, var(--guia) 0 1px, #fafafa 1px 44px, var(--guia) 44px 45px, transparent 45px 55px) content-box 0 0 / 55px 100% repeat-x;
+  transform-origin: top center; animation: e-ti-guia 1.1s var(--curva) both; }
+@keyframes e-ti-guia { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+/* franja del gremio: primario a sangre, acento desde la columna 5 */
+.e-tinta-suizo .d2 { inset: 0 0 auto 0; height: 6px; z-index: 3; background: linear-gradient(90deg, #1a3d6b 0 240px, #e8b84b 240px); }
+.e-tinta-suizo .m-cab, .e-tinta-suizo .m-heroe, .e-tinta-suizo .m-accesos, .e-tinta-suizo .m-novs, .e-tinta-suizo .m-benef { z-index: 1; }
+
+/* encabezado de una línea, cerrado por una regla de 2px */
+.e-tinta-suizo .m-cab { margin: 6px var(--pad) 0; padding: 10px 0; border-bottom: 2px solid #111; gap: 10px; }
+.e-tinta-suizo .m-logo { color: #111; width: 45px; justify-items: start; }
+.e-tinta-suizo .m-logo svg { width: 30px; height: 30px; }
+.e-tinta-suizo .m-marca { font: 800 17px/1 var(--f-tit); font-variation-settings: "wdth" 125; letter-spacing: -.01em; }
+.e-tinta-suizo .m-marca small { font: 600 11px/1.2 var(--f-txt); letter-spacing: 0; color: #565656; }
+.e-tinta-suizo .m-yo { border-radius: 0; background: #fff; border: 0; box-shadow: inset 0 0 0 1.5px #111; color: #111; font-weight: 800; }
+
+/* héroe en la grilla: el saludo gris, el título negro y ancho, el 3 gigante en las columnas 1-2 */
+.e-tinta-suizo .m-heroe { margin: 0; padding: 16px var(--pad) 0; border-radius: 0; background: none; color: #111; overflow: visible;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: var(--gap); }
+.e-tinta-suizo .m-heroe > * { grid-column: 1 / -1; }
+.e-tinta-suizo .m-kick { font: 800 22px/1 var(--f-tit); font-variation-settings: "wdth" 112; letter-spacing: -.03em; text-transform: none; color: #6b6b6b; opacity: 1; }
+.e-tinta-suizo .m-tit { margin: 4px 0 0; font: 900 36px/.88 var(--f-tit); font-variation-settings: "wdth" 125; letter-spacing: -.045em;
+  animation: e-ti-sube .9s var(--curva) .15s both; }
+.e-tinta-suizo .m-det { margin: 8px 0 0; font-size: 14px; color: #565656; opacity: 1; }
+.e-tinta-suizo .m-cifra { display: grid; grid-template-columns: subgrid; align-items: end; margin: 10px 0 0; padding-top: 2px; border-top: 2px solid #111; }
+.e-tinta-suizo .m-cifra b { grid-column: 1 / 3; font: 900 82px/.8 var(--f-tit); font-variation-settings: "wdth" 125; letter-spacing: -.045em; padding-top: 8px;
+  animation: e-ti-sube .9s var(--curva) .2s both; }
+.e-tinta-suizo .m-cifra span { grid-column: 3 / 7; font-size: 16px; line-height: 1.25; opacity: 1; padding-bottom: 2px; font-weight: 600; }
+.e-tinta-suizo .m-btn { margin-top: 10px; min-height: 44px; justify-content: space-between; padding: 0 16px; font: 800 16px/1 var(--f-txt); }
+.e-tinta-suizo .m-btn::after { content: ""; width: 22px; height: 22px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat; }
+@keyframes e-ti-sube { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* accesos: filas en la grilla, cada una de tres columnas, la primera con regla gruesa */
+.e-tinta-suizo .m-accesos { margin-top: 16px; padding: 0 var(--pad); column-gap: var(--gap); row-gap: 0; grid-template-columns: 1fr 1fr; }
+.e-tinta-suizo .m-acc { min-height: 0; padding: 6px 0 7px; border: 0; border-top: 1px solid #d6d6d6; border-radius: 0; background: none;
+  grid-template-columns: 1fr; gap: 2px; }
+.e-tinta-suizo .m-acc:nth-child(-n+2) { border-top: 2px solid #111; }
+.e-tinta-suizo .m-ico { width: 22px; height: 22px; margin: 0 0 2px; color: #111; border-radius: 0; place-items: start; }
+.e-tinta-suizo .m-ico svg { width: 22px; height: 22px; stroke-width: 1.7; }
+.e-tinta-suizo .m-acc b { font: 800 15.5px/1.15 var(--f-tit); font-variation-settings: "wdth" 112; letter-spacing: -.01em; }
+.e-tinta-suizo .m-acc span { font-size: 11.5px; line-height: 1.25; color: #565656; }
+
+/* novedades: título de sección ancho y en mayúsculas, la tapa grande */
+.e-tinta-suizo .m-novs { padding: 12px var(--pad) 0; gap: 0; }
+.e-tinta-suizo .m-sec { margin: 0 0 8px; font: 900 22px/1 var(--f-tit); font-variation-settings: "wdth" 125; letter-spacing: -.03em; color: #111; text-transform: uppercase; margin-bottom: 6px; }
+.e-tinta-suizo .m-nov { grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: var(--gap); padding: 6px 0 7px; border-top: 1px solid #d6d6d6; }
+.e-tinta-suizo .m-nov .m-fecha { grid-column: 1 / 3; grid-row: 1; font: 800 11px/1.3 var(--f-txt); letter-spacing: .1em; text-transform: uppercase; color: #565656; min-width: 0; padding-top: 3px; }
+.e-tinta-suizo .m-nov b { grid-column: 3 / 7; font: 700 15px/1.2 var(--f-tit); }
+.e-tinta-suizo .m-nov p { display: none; }
+.e-tinta-suizo .m-nov-tapa { border-top: 2px solid #111; }
+.e-tinta-suizo .m-nov-tapa .m-nov-foto { display: none; }
+.e-tinta-suizo .m-nov-tapa b { grid-column: 1 / -1; grid-row: 2; margin-top: 2px; font: 900 19px/1.02 var(--f-tit); font-variation-settings: "wdth" 112; letter-spacing: -.03em; }
+.e-tinta-suizo .m-nov-tapa p { display: none; grid-column: 1 / -1; grid-row: 3; font-size: 12.5px; color: #565656; margin-top: 3px; }
+
+/* beneficio como una fila más, con regla gruesa */
+.e-tinta-suizo .m-benef { margin: 4px var(--pad) 0; padding: 9px 0 0; border: 0; border-top: 2px solid #111; border-radius: 0; background: none;
+  grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: var(--gap); row-gap: 1px; }
+.e-tinta-suizo .m-rubro { grid-column: 1 / 3; grid-row: 1 / span 2; font: 800 11px/1.3 var(--f-txt); letter-spacing: .1em; color: #565656; padding-top: 3px; }
+.e-tinta-suizo .m-benef b { grid-column: 3 / 7; font: 700 14px/1.2 var(--f-tit); white-space: nowrap; }
+.e-tinta-suizo .m-benef p { grid-column: 3 / 7; font-size: 11.5px; line-height: 1.3; color: #565656; }
+@media (prefers-reduced-motion: reduce) { .e-tinta-suizo .d1, .e-tinta-suizo .m-tit, .e-tinta-suizo .m-cifra b { animation: none; } }
+
+/* que nada se encoja: lo que no entra se ve, no se aplasta */
+.e-tinta-suizo > * { flex-shrink: 0; }

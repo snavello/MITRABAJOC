@@ -1,0 +1,87 @@
+/* fuentes: Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900; JetBrains Mono:wght@400;500;700 */
+/* foto: tecnico; herramientas */
+/* Núcleo verde (ronda 6, modelo 100): hardware de potencia. Negro profundo con retícula lima de 24px, esquinas cortadas a 45° en todo lo
+   accionable, foto en grises multiplicada con lima y un solo verde #8fd320. */
+.e-nucleo-verde {
+  --fondo: #0b0d0a; --sup: #121510; --tinta: #eef1ea; --suave: #aeb7a6; --linea: #2a3025;
+  --acento: #8fd320; --acento-tinta: #090b06; --acento2: #a6e43f; --oscuro: #060705; --sobre-oscuro: #eef1ea;
+  --f-tit: "Archivo", "Arial Narrow", system-ui, sans-serif; --f-txt: "Archivo", system-ui, sans-serif; --f-num: "JetBrains Mono", ui-monospace, monospace;
+  --radio: 0; --radio-btn: 0; --c: 12px;
+  --corte: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
+  background-color: #0b0d0a;
+  background-image: linear-gradient(rgba(143,211,32,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(143,211,32,.055) 1px, transparent 1px);
+  background-size: 24px 24px; font-stretch: 100%;
+}
+/* encabezado: logo en sello de esquina cortada y filete lima de 64px */
+.e-nucleo-verde .m-cab { padding: 10px 16px; border-bottom: 1px solid #2a3025; background: #0b0d0a; }
+.e-nucleo-verde .m-cab::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 64px; height: 2px; background: #8fd320; }
+.e-nucleo-verde .m-logo { --c: 8px; width: 40px; height: 40px; background: #191d16; box-shadow: inset 0 0 0 1px #3b4334; clip-path: var(--corte); color: #8fd320; }
+.e-nucleo-verde .m-logo svg { width: 22px; height: 22px; }
+.e-nucleo-verde .m-marca { font: 800 17px/1 var(--f-tit); font-stretch: 118%; letter-spacing: .02em; }
+.e-nucleo-verde .m-marca small { order: -1; font: 700 10.5px/1.2 var(--f-tit); font-stretch: 112%; letter-spacing: .16em; text-transform: uppercase; color: #8a9581; }
+.e-nucleo-verde .m-yo { --c: 7px; border-radius: 0; clip-path: var(--corte); background: #191d16; border: 0; box-shadow: inset 0 0 0 1px #3b4334;
+  font: 700 12px/1 var(--f-num); color: #eef1ea; }
+
+/* héroe: foto a sangre teñida de lima, escáner y escuadras; debajo la tarjeta principal cortada */
+.e-nucleo-verde .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #eef1ea; overflow: visible; }
+.e-nucleo-verde .nv-tapa { position: relative; height: 150px; overflow: hidden; border-bottom: 1px solid #2a3025; display: flex; align-items: flex-end; padding: 0 16px 14px; }
+.e-nucleo-verde .m-heroe-foto { display: block; overflow: hidden; position: absolute; inset: 0; z-index: -2; background: #060705; }
+.e-nucleo-verde .m-heroe-foto .m-foto { object-position: 50% 30%; filter: grayscale(1) contrast(1.2) brightness(.78); }
+.e-nucleo-verde .m-heroe-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; background: #8fd320; mix-blend-mode: multiply; opacity: .78; }
+.e-nucleo-verde .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(180deg, rgba(6,7,5,.25) 0%, rgba(6,7,5,0) 35%, rgba(6,7,5,.8) 84%, #0b0d0a 100%); }
+.e-nucleo-verde .nv-scan { position: absolute; left: 0; right: 0; top: 44px; height: 30px; z-index: -1;
+  background: linear-gradient(180deg, transparent, rgba(166,228,63,.14) 80%, #a6e43f 97%, transparent); mix-blend-mode: screen; opacity: .8; }
+.e-nucleo-verde .nv-esq { position: absolute; top: 14px; width: 22px; height: 22px; border: 2px solid #8fd320; }
+.e-nucleo-verde .nv-a { left: 14px; border-right: 0; border-bottom: 0; }
+.e-nucleo-verde .nv-b { right: 14px; border-left: 0; border-bottom: 0; }
+.e-nucleo-verde .nv-hola { display: block; margin: 0; font: 800 38px/1.02 var(--f-tit); font-stretch: 118%; letter-spacing: -.01em; color: #eef1ea; }
+.e-nucleo-verde .nv-hola em { font-style: normal; color: #a6e43f; }
+.e-nucleo-verde .nv-prin { --c: 12px; margin: 10px 16px 0; padding: 14px 14px 14px; clip-path: var(--corte);
+  background: linear-gradient(160deg, #1b2709 0%, #121510 58%); box-shadow: inset 0 0 0 1px #2a3025; }
+.e-nucleo-verde .m-tit { display: block; margin: 0 0 4px; font: 800 23px/1.04 var(--f-tit); font-stretch: 118%; letter-spacing: -.01em; }
+.e-nucleo-verde .m-det { font-size: 13px; color: #aeb7a6; opacity: 1; }
+.e-nucleo-verde .m-cifra { margin: 10px 0 10px; gap: 10px; align-items: center; }
+.e-nucleo-verde .m-cifra b { --c: 7px; display: grid; place-items: center; width: 36px; height: 36px; background: #060705; color: #8fd320;
+  box-shadow: inset 0 0 0 1px #3b4334; clip-path: var(--corte); font: 700 22px/1 var(--f-num); }
+.e-nucleo-verde .m-cifra span { font: 700 11px/1.2 var(--f-tit); font-stretch: 112%; letter-spacing: .16em; text-transform: uppercase; color: #aeb7a6; opacity: 1; }
+.e-nucleo-verde .m-btn { --c: 9px; width: 100%; min-height: 48px; justify-content: space-between; padding: 0 18px; gap: 10px; clip-path: var(--corte);
+  background: #8fd320; color: #090b06; font: 800 14px/1 var(--f-tit); font-stretch: 112%; letter-spacing: .08em; text-transform: uppercase; }
+.e-nucleo-verde .m-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: square; }
+
+/* accesos: tarjetas de esquina cortada con el ícono en su caja cortada */
+.e-nucleo-verde .m-accesos { gap: 6px; padding: 10px 16px 0; }
+.e-nucleo-verde .m-acc { --c: 10px; min-height: 0; padding: 9px 8px; gap: 1px; clip-path: var(--corte); background: #121510; border: 0; box-shadow: inset 0 0 0 1px #2a3025;
+  grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; }
+.e-nucleo-verde .m-acc:first-child { box-shadow: inset 0 0 0 1px #3b4334, inset 0 2px 0 #8fd320; }
+.e-nucleo-verde .m-ico { --c: 6px; grid-row: span 2; width: 30px; height: 30px; margin: 0; border-radius: 0; clip-path: var(--corte);
+  background: #060705; box-shadow: inset 0 0 0 1px #3b4334; color: #8fd320; }
+.e-nucleo-verde .m-ico svg { width: 18px; height: 18px; }
+.e-nucleo-verde .m-acc b { font: 800 13px/1.1 var(--f-tit); font-stretch: 100%; white-space: nowrap; }
+.e-nucleo-verde .m-acc span { font-size: 10.5px; line-height: 1.25; color: #aeb7a6; }
+
+/* novedades: rótulo técnico, miniatura cortada teñida y fecha en mono */
+.e-nucleo-verde .m-novs { padding: 12px 16px 0; gap: 0; }
+.e-nucleo-verde .m-sec { font: 700 11px/1 var(--f-tit); font-stretch: 112%; letter-spacing: .16em; color: #8a9581; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.e-nucleo-verde .m-sec::before { content: ""; width: 8px; height: 8px; background: #8fd320; }
+.e-nucleo-verde .m-nov { border-top: 1px solid #2a3025; padding: 8px 0; }
+.e-nucleo-verde .m-nov .m-fecha { font: 500 11px/1.2 var(--f-num); color: #8a9581; text-transform: uppercase; }
+.e-nucleo-verde .m-nov b { font: 700 14px/1.2 var(--f-tit); font-stretch: 104%; }
+.e-nucleo-verde .m-nov p { font-size: 12px; color: #aeb7a6; }
+.e-nucleo-verde .m-nov-tapa { grid-template-columns: 84px 1fr; grid-template-rows: auto auto 1fr; column-gap: 12px; }
+.e-nucleo-verde .m-nov-tapa .m-nov-foto { overflow: hidden; --c: 8px; grid-column: 1; grid-row: 1 / 4; height: 54px; position: relative; background: transparent; }
+.e-nucleo-verde .m-nov-tapa .m-foto { clip-path: var(--corte); filter: grayscale(1) contrast(1.2) brightness(.8); }
+.e-nucleo-verde .m-nov-tapa .m-nov-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; clip-path: var(--corte); background: #8fd320; mix-blend-mode: multiply; opacity: .62; }
+.e-nucleo-verde .m-nov-tapa .m-fecha { grid-row: auto; grid-column: 2; padding: 0; color: #a6e43f; }
+.e-nucleo-verde .m-nov-tapa b, .e-nucleo-verde .m-nov-tapa p { grid-column: 2; }
+.e-nucleo-verde .m-nov:not(.m-nov-tapa) { display: none; }
+
+/* beneficio: chip técnico arriba y ranura rayada */
+.e-nucleo-verde .m-benef { --c: 10px; margin: 2px 16px 0; padding: 10px 12px; border: 0; clip-path: var(--corte); background: #121510;
+  box-shadow: inset 0 0 0 1px #2a3025; }
+.e-nucleo-verde .m-benef::after { content: ""; position: absolute; top: 10px; right: 12px; width: 64px; height: 20px;
+  background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(143,211,32,.22) 5px 6px); box-shadow: inset 0 0 0 1px #2a3025; }
+.e-nucleo-verde .m-rubro { justify-self: start; padding: 4px 8px; background: rgba(6,7,5,.85); box-shadow: inset 0 0 0 1px #3b4334; color: #8fd320;
+  font: 800 10.5px/1 var(--f-tit); font-stretch: 110%; letter-spacing: .14em; }
+.e-nucleo-verde .m-benef b { margin-top: 5px; font: 800 15px/1.15 var(--f-tit); font-stretch: 104%; }
+.e-nucleo-verde .m-benef p { color: #aeb7a6; }

@@ -1,0 +1,80 @@
+/* fuentes: Manrope:wght@400..800; JetBrains Mono:wght@400..600 */
+/* foto: tecnico; calle */
+/* Grafito (modelo 14): cuatro grises, bordes de 1px, el color del gremio (UOM #e8b84b) solo en el foco y la acción, con su resplandor. */
+.e-grafito-pro {
+  --g0: #0a0a0b; --g1: #111113; --g2: #161618; --g3: #1c1c1f; --ln2: #2e2e33; --ln3: #3a3a40; --t3: #8e8e96;
+  --fondo: #0a0a0b; --sup: #111113; --tinta: #ededed; --suave: #a1a1aa; --linea: #232327;
+  --acento: #e8b84b; --acento-tinta: #0f2240; --acento2: #ff7b6e; --oscuro: #0a0a0b; --sobre-oscuro: #ededed;
+  --ok: #4cc79f; --mal: #ff7b6e;
+  --f-tit: "Manrope", system-ui, sans-serif; --f-txt: "Manrope", system-ui, sans-serif; --f-num: "JetBrains Mono", ui-monospace, monospace;
+  --radio: 16px; --radio-btn: 12px;
+  background: #0a0a0b; color: #ededed; -webkit-font-smoothing: antialiased; font-feature-settings: "ss01";
+}
+.e-grafito-pro > * { flex-shrink: 0; }
+/* encabezado de una línea, borde de 1px */
+.e-grafito-pro .m-cab { padding: 11px 18px; border-bottom: 1px solid #232327; background: color-mix(in srgb, #0a0a0b 70%, transparent); }
+.e-grafito-pro .m-logo { width: 38px; height: 38px; border-radius: 50%; color: #e8b84b; background: #111113;
+  box-shadow: 0 0 0 1px #2e2e33, 0 0 24px -6px color-mix(in srgb, #e8b84b 45%, transparent); }
+.e-grafito-pro .m-logo svg { width: 20px; height: 20px; }
+.e-grafito-pro .m-marca { font: 800 16px/1 var(--f-tit); letter-spacing: -.01em; }
+.e-grafito-pro .m-marca small { font: 500 11px/1 var(--f-num); letter-spacing: .04em; text-transform: uppercase; color: #8e8e96; }
+.e-grafito-pro .m-yo { background: #161618; border: 1px solid #2e2e33; color: #ededed; font-weight: 700; }
+
+/* textura: la escena en gris muy baja + retícula de 32px enmascarada */
+.e-grafito-pro .m-heroe { position: static; margin: 0; padding: 0; border-radius: 0; background: transparent; color: #ededed; overflow: visible; z-index: auto; }
+.e-grafito-pro .m-heroe-foto { display: block; position: absolute; inset: 0 0 auto 0; height: 400px; z-index: -1; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,.55) 45%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,.55) 45%, transparent 100%); }
+.e-grafito-pro .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.15) brightness(.85); opacity: .16; }
+.e-grafito-pro .m-heroe-foto::after { content: ""; position: absolute; inset: 0;
+  background-image: linear-gradient(#232327 1px, transparent 1px), linear-gradient(90deg, #232327 1px, transparent 1px); background-size: 32px 32px; opacity: .35;
+  -webkit-mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, transparent 70%); mask-image: radial-gradient(ellipse at 70% 0%, #000 0%, transparent 70%); }
+.e-grafito-pro .m-kick { margin: 0; padding: 16px 20px 0; font: 800 42px/1 var(--f-tit); letter-spacing: -.045em; text-transform: none; opacity: 1; color: #ededed; }
+.e-grafito-pro .m-kick em { font-style: normal; color: #e8b84b; }
+.e-grafito-pro .gf-carta { position: relative; margin: 14px 14px 0; padding: 15px 16px 15px 18px; border-radius: 16px; border: 1px solid #232327;
+  background: linear-gradient(180deg, #161618, #111113); box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 20px 40px -24px #000; }
+.e-grafito-pro .gf-carta::before { content: ""; position: absolute; left: 18px; top: 21px; width: 7px; height: 7px; border-radius: 50%; background: #4cc79f;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #4cc79f 18%, transparent); }
+.e-grafito-pro .m-tit { margin: 0 0 0 17px; font: 700 18px/1.2 var(--f-tit); letter-spacing: -.02em; color: #ededed; }
+.e-grafito-pro .m-det { margin: 4px 0 0 17px; font-size: 13.5px; line-height: 1.35; color: #a1a1aa; opacity: 1; }
+.e-grafito-pro .gf-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #232327; }
+.e-grafito-pro .m-cifra { margin: 0; gap: 9px; align-items: center; }
+.e-grafito-pro .m-cifra b { font: 800 54px/.9 var(--f-tit); letter-spacing: -.05em; color: #ededed; }
+.e-grafito-pro .m-cifra span { max-width: 90px; font-size: 14px; line-height: 1.2; font-weight: 600; color: #a1a1aa; opacity: 1; }
+/* la firma: el resplandor de la acción */
+.e-grafito-pro .m-btn { position: relative; isolation: isolate; flex: none; min-height: 42px; padding: 0 16px; border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #e8b84b 70%, #fff); background: #e8b84b; color: #0f2240; font: 700 14.5px/1 var(--f-txt);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 4px color-mix(in srgb, #e8b84b 10%, transparent), 0 10px 40px -8px color-mix(in srgb, #e8b84b 60%, transparent); }
+.e-grafito-pro .m-btn::before { content: ""; position: absolute; inset: -18px -10px; z-index: -1; border-radius: 30px;
+  background: radial-gradient(closest-side, color-mix(in srgb, #e8b84b 30%, transparent), transparent); filter: blur(8px); pointer-events: none; }
+
+/* accesos: un bloque con filas de borde 1px, en dos columnas */
+.e-grafito-pro .m-accesos { margin: 14px 14px 0; padding: 0; gap: 0; border: 1px solid #232327; border-radius: 16px; background: #111113; overflow: hidden; }
+.e-grafito-pro .m-acc { grid-template-columns: 26px 1fr; align-items: center; gap: 6px 8px; min-height: 0; padding: 11px 12px 12px; background: none; border: 0; border-radius: 0; }
+.e-grafito-pro .m-acc:nth-child(even) { border-left: 1px solid #232327; }
+.e-grafito-pro .m-acc:nth-child(n+3) { border-top: 1px solid #232327; }
+.e-grafito-pro .m-ico { width: 26px; height: 26px; margin: 0; border-radius: 8px; border: 1px solid #2e2e33; background: #161618; color: #ededed; }
+.e-grafito-pro .m-ico svg { width: 16px; height: 16px; }
+.e-grafito-pro .m-acc:first-child .m-ico { color: #e8b84b; border-color: color-mix(in srgb, #e8b84b 40%, #2e2e33); box-shadow: 0 0 18px -6px color-mix(in srgb, #e8b84b 60%, transparent); }
+.e-grafito-pro .m-acc b { font: 700 14px/1.15 var(--f-tit); letter-spacing: -.025em; white-space: nowrap; }
+.e-grafito-pro .m-acc span { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.3; color: #a1a1aa; }
+
+/* novedades */
+.e-grafito-pro .m-novs { padding: 16px 14px 0; gap: 0; }
+.e-grafito-pro .m-sec { margin: 0 6px 9px; font: 800 21px/1 var(--f-tit); letter-spacing: -.035em; text-transform: none; color: #ededed; }
+.e-grafito-pro .m-nov { grid-template-columns: 50px 1fr; gap: 0 12px; padding: 9px 13px; background: #111113; border: 1px solid #232327; border-top: 0; }
+.e-grafito-pro .m-nov-tapa { border-top: 1px solid #232327; border-radius: 16px 16px 0 0; }
+.e-grafito-pro .m-nov:last-child { border-radius: 0 0 16px 16px; }
+.e-grafito-pro .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; border: 1px solid #2e2e33; background: #1c1c1f; }
+.e-grafito-pro .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.1) brightness(.9); }
+.e-grafito-pro .m-nov .m-fecha { grid-row: auto; grid-column: 2; order: 3; padding: 0; margin-top: 4px; font: 500 11px/1 var(--f-num); text-transform: uppercase; color: #8e8e96; }
+.e-grafito-pro .m-nov-tapa .m-fecha { color: #e8b84b; }
+.e-grafito-pro .m-nov:not(.m-nov-tapa) { grid-template-columns: 50px 1fr; }
+.e-grafito-pro .m-nov:not(.m-nov-tapa) .m-fecha { grid-column: 1; grid-row: 1 / span 3; order: 0; margin: 2px 0 0; }
+.e-grafito-pro .m-nov b { grid-column: 2; font: 700 14.5px/1.3 var(--f-tit); letter-spacing: -.01em; }
+.e-grafito-pro .m-nov p { font-size: 12.5px; color: #a1a1aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* beneficio */
+.e-grafito-pro .m-benef { margin: 10px 14px 12px; padding: 11px 16px; border: 1px solid #232327; border-radius: 16px; background: linear-gradient(180deg, #161618, #111113); }
+.e-grafito-pro .m-rubro { font: 500 11px/1 var(--f-num); letter-spacing: .04em; color: #8e8e96; }
+.e-grafito-pro .m-benef b { font: 800 17px/1.15 var(--f-tit); letter-spacing: -.02em; }
+.e-grafito-pro .m-benef p { color: #a1a1aa; }

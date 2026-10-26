@@ -1,0 +1,72 @@
+/* fuentes: Barlow Condensed:wght@700; Figtree:wght@400;500;600;700;800 */
+/* foto: tecnico; calle */
+/* Síntesis total (Colm3na 146, ronda 7). Todo es tinte del primario de la UOM (#1a3d6b al 4-40%): el fondo, las líneas, los
+   rellenos. Encabezado blanco, la línea móvil de novedades corriendo debajo con su rótulo en el oscuro del gremio, saludo en
+   Barlow Condensed mayúscula, la carta «empezá por acá» con la foto teñida que se funde en blanco y el medidor de cinco
+   esperando, y cartas de radio 20 con borde tonal, nunca gris. Texto en Figtree. */
+.e-sintesis-total {
+  --pri: #1a3d6b; --base: #0f2240;
+  --t4: color-mix(in srgb, #1a3d6b 4%, #fff); --t10: color-mix(in srgb, #1a3d6b 10%, #fff); --t18: color-mix(in srgb, #1a3d6b 18%, #fff);
+  --t26: color-mix(in srgb, #1a3d6b 26%, #fff); --marca-txt: #183863; --gris: #576479;
+  --fondo: var(--t4); --sup: #ffffff; --tinta: #0c1c34; --suave: #576479; --linea: var(--t18);
+  --acento: #1a3d6b; --acento-tinta: #ffffff; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num: "Figtree", system-ui, sans-serif;
+  --radio: 20px; --radio-btn: 999px;
+  --sombra: 0 1px 2px color-mix(in srgb, #0f2240 6%, transparent), 0 10px 26px -18px color-mix(in srgb, #0f2240 40%, transparent);
+}
+/* encabezado blanco; deja lugar a la línea móvil */
+.e-sintesis-total .m-cab { height: 52px; padding: 0 14px; background: #fff; border-bottom: 1px solid var(--t18); margin-bottom: 36px; }
+.e-sintesis-total .m-logo { color: #1a3d6b; }
+.e-sintesis-total .m-marca { font: 700 21px/1 var(--f-tit); letter-spacing: .04em; text-transform: uppercase; color: #0c1c34; }
+.e-sintesis-total .m-marca small { font: 700 11px/1 var(--f-txt); letter-spacing: 0; text-transform: none; color: #576479; }
+.e-sintesis-total .m-yo { width: 34px; height: 34px; background: var(--t10); border: 0; color: #183863; font: 700 12px/1 var(--f-txt);
+  box-shadow: inset 0 0 0 1px var(--t26); }
+/* la línea móvil de novedades */
+.e-sintesis-total .m-novs { position: absolute; top: 52px; left: 0; right: 0; height: 36px; padding: 0; gap: 0; display: flex; align-items: stretch;
+  background: var(--t10); border-bottom: 1px solid var(--t18); overflow: hidden; z-index: 2;
+  -webkit-mask-image: linear-gradient(90deg, #000 0 104px, transparent 104px, #000 124px, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(90deg, #000 0 104px, transparent 104px, #000 124px, #000 calc(100% - 24px), transparent); }
+.e-sintesis-total .m-sec { flex: none; width: 104px; display: flex; align-items: center; gap: 7px; padding: 0 10px 0 14px; background: #0f2240; color: #fff;
+  font: 700 14px/1 var(--f-tit); letter-spacing: .12em; text-transform: uppercase; }
+.e-sintesis-total .m-sec::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #e8b84b; flex: none; }
+.e-sintesis-total .m-nov { flex: none; display: flex; align-items: center; gap: 9px; padding: 0 0 0 20px; border: 0; white-space: nowrap; }
+.e-sintesis-total .m-nov::before { content: ""; width: 6px; height: 6px; background: #1a3d6b; transform: rotate(45deg); flex: none; }
+.e-sintesis-total .m-nov .m-fecha { order: 0; min-width: 0; padding: 0; font: 700 14px/1 var(--f-num); color: #183863; font-variant-numeric: tabular-nums; }
+.e-sintesis-total .m-nov b { font: 600 14px/1 var(--f-txt); color: #0c1c34; }
+.e-sintesis-total .m-nov p, .e-sintesis-total .m-nov-tapa .m-nov-foto { display: none; }
+.e-sintesis-total .m-nov-tapa { padding-left: 10px; }
+/* saludo */
+.e-sintesis-total .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: #0c1c34; overflow: visible; }
+.e-sintesis-total .m-kick { margin: 0; padding: 18px 20px 12px; font: 700 40px/1 var(--f-tit); letter-spacing: .005em; text-transform: uppercase; opacity: 1; }
+.e-sintesis-total .m-kick span { color: #183863; }
+/* la carta "empezá por acá" con la foto teñida */
+.e-sintesis-total .st-carta { margin: 0 16px; border-radius: 20px; background: #fff; overflow: hidden;
+  box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, #1a3d6b 7%, transparent); }
+.e-sintesis-total .m-heroe-foto { display: block; position: relative; height: 160px; overflow: hidden; background: var(--t10); }
+.e-sintesis-total .m-heroe-foto .m-foto { filter: grayscale(1) contrast(.94) brightness(1.08); opacity: .92; object-position: 50% 30%; }
+.e-sintesis-total .m-heroe-foto::after { content: ""; position: absolute; inset: 0; background: #1a3d6b; mix-blend-mode: color; opacity: .5; }
+.e-sintesis-total .m-heroe-foto::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 62%; z-index: 1;
+  background: linear-gradient(to top, #fff, color-mix(in srgb, #fff 0%, transparent)); }
+.e-sintesis-total .m-cifra { position: absolute; left: 14px; top: 12px; z-index: 2; margin: 0; display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 11px; border-radius: 999px; background: #fff; color: #0c1c34; box-shadow: 0 2px 8px -4px color-mix(in srgb, #0f2240 40%, transparent); }
+.e-sintesis-total .m-cifra::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #e8b84b; }
+.e-sintesis-total .m-cifra b { font: 800 13px/1 var(--f-num); }
+.e-sintesis-total .m-cifra span { font: 700 12.5px/1 var(--f-txt); opacity: 1; }
+.e-sintesis-total .st-txt { position: relative; z-index: 2; margin-top: -30px; padding: 0 20px 18px; }
+.e-sintesis-total .m-tit { margin: 0; font: 700 32px/1 var(--f-tit); text-transform: uppercase; letter-spacing: 0; color: #0c1c34; }
+.e-sintesis-total .m-det { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: #576479; opacity: 1; }
+.e-sintesis-total .m-btn { margin-top: 14px; width: 100%; min-height: 48px; background: #1a3d6b; color: #fff; font: 700 16px/1 var(--f-txt); }
+.e-sintesis-total .st-medidor { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 12px; }
+.e-sintesis-total .st-medidor i { height: 8px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--t26); }
+/* accesos en una carta, renglones con tinte */
+.e-sintesis-total .m-accesos { display: block; margin: 16px 16px 0; padding: 4px 0; background: #fff; border-radius: 20px;
+  box-shadow: var(--sombra), inset 0 0 0 1px color-mix(in srgb, #1a3d6b 7%, transparent); }
+.e-sintesis-total .m-acc { display: grid; grid-template-columns: 38px 1fr 12px; column-gap: 14px; row-gap: 0; align-items: center; min-height: 0; padding: 8px 16px;
+  background: none; border: 0; border-radius: 0; }
+.e-sintesis-total .m-acc + .m-acc { border-top: 1px solid var(--t10); }
+.e-sintesis-total .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 7px; height: 7px; border: solid #8a94a6; border-width: 2px 2px 0 0; transform: rotate(45deg); }
+.e-sintesis-total .m-ico { grid-column: 1; grid-row: 1 / span 2; width: 38px; height: 38px; margin: 0; border-radius: 12px; background: var(--t10); color: #183863; }
+.e-sintesis-total .m-acc b { grid-column: 2; font: 700 15.5px/1.25 var(--f-txt); }
+.e-sintesis-total .m-acc span { grid-column: 2; font-size: 13.5px; color: #576479; }
+.e-sintesis-total .m-benef { display: none; }

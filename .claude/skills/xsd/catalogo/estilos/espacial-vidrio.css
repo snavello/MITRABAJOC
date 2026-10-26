@@ -1,0 +1,93 @@
+/* fuentes: Figtree:wght@400..800 */
+/* foto: edificio; calle */
+/* Espacial (modelo 113): ventanas de vidrio oscuro con aro de luz flotando sobre la escena desenfocada y en penumbra, con auroras frías. */
+.e-espacial-vidrio {
+  --vid: linear-gradient(155deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 52%, rgba(255,255,255,.08)); --vid-base: rgba(22,25,34,.54);
+  --aro: inset 0 0 0 1px rgba(255,255,255,.16);
+  --sombra-v: inset 0 1px 0 rgba(255,255,255,.32), inset 0 0 0 1px rgba(255,255,255,.1), 0 34px 64px -26px rgba(0,0,0,.75), 0 10px 22px -10px rgba(0,0,0,.45);
+  --fondo: #0a0d15; --sup: rgba(22,25,34,.54); --tinta: #ffffff; --suave: rgba(255,255,255,.78); --linea: rgba(255,255,255,.16);
+  --acento: #a8e6ff; --acento-tinta: #0d111b; --acento2: #cdbaff; --oscuro: #0a0d15; --sobre-oscuro: #ffffff;
+  --f-tit: "Figtree", system-ui, sans-serif; --f-txt: "Figtree", system-ui, sans-serif; --f-num: "Figtree", system-ui, sans-serif;
+  --radio: 28px; --radio-btn: 999px;
+  background: #0a0d15; color: #fff; padding: 12px 12px 0; gap: 12px; -webkit-font-smoothing: antialiased;
+}
+.e-espacial-vidrio > * { flex-shrink: 0; }
+/* el entorno: la escena desenfocada y en penumbra + auroras frías */
+.e-espacial-vidrio .m-heroe { position: static; z-index: auto; margin: 0; padding: 0; border-radius: 0; background: none; overflow: visible; color: #fff; }
+.e-espacial-vidrio .m-heroe-foto { display: block; position: absolute; inset: -70px; z-index: -3; pointer-events: none; }
+.e-espacial-vidrio .m-heroe-foto .m-foto { filter: grayscale(1) blur(26px) brightness(.44) contrast(1.1); }
+.e-espacial-vidrio .d1 { inset: 0; z-index: -2;
+  background: radial-gradient(70% 32% at 8% 4%, rgba(90,140,255,.34), transparent 70%), radial-gradient(60% 28% at 96% 38%, rgba(180,120,255,.26), transparent 70%),
+    radial-gradient(70% 26% at 18% 88%, rgba(60,200,220,.2), transparent 70%), linear-gradient(180deg, rgba(8,10,18,.12), rgba(8,10,18,.52)); }
+
+/* ventana de vidrio: la pieza común */
+.e-espacial-vidrio .m-cab, .e-espacial-vidrio .ev-v, .e-espacial-vidrio .m-accesos, .e-espacial-vidrio .m-novs, .e-espacial-vidrio .m-benef {
+  background: var(--vid), var(--vid-base); -webkit-backdrop-filter: blur(34px) saturate(1.6); backdrop-filter: blur(34px) saturate(1.6); box-shadow: var(--sombra-v); border: 0; }
+
+/* encabezado: una cápsula */
+.e-espacial-vidrio .m-cab { padding: 5px 5px 5px 6px; border-radius: 999px; gap: 10px; }
+.e-espacial-vidrio .m-logo { width: 38px; height: 38px; border-radius: 50%; color: #fff;
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.34), rgba(255,255,255,.08) 62%); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), var(--aro); }
+.e-espacial-vidrio .m-logo svg { width: 20px; height: 20px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.45)); }
+.e-espacial-vidrio .m-marca { font: 700 16px/1 var(--f-tit); letter-spacing: .02em; }
+.e-espacial-vidrio .m-marca small { font: 600 12px/1.1 var(--f-txt); letter-spacing: 0; color: rgba(255,255,255,.84); }
+.e-espacial-vidrio .m-yo { width: 38px; height: 38px; border: 0; color: #fff; font: 700 13px/1 var(--f-txt);
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.34), rgba(255,255,255,.08) 62%); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), var(--aro), 0 14px 26px -12px rgba(0,0,0,.8); }
+
+/* saludo sobre el entorno y la ventana principal */
+.e-espacial-vidrio .m-kick { margin: 2px 6px 10px; font: 750 31px/1.04 var(--f-tit); letter-spacing: -.025em; text-transform: none; opacity: 1; color: #fff; text-shadow: 0 1px 14px rgba(0,0,0,.55); }
+.e-espacial-vidrio .m-kick span { color: #a8e6ff; }
+.e-espacial-vidrio .ev-v { position: relative; padding: 16px 14px 14px; border-radius: 30px; margin-bottom: 14px; }
+.e-espacial-vidrio .ev-v::after { content: ""; position: absolute; left: 50%; bottom: -12px; width: 60px; height: 5px; margin-left: -30px; border-radius: 99px;
+  background: rgba(255,255,255,.34); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+/* la ventana principal lleva su foto arriba, en gris, con un baño frío */
+.e-espacial-vidrio .ev-v { padding-top: 8px; }
+.e-espacial-vidrio .ev-v::before { content: ""; display: block; height: 104px; margin: 0 -6px 12px; border-radius: 23px;
+  background: linear-gradient(180deg, rgba(70,110,230,.14), rgba(10,12,20,.12) 50%, rgba(10,12,20,.5)), url(fotos/tecnico.jpg) 50% 30% / cover, #1c1f28;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); filter: grayscale(1) contrast(1.08) brightness(.92); }
+.e-espacial-vidrio .m-tit { margin: 0 4px; font: 750 25px/1.06 var(--f-tit); letter-spacing: -.026em; }
+.e-espacial-vidrio .m-det { margin: 6px 4px 0; font-size: 14px; line-height: 1.35; color: rgba(255,255,255,.84); opacity: 1; }
+.e-espacial-vidrio .ev-fila { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.e-espacial-vidrio .m-cifra { flex: none; margin: 0; align-items: center; gap: 8px; }
+.e-espacial-vidrio .m-cifra b { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; font: 700 24px/1 var(--f-num); font-variant-numeric: tabular-nums;
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.4), rgba(255,255,255,.1) 64%), rgba(30,34,46,.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), var(--aro), 0 18px 32px -12px rgba(0,0,0,.8); }
+.e-espacial-vidrio .m-cifra span { max-width: 74px; font-size: 12px; line-height: 1.2; color: rgba(255,255,255,.84); opacity: 1; }
+.e-espacial-vidrio .m-btn { flex: 1; gap: 7px; min-height: 50px; padding: 0 14px; border-radius: 999px; background: #f4f6fb; color: #0d111b; font: 650 15.5px/1 var(--f-txt); white-space: nowrap;
+  box-shadow: 0 14px 28px -12px rgba(0,0,0,.7), inset 0 -1px 0 rgba(0,0,0,.08); }
+.e-espacial-vidrio .m-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* accesos como apps: íconos de vidrio redondos */
+.e-espacial-vidrio .m-accesos { grid-template-columns: repeat(4, 1fr); gap: 0 2px; padding: 12px 4px 11px; border-radius: 30px; }
+.e-espacial-vidrio .m-acc { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; min-height: 0; padding: 0 2px; background: none; border: 0; border-radius: 0; }
+.e-espacial-vidrio .m-ico { width: 50px; height: 50px; margin: 0 0 5px; border-radius: 50%; color: #fff;
+  background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.34), rgba(255,255,255,.07) 62%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 0 0 1px rgba(255,255,255,.14), 0 12px 22px -12px rgba(0,0,0,.8); }
+.e-espacial-vidrio .m-acc:first-child .m-ico { color: #a8e6ff; }
+.e-espacial-vidrio .m-acc b { font: 650 13px/1.15 var(--f-tit); }
+.e-espacial-vidrio .m-acc span { font-size: 11px; line-height: 1.25; color: rgba(255,255,255,.8); }
+.e-espacial-vidrio .m-acc:nth-child(4) span { white-space: nowrap; letter-spacing: -.01em; }
+
+/* novedades en una ventana-lista */
+.e-espacial-vidrio .m-novs { padding: 11px 8px 4px; gap: 0; border-radius: 28px; }
+.e-espacial-vidrio .m-sec { margin: 0 8px 4px; font: 700 18px/1 var(--f-tit); letter-spacing: -.012em; text-transform: none; color: #fff; }
+.e-espacial-vidrio .m-nov { grid-template-columns: 1fr; gap: 0; padding: 7px 8px; border: 0; border-radius: 20px; }
+.e-espacial-vidrio .m-nov-tapa { grid-template-columns: 58px 1fr; gap: 0 12px; }
+.e-espacial-vidrio .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; width: 58px; height: 58px; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 20px -10px rgba(0,0,0,.8); }
+.e-espacial-vidrio .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.05); }
+.e-espacial-vidrio .m-nov .m-fecha { grid-row: auto; grid-column: auto; min-width: 0; padding: 0; font: 650 12px/1.2 var(--f-txt); color: #a8e6ff; }
+.e-espacial-vidrio .m-nov-tapa .m-fecha, .e-espacial-vidrio .m-nov-tapa b, .e-espacial-vidrio .m-nov-tapa p { grid-column: 2; }
+.e-espacial-vidrio .m-nov b { font: 650 15px/1.25 var(--f-tit); }
+.e-espacial-vidrio .m-nov p { grid-column: auto; font-size: 12.5px; line-height: 1.3; color: rgba(255,255,255,.8); }
+.e-espacial-vidrio .m-nov:not(.m-nov-tapa) { grid-template-columns: 58px 1fr; gap: 0 12px; }
+.e-espacial-vidrio .m-nov:not(.m-nov-tapa)::before { content: ""; grid-column: 1; grid-row: 1 / span 3; width: 58px; height: 58px; border-radius: 18px;
+  background: url(fotos/herramientas.jpg) 50% 50% / cover, #1c1f28; filter: grayscale(1) contrast(1.05); box-shadow: 0 10px 20px -10px rgba(0,0,0,.8); }
+.e-espacial-vidrio .m-nov:not(.m-nov-tapa) > * { grid-column: 2; }
+.e-espacial-vidrio .m-nov + .m-nov { box-shadow: inset 0 1px 0 rgba(255,255,255,.1); border-radius: 0 0 20px 20px; }
+
+/* beneficio en vidrio con cápsula de rubro */
+.e-espacial-vidrio .m-benef { margin: 0 0 12px; padding: 12px 16px; border-radius: 26px; gap: 3px; }
+.e-espacial-vidrio .m-rubro { justify-self: start; padding: 4px 11px; border-radius: 999px; font: 600 12px/1.1 var(--f-txt); letter-spacing: 0; text-transform: none;
+  color: rgba(255,255,255,.88); background: rgba(255,255,255,.11); box-shadow: var(--aro); }
+.e-espacial-vidrio .m-benef b { font: 650 15.5px/1.25 var(--f-tit); }
+.e-espacial-vidrio .m-benef p { color: rgba(255,255,255,.8); }

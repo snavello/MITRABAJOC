@@ -1,0 +1,70 @@
+/* fuentes: Manrope:wght@400..800 */
+/* foto: tecnico; calle */
+/* Eléctrico, configurador (Colm3na 98, ronda 6). El minimalismo de un auto eléctrico: blanco y casi negro, Manrope fina,
+   la foto en blanco y negro luminosa como producto a sangre con velos blancos arriba y abajo, navegación en vidrio
+   claro, título fino centrado y dos pastillas de radio 999px; abajo, lista con chevrones, rótulos espaciados y la lámina. */
+.e-electrico-configurador {
+  --fondo: #ffffff; --sup: #f4f4f4; --tinta: #171a20; --suave: #5c5e62; --linea: #e3e4e5;
+  --acento: #171a20; --acento-tinta: #ffffff; --acento2: #393c41; --oscuro: #171a20; --sobre-oscuro: #ffffff;
+  --f-tit: "Manrope", "Hanken Grotesk", system-ui, sans-serif; --f-txt: "Manrope", "Hanken Grotesk", system-ui, sans-serif;
+  --f-num: "Manrope", system-ui, sans-serif;
+  --radio: 6px; --radio-btn: 999px;
+  letter-spacing: .005em; -webkit-font-smoothing: antialiased;
+}
+.e-electrico-configurador > * { flex-shrink: 0; }
+/* navegación encima de la foto, en vidrio claro */
+.e-electrico-configurador .m-cab { position: absolute; inset: 0 0 auto; padding: 14px 16px 10px; }
+.e-electrico-configurador .m-logo { color: #171a20; }
+.e-electrico-configurador .m-marca { font: 600 16px/1 var(--f-tit); letter-spacing: .2em; }
+.e-electrico-configurador .m-marca small { font: 500 10.5px/1 var(--f-txt); letter-spacing: .14em; text-transform: uppercase; color: #393c41; }
+.e-electrico-configurador .m-yo { width: auto; height: 30px; padding: 0 13px; border-radius: 999px; border: 0; background: rgba(23,26,32,.07);
+  backdrop-filter: blur(10px); color: #171a20; font: 500 12.5px/1 var(--f-txt); letter-spacing: .03em; }
+/* el héroe como producto */
+.e-electrico-configurador .m-heroe { margin: 0; height: 426px; padding: 76px 28px 22px; border-radius: 0; background: #dcdcdc; color: #171a20;
+  display: flex; flex-direction: column; align-items: center; text-align: center; }
+.e-electrico-configurador .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.e-electrico-configurador .m-heroe-foto .m-foto { filter: grayscale(1) brightness(1.07) contrast(.94); object-position: 50% 30%; transform: translateY(70px) scale(1.06); transform-origin: 50% 100%; }
+.e-electrico-configurador .m-heroe::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.86) 30%, rgba(255,255,255,.3) 42%, rgba(255,255,255,0) 50%,
+    rgba(255,255,255,0) 70%, rgba(255,255,255,.55) 86%, rgba(255,255,255,.95) 97%, #fff 100%); }
+.e-electrico-configurador .m-kick { font: 500 11.5px/1.2 var(--f-txt); letter-spacing: .22em; color: #5c5e62; opacity: 1; }
+.e-electrico-configurador .m-tit { margin: 10px 0 0; font: 500 32px/1.08 var(--f-tit); letter-spacing: -.005em; text-wrap: balance; }
+.e-electrico-configurador .m-det { margin: 10px auto 0; max-width: 260px; font-size: 14px; line-height: 1.5; color: #393c41; opacity: 1; }
+.e-electrico-configurador .m-btn { order: 5; margin-top: auto; width: 100%; max-width: 300px; height: 42px; min-height: 0; padding: 0 26px;
+  background: rgba(23,26,32,.88); color: #fff; font: 500 14px/1 var(--f-txt); letter-spacing: .02em; }
+.e-electrico-configurador .m-cifra { order: 6; margin: 10px 0 0; width: 100%; max-width: 300px; height: 42px; justify-content: center; align-items: center; gap: 6px;
+  border-radius: 999px; background: rgba(244,244,244,.86); backdrop-filter: blur(12px); }
+.e-electrico-configurador .m-cifra b { font: 600 15px/1 var(--f-num); }
+.e-electrico-configurador .m-cifra span { font-size: 14px; font-weight: 500; letter-spacing: .02em; opacity: 1; color: #171a20; }
+/* accesos como lista de configurador: ícono fino, texto y chevrón */
+.e-electrico-configurador .m-accesos { grid-template-columns: 1fr; gap: 0; padding: 4px 24px 0; }
+.e-electrico-configurador .m-acc { grid-template-columns: 22px 1fr 16px; grid-template-rows: auto auto; gap: 0 14px; align-items: center; min-height: 0;
+  padding: 10px 0; border: 0; border-bottom: 1px solid #e3e4e5; border-radius: 0; background: none; }
+.e-electrico-configurador .m-acc:last-child { border-bottom: 0; }
+.e-electrico-configurador .m-ico { grid-row: 1 / 3; width: 22px; height: 22px; margin: 0; color: #393c41; }
+.e-electrico-configurador .m-ico svg { stroke-width: 1.5; }
+.e-electrico-configurador .m-acc b { font: 500 15px/1.25 var(--f-txt); }
+.e-electrico-configurador .m-acc span { grid-column: 2; font-size: 12.5px; color: #5c5e62; }
+.e-electrico-configurador .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / 3; width: 7px; height: 7px; justify-self: center;
+  border-top: 1.5px solid #5c5e62; border-right: 1.5px solid #5c5e62; transform: rotate(45deg); }
+/* rótulo de sección en mayúsculas espaciadas y novedad con miniatura gris */
+.e-electrico-configurador .m-novs { padding: 18px 24px 0; gap: 6px; }
+.e-electrico-configurador .m-sec { font: 600 13px/1 var(--f-txt); letter-spacing: .2em; color: #171a20; }
+.e-electrico-configurador .m-nov { border-top: 0; padding: 6px 0 0; }
+.e-electrico-configurador .m-nov-tapa { grid-template-columns: 96px 1fr; grid-template-rows: auto auto 1fr; gap: 0 14px; }
+.e-electrico-configurador .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / 4; height: 74px; border-radius: 4px; overflow: hidden; background: #f4f4f4; }
+.e-electrico-configurador .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) brightness(1.04); }
+.e-electrico-configurador .m-nov .m-fecha { grid-row: auto; grid-column: 2; padding: 0; min-width: 0; font: 500 11.5px/1.2 var(--f-txt); letter-spacing: .14em; color: #5c5e62; text-transform: uppercase; }
+.e-electrico-configurador .m-nov b { grid-column: 2; margin-top: 3px; font: 600 15px/1.3 var(--f-txt); }
+.e-electrico-configurador .m-nov p { grid-column: 2; margin-top: 3px; font-size: 12.5px; color: #5c5e62; }
+.e-electrico-configurador .m-nov:not(.m-nov-tapa) { display: none; }
+/* la lámina del beneficio queda bajo el pliegue: el configurador vive del aire */
+.e-electrico-configurador .m-benef { display: none; }
+/* el beneficio como lámina sobre el escenario gris, con su barra de avance */
+.e-electrico-configurador .m-benef { margin: 14px 24px 0; padding: 12px 16px 12px; border: 0; border-radius: 6px; text-align: center; justify-items: center;
+  background: linear-gradient(180deg, #fff 0%, #f4f4f4 55%, #ebebeb 100%); }
+.e-electrico-configurador .m-rubro { font: 500 11px/1.2 var(--f-txt); letter-spacing: .22em; color: #5c5e62; }
+.e-electrico-configurador .m-benef b { margin-top: 4px; font: 500 18px/1.2 var(--f-tit); }
+.e-electrico-configurador .m-benef p { font-size: 12.5px; color: #393c41; }
+.e-electrico-configurador .m-benef::after { content: ""; margin-top: 10px; width: 64px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, #171a20 0 42%, #e3e4e5 42%); }

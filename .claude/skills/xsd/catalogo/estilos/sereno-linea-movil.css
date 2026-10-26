@@ -1,0 +1,111 @@
+/* fuentes: Barlow Condensed:wght@600;700; Hanken Grotesk:wght@400;500;600;700 */
+/* foto: equipo; calle */
+/* Sereno con línea móvil (Colm3na 136/124, ronda 7). Claro y quieto: lo único que se mueve siempre es la franja de novedades
+   bajo el encabezado, que corre despacio con los bordes desvanecidos y se frena al pasar el mouse. La entrada es serena:
+   fundido + 8px en cascada, y el medidor de cinco se llena de izquierda a derecha. */
+.e-sereno-linea-movil {
+  --fondo: #f0f1f1; --sup: #ffffff; --tinta: #171a21; --suave: #555c6b; --linea: #e3e5ea; --linea-2: #eef0f3;
+  --acento: #183863; --acento-tinta: #ffffff; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --marca-txt: #183762; --ok: #0d7a5f; --tick: #f4f5f8;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Hanken Grotesk", system-ui, sans-serif; --f-num: "Hanken Grotesk", system-ui, sans-serif;
+  --radio: 12px; --radio-btn: 10px;
+  --curva: cubic-bezier(.22,.61,.36,1);
+  --sombra: 0 1px 2px rgb(15 34 64 / .06), 0 10px 24px -18px rgb(15 34 64 / .3);
+  font-variant-numeric: tabular-nums;
+}
+/* encabezado claro con filete inferior */
+.e-sereno-linea-movil .m-cab { background: #fff; padding: 12px 16px; box-shadow: inset 0 -1px 0 var(--linea); }
+.e-sereno-linea-movil .m-logo { color: var(--marca-txt); }
+.e-sereno-linea-movil .m-marca { font: 700 20px/1 var(--f-tit); letter-spacing: .06em; text-transform: uppercase; color: var(--tinta); }
+.e-sereno-linea-movil .m-marca small { font-family: var(--f-txt); text-transform: none; letter-spacing: .02em; }
+.e-sereno-linea-movil .m-yo { background: color-mix(in srgb, #1a3d6b 7%, #fff); color: var(--marca-txt); border-color: color-mix(in srgb, #1a3d6b 30%, var(--linea)); }
+
+/* el héroe deja de ser tarjeta: franja + saludo + carta con el clip */
+.e-sereno-linea-movil .m-heroe { margin: 0 0 12px; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+
+/* LA FIRMA: la línea móvil de novedades */
+.e-sereno-linea-movil .slm-tick { position: relative; display: flex; align-items: center; height: 40px; background: var(--tick);
+  box-shadow: inset 0 -1px 0 var(--linea), inset 0 1px 0 var(--linea-2); overflow: hidden; }
+.e-sereno-linea-movil .slm-tick-l { position: relative; z-index: 1; display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 12px 0 16px;
+  background: var(--tick); font: 700 13.5px/1 var(--f-tit); letter-spacing: 1.4px; text-transform: uppercase; color: var(--marca-txt); white-space: nowrap; }
+.e-sereno-linea-movil .slm-tick-l::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #e8b84b;
+  box-shadow: 0 0 0 3px rgb(232 184 75 / .25); }
+.e-sereno-linea-movil .slm-tick-l::after { content: ""; position: absolute; right: 0; top: 11px; bottom: 11px; width: 1px; background: color-mix(in srgb, #1a3d6b 22%, var(--linea)); }
+.e-sereno-linea-movil .slm-tick-v { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 36px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 36px), transparent 100%); }
+.e-sereno-linea-movil .slm-pista { display: flex; flex: none; white-space: nowrap; }
+.e-sereno-linea-movil .slm-tramo { display: flex; flex: none; }
+.e-sereno-linea-movil .slm-pista a { display: inline-flex; align-items: center; gap: 7px; padding: 0 12px 0 14px; font-size: 13.5px; font-weight: 600; color: var(--tinta); }
+.e-sereno-linea-movil .slm-pista a b { font-weight: 700; color: var(--marca-txt); }
+.e-sereno-linea-movil .slm-pista a::after { content: ""; width: 5px; height: 5px; margin-left: 16px; border-radius: 1px; background: #e8b84b; transform: rotate(45deg); }
+.e-sereno-linea-movil .slm-tick:hover .slm-pista { animation-play-state: paused; }
+
+/* saludo en Barlow Condensed */
+.e-sereno-linea-movil .m-kick { margin: 16px 18px 0; font: 700 40px/1 var(--f-tit); letter-spacing: .2px; text-transform: uppercase; opacity: 1; color: var(--tinta); }
+.e-sereno-linea-movil .m-kick span { color: var(--marca-txt); }
+
+/* la carta con el clip teñido */
+.e-sereno-linea-movil .slm-carta { margin: 12px 16px 0; padding: 10px 10px 12px; background: #fff; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--linea), var(--sombra); }
+.e-sereno-linea-movil .slm-clip { position: relative; height: 112px; border-radius: 10px; overflow: hidden; background: #0f2240; isolation: isolate; }
+.e-sereno-linea-movil .slm-clip .m-foto { position: absolute; inset: 0; filter: grayscale(1) contrast(.94) brightness(1.08); opacity: .92; object-position: 50% 45%; transform-origin: 60% 45%; }
+.e-sereno-linea-movil .slm-clip::after { content: ""; position: absolute; inset: 0; background: #1a3d6b; mix-blend-mode: color; opacity: .5; }
+.e-sereno-linea-movil .m-tit { margin: 12px 6px 2px; font: 700 15.5px/1.25 var(--f-txt); color: var(--tinta); }
+.e-sereno-linea-movil .m-det { margin: 0 6px; font-size: 13px; color: var(--suave); opacity: 1; }
+/* medidor de cinco */
+.e-sereno-linea-movil .slm-medidor { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 10px 6px 0; }
+.e-sereno-linea-movil .slm-medidor i { height: 6px; border-radius: 6px; background: var(--ok); transform-origin: left center; }
+.e-sereno-linea-movil .slm-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 6px 0; padding-top: 10px; border-top: 1px solid var(--linea-2); }
+.e-sereno-linea-movil .m-cifra { margin: 0; gap: 6px; color: var(--tinta); }
+.e-sereno-linea-movil .m-cifra b { font: 700 28px/1 var(--f-tit); color: var(--marca-txt); }
+.e-sereno-linea-movil .m-cifra span { font-size: 12.5px; color: var(--suave); opacity: 1; max-width: 9ch; line-height: 1.2; }
+.e-sereno-linea-movil .m-btn { min-height: 42px; padding: 0 16px; font-weight: 700; }
+
+/* accesos en dos columnas, cartas claras */
+.e-sereno-linea-movil .m-accesos { gap: 8px; }
+.e-sereno-linea-movil .m-acc { min-height: 0; padding: 10px 12px; background: #fff; border: 0; box-shadow: inset 0 0 0 1px var(--linea); grid-template-columns: auto 1fr; gap: 0 9px; align-items: center; }
+.e-sereno-linea-movil .m-ico { grid-row: span 2; margin: 0; width: 32px; height: 32px; border-radius: 50%; background: color-mix(in srgb, #1a3d6b 7%, #fff); color: var(--marca-txt); }
+.e-sereno-linea-movil .m-ico svg { width: 17px; height: 17px; }
+.e-sereno-linea-movil .m-acc b { font: 700 15px/1.1 var(--f-tit); text-transform: uppercase; letter-spacing: .3px; }
+.e-sereno-linea-movil .m-acc span { font-size: 11px; }
+
+/* secciones con título condensado y filete */
+.e-sereno-linea-movil .m-novs { padding-top: 14px; gap: 0; }
+.e-sereno-linea-movil .m-sec { font: 700 15px/1 var(--f-tit); letter-spacing: 1px; color: var(--tinta); padding-bottom: 8px; }
+.e-sereno-linea-movil .m-nov { padding: 8px 0; border-top-color: var(--linea); }
+.e-sereno-linea-movil .m-nov .m-fecha { color: var(--marca-txt); font-weight: 600; font-family: var(--f-txt); }
+.e-sereno-linea-movil .m-nov b { font-weight: 700; font-size: 13.5px; }
+.e-sereno-linea-movil .m-nov p { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.e-sereno-linea-movil .m-nov b, .e-sereno-linea-movil .m-nov p { min-width: 0; }
+.e-sereno-linea-movil .m-benef { display: none; }
+
+/* movimiento */
+@media (prefers-reduced-motion: no-preference) {
+  /* ambiente: la franja corre siempre (lineal, como toda marquesina) y el punto del rótulo late lento */
+  .e-sereno-linea-movil .slm-pista { animation: e-sereno-linea-movil-corre 38s linear infinite; }
+  .e-sereno-linea-movil .slm-tick-l::before { animation: e-sereno-linea-movil-late 2.4s ease-in-out infinite; }
+  /* el clip: un plano lento, como el video teñido del original */
+  .e-sereno-linea-movil .slm-clip .m-foto { animation: e-sereno-linea-movil-plano 22s ease-in-out infinite alternate; }
+  /* entrada serena en cascada */
+  .e-sereno-linea-movil .slm-tick, .e-sereno-linea-movil .slm-e, .e-sereno-linea-movil .m-acc,
+  .e-sereno-linea-movil .m-novs { opacity: 0; }
+  .e-sereno-linea-movil .slm-medidor i { transform: scaleX(0); }
+  .e-sereno-linea-movil.en-vista .slm-tick { animation: e-sereno-linea-movil-funde .6s ease both; }
+  .e-sereno-linea-movil.en-vista .slm-e { animation: e-sereno-linea-movil-entra .72s var(--curva) both; animation-delay: calc(var(--i, 0) * 110ms + 160ms); }
+  .e-sereno-linea-movil.en-vista .slm-medidor i { animation: e-sereno-linea-movil-seg .6s var(--curva) both; animation-delay: calc(var(--s, 0) * 110ms + 620ms); }
+  .e-sereno-linea-movil.en-vista .m-acc { animation: e-sereno-linea-movil-entra .72s var(--curva) both; }
+  .e-sereno-linea-movil.en-vista .m-acc:nth-child(1) { animation-delay: .5s; }
+  .e-sereno-linea-movil.en-vista .m-acc:nth-child(2) { animation-delay: .58s; }
+  .e-sereno-linea-movil.en-vista .m-acc:nth-child(3) { animation-delay: .66s; }
+  .e-sereno-linea-movil.en-vista .m-acc:nth-child(4) { animation-delay: .74s; }
+  .e-sereno-linea-movil.en-vista .m-novs { animation: e-sereno-linea-movil-entra .72s var(--curva) .9s both; }
+}
+@keyframes e-sereno-linea-movil-corre { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes e-sereno-linea-movil-late { 50% { opacity: .35; } }
+@keyframes e-sereno-linea-movil-plano { from { transform: scale(1.04); } to { transform: scale(1.16) translate(-3%, 1%); } }
+@keyframes e-sereno-linea-movil-funde { from { opacity: 0; } to { opacity: 1; } }
+@keyframes e-sereno-linea-movil-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes e-sereno-linea-movil-seg { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .e-sereno-linea-movil *, .e-sereno-linea-movil *::before, .e-sereno-linea-movil *::after { animation: none !important; transition: none !important; }
+}

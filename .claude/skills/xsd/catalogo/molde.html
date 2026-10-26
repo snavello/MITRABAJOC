@@ -1,0 +1,47 @@
+<!-- Portada de ACME en teléfono (360 × 740). La misma marca para los 20 estilos; cada estilo la viste con CSS bajo .e-<id>.
+     Ganchos libres para la firma de cada estilo: .m-deco.d1, .m-deco.d2, .m-deco.d3 (vacíos), ::before/::after de cualquier pieza,
+     y .m-foto (una foto real para teñir con mix-blend-mode o filter). {{HEROE}} se reemplaza por el héroe propio del estilo si trae uno. -->
+<article class="m" data-estilo="{{ID}}">
+  <div class="m-deco d1" aria-hidden="true"></div>
+  <div class="m-deco d2" aria-hidden="true"></div>
+  <header class="m-cab">
+    <span class="m-logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3 29.5 28.5h-6.6L16 15 9.1 28.5H2.5Z" fill="currentColor"/><path d="M12.4 21.2h7.2v3.3h-7.2z" fill="currentColor"/></svg></span>
+    <span class="m-marca">ACME<small>Red de servicios</small></span>
+    <span class="m-yo" aria-label="Lucía Ferraro">LF</span>
+  </header>
+  {{HEROE}}
+  <nav class="m-accesos" aria-label="Accesos">
+    <a class="m-acc" href="#"><i class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i><b>Nueva solicitud</b><span>Pedí un servicio en tres pasos</span></a>
+    <a class="m-acc" href="#"><i class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></i><b>Mis solicitudes</b><span>1 en curso, 2 resueltas</span></a>
+    <a class="m-acc" href="#"><i class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg></i><b>Pagos</b><span>Comprobantes y vencimientos</span></a>
+    <a class="m-acc" href="#"><i class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3"/></svg></i><b>Credencial</b><span>Socia S-048213</span></a>
+  </nav>
+  <section class="m-novs">
+    <h3 class="m-sec">Novedades</h3>
+    <article class="m-nov m-nov-tapa">
+      <div class="m-nov-foto">{{FOTO_NOV}}</div>
+      <span class="m-fecha">28 oct</span>
+      <b>Abre la sede Norte</b>
+      <p>Desde el lunes 2 atendemos de 8 a 20 en Av. del Parque 1200.</p>
+    </article>
+    <article class="m-nov"><span class="m-fecha">21 oct</span><b>Nuevo turno nocturno</b><p>Las urgencias de instalación se toman hasta las 23.</p></article>
+  </section>
+  <aside class="m-benef"><span class="m-rubro">Hogar</span><b>15% en materiales eléctricos</b><p>En comercios adheridos, hasta el 30 de noviembre.</p></aside>
+  <div class="m-deco d3" aria-hidden="true"></div>
+</article>
+
+<!-- El héroe por defecto (si el estilo no trae uno propio). -->
+<template id="heroe-base">
+  <section class="m-heroe">
+    <div class="m-heroe-foto">{{FOTO}}</div>
+    <p class="m-kick">Hola, Lucía</p>
+    <h2 class="m-tit">Tu cuenta está al día</h2>
+    <p class="m-det">Último pago acreditado el 3 de octubre.</p>
+    <div class="m-cifra"><b>3</b><span>solicitudes este año</span></div>
+    <a class="m-btn" href="#">Nueva solicitud</a>
+  </section>
+</template>
+
+<!-- Las fotos son reales (CC0, StockSnap; créditos en fotos/creditos.json): tecnico, calle, equipo, edificio, herramientas, acuerdo, persona.
+     Cada estilo elige la del héroe y la de la novedad con /* foto: <heroe>; <novedad> */ (por defecto tecnico; calle).
+     Se tiñen con filter o mix-blend-mode sobre .m-foto, que es un <img> con object-fit: cover. -->

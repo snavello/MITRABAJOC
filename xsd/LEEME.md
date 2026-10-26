@@ -13,7 +13,14 @@ Acá quedan dos cosas:
                          METODO.md, plantillas/, herramientas/xsd.py, capturar.cjs, informe/
 xsd/proyectos/mitrabajo/ lo de Colm3na: ficha, inventario (60 pantallas), sesiones.py,
                          contexto, historial y los consolidados de cada vuelta
+xsd/proyectos/mitrabajo/catalogo/fuentes/
+                         las 113 fichas de estilo extraídas del concurso de diseño y de otras
+                         propuestas, de donde salieron los 60 del catálogo
 ```
+
+El kit trae además el **catálogo de estilos**: los 60 estilos de interfaz aplicados a la portada de ACME,
+una organización inventada. Se pide con «mostrame el catálogo XSD» o con `/xsd catalogo`. El detalle está en
+`.claude/skills/xsd/catalogo/LEEME.md`.
 
 La copia no se edita acá. Un cambio al método o a las herramientas se hace
 en el repositorio del kit y se vuelve a copiar. `ORIGEN.md` explica cómo, y

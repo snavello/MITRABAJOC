@@ -1,0 +1,64 @@
+/* fuentes: Archivo:wght@400;500;600;700 */
+/* Vidrio claro (propuesta C del lienzo de clubes). Vidrio esmerilado blanco sobre un fondo verde grisáceo #E9EDE3 con manchas de
+   luz difuminadas (primario, acento y oro), rayado horizontal finísimo, la cifra grande en Archivo apretado, pastilla en el
+   primario #4E6B2E, la tira de casillas (la de hoy llena) y las tarjetas con el cuadro de fecha en el acento. */
+.e-vidrio-claro {
+  --fondo: #E9EDE3; --sup: rgba(255,255,255,.58); --tinta: #171C14; --suave: #55604F; --linea: rgba(23,28,20,.12);
+  --acento: #4E6B2E; --acento-tinta: #ffffff; --acento2: #2E7D77; --oscuro: #2A3D17; --sobre-oscuro: #ffffff;
+  --f-tit: "Archivo", system-ui, sans-serif; --f-txt: "Archivo", system-ui, sans-serif; --f-num: "Archivo", system-ui, sans-serif;
+  --radio: 20px; --radio-btn: 14px; --sombra: 0 10px 30px rgba(30,45,25,.10);
+  background: #E9EDE3;
+}
+/* las manchas de luz y el rayado */
+.e-vidrio-claro .d1 { left: -70px; top: -60px; width: 300px; height: 300px; border-radius: 50%; background: #4E6B2E; opacity: .38; filter: blur(70px); }
+.e-vidrio-claro .d2 { right: -90px; top: 230px; width: 280px; height: 280px; border-radius: 50%; background: #2E7D77; opacity: .30; filter: blur(80px); }
+.e-vidrio-claro .d3 { left: 40px; bottom: -80px; width: 320px; height: 260px; border-radius: 50%; background: #C9A227; opacity: .22; filter: blur(80px); }
+.e-vidrio-claro::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(23,28,20,.035) 0 1px, rgba(0,0,0,0) 1px 4px); }
+/* encabezado sin barra; perfil en círculo de vidrio */
+.e-vidrio-claro .m-cab { padding: 16px 18px 6px; }
+.e-vidrio-claro .m-logo { color: #2A3D17; }
+.e-vidrio-claro .m-marca { font: 700 16px/1 var(--f-tit); letter-spacing: -.01em; }
+.e-vidrio-claro .m-marca small { font: 500 12px/1 var(--f-txt); letter-spacing: 0; color: #55604F; }
+.e-vidrio-claro .m-yo { width: 44px; height: 44px; background: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.9); color: #171C14;
+  font: 600 14px/1 var(--f-txt); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+/* saludo y la tarjeta de vidrio */
+.e-vidrio-claro .m-heroe { margin: 0 18px; padding: 0; border-radius: 0; background: none; color: #171C14; overflow: visible; }
+.e-vidrio-claro .m-kick { margin: 0; padding: 6px 0 12px; font: 700 27px/1.1 var(--f-tit); letter-spacing: -.02em; text-transform: none; opacity: 1; }
+.e-vidrio-claro .vc-vidrio { display: grid; gap: 10px; border-radius: 26px; padding: 18px; background: rgba(255,255,255,.58);
+  border: 1px solid rgba(255,255,255,.85); box-shadow: 0 10px 30px rgba(30,45,25,.10); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.e-vidrio-claro .m-tit { justify-self: start; margin: 0; padding: 6px 12px; border-radius: 999px; background: #4E6B2E; color: #fff;
+  font: 600 12.5px/1.1 var(--f-txt); letter-spacing: 0; }
+.e-vidrio-claro .m-cifra { margin: 0; display: grid; gap: 2px; }
+.e-vidrio-claro .m-cifra b { font: 700 44px/1 var(--f-num); letter-spacing: -.035em; }
+.e-vidrio-claro .m-cifra span { font-size: 14px; color: #55604F; opacity: 1; }
+.e-vidrio-claro .vc-pie { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid rgba(23,28,20,.1); }
+.e-vidrio-claro .m-det { margin: 0; font-size: 14px; font-weight: 500; color: #171C14; opacity: 1; }
+.e-vidrio-claro .m-btn { min-height: 44px; border-radius: 14px; background: #4E6B2E; color: #fff; font: 600 14.5px/1 var(--f-txt); }
+/* accesos: la tira de casillas, la primera llena */
+.e-vidrio-claro .m-accesos { grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 18px; margin-top: 12px; }
+.e-vidrio-claro .m-acc { min-height: 80px; padding: 10px 4px 8px; border-radius: 18px; background: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.8);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; }
+.e-vidrio-claro .m-acc span { display: none; }
+.e-vidrio-claro .m-ico { width: 26px; height: 26px; margin: 0; color: #4E6B2E; }
+.e-vidrio-claro .m-acc b { font: 600 11.5px/1.15 var(--f-txt); }
+.e-vidrio-claro .m-acc:first-child { background: #4E6B2E; border-color: #4E6B2E; color: #fff; }
+.e-vidrio-claro .m-acc:first-child .m-ico { color: #fff; }
+.e-vidrio-claro .m-acc:nth-child(2)::after, .e-vidrio-claro .m-acc:nth-child(4)::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #4E6B2E; }
+.e-vidrio-claro .m-acc:nth-child(4)::after { background: #2E7D77; }
+/* lo que viene: tarjetas de vidrio con el cuadro de fecha */
+.e-vidrio-claro .m-novs { padding: 14px 18px 0; gap: 7px; }
+.e-vidrio-claro .m-sec { font: 600 15px/1 var(--f-txt); letter-spacing: 0; text-transform: none; color: #55604F; }
+.e-vidrio-claro .m-nov { grid-template-columns: 46px 1fr; align-items: center; gap: 0 14px; padding: 12px; border: 1px solid rgba(255,255,255,.8);
+  border-radius: 20px; background: rgba(255,255,255,.5); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.e-vidrio-claro .m-nov .m-fecha { grid-row: 1 / span 2; width: 46px; height: 46px; min-width: 0; padding: 0 6px; border-radius: 14px; background: #2E7D77; color: #fff;
+  display: grid; place-items: center; text-align: center; font: 700 14px/1 var(--f-num); word-spacing: 46px; }
+.e-vidrio-claro .m-nov b { font: 600 15.5px/1.2 var(--f-tit); }
+.e-vidrio-claro .m-nov p { font-size: 12.5px; line-height: 1.3; color: #55604F; }
+.e-vidrio-claro .m-nov-tapa .m-nov-foto { display: none; }
+.e-vidrio-claro .m-benef { margin: 7px 18px 0; grid-template-columns: 46px 1fr; align-items: center; gap: 0 14px; padding: 12px; border-radius: 20px;
+  background: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.8); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.e-vidrio-claro .m-rubro { grid-row: 1 / span 2; width: 46px; height: 46px; border-radius: 14px; background: #C9A227; color: #2A3D17; display: grid; place-items: center;
+  font: 700 10px/1 var(--f-txt); letter-spacing: .02em; text-transform: none; }
+.e-vidrio-claro .m-benef b { font: 600 15.5px/1.2 var(--f-tit); }
+.e-vidrio-claro .m-benef p { font-size: 12.5px; line-height: 1.3; color: #55604F; }

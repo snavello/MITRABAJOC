@@ -1,0 +1,73 @@
+/* fuentes: Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900 */
+/* foto: persona; equipo */
+/* Impulso (ronda 6, modelo 97): energía de alto rendimiento. Palabras gigantes en Archivo itálica condensada, la foto de la persona a sangre
+   en blanco y negro duro con degradé negro, una banda negra y un único verde voltio #d4ff1f reservado a la acción. El cuerpo es blanco. */
+.e-impulso-voltio {
+  --fondo: #ffffff; --sup: #f3f3f1; --tinta: #0a0a0a; --suave: #5e5e5e; --linea: #e2e2df;
+  --acento: #d4ff1f; --acento-tinta: #0a0a0a; --acento2: #b9e000; --oscuro: #0a0a0a; --sobre-oscuro: #ffffff;
+  --f-tit: "Archivo", system-ui, sans-serif; --f-txt: "Archivo", system-ui, sans-serif; --f-num: "Archivo", system-ui, sans-serif;
+  --radio: 20px; --radio-btn: 999px;
+  background: #0a0a0a; font-stretch: 100%;
+}
+/* encabezado negro de una línea */
+.e-impulso-voltio .m-cab { position: absolute; inset: 0 0 auto; padding: 12px 18px; background: transparent; color: #fff; }
+.e-impulso-voltio .m-logo { color: #fff; }
+.e-impulso-voltio .m-marca { font: 800 15px/1 var(--f-tit); letter-spacing: .02em; }
+.e-impulso-voltio .m-marca small { color: rgba(255,255,255,.82); font-weight: 600; letter-spacing: .02em; }
+.e-impulso-voltio .m-yo { width: 38px; height: 38px; background: #151515; color: #fff; border: 2px solid #fff; font-weight: 700; }
+
+/* héroe: la persona a sangre, B/N duro, y el saludo gigante en itálica condensada */
+.e-impulso-voltio .m-heroe { margin: 0; padding: 0; border-radius: 0; background: #0a0a0a; color: #fff; overflow: visible; }
+.e-impulso-voltio .iv-tapa { position: relative; height: 190px; overflow: hidden; display: flex; align-items: flex-end; padding: 0 18px 0; }
+.e-impulso-voltio .m-heroe-foto { display: block; overflow: hidden; position: absolute; inset: 0; z-index: -1; background: #0a0a0a; }
+.e-impulso-voltio .m-heroe-foto .m-foto { object-position: 50% 28%; transform: scale(1.12); transform-origin: 50% 20%;
+  filter: grayscale(1) contrast(1.35) brightness(.92); }
+.e-impulso-voltio .m-heroe-foto::after { content: ""; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(10,10,10,.8) 0%, rgba(10,10,10,.3) 20%, rgba(10,10,10,0) 38%, rgba(10,10,10,.82) 74%, #0a0a0a 100%); }
+.e-impulso-voltio .iv-hola { display: block; margin: 0; font: italic 900 46px/.86 var(--f-tit); font-stretch: 62%; text-transform: uppercase; letter-spacing: -.005em; color: #fff; }
+.e-impulso-voltio .iv-hola span { display: inline; }
+.e-impulso-voltio .iv-hola .iv-nom { font-size: 92px; }
+/* la banda negra con la acción */
+.e-impulso-voltio .iv-osc { padding: 10px 18px 18px; background: #0a0a0a; }
+.e-impulso-voltio .m-tit { display: block; margin: 0 0 6px; font: italic 800 34px/1 var(--f-tit); font-stretch: 62%; text-transform: uppercase; letter-spacing: .01em; color: #fff; }
+.e-impulso-voltio .m-det { font-size: 14px; color: #e4e4e4; opacity: 1; }
+.e-impulso-voltio .m-cifra { margin: 8px 0 12px; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #a9a9a9; }
+.e-impulso-voltio .m-cifra::before { content: ""; width: 26px; height: 2px; background: #fff; margin-right: 6px; }
+.e-impulso-voltio .m-cifra b { font: 700 12px/1 var(--f-txt); color: #fff; }
+.e-impulso-voltio .m-cifra span { font-size: 12px; opacity: 1; }
+.e-impulso-voltio .m-btn { width: 100%; justify-content: space-between; min-height: 54px; padding: 0 7px 0 24px; background: #d4ff1f; color: #0a0a0a;
+  font: 800 16.5px/1 var(--f-txt); box-shadow: 0 30px 50px -28px rgba(212,255,31,.55); }
+.e-impulso-voltio .iv-flecha { width: 40px; height: 40px; border-radius: 50%; background: #0a0a0a; color: #d4ff1f; display: grid; place-items: center; }
+.e-impulso-voltio .iv-flecha svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  transform: translateX(2px); }
+
+/* el cuerpo blanco sube sobre la banda con 26px de radio */
+.e-impulso-voltio .m-accesos { grid-template-columns: 1fr; gap: 0; margin-top: -2px; padding: 8px 18px 0; background: #fff; border-radius: 26px 26px 0 0; }
+.e-impulso-voltio .m-acc { grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; column-gap: 12px; row-gap: 0; align-items: center; min-height: 0;
+  padding: 4px 0; background: none; border: 0; border-radius: 0; }
+.e-impulso-voltio .m-acc + .m-acc { border-top: 1px solid #e2e2df; }
+.e-impulso-voltio .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / 3; width: 8px; height: 8px; border: solid #5e5e5e; border-width: 2px 2px 0 0; transform: rotate(45deg); margin-right: 4px; }
+.e-impulso-voltio .m-ico { grid-row: span 2; width: 34px; height: 34px; margin: 0; border-radius: 50%; background: #f3f3f1; color: #0a0a0a; }
+.e-impulso-voltio .m-acc:first-child .m-ico { background: #d4ff1f; }
+.e-impulso-voltio .m-acc b { font: italic 800 20px/1 var(--f-tit); font-stretch: 62%; text-transform: uppercase; letter-spacing: .01em; }
+.e-impulso-voltio .m-acc span { font-size: 12px; color: #5e5e5e; margin-top: 1px; }
+
+.e-impulso-voltio .m-novs, .e-impulso-voltio .m-benef { background: #fff; }
+.e-impulso-voltio .m-novs { padding: 6px 18px 0; gap: 6px; }
+.e-impulso-voltio .m-sec { font: italic 900 24px/.9 var(--f-tit); font-stretch: 62%; letter-spacing: -.005em; text-transform: uppercase; color: #0a0a0a; }
+.e-impulso-voltio .m-nov { border: 0; padding: 0; }
+.e-impulso-voltio .m-nov-tapa { grid-template-columns: 96px 1fr; grid-template-rows: auto auto 1fr; column-gap: 14px; }
+.e-impulso-voltio .m-nov-tapa .m-nov-foto { overflow: hidden; grid-column: 1; grid-row: 1 / 4; height: 60px; border-radius: 12px; background: #0a0a0a; }
+.e-impulso-voltio .m-nov-tapa .m-foto { filter: grayscale(1) contrast(1.2); }
+.e-impulso-voltio .m-nov .m-fecha { grid-row: auto; grid-column: 2; padding: 0; font: 700 11.5px/1.2 var(--f-txt); letter-spacing: .1em; text-transform: uppercase; color: #5e5e5e; }
+.e-impulso-voltio .m-nov b { grid-column: 2; margin-top: 2px; font: 800 15px/1.2 var(--f-txt); }
+.e-impulso-voltio .m-nov p { grid-column: 2; font-size: 12px; line-height: 1.3; color: #5e5e5e; }
+.e-impulso-voltio .m-nov:not(.m-nov-tapa) { display: none; }
+
+/* beneficio: lámina negra a lo ancho con el rayado diagonal oscuro, chip blanco y el título en itálica */
+.e-impulso-voltio .m-benef { margin: 10px 0 0; padding: 22px 18px 0; border: 0; border-radius: 0; flex: 1; gap: 0; align-content: start;
+  background: repeating-linear-gradient(-45deg, #1b1b1b 0 10px, #222 10px 20px); }
+.e-impulso-voltio .m-rubro { position: absolute; top: -11px; left: 18px; padding: 6px 11px; border-radius: 999px; background: #fff; color: #0a0a0a;
+  font: 800 11px/1 var(--f-txt); letter-spacing: .12em; box-shadow: 0 0 0 3px #fff; }
+.e-impulso-voltio .m-benef b { font: italic 900 22px/.95 var(--f-tit); font-stretch: 62%; text-transform: uppercase; color: #fff; }
+.e-impulso-voltio .m-benef p { margin: 4px 0 0; font-size: 12px; color: #e6e6e6; }

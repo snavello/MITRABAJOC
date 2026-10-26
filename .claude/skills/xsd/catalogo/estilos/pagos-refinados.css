@@ -1,0 +1,93 @@
+/* fuentes: Hanken Grotesk:wght@400;500;600;650;700; JetBrains Mono:wght@400;500;600 */
+/* foto: tecnico; calle */
+/* Pagos refinados (modelo 105). Lienzo blanco y gris frío, índigo #4f3fe0 como único acento, sombras en capas casi invisibles,
+   el velo de luz pastel que deriva detrás del saludo y el diagrama prolijo del circuito. Cifras y fechas en JetBrains Mono. */
+.e-pagos-refinados {
+  --fondo: #ffffff; --sup: #f6f8fb; --tinta: #0d1b34; --suave: #5a6679; --linea: #e3e8ef;
+  --acento: #4f3fe0; --acento-tinta: #ffffff; --acento2: #3fa9e8; --oscuro: #0d1b34; --sobre-oscuro: #ffffff;
+  --f-tit: "Hanken Grotesk", "Figtree", system-ui, sans-serif; --f-txt: "Hanken Grotesk", "Figtree", system-ui, sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, monospace;
+  --radio: 14px; --radio-btn: 9px;
+  --pr-tinta2: #33415a; --pr-linea2: #d5dbe3; --pr-ind-osc: #3a2bc0; --pr-ind-suave: #efedff; --pr-ind-borde: #d9d4ff;
+  --pr-sombra: 0 1px 1px rgba(13,27,52,.04), 0 2px 6px -2px rgba(50,50,93,.08), 0 12px 28px -14px rgba(50,50,93,.22);
+  font-feature-settings: "ss01", "cv11"; -webkit-font-smoothing: antialiased;
+}
+.e-pagos-refinados > * { flex-shrink: 0; }
+/* encabezado de vidrio blanco */
+.e-pagos-refinados .m-cab { background: rgba(255,255,255,.78); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(227,232,239,.9); padding: 12px 16px; z-index: 3; }
+.e-pagos-refinados .m-logo { color: #4f3fe0; }
+.e-pagos-refinados .m-marca { font: 650 16px/1 var(--f-tit); letter-spacing: -.01em; }
+.e-pagos-refinados .m-marca small { font: 500 10px/1 var(--f-num); letter-spacing: .06em; text-transform: uppercase; color: #5a6679; }
+.e-pagos-refinados .m-yo { position: relative; width: 38px; height: 38px; background: #fff; border: 1px solid var(--linea); color: var(--pr-tinta2);
+  box-shadow: var(--pr-sombra); font: 600 12px/1 var(--f-num); }
+.e-pagos-refinados .m-yo::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid #d9d4ff; }
+/* el héroe: velo pastel en diagonal detrás del saludo, fundido a blanco */
+.e-pagos-refinados .m-heroe { margin: 0; padding: 12px 16px 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; isolation: isolate; }
+.e-pagos-refinados .pr-velo { position: absolute; inset: -66px 0 auto 0; height: 250px; overflow: hidden; z-index: -1; }
+.e-pagos-refinados .pr-velo::before { content: ""; position: absolute; inset: -70% -35% 10% -35%;
+  background: radial-gradient(34% 40% at 24% 46%, rgba(118,96,255,.42), transparent 70%), radial-gradient(30% 36% at 66% 34%, rgba(64,190,245,.36), transparent 70%),
+    radial-gradient(26% 32% at 52% 72%, rgba(255,165,128,.34), transparent 70%), radial-gradient(24% 30% at 88% 66%, rgba(242,128,214,.30), transparent 70%);
+  filter: blur(6px); transform: skewY(-8deg); animation: pr-deriva 22s ease-in-out infinite alternate; }
+.e-pagos-refinados .pr-velo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0) 45%, #fff 96%); }
+@keyframes pr-deriva { 0% { transform: skewY(-8deg) translate3d(-4%,0,0) scale(1); } 100% { transform: skewY(-8deg) translate3d(5%,3%,0) scale(1.08); } }
+.e-pagos-refinados .m-kick { margin: 0 4px 12px; font: 650 30px/1.08 var(--f-tit); letter-spacing: -.03em; text-transform: none; opacity: 1; color: #0d1b34; }
+.e-pagos-refinados .m-kick span { color: #4f3fe0; }
+/* la tarjeta principal con el filete índigo → celeste → rosa */
+.e-pagos-refinados .pr-card { position: relative; overflow: hidden; padding: 16px 16px 16px; background: #fff; border: 1px solid var(--linea);
+  border-radius: 14px; box-shadow: var(--pr-sombra); }
+.e-pagos-refinados .pr-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, #4f3fe0, #3fa9e8 55%, #f08fd2); }
+.e-pagos-refinados .m-cifra { margin: 0; gap: 6px; font: 600 11px/1 var(--f-num); letter-spacing: .06em; text-transform: uppercase; color: #4f3fe0; }
+.e-pagos-refinados .m-cifra b { font: 600 11px/1 var(--f-num); }
+.e-pagos-refinados .m-cifra span { font-size: 11px; opacity: 1; }
+.e-pagos-refinados .m-tit { margin: 7px 0 4px; font: 650 24px/1.1 var(--f-tit); letter-spacing: -.025em; color: #0d1b34; }
+.e-pagos-refinados .m-det { margin: 0; font-size: 14px; opacity: 1; color: #5a6679; }
+/* el diagrama del circuito: tres nodos y la línea punteada que corre */
+.e-pagos-refinados .pr-flujo { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center; margin: 10px 0 10px; padding: 6px 4px;
+  background: #f6f8fb; border: 1px solid var(--linea); border-radius: 10px; }
+.e-pagos-refinados .pr-flujo::before { content: ""; position: absolute; left: 17%; right: 17%; top: 50%; height: 2px; margin-top: -1px;
+  background: repeating-linear-gradient(90deg, #d9d4ff 0 6px, transparent 6px 11px); background-size: 22px 2px; animation: pr-corre 1.4s linear infinite; }
+@keyframes pr-corre { to { background-position: 22px 0; } }
+.e-pagos-refinados .pr-nodo { position: relative; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: #fff;
+  border: 1px solid var(--pr-linea2); color: #4f3fe0; box-shadow: 0 1px 2px rgba(13,27,52,.06); }
+.e-pagos-refinados .pr-nodo.pr-on { background: #4f3fe0; border-color: #4f3fe0; color: #fff; box-shadow: 0 4px 12px -3px rgba(79,63,224,.5); }
+.e-pagos-refinados .pr-nodo svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.e-pagos-refinados .m-btn { display: flex; width: 100%; gap: 8px; min-height: 44px; border-radius: 9px; background: #4f3fe0; color: #fff; font: 600 15px/1 var(--f-txt);
+  box-shadow: 0 1px 1px rgba(13,27,52,.12), 0 4px 10px -2px rgba(79,63,224,.45), inset 0 1px 0 rgba(255,255,255,.18); }
+.e-pagos-refinados .m-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* accesos: una tarjeta con renglones */
+.e-pagos-refinados .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 10px 16px 0; padding: 0; background: #fff; border: 1px solid var(--linea);
+  border-radius: 14px; box-shadow: var(--pr-sombra); overflow: hidden; }
+.e-pagos-refinados .m-acc { grid-template-columns: 32px 1fr 10px; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0;
+  padding: 7px 14px; background: none; border: 0; border-radius: 0; }
+.e-pagos-refinados .m-acc + .m-acc { border-top: 1px solid var(--linea); }
+.e-pagos-refinados .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 6px; height: 6px; border: solid #9aa4b2; border-width: 1.6px 1.6px 0 0; transform: rotate(45deg); }
+.e-pagos-refinados .m-ico { grid-row: 1 / span 2; width: 32px; height: 32px; margin: 0; border-radius: 9px; background: #efedff; color: #4f3fe0; }
+.e-pagos-refinados .m-ico svg { width: 18px; height: 18px; }
+.e-pagos-refinados .m-acc b { font: 600 14.5px/1.25 var(--f-tit); letter-spacing: -.01em; }
+.e-pagos-refinados .m-acc span { font-size: 12.5px; color: #5a6679; }
+.e-pagos-refinados .m-acc:last-child span { font-family: var(--f-num); font-size: 11.5px; letter-spacing: -.01em; }
+/* novedades */
+.e-pagos-refinados .m-novs { padding: 12px 16px 0; gap: 8px; }
+.e-pagos-refinados .m-sec { margin: 0 2px; font: 650 15px/1 var(--f-tit); letter-spacing: -.015em; text-transform: none; color: #0d1b34; }
+.e-pagos-refinados .m-nov { background: #fff; border: 1px solid var(--linea); border-radius: 14px; box-shadow: var(--pr-sombra); padding: 10px 12px; }
+.e-pagos-refinados .m-nov-tapa { grid-template-columns: 56px 1fr; gap: 0 12px; }
+.e-pagos-refinados .m-nov-tapa .m-nov-foto { grid-column: 1; grid-row: 1 / span 3; position: relative; width: 56px; height: 56px; border-radius: 10px; background: #2a2560; }
+.e-pagos-refinados .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.06) brightness(1.04); }
+.e-pagos-refinados .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, #5b4bea, #3fa9e8); mix-blend-mode: color; opacity: .55; }
+.e-pagos-refinados .m-nov .m-fecha { grid-row: auto; grid-column: 2; padding: 0; font: 500 11px/1.3 var(--f-num); color: #5a6679; }
+.e-pagos-refinados .m-nov b { grid-column: 2; font: 650 14.5px/1.3 var(--f-tit); letter-spacing: -.01em; }
+.e-pagos-refinados .m-nov p { grid-column: 2; font-size: 12.5px; color: #5a6679; }
+.e-pagos-refinados .m-nov:not(.m-nov-tapa) { display: none; }
+.e-pagos-refinados .m-benef { margin: 8px 16px 10px; background: #f8f7ff; border: 1px solid #d9d4ff; border-radius: 12px; padding: 10px 14px; grid-template-columns: 1fr auto; }
+.e-pagos-refinados .m-benef b, .e-pagos-refinados .m-benef p { grid-column: 1 / -1; grid-row: auto; }
+.e-pagos-refinados .m-benef b { grid-row: 1; grid-column: 1; }
+.e-pagos-refinados .m-rubro { justify-self: start; padding: 4px 7px; border-radius: 6px; background: #fff; border: 1px solid #d9d4ff; color: #4f3fe0;
+  font: 600 10px/1 var(--f-num); letter-spacing: .06em; grid-row: 1; grid-column: 2; align-self: center; }
+.e-pagos-refinados .m-benef b { font: 650 14.5px/1.25 var(--f-tit); letter-spacing: -.01em; }
+/* el beneficio con su foto B/N y el baño índigo, como las notas */
+.e-pagos-refinados .m-benef { padding-left: 68px; min-height: 66px; align-content: center; }
+.e-pagos-refinados .m-benef::before, .e-pagos-refinados .m-benef::after { content: ""; position: absolute; left: 11px; top: 50%; width: 46px; height: 46px;
+  margin-top: -23px; border-radius: 9px; }
+.e-pagos-refinados .m-benef::before { background: #2a2560 url(fotos/herramientas.jpg) 50% 50% / cover; filter: grayscale(1) contrast(1.06) brightness(1.04); }
+.e-pagos-refinados .m-benef::after { background: linear-gradient(135deg, #5b4bea, #3fa9e8); mix-blend-mode: color; opacity: .55; }
+.e-pagos-refinados .m-benef p { color: #5a6679; }

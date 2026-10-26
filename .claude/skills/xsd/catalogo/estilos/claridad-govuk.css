@@ -1,0 +1,59 @@
+/* fuentes: Public Sans:wght@400;700 */
+/* foto: tecnico; calle */
+/* Claridad (modelo 34, inspirado en GOV.UK). Public Sans, texto de 19px, radio 0, componentes obvios: la banda de la base sobre la foto,
+   el filete de acento, la respuesta primero en una frase grande, el banner de notificación, los accesos como lista de enlaces subrayados
+   y el foco amarillo #ffdd00 con su sombra negra. Colores del gremio: UOM (base #0f2240, primario #1a3d6b, acento #e8b84b). */
+.e-claridad-govuk {
+  --fondo: #ffffff; --sup: #f3f2f1; --tinta: #0b0c0c; --suave: #505a5f; --linea: #b1b4b6;
+  --acento: #1a3d6b; --acento-tinta: #ffffff; --acento2: #e8b84b; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --f-tit: "Public Sans", system-ui, sans-serif; --f-txt: "Public Sans", system-ui, sans-serif; --f-num: "Public Sans", system-ui, sans-serif;
+  --radio: 0; --radio-btn: 5px;
+  --gv-foco: #ffdd00; --gv-linea-suave: #dcdedf;
+  font-size: 19px; line-height: 1.42; font-variant-numeric: tabular-nums;
+}
+.e-claridad-govuk > * { flex-shrink: 0; }
+/* la banda de la base */
+.e-claridad-govuk .m-cab { background: #0f2240; color: #fff; padding: 12px 20px; gap: 12px; }
+.e-claridad-govuk .m-logo { color: #fff; }
+.e-claridad-govuk .m-marca { font: 700 19px/1.1 var(--f-tit); letter-spacing: 0; }
+.e-claridad-govuk .m-marca small { font: 400 14px/1.2 var(--f-txt); letter-spacing: 0; color: #dcdfe6; }
+.e-claridad-govuk .m-yo { width: auto; height: auto; border-radius: 0; background: none; border: 0; color: #fff; font: 700 16px/1 var(--f-txt);
+  text-decoration: underline; text-underline-offset: .18em; text-decoration-thickness: 1px; }
+.e-claridad-govuk .m-heroe { margin: 0; padding: 0; border-radius: 0; background: none; color: var(--tinta); overflow: visible; }
+/* saludo sobre la foto del gremio, fundida en la base */
+.e-claridad-govuk .gv-saludo { position: relative; min-height: 124px; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 20px 14px;
+  overflow: hidden; isolation: isolate; background: #0f2240; }
+.e-claridad-govuk .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -1; background: #0f2240; overflow: hidden; }
+.e-claridad-govuk .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.12); mix-blend-mode: luminosity; opacity: .9; object-position: 50% 28%; }
+.e-claridad-govuk .m-heroe-foto::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(15,34,64,.08) 0%, rgba(15,34,64,.2) 40%, rgba(15,34,64,.86) 82%, #0f2240 100%), rgba(232,184,75,.1); }
+.e-claridad-govuk .m-kick { margin: 0; font: 700 30px/1.1 var(--f-tit); letter-spacing: 0; text-transform: none; opacity: 1; color: #fff; }
+.e-claridad-govuk .m-kick b { color: #e8b84b; }
+.e-claridad-govuk .gv-filete { height: 8px; background: #e8b84b; }
+/* la respuesta primero */
+.e-claridad-govuk .gv-cuerpo { padding: 18px 20px 0; }
+.e-claridad-govuk .m-tit { margin: 0; font: 700 38px/1.08 var(--f-tit); letter-spacing: -.012em; color: #0b0c0c; text-wrap: balance; }
+.e-claridad-govuk .m-det { margin: 8px 0 0; font-size: 19px; line-height: 1.35; opacity: 1; color: #0b0c0c; }
+/* banner de notificación: borde de 5px del primario */
+.e-claridad-govuk .gv-banner { margin-top: 16px; border: 5px solid #1a3d6b; }
+.e-claridad-govuk .m-cifra { margin: 0; padding: 4px 12px 8px; gap: 8px; background: #1a3d6b; color: #fff; align-items: baseline; }
+.e-claridad-govuk .m-cifra b { font: 700 19px/1.2 var(--f-num); }
+.e-claridad-govuk .m-cifra span { font: 700 17px/1.2 var(--f-txt); opacity: 1; }
+.e-claridad-govuk .gv-banner-cuerpo { padding: 14px 14px 16px; }
+.e-claridad-govuk .m-btn { display: flex; width: 100%; min-height: 52px; border-radius: 5px; background: #1a3d6b; color: #fff; font: 700 19px/1.2 var(--f-txt);
+  box-shadow: 0 3px 0 #0b0c0c; }
+/* accesos como lista de enlaces subrayados con su estado */
+.e-claridad-govuk .m-accesos { grid-template-columns: 1fr; gap: 0; margin: 18px 20px 0; padding: 0; border-top: 1px solid #b1b4b6; }
+.e-claridad-govuk .m-acc { grid-template-columns: 26px 1fr 14px; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0; padding: 9px 2px;
+  background: none; border: 0; border-bottom: 1px solid #b1b4b6; border-radius: 0; }
+.e-claridad-govuk .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 8px; height: 8px; border: solid #505a5f; border-width: 2.5px 2.5px 0 0; transform: rotate(45deg); }
+.e-claridad-govuk .m-ico { grid-row: 1 / span 2; width: 26px; height: 26px; margin: 0; border-radius: 0; color: #1a3d6b; }
+.e-claridad-govuk .m-ico svg { width: 24px; height: 24px; stroke-width: 2.2; }
+.e-claridad-govuk .m-acc b { justify-self: start; font: 700 19px/1.2 var(--f-tit); color: #1a3d6b; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .14em; }
+.e-claridad-govuk .m-acc span { font-size: 16px; line-height: 1.3; color: #505a5f; }
+/* el foco amarillo de GOV.UK, mostrado en el primer enlace */
+.e-claridad-govuk .m-acc:first-child b { color: #0b0c0c; background: #ffdd00; text-decoration: none; box-shadow: 0 -2px #ffdd00, 0 4px #0b0c0c; }
+/* una cosa por pantalla: la portada termina en la lista de lo que podés hacer (novedades y beneficio quedan para su página) */
+.e-claridad-govuk .m-novs, .e-claridad-govuk .m-benef { display: none; }
+/* pie de GOV.UK: filete gris arriba y fondo #f3f2f1 */
+.e-claridad-govuk .d3 { inset: auto 0 0 0; height: 14px; background: #f3f2f1; border-top: 1px solid #b1b4b6; z-index: 0; }

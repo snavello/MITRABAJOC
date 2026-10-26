@@ -1,0 +1,95 @@
+/* fuentes: Barlow Condensed:wght@600;700; Hanken Grotesk:wght@400;500;600 */
+/* foto: tecnico; calle */
+/* Pulso (minimalismo de una tinta). Todo sobre el azul del gremio, una sola tinta blanca, filetes de 1px y el número gigante.
+   La firma: doce líneas finas apiladas (una por mes, a lo Joy Division) que se dibujan de atrás hacia adelante,
+   y la del mes en curso, en el acento, que late como un electrocardiograma. */
+.e-pulso-minimal {
+  --fondo: #0f2240; --sup: transparent; --tinta: #ffffff; --suave: #adb4be; --linea: #303f59;
+  --acento: #e8b84b; --acento-tinta: #0f2240; --acento2: #e5533d; --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --tenue: #adb4be; --filo: #2d3d58;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Hanken Grotesk", system-ui, sans-serif; --f-num: "Barlow Condensed", sans-serif;
+  --radio: 0; --radio-btn: 9px;
+  --pu-curva: cubic-bezier(.22,.61,.36,1); --pu-sale: cubic-bezier(.16,1,.3,1);
+}
+/* encabezado mínimo: sigla con raya vertical de acento y filete abajo */
+.e-pulso-minimal .m-cab { height: 56px; padding: 0 20px; border-bottom: 1px solid var(--filo); }
+.e-pulso-minimal .m-logo { display: none; }
+.e-pulso-minimal .m-marca { font: 700 26px/1 var(--f-tit); letter-spacing: .5px; padding-left: 10px; border-left: 3px solid var(--acento);
+  grid-auto-flow: column; align-items: baseline; gap: 10px; }
+.e-pulso-minimal .m-marca small { font: 600 10.5px/1 var(--f-txt); letter-spacing: 1.6px; text-transform: uppercase; color: var(--tenue); }
+.e-pulso-minimal .m-yo { background: none; color: #fff; border: 1px solid var(--filo); font-family: var(--f-txt); }
+
+/* héroe sin caja: el saludo enorme, el número que importa y el pulso */
+.e-pulso-minimal .m-heroe { margin: 0; padding: 20px 16px 0; border-radius: 0; background: none; color: #fff; overflow: visible; }
+.e-pulso-minimal .m-kick { font: 700 46px/.9 var(--f-tit); letter-spacing: 0; text-transform: uppercase; opacity: 1; color: #fff; margin: 0 4px; }
+.e-pulso-minimal .m-tit { font: 600 10.5px/1 var(--f-txt); letter-spacing: 1.6px; text-transform: uppercase; color: var(--tenue); margin: 16px 4px 0; }
+.e-pulso-minimal .m-cifra { margin: 6px 4px 0; gap: 12px; align-items: flex-end; }
+.e-pulso-minimal .m-cifra b { font: 700 92px/.8 var(--f-num); letter-spacing: -1px; display: block; overflow: hidden; padding-top: 4px; }
+.e-pulso-minimal .pu-num { display: block; font-style: normal; }
+.e-pulso-minimal .m-cifra > span { font: 600 26px/1 var(--f-tit); text-transform: uppercase; color: var(--tenue); opacity: 1; padding-bottom: 4px; }
+.e-pulso-minimal .pu-pulso { height: 136px; margin: 12px 0 0; }
+.e-pulso-minimal .pu-svg { display: block; width: 100%; height: 136px; overflow: visible; }
+.e-pulso-minimal .pu-rel { fill: #0f2240; }
+.e-pulso-minimal .pu-tr { fill: none; stroke: #fff; stroke-width: 1; stroke-linejoin: round; opacity: .82; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.e-pulso-minimal .pu-late .pu-tr { stroke: var(--acento); stroke-width: 2.2; opacity: 1; }
+.e-pulso-minimal .pu-late { transform-box: view-box; transform-origin: 0 125px; }
+.e-pulso-minimal .pu-pt { fill: var(--acento); transform-box: fill-box; transform-origin: center; }
+.e-pulso-minimal .m-det { position: relative; display: flex; align-items: center; gap: 8px; margin: 10px 4px 0; font-size: 13px; color: var(--tenue); opacity: 1; }
+.e-pulso-minimal .pu-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--acento); flex: none; }
+.e-pulso-minimal .m-btn { margin: 16px 4px 0; width: calc(100% - 8px); font-family: var(--f-txt); font-weight: 600; transition: transform .12s cubic-bezier(.23,1,.32,1); }
+.e-pulso-minimal .m-btn:active { transform: scale(.97); }
+
+/* lo tuyo: renglones separados solo por filetes, títulos en condensada 20px */
+.e-pulso-minimal .m-accesos { grid-template-columns: 1fr 1fr; gap: 0; margin: 18px 20px 0; padding: 0; border-top: 1px solid var(--filo); }
+.e-pulso-minimal .m-acc { background: none; border: 0; border-radius: 0; border-bottom: 1px solid var(--filo); min-height: 0; padding: 11px 0 10px; gap: 1px; }
+.e-pulso-minimal .m-acc:nth-child(odd) { border-right: 1px solid var(--filo); padding-right: 12px; }
+.e-pulso-minimal .m-acc:nth-child(even) { padding-left: 14px; }
+.e-pulso-minimal .m-ico { display: none; }
+.e-pulso-minimal .m-acc b { font: 700 20px/1 var(--f-tit); text-transform: uppercase; letter-spacing: .2px; }
+.e-pulso-minimal .m-acc span { color: var(--tenue); font-size: 11.5px; }
+.e-pulso-minimal .m-novs { padding: 16px 20px 0; gap: 0; }
+.e-pulso-minimal .m-sec { color: var(--tenue); letter-spacing: 1.6px; font-size: 10.5px; margin-bottom: 6px; }
+.e-pulso-minimal .m-nov { border-top: 1px solid var(--filo); padding: 9px 0; }
+.e-pulso-minimal .m-nov .m-fecha { color: var(--tenue); font: 600 13px/1.2 var(--f-tit); text-transform: uppercase; letter-spacing: .4px; }
+.e-pulso-minimal .m-nov b { font: 600 14px/1.25 var(--f-txt); }
+.e-pulso-minimal .m-nov p { color: var(--tenue); }
+.e-pulso-minimal .m-nov-tapa .m-nov-foto { display: none; }
+.e-pulso-minimal .m-benef { margin: 0 20px 16px; padding: 10px 0; background: none; border: 0; border-top: 1px solid var(--filo); border-radius: 0; }
+.e-pulso-minimal .m-rubro { color: var(--acento); }
+.e-pulso-minimal .m-benef p { color: var(--tenue); }
+
+/* ——— el movimiento ——— */
+/* ambiente: el mes en curso late (doble golpe cada 3,2 s) y el punto de la cresta sube con él */
+.e-pulso-minimal .pu-late { animation: e-pulso-minimal-late 3.2s var(--pu-curva) infinite; }
+.e-pulso-minimal .pu-pt { animation: e-pulso-minimal-cresta 3.2s var(--pu-curva) infinite; }
+.e-pulso-minimal .pu-dot { animation: e-pulso-minimal-punto 3.2s ease-out infinite; }
+@keyframes e-pulso-minimal-late { 0%, 34%, 100% { transform: scaleY(1); } 6% { transform: scaleY(1.55); } 12% { transform: scaleY(.9); } 19% { transform: scaleY(1.3); } 26% { transform: scaleY(1); } }
+@keyframes e-pulso-minimal-cresta { 0%, 34%, 100% { transform: translateY(0); } 6% { transform: translateY(-17.6px); } 12% { transform: translateY(3.2px); } 19% { transform: translateY(-9.6px); } 26% { transform: translateY(0); } }
+@keyframes e-pulso-minimal-punto { 0%, 34%, 100% { opacity: 1; transform: scale(1); } 6% { opacity: .55; transform: scale(1.6); } 19% { opacity: .8; transform: scale(1.25); } }
+@media (prefers-reduced-motion: no-preference) {
+  /* estado inicial: las líneas sin dibujar, el número abajo de su ventana, lo demás apagado */
+  .e-pulso-minimal .pu-tr { stroke-dashoffset: 1; }
+  .e-pulso-minimal .pu-pt { opacity: 0; }
+  .e-pulso-minimal .pu-num { transform: translateY(105%); }
+  .e-pulso-minimal .m-kick, .e-pulso-minimal .m-tit, .e-pulso-minimal .m-cifra > span, .e-pulso-minimal .m-det, .e-pulso-minimal .m-btn,
+  .e-pulso-minimal .m-accesos, .e-pulso-minimal .m-novs, .e-pulso-minimal .m-benef { opacity: 0; }
+  /* entrada: las doce líneas se trazan de atrás hacia adelante, 70 ms una de otra */
+  .e-pulso-minimal.en-vista .pu-tr { animation: e-pulso-minimal-traza 1.15s var(--pu-curva) calc(.25s + var(--i) * 70ms) forwards; }
+  .e-pulso-minimal.en-vista .pu-late { animation: e-pulso-minimal-late 3.2s var(--pu-curva) 2.2s infinite; }
+  .e-pulso-minimal.en-vista .pu-pt { animation: e-pulso-minimal-aparece .4s var(--pu-curva) 1.9s forwards, e-pulso-minimal-cresta 3.2s var(--pu-curva) 2.2s infinite; }
+  .e-pulso-minimal.en-vista .pu-num { animation: e-pulso-minimal-sube .9s var(--pu-sale) .15s forwards; }
+  .e-pulso-minimal.en-vista .m-kick { animation: e-pulso-minimal-aparece .7s var(--pu-curva) 0s forwards; }
+  .e-pulso-minimal.en-vista .m-tit { animation: e-pulso-minimal-aparece .7s var(--pu-curva) .1s forwards; }
+  .e-pulso-minimal.en-vista .m-cifra > span { animation: e-pulso-minimal-aparece .7s var(--pu-curva) .5s forwards; }
+  .e-pulso-minimal.en-vista .m-det { animation: e-pulso-minimal-aparece .7s var(--pu-curva) 1.6s forwards; }
+  .e-pulso-minimal.en-vista .m-btn { animation: e-pulso-minimal-aparece .7s var(--pu-curva) 1.75s forwards; }
+  .e-pulso-minimal.en-vista .m-accesos { animation: e-pulso-minimal-aparece .8s var(--pu-curva) 1.9s forwards; }
+  .e-pulso-minimal.en-vista .m-novs { animation: e-pulso-minimal-aparece .8s var(--pu-curva) 2s forwards; }
+  .e-pulso-minimal.en-vista .m-benef { animation: e-pulso-minimal-aparece .8s var(--pu-curva) 2.1s forwards; }
+}
+@keyframes e-pulso-minimal-traza { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes e-pulso-minimal-sube { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes e-pulso-minimal-aparece { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .e-pulso-minimal *, .e-pulso-minimal *::before, .e-pulso-minimal *::after { animation: none !important; transition: none !important; }
+}

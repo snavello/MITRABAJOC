@@ -1,0 +1,56 @@
+/* fuentes: Manrope:wght@400;500;600;700;800 */
+/* foto: tecnico; calle */
+/* Eléctrico laguna (Colm3na 162, modelo por defecto). La portada es la única pantalla con color: la laguna con la foto fundida. */
+.e-electrico-laguna {
+  --fondo: #dff6f1; --sup: #ffffff; --tinta: #0b2f4f; --suave: #3d5a6c; --linea: rgba(11,47,79,.12);
+  --acento: #0a7f8c; --acento-tinta: #ffffff; --acento2: #46f0d2; --oscuro: #0b2f4f; --sobre-oscuro: #ffffff;
+  --f-tit: "Manrope", system-ui, sans-serif; --f-txt: "Manrope", system-ui, sans-serif; --f-num: "Manrope", system-ui, sans-serif;
+  --radio: 12px; --radio-btn: 999px;
+  background: linear-gradient(180deg, #dff6f1 0 420px, #eefaf7 100%);
+}
+.e-electrico-laguna .m-cab { position: absolute; inset: 0 0 auto; color: #fff; }
+.e-electrico-laguna .m-logo { color: #46f0d2; }
+.e-electrico-laguna .m-marca small { color: rgba(255,255,255,.7); }
+.e-electrico-laguna .m-yo { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.35); backdrop-filter: blur(10px); }
+.e-electrico-laguna .m-heroe { margin: 0; border-radius: 0; height: 430px; padding: 84px 28px 0; text-align: center;
+  background: #0b2f4f; display: flex; flex-direction: column; align-items: center; }
+/* la laguna: la foto en gris fundida por luminosidad sobre el degradé, y el velo que deja el azul opaco solo donde va el texto */
+.e-electrico-laguna .m-heroe-foto { display: block; position: absolute; inset: 0; z-index: -2; isolation: isolate; overflow: hidden;
+  background: linear-gradient(180deg, #0d4a6e 0%, #0a7f8c 42%, #13a3a0 62%, #8de6d4 100%); }
+.e-electrico-laguna .m-heroe-foto .m-foto { filter: grayscale(1) contrast(1.12) brightness(1.02); mix-blend-mode: luminosity; opacity: .95;
+  object-position: 50% 30%; }
+.e-electrico-laguna .m-heroe::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(11,47,79,.96) 0%, rgba(11,47,79,.9) 33%, rgba(11,47,79,.55) 45%, rgba(10,90,120,.12) 56%,
+    rgba(19,163,160,0) 64%, rgba(141,230,212,.18) 76%, rgba(176,238,226,.82) 92%, #dff6f1 100%); }
+.e-electrico-laguna .m-kick { color: #46f0d2; opacity: 1; letter-spacing: .22em; font-size: 11.5px; }
+.e-electrico-laguna .m-tit { font-weight: 500; font-size: 32px; letter-spacing: -.005em; line-height: 1.08; color: #fff; }
+.e-electrico-laguna .m-det { color: rgba(255,255,255,.82); }
+.e-electrico-laguna .m-cifra { display: none; }
+.e-electrico-laguna .m-btn { margin-top: auto; margin-bottom: 34px; width: 100%; max-width: 280px; background: #46f0d2; color: #0b2f4f; font-weight: 600;
+  box-shadow: 0 10px 24px -12px rgba(11,47,79,.55), 0 0 0 1px rgba(11,47,79,.12); }
+/* accesos como renglones con el ícono en círculo blanco */
+.e-electrico-laguna .m-accesos { grid-template-columns: 1fr; gap: 0; margin-top: -8px; padding: 0 18px; }
+.e-electrico-laguna .m-acc { grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 0 12px; min-height: 0; padding: 9px 2px;
+  background: none; border: 0; border-bottom: 1px solid rgba(11,47,79,.12); border-radius: 0; align-items: center; }
+.e-electrico-laguna .m-ico { grid-row: span 2; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #0a7f8c; margin: 0;
+  box-shadow: 0 6px 14px -10px rgba(11,47,79,.6); }
+.e-electrico-laguna .m-acc b { font-weight: 600; font-size: 14.5px; }
+.e-electrico-laguna .m-acc span { color: #3d5a6c; }
+/* secciones con subrayado de laguna solo bajo el texto */
+.e-electrico-laguna .m-sec { justify-self: start; font-weight: 700; letter-spacing: .2em; color: #0b2f4f; padding-bottom: 4px;
+  background: linear-gradient(90deg, #0a7f8c, #46f0d2) bottom / 100% 2px no-repeat; }
+.e-electrico-laguna .m-nov { border-top-color: rgba(11,47,79,.12); }
+/* nota de tapa con filete flúor arriba */
+.e-electrico-laguna .m-nov-tapa { background: #fff; border-radius: 6px; padding: 12px; border: 0; box-shadow: inset 0 3px 0 #46f0d2, 0 8px 22px -16px rgba(11,47,79,.4); }
+.e-electrico-laguna .m-nov-tapa .m-fecha { color: #0a7f8c; }
+/* miniatura de la nota en duotono: sombras azul, luces agua */
+.e-electrico-laguna .m-nov-tapa { grid-template-columns: auto 1fr 64px; }
+.e-electrico-laguna .m-nov-tapa .m-nov-foto { grid-column: 3; grid-row: 1 / span 3; height: 64px; align-self: start; border-radius: 6px;
+  position: relative; background: #8de6d4; isolation: isolate; }
+.e-electrico-laguna .m-nov-tapa .m-nov-foto .m-foto { filter: grayscale(1) contrast(1.2) brightness(1.05); mix-blend-mode: multiply; }
+.e-electrico-laguna .m-nov-tapa .m-nov-foto::after { content: ""; position: absolute; inset: 0; background: #0b2f4f; mix-blend-mode: lighten; }
+.e-electrico-laguna .m-nov-tapa p { grid-column: 2; }
+.e-electrico-laguna .m-benef { background: linear-gradient(180deg, #8de6d4, #dff6f1); border: 0; border-radius: 6px; }
+.e-electrico-laguna .m-rubro { color: #0b2f4f; }
+/* el pie en franja azul */
+.e-electrico-laguna .d3 { inset: auto 0 0 0; height: 34px; background: #0b2f4f; z-index: 0; }

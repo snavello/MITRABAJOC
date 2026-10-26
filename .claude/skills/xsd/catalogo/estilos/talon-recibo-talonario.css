@@ -1,0 +1,95 @@
+/* fuentes: Barlow Condensed:wght@500; Barlow Condensed:wght@600; Barlow Condensed:wght@700; Red Hat Text:wght@400..700; Red Hat Mono:wght@400..600 */
+/* Talón (recibo y talonario). Colores de la UOM: base #0f2240, primario #1a3d6b, acento #e8b84b, apoyo #2fa88f.
+   Firma: el cupón perforado con su talón, el sello de goma estampado y la hoja anillada de los accesos. */
+.e-talon-recibo-talonario {
+  --base: #0f2240; --primario: #1a3d6b; --acento: #e8b84b; --apoyo: #2fa88f;
+  --desk: color-mix(in srgb, #1a3d6b 7%, #eef1f5);
+  --filete: color-mix(in srgb, #1a3d6b 16%, #dde3ea);
+  --carbon: color-mix(in srgb, #1a3d6b 88%, #000);
+  --fondo: var(--desk); --sup: #ffffff; --tinta: #152238; --suave: #5b6478; --linea: var(--filete);
+  --acento-tinta: #0f2240; --acento2: var(--carbon); --oscuro: #0f2240; --sobre-oscuro: #ffffff;
+  --ok: #0d7a5f; --mal: #c0392b;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: "Red Hat Text", system-ui, sans-serif; --f-num: "Red Hat Mono", ui-monospace, monospace;
+  --radio: 10px; --radio-btn: 9px;
+  background: var(--desk); -webkit-font-smoothing: antialiased;
+}
+.e-talon-recibo-talonario .tl-defs { position: absolute; width: 0; height: 0; }
+.e-talon-recibo-talonario .tl-num { font-family: var(--f-num); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.e-talon-recibo-talonario .tl-carbon { color: var(--carbon); }
+.e-talon-recibo-talonario .tl-rot { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--suave); font-weight: 600; }
+
+/* encabezado en base, la sigla subrayada en acento */
+.e-talon-recibo-talonario .m-cab { background: var(--base); color: #fff; height: 56px; padding: 0 16px; }
+.e-talon-recibo-talonario .m-logo { color: var(--acento); }
+.e-talon-recibo-talonario .m-marca { font: 700 25px/1 var(--f-tit); letter-spacing: .04em; display: grid; gap: 0; }
+.e-talon-recibo-talonario .m-marca::after { content: ""; order: 1; justify-self: start; width: 52px; height: 3px; margin-top: 3px; background: var(--acento); }
+.e-talon-recibo-talonario .m-marca small { order: 2; margin-top: 4px; font: 600 9.5px/1 var(--f-tit); letter-spacing: .22em; text-transform: uppercase;
+  color: color-mix(in srgb, #fff 72%, var(--base)); }
+.e-talon-recibo-talonario .m-yo { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.45); font-family: var(--f-num); font-weight: 500; }
+
+/* héroe: banda oscura + billetera */
+.e-talon-recibo-talonario .m-heroe { margin: 0; padding: 0; border-radius: 0; background: transparent; color: var(--tinta); overflow: visible; }
+.e-talon-recibo-talonario .tl-banda { background: var(--base); padding: 8px 16px 60px; border-bottom: 1px solid color-mix(in srgb, var(--base) 70%, white); }
+.e-talon-recibo-talonario .m-kick { font: 700 34px/1 var(--f-tit); letter-spacing: .01em; text-transform: uppercase; color: #fff; opacity: 1; }
+.e-talon-recibo-talonario .tl-billetera { margin: -50px 12px 0; position: relative; }
+.e-talon-recibo-talonario .tl-leng { height: 30px; border-radius: 9px 9px 0 0; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 6px;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.e-talon-recibo-talonario .tl-lg1 { margin: 0 26px 0 42px; background: color-mix(in srgb, var(--apoyo) 30%, white); color: color-mix(in srgb, var(--apoyo) 30%, #0b1626); }
+.e-talon-recibo-talonario .tl-lg2 { margin: -8px 12px 0 22px; background: color-mix(in srgb, var(--primario) 18%, white); color: var(--carbon); position: relative; }
+.e-talon-recibo-talonario .tl-cupon { background: #fff; border-radius: 10px; position: relative; margin-top: -8px;
+  box-shadow: 0 1px 0 var(--filete), 0 10px 24px -14px color-mix(in srgb, var(--base) 60%, transparent); }
+.e-talon-recibo-talonario .tl-cupcab { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 9px; border-bottom: 1px solid var(--filete); }
+.e-talon-recibo-talonario .tl-cupcab .tl-num { font-size: 11px; }
+.e-talon-recibo-talonario .tl-cuerpo { position: relative; padding: 10px 14px 8px; }
+.e-talon-recibo-talonario .m-tit { margin: 0 0 5px; font: 700 30px/1 var(--f-tit); text-transform: uppercase; color: var(--tinta); }
+.e-talon-recibo-talonario .m-det { font-size: 13.5px; color: var(--tinta); opacity: 1; }
+/* el sello de goma */
+.e-talon-recibo-talonario .tl-sello { position: absolute; top: 6px; right: 16px; font: 700 15px/1 var(--f-tit); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ok); border: 2px solid currentColor; border-radius: 5px; padding: 6px 10px 5px;
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px currentColor; transform: rotate(-7deg); filter: url(#goma-talon-recibo-talonario); opacity: .92; }
+/* el perforado con sus medialunas */
+.e-talon-recibo-talonario .tl-perfo { height: 16px; position: relative; margin: 0 10px;
+  background: radial-gradient(circle at 6px 8px, var(--desk) 2.6px, transparent 3.2px) 0 0 / 12px 16px repeat-x; }
+.e-talon-recibo-talonario .tl-perfo::before, .e-talon-recibo-talonario .tl-perfo::after { content: ""; position: absolute; top: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--desk); }
+.e-talon-recibo-talonario .tl-perfo::before { left: -18px; }
+.e-talon-recibo-talonario .tl-perfo::after { right: -18px; }
+.e-talon-recibo-talonario .tl-talon { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 14px 12px;
+  background: color-mix(in srgb, var(--primario) 5%, white); border-radius: 0 0 10px 10px; }
+.e-talon-recibo-talonario .m-cifra { margin: 0; gap: 6px; align-items: baseline; }
+.e-talon-recibo-talonario .m-cifra b { font: 600 22px/1 var(--f-num); color: var(--tinta); }
+.e-talon-recibo-talonario .m-cifra span { font-size: 13px; color: var(--suave); opacity: 1; }
+.e-talon-recibo-talonario .m-btn { min-height: 44px; padding: 0 16px; border-radius: 9px; background: var(--acento); color: #0f2240; font: 700 14px/1 var(--f-txt); }
+
+/* accesos: hoja con agujeros de anillado y margen punteado */
+.e-talon-recibo-talonario .m-accesos { display: block; margin: 12px 12px 0; padding: 0 0 0 24px; background: #fff; border-radius: 10px; box-shadow: 0 1px 0 var(--filete); }
+.e-talon-recibo-talonario .m-accesos::before { content: ""; position: absolute; left: 8px; top: 10px; bottom: 10px; width: 8px;
+  background: radial-gradient(circle at 4px 6px, var(--desk) 2.5px, transparent 3px) 0 0 / 8px 13px repeat-y; }
+.e-talon-recibo-talonario .m-accesos::after { content: ""; position: absolute; left: 22px; top: 0; bottom: 0; border-left: 1px dashed var(--filete); }
+.e-talon-recibo-talonario .m-acc { display: grid; grid-template-columns: 34px 1fr auto; grid-template-rows: auto auto; gap: 0 12px; align-items: center; min-height: 0;
+  padding: 6px 14px 6px 12px; background: none; border: 0; border-top: 1px solid var(--filete); border-radius: 0; }
+.e-talon-recibo-talonario .m-acc:first-child { border-top: 0; }
+.e-talon-recibo-talonario .m-acc::after { content: ""; grid-column: 3; grid-row: 1 / span 2; width: 7px; height: 7px; border: solid var(--suave); border-width: 1.7px 1.7px 0 0; transform: rotate(45deg); margin-right: 3px; }
+.e-talon-recibo-talonario .m-ico { grid-row: span 2; width: 34px; height: 34px; margin: 0; border-radius: 8px; color: var(--carbon);
+  border: 1.5px solid color-mix(in srgb, var(--primario) 35%, white); }
+.e-talon-recibo-talonario .m-acc b { font: 700 18px/1.05 var(--f-tit); text-transform: uppercase; letter-spacing: .02em; }
+.e-talon-recibo-talonario .m-acc span { font-size: 12px; color: var(--suave); grid-column: 2; }
+
+/* novedades: hoja con la fecha en mono carbónico */
+.e-talon-recibo-talonario .m-novs { margin: 0 12px; padding: 10px 0 0; gap: 0; }
+.e-talon-recibo-talonario .m-sec { font: 700 19px/1 var(--f-tit); letter-spacing: .02em; color: var(--tinta); margin: 0 4px 7px; }
+.e-talon-recibo-talonario .m-nov { background: #fff; padding: 8px 14px; grid-template-columns: 52px 1fr; border-top: 1px solid var(--filete); box-shadow: 0 1px 0 var(--filete); }
+.e-talon-recibo-talonario .m-nov-tapa { border-top: 0; border-radius: 10px 10px 0 0; }
+.e-talon-recibo-talonario .m-nov:last-child { border-radius: 0 0 10px 10px; }
+.e-talon-recibo-talonario .m-nov .m-fecha { font: 500 10.5px/1.2 var(--f-num); letter-spacing: .04em; text-transform: uppercase; color: var(--carbon); }
+.e-talon-recibo-talonario .m-nov b { font: 600 14px/1.25 var(--f-txt); }
+.e-talon-recibo-talonario .m-nov p { font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* beneficio: cupón con talón vertical */
+.e-talon-recibo-talonario .m-benef { margin: 10px 12px 12px; padding: 9px 46px 10px 12px; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 1px 0 var(--filete); }
+.e-talon-recibo-talonario .m-rubro { position: absolute; top: 0; right: 0; bottom: 0; width: 32px; border-left: 1.5px dashed var(--filete);
+  display: grid; place-items: center; writing-mode: vertical-rl; transform: rotate(180deg); font: 700 10px/1 var(--f-txt); letter-spacing: .14em;
+  color: color-mix(in srgb, var(--apoyo) 40%, #152238); }
+.e-talon-recibo-talonario .m-benef b { font: 700 14px/1.25 var(--f-txt); }
+.e-talon-recibo-talonario .m-benef p { font-size: 12px; }
+.e-talon-recibo-talonario .tl-tijera { position: absolute; left: 14px; top: 0; width: 16px; height: 16px; padding: 0 2px; box-sizing: content-box; background: #fff;
+  fill: none; stroke: var(--carbon); stroke-width: 1.8; stroke-linecap: round; }

@@ -1,0 +1,364 @@
+{
+  "fuentes": [
+    "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p"
+  ],
+  "estilos": [
+    {
+      "id": "mosaico-baldosa-calcarea",
+      "nombre": "Mosaico (baldosa calcárea)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p",
+        "ronda": null,
+        "numero": null,
+        "archivos": [
+          "project/Mosaico-Inicio.dc.html",
+          "project/Mosaico-Noticias.dc.html",
+          "project/Mosaico-Evaluador.dc.html",
+          "project/Mosaico-Reporte.dc.html"
+        ]
+      },
+      "caracter": "El piso de mosaico calcáreo de la casa y del sindicato de barrio: cálido, popular y propio de cada gremio, porque la baldosa se dibuja con sus cuatro colores.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700, mayúsculas en secciones (21px) y títulos de panel (40px, sin mayúsculas forzadas pero escritos en mayúsculas); saludo 38px",
+        "texto": "Work Sans 400/500/600, 13-14.5px",
+        "cifras": "Barlow Condensed 700 (34px en indicadores y veredicto) con font-variant-numeric: tabular-nums"
+      },
+      "colores": {
+        "fondo": "#e2e3e0 (--cemento)",
+        "superficie": "#f7f7f5 (--losa)",
+        "tinta": "#1d2330",
+        "tinta_suave": "#4f5766",
+        "acento": "var(--acento) del gremio (UOM #e8b84b)",
+        "acento_2": "var(--primario) / var(--apoyo) del gremio; fondo de baldosa color-mix(apoyo 12%, #f2f2ef)",
+        "oscuro": "var(--base) del gremio (UOM #0f2240)",
+        "linea": "#c9cac4 (--pastina, la junta entre baldosas)"
+      },
+      "forma": {
+        "radio": "12px tarjetas, 9px botones y campos, 3px la pared de baldosas, 20px chips",
+        "bordes": "Las listas y tablas no llevan bordes: se separan con 2-3px de 'pastina' (#c9cac4) visible entre losas (gap sobre fondo pastina, border-spacing 0 2px)",
+        "sombras": "0 10px 24px -12px rgba(0,0,0,.55) + inset 0 0 0 1px rgba(255,255,255,.6) en el héroe; 0 12px 28px -18px rgba(15,25,40,.35) en el editor",
+        "densidad": "media"
+      },
+      "recursos": [
+        "baldosa SVG generada con la paleta (symbol #baldosa: cuartos de círculo en primario, rombo en acento, centro en base)",
+        "guarda de baldositas de 14-16px como filete bajo el encabezado y sobre la barra inferior",
+        "pared de aportes: 12 baldosas, completa = pagado, media cemento = parcial, cemento con raya roja = sin pagar",
+        "pastina como separador (grilla de losas)",
+        "pattern 'piso' alternando baldosa y flor como imagen de reemplazo",
+        "animación 'poner' (escala .86→1) por baldosa"
+      ],
+      "pantallas": {
+        "portada": "Encabezado oscuro con la sigla subrayada en acento 3px y COLM3NA espaciado a la derecha; debajo una guarda de baldositas de 14px. Banda oscura con 'Hola, Martín' (acento en el nombre) y una losa clara de héroe: veredicto '4 de 5 controles bien' en condensada 34px y una tira de cinco baldosas (una en cemento con raya roja = la diferencia). Luego la tarjeta 'Mis aportes' con la pared de 12 baldosas de 6 columnas, meses abajo y leyenda Pagado/Parcial/Sin pagar. Accesos, novedades (con baldosita como ícono) y beneficios (guarda de 46px como imagen) son losas separadas por pastina. Barra inferior oscura con guarda de 6px arriba y la pestaña activa en pastilla de acento.",
+        "operacion": "Evaluador: panel oscuro redondeado (14px) con kicker en acento, título condensado 31px en mayúsculas y pasos con círculos verdes y línea. Adentro una 'hoja' clara: veredicto + cinco baldosas rotuladas (Jubilación, PAMI, Obra social, Cuota sindical, Neto), tabla de líneas con esperado debajo del importe, la línea con diferencia en fondo rojo 7% y explicación, totales y neto en condensada. Botón primario en acento, secundario con contorno blanco translúcido.",
+        "listado": "Noticias (escritorio): encabezado oscuro + tira de pestañas en pastillas (activa blanca), guarda de 16px, título 40px. Editor en losa con campos en grilla de 2 columnas, chips de destino, miniaturas con el patrón 'piso' y pie gris-cemento. Vista previa en un teléfono oscuro. La tabla es una 'caja' color pastina con filas-losa separadas 2px (border-spacing), cabecera en cemento, ícono de baldosa/flor por tipo y barrita de lecturas en primario.",
+        "tablero": "Reporte: filtros con fondo losa y borde pastina, botón CSV en acento. Indicadores en una grilla de 5 celdas-losa separadas por pastina; la quinta muestra 'De cada 20 recibos, 16 salen bien' con 20 baldositas. 'Dónde se liquida mal': barras rojas por empresa más seis baldositas por mes (bien / parcial / mal) como mapa de calor. 'Enviados al sindicato' con cifra grande y tira de progreso. Tabla en caja de pastina con filas-losa; las reservadas en losa más oscura."
+      },
+      "firma": "La baldosa calcárea dibujada con los cuatro colores del gremio, usada como unidad de dato (pared de 12 meses, 5 controles, 20 recibos) y la pastina de 2-3px como separador de todo.",
+      "cuidado": "Usado de más, el patrón se vuelve adorno (la nota lo advierte: va en guardas y en la pared, no de fondo). Con paletas de poco contraste la baldosa pierde lectura; el estado 'parcial' depende del ámbar #9a6f05 sobre cemento. Mucho SVG <use> repetido.",
+      "eleccion": "Fue la dirección líder: el sorteo de Impeccable (concept-seed) asignó Mosaico como dirección principal. Viabilidad ALTA según la nota (SVG de patrón con variables CSS + Work Sans vendoreada, sin cambios de backend). De un retador descartado ('catálogo de convención') heredó que la grilla se reacomoda en celdas enteras.",
+      "calidad": 5,
+      "variantes": [],
+      "css_firma": ".mo{--tinta:#1d2330;--gris:#4f5766;--cemento:#e2e3e0;--cemento-2:#d5d6d1;--losa:#f7f7f5;--pastina:#c9cac4;--ok:#0d7a5f;--parcial:#9a6f05;--dif:#c0392b;--b-fondo:color-mix(in srgb,var(--apoyo) 12%,#f2f2ef);font-family:\"Work Sans\",system-ui,sans-serif;background:var(--cemento)}\n.sigla{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:27px;letter-spacing:.6px;color:#fff;padding-bottom:4px;border-bottom:3px solid var(--acento)}\n.hero{background:var(--losa);border-radius:12px;padding:16px;box-shadow:0 10px 24px -12px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.6)}\n.mini{display:grid;grid-template-columns:repeat(5,40px);gap:3px;padding:3px;background:var(--pastina);border-radius:3px;width:max-content}\n.pared{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;padding:3px;background:var(--pastina);border-radius:3px}\n.cel{background:var(--cemento)}\n.cel svg{display:block;width:100%;aspect-ratio:1;animation:poner .7s cubic-bezier(.33,1,.68,1) both}\n.lista{background:var(--pastina);border-radius:12px;overflow:hidden;display:grid;gap:2px}\n.fila{display:flex;align-items:center;gap:12px;background:var(--losa);padding:11px 14px}\n.ind{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.6fr);gap:2px;background:var(--pastina);border-radius:12px;overflow:hidden}\n.ind > div{background:var(--losa);padding:14px 16px}\n.caja{overflow-x:auto;background:var(--pastina);border-radius:12px;padding:2px}\ntable{border-collapse:separate;border-spacing:0 2px}\nth{background:var(--cemento);font-size:11.5px;letter-spacing:.8px;text-transform:uppercase}\ntd{background:var(--losa);padding:11px 14px}\n.barra a.on{color:var(--tinta-acento);background:var(--acento);border-radius:20px}\n@keyframes poner{from{opacity:0;scale:.86}to{opacity:1;scale:1}}\n/* baldosa (SVG symbol 40x40) */\n/* <rect fill=var(--b-fondo)/> cuartos de círculo r13 en las 4 esquinas fill=var(--primario) */\n/* <path d=\"M20 7L33 20L20 33L7 20Z\" fill=var(--acento)/> <path d=\"M20 13L27 20L20 27L13 20Z\" fill=var(--b-fondo)/> <circle r=3.2 fill=var(--base)/> */\n/* b-parcial: baldosa + triángulo var(--cemento-2) + diagonal var(--parcial) 2px; b-dif: cemento-2 + diagonal var(--dif) 3.2px */\n/* guarda: <pattern width=14 height=14><use href=#baldosa/></pattern> en una franja de 14-16px */"
+    },
+    {
+      "id": "documental-duotono",
+      "nombre": "Documental (duotono del gremio)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p",
+        "ronda": null,
+        "numero": null,
+        "archivos": [
+          "project/Documental-Inicio.dc.html",
+          "project/Documental-Noticias.dc.html",
+          "project/Documental-Evaluador.dc.html",
+          "project/Documental-Reporte.dc.html"
+        ]
+      },
+      "caracter": "El trabajo real fotografiado y teñido con los colores del gremio: el modelo más gráfico, con aire de revista y una portada que se mueve; sirve para gremios que quieren mostrar oficio y orgullo.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 800/700 en mayúsculas: saludo 46px, veredicto 40px, título de página 31px",
+        "texto": "system-ui (sans del sistema) para la interfaz; Source Serif 4 en itálica para bajadas, créditos y meta, y en 600 para títulos de noticias",
+        "cifras": "Barlow Condensed 800 (38px en indicadores, 30px el neto) con tabular-nums"
+      },
+      "colores": {
+        "fondo": "#eef0f3",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#566074",
+        "acento": "var(--acento) del gremio (botón primario)",
+        "acento_2": "--luz: el acento si es claro, si no el apoyo (UOM #e8b84b; FEGA #c19a3e) — es el color de las luces del duotono",
+        "oscuro": "var(--base) del gremio (sombras del duotono, velo y banda)",
+        "linea": "#dfe3ea"
+      },
+      "forma": {
+        "radio": "12px tarjetas, 9-10px miniaturas y botones, 22px el teléfono de vista previa, 20px píldoras",
+        "bordes": "1px #dfe3ea entre filas; campos 1px #c9cfd9",
+        "sombras": "0 1px 2px rgba(21,34,56,.06), 0 8-10px 24-30px -14/-20px rgba(21,34,56,.25-.3); la hoja del evaluador 0 18px 40px -20px rgba(0,0,0,.7)",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "duotono CSS: foto grayscale(1) contrast(1.18) con mix-blend-mode multiply sobre --luz y un ::after en --base con blend lighten",
+        "Ken Burns por CSS (scale 1.04→1.16 en 22 s, alternate)",
+        "velo en degradé desde la base hacia arriba para leer texto sobre foto",
+        "encabezado transparente sobre la foto",
+        "banda de escritorio con foto enmascarada (mask-image en degradé)",
+        "crédito de foto en vertical",
+        "recibo escaneado en miniatura rotado -2.5° con barrido de luz animado",
+        "serif itálica como voz editorial"
+      ],
+      "pantallas": {
+        "portada": "Héroe de 500px a sangre con una foto de oficio en duotono y Ken Burns; el encabezado (sigla con raya de 3px en --luz, COLM3NA) flota encima con degradé. Sobre el velo: 'Hola, Martín' 46px, seccional en serif itálica y, separado por un filete, el último recibo con kicker en --luz, veredicto 40px, píldora roja de diferencia y botón Revisar. Debajo, accesos en tarjeta blanca con íconos en cuadrado tintado, novedades con miniatura duotono (la primera) y beneficios en tres tarjetas-foto duotono con chip en --luz.",
+        "operacion": "Evaluador sobre fondo base oscuro: héroe fotográfico de 236px con kicker, título y pasos (círculos verdes). Luego un bloque con un 'escaneo' del recibo (renglones grises, uno rojo, barrido de luz) junto al veredicto 40px y la píldora roja. Hoja blanca con cada aporte (ícono circular, esperado vs liquidado), la línea mal en rojo 7% con explicación en serif, totales y neto con filete punteado. Pie en serif itálica; botones primario, secundario de contorno y link en --luz.",
+        "listado": "Noticias (escritorio): banda oscura con la foto duotono a la derecha enmascarada en degradé, encabezado, tira de pestañas en pastillas y título + bajada serif itálica. Editor blanco con la bajada en serif, imágenes duotono y un interruptor 'Teñir con los colores del gremio'. Vista previa en teléfono con marco #10151f de 8px. Tabla con miniatura duotono por fila, títulos en serif 600, píldoras de estado con punto y lecturas en condensada 18px.",
+        "tablero": "Reporte: banda con foto duotono de fondo al 55% con Ken Burns y degradé lateral a base; título y bajada serif. Filtros en tarjeta blanca, cinco indicadores en una tira blanca con divisores (cifras en condensada 800, verde/rojo). Tabla de recibos con datos reservados en serif itálica y, al costado, 'Dónde se liquida mal': barras horizontales de 10px, la mayor en rojo."
+      },
+      "firma": "Fotos de trabajo en duotono automático (sombras = base del gremio, luces = acento o apoyo), con movimiento lento tipo Ken Burns, y la serif itálica como voz editorial frente a la condensada.",
+      "cuidado": "Depende de un banco de fotos por rubro con licencia y peso cuidado (~60 KB webp según la nota); con fotos genéricas parece sitio institucional. Texto sobre foto exige el velo. mix-blend-mode y el Ken Burns pesan en teléfonos modestos; respeta prefers-reduced-motion. La --luz cambia de color según la marca.",
+      "eleccion": "Viabilidad MEDIA según la nota del lienzo: el duotono es CSS pero hace falta curaduría de fotos por gremio. Quinto en el orden de resonancia del jurado de Impeccable.",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".raiz{--ok:#0d7a5f;--rojo:#c0392b;--linea:#dfe3ea;--gris:#566074;--cond:\"Barlow Condensed\",\"Arial Narrow\",sans-serif;--serif:\"Source Serif 4\",Georgia,serif;--ease:cubic-bezier(.33,1,.68,1);background:#eef0f3;color:#152238;font-family:system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif}\n/* duotono: sombras = base, luces = luz del gremio */\n.duo{position:relative;overflow:hidden;background:var(--luz);isolation:isolate}\n.duo img{display:block;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.18) brightness(1.06);mix-blend-mode:multiply}\n.duo::after{content:\"\";position:absolute;inset:0;background:var(--base);mix-blend-mode:lighten;pointer-events:none}\n.vivo img{animation:kb 22s var(--ease) infinite alternate;transform-origin:62% 40%}\n@keyframes kb{from{transform:scale(1.04) translate(0,0)}to{transform:scale(1.16) translate(-3%,-2%)}}\n.enc{position:absolute;top:0;left:0;right:0;z-index:5;height:64px;background:linear-gradient(to bottom,color-mix(in srgb,var(--base) 85%,transparent),transparent)}\n.sigla{font-family:var(--cond);font-weight:800;font-size:28px;color:#fff;display:flex;flex-direction:column;gap:4px}\n.sigla i{display:block;width:28px;height:3px;background:var(--luz);border-radius:2px}\n.hero{position:relative;height:500px}\n.velo{position:absolute;inset:0;z-index:2;background:linear-gradient(to top,var(--base) 6%,color-mix(in srgb,var(--base) 70%,transparent) 42%,transparent 72%)}\n.hola{font-family:var(--cond);font-weight:800;font-size:46px;line-height:.95;text-transform:uppercase}\n.quien{font-family:var(--serif);font-style:italic;font-size:15px}\n.credito{position:absolute;right:10px;top:70px;font-size:9.5px;writing-mode:vertical-rl}\n.banda .duo{position:absolute;top:0;right:0;bottom:0;width:46%;mask-image:linear-gradient(to right,transparent,#000 55%);opacity:.9}\n.bajada{font-family:var(--serif);font-style:italic;font-size:16px}\n.t-tit{font-family:var(--serif);font-weight:600;font-size:15px}\n.scan{height:124px;border-radius:6px;background:#f4f5f7;transform:rotate(-2.5deg);box-shadow:0 10px 24px -12px rgba(0,0,0,.6)}\n.scan .hecho{position:absolute;left:0;right:0;bottom:0;border-top:2px solid var(--luz);box-shadow:0 -6px 14px -4px var(--luz);animation:barrido 1.6s var(--ease) both}\n@keyframes barrido{from{height:100%}to{height:0%}}\n.k b{font-family:var(--cond);font-weight:800;font-size:38px;line-height:1}"
+    },
+    {
+      "id": "anden-senaletica",
+      "nombre": "Andén (señalética de subte)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p",
+        "ronda": null,
+        "numero": null,
+        "archivos": [
+          "project/Anden-Inicio.dc.html",
+          "project/Anden-Noticias.dc.html",
+          "project/Anden-Evaluador.dc.html",
+          "project/Anden-Reporte.dc.html"
+        ]
+      },
+      "caracter": "La señalética del subte y del colectivo, el idioma visual que el afiliado lee todos los días camino al trabajo: claro, directo y orientador.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 en mayúsculas (saludo 40px, veredicto 31px, títulos de página 31px, secciones 19-22px)",
+        "texto": "Archivo variable (wdth 62-125, wght 400-800) a ancho 100; COLM3NA en Archivo wdth 70, 700, 12px, tracking 2.4px",
+        "cifras": "Archivo con font-variation-settings wdth 75-85 y peso 600-700 (fechas, importes); indicadores en Barlow Condensed 40px; tabular-nums"
+      },
+      "colores": {
+        "fondo": "#e9edf2",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478",
+        "acento": "var(--acento) del gremio (botón y línea activa)",
+        "acento_2": "var(--primario) (la vía) y var(--apoyo) (insignias)",
+        "oscuro": "color-mix(var(--base) 92%, #000) para el 'cartel' y el tablero de partidas",
+        "linea": "#e4e7ec / #d6dce4"
+      },
+      "forma": {
+        "radio": "12px tarjetas, 9px botones y campos, círculos de 20-40px para insignias de línea",
+        "bordes": "Franja de 8px en --primario bajo el encabezado (como la banda de color de una línea); tabla clara con cabecera subrayada 2px en #152238",
+        "sombras": "0 1px 0 #d6dce4, 0 10px 24px -14px rgba(15,34,64,.35)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "recorrido: la vía horizontal o vertical en --primario con estaciones circulares (verde = bien, roja llena = mal)",
+        "insignias de línea redondas con una letra (N, C, A, E) como en el subte",
+        "tablero de partidas oscuro con animación split-flap (rotateX -80°→0)",
+        "franja de color de línea de 8px",
+        "barra lateral de 5-6px en acento junto a la sigla",
+        "switch rojo",
+        "Archivo de ancho variable para fechas angostas"
+      ],
+      "pantallas": {
+        "portada": "Encabezado en base con una barra vertical de acento junto a la sigla; 'cartel' más oscuro con franja de primario de 8px arriba y 'HOLA, MARTÍN' 40px. Tarjeta blanca del último recibo: veredicto 31px y el recorrido horizontal Jubil. → PAMI → Obra soc. → Cuota sind. (estación roja) → Neto, con alerta roja suave y botón Revisar en acento. Accesos en lista blanca con insignias circulares en primario/apoyo y flecha en círculo. Novedades como tablero de partidas oscuro (Tipo / Novedad / Cuándo) con insignia de letra y cascada split-flap. Beneficios con banda de color por rubro. Barra inferior en base, activa con fondo aclarado y subrayado de acento.",
+        "operacion": "Evaluador: cartel oscuro con kicker en acento, título, y pasos como estaciones sobre una vía clara (la activa con halo de acento). Bloque de veredicto con '4/5' en condensada 46px. 'Recorrido del recibo' vertical: vía de 7px en primario, paradas Bruto (terminal oscura) → aportes (nodos verdes) → cuota sindical (nodo rojo, banda rosa, etiqueta 'CON DIFERENCIA', comparativa Esperado/Liquidado/Diferencia en tres cajitas, la última roja) → Neto (terminal). Botón Enviar en acento y dos secundarios con contorno.",
+        "listado": "Noticias (escritorio): encabezado + tira de pestañas oscura con subrayado de 4px en acento y franja de primario. La tabla es un tablero de partidas oscuro: chips de filtro, columnas en mayúsculas espaciadas, insignia de línea por tipo, estados en píldora (vigente verde lleno, programada con contorno, vencida apagada) y filas que entran en split-flap. Editor blanco con cabecera en primario e insignia 'N', campos con rótulos en mayúsculas y un teléfono miniatura que muestra el tablero.",
+        "tablero": "Reporte: filtros en tarjeta blanca con switch rojo. Indicadores en un tablero oscuro de 5 columnas, cada uno con una franja superior de 5px del color de su 'línea' (primario, verde, rojo, rojo, acento) y cifra en condensada 40px que entra en flap. 'Diferencias por empresa' como líneas de recorrido: barra en primario que crece y termina en una estación roja. Tabla clara con cabecera subrayada 2px, diferencias como ícono de estación."
+      },
+      "firma": "El recibo como recorrido de una línea de subte (Bruto → aportes → Neto, la estación que falla en rojo) y las novedades en un tablero de partidas que cae como split-flap, con insignias de línea redondas.",
+      "cuidado": "Riesgo de disfrazar la app de cartel (la nota pide controles estándar). El tablero oscuro con texto chico en color-mix al 55-72% puede quedar bajo contraste. La animación rotateX es vistosa pero cansa si se repite; tiene reducción de movimiento.",
+      "eleccion": "Viabilidad ALTA (Archivo vendoreada, todo CSS). Impeccable le sumó el retador 'tablero split-flap' (competitivo) para el tablero de noticias. Tercero en el orden de resonancia del jurado.",
+      "calidad": 5,
+      "variantes": [],
+      "css_firma": ".an{font-family:\"Archivo\",system-ui,sans-serif;font-variation-settings:\"wdth\" 100;color:#152238;background:#e9edf2}\n.sigla{display:flex;align-items:center;gap:9px;color:#fff;font-size:27px}\n.sigla i{display:block;width:5px;height:30px;background:var(--acento);border-radius:2px}\n.firma{font-variation-settings:\"wdth\" 70;font-weight:700;font-size:12px;letter-spacing:2.4px}\n.cartel{background:color-mix(in srgb,var(--base) 92%,#000);color:#fff;padding:0 16px 18px}\n.cartel:before{content:\"\";display:block;height:8px;margin:0 -16px 16px;background:var(--primario)}\n.recorrido{position:relative;margin:18px 16px 4px;height:46px}\n.recorrido .via{position:absolute;left:8px;right:8px;top:9px;height:6px;border-radius:3px;background:var(--primario)}\n.est{position:absolute;top:0;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#fff;border:3px solid var(--primario)}\n.est.ok{border-color:#0d7a5f}\n.est.mal{border-color:#c0392b;background:#c0392b}\n.est small{position:absolute;top:28px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:#5b6478}\n.ruta:before{content:\"\";position:absolute;left:15px;top:22px;bottom:24px;width:7px;border-radius:4px;background:var(--primario)}\n.nodo{width:30px;height:30px;border-radius:50%;background:#fff;border:4px solid var(--primario)}\n.nodo.term{background:var(--base);border-color:var(--base)}\n.demora{padding:2px 8px;border-radius:20px;background:#c0392b;color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}\n.tablero{background:color-mix(in srgb,var(--base) 92%,#000);border-radius:12px;color:#fff}\n.tab-cab{border-bottom:2px solid var(--acento)}\n.linea{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:\"Barlow Condensed\";font-weight:700}\n.partida{display:grid;grid-template-columns:28px 1fr 64px;gap:10px;animation:flap .5s cubic-bezier(.33,1,.68,1) both;transform-origin:50% 0}\n.partida time{font-variation-settings:\"wdth\" 75;font-weight:600}\n@keyframes flap{from{opacity:0;transform:rotateX(-80deg)}to{opacity:1;transform:none}}\n.tira a.on{color:#fff;border-bottom:4px solid var(--acento)}\n.franja{height:8px;background:var(--primario)}\n.ind:before{content:\"\";position:absolute;left:0;right:0;top:0;height:5px;background:var(--c)}\n.ind b{font-family:\"Barlow Condensed\";font-size:40px;animation:flap .6s cubic-bezier(.33,1,.68,1) both}\n.lr .via i:after{content:\"\";position:absolute;right:-7px;top:-5px;width:18px;height:18px;border-radius:50%;background:#fff;border:4px solid #c0392b}\nth{border-bottom:2px solid #152238}"
+    },
+    {
+      "id": "credencial-impresion-seguridad",
+      "nombre": "Credencial (impresión de seguridad)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p",
+        "ronda": null,
+        "numero": null,
+        "archivos": [
+          "project/Credencial-Inicio.dc.html",
+          "project/Credencial-Noticias.dc.html",
+          "project/Credencial-Evaluador.dc.html",
+          "project/Credencial-Reporte.dc.html"
+        ]
+      },
+      "caracter": "El carnet gremial y el billete: un documento de valor, imposible de falsificar, que le da al afiliado la sensación de tener algo oficial y propio.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 en mayúsculas (31px páginas, 28px nombre en el carnet con tracking .06em); secciones en Barlow Condensed 14px con tracking .16em",
+        "texto": "Barlow 400-700 (familia completa)",
+        "cifras": "Barlow Condensed 700 (38px indicadores, 54px el veredicto, 30px el neto) y numeración en serie 'N.º 0042-2026' en Barlow 600 tracking .04-.08em, tabular-nums"
+      },
+      "colores": {
+        "fondo": "#eef1f5 (escritorio) / #dfe3ea",
+        "superficie": "#f6f8fb con trama de guilloché lineal; #ffffff en listas",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478",
+        "acento": "var(--acento) del gremio (subrayado de sigla, serie del carnet, botón)",
+        "acento_2": "var(--apoyo) en la trama y el holograma",
+        "oscuro": "var(--base) del gremio; el carnet en color-mix(primario 70%, base)",
+        "linea": "#d9dee6 / #e4e7ec"
+      },
+      "forma": {
+        "radio": "14px hojas y carnet, 12px tarjetas, 9px botones y campos, 20px pestañas en pastilla",
+        "bordes": "Hojas con 0 0 0 1px rgba(21,34,56,.08); carnet con 1px blanco al 14% y filo interno",
+        "sombras": "0 18px 40px -18px rgba(0,0,0,.6) carnet; 0 12px 30px -14px rgba(15,25,45,.45) hoja; 0 20px 40px -24px en escritorio",
+        "densidad": "media"
+      },
+      "recursos": [
+        "guilloché: epitrocoides SVG generadas por función (rosetas en apoyo/primario/acento a 0.25-0.35px)",
+        "ondas sinusoidales finas en el carnet",
+        "holograma: círculo con conic-gradient de acento/blanco/apoyo",
+        "microtexto de 6px 'COLM3NA · UOM · ' repetido",
+        "trama de seguridad: dos repeating-linear-gradient a 118° y 62°",
+        "sello circular con texto en arco (textPath) y roseta, estampado con rotación -5/-6°",
+        "numeración en serie en recibos, noticias y reportes",
+        "hoja que se monta sobre la banda oscura con margen negativo"
+      ],
+      "pantallas": {
+        "portada": "Encabezado en base con la sigla subrayada 2px en acento. Banda oscura con roseta de guilloché a la derecha, microtexto, 'Hola, Martín' y un carnet de 184px: fondo primario-base con 14 ondas finas, 'Credencial gremial · UOM', N.º 004821 en acento, nombre en mayúsculas espaciadas, CUIL y vigencia, holograma cónico y microlínea. La hoja del último recibo se monta 80px sobre la banda: trama de seguridad, N.º 0042-2026, sello rojo chico estampado y '4 de 5 controles bien'. Accesos en tarjeta blanca, novedades numeradas 'N.º 0118', beneficios en tarjetas oscuras con roseta.",
+        "operacion": "Evaluador: panel oscuro de 14px con guilloché, kicker en acento, título y pasos con puntos. Veredicto con un sello circular de 136px (aro con 'VERIFICADO · CCT 260/75 · COLM3NA · N.º 0042-2026', roseta roja y triángulo de alerta) estampado con rebote, junto a '4 de 5' en 54px y chip rojo. Debajo una hoja-comprobante con trama: cabecera 'Comprobante N.º 0042-2026 · CUIL', tabla Aporte/Esperado/Liquidado, fila de diferencia en rojo 7% con explicación, totales y neto, cerrando con microtexto. Botones en acento y de contorno; aside blanco '¿Qué pasa si lo enviás?'.",
+        "listado": "Noticias (escritorio): pestañas en pastillas sobre base (activa blanca), franja oscura con roseta de guilloché grande, microtexto, título blanco y botón claro. El editor es una hoja con trama de seguridad que se monta 100px sobre la franja, con 'N.º 0118-2026 · borrador'. Vista previa en teléfono oscuro con una nota cuya imagen lleva roseta y sello. Tabla blanca con columna N.º en serie, chip de tipo en apoyo, estados con punto.",
+        "tablero": "Reporte: franja oscura con guilloché, y encima un 'papel' con trama: filtros, planilla de cinco cifras (38px, roja/verde/primario) y pie 'Reporte N.º R-0009-2026 · CCT' con microtexto. Barras por empresa (la mayor en rojo) y una caja con un sello de período de 150px ('81%', texto en arco) estampado: 'Septiembre, sellado'. Tabla con datos reservados en itálica y chips de enviado."
+      },
+      "firma": "El sello circular estampado con el veredicto y la numeración en serie en cada pieza, sobre papel con guilloché, microtexto y trama de seguridad generados con la paleta del gremio.",
+      "cuidado": "La más familiar: si se apaga el color se acerca al 'trámite estatal' (lo dice la nota). El microtexto de 6px es puramente decorativo e ilegible; las tramas pueden ensuciar con paletas saturadas. Los SVG de rosetas con 1100-1500 puntos pesan en el DOM.",
+      "eleccion": "La elegida por Impeccable de la lista propia ('la elegida por Impeccable de nuestra lista') y primera en el orden de resonancia del acta del jurado. Viabilidad ALTA (guilloché SVG generado con la paleta, familia Barlow completa).",
+      "calidad": 5,
+      "variantes": [],
+      "css_firma": ".cr{font-family:\"Barlow\",system-ui,sans-serif;color:#152238;-webkit-font-smoothing:antialiased}\n.enc-gremio{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:27px;letter-spacing:.05em;color:#fff;padding-bottom:4px;border-bottom:2px solid var(--acento)}\n.enc-colm{font-family:\"Barlow Condensed\",sans-serif;font-weight:600;font-size:13px;letter-spacing:.24em}\n.micro{font-family:\"Barlow Condensed\",sans-serif;font-size:6px;font-weight:600;letter-spacing:.14em;white-space:nowrap;overflow:hidden;line-height:8px;text-transform:uppercase}\n.banda .guill{position:absolute;right:-120px;top:-70px;width:360px;height:360px;opacity:.5}\n.carnet{position:relative;border-radius:14px;height:184px;overflow:hidden;color:#fff;background:color-mix(in srgb,var(--primario) 70%,var(--base));box-shadow:0 1px 0 color-mix(in srgb,#fff 18%,transparent) inset,0 18px 40px -18px rgba(0,0,0,.6);border:1px solid color-mix(in srgb,#fff 14%,transparent)}\n.carnet .nombre{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:28px;letter-spacing:.06em}\n.carnet .serie{position:absolute;right:16px;top:12px;font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:20px;letter-spacing:.08em;color:var(--acento-txt)}\n.holo{position:absolute;right:16px;bottom:16px;width:54px;height:54px;border-radius:50%;background:conic-gradient(from 30deg,color-mix(in srgb,var(--acento) 70%,#fff),#fff,color-mix(in srgb,var(--apoyo) 60%,#fff),color-mix(in srgb,var(--acento) 85%,#fff),#fff,color-mix(in srgb,var(--acento) 70%,#fff));box-shadow:0 0 0 1px rgba(255,255,255,.5) inset,0 3px 10px rgba(0,0,0,.35)}\n.hoja{margin:-80px 12px 0;border-radius:12px;background-color:#f6f8fb;background-image:repeating-linear-gradient(118deg,color-mix(in srgb,var(--primario) 5%,transparent) 0 1px,transparent 1px 7px),repeating-linear-gradient(62deg,color-mix(in srgb,var(--apoyo) 6%,transparent) 0 1px,transparent 1px 9px);box-shadow:0 12px 30px -14px rgba(15,25,45,.45),0 0 0 1px rgba(21,34,56,.08)}\n.serie,.rc-tit .nro{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.06em;color:color-mix(in srgb,var(--primario) 75%,#5b6478)}\n.sello{flex:0 0 136px;width:136px;height:136px;rotate:-6deg;animation:estampa .6s .3s cubic-bezier(.33,1,.68,1) both}\n@keyframes estampa{0%{opacity:0;scale:1.5;rotate:-20deg}70%{opacity:1;scale:.96;rotate:-5deg}100%{opacity:1;scale:1;rotate:-6deg}}\n.v-num{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:54px;line-height:.9}\n.tira a.on{background:#fff;color:var(--base);border-radius:20px}\n.cel .v{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:38px;color:color-mix(in srgb,var(--primario) 70%,#152238)}\n/* JS: guilloché = epitrocoide rosa(R,r,d,s,cx,cy,n): x=cx+s*((R+r)cos t - d cos(k t)), k=(R+r)/r */\n/* sello SVG: circle r66 #fff + roseta stroke #c0392b .45 + aros r58/r44 + <textPath> 9.5px tracking 1.6px + círculo r30 rojo con triángulo blanco */"
+    },
+    {
+      "id": "talon-recibo-talonario",
+      "nombre": "Talón (recibo y talonario)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p",
+        "ronda": null,
+        "numero": null,
+        "archivos": [
+          "project/Talon-Inicio.dc.html",
+          "project/Talon-Noticias.dc.html",
+          "project/Talon-Evaluador.dc.html",
+          "project/Talon-Reporte.dc.html"
+        ]
+      },
+      "caracter": "El recibo de sueldo y el talonario: original para vos, duplicado para el gremio; papel, perforado y sellos de goma que dan sensación de comprobante real.",
+      "claro_u_oscuro": "claro",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 en mayúsculas (veredicto 32-36px, títulos de página 31px, accesos 19px; cabeceras de comprobante 15-16px con tracking .1em)",
+        "texto": "Red Hat Text 400-700; rótulos en 10-10.5px mayúsculas con tracking .09em",
+        "cifras": "Red Hat Mono 400-600 con tabular-nums para importes, fechas, CUIT y números de comprobante; indicadores en Barlow Condensed 38px"
+      },
+      "colores": {
+        "fondo": "color-mix(primario 7%, #eef1f5) (--desk)",
+        "superficie": "#ffffff",
+        "tinta": "#152238",
+        "tinta_suave": "#5b6478 (--rotulo)",
+        "acento": "var(--acento) del gremio (botón, subrayado de sigla)",
+        "acento_2": "--carbon: color-mix(primario 88%, #000), el 'papel carbónico' para números y links",
+        "oscuro": "var(--base) del gremio (encabezado y banda)",
+        "linea": "color-mix(primario 16%, #dde3ea) (--filete)"
+      },
+      "forma": {
+        "radio": "10px hojas y cupones, 9px botones y lengüetas, 999px pestañas y chips, 4-6px sellos",
+        "bordes": "Filetes de 1px en --filete; perforados con radial-gradient y medialunas en los bordes; troquel con tijera",
+        "sombras": "0 1px 0 var(--filete), 0 10-14px 24-30px -14/-24px color-mix(base 55-60%, transparent)",
+        "densidad": "media"
+      },
+      "recursos": [
+        "perforación con radial-gradient repetido y medialunas ::before/::after del color de la mesa",
+        "talón troquelado con ícono de tijera: 'Enviar al sindicato' es cortar el duplicado",
+        "sello de goma: borde doble con inset box-shadow, rotado -3/-8°, con filtro SVG feTurbulence + feDisplacementMap (#goma)",
+        "billetera: lengüetas apiladas (credencial, trámite) asomando detrás del recibo",
+        "cupones de beneficio con talón lateral vertical 'Cupón'",
+        "indicadores como talonario de cupones numerados 01-05 separados por perforado",
+        "estados de noticias estampados; vencidas tachadas",
+        "formularios como planilla de celdas con filetes"
+      ],
+      "pantallas": {
+        "portada": "Encabezado en base con la sigla subrayada 3px en acento; banda oscura con el saludo. Debajo, una 'billetera': dos lengüetas asoman (Credencial N.º 004821 · Vigente; Trámite Kit escolar · En curso) y encima el cupón del último recibo con número VR-0926-4821, empresa en carbónico, veredicto 32px, sello de goma rojo '1 diferencia' estampado, perforado y un talón con 'Este año verificaste 9' + Revisar. Accesos en una hoja con agujeros de anillado a la izquierda y margen punteado. Novedades con fecha en mono, beneficios como cupones horizontales con talón vertical. Barra inferior blanca, activa tintada en primario.",
+        "operacion": "Evaluador: banda oscura con kicker, título y pasos. El recibo se monta sobre la banda: cabecera 'Original · Afiliado' con N.º VR-0926-4821, grilla 2×2 de campos (Empleador, CUIT, Afiliado, Período · Convenio), veredicto 36px con sello de goma 'verificado', tabla Aporte/Esperado/Liquidado en mono con la fila mala tintada, nota roja y neto con filete 1.5px. Luego un troquel con tijera y el talón 'Duplicado · para el sindicato' (VR-...-D) con resumen y el botón Enviar en acento.",
+        "listado": "Noticias (escritorio): pestañas en pastillas sobre base. El alta es una hoja-planilla de 4 columnas con celdas separadas por filetes (título en condensada 24px editable, bajada, vigencias en mono, chips de destino, miniatura), número NT-2026-031, perforado y acciones. Vista previa en teléfono. La lista es una hoja con buscador; estados como sellos de goma rotados (vigente verde, programada carbónico, vencida gris), títulos vencidos tachados, filas que entran escalonadas y acción 'Republicar'.",
+        "tablero": "Reporte: filtros como una tira de celdas con filetes (switch que se pone rojo). Indicadores en un talonario: cinco cupones numerados 01-05 separados por perforado vertical y medialunas en los extremos, cifras en condensada 38px (verde/rojo). Barras por empresa (la mayor en rojo) y una barra apilada enviados/reservados con leyenda y nota punteada. Tabla con importes en mono y 'Enviado' como sello de goma."
+      },
+      "firma": "El talón troquelado (perforado + tijera) que convierte 'Enviar al sindicato' en cortar el duplicado, y los estados estampados como sellos de goma con borde doble y textura de tinta.",
+      "cuidado": "Papel y sellos pueden leerse retro (lo advierte la nota). Los sellos rotados con filtro de desplazamiento pierden nitidez en pantallas de baja densidad; el texto tachado de vencidas baja la legibilidad. Rótulos de 10px en mayúsculas al límite.",
+      "eleccion": "Viabilidad ALTA (máscaras CSS para la perforación, Red Hat Text + Mono solo para importes). Impeccable lo fusionó con el retador 'billetera de pasajes', que ganaba en claridad: los estados se estampan, nada desaparece. Segundo en el orden de resonancia.",
+      "calidad": 5,
+      "variantes": [],
+      "css_firma": ".tl{--tinta:#152238;--rotulo:#5b6478;--ok:#0d7a5f;--dif:#c0392b;--parcial:#b8860b;--desk:color-mix(in srgb,var(--primario) 7%,#eef1f5);--filete:color-mix(in srgb,var(--primario) 16%,#dde3ea);--carbon:color-mix(in srgb,var(--primario) 88%,#000);font-family:\"Red Hat Text\",system-ui,sans-serif;color:var(--tinta);background:var(--desk)}\n.num{font-family:\"Red Hat Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums}\n.rot{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--rotulo);font-weight:600}\n.logo{font-family:\"Barlow Condensed\";font-weight:700;font-size:25px;letter-spacing:.04em;color:#fff;padding-bottom:4px;border-bottom:3px solid var(--acento)}\n.lengueta{height:30px;border-radius:9px 9px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}\n.lg1{margin:0 26px 0 42px;background:color-mix(in srgb,var(--apoyo) 30%,white)}\n.lg2{margin:-8px 12px 0 22px;background:color-mix(in srgb,var(--primario) 18%,white);color:var(--carbon)}\n.cupon{background:#fff;border-radius:10px;margin-top:-8px;box-shadow:0 1px 0 var(--filete),0 10px 24px -14px color-mix(in srgb,var(--base) 60%,transparent)}\n.sello{font-family:\"Barlow Condensed\";font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--dif);border:2px solid currentColor;border-radius:5px;padding:4px 9px 3px;box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 3px currentColor;transform:rotate(-7deg);filter:url(#goma);opacity:.9;animation:estampa .5s cubic-bezier(.33,1,.68,1) .55s both}\n@keyframes estampa{0%{opacity:0;transform:rotate(-7deg) scale(1.5)}60%{opacity:.95;transform:rotate(-7deg) scale(.96)}100%{opacity:.9;transform:rotate(-7deg) scale(1)}}\n/* <filter id=\"goma\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.9\" numOctaves=\"2\"/><feDisplacementMap in=\"SourceGraphic\" scale=\"1.6\"/></filter> */\n.perfo{height:16px;margin:0 10px;background:radial-gradient(circle at 6px 8px,var(--desk) 2.6px,transparent 3.2px) 0 0/12px 16px repeat-x;position:relative}\n.perfo::before,.perfo::after{content:\"\";position:absolute;top:0;width:16px;height:16px;border-radius:50%;background:var(--desk)}\n.perfo::before{left:-18px}.perfo::after{right:-18px}\n.hoja::before{content:\"\";position:absolute;left:8px;top:10px;bottom:10px;width:8px;background:radial-gradient(circle at 4px 6px,var(--desk) 2.5px,transparent 3px) 0 0/8px 13px repeat-y}\n.hoja::after{content:\"\";position:absolute;left:22px;top:0;bottom:0;border-left:1px dashed var(--filete)}\n.bc .der{width:30px;border-left:1.5px dashed var(--filete)}\n.bc .der span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}\n.troquel .agujeros{position:absolute;left:14px;right:14px;top:9px;height:6px;background:radial-gradient(circle at 3px 3px,var(--desk) 2.6px,transparent 3.1px) 0 0/11px 6px repeat-x}\n.talon{background:color-mix(in srgb,var(--primario) 5%,white);border-radius:0 0 10px 10px}\n.cup + .cup{background-image:radial-gradient(circle at 3px 4px,var(--desk) 2.4px,transparent 3px);background-size:6px 11px;background-repeat:repeat-y;background-position:-3px 6px}\n.st{font-family:\"Barlow Condensed\";font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;border:1.8px solid currentColor;border-radius:4px;padding:2px 7px 1px;box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 2.6px currentColor;transform:rotate(-3deg);filter:url(#goma)}\ntr.vencida .tt{color:#6b7488;text-decoration:line-through}\n.c{padding:10px 18px 12px;border-top:1px solid var(--filete);border-left:1px solid var(--filete)}\n.c input.grande{font-family:\"Barlow Condensed\";font-weight:700;font-size:24px;text-transform:uppercase}"
+    },
+    {
+      "id": "pulso-minimal",
+      "nombre": "Pulso (minimalismo de una tinta)",
+      "origen": {
+        "lienzo": "https://claude.ai/artifact/BM5VgpCoxib7632qrgJL6p",
+        "ronda": null,
+        "numero": null,
+        "archivos": [
+          "project/Pulso-Inicio.dc.html",
+          "project/Pulso-Noticias.dc.html",
+          "project/Pulso-Evaluador.dc.html",
+          "project/Pulso-Reporte.dc.html"
+        ]
+      },
+      "caracter": "Aire, una sola tinta y el número que importa en grande: sobrio y contemporáneo, para quien quiere leer el veredicto sin ruido.",
+      "claro_u_oscuro": "mixto",
+      "tipografia": {
+        "titulos": "Barlow Condensed 700 en mayúsculas: saludo 46px, títulos de escritorio 60px con interlineado .85; secciones como rótulos 10.5px en mayúsculas con tracking 1.6px",
+        "texto": "Hanken Grotesk 400/500/600, 14px, interlineado 1.45",
+        "cifras": "Barlow Condensed 700 enorme: 92px en la portada y 104px en el evaluador ('4/5', con el '/5' en 44-48px atenuado), 34-44px en indicadores; tabular-nums"
+      },
+      "colores": {
+        "fondo": "var(--base) del gremio en el teléfono (oscuro); #ffffff en escritorio",
+        "superficie": "sin superficies: todo sobre el fondo, separado por filetes",
+        "tinta": "#ffffff en teléfono; var(--base) en escritorio",
+        "tinta_suave": "color-mix(#fff 66%, base) en teléfono; color-mix(base 70%, white) en escritorio (--tenue)",
+        "acento": "var(--acento) del gremio (solo botón, subrayado de pestaña y raya de la sigla)",
+        "acento_2": "rojo #e5533d (oscuro) / #c0392b (claro); ámbar #d9a520; verde #3fb58f / #0d7a5f",
+        "oscuro": "var(--base) del gremio",
+        "linea": "color-mix(#fff 14%, base) en oscuro; color-mix(base 12%/22%, white) en claro (--filo/--filo2)"
+      },
+      "forma": {
+        "radio": "9px botones; 22px el teléfono de vista previa; casi nada más tiene radio",
+        "bordes": "Solo filetes de 1px; campos de formulario con línea inferior y sin caja (border-bottom 1px)",
+        "sombras": "ninguna",
+        "densidad": "aireada"
+      },
+      "recursos": [
+        "el pulso: 12 líneas finas apiladas, una por mes (o 30, una por día), estilo Joy Division, con relleno del color de fondo para ocluir; el mes con diferencia late en rojo 2.2px",
+        "trazos que se dibujan con stroke-dasharray/dashoffset",
+        "latido tipo electrocardiograma por control en el evaluador",
+        "pestañas subrayadas 2px en acento, sin fondo",
+        "sigla con raya vertical de 3px en acento",
+        "scale .97 al presionar el botón",
+        "el mismo número a varias escalas"
+      ],
+      "pantallas": {
+        "portada": "Teléfono a fondo base oscuro. Encabezado mínimo con filete; 'HOLA, MARTÍN' 46px. El último recibo: rótulo en mayúsculas, '4/5' en 92px con 'controles bien' y un punto rojo con la diferencia. Debajo el pulso: 12 líneas finas apiladas con el mes a la izquierda, la de septiembre en rojo con un pico alto y la de agosto en ámbar. Luego 'Lo tuyo', Novedades y Beneficios como listas separadas solo por filetes, títulos de acceso en condensada 20px. Barra inferior con filete y una raya de acento sobre la pestaña activa.",
+        "operacion": "Evaluador oscuro: pasos como tres segmentos de línea (el activo en acento), título 34px, y el veredicto '4/5' en 104px. Cada control es una fila con nombre, importe y una línea de latido de 350px que se dibuja (la cuota sindical con pico alto en rojo). Explicación con lista de definición Esperado/Liquidado/Diferencia, totales con neto en 38px, botón único en acento y dos links subrayados.",
+        "listado": "Noticias en escritorio blanco: encabezado en base, pestañas en texto con subrayado de acento, título 60px. Una tira de cifras separadas por filetes verticales (30 cargadas, 4 vigentes, 1 programada, 8.182 lecturas). Lista como grilla CSS sin tabla, filetes horizontales, lecturas en condensada 20px, fila seleccionada tintada al 12% de acento. Editor a la derecha con campos de línea inferior y vista previa en un teléfono oscuro mínimo.",
+        "tablero": "Reporte en escritorio blanco: filtros de línea inferior y switch, tira de cinco cifras de 44px separadas por filetes. 'El pulso de septiembre': 30 líneas apiladas (una por día) con altura según recibos con diferencias, los días de 15 o más en rojo. 'Diferencias por empresa' como líneas finas punteadas con una barra de 3px que termina en un punto (la mayor en rojo). Tabla como grilla con filetes."
+      },
+      "firma": "El pulso: líneas finas apiladas, una por mes o por día, donde el período con diferencia late en rojo; y el veredicto como un número gigante (92-104px) en condensada sobre una sola tinta.",
+      "cuidado": "Sin el pulso es genérico (lo dice la nota). Las líneas de 1px y los textos --tenue al 66-70% pueden quedar débiles; el estado depende del color (rojo/ámbar) con apoyo de un punto. Campos sin caja pueden no leerse como editables.",
+      "eleccion": "Viabilidad la más alta (Hanken Grotesk + un SVG). Impeccable lo fusionó con el retador 'catálogo Factory/Saville' (competitivo) y le sumó, del descartado 'espécimen bitmap Emigre', el mismo número a varias escalas. Sexto en el orden de resonancia.",
+      "calidad": 4,
+      "variantes": [],
+      "css_firma": ".pu{background:var(--base);color:#fff;font-family:\"Hanken Grotesk\",system-ui,sans-serif;font-size:14px;line-height:1.45;--tenue:color-mix(in srgb,#fff 66%,var(--base));--filo:color-mix(in srgb,#fff 14%,var(--base));--rojo:#e5533d;--ambar:#d9a520;--verde:#3fb58f}\n.sigla{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:26px;letter-spacing:.5px;padding-left:10px;border-left:3px solid var(--acento)}\n.enc{height:56px;border-bottom:1px solid var(--filo)}\n.rot{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--tenue);font-weight:600}\n.cifra{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:92px;line-height:.8;letter-spacing:-1px;font-variant-numeric:tabular-nums}\n.cifra small{font-size:44px;color:var(--tenue);font-weight:600}\n.dif i{width:8px;height:8px;border-radius:50%;background:var(--rojo)}\n.pulso{position:relative;height:150px}\n.pulso .relleno{fill:var(--base)}\n.pulso .trazo{fill:none;stroke:#fff;stroke-width:1;stroke-linejoin:round;opacity:.82;stroke-dasharray:900;stroke-dashoffset:900;animation:dibujar 1.4s cubic-bezier(.33,1,.68,1) forwards;animation-delay:var(--d)}\n.pulso .trazo.parcial{stroke:var(--ambar);opacity:1}\n.pulso .trazo.dif{stroke:var(--rojo);stroke-width:2.2;opacity:1}\n.pulso .mes{position:absolute;left:0;font-size:9px;letter-spacing:1px;color:var(--tenue);transform:translateY(-50%);background:var(--base)}\n@keyframes dibujar{to{stroke-dashoffset:0}}\n.btn{border:0;border-radius:9px;background:var(--acento);color:var(--tinta-acento);font:600 14px \"Hanken Grotesk\",sans-serif;height:44px;padding:0 20px;transition:scale .12s cubic-bezier(.23,1,.32,1)}\n.btn:active{scale:.97}\n.lista li{border-bottom:1px solid var(--filo)}\n.barra a[aria-current]::before{content:\"\";position:absolute;top:-1px;left:30%;right:30%;height:2px;background:var(--acento)}\n/* escritorio claro */\n.cab h1{font-family:\"Barlow Condensed\",sans-serif;font-weight:700;font-size:60px;line-height:.85;text-transform:uppercase}\n.tabs a[aria-current]{color:var(--base);font-weight:600;border-bottom:2px solid var(--acento)}\n.cifras{display:flex;flex-wrap:wrap;border-top:1px solid var(--filo);border-bottom:1px solid var(--filo)}\n.cifras div{padding:14px 28px 14px 0;margin-right:28px;border-right:1px solid var(--filo)}\n.campo input,.campo textarea,.campo select{border:0;border-bottom:1px solid var(--filo2);background:transparent;border-radius:0;padding:6px 0 8px}\n.emp .barra::before{content:\"\";position:absolute;left:0;right:0;top:4px;border-top:1px dotted var(--filo2)}\n.emp .barra i::after{content:\"\";position:absolute;right:-3px;top:-3px;width:9px;height:9px;border-radius:50%;background:var(--base)}\n/* JS: cada línea = envolvente gaussiana exp(-c²) × amplitud (11 ok, 18 parcial, 46 dif) + ruido; relleno cierra 40px abajo para tapar las de atrás */"
+    }
+  ],
+  "notas": "Lienzo 'Colm3na — Concurso de diseño' (tipo Design, creado 2026-10-20). Seis modelos jugados en las mismas cuatro pantallas testigo y con el mismo contenido: Inicio del afiliado (teléfono 390×1180), Noticias del sindicato (escritorio 1280), Evaluador de recibos / resultado (teléfono) y Reportes del sindicato (escritorio). Cada pantalla tiene un selector Tweaks de gremio (UOM, La Bancaria, Gastronómica) y todo color de marca entra por variables; los fijos son de estado (verde #0d7a5f, rojo #c0392b, ámbar #b8860b/#9a6f05). Titulares siempre en Barlow Condensed; cambia la letra de texto por modelo. Bases (Main): audiencia que manda = el afiliado en el teléfono; regla de oro = funciona con cualquier marca sin tocar el backend; queda descalificado si parece trámite estatal gris, panfleto militante, ERP del montón o rejunte de pantallas. Criterios: carácter reconocible con el nombre tapado, veredicto del recibo en dos segundos, aguanta las tres marcas sin perder contraste, las cuatro apps como familia, implementable con CSS + SVG + una fuente. Acta del jurado (Impeccable): orden por resonancia Credencial, Talón, Andén, Mosaico, Documental, Pulso, Fileteado; el sorteo (concept-seed) asignó Mosaico como dirección líder; Credencial fue 'la elegida por Impeccable de nuestra lista'. Fileteado quedó afuera (el más identitario, pero el más riesgoso de caer en folclore). Retadores: split-flap → dentro de Andén; billetera de pasajes → dentro de Talón; catálogo Factory/Saville → dentro de Pulso; descartados con donación: Partitura Labanotation (la duración como largo exacto, barras de Reportes), Espécimen bitmap Emigre (el mismo número a varias escalas, Pulso), Catálogo de convención (grilla en celdas enteras, Mosaico). El lienzo no numera rondas ni variantes: ronda y numero quedan en null. No hay variantes dentro de cada familia (las tres marcas son el mismo diseño con otra paleta). Las fotos de Documental son blobs del lienzo (/_blob/...), con crédito 'Savannah River Site, CC BY 2.0' y 'Unsplash' como muestra."
+}

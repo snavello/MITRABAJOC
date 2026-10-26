@@ -1,0 +1,72 @@
+/* fuentes: Barlow Condensed:wght@600; Barlow Condensed:wght@700 */
+/* Hilo (esquema de Notificaciones y Trámites del afiliado, opción 3; después toda la suite). Lo que te espera, primero:
+   la tarjeta oscura "necesita tu atención" con filo ámbar, accesos grandes con el primero lleno en el acento, y las
+   novedades como un hilo vertical con hito hexagonal y burbujas de chat junto al avatar del remitente. Colores de la UOM. */
+.e-hilo {
+  --fondo: #f6f7f9; --sup: #ffffff; --tinta: #152238; --suave: #5b6478; --linea: #e4e7ec;
+  --acento: #e8a33d; --acento-tinta: #0f1b2d; --acento2: #2fa88f; --oscuro: #0f1b2d; --sobre-oscuro: #ffffff;
+  --f-tit: "Barlow Condensed", "Arial Narrow", sans-serif; --f-txt: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-num: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radio: 12px; --radio-btn: 10px;
+  font-size: 13px;
+}
+/* la barra oscura de marca arriba */
+.e-hilo .d1 { inset: 0 0 auto; height: 62px; background: #0f1b2d; z-index: 0; }
+.e-hilo .m-cab { height: 62px; padding: 0 15px; color: #fff; }
+.e-hilo .m-logo { color: #e8a33d; }
+.e-hilo .m-marca { font: 700 21px/1 var(--f-tit); letter-spacing: .5px; text-transform: uppercase; }
+.e-hilo .m-marca small { color: rgba(255,255,255,.72); font: 600 10.5px/1 var(--f-txt); letter-spacing: .08em; }
+.e-hilo .m-yo { position: relative; background: #1a3d6b; color: #fff; border: 0; box-shadow: 0 0 0 3px #0f1b2d, 0 0 0 4px rgba(255,255,255,.22);
+  font: 600 12px/1 var(--f-num); }
+.e-hilo .m-yo::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%;
+  background: #e8a33d; border: 2px solid #0f1b2d; }
+/* "necesita tu atención": degradé base → primario, filo ámbar de 5px */
+.e-hilo .m-heroe { margin: 14px 15px 12px; padding: 13px 14px 14px; border-radius: 14px; border-left: 5px solid #e8a33d;
+  background: linear-gradient(150deg, #0f1b2d, #152e4f); display: grid; grid-template-columns: 1fr auto; column-gap: 10px; }
+.e-hilo .m-kick, .e-hilo .m-tit, .e-hilo .m-det { grid-column: 1 / -1; }
+.e-hilo .m-kick { font: 700 10px/1.2 var(--f-txt); letter-spacing: 1.6px; color: #e8a33d; opacity: 1; }
+.e-hilo .m-tit { margin: 5px 0 9px; font: 700 26px/1.02 var(--f-tit); text-transform: uppercase; letter-spacing: .3px; }
+.e-hilo .m-det { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; opacity: 1; font-size: 12.5px;
+  color: rgba(255,255,255,.9); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+.e-hilo .m-det::before { content: ""; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  background: #e8a33d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 29.5 28.5h-6.6L16 15 9.1 28.5H2.5Z' fill='%230f1b2d'/%3E%3C/svg%3E") center / 13px no-repeat; }
+.e-hilo .m-cifra { margin: 12px 0 0; align-self: center; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.18); border-radius: 20px; }
+.e-hilo .m-cifra b { font: 600 12px/1 var(--f-num); color: #e8a33d; }
+.e-hilo .m-cifra span { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.8); opacity: 1; }
+.e-hilo .m-btn { margin-top: 12px; min-height: 38px; padding: 0 14px; border-radius: 10px; background: #e8a33d; color: #0f1b2d;
+  font: 700 15px/1 var(--f-tit); letter-spacing: .6px; text-transform: uppercase; }
+/* accesos grandes: el primero lleno en el acento */
+.e-hilo .m-accesos { gap: 8px; padding: 0 15px; }
+.e-hilo > * { flex-shrink: 0; }
+.e-hilo .m-acc { position: relative; min-height: 0; padding: 11px 12px; border-radius: 12px; background: #fff; border-color: #e4e7ec; gap: 1px; }
+.e-hilo .m-acc:first-child { background: #e8a33d; border-color: #e8a33d; color: #0f1b2d; }
+.e-hilo .m-acc:first-child span, .e-hilo .m-acc:first-child .m-ico { color: #0f1b2d; }
+.e-hilo .m-ico { position: absolute; right: 9px; top: 9px; width: 24px; height: 24px; margin: 0; color: #1a3d6b; }
+.e-hilo .m-acc b { padding-right: 24px; font: 700 16px/1.05 var(--f-tit); text-transform: uppercase; letter-spacing: .4px; }
+.e-hilo .m-acc span { font-size: 11.5px; color: #5b6478; }
+/* el hilo: línea vertical de 2px, hito hexagonal, burbujas con avatar */
+.e-hilo .m-novs { padding: 14px 15px 0; gap: 8px; }
+.e-hilo .m-novs::before { content: ""; position: absolute; left: 31px; top: 26px; bottom: -40px; width: 2px; background: #e4e7ec; z-index: -1; }
+.e-hilo .m-sec { display: flex; align-items: center; gap: 10px; font: 600 13px/1 var(--f-tit); letter-spacing: 1.6px; color: #5b6478; }
+.e-hilo .m-sec::before { content: ""; width: 32px; height: 22px; flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.8 20 7.4v9.2l-8 4.6-8-4.6V7.4Z' fill='%23f6f7f9' stroke='%235b6478' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E") center / 20px no-repeat; }
+.e-hilo .m-nov { position: relative; display: block; margin-left: 42px; padding: 8px 12px 9px; border: 1px solid #e4e7ec; border-radius: 4px 14px 14px 14px;
+  background: #fff; }
+.e-hilo .m-nov::before { content: ""; position: absolute; left: -43px; top: -1px; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 3px #f6f7f9;
+  background: #0f1b2d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 29.5 28.5h-6.6L16 15 9.1 28.5H2.5Z' fill='%23e8a33d'/%3E%3C/svg%3E") center / 16px no-repeat; }
+.e-hilo .m-nov .m-fecha { float: right; min-width: 0; padding: 1px 0 0 8px; font: 500 10.5px/1.2 var(--f-num); color: #5b6478; }
+.e-hilo .m-nov b { display: block; font: 600 13px/1.3 var(--f-txt); color: #152238; }
+.e-hilo .m-nov p { margin-top: 2px; font-size: 12.5px; line-height: 1.35; color: #5b6478; }
+.e-hilo .m-nov-tapa .m-nov-foto { display: none; }
+/* la no leída: borde del acento al 50% y fondo al 5%, punto ámbar sobre el avatar */
+.e-hilo .m-nov-tapa { border-color: color-mix(in srgb, #e8a33d 50%, #e4e7ec); background: color-mix(in srgb, #e8a33d 5%, #fff); }
+.e-hilo .m-nov-tapa::after { content: ""; position: absolute; left: -22px; top: 20px; width: 11px; height: 11px; border-radius: 50%;
+  background: #e8a33d; border: 2px solid #f6f7f9; box-shadow: 0 0 0 4px rgba(232,163,61,.22); }
+/* el beneficio: tarjeta blanca con chip de rubro lleno */
+.e-hilo .m-benef { margin: 12px 15px 14px; padding: 11px 13px; border-radius: 12px; background: #fff; border-color: #e4e7ec; }
+.e-hilo .m-rubro { justify-self: start; padding: 4px 10px; border-radius: 20px; background: #0f1b2d; color: #e8a33d; font-size: 10px; letter-spacing: 1.6px; margin-bottom: 3px; }
+.e-hilo .m-benef b { font: 700 17px/1.05 var(--f-tit); text-transform: uppercase; letter-spacing: .3px; }
+/* barra de progreso segmentada al pie del beneficio */
+.e-hilo .m-benef::after { content: ""; height: 4px; margin-top: 8px; border-radius: 2px;
+  background: linear-gradient(90deg, #1a3d6b 0 23%, transparent 23% 25.5%, #1a3d6b 25.5% 48.5%, transparent 48.5% 51%, #e8a33d 51% 74%, transparent 74% 76.5%, #e4e7ec 76.5%); }

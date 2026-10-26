@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo XSD · preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+{{FUENTES}}
+<style>
+:root {
+  --bg: #f3f4f7; --hoja: #ffffff; --tinta: #16203a; --gris: #5d6680; --linea: #dde1ea;
+  --acento: #d9821a; --acento-suave: #fdf1e1; --tinta-suave: #e8ebf3;
+  --ok: #1f7a55; --ok-suave: #e2f3ea; --dejar: #6b7280; --dejar-suave: #eef0f3; --cambio: #7b4bb3; --cambio-suave: #f1eafa;
+  --sombra: 0 1px 2px rgb(22 32 58 / .06), 0 4px 14px rgb(22 32 58 / .06);
+  --f-tit: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-txt: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10141f; --hoja: #181e2c; --tinta: #e7ebf5; --gris: #9aa3bb; --linea: #2b3347;
+  --acento: #f0a54a; --acento-suave: #3a2c19; --tinta-suave: #232b3d;
+  --ok: #5cc596; --ok-suave: #173326; --dejar: #a3a9b6; --dejar-suave: #262b36; --cambio: #b892ec; --cambio-suave: #2b2140;
+  --sombra: 0 1px 2px rgb(0 0 0 / .3), 0 4px 14px rgb(0 0 0 / .25); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10141f; --hoja: #181e2c; --tinta: #e7ebf5; --gris: #9aa3bb; --linea: #2b3347;
+  --acento: #f0a54a; --acento-suave: #3a2c19; --tinta-suave: #232b3d;
+  --ok: #5cc596; --ok-suave: #173326; --dejar: #a3a9b6; --dejar-suave: #262b36; --cambio: #b892ec; --cambio-suave: #2b2140;
+  --sombra: 0 1px 2px rgb(0 0 0 / .3), 0 4px 14px rgb(0 0 0 / .25); color-scheme: dark }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--tinta); font: 15px/1.5 var(--f-txt); }
+button, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+.cab { position: sticky; top: 0; z-index: 20; background: var(--hoja); border-bottom: 1px solid var(--linea); padding: 12px 16px; }
+.cab-fila { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; max-width: 1500px; margin: 0 auto; }
+.cab h1 { font: 700 26px/1 var(--f-tit); letter-spacing: .01em; margin: 0; }
+.cab h1 span { color: var(--acento); }
+.cab .sub { color: var(--gris); font-size: 13px; }
+.avance { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 220px; }
+.avance-barra { flex: 1; height: 8px; border-radius: 4px; background: var(--tinta-suave); overflow: hidden; display: flex; }
+.avance-barra i { display: block; height: 100%; transition: width .3s ease; }
+.avance-txt { font: 500 13px var(--f-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.indice { display: flex; flex-wrap: wrap; gap: 6px; max-width: 1500px; margin: 10px auto 0; }
+.chip { border: 1px solid var(--linea); background: var(--hoja); border-radius: 999px; padding: 4px 11px; font-size: 13px; color: var(--tinta); text-decoration: none; }
+.chip:hover { background: var(--tinta-suave); }
+
+main { max-width: 1500px; margin: 0 auto; padding: 20px 16px 80px; display: grid; gap: 28px; }
+.ficha { background: var(--hoja); border: 1px solid var(--linea); border-radius: 12px; padding: 18px 20px; box-shadow: var(--sombra); }
+.ficha .kick { font: 600 12px var(--f-txt); color: var(--acento); text-transform: uppercase; letter-spacing: .1em; }
+.ficha h2 { font: 700 30px/1.05 var(--f-tit); margin: 4px 0 8px; }
+.ficha p { margin: 0 0 8px; max-width: 78ch; }
+.acme { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px 24px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--linea); }
+.acme-logo { width: 84px; height: 84px; border-radius: 18px; background: #14213D; color: #F4A259; display: grid; place-items: center; }
+.acme-logo svg { width: 52px; height: 52px; }
+.acme b { font: 700 28px/1 var(--f-tit); letter-spacing: .05em; }
+.acme .muestras { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.acme .muestras span { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--f-mono); color: var(--gris); }
+.acme .muestras i { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--linea); }
+.acme ul { margin: 6px 0 0; padding-left: 18px; color: var(--gris); font-size: 14px; }
+
+.familia > h2 { font: 700 28px/1 var(--f-tit); margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.familia > h2 small { font: 500 14px var(--f-mono); color: var(--gris); }
+.fam-txt { color: var(--gris); margin: 6px 0 14px; max-width: 80ch; }
+.grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 18px; }
+.est { background: var(--hoja); border: 1px solid var(--linea); border-radius: 12px; overflow: hidden; box-shadow: var(--sombra); display: flex; flex-direction: column; }
+.est.va { border-color: var(--ok); box-shadow: 0 0 0 2px var(--ok-suave), var(--sombra); }
+.est.no { opacity: .62; }
+.est.cambio { border-color: var(--cambio); box-shadow: 0 0 0 2px var(--cambio-suave), var(--sombra); }
+.marco { display: block; border: 0; padding: 14px 0; width: 100%; background: repeating-conic-gradient(var(--tinta-suave) 0 25%, transparent 0 50%) 0 0 / 18px 18px; cursor: zoom-in; }
+.escala { width: 288px; height: 592px; margin: 0 auto; border-radius: 22px; overflow: hidden; box-shadow: 0 10px 30px rgb(10 14 25 / .22); }
+.escala > .m { transform: scale(.8); transform-origin: 0 0; }
+.est-txt { padding: 14px 16px 16px; display: grid; gap: 6px; flex: 1; align-content: start; }
+.repetir { justify-self: start; border: 1px solid var(--linea); background: var(--hoja); border-radius: 999px; padding: 4px 12px; font-size: 13px; min-height: 32px; }
+.est-txt h3 { margin: 0; font: 700 22px/1.05 var(--f-tit); }
+.est-txt p { margin: 0; font-size: 14px; }
+.est-txt .ori { font: 500 12px var(--f-mono); color: var(--gris); }
+.est-txt .firma, .est-txt .cuidado { color: var(--gris); font-size: 13px; }
+.lbl { font: 600 11px var(--f-txt); text-transform: uppercase; letter-spacing: .08em; color: var(--gris); display: block; }
+.decide { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--linea); }
+.decide button { border: 1px solid var(--linea); background: var(--hoja); border-radius: 8px; padding: 7px 12px; font-size: 14px; font-weight: 500; min-height: 40px; }
+.decide button[data-e="va"][aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: #fff; }
+.decide button[data-e="no"][aria-pressed="true"] { background: var(--dejar); border-color: var(--dejar); color: #fff; }
+.decide button[data-e="cambio"][aria-pressed="true"] { background: var(--cambio); border-color: var(--cambio); color: #fff; }
+.decide .estado { font-size: 12.5px; color: var(--gris); }
+.cambio-caja { flex-basis: 100%; display: grid; gap: 6px; }
+.cambio-caja label { display: grid; gap: 4px; font-size: 13px; color: var(--gris); }
+.cambio-caja textarea { width: 100%; min-height: 64px; border: 1px solid var(--linea); border-radius: 8px; padding: 8px 10px; background: var(--bg); resize: vertical; }
+.cambio-caja .guardar-nota { justify-self: start; border: 1px solid var(--cambio); color: var(--cambio); background: var(--hoja); border-radius: 8px; padding: 6px 12px; min-height: 36px; }
+.aviso-db { font-size: 13px; background: var(--acento-suave); border-radius: 8px; padding: 8px 12px; }
+.resumen textarea { width: 100%; min-height: 90px; font: 12px var(--f-mono); border: 1px solid var(--linea); border-radius: 8px; padding: 8px; background: var(--bg); }
+
+dialog.grande { border: 0; padding: 0; background: transparent; max-height: 96vh; overflow: auto; }
+dialog.grande::backdrop { background: rgb(10 14 25 / .7); }
+dialog.grande .caja { border-radius: 26px; overflow: hidden; box-shadow: 0 20px 60px rgb(0 0 0 / .45); }
+dialog.grande .cerrar { position: fixed; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: #fff; color: #16203a; font-size: 22px; }
+
+/* ---------- la portada de ACME ---------- */
+{{CSS_BASE}}
+/* ---------- los estilos ---------- */
+{{CSS_ESTILOS}}
+</style>
+</head>
+<body>
+<header class="cab">
+  <div class="cab-fila">
+    <h1>Catálogo XSD · <span>preview</span></h1>
+    <span class="sub">{{TOTAL}} estilos sobre la portada de ACME · elegí cuáles pasan al catálogo</span>
+    <div class="avance"><div class="avance-barra" id="barra"></div><span class="avance-txt" id="avance-txt"></span></div>
+  </div>
+  <nav class="indice" aria-label="Familias">
+    {{INDICE}}<a class="chip" href="#resumen">Resumen</a>
+  </nav>
+</header>
+<main>
+  <section class="ficha">
+    <div class="kick">Antes de armar el catálogo</div>
+    <h2>{{TOTAL}} estilos, una sola portada</h2>
+    <p>Son los estilos más logrados y más distintos entre sí de las rondas del concurso de diseño de Colm3na y de otras propuestas. Los 113 que se revisaron se agruparon por familia; a los veinte de la primera tanda se sumaron veinte más (muy claros, de color, grises con uno o dos colores, flúor y fotográficos) y veinte con movimiento. En los que se mueven, la animación arranca cuando la portada aparece en pantalla, y cada tarjeta tiene un botón para repetirla. Con «reducir movimiento» activado en el sistema, se ven quietos y completos. Todos visten la misma portada, con el mismo contenido, para que se puedan comparar.</p>
+    <p>Marcá cada uno: <b>Va</b>, <b>No va</b> o <b>Va con cambios</b> (y escribí qué cambiarías). Tocá una portada para verla en tamaño real. Los que pasen se arman después en las cuatro pantallas: portada, operación, listado y tablero.</p>
+    <div class="aviso-db" id="aviso-db" hidden></div>
+    <div class="acme">
+      <div class="acme-logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3 29.5 28.5h-6.6L16 15 9.1 28.5H2.5Z" fill="currentColor"/><path d="M12.4 21.2h7.2v3.3h-7.2z" fill="currentColor"/></svg></div>
+      <div>
+        <b>ACME</b> <span style="color:var(--gris)">· Red de servicios</span>
+        <div class="muestras"><span><i style="background:#14213D"></i>base #14213D</span><span><i style="background:#2A6F97"></i>primario #2A6F97</span><span><i style="background:#F4A259"></i>acento #F4A259</span><span><i style="background:#8CB369"></i>apoyo #8CB369</span></div>
+        <ul>
+          <li>Una red de servicios inventada, con socios, solicitudes, seis sedes y un tablero de operaciones. Es todo ficticio.</li>
+          <li>Las cuatro pantallas del catálogo: la <b>portada</b> de la socia Lucía Ferraro, una <b>nueva solicitud</b> en tres pasos, el <b>listado</b> de solicitudes y el <b>tablero</b> de operaciones de octubre.</li>
+          <li>En este preview cada estilo va con su propia paleta. En el catálogo se va a poder ver además con los colores de ACME.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  {{SECCIONES}}
+  <section class="ficha resumen" id="resumen">
+    <div class="kick">Resumen</div>
+    <h2 id="res-tit">Lo que elegiste</h2>
+    <p id="res-txt"></p>
+    <p style="color:var(--gris);font-size:13px">Fotos de ejemplo de StockSnap, licencia CC0: {{CREDITOS}}.</p>
+    <div id="res-copia" hidden><p>Este navegador no tiene el guardado del preview: copiá este texto y pegalo en la conversación.</p><textarea readonly></textarea></div>
+  </section>
+</main>
+<dialog class="grande" id="grande"><button class="cerrar" type="button" aria-label="Cerrar">×</button><div class="caja"></div></dialog>
+<script>
+(() => {
+  const ESTILOS = {{DATOS}};
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const CLAVE = 'xsd-catalogo-preview';
+  const TXT = { va: 'Va', no: 'No va', cambio: 'Va con cambios' };
+  let dec = {}, db = null;
+  const leerLocal = () => { try { return JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { return {}; } };
+  const guardarLocal = () => { try { localStorage.setItem(CLAVE, JSON.stringify(dec)); } catch (e) {} };
+  function aviso(t) { const a = $('#aviso-db'); a.textContent = t; a.hidden = false; }
+  async function guardar(id, cuerpo) {
+    dec[id] = cuerpo; pintar();
+    if (db) { try { await db.doc('preview/' + id).set(cuerpo); return; } catch (e) { aviso('No se pudo guardar en el preview (' + (e && e.code || 'error') + '). Queda en este navegador.'); } }
+    guardarLocal();
+  }
+  function pintar() {
+    const c = { va: 0, no: 0, cambio: 0 };
+    ESTILOS.forEach(({ id }) => {
+      const d = dec[id] || {}; if (c[d.estado] != null) c[d.estado]++;
+      const card = document.getElementById(id); if (!card) return;
+      card.classList.toggle('va', d.estado === 'va'); card.classList.toggle('no', d.estado === 'no'); card.classList.toggle('cambio', d.estado === 'cambio');
+      card.querySelectorAll('.decide > button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.e === d.estado)));
+      card.querySelector('.estado').textContent = d.estado ? 'Guardado' : '';
+      const caja = card.querySelector('.cambio-caja'); caja.hidden = d.estado !== 'cambio';
+      const ta = caja.querySelector('textarea'); if (document.activeElement !== ta) ta.value = d.nota || '';
+    });
+    const n = ESTILOS.length, hechos = c.va + c.no + c.cambio;
+    const barra = $('#barra'); barra.textContent = '';
+    [['va', 'var(--ok)'], ['cambio', 'var(--cambio)'], ['no', 'var(--dejar)']].forEach(([k, col]) => {
+      const i = document.createElement('i'); i.style.width = (100 * c[k] / n) + '%'; i.style.background = col; barra.append(i); });
+    $('#avance-txt').textContent = hechos + ' / ' + n;
+    $('#res-txt').textContent = hechos === 0 ? 'Todavía no marcaste ninguno.' :
+      `${c.va} van, ${c.cambio} van con cambios y ${c.no} no van. ${n - hechos ? (n - hechos) + ' sin marcar. ' : ''}Cuando termines, avisale a Claude en la conversación.`;
+    if (!db) { $('#res-copia').hidden = false; $('#res-copia textarea').value = JSON.stringify(dec); }
+  }
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('.decide > button');
+    if (b) { const id = b.closest('.decide').dataset.id; const prev = dec[id] || {};
+      guardar(id, { estado: b.dataset.e, nota: b.dataset.e === 'cambio' ? (prev.nota || '') : '' }); return; }
+    const g = ev.target.closest('.guardar-nota');
+    if (g) { const id = g.closest('.decide').dataset.id; guardar(id, { estado: 'cambio', nota: g.previousElementSibling.querySelector('textarea').value.trim() }); return; }
+    const m = ev.target.closest('.marco');
+    if (m) { const d = $('#grande'), caja = d.querySelector('.caja'); caja.textContent = ''; const c = m.querySelector('.m').cloneNode(true);
+      c.classList.remove('en-vista'); caja.append(c); d.showModal(); requestAnimationFrame(() => requestAnimationFrame(() => c.classList.add('en-vista'))); return; }
+    const r = ev.target.closest('.repetir');
+    if (r) { repetir(r.closest('.est').querySelector('.m')); return; }
+    if (ev.target.closest('#grande .cerrar') || ev.target === $('#grande')) $('#grande').close();
+  });
+  // Las animaciones de entrada arrancan cuando la portada se ve (clase en-vista), no al cargar la página.
+  function repetir(m) { m.classList.remove('en-vista'); void m.offsetWidth; m.classList.add('en-vista'); }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('en-vista'); io.unobserve(e.target); } }), { threshold: .35 });
+    $$('.escala > .m').forEach(m => io.observe(m));
+  } else { $$('.escala > .m').forEach(m => m.classList.add('en-vista')); }
+  async function iniciar() {
+    dec = leerLocal(); pintar();
+    try { db = window.claude && window.claude.use ? await window.claude.use('db') : null; } catch (e) { db = null; }
+    if (!db) { aviso('Lo que marques se guarda en este navegador. Al terminar, copiá el texto del resumen y pegalo en la conversación.'); pintar(); return; }
+    db.collection('preview').onSnapshot(snap => {
+      const nuevas = {}; snap.docs.forEach(d => { nuevas[d.id] = d.data(); });
+      for (const [k, v] of Object.entries(leerLocal())) if (!nuevas[k]) nuevas[k] = v;
+      dec = nuevas; pintar();
+    }, e => aviso('Se cortó la conexión con el guardado (' + e.code + '). Lo que marques queda en este navegador.'));
+  }
+  iniciar();
+})();
+</script>
+</body>
+</html>
