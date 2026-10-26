@@ -9128,3 +9128,57 @@ zoom al sello ENVIADO, los rótulos ("UNA IDEA." … "EN SU CELULAR.") que
 entran al compás, y el fundido final; `ffmpeg` codifica con la música
 (libx264 CRF 18, 1080p30, AAC). Las fuentes están en git porque son solo
 scripts (sin cuadros ni música, que se bajan: ver `LEEME.md`).
+
+### Segunda versión: narrada, en 3D, con Josefina (2026-10-26)
+
+SDN vio la versión de 30 s y no le gustó: "le faltan variantes, los títulos no
+explican nada, no mostrás la portada de Colm3na celular para que se
+identifique, es todo plano, sin ángulos distintos ni tomas más creativas, el
+del circuito quiero que sea como un vuelo en 3D, ponele voz en español, más
+humano, más real". Y dejó el centro del relato: con una descripción en
+lenguaje natural y unas preguntas se genera en minutos, sin intervención
+técnica, un trámite digital para miles de trabajadores.
+
+**Lo que cambió.** El video pasa de 30 s al compás a 1:46 narrado, con una
+historia: Josefina (la afiliada de prueba de La Bancaria) pedía el kit escolar
+en papel; el sindicato lo cuenta al asistente; la IA lo entiende; seis
+preguntas; los datos; el circuito; en minutos está en la app; Josefina lo envía
+desde el celular; el pedido cae en la bandeja de Acción Social. Diez líneas de
+locución (`guion.json`) y un rótulo de dos líneas por paso (título corto +
+una frase que explica). Dos escenas nuevas: la portada de Josefina en el
+celular (`portada.js`, con "Hola, Josefina", Tu día y las novedades) y la
+bandeja de Trámites del panel con su expediente resaltado (`bandeja.js`).
+
+**La voz.** Síntesis neural de Microsoft Edge (`edge-tts`, voz
+`es-AR-ElenaNeural`, +4 % de velocidad): rioplatense, natural, gratis. Desde
+la sesión en la nube la conexión pasa por el proxy de la sesión, así que hubo
+que sumar su CA al `cacert.pem` de `certifi` (nunca apagar la verificación) y
+pasar `--proxy`. Piper con la voz `es_AR-daniela-high` quedó probado como
+alternativa sin red. "Colm3na" se escribe "Colmena" en el guion para que lo
+pronuncie bien.
+
+**El escenario 3D.** La variedad de tomas no sale de filmar distinto sino de
+una segunda capa: `escenario/stage.html` es una página de 1920×1080 con el
+fondo de marca donde cada cuadro filmado se pone como un plano CSS 3D
+(`perspective` + `translate3d/rotateX/rotateY`): la pantalla del asistente
+entra en ángulo y se endereza para leer, el teléfono lleva bisel y reflejo y
+gira mientras Josefina completa, y el circuito es la textura del diagrama
+(`textura.js` lo renderiza a 3x desde el HTML volcado por `asistente2.js`)
+puesta como piso que la cámara sobrevuela de principio a fin: eso es el
+"vuelo 3D" pedido. `armar_timeline2.py` escribe `timeline2.json` con cada
+toma (qué cuadros fuente, en qué rango de tiempo, con claves de cámara,
+fundidos y zoom interno), los rótulos y las placas; `escenario/escenario.js`
+renderiza los 3.183 cuadros con Playwright. Las escenas se filmaron con
+tiempos holgados y marcas por paso, y la línea de tiempo las recorta y las
+acelera o frena según dure cada línea de la locución: filmar y montar quedan
+desacoplados.
+
+**El audio.** `mezclar.py`: cada línea de voz en su tiempo, la música
+(Vivaldi, "La primavera", Allegro, misma grabación CC BY-SA) agachada debajo
+de la voz con `sidechaincompress` y `loudnorm` a −15 LUFS. La voz hay que
+rellenarla con `apad` hasta el final: si no, el compresor con cadena lateral
+termina cuando termina la voz y la mezcla queda dos segundos más corta que el
+video.
+
+Quedan en Pruebas seis expedientes LABAKIT de Josefina (cada toma envía uno
+de verdad). Plataforma 0.58.03.

@@ -1,0 +1,694 @@
+{
+ "duracion": 106.1,
+ "shots": [
+  {
+   "id": "port",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 2.0,
+   "t1": 16.000000000000004,
+   "fade_in": 0.6,
+   "reflejo": 0.25,
+   "z": 2,
+   "fuente": {
+    "dir": "portada",
+    "prefijo": "p",
+    "tramos": [
+     {
+      "u0": 0,
+      "u1": 0.32,
+      "i0": 30,
+      "i1": 120
+     },
+     {
+      "u0": 0.32,
+      "u1": 0.8,
+      "i0": 120,
+      "i1": 300
+     },
+     {
+      "u0": 0.8,
+      "u1": 1.0,
+      "i0": 300,
+      "i1": 380
+     }
+    ]
+   },
+   "cam": [
+    {
+     "t": 2.0,
+     "tx": 120,
+     "ty": 40,
+     "tz": -520,
+     "rx": 6,
+     "ry": 34,
+     "rz": -3,
+     "s": 1
+    },
+    {
+     "t": 5.2,
+     "tx": 40,
+     "ty": 10,
+     "tz": -60,
+     "rx": 2,
+     "ry": 12,
+     "rz": 0,
+     "s": 1,
+     "e": "out"
+    },
+    {
+     "t": 13.500000000000004,
+     "tx": -20,
+     "ty": -10,
+     "tz": 40,
+     "rx": -1,
+     "ry": -8,
+     "rz": 0,
+     "s": 1
+    },
+    {
+     "t": 16.000000000000004,
+     "tx": -30,
+     "ty": -10,
+     "tz": 40,
+     "rx": -1,
+     "ry": -10,
+     "rz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 16.000000000000004,
+   "t1": 30.280000000000005,
+   "fade_in": 0.5,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 0,
+    "i1": 378
+   },
+   "cam": [
+    {
+     "t": 16.000000000000004,
+     "tx": 140,
+     "ty": 30,
+     "tz": -700,
+     "rx": 6,
+     "ry": -26,
+     "rz": 2,
+     "s": 1
+    },
+    {
+     "t": 19.000000000000004,
+     "tx": 0,
+     "ty": 0,
+     "tz": -60,
+     "rx": 0,
+     "ry": -4,
+     "rz": 0,
+     "s": 1,
+     "e": "out"
+    },
+    {
+     "t": 30.280000000000005,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "rx": 0,
+     "ry": 0,
+     "rz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 30.280000000000005,
+   "t1": 37.67000000000001,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 378,
+    "i1": 570
+   },
+   "cam": [
+    {
+     "t": 30.280000000000005,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "s": 1
+    },
+    {
+     "t": 37.67000000000001,
+     "tx": 0,
+     "ty": -10,
+     "tz": 30,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 37.67000000000001,
+   "t1": 47.05000000000001,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 570,
+    "i1": 813
+   },
+   "cam": [
+    {
+     "t": 37.67000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": -120,
+     "rx": 0,
+     "ry": 10,
+     "s": 1
+    },
+    {
+     "t": 40.17000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "rx": 0,
+     "ry": 0,
+     "s": 1,
+     "e": "out"
+    },
+    {
+     "t": 47.05000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 47.05000000000001,
+   "t1": 57.05000000000001,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 813,
+    "i1": 1071
+   },
+   "cam": [
+    {
+     "t": 47.05000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "s": 1
+    },
+    {
+     "t": 57.05000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": 40,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 57.05000000000001,
+   "t1": 59.45000000000001,
+   "fade_out": 0.8,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 1071,
+    "i1": 1155
+   },
+   "cam": [
+    {
+     "t": 57.05000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "s": 1
+    },
+    {
+     "t": 59.45000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": -300,
+     "rx": 18,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "piso",
+   "clase": "piso",
+   "w": 3000,
+   "h": 476,
+   "t0": 58.65000000000001,
+   "t1": 69.09000000000002,
+   "fade_in": 0.8,
+   "imagen": "frames/diagrama.png",
+   "z": 3,
+   "cam": [
+    {
+     "t": 58.65000000000001,
+     "tx": 1500,
+     "ty": 160,
+     "tz": -900,
+     "rx": 58,
+     "ry": 0,
+     "rz": 0,
+     "s": 1.3
+    },
+    {
+     "t": 61.05000000000001,
+     "tx": 1050,
+     "ty": 110,
+     "tz": -250,
+     "rx": 55,
+     "ry": 6,
+     "rz": -2,
+     "s": 1.42,
+     "e": "out"
+    },
+    {
+     "t": 66.59000000000002,
+     "tx": -1100,
+     "ty": 80,
+     "tz": -200,
+     "rx": 51,
+     "ry": -6,
+     "rz": 2,
+     "s": 1.42
+    },
+    {
+     "t": 69.09000000000002,
+     "tx": -1550,
+     "ty": 120,
+     "tz": -700,
+     "rx": 56,
+     "ry": -10,
+     "rz": 2,
+     "s": 1.3
+    }
+   ]
+  },
+  {
+   "id": "asis",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 69.09000000000002,
+   "t1": 71.69000000000001,
+   "fade_in": 0.5,
+   "fuente": {
+    "dir": "asistente2",
+    "prefijo": "a",
+    "i0": 1191,
+    "i1": 1275
+   },
+   "cam": [
+    {
+     "t": 69.09000000000002,
+     "tx": 0,
+     "ty": 0,
+     "tz": -200,
+     "ry": 8,
+     "s": 1
+    },
+    {
+     "t": 71.69000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": 0,
+     "ry": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "cel",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 71.69000000000001,
+   "t1": 75.71000000000002,
+   "fade_in": 0.4,
+   "reflejo": 0.2,
+   "z": 2,
+   "fuente": {
+    "dir": "movil2",
+    "prefijo": "m",
+    "i0": 0,
+    "i1": 39
+   },
+   "cam": [
+    {
+     "t": 71.69000000000001,
+     "tx": 0,
+     "ty": 20,
+     "tz": -260,
+     "rx": 4,
+     "ry": 22,
+     "s": 1
+    },
+    {
+     "t": 75.71000000000002,
+     "tx": 0,
+     "ty": 10,
+     "tz": -60,
+     "rx": 2,
+     "ry": 10,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "cel",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 75.71000000000002,
+   "t1": 86.66000000000001,
+   "reflejo": 0.2,
+   "z": 2,
+   "fuente": {
+    "dir": "movil2",
+    "prefijo": "m",
+    "i0": 39,
+    "i1": 180
+   },
+   "cam": [
+    {
+     "t": 75.71000000000002,
+     "tx": 0,
+     "ty": 10,
+     "tz": -60,
+     "rx": 2,
+     "ry": 10,
+     "s": 1
+    },
+    {
+     "t": 78.71000000000002,
+     "tx": 380,
+     "ty": 0,
+     "tz": 40,
+     "rx": 0,
+     "ry": -16,
+     "rz": -2,
+     "s": 1
+    },
+    {
+     "t": 83.66000000000001,
+     "tx": 420,
+     "ty": 0,
+     "tz": 70,
+     "rx": -2,
+     "ry": 12,
+     "rz": 1,
+     "s": 1
+    },
+    {
+     "t": 86.66000000000001,
+     "tx": 420,
+     "ty": 0,
+     "tz": 90,
+     "rx": 0,
+     "ry": 0,
+     "rz": 0,
+     "s": 1
+    }
+   ]
+  },
+  {
+   "id": "cel",
+   "clase": "telefono",
+   "w": 430,
+   "h": 930,
+   "t0": 86.66000000000001,
+   "t1": 92.26,
+   "z": 2,
+   "fuente": {
+    "dir": "movil2",
+    "prefijo": "m",
+    "tramos": [
+     {
+      "u0": 0,
+      "u1": 0.55,
+      "i0": 180,
+      "i1": 249
+     },
+     {
+      "u0": 0.55,
+      "u1": 1.0,
+      "i0": 270,
+      "i1": 381
+     }
+    ]
+   },
+   "cam": [
+    {
+     "t": 86.66000000000001,
+     "tx": 420,
+     "ty": 0,
+     "tz": 90,
+     "s": 1,
+     "zs": 1,
+     "zx": 0.5,
+     "zy": 0.5
+    },
+    {
+     "t": 87.86000000000001,
+     "tx": 420,
+     "ty": 0,
+     "tz": 120,
+     "s": 1,
+     "zs": 1.3,
+     "zx": 0.5,
+     "zy": 0.6,
+     "e": "out"
+    },
+    {
+     "t": 89.66000000000001,
+     "tx": 420,
+     "ty": 0,
+     "tz": 120,
+     "s": 1,
+     "zs": 1.3,
+     "zx": 0.5,
+     "zy": 0.6
+    },
+    {
+     "t": 92.26,
+     "tx": 420,
+     "ty": 0,
+     "tz": 60,
+     "s": 1,
+     "zs": 1.0,
+     "zx": 0.5,
+     "zy": 0.5
+    }
+   ]
+  },
+  {
+   "id": "band",
+   "clase": "pantalla",
+   "w": 1760,
+   "h": 990,
+   "t0": 92.26,
+   "t1": 96.52000000000001,
+   "fade_in": 0.5,
+   "fuente": {
+    "dir": "bandeja",
+    "prefijo": "b",
+    "i0": 0,
+    "i1": 180
+   },
+   "cam": [
+    {
+     "t": 92.26,
+     "tx": 60,
+     "ty": 20,
+     "tz": -400,
+     "rx": 4,
+     "ry": -18,
+     "s": 1
+    },
+    {
+     "t": 96.52000000000001,
+     "tx": 0,
+     "ty": 0,
+     "tz": -80,
+     "rx": 0,
+     "ry": -6,
+     "s": 1
+    }
+   ]
+  }
+ ],
+ "rotulos": [
+  {
+   "t0": 3.0,
+   "t1": 9.6,
+   "h": "Josefina, afiliada a <b>La Bancaria</b>",
+   "s": "Cada diciembre, el kit escolar: formulario en papel, fotocopias y una cola en la seccional."
+  },
+  {
+   "t0": 10.6,
+   "t1": 15.800000000000002,
+   "h": "Su sindicato ya usa <b>Colm3na</b>",
+   "s": "La app del afiliado: recibos, credencial, trámites, novedades y beneficios, con la marca del gremio."
+  },
+  {
+   "t0": 17.000000000000004,
+   "t1": 23.800000000000004,
+   "h": "El <b>Asistente de trámites</b> de Colm3na",
+   "s": "Alguien de Acción Social cuenta el trámite como se lo contaron: en lenguaje natural, sin programar."
+  },
+  {
+   "t0": 24.800000000000004,
+   "t1": 30.080000000000005,
+   "h": "Un clic: <b>Analizar con IA</b>",
+   "s": "La inteligencia artificial de Colm3na lee el relato y propone el trámite entero."
+  },
+  {
+   "t0": 31.080000000000005,
+   "t1": 37.470000000000006,
+   "h": "La IA <b>lo entiende</b>",
+   "s": "Para qué sirve, quién lo pide, quién lo revisa y cómo termina. Lo que infiere, marcado como «IA»."
+  },
+  {
+   "t0": 38.470000000000006,
+   "t1": 46.85000000000001,
+   "h": "<b>Seis preguntas</b>, nada más",
+   "s": "Cada una trae la respuesta recomendada ya puesta: se confirma con un clic, o se cambia."
+  },
+  {
+   "t0": 47.85000000000001,
+   "t1": 56.85000000000001,
+   "h": "Los datos y <b>sus controles</b>",
+   "s": "DNI del chico, constancia de alumno regular, una fecha de nacimiento que no puede ser futura."
+  },
+  {
+   "t0": 57.85000000000001,
+   "t1": 68.79000000000002,
+   "h": "El circuito, <b>actor por actor</b>",
+   "s": "El afiliado pide desde la app; Acción Social revisa la documentación, aprueba y avisa dónde retirar el kit."
+  },
+  {
+   "t0": 69.79000000000002,
+   "t1": 75.51000000000002,
+   "h": "En minutos, <b>sin intervención técnica</b>",
+   "s": "El trámite ya está publicado en la app del sindicato, con la marca de La Bancaria."
+  },
+  {
+   "t0": 76.51000000000002,
+   "t1": 86.46000000000001,
+   "h": "Desde el celular, <b>en cinco minutos</b>",
+   "s": "Los datos de Mateo, el DNI y la constancia adjuntos: Josefina envía desde el colectivo."
+  },
+  {
+   "t0": 87.56000000000002,
+   "t1": 96.22000000000001,
+   "h": "Expediente numerado, <b>estado a la vista</b>",
+   "s": "Y en la seccional, el pedido ya está en la bandeja de Acción Social: sin papel, sin cola."
+  }
+ ],
+ "placas": [
+  {
+   "t0": 0.0,
+   "t1": 2.3,
+   "h": "Asistente <b>de trámites</b>",
+   "s": "De una necesidad contada en palabras a un trámite digital"
+  },
+  {
+   "t0": 96.52000000000001,
+   "t1": 106.1,
+   "h": "De una necesidad en palabras<br>a un trámite digital <b>para miles de trabajadores</b>",
+   "s": "Colm3na · Asistente de trámites · sin programar, sin intervención técnica"
+  }
+ ],
+ "negros": [
+  {
+   "t0": 105.1,
+   "t1": 106.1,
+   "a0": 0,
+   "a1": 1
+  },
+  {
+   "t0": 0,
+   "t1": 0.6,
+   "a0": 1,
+   "a1": 0
+  }
+ ],
+ "voces": [
+  {
+   "archivo": "01_josefina.mp3",
+   "t": 2.4
+  },
+  {
+   "archivo": "02_relato.mp3",
+   "t": 16.2
+  },
+  {
+   "archivo": "03_entiende.mp3",
+   "t": 30.58
+  },
+  {
+   "archivo": "04_preguntas.mp3",
+   "t": 37.97
+  },
+  {
+   "archivo": "05_datos.mp3",
+   "t": 47.35
+  },
+  {
+   "archivo": "06_circuito.mp3",
+   "t": 57.35
+  },
+  {
+   "archivo": "07_minutos.mp3",
+   "t": 69.39
+  },
+  {
+   "archivo": "08_celular.mp3",
+   "t": 76.01
+  },
+  {
+   "archivo": "09_enviado.mp3",
+   "t": 87.16
+  },
+  {
+   "archivo": "10_cierre.mp3",
+   "t": 96.92
+  }
+ ],
+ "musica": {
+  "archivo": "spring.mp3",
+  "desde": 0.0,
+  "volumen": 0.8
+ }
+}

@@ -1,0 +1,75 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>stage</title>
+<style>
+@font-face{font-family:Barlow;src:url(barlow-condensed-bold.woff2);font-weight:700}
+@font-face{font-family:Manrope;src:url(manrope.woff2)}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0d1626}
+body{position:relative;font-family:Manrope,system-ui,sans-serif;color:#fff;
+  background:radial-gradient(1100px 600px at 80% -10%, rgba(78,178,210,.26), transparent 62%),
+             radial-gradient(900px 700px at 8% 105%, rgba(255,176,32,.16), transparent 60%),
+             linear-gradient(160deg,#0d1626 15%,#141f3a 70%,#26386a)}
+.colmena{position:absolute;inset:0;opacity:.06;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'><path d='M28 0 L56 16 L56 48 L28 64 L0 48 L0 16 Z M28 64 L56 80 L56 97 M28 64 L0 80 L0 97' fill='none' stroke='white' stroke-width='1.2'/></svg>");background-size:56px 97px}
+.vineta{position:absolute;inset:0;background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);pointer-events:none}
+#escena{position:absolute;inset:0;perspective:1600px;perspective-origin:50% 50%}
+.plano{position:absolute;left:50%;top:50%;transform-style:preserve-3d;will-change:transform;backface-visibility:hidden}
+.plano img{display:block;width:100%;height:100%;object-fit:cover}
+.plano.pantalla{box-shadow:0 40px 90px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08);border-radius:14px;overflow:hidden;background:#0d1626}
+.plano.telefono{border-radius:58px;padding:14px;background:#15171d;box-shadow:0 50px 100px rgba(0,0,0,.6), inset 0 0 0 2px #3a3f4c}
+.plano.telefono img{border-radius:46px}
+.plano.telefono::after{content:"";position:absolute;left:50%;top:22px;width:110px;height:26px;margin-left:-55px;border-radius:13px;background:#15171d}
+.plano.piso{border-radius:18px;overflow:hidden;box-shadow:0 0 120px rgba(78,178,210,.25)}
+.reflejo{position:absolute;left:0;top:100%;width:100%;height:60%;transform:scaleY(-1);opacity:.22;-webkit-mask-image:linear-gradient(to top, rgba(0,0,0,.9), transparent 70%);mask-image:linear-gradient(to top, rgba(0,0,0,.9), transparent 70%);pointer-events:none}
+.reflejo img{width:100%;height:auto;display:block}
+#brillo{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.07) 50%, transparent 60%);background-size:300% 100%;opacity:0}
+/* rótulo: dos líneas */
+#rotulo{position:absolute;left:84px;bottom:76px;max-width:1100px;opacity:0;transform:translateY(30px)}
+#rotulo .h{font:700 54px/1 Barlow;letter-spacing:3px;text-transform:uppercase;color:#fff;padding:12px 22px 10px 24px;display:inline-block;background:rgba(13,22,38,.86);border-left:8px solid #ffb020;border-radius:0 10px 10px 0}
+#rotulo .s{font:500 26px/1.35 Manrope;color:#e3e9f5;margin-top:10px;padding:10px 20px;background:rgba(13,22,38,.72);border-radius:10px;display:inline-block;max-width:1000px}
+#rotulo .h b{color:#ffb020}
+/* placa */
+#placa{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;opacity:0}
+#placa img{height:150px}
+#placa h1{margin:0;font:700 84px/1.05 Barlow;letter-spacing:3px;text-transform:uppercase;text-align:center;max-width:1500px}
+#placa h1 b{color:#ffb020}
+#placa p{margin:0;font-size:30px;color:#c8d2e4;text-align:center;max-width:1300px;line-height:1.4}
+#negro{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+</style></head><body>
+<div class="colmena"></div>
+<div id="escena"></div>
+<div class="vineta"></div>
+<div id="brillo"></div>
+<div id="rotulo"><div class="h"></div><br><div class="s"></div></div>
+<div id="placa"><img src="logo.png" alt=""><h1></h1><p></p></div>
+<div id="negro"></div>
+<script>
+const ESC = document.getElementById('escena');
+const planos = {};
+function plano(id, clase, w, h) {
+  let p = planos[id];
+  if (!p) { p = document.createElement('div'); p.className = 'plano ' + clase; p.id = 'pl_' + id; p.innerHTML = '<img>'; ESC.appendChild(p); planos[id] = p; }
+  p.style.width = w + 'px'; p.style.height = h + 'px'; p.style.marginLeft = (-w / 2) + 'px'; p.style.marginTop = (-h / 2) + 'px';
+  return p;
+}
+window.render = function (f) {
+  // f: { planos: [{id, clase, src, w, h, t (transform), op, reflejo}], rotulo:{h,s,k}, placa:{h,s,k}, negro, brillo }
+  const vivos = new Set();
+  for (const d of f.planos || []) {
+    vivos.add(d.id);
+    const p = plano(d.id, d.clase, d.w, d.h);
+    const img = p.querySelector('img'); if (img.getAttribute('src') !== d.src) img.src = d.src;
+    p.style.transform = d.t; p.style.opacity = d.op == null ? 1 : d.op; p.style.zIndex = d.z || 1;
+    let r = p.querySelector('.reflejo');
+    if (d.reflejo) { if (!r) { r = document.createElement('div'); r.className = 'reflejo'; r.innerHTML = '<img>'; p.appendChild(r); } const ri = r.querySelector('img'); if (ri.getAttribute('src') !== d.src) ri.src = d.src; r.style.opacity = d.reflejo; }
+    else if (r) r.remove();
+  }
+  for (const id of Object.keys(planos)) if (!vivos.has(id)) { planos[id].remove(); delete planos[id]; }
+  const ro = document.getElementById('rotulo');
+  if (f.rotulo && f.rotulo.k > 0) { ro.querySelector('.h').innerHTML = f.rotulo.h; ro.querySelector('.s').textContent = f.rotulo.s; ro.style.opacity = f.rotulo.k; ro.style.transform = 'translateY(' + (30 * (1 - f.rotulo.k)) + 'px)'; ro.style.display = f.rotulo.s ? '' : ''; ro.querySelector('.s').style.display = f.rotulo.s ? 'inline-block' : 'none'; }
+  else ro.style.opacity = 0;
+  const pl = document.getElementById('placa');
+  if (f.placa && f.placa.k > 0) { pl.querySelector('h1').innerHTML = f.placa.h; pl.querySelector('p').textContent = f.placa.s || ''; pl.style.opacity = f.placa.k; pl.style.transform = 'translateY(' + (18 * (1 - f.placa.k)) + 'px) scale(' + (0.97 + 0.03 * f.placa.k) + ')'; }
+  else pl.style.opacity = 0;
+  document.getElementById('negro').style.opacity = f.negro || 0;
+  const br = document.getElementById('brillo'); br.style.opacity = f.brillo ? 1 : 0; if (f.brillo) br.style.backgroundPosition = (100 - 200 * f.brillo) + '% 0';
+  return new Promise((res) => { const imgs = Array.from(document.images); Promise.all(imgs.map((i) => i.complete ? null : new Promise((r) => { i.onload = i.onerror = r; }))).then(() => requestAnimationFrame(() => requestAnimationFrame(res))); });
+};
+</script></body></html>

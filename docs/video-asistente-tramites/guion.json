@@ -1,0 +1,12 @@
+[
+ {"id": "01_josefina", "texto": "Esta es Josefina. Trabaja en un banco y está afiliada a La Bancaria. Cada diciembre pide el kit escolar para su hijo: un formulario en papel, fotocopias, y una cola en la seccional."},
+ {"id": "02_relato", "texto": "Este año el sindicato lo resuelve distinto. Alguien de Acción Social abre el Asistente de trámites de Colmena y cuenta el trámite como se lo contaron. En lenguaje natural. Sin una línea de código."},
+ {"id": "03_entiende", "texto": "La inteligencia artificial lo entiende: para qué sirve, quién lo pide, quién lo revisa y cómo termina."},
+ {"id": "04_preguntas", "texto": "Después, seis preguntas. Cada una trae la respuesta recomendada ya puesta; se confirma con un clic, o se cambia."},
+ {"id": "05_datos", "texto": "Los datos que se van a pedir aparecen con sus controles: el DNI del chico, la constancia de alumno regular, una fecha de nacimiento que no puede ser futura."},
+ {"id": "06_circuito", "texto": "Y el circuito completo, actor por actor. El afiliado pide desde la app. Acción Social revisa la documentación, aprueba, y avisa dónde retirar el kit."},
+ {"id": "07_minutos", "texto": "En minutos, sin intervención técnica, el trámite está publicado en la app del sindicato."},
+ {"id": "08_celular", "texto": "Josefina lo completa desde el celular, en el colectivo, en cinco minutos. Carga los datos de Mateo, adjunta el DNI y la constancia, y envía."},
+ {"id": "09_enviado", "texto": "Expediente numerado, estado a la vista, sin cola. Y en la seccional, el pedido ya está en la bandeja de Acción Social."},
+ {"id": "10_cierre", "texto": "De una necesidad contada en palabras a un trámite digital para miles de trabajadores. Colmena."}
+]

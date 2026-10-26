@@ -241,12 +241,14 @@ SEMILLA = [
     {
         "clave": "video-asistente-tramites",
         "titulo": "Video: Asistente de trámites, de la idea al celular del afiliado",
-        "descripcion": "El kit escolar de La Bancaria, de punta a punta en 30 segundos: el relato "
-                       "en lenguaje natural, la IA que entiende, las seis preguntas, el circuito "
-                       "por actor en vuelo 3D y el formulario que la afiliada completa en su "
-                       "celular. Filmado sobre Pruebas, con la IA real. Música: Vivaldi, "
-                       "«El verano» (Presto), grabación de John Harrison con la Wichita State "
-                       "University Chamber Players (CC BY-SA 3.0). Sin locución.",
+        "descripcion": "Josefina, afiliada a La Bancaria, pedía el kit escolar en papel. Este año el "
+                       "sindicato lo cuenta en lenguaje natural al Asistente de trámites, la IA lo "
+                       "entiende, seis preguntas, los datos y el circuito en vuelo 3D; en minutos y "
+                       "sin intervención técnica el trámite está en la app, Josefina lo envía desde "
+                       "el celular y el pedido cae en la bandeja de Acción Social. 1:46, narrado en "
+                       "español rioplatense (voz sintética), filmado sobre Pruebas con la IA real. "
+                       "Música: Vivaldi, «La primavera» (Allegro), grabación de John Harrison con la "
+                       "Wichita State University Chamber Players (CC BY-SA 3.0).",
         "fecha": date(2026, 10, 26),
         "archivo": "colm3na-asistente-tramites.mp4",
         "miniatura": "colm3na-asistente-tramites.jpg",
