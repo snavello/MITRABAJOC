@@ -36,9 +36,11 @@ que está en Recursos).
 Desde una carpeta de trabajo con `playwright` (Node) y `edge-tts` (pip):
 copiar estos scripts a `film/` y `stage/` dentro de ella (asumen
 `__dirname/../frames`, `../adjuntos`, `../musica`, `../voz`).
-1. Voz: por cada línea de `guion.json`, `edge-tts --voice es-AR-ElenaNeural
-   --rate=+10% --text "..." --write-media voz/<id>.mp3` (detrás del proxy de
-   la sesión hace falta su CA en `certifi` y `--proxy`).
+1. Voz: por cada línea de `guion.json`, `echo "..." | piper --model
+   es_AR-daniela-high.onnx --length_scale 0.92 --sentence_silence 0.25
+   --output_file voz/v4/<id>.wav` y recortar el silencio final con ffmpeg
+   (`areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse`).
+   (La alternativa con red es `edge-tts --voice es-AR-ElenaNeural`.)
 2. Pruebas tiene que tener en La Bancaria el área «Acción Social» y el
    formulario «Kit escolar 2027» publicado.
 3. `node film/portada.js`, `node film/asistente2.js` (una llamada a la IA),

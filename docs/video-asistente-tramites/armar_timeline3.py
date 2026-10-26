@@ -3,11 +3,11 @@ F = 30
 def fr(t): return int(round(t * F))
 V = {"01": 8.064, "02": 6.936, "03": 7.296, "04": 5.184, "05": 4.776, "06": 7.392, "07": 8.28, "08": 4.08}
 nom = {"01": "01_cerca", "02": "02_media_hora", "03": "03_entiende", "04": "04_preguntas", "05": "05_circuito", "06": "06_publicada", "07": "07_celular", "08": "08_cierre"}
-t = {"01": 0.8}
-for a, b, gap in [("01", "02", 0.4), ("02", "03", 0.4), ("03", "04", 0.4), ("04", "05", 0.4), ("05", "06", 2.1), ("06", "07", 0.4), ("07", "08", 1.7)]:
-    t[b] = round(t[a] + V[a] + gap, 2)
-DUR = round(t["08"] + V["08"] + 2.0, 2)
-voces = [{"archivo": "v3/" + nom[k] + ".mp3", "t": t[k]} for k in V]
+# los tiempos de corte quedan como en la versión con Elena (las tomas no cambian); la voz Daniela es más corta y arranca en cada corte
+t = {"01": 0.8, "02": 9.26, "03": 16.6, "04": 24.3, "05": 29.88, "06": 36.76, "07": 44.55, "08": 54.53}
+V = {"01": 6.07, "02": 5.07, "03": 5.27, "04": 3.40, "05": 3.54, "06": 4.92, "07": 6.24, "08": 2.41}
+DUR = 60.61
+voces = [{"archivo": "v4/" + nom[k] + "_r.wav", "t": t[k] + 0.3} for k in V]
 PANT = dict(clase="pantalla", w=1760, h=990); TEL = dict(clase="telefono", w=430, h=930)
 A = dict(dir="asistente2", prefijo="a"); M = dict(dir="movil2", prefijo="m"); P = dict(dir="portada", prefijo="p"); B = dict(dir="bandeja", prefijo="b")
 S = []; R = []

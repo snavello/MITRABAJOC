@@ -34,15 +34,16 @@ def seccion(t0, t1, bombo=True, hats=True, cl=True, ganancia=1.0):
         if bombo:
             add(drums, i, K * ganancia)
             # bombeo de cadena lateral sobre las cuerdas
-            nn = int(0.5 * SR); j = min(N, i + nn); pump[i:j] = np.minimum(pump[i:j], 0.35 + 0.65 * (1 - np.exp(-np.arange(j - i) / (SR * 0.12))))
+            nn = int(0.5 * SR); j = min(N, i + nn); pump[i:j] = np.minimum(pump[i:j], 0.28 + 0.72 * (1 - np.exp(-np.arange(j - i) / (SR * 0.14))))
         if hats:
             add(drums, i + int(BEAT * SR / 2), hat(False) * ganancia)
             if b % 2 == 1: add(drums, i, hat(True) * 0.6 * ganancia)
         if cl and b % 2 == 1: add(drums, i, C * ganancia)
         b += 1
+# el beat nunca se va: en la intro y el corte el bombo sigue, más suave y sin clap
 for t0, t1, modo in SECC:
-    if modo == 'intro': seccion(t0, t1, bombo=False, hats=True, cl=False, ganancia=0.6)
-    elif modo == 'break': seccion(t0, t1, bombo=False, hats=True, cl=False, ganancia=0.5)
+    if modo == 'intro': seccion(t0, t1, bombo=True, hats=True, cl=False, ganancia=0.62)
+    elif modo == 'break': seccion(t0, t1, bombo=True, hats=True, cl=False, ganancia=0.7)
     else: seccion(t0, t1, True, True, True, 1.0)
     if modo != 'drop' and t1 < DUR - 2: add(drums, int((t1 - 1.8) * SR), riser(1.8))
 add(drums, int((DUR - 3.5) * SR), K * 1.2)  # golpe final
@@ -50,10 +51,10 @@ add(drums, int((DUR - 3.5) * SR), K * 1.2)  # golpe final
 sub = np.sin(2 * np.pi * 41.2 * t) * 0.18
 gate = np.zeros(N)
 for t0, t1, modo in SECC:
-    if modo == 'drop': gate[int(t0 * SR):int(min(t1, DUR - 3.5) * SR)] = 1
+    gate[int(t0 * SR):int(min(t1, DUR - 3.5) * SR)] = 1 if modo == 'drop' else 0.6
 sub *= gate * pump
 # 4) mezcla
-mix = st * pump[:, None] * 0.9 + drums[:, None] * 0.8 + sub[:, None]
+mix = st * pump[:, None] * 0.62 + drums[:, None] * 0.95 + sub[:, None] * 1.2
 mix = np.tanh(mix * 1.1) / 1.05
 # fundido final
 fo = int(2.5 * SR); mix[-fo:] *= np.linspace(1, 0, fo)[:, None]

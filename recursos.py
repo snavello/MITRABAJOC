@@ -246,8 +246,8 @@ SEMILLA = [
                        "cuenta en lenguaje natural, la IA la entiende, seis preguntas, los datos y el "
                        "circuito en vuelo 3D, y minutos después está en la app con la marca del gremio; "
                        "el afiliado la completa desde el celular y el pedido cae en la bandeja del área. "
-                       "Un minuto, narrado en español rioplatense (voz sintética), filmado sobre Pruebas "
-                       "con la IA real; el kit escolar es solo el ejemplo. Música: clásico-tecno hecho "
+                       "Un minuto, narrado en español rioplatense (voz sintética Daniela, es-AR), filmado "
+                       "sobre Pruebas con la IA real; el kit escolar es solo el ejemplo. Música: clásico-tecno hecho "
                        "sobre «La primavera» de Vivaldi (grabación CC BY-SA de John Harrison y la "
                        "Wichita State University Chamber Players) a 124 BPM con percusión sintetizada.",
         "fecha": date(2026, 10, 26),

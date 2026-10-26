@@ -9220,3 +9220,29 @@ blanco en cada corte, un barrido especular que recorre cada plano en su
 primer segundo y medio, un filo de luz en el borde de los planos y un
 resplandor bajo los teléfonos. Nada de eso toca las capturas: son capas
 encima y debajo. Plataforma 0.58.04.
+
+### Cuarta pasada: Daniela, la portada de hoy y el beat sin pausa (2026-10-26)
+
+SDN escuchó "un hombre hablando en español de España" en la versión de un
+minuto. Los clips medidos dan 200–230 Hz en todas las líneas (registro
+femenino, el mismo de la versión de 1:46), así que se le mandaron dos
+muestras de la primera línea: A, Elena (Edge, la que llevaba el video) y B,
+Daniela (`es_AR-daniela-high` de Piper, sintetizada en la máquina, sin red).
+Eligió B. Las ocho líneas se generan con `piper --length_scale 0.92
+--sentence_silence 0.25` y se les recorta solo el silencio final
+(`areverse` + `silenceremove` + `areverse`: un `silenceremove` con
+`stop_periods` corta en la primera pausa interna y deja frases por la mitad).
+Daniela es más rápida: 37 s de voz contra 52; los cortes de imagen quedaron
+donde estaban y cada línea arranca 0,3 s después de su corte.
+
+Dos pedidos más: la captura de la portada del celular se refilmó tal como
+está hoy en Pruebas (`portada.js`, mismos tiempos), y la música: "que Vivaldi
+quede más mezclado y nunca suene solo", así que `tecno.py` deja el bombo en
+la intro y en el corte del vuelo (más suave y sin clap), baja las cuerdas a
+0,62 y hunde más el bombeo. SDN quería, si se podía, una versión electrónica
+de bandoneón de "Adiós Nonino": la obra de Piazzolla sigue bajo derechos de
+autor (murió en 1992; en Argentina rige hasta 2062), no hay grabación con
+licencia libre y una versión sintetizada sería una reproducción de la obra
+igual, así que no se hizo y se le dijo; la alternativa ofrecida es un
+electro-tango original con timbre de bandoneón sintetizado. Plataforma
+0.58.05.
