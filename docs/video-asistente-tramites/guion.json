@@ -1,10 +1,10 @@
 [
  {"id": "01_cerca", "texto": "Con Colmena, el sindicato tiene una herramienta de última tecnología para estar más cerca de sus trabajadores: las gestiones electrónicas."},
- {"id": "02_media_hora", "texto": "Cualquier gestión se digitaliza en media hora: alguien del sindicato la cuenta en lenguaje natural, sin programar."},
- {"id": "03_entiende", "texto": "La inteligencia artificial la entiende y propone todo: quién la pide, quién la revisa, qué datos lleva y cómo termina."},
+ {"id": "02_media_hora", "texto": "Cualquier gestión o trámite se crea en media hora: alguien del sindicato lo cuenta en lenguaje natural, sin programar."},
+ {"id": "03_entiende", "texto": "La inteligencia artificial lo entiende y propone todo: quién lo pide, quién lo revisa, qué datos lleva y cómo termina."},
  {"id": "04_preguntas", "texto": "Seis preguntas con la respuesta recomendada. Un clic por cada una."},
- {"id": "05_circuito", "texto": "Los datos con sus controles, y el circuito completo, actor por actor."},
- {"id": "06_publicada", "texto": "Minutos después, la gestión está en la app, con la marca del sindicato. Por ejemplo, el kit escolar."},
- {"id": "07_celular", "texto": "El afiliado la completa desde su celular y envía. Expediente numerado, estado a la vista, y el pedido en la bandeja del área."},
+ {"id": "05_circuito", "texto": "Los datos con sus controles y el circuito completo, actor por actor. Las condiciones y los requisitos se validan en línea."},
+ {"id": "06_publicada", "texto": "En media hora, el trámite está disponible para miles de trabajadores, en la app, con la marca del sindicato. Por ejemplo, el kit escolar."},
+ {"id": "07_celular", "texto": "El afiliado lo completa desde su celular y envía. Expediente numerado, estado a la vista, y el sindicato lo resuelve en minutos desde su bandeja."},
  {"id": "08_cierre", "texto": "Gestiones electrónicas fáciles. Colmena."}
 ]

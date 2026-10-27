@@ -73,7 +73,8 @@ function transformDe(v) {
     for (const r of TL.rotulos || []) {
       if (t >= r.t0 - 0.05 && t <= r.t1) {
         const kin = clamp((t - r.t0) / 0.5, 0, 1), kout = clamp((r.t1 - t) / 0.4, 0, 1);
-        f.rotulo = { h: r.h, s: r.s, k: ease.out(kin) * kout };
+        if (r.pos === 'izq' || r.pos === 'der') f.lateral = { h: r.h, s: r.s, k: ease.out(kin) * kout, lado: r.pos };
+        else f.rotulo = { h: r.h, s: r.s, k: ease.out(kin) * kout };
       }
     }
     for (const p of TL.placas || []) {

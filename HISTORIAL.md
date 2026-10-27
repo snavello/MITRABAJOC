@@ -9246,3 +9246,29 @@ licencia libre y una versión sintetizada sería una reproducción de la obra
 igual, así que no se hizo y se le dijo; la alternativa ofrecida es un
 electro-tango original con timbre de bandoneón sintetizado. Plataforma
 0.58.05.
+
+### Quinta pasada: los textos ocupan el lugar libre y el relato dice los cuatro énfasis (2026-10-27)
+
+SDN: "el texto que va apareciendo debajo ocupe más lugar en los laterales,
+alineado al borde, con una letra más grande; solo usamos texto inferior cuando
+no sea posible hacerlo de la otra manera". El escenario suma un rótulo
+**lateral** (`#lateral`, 880 px de ancho, título en Barlow a 104 px con raya
+ámbar y bajada a 38 px) que ocupa el costado libre de las tomas con teléfono,
+pegado al borde; los teléfonos se corrieron a la derecha (`tx` 380–420) para
+dejarlo. El rótulo inferior queda para las pantallas completas, a 72/34 px y
+de borde a borde. Cada rótulo de la línea de tiempo lleva `pos` (`izq`,
+`der` o abajo).
+
+El guion enfatiza lo que SDN pidió: "cualquier gestión o trámite se crea en
+media hora", "las condiciones y los requisitos se validan en línea", "en media
+hora el trámite está disponible para miles de trabajadores" y "el sindicato lo
+resuelve en minutos desde su bandeja"; los títulos dicen lo mismo. Voz
+Daniela regenerada (42 s en total).
+
+**Prueba interna con Piazzolla.** SDN subió una grabación en vivo de "Adiós
+Nonino" (Piazzolla Electrónico, Nico Sorin, Niceto Club) y pidió oírla de
+fondo desde el 3:45, "solo para una prueba interna, no lo publiques". Se armó
+con una envolvente de ganancia (muy abajo bajo la voz, algo más en los huecos,
+sube en las afirmaciones importantes y queda sola tras el cierre) y se le
+mandó como archivo. No está en Recursos, en ningún entorno ni en el repo, y la
+pista tampoco: lo versionado sigue siendo Vivaldi-tecno. Plataforma 0.58.06.

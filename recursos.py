@@ -242,10 +242,11 @@ SEMILLA = [
         "clave": "video-asistente-tramites",
         "titulo": "Video: Gestiones electrónicas fáciles, de la idea a la app en media hora",
         "descripcion": "El sindicato tiene una herramienta de última tecnología para estar más cerca "
-                       "de sus trabajadores: cualquier gestión se digitaliza en media hora. Alguien la "
-                       "cuenta en lenguaje natural, la IA la entiende, seis preguntas, los datos y el "
-                       "circuito en vuelo 3D, y minutos después está en la app con la marca del gremio; "
-                       "el afiliado la completa desde el celular y el pedido cae en la bandeja del área. "
+                       "de sus trabajadores: un trámite nuevo se crea en media hora. Alguien lo cuenta en "
+                       "lenguaje natural, la IA lo entiende, seis preguntas, datos con sus controles y "
+                       "condiciones y requisitos validados en línea, el circuito en vuelo 3D, y queda "
+                       "disponible para miles de trabajadores en la app con la marca del gremio; el "
+                       "afiliado lo completa desde el celular y el sindicato lo resuelve en minutos. "
                        "Un minuto, narrado en español rioplatense (voz sintética Daniela, es-AR), filmado "
                        "sobre Pruebas con la IA real; el kit escolar es solo el ejemplo. Música: clásico-tecno hecho "
                        "sobre «La primavera» de Vivaldi (grabación CC BY-SA de John Harrison y la "

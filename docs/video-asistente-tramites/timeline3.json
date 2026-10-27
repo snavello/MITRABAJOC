@@ -35,7 +35,7 @@
    "cam": [
     {
      "t": 2.0,
-     "tx": 160,
+     "tx": 520,
      "ty": 60,
      "tz": -560,
      "rx": 8,
@@ -45,7 +45,7 @@
     },
     {
      "t": 4.6,
-     "tx": 60,
+     "tx": 400,
      "ty": 10,
      "tz": -40,
      "rx": 2,
@@ -56,7 +56,7 @@
     },
     {
      "t": 8.959999999999999,
-     "tx": -10,
+     "tx": 380,
      "ty": -10,
      "tz": 50,
      "rx": -1,
@@ -344,7 +344,7 @@
    "cam": [
     {
      "t": 38.76,
-     "tx": 0,
+     "tx": 420,
      "ty": 20,
      "tz": -260,
      "rx": 4,
@@ -353,7 +353,7 @@
     },
     {
      "t": 44.349999999999994,
-     "tx": 0,
+     "tx": 400,
      "ty": 10,
      "tz": -40,
      "rx": 2,
@@ -381,7 +381,7 @@
    "cam": [
     {
      "t": 44.349999999999994,
-     "tx": 0,
+     "tx": 400,
      "ty": 10,
      "tz": -40,
      "rx": 2,
@@ -510,22 +510,23 @@
  ],
  "rotulos": [
   {
+   "pos": "izq",
    "t0": 2.6,
    "t1": 8.659999999999998,
    "h": "Más cerca de <b>los trabajadores</b>",
-   "s": "La app del afiliado, con la marca del sindicato: recibos, credencial, novedades y gestiones electrónicas."
+   "s": "Gestiones electrónicas en la app del afiliado, con la marca del sindicato."
   },
   {
    "t0": 9.559999999999999,
    "t1": 16.200000000000003,
-   "h": "Cualquier gestión, <b>en media hora</b>",
-   "s": "Contada en lenguaje natural por alguien del sindicato: sin programar, sin intervención técnica."
+   "h": "Un trámite nuevo, <b>en media hora</b>",
+   "s": "Contado en lenguaje natural por alguien del sindicato: sin programar, sin intervención técnica."
   },
   {
    "t0": 16.900000000000002,
    "t1": 23.900000000000002,
-   "h": "La IA <b>la entiende</b>",
-   "s": "Quién la pide, quién la revisa, qué datos lleva y cómo termina. Lo que propone, marcado como «IA»."
+   "h": "La IA <b>lo entiende</b>",
+   "s": "Quién lo pide, quién lo revisa, qué datos lleva y cómo termina. Lo que propone, marcado como «IA»."
   },
   {
    "t0": 24.6,
@@ -536,20 +537,34 @@
   {
    "t0": 30.08,
    "t1": 36.06,
-   "h": "Datos, controles <b>y circuito</b>",
-   "s": "El circuito completo, actor por actor, lo arma el asistente."
+   "h": "Condiciones y requisitos <b>validados en línea</b>",
+   "s": "Datos con sus controles y el circuito completo, actor por actor: lo arma el asistente."
   },
   {
    "t0": 36.86,
-   "t1": 44.14999999999999,
-   "h": "Publicada en la app, <b>minutos después</b>",
-   "s": "Con la marca del sindicato. Un ejemplo: el kit escolar."
+   "t1": 38.66,
+   "h": "Disponible para <b>miles de trabajadores</b>",
+   "s": "En media hora, en la app, con la marca del sindicato."
   },
   {
+   "pos": "izq",
+   "t0": 38.96,
+   "t1": 44.14999999999999,
+   "h": "Disponible para <b>miles de trabajadores</b>",
+   "s": "En media hora, en la app, con la marca del sindicato. Un ejemplo: el kit escolar."
+  },
+  {
+   "pos": "izq",
    "t0": 44.849999999999994,
-   "t1": 53.93000000000001,
+   "t1": 51.14999999999999,
    "h": "Desde el celular <b>del afiliado</b>",
-   "s": "Expediente numerado, estado a la vista, y el pedido en la bandeja del área que lo atiende."
+   "s": "Expediente numerado, estado a la vista."
+  },
+  {
+   "t0": 51.64999999999999,
+   "t1": 53.93000000000001,
+   "h": "El sindicato lo resuelve <b>en minutos</b>",
+   "s": "El pedido cae en la bandeja del área que lo atiende."
   }
  ],
  "placas": [
@@ -563,7 +578,7 @@
    "t0": 54.230000000000004,
    "t1": 60.61,
    "h": "Gestiones electrónicas <b>fáciles</b>",
-   "s": "Colm3na · de una necesidad en palabras a una gestión digital, en media hora"
+   "s": "Colm3na · un trámite nuevo en media hora, para miles de trabajadores, resuelto en minutos"
   }
  ],
  "negros": [
@@ -582,36 +597,36 @@
  ],
  "voces": [
   {
-   "archivo": "v3/01_cerca.mp3",
-   "t": 0.8
+   "archivo": "v5/01_cerca_r.wav",
+   "t": 1.1
   },
   {
-   "archivo": "v3/02_media_hora.mp3",
-   "t": 9.26
+   "archivo": "v5/02_media_hora_r.wav",
+   "t": 9.56
   },
   {
-   "archivo": "v3/03_entiende.mp3",
-   "t": 16.6
+   "archivo": "v5/03_entiende_r.wav",
+   "t": 16.900000000000002
   },
   {
-   "archivo": "v3/04_preguntas.mp3",
-   "t": 24.3
+   "archivo": "v5/04_preguntas_r.wav",
+   "t": 24.6
   },
   {
-   "archivo": "v3/05_circuito.mp3",
-   "t": 29.88
+   "archivo": "v5/05_circuito_r.wav",
+   "t": 30.18
   },
   {
-   "archivo": "v3/06_publicada.mp3",
-   "t": 36.76
+   "archivo": "v5/06_publicada_r.wav",
+   "t": 37.059999999999995
   },
   {
-   "archivo": "v3/07_celular.mp3",
-   "t": 44.55
+   "archivo": "v5/07_celular_r.wav",
+   "t": 44.849999999999994
   },
   {
-   "archivo": "v3/08_cierre.mp3",
-   "t": 54.53
+   "archivo": "v5/08_cierre_r.wav",
+   "t": 54.83
   }
  ],
  "musica": {
