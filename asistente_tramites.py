@@ -119,11 +119,6 @@ BRECHAS = {
         "hoy": "El área lleva las unidades en su planilla y avisa por el chat si se agotaron.",
         "rec": "Cupos por formulario y seccional que se descuentan al aprobar y cierran el formulario al llegar a cero.",
         "backlog": ""},
-    "exportar": {
-        "titulo": "Listado de pedidos con sus respuestas", "nivel": "ajuste", "tam": "mediano",
-        "hoy": "El Panel Sindical lista expediente, seccional, estado y días, pero no las respuestas.",
-        "rec": "Exportar a CSV los trámites de un formulario con una columna por campo, filtrado por seccional y estado.",
-        "backlog": "Trámites: seis brechas · 4"},
     "entrega": {
         "titulo": "Registrar la entrega", "nivel": "ajuste", "tam": "mediano",
         "hoy": "Al entregar, el área pasa el trámite a Terminado con un mensaje. El afiliado se identifica con su credencial digital.",
@@ -227,7 +222,7 @@ INFERIDAS = [
      "ayuda": "Lo normal: el sindicato paga por su circuito (transferencia, tesorería) y avisa por el chat con el comprobante. Pagar desde Colm3na no existe hoy: es un desarrollo grande.",
      "cuando": {"clave": "fin", "en": ["pago"]}, "recomendada": "no",
      "opciones": [["no", "No: el sindicato paga por su circuito y avisa por el chat"], ["si", "Sí, quieren pagar desde Colm3na"]]},
-    {"clave": "listado", "titulo": "¿Necesitan un listado de los pedidos?", "ayuda": "Para compras, logística o para rendir cuentas.",
+    {"clave": "listado", "titulo": "¿Necesitan un listado de los pedidos?", "ayuda": "Para compras, logística o para rendir cuentas. Existe: el CSV por formulario de la pestaña Trámites.",
      "recomendada": "no", "opciones": [["si", "Sí"], ["no", "No"]]},
     {"clave": "tercero", "titulo": "¿Interviene alguien fuera del sindicato?", "ayuda": "Un proveedor, la obra social, un banco. No usa la app.",
      "recomendada": "no", "opciones": [["no", "No"], ["si", "Sí"]],
@@ -603,9 +598,9 @@ def circuito(entrada: dict) -> dict:
             TN(); nd("prov", "ex", "tarea", "Prepara los envíos" if quien == "proveedor" else "Provee lo que se entrega")
             fl(ult, "prov", "listado de pedidos" if r.get("listado") == "si" else "pedido", "msg")
             dato("Listado de pedidos aprobados" if r.get("listado") == "si" else "Pedido de compra",
-                 nom(dec), nom("ex"), "Fuera de Colm3na (hoy sin exportación)")
+                 nom(dec), nom("ex"), "CSV de Trámites → «Listado con las respuestas», fuera de Colm3na")
         elif r.get("listado") == "si":
-            dato("Listado de pedidos aprobados", nom(dec), "Compras del sindicato", "Planilla (hoy sin exportación)")
+            dato("Listado de pedidos aprobados", nom(dec), "Compras del sindicato", "CSV de Trámites → «Listado con las respuestas»")
         mas(); nd("aviso", dec, "tarea", "Avisa cuándo llega" if quien == "proveedor" else "Avisa dónde y cuándo retirar", "respondido")
         fl(ult, "aviso", lbl); lbl = ""
         dato("Fecha de envío" if quien == "proveedor" else "Lugar y fecha de retiro", nom(dec), AF, "Chat del trámite y aviso en la app")
@@ -681,8 +676,6 @@ def brechas_de(entrada: dict, circ: Optional[dict] = None) -> dict:
         add("duplicados", "Se puede pedir más de una vez (por familiar o por período).")
     if r.get("cupo") == "si":
         add("cupo", "La cantidad es limitada.")
-    if r.get("listado") == "si":
-        add("exportar", "Piden un listado de los pedidos.")
     if r.get("fin") == "entrega":
         add("entrega", "Termina con una entrega en persona.")
     if r.get("fin") == "turno":
@@ -937,6 +930,9 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
                           + (" y una fórmula con la edad (anios_entre(lista.fecha_nacimiento, hoy()))" if "edad" in req else "")
                           + "; el sindicato carga antes el grupo familiar en la pestaña Listas")
         pasos.append({"clave": "requisitos", "texto": "Requisitos: " + "; ".join(partes) + "."})
+    if r.get("listado") == "si":
+        pasos.append({"clave": "listado", "ruta": "Trámites → Listado con las respuestas",
+                      "texto": "El listado de pedidos con sus respuestas se baja en CSV, por formulario, filtrado por estado y seccional (una columna por pregunta). No hace falta armar nada."})
     pasos.append({"clave": "probar", "texto": "Probar con el banco de pruebas del constructor y con un pedido de punta a punta en Pruebas."})
     if r.get("ventana") == "si":
         pasos.append({"clave": "anunciar",

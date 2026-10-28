@@ -1476,6 +1476,21 @@ class TramiteLog(SQLModel, table=True):
     creado: str = ""
 
 
+class DescargaListado(SQLModel, table=True):
+    """Cada descarga del listado de trámites con sus respuestas (CSV desde
+    la pestaña Trámites, 2026-10-28). Está acá y no en un log del servidor
+    por lo mismo que EventoEncuesta: los nombres y documentos de familiares
+    son dato sensible, y si alguna vez circula una planilla que no debía,
+    hay a quién preguntarle. `filtros` es el texto de lo que se pidió."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    filtros: str = ""
+    filas: int = 0
+    fecha: str = ""     # "AAAA-MM-DD HH:MM"
+
+
 class TipoTramiteEmpleador(SQLModel, table=True):
     """Mirror de TipoTramite, para formularios "externos" que el sindicato
     pone a disposición de las empresas (Fase 5 del plan de Empleadores) --
@@ -6265,6 +6280,67 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
             r["nombre"] = nombres.get(tr.cuil) or ""
             salida.append(r)
         return salida
+
+
+def listado_tramites(sindicato_id: int, tipo_tramite_id: int, usuario_id: Optional[int],
+                     estado: str = "", seccional_id: Optional[int] = None) -> Optional[dict]:
+    """El listado de los pedidos de UN formulario con sus respuestas, para
+    el CSV de la pestaña Trámites (2026-10-28; era la brecha «exportar» del
+    Asistente de trámites). Dentro del alcance del operador (área y
+    seccional, _recortar_tramites: el recorte va en la consulta), con los
+    filtros opcionales de estado y seccional del afiliado. None si el tipo
+    no es de este sindicato. Las respuestas de archivo salen como el nombre
+    del archivo, nunca los bytes."""
+    with Session(engine) as s:
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id:
+            return None
+        campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_tramite_id)
+                        .order_by(CampoTramite.orden)).all()
+        q = select(Tramite).where(Tramite.sindicato_id == sindicato_id,
+                                  Tramite.tipo_tramite_id == tipo_tramite_id)
+        if estado:
+            q = q.where(Tramite.estado == estado)
+        q = _recortar_tramites(s, q, sindicato_id, usuario_id)
+        padron = {t.cuil: t.seccional_id for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id)).all()}
+        if seccional_id:
+            cuiles = [c for c, sec in padron.items() if sec == seccional_id]
+            q = q.where(Tramite.cuil.in_(cuiles)) if cuiles else q.where(False)
+        tramites = s.exec(q.order_by(Tramite.id)).all()
+        ids = [tr.id for tr in tramites]
+        respuestas = {}
+        if ids:
+            for r in s.exec(select(RespuestaTramite).where(RespuestaTramite.tramite_id.in_(ids))).all():
+                respuestas[(r.tramite_id, r.campo_tramite_id)] = r.archivo_nombre if r.archivo_datos else r.valor_texto
+        cuils = list({tr.cuil for tr in tramites})
+        nombres = dict(s.exec(select(CuentaTrabajador.cuil, CuentaTrabajador.nombre).where(
+            CuentaTrabajador.cuil.in_(cuils))).all()) if cuils else {}
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(Seccional.sindicato_id == sindicato_id)).all()}
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(Area.sindicato_id == sindicato_id)).all()}
+        filas = []
+        for tr in tramites:
+            filas.append({
+                "expediente": tr.numero_expediente, "creado": tr.creado, "actualizado": tr.actualizado,
+                "estado": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado), "cuil": tr.cuil,
+                "nombre": nombres.get(tr.cuil) or "", "seccional": secs.get(padron.get(tr.cuil), ""),
+                "area": areas.get(tr.area_a_cargo_id, ""),
+                "respuestas": [respuestas.get((tr.id, c.id), "") for c in campos],
+            })
+        return {"tipo": {"id": tipo.id, "titulo": tipo.titulo, "codigo": tipo.codigo},
+                "campos": [c.etiqueta + (" (retirado)" if c.retirado else "") for c in campos
+                           if c.tipo_dato != "separador"],
+                "indices": [i for i, c in enumerate(campos) if c.tipo_dato != "separador"],
+                "filas": filas}
+
+
+def registrar_descarga_listado(sindicato_id: int, tipo_tramite_id: int, usuario_id: Optional[int],
+                               filtros: str, filas: int) -> None:
+    with Session(engine) as s:
+        s.add(DescargaListado(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id,
+                              usuario_id=usuario_id or None, filtros=filtros[:300], filas=filas,
+                              fecha=fechas.ahora_texto()))
+        s.commit()
 
 
 # ---------- Pase entre áreas (decisión N8) ----------

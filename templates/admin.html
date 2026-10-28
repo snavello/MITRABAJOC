@@ -2313,6 +2313,31 @@
       <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
       <span class="f-cant" id="f-tramites-cant"></span>
     </div>
+    {# El listado con las respuestas (2026-10-28): un CSV por formulario, una
+       columna por campo, con el estado y la seccional como filtros. Lo arma
+       el servidor dentro del alcance de quien lo pide y registra la
+       descarga; acá solo se elige qué bajar. #}
+    {% if tipos_tramite %}
+    <form class="filtros tr-listado" method="get" action="/admin/tramites/listado.csv" target="_blank" id="tr-listado">
+      <span class="muted" style="font-size:13px;">Listado con las respuestas:</span>
+      <select name="tipo_id" aria-label="Formulario" required>
+        <option value="">Elegí el formulario</option>
+        {% for t in tipos_tramite %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
+      </select>
+      <select name="estado" aria-label="Estado del listado">
+        <option value="">Todos los estados</option>
+        {% for e in estados_tramite %}<option value="{{ e }}">{{ 'Espera al afiliado' if e == 'espera_info' else estados_tramite_label[e] }}</option>{% endfor %}
+      </select>
+      {% if seccionales_visibles and seccionales_visibles|length > 1 %}
+      <select name="seccional_id" aria-label="Seccional del listado">
+        <option value="">Todas las seccionales</option>
+        {% for sec in seccionales_visibles %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <button type="submit" class="sec mini">Descargar CSV</button>
+      <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Una fila por pedido de ese formulario y una columna por pregunta (los archivos salen con su nombre). Sirve para la compra, la logística o rendir cuentas. Baja solo lo que está a tu alcance, y cada descarga queda registrada: es información de personas."></button>
+    </form>
+    {% endif %}
     <div class="lst-scroll">
     <table id="tr-tabla">
       <tr><th>Expediente</th><th>Nombre</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>

@@ -247,7 +247,9 @@ def test_preparar_dice_que_existe_y_que_falta_con_el_sindicato_elegido():
     assert cfg["area"]["estado"] == "falta" and "Córdoba" in cfg["area"]["detalle"]
     sin = at.resolver(e, hoy=HOY)["preparar"]
     assert {x["estado"] for x in sin["configurar"]} == {"sin_verificar"}
-    assert [x["clave"] for x in r["preparar"]["ajuste"]] == ["ventana", "duplicados", "exportar", "entrega", "dependencia"]
+    assert [x["clave"] for x in r["preparar"]["ajuste"]] == ["ventana", "duplicados", "entrega", "dependencia"]
+    assert "exportar" not in at.BRECHAS, "el listado con las respuestas existe desde 2026-10-28"
+    assert "listado" in [p["clave"] for p in r["instruccion"]["pasos"]]
     assert [x["clave"] for x in r["preparar"]["desarrollo"]] == ["familia", "cupo"]
     assert "requisitos" not in at.BRECHAS and "lista" not in at.BRECHAS, "existen desde el bloque 3: no son brechas"
     assert "requisitos" in [p["clave"] for p in r["instruccion"]["pasos"]]
@@ -315,7 +317,7 @@ def test_el_pago_fuera_de_colm3na_no_es_brecha_y_el_solicitante_no_se_pide_dos_v
 def test_la_instruccion_y_los_estados_siguen_a_las_respuestas():
     r = at.resolver(_ejemplo(), hoy=HOY)
     claves = [p["clave"] for p in r["instruccion"]["pasos"]]
-    assert claves == ["crear", "destino", "pase", "requisitos", "probar", "anunciar"]
+    assert claves == ["crear", "destino", "pase", "requisitos", "listado", "probar", "anunciar"]
     assert "en «Requisitos para iniciar»" in r["instruccion"]["pasos"][3]["texto"] and "grupo familiar" in r["instruccion"]["pasos"][3]["texto"]
     assert "Sin pase entre áreas." in r["instruccion"]["pasos"][2]["texto"]
     assert "15. Lugar de retiro — Lista desplegable, obligatorio — Sede de la seccional" in r["instruccion"]["texto"]
