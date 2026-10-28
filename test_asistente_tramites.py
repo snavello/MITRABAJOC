@@ -56,8 +56,8 @@ def test_cada_brecha_esta_completa():
 def test_las_preguntas_viajan_como_datos():
     """`cuando` es un dict (no una función): la pantalla lo evalúa igual."""
     claves = [p["clave"] for p in at.PREGUNTAS_TODAS]
-    assert len(claves) == len(set(claves)) == 13
-    assert len(at.PREGUNTAS) == 6 and len(at.INFERIDAS) == 7, "seis se preguntan, siete se infieren (previo desde 2026-10-28)"
+    assert len(claves) == len(set(claves)) == 14
+    assert len(at.PREGUNTAS) == 6 and len(at.INFERIDAS) == 8, "seis se preguntan, ocho se infieren (previo y pago_colm3na desde 2026-10-28)"
     assert not any("cuando" in p for p in at.PREGUNTAS), "las que se preguntan se preguntan siempre"
     for p in at.PREGUNTAS_TODAS:
         validas = [k for k, _ in p["opciones"]]
@@ -84,7 +84,8 @@ def test_el_kit_escolar_sale_igual_que_el_prototipo():
     archivo dorado se regeneró con el motor ese día. Y el 2026-10-28
     (PLAN_ASISTENTE_TRAMITES_V2.md): `respuestas.previo` (el formulario
     previo de Colm3na) y `pendientes.aclaraciones` (lo que el analista
-    contestó con texto); regenerado otra vez."""
+    contestó con texto), y los dos campos del solicitante (nombre y CUIL
+    extraídos del padrón) adelante del formulario; regenerado otra vez."""
     esperado = json.loads(DORADO.read_text(encoding="utf-8"))
     generado = at.resolver(_ejemplo(), hoy=HOY)["json"]
     assert generado == esperado
@@ -106,7 +107,8 @@ def test_cada_campo_tiene_la_forma_que_acepta_el_constructor():
         assert len(saneados) == len(campos)
         for c, s in zip(campos, saneados):
             assert {k: v for k, v in s.items() if k != "id"} == {k: v for k, v in c.items() if k != "x_pendiente"}
-            assert validaciones_tramite.validaciones_saneadas(c["validaciones"], c["tipo_dato"]) == c["validaciones"]
+            # las de fuente `funcion` necesitan la lista entera (la segunda clave va por orden)
+            assert validaciones_tramite.validaciones_saneadas(c["validaciones"], c["tipo_dato"], campos=campos, indice=campos.index(c)) == c["validaciones"]
 
 
 def test_un_control_sin_soporte_marca_pendiente_y_no_inventa_validacion():
@@ -275,8 +277,9 @@ def test_el_prompt_dice_que_funcion_usar_y_cual_desarrollar():
         {"etiqueta": "Mal", "tipo": "texto", "formula": "sistema.inventado > 1"}]})
     r = at.resolver(e, hoy=HOY)
     f = r["formularios"][0]
-    dni, monto, suc, mal = f["campos"]
-    assert dni["x_aclaracion"] == "Sin puntos" and dni["validaciones"][0]["origen"] == "lista" and dni["validaciones"][0]["clave2"] == 0
+    nombre, cuil, dni, monto, suc, mal = f["campos"]
+    assert nombre["tipo_dato"] == "calculado" and nombre["validaciones"][0]["ingreso"] and cuil["validaciones"][0]["trae"] == "cuil"
+    assert dni["x_aclaracion"] == "Sin puntos" and dni["validaciones"][0]["origen"] == "lista" and dni["validaciones"][0]["clave2"] == 2
     assert dni["validaciones"][0]["mensaje"] == "Hasta 12 años" and dni["validaciones"][0]["en_vivo"] is True
     assert monto["validaciones"][0]["origen"] == "sistema" and monto["validaciones"][0]["en_vivo"] is False
     assert suc["validaciones"] == [] and suc["x_funcion_nueva"].startswith("sucursal_valida")
@@ -284,13 +287,29 @@ def test_el_prompt_dice_que_funcion_usar_y_cual_desarrollar():
     assert f["requisitos"][0]["trae"] == "credencial_vigente"
     # Y lo exportado pasa entero por el saneo real del constructor.
     saneados = main._campos_tramite_validos(copy.deepcopy(f["campos"]))
-    assert [len(c["validaciones"]) for c in saneados] == [1, 1, 0, 0]
+    assert [len(c["validaciones"]) for c in saneados] == [1, 1, 1, 1, 0, 0]
     p = r["prompt"]
     assert "## Validaciones: usar lo que existe" in p and "`campo.monto <= sistema.ultimo_recibo_bruto * 0.3`" in p
     assert "`sistema.credencial_vigente == si`" in p
     assert "## Funciones a desarrollar" in p and "sucursal_valida" in p
     assert "## A controlar sin función todavía" in p and "«Sucursal»: Una sucursal del banco" in p
     assert "Aclaración: Sin puntos" in p
+    assert "Extraer de `sistema.afiliado.nombre`" in p and "Se completa con" not in p.split("## Validaciones")[1]
+
+
+def test_el_pago_fuera_de_colm3na_no_es_brecha_y_el_solicitante_no_se_pide_dos_veces():
+    """Prueba de SDN (2026-10-28) con un subsidio por matrimonio: terminar con
+    un pago no significa pagar DESDE Colm3na; solo eso es la brecha. Y el
+    nombre o el CUIL que la IA pida de más se descartan: ya vienen."""
+    e = at.sanear_propuesta({"nombre": "Subsidio por matrimonio", "respuestas": {"fin": "pago"},
+                             "campos": [{"etiqueta": "Nombre y apellido", "tipo": "texto"}, {"etiqueta": "DNI", "tipo": "numero"},
+                                        {"etiqueta": "Acta de matrimonio", "tipo": "archivo"}]})
+    r = at.resolver(e, hoy=HOY)
+    assert "pago" not in r["brechas"] and r["veredicto"]["complejidad"] == "ninguna"
+    assert [c["etiqueta"] for c in r["formularios"][0]["campos"]] == ["Apellido y nombre", "CUIL", "Acta de matrimonio"]
+    assert "pago_colm3na" in r["json"]["respuestas"] and r["json"]["respuestas"]["pago_colm3na"] == "no"
+    e["respuestas"]["pago_colm3na"] = "si"
+    assert "pago" in at.resolver(e, hoy=HOY)["brechas"]
 
 
 def test_la_instruccion_y_los_estados_siguen_a_las_respuestas():
@@ -299,7 +318,8 @@ def test_la_instruccion_y_los_estados_siguen_a_las_respuestas():
     assert claves == ["crear", "destino", "pase", "requisitos", "probar", "anunciar"]
     assert "en «Requisitos para iniciar»" in r["instruccion"]["pasos"][3]["texto"] and "grupo familiar" in r["instruccion"]["pasos"][3]["texto"]
     assert "Sin pase entre áreas." in r["instruccion"]["pasos"][2]["texto"]
-    assert "13. Lugar de retiro — Lista desplegable, obligatorio — Sede de la seccional" in r["instruccion"]["texto"]
+    assert "15. Lugar de retiro — Lista desplegable, obligatorio — Sede de la seccional" in r["instruccion"]["texto"]
+    assert "1. Apellido y nombre — Extraído del padrón (sistema.afiliado.nombre), obligatorio" in r["instruccion"]["texto"]
     assert [x["estado"] for x in r["estados"]] == ["iniciado", "en_tratamiento", "espera_info", "respondido", "terminado"]
     assert "Retiralo en Sede, delegación o comisión gremial del banco" in r["estados"][3]["mensaje"]
     assert [q["actor"] for q in r["quien_hace_que"]] == ["Afiliado", "Acción Social", "Delegado de la comisión gremial", "Proveedor de kits"]

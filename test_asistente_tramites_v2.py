@@ -112,6 +112,8 @@ def test_la_hoja_de_trabajo_con_varios_tramites():
     assert "function Dudas(" in app and "Lo que no quedó claro" in app and 'placeholder="O contestá con tus palabras"' in app
     assert "function Veredicto(" in app and "v.puntos.map" in app and "Confirmar la importación" in app
     assert "Importar a ${sind.nombre}" in app and "ensayo" in app and "/casos/${E.caso_id}" in app
+    # Guardar explica qué hace y pide confirmación; Importar ensaya antes (SDN, 2026-10-28).
+    assert "¿Guardar este trámite?" in app and "Sí, guardar" in app and 'class="nota v-que-hace"' in app
     assert "hoja-layout" in css and "ct-area" in css and "ct-der" in css
     assert "html { background: var(--mesa); }" in css and "--mesa: #eef1f5" in css
     assert "#0d1626" not in css, "la colmena nocturna se fue"

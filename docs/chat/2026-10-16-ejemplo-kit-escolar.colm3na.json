@@ -43,6 +43,60 @@
       "areas_pase": [],
       "campos": [
         {
+          "etiqueta": "Apellido y nombre",
+          "tipo_dato": "calculado",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": [
+            {
+              "fuente": "funcion",
+              "origen": "sistema",
+              "lista": null,
+              "clave2": null,
+              "trae": "nombre",
+              "formula": null,
+              "operador": null,
+              "valor": "",
+              "mensaje": "Se completa con apellido y nombre, como figura en el padrón.",
+              "bloquea": true,
+              "en_vivo": false,
+              "ingreso": true
+            }
+          ]
+        },
+        {
+          "etiqueta": "CUIL",
+          "tipo_dato": "calculado",
+          "longitud_maxima": null,
+          "longitud_exacta": null,
+          "decimales": null,
+          "tipos_archivo_permitidos": "",
+          "opciones": "",
+          "ancho": "mitad",
+          "obligatorio": true,
+          "validaciones": [
+            {
+              "fuente": "funcion",
+              "origen": "sistema",
+              "lista": null,
+              "clave2": null,
+              "trae": "cuil",
+              "formula": null,
+              "operador": null,
+              "valor": "",
+              "mensaje": "Se completa con cuil, once dígitos sin guiones.",
+              "bloquea": true,
+              "en_vivo": false,
+              "ingreso": true
+            }
+          ]
+        },
+        {
           "etiqueta": "¿Es la primera vez que lo pedís para este chico?",
           "tipo_dato": "booleano",
           "longitud_maxima": null,
@@ -509,6 +563,7 @@
     "entrega": "delegado",
     "entrega_quien": "Delegado de la comisión gremial",
     "cupo": "si",
+    "pago_colm3na": "no",
     "listado": "si",
     "tercero": "si",
     "tercero_nombre": "Proveedor de kits",

@@ -9226,3 +9226,35 @@ robot `e2e/test_robot_asistente_tramites.py` reescrito al flujo nuevo
 (pasó contra el servidor local con el Chromium preinstalado,
 `E2E_CHROMIUM_PATH`). Humo con Playwright sobre La Bancaria (humo): del
 relato a la importación confirmada y el borrador en `/admin`.
+
+**Ajustes tras la prueba de SDN (misma noche, Admin 0.74.02, Plataforma
+0.59.02).** Tres cosas que salieron de probar un trámite sencillo (un
+subsidio por matrimonio):
+- **El formulario viene con el nombre y el documento de quien lo pide.**
+  `validaciones_tramite.DATOS_SISTEMA` suma `nombre` y `cuil` (con su ayuda
+  y su cálculo en `db.contexto_validaciones`), y el motor
+  (`campos_colm3na(..., con_solicitante=True)`, `CAMPOS_SOLICITANTE`) pone
+  adelante del formulario principal dos campos extraídos del padrón
+  («Apellido y nombre», «CUIL»; calculado con ingreso, ancho mitad), que el
+  afiliado ve completos y puede corregir con aviso al operador, como todo
+  extraído. Un campo de la IA que los repita se descarta
+  (`_ETIQUETAS_SOLICITANTE`), y el prompt le dice que no los pida. No cuentan
+  como preguntas en el veredicto ni en el importador. La vista previa los
+  dibuja completos (Pérez, Juan · 20111111112).
+- **Terminar con un pago no es pagar desde Colm3na.** La IA había decidido
+  que el subsidio se pagaba desde Colm3na y eso dejó un desarrollo de
+  complejidad alta que no hacía falta. Inferida nueva `pago_colm3na`
+  (cuando `fin = pago`; recomendada «no: el sindicato paga por su circuito y
+  avisa por el chat»): la brecha `pago` se dispara solo con «sí». Y el
+  prompt pide una duda con opciones (`sobre: fin` / `atiende`) cuando el
+  relato no dice cómo termina o quién atiende, en vez de suponerlo en
+  silencio.
+- **Guardar explica y pide confirmación.** SDN tocó «Guardar trámite» y
+  guardó de una. Ahora abre un recuadro que dice qué hace (queda en la lista
+  de la izquierda; no toca el sindicato) con «Sí, guardar» / «Cancelar»;
+  «Importar» ya ensayaba y pedía confirmación. Debajo de los dos botones se
+  lee qué hace cada uno.
+Tests: `test_el_pago_fuera_de_colm3na_no_es_brecha_y_el_solicitante_no_se_pide_dos_veces`
+(motor) y `test_el_formulario_importado_abre_con_el_nombre_y_el_cuil_del_afiliado`
+(importa, publica y abre desde la app del afiliado: los dos campos vienen
+completos). El caso dorado se regeneró (dos campos más, `pago_colm3na`).

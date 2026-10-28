@@ -8431,6 +8431,8 @@ def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dic
                 Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
                 Tramite.tipo_tramite_id == tipo["id"], Tramite.estado != "terminado")).one() or 0
         sistema = {
+            "nombre": (c.nombre or None) if c else None,
+            "cuil": cuil or None,
             "en_padron": t is not None,
             "activo": bool(t and t.activo),
             "registrado": bool(t and t.registrado),

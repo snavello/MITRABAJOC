@@ -10435,7 +10435,7 @@ def _importar_tramite(entrada: dict, sind: dict, resultado: dict, ensayo: bool) 
                     if m.get("area_id") and m["seccional"] in sec_id}
             pase = [x["area_id"] for x in p["pase"] if x.get("area_id")]
             fila = {"clave": f["clave"], "titulo": f["titulo"], "codigo": codigo, "id": None,
-                    "preguntas": sum(1 for c in campos if c["tipo_dato"] != "separador"),
+                    "preguntas": sum(1 for c in campos if c["tipo_dato"] != "separador" and not validaciones_tramite.ingreso_de(c)),
                     "destino": {**p["destino"]}, "mapa": f"{len(mapa)} de {len(p['mapa'])}" if p["mapa"] else "",
                     "pase": f"{len(pase)} de {len(p['pase'])}" if p["pase"] else "",
                     "requisitos": len(requisitos), "solo_encadenado": bool(f.get("x_solo_encadenado"))}
@@ -10472,7 +10472,8 @@ def api_asistente_importar(request: Request, payload: dict = Body(...)):
     entrada, sind, resultado = _resolver_pedido(payload)
     if not sind:
         raise HTTPException(422, "Elegí el sindicato al que se importa.")
-    if not any(c["tipo_dato"] != "separador" and c["etiqueta"] for c in resultado["formularios"][0]["campos"]):
+    if not any(c["tipo_dato"] != "separador" and c["etiqueta"] and not validaciones_tramite.ingreso_de(c)
+               for c in resultado["formularios"][0]["campos"]):
         raise HTTPException(422, "El formulario no tiene preguntas todavía.")
     ensayo = bool(payload.get("ensayo"))
     salida = _importar_tramite(entrada, sind, resultado, ensayo)

@@ -85,6 +85,8 @@ function Telefono({ f, i }) {
     const et = html`${c.etiqueta}${c.obligatorio ? " *" : ""}${c.x_pendiente ? html`<span class="vp-pend">pendiente</span>` : null}`;
     const cls = "vp-campo vp-" + (c.ancho || "completo");
     if (c.tipo_dato === "booleano") return html`<div class=${cls} key=${k}><div class="vp-bool"><i></i> ${et}</div></div>`;
+    // Extraído del padrón (el nombre y el CUIL de quien lo pide): viene completo.
+    if (c.tipo_dato === "calculado") { const ing = (c.validaciones || []).find((v) => v.ingreso) || {}; return html`<div class=${cls} key=${k}><label>${et}</label><div class="vp-in vp-calc">${ing.trae === "nombre" ? "Pérez, Juan" : ing.trae === "cuil" ? "20111111112" : "se completa solo"}</div></div>`; }
     const ops = (c.opciones || "").split(",").map((o) => o.trim()).filter(Boolean);
     let x;
     if (c.tipo_dato === "opcion_unica" || c.tipo_dato === "multiple") x = (ops.length ? ops : ["(sin opciones cargadas)"]).map((o) => html`<div class="vp-op"><i class=${c.tipo_dato === "multiple" ? "c" : "r"}></i> ${o}</div>`);
@@ -301,7 +303,7 @@ function Relato({ E, set, cat, estadoIA, analizar, sinIA }) {
 const GRUPOS = [
   ["Quién lo pide", ["quien", "requisitos"]],
   ["Quién lo atiende", ["atiende", "aprueba", "segundo"]],
-  ["Cómo termina", ["fin", "entrega", "cupo", "tercero", "listado"]],
+  ["Cómo termina", ["fin", "pago_colm3na", "entrega", "cupo", "tercero", "listado"]],
   ["Cuántas veces y cuándo", ["frecuencia", "ventana"]],
   ["Antes de este trámite", ["previo"]],
 ];
@@ -501,6 +503,7 @@ function Catalogo({ cat }) {
 // ---------------------------------------------------------------- paso 4: el veredicto
 function Veredicto({ E, set, ir, cat, res, sind, guardarCaso, aviso, copiar, descargar, importar, importacion, cambiarEstado, casos }) {
   const [abierto, setAbierto] = useState({});
+  const [confirmar, setConfirmar] = useState(false);
   if (!res) return html`<p class="cargando">Armando el veredicto…</p>`;
   const v = res.veredicto;
   const principal = res.formularios[0];
@@ -524,13 +527,19 @@ function Veredicto({ E, set, ir, cat, res, sind, guardarCaso, aviso, copiar, des
 
     <div class="v-acciones">
       <div class="v-importar">
-        ${puedeImportar ? html`<button class="boton" type="button" disabled=${importacion && importacion.cargando} onClick=${() => importar(true)}>Importar a ${sind.nombre}…</button>`
+        ${puedeImportar ? html`<button class="boton" type="button" disabled=${importacion && importacion.cargando} onClick=${() => { setConfirmar(false); importar(true); }}>Importar a ${sind.nombre}…</button>`
           : html`<span class="nota">${sind ? "Para importar, el formulario necesita al menos una pregunta." : "Para importar, elegí el sindicato en el paso 1."}</span>`}
-        <button class="boton suave" type="button" onClick=${guardarCaso}>${E.caso_id ? "Guardar cambios" : "Guardar trámite"}</button>
+        <button class="boton suave" type="button" onClick=${() => setConfirmar(true)}>${E.caso_id ? "Guardar cambios" : "Guardar trámite"}</button>
         <span class="estado-ia" role="status">${aviso}</span>
       </div>
       ${caso ? html`<label class="campo chico"><span>Estado del trámite</span><select value=${caso.estado} onChange=${(e) => cambiarEstado(caso.id, e.target.value)}>${cat.estados_caso.map((s) => html`<option value=${s}>${s}</option>`)}</select></label>` : null}
+      <p class="nota v-que-hace"><b>Importar</b> crea el formulario en el panel de ${sind ? sind.nombre : "ese sindicato"} como borrador: antes muestra qué va a crear y pide confirmación. <b>Guardar</b> lo deja en la lista de la izquierda, con relato, respuestas, datos y veredicto, para retomarlo o importarlo después; no toca el sindicato.</p>
     </div>
+    ${confirmar ? html`<div class="imp confirmar">
+      <h3>${E.caso_id ? "¿Guardar los cambios de este trámite?" : "¿Guardar este trámite?"}</h3>
+      <p class="nota">${E.caso_id ? `Se reemplaza lo guardado del trámite ${E.caso_id} con lo que está en pantalla (relato, respuestas, datos y veredicto). ` : "Queda en la lista «Trámites tratados» de la izquierda, para retomarlo, compartirlo o importarlo después. "}No crea nada en el sindicato: eso lo hace «Importar», que pide su propia confirmación.</p>
+      <div class="acciones"><button class="boton suave" type="button" onClick=${() => setConfirmar(false)}>Cancelar</button><div class="der"><button class="boton" type="button" onClick=${() => { setConfirmar(false); guardarCaso(); }}>Sí, guardar</button></div></div>
+    </div>` : null}
     <label class="campo"><span>Nota para quien lo retome (opcional)</span><input type="text" value=${E.nota} placeholder="Qué falta acordar con el sindicato, qué se probó…" onInput=${(e) => set({ nota: e.target.value })} /></label>
     ${importacion ? html`<${Importacion} imp=${importacion} confirmar=${() => importar(false)} sind=${sind} />` : null}
     ${caso && caso.importaciones.length ? html`<div class="importado-ya"><b>Ya importado</b>${caso.importaciones.map((x, k) => html`<p key=${k}>${x.cuando.slice(0, 16)} por ${x.quien} a ${x.sindicato}: ${x.tipos.map((t) => `«${t.titulo}» (${t.codigo})`).join(", ")}.</p>`)}</div>` : null}

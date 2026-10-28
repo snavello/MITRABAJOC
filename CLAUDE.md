@@ -1838,6 +1838,18 @@ planes `PLAN_ASISTENTE_TRAMITES.md` y, desde 2026-10-28,
   lista» exporta una validación por función real y las respuestas de
   requisitos salen como `requisitos` del formulario (`requisitos_colm3na`);
   `duplicados` quedó solo para «por familiar o por período».
+- **El formulario viene con el nombre y el CUIL de quien lo pide** (SDN,
+  prueba del 2026-10-28): `campos_colm3na(..., con_solicitante=True)` pone
+  adelante del principal dos campos extraídos del padrón
+  (`CAMPOS_SOLICITANTE`, calculado con ingreso `sistema.afiliado.nombre` /
+  `cuil`, datos nuevos de `DATOS_SISTEMA`) y descarta un campo de la IA que
+  los repita; no cuentan como preguntas. **Terminar con un pago no es pagar
+  desde Colm3na**: la inferida `pago_colm3na` (default no) es la única que
+  dispara la brecha `pago`; lo normal es que el sindicato pague por su
+  circuito y avise por el chat. Y el prompt pide una duda con opciones
+  cuando el relato no dice cómo termina o quién atiende, en vez de suponer.
+  En pantalla, **Guardar pide confirmación y dice qué hace**, e Importar
+  ensaya antes de confirmar; debajo de los botones se lee qué hace cada uno.
 - **El importador existe desde 2026-10-28** (V6; antes D7 lo postergaba):
   sigue el contrato `docs/chat/2026-10-16-contrato-importacion-tramites.md`
   salvo en dos cosas dichas: lo que falta no frena la importación (nace como
@@ -2054,7 +2066,9 @@ por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes
   fecha, vigente), `numero_credencial`, `edad`, `antiguedad_meses`,
   `ultimo_recibo_periodo`, `meses_sin_recibo`, `ultimo_recibo_bruto`,
   `empleador_cuit`, `empleador_nombre`, `tramites_abiertos` y
-  `dias_desde_ultimo_pedido_de_este_tipo`. Un dato nuevo es una entrada ahí
+  `dias_desde_ultimo_pedido_de_este_tipo`; y desde 2026-10-28 `nombre` y
+  `cuil`, para EXTRAER en un campo calculado (el Asistente de trámites los
+  pone adelante de todo formulario). Un dato nuevo es una entrada ahí
   más su cálculo en `contexto_validaciones` **y su ayuda en `AYUDA_SISTEMA`**
   (grupo, qué devuelve, ejemplo, qué significa; `AYUDA_FUNCION` para las
   funciones; `COMO_SE_COMPARA` por tipo): sin ayuda el test falla, y cada

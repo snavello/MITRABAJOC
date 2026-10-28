@@ -219,6 +219,14 @@ INFERIDAS = [
     {"clave": "cupo", "titulo": "¿La cantidad es limitada?", "ayuda": "Por ejemplo, unidades por seccional.",
      "cuando": {"clave": "fin", "en": ["entrega"]}, "recomendada": "no",
      "opciones": [["si", "Sí, hay cupo o stock"], ["no", "No"]]},
+    # 2026-10-28 (prueba de SDN con un subsidio por matrimonio): que termine
+    # con un pago NO significa pagar desde Colm3na. Lo normal es que el
+    # sindicato pague por su circuito y avise por el chat; solo si quieren
+    # pagar DESDE Colm3na es una brecha (desarrollo grande).
+    {"clave": "pago_colm3na", "titulo": "¿El pago se hace desde Colm3na?",
+     "ayuda": "Lo normal: el sindicato paga por su circuito (transferencia, tesorería) y avisa por el chat con el comprobante. Pagar desde Colm3na no existe hoy: es un desarrollo grande.",
+     "cuando": {"clave": "fin", "en": ["pago"]}, "recomendada": "no",
+     "opciones": [["no", "No: el sindicato paga por su circuito y avisa por el chat"], ["si", "Sí, quieren pagar desde Colm3na"]]},
     {"clave": "listado", "titulo": "¿Necesitan un listado de los pedidos?", "ayuda": "Para compras, logística o para rendir cuentas.",
      "recomendada": "no", "opciones": [["si", "Sí"], ["no", "No"]]},
     {"clave": "tercero", "titulo": "¿Interviene alguien fuera del sindicato?", "ayuda": "Un proveedor, la obra social, un banco. No usa la app.",
@@ -295,6 +303,11 @@ EJEMPLO_PROPUESTA = {
 # ---------------------------------------------------------------- utilidades
 def _texto(v, tope: int) -> str:
     return str(v or "").strip()[:tope]
+
+
+def _norm(s: str) -> str:
+    plano = unicodedata.normalize("NFD", str(s or "").lower())
+    return "".join(c for c in plano if unicodedata.category(c) != "Mn").strip()
 
 
 def sigla(s: str) -> str:
@@ -674,8 +687,8 @@ def brechas_de(entrada: dict, circ: Optional[dict] = None) -> dict:
         add("entrega", "Termina con una entrega en persona.")
     if r.get("fin") == "turno":
         add("turnos", "Termina con un turno.")
-    if r.get("fin") == "pago":
-        add("pago", "Termina con un pago o reintegro.")
+    if r.get("fin") == "pago" and r.get("pago_colm3na") == "si":
+        add("pago", "Quieren hacer el pago desde Colm3na.")
     if r.get("quien") == "publico":
         add("publico", "Lo inicia alguien fuera del padrón.")
     if r.get("previo") == "si":
@@ -690,12 +703,33 @@ def brechas_de(entrada: dict, circ: Optional[dict] = None) -> dict:
 
 
 # ---------------------------------------------------------------- formulario
-def campos_colm3na(campos: list) -> list:
+# El formulario viene con el nombre y el documento de quien lo pide (SDN,
+# 2026-10-28): dos campos EXTRAÍDOS del padrón (calculado con ingreso
+# `sistema.afiliado.nombre` / `cuil`), al principio del principal. El
+# afiliado los ve completos y puede corregirlos con aviso al operador.
+CAMPOS_SOLICITANTE = (("Apellido y nombre", "nombre"), ("CUIL", "cuil"))
+_ETIQUETAS_SOLICITANTE = {"apellido y nombre", "nombre y apellido", "nombre", "nombre completo", "cuil", "dni", "documento", "cuil del afiliado", "dni del afiliado", "nombre del afiliado"}
+
+
+def campo_solicitante(etiqueta: str, dato: str) -> dict:
+    return {"etiqueta": etiqueta, "tipo_dato": "calculado", "longitud_maxima": None, "longitud_exacta": None,
+            "decimales": None, "tipos_archivo_permitidos": "", "opciones": "", "ancho": "mitad", "obligatorio": True,
+            "validaciones": [{"fuente": "funcion", "origen": "sistema", "lista": None, "clave2": None, "trae": dato,
+                              "formula": None, "operador": None, "valor": "",
+                              "mensaje": f"Se completa con {validaciones_tramite.DATOS_SISTEMA[dato][1].lower()}.",
+                              "bloquea": True, "en_vivo": False, "ingreso": True}]}
+
+
+def campos_colm3na(campos: list, con_solicitante: bool = False) -> list:
     """Cada campo con la forma EXACTA que acepta main._campos_tramite_validos
     (el test lo verifica pasándolos por esa función). `x_pendiente` marca un
-    control que Colm3na no tiene: el importador lo va a ignorar."""
-    salida = []
+    control que Colm3na no tiene: el importador lo va a ignorar. Con
+    `con_solicitante`, adelante van el nombre y el CUIL de quien lo pide,
+    extraídos del padrón, y se descarta un campo de la IA que los repita."""
+    salida = [campo_solicitante(e, d) for e, d in CAMPOS_SOLICITANTE] if con_solicitante else []
     for c in campos:
+        if con_solicitante and _norm(c["etiqueta"]) in _ETIQUETAS_SOLICITANTE:
+            continue
         if not c["etiqueta"] and c["tipo"] != "separador":
             continue
         o = {"etiqueta": c["etiqueta"], "tipo_dato": c["tipo"], "longitud_maxima": None,
@@ -735,6 +769,8 @@ def campos_colm3na(campos: list) -> list:
     # pendiente y el prompt lo dice. Va después porque `campo.<nombre>`
     # necesita la lista entera.
     for i, o in enumerate(salida):
+        if "_regla" not in o:          # los del solicitante no traen regla
+            continue
         regla, formula = o.pop("_regla"), o.pop("_formula")
         if formula and o["tipo_dato"] in validaciones_tramite.TIPOS_CON_FUNCION:
             es_lista = "lista." in formula
@@ -803,7 +839,7 @@ def configuracion(entrada: dict, circ: Optional[dict] = None) -> dict:
     codigo = entrada["codigo"] or codigo_de(entrada["nombre"])
     forms = [{"clave": "principal", "titulo": entrada["nombre"], "codigo": codigo, "activo": True, "seccional": None,
               "destino": destino, "permite_pase": bool(pase), "areas_pase": pase,
-              "campos": campos_colm3na(entrada["campos"]), "reglas_consistencia": [],
+              "campos": campos_colm3na(entrada["campos"], con_solicitante=True), "reglas_consistencia": [],
               "requisitos": requisitos_colm3na(r)}]
     for i, f in enumerate(c["encadenados"]):
         forms.append({"clave": f"encadenado_{i + 1}", "titulo": f"{f['nombre']} · {entrada['nombre']}",
@@ -915,7 +951,8 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
         lineas.append("Crear primero: " + ", ".join(f["titulo"] for f in enc) + ".")
     lineas += ["", "Campos:"]
     for i, c in enumerate(p["campos"]):
-        linea = f"{i + 1}. {c['etiqueta'] or '(separador)'} — {TIPOS[c['tipo_dato']]}"
+        ing = validaciones_tramite.ingreso_de(c)
+        linea = f"{i + 1}. {c['etiqueta'] or '(separador)'} — " + (f"Extraído del padrón (sistema.afiliado.{ing['trae']})" if ing else TIPOS[c["tipo_dato"]])
         if c["tipo_dato"] != "separador":
             linea += ", obligatorio" if c["obligatorio"] else ", opcional"
         if c["opciones"]:
@@ -927,7 +964,8 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
         if c.get("x_aclaracion"):
             linea += " — " + c["x_aclaracion"]
         for v in c.get("validaciones") or []:
-            linea += " — validación: " + (v.get("formula") or v.get("mensaje") or "")
+            if not v.get("ingreso"):
+                linea += " — validación: " + (v.get("formula") or v.get("mensaje") or "")
         if c.get("x_regla"):
             linea += " — a controlar (sin función todavía): " + c["x_regla"]
         if c.get("x_funcion_nueva"):
@@ -970,7 +1008,10 @@ def prompt_para_code(entrada: dict, cfg: dict, brechas: dict, sindicato: Optiona
         if c["tipo_dato"] == "separador":
             L.append(f"{i + 1}. — {c['etiqueta'] or 'separador'} —")
             continue
-        linea = f"{i + 1}. {c['etiqueta']} · {TIPOS[c['tipo_dato']]}" + (", obligatorio" if c["obligatorio"] else ", opcional")
+        ing = validaciones_tramite.ingreso_de(c)
+        linea = f"{i + 1}. {c['etiqueta']} · " + ("Extraído del padrón" if ing else TIPOS[c["tipo_dato"]]) + (", obligatorio" if c["obligatorio"] else ", opcional")
+        if ing:
+            linea += f" · Extraer de `sistema.afiliado.{ing['trae']}` (el afiliado lo ve completo y puede corregirlo)"
         if c["opciones"]:
             linea += f" · opciones: {c['opciones']}"
         if c["tipos_archivo_permitidos"]:
@@ -981,6 +1022,8 @@ def prompt_para_code(entrada: dict, cfg: dict, brechas: dict, sindicato: Optiona
     usar, desarrollar, a_mano = [], [], []
     for i, c in enumerate(p["campos"]):
         for v in c.get("validaciones") or []:
+            if v.get("ingreso"):
+                continue
             if v["fuente"] == "fija":
                 usar.append(f"«{c['etiqueta']}»: validación fija {v['operador']} {v['valor']} → «{v['mensaje']}».")
             elif v.get("formula"):
@@ -1024,11 +1067,6 @@ def prompt_para_code(entrada: dict, cfg: dict, brechas: dict, sindicato: Optiona
 
 
 # ---------------------------------------------------------------- preparar
-def _norm(s: str) -> str:
-    plano = unicodedata.normalize("NFD", str(s or "").lower())
-    return "".join(c for c in plano if unicodedata.category(c) != "Mn").strip()
-
-
 def preparar(entrada: dict, cfg: dict, brechas: dict, sindicato: Optional[dict] = None) -> dict:
     """Configurar (sin programar), ajuste y desarrollo. Con los datos del
     sindicato elegido (D6: módulos encendidos, áreas con su seccional,
@@ -1230,7 +1268,9 @@ def veredicto(entrada: dict, cfg: dict, brechas: dict, sindicato: Optional[dict]
     plan = plan or plan_importacion(cfg, sindicato)
     p = cfg["formularios"][0]
     nombre_sind = (sindicato or {}).get("nombre") or "el sindicato"
-    campos_reales = [c for c in p["campos"] if c["tipo_dato"] != "separador" and c["etiqueta"]]
+    # Los dos del solicitante vienen siempre: no cuentan como preguntas.
+    campos_reales = [c for c in p["campos"] if c["tipo_dato"] != "separador" and c["etiqueta"]
+                     and not validaciones_tramite.ingreso_de(c)]
 
     # 6 y 5: el formulario previo de Colm3na.
     previo_nombre = (r.get("previo_nombre") or "").strip()
