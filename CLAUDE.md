@@ -1850,6 +1850,15 @@ planes `PLAN_ASISTENTE_TRAMITES.md` y, desde 2026-10-28,
   cuando el relato no dice cómo termina o quién atiende, en vez de suponer.
   En pantalla, **Guardar pide confirmación y dice qué hace**, e Importar
   ensaya antes de confirmar; debajo de los botones se lee qué hace cada uno.
+- **El listado de pedidos con sus respuestas existe** (SDN, 2026-10-28:
+  «no es pendiente, es un filtro más en las consultas de trámites»):
+  `GET /admin/tramites/listado.csv?tipo_id&estado&seccional_id` desde la
+  bandeja de Trámites («Listado con las respuestas»), una fila por pedido y
+  una columna por pregunta (los archivos, con su nombre), dentro del alcance
+  del operador (`db.listado_tramites` recorta en la consulta) y con cada
+  descarga registrada en `DescargaListado` (migración `d9e1b3c5a7f2`). La
+  brecha `exportar` se sacó de `BRECHAS`; «listado = sí» ya no es brecha y
+  la instrucción dice de dónde se baja. Tests: `test_listado_tramites.py`.
 - **El importador existe desde 2026-10-28** (V6; antes D7 lo postergaba):
   sigue el contrato `docs/chat/2026-10-16-contrato-importacion-tramites.md`
   salvo en dos cosas dichas: lo que falta no frena la importación (nace como

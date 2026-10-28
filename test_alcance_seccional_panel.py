@@ -122,7 +122,7 @@ ALCANCE_POR_PREFIJO = [
     ("/admin/encuesta", "seccional"), ("/admin/lista", "seccional"),
     ("/admin/reportes", "seccional"), ("/admin/seccional", "seccional"),
     ("/admin/tramite-tipo", "seccional"), ("/admin/tramite", "seccional"),
-    ("/admin/tramites-nuevos-cantidad", "seccional"),
+    ("/admin/tramites-nuevos-cantidad", "seccional"), ("/admin/tramites/listado.csv", "seccional"),
     ("/admin/usuario", "seccional"), ("/admin/area", "seccional"),
     # Apariencia (PLAN_TEMAS.md): la del sindicato es del gremio entero y la
     # cambia solo el general; la propia es de la persona.

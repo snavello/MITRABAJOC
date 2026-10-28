@@ -27,13 +27,11 @@ se hace.
      equivalente de cada una (jpg↔jpeg, tif↔tiff) al comparar en las dos
      rutas de envío y al armar el `accept` del navegador, sin tocar lo
      guardado; la ayuda del constructor lo dice.
-  4. **Exportar trámites con sus respuestas** (mediano): no hay CSV de
-     trámites; `dashboard.explorador_tramites` devuelve expediente, fecha,
-     seccional, tipo, estado y días, y las respuestas solo se ven de a
-     una en el modal "Ver". Una ruta por tipo con una columna por campo,
-     dentro del alcance de seccional y área del operador, registrando
-     cada descarga como hace Encuestas (nombres y DNI de familiares son
-     dato sensible).
+  4. ~~**Exportar trámites con sus respuestas**~~ **HECHO el 2026-10-28**
+     (Admin 0.75.01): `GET /admin/tramites/listado.csv` desde la bandeja
+     de Trámites, una columna por campo, dentro del alcance de seccional y
+     área del operador, con cada descarga registrada en `DescargaListado`
+     (`test_listado_tramites.py`). Salió de `BRECHAS` del asistente.
   5. **Opciones que dependen de otra respuesta** (mediano, prioridad
      baja): `validaciones_tramite.TIPOS_VALIDABLES = ("numero", "fecha")`
      y `reglas_saneadas` descarta una regla si los dos campos no son del

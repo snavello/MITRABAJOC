@@ -516,7 +516,7 @@
         "dato": "Listado de pedidos aprobados",
         "de": "Acción Social",
         "a": "Proveedor de kits",
-        "canal": "Fuera de Colm3na (hoy sin exportación)"
+        "canal": "CSV de Trámites → «Listado con las respuestas», fuera de Colm3na"
       },
       {
         "dato": "Lugar y fecha de retiro",
@@ -594,12 +594,6 @@
         "nivel": "desarrollo",
         "motivo": "La cantidad es limitada.",
         "provisorio": "El área lleva las unidades en su planilla y avisa por el chat si se agotaron."
-      },
-      {
-        "clave": "exportar",
-        "nivel": "ajuste",
-        "motivo": "Piden un listado de los pedidos.",
-        "provisorio": "El Panel Sindical lista expediente, seccional, estado y días, pero no las respuestas."
       },
       {
         "clave": "entrega",

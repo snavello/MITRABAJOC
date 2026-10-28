@@ -235,8 +235,8 @@ def test_guardar_listar_cambiar_estado_y_csv(sindicato):
     lista = c.get(API + "/casos").json()["casos"]
     mio = next(x for x in lista if x["id"] == caso_id)
     assert mio["nombre"] == "Kit escolar 2027" and mio["sindicato"] == "Sindicato Asistente"
-    # 7 brechas distintas desde el bloque 5 de Listas y validaciones (antes 8: «requisitos» ya existe).
-    assert mio["quien"] == "snavello" and mio["distintos"] == 7 and "ventana" in mio["brechas"]
+    # 6 brechas distintas desde 2026-10-28 (antes 7: el listado con las respuestas ya existe).
+    assert mio["quien"] == "snavello" and mio["distintos"] == 6 and "ventana" in mio["brechas"]
     detalle = c.get(API + f"/casos/{caso_id}").json()
     assert detalle["resultado"]["json"]["formato"] == "colm3na.tramite" and detalle["entrada"]["sindicato"]["id"] == sindicato
     assert c.post(API + f"/casos/{caso_id}/estado", json={"estado": "revisado"}).status_code == 200

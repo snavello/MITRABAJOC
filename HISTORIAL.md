@@ -9258,3 +9258,40 @@ Tests: `test_el_pago_fuera_de_colm3na_no_es_brecha_y_el_solicitante_no_se_pide_d
 (motor) y `test_el_formulario_importado_abre_con_el_nombre_y_el_cuil_del_afiliado`
 (importa, publica y abre desde la app del afiliado: los dos campos vienen
 completos). El caso dorado se regeneró (dos campos más, `pago_colm3na`).
+
+## El listado de trámites con sus respuestas (2026-10-28, Admin 0.75.01, Plataforma 0.59.03)
+
+SDN, probando el asistente: «cuando falta desarrollar un listado de
+trámites no se informa como pendiente, es solo agregar una vez un filtro
+más complejo en las consultas de trámites del sindicato que podemos hacer
+ahora». Se hizo en el mismo bloque y la brecha `exportar` salió del
+asistente (era la 4 de las «seis brechas» del BACKLOG).
+
+- **La consulta** (`db.listado_tramites`): los pedidos de UN formulario con
+  todas sus respuestas, por `_recortar_tramites` (área y seccional del
+  operador, en la consulta), con los filtros opcionales de estado y de
+  seccional del afiliado (por el padrón: `Tramite` guarda el CUIL). Las
+  respuestas de archivo salen como el nombre del archivo, nunca los bytes;
+  los separadores no son columnas; un campo retirado se marca.
+- **La ruta** (`GET /admin/tramites/listado.csv`, sección
+  `tramites_recibidos`, clase de alcance «seccional»): CSV con `;` y BOM,
+  columnas Expediente, Iniciado, Actualizado, Estado, Apellido y nombre,
+  CUIL, Seccional, Área a cargo y una por pregunta. Un estado desconocido o
+  una seccional ilegible, 400; una seccional fuera del alcance, 403; un
+  formulario de otro sindicato, 404. **Cada descarga queda registrada** en
+  la tabla nueva `DescargaListado` (migración `d9e1b3c5a7f2`: sindicato,
+  formulario, usuario, filtros, filas, fecha), por lo mismo que
+  `EventoEncuesta`: una planilla con nombres y documentos de familiares es
+  dato sensible y tiene que poder saberse de dónde salió.
+- **La bandeja** (`templates/admin.html`, `#tr-listado`): debajo de los
+  filtros, «Listado con las respuestas» con el formulario, el estado y la
+  seccional (solo si hay más de una a la vista) y «Descargar CSV», con su
+  globo «?».
+- **El asistente**: `exportar` fuera de `BRECHAS`; «¿Necesitan un listado
+  de los pedidos?» sigue siendo una inferida (arma el circuito) pero ya no
+  dispara brecha; los datos que circulan nombran el CSV de Trámites y la
+  instrucción suma el paso «listado». El caso dorado se regeneró.
+- Tests: `test_listado_tramites.py` (columnas y filas, filtros, el admin
+  local solo su seccional y 403 si elige otra, 404 ajeno, registro de cada
+  descarga, la bandeja lo ofrece). `test_alcance_seccional_panel.py`
+  clasifica la ruta; `test_migraciones.py` compara la tabla nueva.

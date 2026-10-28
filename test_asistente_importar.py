@@ -135,8 +135,9 @@ def test_un_tramite_simple_se_puede_importar_ya(bancaria):
 def test_la_complejidad_sigue_a_las_brechas():
     assert at.complejidad_de({}) == "ninguna"
     assert at.complejidad_de({"ventana": ["x"]}) == "baja"
-    assert at.complejidad_de({"ventana": ["x"], "exportar": ["x"]}) == "media"
-    assert at.complejidad_de({"exportar": ["x"], "turnos": ["x"]}) == "alta"
+    assert at.complejidad_de({"ventana": ["x"], "entrega": ["x"]}) == "media"
+    assert at.complejidad_de({"entrega": ["x"], "turnos": ["x"]}) == "alta"
+    assert "exportar" not in at.BRECHAS
     assert "previo" in at.BRECHAS and at.BRECHAS["previo"]["nivel"] == "ajuste"
 
 
