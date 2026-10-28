@@ -56,8 +56,8 @@ def test_cada_brecha_esta_completa():
 def test_las_preguntas_viajan_como_datos():
     """`cuando` es un dict (no una función): la pantalla lo evalúa igual."""
     claves = [p["clave"] for p in at.PREGUNTAS_TODAS]
-    assert len(claves) == len(set(claves)) == 12
-    assert len(at.PREGUNTAS) == 6 and len(at.INFERIDAS) == 6, "seis se preguntan, seis se infieren (SDN, 2026-10-18)"
+    assert len(claves) == len(set(claves)) == 13
+    assert len(at.PREGUNTAS) == 6 and len(at.INFERIDAS) == 7, "seis se preguntan, siete se infieren (previo desde 2026-10-28)"
     assert not any("cuando" in p for p in at.PREGUNTAS), "las que se preguntan se preguntan siempre"
     for p in at.PREGUNTAS_TODAS:
         validas = [k for k, _ in p["opciones"]]
@@ -81,7 +81,10 @@ def test_el_kit_escolar_sale_igual_que_el_prototipo():
     bloque 5 de PLAN_LISTAS_VALIDACIONES.md): el formulario trae
     `requisitos` (ser titular sale como requisito sobre `sistema.en_padron`),
     y `requisitos` y `lista` dejaron de ser brechas porque existen; el
-    archivo dorado se regeneró con el motor ese día."""
+    archivo dorado se regeneró con el motor ese día. Y el 2026-10-28
+    (PLAN_ASISTENTE_TRAMITES_V2.md): `respuestas.previo` (el formulario
+    previo de Colm3na) y `pendientes.aclaraciones` (lo que el analista
+    contestó con texto); regenerado otra vez."""
     esperado = json.loads(DORADO.read_text(encoding="utf-8"))
     generado = at.resolver(_ejemplo(), hoy=HOY)["json"]
     assert generado == esperado
@@ -145,7 +148,9 @@ def test_sanear_descarta_lo_que_no_esta_en_el_catalogo():
                        "area": "  Acción Social  ", "enc_datos": "x" * 500},
         "campos": [{"etiqueta": "Partida", "tipo": "pdf", "control": "mágico"}, "basura",
                    {"etiqueta": "Foto", "tipo": "archivo", "opciones": "jpg"}, {"tipo": "separador", "obligatorio": True}],
-        "dudas": ["¿Y los mellizos?", "", 42],
+        "dudas": ["¿Y los mellizos?", "", 42, {"pregunta": "¿Quién aprueba?", "sobre": "aprueba", "opciones": ["ignoradas"]},
+                  {"pregunta": "¿Plazo?", "sobre": "inventada", "opciones": ["30 días", "60 días", "", "30 días"]}, {"sobre": "fin"}],
+        "aclaraciones": [{"pregunta": "¿Plazo?", "respuesta": "60 días"}, {"pregunta": "sin respuesta"}, "basura"],
     }, de_ia=True)
     assert e["codigo"] == "AYUDAN"          # sigla("ayú-da nac!") recortada a seis
     # Un valor fuera del catálogo se descarta y queda la RECOMENDADA: siempre hay una.
@@ -158,7 +163,14 @@ def test_sanear_descarta_lo_que_no_esta_en_el_catalogo():
     assert [c["tipo"] for c in e["campos"]] == ["texto", "archivo", "separador"]
     assert e["campos"][0]["control"] == "" and e["campos"][1]["opciones"] == "jpg,jpeg"
     assert e["campos"][2]["obligatorio"] is False
-    assert e["dudas"] == ["¿Y los mellizos?", "42"]
+    # Las dudas (V3): un texto suelto queda sin opciones; sobre una pregunta
+    # del catálogo lleva LAS opciones de esa pregunta; si no, las suyas, sin
+    # repetir; sin pregunta no es una duda.
+    assert [d["pregunta"] for d in e["dudas"]] == ["¿Y los mellizos?", "42", "¿Quién aprueba?", "¿Plazo?"]
+    assert e["dudas"][0]["opciones"] == [] and e["dudas"][2]["sobre"] == "aprueba"
+    assert e["dudas"][2]["opciones"][0] == ["misma", "Sí, la misma área que lo revisa"]
+    assert e["dudas"][3]["sobre"] == "" and e["dudas"][3]["opciones"] == [["30 días", "30 días"], ["60 días", "60 días"]]
+    assert e["aclaraciones"] == [{"pregunta": "¿Plazo?", "respuesta": "60 días"}]
 
 
 def test_normalizar_extensiones():
@@ -245,7 +257,8 @@ def test_las_pendientes_son_solo_las_dudas_y_el_resto_va_al_prompt():
     e = at.sanear_propuesta({"nombre": "X", "respuestas": {"ventana": "si", "nota_fin": "Se entrega en la obra social"},
                              "dudas": ["¿Plazo?"]})
     r = at.resolver(e, hoy=HOY)
-    assert r["pendientes"] == ["¿Plazo?"]
+    assert r["pendientes"] == [{"pregunta": "¿Plazo?", "sobre": "", "opciones": []}]
+    assert r["json"]["pendientes"]["preguntas"] == ["¿Plazo?"]
     assert "## A confirmar con el sindicato" in r["prompt"] and "- ¿Plazo?" in r["prompt"]
     assert "¿Cómo termina? Se entrega en la obra social" in r["prompt"]
     assert "Abrir y cerrar el formulario por fechas" in r["prompt"] and "salida provisoria" in r["prompt"]

@@ -144,6 +144,11 @@ BRECHAS = {
         "hoy": "Solo inician trámites los afiliados del padrón con cuenta.",
         "rec": "Entrada pública con captcha y mail confirmado que abra un expediente sin cuenta.",
         "backlog": ""},
+    "previo": {
+        "titulo": "Exigir un formulario previo de Colm3na", "nivel": "ajuste", "tam": "mediano",
+        "hoy": "El área verifica al revisar que el afiliado haya presentado el formulario previo; la instrucción lo dice y el chat lo pide si falta.",
+        "rec": "Dato del sistema «presentó el formulario X» (sistema.afiliado.tramites_de_tipo) para usarlo como requisito para iniciar.",
+        "backlog": ""},
     "encadenado": {
         "titulo": "Formularios que solo se mandan desde el chat", "nivel": "ajuste", "tam": "chico",
         "hoy": "Para poder adjuntarse en el chat, el formulario tiene que estar activo, y entonces el afiliado también lo ve en «Iniciar trámite» y puede enviarlo sin pedido previo. Salida: titularlo «(solo si te lo pide el sindicato)».",
@@ -219,6 +224,16 @@ INFERIDAS = [
     {"clave": "tercero", "titulo": "¿Interviene alguien fuera del sindicato?", "ayuda": "Un proveedor, la obra social, un banco. No usa la app.",
      "recomendada": "no", "opciones": [["no", "No"], ["si", "Sí"]],
      "texto": {"clave": "tercero_nombre", "si": "si", "rotulo": "¿Quién?", "ejemplo": "Proveedor de kits"}},
+    # 2026-10-28 (V4 de PLAN_ASISTENTE_TRAMITES_V2.md): un formulario de
+    # Colm3na que el afiliado presenta ANTES o adjunta a este pedido. Si
+    # existe en el sindicato es el punto 5 del veredicto; si no, el 6. Un
+    # documento de afuera (certificado, constancia) no es esto: es un
+    # campo de tipo archivo.
+    {"clave": "previo", "titulo": "¿Tiene que presentar antes otro formulario de Colm3na?",
+     "ayuda": "Un formulario del sindicato en Colm3na que el afiliado completa antes o adjunta a este pedido. Un documento de afuera (una constancia, un certificado) no es un formulario: es un archivo que se adjunta.",
+     "recomendada": "no",
+     "opciones": [["no", "No"], ["si", "Sí, otro formulario de Colm3na"]],
+     "texto": {"clave": "previo_nombre", "si": "si", "rotulo": "¿Cómo se llama ese formulario?", "ejemplo": "Declaración de grupo familiar"}},
 ]
 PREGUNTAS_TODAS = PREGUNTAS + INFERIDAS
 PREGUNTAS_POR_CLAVE = {p["clave"]: p for p in PREGUNTAS_TODAS}
@@ -392,6 +407,49 @@ def sanear_extras(crudos) -> list:
     return extras
 
 
+MAX_DUDAS = 8
+MAX_OPCIONES_DUDA = 6
+
+
+def sanear_duda(d) -> Optional[dict]:
+    """Una duda de la IA (V3): la pregunta, sobre qué pregunta del catálogo
+    es (`sobre`, vacío si no es sobre ninguna) y sus opciones. Si es sobre una
+    pregunta del catálogo, las opciones son las de ESA pregunta y elegir una
+    la responde; si no, las que la IA propuso (hasta seis) o ninguna, y se
+    contesta con texto. Un texto suelto (lo viejo) es una duda sin opciones."""
+    if isinstance(d, str) or isinstance(d, (int, float)):
+        d = {"pregunta": d}
+    if not isinstance(d, dict):
+        return None
+    pregunta = _texto(d.get("pregunta"), 300)
+    if not pregunta:
+        return None
+    sobre = d.get("sobre") if d.get("sobre") in PREGUNTAS_POR_CLAVE else ""
+    if sobre:
+        opciones = [list(o) for o in PREGUNTAS_POR_CLAVE[sobre]["opciones"]]
+    else:
+        vistas = []
+        for o in (d.get("opciones") if isinstance(d.get("opciones"), list) else [])[:MAX_OPCIONES_DUDA]:
+            t = _texto(o, 120)
+            if t and t not in vistas:
+                vistas.append(t)
+        opciones = [[t, t] for t in vistas]
+    return {"pregunta": pregunta, "sobre": sobre, "opciones": opciones}
+
+
+def sanear_aclaraciones(crudas) -> list:
+    """Lo que el analista contestó con texto a una duda (V3): viaja al
+    prompt y al veredicto como «aclaración del analista»."""
+    salida = []
+    for a in (crudas if isinstance(crudas, list) else [])[:MAX_DUDAS + 4]:
+        if not isinstance(a, dict):
+            continue
+        pregunta, respuesta = _texto(a.get("pregunta"), 300), _texto(a.get("respuesta"), 300)
+        if pregunta and respuesta:
+            salida.append({"pregunta": pregunta, "respuesta": respuesta})
+    return salida
+
+
 def sanear_propuesta(o, de_ia: bool = False, relato: str = "") -> dict:
     """La ENTRADA del motor, saneada. Sirve igual para lo que propone la IA,
     para el ejemplo y para lo que manda el navegador en cada cambio."""
@@ -407,7 +465,8 @@ def sanear_propuesta(o, de_ia: bool = False, relato: str = "") -> dict:
         "respuestas": respuestas,
         "campos": campos,
         "extras": sanear_extras(o.get("extras")),
-        "dudas": [_texto(d, 300) for d in (o.get("dudas") or [])[:8] if _texto(d, 300)],
+        "dudas": [d for d in (sanear_duda(x) for x in (o.get("dudas") or [])[:MAX_DUDAS]) if d],
+        "aclaraciones": sanear_aclaraciones(o.get("aclaraciones")),
         "de_ia": con_valor if de_ia else [],
         "recomendadas": recomendadas,
     }
@@ -619,6 +678,8 @@ def brechas_de(entrada: dict, circ: Optional[dict] = None) -> dict:
         add("pago", "Termina con un pago o reintegro.")
     if r.get("quien") == "publico":
         add("publico", "Lo inicia alguien fuera del padrón.")
+    if r.get("previo") == "si":
+        add("previo", f"Tiene que presentar antes «{(r.get('previo_nombre') or 'otro formulario').strip()}».")
     for c in entrada["campos"]:
         k = CONTROL_BRECHA.get(c["control"])
         if k:
@@ -878,10 +939,11 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
 
 
 def preguntas_pendientes(entrada: dict, brechas: dict) -> list:
-    """Solo lo que el relato no aclaró (las dudas de la IA). Hasta el
-    2026-10-18 sumaba las preguntas sin responder y una por brecha: era un
-    segundo cuestionario después del primero, y SDN lo sacó. Las brechas
-    van en el prompt, con su salida provisoria."""
+    """Solo lo que el relato no aclaró (las dudas de la IA, cada una con sus
+    opciones si las tiene). Hasta el 2026-10-18 sumaba las preguntas sin
+    responder y una por brecha: era un segundo cuestionario después del
+    primero, y SDN lo sacó. Las brechas van en el prompt, con su salida
+    provisoria."""
     return list(entrada["dudas"])
 
 
@@ -948,9 +1010,12 @@ def prompt_para_code(entrada: dict, cfg: dict, brechas: dict, sindicato: Optiona
     L += ["", "## Funciones a desarrollar"]
     L += [f"- {x}" for x in desarrollar] or ["- Ninguna: todo lo que se controla se puede hacer con el catálogo actual."]
     notas = [(PREGUNTAS_POR_CLAVE[k[5:]]["titulo"], r[k]) for k in CLAVES_NOTA if r.get(k)]
+    if entrada.get("aclaraciones"):
+        L += ["", "## Aclaraciones del analista"]
+        L += [f"- {a['pregunta']} {a['respuesta']}" for a in entrada["aclaraciones"]]
     if notas or entrada["dudas"]:
         L += ["", "## A confirmar con el sindicato"]
-        L += [f"- {t} {v}" for t, v in notas] + [f"- {d}" for d in entrada["dudas"]]
+        L += [f"- {t} {v}" for t, v in notas] + [f"- {d['pregunta']}" for d in entrada["dudas"]]
     if brechas:
         L += ["", "## Lo que Colm3na todavía no tiene (se arranca con la salida provisoria)"]
         L += [f"- {BRECHAS[k]['titulo']}: {' '.join(w)} Mientras tanto: {BRECHAS[k]['hoy']}" for k, w in brechas.items()]
@@ -1022,6 +1087,275 @@ def preparar(entrada: dict, cfg: dict, brechas: dict, sindicato: Optional[dict] 
             "desarrollo": [item(k) for k in brechas if BRECHAS[k]["nivel"] == "desarrollo"]}
 
 
+# ---------------------------------------------------------------- importar
+def _area_id(sindicato: Optional[dict], nombre: str, seccional: str) -> Optional[int]:
+    for a in (sindicato or {}).get("areas") or []:
+        if _norm(a.get("nombre")) == _norm(nombre) and _norm(a.get("seccional")) == _norm(seccional):
+            return a.get("id")
+    return None
+
+
+def _area_existe(sindicato: Optional[dict], nombre: str, seccional: str) -> bool:
+    return any(_norm(a.get("nombre")) == _norm(nombre) and _norm(a.get("seccional")) == _norm(seccional)
+               for a in (sindicato or {}).get("areas") or [])
+
+
+def seccional_central(sindicato: Optional[dict]) -> str:
+    """La seccional con `ve_todas` (Sede Central en casi todos): ahí vive el
+    destino por defecto. Sin dato, el nombre de siempre."""
+    for s in (sindicato or {}).get("seccionales_detalle") or []:
+        if s.get("ve_todas"):
+            return s.get("nombre") or SECCIONAL_CENTRAL
+    return SECCIONAL_CENTRAL
+
+
+def plan_importacion(cfg: dict, sindicato: Optional[dict] = None) -> dict:
+    """Qué se resuelve POR NOMBRE en el sindicato elegido y qué falta (V6):
+    el destino por defecto (el área homónima de la seccional central), el
+    mapa por seccional (el área homónima de cada una) y las áreas de pase.
+    Puro: con los ids que traiga el sindicato, el importador de main.py
+    escribe; sin sindicato, todo queda «sin resolver»."""
+    conocido = bool(sindicato)
+    central = seccional_central(sindicato)
+    seccionales = [str(s) for s in (sindicato or {}).get("seccionales") or []]
+    faltan = []
+    forms = []
+    for f in cfg["formularios"]:
+        d = f["destino"]
+        A = d["area"]
+        existe_def = _area_existe(sindicato, A, central) if conocido else None
+        destino = {"area": A, "seccional": central, "existe": existe_def,
+                   "area_id": _area_id(sindicato, A, central) if conocido else None}
+        mapa = []
+        if d["modo"] == "misma_area_en_cada_seccional" and conocido:
+            for s in seccionales:
+                ok = _area_existe(sindicato, A, s)
+                mapa.append({"seccional": s, "area": A, "existe": ok, "area_id": _area_id(sindicato, A, s)})
+        pase = []
+        for p in f["areas_pase"]:
+            secs = seccionales if (p["en"] == "cada_seccional" and conocido) else [central]
+            for s in secs:
+                ok = _area_existe(sindicato, p["area"], s) if conocido else None
+                pase.append({"area": p["area"], "seccional": s, "existe": ok,
+                             "area_id": _area_id(sindicato, p["area"], s) if conocido else None})
+        forms.append({"clave": f["clave"], "titulo": f["titulo"], "codigo": f["codigo"],
+                      "destino": destino, "mapa": mapa, "pase": pase})
+    if conocido:
+        p = forms[0]
+        if not p["destino"]["existe"]:
+            faltan.append(f"Área «{p['destino']['area']}» en {central} (el destino por defecto)")
+        for m in p["mapa"]:
+            if not m["existe"] and m["seccional"] != central:
+                faltan.append(f"Área «{m['area']}» en {m['seccional']}")
+        for x in p["pase"]:
+            if not x["existe"]:
+                faltan.append(f"Área «{x['area']}» en {x['seccional']} (para el pase)")
+    mods_on = set((sindicato or {}).get("modulos") or [])
+    modulos_faltan = [m for m in cfg["modulos"] if m not in mods_on] if conocido else []
+    return {"conocido": conocido, "central": central, "formularios": forms,
+            "faltan": list(dict.fromkeys(faltan)), "modulos_faltan": modulos_faltan}
+
+
+# ---------------------------------------------------------------- veredicto
+# Las seis preguntas que SDN pidió que el resultado conteste (V5), en este
+# orden y con estas claves. `si` es True / False / None (sin verificar).
+PUNTOS_VEREDICTO = [
+    ("importar", "¿Ya se puede importar al sindicato?"),
+    ("manual", "¿Conviene terminarlo a mano, guiado, en el constructor?"),
+    ("prerrequisito", "¿Hace falta preparar algo antes?"),
+    ("desarrollo", "¿Hace falta desarrollar algo?"),
+    ("formulario_existente", "¿Se completa o adjunta un formulario que ya existe?"),
+    ("formulario_nuevo", "¿Hay que construir antes otro formulario?"),
+]
+COMPLEJIDAD_NOMBRE = {"alta": "alta", "media": "media", "baja": "baja", "ninguna": "ninguna"}
+
+
+def formulario_existente(sindicato: Optional[dict], nombre: str) -> Optional[dict]:
+    """El formulario del sindicato que se llama (más o menos) así: por
+    nombre normalizado, entero o contenido."""
+    n = _norm(nombre)
+    if not n:
+        return None
+    forms = (sindicato or {}).get("formularios") or []
+    for f in forms:
+        if _norm(f.get("titulo")) == n or _norm(f.get("codigo")) == n:
+            return f
+    for f in forms:
+        t = _norm(f.get("titulo"))
+        if t and (n in t or t in n):
+            return f
+    return None
+
+
+def lista_cargada(sindicato: Optional[dict], plantilla: str) -> bool:
+    return any(l.get("plantilla") == plantilla and (l.get("filas") or 0) > 0
+               for l in (sindicato or {}).get("listas") or [])
+
+
+def necesita_lista(cfg: dict, respuestas: dict) -> Optional[str]:
+    """La plantilla de lista que el formulario consulta (hoy, el grupo
+    familiar: por el control «contra una lista» o por los requisitos de
+    familiar / edad), o None."""
+    for f in cfg["formularios"]:
+        for c in f["campos"]:
+            for v in c.get("validaciones") or []:
+                if v.get("origen") == "lista" and v.get("lista"):
+                    return v["lista"]
+    req = [x for x in (respuestas.get("requisitos") or []) if x != "ninguno"]
+    if "familiar" in req or "edad" in req:
+        return LISTA_FAMILIAR
+    return None
+
+
+def complejidad_de(brechas: dict) -> str:
+    """baja = solo ajustes chicos; media = un ajuste mediano o un desarrollo
+    mediano; alta = un desarrollo grande; ninguna = sin brechas."""
+    if not brechas:
+        return "ninguna"
+    tams = [(BRECHAS[k]["nivel"], BRECHAS[k]["tam"]) for k in brechas]
+    if any(t == "grande" for _, t in tams):
+        return "alta"
+    if any(t == "mediano" for _, t in tams):
+        return "media"
+    return "baja"
+
+
+def veredicto(entrada: dict, cfg: dict, brechas: dict, sindicato: Optional[dict] = None,
+              plan: Optional[dict] = None) -> dict:
+    """Las seis respuestas (V5), cada una con sí / no / sin verificar y el
+    porqué en una frase, más el titular con la conclusión principal. Puro y
+    determinista: lo mismo que el analista lee, lo lee el importador."""
+    r = entrada["respuestas"]
+    conocido = bool(sindicato)
+    plan = plan or plan_importacion(cfg, sindicato)
+    p = cfg["formularios"][0]
+    nombre_sind = (sindicato or {}).get("nombre") or "el sindicato"
+    campos_reales = [c for c in p["campos"] if c["tipo_dato"] != "separador" and c["etiqueta"]]
+
+    # 6 y 5: el formulario previo de Colm3na.
+    previo_nombre = (r.get("previo_nombre") or "").strip()
+    previo = r.get("previo") == "si"
+    existente = formulario_existente(sindicato, previo_nombre) if (previo and conocido) else None
+    p5 = {"si": bool(existente) if (previo and conocido) else (None if previo else False)}
+    p6 = {"si": (previo and conocido and not existente) if (previo and conocido) else (None if previo else False)}
+    if not previo:
+        p5["detalle"] = p6["detalle"] = "No: el relato no nombra otro formulario de Colm3na."
+    elif not conocido:
+        p5["detalle"] = p6["detalle"] = f"El relato nombra «{previo_nombre or 'otro formulario'}»: elegí el sindicato para saber si ya existe."
+    elif existente:
+        p5["detalle"] = (f"Sí: «{existente.get('titulo')}» ({existente.get('codigo')}) ya existe en {nombre_sind}"
+                         + (", como borrador" if existente.get("borrador") else "" if existente.get("activo") else ", pero está inactivo")
+                         + ". Como requisito no se puede exigir todavía: el área lo verifica al revisar.")
+        p6["detalle"] = "No: el formulario previo ya existe."
+    else:
+        p5["detalle"] = f"No: «{previo_nombre or 'el formulario previo'}» no está entre los formularios de {nombre_sind}."
+        p6["detalle"] = f"Sí: hay que construir primero «{previo_nombre or 'el formulario previo'}» (otro relato en este asistente, o el constructor)."
+
+    # 3: prerrequisitos (área, módulo, lista con datos).
+    prereq = []
+    if conocido:
+        prereq += plan["faltan"]
+        prereq += [f"Habilitar el módulo {MODULOS_NOMBRE.get(m, m)} (lo hace plataforma)" for m in plan["modulos_faltan"]]
+    lista = necesita_lista(cfg, r)
+    lista_ok = None
+    if lista:
+        lista_ok = lista_cargada(sindicato, lista) if conocido else None
+        if conocido and not lista_ok:
+            prereq.append(f"Cargar la lista «{listas_mod.PLANTILLAS[lista]['nombre']}» en Listas, con los datos del sindicato")
+    if not conocido:
+        p3 = {"si": None, "detalle": "Elegí el sindicato para verificar áreas, módulos y listas."
+              + (f" Este trámite consulta la lista «{listas_mod.PLANTILLAS[lista]['nombre']}»." if lista else "")}
+    elif prereq:
+        p3 = {"si": True, "detalle": "Sí: " + "; ".join(prereq) + "."}
+    else:
+        p3 = {"si": False, "detalle": "No: las áreas y los módulos existen"
+              + (f" y la lista «{listas_mod.PLANTILLAS[lista]['nombre']}» está cargada" if lista else "") + "."}
+
+    # 4: desarrollo y complejidad.
+    comp = complejidad_de(brechas)
+    desarrollos = [BRECHAS[k]["titulo"] for k in brechas if BRECHAS[k]["nivel"] == "desarrollo"]
+    ajustes = [BRECHAS[k]["titulo"] for k in brechas if BRECHAS[k]["nivel"] == "ajuste"]
+    if comp == "ninguna":
+        p4 = {"si": False, "detalle": "No: todo lo que pide existe en Colm3na."}
+    else:
+        partes = []
+        if desarrollos:
+            partes.append("desarrollar: " + "; ".join(desarrollos))
+        if ajustes:
+            partes.append("ajustar: " + "; ".join(ajustes))
+        p4 = {"si": True, "detalle": f"Sí, de complejidad {comp}: " + "; ".join(partes)
+              + ". Se puede arrancar con la salida provisoria de cada una."}
+
+    # 2: mejor a mano, guiado.
+    manual = []
+    for c in campos_reales:
+        if c.get("x_pendiente"):
+            manual.append(f"«{c['etiqueta']}»: {c['x_pendiente'].lower()} no existe en el constructor")
+        if c.get("x_regla"):
+            manual.append(f"«{c['etiqueta']}»: una regla que no se pudo escribir como fórmula")
+        if c.get("x_funcion_nueva"):
+            manual.append(f"«{c['etiqueta']}»: necesita una función nueva")
+    if "dependencia" in brechas:
+        manual.append("hay opciones que dependen de otra respuesta: unirlas en una sola lista")
+    if not campos_reales:
+        manual.append("el formulario no tiene preguntas todavía")
+    if not conocido:
+        p2 = {"si": None, "detalle": "Sin sindicato elegido no hay dónde importar: el constructor es el camino."
+              + (" Además: " + "; ".join(manual) + "." if manual else "")}
+    elif manual:
+        p2 = {"si": True, "detalle": "Sí: se importa como borrador, pero hay que terminar a mano " + "; ".join(manual) + "."}
+    else:
+        p2 = {"si": False, "detalle": "No hace falta: el importador traslada todo lo que el relato pide."}
+
+    # 1: ya se puede importar.
+    if not conocido:
+        p1 = {"si": None, "detalle": "Elegí el sindicato."}
+    elif not campos_reales:
+        p1 = {"si": False, "detalle": "Todavía no: el formulario no tiene preguntas."}
+    elif p6["si"]:
+        p1 = {"si": False, "detalle": f"Todavía no: primero el formulario «{previo_nombre}»."}
+    elif prereq:
+        p1 = {"si": False, "detalle": "Se puede importar como borrador, pero no publicar: falta lo del punto 3. El constructor lo marca al publicar."}
+    elif manual:
+        p1 = {"si": True, "detalle": "Sí, como borrador; lo del punto 2 se termina en el constructor antes de publicar."}
+    else:
+        p1 = {"si": True, "detalle": f"Sí: se importa como borrador en {nombre_sind}, con {len(campos_reales)} preguntas, y se publica desde el constructor."}
+
+    puntos = []
+    for (clave, pregunta), x in zip(PUNTOS_VEREDICTO, (p1, p2, p3, p4, p5, p6)):
+        puntos.append({"clave": clave, "pregunta": pregunta, "si": x["si"], "detalle": x["detalle"]})
+
+    # El titular: lo más bloqueante primero.
+    if not conocido:
+        conclusion, titular = "sin_sindicato", "Elegí el sindicato para saber si se puede importar"
+    elif not campos_reales:
+        conclusion, titular = "sin_campos", "Faltan las preguntas del formulario"
+    elif p6["si"]:
+        conclusion, titular = "formulario_nuevo", f"Primero hay que construir «{previo_nombre}»"
+    elif prereq:
+        conclusion, titular = "prerrequisito", "Antes hay que preparar algo en el sindicato"
+    elif comp == "alta":
+        conclusion, titular = "desarrollo", "Se puede arrancar, pero necesita un desarrollo de complejidad alta"
+    elif manual:
+        conclusion, titular = "manual", "Se importa como borrador y se termina a mano en el constructor"
+    else:
+        conclusion, titular = "importar", "Ya se puede importar como borrador"
+    resumen = {
+        "sin_sindicato": "Con el sindicato elegido, el asistente verifica áreas, módulos, listas y formularios, y puede importar.",
+        "sin_campos": "Agregá en «Los datos» las preguntas que completa quien lo pide.",
+        "formulario_nuevo": "Relevalo con este mismo asistente e importalo; después, este trámite.",
+        "prerrequisito": "Importar crea el borrador igual; publicar va a esperar a que esté preparado lo del punto 3.",
+        "desarrollo": "Importar crea el borrador con la salida provisoria; el desarrollo va al inventario de brechas.",
+        "manual": "El importador traslada el formulario; lo marcado en el punto 2 lo termina quien lo publica.",
+        "importar": "Lo revisa y lo publica el Super Admin desde Trámites, en el constructor.",
+    }[conclusion]
+    if conclusion in ("manual", "importar", "prerrequisito", "desarrollo") and p5["si"]:
+        resumen += f" El área va a verificar que haya presentado «{existente.get('titulo')}»."
+    return {"conclusion": conclusion, "titular": titular, "resumen": resumen, "complejidad": comp,
+            "puntos": puntos, "lista": lista, "lista_cargada": lista_ok,
+            "previo": {"nombre": previo_nombre, "existe": existente} if previo else None}
+
+
 # ---------------------------------------------------------------- JSON v1
 TIPO_PASO = {"inicio": "inicio", "tarea": "accion", "gate": "decision", "fin": "fin"}
 TIPO_FLUJO = {"seq": "secuencia", "vuelta": "secuencia", "msg": "mensaje_fuera_de_colm3na"}
@@ -1047,7 +1381,8 @@ def exportar(entrada: dict, cfg: dict, brechas: dict, pendientes: list, generado
         "respuestas": entrada["respuestas"],
         "pendientes": {"brechas": [{"clave": k, "nivel": BRECHAS[k]["nivel"], "motivo": " ".join(w), "provisorio": BRECHAS[k]["hoy"]}
                                    for k, w in brechas.items()],
-                       "preguntas": pendientes},
+                       "preguntas": [d["pregunta"] for d in pendientes],
+                       "aclaraciones": list(entrada.get("aclaraciones") or [])},
     }
 
 
@@ -1060,8 +1395,11 @@ def resolver(entrada: dict, sindicato: Optional[dict] = None, hoy=None) -> dict:
     cfg = configuracion(entrada, circ)
     b = brechas_de(entrada, circ)
     pend = preguntas_pendientes(entrada, b)
+    plan = plan_importacion(cfg, sindicato)
     return {
         "nombre": entrada["nombre"], "codigo": cfg["formularios"][0]["codigo"], "objetivo": entrada["objetivo"],
+        "veredicto": veredicto(entrada, cfg, b, sindicato, plan),
+        "importacion": plan,
         "circuito": {k: circ[k] for k in ("carriles", "nodos", "flujos", "datos", "cols")},
         "estados": mensajes_estados(entrada, cfg),
         "quien_hace_que": quien_hace_que(entrada, cfg),
@@ -1083,6 +1421,7 @@ def catalogo() -> dict:
             "tipos": TIPOS, "anchos": ANCHO_POR_TIPO, "con_opciones": list(CON_OPCIONES),
             "extensiones_default": EXTENSIONES_DEFAULT, "controles": CONTROLES, "control_brecha": CONTROL_BRECHA,
             "estados": ESTADOS, "brechas": BRECHAS, "max_campos": MAX_CAMPOS,
+            "puntos_veredicto": [{"clave": k, "pregunta": t} for k, t in PUNTOS_VEREDICTO],
             "ejemplo": {"relato": EJEMPLO_RELATO, "propuesta": EJEMPLO_PROPUESTA}}
 
 

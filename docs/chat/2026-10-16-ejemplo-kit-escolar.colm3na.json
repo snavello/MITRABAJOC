@@ -511,7 +511,8 @@
     "cupo": "si",
     "listado": "si",
     "tercero": "si",
-    "tercero_nombre": "Proveedor de kits"
+    "tercero_nombre": "Proveedor de kits",
+    "previo": "no"
   },
   "pendientes": {
     "brechas": [
@@ -561,6 +562,7 @@
     "preguntas": [
       "¿Aprueba la seccional o Acción Social Nacional?",
       "¿Desde qué grado o año ya no corresponde el kit?"
-    ]
+    ],
+    "aclaraciones": []
   }
 }
