@@ -10270,10 +10270,18 @@ def _sindicato_para_asistente(sindicato_id) -> dict | None:
     nombre = next((s["nombre"] for s in _sindicatos_para_asistente() if s["id"] == sid), None)
     if nombre is None:
         return None
+    seccionales = db.seccionales_del_sindicato(sid)
+    # Desde 2026-10-28 (V7): además las listas cargadas y los formularios
+    # que ya existen, con ids, para el veredicto y el importador.
     return {"id": sid, "nombre": nombre, "modulos": db.modulos_habilitados(sid),
-            "seccionales": [s["nombre"] for s in db.seccionales_del_sindicato(sid)],
-            "areas": [{"nombre": a["nombre"], "seccional": a["seccional"]}
-                      for a in db.areas_del_sindicato(sid) if a["activo"]]}
+            "seccionales": [s["nombre"] for s in seccionales],
+            "seccionales_detalle": [{"id": s["id"], "nombre": s["nombre"], "ve_todas": bool(s.get("ve_todas"))}
+                                    for s in seccionales],
+            "areas": [{"id": a["id"], "nombre": a["nombre"], "seccional": a["seccional"], "seccional_id": a["seccional_id"]}
+                      for a in db.areas_del_sindicato(sid) if a["activo"]],
+            "listas": [{"plantilla": l["plantilla"], "nombre": l["nombre"], "seccional": l["seccional"], "filas": l["filas"]}
+                       for l in db.listas_del_sindicato(sid)],
+            "formularios": db.formularios_para_asistente(sid)}
 
 
 @app.get(API_ASISTENTE + "/catalogo")
@@ -10333,6 +10341,10 @@ def _caso_asistente_resumen(c) -> dict:
             "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,
             "nombre": (c.entrada or {}).get("nombre", ""), "codigo": (c.esperado or {}).get("codigo", ""),
             "sindicato": ((c.entrada or {}).get("sindicato") or {}).get("nombre", ""),
+            "sindicato_id": ((c.entrada or {}).get("sindicato") or {}).get("id"),
+            "veredicto": ((c.esperado or {}).get("veredicto") or {}).get("conclusion", ""),
+            "titular": ((c.esperado or {}).get("veredicto") or {}).get("titular", ""),
+            "importaciones": list((c.diferencias or {}).get("importaciones") or []),
             "brechas": [b["clave"] for b in (c.diferencias.get("brechas") or [])], "distintos": c.distintos}
 
 
@@ -10352,6 +10364,131 @@ def api_asistente_guardar_caso(request: Request, payload: dict = Body(...)):
         entrada={**entrada, "sindicato": sind}, esperado={k: v for k, v in resultado.items() if k != "json"},
         real=resultado["json"], diferencias={"brechas": brechas}, distintos=len(brechas))
     return {"ok": True, "id": caso_id}
+
+
+@app.post(API_ASISTENTE + "/casos/{caso_id}")
+def api_asistente_actualizar_caso(request: Request, caso_id: int, payload: dict = Body(...)):
+    """Guardar un trámite ya guardado lo ACTUALIZA (V1): misma entrada,
+    resultado recalculado acá. Conserva el estado y las importaciones
+    registradas."""
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_ASISTENTE, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese caso.")
+    entrada, sind, resultado = _resolver_pedido(payload)
+    if not entrada["nombre"] and not entrada["relato"]:
+        raise HTTPException(422, "Un caso sin nombre ni relato no sirve para revisar.")
+    nota = str(payload.get("nota") if payload.get("nota") is not None else c.nota or "").strip()[:4000]
+    brechas = [{"clave": k, "nivel": asistente_tramites.BRECHAS[k]["nivel"]} for k in resultado["brechas"]]
+    db.actualizar_caso_herramienta(
+        HERRAMIENTA_ASISTENTE, caso_id, nota=nota,
+        entrada={**entrada, "sindicato": sind}, esperado={k: v for k, v in resultado.items() if k != "json"},
+        real=resultado["json"], diferencias={**(c.diferencias or {}), "brechas": brechas}, distintos=len(brechas))
+    return {"ok": True, "id": caso_id}
+
+
+def _codigo_libre(codigo: str, tomados: set) -> str:
+    """Un código que no exista en el sindicato: KE27, KE27B, KE27C… (V6)."""
+    base = (codigo or "NUEVO")[:6]
+    if base not in tomados:
+        return base
+    for letra in "BCDEFGHJKLMNPQRSTUVWXYZ":
+        c = (base[:5] + letra)
+        if c not in tomados:
+            return c
+    return base + "2"
+
+
+def _importar_tramite(entrada: dict, sind: dict, resultado: dict, ensayo: bool) -> dict:
+    """Crea los tipos de trámite COMO BORRADOR en el sindicato elegido (V6):
+    primero los encadenados, después el principal; destino, mapa y pase
+    resueltos por nombre (plan_importacion), lo que no se resolvió queda
+    para completar en el constructor. Con `ensayo`, no escribe nada y
+    devuelve lo mismo que haría. Si una creación falla a mitad, se borran
+    las que ya se crearon en esta misma importación."""
+    import copy
+    plan = resultado["importacion"]
+    por_clave = {f["clave"]: f for f in plan["formularios"]}
+    sec_id = {s["nombre"]: s["id"] for s in sind.get("seccionales_detalle") or []}
+    tomados = {f["codigo"] for f in sind.get("formularios") or []}
+    forms = sorted(resultado["formularios"], key=lambda f: 0 if f["clave"] != "principal" else 1)
+    creados, pendientes, ids = [], [], []
+    pendientes += [f"Crear {x}" for x in plan["faltan"]]
+    pendientes += [f"Habilitar el módulo {asistente_tramites.MODULOS_NOMBRE.get(m, m)} (plataforma)" for m in plan["modulos_faltan"]]
+    v = resultado["veredicto"]
+    if v.get("lista") and v.get("lista_cargada") is False:
+        pendientes.append(f"Cargar la lista «{listas_mod.PLANTILLAS[v['lista']]['nombre']}» en Listas")
+    if v.get("previo") and not v["previo"].get("existe"):
+        pendientes.append(f"Construir antes el formulario «{v['previo']['nombre']}»")
+    try:
+        for f in forms:
+            p = por_clave[f["clave"]]
+            campos = _campos_tramite_validos(copy.deepcopy(f["campos"]), borrador=True)
+            for c in f["campos"]:
+                for k, rot in (("x_pendiente", "control que no existe"), ("x_regla", "regla sin fórmula"), ("x_funcion_nueva", "función a desarrollar")):
+                    if c.get(k):
+                        pendientes.append(f"«{c['etiqueta']}»: {rot}: {c[k]}")
+            requisitos = validaciones_tramite.requisitos_saneados(f.get("requisitos") or [], campos)
+            codigo = _codigo_libre(f["codigo"], tomados)
+            tomados.add(codigo)
+            mapa = {sec_id[m["seccional"]]: m["area_id"] for m in p["mapa"]
+                    if m.get("area_id") and m["seccional"] in sec_id}
+            pase = [x["area_id"] for x in p["pase"] if x.get("area_id")]
+            fila = {"clave": f["clave"], "titulo": f["titulo"], "codigo": codigo, "id": None,
+                    "preguntas": sum(1 for c in campos if c["tipo_dato"] != "separador"),
+                    "destino": {**p["destino"]}, "mapa": f"{len(mapa)} de {len(p['mapa'])}" if p["mapa"] else "",
+                    "pase": f"{len(pase)} de {len(p['pase'])}" if p["pase"] else "",
+                    "requisitos": len(requisitos), "solo_encadenado": bool(f.get("x_solo_encadenado"))}
+            if f.get("x_solo_encadenado"):
+                pendientes.append(f"«{f['titulo']}» se manda desde el chat: dejarlo activo y titularlo «(solo si te lo pide el sindicato)»")
+            if not ensayo:
+                tid = db.crear_tipo_tramite(sind["id"], f["titulo"], codigo, campos, [],
+                                            area_destino_default_id=p["destino"].get("area_id"),
+                                            seccional_id=None, permite_pase=bool(pase),
+                                            requisitos=requisitos, borrador=True)
+                ids.append(tid)
+                fila["id"] = tid
+                if mapa:
+                    db.set_destinos_tipo_tramite(tid, mapa, sind["id"])
+                if pase:
+                    db.set_areas_de_pase(tid, pase, sind["id"])
+            creados.append(fila)
+    except Exception:
+        for tid in ids:
+            db.borrar_tipo_tramite(tid, sind["id"])
+        raise
+    return {"ensayo": ensayo, "sindicato": {"id": sind["id"], "nombre": sind["nombre"]},
+            "creados": creados, "pendientes": list(dict.fromkeys(pendientes))}
+
+
+@app.post(API_ASISTENTE + "/importar")
+def api_asistente_importar(request: Request, payload: dict = Body(...)):
+    """Importa el trámite al sindicato elegido como BORRADOR (V6). Con
+    `ensayo: true` solo dice qué haría. Si viene `caso_id`, la importación
+    queda registrada en el caso (quién, cuándo, qué ids) y el caso pasa a
+    «aplicado». El sindicato sale del caso, no de la sesión: es una
+    herramienta de plataforma."""
+    quien = _exigir_herramientas(request)
+    entrada, sind, resultado = _resolver_pedido(payload)
+    if not sind:
+        raise HTTPException(422, "Elegí el sindicato al que se importa.")
+    if not any(c["tipo_dato"] != "separador" and c["etiqueta"] for c in resultado["formularios"][0]["campos"]):
+        raise HTTPException(422, "El formulario no tiene preguntas todavía.")
+    ensayo = bool(payload.get("ensayo"))
+    salida = _importar_tramite(entrada, sind, resultado, ensayo)
+    caso_id = payload.get("caso_id")
+    if not ensayo and caso_id:
+        c = db.caso_herramienta(HERRAMIENTA_ASISTENTE, int(caso_id))
+        if c:
+            registro = {"cuando": fechas.ahora_con_segundos(), "quien": quien, "sindicato_id": sind["id"],
+                        "sindicato": sind["nombre"],
+                        "tipos": [{"id": x["id"], "titulo": x["titulo"], "codigo": x["codigo"]} for x in salida["creados"]]}
+            dif = dict(c.diferencias or {})
+            dif["importaciones"] = list(dif.get("importaciones") or []) + [registro]
+            db.actualizar_caso_herramienta(HERRAMIENTA_ASISTENTE, c.id, diferencias=dif)
+            db.cambiar_estado_caso(HERRAMIENTA_ASISTENTE, c.id, "aplicado", quien)
+            salida["caso_id"] = c.id
+    return salida
 
 
 @app.get(API_ASISTENTE + "/casos")

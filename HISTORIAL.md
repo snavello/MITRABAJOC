@@ -9127,3 +9127,102 @@ Pedido de SDN para balancear la portada del afiliado en los dos modelos.
   «Destacada» y «Lo último» pasa a la más nueva de las demás.
 - Tests: `test_noticias.py` (orden y alta/edición), `test_tema_laguna_portada.py`,
   `test_auditoria_afiliado.py`, `test_proporciones_temas.py`.
+
+## El Asistente de trámites, segunda vuelta: varios trámites, veredicto e importador (2026-10-28, Plataforma 0.59.01)
+
+Pedido de SDN del 2026-10-27, acordado en `PLAN_ASISTENTE_TRAMITES_V2.md`
+(V1–V10). Rama `claude/festive-mayer-u4o69w`.
+
+**Lo que pidió.** Tratar varios trámites a la vez («nuevo trámite» y ver los
+generados), fondo claro, sacar las preguntas obvias (opciones si hay duda,
+confirmación cuando haga falta, texto si no), lenguaje llano, y que el
+resultado concluya seis cosas: si ya se puede importar, si conviene hacerlo a
+mano guiado, si hace falta un prerrequisito (listas con datos), si hace falta
+desarrollo y de qué complejidad, si se completa un formulario que ya existe,
+y si hay que construir uno antes. Y llegar a incorporar el formulario al
+sistema con los datos de cada sindicato, probando con La Bancaria.
+
+**Motor (`asistente_tramites.py`).** Inferida nueva `previo` (+
+`previo_nombre`): el formulario de Colm3na que se presenta antes; un
+documento de afuera sigue siendo un campo archivo. Las `dudas` pasan de
+texto a `{pregunta, sobre, opciones}`: `sanear_duda` toma las opciones de la
+pregunta del catálogo si `sobre` la nombra (y elegir una la responde), o las
+que la IA propuso (hasta seis, sin repetir); un texto suelto es una duda sin
+opciones. `aclaraciones` (`{pregunta, respuesta}`) es lo que el analista
+contestó con texto; va al prompt ("## Aclaraciones del analista") y al JSON
+(`pendientes.aclaraciones`). `plan_importacion(cfg, sindicato)` resuelve POR
+NOMBRE el destino por defecto (el área homónima de la seccional con
+`ve_todas`, `seccional_central`), el mapa por seccional y el pase, con los
+ids que el sindicato traiga, y lista lo que falta. `veredicto(...)` contesta
+los seis puntos con sí / no / sin verificar y el porqué, más el titular y el
+resumen; la complejidad sale de las brechas (`complejidad_de`: baja = solo
+ajustes chicos, media = algo mediano, alta = un desarrollo grande); «a
+mano, guiado» cuando hay un control que no existe, una regla que no compila,
+una función a desarrollar u opciones dependientes; los prerrequisitos son
+áreas, módulos y la lista que el formulario consulta (`necesita_lista`,
+`lista_cargada`); el formulario previo se busca entre los del sindicato
+(`formulario_existente`, por nombre normalizado, entero o contenido). Brecha
+nueva `previo` (ajuste, mediano): hoy no se puede exigir como requisito
+haber presentado otro formulario, el área lo verifica. El caso dorado del
+kit escolar se regeneró (`respuestas.previo`, `pendientes.aclaraciones`).
+
+**IA (`asistente_tramites_ia.py`).** El esquema de `dudas` pide objetos con
+`sobre` (enum de las trece claves o vacío) y `opciones`; el prompt pide
+pocas dudas (dos o tres), solo lo que cambia el formulario o el circuito,
+con opciones cuando admiten respuestas típicas, y explica qué es `previo`.
+
+**Rutas (`main.py`).** `_sindicato_para_asistente` suma
+`seccionales_detalle` (id, nombre, `ve_todas`), ids en las áreas, las
+`listas` cargadas (plantilla, nombre, seccional, filas) y los `formularios`
+existentes (`db.formularios_para_asistente`, liviano). `POST /casos/{id}`
+actualiza un caso (`db.actualizar_caso_herramienta`): guardar un trámite ya
+guardado no crea otro. `POST /importar` (`_importar_tramite`): con el
+sindicato del caso, crea primero los encadenados y después el principal,
+todo con `borrador=True` (inactivo, el afiliado no lo ve), campos por
+`_campos_tramite_validos(..., borrador=True)`, requisitos por
+`requisitos_saneados`, destino y mapa por los ids del plan, pase por nombre,
+código renumerado si ya está tomado (`_codigo_libre`: KE27 → KE27B); con
+`ensayo: true` devuelve lo mismo sin escribir; si una creación falla, borra
+las de esa misma importación. Lo que no se resolvió (área que falta, módulo
+apagado, lista sin cargar, formulario previo a construir, controles `x_`)
+se devuelve como `pendientes` y el borrador se crea igual: lo termina quien
+lo publica. Con `caso_id`, la importación queda registrada en
+`diferencias.importaciones` (quién, cuándo, ids) y el caso pasa a
+`aplicado`. Decisión dicha: el sindicato sale del caso y no de la sesión,
+porque es una herramienta de plataforma; el contrato de 2026-10-16 pedía el
+permiso `tramites_formularios` del panel, que acá no aplica.
+
+**Pantalla (`static/asistente_tramites/app.js` + `asistente.css`).**
+Reescrita como la hoja de trabajo A del constructor, en claro: riel con
+«+ Nuevo trámite», los cuatro pasos con su estado y la lista «Trámites
+tratados» (nombre, sindicato, chip del veredicto, «importado»); el área
+cuadriculada con la hoja blanca; la vista del afiliado fija a la derecha
+con «Hasta ahora» (el titular del veredicto) mientras no se está en el paso
+4. «Lo que entendí» muestra las trece respuestas como frases con selector en
+cinco grupos (quién lo pide, quién lo atiende, cómo termina, cuántas veces y
+cuándo, antes de este trámite), con el globo «?» de ayuda y las marcas IA /
+supuesto; arriba, «Lo que no quedó claro» con cada duda y sus opciones como
+chips o un campo de texto con «Responder», y «Lo que aclaraste». El paso de
+las seis preguntas una por pantalla se fue. «Los datos» conserva las
+tarjetas por dato (con subir / bajar). «El veredicto»: titular, resumen, la
+complejidad, los seis puntos con ✓ / — / ?, «Importar a <sindicato>…»
+(ensayo con la tabla de lo que se crearía y lo pendiente, y «Confirmar la
+importación»), «Guardar trámite / Guardar cambios», el estado del caso, la
+nota, «Ya importado», y plegadas las secciones de siempre (circuito con
+diagrama o lo que ve el afiliado, antes de publicarlo, para hacerlo a mano,
+prompt para Code, JSON). Brechas se abre desde el riel. Mismos tokens de
+movimiento; `localStorage` pasa a `asistente-tramites-v2`.
+
+**Tests.** `test_asistente_importar.py` (sindicato con la estructura de La
+Bancaria: Sede Central `ve_todas`, Rosario y Córdoba, Acción Social en dos
+de las tres, un formulario previo existente): el sindicato completo, el
+veredicto con lo que falta, el formulario previo existente o a construir,
+un trámite simple importable ya, la complejidad, el ensayo que no escribe,
+la importación real (borradores, destino, mapa, pase, requisitos, registro
+en el caso, estado `aplicado`, renumeración del código, el panel lo lista
+como borrador) y actualizar un caso sin duplicarlo. Los tres de siempre
+actualizados (13 preguntas, dudas como objetos, la pantalla nueva) y el
+robot `e2e/test_robot_asistente_tramites.py` reescrito al flujo nuevo
+(pasó contra el servidor local con el Chromium preinstalado,
+`E2E_CHROMIUM_PATH`). Humo con Playwright sobre La Bancaria (humo): del
+relato a la importación confirmada y el borrador en `/admin`.

@@ -7149,6 +7149,33 @@ def sindicatos_para_asistente() -> list:
                 s.exec(select(Sindicato).where(Sindicato.activo == True).order_by(Sindicato.nombre)).all()]  # noqa: E712
 
 
+def actualizar_caso_herramienta(herramienta: str, caso_id: int, **campos) -> bool:
+    """Reescribe un caso guardado (V1 del Asistente de trámites: guardar un
+    trámite ya guardado lo ACTUALIZA, no crea otro). Solo las columnas que
+    vienen; el estado y su traza no se tocan por acá."""
+    with Session(engine) as s:
+        caso = s.get(CasoHerramienta, caso_id)
+        if not caso or caso.herramienta != herramienta:
+            return False
+        for k, v in campos.items():
+            if k in ("entrada", "esperado", "real", "diferencias", "distintos", "nota", "banco", "grilla"):
+                setattr(caso, k, v)
+        s.add(caso)
+        s.commit()
+        return True
+
+
+def formularios_para_asistente(sindicato_id: int) -> list:
+    """Los tipos de trámite del sindicato, livianos (sin campos), para que el
+    Asistente de trámites sepa si un formulario previo ya existe (V4) y
+    qué códigos están tomados (V6)."""
+    with Session(engine) as s:
+        filas = s.exec(select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)
+                       .order_by(TipoTramite.titulo)).all()
+        return [{"id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
+                 "borrador": t.borrador} for t in filas]
+
+
 def casos_herramienta(herramienta: str) -> list:
     with Session(engine) as s:
         return list(s.exec(select(CasoHerramienta).where(CasoHerramienta.herramienta == herramienta)

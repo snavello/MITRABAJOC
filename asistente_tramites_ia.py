@@ -111,8 +111,13 @@ def herramienta() -> dict:
                                          "formula": {"type": "string", "description": "Si la regla se puede escribir con el CATÁLOGO de datos y funciones del sistema (campo.*, lista.*, sistema.*, y/o/no, las funciones listadas), la fórmula exacta. Vacío si no se puede."},
                                          "funcion_nueva": {"type": "string", "description": "Si la regla necesita un dato o una función que NO está en el catálogo: 'nombre_en_minusculas: qué tiene que devolver y de dónde sale'. Vacío si no hace falta."},
                                      }}},
-                "dudas": {"type": "array", "items": {"type": "string"},
-                          "description": "Preguntas cortas sobre lo que el relato no aclara. Lista vacía si no hay."},
+                "dudas": {"type": "array", "description": "Solo lo que el relato NO dice y hace falta saber. Lista vacía si no hay. Nunca preguntes lo que ya respondiste en 'respuestas'.",
+                          "items": {"type": "object", "additionalProperties": False, "required": ["pregunta", "sobre", "opciones"],
+                                    "properties": {
+                                        "pregunta": {"type": "string", "description": "La pregunta, corta y en lenguaje llano."},
+                                        "sobre": _enum([p["clave"] for p in at.PREGUNTAS_TODAS] + [""], "Si la duda es sobre una de las preguntas de 'respuestas', su clave: las opciones serán las de esa pregunta. Vacío si no.", nulo=False),
+                                        "opciones": {"type": "array", "items": {"type": "string"}, "description": "Si no es sobre una pregunta del catálogo: hasta seis respuestas posibles, cortas, para elegir con un clic. Lista vacía si se contesta con texto."},
+                                    }}},
             },
         },
     }
@@ -138,7 +143,9 @@ PROMPT_SISTEMA = """Sos analista funcional de Colm3na, la plataforma para sindic
 Vas a leer el relato de un trámite y llamar a la herramienta proponer_tramite UNA vez.
 Reglas:
 - Proponé con criterio y lo mínimo: pocas preguntas al afiliado, sin repetir lo que el sindicato ya sabe del padrón (nombre, CUIL, seccional, empleador, credencial), y separadores solo si hay más de seis campos.
-- Respondé TODAS las preguntas de "respuestas" con tu mejor lectura del relato. Si el relato no lo dice, elegí la opción más común para ese tipo de trámite y, si de verdad hace falta confirmarlo, sumá UNA pregunta corta a "dudas". No inventes requisitos, áreas ni documentos.
+- Respondé TODAS las preguntas de "respuestas" con tu mejor lectura del relato. Si el relato no lo dice, elegí la opción más común para ese tipo de trámite y, si de verdad hace falta confirmarlo, sumá UNA duda corta a "dudas" con "sobre" apuntando a esa pregunta. No inventes requisitos, áreas ni documentos.
+- "dudas": solo lo que el relato no dice Y cambia el formulario o el circuito. Nada obvio, nada que ya respondiste. Si una duda admite respuestas típicas, dalas en "opciones" (cortas, hasta seis) para que se elija con un clic; si no, dejá "opciones" vacía y se contesta con texto. Pocas: dos o tres como mucho.
+- "previo": solo si el relato dice que el afiliado tiene que haber completado o adjuntar OTRO FORMULARIO DE COLM3NA (del sindicato, en la app). Un certificado, una constancia o cualquier documento de afuera NO es un formulario: es un campo de tipo archivo.
 - Usá únicamente los valores permitidos de cada enumeración.
 - "campos": las preguntas del formulario que completa quien lo pide, en orden. Los documentos son tipo "archivo". Una lista cerrada de opciones es "seleccion".
 - "control": solo si el relato lo pide o es evidente (fecha de nacimiento → no_futura; un dato que no puede repetirse → unico; una opción que depende de otra → depende; un dato a cotejar con el grupo familiar del sindicato → lista).

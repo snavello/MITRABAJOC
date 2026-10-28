@@ -65,6 +65,7 @@ cuenta), no en cada commit.
 | `PLAN_REGISTRO.md` | Registro confirmado por mail con niveles de fiabilidad (R2), recuperación de clave (R3), captcha y freno en el registro (segunda medida de la serie XSK, cierra H-0017). Acordado con SDN decisión por decisión. | 2026-10-11 |
 | `PLAN_DASHBOARD_V2.md` | Panel Sindical v2 con Preact sin build, en paralelo a la v1 (`/admin/dashboard-v2`, solo local y Pruebas): primer piloto de una capa de componentes, sin tocar el backend. Acordado con SDN decisión por decisión. | 2026-10-12 |
 | `PLAN_ASISTENTE_TRAMITES.md` | El Asistente de trámites como Herramienta de `/entornos` (IA que propone, motor que arma con el catálogo real, casos guardados y vista de brechas; el importador queda para después). Acordado con SDN decisión por decisión (D1–D10). | 2026-10-16 |
+| `PLAN_ASISTENTE_TRAMITES_V2.md` | La segunda vuelta del Asistente de trámites: varios trámites a la vez, sin cuestionario (dudas con opciones o texto), el veredicto de seis puntos con la complejidad, y el importador que crea el tipo de trámite como borrador en el sindicato (V1–V10). | 2026-10-28 |
 | `PLAN_LISTAS_VALIDACIONES.md` | Listas que sube el admin del sindicato (plantillas tipadas sobre una tabla genérica) y validaciones por función en Trámites: requisito para iniciar, validación de campo y campo calculado con fórmula; dos fechas nuevas en el padrón. Cierra las fases 2 y 3 de validaciones. Acordado con SDN decisión por decisión (D1–D7). | 2026-10-16 |
 
 ### Carpetas

@@ -73,7 +73,7 @@ def test_usa_solo_las_rutas_del_asistente():
     rutas del asistente y a ninguna otra; no calcula circuitos ni brechas."""
     app = (CARPETA / "app.js").read_text(encoding="utf-8")
     assert 'const API = "/api/entornos/herramientas/asistente"' in app
-    for ruta in ("/catalogo", "/entender", "/resolver", "/casos", "/brechas"):
+    for ruta in ("/catalogo", "/entender", "/resolver", "/casos", "/brechas", "/importar"):
         assert f'API + "{ruta}' in app or f"API + `{ruta}" in app, ruta
     assert "preguntas-extra" not in app, "el segundo cuestionario se fue (2026-10-18)"
     otras = set(re.findall(r'fetch\(\s*"([^"]+)"', app)) - set()
@@ -97,6 +97,24 @@ def test_lo_propuesto_por_la_ia_se_distingue():
     css = _sin_comentarios((CARPETA / "asistente.css").read_text(encoding="utf-8"))
     assert 'class="marca-ia"' in app and "Propuesto" in app
     assert re.search(r"\.marca-ia \{[^}]*var\(--propuesta\)", css)
+
+
+def test_la_hoja_de_trabajo_con_varios_tramites():
+    """V1, V2 y V8 de PLAN_ASISTENTE_TRAMITES_V2.md: riel con «Nuevo trámite»
+    y la lista de los tratados, cuatro pasos (sin el cuestionario una
+    pregunta por pantalla), las dudas con opciones, el veredicto con sus seis
+    puntos e importar como borrador; fondo claro."""
+    app = _sin_comentarios((CARPETA / "app.js").read_text(encoding="utf-8"))
+    css = _sin_comentarios((CARPETA / "asistente.css").read_text(encoding="utf-8"))
+    assert "+ Nuevo trámite" in app and 'class="lista-tramites"' in app and "Trámites tratados" in app
+    assert '["relato", "El relato"' in app and '["veredicto", "El veredicto"' in app
+    assert "function Pregunta(" not in app and "Pregunta ${qi + 1} de" not in app, "el cuestionario una por pantalla se fue"
+    assert "function Dudas(" in app and "Lo que no quedó claro" in app and 'placeholder="O contestá con tus palabras"' in app
+    assert "function Veredicto(" in app and "v.puntos.map" in app and "Confirmar la importación" in app
+    assert "Importar a ${sind.nombre}" in app and "ensayo" in app and "/casos/${E.caso_id}" in app
+    assert "hoja-layout" in css and "ct-area" in css and "ct-der" in css
+    assert "html { background: var(--mesa); }" in css and "--mesa: #eef1f5" in css
+    assert "#0d1626" not in css, "la colmena nocturna se fue"
 
 
 def test_la_pestana_herramientas_la_presenta():

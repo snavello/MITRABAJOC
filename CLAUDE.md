@@ -1163,6 +1163,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     "Herramientas". El importador del JSON queda para después de probar con
     trámites reales de La Bancaria. El mismo día se acordó el plan de Listas
     y validaciones por función (`PLAN_LISTAS_VALIDACIONES.md`, PR #127).
+    **Segunda vuelta HECHA el 2026-10-28** (Plataforma 0.59.01,
+    `PLAN_ASISTENTE_TRAMITES_V2.md`): hoja de trabajo clara con varios
+    trámites a la vez, sin cuestionario (dudas con opciones o texto), el
+    veredicto de seis puntos con la complejidad del desarrollo, y el
+    **importador** que crea el tipo de trámite como borrador en el sindicato
+    elegido. Ver "Herramientas".
 
 35. **Listas del sindicato** (2026-10-16, Admin 0.54.01, bloque 1 de
     `PLAN_LISTAS_VALIDACIONES.md`): pestaña Listas propia de `/admin` con
@@ -1644,12 +1650,11 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
 12. **Asistente de trámites e importación de formularios** (prototipo de Chat
     del 2026-10-16, **construido el mismo día como Herramienta de `/entornos`**,
     ver "Estado actual" 34 y "Herramientas"): el JSON `colm3na.tramite` v1
-    sale con la forma exacta de `_campos_tramite_validos`. **Lo que queda**: el
-    importador, especificado como propuesta en
-    `docs/chat/2026-10-16-contrato-importacion-tramites.md`, que NO se
-    construye hasta probar el asistente con un trámite acordado con el
-    sindicato; la entrada por foto o PDF del formulario actual; y el uso desde
-    el panel del sindicato. Criterios: las correcciones van por el chat del
+    sale con la forma exacta de `_campos_tramite_validos`. **El importador
+    está HECHO desde 2026-10-28** (crea el tipo como borrador en el
+    sindicato, ver "Herramientas"). **Lo que queda**: probarlo con un trámite
+    acordado con La Bancaria, la entrada por foto o PDF del formulario
+    actual, y el uso desde el panel del sindicato. Criterios: las correcciones van por el chat del
     trámite; los formularios encadenados son solo para datos nuevos después de
     la aprobación.
 14. **El Admin de Seccional acotado en todo el panel**
@@ -1744,7 +1749,39 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
 
 **Asistente de trámites** (`templates/asistente_tramites.html` +
 `static/asistente_tramites/`, rutas `/api/entornos/herramientas/asistente/*`,
-plan `PLAN_ASISTENTE_TRAMITES.md`):
+planes `PLAN_ASISTENTE_TRAMITES.md` y, desde 2026-10-28,
+`PLAN_ASISTENTE_TRAMITES_V2.md` V1–V10, que manda donde cambia):
+- **Es una hoja de trabajo con varios trámites a la vez** (V1, V2, V8): el
+  riel de la izquierda tiene «Nuevo trámite», los cuatro pasos del trámite
+  abierto (el relato → lo que entendí → los datos → el veredicto) y la lista
+  de los trámites tratados (los casos guardados, con su veredicto); la hoja
+  al centro y la vista del afiliado fija a la derecha, en claro, como el
+  constructor. **No hay cuestionario**: las doce respuestas (seis preguntadas
+  y seis inferidas, más `previo`) se muestran como frases con su selector,
+  y lo que el relato no aclara llega como **dudas con opciones** (si la duda
+  es sobre una pregunta del catálogo, elegir una la responde) o se contesta
+  con texto (`aclaraciones`, van al prompt). Guardar un trámite ya guardado
+  lo actualiza (`POST /casos/{id}`), no crea otro.
+- **El veredicto son seis preguntas con respuesta** (V5,
+  `asistente_tramites.veredicto`, puro): ¿ya se puede importar?, ¿conviene
+  terminarlo a mano?, ¿hace falta preparar algo (área, módulo, lista con
+  datos)?, ¿hace falta desarrollar, de qué complejidad (alta / media /
+  baja)?, ¿se completa o adjunta un formulario que ya existe?, ¿hay que
+  construir antes otro formulario? Con titular y resumen. Un formulario
+  previo de Colm3na es la inferida `previo` + `previo_nombre` (V4): existe
+  → punto 5 (y la brecha `previo`, porque hoy no se puede exigir como
+  requisito), no existe → punto 6. Un documento ajeno es un campo archivo.
+- **Importar crea el tipo de trámite como BORRADOR** en el sindicato elegido
+  (V6, `POST .../importar`, `main._importar_tramite`): áreas por nombre
+  (`plan_importacion`: destino por defecto = el área homónima de la
+  seccional con `ve_todas`, mapa por seccional, pase), encadenados primero,
+  campos por `_campos_tramite_validos(..., borrador=True)`, requisitos
+  saneados, código renumerado si ya existe (KE27 → KE27B); `ensayo: true`
+  no escribe. Lo que no se resuelve queda listado como pendiente y el
+  borrador se crea igual; se publica desde el constructor. La importación
+  queda registrada en el caso (`diferencias.importaciones`) y el caso pasa a
+  `aplicado`. `_sindicato_para_asistente` trae además listas cargadas y
+  formularios existentes con ids (V7).
 - **La IA propone, el código arma** (D1). `asistente_tramites_ia.entender`
   lee el relato y devuelve, por una herramienta con esquema cerrado, nombre,
   respuestas a las preguntas, campos y dudas; TODO pasa por
@@ -1801,11 +1838,14 @@ plan `PLAN_ASISTENTE_TRAMITES.md`):
   lista» exporta una validación por función real y las respuestas de
   requisitos salen como `requisitos` del formulario (`requisitos_colm3na`);
   `duplicados` quedó solo para «por familiar o por período».
-- **El importador NO existe** (D7): se construye después de probar con uno o
-  dos trámites reales de La Bancaria, con el contrato
-  `docs/chat/2026-10-16-contrato-importacion-tramites.md`.
+- **El importador existe desde 2026-10-28** (V6; antes D7 lo postergaba):
+  sigue el contrato `docs/chat/2026-10-16-contrato-importacion-tramites.md`
+  salvo en dos cosas dichas: lo que falta no frena la importación (nace como
+  borrador y se lista) y el sindicato sale del caso, no de la sesión.
 - Tests: `test_asistente_tramites.py` (motor), `test_asistente_tramites_api.py`
-  (rutas e IA simulada), `test_asistente_tramites_v2.py` (pantalla) y el robot
+  (rutas e IA simulada), `test_asistente_tramites_v2.py` (pantalla),
+  `test_asistente_importar.py` (veredicto e importador sobre un sindicato
+  con la estructura de La Bancaria) y el robot
   `e2e/test_robot_asistente_tramites.py`.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
