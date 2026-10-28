@@ -79,6 +79,11 @@ TIPO_CALCULADO = "calculado"
 # db.contexto_validaciones; acá solo se declara para que el constructor lo
 # ofrezca y el saneo lo verifique.
 DATOS_SISTEMA = {
+    # 2026-10-28 (pedido de SDN): el formulario tiene que venir con el nombre
+    # y el documento de quien lo pide. Son datos para EXTRAER en un campo
+    # calculado; nunca se piden de nuevo.
+    "nombre": ("texto", "Apellido y nombre, como figura en el padrón"),
+    "cuil": ("texto", "CUIL, once dígitos sin guiones"),
     "en_padron": ("booleano", "Está en el padrón de este sindicato"),
     "activo": ("booleano", "Empadronamiento activo (no dado de baja)"),
     "registrado": ("booleano", "Ya se registró en la app"),
@@ -142,6 +147,8 @@ COMO_SE_COMPARA = {
 
 # dato -> (grupo, qué devuelve, ejemplo, qué significa el ejemplo).
 AYUDA_SISTEMA = {
+    "nombre": ("padron", "texto", "existe(sistema.afiliado.nombre)", "el padrón tiene cargado su nombre"),
+    "cuil": ("padron", "11 dígitos sin guiones", 'sistema.afiliado.cuil != ""', "tiene CUIL (siempre: es la sesión)"),
     "en_padron": ("padron", "sí / no", "sistema.afiliado.en_padron", "está en el padrón de este sindicato"),
     "activo": ("padron", "sí / no", "sistema.afiliado.activo", "no fue dado de baja"),
     "registrado": ("padron", "sí / no", "no sistema.afiliado.registrado", "todavía no se registró en la app"),

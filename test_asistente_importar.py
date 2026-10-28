@@ -56,6 +56,8 @@ def bancaria():
             s.refresh(a)
             areas[sec] = a.id
         # Un formulario que ya existe, para el punto 5 del veredicto.
+        s.add(db.Trabajador(sindicato_id=sid, cuil="20111111112", activo=True, registrado=True, seccional_id=secs["Rosario"]))
+        db.guardar_datos_personales(s, "20111111112", nombre="Pérez, Juan")
         s.add(db.UsuarioSindicato(sindicato_id=sid, usuario="20111111120", nombre="Admin",
                                   clave_hash=auth.hashear_clave("banc-demo"), debe_cambiar_clave=False, es_super_admin=True))
         s.commit()
@@ -166,7 +168,8 @@ def test_importar_crea_borradores_con_destino_mapa_y_registro(bancaria):
     t = db.tipo_tramite_por_id(pri["id"])
     assert t["borrador"] is True and t["activo"] is False and t["titulo"] == "Kit escolar 2027"
     assert t["area_destino_default_id"] == bancaria["areas"]["Sede Central"] and t["seccional_id"] is None
-    assert len(t["campos"]) == 13 and t["campos"][3]["etiqueta"] == "DNI del chico"
+    assert len(t["campos"]) == 15 and t["campos"][5]["etiqueta"] == "DNI del chico"
+    assert t["campos"][0]["tipo_dato"] == "calculado" and t["campos"][0]["validaciones"][0]["trae"] == "nombre"
     assert t["requisitos"][0]["trae"] == "en_padron"
     with Session(db.engine) as s:
         tipo = s.get(db.TipoTramite, pri["id"])
@@ -192,6 +195,31 @@ def test_importar_crea_borradores_con_destino_mapa_y_registro(bancaria):
     html = admin.get("/admin").text
     assert "Kit escolar 2027" in html and ">borrador<" in html
     assert "KE27B" in html
+
+
+def test_el_formulario_importado_abre_con_el_nombre_y_el_cuil_del_afiliado(bancaria):
+    """SDN, 2026-10-28: «el formulario ya debe venir con el nombre y el
+    documento del peticionante». Los dos primeros campos son extraídos del
+    padrón; al publicar el borrador y abrirlo desde la app, vienen completos."""
+    c = _con_plataforma()
+    sid = bancaria["id"]
+    e = {"nombre": "Cambio de domicilio", "respuestas": {"atiende": "central", "area": "Acción Social"},
+         "campos": [{"etiqueta": "Domicilio nuevo", "tipo": "texto"}, {"etiqueta": "Nombre y apellido", "tipo": "texto"}]}
+    r = c.post(API + "/importar", json={"entrada": e, "sindicato_id": sid}).json()
+    tid = r["creados"][0]["id"]
+    t = db.tipo_tramite_por_id(tid)
+    assert [x["etiqueta"] for x in t["campos"]] == ["Apellido y nombre", "CUIL", "Domicilio nuevo"], "el nombre pedido de más se descartó"
+    # Publicarlo como lo haría el Super Admin.
+    db.editar_tipo_tramite(tid, sid, t["titulo"], t["codigo"], True, t["campos"], [],
+                           area_destino_default_id=bancaria["areas"]["Sede Central"], borrador=False)
+    afiliado = TestClient(main.app)
+    afiliado.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=sid, ident="20111111112"))
+    afiliado.cookies.set("cuil_trab", "20111111112")
+    abre = afiliado.get(f"/api/tramite/requisitos/{tid}")
+    assert abre.status_code == 200, abre.text
+    calc = abre.json()["calculados"]
+    ids = {x["etiqueta"]: x["id"] for x in db.tipo_tramite_por_id(tid)["campos"]}
+    assert calc[str(ids["Apellido y nombre"])] == "Pérez, Juan" and calc[str(ids["CUIL"])] == "20111111112"
 
 
 def test_actualizar_un_caso_lo_reescribe_sin_duplicar(bancaria):

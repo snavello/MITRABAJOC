@@ -218,6 +218,8 @@ td input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--tinta);
 .imp { display: grid; gap: 12px; border: 1.5px solid var(--tinta); border-radius: 12px; padding: 14px; animation: fila-entra var(--mov-medio) var(--ease-entrada) both; }
 .imp.hecho { border-color: var(--bien); background: color-mix(in srgb, var(--bien) 5%, white); }
 .imp.mal { border-color: var(--mal); }
+.imp.confirmar { border-color: var(--agua); background: color-mix(in srgb, var(--agua) 5%, white); }
+.v-que-hace { flex-basis: 100%; }
 .imp .pend { padding-left: 20px; font-size: 13.5px; display: grid; gap: 3px; }
 .importado-ya { font-size: 13px; color: var(--gris); display: grid; gap: 3px; }
 .importado-ya b { color: var(--bien); font: 700 10.5px var(--mono); letter-spacing: .6px; text-transform: uppercase; }
@@ -316,6 +318,7 @@ details.grupo summary { cursor: pointer; font-size: 14px; }
 .vp-sep { grid-column: 1 / -1; border: none; border-top: 1px solid var(--vl); margin: 2px 0 12px; }
 .vp-in { display: block; width: 100%; padding: 7px 9px; border: 1px solid var(--vl); border-radius: 10px; font: 12px system-ui, sans-serif; background: #fff; color: var(--vt); min-height: 31px; }
 .vp-in.ph { color: #9aa3b2; }
+.vp-in.vp-calc { background: #f5f3ff; border-color: #cdbde9; color: #3b2d63; }
 .vp-op { display: flex; align-items: center; gap: 7px; font-size: 12px; margin: 4px 0; }
 .vp-op i { width: 14px; height: 14px; border: 1.5px solid #9aa3b2; display: inline-block; background: #fff; }
 .vp-op i.r { border-radius: 50%; } .vp-op i.c { border-radius: 3px; }
