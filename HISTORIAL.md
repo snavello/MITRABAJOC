@@ -9467,6 +9467,7 @@ del extractor). Así que el laboratorio ahora lo pregunta: el catálogo trae
 y el servidor lo pone primero en la corrida para que sea la referencia
 aunque en la lista esté detrás de otro. Si no se lo elige, la referencia
 sigue siendo el primero que contesta.
+
 **«El que más se aparta» contaba mal** (misma noche, Plataforma 0.63.03).
 SDN: «¿por qué dice que Luna se apartó más? El único que veo es el PAMI en
 Qwen». Dos causas: la línea miraba solo los campos del resumen (período,
@@ -9476,3 +9477,15 @@ primero de la lista, que era Luna. Ahora el apartamiento de cada modelo son
 los campos del resumen distintos MÁS las líneas leídas distinto (sin contar
 las filas donde la que se aparta es la referencia); si nadie se aparta no se
 nombra a ninguno, y en empate se nombran todos.
+
+**«Qué implica» habla solo del impacto en el sistema** (misma noche). SDN:
+«no quiero un análisis de precios, solo quiero cómo impacta en el sistema la
+diferencia, y si no impacta, nada». La primera línea es ahora el veredicto:
+«Impacto en el sistema: NINGUNO» cuando las lecturas darían la misma
+validación (mismos totales, período, CUIL/CUIT y líneas clasificadas igual;
+Confianza y Formato no cuentan, y el signo tampoco), o «SÍ» seguido de qué
+cambiaría: un total distinto valida los aportes contra otro número, el
+período manda topes y grilla, un CUIL/CUIT cambia de quién es el recibo, y
+cada línea distinta se nombra por código porque toca la cuota, el tope del
+2 % o la base. La línea de costo y tiempo se fue del análisis (siguen en la
+tabla de arriba, que es donde se comparan).
