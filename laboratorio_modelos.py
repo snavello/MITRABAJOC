@@ -426,53 +426,79 @@ def campos_contra_referencia(tipo: str, leidas: list) -> list:
     return salida
 
 
+# Campos del resumen que NO cambian lo que la app calcula: una lectura puede
+# diferir ahí sin impacto en el sistema.
+_RESUMEN_SIN_IMPACTO = {"Confianza", "Formato"}
+
+
 def analisis(filas: list, lineas: dict | None, referencia: str | None,
              contra_ref: list | None = None) -> list:
-    """Cinco o seis líneas, en castellano, sobre qué implican las diferencias
-    entre las lecturas. Determinista, sin IA: dice lo que los números dicen
-    y qué toca de la app (pedido de SDN, 2026-10-29)."""
+    """Hasta seis líneas, en castellano, sobre qué implican las diferencias
+    entre las lecturas PARA EL SISTEMA. Determinista, sin IA. La primera
+    línea es el veredicto: si ninguna diferencia impacta, lo dice y listo.
+    Sin análisis de precios ni de tiempos (SDN, 2026-10-29: «solo quiero cómo
+    impacta en el sistema la diferencia, si no impacta nada»)."""
     ok = [f for f in filas if f.get("ok")]
     fallidos = [f for f in filas if not f.get("ok")]
-    out = []
     if not ok:
         return ["Ningún modelo leyó el archivo: no hay nada que comparar."]
     detenidos = [f for f in fallidos if str(f.get("error", "")).startswith("detenido")]
     fallidos = [f for f in fallidos if f not in detenidos]
+    if len(ok) == 1:
+        out = [f"Solo contestó {ok[0]['nombre']}: con uno solo no hay comparación. Sumá al menos el de producción."]
+        if fallidos:
+            out.append(f"{len(fallidos)} no contestaron ({', '.join(f['nombre'] for f in fallidos)}): "
+                       "un modelo que falla en el laboratorio también falla con un afiliado esperando.")
+        return out
+    otros = [f for f in ok if f["nombre"] != referencia]
+    contra = list(contra_ref or [])
+    n_lineas_contra = (lineas or {}).get("contra_referencia", 0)
+
+    # --- qué difiere y qué de eso impacta en lo que la app calcula
+    campos = sorted({d["etiqueta"] for f in otros for d in f.get("resumen", []) if not d.get("igual")})
+    campos_impacto = [c for c in campos if c not in _RESUMEN_SIN_IMPACTO]
+    campos_forma = [c for c in campos if c in _RESUMEN_SIN_IMPACTO]
+    filas_lineas = [fl for fl in (lineas or {}).get("filas", []) if fl.get("difiere")]
+    # Una fila que difiere solo por el signo no impacta (la app usa el valor absoluto).
+    filas_impacto = [fl for fl in filas_lineas
+                     if any((not c["igual"]) and not c.get("signo") for c in fl["celdas"])]
+    invalidos = [(f["nombre"], d["etiqueta"]) for f in ok for d in f.get("resumen", []) if d.get("invalido")]
+    hay_impacto = bool(campos_impacto or filas_impacto or invalidos or fallidos)
+
+    out = []
+    if not hay_impacto:
+        out.append(f"Impacto en el sistema: NINGUNO. Las {len(ok)} lecturas darían la misma validación: "
+                   "mismos totales, mismo período y las líneas clasificadas igual."
+                   + (" Difieren solo en " + ", ".join(campos_forma) + ", que la app no usa para calcular." if campos_forma else "")
+                   + (f" {lineas['signos']} línea(s) con el signo distinto: la app toma el valor absoluto." if lineas and lineas.get("signos") else ""))
+    else:
+        out.append("Impacto en el sistema: SÍ. Lo que sigue es lo que cambiaría en la validación según qué modelo lea.")
     if detenidos:
         out.append(f"{len(detenidos)} detenido(s) desde la pantalla ({', '.join(f['nombre'] for f in detenidos)}): no cuentan.")
     if fallidos:
         out.append(f"{len(fallidos)} de {len(filas)} no contestaron ({', '.join(f['nombre'] for f in fallidos)}): "
                    "un modelo que falla o no termina en el laboratorio también va a fallar con un afiliado esperando.")
-    if len(ok) == 1:
-        out.append(f"Solo contestó {ok[0]['nombre']}: con uno solo no hay comparación. Sumá al menos el de producción.")
-        return out
-    otros = [f for f in ok if f["nombre"] != referencia]
-    peor = min(otros, key=lambda f: (f.get("iguales", 0), -f.get("campos", 0)), default=None)
-    difieren = [f for f in otros if f.get("iguales", 0) < f.get("campos", 0)]
-    if not difieren:
-        out.append(f"Los {len(ok)} coincidieron en todos los campos del resumen con {referencia}: "
-                   "período, totales, cantidad de líneas y aportes. Es acuerdo, no verdad: hay que mirar el recibo.")
-    else:
-        campos = sorted({d["etiqueta"] for f in difieren for d in f.get("resumen", []) if not d.get("igual")})
-        out.append(f"{len(difieren)} de {len(otros)} leyeron distinto de {referencia} en: {', '.join(campos)}. "
-                   + ("Un total o un período distinto es un error de lectura de alguien, y la app validaría contra ese número."
-                      if any(c in campos for c in ("Neto", "Remuneraciones", "Descuentos", "Período")) else
-                      "Son diferencias de forma, no de importes."))
-    if lineas:
-        if lineas["distintas"]:
-            out.append(f"Línea por línea, {lineas['distintas']} de {lineas['total']} difieren: una línea clasificada distinto "
-                       "(aporte, remuneración, sección) cambia la cuota sindical y el tope del 2 %, aunque el neto coincida.")
-        else:
-            out.append(f"Las {lineas['total']} líneas se leyeron igual, clasificación incluida: es lo que más pesa para la validación.")
-        if lineas.get("signos"):
-            out.append(f"{lineas['signos']} línea(s) difieren solo en el signo (un modelo transcribe el descuento en negativo y otro "
-                       "en positivo): la app usa el valor absoluto, así que no cambia el resultado, pero se señala en ámbar.")
-    # La referencia es el primer modelo elegido, no la verdad. Si los demás
-    # coinciden entre sí y ella se aparta, lo más probable es que la
-    # equivocada sea ella (caso real: Haiku 4.5 leyó "4.590,00" y "125-001"
-    # donde los cuatro GPT leyeron "4.580,00" y "126-001", el código real).
-    contra = list(contra_ref or [])
-    n_lineas_contra = (lineas or {}).get("contra_referencia", 0)
+    if campos_impacto:
+        totales = [c for c in campos_impacto if c in ("Neto", "Remuneraciones", "Descuentos", "Aportes del trabajador")]
+        partes = []
+        if totales:
+            partes.append("un total distinto (" + ", ".join(totales) + ") es un error de lectura de alguien y la app validaría los aportes contra ese número")
+        if "Período" in campos_impacto:
+            partes.append("el período manda qué topes y qué grilla aplican")
+        if any(c.startswith("CUI") for c in campos_impacto):
+            partes.append("un CUIL/CUIT distinto cambia de quién es el recibo o contra qué empleador se valida")
+        if "Líneas leídas" in campos_impacto:
+            partes.append("leer más o menos líneas cambia la base de los aportes")
+        if any(c in ("Desde", "Hasta", "Meses leídos", "Meses con algo impago") for c in campos_impacto):
+            partes.append("en un comprobante de ARCA cambia el semáforo de aportes")
+        out.append(f"{len([f for f in otros if any(not d.get('igual') and d['etiqueta'] not in _RESUMEN_SIN_IMPACTO for d in f.get('resumen', []))])} "
+                   f"de {len(otros)} leyeron distinto de {referencia} en {', '.join(campos_impacto)}: " + "; ".join(partes) + ".")
+    if filas_impacto:
+        codigos = [fl["codigo"] or fl["descripcion"][:24] for fl in filas_impacto[:4]]
+        extra = f" y {len(filas_impacto) - 4} más" if len(filas_impacto) > 4 else ""
+        out.append(f"{len(filas_impacto)} línea(s) leída(s) distinto ({', '.join(codigos)}{extra}): una línea clasificada "
+                   "distinto (aporte, remuneración, sección), con otro importe o que un modelo no leyó cambia la cuota "
+                   "sindical, el tope del 2 % o la base de los aportes, aunque el neto coincida.")
     if (contra or n_lineas_contra) and len(otros) >= 2:
         partes = []
         if contra:
@@ -482,26 +508,37 @@ def analisis(filas: list, lineas: dict | None, referencia: str | None,
         out.append(f"Ojo con la referencia: {' y '.join(partes)} los otros {len(otros)} coinciden entre sí y "
                    f"{referencia} es el único que se aparta. Ahí lo más probable es que la lectura "
                    "equivocada sea la de la referencia, no la de los demás (se marca en la tabla).")
-    invalidos = [(f["nombre"], d["etiqueta"]) for f in ok for d in f.get("resumen", []) if d.get("invalido")]
     if invalidos:
         out.append("Dígito mal leído: " + "; ".join(f"{n} devolvió un {e} que no pasa el verificador (módulo 11)" for n, e in invalidos)
                    + ". En la app ese recibo no se validaría contra el empleador correcto.")
-    signos_tot = [d["etiqueta"] for f in otros for d in f.get("resumen", []) if d.get("signo")]
-    if signos_tot and not (lineas and lineas.get("signos")):
-        out.append(f"Totales escritos con distinto signo ({', '.join(sorted(set(signos_tot)))}): mismo importe, "
-                   "distinta convención; la app lo toma en valor absoluto.")
-    con_costo = [f for f in ok if f.get("costo") is not None and f.get("duracion_ms")]
-    if len(con_costo) > 1:
-        barato = min(con_costo, key=lambda f: f["costo"]); caro = max(con_costo, key=lambda f: f["costo"])
-        rapido = min(con_costo, key=lambda f: f["duracion_ms"]); lento = max(con_costo, key=lambda f: f["duracion_ms"])
-        veces = (caro["costo"] / barato["costo"]) if barato["costo"] else 0
-        out.append(f"Costo: {barato['nombre']} {barato['costo_txt']} contra {caro['nombre']} {caro['costo_txt']}"
-                   + (f" ({veces:.0f}× más caro)" if veces >= 2 else "")
-                   + f". Tiempo: {rapido['nombre']} {rapido['duracion_txt']} contra {lento['nombre']} {lento['duracion_txt']}.")
-    if peor is not None and peor.get("campos"):
-        out.append(f"El que más se aparta es {peor['nombre']} ({peor['iguales']}/{peor['campos']} campos iguales). "
+    if hay_impacto and lineas and lineas.get("signos"):
+        out.append(f"{lineas['signos']} línea(s) difieren solo en el signo: la app usa el valor absoluto, no impacta; se señala en ámbar.")
+    # Quién se aparta más: campos del resumen con impacto + líneas con impacto,
+    # sin contar las filas donde la que se aparta es la referencia. En empate
+    # se nombran todos; si nadie se aparta, nadie.
+    pos_ok = {f["nombre"]: k for k, f in enumerate(ok)}
+
+    def _apartamiento(f):
+        resumen_ = sum(1 for d in f.get("resumen", []) if not d.get("igual") and d["etiqueta"] not in _RESUMEN_SIN_IMPACTO)
+        lineas_ = 0
+        if lineas and f["nombre"] in pos_ok:
+            k = pos_ok[f["nombre"]]
+            lineas_ = sum(1 for fila in lineas["filas"]
+                          if not fila.get("ref_sola") and k < len(fila["celdas"])
+                          and not fila["celdas"][k]["igual"] and not fila["celdas"][k].get("signo"))
+        return resumen_, lineas_
+    apart = {f["nombre"]: _apartamiento(f) for f in otros}
+    tope = max((sum(v) for v in apart.values()), default=0)
+    if tope > 0:
+        peores = [n for n, v in apart.items() if sum(v) == tope]
+        r_, l_ = apart[peores[0]]
+        detalle = " y ".join(x for x in (f"{r_} campo(s) del resumen" if r_ else "",
+                                        f"{l_} línea(s)" if l_ else "") if x)
+        quien = (f"El que más se aparta es {peores[0]}" if len(peores) == 1
+                 else "Los que más se apartan son " + ", ".join(peores[:-1]) + f" y {peores[-1]}")
+        out.append(f"{quien}: {detalle} distinto(s) de {referencia}. "
                    "Con un ensayo no alcanza: treinta recibos distintos antes de sacar una conclusión.")
-    return out[:6]
+    return out[:7]
 
 
 def para_guardar(tipo: str, claves: list, lecturas: list, resultado: dict) -> dict:

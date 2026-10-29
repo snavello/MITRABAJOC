@@ -1950,10 +1950,14 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   **El signo solo se SEÑALA en ámbar (±), nunca en rojo**:
   en las líneas (`celdas[].signo`, `lineas.signos`) y en los totales del
   resumen (se comparan en valor absoluto); la app usa el valor absoluto.
-  **«Qué implica»**: `laboratorio_modelos.analisis` escribe cinco o seis
-  líneas deterministas (quién falló, en qué campos difieren y qué toca de
-  la validación, líneas distintas, signo, costo y tiempo, el que más se
-  aparta), en el resultado y en cada ensayo guardado.
+  **«Qué implica» habla SOLO del impacto en el sistema** (SDN, 2026-10-29:
+  sin análisis de precios ni tiempos): `laboratorio_modelos.analisis` abre
+  con el veredicto «Impacto en el sistema: NINGUNO / SÍ» y sigue con qué
+  cambiaría en la validación (quién falló, totales/período/CUIT distintos,
+  cada línea distinta por código, la referencia sola, el verificador) y el
+  que más se aparta (resumen + líneas, sin `ref_sola` ni signo; nadie si
+  nadie, todos en empate). Confianza y Formato no impactan. Determinista,
+  en el resultado y en cada ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)

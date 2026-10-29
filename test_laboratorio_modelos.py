@@ -412,12 +412,13 @@ def test_el_analisis_dice_lo_que_implican_las_diferencias():
         (otro, {"modelo": "alibaba:qwen3.8-flash", "tokens_entrada": 2000, "tokens_salida": 600, "duracion_ms": 9000}),
         lab.ErrorProveedor("sin saldo")])
     a = r["analisis"]
-    assert 3 <= len(a) <= 6
+    assert 3 <= len(a) <= 7
     texto = " ".join(a)
     assert "no contestaron" in texto and "Kimi K3" in texto
+    assert a[0].startswith("Impacto en el sistema: SÍ")
     assert "Neto" in texto and "error de lectura" in texto
-    assert "1 de 2 difieren" in texto and "cuota sindical" in texto
-    assert "Costo:" in texto and "Tiempo:" in texto
+    assert "1 línea(s) leída(s) distinto" in texto and "cuota" in texto
+    assert "Costo" not in texto and "Tiempo" not in texto, "sin análisis de precios (SDN)"
     assert "más se aparta es Qwen 3.8 Flash" in texto
     assert lab.analisis([], None, None) == ["Ningún modelo leyó el archivo: no hay nada que comparar."]
     solo = lab.analisis([{"ok": True, "nombre": "X", "iguales": 3, "campos": 3}], None, "X")
@@ -637,3 +638,45 @@ def test_la_referencia_es_el_modelo_de_produccion_aunque_no_vaya_primero(monkeyp
     assert r.status_code == 200, r.text
     assert r.json()["referencia"] == "Claude Haiku 4.5"
     assert [m["clave"] for m in r.json()["modelos"]][0] == "anthropic:claude-haiku-4-5"
+
+
+def test_el_que_mas_se_aparta_cuenta_las_lineas_y_no_inventa_un_peor_en_empate():
+    """SDN vio «el que más se aparta es Luna» con Luna idéntica a la referencia
+    y Qwen con una línea (PAMI) clasificada distinto: se miraba solo el
+    resumen y, en empate, salía el primero de la lista. Ahora cuentan las
+    líneas y en empate total no se nombra a nadie."""
+    ref = json.loads(json.dumps(RECIBO)); igual = json.loads(json.dumps(RECIBO))
+    qwen = json.loads(json.dumps(RECIBO)); qwen["lineas"][1]["categoria_universal"] = "pami"
+    uso = {"tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna", "alibaba:qwen3.8-flash"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6")), (igual, dict(uso, modelo="openai:gpt-6-luna")),
+        (qwen, dict(uso, modelo="alibaba:qwen3.8-flash"))])
+    aviso = next(l for l in r["analisis"] if "se aparta" in l and "Ojo" not in l)
+    assert aviso.startswith("El que más se aparta es Qwen 3.8 Flash: 1 línea(s)")
+    # Todos iguales a la referencia: no se nombra a ninguno como el peor.
+    r2 = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna", "alibaba:qwen3.8-flash"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6")), (igual, dict(uso, modelo="openai:gpt-6-luna")),
+        (igual, dict(uso, modelo="alibaba:qwen3.8-flash"))])
+    assert not any("se aparta es" in l or "se apartan son" in l for l in r2["analisis"])
+    # Dos empatados: se nombran los dos.
+    r3 = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna", "alibaba:qwen3.8-flash"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6")), (qwen, dict(uso, modelo="openai:gpt-6-luna")),
+        (qwen, dict(uso, modelo="alibaba:qwen3.8-flash"))])
+    # Acá los dos coinciden entre sí contra la referencia: la fila es ref_sola y no cuenta contra ellos.
+    assert not any("se aparta es" in l or "se apartan son" in l for l in r3["analisis"])
+    assert any(l.startswith("Ojo con la referencia") for l in r3["analisis"])
+
+
+def test_sin_diferencias_que_importen_el_analisis_dice_impacto_ninguno():
+    """SDN: «no quiero un análisis de precios, solo cómo impacta en el sistema
+    la diferencia, y si no impacta, nada». Mismo recibo leído igual salvo la
+    confianza declarada: una sola línea, «NINGUNO», y sin costo ni tiempo."""
+    ref = json.loads(json.dumps(RECIBO)); otro = json.loads(json.dumps(RECIBO)); otro["confianza"] = "media"
+    uso = {"tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6", tokens_entrada=1000, duracion_ms=3000)),
+        (otro, dict(uso, modelo="openai:gpt-6-luna", tokens_entrada=5000, duracion_ms=30000))])
+    a = r["analisis"]
+    assert a[0].startswith("Impacto en el sistema: NINGUNO") and "Confianza" in a[0]
+    assert not any("Costo" in l or "Tiempo" in l for l in a)
+    assert not any("se aparta" in l for l in a)
