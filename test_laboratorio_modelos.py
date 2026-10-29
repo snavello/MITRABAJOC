@@ -469,3 +469,26 @@ def test_un_importe_escrito_como_texto_argentino_es_el_mismo_importe():
     c = extractor.comparar_lineas([("a", RECIBO_NUM), ("b", ilegible)])
     assert c["distintas"] == 1 and c["filas"][0]["celdas"][1]["valor"].endswith("· importe ilegible")
 
+
+def test_el_cuit_con_guiones_no_lleva_signo_y_el_verificador_delata_el_digito_mal_leido():
+    """Caso real (SDN, 2026-10-29): la referencia leyó 33693450239, otro
+    33-69345023-9 (el mismo CUIT, salía con ±) y Kimi 33-59345023-9 (un
+    dígito mal leído, que además no pasa el módulo 11)."""
+    def con(cuit_):
+        r = json.loads(json.dumps(RECIBO)); r["empleador"]["cuit"] = cuit_; return r
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash", "moonshot:kimi-k3"], [
+        (con("33693450239"), {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}),
+        (con("33-69345023-9"), {"modelo": "alibaba:qwen3.8-flash", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}),
+        (con("33-59345023-9"), {"modelo": "moonshot:kimi-k3", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1})])
+    fila = lambda i: next(d for d in r["modelos"][i]["resumen"] if d["etiqueta"] == "CUIT del empleador")
+    assert fila(1)["igual"] and not fila(1)["signo"] and not fila(1)["invalido"]
+    assert not fila(2)["igual"] and not fila(2)["signo"] and fila(2)["invalido"]
+    assert not fila(0)["invalido"]
+    assert any("Kimi K3" in l and "verificador" in l for l in r["analisis"])
+    # El ± sigue existiendo para lo que es signo de verdad.
+    neg = json.loads(json.dumps(RECIBO)); neg["totales_impresos"]["descuentos"] = 110000
+    r2 = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "moonshot:kimi-k3"], [
+        (RECIBO, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}),
+        (neg, {"modelo": "moonshot:kimi-k3", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1})])
+    assert next(d for d in r2["modelos"][1]["resumen"] if d["etiqueta"] == "Descuentos")["signo"]
+

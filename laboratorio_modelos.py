@@ -44,6 +44,8 @@ from pathlib import Path
 
 import httpx
 
+import cuit
+
 import extractor
 import precios_ia
 from extractor import ErrorLectura
@@ -298,6 +300,14 @@ def sin_identidad(tipo: str, datos: dict) -> dict:
     return d
 
 
+def _cuit_invalido(d: dict) -> bool:
+    """True si el dato es un CUIL/CUIT con dígitos que no pasa el verificador."""
+    if not d["etiqueta"].startswith("CUI"):
+        return False
+    digitos = cuit.normalizar(d.get("comparar") or d.get("valor"))
+    return bool(digitos) and not cuit.es_valido(digitos)
+
+
 def _etiqueta_error(e: BaseException) -> str:
     if isinstance(e, (ErrorLectura, ErrorProveedor)):
         return str(e)[:300]
@@ -346,8 +356,15 @@ def armar_resultado(tipo: str, claves: list, lecturas: list) -> dict:
                          "igual": any(d["etiqueta"] == x["etiqueta"] and d["comparar"] == x["comparar"]
                                       for x in referencia[1]),
                          # Igual en valor absoluto pero escrito con otro signo: se señala.
+                         # SOLO si difieren en el "-" de adelante: un CUIT con guiones
+                         # contra uno sin guiones es el mismo número y no lleva ±.
                          "signo": any(d["etiqueta"] == x["etiqueta"] and d["comparar"] == x["comparar"]
-                                      and d["valor"] != x["valor"] for x in referencia[1])}
+                                      and d["valor"] != x["valor"]
+                                      and d["valor"].lstrip("-") == x["valor"].lstrip("-")
+                                      for x in referencia[1]),
+                         # Un CUIL o CUIT que no pasa el módulo 11 es un dígito mal leído,
+                         # aunque todos los modelos coincidan (cuit.py, única implementación).
+                         "invalido": _cuit_invalido(d)}
                         for d in resumen],
             "iguales": iguales, "campos": len(resumen),
             "json": json.dumps(datos, ensure_ascii=False, indent=1),
@@ -399,6 +416,10 @@ def analisis(filas: list, lineas: dict | None, referencia: str | None) -> list:
         if lineas.get("signos"):
             out.append(f"{lineas['signos']} línea(s) difieren solo en el signo (un modelo transcribe el descuento en negativo y otro "
                        "en positivo): la app usa el valor absoluto, así que no cambia el resultado, pero se señala en ámbar.")
+    invalidos = [(f["nombre"], d["etiqueta"]) for f in ok for d in f.get("resumen", []) if d.get("invalido")]
+    if invalidos:
+        out.append("Dígito mal leído: " + "; ".join(f"{n} devolvió un {e} que no pasa el verificador (módulo 11)" for n, e in invalidos)
+                   + ". En la app ese recibo no se validaría contra el empleador correcto.")
     signos_tot = [d["etiqueta"] for f in otros for d in f.get("resumen", []) if d.get("signo")]
     if signos_tot and not (lineas and lineas.get("signos")):
         out.append(f"Totales escritos con distinto signo ({', '.join(sorted(set(signos_tot)))}): mismo importe, "
