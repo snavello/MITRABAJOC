@@ -5,8 +5,8 @@ funcionalidad nueva, +1 al minor y el patch vuelve a 01. Solo sube la app que
 se tocó. Ante la duda de si un cambio es "funcionalidad nueva", lo decide Sd.
 """
 
-VERSION_TRABAJADOR = "0.56.01"
-VERSION_ADMIN = "0.76.01"
+VERSION_TRABAJADOR = "0.57.01"
+VERSION_ADMIN = "0.77.01"
 VERSION_PLATAFORMA = "0.64.01"
 
-FECHA_VERSION = "2026-10-29 15:36"
+FECHA_VERSION = "2026-10-29 17:04"

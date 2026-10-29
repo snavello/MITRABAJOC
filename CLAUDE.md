@@ -674,7 +674,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   50, 75, 100), no un `saturate()` sobre la original: a 0 % tiene que verse
   exactamente como antes, y los velos del modelo siguen arriba. Una foto sin
   versión en color se muestra normalizada aunque el nivel pida color.
-  Detalle en HISTORIAL.md, "Las fotos de los modelos, también en color".
+  **Las fotos de Noticias y Beneficios siguen la misma regla** con su
+  propio nivel por modelo (`Sindicato.saturacion_publicaciones`), que rige
+  solo donde el modelo las usa de ambiente (tapa y carrusel de la portada);
+  abiertas, se ven tal cual se subieron. Detalle en HISTORIAL.md, "Las
+  fotos de los modelos, también en color" y "Las fotos de noticias y
+  beneficios, en gris o en color".
 
 - **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
   (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
@@ -1389,6 +1394,17 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     que plataforma la reponga con «Volver a subir el archivo» (`POST
     /plataforma/fotos-tema/{id}/archivo`, conserva id, foco y publicación).
     Detalle en HISTORIAL.md, "Las fotos de los modelos, también en color".
+    **Lo mismo para las fotos de Noticias y Beneficios** (misma tarde,
+    Trabajador 0.57.01, Admin 0.77.01): la normalizada se guarda al lado
+    de la de color (`Noticia.imagen1_norm`/`imagen2_norm`,
+    `Beneficio.imagen_norm`, migración `c8d0e2f4a6b3`; al subir y, en las
+    de antes, la primera vez que se pide: `db.imagen_normalizada`),
+    rutas `/noticia-imagen/{id}/{n}/normalizada` y
+    `/beneficio-imagen/{id}/normalizada`, y un segundo selector por modelo
+    en Apariencia (`Sindicato.saturacion_publicaciones`) que rige la nota
+    de tapa y el carrusel de la portada; al abrir la noticia o el
+    beneficio, la foto va siempre tal cual se subió. HISTORIAL.md, "Las
+    fotos de noticias y beneficios, en gris o en color".
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

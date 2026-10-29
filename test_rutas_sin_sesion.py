@@ -51,7 +51,9 @@ PUBLICAS = {
     ("GET", "/logo-plataforma"): "logo de Colm3na",
     ("GET", "/logo-plataforma-oscuro"): "logo de Colm3na",
     ("GET", "/noticia-imagen/{noticia_id}/{n}"): "imagen de noticia (contenido público del gremio)",
+    ("GET", "/noticia-imagen/{noticia_id}/{n}/normalizada"): "la misma en gris normalizado (ídem)",
     ("GET", "/beneficio-imagen/{beneficio_id}"): "imagen de beneficio (ídem)",
+    ("GET", "/beneficio-imagen/{beneficio_id}/normalizada"): "la misma en gris normalizado (ídem)",
     # Pasos 1 y 2 del registro (PLAN_REGISTRO.md): son anteriores a toda sesión
     # por definición, con captcha y freno por IP; no entregan datos de nadie.
     ("POST", "/trabajador/registro/iniciar"): "paso 1 del registro del afiliado",

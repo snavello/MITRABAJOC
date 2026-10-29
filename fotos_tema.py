@@ -88,6 +88,29 @@ def normalizar(datos: bytes) -> dict:
             "datos_color": salida_color.getvalue(), "mime_color": "image/webp"}
 
 
+def normalizar_imagen(datos: bytes) -> dict:
+    """La versión NORMALIZADA (gris, niveles y brillo parejos, webp) de una
+    imagen que ya está guardada en color: las fotos de Noticias y Beneficios
+    (2026-10-29), que no tienen el tamaño mínimo de la biblioteca de portada
+    porque son contenido, no fondo. Devuelve {"datos", "mime", "ancho",
+    "alto"}; lanza FotoInvalida si no es una imagen."""
+    if not datos:
+        raise FotoInvalida("No hay imagen.")
+    try:
+        imagen = Image.open(BytesIO(datos))
+        imagen.load()
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as e:
+        raise FotoInvalida("No se pudo leer la imagen.") from e
+    imagen = ImageOps.exif_transpose(imagen)
+    gris = imagen.convert("L")
+    gris.thumbnail((LADO_MAXIMO, LADO_MAXIMO), Image.LANCZOS)
+    gris = ImageOps.autocontrast(gris, cutoff=RECORTE)
+    gris = _llevar_brillo(gris, BRILLO_MEDIO)
+    salida = BytesIO()
+    gris.save(salida, "WEBP", quality=CALIDAD, method=6)
+    return {"datos": salida.getvalue(), "mime": "image/webp", "ancho": gris.width, "alto": gris.height}
+
+
 def brillo_medio(imagen: Image.Image) -> float:
     """Luminancia media de 0 a 1 (para los tests y la pantalla)."""
     hist = imagen.convert("L").histogram()

@@ -217,6 +217,8 @@ html[data-tema="noticiero"] .pt-tapa-foto { aspect-ratio: auto; height: 292px; m
   background: var(--nt-indigo); box-shadow: inset 0 -4px 0 var(--nt-coral); }
 html[data-tema="noticiero"] .pt-tapa-foto img { filter: grayscale(1) contrast(1.25) brightness(1.04); mix-blend-mode: screen;
   transform-origin: 60% 40%; animation: nt-zoom 24s var(--nt-curva) infinite alternate; transition: none; }
+/* La foto en color de la noticia, si el sindicato la pidió (fotos_tema.SATURACIONES): encima del duotono con su opacidad. */
+html[data-tema="noticiero"] .pt-tapa-foto img.foto-color { filter: none; mix-blend-mode: normal; opacity: var(--foto-sat, 1); }
 html[data-tema="noticiero"] .pt-tapa:hover .pt-tapa-foto img { transform: none; }
 html[data-tema="noticiero"] .pt-tapa-foto::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: var(--nt-marfil); mix-blend-mode: multiply; }
@@ -308,6 +310,7 @@ html[data-tema="noticiero"] .pt-filas .badge-noleidas { top: 8px; left: 44px; ri
 html[data-tema="noticiero"] .car-marco { border: 1px solid var(--nt-linea); border-radius: 0; box-shadow: none; }
 html[data-tema="noticiero"] .car-sl { aspect-ratio: auto; height: 214px; isolation: isolate; background: var(--nt-indigo); }
 html[data-tema="noticiero"] .car-sl img { filter: grayscale(1) contrast(1.25) brightness(1.04); mix-blend-mode: screen; }
+html[data-tema="noticiero"] .car-sl img.foto-color { filter: none; mix-blend-mode: normal; opacity: var(--foto-sat, 1); }
 html[data-tema="noticiero"] .car-sl::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: var(--nt-marfil); mix-blend-mode: multiply; }
 html[data-tema="noticiero"] .car-velo { z-index: 2; background: linear-gradient(180deg,

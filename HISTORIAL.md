@@ -9551,3 +9551,45 @@ borrador solo lo ve plataforma) y su propio sello `?v=`.
 Tests: `test_fotos_tema.py` (las dos versiones, el catálogo, la ruta y la
 reposición), `test_apariencia_panel.py` (guardar el nivel, lo que recibe la
 portada, la foto sin color, el rechazo), `test_biblioteca_fotos_pantalla.py`.
+
+## Las fotos de noticias y beneficios, en gris o en color (2026-10-29, Trabajador 0.57.01, Admin 0.77.01)
+
+Lo mismo que la foto de portada de los modelos, pedido por SDN el mismo
+día, para las fotos que el sindicato pone en sus Noticias y Beneficios. La
+diferencia de partida: esas imágenes ya se guardaban en color (son
+contenido, entran por el alta de la noticia o del beneficio) y el modelo
+las pasaba a gris con CSS en la nota de tapa y en el carrusel de la
+portada; no existía la versión normalizada.
+
+**Qué se guarda.** `fotos_tema.normalizar_imagen` es la normalizada de
+siempre (gris, niveles, brillo, webp) sin exigir el tamaño mínimo de la
+biblioteca, porque una foto de noticia puede ser chica. Va en
+`Noticia.imagen1_norm` / `imagen2_norm` y `Beneficio.imagen_norm`
+(migración `c8d0e2f4a6b3`): se calcula al subir la imagen (alta y
+edición, `db.normalizada_o_none`) y, **en las de antes, la primera vez
+que se pide** (`db.imagen_normalizada`: calcula, guarda y sirve). No hay
+que reponer nada a mano. Una imagen que no se puede leer se sirve en
+color tal cual, sin 500, y la hoja del modelo la pasa a gris como hasta
+hoy. Rutas `GET /noticia-imagen/{id}/{n}/normalizada` y
+`GET /beneficio-imagen/{id}/normalizada`, públicas como las originales.
+
+**Dónde se elige y dónde se ve.** En Apariencia, debajo del selector de
+la foto de portada de cada modelo, «Color de las fotos de noticias y
+beneficios» con las mismas cinco pastillas, guardado por modelo en
+`Sindicato.saturacion_publicaciones` (`db.elegir_saturacion_publicaciones`,
+mismo validador y mismo rechazo entero del formulario). Vale para la nota
+de tapa y el carrusel de la portada del afiliado: la normalizada abajo y
+la original en color encima con la opacidad del nivel (`img.foto-color`
+en `.pt-tapa-foto` y `.car-sl`, en Laguna y Noticiero). **Al abrir una
+noticia o un beneficio la foto se ve siempre tal cual se subió**: ahí es
+contenido que la persona quiere mirar, no ambiente; lo mismo las
+miniaturas de Novedades en `/app`, que los modelos ya mostraban en color.
+El nivel por defecto es 0, así que la portada ahora muestra la normalizada
+de verdad (niveles y brillo parejos) donde antes mostraba la de color con
+un `grayscale(1)`: el cambio es leve y es el que pide el diseño de los
+modelos. Verificado con capturas en los dos modelos a 0, 50 y 100 %.
+
+Tests: `test_publicaciones_color.py`; `test_noticias.py` y
+`test_beneficios.py` miran ahora la normalizada en la portada;
+`test_rutas_sin_sesion.py` y `test_regularizar_cuit.py` con las rutas y la
+columna nuevas declaradas.
