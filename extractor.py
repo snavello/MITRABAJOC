@@ -366,10 +366,16 @@ def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
 # que compara dos lecturas está en la misma pantalla y se actualiza junto.
 def _num(x) -> str:
     """1234.5 -> "1.234,50". Devuelve "—" si no hay número: un campo que el
-    modelo no leyó no es un cero."""
-    try:
-        v = float(x)
-    except (TypeError, ValueError):
+    modelo no leyó no es un cero.
+
+    Se lee con `validador.a_numero`, la MISMA función por la que pasa todo
+    importe antes de entrar al motor: un modelo que transcribe "2.180,00"
+    como texto (Kimi K3, 2026-10-29) es el mismo importe para la app, y el
+    comparador tiene que decir lo mismo que la app. Antes `float("2.180,00")`
+    fallaba y todas sus líneas salían como "· —", es decir, distintas."""
+    import validador
+    v = validador.a_numero(x)
+    if v is None:
         return "—"
     return f"{v:,.2f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
 
@@ -521,7 +527,8 @@ def comparar_lineas(lecturas: list) -> dict:
             # "173.520,83" en la columna Deducciones y otro "-173.520,83".
             # Mismo criterio que un CUIT con o sin guiones.
             if ln["importe"].lstrip("-") != ref["importe"].lstrip("-"):
-                valor += f' · {ln["importe"]}'
+                # "—" es "no se pudo leer como número": se dice, no se deja un guion.
+                valor += " · importe ilegible" if ln["importe"] == "—" else f' · {ln["importe"]}'
             if ln["codigo"] != ref["codigo"]:
                 valor += f' · código {ln["codigo"]}'
             # El signo solo no es diferencia, pero SE SEÑALA (`signo`): que un
