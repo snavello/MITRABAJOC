@@ -4744,17 +4744,22 @@ def admin_ver_tramite(tramite_id: int, request: Request):
 
 
 @app.get("/admin/tramites/listado.csv")
-def admin_tramites_listado_csv(request: Request, tipo_id: int = 0, estado: str = "", seccional_id: str = ""):
-    """El listado de los pedidos de UN formulario con sus respuestas, una
-    columna por campo, filtrado por estado y seccional (2026-10-28; cierra
-    la brecha «exportar» del Asistente de trámites, BACKLOG «seis brechas»
-    4). Dentro del alcance del operador (db.listado_tramites recorta por área
-    y seccional en la consulta), y CADA DESCARGA QUEDA REGISTRADA
-    (DescargaListado): nombres y documentos de familiares son dato sensible."""
+def admin_tramites_listado_csv(request: Request, tipo_id: int = 0, estado: str = "", seccional_id: str = "",
+                               q: str = "", expediente: str = "", grupo: str = ""):
+    """Baja lo que la bandeja de Trámites tiene filtrado (2026-10-29, SDN:
+    «ponés los filtros para todo el listado y con lo filtrado bajás a
+    CSV»): los mismos filtros de la pantalla (formulario, estado o pastilla,
+    seccional, nombre o CUIL, expediente) y, si hay un formulario elegido,
+    una columna por pregunta. Dentro del alcance del operador
+    (db.listado_tramites recorta por área y seccional en la consulta), y
+    CADA DESCARGA QUEDA REGISTRADA (DescargaListado): nombres y documentos
+    de familiares son dato sensible."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     if estado and estado not in db.ESTADOS_TRAMITE:
         raise HTTPException(400, "Estado desconocido")
+    if grupo and grupo not in db.GRUPOS_TRAMITE:
+        raise HTTPException(400, "Grupo desconocido")
     try:
         sec = int(seccional_id) if seccional_id else None
     except ValueError:
@@ -4762,21 +4767,31 @@ def admin_tramites_listado_csv(request: Request, tipo_id: int = 0, estado: str =
     alcance = _alcance_de(request)
     if sec and alcance is not None and sec not in alcance:
         raise HTTPException(403, "Esa seccional está fuera de tu alcance")
-    datos = db.listado_tramites(sid, tipo_id, _uid_sesion(request), estado=estado, seccional_id=sec)
-    if not datos:
+    datos = db.listado_tramites(sid, _uid_sesion(request), tipo_tramite_id=tipo_id or None, estado=estado,
+                                seccional_id=sec, q=q[:120], expediente=expediente[:60], grupo=grupo)
+    if datos is None:
         raise HTTPException(404, "Formulario no encontrado")
     import csv
     import io
     salida = io.StringIO()
     w = csv.writer(salida, delimiter=";")
-    w.writerow(["Expediente", "Iniciado", "Actualizado", "Estado", "Apellido y nombre", "CUIL", "Seccional", "Área a cargo"]
+    con_tipo = bool(datos["tipo"])
+    w.writerow(["Expediente"] + ([] if con_tipo else ["Formulario"])
+               + ["Iniciado", "Actualizado", "Estado", "Apellido y nombre", "CUIL", "Seccional", "Área a cargo"]
                + datos["campos"])
     for f in datos["filas"]:
-        w.writerow([f["expediente"], f["creado"], f["actualizado"], f["estado"], f["nombre"], f["cuil"],
-                    f["seccional"], f["area"]] + [f["respuestas"][i] for i in datos["indices"]])
-    filtros = " · ".join(x for x in (f"estado {estado}" if estado else "", f"seccional {sec}" if sec else "") if x) or "sin filtros"
-    db.registrar_descarga_listado(sid, tipo_id, _uid_sesion(request), filtros, len(datos["filas"]))
-    nombre = f"tramites-{db.sin_tildes(datos['tipo']['codigo']).lower().replace(' ', '-')}-{fechas.hoy_texto()}.csv"
+        w.writerow([f["expediente"]] + ([] if con_tipo else [f["formulario"]])
+                   + [f["creado"], f["actualizado"], f["estado"], f["nombre"], f["cuil"], f["seccional"], f["area"]]
+                   + [f["respuestas"][i] for i in datos["indices"]])
+    filtros = " · ".join(x for x in (
+        f"formulario {datos['tipo']['codigo']}" if con_tipo else "",
+        f"estado {estado}" if estado else (f"grupo {grupo}" if grupo else ""),
+        f"seccional {sec}" if sec else "", f"busca «{q.strip()}»" if q.strip() else "",
+        f"expediente «{expediente.strip()}»" if expediente.strip() else "") if x) or "sin filtros"
+    db.registrar_descarga_listado(sid, datos["tipo"]["id"] if con_tipo else None, _uid_sesion(request),
+                                  filtros, len(datos["filas"]))
+    codigo = f"-{db.sin_tildes(datos['tipo']['codigo']).lower().replace(' ', '-')}" if con_tipo else ""
+    nombre = f"tramites{codigo}-{fechas.hoy_texto()}.csv"
     contenido = "\ufeff" + salida.getvalue()
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
