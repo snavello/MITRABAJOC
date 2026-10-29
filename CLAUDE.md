@@ -1953,7 +1953,9 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   **«Qué implica»**: `laboratorio_modelos.analisis` escribe cinco o seis
   líneas deterministas (quién falló, en qué campos difieren y qué toca de
   la validación, líneas distintas, signo, costo y tiempo, el que más se
-  aparta), en el resultado y en cada ensayo guardado.
+  aparta: campos del resumen + líneas, sin contar las filas `ref_sola`;
+  nadie si nadie se aparta, todos en empate), en el resultado y en cada
+  ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)

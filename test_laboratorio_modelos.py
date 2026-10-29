@@ -637,3 +637,30 @@ def test_la_referencia_es_el_modelo_de_produccion_aunque_no_vaya_primero(monkeyp
     assert r.status_code == 200, r.text
     assert r.json()["referencia"] == "Claude Haiku 4.5"
     assert [m["clave"] for m in r.json()["modelos"]][0] == "anthropic:claude-haiku-4-5"
+
+
+def test_el_que_mas_se_aparta_cuenta_las_lineas_y_no_inventa_un_peor_en_empate():
+    """SDN vio «el que más se aparta es Luna» con Luna idéntica a la referencia
+    y Qwen con una línea (PAMI) clasificada distinto: se miraba solo el
+    resumen y, en empate, salía el primero de la lista. Ahora cuentan las
+    líneas y en empate total no se nombra a nadie."""
+    ref = json.loads(json.dumps(RECIBO)); igual = json.loads(json.dumps(RECIBO))
+    qwen = json.loads(json.dumps(RECIBO)); qwen["lineas"][1]["categoria_universal"] = "pami"
+    uso = {"tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna", "alibaba:qwen3.8-flash"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6")), (igual, dict(uso, modelo="openai:gpt-6-luna")),
+        (qwen, dict(uso, modelo="alibaba:qwen3.8-flash"))])
+    aviso = next(l for l in r["analisis"] if "se aparta" in l and "Ojo" not in l)
+    assert aviso.startswith("El que más se aparta es Qwen 3.8 Flash: 1 línea(s)")
+    # Todos iguales a la referencia: no se nombra a ninguno como el peor.
+    r2 = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna", "alibaba:qwen3.8-flash"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6")), (igual, dict(uso, modelo="openai:gpt-6-luna")),
+        (igual, dict(uso, modelo="alibaba:qwen3.8-flash"))])
+    assert not any("se aparta es" in l or "se apartan son" in l for l in r2["analisis"])
+    # Dos empatados: se nombran los dos.
+    r3 = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "openai:gpt-6-luna", "alibaba:qwen3.8-flash"], [
+        (ref, dict(uso, modelo="claude-sonnet-4-6")), (qwen, dict(uso, modelo="openai:gpt-6-luna")),
+        (qwen, dict(uso, modelo="alibaba:qwen3.8-flash"))])
+    # Acá los dos coinciden entre sí contra la referencia: la fila es ref_sola y no cuenta contra ellos.
+    assert not any("se aparta es" in l or "se apartan son" in l for l in r3["analisis"])
+    assert any(l.startswith("Ojo con la referencia") for l in r3["analisis"])

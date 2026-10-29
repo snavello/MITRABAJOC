@@ -447,7 +447,24 @@ def analisis(filas: list, lineas: dict | None, referencia: str | None,
         out.append(f"Solo contestó {ok[0]['nombre']}: con uno solo no hay comparación. Sumá al menos el de producción.")
         return out
     otros = [f for f in ok if f["nombre"] != referencia]
-    peor = min(otros, key=lambda f: (f.get("iguales", 0), -f.get("campos", 0)), default=None)
+    # Cuánto se aparta cada uno de la referencia: campos del resumen distintos
+    # MÁS líneas leídas distinto (clasificación, importe, código o que no la
+    # leyó), sin contar las filas donde la que se aparta es la referencia.
+    # Antes se miraba solo el resumen y, en empate, salía el primero de la
+    # lista: SDN vio «el que más se aparta es Luna» con Luna igual en todo y
+    # Qwen con PAMI leído distinto (2026-10-29).
+    pos_ok = {f["nombre"]: k for k, f in enumerate(ok)}
+
+    def _apartamiento(f):
+        resumen_ = f.get("campos", 0) - f.get("iguales", 0)
+        lineas_ = 0
+        if lineas and f["nombre"] in pos_ok:
+            k = pos_ok[f["nombre"]]
+            lineas_ = sum(1 for fila in lineas["filas"]
+                          if not fila.get("ref_sola") and k < len(fila["celdas"])
+                          and not fila["celdas"][k]["igual"])
+        return resumen_, lineas_
+    apart = {f["nombre"]: _apartamiento(f) for f in otros}
     difieren = [f for f in otros if f.get("iguales", 0) < f.get("campos", 0)]
     if not difieren:
         out.append(f"Los {len(ok)} coincidieron en todos los campos del resumen con {referencia}: "
@@ -498,8 +515,15 @@ def analisis(filas: list, lineas: dict | None, referencia: str | None,
         out.append(f"Costo: {barato['nombre']} {barato['costo_txt']} contra {caro['nombre']} {caro['costo_txt']}"
                    + (f" ({veces:.0f}× más caro)" if veces >= 2 else "")
                    + f". Tiempo: {rapido['nombre']} {rapido['duracion_txt']} contra {lento['nombre']} {lento['duracion_txt']}.")
-    if peor is not None and peor.get("campos"):
-        out.append(f"El que más se aparta es {peor['nombre']} ({peor['iguales']}/{peor['campos']} campos iguales). "
+    tope = max((sum(v) for v in apart.values()), default=0)
+    if tope > 0:
+        peores = [n for n, v in apart.items() if sum(v) == tope]
+        r_, l_ = apart[peores[0]]
+        detalle = " y ".join(x for x in (f"{r_} campo(s) del resumen" if r_ else "",
+                                        f"{l_} línea(s)" if l_ else "") if x)
+        quien = (f"El que más se aparta es {peores[0]}" if len(peores) == 1
+                 else "Los que más se apartan son " + ", ".join(peores[:-1]) + f" y {peores[-1]}")
+        out.append(f"{quien}: {detalle} distinto(s) de {referencia}. "
                    "Con un ensayo no alcanza: treinta recibos distintos antes de sacar una conclusión.")
     return out[:6]
 
