@@ -2340,7 +2340,7 @@
     <table id="tr-tabla">
       <tr><th>Expediente</th><th>Nombre</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
       {% for tr in tr_abiertos + tr_terminados %}
-      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-persona="{{ tr.nombre or '' }}" data-estado="{{ tr.estado }}" data-tipo="{{ tr.tipo_tramite_id }}" data-seccional="{{ tr.seccional_id or '' }}" data-actualizado="{{ tr.actualizado }}"{% if tr.estado == 'terminado' %} style="display:none"{% endif %}>
+      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-persona="{{ tr.nombre or '' }}" data-estado="{{ tr.estado }}" data-actualizado="{{ tr.actualizado }}" data-tipo="{{ tr.tipo_tramite_id }}" data-seccional="{{ tr.seccional_id or '' }}"{% if tr.estado == 'terminado' %} style="display:none"{% endif %}>
         <td><code>{{ tr.numero_expediente }}</code></td>
         <td>{{ tr.nombre or '—' }}</td>
         <td class="lst-nowrap">{{ tr.cuil }}</td>
