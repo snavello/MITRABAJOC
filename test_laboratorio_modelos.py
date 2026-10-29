@@ -450,3 +450,22 @@ def test_correr_en_vivo_transmite_un_evento_por_modelo(monkeypatch):
     # Lo que falla antes de empezar, falla con su HTTP normal (sin modelos: 422).
     assert c.post(API + "/correr-en-vivo", data={"tipo": "recibo"}, files={"archivo": ("r.png", b"x", "image/png")}).status_code == 422
 
+
+def test_un_importe_escrito_como_texto_argentino_es_el_mismo_importe():
+    """Kimi K3 devolvió "2.180,00" (texto) donde Claude devolvió 2180.0: la app
+    los lee igual (validador.a_numero), así que el comparador también. Y un
+    importe que de verdad no se puede leer se dice, no sale como "· —"."""
+    texto = json.loads(json.dumps(RECIBO))
+    texto["lineas"][0]["importe"] = "2.180,00"; RECIBO_NUM = json.loads(json.dumps(RECIBO)); RECIBO_NUM["lineas"][0]["importe"] = 2180
+    texto["lineas"][1]["importe"] = "-110.000,00"
+    texto["totales_impresos"] = {"remuneraciones": "1.000.000,00", "descuentos": "-110.000,00", "neto": "890.000,00"}
+    c = extractor.comparar_lineas([("a", RECIBO_NUM), ("b", texto)])
+    assert c["distintas"] == 0 and c["signos"] == 0
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "moonshot:kimi-k3"], [
+        (RECIBO_NUM, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}),
+        (texto, {"modelo": "moonshot:kimi-k3", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1})])
+    assert r["modelos"][1]["iguales"] == r["modelos"][1]["campos"]
+    ilegible = json.loads(json.dumps(RECIBO_NUM)); ilegible["lineas"][0]["importe"] = "dos mil"
+    c = extractor.comparar_lineas([("a", RECIBO_NUM), ("b", ilegible)])
+    assert c["distintas"] == 1 and c["filas"][0]["celdas"][1]["valor"].endswith("· importe ilegible")
+
