@@ -284,6 +284,7 @@ EXCLUIDAS = {
     "avisoenviado.clave": "candado de avisos por día: no lleva identidades",
     "fototema.sindicatos": "ids de fila de los sindicatos a los que se ofrece la foto (PLAN_TEMAS.md): no son identidades",
     "sindicato.fotos_portada": "ids de FotoTema elegidas por modelo de diseño (PLAN_TEMAS.md): no lleva identidades",
+    "sindicato.saturacion_fotos": "cuánto color muestra la foto de portada por modelo (fotos_tema.SATURACIONES): no lleva identidades",
     "configuracionplataforma.claves_laboratorio": "claves de API de los proveedores del Laboratorio de modelos ({variable: clave}): no lleva identidades",
     "sindicato.tu_dia": "rubros e intervalo de «Tu día» elegidos por el sindicato: no lleva identidades",
     "cacheexterna.valor": "respuestas de clima, dólar y centroides de «Tu día»: no lleva identidades",

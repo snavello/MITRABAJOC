@@ -277,6 +277,13 @@ class Sindicato(SQLModel, table=True):
     # {"laguna": id de FotoTema, "noticiero": id}. Sin elegir = la primera
     # publicada que tenga disponible.
     fotos_portada: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    # Cuánto color muestra la foto de portada de cada modelo
+    # (`fotos_tema.SATURACIONES`): {"laguna": 0, "noticiero": 50}. 0 o sin
+    # elegir = la normalizada sola, como siempre; 100 = la original a todo
+    # color; en el medio, la de color fundida sobre la normalizada. Vale
+    # para la foto que tenga de portada; si esa foto no tiene versión en
+    # color (se subió antes del 2026-10-29), se muestra normalizada.
+    saturacion_fotos: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
     # "Tu día" en la portada del afiliado (módulo opt-in `tu_dia`): qué rubros
     # rotan, cada cuánto y sus opciones. NULL = los valores por defecto de
     # tu_dia.py. Lo escribe solo `db.set_tu_dia`, que descarta lo que no está
@@ -1038,16 +1045,22 @@ class UsoIA(SQLModel, table=True):
 class FotoTema(SQLModel, table=True):
     """Una foto de la biblioteca de un modelo de diseño (PLAN_TEMAS.md, D5).
 
-    La carga plataforma y se guarda YA normalizada (`fotos_tema.normalizar`:
-    gris, niveles y brillo parejos, webp): el color lo pone el modelo al
-    mostrarla. Bytes en la base, como el logo. `foco_x`/`foco_y` (0 a 1) es
-    el punto de interés: el recorte de cada pantalla se centra ahí. Un
-    borrador no lo ve ningún sindicato; publicada, la ven todos o solo los de
-    `sindicatos`."""
+    La carga plataforma y se guarda en dos versiones del mismo tamaño
+    (`fotos_tema.normalizar`): `datos` es la NORMALIZADA (gris, niveles y
+    brillo parejos, webp), a la que el modelo le pone el color al mostrarla;
+    `datos_color` es la ORIGINAL en color (solo orientada y acotada), que el
+    sindicato puede fundir encima según `Sindicato.saturacion_fotos`. NULL
+    en `datos_color` = foto subida antes del 2026-10-29, solo en gris, hasta
+    que plataforma la vuelva a subir. Bytes en la base, como el logo.
+    `foco_x`/`foco_y` (0 a 1) es el punto de interés: el recorte de cada
+    pantalla se centra ahí. Un borrador no lo ve ningún sindicato;
+    publicada, la ven todos o solo los de `sindicatos`."""
     id: Optional[int] = Field(default=None, primary_key=True)
     tema: str = Field(index=True)
     datos: bytes
     mime: str = "image/webp"
+    datos_color: Optional[bytes] = None
+    mime_color: str = "image/webp"
     ancho: int = 0
     alto: int = 0
     foco_x: float = 0.5
@@ -3409,6 +3422,8 @@ def crear_foto_tema(tema: str, normalizada: dict, descripcion: str = "", subida_
     """Guarda una foto YA normalizada como borrador del modelo. Devuelve el id."""
     with Session(engine) as s:
         f = FotoTema(tema=tema, datos=normalizada["datos"], mime=normalizada["mime"],
+                     datos_color=normalizada.get("datos_color"),
+                     mime_color=normalizada.get("mime_color") or "image/webp",
                      ancho=normalizada["ancho"], alto=normalizada["alto"],
                      foco_x=_entre_0_y_1(foco_x), foco_y=_entre_0_y_1(foco_y),
                      descripcion=(descripcion or "").strip()[:300],
@@ -3431,7 +3446,28 @@ def _foto_dict(f: "FotoTema") -> dict:
             "foco_x": f.foco_x, "foco_y": f.foco_y, "descripcion": f.descripcion,
             "publicada": f.publicada, "todos_los_sindicatos": f.todos_los_sindicatos,
             "sindicatos": list(f.sindicatos or []), "creada": f.creada,
-            "subida_por": f.subida_por, "v": len(f.datos or b"")}
+            "subida_por": f.subida_por, "v": len(f.datos or b""),
+            # La versión en color, si la tiene, con su propio sello de caché.
+            "color": bool(f.datos_color), "v_color": len(f.datos_color or b"")}
+
+
+def reemplazar_archivo_foto_tema(foto_id: int, normalizada: dict) -> bool:
+    """Plataforma vuelve a subir el archivo de una foto que ya existe (las
+    de antes del 2026-10-29 no tienen versión en color): cambian las dos
+    versiones y el tamaño; quedan el id, el foco, la descripción, la
+    publicación y la disponibilidad, así los sindicatos que la eligieron
+    no tienen que volver a elegirla."""
+    with Session(engine) as s:
+        f = s.get(FotoTema, foto_id)
+        if not f:
+            return False
+        f.datos, f.mime = normalizada["datos"], normalizada["mime"]
+        f.datos_color = normalizada.get("datos_color")
+        f.mime_color = normalizada.get("mime_color") or "image/webp"
+        f.ancho, f.alto = normalizada["ancho"], normalizada["alto"]
+        s.add(f)
+        s.commit()
+        return True
 
 
 def fotos_de_tema(tema: str) -> list:
@@ -3515,6 +3551,38 @@ def elegir_foto_portada(sindicato_id: int, tema: str, foto_id) -> bool:
         s.add(sind)
         s.commit()
         return True
+
+
+def elegir_saturacion_foto(sindicato_id: int, tema: str, nivel) -> bool:
+    """El sindicato elige cuánto color muestra la foto de portada de un
+    modelo (`fotos_tema.SATURACIONES`). Un nivel fuera del catálogo o un
+    modelo que no existe no se guardan."""
+    import fotos_tema
+    import temas
+    n = fotos_tema.saturacion_valida(nivel)
+    if temas.tema_valido(tema) is None or n is None:
+        return False
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return False
+        niveles = dict(sind.saturacion_fotos or {})
+        niveles[tema] = n
+        sind.saturacion_fotos = niveles
+        s.add(sind)
+        s.commit()
+        return True
+
+
+def saturacion_foto_de(sindicato_id: int, tema: str) -> int:
+    """El nivel de color elegido para un modelo; un valor que no está en el
+    catálogo (o nada) vale el por defecto, la normalizada sola."""
+    import fotos_tema
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        guardado = (sind.saturacion_fotos or {}).get(tema) if sind else None
+    n = fotos_tema.saturacion_valida(guardado)
+    return fotos_tema.SATURACION_DEFECTO if n is None else n
 
 
 def foto_portada_de(sindicato_id: int, tema: str):

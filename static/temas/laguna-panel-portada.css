@@ -108,6 +108,9 @@ html[data-tema="laguna"] .pt-media img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
   filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: luminosity; opacity: .9;
 }
+/* La original en color, si el sindicato la pidió (fotos_tema.SATURACIONES):
+   se funde encima de la normalizada con la opacidad elegida. */
+html[data-tema="laguna"] .pt-media img.foto-color { filter: none; mix-blend-mode: normal; opacity: var(--foto-sat, 1); }
 html[data-tema="laguna"] .pt-heroe::after {
   content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(180deg,

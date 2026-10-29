@@ -364,6 +364,15 @@
   .ft-acciones button { margin-top:0; }
   .ft-acciones button.ft-borrar { background:#fff; color:#b23a2e; border:1px solid #e0c4c0; }
   .ft-ficha { font-size:12px; color:var(--gris); margin-top:6px; }
+  .ft-color { display:flex; flex-direction:column; gap:8px; margin-top:10px; padding:10px 12px; border:1px solid var(--linea); border-radius:9px; background:#fbfaf7; }
+  .ft-ver-color { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .ft-ver-color input { width:16px; height:16px; margin:0; accent-color:var(--tinta); }
+  .ft-sin-color { margin:0; font-size:12.5px; color:#8a5a1a; }
+  .ft-reponer { display:flex; flex-direction:column; gap:3px; cursor:pointer; position:relative; }
+  .ft-reponer input[type=file] { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .ft-reponer-btn { align-self:flex-start; font-size:12.5px; font-weight:700; color:var(--tinta); text-decoration:underline; text-underline-offset:3px; }
+  .ft-reponer:has(input:focus-visible) .ft-reponer-btn { outline:2px solid var(--tinta); outline-offset:2px; border-radius:4px; }
+  .ft-chip-gris { background:#eeeeee; color:#555; }
   @media (max-width:760px) {
     .ft-trabajo.editando { grid-template-columns:minmax(0,1fr); }
     .ft-comparar { grid-template-columns:minmax(0,1fr); }
@@ -784,7 +793,7 @@
       <span class="muted">JPG, PNG o WEBP, hasta 8 MB, de al menos 600 px de lado.</span>
       <input type="file" id="ft-archivo" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
     </label>
-    <p class="ft-ayuda">Toda foto se pasa a escala de grises y se le emparejan brillo y contraste; el color lo pone el modelo.</p>
+    <p class="ft-ayuda">De cada foto se guardan dos versiones: la <b>normalizada</b> (escala de grises con brillo y contraste parejos; el color lo pone el modelo) y la <b>original en color</b>. Cada sindicato elige en su Apariencia cuánto color mostrar.</p>
     <div class="campo" style="margin-top:12px;">
       <label for="ft-desc-nueva">Descripción (texto alternativo)</label>
       <input id="ft-desc-nueva" maxlength="300" placeholder="Ej: Asamblea en la puerta de la planta">
@@ -792,7 +801,7 @@
     <button type="button" id="ft-btn-subir" disabled>Subir foto</button>
     <p class="ft-msg" id="ft-msg-subir" role="status" hidden></p>
     <div class="ft-comparar" id="ft-comparar" hidden>
-      <figure><img id="ft-original" alt="Original elegida"><figcaption>Original</figcaption></figure>
+      <figure><img id="ft-original" alt="Original elegida"><figcaption>Original (en color)</figcaption></figure>
       <span class="ft-flecha" aria-hidden="true">→</span>
       <figure>
         <div class="ft-espera" id="ft-espera">Se ve cuando la subas</div>
@@ -822,6 +831,18 @@
         <figure><img class="ft-rec-alto" id="ft-rec-alto" alt=""><figcaption>Teléfono</figcaption></figure>
       </div>
       <p class="ft-ficha" id="ft-ficha"></p>
+      {# La foto en color: si la tiene, se puede ver en el lienzo; si no
+         (subida antes del 2026-10-29), plataforma la vuelve a subir y
+         queda con las dos versiones sin que los sindicatos la re-elijan. #}
+      <div class="ft-color" id="ft-color">
+        <label class="ft-ver-color" id="ft-ver-color-l"><input type="checkbox" id="ft-ver-color"> Ver la versión en color</label>
+        <p class="ft-sin-color" id="ft-sin-color" hidden><b>Esta foto está solo en gris</b>: se subió antes de que guardáramos el color. Si querés que los sindicatos puedan mostrarla en color, volvé a subir el mismo archivo.</p>
+        <label class="ft-reponer" for="ft-archivo-reponer">
+          <span class="ft-reponer-btn">Volver a subir el archivo</span>
+          <span class="muted" style="font-size:12px;">Mismo tamaño mínimo; quedan el punto de interés, la descripción y la publicación.</span>
+          <input type="file" id="ft-archivo-reponer" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+        </label>
+      </div>
 
       <div class="campo" style="margin-top:14px;">
         <label for="ft-desc">Descripción (texto alternativo)</label>
@@ -2025,6 +2046,9 @@ function ftPintarGrilla() {
     // Sin descripción, la foto no tiene texto alternativo: se avisa como
     // falta (chip ámbar), no como un texto en itálica que parece contenido.
     if (!f.descripcion) chips.append(ftEl('span', 'chip-estado ft-chip-borr', 'Falta descripción'));
+    // Sin versión en color (subida antes del 2026-10-29): el sindicato solo
+    // la puede mostrar normalizada, se dice acá para que plataforma la reponga.
+    if (!f.color) chips.append(ftEl('span', 'chip-estado ft-chip-gris', 'Solo en gris'));
     const desc = ftEl('span', 'ft-desc', f.descripcion || '');
     // La acción, a la vista; la ficha entera sigue siendo el botón.
     const accion = ftEl('span', 'ft-accion', f.publicada ? 'Editar' : 'Editar y publicar');
@@ -2061,8 +2085,10 @@ function ftSincAlcance() {
 function ftAbrir(f) {
   ft.elegida = f;
   ft.foco = {x: ftEntre01(f.foco_x), y: ftEntre01(f.foco_y)};
-  const url = ftUrl(f);
-  ['ft-ed-img', 'ft-rec-ancho', 'ft-rec-alto'].forEach(id => { ft$(id).src = url; });
+  ft$('ft-ver-color').checked = false;
+  ft$('ft-ver-color-l').hidden = !f.color;
+  ft$('ft-sin-color').hidden = !!f.color;
+  ftPintarLienzo();
   ft$('ft-ed-img').alt = f.descripcion || 'Foto sin descripción';
   ft$('ft-desc').value = f.descripcion || '';
   document.querySelectorAll('input[name="ft-estado"]').forEach(r => { r.checked = r.value === (f.publicada ? '1' : '0'); });
@@ -2078,6 +2104,39 @@ function ftAbrir(f) {
   ft$('ft-trabajo').classList.add('editando');
   ftMarcarElegida();
   if (window.matchMedia('(max-width:760px)').matches) ft$('ft-editor').scrollIntoView({block: 'start'});
+}
+
+function ftUrlColor(f) {
+  return '/foto-tema/' + encodeURIComponent(f.id) + '/color?v=' + encodeURIComponent(f.v_color || 0);
+}
+
+function ftPintarLienzo() {
+  const f = ft.elegida;
+  if (!f) return;
+  const url = (f.color && ft$('ft-ver-color').checked) ? ftUrlColor(f) : ftUrl(f);
+  ['ft-ed-img', 'ft-rec-ancho', 'ft-rec-alto'].forEach(id => { ft$(id).src = url; });
+}
+
+async function ftReponer(file) {
+  const f = ft.elegida;
+  if (!f || !file) return;
+  const tipoOk = /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name || '');
+  if (!tipoOk) { ftMsg('ft-msg-editar', 'Ese archivo no es una foto JPG, PNG o WEBP.', 'error'); return; }
+  if (file.size > FT_MAX_BYTES) { ftMsg('ft-msg-editar', 'La foto pesa más de 8 MB.', 'error'); return; }
+  const fd = new FormData();
+  fd.append('archivo', file);
+  ftMsg('ft-msg-editar', 'Subiendo y normalizando…');
+  let r;
+  try {
+    r = await fetch('/plataforma/fotos-tema/' + encodeURIComponent(f.id) + '/archivo', {method: 'POST', body: fd, credentials: 'same-origin'});
+  } catch (e) { r = null; }
+  ft$('ft-archivo-reponer').value = '';
+  if (!r || !r.ok) {
+    ftMsg('ft-msg-editar', r ? await ftDetalle(r) : 'No se pudo subir: revisá la conexión.', 'error');
+    return;
+  }
+  await ftCargar(f.id);
+  ftMsg('ft-msg-editar', 'Archivo repuesto: la foto quedó en gris y en color, con el mismo punto de interés.', 'ok');
 }
 
 function ftCerrar() {
@@ -2248,6 +2307,8 @@ async function ftBorrar() {
   ft$('ft-guardar').addEventListener('click', ftGuardar);
   ft$('ft-borrar').addEventListener('click', ftBorrar);
   ft$('ft-cerrar').addEventListener('click', ftCerrar);
+  ft$('ft-ver-color').addEventListener('change', ftPintarLienzo);
+  ft$('ft-archivo-reponer').addEventListener('change', () => ftReponer(ft$('ft-archivo-reponer').files[0]));
   document.querySelectorAll('input[name="ft-alcance"]').forEach(r => r.addEventListener('change', ftSincAlcance));
   // El punto de interés: un clic sobre la foto, o las flechas del teclado.
   lienzo.addEventListener('click', e => {

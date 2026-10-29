@@ -131,6 +131,9 @@ html[data-tema="noticiero"] .pt-media img {
   filter: grayscale(1) contrast(1.25) brightness(1.04); mix-blend-mode: screen;
   transform-origin: 60% 40%; animation: nt-adm-zoom 24s var(--ease-entrada) infinite alternate;
 }
+/* La original en color, si el sindicato la pidió (fotos_tema.SATURACIONES):
+   encima del duotono con la opacidad elegida; el marfil la sigue multiplicando. */
+html[data-tema="noticiero"] .pt-media img.foto-color { filter: none; mix-blend-mode: normal; opacity: var(--foto-sat, 1); }
 html[data-tema="noticiero"] .pt-media::before {
   content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: var(--nt-marfil); mix-blend-mode: multiply;

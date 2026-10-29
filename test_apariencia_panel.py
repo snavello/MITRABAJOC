@@ -55,9 +55,11 @@ with db.get_session() as s:
     s.commit()
 
 
-def _foto(tema, publicada=True, sindicatos=None):
-    fid = db.crear_foto_tema(tema, {"datos": b"RIFF-foto-" + tema.encode(), "mime": "image/webp",
-                                    "ancho": 1600, "alto": 1000}, descripcion=f"Foto {tema}")
+def _foto(tema, publicada=True, sindicatos=None, color=True):
+    normalizada = {"datos": b"RIFF-foto-" + tema.encode(), "mime": "image/webp", "ancho": 1600, "alto": 1000}
+    if color:
+        normalizada.update(datos_color=b"RIFF-color-" + tema.encode(), mime_color="image/webp")
+    fid = db.crear_foto_tema(tema, normalizada, descripcion=f"Foto {tema}")
     campos = {"publicada": publicada}
     if sindicatos is not None:
         campos.update(todos_los_sindicatos=False, sindicatos=sindicatos)
@@ -65,7 +67,7 @@ def _foto(tema, publicada=True, sindicatos=None):
     return fid
 
 
-LAGUNA_1 = _foto("laguna")
+LAGUNA_1 = _foto("laguna", color=False)     # como las subidas antes del 2026-10-29
 LAGUNA_2 = _foto("laguna")
 NOTICIERO_1 = _foto("noticiero")
 BORRADOR = _foto("laguna", publicada=False)
@@ -120,6 +122,62 @@ def test_sin_el_campo_de_foto_no_se_toca_la_elegida():
     _guardar(c, foto_laguna=str(LAGUNA_1))
     _guardar(c)
     assert (_sind().fotos_portada or {}).get("laguna") == LAGUNA_1
+
+
+# ---------- Cuánto color (2026-10-29) ----------
+
+def test_el_super_admin_elige_cuanto_color_y_la_portada_lo_funde():
+    c = _cliente(GENERAL, "gen")
+    r = _guardar(c, foto_laguna=str(LAGUNA_2), saturacion_laguna="50", saturacion_noticiero="100")
+    assert r.headers["location"].endswith("ok=apariencia#apariencia")
+    assert _sind().saturacion_fotos == {"laguna": 50, "noticiero": 100}
+    assert db.saturacion_foto_de(SID, "laguna") == 50
+    # Lo que recibe la portada: la de color con su opacidad.
+    p = main._url_foto_portada(SID, "laguna")
+    assert p["saturacion"] == 50 and p["url_color"] == f"/foto-tema/{LAGUNA_2}/color?v={len(b'RIFF-color-laguna')}"
+    html = c.get("/admin/inicio").text
+    assert f'src="/foto-tema/{LAGUNA_2}?v=' in html and f'class="foto-color" src="/foto-tema/{LAGUNA_2}/color?v=' in html
+    assert "--foto-sat: 0.5" in html
+    # Full color: no se pide la normalizada.
+    _guardar(c, foto_laguna=str(LAGUNA_2), saturacion_laguna="100")
+    html = c.get("/admin/inicio").text
+    assert f'src="/foto-tema/{LAGUNA_2}?v=' not in html and f'/foto-tema/{LAGUNA_2}/color?v=' in html
+    # Normalizada: como siempre, sin capa de color.
+    _guardar(c, foto_laguna=str(LAGUNA_2), saturacion_laguna="0")
+    html = c.get("/admin/inicio").text
+    assert f'src="/foto-tema/{LAGUNA_2}?v=' in html and "foto-color" not in html
+
+
+def test_una_foto_sin_version_en_color_se_muestra_normalizada_aunque_pidan_color():
+    c = _cliente(GENERAL, "gen")
+    _guardar(c, foto_laguna=str(LAGUNA_1), saturacion_laguna="75")
+    assert _sind().saturacion_fotos["laguna"] == 75           # la elección se guarda igual
+    p = main._url_foto_portada(SID, "laguna")
+    assert p["saturacion"] == 0 and p["url_color"] is None
+    assert "foto-color" not in c.get("/admin/inicio").text
+    # La pestaña lo avisa: la foto elegida va marcada sin color y el selector está.
+    html = c.get("/admin").text
+    assert f'value="{LAGUNA_1}" data-color="0"' in html and f'value="{LAGUNA_2}" data-color="1"' in html
+    assert 'name="saturacion_laguna" value="75" checked' in html
+    assert "se va a mostrar normalizada" in html and "Full color" in html
+
+
+def test_un_nivel_fuera_del_catalogo_rechaza_el_formulario_entero():
+    c = _cliente(GENERAL, "gen")
+    _guardar(c, saturacion_laguna="25")
+    r = _guardar(c, tema_afiliados="noticiero", saturacion_laguna="30")
+    assert r.headers["location"] == "/admin?err=apariencia#apariencia"
+    s = _sind()
+    assert s.saturacion_fotos["laguna"] == 25 and s.tema_afiliados == "laguna"
+    # Sin el campo no se toca; un valor sucio en la base vale el por defecto.
+    _guardar(c)
+    assert _sind().saturacion_fotos["laguna"] == 25
+    with Session(db.engine) as ses:
+        sind = ses.get(Sindicato, SID)
+        sind.saturacion_fotos = {"laguna": "mucho"}
+        ses.add(sind); ses.commit()
+    assert db.saturacion_foto_de(SID, "laguna") == 0
+    assert not db.elegir_saturacion_foto(SID, "rosa", 50) and not db.elegir_saturacion_foto(SID, "laguna", 40)
 
 
 # ---------- Lo que no se guarda ----------

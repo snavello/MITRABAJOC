@@ -1050,6 +1050,20 @@
   .ap-foto-auto { aspect-ratio:3 / 2; border-radius:7px; display:flex; align-items:center; justify-content:center;
     text-align:center; padding:8px; font-size:12px; color:var(--gris); background:var(--papel); }
   .ap-fotos .ap-op-t { font-size:12.5px; font-weight:600; }
+  /* La versión en color de cada foto se funde sobre la normalizada con la
+     opacidad del nivel elegido (--ap-sat, lo pone el selector de abajo):
+     la vista previa es la misma fusión que hace la portada. */
+  .ap-foto-marco { position:relative; display:block; border-radius:7px; overflow:hidden; }
+  .ap-foto-marco .ap-foto-color { position:absolute; inset:0; opacity:var(--ap-sat, 0);
+    transition:opacity var(--mov-media, .25s) var(--ease-salida, ease); }
+  .ap-sat { display:inline-flex; flex-wrap:wrap; gap:4px; padding:3px; border:1px solid var(--linea);
+    border-radius:10px; background:#fbfaf7; margin-top:4px; }
+  .ap-sat label { display:flex; align-items:center; padding:6px 12px; border-radius:7px; cursor:pointer;
+    font-size:13px; font-weight:600; color:var(--gris); position:relative; }
+  .ap-sat input { position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+  .ap-sat label:has(input:checked) { background:var(--tinta); color:#fff; }
+  .ap-sat label:has(input:focus-visible) { outline:2px solid var(--tinta); outline-offset:2px; }
+  .ap-sat-nota { font-size:12.5px; margin:8px 0 0; color:#8a5a1a; }
 </style>
 {% include "_fondo_interior.html" %}
 {# Auditoría de diseño 2026-10, bloque 5b (panel A): rótulos de los filtros y
@@ -3983,27 +3997,41 @@
 
   <div class="card">
     <h3 style="margin-top:0;">Foto de portada</h3>
-    <p class="muted" style="margin-top:0;">Cada modelo tiene su biblioteca. La foto toma los colores del modelo al mostrarse.</p>
+    <p class="muted" style="margin-top:0;">Cada modelo tiene su biblioteca. La foto toma los colores del modelo al mostrarse, y vos elegís cuánto de su color original dejar ver.</p>
     <div class="ap-dos">
     {% for m in ap.modelos %}
-    <div>
+    {# --ap-sat es la opacidad de la capa en color de las miniaturas: la
+       misma fusión que hace la portada (fotos_tema.SATURACIONES). #}
+    <div data-ap-modelo="{{ m.clave }}" style="--ap-sat:{{ m.saturacion / 100 }};">
     <div class="ap-sub">{{ m.nombre }}</div>
     {% if m.fotos %}
     <div class="ap-fotos" role="radiogroup" aria-label="Foto de portada de {{ m.nombre }}">
       <label class="ap-op">
-        <input type="radio" name="foto_{{ m.clave }}" value="auto" {% if not m.elegida %}checked{% endif %}>
+        <input type="radio" name="foto_{{ m.clave }}" value="auto" data-color="{{ '1' if m.auto_color else '0' }}" {% if not m.elegida %}checked{% endif %}>
         <span class="ap-foto-auto">La más nueva de la biblioteca</span>
         <span class="ap-op-t">Automática<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
       </label>
       {% for f in m.fotos %}
       <label class="ap-op">
-        <input type="radio" name="foto_{{ m.clave }}" value="{{ f.id }}" {% if f.id == m.elegida %}checked{% endif %}>
+        <input type="radio" name="foto_{{ m.clave }}" value="{{ f.id }}" data-color="{{ '1' if f.color else '0' }}" {% if f.id == m.elegida %}checked{% endif %}>
+        <span class="ap-foto-marco">
         <img class="ap-foto" src="/foto-tema/{{ f.id }}?v={{ f.v }}" alt="{{ f.descripcion }}" loading="lazy"
              style="object-position:{{ (f.foco_x * 100) | round(1) }}% {{ (f.foco_y * 100) | round(1) }}%;">
+        {% if f.color %}<img class="ap-foto ap-foto-color" src="/foto-tema/{{ f.id }}/color?v={{ f.v_color }}" alt="" loading="lazy" aria-hidden="true"
+             style="object-position:{{ (f.foco_x * 100) | round(1) }}% {{ (f.foco_y * 100) | round(1) }}%;">{% endif %}
+        </span>
         <span class="ap-op-t">{{ f.descripcion or ('Foto ' ~ f.id) }}<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
       </label>
       {% endfor %}
     </div>
+    <div class="ap-sub">Color de la foto</div>
+    <div class="ap-sat" role="radiogroup" aria-label="Color de la foto de {{ m.nombre }}">
+      {% for nivel, etiqueta in ap.saturaciones %}
+      <label><input type="radio" name="saturacion_{{ m.clave }}" value="{{ nivel }}" {% if nivel == m.saturacion %}checked{% endif %}>{{ etiqueta }}</label>
+      {% endfor %}
+    </div>
+    <p class="muted" style="font-size:12.5px; margin:8px 0 0;"><b>Normalizada</b> es la foto en gris con los colores del modelo; <b>Full color</b>, la original tal cual se subió; en el medio, una mezcla de las dos.</p>
+    <p class="ap-sat-nota" data-ap-nota hidden>Esta foto se subió antes de que guardáramos el color: se va a mostrar normalizada hasta que Colm3na la vuelva a subir.</p>
     {% else %}
     <p class="muted">Todavía no hay fotos para este modelo. Las carga Colm3na.</p>
     {% endif %}
@@ -4068,6 +4096,22 @@
     const cuenta = document.getElementById('td-cuenta');
     const contar = () => { const l = f.querySelectorAll('.td-llave[name=rubros]'); cuenta.textContent = [...l].filter(x => x.checked).length + ' de ' + l.length + ' prendidos'; };
     f.addEventListener('change', contar); contar();
+  })();
+  // Color de la foto (2026-10-29): el nivel elegido pinta las miniaturas con
+  // la misma fusión que la portada, y si la foto elegida no tiene versión
+  // en color se avisa que se va a ver normalizada igual.
+  (function () {
+    const f = document.getElementById('ap-form'); if (!f) return;
+    const revisar = bloque => {
+      const sat = bloque.querySelector('input[name^="saturacion_"]:checked');
+      const foto = bloque.querySelector('input[name^="foto_"]:checked');
+      const nota = bloque.querySelector('[data-ap-nota]');
+      if (sat) bloque.style.setProperty('--ap-sat', String(Number(sat.value) / 100));
+      if (nota) nota.hidden = !sat || Number(sat.value) === 0 || !foto || foto.dataset.color === '1';
+    };
+    const bloques = f.querySelectorAll('[data-ap-modelo]');
+    bloques.forEach(revisar);
+    f.addEventListener('change', ev => { const b = ev.target.closest('[data-ap-modelo]'); if (b) revisar(b); });
   })();
   // Cambios sin guardar (G6-18): cada formulario avisa junto a SU botón, y
   // guardar uno con el otro tocado pregunta antes, porque la página se

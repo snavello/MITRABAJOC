@@ -65,6 +65,29 @@ def test_normaliza_a_gris_con_brillo_parejo_y_tamano_acotado():
     assert (oscura["ancho"], oscura["alto"]) == (1600, 1067)    # 3000x2000 acotada, misma proporción
 
 
+def test_guarda_tambien_la_original_en_color_del_mismo_tamano():
+    """Pedido de los sindicatos (2026-10-29): la normalizada sigue en gris y
+    al lado va la original en color, con la misma medida y orientación."""
+    f = fotos_tema.normalizar(_jpg((20, 120, 200), (3000, 2000)))
+    color = Image.open(BytesIO(f["datos_color"]))
+    assert f["mime_color"] == "image/webp" and color.format == "WEBP"
+    assert color.size == (f["ancho"], f["alto"]) == (1600, 1067)
+    # de verdad en color: los canales difieren (la foto va teñida de azul)
+    r, g, b = color.convert("RGB").split()
+    assert ImageChops.difference(r, b).getextrema()[1] > 60
+    # y la original no se "normaliza": el brillo queda el de la foto, no el objetivo
+    assert abs(fotos_tema.brillo_medio(color) - fotos_tema.brillo_medio(
+        Image.open(BytesIO(_jpg((20, 120, 200)))))) < 0.05
+
+
+def test_el_catalogo_de_saturaciones():
+    assert [n for n, _ in fotos_tema.SATURACIONES] == [0, 25, 50, 75, 100]
+    assert fotos_tema.saturacion_valida("50") == 50 and fotos_tema.saturacion_valida(100) == 100
+    assert fotos_tema.saturacion_valida("75 %") == 75
+    for malo in ("30", "", None, "cien", -25, "0.5"):
+        assert fotos_tema.saturacion_valida(malo) is None, malo
+
+
 def test_rechaza_lo_que_no_sirve():
     for datos, frase in ((b"", "ninguna"), (b"no soy una imagen", "No se pudo leer"),
                          (_jpg((90, 90, 90), (300, 200)), "muy chica")):
@@ -92,10 +115,47 @@ def test_plataforma_sube_publica_y_el_borrador_no_se_ve():
     assert [x["id"] for x in c.get("/plataforma/fotos-tema?tema=laguna").json()["fotos"]] == [fid]
 
 
+def test_la_version_en_color_se_sirve_aparte_y_la_foto_vieja_se_repone():
+    c = _plataforma()
+    r = c.post("/plataforma/fotos-tema", data={"tema": "laguna"},
+               files={"archivo": ("x.jpg", _jpg((30, 90, 160)), "image/jpeg")})
+    fid = r.json()["id"]
+    # borrador: la de color tampoco la ve nadie más
+    assert TestClient(main.app).get(f"/foto-tema/{fid}/color").status_code == 404
+    assert c.get(f"/foto-tema/{fid}/color").status_code == 200
+    c.post(f"/plataforma/fotos-tema/{fid}", data={"publicada": "1"})
+    r = TestClient(main.app).get(f"/foto-tema/{fid}/color")
+    assert r.status_code == 200 and r.headers["content-type"] == "image/webp"
+    im = Image.open(BytesIO(r.content)).convert("RGB")
+    assert ImageChops.difference(*im.split()[::2]).getextrema()[1] > 60     # en color
+    ficha = next(x for x in c.get("/plataforma/fotos-tema?tema=laguna").json()["fotos"] if x["id"] == fid)
+    assert ficha["color"] is True and ficha["v_color"] > 0
+    # Una foto de antes (sin versión en color): 404 en /color y lo dice la ficha.
+    vieja = db.crear_foto_tema("laguna", {"datos": b"RIFF-gris", "mime": "image/webp", "ancho": 1600, "alto": 900},
+                               descripcion="de antes", foco_x=0.2, foco_y=0.8)
+    db.editar_foto_tema(vieja, publicada=True)
+    assert TestClient(main.app).get(f"/foto-tema/{vieja}/color").status_code == 404
+    assert next(x for x in c.get("/plataforma/fotos-tema?tema=laguna").json()["fotos"]
+                if x["id"] == vieja)["color"] is False
+    # Volver a subir el archivo: las dos versiones nuevas, lo demás igual.
+    r = c.post(f"/plataforma/fotos-tema/{vieja}/archivo",
+               files={"archivo": ("x.jpg", _jpg((200, 40, 40)), "image/jpeg")})
+    assert r.status_code == 200 and r.json()["id"] == vieja
+    f = db.foto_tema(vieja)
+    assert f.datos_color and f.datos != b"RIFF-gris" and (f.ancho, f.alto) == (1200, 800)
+    assert (f.publicada, f.descripcion, f.foco_x, f.foco_y) == (True, "de antes", 0.2, 0.8)
+    assert c.post("/plataforma/fotos-tema/999999/archivo",
+                  files={"archivo": ("x.jpg", _jpg((1, 2, 3)), "image/jpeg")}).status_code == 404
+    assert c.post(f"/plataforma/fotos-tema/{vieja}/archivo",
+                  files={"archivo": ("x.txt", b"hola", "text/plain")}).status_code == 400
+
+
 def test_sin_sesion_de_plataforma_no_se_toca_nada():
     anon = TestClient(main.app)
     assert anon.get("/plataforma/fotos-tema").status_code == 403
     assert anon.post("/plataforma/fotos-tema", data={"tema": "laguna"},
+                     files={"archivo": ("x.jpg", _jpg((1, 2, 3)), "image/jpeg")}).status_code == 403
+    assert anon.post("/plataforma/fotos-tema/1/archivo",
                      files={"archivo": ("x.jpg", _jpg((1, 2, 3)), "image/jpeg")}).status_code == 403
 
 

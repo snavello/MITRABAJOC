@@ -92,6 +92,10 @@ html[data-tema="laguna"] .pt-gremio-media { display: block; position: absolute; 
 /* La foto viene en gris de la biblioteca; el color se lo da la laguna de atrás. */
 html[data-tema="laguna"] .pt-gremio-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
   filter: grayscale(1) contrast(1.08) brightness(1.04); mix-blend-mode: luminosity; opacity: .9; }
+/* La original en color, si el sindicato la pidió (fotos_tema.SATURACIONES):
+   se funde encima de la normalizada con la opacidad elegida, sin filtro ni
+   fusión, así el tinte de la laguna sigue abajo y asoma el color real. */
+html[data-tema="laguna"] .pt-gremio-foto.foto-color { filter: none; mix-blend-mode: normal; opacity: var(--foto-sat, 1); }
 html[data-tema="laguna"] .pt-gremio::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(180deg,
     color-mix(in oklab, var(--lg-azul) 97%, transparent) 0%,

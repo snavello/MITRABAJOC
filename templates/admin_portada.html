@@ -96,10 +96,15 @@
 
 <section class="pt-heroe" aria-label="Portada">
   {# La foto de portada del modelo (biblioteca de plataforma, ya en gris): el
-     color se lo pone la hoja del modelo. Es decorado: sin foto, el degradé. #}
+     color se lo pone la hoja del modelo. Es decorado: sin foto, el degradé.
+     Si el sindicato pidió color (fotos_tema.SATURACIONES), la original en
+     color se funde encima de la normalizada con esa opacidad. #}
   <div class="pt-media" aria-hidden="true">
-    {% if foto_portada %}<img src="{{ foto_portada.url }}" alt="" decoding="async"
-      style="object-position:{{ ((foto_portada.foco_x or 0.5) * 100) | round(1) }}% {{ ((foto_portada.foco_y or 0.5) * 100) | round(1) }}%;">{% endif %}
+    {% if foto_portada %}{% set pos = ((foto_portada.foco_x or 0.5) * 100) | round(1) ~ '% ' ~ ((foto_portada.foco_y or 0.5) * 100) | round(1) ~ '%' %}
+    {% if foto_portada.saturacion < 100 %}<img src="{{ foto_portada.url }}" alt="" decoding="async"
+      style="object-position:{{ pos }};">{% endif %}
+    {% if foto_portada.saturacion > 0 and foto_portada.url_color %}<img class="foto-color" src="{{ foto_portada.url_color }}" alt="" decoding="async"
+      style="object-position:{{ pos }}; --foto-sat: {{ foto_portada.saturacion / 100 }};">{% endif %}{% endif %}
   </div>
 
 {% include "_encabezado.html" %}
