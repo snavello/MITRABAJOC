@@ -631,3 +631,46 @@ def test_el_signo_solo_no_es_una_diferencia():
     otro = {"lineas": [dict(pos["lineas"][0], importe=-173520.00)]}
     assert extractor.comparar_lineas([("a", pos), ("b", neg)])["distintas"] == 0
     assert extractor.comparar_lineas([("a", pos), ("b", otro)])["distintas"] == 1
+
+
+def test_tercera_pasada_empareja_por_importe_cuando_codigo_y_descripcion_difieren():
+    """Caso real (2026-10-29): la referencia leyó "125-001 TITULO UNIV/TERCER
+    LAUDO(15/91" y los otros cuatro "126-001 TITULO UNIV/TERC.LAUDO15/91".
+    Código Y descripción distintos: ni la primera ni la segunda pasada la
+    emparejaban y salía como dos filas, las dos con "no la leyó". Misma
+    sección y mismo importe, única de cada lado: es la misma línea."""
+    ref = {"lineas": [{"codigo": "125-001", "descripcion": "TITULO UNIV/TERCER LAUDO(15/91 - INCISO A)",
+                       "importe": 563, "tipo": "remuneracion", "seccion": "haberes"},
+                      {"codigo": "100-001", "descripcion": "ADICIONAL POR JEFATURA", "importe": 4590,
+                       "tipo": "remuneracion", "seccion": "haberes"}]}
+    otro = {"lineas": [{"codigo": "126-001", "descripcion": "TITULO UNIV/TERC.LAUDO15/91 - INCISO A)",
+                        "importe": 563, "tipo": "remuneracion", "seccion": "haberes"},
+                       {"codigo": "100-001", "descripcion": "ADICIONAL POR JEFATURA", "importe": 4580,
+                        "tipo": "remuneracion", "seccion": "haberes"}]}
+    c = extractor.comparar_lineas([("haiku", ref), ("sol", otro), ("terra", otro), ("luna", otro)])
+    assert c["total"] == 2, "la línea del título es UNA, no dos"
+    titulo = next(f for f in c["filas"] if f["codigo"] == "125-001")
+    assert titulo["celdas"][1]["valor"] == "remuneracion · haberes · código 126-001"
+    assert not any(cel["falta"] for cel in titulo["celdas"])
+    # Y en las dos filas los otros tres coinciden entre sí: la que se aparta es la referencia.
+    assert all(f["ref_sola"] for f in c["filas"]) and c["contra_referencia"] == 2
+
+
+def test_la_tercera_pasada_no_adivina_si_la_pareja_no_es_unica():
+    """Dos líneas de 563 entre los haberes del mismo lado: no se sabe cuál es
+    cuál, y se dejan como líneas que solo vio cada uno."""
+    ref = {"lineas": [{"codigo": "125-001", "descripcion": "A", "importe": 563, "tipo": "remuneracion", "seccion": "haberes"},
+                      {"codigo": "127-001", "descripcion": "B", "importe": 563, "tipo": "remuneracion", "seccion": "haberes"}]}
+    otro = {"lineas": [{"codigo": "126-001", "descripcion": "C", "importe": 563, "tipo": "remuneracion", "seccion": "haberes"}]}
+    c = extractor.comparar_lineas([("a", ref), ("b", otro)])
+    assert c["total"] == 3
+
+
+def test_ref_sola_exige_dos_que_coincidan_y_no_se_marca_con_dos_modelos():
+    a = {"lineas": [{"codigo": "1", "descripcion": "X", "importe": 10, "tipo": "remuneracion", "seccion": "haberes"}]}
+    b = {"lineas": [{"codigo": "1", "descripcion": "X", "importe": 11, "tipo": "remuneracion", "seccion": "haberes"}]}
+    c = extractor.comparar_lineas([("a", a), ("b", b)])
+    assert c["filas"][0]["difiere"] and not c["filas"][0]["ref_sola"] and c["contra_referencia"] == 0
+    # Con tres, si los dos "otros" no coinciden entre sí, tampoco.
+    c3 = extractor.comparar_lineas([("a", a), ("b", b), ("c", a)])
+    assert not c3["filas"][0]["ref_sola"]

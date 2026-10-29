@@ -93,6 +93,9 @@
   td.dif { color:var(--mal); font-weight:700; }
   td.signo { color:var(--leve); }
   td.signo::after { content:' ±'; font-weight:700; }
+  td.minoria, span.minoria { color:var(--leve); }
+  td.minoria-ref { color:var(--leve); font-style:italic; }
+  td.minoria-ref::after { content:' · los demás coinciden'; font-weight:700; font-style:normal; }
   .analisis { margin:12px 0 0; padding-left:18px; font-size:13.5px; line-height:1.5; color:#e8edf6; }
   .analisis li + li { margin-top:4px; }
   .progreso { list-style:none; padding:0; margin:0; }
@@ -182,7 +185,7 @@
       <div id="resultado">
         <div class="tarjeta">
           <h2>Cómo leer la comparación</h2>
-          <p class="muted">La referencia es el <b>primer modelo que contestó</b>, en el orden en que se eligieron: lo que otro modelo leyó distinto va en rojo.
+          <p class="muted">La referencia es el <b>modelo de producción</b> (el que hoy lee los recibos en la app, elegido en /plataforma) si está entre los elegidos; si no, el primero que contestó en el orden de la lista. Lo que otro modelo leyó distinto va en rojo; si los demás coinciden entre sí y la referencia se aparta, va en ámbar: la referencia no es la verdad.
             Que coincidan no prueba que estén bien, prueba que leyeron lo mismo; por eso conviene incluir siempre el modelo que hoy corre en producción.
             Un CUIL o CUIT con guiones no cuenta como diferencia (la app los normaliza), y la tabla línea por línea es la que importa:
             dos modelos pueden dar el mismo neto y clasificar distinto una línea, y esa clasificación alimenta la cuota sindical y el tope del 2%.</p>
@@ -255,8 +258,8 @@ async function cargarCatalogo() {
       bloqueClave(p);
     const ms = p.modelos.length ? p.modelos.map(m =>
       '<label class="tilde' + (p.configurado ? '' : ' apagado') + '" title="' + escHTML(m.resumen) + '">' +
-      '<input type="checkbox" class="modelo" value="' + escHTML(m.clave) + '"' + (p.configurado ? '' : ' disabled') + '>' +
-      '<span>' + escHTML(m.nombre) + '<small><span class="modelo-precio">' + escHTML(m.precio_txt) + '</span>' +
+      '<input type="checkbox" class="modelo" value="' + escHTML(m.clave) + '"' + (p.configurado ? '' : ' disabled') + (m.clave === CAT.produccion && p.configurado ? ' checked' : '') + '>' +
+      '<span>' + escHTML(m.nombre) + (m.clave === CAT.produccion ? ' <span class="chip ref" title="El modelo que hoy lee los recibos en la app (se elige en /plataforma → Uso de IA → Modelos). Va de referencia.">producción hoy</span>' : '') + '<small><span class="modelo-precio">' + escHTML(m.precio_txt) + '</span>' +
       (m.contexto ? ' · ' + escHTML(m.contexto) : '') + '</small></span></label>').join('')
       : '<p class="muted">Sin modelos en el catálogo todavía.</p>';
     return cab + ms;
@@ -289,7 +292,8 @@ document.getElementById('modelos').addEventListener('click', async e => {
 document.getElementById('correr').addEventListener('click', correr);
 async function correr() {
   const inp = document.getElementById('archivo'), estado = document.getElementById('estado'), btn = document.getElementById('correr');
-  const elegidos = [...document.querySelectorAll('.modelo:checked')].map(c => c.value);
+  // El de producción primero: es la referencia (el servidor también lo ordena así).
+  const elegidos = [...document.querySelectorAll('.modelo:checked')].map(c => c.value).sort((a, b) => (a === CAT.produccion ? -1 : 0) - (b === CAT.produccion ? -1 : 0));
   estado.className = 'estado';
   if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
   if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
@@ -389,8 +393,11 @@ function pintarResultado(data, destino, vivo) {
     if (!m.ok || !m.resumen) return '—';
     const c = m.resumen[i];
     const inv = c.invalido ? ' <span class="dif" title="No pasa el dígito verificador (módulo 11): un dígito mal leído">· no pasa el verificador</span>' : '';
+    // La referencia sola: los demás coinciden entre sí y ella se aparta. Ni los
+    // demás en rojo ni ella como verdad: ámbar en todos y el aviso en la suya.
+    if (c.ref_sola && m === ref) return '<span class="minoria" title="Los demás coinciden entre sí: la que se aparta es la referencia">' + escHTML(c.valor) + ' · los demás coinciden</span>' + inv;
     return (c.igual ? (c.signo ? '<span class="signo" style="color:var(--leve);">' + escHTML(c.valor) + ' ±</span>' : escHTML(c.valor))
-      : '<span class="dif">' + escHTML(c.valor) + '</span>') + inv;
+      : '<span class="' + (c.ref_sola ? 'minoria' : 'dif') + '">' + escHTML(c.valor) + '</span>') + inv;
   }))));
   const crudos = vivo ? ms.filter(m => m.ok && m.json).map(m =>
     '<details><summary>Lo que leyó ' + escHTML(m.nombre) + ', completo</summary><pre>' + escHTML(m.json) + '</pre></details>').join('') : '';
@@ -409,9 +416,13 @@ function pintarResultado(data, destino, vivo) {
 function tablaLineas(L, columnas) {
   if (!L || !L.filas || !L.filas.length) return '';
   const cab = '<tr><th>Código</th><th>Descripción</th><th class="num">Importe</th>' + columnas.map(m => '<th>' + escHTML(m.nombre) + '</th>').join('') + '</tr>';
-  const filas = L.filas.map(f => '<tr class="' + ((f.difiere || f.signo) ? '' : 'igual-todas') + '"><td class="num">' + escHTML(f.codigo) + '</td><td>' + escHTML(f.descripcion) + '</td><td class="num">' + escHTML(f.importe) + '</td>' +
-    f.celdas.map(c => '<td class="' + (c.falta ? 'falta' : (c.igual ? (c.signo ? 'signo' : '') : 'dif')) + '">' + escHTML(c.valor) + '</td>').join('') + '</tr>').join('');
-  return '<div class="tarjeta"><h2>Línea por línea</h2><p class="muted">' + L.total + ' líneas, <b>' + L.distintas + '</b> leídas distinto por algún modelo' + (L.signos ? ' y <b>' + L.signos + '</b> solo con el signo distinto (ámbar, ±: la app usa el valor absoluto)' : '') + '. En cada celda: tipo · categoría · sección, y lo que difiera del renglón (importe o código).</p>' +
+  const filas = L.filas.map(f => '<tr class="' + ((f.difiere || f.signo) ? '' : 'igual-todas') + (f.ref_sola ? ' ref-sola' : '') + '"><td class="num">' + escHTML(f.codigo) + '</td><td>' + escHTML(f.descripcion) + '</td><td class="num">' + escHTML(f.importe) + '</td>' +
+    f.celdas.map((c, i) => {
+      // Referencia sola (los demás coinciden entre sí): ámbar, no rojo, y el aviso en su celda.
+      if (f.ref_sola && i === 0) return '<td class="minoria-ref" title="Los demás coinciden entre sí: la que se aparta es la referencia">' + escHTML(c.valor) + '</td>';
+      return '<td class="' + (c.falta ? 'falta' : (c.igual ? (c.signo ? 'signo' : '') : (f.ref_sola ? 'minoria' : 'dif'))) + '">' + escHTML(c.valor) + '</td>';
+    }).join('') + '</tr>').join('');
+  return '<div class="tarjeta"><h2>Línea por línea</h2><p class="muted">' + L.total + ' líneas, <b>' + L.distintas + '</b> leídas distinto por algún modelo' + (L.signos ? ' y <b>' + L.signos + '</b> solo con el signo distinto (ámbar, ±: la app usa el valor absoluto)' : '') + (L.contra_referencia ? '; en <b>' + L.contra_referencia + '</b> la que se aparta es la referencia y los demás coinciden entre sí (ámbar: la referencia no es la verdad)' : '') + '. En cada celda: tipo · categoría · sección, y lo que difiera del renglón (importe o código).</p>' +
     '<label class="filtro-lineas"><input type="checkbox" checked onchange="this.closest(\'.tarjeta\').querySelector(\'table\').classList.toggle(\'solo-dif\', this.checked)"> Mostrar solo las que difieren</label>' +
     '<div class="tabla-ancha"><table class="solo-dif">' + cab + filas + '</table></div></div>';
 }

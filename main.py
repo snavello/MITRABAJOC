@@ -10663,6 +10663,12 @@ def entornos_laboratorio_modelos(request: Request):
     })
 
 
+def _modelo_produccion_laboratorio() -> str:
+    """Clave `anthropic:<modelo>` del modelo que hoy lee recibos en la app
+    (`db.modelo_ia("recibos")`, elegible desde /plataforma)."""
+    return laboratorio_modelos.clave(laboratorio_modelos.ANTHROPIC, db.modelo_ia("recibos"))
+
+
 @app.get(API_LABORATORIO + "/catalogo")
 def api_laboratorio_catalogo(request: Request):
     """Proveedores y modelos con qué variable falta en este entorno, más dos
@@ -10672,6 +10678,10 @@ def api_laboratorio_catalogo(request: Request):
     _exigir_herramientas(request)
     laboratorio_modelos.configurar_claves(db.claves_laboratorio())
     return {**laboratorio_modelos.catalogo_pantalla(),
+            # El modelo que HOY lee los recibos en la app: el que eligió
+            # plataforma en Uso de IA → Modelos (vacío = el default del
+            # extractor). Es la referencia natural del laboratorio.
+            "produccion": _modelo_produccion_laboratorio(),
             "mock": os.getenv("MOCK_EXTRACTOR") == "1",
             "enmascarado": preparacion.modo() != "apagado",
             "resumen": laboratorio_modelos.resumen_por_modelo(
@@ -10720,7 +10730,11 @@ async def _laboratorio_correr(request: Request, archivo: UploadFile, tipo: str, 
     if tipo not in laboratorio_modelos.TIPOS:
         raise HTTPException(422, "Tipo de archivo desconocido.")
     elegidos = []
-    for clave in dict.fromkeys(modelos):
+    # El de producción va primero si está elegido: la referencia es el primero
+    # que contesta, y lo que interesa medir es quién se aparta del que hoy usa
+    # la app, no del que quedó primero en la lista (SDN, 2026-10-29).
+    produccion = _modelo_produccion_laboratorio()
+    for clave in sorted(dict.fromkeys(modelos), key=lambda c: c != produccion):
         m = laboratorio_modelos.modelo(clave)
         if m is None:
             raise HTTPException(422, f"{clave} no está en el catálogo del laboratorio.")
@@ -10908,7 +10922,9 @@ def api_laboratorio_ensayo(request: Request, caso_id: int):
     real = c.real or {}
     return {**_ensayo_resumen(c), "entrada": c.entrada, "real": real, "diferencias": c.diferencias,
             "analisis": laboratorio_modelos.analisis(real.get("lecturas", []), (c.diferencias or {}).get("lineas"),
-                                                     real.get("referencia"))}
+                                                     real.get("referencia"),
+                                                     sorted({d["etiqueta"] for f in real.get("lecturas", [])
+                                                             for d in f.get("resumen", []) if d.get("ref_sola")}))}
 
 
 @app.post(API_LABORATORIO + "/ensayos/{caso_id}/estado")

@@ -464,19 +464,39 @@ def lineas_comparables(datos: dict) -> list:
     } for ln in (datos.get("lineas") or [])]
 
 
+def _clave_importe(ln: dict) -> str:
+    """Sección + importe en valor absoluto, para la tercera pasada. Sin
+    importe legible no hay clave: "—" no empareja con nada."""
+    if ln["importe"] == "—":
+        return ""
+    return f'{ln["seccion"]}|{ln["importe"].lstrip("-")}'
+
+
 def comparar_lineas(lecturas: list) -> dict:
     """[(modelo, datos)] -> la tabla línea por línea.
 
-    El emparejado va en DOS pasadas: primero por código y después, sobre lo
-    que sobró, por descripción. La segunda pasada existe por un caso real: un
-    modelo leyó el código "128-001" donde los otros tres leyeron "126-001",
-    misma descripción y mismo importe. Emparejando solo por código, esa única
+    El emparejado va en TRES pasadas: primero por código, después, sobre lo
+    que sobró, por descripción, y por último por sección + importe cuando la
+    pareja es única. La segunda pasada existe por un caso real: un modelo
+    leyó el código "128-001" donde los otros tres leyeron "126-001", misma
+    descripción y mismo importe. Emparejando solo por código, esa única
     línea salía como dos filas y ninguna de las dos mostraba el problema
     --que es justamente el dígito mal leído--. Ahora cae en una fila sola y
-    la celda lo dice: "remuneracion · código 128-001".
+    la celda lo dice: "remuneracion · código 128-001". La tercera, por otro
+    caso real (2026-10-29): la referencia leyó "125-001 TITULO UNIV/TERCER
+    LAUDO(15/91" y los otros cuatro "126-001 TITULO UNIV/TERC.LAUDO15/91":
+    código Y descripción distintos, y la línea volvía a salir como dos filas
+    con "no la leyó" en todas. Si en lo que sobró hay UNA sola línea de la
+    misma sección con el mismo importe de cada lado, es la misma línea.
 
     Por POSICIÓN no se empareja nunca: si un modelo se saltea una línea, todo
     lo que sigue queda corrido y la tabla es un muro de rojo que no dice nada.
+
+    `ref_sola` en una fila: la referencia (el primer modelo elegido) se
+    aparta y los demás --dos o más-- coinciden entre sí. La referencia no es
+    la verdad: cuando cuatro leen 4.580 y la referencia 4.590, lo más probable
+    es que la equivocada sea la referencia, y la tabla lo dice en vez de
+    pintar a los cuatro de rojo.
     """
     lecturas_n = [(modelo, lineas_comparables(datos)) for modelo, datos in lecturas]
     n = len(lecturas_n)
@@ -503,10 +523,22 @@ def comparar_lineas(lecturas: list) -> dict:
                 else:
                     g["celdas"][i] = ln
             libres = sobran
+        # Tercera pasada: sección + importe, solo si la pareja es única de los
+        # dos lados (si hay dos líneas de 563,00 entre los haberes no se
+        # adivina cuál es cuál).
+        sobran = []
+        for ln in libres:
+            k = _clave_importe(ln)
+            cand = [g for g in grupos if g["celdas"][i] is None and k and _clave_importe(g["ref"]) == k]
+            if len(cand) == 1 and sum(1 for x in libres if _clave_importe(x) == k) == 1:
+                cand[0]["celdas"][i] = ln
+            else:
+                sobran.append(ln)
+        libres = sobran
         for ln in libres:          # líneas que solo vio este modelo
             _nuevo(i, ln)
 
-    filas, distintas, signos = [], 0, 0
+    filas, distintas, signos, contra_ref = [], 0, 0, 0
     for g in grupos:
         ref, celdas = g["ref"], []
         for ln in g["celdas"]:
@@ -542,12 +574,20 @@ def comparar_lineas(lecturas: list) -> dict:
         for c in celdas:
             c["igual"] = (not c["falta"]) and c["valor"] == base
         difiere = any(not c["igual"] for c in celdas)
+        # La referencia sola: los demás (dos o más) dicen lo mismo entre sí y
+        # distinto que ella, o la leyeron todos y ella no.
+        otros = [c for c in celdas[1:] if not c["falta"]]
+        ref_sola = (len(otros) >= 2 and len(celdas) - 1 == len(otros)
+                    and len({c["valor"] for c in otros}) == 1
+                    and (celdas[0]["falta"] or otros[0]["valor"] != celdas[0]["valor"]))
         distintas += 1 if difiere else 0
         signos += 1 if any(c.get("signo") for c in celdas) else 0
+        contra_ref += 1 if ref_sola else 0
         filas.append({"codigo": ref["codigo"], "descripcion": ref["descripcion"],
                       "importe": ref["importe"], "celdas": celdas, "difiere": difiere,
-                      "signo": any(c.get("signo") for c in celdas)})
-    return {"filas": filas, "total": len(filas), "distintas": distintas, "signos": signos}
+                      "signo": any(c.get("signo") for c in celdas), "ref_sola": ref_sola})
+    return {"filas": filas, "total": len(filas), "distintas": distintas, "signos": signos,
+            "contra_referencia": contra_ref}
 
 
 # ==================== Comprobante de aportes de ARCA ====================

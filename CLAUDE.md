@@ -1938,6 +1938,15 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   «no terminó»), botón **Detener** por modelo (`POST .../correr/{rid}/detener`,
   corridas en memoria del proceso) y reintento ante 429 del proveedor
   (`REINTENTOS_429`, Qwen limita pedidos en paralelo en el nivel gratis).
+  **La referencia es el modelo de producción** (2026-10-29): el que hoy lee
+  recibos en la app (`db.modelo_ia("recibos")`, elegible en /plataforma;
+  Sonnet 4.6 es solo el default), marcado «producción hoy» y tildado de
+  entrada; el servidor lo ordena primero. Si no está elegido, el primero
+  que contestó. **Y la referencia no es la verdad**: Cuando los demás (dos o más) coinciden entre sí y ella se aparta,
+  la fila y el campo se marcan `ref_sola` (ámbar, «los demás coinciden») y
+  el análisis dice que la sospechosa es la referencia; con dos modelos no se
+  marca nada. Y `extractor.comparar_lineas` empareja en TRES pasadas (código,
+  descripción, sección + importe si la pareja es única).
   **El signo solo se SEÑALA en ámbar (±), nunca en rojo**:
   en las líneas (`celdas[].signo`, `lineas.signos`) y en los totales del
   resumen (se comparan en valor absoluto); la app usa el valor absoluto.
