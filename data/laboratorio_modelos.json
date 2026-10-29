@@ -1,6 +1,76 @@
 {
-  "nota": "Proveedores del Laboratorio de modelos (Herramientas de /entornos). Anthropic NO esta aca: sus modelos y precios salen de precios_ia.json. Precios de LISTA en USD por millon de tokens (entrada sin cache / salida), copiados a mano; vale la fecha `leido` de cada proveedor. `extra` son parametros propios del proveedor que se suman al pedido tal cual. `variable_url`, si esta cargada en el entorno, reemplaza a `base_url`.",
+  "nota": "Proveedores del Laboratorio de modelos (Herramientas de /entornos). Anthropic NO esta aca: sus modelos y precios salen de precios_ia.json. Precios de LISTA en USD por millon de tokens (entrada sin cache / salida), copiados a mano; vale la fecha `leido` de cada proveedor. `extra` son parametros propios del proveedor que se suman al pedido tal cual. `variable_url`, si esta cargada en el entorno, reemplaza a `base_url`. `quitar` son parametros que el proveedor rechaza y se sacan del pedido; `tope_salida` es como llama al tope de tokens de salida (por defecto `max_tokens`).",
   "proveedores": [
+    {
+      "id": "openai",
+      "nombre": "OpenAI (GPT)",
+      "estilo": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "variable": "OPENAI_API_KEY",
+      "variable_url": "OPENAI_BASE_URL",
+      "sitio": "https://platform.openai.com",
+      "leido": "2026-10-29",
+      "fuente": "developers.openai.com/api/docs/pricing (precios de lista, contexto corto hasta 272K), /api/docs/models (los cuatro vigentes, todos con imagen) y /api/docs/guides/reasoning (esfuerzos permitidos por modelo)",
+      "nota": "Chat Completions sigue soportado pero sus modelos vigentes razonan todos: exigen `max_completion_tokens` (no `max_tokens`) y rechazan `temperature` fuera del valor por defecto, asi que se saca del pedido. `reasoning_effort: none` devuelve 400 en Chat Completions y Astra y Sol no lo aceptan de ningun modo: a los cuatro se les pide `low`, como a los Claude que razonan. La imagen se cobra por parches de 32x32 px (x1,2 en Astra). Sin credito gratis para cuentas nuevas: recarga minima de US$ 5.",
+      "tope_salida": "max_completion_tokens",
+      "quitar": [
+        "temperature"
+      ],
+      "modelos": [
+        {
+          "id": "gpt-6.1-sol",
+          "nombre": "GPT-6.1 Sol",
+          "entrada": 2.0,
+          "salida": 10.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "extra": {
+            "reasoning_effort": "low"
+          },
+          "resumen": "El de uso general de la familia (2026). Mismo precio de lista que Kimi K3.1 Pro y Qwen 3.8 Max en entrada."
+        },
+        {
+          "id": "gpt-6.1-terra",
+          "nombre": "GPT-6.1 Terra",
+          "entrada": 1.0,
+          "salida": 5.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "extra": {
+            "reasoning_effort": "low"
+          },
+          "resumen": "La mitad de Sol. Admite razonamiento `none`, pero Chat Completions lo rechaza: va con `low` como los demas."
+        },
+        {
+          "id": "gpt-6-luna",
+          "nombre": "GPT-6 Luna",
+          "entrada": 0.1,
+          "salida": 0.5,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "extra": {
+            "reasoning_effort": "low"
+          },
+          "resumen": "El barato: mismo precio de lista que Claude Haiku 5.5 y que Qwen 3.8 Flash."
+        },
+        {
+          "id": "gpt-6-astra",
+          "nombre": "GPT-6 Astra",
+          "entrada": 10.0,
+          "salida": 50.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "extra": {
+            "reasoning_effort": "low"
+          },
+          "resumen": "El tope de la familia y el que OpenAI recomienda para razonamiento complejo. Cinco veces Sol: esta para medir si lee mejor, no para producir."
+        }
+      ]
+    },
     {
       "id": "moonshot",
       "nombre": "Moonshot AI (Kimi)",

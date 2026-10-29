@@ -52,7 +52,7 @@ def test_el_catalogo_tiene_forma_y_anthropic_sale_de_precios_ia():
     assert provs[0]["id"] == lab.ANTHROPIC and provs[0]["estilo"] == "anthropic"
     assert [m["id"] for m in provs[0]["modelos"]] == [m["id"] for m in precios_ia.modelos()]
     ids = {p["id"] for p in provs}
-    assert {"moonshot", "alibaba"} <= ids
+    assert {"openai", "moonshot", "alibaba"} <= ids
     claves = [m["clave"] for m in lab.modelos()]
     assert len(claves) == len(set(claves)), "dos modelos con la misma clave proveedor:modelo"
     for p in provs:
@@ -559,3 +559,32 @@ def test_un_429_se_reintenta_y_despues_se_rinde(monkeypatch):
         lab.leer("alibaba:qwen3.8-flash", "recibo", b"", "image/png", IMAGEN)
     assert "429" in str(e.value) and "reintentar" in str(e.value)
 
+
+
+def test_openai_pide_max_completion_tokens_y_va_sin_temperature(monkeypatch):
+    """Los GPT vigentes razonan todos: Chat Completions les exige
+    `max_completion_tokens` (400 con `max_tokens`) y rechaza `temperature`
+    fuera del valor por defecto, así que el catálogo lo saca del pedido."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+    capturado = {}
+
+    def falso_post(url, headers, body):
+        capturado.update(url=url, headers=headers, body=body)
+        return _respuesta(cuerpo=_ok(json.dumps(RECIBO)))
+    monkeypatch.setattr(lab, "_post", falso_post)
+    datos, uso = lab.leer("openai:gpt-6.1-sol", "recibo", b"", "image/png", IMAGEN)
+    assert datos["periodo"] == "2026-08" and uso["modelo"] == "openai:gpt-6.1-sol"
+    assert capturado["url"] == "https://api.openai.com/v1/chat/completions"
+    assert capturado["headers"]["Authorization"] == "Bearer sk-openai"
+    b = capturado["body"]
+    assert b["max_completion_tokens"] == extractor.MAX_TOKENS and "max_tokens" not in b
+    assert "temperature" not in b
+    assert b["reasoning_effort"] == "low" and b["response_format"] == {"type": "json_object"}
+    assert b["messages"][0] == {"role": "system", "content": extractor.SYSTEM}
+    # Ninguno de los cuatro acepta `none` por Chat Completions: todos con esfuerzo bajo.
+    for m in lab.proveedor("openai")["modelos"]:
+        assert m["extra"]["reasoning_effort"] == "low" and m["vision"] and m["json_mode"]
+    # Los demás proveedores no cambian: Kimi sigue con max_tokens.
+    monkeypatch.setenv("MOONSHOT_API_KEY", "sk-kimi")
+    lab.leer("moonshot:kimi-k3", "recibo", b"", "image/png", IMAGEN)
+    assert capturado["body"]["max_tokens"] == extractor.MAX_TOKENS and "max_completion_tokens" not in capturado["body"]

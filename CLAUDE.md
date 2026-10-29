@@ -193,8 +193,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - laboratorio_modelos.py — **Laboratorio de modelos** (Herramientas de
   `/entornos`, `docs/LABORATORIO_MODELOS.md`): el banco de pruebas
   replicado, aislado de la app y abierto a otros proveedores por formato
-  OpenAI (catálogo `data/laboratorio_modelos.json`: Kimi de Moonshot, Qwen
-  de Alibaba; Anthropic sale de `precios_ia`). Mismo prompt del extractor;
+  OpenAI (catálogo `data/laboratorio_modelos.json`: GPT de OpenAI, Kimi de
+  Moonshot, Qwen de Alibaba; Anthropic sale de `precios_ia`). Mismo prompt del extractor;
   ensayos en `CasoHerramienta` sin identidad. Ninguna ruta de la app lo
   importa. Ver "Herramientas".
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
@@ -367,10 +367,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   resumen del día a la hora de TELEGRAM_RESUMEN_HORA (21:00 BA por defecto,
   `resumen_diario.py`) y las alertas de Grafana por su propio punto de
   contacto. Sin las dos, apagado en silencio. Ver "Estado actual" 25.
-- MOONSHOT_API_KEY / DASHSCOPE_API_KEY (+ `MOONSHOT_BASE_URL` /
-  `DASHSCOPE_BASE_URL` opcionales) — claves de Moonshot (Kimi) y Alibaba
-  (Qwen) SOLO para el Laboratorio de modelos de `/entornos`; ninguna ruta
-  de la app las usa. Sin ellas, esos modelos se ven pero no se eligen.
+- OPENAI_API_KEY / MOONSHOT_API_KEY / DASHSCOPE_API_KEY (+ `*_BASE_URL`
+  opcionales) — claves de OpenAI (GPT), Moonshot (Kimi) y Alibaba (Qwen)
+  SOLO para el Laboratorio de modelos de `/entornos`; ninguna ruta de la
+  app las usa. Sin ellas, esos modelos se ven pero no se eligen (también se
+  pegan desde la misma pantalla).
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
 - RESEND_API_KEY / MAIL_REMITENTE — canal de mail del registro y la
@@ -1356,11 +1357,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 40. **Laboratorio de modelos** (2026-10-29, Plataforma 0.60.01, pedido de
     SDN: diversificar la API de recibos solo en un módulo de prueba aislado):
     herramienta de `/entornos` que replica el banco de pruebas y lo abre a
-    otros proveedores (Kimi K3 / K3.1 Pro de Moonshot, Qwen 3.8 de Alibaba)
-    por formato OpenAI, con el mismo prompt, tapado antes de mandar, ensayos
+    otros proveedores (Kimi K3 / K3.1 Pro de Moonshot, Qwen 3.8 de Alibaba
+    y, desde el mismo día, GPT-6.x de OpenAI) por formato OpenAI, con el mismo prompt, tapado antes de mandar, ensayos
     guardados sin identidad, resumen por modelo y CSV. Ver "Herramientas" y
     `docs/LABORATORIO_MODELOS.md` (paso a paso de las claves y comparativa).
-    **Queda de SDN**: cargar `DASHSCOPE_API_KEY` y `MOONSHOT_API_KEY` en
+    **OpenAI (GPT-6.x) sumado el mismo día** (Plataforma 0.63.01). **Queda
+    de SDN**: cargar `DASHSCOPE_API_KEY` y `MOONSHOT_API_KEY` en
     Pruebas y correr el primer lote de ensayos.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
@@ -1908,7 +1910,12 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   tokens, tiempo y costo de lista, y la tabla línea por línea. No cambia el
   modelo de ningún uso de la app.
 - **Un proveedor es una entrada en `data/laboratorio_modelos.json`**, no
-  código (formato OpenAI, `base_url`, `variable` de la clave, `extra`).
+  código (formato OpenAI, `base_url`, `variable` de la clave, `extra`, y sus
+  dialectos: `quitar` saca del pedido lo que rechaza, `tope_salida` renombra
+  el tope de tokens). **OpenAI entró el 2026-10-29** con los cuatro GPT
+  vigentes (6.1 Sol, 6.1 Terra, 6 Luna, 6 Astra): todos razonan, piden
+  `max_completion_tokens` y no aceptan `temperature`; van con
+  `reasoning_effort: low` porque `none` devuelve 400 en Chat Completions.
   Anthropic no está ahí: sale de `precios_ia`. **La clave se pega en la
   misma pantalla** y se guarda en `ConfiguracionPlataforma.claves_laboratorio`
   (migración `a1b2c3d4e5f6`; solo evaluación; una variable de entorno con el
