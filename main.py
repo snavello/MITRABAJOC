@@ -39,7 +39,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -10686,17 +10686,17 @@ def api_laboratorio_clave(request: Request, payload: dict = Body(...)):
             "pista": laboratorio_modelos.pista(laboratorio_modelos.clave_de(prov)) if clave else ""}
 
 
-@app.post(API_LABORATORIO + "/correr")
-async def api_laboratorio_correr(request: Request,
-                                 archivo: UploadFile = File(...),
-                                 tipo: str = Form("recibo"),
-                                 modelos: list[str] = Form([]),
-                                 tapar: str = Form(""),
-                                 nota: str = Form("")):
-    """Lee el archivo con cada modelo elegido, en paralelo, y guarda el
-    ensayo. Mismo esquema que /plataforma/probar-modelos: el archivo se
-    prepara UNA vez y las N llamadas comparten la imagen; un modelo que falla
-    vuelve con su error al lado de los que contestaron.
+async def _laboratorio_correr(request: Request, archivo: UploadFile, tipo: str, modelos: list,
+                              tapar: str, nota: str):
+    """El núcleo del ensayo, como generador de eventos: `inicio` (qué modelos
+    van), un `modelo` por cada uno que termina (en el orden en que terminan,
+    para el progreso en vivo) y `fin` con el resultado entero. `/correr` lo
+    consume y devuelve solo el final; `/correr-en-vivo` lo transmite.
+
+    Lee el archivo con cada modelo elegido, en paralelo, y guarda el ensayo.
+    Mismo esquema que /plataforma/probar-modelos: el archivo se prepara UNA
+    vez y las N llamadas comparten la imagen; un modelo que falla vuelve con
+    su error al lado de los que contestaron.
 
     `tapar`: manda a TODOS los modelos la versión con los datos personales
     cubiertos (preparacion.py, como la app en Pruebas) y rearma la identidad
@@ -10738,10 +10738,28 @@ async def api_laboratorio_correr(request: Request,
                        "cajas": r.get("cajas"), "fugas": r.get("fugas"), "total_ms": r.get("total_ms")}
     tapado = bool(prep is not None and prep.tapado)
     img = prep.imagen if tapado else imagen
-    lecturas = await asyncio.gather(
-        *(run_in_threadpool(laboratorio_modelos.leer, clave, tipo, contenido, archivo.content_type, img, tapado)
-          for clave in elegidos),
-        return_exceptions=True)
+    yield {"evento": "inicio", "modelos": [{"clave": c, "nombre": laboratorio_modelos.modelo(c)["nombre"]} for c in elegidos],
+           "tapado": tapado}
+
+    async def uno(clave):
+        try:
+            return clave, await run_in_threadpool(laboratorio_modelos.leer, clave, tipo, contenido,
+                                                  archivo.content_type, img, tapado)
+        except Exception as e:  # noqa: BLE001 -- el error es el dato de esa fila
+            return clave, e
+    por_clave = {}
+    for tarea in asyncio.as_completed([uno(c) for c in elegidos]):
+        clave, r = await tarea
+        por_clave[clave] = r
+        m = laboratorio_modelos.modelo(clave)
+        if isinstance(r, BaseException):
+            yield {"evento": "modelo", "clave": clave, "ok": False, "error": laboratorio_modelos._etiqueta_error(r)}
+        else:
+            uso = r[1]
+            yield {"evento": "modelo", "clave": clave, "ok": True,
+                   "duracion_txt": precios_ia.segundos(uso.get("duracion_ms", 0)),
+                   "costo_txt": precios_ia.usd(laboratorio_modelos.costo_de(m, uso["tokens_entrada"], uso["tokens_salida"]))}
+    lecturas = [por_clave[c] for c in elegidos]
 
     for clave, r in zip(elegidos, lecturas):
         m = laboratorio_modelos.modelo(clave)
@@ -10770,8 +10788,41 @@ async def api_laboratorio_correr(request: Request,
                  "tapado": tapado, "enmascarado": enmascarado, "mock": os.getenv("MOCK_EXTRACTOR") == "1"},
         esperado={}, real=laboratorio_modelos.para_guardar(tipo, elegidos, lecturas, resultado),
         diferencias={"lineas": resultado["lineas"]}, distintos=resultado["distintos"])
-    return {**resultado, "id": caso_id, "archivo": archivo.filename or "", "tapado": tapado,
-            "enmascarado": enmascarado, "mock": os.getenv("MOCK_EXTRACTOR") == "1"}
+    yield {"evento": "fin", **resultado, "id": caso_id, "archivo": archivo.filename or "", "tapado": tapado,
+           "enmascarado": enmascarado, "mock": os.getenv("MOCK_EXTRACTOR") == "1"}
+
+
+@app.post(API_LABORATORIO + "/correr")
+async def api_laboratorio_correr(request: Request, archivo: UploadFile = File(...), tipo: str = Form("recibo"),
+                                 modelos: list[str] = Form([]), tapar: str = Form(""), nota: str = Form("")):
+    """El ensayo entero en una respuesta (ver _laboratorio_correr)."""
+    final = None
+    async for ev in _laboratorio_correr(request, archivo, tipo, modelos, tapar, nota):
+        if ev["evento"] == "fin":
+            final = {k: v for k, v in ev.items() if k != "evento"}
+    return final
+
+
+@app.post(API_LABORATORIO + "/correr-en-vivo")
+async def api_laboratorio_correr_en_vivo(request: Request, archivo: UploadFile = File(...), tipo: str = Form("recibo"),
+                                         modelos: list[str] = Form([]), tapar: str = Form(""), nota: str = Form("")):
+    """Lo mismo, transmitido: una línea JSON por evento (NDJSON), para que la
+    pantalla muestre cada modelo a medida que termina en vez de una espera
+    muda de hasta tres minutos. Lo que puede fallar ANTES de empezar (pase,
+    archivo, modelos) falla con su HTTP normal: el primer evento se arma
+    antes de abrir la respuesta."""
+    import json
+    gen = _laboratorio_correr(request, archivo, tipo, modelos, tapar, nota)
+    primero = await gen.__anext__()
+
+    async def cuerpo():
+        yield json.dumps(primero, ensure_ascii=False) + "\n"
+        try:
+            async for ev in gen:
+                yield json.dumps(ev, ensure_ascii=False) + "\n"
+        except HTTPException as e:
+            yield json.dumps({"evento": "error", "detail": e.detail}, ensure_ascii=False) + "\n"
+    return StreamingResponse(cuerpo(), media_type="application/x-ndjson", headers={"Cache-Control": "no-store"})
 
 
 def _ensayo_resumen(c) -> dict:
@@ -10800,7 +10851,10 @@ def api_laboratorio_ensayo(request: Request, caso_id: int):
     c = db.caso_herramienta(HERRAMIENTA_LABORATORIO, caso_id)
     if not c:
         raise HTTPException(404, "No existe ese ensayo.")
-    return {**_ensayo_resumen(c), "entrada": c.entrada, "real": c.real, "diferencias": c.diferencias}
+    real = c.real or {}
+    return {**_ensayo_resumen(c), "entrada": c.entrada, "real": real, "diferencias": c.diferencias,
+            "analisis": laboratorio_modelos.analisis(real.get("lecturas", []), (c.diferencias or {}).get("lineas"),
+                                                     real.get("referencia"))}
 
 
 @app.post(API_LABORATORIO + "/ensayos/{caso_id}/estado")

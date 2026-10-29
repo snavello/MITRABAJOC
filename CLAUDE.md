@@ -1923,6 +1923,16 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   otros proveedores no (UsoIA es el consumo de Anthropic).
 - **Tapar antes de mandar** viene tildado si el enmascarado está prendido;
   `MOCK_EXTRACTOR=1` se avisa en rojo (los Claude no llaman a la API).
+- **El progreso se ve en vivo** (2026-10-29): `POST .../correr-en-vivo`
+  transmite NDJSON (`inicio`, un `modelo` por cada uno que termina, `fin`)
+  desde el mismo generador que `/correr`; la pantalla muestra aro, reloj y
+  barra por modelo. **El signo solo se SEÑALA en ámbar (±), nunca en rojo**:
+  en las líneas (`celdas[].signo`, `lineas.signos`) y en los totales del
+  resumen (se comparan en valor absoluto); la app usa el valor absoluto.
+  **«Qué implica»**: `laboratorio_modelos.analisis` escribe cinco o seis
+  líneas deterministas (quién falló, en qué campos difieren y qué toca de
+  la validación, líneas distintas, signo, costo y tiempo, el que más se
+  aparta), en el resultado y en cada ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)

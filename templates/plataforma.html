@@ -1663,7 +1663,7 @@ function tablaLineas(data, ms) {
     '<td>' + escHTML(f.codigo) + '</td>' +
     '<td>' + escHTML(f.descripcion) + '</td>' +
     '<td class="num">' + escHTML(f.importe) + '</td>' +
-    f.celdas.map(c => '<td>' + (c.igual ? escHTML(c.valor)
+    f.celdas.map(c => '<td>' + (c.igual ? (c.signo ? '<span style="color:#b8860b;" title="El mismo importe con otro signo: la app usa el valor absoluto">' + escHTML(c.valor) + ' ±</span>' : escHTML(c.valor))
       : '<strong style="color:#b23a2e;">' + escHTML(c.valor) + '</strong>') + '</td>').join('') +
     '</tr>').join('');
   const resumen = L.distintas

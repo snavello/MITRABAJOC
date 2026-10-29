@@ -91,6 +91,24 @@
   td { padding:8px; border-bottom:1px solid rgba(255,255,255,.06); vertical-align:top; }
   td.num, th.num { text-align:right; font-family:var(--mono); white-space:nowrap; }
   td.dif { color:var(--mal); font-weight:700; }
+  td.signo { color:var(--leve); }
+  td.signo::after { content:' ±'; font-weight:700; }
+  .analisis { margin:12px 0 0; padding-left:18px; font-size:13.5px; line-height:1.5; color:#e8edf6; }
+  .analisis li + li { margin-top:4px; }
+  .progreso { list-style:none; padding:0; margin:0; }
+  .progreso li { display:grid; grid-template-columns:22px 1fr auto; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:14px; }
+  .progreso .aro { width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,.18); border-top-color:var(--ambar); animation:gira .8s linear infinite; }
+  .progreso .tilde-ok { color:var(--bien); font-weight:700; }
+  .progreso .tilde-mal { color:var(--mal); font-weight:700; }
+  .progreso .reloj { font-family:var(--mono); font-size:12.5px; color:var(--suave); }
+  .progreso li.listo .reloj { color:#fff; }
+  .progreso .barra-t { height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden; grid-column:2 / 4; }
+  .progreso .barra-t span { display:block; height:100%; width:30%; background:var(--ambar); animation:corre 1.4s ease-in-out infinite; }
+  .progreso li.listo .barra-t span { animation:none; width:100%; background:var(--bien); }
+  .progreso li.fallo .barra-t span { animation:none; width:100%; background:var(--mal); }
+  @keyframes gira { to { transform:rotate(360deg); } }
+  @keyframes corre { 0% { margin-left:0; } 50% { margin-left:70%; } 100% { margin-left:0; } }
+  @media (prefers-reduced-motion: reduce) { .progreso .aro, .progreso .barra-t span { animation:none; } }
   td.falta { color:var(--suave); font-style:italic; }
   td.err { color:var(--mal); font-size:12.5px; }
   .tabla-ancha { overflow:auto; }
@@ -282,17 +300,67 @@ async function correr() {
   if (tapar) fd.append('tapar', '1');
   fd.append('nota', document.getElementById('nota').value);
   btn.disabled = true;
-  estado.textContent = 'Leyendo con ' + elegidos.length + (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo… (hasta tres minutos)');
+  estado.textContent = 'Leyendo con ' + elegidos.length + (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo…');
+  const prog = new Progreso(document.getElementById('resultado'));
   try {
-    const r = await fetch(API + '/correr', {method: 'POST', body: fd});
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.detail || ('el servidor contestó ' + r.status));
+    const r = await fetch(API + '/correr-en-vivo', {method: 'POST', body: fd});
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.detail || ('el servidor contestó ' + r.status)); }
+    let data = null;
+    for await (const ev of lineasJson(r.body)) {
+      if (ev.evento === 'inicio') prog.arrancar(ev.modelos, ev.tapado);
+      else if (ev.evento === 'modelo') prog.termino(ev);
+      else if (ev.evento === 'error') throw new Error(ev.detail);
+      else if (ev.evento === 'fin') data = ev;
+    }
+    if (!data) throw new Error('la respuesta se cortó antes de terminar');
+    prog.parar();
     pintarResultado(data, document.getElementById('resultado'), true);
     estado.textContent = 'Ensayo #' + data.id + ' guardado.';
     document.getElementById('cuenta-ensayos').textContent = '…';
   } catch (e) {
+    prog.parar();
     estado.textContent = 'No se pudo: ' + e.message; estado.className = 'estado mal';
   } finally { btn.disabled = false; }
+}
+
+/* Una línea JSON por evento (NDJSON), leída a medida que llega. */
+async function* lineasJson(body) {
+  const lector = body.getReader(), dec = new TextDecoder(); let resto = '';
+  while (true) {
+    const {value, done} = await lector.read();
+    if (done) break;
+    resto += dec.decode(value, {stream: true});
+    const partes = resto.split('\n'); resto = partes.pop();
+    for (const p of partes) if (p.trim()) yield JSON.parse(p);
+  }
+  if (resto.trim()) yield JSON.parse(resto);
+}
+
+/* El progreso por modelo mientras se lee: aro que gira, reloj que corre y la
+   barra que recorre; al terminar cada uno, tilde o cruz con su tiempo y costo. */
+class Progreso {
+  constructor(destino) { this.destino = destino; this.filas = {}; this.t0 = {}; this.timer = null; }
+  arrancar(modelos, tapado) {
+    const ahora = performance.now();
+    this.destino.innerHTML = '<div class="tarjeta"><h2>Leyendo' + (tapado ? ' (datos personales tapados)' : '') + '</h2>' +
+      '<ul class="progreso">' + modelos.map(m => '<li data-clave="' + escHTML(m.clave) + '"><span class="aro"></span><span>' + escHTML(m.nombre) +
+      '</span><span class="reloj">0,0 s</span><div class="barra-t"><span></span></div></li>').join('') + '</ul></div>';
+    modelos.forEach(m => { this.filas[m.clave] = this.destino.querySelector('li[data-clave="' + CSS.escape(m.clave) + '"]'); this.t0[m.clave] = ahora; });
+    this.destino.scrollIntoView({behavior: 'smooth', block: 'start'});
+    this.timer = setInterval(() => {
+      const t = performance.now();
+      for (const [clave, li] of Object.entries(this.filas)) if (!li.classList.contains('listo') && !li.classList.contains('fallo'))
+        li.querySelector('.reloj').textContent = ((t - this.t0[clave]) / 1000).toFixed(1).replace('.', ',') + ' s';
+    }, 100);
+  }
+  termino(ev) {
+    const li = this.filas[ev.clave]; if (!li) return;
+    li.classList.add(ev.ok ? 'listo' : 'fallo');
+    li.querySelector('.aro').outerHTML = ev.ok ? '<span class="tilde-ok">✓</span>' : '<span class="tilde-mal">✕</span>';
+    li.querySelector('.reloj').textContent = ev.ok ? ev.duracion_txt + ' · ' + ev.costo_txt : 'falló';
+    if (!ev.ok) li.querySelector('span:nth-child(2)').insertAdjacentHTML('beforeend', '<br><span class="err" style="font-size:12px;">' + escHTML(ev.error) + '</span>');
+  }
+  parar() { if (this.timer) clearInterval(this.timer); this.timer = null; }
 }
 
 /* ---------- la comparación (sirve para el resultado vivo y para un ensayo guardado) ---------- */
@@ -311,7 +379,9 @@ function pintarResultado(data, destino, vivo) {
   const ref = ms.find(m => m.ok && m.resumen);
   if (ref) ref.resumen.forEach((r, i) => filas.push(fila(escHTML(r.etiqueta), ms.map(m => {
     if (!m.ok || !m.resumen) return '—';
-    const c = m.resumen[i]; return c.igual ? escHTML(c.valor) : '<span class="dif">' + escHTML(c.valor) + '</span>';
+    const c = m.resumen[i];
+    return c.igual ? (c.signo ? '<span class="signo" style="color:var(--leve);">' + escHTML(c.valor) + ' ±</span>' : escHTML(c.valor))
+      : '<span class="dif">' + escHTML(c.valor) + '</span>';
   }))));
   const crudos = vivo ? ms.filter(m => m.ok && m.json).map(m =>
     '<details><summary>Lo que leyó ' + escHTML(m.nombre) + ', completo</summary><pre>' + escHTML(m.json) + '</pre></details>').join('') : '';
@@ -320,7 +390,8 @@ function pintarResultado(data, destino, vivo) {
   const enm = data.enmascarado ? '<p class="muted" style="margin-top:8px;">Tapado: ' + (data.tapado ? 'sí, ' + (data.enmascarado.cajas ?? 0) + ' zonas cubiertas, ' + (data.enmascarado.fugas ?? 0) + ' fugas, ' + ((data.enmascarado.total_ms || 0) / 1000).toFixed(1).replace('.', ',') + ' s' : 'no se pudo (' + escHTML(data.enmascarado.motivo || '') + '); el archivo salió tal cual') + '.</p>' : '';
   const mock = data.mock ? '<p class="aviso rojo" style="margin-top:10px;"><b>Simulado:</b> los modelos de Anthropic no llamaron a la API en este ensayo.</p>' : '';
   destino.innerHTML = '<div class="tarjeta"><h2>Comparación' + (data.id ? ' · ensayo #' + data.id : '') + (data.archivo ? ' <span class="muted" style="font-family:system-ui; text-transform:none; letter-spacing:0; font-size:13px;">' + escHTML(data.archivo) + '</span>' : '') + '</h2>' +
-    '<p class="muted">' + (data.referencia ? 'En rojo, lo que ese modelo leyó distinto de <b>' + escHTML(data.referencia) + '</b> (el primero que contestó).' : 'Ningún modelo pudo leer el archivo.') + '</p>' + mock + enm +
+    '<p class="muted">' + (data.referencia ? 'En rojo, lo que ese modelo leyó distinto de <b>' + escHTML(data.referencia) + '</b> (el primero que contestó). En ámbar con ±, el mismo importe escrito con otro signo.' : 'Ningún modelo pudo leer el archivo.') + '</p>' + mock + enm +
+    ((data.analisis || []).length ? '<h3 style="margin-top:14px;">Qué implica</h3><ol class="analisis">' + data.analisis.map(l => '<li>' + escHTML(l) + '</li>').join('') + '</ol>' : '') +
     '<div class="tabla-ancha" style="margin-top:10px;"><table>' + cab + filas.join('') + '</table></div></div>' +
     tablaLineas(data.lineas, ms.filter(m => m.ok)) +
     ((crudos || guardados) ? '<div class="tarjeta">' + crudos + guardados + '</div>' : '');
@@ -329,9 +400,9 @@ function pintarResultado(data, destino, vivo) {
 function tablaLineas(L, columnas) {
   if (!L || !L.filas || !L.filas.length) return '';
   const cab = '<tr><th>Código</th><th>Descripción</th><th class="num">Importe</th>' + columnas.map(m => '<th>' + escHTML(m.nombre) + '</th>').join('') + '</tr>';
-  const filas = L.filas.map(f => '<tr class="' + (f.difiere ? '' : 'igual-todas') + '"><td class="num">' + escHTML(f.codigo) + '</td><td>' + escHTML(f.descripcion) + '</td><td class="num">' + escHTML(f.importe) + '</td>' +
-    f.celdas.map(c => '<td class="' + (c.falta ? 'falta' : (c.igual ? '' : 'dif')) + '">' + escHTML(c.valor) + '</td>').join('') + '</tr>').join('');
-  return '<div class="tarjeta"><h2>Línea por línea</h2><p class="muted">' + L.total + ' líneas, <b>' + L.distintas + '</b> leídas distinto por algún modelo. En cada celda: tipo · categoría · sección, y lo que difiera del renglón (importe o código).</p>' +
+  const filas = L.filas.map(f => '<tr class="' + ((f.difiere || f.signo) ? '' : 'igual-todas') + '"><td class="num">' + escHTML(f.codigo) + '</td><td>' + escHTML(f.descripcion) + '</td><td class="num">' + escHTML(f.importe) + '</td>' +
+    f.celdas.map(c => '<td class="' + (c.falta ? 'falta' : (c.igual ? (c.signo ? 'signo' : '') : 'dif')) + '">' + escHTML(c.valor) + '</td>').join('') + '</tr>').join('');
+  return '<div class="tarjeta"><h2>Línea por línea</h2><p class="muted">' + L.total + ' líneas, <b>' + L.distintas + '</b> leídas distinto por algún modelo' + (L.signos ? ' y <b>' + L.signos + '</b> solo con el signo distinto (ámbar, ±: la app usa el valor absoluto)' : '') + '. En cada celda: tipo · categoría · sección, y lo que difiera del renglón (importe o código).</p>' +
     '<label class="filtro-lineas"><input type="checkbox" checked onchange="this.closest(\'.tarjeta\').querySelector(\'table\').classList.toggle(\'solo-dif\', this.checked)"> Mostrar solo las que difieren</label>' +
     '<div class="tabla-ancha"><table class="solo-dif">' + cab + filas + '</table></div></div>';
 }
@@ -361,7 +432,7 @@ async function verEnsayo(id) {
   const r = await fetch(API + '/ensayos/' + id, {cache: 'no-store'});
   if (!r.ok) return;
   const e = await r.json();
-  const data = {id: e.id, archivo: e.archivo, referencia: (e.real || {}).referencia, modelos: (e.real || {}).lecturas || [],
+  const data = {id: e.id, archivo: e.archivo, referencia: (e.real || {}).referencia, modelos: (e.real || {}).lecturas || [], analisis: e.analisis,
                 lineas: (e.diferencias || {}).lineas, tapado: e.tapado, enmascarado: (e.entrada || {}).enmascarado, mock: e.mock};
   pintarResultado(data, document.getElementById('detalle-ensayo'), false);
   document.getElementById('detalle-ensayo').scrollIntoView({behavior: 'smooth', block: 'start'});
