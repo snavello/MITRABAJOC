@@ -387,3 +387,65 @@ def test_la_clave_se_pega_desde_la_pantalla_y_el_entorno_manda(monkeypatch):
     assert c.post(API + "/claves", json={"proveedor": "nadie", "clave": "sk-12345678"}).status_code == 422
     assert TestClient(main.app).post(API + "/claves", json={"proveedor": "moonshot", "clave": "sk-12345678"}).status_code == 403
 
+
+def test_el_signo_se_senala_en_ambar_y_no_en_rojo():
+    pos = json.loads(json.dumps(RECIBO)); neg = json.loads(json.dumps(RECIBO))
+    pos["lineas"][1]["importe"] = 110000            # descuento en positivo
+    pos["totales_impresos"]["descuentos"] = 110000
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash"], [
+        (neg, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}),
+        (pos, {"modelo": "alibaba:qwen3.8-flash", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1})])
+    f = r["modelos"][1]
+    assert f["iguales"] == f["campos"], "el signo solo no es diferencia"
+    desc = next(d for d in f["resumen"] if d["etiqueta"] == "Descuentos")
+    assert desc["igual"] and desc["signo"] and desc["valor"] == "110.000,00"
+    assert r["lineas"]["distintas"] == 0 and r["lineas"]["signos"] == 1
+    assert r["lineas"]["filas"][1]["signo"] and r["lineas"]["filas"][1]["celdas"][1]["signo"] is True
+    assert any("signo" in l for l in r["analisis"])
+
+
+def test_el_analisis_dice_lo_que_implican_las_diferencias():
+    otro = json.loads(json.dumps(RECIBO)); otro["totales_impresos"]["neto"] = 1; otro["lineas"][1]["categoria_universal"] = None
+    r = lab.armar_resultado("recibo", ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash", "moonshot:kimi-k3"], [
+        (RECIBO, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1000, "tokens_salida": 500, "duracion_ms": 4000}),
+        (otro, {"modelo": "alibaba:qwen3.8-flash", "tokens_entrada": 2000, "tokens_salida": 600, "duracion_ms": 9000}),
+        lab.ErrorProveedor("sin saldo")])
+    a = r["analisis"]
+    assert 3 <= len(a) <= 6
+    texto = " ".join(a)
+    assert "no contestaron" in texto and "Kimi K3" in texto
+    assert "Neto" in texto and "error de lectura" in texto
+    assert "1 de 2 difieren" in texto and "cuota sindical" in texto
+    assert "Costo:" in texto and "Tiempo:" in texto
+    assert "más se aparta es Qwen 3.8 Flash" in texto
+    assert lab.analisis([], None, None) == ["Ningún modelo leyó el archivo: no hay nada que comparar."]
+    solo = lab.analisis([{"ok": True, "nombre": "X", "iguales": 3, "campos": 3}], None, "X")
+    assert "Solo contestó X" in solo[0]
+
+
+def test_correr_en_vivo_transmite_un_evento_por_modelo(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-q")
+    monkeypatch.setattr(main, "preparar_imagen", lambda contenido, ct: IMAGEN)
+
+    def falso_leer(clave, tipo, contenido, ct, imagen, aviso=False):
+        if clave.startswith("anthropic:"):
+            return json.loads(json.dumps(RECIBO)), {"modelo": "claude-sonnet-4-6", "tokens_entrada": 10, "tokens_salida": 5, "duracion_ms": 100}
+        raise lab.ErrorProveedor("Alibaba contestó 429: sin cupo")
+    monkeypatch.setattr(lab, "leer", falso_leer)
+    c = _con_plataforma()
+    r = c.post(API + "/correr-en-vivo", data={"tipo": "recibo", "modelos": ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash"]},
+               files={"archivo": ("r.png", b"x", "image/png")})
+    assert r.status_code == 200 and r.headers["content-type"].startswith("application/x-ndjson")
+    eventos = [json.loads(l) for l in r.text.splitlines() if l.strip()]
+    assert [e["evento"] for e in eventos] == ["inicio", "modelo", "modelo", "fin"]
+    assert [m["clave"] for m in eventos[0]["modelos"]] == ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash"]
+    por = {e["clave"]: e for e in eventos[1:3]}
+    assert por["anthropic:claude-sonnet-4-6"]["ok"] and por["anthropic:claude-sonnet-4-6"]["duracion_txt"] == "0,1 s"
+    assert not por["alibaba:qwen3.8-flash"]["ok"] and "429" in por["alibaba:qwen3.8-flash"]["error"]
+    fin = eventos[3]
+    assert fin["id"] and fin["ok"] == 1 and fin["analisis"]
+    assert c.get(API + f"/ensayos/{fin['id']}").json()["analisis"] == fin["analisis"]
+    # Lo que falla antes de empezar, falla con su HTTP normal (sin modelos: 422).
+    assert c.post(API + "/correr-en-vivo", data={"tipo": "recibo"}, files={"archivo": ("r.png", b"x", "image/png")}).status_code == 422
+

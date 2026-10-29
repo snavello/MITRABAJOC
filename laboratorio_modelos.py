@@ -344,7 +344,11 @@ def armar_resultado(tipo: str, claves: list, lecturas: list) -> dict:
             "confianza": str(datos.get("confianza") or "—"),
             "resumen": [{"etiqueta": d["etiqueta"], "valor": d["valor"],
                          "igual": any(d["etiqueta"] == x["etiqueta"] and d["comparar"] == x["comparar"]
-                                      for x in referencia[1])} for d in resumen],
+                                      for x in referencia[1]),
+                         # Igual en valor absoluto pero escrito con otro signo: se señala.
+                         "signo": any(d["etiqueta"] == x["etiqueta"] and d["comparar"] == x["comparar"]
+                                      and d["valor"] != x["valor"] for x in referencia[1])}
+                        for d in resumen],
             "iguales": iguales, "campos": len(resumen),
             "json": json.dumps(datos, ensure_ascii=False, indent=1),
         })
@@ -355,7 +359,62 @@ def armar_resultado(tipo: str, claves: list, lecturas: list) -> dict:
     if lineas:
         distintos += lineas["distintas"]
     return {"tipo": tipo, "modelos": filas, "referencia": referencia[0] if referencia else None,
-            "lineas": lineas, "distintos": distintos, "ok": sum(1 for f in filas if f.get("ok"))}
+            "lineas": lineas, "distintos": distintos, "ok": sum(1 for f in filas if f.get("ok")),
+            "analisis": analisis(filas, lineas, referencia[0] if referencia else None)}
+
+
+def analisis(filas: list, lineas: dict | None, referencia: str | None) -> list:
+    """Cinco o seis líneas, en castellano, sobre qué implican las diferencias
+    entre las lecturas. Determinista, sin IA: dice lo que los números dicen
+    y qué toca de la app (pedido de SDN, 2026-10-29)."""
+    ok = [f for f in filas if f.get("ok")]
+    fallidos = [f for f in filas if not f.get("ok")]
+    out = []
+    if not ok:
+        return ["Ningún modelo leyó el archivo: no hay nada que comparar."]
+    if fallidos:
+        out.append(f"{len(fallidos)} de {len(filas)} no contestaron ({', '.join(f['nombre'] for f in fallidos)}): "
+                   "un modelo que falla en el laboratorio también va a fallar con un afiliado esperando.")
+    if len(ok) == 1:
+        out.append(f"Solo contestó {ok[0]['nombre']}: con uno solo no hay comparación. Sumá al menos el de producción.")
+        return out
+    otros = [f for f in ok if f["nombre"] != referencia]
+    peor = min(otros, key=lambda f: (f.get("iguales", 0), -f.get("campos", 0)), default=None)
+    difieren = [f for f in otros if f.get("iguales", 0) < f.get("campos", 0)]
+    if not difieren:
+        out.append(f"Los {len(ok)} coincidieron en todos los campos del resumen con {referencia}: "
+                   "período, totales, cantidad de líneas y aportes. Es acuerdo, no verdad: hay que mirar el recibo.")
+    else:
+        campos = sorted({d["etiqueta"] for f in difieren for d in f.get("resumen", []) if not d.get("igual")})
+        out.append(f"{len(difieren)} de {len(otros)} leyeron distinto de {referencia} en: {', '.join(campos)}. "
+                   + ("Un total o un período distinto es un error de lectura de alguien, y la app validaría contra ese número."
+                      if any(c in campos for c in ("Neto", "Remuneraciones", "Descuentos", "Período")) else
+                      "Son diferencias de forma, no de importes."))
+    if lineas:
+        if lineas["distintas"]:
+            out.append(f"Línea por línea, {lineas['distintas']} de {lineas['total']} difieren: una línea clasificada distinto "
+                       "(aporte, remuneración, sección) cambia la cuota sindical y el tope del 2 %, aunque el neto coincida.")
+        else:
+            out.append(f"Las {lineas['total']} líneas se leyeron igual, clasificación incluida: es lo que más pesa para la validación.")
+        if lineas.get("signos"):
+            out.append(f"{lineas['signos']} línea(s) difieren solo en el signo (un modelo transcribe el descuento en negativo y otro "
+                       "en positivo): la app usa el valor absoluto, así que no cambia el resultado, pero se señala en ámbar.")
+    signos_tot = [d["etiqueta"] for f in otros for d in f.get("resumen", []) if d.get("signo")]
+    if signos_tot and not (lineas and lineas.get("signos")):
+        out.append(f"Totales escritos con distinto signo ({', '.join(sorted(set(signos_tot)))}): mismo importe, "
+                   "distinta convención; la app lo toma en valor absoluto.")
+    con_costo = [f for f in ok if f.get("costo") is not None and f.get("duracion_ms")]
+    if len(con_costo) > 1:
+        barato = min(con_costo, key=lambda f: f["costo"]); caro = max(con_costo, key=lambda f: f["costo"])
+        rapido = min(con_costo, key=lambda f: f["duracion_ms"]); lento = max(con_costo, key=lambda f: f["duracion_ms"])
+        veces = (caro["costo"] / barato["costo"]) if barato["costo"] else 0
+        out.append(f"Costo: {barato['nombre']} {barato['costo_txt']} contra {caro['nombre']} {caro['costo_txt']}"
+                   + (f" ({veces:.0f}× más caro)" if veces >= 2 else "")
+                   + f". Tiempo: {rapido['nombre']} {rapido['duracion_txt']} contra {lento['nombre']} {lento['duracion_txt']}.")
+    if peor is not None and peor.get("campos"):
+        out.append(f"El que más se aparta es {peor['nombre']} ({peor['iguales']}/{peor['campos']} campos iguales). "
+                   "Con un ensayo no alcanza: treinta recibos distintos antes de sacar una conclusión.")
+    return out[:6]
 
 
 def para_guardar(tipo: str, claves: list, lecturas: list, resultado: dict) -> dict:

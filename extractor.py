@@ -420,9 +420,12 @@ def resumen_comparable(tipo: str, datos: dict) -> list:
         _dato("Líneas leídas", str(len(lineas))),
         _dato("Aportes del trabajador",
               str(sum(1 for l in lineas if l.get("tipo") == "aporte_trabajador"))),
-        _dato("Remuneraciones", _num(totales.get("remuneraciones"))),
-        _dato("Descuentos", _num(totales.get("descuentos"))),
-        _dato("Neto", _num(totales.get("neto"))),
+        # Los totales se comparan en valor absoluto, como las líneas: un
+        # modelo transcribe los descuentos en negativo y otro en positivo y
+        # es el mismo total. La pantalla señala el signo aparte (ámbar).
+        _dato("Remuneraciones", _num(totales.get("remuneraciones")), _num(totales.get("remuneraciones")).lstrip("-")),
+        _dato("Descuentos", _num(totales.get("descuentos")), _num(totales.get("descuentos")).lstrip("-")),
+        _dato("Neto", _num(totales.get("neto")), _num(totales.get("neto")).lstrip("-")),
         _dato("Confianza", _txt(datos.get("confianza"))),
     ]
 
@@ -497,7 +500,7 @@ def comparar_lineas(lecturas: list) -> dict:
         for ln in libres:          # líneas que solo vio este modelo
             _nuevo(i, ln)
 
-    filas, distintas = [], 0
+    filas, distintas, signos = [], 0, 0
     for g in grupos:
         ref, celdas = g["ref"], []
         for ln in g["celdas"]:
@@ -521,15 +524,23 @@ def comparar_lineas(lecturas: list) -> dict:
                 valor += f' · {ln["importe"]}'
             if ln["codigo"] != ref["codigo"]:
                 valor += f' · código {ln["codigo"]}'
-            celdas.append({"valor": valor, "igual": None, "falta": False})
+            # El signo solo no es diferencia, pero SE SEÑALA (`signo`): que un
+            # modelo transcriba "-173.520,83" donde otro puso "173.520,83" es
+            # un dato para quien compara, aunque la validación no cambie
+            # (pedido de SDN, 2026-10-29: "no detectó la diferencia de signo").
+            celdas.append({"valor": valor, "igual": None, "falta": False,
+                           "signo": ln["importe"] != ref["importe"]
+                           and ln["importe"].lstrip("-") == ref["importe"].lstrip("-")})
         base = next((c["valor"] for c in celdas if not c["falta"]), "")
         for c in celdas:
             c["igual"] = (not c["falta"]) and c["valor"] == base
         difiere = any(not c["igual"] for c in celdas)
         distintas += 1 if difiere else 0
+        signos += 1 if any(c.get("signo") for c in celdas) else 0
         filas.append({"codigo": ref["codigo"], "descripcion": ref["descripcion"],
-                      "importe": ref["importe"], "celdas": celdas, "difiere": difiere})
-    return {"filas": filas, "total": len(filas), "distintas": distintas}
+                      "importe": ref["importe"], "celdas": celdas, "difiere": difiere,
+                      "signo": any(c.get("signo") for c in celdas)})
+    return {"filas": filas, "total": len(filas), "distintas": distintas, "signos": signos}
 
 
 # ==================== Comprobante de aportes de ARCA ====================

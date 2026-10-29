@@ -31,6 +31,15 @@ Ruta: `/entornos/herramientas/laboratorio-modelos`. Motor:
   borran antes de guardar. Quedan importes, códigos, clasificaciones y los
   números de cada llamada (tokens, tiempo, costo). Estados nuevo / revisado
   / aplicado / descartado; CSV con una fila por modelo y ensayo.
+- **El progreso se ve en vivo**: cada modelo con su reloj mientras lee y,
+  al terminar, tilde o cruz con tiempo y costo (`/correr-en-vivo`, NDJSON).
+- **Qué implica**: debajo de la comparación, cinco o seis líneas escritas
+  por el código (no por una IA) sobre qué significan las diferencias:
+  quién no contestó, en qué campos difieren y qué toca de la validación,
+  líneas clasificadas distinto, signo, costo y tiempo, el que más se aparta.
+- **El signo se señala, no se marca**: un importe igual con otro signo va
+  en ámbar con ±, en las líneas y en los totales. La app usa el valor
+  absoluto, así que no cambia la validación, pero se ve.
 - **Resumen por modelo**: sobre todos los ensayos no descartados, cuántas
   veces se lo probó, cuántas contestó, tiempo mediano, costo promedio y
   coincidencia con la referencia. Es una medida de acuerdo, no de verdad.
