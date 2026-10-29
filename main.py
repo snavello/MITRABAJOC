@@ -588,13 +588,19 @@ def servir_logo(sindicato_id: int, tono: str = ""):
 
 def _url_foto_portada(sindicato_id, tema: str) -> dict | None:
     """La foto de portada del modelo para una pantalla: {"url", "foco_x",
-    "foco_y", "descripcion"}, o None si la biblioteca de ese modelo todavía no
-    tiene ninguna para este sindicato (la portada se arma sin foto)."""
+    "foco_y", "descripcion", "url_color", "saturacion"}, o None si la
+    biblioteca de ese modelo todavía no tiene ninguna para este sindicato
+    (la portada se arma sin foto). `saturacion` es cuánto color eligió el
+    sindicato (0 a 100); si la foto no tiene versión en color vale 0 y
+    `url_color` es None, así la plantilla no pide una imagen que no existe."""
     f = db.foto_portada_de(sindicato_id, tema) if sindicato_id else None
     if not f:
         return None
+    saturacion = db.saturacion_foto_de(sindicato_id, tema) if f["color"] else 0
     return {"url": f"/foto-tema/{f['id']}?v={f['v']}", "foco_x": f["foco_x"],
-            "foco_y": f["foco_y"], "descripcion": f["descripcion"]}
+            "foco_y": f["foco_y"], "descripcion": f["descripcion"],
+            "url_color": f"/foto-tema/{f['id']}/color?v={f['v_color']}" if f["color"] else None,
+            "saturacion": saturacion}
 
 
 @app.get("/foto-tema/{foto_id}")
@@ -606,6 +612,19 @@ def servir_foto_tema(foto_id: int, request: Request):
     if not f or (not f.publicada and not sesion_actual(request, "plataforma")):
         raise HTTPException(404, "Sin foto")
     return BinResponse(content=f.datos, media_type=f.mime or "image/webp",
+                       headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/foto-tema/{foto_id}/color")
+def servir_foto_tema_color(foto_id: int, request: Request):
+    """La misma foto, en su versión original a color (2026-10-29). Misma
+    puerta que la normalizada; 404 si la foto se subió antes y no la tiene."""
+    f = db.foto_tema(foto_id)
+    if not f or (not f.publicada and not sesion_actual(request, "plataforma")):
+        raise HTTPException(404, "Sin foto")
+    if not f.datos_color:
+        raise HTTPException(404, "Esta foto no tiene versión en color")
+    return BinResponse(content=f.datos_color, media_type=f.mime_color or "image/webp",
                        headers={"Cache-Control": "public, max-age=3600"})
 
 
@@ -6552,6 +6571,24 @@ def plataforma_fotos_tema_editar(request: Request, foto_id: int, descripcion: st
     return {"ok": True}
 
 
+@app.post("/plataforma/fotos-tema/{foto_id}/archivo")
+async def plataforma_fotos_tema_reemplazar(request: Request, foto_id: int,
+                                           archivo: UploadFile = File(...)):
+    """Vuelve a subir el archivo de una foto que ya existe: las de antes del
+    2026-10-29 no tienen versión en color. Se normaliza igual que una nueva;
+    el id, el foco, la publicación y la disponibilidad quedan como estaban."""
+    exigir_plataforma(request)
+    try:
+        normalizada = fotos_tema.normalizar(await archivo.read())
+    except fotos_tema.FotoInvalida as e:
+        raise HTTPException(400, str(e))
+    if not db.reemplazar_archivo_foto_tema(foto_id, normalizada):
+        raise HTTPException(404, "Sin foto")
+    db.registrar_log_plataforma("foto_tema_archivo", _quien_plataforma(request), objetivo=str(foto_id),
+                                ip=_ip_de(request))
+    return {"ok": True, "id": foto_id, "ancho": normalizada["ancho"], "alto": normalizada["alto"]}
+
+
 @app.post("/plataforma/fotos-tema/{foto_id}/borrar")
 def plataforma_fotos_tema_borrar(request: Request, foto_id: int):
     exigir_plataforma(request)
@@ -8697,7 +8734,11 @@ def _apariencia_del_sindicato(sid: int, sind, marca: dict) -> dict:
         elegida = portadas.get(clave)
         modelos.append({"clave": clave, "nombre": t["nombre"], "descripcion": t["descripcion"],
                         "fotos": fotos,
-                        "elegida": elegida if elegida in {f["id"] for f in fotos} else None})
+                        "elegida": elegida if elegida in {f["id"] for f in fotos} else None,
+                        # Cuánto color muestra la foto de este modelo (2026-10-29).
+                        "saturacion": db.saturacion_foto_de(sid, clave),
+                        # La automática (la más nueva) ¿tiene versión en color?
+                        "auto_color": bool(fotos and fotos[0]["color"])})
     colores = [marca.get("color_base"), marca.get("color_primario"),
                marca.get("color_acento"), marca.get("color_secundario")]
     return {
@@ -8706,6 +8747,7 @@ def _apariencia_del_sindicato(sid: int, sind, marca: dict) -> dict:
         "paleta": temas.resolver_paleta(sind.paleta_tema),
         "paletas": temas.PALETAS,
         "modelos": modelos,
+        "saturaciones": fotos_tema.SATURACIONES,
         "colores": colores,
         "prueba": temas.prueba_de_lectura(*colores),
         # «Tu día» se muestra SIEMPRE, con su estado: un módulo apagado que no
@@ -8731,10 +8773,12 @@ def _foto_de_formulario(valor):
 @app.post("/admin/apariencia")
 def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_panel: str = Form(""),
                      paleta: str = Form(""), foto_laguna: str = Form(None),
-                     foto_noticiero: str = Form(None)):
+                     foto_noticiero: str = Form(None), saturacion_laguna: str = Form(None),
+                     saturacion_noticiero: str = Form(None)):
     """El Super Admin elige la apariencia del sindicato (PLAN_TEMAS.md, D3 y
     D5): el modelo por defecto de los afiliados y de los operadores, la
-    paleta y la foto de portada de cada modelo. Se valida TODO antes de
+    paleta, la foto de portada de cada modelo y cuánto color muestra
+    (`fotos_tema.SATURACIONES`, 2026-10-29). Se valida TODO antes de
     guardar nada: un valor fuera del catálogo o una foto que este sindicato
     no puede usar rechazan el formulario entero, sin cambios a medias."""
     sid = exigir_sindicato(request)
@@ -8742,6 +8786,13 @@ def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_pane
     if not (temas.tema_valido(tema_afiliados) and temas.tema_valido(tema_panel)
             and temas.paleta_valida(paleta)):
         return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
+    saturaciones = {}
+    for tema, valor in (("laguna", saturacion_laguna), ("noticiero", saturacion_noticiero)):
+        if valor is None:
+            continue
+        if fotos_tema.saturacion_valida(valor) is None:
+            return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
+        saturaciones[tema] = fotos_tema.saturacion_valida(valor)
     fotos = {}
     for tema, valor in (("laguna", foto_laguna), ("noticiero", foto_noticiero)):
         elegida = _foto_de_formulario(valor)
@@ -8755,6 +8806,8 @@ def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_pane
         return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
     for tema, foto_id in fotos.items():
         db.elegir_foto_portada(sid, tema, foto_id)
+    for tema, nivel in saturaciones.items():
+        db.elegir_saturacion_foto(sid, tema, nivel)
     return RedirectResponse("/admin?ok=apariencia#apariencia", status_code=303)
 
 

@@ -60,10 +60,13 @@ def test_la_zona_de_subida_y_su_ayuda():
     assert 'id="ft-zona"' in html and 'type="file" id="ft-archivo"' in html
     assert "image/jpeg,image/png,image/webp" in html
     assert "hasta 8 MB" in html and "600 px" in html
-    assert ("Toda foto se pasa a escala de grises y se le emparejan brillo y contraste; "
-            "el color lo pone el modelo.") in html
+    # Desde 2026-10-29 se guardan las dos versiones y la ayuda lo dice.
+    assert "normalizada</b>" in html and "original en color</b>" in html
+    assert "cuánto color mostrar" in html
     # la fila Original → Normalizada
     assert 'id="ft-original"' in html and 'id="ft-normalizada"' in html
+    # el editor deja ver la versión en color y reponer el archivo de las viejas
+    assert 'id="ft-ver-color"' in html and 'id="ft-archivo-reponer"' in html and 'id="ft-sin-color"' in html
 
 
 def test_los_sindicatos_para_elegir_vienen_escapados():

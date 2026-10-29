@@ -9489,3 +9489,65 @@ período manda topes y grilla, un CUIL/CUIT cambia de quién es el recibo, y
 cada línea distinta se nombra por código porque toca la cuota, el tope del
 2 % o la base. La línea de costo y tiempo se fue del análisis (siguen en la
 tabla de arriba, que es donde se comparan).
+
+## Las fotos de los modelos, también en color (2026-10-29, Trabajador 0.56.01, Admin 0.76.01, Plataforma 0.64.01)
+
+**El pedido.** Desde el bloque 2 de PLAN_TEMAS.md (D5) la biblioteca de
+fotos guardaba una sola versión de cada foto: la normalizada, en escala de
+grises con niveles y brillo parejos, y el color se lo ponía el modelo al
+mostrarla (duotono en Laguna, screen + marfil en Noticiero). Los sindicatos
+pidieron poder verlas también en color, "a veces". Como punto intermedio,
+SDN definió que el sindicato elija en su menú entre **Normalizada** en una
+punta, **Full color** en la otra, y **25 / 50 / 75 % de saturación** en el
+medio, dentro de la gama de colores ya elegida.
+
+**Qué se guarda.** `fotos_tema.normalizar` devuelve ahora dos versiones del
+mismo archivo: la normalizada de siempre y la **original en color**, solo
+orientada (EXIF) y acotada al mismo lado largo, en webp (`CALIDAD_COLOR`
+85). Las dos salen del mismo achique, así miden exactamente lo mismo y el
+punto de interés vale para ambas. `FotoTema.datos_color` / `mime_color`
+(migración `b7c9d1e3f5a2`); NULL = foto subida antes, solo en gris. No se
+guardan los bytes crudos que subió la persona: la foto en color está ahí
+para usarla en el diseño, y una original de 8 MB por foto en la base no
+servía para eso.
+
+**Cómo se funde.** El nivel no es un filtro de saturación sobre la foto en
+color: a 0 % la pantalla tiene que verse exactamente como hasta hoy (la
+normalizada con el tinte del modelo), y un `filter: saturate()` sobre la
+original no da eso. Lo que hace la portada es poner la **original en color
+encima de la normalizada, con la opacidad del nivel** (`--foto-sat`, clase
+`foto-color`, sin filtro ni `mix-blend-mode`): a 25 % domina el tinte del
+modelo y asoma el color real, a 100 % se ve la original tal cual (y la
+normalizada ni se pide). Los velos de cada modelo siguen arriba (el marfil
+de Noticiero la sigue multiplicando), así que el color queda en la gama del
+modelo. Una regla por hoja en las cuatro de tema (`laguna-portada`,
+`noticiero-portada`, `laguna-panel-portada`, `noticiero-panel-portada`) y
+el mismo bloque en las tres portadas (afiliado, empresa, panel). Verificado
+con capturas en los dos modelos a 0, 50 y 100 %.
+
+**Dónde se elige.** En la pestaña Apariencia del Super Admin, debajo de las
+fotos de cada modelo: «Color de la foto», cinco pastillas
+(`fotos_tema.SATURACIONES`), guardadas en `Sindicato.saturacion_fotos`
+(`{"laguna": 0, "noticiero": 50}`) por `db.elegir_saturacion_foto`; un
+valor fuera del catálogo rechaza el formulario entero, como el resto de la
+pestaña, y un valor sucio en la base vale el por defecto (0). Las
+miniaturas de la pestaña se pintan con la misma fusión (`--ap-sat`), así lo
+que se elige se ve antes de guardar. Es un ajuste del sindicato por
+modelo, no por foto: vale para la foto que tenga de portada. Si esa foto
+no tiene versión en color, la portada la muestra normalizada
+(`_url_foto_portada` devuelve `saturacion` 0 y `url_color` None) y la
+pestaña lo avisa junto al selector.
+
+**Las fotos de antes.** En Fotos de `/plataforma` cada una lleva el chip
+«Solo en gris» si no tiene color, el editor deja «Ver la versión en color»
+cuando la tiene y **«Volver a subir el archivo»** (`POST
+/plataforma/fotos-tema/{id}/archivo`, `db.reemplazar_archivo_foto_tema`):
+cambian las dos versiones y el tamaño, quedan el id, el foco, la
+descripción, la publicación y la disponibilidad, así los sindicatos que ya
+la eligieron no tienen que volver a elegirla. La versión en color se sirve
+en `GET /foto-tema/{id}/color` con la misma puerta que la normalizada (un
+borrador solo lo ve plataforma) y su propio sello `?v=`.
+
+Tests: `test_fotos_tema.py` (las dos versiones, el catálogo, la ruta y la
+reposición), `test_apariencia_panel.py` (guardar el nivel, lo que recibe la
+portada, la foto sin color, el rechazo), `test_biblioteca_fotos_pantalla.py`.

@@ -666,6 +666,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   el logo en tono oscuro de `_encabezado.html` se había hecho solo para
   Laguna y Noticiero (encabezado gris claro) seguía con el logo invisible.
 
+- **La foto de portada se guarda en gris Y en color; cuánto color se ve lo
+  elige el sindicato por modelo, nunca por foto** (2026-10-29, pedido de
+  los sindicatos, definido por SDN). `fotos_tema.normalizar` saca las dos
+  versiones del mismo achique; la portada pone la de color ENCIMA de la
+  normalizada con la opacidad del nivel (`fotos_tema.SATURACIONES`: 0, 25,
+  50, 75, 100), no un `saturate()` sobre la original: a 0 % tiene que verse
+  exactamente como antes, y los velos del modelo siguen arriba. Una foto sin
+  versión en color se muestra normalizada aunque el nivel pida color.
+  Detalle en HISTORIAL.md, "Las fotos de los modelos, también en color".
+
 - **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
   (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
   (147); cada persona cambia el suyo (afiliado: `CuentaTrabajador.tema`;
@@ -1364,6 +1374,21 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     **OpenAI (GPT-6.x) sumado el mismo día** (Plataforma 0.63.01). **Queda
     de SDN**: cargar `DASHSCOPE_API_KEY` y `MOONSHOT_API_KEY` en
     Pruebas y correr el primer lote de ensayos.
+
+41. **Las fotos de los modelos, también en color** (2026-10-29, Trabajador
+    0.56.01, Admin 0.76.01, Plataforma 0.64.01; pedido de los sindicatos):
+    la biblioteca guarda de cada foto la normalizada (gris, como siempre) y
+    la **original en color** (`FotoTema.datos_color`, mismo tamaño,
+    migración `b7c9d1e3f5a2`; `GET /foto-tema/{id}/color`). El Super Admin
+    elige en Apariencia, por modelo, cuánto color mostrar
+    (`fotos_tema.SATURACIONES`: Normalizada / 25 / 50 / 75 % / Full color,
+    `Sindicato.saturacion_fotos`): la portada funde la de color sobre la
+    normalizada con esa opacidad (clase `foto-color`, `--foto-sat`), en las
+    tres portadas y los dos modelos. Una foto de antes no tiene color
+    (chip «Solo en gris» en `/plataforma`): se muestra normalizada hasta
+    que plataforma la reponga con «Volver a subir el archivo» (`POST
+    /plataforma/fotos-tema/{id}/archivo`, conserva id, foco y publicación).
+    Detalle en HISTORIAL.md, "Las fotos de los modelos, también en color".
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

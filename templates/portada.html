@@ -395,8 +395,14 @@
    la foto no se dibuja y la portada queda como siempre. #}
 <section class="pt-gremio{% if foto_portada %} con-foto{% endif %}" aria-label="Tu gremio">
   <div class="pt-gremio-media" aria-hidden="true">
-    {% if foto_portada %}<img class="pt-gremio-foto" src="{{ foto_portada.url }}" alt=""
-         style="object-position: {{ ((foto_portada.foco_x or 0.5) * 100) | round(1) }}% {{ ((foto_portada.foco_y or 0.5) * 100) | round(1) }}%;">{% endif %}
+    {% if foto_portada %}{% set pos = ((foto_portada.foco_x or 0.5) * 100) | round(1) ~ '% ' ~ ((foto_portada.foco_y or 0.5) * 100) | round(1) ~ '%' %}
+    {# La normalizada (gris, teñida por el modelo) va siempre que el sindicato
+       no pida full color; la de color se funde encima con la opacidad que
+       eligió (fotos_tema.SATURACIONES, 2026-10-29). #}
+    {% if foto_portada.saturacion < 100 %}<img class="pt-gremio-foto" src="{{ foto_portada.url }}" alt=""
+         style="object-position: {{ pos }};">{% endif %}
+    {% if foto_portada.saturacion > 0 and foto_portada.url_color %}<img class="pt-gremio-foto foto-color" src="{{ foto_portada.url_color }}" alt=""
+         style="object-position: {{ pos }}; --foto-sat: {{ foto_portada.saturacion / 100 }};">{% endif %}{% endif %}
   </div>
   {# Encabezado normalizado: el mismo parcial que el resto de la suite.
      En la app del afiliado es UNA sola línea -- logo del gremio a la
