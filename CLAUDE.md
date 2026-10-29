@@ -1938,6 +1938,12 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   «no terminó»), botón **Detener** por modelo (`POST .../correr/{rid}/detener`,
   corridas en memoria del proceso) y reintento ante 429 del proveedor
   (`REINTENTOS_429`, Qwen limita pedidos en paralelo en el nivel gratis).
+  **La referencia no es la verdad** (2026-10-29): es el primer modelo
+  elegido. Cuando los demás (dos o más) coinciden entre sí y ella se aparta,
+  la fila y el campo se marcan `ref_sola` (ámbar, «los demás coinciden») y
+  el análisis dice que la sospechosa es la referencia; con dos modelos no se
+  marca nada. Y `extractor.comparar_lineas` empareja en TRES pasadas (código,
+  descripción, sección + importe si la pareja es única).
   **El signo solo se SEÑALA en ámbar (±), nunca en rojo**:
   en las líneas (`celdas[].signo`, `lineas.signos`) y en los totales del
   resumen (se comparan en valor absoluto); la app usa el valor absoluto.

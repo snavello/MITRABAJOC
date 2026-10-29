@@ -10908,7 +10908,9 @@ def api_laboratorio_ensayo(request: Request, caso_id: int):
     real = c.real or {}
     return {**_ensayo_resumen(c), "entrada": c.entrada, "real": real, "diferencias": c.diferencias,
             "analisis": laboratorio_modelos.analisis(real.get("lecturas", []), (c.diferencias or {}).get("lineas"),
-                                                     real.get("referencia"))}
+                                                     real.get("referencia"),
+                                                     sorted({d["etiqueta"] for f in real.get("lecturas", [])
+                                                             for d in f.get("resumen", []) if d.get("ref_sola")}))}
 
 
 @app.post(API_LABORATORIO + "/ensayos/{caso_id}/estado")

@@ -9418,3 +9418,42 @@ prueba. Sin crédito gratis para cuentas nuevas (recarga mínima US$ 5). Test
 nuevo: el pedido a OpenAI lleva `max_completion_tokens`, no lleva
 `temperature` y el de Kimi no cambia. Paso a paso y comparativa en
 `docs/LABORATORIO_MODELOS.md`.
+
+## La referencia no es la verdad (2026-10-29, Plataforma 0.63.02)
+
+Primera corrida real de SDN con los cuatro GPT y Claude Haiku 4.5 de
+referencia. La tabla línea por línea pintó de rojo a los cuatro GPT en tres
+renglones donde los cuatro decían LO MISMO entre sí: «ADICIONAL POR
+JEFATURA» 4.580,00 contra 4.590,00 de Haiku, «SEGURO FAMILIAR» código 309-004
+y -16,50 contra 309-001 y -15,50, y «APORTE PERSONAL I.N.S.S.J.Y.P.» como
+`pami` contra `jubilacion` de Haiku --y el INSSJyP ES el PAMI, así que ahí la
+equivocada era la referencia sin lugar a dudas--. Y el título universitario
+salía como DOS filas con «no la leyó» en todas: Haiku leyó «125-001 TITULO
+UNIV/TERCER LAUDO(15/91» y los GPT «126-001 TITULO UNIV/TERC.LAUDO15/91» (el
+código real del recibo es 126-001, dice SDN). Código Y descripción distintos:
+ni la pasada por código ni la por descripción la emparejaban.
+
+Dos cambios, los dos en el comparador y no en el prompt:
+
+- **Tercera pasada de emparejado** (`extractor.comparar_lineas`): lo que
+  sobró después de código y descripción se empareja por sección + importe en
+  valor absoluto, solo si la pareja es única de los dos lados (dos líneas de
+  563,00 entre los haberes no se adivinan). La línea del título cae en una
+  fila y la celda dice «código 126-001».
+- **La referencia sola** (`ref_sola` por fila y `contra_referencia` en el
+  total; `campos_contra_referencia` para el resumen): cuando los demás --dos o
+  más-- coinciden entre sí y la referencia se aparta (o no leyó la línea),
+  la fila se marca y los demás van en ámbar, no en rojo; la celda de la
+  referencia dice «los demás coinciden». El análisis suma la línea «Ojo con
+  la referencia: … lo más probable es que la lectura equivocada sea la de la
+  referencia». Con dos modelos no hay mayoría posible y nada se marca.
+
+**Qué hace la app real con un código mal leído** (pregunta de SDN): la app
+no «chequea» el código contra el importe. `validador.matchear_lineas` busca
+el concepto por código exacto, después por nombre o alias normalizado y, si
+no, por la categoría universal que la IA le puso a la línea. Un «125-001» que
+no está en el catálogo cae a la descripción; si esa también vino distinta,
+la línea queda como concepto desconocido (pendiente de revisión en
+Conceptos) y no se valida contra ninguna fórmula, pero sigue sumando al
+bruto por su sección. Es decir: un dígito mal leído en el código de un haber
+no cambia la aritmética del recibo, pero sí deja ese concepto sin controlar.

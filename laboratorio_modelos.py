@@ -400,12 +400,34 @@ def armar_resultado(tipo: str, claves: list, lecturas: list) -> dict:
     distintos = sum(f["campos"] - f["iguales"] for f in filas if f.get("ok"))
     if lineas:
         distintos += lineas["distintas"]
+    contra_ref = campos_contra_referencia(tipo, leidas)
+    for f in filas:
+        if f.get("ok"):
+            for d in f["resumen"]:
+                d["ref_sola"] = d["etiqueta"] in contra_ref
     return {"tipo": tipo, "modelos": filas, "referencia": referencia[0] if referencia else None,
             "lineas": lineas, "distintos": distintos, "ok": sum(1 for f in filas if f.get("ok")),
-            "analisis": analisis(filas, lineas, referencia[0] if referencia else None)}
+            "contra_referencia": contra_ref,
+            "analisis": analisis(filas, lineas, referencia[0] if referencia else None, contra_ref)}
 
 
-def analisis(filas: list, lineas: dict | None, referencia: str | None) -> list:
+def campos_contra_referencia(tipo: str, leidas: list) -> list:
+    """Las etiquetas del resumen en las que la referencia se aparta y los
+    demás (dos o más) coinciden entre sí. Puro."""
+    if len(leidas) < 3:
+        return []
+    resumenes = [extractor.resumen_comparable(tipo, datos) for _, datos in leidas]
+    ref = {d["etiqueta"]: d["comparar"] for d in resumenes[0]}
+    salida = []
+    for etiqueta, valor_ref in ref.items():
+        otros = [next((d["comparar"] for d in r if d["etiqueta"] == etiqueta), None) for r in resumenes[1:]]
+        if all(o is not None for o in otros) and len(set(otros)) == 1 and otros[0] != valor_ref:
+            salida.append(etiqueta)
+    return salida
+
+
+def analisis(filas: list, lineas: dict | None, referencia: str | None,
+             contra_ref: list | None = None) -> list:
     """Cinco o seis líneas, en castellano, sobre qué implican las diferencias
     entre las lecturas. Determinista, sin IA: dice lo que los números dicen
     y qué toca de la app (pedido de SDN, 2026-10-29)."""
@@ -445,6 +467,21 @@ def analisis(filas: list, lineas: dict | None, referencia: str | None) -> list:
         if lineas.get("signos"):
             out.append(f"{lineas['signos']} línea(s) difieren solo en el signo (un modelo transcribe el descuento en negativo y otro "
                        "en positivo): la app usa el valor absoluto, así que no cambia el resultado, pero se señala en ámbar.")
+    # La referencia es el primer modelo elegido, no la verdad. Si los demás
+    # coinciden entre sí y ella se aparta, lo más probable es que la
+    # equivocada sea ella (caso real: Haiku 4.5 leyó "4.590,00" y "125-001"
+    # donde los cuatro GPT leyeron "4.580,00" y "126-001", el código real).
+    contra = list(contra_ref or [])
+    n_lineas_contra = (lineas or {}).get("contra_referencia", 0)
+    if (contra or n_lineas_contra) and len(otros) >= 2:
+        partes = []
+        if contra:
+            partes.append(f"en {', '.join(contra)}")
+        if n_lineas_contra:
+            partes.append(f"en {n_lineas_contra} línea(s)")
+        out.append(f"Ojo con la referencia: {' y '.join(partes)} los otros {len(otros)} coinciden entre sí y "
+                   f"{referencia} es el único que se aparta. Ahí lo más probable es que la lectura "
+                   "equivocada sea la de la referencia, no la de los demás (se marca en la tabla).")
     invalidos = [(f["nombre"], d["etiqueta"]) for f in ok for d in f.get("resumen", []) if d.get("invalido")]
     if invalidos:
         out.append("Dígito mal leído: " + "; ".join(f"{n} devolvió un {e} que no pasa el verificador (módulo 11)" for n, e in invalidos)

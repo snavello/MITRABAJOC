@@ -588,3 +588,27 @@ def test_openai_pide_max_completion_tokens_y_va_sin_temperature(monkeypatch):
     monkeypatch.setenv("MOONSHOT_API_KEY", "sk-kimi")
     lab.leer("moonshot:kimi-k3", "recibo", b"", "image/png", IMAGEN)
     assert capturado["body"]["max_tokens"] == extractor.MAX_TOKENS and "max_completion_tokens" not in capturado["body"]
+
+
+def test_el_analisis_avisa_cuando_la_que_se_aparta_es_la_referencia():
+    """Caso real: Haiku 4.5 de referencia leyó INSSJyP como jubilación y
+    "4.590,00"; los cuatro GPT leyeron pami y "4.580,00". Cuatro contra uno:
+    la tabla pintaba a los cuatro de rojo y el análisis culpaba al que más
+    se apartaba. Ahora dice que la sospechosa es la referencia."""
+    ref = json.loads(json.dumps(RECIBO)); otro = json.loads(json.dumps(RECIBO))
+    otro["totales_impresos"]["neto"] = RECIBO["totales_impresos"]["neto"] + 10
+    otro["lineas"][0]["importe"] = (RECIBO["lineas"][0]["importe"] or 0) + 10
+    uso = {"tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}
+    r = lab.armar_resultado("recibo", ["anthropic:claude-haiku-4-5", "openai:gpt-6.1-sol", "openai:gpt-6.1-terra", "openai:gpt-6-luna"], [
+        (ref, dict(uso, modelo="claude-haiku-4-5")), (otro, dict(uso, modelo="openai:gpt-6.1-sol")),
+        (otro, dict(uso, modelo="openai:gpt-6.1-terra")), (otro, dict(uso, modelo="openai:gpt-6-luna"))])
+    assert "Neto" in r["contra_referencia"]
+    assert r["lineas"]["contra_referencia"] == 1 and r["lineas"]["filas"][0]["ref_sola"]
+    aviso = next(l for l in r["analisis"] if l.startswith("Ojo con la referencia"))
+    assert "Neto" in aviso and "1 línea(s)" in aviso and r["referencia"] in aviso
+    # Cada celda del resumen sabe si ahí la referencia quedó sola (lo pinta la pantalla).
+    assert any(d["ref_sola"] for d in r["modelos"][1]["resumen"] if d["etiqueta"] == "Neto")
+    # Con dos modelos no hay mayoría posible: nada se marca.
+    r2 = lab.armar_resultado("recibo", ["anthropic:claude-haiku-4-5", "openai:gpt-6.1-sol"], [
+        (ref, dict(uso, modelo="claude-haiku-4-5")), (otro, dict(uso, modelo="openai:gpt-6.1-sol"))])
+    assert r2["contra_referencia"] == [] and not any(l.startswith("Ojo con la referencia") for l in r2["analisis"])
