@@ -492,7 +492,11 @@
       <button type="button" class="pt-tapa{% if not tapa.tiene_imagen1 %} sin-foto{% endif %}" onclick="abrirNoticia({{ tapa.id }})">
         {% if tapa.tiene_imagen1 %}
         <span class="pt-tapa-foto">
-          <img class="pt-mini" src="/noticia-imagen/{{ tapa.id }}/1" alt="">
+          {# La normalizada (gris, teñida por el modelo) y, si el sindicato
+             pidió color, la original fundida encima con esa opacidad
+             (fotos_tema.SATURACIONES; a full color, la normalizada no se pide). #}
+          {% if sat_publicaciones < 100 %}<img class="pt-mini" src="/noticia-imagen/{{ tapa.id }}/1/normalizada" alt="">{% endif %}
+          {% if sat_publicaciones > 0 %}<img class="pt-mini foto-color" src="/noticia-imagen/{{ tapa.id }}/1" alt="" style="--foto-sat: {{ sat_publicaciones / 100 }};">{% endif %}
           {% if chip %}<span class="pt-tapa-chip">{{ chip }}</span>{% endif %}
         </span>
         {% elif chip %}<span class="pt-tapa-chip">{{ chip }}</span>{% endif %}
@@ -607,7 +611,8 @@
             {# Auditoría G2-01: sin foto, la lámina es tipográfica (el rubro en
                grande sobre el plano de la marca), como la nota de tapa. #}
             <button type="button" class="car-sl{% if not b.tiene_imagen %} sin-foto{% endif %}" onclick="abrirBeneficio({{ b.id }})">
-              {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
+              {% if b.tiene_imagen %}{% if sat_publicaciones < 100 %}<img src="/beneficio-imagen/{{ b.id }}/normalizada" alt="">{% endif %}
+              {% if sat_publicaciones > 0 %}<img class="foto-color" src="/beneficio-imagen/{{ b.id }}" alt="" style="--foto-sat: {{ sat_publicaciones / 100 }};">{% endif %}{% endif %}
               <span class="car-velo"></span>
               <span class="car-txt">
                 <span class="car-k">{{ b.rubro }}</span>

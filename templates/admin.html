@@ -4035,6 +4035,15 @@
     {% else %}
     <p class="muted">Todavía no hay fotos para este modelo. Las carga Colm3na.</p>
     {% endif %}
+    {# Lo mismo para las fotos de noticias y beneficios en la portada (la
+       nota de tapa y el carrusel), 2026-10-29. #}
+    <div class="ap-sub">Color de las fotos de noticias y beneficios</div>
+    <div class="ap-sat" role="radiogroup" aria-label="Color de las fotos de noticias y beneficios en {{ m.nombre }}">
+      {% for nivel, etiqueta in ap.saturaciones %}
+      <label><input type="radio" name="publicaciones_{{ m.clave }}" value="{{ nivel }}" {% if nivel == m.saturacion_publicaciones %}checked{% endif %}>{{ etiqueta }}</label>
+      {% endfor %}
+    </div>
+    <p class="muted" style="font-size:12.5px; margin:8px 0 0;">Vale para la nota de tapa y el carrusel de beneficios de la portada. Al abrir una noticia o un beneficio, la foto se ve siempre tal cual se subió.</p>
     </div>
     {% endfor %}
     </div>

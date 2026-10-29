@@ -660,6 +660,29 @@ def servir_imagen_noticia(noticia_id: int, n: int):
         )
 
 
+@app.get("/noticia-imagen/{noticia_id}/{n}/normalizada")
+def servir_imagen_noticia_normalizada(noticia_id: int, n: int):
+    """La misma imagen en su versión normalizada (gris, niveles y brillo
+    parejos), para que la portada funda la de color encima según el nivel
+    que eligió el sindicato (2026-10-29). Una noticia de antes la calcula
+    la primera vez que se pide."""
+    if n not in (1, 2):
+        raise HTTPException(404, "Imagen inválida")
+    datos, mime = db.imagen_normalizada(Noticia, noticia_id, f"imagen{n}")
+    if not datos:
+        raise HTTPException(404, "Sin imagen")
+    return BinResponse(content=datos, media_type=mime, headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/beneficio-imagen/{beneficio_id}/normalizada")
+def servir_imagen_beneficio_normalizada(beneficio_id: int):
+    """La imagen del beneficio normalizada (ver la de noticias)."""
+    datos, mime = db.imagen_normalizada(Beneficio, beneficio_id, "imagen")
+    if not datos:
+        raise HTTPException(404, "Sin imagen")
+    return BinResponse(content=datos, media_type=mime, headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/beneficio-imagen/{beneficio_id}")
 def servir_imagen_beneficio(beneficio_id: int):
     """Sirve la imagen de un beneficio (una sola, es la que se expone en el
@@ -3270,10 +3293,12 @@ async def abm_noticia(
                     datos, mime, _ = _leer_logo(imagen1)
                     if datos:
                         n.imagen1_datos, n.imagen1_mime = datos, mime
+                        n.imagen1_norm = db.normalizada_o_none(datos)
                 if imagen2 and imagen2.filename:
                     datos, mime, _ = _leer_logo(imagen2)
                     if datos:
                         n.imagen2_datos, n.imagen2_mime = datos, mime
+                        n.imagen2_norm = db.normalizada_o_none(datos)
                 s.add(n)
         else:
             imagen1_datos, imagen1_mime = None, ""
@@ -3288,6 +3313,8 @@ async def abm_noticia(
                 creada=fechas.ahora_texto(),
                 imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
                 imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
+                imagen1_norm=db.normalizada_o_none(imagen1_datos),
+                imagen2_norm=db.normalizada_o_none(imagen2_datos),
                 destino_seccionales=destinos, formulario_id=formulario,
                 on_top=arriba,
             ))
@@ -3333,6 +3360,7 @@ async def abm_beneficio(
                     datos, mime, _ = _leer_logo(imagen)
                     if datos:
                         b.imagen_datos, b.imagen_mime = datos, mime
+                        b.imagen_norm = db.normalizada_o_none(datos)
                 s.add(b)
         else:
             imagen_datos, imagen_mime = None, ""
@@ -3343,6 +3371,7 @@ async def abm_beneficio(
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
                 creada=fechas.ahora_texto(),
                 imagen_datos=imagen_datos, imagen_mime=imagen_mime,
+                imagen_norm=db.normalizada_o_none(imagen_datos),
                 destino_seccionales=destinos, formulario_id=formulario,
             ))
         s.commit()
@@ -8442,6 +8471,9 @@ def app_portada(request: Request):
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "apariencia": apariencia,
             "foto_portada": _url_foto_portada(sid_activo, apariencia["tema"]),
+            # Cuánto color muestran las fotos de noticias y beneficios en la
+            # tapa y el carrusel (fotos_tema.SATURACIONES, 2026-10-29).
+            "sat_publicaciones": db.saturacion_publicaciones_de(sid_activo, apariencia["tema"]),
             "marca_plataforma": db.marca_plataforma(),
             "cuil": cuil, "nombre_trab": nombre_trab,
             "primer_nombre": (nombre_trab or "").split(" ")[0] or "Trabajador",
@@ -8737,6 +8769,7 @@ def _apariencia_del_sindicato(sid: int, sind, marca: dict) -> dict:
                         "elegida": elegida if elegida in {f["id"] for f in fotos} else None,
                         # Cuánto color muestra la foto de este modelo (2026-10-29).
                         "saturacion": db.saturacion_foto_de(sid, clave),
+                        "saturacion_publicaciones": db.saturacion_publicaciones_de(sid, clave),
                         # La automática (la más nueva) ¿tiene versión en color?
                         "auto_color": bool(fotos and fotos[0]["color"])})
     colores = [marca.get("color_base"), marca.get("color_primario"),
@@ -8774,7 +8807,8 @@ def _foto_de_formulario(valor):
 def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_panel: str = Form(""),
                      paleta: str = Form(""), foto_laguna: str = Form(None),
                      foto_noticiero: str = Form(None), saturacion_laguna: str = Form(None),
-                     saturacion_noticiero: str = Form(None)):
+                     saturacion_noticiero: str = Form(None), publicaciones_laguna: str = Form(None),
+                     publicaciones_noticiero: str = Form(None)):
     """El Super Admin elige la apariencia del sindicato (PLAN_TEMAS.md, D3 y
     D5): el modelo por defecto de los afiliados y de los operadores, la
     paleta, la foto de portada de cada modelo y cuánto color muestra
@@ -8786,13 +8820,15 @@ def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_pane
     if not (temas.tema_valido(tema_afiliados) and temas.tema_valido(tema_panel)
             and temas.paleta_valida(paleta)):
         return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
-    saturaciones = {}
-    for tema, valor in (("laguna", saturacion_laguna), ("noticiero", saturacion_noticiero)):
-        if valor is None:
-            continue
-        if fotos_tema.saturacion_valida(valor) is None:
-            return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
-        saturaciones[tema] = fotos_tema.saturacion_valida(valor)
+    saturaciones, publicaciones = {}, {}
+    for destino, pares in ((saturaciones, (("laguna", saturacion_laguna), ("noticiero", saturacion_noticiero))),
+                           (publicaciones, (("laguna", publicaciones_laguna), ("noticiero", publicaciones_noticiero)))):
+        for tema, valor in pares:
+            if valor is None:
+                continue
+            if fotos_tema.saturacion_valida(valor) is None:
+                return RedirectResponse("/admin?err=apariencia#apariencia", status_code=303)
+            destino[tema] = fotos_tema.saturacion_valida(valor)
     fotos = {}
     for tema, valor in (("laguna", foto_laguna), ("noticiero", foto_noticiero)):
         elegida = _foto_de_formulario(valor)
@@ -8808,6 +8844,8 @@ def admin_apariencia(request: Request, tema_afiliados: str = Form(""), tema_pane
         db.elegir_foto_portada(sid, tema, foto_id)
     for tema, nivel in saturaciones.items():
         db.elegir_saturacion_foto(sid, tema, nivel)
+    for tema, nivel in publicaciones.items():
+        db.elegir_saturacion_publicaciones(sid, tema, nivel)
     return RedirectResponse("/admin?ok=apariencia#apariencia", status_code=303)
 
 

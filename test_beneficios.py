@@ -127,7 +127,8 @@ def test_imagen_del_beneficio_se_sirve():
         b = s.exec(select(Beneficio).where(Beneficio.sindicato_id == SID_UOM,
                                             Beneficio.rubro == "Indumentaria (actualizado)")).first()
         bid = b.id
-    assert f'src="/beneficio-imagen/{bid}"' in trab_client.get("/app/inicio").text
+    # En el carrusel va la normalizada (el nivel por defecto es 0, "Normalizada").
+    assert f'src="/beneficio-imagen/{bid}/normalizada"' in trab_client.get("/app/inicio").text
     r_img = trab_client.get(f"/beneficio-imagen/{bid}")
     assert r_img.status_code == 200
     assert r_img.headers["content-type"] == "image/png"

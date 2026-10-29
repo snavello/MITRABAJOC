@@ -146,7 +146,8 @@ def test_miniatura_se_ve_en_el_feed_si_tiene_imagen1():
         nid = n.id
 
     r_portada = trab_client.get("/app/inicio")
-    assert f'src="/noticia-imagen/{nid}/1"' in r_portada.text
+    # En la tapa va la normalizada (el nivel por defecto es 0, "Normalizada").
+    assert f'src="/noticia-imagen/{nid}/1/normalizada"' in r_portada.text
 
     r_novedades = trab_client.get("/app?tab=novedades")
     assert f'src="/noticia-imagen/{nid}/1"' in r_novedades.text

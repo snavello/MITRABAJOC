@@ -284,6 +284,9 @@ class Sindicato(SQLModel, table=True):
     # para la foto que tenga de portada; si esa foto no tiene versión en
     # color (se subió antes del 2026-10-29), se muestra normalizada.
     saturacion_fotos: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    # Lo mismo para las fotos de Noticias y Beneficios en la portada (la
+    # nota de tapa y el carrusel), por modelo: {"laguna": 0, "noticiero": 50}.
+    saturacion_publicaciones: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
     # "Tu día" en la portada del afiliado (módulo opt-in `tu_dia`): qué rubros
     # rotan, cada cuánto y sus opciones. NULL = los valores por defecto de
     # tu_dia.py. Lo escribe solo `db.set_tu_dia`, que descarta lo que no está
@@ -969,6 +972,13 @@ class Noticia(SQLModel, table=True):
     imagen1_mime: str = ""
     imagen2_datos: Optional[bytes] = Field(default=None)
     imagen2_mime: str = ""
+    # La versión NORMALIZADA de cada imagen (gris, niveles y brillo parejos,
+    # webp; `fotos_tema.normalizar_imagen`), para que el sindicato elija
+    # cuánto color mostrar (`Sindicato.saturacion_publicaciones`,
+    # 2026-10-29). Se calcula al subir y, en las de antes, la primera vez
+    # que se pide (`db.imagen_normalizada`). NULL = todavía no se calculó.
+    imagen1_norm: Optional[bytes] = Field(default=None)
+    imagen2_norm: Optional[bytes] = Field(default=None)
     # Formulario "para iniciar" (TipoTramite) asociado: el trabajador ve un
     # ícono que abre ese formulario ("completá los datos haciendo click
     # acá" lo escribe el admin en el texto). Int SIN FK, mismo criterio que
@@ -999,6 +1009,8 @@ class Beneficio(SQLModel, table=True):
     creada: str = ""  # fecha y hora de alta ("AAAA-MM-DD HH:MM")
     imagen_datos: Optional[bytes] = Field(default=None)
     imagen_mime: str = ""
+    # La versión normalizada (como en Noticia.imagen1_norm).
+    imagen_norm: Optional[bytes] = Field(default=None)
     formulario_id: Optional[int] = None  # mismo criterio que Noticia.formulario_id
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, mismo criterio que Noticia.
@@ -3553,10 +3565,7 @@ def elegir_foto_portada(sindicato_id: int, tema: str, foto_id) -> bool:
         return True
 
 
-def elegir_saturacion_foto(sindicato_id: int, tema: str, nivel) -> bool:
-    """El sindicato elige cuánto color muestra la foto de portada de un
-    modelo (`fotos_tema.SATURACIONES`). Un nivel fuera del catálogo o un
-    modelo que no existe no se guardan."""
+def _elegir_nivel_color(sindicato_id: int, campo: str, tema: str, nivel) -> bool:
     import fotos_tema
     import temas
     n = fotos_tema.saturacion_valida(nivel)
@@ -3566,23 +3575,80 @@ def elegir_saturacion_foto(sindicato_id: int, tema: str, nivel) -> bool:
         sind = s.get(Sindicato, sindicato_id)
         if not sind:
             return False
-        niveles = dict(sind.saturacion_fotos or {})
+        niveles = dict(getattr(sind, campo) or {})
         niveles[tema] = n
-        sind.saturacion_fotos = niveles
+        setattr(sind, campo, niveles)
         s.add(sind)
         s.commit()
         return True
 
 
-def saturacion_foto_de(sindicato_id: int, tema: str) -> int:
-    """El nivel de color elegido para un modelo; un valor que no está en el
-    catálogo (o nada) vale el por defecto, la normalizada sola."""
+def _nivel_color_de(sindicato_id: int, campo: str, tema: str) -> int:
     import fotos_tema
     with Session(engine) as s:
         sind = s.get(Sindicato, sindicato_id)
-        guardado = (sind.saturacion_fotos or {}).get(tema) if sind else None
+        guardado = (getattr(sind, campo) or {}).get(tema) if sind else None
     n = fotos_tema.saturacion_valida(guardado)
     return fotos_tema.SATURACION_DEFECTO if n is None else n
+
+
+def elegir_saturacion_foto(sindicato_id: int, tema: str, nivel) -> bool:
+    """El sindicato elige cuánto color muestra la foto de portada de un
+    modelo (`fotos_tema.SATURACIONES`). Un nivel fuera del catálogo o un
+    modelo que no existe no se guardan."""
+    return _elegir_nivel_color(sindicato_id, "saturacion_fotos", tema, nivel)
+
+
+def saturacion_foto_de(sindicato_id: int, tema: str) -> int:
+    """El nivel de color elegido para un modelo; un valor que no está en el
+    catálogo (o nada) vale el por defecto, la normalizada sola."""
+    return _nivel_color_de(sindicato_id, "saturacion_fotos", tema)
+
+
+def elegir_saturacion_publicaciones(sindicato_id: int, tema: str, nivel) -> bool:
+    """Lo mismo para las fotos de Noticias y Beneficios en la portada."""
+    return _elegir_nivel_color(sindicato_id, "saturacion_publicaciones", tema, nivel)
+
+
+def saturacion_publicaciones_de(sindicato_id: int, tema: str) -> int:
+    return _nivel_color_de(sindicato_id, "saturacion_publicaciones", tema)
+
+
+def normalizada_o_none(datos) -> Optional[bytes]:
+    """La versión normalizada de una imagen de noticia o beneficio, o None
+    si no hay imagen o no se pudo leer (la pantalla cae a la de color)."""
+    import fotos_tema
+    if not datos:
+        return None
+    try:
+        return fotos_tema.normalizar_imagen(datos)["datos"]
+    except fotos_tema.FotoInvalida:
+        return None
+
+
+def imagen_normalizada(modelo, fila_id: int, campo: str):
+    """Los bytes normalizados de `campo` (imagen1 / imagen2 / imagen) de una
+    Noticia o un Beneficio. Las filas de antes del 2026-10-29 no los tienen:
+    se calculan la primera vez que se piden y quedan guardados. Devuelve
+    (datos, mime) o (None, "") sin imagen; si la imagen no se pudo leer,
+    devuelve la de color tal cual (la hoja del modelo la pasa a gris)."""
+    with Session(engine) as s:
+        fila = s.get(modelo, fila_id)
+        if not fila:
+            return None, ""
+        original = getattr(fila, f"{campo}_datos")
+        if not original:
+            return None, ""
+        norm = getattr(fila, f"{campo}_norm")
+        if not norm:
+            norm = normalizada_o_none(original)
+            if norm:
+                setattr(fila, f"{campo}_norm", norm)
+                s.add(fila)
+                s.commit()
+        if norm:
+            return norm, "image/webp"
+        return original, getattr(fila, f"{campo}_mime") or "application/octet-stream"
 
 
 def foto_portada_de(sindicato_id: int, tema: str):
