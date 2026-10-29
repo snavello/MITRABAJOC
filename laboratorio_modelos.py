@@ -90,8 +90,35 @@ def proveedores() -> list:
     return [_proveedor_anthropic()] + list(catalogo().get("proveedores", []))
 
 
+# Claves pegadas desde la pantalla (db.claves_laboratorio); main las carga en
+# cada pedido con `configurar_claves`. La variable de entorno manda.
+_GUARDADAS: dict = {}
+
+
+def configurar_claves(claves: dict) -> None:
+    _GUARDADAS.clear()
+    _GUARDADAS.update({k: v for k, v in (claves or {}).items() if v})
+
+
+def clave_de(prov: dict) -> str:
+    v = prov.get("variable", "") or ""
+    return (os.getenv(v, "").strip() if v else "") or _GUARDADAS.get(v, "").strip()
+
+
+def origen_clave(prov: dict) -> str:
+    """'entorno' (variable de Render, no se edita acá), 'guardada' o ''."""
+    v = prov.get("variable", "") or ""
+    if v and os.getenv(v, "").strip():
+        return "entorno"
+    return "guardada" if _GUARDADAS.get(v, "").strip() else ""
+
+
+def pista(clave: str) -> str:
+    return ("····" + clave[-4:]) if len(clave) >= 8 else "····"
+
+
 def configurado(prov: dict) -> bool:
-    return bool(os.getenv(prov.get("variable", "") or "", "").strip())
+    return bool(clave_de(prov))
 
 
 def clave(prov_id: str, modelo_id: str) -> str:
@@ -129,6 +156,8 @@ def catalogo_pantalla() -> dict:
     for p in proveedores():
         provs.append({
             "id": p["id"], "nombre": p["nombre"], "configurado": configurado(p),
+            "origen": origen_clave(p), "pista": pista(clave_de(p)) if configurado(p) else "",
+            "editable": p["id"] != ANTHROPIC,
             "variable": p.get("variable", ""), "sitio": p.get("sitio", ""),
             "nota": p.get("nota", ""), "leido": p.get("leido", ""), "fuente": p.get("fuente", ""),
             "modelos": [{"clave": clave(p["id"], m["id"]), "id": m["id"], "nombre": m["nombre"],
@@ -201,7 +230,7 @@ def _leer_openai(prov: dict, m: dict, tipo: str, imagen: tuple[str, str],
     # van en el catálogo, no en el código.
     body.update(m.get("extra") or {})
     url = base_url(prov).rstrip("/") + "/chat/completions"
-    headers = {"Authorization": f"Bearer {os.getenv(prov['variable'], '').strip()}",
+    headers = {"Authorization": f"Bearer {clave_de(prov)}",
                "Content-Type": "application/json"}
     clave_ = clave(prov["id"], m["id"])
     inicio = time.perf_counter()

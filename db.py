@@ -1091,6 +1091,11 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     modelo_convenio: str = ""
     modelo_asistente: str = ""
     modelo_asistente_tramites: str = ""   # Asistente de trámites (Herramientas de /entornos)
+    # Claves de los OTROS proveedores del Laboratorio de modelos (Kimi, Qwen),
+    # {variable: clave}, pegadas desde la propia pantalla (2026-10-29): es un
+    # módulo de evaluación y SDN pidió no tener que ir a Render por cada una.
+    # Una variable de entorno con el mismo nombre manda sobre lo guardado acá.
+    claves_laboratorio: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO, nullable=True))
     # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
     # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
     # que Sindicato: logo en la base (Opción B), colores editables. Si no se
@@ -3789,6 +3794,28 @@ def set_modelos_ia(elegidos: dict) -> None:
             valor = (elegidos.get(uso) or "").strip()
             if valor and precios_ia.modelo_valido(valor):
                 setattr(cfg, columna, valor)
+        s.add(cfg)
+        s.commit()
+
+
+def claves_laboratorio() -> dict:
+    """{variable: clave} guardadas para el Laboratorio de modelos. Se lee en
+    cada pedido (Render corre un worker por núcleo)."""
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        return dict((cfg.claves_laboratorio if cfg else None) or {})
+
+
+def set_clave_laboratorio(variable: str, clave: str) -> None:
+    """Guarda (o borra, con clave vacía) la clave de un proveedor."""
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1) or ConfiguracionPlataforma(id=1)
+        claves = dict(cfg.claves_laboratorio or {})
+        if clave:
+            claves[variable] = clave
+        else:
+            claves.pop(variable, None)
+        cfg.claves_laboratorio = claves
         s.add(cfg)
         s.commit()
 
