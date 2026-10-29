@@ -1909,8 +1909,11 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   modelo de ningún uso de la app.
 - **Un proveedor es una entrada en `data/laboratorio_modelos.json`**, no
   código (formato OpenAI, `base_url`, `variable` de la clave, `extra`).
-  Anthropic no está ahí: sale de `precios_ia`. Sin la variable, el modelo
-  se ve pero no se puede elegir y el servidor lo rechaza nombrándola.
+  Anthropic no está ahí: sale de `precios_ia`. **La clave se pega en la
+  misma pantalla** y se guarda en `ConfiguracionPlataforma.claves_laboratorio`
+  (migración `a1b2c3d4e5f6`; solo evaluación; una variable de entorno con el
+  mismo nombre manda y ahí no se edita). Sin clave, el modelo se ve pero no se
+  puede elegir.
 - **Cada corrida es un ensayo** (`CasoHerramienta`, `herramienta=
   "laboratorio"`) **sin identidad** (nombre, CUIL y legajo se borran antes
   de guardar), con estados, CSV y el **resumen por modelo** (ensayos,

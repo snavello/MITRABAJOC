@@ -10658,11 +10658,32 @@ def api_laboratorio_catalogo(request: Request):
     simulado (MOCK_EXTRACTOR=1: las lecturas de Claude no son reales) y si
     el enmascarado está disponible para tapar antes de mandar."""
     _exigir_herramientas(request)
+    laboratorio_modelos.configurar_claves(db.claves_laboratorio())
     return {**laboratorio_modelos.catalogo_pantalla(),
             "mock": os.getenv("MOCK_EXTRACTOR") == "1",
             "enmascarado": preparacion.modo() != "apagado",
             "resumen": laboratorio_modelos.resumen_por_modelo(
                 [{"real": c.real, "estado": c.estado} for c in db.casos_herramienta(HERRAMIENTA_LABORATORIO)])}
+
+
+@app.post(API_LABORATORIO + "/claves")
+def api_laboratorio_clave(request: Request, payload: dict = Body(...)):
+    """Pega (o borra, con clave vacía) la clave de un proveedor desde la
+    pantalla, sin pasar por Render. Solo los proveedores del catálogo que no
+    son Anthropic; si la variable existe en el entorno, manda esa. Nunca
+    vuelve la clave entera: solo la pista."""
+    _exigir_herramientas(request)
+    prov = laboratorio_modelos.proveedor(str(payload.get("proveedor") or ""))
+    if prov is None or prov["id"] == laboratorio_modelos.ANTHROPIC:
+        raise HTTPException(422, "Ese proveedor no admite clave desde acá.")
+    clave = str(payload.get("clave") or "").strip()
+    if clave and (len(clave) < 8 or any(c.isspace() for c in clave)):
+        raise HTTPException(422, "Eso no parece una clave: muy corta o con espacios.")
+    db.set_clave_laboratorio(prov["variable"], clave)
+    laboratorio_modelos.configurar_claves(db.claves_laboratorio())
+    return {"ok": True, "configurado": laboratorio_modelos.configurado(prov),
+            "origen": laboratorio_modelos.origen_clave(prov),
+            "pista": laboratorio_modelos.pista(laboratorio_modelos.clave_de(prov)) if clave else ""}
 
 
 @app.post(API_LABORATORIO + "/correr")
@@ -10683,6 +10704,7 @@ async def api_laboratorio_correr(request: Request,
     enmascarado está disponible: un recibo real que sale hacia un proveedor
     nuevo es justo donde más vale tapar (Ley 25.326)."""
     quien = _exigir_herramientas(request)
+    laboratorio_modelos.configurar_claves(db.claves_laboratorio())
     if tipo not in laboratorio_modelos.TIPOS:
         raise HTTPException(422, "Tipo de archivo desconocido.")
     elegidos = []

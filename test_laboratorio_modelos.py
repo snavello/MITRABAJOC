@@ -357,3 +357,33 @@ def test_el_mapa_funcional_clasifica_las_rutas_nuevas():
     if datos is None:
         pytest.skip("mapa_funcional sin armar()")
     assert not [r for r in datos.get("sin_clasificar", []) if "laboratorio" in json.dumps(r)]
+
+
+def test_la_clave_se_pega_desde_la_pantalla_y_el_entorno_manda(monkeypatch):
+    monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
+    db.set_clave_laboratorio("MOONSHOT_API_KEY", "")
+    c = _con_plataforma()
+    # Guardar: queda configurado, con pista y sin devolver la clave.
+    r = c.post(API + "/claves", json={"proveedor": "moonshot", "clave": "sk-kimi-1234abcd"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "configurado": True, "origen": "guardada", "pista": "····abcd"}
+    cat = c.get(API + "/catalogo").json()
+    p = next(x for x in cat["proveedores"] if x["id"] == "moonshot")
+    assert p["configurado"] and p["origen"] == "guardada" and p["pista"] == "····abcd" and p["editable"]
+    assert next(x for x in cat["proveedores"] if x["id"] == "anthropic")["editable"] is False
+    assert "sk-kimi-1234abcd" not in json.dumps(cat)
+    # El motor la usa en la llamada.
+    lab.configurar_claves(db.claves_laboratorio())
+    assert lab.clave_de(lab.proveedor("moonshot")) == "sk-kimi-1234abcd"
+    # La variable de entorno manda sobre la guardada.
+    monkeypatch.setenv("MOONSHOT_API_KEY", "sk-render")
+    assert lab.clave_de(lab.proveedor("moonshot")) == "sk-render" and lab.origen_clave(lab.proveedor("moonshot")) == "entorno"
+    monkeypatch.delenv("MOONSHOT_API_KEY")
+    # Quitar.
+    assert c.post(API + "/claves", json={"proveedor": "moonshot", "clave": ""}).json()["configurado"] is False
+    assert db.claves_laboratorio() == {}
+    # Lo que no corresponde.
+    assert c.post(API + "/claves", json={"proveedor": "anthropic", "clave": "sk-ant-12345678"}).status_code == 422
+    assert c.post(API + "/claves", json={"proveedor": "moonshot", "clave": "corta"}).status_code == 422
+    assert c.post(API + "/claves", json={"proveedor": "nadie", "clave": "sk-12345678"}).status_code == 422
+    assert TestClient(main.app).post(API + "/claves", json={"proveedor": "moonshot", "clave": "sk-12345678"}).status_code == 403
+

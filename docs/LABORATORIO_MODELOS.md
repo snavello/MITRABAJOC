@@ -19,9 +19,13 @@ Ruta: `/entornos/herramientas/laboratorio-modelos`. Motor:
 - **No toca la app.** Ninguna ruta de trabajador, sindicato ni plataforma
   importa el laboratorio, y el laboratorio no cambia el modelo de ningún
   uso (`db.modelo_ia`). Lo que se elige acá no llega a los afiliados.
-- **Cada proveedor con su clave, por variable de entorno.** Sin la
-  variable, el modelo se ve en la lista pero no se puede tildar, y la
-  pantalla dice qué variable falta. La clave nunca sale al navegador.
+- **La clave de cada proveedor se pega en la misma pantalla** (bajo el
+  nombre del proveedor: Pegá la clave → Guardar) y queda en la base
+  (`ConfiguracionPlataforma.claves_laboratorio`). Es un módulo de
+  evaluación: no hace falta ir a Render. Si la variable de entorno existe,
+  manda esa y la pantalla lo dice. Sin clave, el modelo se ve pero no se
+  puede tildar. La clave nunca vuelve al navegador: solo sus últimos cuatro
+  caracteres.
 - **Cada corrida es un ensayo guardado** (`CasoHerramienta`,
   `herramienta="laboratorio"`), **sin identidad**: nombre, CUIL y legajo se
   borran antes de guardar. Quedan importes, códigos, clasificaciones y los
