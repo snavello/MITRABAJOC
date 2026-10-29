@@ -380,8 +380,9 @@ function pintarResultado(data, destino, vivo) {
   if (ref) ref.resumen.forEach((r, i) => filas.push(fila(escHTML(r.etiqueta), ms.map(m => {
     if (!m.ok || !m.resumen) return '—';
     const c = m.resumen[i];
-    return c.igual ? (c.signo ? '<span class="signo" style="color:var(--leve);">' + escHTML(c.valor) + ' ±</span>' : escHTML(c.valor))
-      : '<span class="dif">' + escHTML(c.valor) + '</span>';
+    const inv = c.invalido ? ' <span class="dif" title="No pasa el dígito verificador (módulo 11): un dígito mal leído">· no pasa el verificador</span>' : '';
+    return (c.igual ? (c.signo ? '<span class="signo" style="color:var(--leve);">' + escHTML(c.valor) + ' ±</span>' : escHTML(c.valor))
+      : '<span class="dif">' + escHTML(c.valor) + '</span>') + inv;
   }))));
   const crudos = vivo ? ms.filter(m => m.ok && m.json).map(m =>
     '<details><summary>Lo que leyó ' + escHTML(m.nombre) + ', completo</summary><pre>' + escHTML(m.json) + '</pre></details>').join('') : '';
