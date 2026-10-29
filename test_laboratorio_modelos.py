@@ -114,6 +114,7 @@ def test_la_lectura_openai_arma_el_pedido_con_el_mismo_prompt_y_parsea(monkeypat
     assert partes[1]["text"] == extractor.ESQUEMA and partes[2]["text"] == extractor.AVISO_ENMASCARADO
     assert b["response_format"] == {"type": "json_object"}
     assert b["reasoning_effort"] == "low"          # el `extra` del catálogo, tal cual
+    assert b["temperature"] == 1, "Kimi K3 rechaza con 400 cualquier temperature que no sea 1 (visto en Pruebas, 2026-10-29)"
 
 
 def test_aportes_usa_el_prompt_de_aportes(monkeypatch):
