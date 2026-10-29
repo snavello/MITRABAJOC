@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Laboratorio de modelos</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  /* Herramientas de /entornos (2026-10-29): el Laboratorio de modelos. Misma
+     "colmena nocturna" que la Calculadora bancaria y la landing, standalone,
+     sin marca.css: existe solo donde existe /entornos. Lo que difiere entre
+     modelos va en rojo; lo que coincide, en tinta normal. */
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --ambar: #ffb020;
+    --bien: #3ecfae;
+    --mal: #ff6b6b;
+    --leve: #ffd27a;
+    --celeste: #8ecbff;
+    --linea: rgba(255,255,255,.12);
+    --suave: rgba(255,255,255,.62);
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  html { background:#0d1626; }
+  body { min-height:100vh; padding:22px 16px 70px; color:#fff;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 22%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 75%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  a { color:var(--ambar); }
+  .pagina { max-width:1240px; margin:0 auto; }
+  .cab { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .cab .volver { font-size:13px; text-decoration:none; color:var(--suave); display:block; margin-bottom:6px; }
+  .cab .volver:hover { color:#fff; }
+  .cab h1 { font-family:var(--fuente-display); font-size:42px; line-height:1; letter-spacing:2px; text-transform:uppercase; }
+  .cab .lede { font-size:13.5px; color:var(--suave); margin-top:6px; max-width:720px; line-height:1.45; }
+  .aviso { border:1px solid rgba(255,176,32,.5); background:rgba(255,176,32,.1); border-radius:12px; padding:10px 14px; font-size:13px; margin-bottom:14px; line-height:1.4; }
+  .aviso.rojo { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.1); }
+  .aviso b { color:var(--ambar); }
+  .aviso.rojo b { color:var(--mal); }
+
+  .pestanas { display:flex; gap:6px; border-bottom:1px solid var(--linea); margin-bottom:18px; }
+  .pestana { background:none; border:0; color:var(--suave); font:600 14px system-ui; padding:10px 14px; cursor:pointer;
+    border-bottom:3px solid transparent; margin-bottom:-1px; }
+  .pestana[aria-selected="true"] { color:#fff; border-bottom-color:var(--ambar); }
+  .pestana .cuenta { font-family:var(--mono); font-size:12px; background:rgba(255,255,255,.12); border-radius:999px; padding:1px 7px; margin-left:4px; }
+  [hidden] { display:none !important; }
+
+  .grid { display:grid; grid-template-columns:360px 1fr; gap:18px; align-items:start; }
+  @media (max-width:960px) { .grid { grid-template-columns:1fr; } }
+  .tarjeta { background:rgba(9,15,26,.55); border:1px solid var(--linea); border-radius:16px; padding:18px; }
+  .tarjeta + .tarjeta { margin-top:14px; }
+  .tarjeta h2 { font-family:var(--fuente-display); font-size:22px; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+  .tarjeta h3 { font-size:12px; color:var(--suave); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .tarjeta h3 .falta { font-family:var(--mono); font-size:11px; color:var(--mal); text-transform:none; letter-spacing:0; }
+  .tarjeta h3 .lista { font-weight:400; text-transform:none; letter-spacing:0; }
+  .campo { display:flex; flex-direction:column; gap:5px; margin-bottom:13px; }
+  .campo > span { font-size:12px; color:var(--suave); letter-spacing:.02em; }
+  input[type=file], input[type=text], textarea {
+    width:100%; background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.18);
+    border-radius:9px; padding:9px 10px; font-size:14px; }
+  textarea { min-height:64px; resize:vertical; }
+  input:focus-visible, button:focus-visible, select:focus-visible { outline:2px solid var(--ambar); outline-offset:1px; }
+  .segmentos { display:flex; gap:4px; background:rgba(255,255,255,.06); border-radius:10px; padding:3px; }
+  .segmentos button { flex:1; background:none; border:0; color:var(--suave); padding:8px 4px; border-radius:8px; font:600 13px system-ui; cursor:pointer; }
+  .segmentos button[aria-pressed="true"] { background:var(--ambar); color:#1b1508; }
+  .tilde { display:flex; align-items:flex-start; gap:9px; font-size:14px; margin-bottom:9px; cursor:pointer; line-height:1.3; }
+  .tilde input { width:17px; height:17px; accent-color:var(--ambar); margin-top:1px; flex:none; }
+  .tilde small { color:var(--suave); display:block; font-size:12px; }
+  .tilde.apagado { opacity:.5; cursor:not-allowed; }
+  .modelo-precio { font-family:var(--mono); font-size:11.5px; color:var(--suave); }
+  .separa { border:0; border-top:1px solid var(--linea); margin:14px 0; }
+  .boton { display:inline-block; background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:10px 16px; font:700 14px system-ui; cursor:pointer; text-decoration:none; }
+  .boton:disabled { opacity:.5; cursor:wait; }
+  .boton.suave { background:rgba(255,255,255,.1); color:#fff; }
+  .estado { font-size:13px; color:var(--suave); margin-top:10px; min-height:18px; }
+  .estado.mal { color:var(--mal); }
+
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; font-size:11.5px; color:var(--suave); font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+    padding:6px 8px; border-bottom:1px solid var(--linea); white-space:nowrap; }
+  td { padding:8px; border-bottom:1px solid rgba(255,255,255,.06); vertical-align:top; }
+  td.num, th.num { text-align:right; font-family:var(--mono); white-space:nowrap; }
+  td.dif { color:var(--mal); font-weight:700; }
+  td.falta { color:var(--suave); font-style:italic; }
+  td.err { color:var(--mal); font-size:12.5px; }
+  .tabla-ancha { overflow:auto; }
+  .muted { color:var(--suave); font-size:13px; line-height:1.45; }
+  details { margin-top:10px; }
+  summary { cursor:pointer; color:var(--ambar); font-size:13px; }
+  pre { background:rgba(0,0,0,.35); border:1px solid var(--linea); border-radius:8px; padding:12px; overflow:auto; font-size:11.5px; max-height:340px; font-family:var(--mono); color:#dfe6f3; white-space:pre-wrap; }
+  .chip { display:inline-block; font-size:11.5px; border-radius:999px; padding:2px 8px; margin:1px 3px 1px 0; background:rgba(255,255,255,.1); }
+  .chip.ok { background:rgba(62,207,174,.18); color:var(--bien); }
+  .chip.mal { background:rgba(255,107,107,.18); color:var(--mal); }
+  .chip.ref { outline:1px solid var(--ambar); }
+  select.estado-sel { background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:4px 6px; font-size:12.5px; }
+  select.estado-sel option { background:#13213a; color:#fff; }
+  .enlace { background:none; border:0; color:var(--ambar); cursor:pointer; font-size:13px; padding:0; text-decoration:underline; }
+  .barra { height:6px; background:rgba(255,255,255,.1); border-radius:3px; overflow:hidden; min-width:80px; }
+  .barra span { display:block; height:100%; background:var(--bien); }
+  tr.igual-todas { }
+  .filtro-lineas { font-size:12.5px; color:var(--suave); display:flex; gap:8px; align-items:center; margin:6px 0 8px; }
+  .filtro-lineas input { accent-color:var(--ambar); }
+  table.solo-dif tr.igual-todas { display:none; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <header class="cab">
+    <div>
+      <a class="volver" href="/entornos#herramientas">← Volver a Herramientas</a>
+      <h1>Laboratorio de modelos</h1>
+      <p class="lede">El mismo recibo leído por varios modelos, de Anthropic y de otros proveedores, con el <b>mismo prompt</b> de la app:
+        qué leyó cada uno, cuánto tardó y cuánto costó. Cada corrida queda como ensayo para comparar después con números.
+        Aislado de la app real: nada de lo que se elija acá cambia qué modelo usan los afiliados.</p>
+    </div>
+  </header>
+
+  <div id="avisos"></div>
+
+  <div class="pestanas" role="tablist">
+    <button class="pestana" role="tab" aria-selected="true" data-vista="ensayar">Ensayar</button>
+    <button class="pestana" role="tab" aria-selected="false" data-vista="ensayos">Ensayos guardados <span class="cuenta" id="cuenta-ensayos">…</span></button>
+    <button class="pestana" role="tab" aria-selected="false" data-vista="resumen">Resumen por modelo</button>
+  </div>
+
+  <!-- Ensayar -->
+  <section data-vista="ensayar">
+    <div class="grid">
+      <div>
+        <div class="tarjeta">
+          <h2>El archivo</h2>
+          <label class="campo"><span>Recibo o comprobante (JPG, PNG o PDF, hasta 10 MB)</span>
+            <input type="file" id="archivo" accept="image/*,application/pdf"></label>
+          <div class="campo"><span>Qué es</span>
+            <div class="segmentos" id="tipo">
+              <button type="button" data-tipo="recibo" aria-pressed="true">Recibo de sueldo</button>
+              <button type="button" data-tipo="aportes" aria-pressed="false">Comprobante de ARCA</button>
+            </div></div>
+          <hr class="separa">
+          <h2>Los modelos</h2>
+          <div id="modelos"><p class="muted">Leyendo el catálogo…</p></div>
+          <hr class="separa">
+          <label class="tilde" id="tilde-tapar"><input type="checkbox" id="tapar">
+            <span>Tapar datos personales antes de mandar<small>Cubre nombre, CUIL, legajo y CUIT (como la app en Pruebas) y la identidad se rearma acá. Pensado para cuando el archivo sale hacia un proveedor nuevo.</small></span></label>
+          <label class="campo"><span>Nota (opcional: de dónde salió el recibo, qué se quiere mirar)</span>
+            <textarea id="nota" maxlength="4000"></textarea></label>
+          <button class="boton" id="correr" type="button">Correr el ensayo</button>
+          <div class="estado" id="estado"></div>
+        </div>
+      </div>
+      <div id="resultado">
+        <div class="tarjeta">
+          <h2>Cómo leer la comparación</h2>
+          <p class="muted">La referencia es el <b>primer modelo que contestó</b>, en el orden en que se eligieron: lo que otro modelo leyó distinto va en rojo.
+            Que coincidan no prueba que estén bien, prueba que leyeron lo mismo; por eso conviene incluir siempre el modelo que hoy corre en producción.
+            Un CUIL o CUIT con guiones no cuenta como diferencia (la app los normaliza), y la tabla línea por línea es la que importa:
+            dos modelos pueden dar el mismo neto y clasificar distinto una línea, y esa clasificación alimenta la cuota sindical y el tope del 2%.</p>
+          <p class="muted" style="margin-top:8px;">El costo es de lista, con la fecha de lectura de cada proveedor. El tiempo se mide alrededor de la llamada a la API, no del request: pasar el PDF a imagen tarda lo mismo con cualquier modelo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ensayos guardados -->
+  <section data-vista="ensayos" hidden>
+    <div class="tarjeta">
+      <h2>Ensayos guardados <a class="boton suave" style="float:right; font-size:13px; padding:7px 12px;" href="/entornos/herramientas/laboratorio/ensayos.csv">Descargar CSV</a></h2>
+      <p class="muted" style="margin-bottom:12px;">Cada corrida, con sus modelos y cómo les fue. Lo guardado no tiene nombre ni CUIL: solo importes, códigos, clasificaciones y los números de cada llamada. «Descartado» lo saca del resumen por modelo.</p>
+      <div class="tabla-ancha"><table id="tabla-ensayos"><tbody><tr><td class="muted">Leyendo…</td></tr></tbody></table></div>
+    </div>
+    <div id="detalle-ensayo"></div>
+  </section>
+
+  <!-- Resumen -->
+  <section data-vista="resumen" hidden>
+    <div class="tarjeta">
+      <h2>Resumen por modelo</h2>
+      <p class="muted" style="margin-bottom:12px;">Sobre todos los ensayos no descartados. <b>Coincidencia</b> es qué parte de los campos del resumen (período, totales, cantidad de líneas, CUIT…) dio igual que la referencia de cada ensayo: es una medida de acuerdo, no de verdad.
+        Con pocos ensayos no dice nada; con treinta recibos distintos empieza a decir algo.</p>
+      <div class="tabla-ancha"><table id="tabla-resumen"><tbody><tr><td class="muted">Leyendo…</td></tr></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const API = {{ api | tojson }};
+const ESTADOS = {{ estados | list | tojson }};
+let CAT = null, TIPO = 'recibo';
+
+function escHTML(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const num = n => Number(n || 0).toLocaleString('es-AR');
+
+/* ---------- pestañas ---------- */
+document.querySelectorAll('.pestana').forEach(b => b.addEventListener('click', () => mostrar(b.dataset.vista)));
+function mostrar(v) {
+  document.querySelectorAll('.pestana').forEach(b => b.setAttribute('aria-selected', String(b.dataset.vista === v)));
+  document.querySelectorAll('section[data-vista]').forEach(s => s.hidden = s.dataset.vista !== v);
+  if (v !== 'ensayar') cargarEnsayos();
+  history.replaceState(null, '', '#' + v);
+}
+
+/* ---------- tipo ---------- */
+document.querySelectorAll('#tipo button').forEach(b => b.addEventListener('click', () => {
+  TIPO = b.dataset.tipo;
+  document.querySelectorAll('#tipo button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+
+/* ---------- catálogo ---------- */
+async function cargarCatalogo() {
+  const r = await fetch(API + '/catalogo', {cache: 'no-store'});
+  if (!r.ok) { document.getElementById('modelos').innerHTML = '<p class="muted">No se pudo leer el catálogo (' + r.status + ').</p>'; return; }
+  CAT = await r.json();
+  const avisos = [];
+  if (CAT.mock) avisos.push('<div class="aviso rojo"><b>Extractor simulado.</b> Este entorno tiene <code>MOCK_EXTRACTOR=1</code>: las lecturas de los modelos de Anthropic devuelven un recibo fijo y no llaman a la API. Los otros proveedores sí se llaman de verdad. Para comparar en serio hay que apagar el mock en Render.</div>');
+  if (!CAT.enmascarado) avisos.push('<div class="aviso"><b>Enmascarado apagado</b> en este entorno (<code>ENMASCARADO</code>): el archivo sale tal cual a cada proveedor. Si el recibo es de una persona real, pensarlo antes de mandarlo a un proveedor nuevo.</div>');
+  document.getElementById('avisos').innerHTML = avisos.join('');
+  const tapar = document.getElementById('tapar');
+  tapar.checked = CAT.enmascarado; tapar.disabled = !CAT.enmascarado;
+  document.getElementById('tilde-tapar').classList.toggle('apagado', !CAT.enmascarado);
+  document.getElementById('modelos').innerHTML = CAT.proveedores.map(p => {
+    const cab = '<h3>' + escHTML(p.nombre) +
+      (p.configurado ? '' : ' <span class="falta">falta ' + escHTML(p.variable) + '</span>') +
+      (p.leido ? ' <span class="lista">· precios leídos el ' + escHTML(p.leido) + '</span>' : '') + '</h3>';
+    const ms = p.modelos.length ? p.modelos.map(m =>
+      '<label class="tilde' + (p.configurado ? '' : ' apagado') + '" title="' + escHTML(m.resumen) + '">' +
+      '<input type="checkbox" class="modelo" value="' + escHTML(m.clave) + '"' + (p.configurado ? '' : ' disabled') + '>' +
+      '<span>' + escHTML(m.nombre) + '<small><span class="modelo-precio">' + escHTML(m.precio_txt) + '</span>' +
+      (m.contexto ? ' · ' + escHTML(m.contexto) : '') + '</small></span></label>').join('')
+      : '<p class="muted">Sin modelos en el catálogo todavía.</p>';
+    return cab + ms;
+  }).join('');
+  pintarResumen(CAT.resumen);
+}
+
+/* ---------- correr ---------- */
+document.getElementById('correr').addEventListener('click', correr);
+async function correr() {
+  const inp = document.getElementById('archivo'), estado = document.getElementById('estado'), btn = document.getElementById('correr');
+  const elegidos = [...document.querySelectorAll('.modelo:checked')].map(c => c.value);
+  estado.className = 'estado';
+  if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
+  if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
+  const tapar = document.getElementById('tapar').checked;
+  if (!confirm('Se va a llamar a ' + elegidos.length + (elegidos.length === 1 ? ' API' : ' APIs') + ' con ese archivo' +
+    (tapar ? ', con los datos personales tapados' : ', SIN tapar los datos personales') +
+    '. Cada llamada gasta créditos de verdad y el ensayo queda guardado. ¿Seguimos?')) return;
+  const fd = new FormData();
+  fd.append('archivo', inp.files[0]); fd.append('tipo', TIPO);
+  elegidos.forEach(m => fd.append('modelos', m));
+  if (tapar) fd.append('tapar', '1');
+  fd.append('nota', document.getElementById('nota').value);
+  btn.disabled = true;
+  estado.textContent = 'Leyendo con ' + elegidos.length + (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo… (hasta tres minutos)');
+  try {
+    const r = await fetch(API + '/correr', {method: 'POST', body: fd});
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || ('el servidor contestó ' + r.status));
+    pintarResultado(data, document.getElementById('resultado'), true);
+    estado.textContent = 'Ensayo #' + data.id + ' guardado.';
+    document.getElementById('cuenta-ensayos').textContent = '…';
+  } catch (e) {
+    estado.textContent = 'No se pudo: ' + e.message; estado.className = 'estado mal';
+  } finally { btn.disabled = false; }
+}
+
+/* ---------- la comparación (sirve para el resultado vivo y para un ensayo guardado) ---------- */
+function pintarResultado(data, destino, vivo) {
+  const ms = data.modelos || [];
+  const fila = (rot, celdas, clase) => '<tr><td>' + rot + '</td>' + celdas.map(c => '<td class="' + (clase || '') + '">' + c + '</td>').join('') + '</tr>';
+  const cab = '<tr><th></th>' + ms.map(m => '<th>' + escHTML(m.nombre) + (m.nombre === data.referencia ? ' <span class="chip ref">referencia</span>' : '') + '<br><span class="muted" style="font-weight:400; text-transform:none; letter-spacing:0;">' + escHTML(m.proveedor_nombre) + '</span></th>').join('') + '</tr>';
+  const filas = [
+    fila('Estado', ms.map(m => m.ok ? '<span class="chip ok">leyó el archivo</span>' : '<span class="err">' + escHTML(m.error) + '</span>')),
+    fila('Costo de la llamada', ms.map(m => escHTML(m.costo_txt || '—')), 'num'),
+    fila('Tiempo', ms.map(m => escHTML(m.duracion_txt || '—')), 'num'),
+    fila('Tokens entrada / salida', ms.map(m => (m.ok || m.tokens_entrada) ? num(m.tokens_entrada) + ' / ' + num(m.tokens_salida) : '—'), 'num'),
+    fila('Precio de lista', ms.map(m => '<span class="muted">' + escHTML(m.precio_txt) + '</span>')),
+    fila('Confianza declarada', ms.map(m => m.ok ? escHTML(m.confianza || '—') : '—')),
+  ];
+  const ref = ms.find(m => m.ok && m.resumen);
+  if (ref) ref.resumen.forEach((r, i) => filas.push(fila(escHTML(r.etiqueta), ms.map(m => {
+    if (!m.ok || !m.resumen) return '—';
+    const c = m.resumen[i]; return c.igual ? escHTML(c.valor) : '<span class="dif">' + escHTML(c.valor) + '</span>';
+  }))));
+  const crudos = vivo ? ms.filter(m => m.ok && m.json).map(m =>
+    '<details><summary>Lo que leyó ' + escHTML(m.nombre) + ', completo</summary><pre>' + escHTML(m.json) + '</pre></details>').join('') : '';
+  const guardados = !vivo ? ms.filter(m => m.ok && m.lectura).map(m =>
+    '<details><summary>Lo que leyó ' + escHTML(m.nombre) + ' (sin identidad)</summary><pre>' + escHTML(JSON.stringify(m.lectura, null, 1)) + '</pre></details>').join('') : '';
+  const enm = data.enmascarado ? '<p class="muted" style="margin-top:8px;">Tapado: ' + (data.tapado ? 'sí, ' + (data.enmascarado.cajas ?? 0) + ' zonas cubiertas, ' + (data.enmascarado.fugas ?? 0) + ' fugas, ' + ((data.enmascarado.total_ms || 0) / 1000).toFixed(1).replace('.', ',') + ' s' : 'no se pudo (' + escHTML(data.enmascarado.motivo || '') + '); el archivo salió tal cual') + '.</p>' : '';
+  const mock = data.mock ? '<p class="aviso rojo" style="margin-top:10px;"><b>Simulado:</b> los modelos de Anthropic no llamaron a la API en este ensayo.</p>' : '';
+  destino.innerHTML = '<div class="tarjeta"><h2>Comparación' + (data.id ? ' · ensayo #' + data.id : '') + (data.archivo ? ' <span class="muted" style="font-family:system-ui; text-transform:none; letter-spacing:0; font-size:13px;">' + escHTML(data.archivo) + '</span>' : '') + '</h2>' +
+    '<p class="muted">' + (data.referencia ? 'En rojo, lo que ese modelo leyó distinto de <b>' + escHTML(data.referencia) + '</b> (el primero que contestó).' : 'Ningún modelo pudo leer el archivo.') + '</p>' + mock + enm +
+    '<div class="tabla-ancha" style="margin-top:10px;"><table>' + cab + filas.join('') + '</table></div></div>' +
+    tablaLineas(data.lineas, ms.filter(m => m.ok)) +
+    ((crudos || guardados) ? '<div class="tarjeta">' + crudos + guardados + '</div>' : '');
+}
+
+function tablaLineas(L, columnas) {
+  if (!L || !L.filas || !L.filas.length) return '';
+  const cab = '<tr><th>Código</th><th>Descripción</th><th class="num">Importe</th>' + columnas.map(m => '<th>' + escHTML(m.nombre) + '</th>').join('') + '</tr>';
+  const filas = L.filas.map(f => '<tr class="' + (f.difiere ? '' : 'igual-todas') + '"><td class="num">' + escHTML(f.codigo) + '</td><td>' + escHTML(f.descripcion) + '</td><td class="num">' + escHTML(f.importe) + '</td>' +
+    f.celdas.map(c => '<td class="' + (c.falta ? 'falta' : (c.igual ? '' : 'dif')) + '">' + escHTML(c.valor) + '</td>').join('') + '</tr>').join('');
+  return '<div class="tarjeta"><h2>Línea por línea</h2><p class="muted">' + L.total + ' líneas, <b>' + L.distintas + '</b> leídas distinto por algún modelo. En cada celda: tipo · categoría · sección, y lo que difiera del renglón (importe o código).</p>' +
+    '<label class="filtro-lineas"><input type="checkbox" checked onchange="this.closest(\'.tarjeta\').querySelector(\'table\').classList.toggle(\'solo-dif\', this.checked)"> Mostrar solo las que difieren</label>' +
+    '<div class="tabla-ancha"><table class="solo-dif">' + cab + filas + '</table></div></div>';
+}
+
+/* ---------- ensayos guardados ---------- */
+async function cargarEnsayos() {
+  const r = await fetch(API + '/ensayos', {cache: 'no-store'});
+  if (!r.ok) return;
+  const d = await r.json();
+  document.getElementById('cuenta-ensayos').textContent = d.ensayos.length;
+  const tb = document.querySelector('#tabla-ensayos tbody');
+  if (!d.ensayos.length) { tb.innerHTML = '<tr><td class="muted">Todavía no hay ensayos. El primero se corre desde «Ensayar».</td></tr>'; }
+  else tb.innerHTML = '<tr><th>#</th><th>Cuándo</th><th>Tipo</th><th>Archivo</th><th>Modelos</th><th class="num">Distintos</th><th>Estado</th><th></th></tr>' +
+    d.ensayos.map(e => '<tr><td class="num">' + e.id + '</td><td style="white-space:nowrap;">' + escHTML(e.creado) + (e.tapado ? ' <span class="chip">tapado</span>' : '') + (e.mock ? ' <span class="chip mal">simulado</span>' : '') + '</td><td>' + escHTML(e.tipo) + '</td><td>' + escHTML(e.archivo) + (e.nota ? '<br><span class="muted" style="font-size:12px;">' + escHTML(e.nota) + '</span>' : '') + '</td><td>' +
+      e.modelos.map(m => '<span class="chip ' + (m.ok ? 'ok' : 'mal') + '" title="' + escHTML(m.ok ? m.costo_txt + ' · ' + m.duracion_txt : m.error) + '">' + escHTML(m.nombre) + (m.ok && m.campos ? ' ' + m.iguales + '/' + m.campos : '') + '</span>').join('') +
+      '</td><td class="num">' + e.distintos + '</td><td><select class="estado-sel" data-id="' + e.id + '">' + ESTADOS.map(s => '<option' + (s === e.estado ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></td>' +
+      '<td><button class="enlace" data-ver="' + e.id + '">Ver</button></td></tr>').join('');
+  tb.querySelectorAll('select.estado-sel').forEach(s => s.addEventListener('change', async () => {
+    await fetch(API + '/ensayos/' + s.dataset.id + '/estado', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({estado: s.value})});
+    cargarEnsayos();
+  }));
+  tb.querySelectorAll('button[data-ver]').forEach(b => b.addEventListener('click', () => verEnsayo(b.dataset.ver)));
+  pintarResumen(d.resumen);
+}
+
+async function verEnsayo(id) {
+  const r = await fetch(API + '/ensayos/' + id, {cache: 'no-store'});
+  if (!r.ok) return;
+  const e = await r.json();
+  const data = {id: e.id, archivo: e.archivo, referencia: (e.real || {}).referencia, modelos: (e.real || {}).lecturas || [],
+                lineas: (e.diferencias || {}).lineas, tapado: e.tapado, enmascarado: (e.entrada || {}).enmascarado, mock: e.mock};
+  pintarResultado(data, document.getElementById('detalle-ensayo'), false);
+  document.getElementById('detalle-ensayo').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function pintarResumen(res) {
+  const tb = document.querySelector('#tabla-resumen tbody');
+  if (!res || !res.length) { tb.innerHTML = '<tr><td class="muted">Sin ensayos todavía.</td></tr>'; return; }
+  tb.innerHTML = '<tr><th>Modelo</th><th>Proveedor</th><th class="num">Ensayos</th><th class="num">Leyó</th><th class="num">Tiempo mediano</th><th class="num">Costo promedio</th><th>Coincidencia con la referencia</th></tr>' +
+    res.map(m => '<tr><td>' + escHTML(m.nombre) + '</td><td class="muted">' + escHTML(m.proveedor_nombre) + '</td><td class="num">' + m.ensayos + '</td><td class="num">' + m.ok + ' / ' + m.ensayos + '</td><td class="num">' + escHTML(m.tiempo_mediano_txt) + '</td><td class="num">' + escHTML(m.costo_promedio_txt) + '</td>' +
+      '<td>' + (m.coincidencia == null ? '<span class="muted">—</span>' : '<div style="display:flex; gap:8px; align-items:center;"><div class="barra"><span style="width:' + m.coincidencia + '%"></span></div><span class="num" style="font-family:var(--mono);">' + m.coincidencia + '%</span></div>') + '</td></tr>').join('');
+}
+
+cargarCatalogo().then(() => { cargarEnsayos(); });
+if (['ensayos', 'resumen'].includes(location.hash.slice(1))) mostrar(location.hash.slice(1));
+</script>
+</body>
+</html>

@@ -9327,3 +9327,63 @@ borró. Lo que quedó:
   filtros y la bandeja con los dos selectores nuevos y sin el formulario
   aparte. Humo con Playwright sobre la bandeja: filtrar por formulario,
   bajar, ver el botón apagado sin filas, limpiar y bajar todo.
+
+## El Laboratorio de modelos (2026-10-29, Plataforma 0.60.01)
+
+**Pedido de SDN.** Diversificar el uso de la API que lee recibos, pero solo
+en un módulo de prueba aislado: comparar rendimiento y costo de otros
+modelos (las primeras pruebas, Kimi K3 y Qwen 3.8) sin tocar la app real.
+El banco de pruebas de `/plataforma` ya comparaba modelos, pero solo los de
+Anthropic y con la clave de la plataforma.
+
+**Qué se hizo.** Una herramienta más en `/entornos` → Herramientas
+(`/entornos/herramientas/laboratorio-modelos`), con la misma puerta que las
+otras dos (pase o sesión de plataforma; 404 en demo), que replica el banco
+de pruebas y lo adapta:
+
+- **Motor `laboratorio_modelos.py`**, sin `db`: catálogo de proveedores
+  (`data/laboratorio_modelos.json`; Anthropic sale de `precios_ia`, para que
+  no pueda haber dos precios), la llamada en formato OpenAI (`/chat/
+  completions`, imagen como data URL, `json_object`, `extra` por proveedor),
+  el armado del resultado (mismo `resumen_comparable` y `comparar_lineas`
+  del extractor), el borrado de identidad antes de guardar y el resumen por
+  modelo sobre todos los ensayos. `_post` es la única salida a la red y los
+  tests la reemplazan.
+- **Mismo prompt para todos**, a propósito: si un modelo necesita otro
+  prompt, eso es parte de lo que se mide.
+- **Cada proveedor con su clave por variable** (`MOONSHOT_API_KEY`,
+  `DASHSCOPE_API_KEY`, más `*_BASE_URL` opcional). Sin la variable el modelo
+  se ve pero no se puede tildar; el servidor lo rechaza con 422 nombrando la
+  variable antes de gastar.
+- **Ensayos** en `CasoHerramienta` (`herramienta="laboratorio"`, sin
+  migración): por modelo, tokens, tiempo, costo, campos iguales a la
+  referencia y la lectura SIN nombre, CUIL ni legajo. Estados, CSV con una
+  fila por modelo y ensayo, y **resumen por modelo** (ensayos, leídos,
+  tiempo mediano, costo promedio, coincidencia). Los descartados no cuentan.
+- **Las lecturas de Anthropic van a UsoIA como `prueba`** (gasto real de la
+  misma clave, como el banco); las de otros proveedores no: UsoIA es el
+  consumo de Anthropic y su catálogo de precios.
+- **Tapar antes de mandar**, tildado por defecto cuando `ENMASCARADO` está
+  prendido: todos los modelos reciben la imagen cubierta y la identidad se
+  rearma acá. Con el enmascarado apagado, aviso ámbar; con
+  `MOCK_EXTRACTOR=1`, aviso rojo (los Claude no llaman a la API; los otros
+  sí).
+- La pantalla es standalone, "colmena nocturna" como la Calculadora, en
+  vanilla JS, con tres pestañas (Ensayar, Ensayos guardados, Resumen por
+  modelo). Probada en navegador real sin errores de consola.
+
+**Investigación (2026-10-29).** Kimi K3 existe (julio 2026) y ya tiene
+sucesor, Kimi K3.1 Pro (23-oct), más barato (2/10 contra 3/15). Qwen 3.8 es
+la familia vigente de Alibaba: `qwen3.8-flash` (0,15/0,47), `qwen3.8-max`
+(2/6), `qwen3.8-27b` (0,5/3), todos con imagen. Alibaba regala 1 M de
+tokens por modelo por 90 días en Singapur; Moonshot no regala nada a
+cuentas internacionales (recarga mínima de US$ 1 y 3 pedidos por minuto en
+el nivel 0). Los precios de Moonshot salen de su endpoint en OpenRouter
+porque la tabla oficial se dibuja con JS. Todo, con lo que no se pudo
+verificar, en `docs/LABORATORIO_MODELOS.md`.
+
+**Lo que queda.** Cargar las claves en Pruebas (SDN), apagar el mock si
+sigue prendido, y correr el primer lote de ensayos con los recibos
+sintéticos de La Bancaria. Un proveedor nuevo (OpenRouter si la tarjeta no
+entra en Moonshot) es una entrada en el JSON.
+
