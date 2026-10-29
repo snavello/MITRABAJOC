@@ -9295,3 +9295,35 @@ asistente (era la 4 de las «seis brechas» del BACKLOG).
   local solo su seccional y 403 si elige otra, 404 ajeno, registro de cada
   descarga, la bandeja lo ofrece). `test_alcance_seccional_panel.py`
   clasifica la ruta; `test_migraciones.py` compara la tabla nueva.
+
+**Rehecho al día siguiente (2026-10-29, Admin 0.75.02).** SDN, al verlo:
+«hay algo que no se entendió y que resolviste mal. Cuando hablé de poner un
+filtro a los trámites no es solo para generar un CSV, no tiene sentido.
+Ponés los filtros para todo el listado y con lo filtrado bajás a CSV.
+Simple». El formulario aparte (`#tr-listado`) con sus tres selectores se
+borró. Lo que quedó:
+
+- **Los filtros son de la bandeja**: a la fila que ya tenía nombre o CUIL,
+  expediente y estado se le sumaron **formulario** (`#f-tramites-tipo`) y
+  **seccional** (`#f-tramites-seccional`, solo con más de una a la vista),
+  y las filas llevan `data-tipo` y `data-seccional` (la seccional del
+  afiliado sale del padrón por CUIL, `tramites_del_sindicato` la trae en
+  la misma consulta). `filtrosTramites()` lee los filtros UNA vez y los
+  usan la tabla (`filtrarTramites`) y el CSV (`descargarListadoTramites`):
+  no hay dos lecturas que se desincronicen. El grupo de la pastilla cuenta
+  solo cuando no hay búsqueda ni estado elegido, como ya era.
+- **«Descargar CSV» baja lo que se ve**: arma la query con los mismos
+  valores (`tipo_id`, `estado` o `grupo`, `seccional_id`, `q`,
+  `expediente`) y el servidor los vuelve a aplicar dentro del alcance.
+  `db.listado_tramites` ya no exige formulario: con uno, una columna por
+  pregunta; sin él, las columnas comunes más «Formulario». `q` sigue la
+  regla de la pantalla (solo dígitos = CUIL, si no, nombre);
+  `db.GRUPOS_TRAMITE` define las pastillas una vez (la plantilla tiene su
+  espejo en JS). Con cero filas visibles el botón queda deshabilitado.
+- **El registro** admite formulario en NULL (migración `e2a4c6b8d0f1`,
+  `tipo_tramite_id` nullable) y el texto de `filtros` dice todo lo que se
+  pidió («formulario KIT · estado terminado», «busca «ana»»).
+- Tests: `test_listado_tramites.py` suma la descarga sin formulario con sus
+  filtros y la bandeja con los dos selectores nuevos y sin el formulario
+  aparte. Humo con Playwright sobre la bandeja: filtrar por formulario,
+  bajar, ver el botón apagado sin filas, limpiar y bajar todo.

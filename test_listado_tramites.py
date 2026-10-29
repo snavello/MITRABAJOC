@@ -1,8 +1,11 @@
 """El listado de trámites con sus respuestas (CSV desde la pestaña Trámites,
 2026-10-28; cierra la brecha «exportar» del Asistente de trámites, BACKLOG
-«seis brechas» 4): una fila por pedido de un formulario y una columna por
-pregunta, filtrado por estado y seccional, dentro del alcance del operador,
-y cada descarga registrada.
+«seis brechas» 4). Desde el 2026-10-29 el CSV baja lo que la bandeja tiene
+filtrado (SDN: «ponés los filtros para todo el listado y con lo filtrado
+bajás a CSV»): formulario, estado o pastilla, seccional, nombre o CUIL y
+expediente son filtros de la tabla, y con un formulario elegido sale una
+columna por pregunta. Dentro del alcance del operador, y cada descarga
+registrada.
 
 Correr con: python -m pytest test_listado_tramites.py -q
 """
@@ -116,25 +119,50 @@ def test_el_admin_local_baja_solo_su_seccional_y_no_elige_otra():
     assert len(_filas(c.get(f"/admin/tramites/listado.csv?tipo_id={TIPO}&seccional_id={SEC_ROS}").text)[1]) == 1
 
 
+def test_sin_formulario_baja_todo_lo_filtrado_con_la_columna_formulario():
+    c = _cliente(GENERAL, "gen")
+    r = c.get("/admin/tramites/listado.csv")
+    assert r.status_code == 200 and 'filename="tramites-2' in r.headers["content-disposition"]
+    cab, filas = _filas(r.text)
+    assert cab == ["Expediente", "Formulario", "Iniciado", "Actualizado", "Estado", "Apellido y nombre", "CUIL",
+                   "Seccional", "Área a cargo"], "sin formulario no hay columnas de preguntas, y se dice cuál es"
+    assert len(filas) == 2 and {f[1] for f in filas} == {"Kit escolar"}
+    # Los mismos filtros de la pantalla: nombre o CUIL, expediente y la pastilla.
+    assert [f[6] for f in _filas(c.get("/admin/tramites/listado.csv?q=ana").text)[1]] == [ANA]
+    assert [f[6] for f in _filas(c.get(f"/admin/tramites/listado.csv?q={FABIAN[:6]}").text)[1]] == [FABIAN]
+    assert len(_filas(c.get("/admin/tramites/listado.csv?expediente=KIT-").text)[1]) == 2
+    assert len(_filas(c.get("/admin/tramites/listado.csv?expediente=ZZZ").text)[1]) == 0
+    assert len(_filas(c.get("/admin/tramites/listado.csv?grupo=sindicato").text)[1]) == 2
+    assert len(_filas(c.get("/admin/tramites/listado.csv?grupo=terminados").text)[1]) == 0
+    assert c.get("/admin/tramites/listado.csv?grupo=raro").status_code == 400
+
+
 def test_un_formulario_ajeno_es_404_y_cada_descarga_queda_registrada():
     c = _cliente(GENERAL, "gen")
     assert c.get(f"/admin/tramites/listado.csv?tipo_id={AJENO}").status_code == 404
     assert c.get("/admin/tramites/listado.csv?tipo_id=999999").status_code == 404
     with Session(db.engine) as s:
         regs = s.exec(select(DescargaListado).where(DescargaListado.sindicato_id == SID).order_by(DescargaListado.id)).all()
-    assert len(regs) >= 5 and regs[0].filas == 2 and regs[0].filtros == "sin filtros" and regs[0].fecha
-    assert any(r.filtros == "estado terminado" and r.filas == 0 for r in regs)
-    assert all(r.usuario_id for r in regs) and all(r.tipo_tramite_id == TIPO for r in regs)
+    assert len(regs) >= 5 and regs[0].filas == 2 and regs[0].filtros == "formulario KIT" and regs[0].fecha
+    assert any(r.filtros == "formulario KIT · estado terminado" and r.filas == 0 for r in regs)
+    assert any(r.tipo_tramite_id is None and r.filtros == "sin filtros" and r.filas == 2 for r in regs), \
+        "la descarga sin formulario también se registra"
+    assert any(r.filtros == "busca «ana»" for r in regs)
+    assert all(r.usuario_id for r in regs) and all(r.tipo_tramite_id in (TIPO, None) for r in regs)
     assert not any(r.tipo_tramite_id == AJENO for r in regs), "lo que no se bajó no se registra"
 
 
-def test_la_bandeja_ofrece_el_listado():
-    def formulario(html):
-        i = html.index('id="tr-listado"')
-        return html[i:html.index("</form>", i)]
+def test_la_bandeja_filtra_por_formulario_y_seccional_y_baja_lo_filtrado():
+    def bandeja(html):
+        i = html.index('id="f-tramites-cuit"')
+        return html[i:html.index('id="tr-tabla"', i)]
     html = _cliente(GENERAL, "gen").get("/admin").text
-    f = formulario(html)
-    assert 'action="/admin/tramites/listado.csv"' in html and "Listado con las respuestas" in html
-    assert 'name="seccional_id"' in f and 'name="tipo_id"' in f and 'name="estado"' in f
-    local = formulario(_cliente(LOCAL, "loc").get("/admin").text)
-    assert 'name="seccional_id"' not in local, "con una sola seccional no se elige"
+    b = bandeja(html)
+    assert 'id="f-tramites-tipo"' in b and 'id="f-tramites-estado"' in b and 'id="f-tramites-seccional"' in b
+    assert 'id="tr-descargar"' in b and "descargarListadoTramites()" in b
+    assert 'id="tr-listado"' not in html, "no hay un formulario aparte para el CSV: baja lo filtrado"
+    assert 'data-tipo="%d"' % TIPO in html and 'data-seccional="%d"' % SEC_ROS in html
+    assert "/admin/tramites/listado.csv" in html
+    local = _cliente(LOCAL, "loc").get("/admin").text
+    assert 'id="f-tramites-seccional"' not in bandeja(local), "con una sola seccional no se elige"
+    assert 'id="f-tramites-tipo"' in bandeja(local)

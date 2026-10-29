@@ -1851,14 +1851,23 @@ planes `PLAN_ASISTENTE_TRAMITES.md` y, desde 2026-10-28,
   En pantalla, **Guardar pide confirmación y dice qué hace**, e Importar
   ensaya antes de confirmar; debajo de los botones se lee qué hace cada uno.
 - **El listado de pedidos con sus respuestas existe** (SDN, 2026-10-28:
-  «no es pendiente, es un filtro más en las consultas de trámites»):
-  `GET /admin/tramites/listado.csv?tipo_id&estado&seccional_id` desde la
-  bandeja de Trámites («Listado con las respuestas»), una fila por pedido y
-  una columna por pregunta (los archivos, con su nombre), dentro del alcance
-  del operador (`db.listado_tramites` recorta en la consulta) y con cada
-  descarga registrada en `DescargaListado` (migración `d9e1b3c5a7f2`). La
-  brecha `exportar` se sacó de `BRECHAS`; «listado = sí» ya no es brecha y
-  la instrucción dice de dónde se baja. Tests: `test_listado_tramites.py`.
+  «no es pendiente, es un filtro más en las consultas de trámites»; y el
+  29: **«ponés los filtros para todo el listado y con lo filtrado bajás a
+  CSV»**). Los filtros de la bandeja de Trámites son de la tabla entera:
+  nombre o CUIL, expediente, **formulario**, estado y **seccional** (solo si
+  hay más de una a la vista), más la pastilla; «Descargar CSV» baja
+  exactamente lo que quedó a la vista (`GET /admin/tramites/listado.csv?
+  tipo_id&estado&grupo&seccional_id&q&expediente`, misma lectura de
+  filtros en `filtrosTramites()`), una fila por trámite y, con un
+  formulario elegido, una columna por pregunta (los archivos, con su
+  nombre; sin formulario, la columna «Formulario»). No hay un formulario
+  aparte para el CSV. Dentro del alcance del operador
+  (`db.listado_tramites` recorta en la consulta; `db.GRUPOS_TRAMITE` son
+  las pastillas) y con cada descarga registrada en `DescargaListado`
+  (migraciones `d9e1b3c5a7f2` y `e2a4c6b8d0f1`, formulario en NULL = sin
+  elegir). La brecha `exportar` se sacó de `BRECHAS`; «listado = sí» ya no
+  es brecha y la instrucción dice de dónde se baja. Tests:
+  `test_listado_tramites.py`.
 - **El importador existe desde 2026-10-28** (V6; antes D7 lo postergaba):
   sigue el contrato `docs/chat/2026-10-16-contrato-importacion-tramites.md`
   salvo en dos cosas dichas: lo que falta no frena la importación (nace como

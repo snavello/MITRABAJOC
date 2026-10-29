@@ -698,6 +698,8 @@
   .filtros input { padding:7px 10px; border:1px solid #ccc; border-radius:7px; font-size:13px; font-family:inherit; }
   .filtros input[type=text] { width:150px; }
   .filtros .f-cant { font-size:12px; color:var(--gris); margin-left:2px; }
+  .filtros #tr-descargar { margin-left:auto; }
+  .filtros #tr-descargar:disabled { opacity:.45; cursor:not-allowed; }
   @media (max-width:560px){ .grid2 { grid-template-columns:1fr; } }
   h2 { font-size:17px; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
   h2:first-of-type { margin-top:0; }
@@ -2303,46 +2305,42 @@
       <button type="button" class="sec lst-pastilla" data-grupo="terminados" aria-pressed="false" onclick="grupoTramites('terminados')">Terminados <span class="n">{{ tr_terminados|length }}</span></button>
       <button type="button" class="sec lst-pastilla" data-grupo="todos" aria-pressed="false" onclick="grupoTramites('todos')">Todos <span class="n">{{ tramites|length }}</span></button>
     </div>
+    {# Los filtros son de la bandeja entera (2026-10-29, SDN: «ponés los
+       filtros para todo el listado y con lo filtrado bajás a CSV»): nombre
+       o CUIL, expediente, formulario, estado y seccional recortan la tabla
+       acá mismo, y «Descargar CSV» baja exactamente lo que queda a la
+       vista, con una columna por pregunta si hay un formulario elegido. El
+       servidor vuelve a aplicar los filtros dentro del alcance de quien lo
+       pide y registra la descarga. #}
     <div class="filtros">
       <input type="text" id="f-tramites-cuit" class="f-ancho" placeholder="Nombre o CUIL" aria-label="Buscar por nombre o CUIL" oninput="filtrarTramites()">
       <input type="text" id="f-tramites-nombre" placeholder="N° de expediente" aria-label="Buscar por número de expediente" oninput="filtrarTramites()">
+      {% if tipos_tramite %}
+      <select id="f-tramites-tipo" onchange="filtrarTramites()" aria-label="Formulario">
+        <option value="">Todos los formularios</option>
+        {% for t in tipos_tramite %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
+      </select>
+      {% endif %}
       <select id="f-tramites-estado" onchange="filtrarTramites()" aria-label="Estado">
         <option value="">Todos los estados</option>
         {% for e in estados_tramite %}<option value="{{ e }}">{{ 'Espera al afiliado' if e == 'espera_info' else estados_tramite_label[e] }}</option>{% endfor %}
       </select>
-      <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
-      <span class="f-cant" id="f-tramites-cant"></span>
-    </div>
-    {# El listado con las respuestas (2026-10-28): un CSV por formulario, una
-       columna por campo, con el estado y la seccional como filtros. Lo arma
-       el servidor dentro del alcance de quien lo pide y registra la
-       descarga; acá solo se elige qué bajar. #}
-    {% if tipos_tramite %}
-    <form class="filtros tr-listado" method="get" action="/admin/tramites/listado.csv" target="_blank" id="tr-listado">
-      <span class="muted" style="font-size:13px;">Listado con las respuestas:</span>
-      <select name="tipo_id" aria-label="Formulario" required>
-        <option value="">Elegí el formulario</option>
-        {% for t in tipos_tramite %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
-      </select>
-      <select name="estado" aria-label="Estado del listado">
-        <option value="">Todos los estados</option>
-        {% for e in estados_tramite %}<option value="{{ e }}">{{ 'Espera al afiliado' if e == 'espera_info' else estados_tramite_label[e] }}</option>{% endfor %}
-      </select>
       {% if seccionales_visibles and seccionales_visibles|length > 1 %}
-      <select name="seccional_id" aria-label="Seccional del listado">
+      <select id="f-tramites-seccional" onchange="filtrarTramites()" aria-label="Seccional">
         <option value="">Todas las seccionales</option>
         {% for sec in seccionales_visibles %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
       </select>
       {% endif %}
-      <button type="submit" class="sec mini">Descargar CSV</button>
-      <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Una fila por pedido de ese formulario y una columna por pregunta (los archivos salen con su nombre). Sirve para la compra, la logística o rendir cuentas. Baja solo lo que está a tu alcance, y cada descarga queda registrada: es información de personas."></button>
-    </form>
-    {% endif %}
+      <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
+      <span class="f-cant" id="f-tramites-cant"></span>
+      <button type="button" class="sec mini" id="tr-descargar" onclick="descargarListadoTramites()">Descargar CSV</button>
+      <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Baja lo que está filtrado, una fila por trámite. Si elegís un formulario, sale además una columna por pregunta (los archivos, con su nombre). Solo lo que está a tu alcance, y cada descarga queda registrada: es información de personas."></button>
+    </div>
     <div class="lst-scroll">
     <table id="tr-tabla">
       <tr><th>Expediente</th><th>Nombre</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
       {% for tr in tr_abiertos + tr_terminados %}
-      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-persona="{{ tr.nombre or '' }}" data-estado="{{ tr.estado }}" data-actualizado="{{ tr.actualizado }}"{% if tr.estado == 'terminado' %} style="display:none"{% endif %}>
+      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-persona="{{ tr.nombre or '' }}" data-estado="{{ tr.estado }}" data-actualizado="{{ tr.actualizado }}" data-tipo="{{ tr.tipo_tramite_id }}" data-seccional="{{ tr.seccional_id or '' }}"{% if tr.estado == 'terminado' %} style="display:none"{% endif %}>
         <td><code>{{ tr.numero_expediente }}</code></td>
         <td>{{ tr.nombre or '—' }}</td>
         <td class="lst-nowrap">{{ tr.cuil }}</td>
@@ -5939,38 +5937,63 @@ function ordenarTramites() {
   });
   filas.forEach(f => cuerpo.appendChild(f));
 }
-function filtrarTramites() {
-  const quien = (document.getElementById('f-tramites-cuit').value || '').trim();
-  const digitos = quien.replace(/\D/g, '');
-  const texto = quien.toLowerCase();
-  const nombre = (document.getElementById('f-tramites-nombre').value || '').toUpperCase().trim();
-  const estado = document.getElementById('f-tramites-estado').value;
+// Los filtros de la bandeja, leídos una vez: la tabla y el CSV usan los
+// MISMOS (2026-10-29). El grupo de la pastilla cuenta solo cuando no hay
+// búsqueda ni estado elegido, igual que en la tabla.
+function filtrosTramites() {
+  const v = id => { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+  const quien = v('f-tramites-cuit'), nombre = v('f-tramites-nombre'), estado = v('f-tramites-estado');
   const buscando = !!(quien || nombre);
+  return { quien, nombre, estado, tipo: v('f-tramites-tipo'), seccional: v('f-tramites-seccional'),
+           buscando, grupo: (!buscando && !estado) ? grupoTramitesActual : '' };
+}
+function filtrarTramites() {
+  const f = filtrosTramites();
+  const digitos = f.quien.replace(/\D/g, '');
+  const texto = f.quien.toLowerCase();
+  const nombre = f.nombre.toUpperCase();
   const enGrupo = GRUPOS_TRAMITE[grupoTramitesActual] || GRUPOS_TRAMITE.todos;
   let visibles = 0;
   document.querySelectorAll('.fila-tramite').forEach(fila => {
     let visible = true;
-    if (quien) {
-      const porCuil = digitos && digitos.length === quien.replace(/[\s.-]/g, '').length;
+    if (f.quien) {
+      const porCuil = digitos && digitos.length === f.quien.replace(/[\s.-]/g, '').length;
       visible = porCuil ? fila.dataset.cuil.replace(/\D/g, '').includes(digitos)
                         : (fila.dataset.persona || '').toLowerCase().includes(texto);
     }
     if (visible && nombre && !fila.dataset.nombre.toUpperCase().includes(nombre)) visible = false;
-    if (visible && estado && fila.dataset.estado !== estado) visible = false;
-    if (visible && !buscando && !estado && !enGrupo(fila.dataset.estado)) visible = false;
+    if (visible && f.tipo && fila.dataset.tipo !== f.tipo) visible = false;
+    if (visible && f.seccional && fila.dataset.seccional !== f.seccional) visible = false;
+    if (visible && f.estado && fila.dataset.estado !== f.estado) visible = false;
+    if (visible && f.grupo && !enGrupo(fila.dataset.estado)) visible = false;
     fila.style.display = visible ? '' : 'none';
     if (visible) visibles++;
   });
   const past = document.getElementById('tr-pastillas');
-  if (past) past.classList.toggle('apagadas', buscando || !!estado);
+  if (past) past.classList.toggle('apagadas', f.buscando || !!f.estado);
   document.getElementById('f-tramites-cant').textContent = visibles + ' resultado' + (visibles === 1 ? '' : 's')
-    + (buscando ? ' en todos los estados' : '');
+    + (f.buscando ? ' en todos los estados' : '');
+  const desc = document.getElementById('tr-descargar');
+  if (desc) desc.disabled = visibles === 0;
 }
 function limpiarFiltroTramites() {
-  document.getElementById('f-tramites-cuit').value = '';
-  document.getElementById('f-tramites-nombre').value = '';
-  document.getElementById('f-tramites-estado').value = '';
+  ['f-tramites-cuit', 'f-tramites-nombre', 'f-tramites-estado', 'f-tramites-tipo', 'f-tramites-seccional']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   grupoTramites('abiertos');
+}
+// El CSV baja lo que la tabla muestra: la misma lectura de filtros, en la
+// query. El servidor los vuelve a aplicar dentro del alcance.
+function descargarListadoTramites() {
+  const f = filtrosTramites();
+  const p = new URLSearchParams();
+  if (f.tipo) p.set('tipo_id', f.tipo);
+  if (f.estado) p.set('estado', f.estado);
+  if (f.seccional) p.set('seccional_id', f.seccional);
+  if (f.quien) p.set('q', f.quien);
+  if (f.nombre) p.set('expediente', f.nombre);
+  if (f.grupo && f.grupo !== 'todos') p.set('grupo', f.grupo);
+  const qs = p.toString();
+  window.location.href = '/admin/tramites/listado.csv' + (qs ? '?' + qs : '');
 }
 if (document.getElementById('tr-tabla')) filtrarTramites();
 
