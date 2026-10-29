@@ -10638,6 +10638,18 @@ def entornos_asistente_casos_csv(request: Request):
 # proveedores quedan solo en el ensayo: UsoIA es el consumo de Anthropic.
 HERRAMIENTA_LABORATORIO = laboratorio_modelos.HERRAMIENTA
 API_LABORATORIO = "/api/entornos/herramientas/laboratorio"
+# Lo que se espera a UN modelo, como máximo: pasado eso, el ensayo sigue con los
+# que contestaron y ese queda como "no terminó". Un modelo que no vuelve no
+# puede dejar sin resultado a los otros cuatro (SDN, 2026-10-29).
+LABORATORIO_LIMITE_S = laboratorio_modelos.TIEMPO_MAXIMO_S
+# Corridas en curso: id → claves que la pantalla pidió detener ("*" = todas).
+# En memoria del proceso: Pruebas corre un worker, y es una herramienta de
+# evaluación; con varios workers el pedido de detener podría caer en otro.
+_CORRIDAS_LABORATORIO: dict = {}
+
+
+def _nuevo_rid() -> str:
+    return uuid.uuid4().hex[:12]
 
 
 @app.get("/entornos/herramientas/laboratorio-modelos", response_class=HTMLResponse)
@@ -10738,7 +10750,10 @@ async def _laboratorio_correr(request: Request, archivo: UploadFile, tipo: str, 
                        "cajas": r.get("cajas"), "fugas": r.get("fugas"), "total_ms": r.get("total_ms")}
     tapado = bool(prep is not None and prep.tapado)
     img = prep.imagen if tapado else imagen
-    yield {"evento": "inicio", "modelos": [{"clave": c, "nombre": laboratorio_modelos.modelo(c)["nombre"]} for c in elegidos],
+    rid = _nuevo_rid()
+    _CORRIDAS_LABORATORIO.setdefault(rid, set())
+    yield {"evento": "inicio", "corrida": rid, "limite_s": LABORATORIO_LIMITE_S,
+           "modelos": [{"clave": c, "nombre": laboratorio_modelos.modelo(c)["nombre"]} for c in elegidos],
            "tapado": tapado}
 
     async def uno(clave):
@@ -10747,18 +10762,45 @@ async def _laboratorio_correr(request: Request, archivo: UploadFile, tipo: str, 
                                                   archivo.content_type, img, tapado)
         except Exception as e:  # noqa: BLE001 -- el error es el dato de esa fila
             return clave, e
-    por_clave = {}
-    for tarea in asyncio.as_completed([uno(c) for c in elegidos]):
-        clave, r = await tarea
-        por_clave[clave] = r
+
+    def evento_de(clave, r):
         m = laboratorio_modelos.modelo(clave)
         if isinstance(r, BaseException):
-            yield {"evento": "modelo", "clave": clave, "ok": False, "error": laboratorio_modelos._etiqueta_error(r)}
-        else:
-            uso = r[1]
-            yield {"evento": "modelo", "clave": clave, "ok": True,
-                   "duracion_txt": precios_ia.segundos(uso.get("duracion_ms", 0)),
-                   "costo_txt": precios_ia.usd(laboratorio_modelos.costo_de(m, uso["tokens_entrada"], uso["tokens_salida"]))}
+            return {"evento": "modelo", "clave": clave, "ok": False, "error": laboratorio_modelos._etiqueta_error(r)}
+        uso = r[1]
+        return {"evento": "modelo", "clave": clave, "ok": True,
+                "duracion_txt": precios_ia.segundos(uso.get("duracion_ms", 0)),
+                "costo_txt": precios_ia.usd(laboratorio_modelos.costo_de(m, uso["tokens_entrada"], uso["tokens_salida"]))}
+
+    por_clave = {}
+    pendientes = {asyncio.ensure_future(uno(c)): c for c in elegidos}
+    arranque = asyncio.get_event_loop().time()
+    try:
+        while pendientes:
+            hechas, _ = await asyncio.wait(list(pendientes), timeout=0.5, return_when=asyncio.FIRST_COMPLETED)
+            for t in hechas:
+                clave, r = t.result()
+                pendientes.pop(t)
+                por_clave[clave] = r
+                yield evento_de(clave, r)
+            # Lo que la pantalla pidió detener, y lo que se pasó del tope: se deja
+            # de esperar (el hilo sigue solo hasta que la API conteste, pero su
+            # resultado se descarta) y el ensayo sigue con los demás.
+            detener = _CORRIDAS_LABORATORIO.get(rid, set())
+            pasado = asyncio.get_event_loop().time() - arranque > LABORATORIO_LIMITE_S
+            for t, clave in list(pendientes.items()):
+                if clave in detener or "*" in detener:
+                    motivo = "detenido desde la pantalla"
+                elif pasado:
+                    motivo = f"no terminó en {LABORATORIO_LIMITE_S} s: el laboratorio no espera más"
+                else:
+                    continue
+                pendientes.pop(t)
+                t.cancel()
+                por_clave[clave] = laboratorio_modelos.ErrorProveedor(motivo)
+                yield evento_de(clave, por_clave[clave])
+    finally:
+        _CORRIDAS_LABORATORIO.pop(rid, None)
     lecturas = [por_clave[c] for c in elegidos]
 
     for clave, r in zip(elegidos, lecturas):
@@ -10801,6 +10843,18 @@ async def api_laboratorio_correr(request: Request, archivo: UploadFile = File(..
         if ev["evento"] == "fin":
             final = {k: v for k, v in ev.items() if k != "evento"}
     return final
+
+
+@app.post(API_LABORATORIO + "/correr/{rid}/detener")
+def api_laboratorio_detener(request: Request, rid: str, payload: dict = Body(...)):
+    """Deja de esperar a UN modelo (o a todos, con `"todo": true`) de una
+    corrida en curso: queda en el ensayo como "detenido desde la pantalla" y
+    el resultado sale con los que sí contestaron."""
+    _exigir_herramientas(request)
+    if rid not in _CORRIDAS_LABORATORIO:
+        raise HTTPException(404, "Esa corrida ya terminó o no existe.")
+    _CORRIDAS_LABORATORIO[rid].add("*" if payload.get("todo") else str(payload.get("clave") or ""))
+    return {"ok": True}
 
 
 @app.post(API_LABORATORIO + "/correr-en-vivo")

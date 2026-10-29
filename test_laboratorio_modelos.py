@@ -492,3 +492,70 @@ def test_el_cuit_con_guiones_no_lleva_signo_y_el_verificador_delata_el_digito_ma
         (neg, {"modelo": "moonshot:kimi-k3", "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1})])
     assert next(d for d in r2["modelos"][1]["resumen"] if d["etiqueta"] == "Descuentos")["signo"]
 
+
+def test_un_modelo_que_no_vuelve_no_deja_sin_resultado_a_los_otros(monkeypatch):
+    """SDN corrió cinco en paralelo, uno no terminó y no vio ninguno. Ahora el
+    tope por modelo lo deja como «no terminó» y el ensayo sale con los demás."""
+    import time as _t
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant"); monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-q")
+    monkeypatch.setattr(main, "preparar_imagen", lambda contenido, ct: IMAGEN)
+    monkeypatch.setattr(main, "LABORATORIO_LIMITE_S", 0.3)
+
+    def falso_leer(clave, tipo, contenido, ct, imagen, aviso=False):
+        if clave.startswith("alibaba:"):
+            _t.sleep(3)
+        return json.loads(json.dumps(RECIBO)), {"modelo": "claude-sonnet-4-6", "tokens_entrada": 10, "tokens_salida": 5, "duracion_ms": 100}
+    monkeypatch.setattr(lab, "leer", falso_leer)
+    c = _con_plataforma()
+    r = c.post(API + "/correr-en-vivo", data={"tipo": "recibo", "modelos": ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash"]},
+               files={"archivo": ("r.png", b"x", "image/png")})
+    eventos = [json.loads(l) for l in r.text.splitlines() if l.strip()]
+    assert eventos[0]["corrida"] and eventos[0]["limite_s"] == 0.3
+    por = {e["clave"]: e for e in eventos if e["evento"] == "modelo"}
+    assert por["anthropic:claude-sonnet-4-6"]["ok"]
+    assert not por["alibaba:qwen3.8-flash"]["ok"] and "no terminó" in por["alibaba:qwen3.8-flash"]["error"]
+    fin = eventos[-1]
+    assert fin["evento"] == "fin" and fin["ok"] == 1 and fin["modelos"][0]["ok"] and fin["id"]
+
+
+def test_detener_un_modelo_desde_la_pantalla(monkeypatch):
+    import time as _t
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant"); monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-q")
+    monkeypatch.setattr(main, "preparar_imagen", lambda contenido, ct: IMAGEN)
+    monkeypatch.setattr(main, "_nuevo_rid", lambda: "corrida-test")
+
+    def falso_leer(clave, tipo, contenido, ct, imagen, aviso=False):
+        if clave.startswith("alibaba:"):
+            _t.sleep(3)
+        return json.loads(json.dumps(RECIBO)), {"modelo": "claude-sonnet-4-6", "tokens_entrada": 10, "tokens_salida": 5, "duracion_ms": 100}
+    monkeypatch.setattr(lab, "leer", falso_leer)
+    c = _con_plataforma()
+    # El pedido de detener llega "antes" (la corrida ya está registrada con ese id).
+    main._CORRIDAS_LABORATORIO["corrida-test"] = {"alibaba:qwen3.8-flash"}
+    r = c.post(API + "/correr-en-vivo", data={"tipo": "recibo", "modelos": ["anthropic:claude-sonnet-4-6", "alibaba:qwen3.8-flash"]},
+               files={"archivo": ("r.png", b"x", "image/png")})
+    eventos = [json.loads(l) for l in r.text.splitlines() if l.strip()]
+    por = {e["clave"]: e for e in eventos if e["evento"] == "modelo"}
+    assert por["anthropic:claude-sonnet-4-6"]["ok"]
+    assert "detenido desde la pantalla" in por["alibaba:qwen3.8-flash"]["error"]
+    assert eventos[-1]["evento"] == "fin" and eventos[-1]["ok"] == 1
+    assert "corrida-test" not in main._CORRIDAS_LABORATORIO
+    # La ruta de detener: 404 si la corrida no existe, 200 si está en curso.
+    assert c.post(API + "/correr/nada/detener", json={"clave": "x"}).status_code == 404
+    main._CORRIDAS_LABORATORIO["viva"] = set()
+    assert c.post(API + "/correr/viva/detener", json={"todo": True}).json()["ok"] and main._CORRIDAS_LABORATORIO.pop("viva") == {"*"}
+
+
+def test_un_429_se_reintenta_y_despues_se_rinde(monkeypatch):
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-q")
+    monkeypatch.setattr(lab.time, "sleep", lambda s: None)
+    respuestas = [httpx.Response(429, text="Throttling", headers={"Retry-After": "1"}),
+                  httpx.Response(200, json=_ok(json.dumps(RECIBO)))]
+    monkeypatch.setattr(lab, "_post", lambda u, h, b: respuestas.pop(0))
+    datos, _ = lab.leer("alibaba:qwen3.8-flash", "recibo", b"", "image/png", IMAGEN)
+    assert datos["periodo"] == "2026-08" and not respuestas
+    monkeypatch.setattr(lab, "_post", lambda u, h, b: httpx.Response(429, text="Throttling"))
+    with pytest.raises(lab.ErrorProveedor) as e:
+        lab.leer("alibaba:qwen3.8-flash", "recibo", b"", "image/png", IMAGEN)
+    assert "429" in str(e.value) and "reintentar" in str(e.value)
+

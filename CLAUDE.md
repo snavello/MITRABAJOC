@@ -1926,7 +1926,12 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
 - **El progreso se ve en vivo** (2026-10-29): `POST .../correr-en-vivo`
   transmite NDJSON (`inicio`, un `modelo` por cada uno que termina, `fin`)
   desde el mismo generador que `/correr`; la pantalla muestra aro, reloj y
-  barra por modelo. **El signo solo se SEÑALA en ámbar (±), nunca en rojo**:
+  barra por modelo. **Un modelo que no vuelve no deja sin resultado a los
+  demás** (SDN, 2026-10-29): tope `LABORATORIO_LIMITE_S` por modelo (queda
+  «no terminó»), botón **Detener** por modelo (`POST .../correr/{rid}/detener`,
+  corridas en memoria del proceso) y reintento ante 429 del proveedor
+  (`REINTENTOS_429`, Qwen limita pedidos en paralelo en el nivel gratis).
+  **El signo solo se SEÑALA en ámbar (±), nunca en rojo**:
   en las líneas (`celdas[].signo`, `lineas.signos`) y en los totales del
   resumen (se comparan en valor absoluto); la app usa el valor absoluto.
   **«Qué implica»**: `laboratorio_modelos.analisis` escribe cinco o seis

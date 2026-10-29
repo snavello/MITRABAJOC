@@ -96,13 +96,16 @@
   .analisis { margin:12px 0 0; padding-left:18px; font-size:13.5px; line-height:1.5; color:#e8edf6; }
   .analisis li + li { margin-top:4px; }
   .progreso { list-style:none; padding:0; margin:0; }
-  .progreso li { display:grid; grid-template-columns:22px 1fr auto; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:14px; }
+  .progreso li { display:grid; grid-template-columns:22px 1fr auto auto; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:14px; }
+  .progreso .detener { background:rgba(255,107,107,.15); color:var(--mal); border:1px solid rgba(255,107,107,.4); border-radius:8px; padding:4px 9px; font:600 12px system-ui; cursor:pointer; }
+  .progreso .detener:disabled { opacity:.5; cursor:default; }
+  .progreso li.listo .detener, .progreso li.fallo .detener { visibility:hidden; }
   .progreso .aro { width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,.18); border-top-color:var(--ambar); animation:gira .8s linear infinite; }
   .progreso .tilde-ok { color:var(--bien); font-weight:700; }
   .progreso .tilde-mal { color:var(--mal); font-weight:700; }
   .progreso .reloj { font-family:var(--mono); font-size:12.5px; color:var(--suave); }
   .progreso li.listo .reloj { color:#fff; }
-  .progreso .barra-t { height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden; grid-column:2 / 4; }
+  .progreso .barra-t { height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden; grid-column:2 / 5; }
   .progreso .barra-t span { display:block; height:100%; width:30%; background:var(--ambar); animation:corre 1.4s ease-in-out infinite; }
   .progreso li.listo .barra-t span { animation:none; width:100%; background:var(--bien); }
   .progreso li.fallo .barra-t span { animation:none; width:100%; background:var(--mal); }
@@ -307,7 +310,7 @@ async function correr() {
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.detail || ('el servidor contestó ' + r.status)); }
     let data = null;
     for await (const ev of lineasJson(r.body)) {
-      if (ev.evento === 'inicio') prog.arrancar(ev.modelos, ev.tapado);
+      if (ev.evento === 'inicio') prog.arrancar(ev.modelos, ev.tapado, ev.corrida, ev.limite_s);
       else if (ev.evento === 'modelo') prog.termino(ev);
       else if (ev.evento === 'error') throw new Error(ev.detail);
       else if (ev.evento === 'fin') data = ev;
@@ -340,11 +343,16 @@ async function* lineasJson(body) {
    barra que recorre; al terminar cada uno, tilde o cruz con su tiempo y costo. */
 class Progreso {
   constructor(destino) { this.destino = destino; this.filas = {}; this.t0 = {}; this.timer = null; }
-  arrancar(modelos, tapado) {
-    const ahora = performance.now();
+  arrancar(modelos, tapado, corrida, limite) {
+    const ahora = performance.now(); this.corrida = corrida;
     this.destino.innerHTML = '<div class="tarjeta"><h2>Leyendo' + (tapado ? ' (datos personales tapados)' : '') + '</h2>' +
+      '<p class="muted">Cada modelo se espera hasta ' + (limite || 180) + ' s; el que no vuelve queda como «no terminó» y el ensayo sigue con los demás. «Detener» deja de esperar a ese modelo.</p>' +
       '<ul class="progreso">' + modelos.map(m => '<li data-clave="' + escHTML(m.clave) + '"><span class="aro"></span><span>' + escHTML(m.nombre) +
-      '</span><span class="reloj">0,0 s</span><div class="barra-t"><span></span></div></li>').join('') + '</ul></div>';
+      '</span><span class="reloj">0,0 s</span><button type="button" class="detener" data-detener="' + escHTML(m.clave) + '">Detener</button><div class="barra-t"><span></span></div></li>').join('') + '</ul></div>';
+    this.destino.querySelectorAll('button[data-detener]').forEach(b => b.addEventListener('click', async () => {
+      b.disabled = true; b.textContent = 'deteniendo…';
+      await fetch(API + '/correr/' + encodeURIComponent(corrida) + '/detener', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({clave: b.dataset.detener})}).catch(() => {});
+    }));
     modelos.forEach(m => { this.filas[m.clave] = this.destino.querySelector('li[data-clave="' + CSS.escape(m.clave) + '"]'); this.t0[m.clave] = ahora; });
     this.destino.scrollIntoView({behavior: 'smooth', block: 'start'});
     this.timer = setInterval(() => {
