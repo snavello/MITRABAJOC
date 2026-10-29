@@ -612,3 +612,28 @@ def test_el_analisis_avisa_cuando_la_que_se_aparta_es_la_referencia():
     r2 = lab.armar_resultado("recibo", ["anthropic:claude-haiku-4-5", "openai:gpt-6.1-sol"], [
         (ref, dict(uso, modelo="claude-haiku-4-5")), (otro, dict(uso, modelo="openai:gpt-6.1-sol"))])
     assert r2["contra_referencia"] == [] and not any(l.startswith("Ojo con la referencia") for l in r2["analisis"])
+
+
+def test_la_referencia_es_el_modelo_de_produccion_aunque_no_vaya_primero(monkeypatch):
+    """Producción no es Sonnet 4.6 fijo: es lo que plataforma eligió en Uso
+    de IA → Modelos (corrección de SDN, 2026-10-29). El catálogo lo dice y la
+    corrida lo pone primero, así es la referencia."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-q")
+    monkeypatch.setattr(db, "modelo_ia", lambda uso: "claude-haiku-4-5" if uso == "recibos" else "x")
+    monkeypatch.setattr(main, "preparar_imagen", lambda contenido, ct: IMAGEN)
+    orden = []
+
+    def falso_leer(clave, tipo, contenido, ct, imagen, aviso=False):
+        orden.append(clave)
+        return json.loads(json.dumps(RECIBO)), {"modelo": clave.split(":")[1] if clave.startswith("anthropic:") else clave,
+                                                "tokens_entrada": 1, "tokens_salida": 1, "duracion_ms": 1}
+    monkeypatch.setattr(lab, "leer", falso_leer)
+    c = _con_plataforma("snavello")
+    assert c.get(API + "/catalogo").json()["produccion"] == "anthropic:claude-haiku-4-5"
+    r = c.post(API + "/correr",
+               data={"tipo": "recibo", "modelos": ["alibaba:qwen3.8-flash", "anthropic:claude-sonnet-4-6", "anthropic:claude-haiku-4-5"]},
+               files={"archivo": ("r.png", b"png", "image/png")})
+    assert r.status_code == 200, r.text
+    assert r.json()["referencia"] == "Claude Haiku 4.5"
+    assert [m["clave"] for m in r.json()["modelos"]][0] == "anthropic:claude-haiku-4-5"

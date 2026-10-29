@@ -9457,3 +9457,13 @@ la línea queda como concepto desconocido (pendiente de revisión en
 Conceptos) y no se valida contra ninguna fórmula, pero sigue sumando al
 bruto por su sección. Es decir: un dígito mal leído en el código de un haber
 no cambia la aritmética del recibo, pero sí deja ese concepto sin controlar.
+
+**La referencia es el modelo de producción** (misma tarde). Yo había
+escrito «poné de referencia a Sonnet 4.6, que es el de producción» y SDN lo
+corrigió: producción no es un modelo fijo, es el que plataforma elige en Uso
+de IA → Modelos (`db.modelo_ia("recibos")`; Sonnet 4.6 es solo el default
+del extractor). Así que el laboratorio ahora lo pregunta: el catálogo trae
+`produccion`, la pantalla lo marca «producción hoy» y lo tilda de entrada,
+y el servidor lo pone primero en la corrida para que sea la referencia
+aunque en la lista esté detrás de otro. Si no se lo elige, la referencia
+sigue siendo el primero que contesta.

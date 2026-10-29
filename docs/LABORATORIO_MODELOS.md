@@ -197,7 +197,7 @@ con el prefijo del proveedor; es una entrada en el JSON, no código.
 
 | Modelo | Entrada | Salida | Costo aprox. de UN recibo (2.500 tokens de entrada, 1.800 de salida) | Para empezar |
 |---|---|---|---|---|
-| Claude Sonnet 4.6 (producción hoy) | 3,00 | 15,00 | US$ 0,034 | ya está |
+| Claude Sonnet 4.6 (default del extractor; el vigente lo elige /plataforma) | 3,00 | 15,00 | US$ 0,034 | ya está |
 | Claude Haiku 5.5 | 0,10 | 0,50 | US$ 0,0012 | ya está |
 | GPT-6.1 Sol | 2,00 | 10,00 | US$ 0,023 | recargar US$ 5 |
 | GPT-6.1 Terra | 1,00 | 5,00 | US$ 0,0115 | recargar US$ 5 |

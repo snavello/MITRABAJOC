@@ -185,7 +185,7 @@
       <div id="resultado">
         <div class="tarjeta">
           <h2>Cómo leer la comparación</h2>
-          <p class="muted">La referencia es el <b>primer modelo que contestó</b>, en el orden en que se eligieron: lo que otro modelo leyó distinto va en rojo.
+          <p class="muted">La referencia es el <b>modelo de producción</b> (el que hoy lee los recibos en la app, elegido en /plataforma) si está entre los elegidos; si no, el primero que contestó en el orden de la lista. Lo que otro modelo leyó distinto va en rojo; si los demás coinciden entre sí y la referencia se aparta, va en ámbar: la referencia no es la verdad.
             Que coincidan no prueba que estén bien, prueba que leyeron lo mismo; por eso conviene incluir siempre el modelo que hoy corre en producción.
             Un CUIL o CUIT con guiones no cuenta como diferencia (la app los normaliza), y la tabla línea por línea es la que importa:
             dos modelos pueden dar el mismo neto y clasificar distinto una línea, y esa clasificación alimenta la cuota sindical y el tope del 2%.</p>
@@ -258,8 +258,8 @@ async function cargarCatalogo() {
       bloqueClave(p);
     const ms = p.modelos.length ? p.modelos.map(m =>
       '<label class="tilde' + (p.configurado ? '' : ' apagado') + '" title="' + escHTML(m.resumen) + '">' +
-      '<input type="checkbox" class="modelo" value="' + escHTML(m.clave) + '"' + (p.configurado ? '' : ' disabled') + '>' +
-      '<span>' + escHTML(m.nombre) + '<small><span class="modelo-precio">' + escHTML(m.precio_txt) + '</span>' +
+      '<input type="checkbox" class="modelo" value="' + escHTML(m.clave) + '"' + (p.configurado ? '' : ' disabled') + (m.clave === CAT.produccion && p.configurado ? ' checked' : '') + '>' +
+      '<span>' + escHTML(m.nombre) + (m.clave === CAT.produccion ? ' <span class="chip ref" title="El modelo que hoy lee los recibos en la app (se elige en /plataforma → Uso de IA → Modelos). Va de referencia.">producción hoy</span>' : '') + '<small><span class="modelo-precio">' + escHTML(m.precio_txt) + '</span>' +
       (m.contexto ? ' · ' + escHTML(m.contexto) : '') + '</small></span></label>').join('')
       : '<p class="muted">Sin modelos en el catálogo todavía.</p>';
     return cab + ms;
@@ -292,7 +292,8 @@ document.getElementById('modelos').addEventListener('click', async e => {
 document.getElementById('correr').addEventListener('click', correr);
 async function correr() {
   const inp = document.getElementById('archivo'), estado = document.getElementById('estado'), btn = document.getElementById('correr');
-  const elegidos = [...document.querySelectorAll('.modelo:checked')].map(c => c.value);
+  // El de producción primero: es la referencia (el servidor también lo ordena así).
+  const elegidos = [...document.querySelectorAll('.modelo:checked')].map(c => c.value).sort((a, b) => (a === CAT.produccion ? -1 : 0) - (b === CAT.produccion ? -1 : 0));
   estado.className = 'estado';
   if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
   if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
