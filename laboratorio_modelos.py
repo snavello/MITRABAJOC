@@ -56,6 +56,15 @@ TIPOS = ("recibo", "aportes")
 # Un modelo abierto servido desde Asia puede tardar bastante más que Claude;
 # el navegador espera a todos en paralelo, así que el techo es generoso.
 TIEMPO_MAXIMO_S = 180
+# Ante un 429 (límite de pedidos del proveedor) se reintenta hasta tantas veces.
+REINTENTOS_429 = 2
+
+
+def _espera_429(r, intento: int) -> float:
+    try:
+        return min(float(r.headers.get("Retry-After", "")), 30.0)
+    except (TypeError, ValueError):
+        return 3.0 * (intento + 1)
 ANTHROPIC = "anthropic"
 
 
@@ -236,13 +245,21 @@ def _leer_openai(prov: dict, m: dict, tipo: str, imagen: tuple[str, str],
                "Content-Type": "application/json"}
     clave_ = clave(prov["id"], m["id"])
     inicio = time.perf_counter()
-    try:
-        r = _post(url, headers, body)
-    except httpx.HTTPError as e:
-        raise ErrorProveedor(f"no se pudo llegar a {prov['nombre']}: {type(e).__name__}: {e}") from e
+    for intento in range(REINTENTOS_429 + 1):
+        try:
+            r = _post(url, headers, body)
+        except httpx.HTTPError as e:
+            raise ErrorProveedor(f"no se pudo llegar a {prov['nombre']}: {type(e).__name__}: {e}") from e
+        # Un 429 es "demasiados pedidos a la vez" (Qwen en el nivel gratis, con
+        # cinco modelos en paralelo): se espera lo que pida Retry-After, o unos
+        # segundos, y se vuelve a intentar un par de veces antes de rendirse.
+        if r.status_code != 429 or intento == REINTENTOS_429:
+            break
+        time.sleep(_espera_429(r, intento))
     ms = int((time.perf_counter() - inicio) * 1000)
     if r.status_code != 200:
-        raise ErrorProveedor(f"{prov['nombre']} contestó {r.status_code}: {r.text[:300]}")
+        raise ErrorProveedor(f"{prov['nombre']} contestó {r.status_code}: {r.text[:300]}"
+                             + (" (tras reintentar por límite de pedidos)" if r.status_code == 429 else ""))
     try:
         data = r.json()
         eleccion = data["choices"][0]
@@ -389,9 +406,13 @@ def analisis(filas: list, lineas: dict | None, referencia: str | None) -> list:
     out = []
     if not ok:
         return ["Ningún modelo leyó el archivo: no hay nada que comparar."]
+    detenidos = [f for f in fallidos if str(f.get("error", "")).startswith("detenido")]
+    fallidos = [f for f in fallidos if f not in detenidos]
+    if detenidos:
+        out.append(f"{len(detenidos)} detenido(s) desde la pantalla ({', '.join(f['nombre'] for f in detenidos)}): no cuentan.")
     if fallidos:
         out.append(f"{len(fallidos)} de {len(filas)} no contestaron ({', '.join(f['nombre'] for f in fallidos)}): "
-                   "un modelo que falla en el laboratorio también va a fallar con un afiliado esperando.")
+                   "un modelo que falla o no termina en el laboratorio también va a fallar con un afiliado esperando.")
     if len(ok) == 1:
         out.append(f"Solo contestó {ok[0]['nombre']}: con uno solo no hay comparación. Sumá al menos el de producción.")
         return out
