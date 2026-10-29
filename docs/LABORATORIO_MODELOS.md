@@ -63,10 +63,14 @@ Ruta: `/entornos/herramientas/laboratorio-modelos`. Motor:
 Anthropic va por `extractor.extraer` (la misma llamada de la app, incluido
 `effort: low` para los que razonan). Los demás hablan el **formato OpenAI**
 (`POST <base_url>/chat/completions`): sistema + usuario con la imagen como
-`image_url` en data URL base64 y el esquema como texto, `max_tokens` 8.000,
-`temperature` 0, `response_format: json_object` cuando el catálogo lo marca,
-y los parámetros propios del proveedor en `extra` (hoy, `reasoning_effort:
-low` para Kimi, que razona siempre). Se parsea `message.content` (los
+`image_url` en data URL base64 y el esquema como texto, tope de salida
+8.000 (`max_tokens`, o el nombre que diga `tope_salida` del proveedor:
+OpenAI exige `max_completion_tokens`), `temperature` 0 salvo que el
+proveedor lo rechace (`quitar` lo saca del pedido: OpenAI no acepta ninguna
+temperatura en los modelos que razonan; Kimi solo acepta 1, que va en
+`extra`), `response_format: json_object` cuando el catálogo lo marca, y los
+parámetros propios del proveedor en `extra` (`reasoning_effort: low` para
+Kimi y para los GPT, que razonan siempre). Se parsea `message.content` (los
 modelos que razonan devuelven el razonamiento aparte, en
 `reasoning_content`, y no interesa). Un `finish_reason: length` es
 `ErrorLectura` con el uso adentro (se pagó); un status distinto de 200 es
@@ -74,8 +78,10 @@ modelos que razonan devuelven el razonamiento aparte, en
 
 Un proveedor nuevo es una entrada en `data/laboratorio_modelos.json`
 (`id`, `nombre`, `estilo: openai`, `base_url`, `variable`, `variable_url`
-opcional, `leido`, `fuente`, `modelos[]` con `id`, `nombre`, `entrada`,
-`salida`, `contexto`, `vision: true`, `json_mode`, `extra`), no código.
+opcional, `leido`, `fuente`, `tope_salida` y `quitar` opcionales,
+`modelos[]` con `id`, `nombre`, `entrada`, `salida`, `contexto`, `vision:
+true`, `json_mode`, `extra`, `quitar`), no código. OpenAI entró así el mismo
+2026-10-29, sin tocar `_leer_openai` más que para leer esos dos campos.
 
 ## Paso a paso: obtener la clave de cada proveedor (verificado el 2026-10-29)
 
@@ -150,6 +156,32 @@ laboratorio le pide `reasoning_effort: low`, como a los Claude que razonan.
 Imagen en base64 (no acepta URL remota), formatos JPEG/PNG/WebP/GIF/BMP/HEIC,
 cuerpo total del pedido hasta 100 MB.
 
+### OpenAI (GPT)
+
+**Sin crédito gratis para cuentas nuevas**: la API es prepaga, la recarga
+mínima es de US$ 5 (por defecto propone 10) y los créditos vencen al año. La
+cuenta de ChatGPT no sirve: la API se factura aparte. El nivel de uso sube
+solo con lo gastado (OpenAI reordenó los niveles el 2026-10-06; con los
+primeros US$ 5 alcanza para el laboratorio).
+
+1. Entrar a https://platform.openai.com con la cuenta de OpenAI (o crearla).
+2. *Settings → Billing → Add payment details* y cargar la recarga mínima.
+   Acepta tarjeta internacional.
+3. *API keys → Create new secret key* (se muestra una sola vez). Pegarla en
+   la pantalla del laboratorio o cargarla en Render como `OPENAI_API_KEY`.
+4. La base es `https://api.openai.com/v1` (ya está en el catálogo);
+   `OPENAI_BASE_URL` solo si algún día se pasa por un proxy.
+
+Los modelos del catálogo son los cuatro vigentes al 2026-10-29 según
+developers.openai.com/api/docs/models: `gpt-6.1-sol`, `gpt-6.1-terra`,
+`gpt-6-luna` y `gpt-6-astra`; todos aceptan imagen y todos razonan. Por eso
+Chat Completions les pide `max_completion_tokens` (los tokens de
+razonamiento cuentan contra ese tope, por eso los 8.000 no se bajan) y no se
+les manda `temperature`. `reasoning_effort: none` devuelve 400 en Chat
+Completions, y Astra y Sol no lo aceptan de ningún modo: los cuatro van con
+`low`. La imagen se cobra por parches de 32×32 px (×1,2 en Astra): un recibo
+de 1.024×1.024 son ~1.229 tokens de entrada. Formatos PNG/JPEG/WebP/GIF.
+
 ### Si una tarjeta argentina no entra: OpenRouter
 
 OpenRouter (https://openrouter.ai) revende los dos con la **misma API
@@ -167,6 +199,10 @@ con el prefijo del proveedor; es una entrada en el JSON, no código.
 |---|---|---|---|---|
 | Claude Sonnet 4.6 (producción hoy) | 3,00 | 15,00 | US$ 0,034 | ya está |
 | Claude Haiku 5.5 | 0,10 | 0,50 | US$ 0,0012 | ya está |
+| GPT-6.1 Sol | 2,00 | 10,00 | US$ 0,023 | recargar US$ 5 |
+| GPT-6.1 Terra | 1,00 | 5,00 | US$ 0,0115 | recargar US$ 5 |
+| GPT-6 Luna | 0,10 | 0,50 | US$ 0,0012 | recargar US$ 5 |
+| GPT-6 Astra | 10,00 | 50,00 | US$ 0,115 | recargar US$ 5 |
 | Kimi K3.1 Pro | 2,00 | 10,00 | US$ 0,023 | recargar US$ 1, 3 pedidos/min |
 | Kimi K3 | 3,00 | 15,00 | US$ 0,034 | ídem |
 | Qwen 3.8 Max | 2,00 | 6,00 | US$ 0,016 | 1 M tokens gratis / 90 días |
@@ -185,6 +221,12 @@ Lo que estos números NO dicen, y el laboratorio sí:
 - **Que Kimi K3 no es más barato que Sonnet 4.6.** Tiene el mismo precio
   de lista; K3.1 Pro es un tercio más barato. Lo que puede justificarlo es
   la calidad, no el costo, y eso hay que medirlo.
+- **Que GPT-6.1 Sol, Kimi K3.1 Pro y Qwen 3.8 Max cuestan lo mismo de
+  entrada** (US$ 2) y GPT-6 Luna, Haiku 5.5 y Qwen 3.8 Flash lo mismo en la
+  banda baja (US$ 0,10–0,15). En esas dos bandas el precio no decide nada:
+  decide qué leyó cada uno. Astra, a cinco veces Sol, solo tiene sentido si
+  lee algo que los demás no, y eso es exactamente lo que el laboratorio
+  puede mostrar o desmentir.
 - **Los tokens de imagen se cuentan distinto en cada proveedor.** Qwen cobra
   (alto × ancho) / 1.024 + 2 con un tope por defecto de ~2.560 tokens por
   imagen; Moonshot los calcula "dinámicamente" según resolución; Anthropic
@@ -213,6 +255,6 @@ Lo que estos números NO dicen, y el laboratorio sí:
    leer el aviso rojo: los Claude no se estarían comparando.
 2. Diez recibos de `docs/recibos-bancaria-prueba/` (sintéticos, sin
    persona real) con Claude Sonnet 4.6 + Qwen 3.8 Flash + Qwen 3.8 Max +
-   Kimi K3.1 Pro, tapado tildado.
+   Kimi K3.1 Pro + GPT-6.1 Sol + GPT-6 Luna, tapado tildado.
 3. Mirar la tabla línea por línea de cada ensayo, marcar los ensayos como
    revisados y leer el resumen por modelo. Después, recibos reales tapados.

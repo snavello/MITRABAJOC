@@ -22,9 +22,10 @@ Reglas:
   elegir, y la pantalla dice qué variable falta. La clave nunca sale al
   navegador.
 - **Los proveedores que no son Anthropic hablan el formato OpenAI** (`/chat/
-  completions` con la imagen como data URL): Moonshot y Alibaba lo exponen
-  así y es el que más proveedores comparten. Un proveedor nuevo es una
-  entrada en `data/laboratorio_modelos.json`, no código.
+  completions` con la imagen como data URL): OpenAI, Moonshot y Alibaba lo
+  exponen así y es el que más proveedores comparten. Un proveedor nuevo es
+  una entrada en `data/laboratorio_modelos.json`, no código; sus dialectos
+  también (`extra`, `quitar`, `tope_salida`).
 - **Un ensayo no guarda identidad**: nombre, CUIL y legajo del recibo se
   borran antes de guardar (`sin_identidad`). Lo que se compara son
   importes, códigos y clasificaciones.
@@ -231,15 +232,22 @@ def _leer_openai(prov: dict, m: dict, tipo: str, imagen: tuple[str, str],
         "model": m["id"],
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": partes}],
-        "max_tokens": extractor.MAX_TOKENS,
+        # El tope de salida se llama `max_tokens` en casi todos; OpenAI lo
+        # retiró de sus modelos que razonan y exige `max_completion_tokens`
+        # (`tope_salida` del proveedor en el catálogo).
+        prov.get("tope_salida") or "max_tokens": extractor.MAX_TOKENS,
         # Transcribir, no crear: la temperatura más baja que acepte el proveedor.
         "temperature": 0,
     }
     if m.get("json_mode"):
         body["response_format"] = {"type": "json_object"}
     # Parámetros propios de un proveedor (ej. apagar el razonamiento en Qwen):
-    # van en el catálogo, no en el código.
+    # van en el catálogo, no en el código. `quitar` saca del pedido lo que un
+    # proveedor rechaza aunque sea con su valor por defecto (OpenAI y la
+    # temperatura en los modelos que razonan).
     body.update(m.get("extra") or {})
+    for k in list(prov.get("quitar") or []) + list(m.get("quitar") or []):
+        body.pop(k, None)
     url = base_url(prov).rstrip("/") + "/chat/completions"
     headers = {"Authorization": f"Bearer {clave_de(prov)}",
                "Content-Type": "application/json"}

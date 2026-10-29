@@ -9387,3 +9387,34 @@ sigue prendido, y correr el primer lote de ensayos con los recibos
 sintéticos de La Bancaria. Un proveedor nuevo (OpenRouter si la tarjeta no
 entra en Moonshot) es una entrada en el JSON.
 
+## OpenAI en el Laboratorio de modelos (2026-10-29, Plataforma 0.63.01)
+
+SDN consiguió una clave propia de OpenAI y pidió sumar sus modelos «con el
+mismo método»: una entrada en el catálogo, la clave pegada en la pantalla,
+sin tocar la app. El proveedor entró como `openai` en
+`data/laboratorio_modelos.json` con los **cuatro GPT vigentes** al
+2026-10-29 según developers.openai.com/api/docs/models: `gpt-6.1-sol` (2/10),
+`gpt-6.1-terra` (1/5), `gpt-6-luna` (0,10/0,50) y `gpt-6-astra` (10/50),
+todos con imagen y todos razonan.
+
+**Dos dialectos nuevos en el catálogo, no en el código.** Chat Completions
+sigue soportado en OpenAI, pero sus modelos que razonan rechazan `max_tokens`
+(exigen `max_completion_tokens`, y los tokens de razonamiento cuentan contra
+ese tope: los 8.000 no se bajan) y rechazan cualquier `temperature` fuera del
+valor por defecto. En vez de ramas por proveedor en `_leer_openai`, el
+catálogo gana `tope_salida` (cómo llama el proveedor al tope de salida; por
+defecto `max_tokens`) y `quitar` (parámetros que se sacan del pedido, en el
+proveedor o en el modelo). Kimi, que solo acepta `temperature: 1`, sigue
+resolviéndolo con `extra`; OpenAI lo saca con `quitar`. `reasoning_effort:
+none` devuelve 400 en Chat Completions y Astra y Sol no lo aceptan de ningún
+modo, así que los cuatro van con `low`, el mismo criterio que los Claude que
+razonan.
+
+**Lo que se verificó y lo que no.** Precios y modelos leídos de la
+documentación oficial (pricing, models, guía de razonamiento, guía de
+imágenes: parches de 32×32 px, ×1,2 en Astra). No se corrió contra la API
+real desde el repo: la primera lectura con la clave de SDN en Pruebas es la
+prueba. Sin crédito gratis para cuentas nuevas (recarga mínima US$ 5). Test
+nuevo: el pedido a OpenAI lleva `max_completion_tokens`, no lleva
+`temperature` y el de Kimi no cambia. Paso a paso y comparativa en
+`docs/LABORATORIO_MODELOS.md`.
