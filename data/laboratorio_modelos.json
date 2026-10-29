@@ -11,7 +11,7 @@
       "sitio": "https://platform.kimi.ai",
       "leido": "2026-10-29",
       "fuente": "platform.kimi.ai/docs (modelos, vision, response_format) + endpoint oficial de Moonshot en OpenRouter para los precios: la tabla de precios de platform.kimi.ai se dibuja con JS y no se pudo leer directo",
-      "nota": "Plataforma internacional (platform.kimi.ai, base api.moonshot.ai). Sin credito gratis para cuentas internacionales: hay que recargar US$ 1 antes de la primera llamada y el nivel 0 queda en 3 pedidos por minuto. Razona siempre; se le pide esfuerzo bajo, como a los Claude que razonan. La serie K2 se cierra a cuentas nuevas el 2026-10-31 y no se lista.",
+      "nota": "Plataforma internacional (platform.kimi.ai, base api.moonshot.ai). Sin credito gratis para cuentas internacionales: hay que recargar US$ 1 antes de la primera llamada y el nivel 0 queda en 3 pedidos por minuto. Razona siempre; se le pide esfuerzo bajo, como a los Claude que razonan. La serie K2 se cierra a cuentas nuevas el 2026-10-31 y no se lista. Los K3 solo aceptan temperature 1 (la API rechaza cualquier otro valor con 400): va en `extra`, que pisa el 0 por defecto del laboratorio.",
       "modelos": [
         {
           "id": "kimi-k3.1-pro",
@@ -21,7 +21,10 @@
           "contexto": "1M",
           "vision": true,
           "json_mode": true,
-          "extra": {"reasoning_effort": "low"},
+          "extra": {
+            "reasoning_effort": "low",
+            "temperature": 1
+          },
           "resumen": "El recomendado por Moonshot (2026-10-23). Vision nativa. Mas barato que K3 y, segun Moonshot, mejor."
         },
         {
@@ -32,7 +35,10 @@
           "contexto": "1M",
           "vision": true,
           "json_mode": true,
-          "extra": {"reasoning_effort": "low"},
+          "extra": {
+            "reasoning_effort": "low",
+            "temperature": 1
+          },
           "resumen": "El K3 original (2026-07). Vision nativa. Mismo precio de lista que Claude Sonnet 4.6."
         }
       ]
