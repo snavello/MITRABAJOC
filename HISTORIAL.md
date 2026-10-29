@@ -9467,7 +9467,6 @@ del extractor). Así que el laboratorio ahora lo pregunta: el catálogo trae
 y el servidor lo pone primero en la corrida para que sea la referencia
 aunque en la lista esté detrás de otro. Si no se lo elige, la referencia
 sigue siendo el primero que contesta.
-\n
 **«El que más se aparta» contaba mal** (misma noche, Plataforma 0.63.03).
 SDN: «¿por qué dice que Luna se apartó más? El único que veo es el PAMI en
 Qwen». Dos causas: la línea miraba solo los campos del resumen (período,
