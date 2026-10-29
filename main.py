@@ -98,6 +98,7 @@ import render_admin
 import grilla_bancaria
 import asistente_tramites
 import asistente_tramites_ia
+import laboratorio_modelos
 import listas as listas_mod
 import render_planes
 from observabilidad import panel as observabilidad_panel
@@ -10624,6 +10625,199 @@ def entornos_asistente_casos_csv(request: Request):
     contenido = "﻿" + salida.getvalue()
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="casos-asistente-tramites-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramientas: Laboratorio de modelos ====================
+# (2026-10-29, pedido de SDN) El banco de pruebas de /plataforma, replicado
+# como herramienta AISLADA de /entornos y abierto a otros proveedores (Kimi
+# de Moonshot, Qwen de Alibaba...): el mismo archivo leído por varios modelos,
+# lado a lado, con tiempo y costo, y cada corrida guardada como ensayo para
+# comparar después con números. Motor en laboratorio_modelos.py; ninguna ruta
+# de la app real lo importa. Las lecturas de Anthropic SÍ se registran en
+# UsoIA como «prueba» (son gasto real de la misma clave); las de los otros
+# proveedores quedan solo en el ensayo: UsoIA es el consumo de Anthropic.
+HERRAMIENTA_LABORATORIO = laboratorio_modelos.HERRAMIENTA
+API_LABORATORIO = "/api/entornos/herramientas/laboratorio"
+
+
+@app.get("/entornos/herramientas/laboratorio-modelos", response_class=HTMLResponse)
+def entornos_laboratorio_modelos(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("laboratorio_modelos.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": db.ESTADOS_CASO, "api": API_LABORATORIO,
+    })
+
+
+@app.get(API_LABORATORIO + "/catalogo")
+def api_laboratorio_catalogo(request: Request):
+    """Proveedores y modelos con qué variable falta en este entorno, más dos
+    avisos que cambian cómo leer los resultados: si el extractor está
+    simulado (MOCK_EXTRACTOR=1: las lecturas de Claude no son reales) y si
+    el enmascarado está disponible para tapar antes de mandar."""
+    _exigir_herramientas(request)
+    return {**laboratorio_modelos.catalogo_pantalla(),
+            "mock": os.getenv("MOCK_EXTRACTOR") == "1",
+            "enmascarado": preparacion.modo() != "apagado",
+            "resumen": laboratorio_modelos.resumen_por_modelo(
+                [{"real": c.real, "estado": c.estado} for c in db.casos_herramienta(HERRAMIENTA_LABORATORIO)])}
+
+
+@app.post(API_LABORATORIO + "/correr")
+async def api_laboratorio_correr(request: Request,
+                                 archivo: UploadFile = File(...),
+                                 tipo: str = Form("recibo"),
+                                 modelos: list[str] = Form([]),
+                                 tapar: str = Form(""),
+                                 nota: str = Form("")):
+    """Lee el archivo con cada modelo elegido, en paralelo, y guarda el
+    ensayo. Mismo esquema que /plataforma/probar-modelos: el archivo se
+    prepara UNA vez y las N llamadas comparten la imagen; un modelo que falla
+    vuelve con su error al lado de los que contestaron.
+
+    `tapar`: manda a TODOS los modelos la versión con los datos personales
+    cubiertos (preparacion.py, como la app en Pruebas) y rearma la identidad
+    del lado nuestro. Es la opción por defecto en la pantalla cuando el
+    enmascarado está disponible: un recibo real que sale hacia un proveedor
+    nuevo es justo donde más vale tapar (Ley 25.326)."""
+    quien = _exigir_herramientas(request)
+    if tipo not in laboratorio_modelos.TIPOS:
+        raise HTTPException(422, "Tipo de archivo desconocido.")
+    elegidos = []
+    for clave in dict.fromkeys(modelos):
+        m = laboratorio_modelos.modelo(clave)
+        if m is None:
+            raise HTTPException(422, f"{clave} no está en el catálogo del laboratorio.")
+        if not m["configurado"]:
+            raise HTTPException(422, f"{m['nombre']}: falta la variable {m['variable']} en este entorno.")
+        elegidos.append(clave)
+    if not elegidos:
+        raise HTTPException(422, "Elegí al menos un modelo.")
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(422, "El archivo llegó vacío.")
+    if len(contenido) > LEER_MAX_BYTES:
+        raise HTTPException(422, "El archivo pasa de 10 MB.")
+    try:
+        imagen = await run_in_threadpool(preparar_imagen, contenido, archivo.content_type)
+    except Exception as e:
+        print(f"[laboratorio] no se pudo preparar el archivo: {type(e).__name__}: {e}")
+        raise HTTPException(422, "No se pudo abrir el archivo. ¿Es una imagen o un PDF?")
+
+    prep, enmascarado = None, None
+    if tapar and preparacion.modo() != "apagado":
+        prep = await run_in_threadpool(preparacion.preparar, contenido, archivo.content_type, None, "activo")
+        rid = db.registrar_enmascarado(None, "prueba", prep.registro)
+        await _guardar_diagnostico(rid, prep, contenido, archivo.content_type)
+        r = prep.registro
+        enmascarado = {"tapado": prep.tapado, "camino": r.get("camino"), "motivo": r.get("motivo"),
+                       "cajas": r.get("cajas"), "fugas": r.get("fugas"), "total_ms": r.get("total_ms")}
+    tapado = bool(prep is not None and prep.tapado)
+    img = prep.imagen if tapado else imagen
+    lecturas = await asyncio.gather(
+        *(run_in_threadpool(laboratorio_modelos.leer, clave, tipo, contenido, archivo.content_type, img, tapado)
+          for clave in elegidos),
+        return_exceptions=True)
+
+    for clave, r in zip(elegidos, lecturas):
+        m = laboratorio_modelos.modelo(clave)
+        es_anthropic = m["proveedor"] == laboratorio_modelos.ANTHROPIC
+        if isinstance(r, BaseException):
+            print(f"[laboratorio] {clave}: {type(r).__name__}: {r}")
+            if es_anthropic:
+                _registrar_uso_fallido(r, None, "", "prueba")
+            continue
+        datos, uso = r
+        if es_anthropic:
+            db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
+                                uso["tokens_salida"], uso.get("duracion_ms", 0))
+        if tapado:
+            if tipo == "aportes":
+                preparacion.rearmar_aportes(datos, prep.analisis, None)
+            else:
+                preparacion.rearmar_recibo(datos, prep.analisis, None)
+    resultado = laboratorio_modelos.armar_resultado(tipo, elegidos, lecturas)
+    nota = str(nota or "").strip()[:4000]
+    caso_id = db.guardar_caso_herramienta(
+        herramienta=HERRAMIENTA_LABORATORIO, quien=quien, grilla=tipo,
+        banco=(archivo.filename or "")[:120], nota=nota,
+        entrada={"tipo": tipo, "archivo": archivo.filename or "", "bytes": len(contenido),
+                 "imagen_bytes": laboratorio_modelos.tamanio_imagen(img), "modelos": elegidos,
+                 "tapado": tapado, "enmascarado": enmascarado, "mock": os.getenv("MOCK_EXTRACTOR") == "1"},
+        esperado={}, real=laboratorio_modelos.para_guardar(tipo, elegidos, lecturas, resultado),
+        diferencias={"lineas": resultado["lineas"]}, distintos=resultado["distintos"])
+    return {**resultado, "id": caso_id, "archivo": archivo.filename or "", "tapado": tapado,
+            "enmascarado": enmascarado, "mock": os.getenv("MOCK_EXTRACTOR") == "1"}
+
+
+def _ensayo_resumen(c) -> dict:
+    lecturas = (c.real or {}).get("lecturas", [])
+    return {"id": c.id, "creado": c.creado, "quien": c.quien, "tipo": c.grilla, "archivo": c.banco,
+            "nota": c.nota, "distintos": c.distintos, "estado": c.estado,
+            "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,
+            "tapado": bool((c.entrada or {}).get("tapado")), "mock": bool((c.entrada or {}).get("mock")),
+            "modelos": [{"clave": f["clave"], "nombre": f["nombre"], "ok": f.get("ok", False),
+                         "costo_txt": f.get("costo_txt", "—"), "duracion_txt": f.get("duracion_txt", "—"),
+                         "iguales": f.get("iguales"), "campos": f.get("campos"), "error": f.get("error")}
+                        for f in lecturas]}
+
+
+@app.get(API_LABORATORIO + "/ensayos")
+def api_laboratorio_ensayos(request: Request):
+    _exigir_herramientas(request)
+    casos = db.casos_herramienta(HERRAMIENTA_LABORATORIO)
+    return {"ensayos": [_ensayo_resumen(c) for c in casos], "estados": db.ESTADOS_CASO,
+            "resumen": laboratorio_modelos.resumen_por_modelo([{"real": c.real, "estado": c.estado} for c in casos])}
+
+
+@app.get(API_LABORATORIO + "/ensayos/{caso_id}")
+def api_laboratorio_ensayo(request: Request, caso_id: int):
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_LABORATORIO, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese ensayo.")
+    return {**_ensayo_resumen(c), "entrada": c.entrada, "real": c.real, "diferencias": c.diferencias}
+
+
+@app.post(API_LABORATORIO + "/ensayos/{caso_id}/estado")
+def api_laboratorio_ensayo_estado(request: Request, caso_id: int, payload: dict = Body(...)):
+    quien = _exigir_herramientas(request)
+    try:
+        if not db.cambiar_estado_caso(HERRAMIENTA_LABORATORIO, caso_id, str(payload.get("estado") or ""), quien):
+            raise HTTPException(404, "No existe ese ensayo.")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.get("/entornos/herramientas/laboratorio/ensayos.csv")
+def entornos_laboratorio_csv(request: Request):
+    """Una fila por modelo y ensayo: es la planilla para comparar en frío."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";")
+    w.writerow(["ensayo", "creado", "quien", "estado", "tipo", "archivo", "tapado", "simulado", "proveedor", "modelo",
+                "leyo", "tokens_entrada", "tokens_salida", "duracion_ms", "costo_usd", "campos_iguales",
+                "campos", "confianza", "error", "nota"])
+    for c in db.casos_herramienta(HERRAMIENTA_LABORATORIO):
+        base = [c.id, c.creado, c.quien, c.estado, c.grilla, c.banco,
+                "si" if (c.entrada or {}).get("tapado") else "no", "si" if (c.entrada or {}).get("mock") else "no"]
+        for f in (c.real or {}).get("lecturas", []):
+            costo = f.get("costo")
+            w.writerow(base + [f.get("proveedor_nombre", ""), f["nombre"], "si" if f.get("ok") else "no",
+                               f.get("tokens_entrada", 0), f.get("tokens_salida", 0), f.get("duracion_ms", 0),
+                               "" if costo is None else f"{costo:.6f}".replace(".", ","),
+                               f.get("iguales", ""), f.get("campos", ""), f.get("confianza", ""),
+                               f.get("error", ""), c.nota])
+    contenido = "﻿" + salida.getvalue()
+    return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="ensayos-laboratorio-{fechas.hoy_texto()}.csv"'})
 
 
 # ==================== Solapa "Observabilidad" ====================

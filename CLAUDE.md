@@ -190,6 +190,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   la lista cerrada de lo que Colm3na no hace; cuando algo se desarrolla, se
   saca de ahí. `asistente_tramites_ia.py` es la llamada a la IA (propone,
   nunca decide). Ver "Herramientas".
+- laboratorio_modelos.py — **Laboratorio de modelos** (Herramientas de
+  `/entornos`, `docs/LABORATORIO_MODELOS.md`): el banco de pruebas
+  replicado, aislado de la app y abierto a otros proveedores por formato
+  OpenAI (catálogo `data/laboratorio_modelos.json`: Kimi de Moonshot, Qwen
+  de Alibaba; Anthropic sale de `precios_ia`). Mismo prompt del extractor;
+  ensayos en `CasoHerramienta` sin identidad. Ninguna ruta de la app lo
+  importa. Ver "Herramientas".
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
   **Carga la demo AL IMPORTARSE** (no tiene `if __name__`): nunca importarlo
   para leer una constante. Sus números viejos → nuevos, en `identificadores_demo.py`.
@@ -360,6 +367,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   resumen del día a la hora de TELEGRAM_RESUMEN_HORA (21:00 BA por defecto,
   `resumen_diario.py`) y las alertas de Grafana por su propio punto de
   contacto. Sin las dos, apagado en silencio. Ver "Estado actual" 25.
+- MOONSHOT_API_KEY / DASHSCOPE_API_KEY (+ `MOONSHOT_BASE_URL` /
+  `DASHSCOPE_BASE_URL` opcionales) — claves de Moonshot (Kimi) y Alibaba
+  (Qwen) SOLO para el Laboratorio de modelos de `/entornos`; ninguna ruta
+  de la app las usa. Sin ellas, esos modelos se ven pero no se eligen.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
 - RESEND_API_KEY / MAIL_REMITENTE — canal de mail del registro y la
@@ -1342,6 +1353,16 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (todo `revisado: false`). Detalle en HISTORIAL.md, "Tu día en la portada
     del afiliado".
 
+40. **Laboratorio de modelos** (2026-10-29, Plataforma 0.60.01, pedido de
+    SDN: diversificar la API de recibos solo en un módulo de prueba aislado):
+    herramienta de `/entornos` que replica el banco de pruebas y lo abre a
+    otros proveedores (Kimi K3 / K3.1 Pro de Moonshot, Qwen 3.8 de Alibaba)
+    por formato OpenAI, con el mismo prompt, tapado antes de mandar, ensayos
+    guardados sin identidad, resumen por modelo y CSV. Ver "Herramientas" y
+    `docs/LABORATORIO_MODELOS.md` (paso a paso de las claves y comparativa).
+    **Queda de SDN**: cargar `DASHSCOPE_API_KEY` y `MOONSHOT_API_KEY` en
+    Pruebas y correr el primer lote de ensayos.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -1877,6 +1898,29 @@ planes `PLAN_ASISTENTE_TRAMITES.md` y, desde 2026-10-28,
   `test_asistente_importar.py` (veredicto e importador sobre un sindicato
   con la estructura de La Bancaria) y el robot
   `e2e/test_robot_asistente_tramites.py`.
+
+**Laboratorio de modelos** (`templates/laboratorio_modelos.html`, rutas
+`/api/entornos/herramientas/laboratorio/*`, motor `laboratorio_modelos.py`,
+ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
+- **Es el banco de pruebas de `/plataforma`, aislado y abierto a otros
+  proveedores**: el mismo archivo leído por Claude, Kimi (Moonshot) y Qwen
+  (Alibaba) con el **mismo prompt** de `extractor.py`, lado a lado, con
+  tokens, tiempo y costo de lista, y la tabla línea por línea. No cambia el
+  modelo de ningún uso de la app.
+- **Un proveedor es una entrada en `data/laboratorio_modelos.json`**, no
+  código (formato OpenAI, `base_url`, `variable` de la clave, `extra`).
+  Anthropic no está ahí: sale de `precios_ia`. Sin la variable, el modelo
+  se ve pero no se puede elegir y el servidor lo rechaza nombrándola.
+- **Cada corrida es un ensayo** (`CasoHerramienta`, `herramienta=
+  "laboratorio"`) **sin identidad** (nombre, CUIL y legajo se borran antes
+  de guardar), con estados, CSV y el **resumen por modelo** (ensayos,
+  leídos, tiempo mediano, costo promedio, coincidencia con la referencia:
+  medida de acuerdo, no de verdad).
+- **Las lecturas de Anthropic se registran en UsoIA como `prueba`**; las de
+  otros proveedores no (UsoIA es el consumo de Anthropic).
+- **Tapar antes de mandar** viene tildado si el enmascarado está prendido;
+  `MOCK_EXTRACTOR=1` se avisa en rojo (los Claude no llaman a la API).
+- Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

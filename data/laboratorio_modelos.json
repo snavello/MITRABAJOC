@@ -1,0 +1,95 @@
+{
+  "nota": "Proveedores del Laboratorio de modelos (Herramientas de /entornos). Anthropic NO esta aca: sus modelos y precios salen de precios_ia.json. Precios de LISTA en USD por millon de tokens (entrada sin cache / salida), copiados a mano; vale la fecha `leido` de cada proveedor. `extra` son parametros propios del proveedor que se suman al pedido tal cual. `variable_url`, si esta cargada en el entorno, reemplaza a `base_url`.",
+  "proveedores": [
+    {
+      "id": "moonshot",
+      "nombre": "Moonshot AI (Kimi)",
+      "estilo": "openai",
+      "base_url": "https://api.moonshot.ai/v1",
+      "variable": "MOONSHOT_API_KEY",
+      "variable_url": "MOONSHOT_BASE_URL",
+      "sitio": "https://platform.kimi.ai",
+      "leido": "2026-10-29",
+      "fuente": "platform.kimi.ai/docs (modelos, vision, response_format) + endpoint oficial de Moonshot en OpenRouter para los precios: la tabla de precios de platform.kimi.ai se dibuja con JS y no se pudo leer directo",
+      "nota": "Plataforma internacional (platform.kimi.ai, base api.moonshot.ai). Sin credito gratis para cuentas internacionales: hay que recargar US$ 1 antes de la primera llamada y el nivel 0 queda en 3 pedidos por minuto. Razona siempre; se le pide esfuerzo bajo, como a los Claude que razonan. La serie K2 se cierra a cuentas nuevas el 2026-10-31 y no se lista.",
+      "modelos": [
+        {
+          "id": "kimi-k3.1-pro",
+          "nombre": "Kimi K3.1 Pro",
+          "entrada": 2.0,
+          "salida": 10.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "extra": {"reasoning_effort": "low"},
+          "resumen": "El recomendado por Moonshot (2026-10-23). Vision nativa. Mas barato que K3 y, segun Moonshot, mejor."
+        },
+        {
+          "id": "kimi-k3",
+          "nombre": "Kimi K3",
+          "entrada": 3.0,
+          "salida": 15.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "extra": {"reasoning_effort": "low"},
+          "resumen": "El K3 original (2026-07). Vision nativa. Mismo precio de lista que Claude Sonnet 4.6."
+        }
+      ]
+    },
+    {
+      "id": "alibaba",
+      "nombre": "Alibaba Cloud Model Studio (Qwen)",
+      "estilo": "openai",
+      "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "variable": "DASHSCOPE_API_KEY",
+      "variable_url": "DASHSCOPE_BASE_URL",
+      "sitio": "https://modelstudio.console.alibabacloud.com/ap-southeast-1",
+      "leido": "2026-10-29",
+      "fuente": "alibabacloud.com/help/en/model-studio (fichas de qwen3.8-max, qwen3.8-flash, qwen3.8-27b, qwen3-vl-plus; model-pricing; new-free-quota; vision; json-mode)",
+      "nota": "Region Singapur, cuenta internacional. Cupo gratis oficial: 1.000.000 de tokens POR MODELO, 90 dias, solo Singapur. La base por defecto es el host legado (tope de 16 MiB por pedido); la recomendada lleva el Workspace ID y se carga en DASHSCOPE_BASE_URL. Con imagen, el modo JSON es json_object (json_schema no aplica a entradas multimodales).",
+      "modelos": [
+        {
+          "id": "qwen3.8-flash",
+          "nombre": "Qwen 3.8 Flash",
+          "entrada": 0.15,
+          "salida": 0.47,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "resumen": "El barato de la familia: veinte veces menos que Sonnet 4.6 en entrada. 1M de tokens gratis por 90 dias."
+        },
+        {
+          "id": "qwen3.8-max",
+          "nombre": "Qwen 3.8 Max",
+          "entrada": 2.0,
+          "salida": 6.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "resumen": "El tope de la familia (2026-08). Segundo en Vision Arena al salir. Su propio millon de tokens gratis."
+        },
+        {
+          "id": "qwen3.8-27b",
+          "nombre": "Qwen 3.8 27B",
+          "entrada": 0.5,
+          "salida": 3.0,
+          "contexto": "1M",
+          "vision": true,
+          "json_mode": true,
+          "resumen": "Pesos abiertos (Apache 2.0): el que se podria correr en casa el dia que haga falta. Multimodal."
+        },
+        {
+          "id": "qwen3-vl-plus",
+          "nombre": "Qwen3 VL Plus",
+          "entrada": 0.2,
+          "salida": 1.6,
+          "contexto": "256K",
+          "vision": true,
+          "json_mode": true,
+          "resumen": "La generacion anterior especializada en vision; precio escalonado, el de lista es hasta 32K de entrada."
+        }
+      ]
+    }
+  ]
+}
