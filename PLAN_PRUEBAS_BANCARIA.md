@@ -4,7 +4,7 @@
 (`carga/INFORME.md`) y al test 3 del Panel (19-09). Desde entonces la app
 cambió en cosas que pesan bajo carga o en la exactitud, y ninguna se midió en
 conjunto. Este plan las suma con un insumo nuevo: **el lote de recibos
-bancarios con variantes** que SDN generó (zip en `Colmena\` de su PC).
+bancarios con variantes** que SDN generó (`datos_prueba/bancaria/`).
 
 ## 1. Con qué contamos (no se reconstruye nada)
 
@@ -47,23 +47,32 @@ bancarios con variantes** que SDN generó (zip en `Colmena\` de su PC).
 
 ## 3. El insumo: el lote bancario
 
-**Cómo llega al repo.** La carpeta `Colmena` está en Remote Control pero su
-PC no la ofrece a sesiones en la nube, así que hoy no se puede leer desde acá.
-Dos caminos: subir el zip a la rama desde la web de GitHub (Add file → Upload),
-o actualizar la app de Claude en Windows para que comparta la carpeta.
+En `datos_prueba/bancaria/` (`parte1.zip` y `parte3.zip`; **falta `parte2.zip`**).
+Datos ficticios, lo dice el pie de cada recibo. Trae su propio `manifest.csv`
+(archivo, banco, CUIL leído e impreso, totales, neto correcto e impreso, error
+intencional), `empleados.csv` y `bancos.json`.
 
-**Dónde va y qué tiene que traer.** `datos_prueba/bancaria/` (si los recibos
-son ficticios, como los 10 de hoy, se versionan; si alguno tiene datos reales,
-fuera de git) con un `manifiesto.csv`:
+| | |
+|---|---|
+| Recibos | 600: 50 personas × 12 meses (2025-09 a 2026-08) |
+| Bancos | BBVA, Galicia, Nación, Industrial (PDF digital) y Santander (foto JPG 1240×1754) |
+| Llegaron | 360 (BBVA, Galicia, Santander); faltan Nación e Industrial (240, la parte 2) |
+| CUIL | los 50 cumplen el módulo 11 |
+| Errores a propósito | 2: un CUIL impreso con dígito verificador mal (Nación, 2026-05) y un neto impreso con $ 10.000 de más (Industrial, 2026-01) |
 
-`archivo, cuil, banco, periodo, categoria, antiguedad, variante, formato (pdf/foto), resultado_esperado`
-
-- CUIL válido (módulo 11) y **empadronado en La Bancaria de Pruebas**; un
-  script chico (`carga/preparar_bancaria.py`) da de alta esos CUIL con clave
-  conocida y escribe `carga/usuarios_bancaria.csv`.
-- `variante` nombra lo que se ejercita: cajero, título, zona, tope, ROE,
-  reintegro, Anexo III, error inyectado, foto torcida, foto con poca luz,
-  multipágina, etc. Es lo que después permite leer los resultados por variante.
+Qué implica para las pruebas:
+- **Sirve sobre todo para carga** (B1–B3): 480 PDF y 120 fotos, a nombre de
+  50 personas, es justo lo que el test 2 no tenía. Cada recibo se sube con la
+  sesión de su CUIL; hay que empadronar a los 50 en La Bancaria de Pruebas.
+- **Para exactitud alcanza poco**: 2 errores en 600. A1 usa el lote para medir
+  que los 598 correctos salgan OK y suma los 10 PDF de `docs/recibos-bancaria-prueba/`
+  para los errores.
+- **No sigue la grilla del CCT 18/75**: categorías genéricas (Auxiliar,
+  Supervisor…), antigüedad como renglón aparte y básicos que no son los de la
+  grilla. En la Calculadora (A3) va a dar diferencias que no son defectos de
+  la app: A3 se queda con los 10 PDF de la grilla.
+- **El CUIL impreso mal** no debe cortar con E-RECIBO-04 (un dígito
+  verificador inválido no rechaza un recibo propio): es un caso de A4.
 
 ## 4. Pruebas nuevas
 
@@ -107,8 +116,8 @@ pesa el OCR con poca CPU.
 
 ## 5. Lo que hay que construir (chico)
 
-1. `carga/preparar_bancaria.py`: empadrona los CUIL del manifiesto y escribe
-   `carga/usuarios_bancaria.csv`.
+1. `carga/preparar_bancaria.py`: empadrona los 50 CUIL de `empleados.csv` en
+   La Bancaria y escribe `carga/usuarios_bancaria.csv`.
 2. `carga/k6/test4_bancaria.js`: el test 2 leyendo manifiesto y usuarios, con
    etiqueta por `formato` y `variante`; ráfaga de 40 y fase "día de cobro".
 3. `probar_lote_bancaria.py` (A1/A4): corre el manifiesto contra Pruebas,
@@ -119,7 +128,7 @@ pesa el OCR con poca CPU.
 
 ## 6. Orden
 
-1. Subir el zip y armar el manifiesto (SDN).
+1. Subir `parte2.zip` (SDN). El manifiesto ya viene en el lote.
 2. A2 → A1 → A4 (exactitud antes que carga: si lee mal, la carga no importa).
 3. B6 → B1 → B2 (decide el cupo del OCR) → B3 → B4 → B5.
 4. A5 y C cuando el resto esté en verde.
