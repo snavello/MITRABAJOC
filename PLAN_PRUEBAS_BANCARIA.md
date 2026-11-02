@@ -183,9 +183,12 @@ simultáneo desde varios hilos**, y `/api/leer` y `/api/aportes` corren el
 enmascarado en el threadpool sin candado. Pruebas y Demo tienen el
 enmascarado activo: dos afiliados que suben un PDF en el mismo momento al
 mismo worker pueden tumbarlo (y cortar todo lo que ese worker atendía). El
-test 2 no lo vio porque subía solo fotos. **Hay que corregirlo antes de B1**
-(un candado alrededor de todo uso de PDFium en `lectores.py`), si no las
-pruebas de carga miden la caída y no el rendimiento.
+test 2 no lo vio porque subía solo fotos. **Corregido el mismo día** (Trabajador
+0.57.02): un candado alrededor de todo uso de PDFium en `lectores.py`
+(`_candado_pdf`), con su test en `test_lectores.py`. Verificado: 320 lecturas
+en 8 hilos sin caída (~33 ms cada una) y 5 corridas de 60 recibos con 8 en
+paralelo contra el servidor local, 300 subidas sin un error. Antes de B1 tiene
+que estar desplegado en Pruebas.
 
 ## 8. Para el plan de ejecución (a decidir)
 
