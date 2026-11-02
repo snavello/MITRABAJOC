@@ -47,7 +47,7 @@ bancarios con variantes** que SDN generó (`datos_prueba/bancaria/`).
 
 ## 3. El insumo: el lote bancario
 
-En `datos_prueba/bancaria/` (`parte1.zip` y `parte3.zip`; **falta `parte2.zip`**).
+En `datos_prueba/bancaria/` (`parte1.zip`, `parte2.zip`, `parte3.zip`: los 600 completos).
 Datos ficticios, lo dice el pie de cada recibo. Trae su propio `manifest.csv`
 (archivo, banco, CUIL leído e impreso, totales, neto correcto e impreso, error
 intencional), `empleados.csv` y `bancos.json`.
@@ -56,7 +56,6 @@ intencional), `empleados.csv` y `bancos.json`.
 |---|---|
 | Recibos | 600: 50 personas × 12 meses (2025-09 a 2026-08) |
 | Bancos | BBVA, Galicia, Nación, Industrial (PDF digital) y Santander (foto JPG 1240×1754) |
-| Llegaron | 360 (BBVA, Galicia, Santander); faltan Nación e Industrial (240, la parte 2) |
 | CUIL | los 50 cumplen el módulo 11 |
 | Errores a propósito | 2: un CUIL impreso con dígito verificador mal (Nación, 2026-05) y un neto impreso con $ 10.000 de más (Industrial, 2026-01) |
 
@@ -128,7 +127,7 @@ pesa el OCR con poca CPU.
 
 ## 6. Orden
 
-1. Subir `parte2.zip` (SDN). El manifiesto ya viene en el lote.
+1. ~~Subir el lote~~ hecho: 600 recibos con su manifiesto.
 2. A2 → A1 → A4 (exactitud antes que carga: si lee mal, la carga no importa).
 3. B6 → B1 → B2 (decide el cupo del OCR) → B3 → B4 → B5.
 4. A5 y C cuando el resto esté en verde.
