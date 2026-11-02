@@ -99,11 +99,32 @@ base que hoy falta.
 | B5 | Lanzamiento | 500 registros + primeros logins en 10 minutos (freno por IP ajustado) | sin 500; ningún registro duplicado |
 | B6 | Archivos al límite | PDF multipágina, foto de 12 MP, archivo que no es recibo, PDF dañado | error con código propio, nunca 500; memoria del proceso estable |
 
-**Configuración.** Correr sobre la configuración que se va a contratar para
-La Bancaria (el test 7, 4 núcleos, o el 8, dos instancias), subida y bajada
-desde la solapa **Planes** de `/entornos`, programada para la ventana de la
-corrida. B1 y B2 conviene repetirlos en la configuración base para ver cuánto
-pesa el OCR con poca CPU.
+### R. Recursos de Render: cada prueba de carga se corre en varios planes
+
+Los tests 1–8 mostraron que el plan cambia todo; las pruebas nuevas (B1, B3,
+B4) se corren **en cada escalón**, subiendo y bajando desde la solapa
+**Planes** de `/entornos` (workers = núcleos, lo ajusta `render_admin`).
+Precios de lista de `data/render_planes.json` (USD/mes).
+
+| Escalón | Web | Postgres | Equivale a | Para qué |
+|---|---|---|---|---|
+| R1 Mínimo | 0,5 vCPU / 512 MB (7) | 0,1 vCPU / 256 MB (6) | test 1 | cuánto pesa el OCR con poca CPU (hoy Pruebas) |
+| R2 Intermedio | 2 vCPU / 4 GB (85) | 2 vCPU / 4 GB (75) | test 5 | arranque barato de La Bancaria |
+| R3 Producción | 4 vCPU / 8 GB (175) | 4 vCPU / 16 GB (200) | test 7 | lo que se piensa contratar |
+| R4 Dos instancias | 4 vCPU / 8 GB × 2 | 4 vCPU / 16 GB | test 8 | pico del día de cobro |
+
+Además de las pruebas de carga, se prueba **el cambio de plan en sí**:
+- **Subir y bajar en caliente** con 200 lectores navegando: cuánto dura el
+  corte del web (reinicio) y de la base (~1 min), y que los pedidos fallen con
+  503 y código, nunca con 500 ni datos a medio escribir.
+- **Orden de los workers**: al bajar, primero los workers; al subir, después
+  (`render_admin`). Verificar en `CambioPlan` que se respetó.
+- **Programado**: una regla del planificador que sube a R3 antes del "día de
+  cobro" y baja a R1 después; se verifica que dispare a horario, que quede en la
+  bitácora y que la gracia de 10 minutos cubra un reinicio.
+- **`ENMASCARADO_CUPO`** se decide por escalón con B2 (1 por proceso hoy).
+- **Costo**: Render prorratea por segundo; se anota el gasto de cada corrida
+  y cuánto costaría el día de cobro con la regla programada contra R3 fijo.
 
 ### C. Funcionales con datos de La Bancaria (sin carga)
 
@@ -129,11 +150,13 @@ pesa el OCR con poca CPU.
 
 1. ~~Subir el lote~~ hecho: 600 recibos con su manifiesto.
 2. A2 → A1 → A4 (exactitud antes que carga: si lee mal, la carga no importa).
-3. B6 → B1 → B2 (decide el cupo del OCR) → B3 → B4 → B5.
+3. B6 → B1 → B2 (decide el cupo del OCR) → B3 → B4 → B5, cada una en R1 → R2 → R3
+   (R4 solo B3), con el cambio de plan en caliente entre escalones y el
+   programado al final.
 4. A5 y C cuando el resto esté en verde.
 5. Volcar todo al informe (`consolidar.py` + `generar_md.py`) y una línea en
    `BITACORA.md`.
 
 Al terminar: `MOCK_EXTRACTOR` y `LOGIN_MAX_FALLOS` de Pruebas vuelven a su
-valor, el plan baja al de siempre, y los recibos del lote se borran con
+valor, los planes bajan a R1 (y se borra la regla programada), y los recibos del lote se borran con
 `cargar_bancaria.py --borrar-recibos-de <CUIL> --si` si no se van a reusar.
