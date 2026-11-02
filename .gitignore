@@ -59,3 +59,8 @@ backup_regularizacion_*
 
 # Archivos de trabajo de XSD (capturas, hallazgos, informes): pesan y se regeneran.
 xsd-trabajo/
+# Lote bancario de prueba (PLAN_PRUEBAS_BANCARIA.md): los zips están en
+# datos_prueba/bancaria/; lo extraído, lo generado y las claves no se versionan.
+carga/recibos_bancaria/
+carga/archivos_limite/
+carga/usuarios_bancaria.csv

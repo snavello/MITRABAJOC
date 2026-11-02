@@ -134,29 +134,69 @@ Además de las pruebas de carga, se prueba **el cambio de plan en sí**:
 - Admin de Seccional de La Bancaria: repetir la auditoría de alcance
   (`docs/chat/2026-10-17-auditoria-alcance.md`) con el lote cargado.
 
-## 5. Lo que hay que construir (chico)
+## 5. Recursos listos (2026-11-02; ninguno se corrió contra Pruebas)
 
-1. `carga/preparar_bancaria.py`: empadrona los 50 CUIL de `empleados.csv` en
-   La Bancaria y escribe `carga/usuarios_bancaria.csv`.
-2. `carga/k6/test4_bancaria.js`: el test 2 leyendo manifiesto y usuarios, con
-   etiqueta por `formato` y `variante`; ráfaga de 40 y fase "día de cobro".
-3. `probar_lote_bancaria.py` (A1/A4): corre el manifiesto contra Pruebas,
-   CSV de resultados por variante; pide confirmación porque gasta créditos.
-4. `resumen.py` que levante los tests 3 y 4 (hoy no levanta el 3), y
-   `consolidar.py` que los numere como tests 9 en adelante en el mismo informe.
-5. Sumar `/api/tu-dia` al journey de `test1_lecturas.js`.
+| Prueba | Recurso | Qué hace |
+|---|---|---|
+| todas | `carga/lote_bancaria.py extraer` / `verificar` | zips → `carga/recibos_bancaria/` (fuera de git) + `k6.json`; controla los 600 y sus CUIL |
+| todas | `carga/preparar_bancaria.py [--si] [--limpiar --si --con-conceptos]` | empadrona a los 50 en La Bancaria (clave = 5 primeros dígitos del CUIL, sin pisar una clave existente, repartidos por seccional) y escribe `carga/usuarios_bancaria.csv`; `--limpiar` borra lo que dejaron las pruebas. Sin `--si` no escribe |
+| A1, A4, modelos | `carga/probar_lote_bancaria.py --base-url … --etiqueta … [--muestra N] [--si]` | cada recibo por `/api/leer` + `/api/validar` con la sesión de su CUIL; CSV por recibo y resumen; sin `--si` dice cuánto costaría. Con DATABASE_URL lee de UsoIA el modelo que corrió, tokens y USD, y marca inválida una corrida con el mock |
+| comparar modelos | `probar_lote_bancaria.py --comparar a.csv b.csv` | tabla por corrida (aciertos, lectura exacta, errores detectados, tiempo, USD por recibo) y los recibos donde no coinciden |
+| B1, B2 | `k6/test4_bancaria.js` `ESCENARIO=rafagas` (`FORMATO=pdf\|jpg`) | 200 lectores + ráfagas 2/5/10/20/40 con los recibos del lote, cada uno con su dueño |
+| B3 | `test4_bancaria.js` `ESCENARIO=cobro` | 400 lectores (con «Tu día») + 20 subidas simultáneas durante 10 min |
+| R | `test4_bancaria.js` `ESCENARIO=continuo` + `carga/analizar_corte.py` | lectores navegando mientras se cambia el plan; duración del corte, códigos, si hubo 500, y la bitácora `CambioPlan` de la ventana |
+| B4 | `k6/test3_panel.js` con `ADMIN2_CUIT`/`ADMIN2_CLAVE` y `USUARIOS_CSV` | suma un Admin de Seccional con su propia tormenta y falla si su catálogo trae más de una seccional |
+| B6 | `carga/archivos_limite.py generar` / `enviar … --si` | 9 archivos (3 y 40 páginas, PDF dañado, vacío, texto como PDF, foto 12 MP, torcida, oscura, no es recibo); falla si alguno da 500 o un error sin código |
+| journey | `k6/test1_lecturas.js` con `CON_TU_DIA=1` y `USUARIOS_CSV` | «Tu día» opcional, para no romper la comparación con los tests 1–8 |
+| — | `test_lote_bancaria.py` | 13 tests de todo lo anterior (sin red ni IA) |
 
-## 6. Orden
+**Quedan sin recurso propio** (se resuelven en el plan de ejecución): B5
+(registro masivo: el registro tiene captcha y código por mail), C (robot E2E
+con La Bancaria), y volcar los tests 3 y 4 al informe comparado
+(`consolidar.py` hoy solo entiende los tests 1 y 2; el 3 y el 4 dejan su
+propio JSON con veredicto).
 
-1. ~~Subir el lote~~ hecho: 600 recibos con su manifiesto.
-2. A2 → A1 → A4 (exactitud antes que carga: si lee mal, la carga no importa).
-3. B6 → B1 → B2 (decide el cupo del OCR) → B3 → B4 → B5, cada una en R1 → R2 → R3
-   (R4 solo B3), con el cambio de plan en caliente entre escalones y el
-   programado al final.
-4. A5 y C cuando el resto esté en verde.
-5. Volcar todo al informe (`consolidar.py` + `generar_md.py`) y una línea en
-   `BITACORA.md`.
+## 6. Modelos de lectura
 
-Al terminar: `MOCK_EXTRACTOR` y `LOGIN_MAX_FALLOS` de Pruebas vuelven a su
-valor, los planes bajan a R1 (y se borra la regla programada), y los recibos del lote se borran con
-`cargar_bancaria.py --borrar-recibos-de <CUIL> --si` si no se van a reusar.
+Para empezar, **Sonnet 5.5**; **Haiku 5.5** como alternativa a comparar (los dos
+en el catálogo de precios y con `effort: low`). El modelo no lo elige ningún
+script: se cambia en `/plataforma` → Uso de IA → Modelos → Lectura de recibos,
+y cada corrida lleva su etiqueta.
+
+- **Exactitud**: la misma muestra (`--muestra` es determinista) con cada
+  modelo, y `--comparar`. Mismo criterio que el Laboratorio: coincidir en el
+  neto no alcanza, cuenta la lectura exacta de los tres totales y el período.
+- **Carga**: con el mock, el modelo no corre. Lo que cambia entre modelos es
+  cuánto tarda: `MOCK_EXTRACTOR_LATENCIA` se fija con el p50 de lectura que dé
+  A1 para el modelo elegido (hoy 15 s, la de septiembre).
+- El Laboratorio de modelos sigue sirviendo para mirar un recibo puntual lado
+  a lado.
+
+## 7. Hallazgo de la prueba local: la app se cae con dos PDF a la vez
+
+Probando los recursos contra un servidor local (`MOCK_EXTRACTOR=1`,
+`ENMASCARADO=activo`), el proceso murió dos veces con `double free or
+corruption` al recibir varias subidas de PDF juntas. Aislado: 8 hilos leyendo
+PDF con `lectores.palabras_pdf` / `imagen_pdf` → una corrida colgada y dos
+caídas en tres; de a uno, sin problema. **PDFium (`pypdfium2`) no admite uso
+simultáneo desde varios hilos**, y `/api/leer` y `/api/aportes` corren el
+enmascarado en el threadpool sin candado. Pruebas y Demo tienen el
+enmascarado activo: dos afiliados que suben un PDF en el mismo momento al
+mismo worker pueden tumbarlo (y cortar todo lo que ese worker atendía). El
+test 2 no lo vio porque subía solo fotos. **Hay que corregirlo antes de B1**
+(un candado alrededor de todo uso de PDFium en `lectores.py`), si no las
+pruebas de carga miden la caída y no el rendimiento.
+
+## 8. Para el plan de ejecución (a decidir)
+
+1. Qué escalones de Render tienen sentido (R1 probablemente no) y en qué orden.
+2. El recibo con el CUIL impreso mal: hoy se rechaza con E-RECIBO-04. ¿Se
+   acepta con alerta cuando solo difiere el dígito verificador?
+3. Volumen del Panel para B4: el lote sintético de La Bancaria trae 5.000
+   recibos; llegar a 50.000 pide otro sembrado.
+4. Cuántos recibos de A1 por modelo (60 de muestra ≈ US$ 2 con Sonnet 5.5,
+   estimado) y si se corre una vez con los 600.
+5. B5 y C: si se construyen o se sacan del plan.
+6. Al terminar: `MOCK_EXTRACTOR` y `LOGIN_MAX_FALLOS` de Pruebas vuelven a su
+   valor, los planes bajan al de siempre (y se borra la regla programada), y
+   `preparar_bancaria.py --limpiar --si --con-conceptos`.

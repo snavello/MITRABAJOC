@@ -37,25 +37,36 @@ const BASE_URL = (__ENV.BASE_URL || 'https://mitrabajo-pruebas.onrender.com').re
 const ADMIN_CUIT = __ENV.ADMIN_CUIT || '20111111120';
 const ADMIN_CLAVE = __ENV.ADMIN_CLAVE || '';
 const RESUMEN = __ENV.RESUMEN_PANEL || 'test3_resumen.json';
+// Segundo admin, opcional (PLAN_PRUEBAS_BANCARIA.md, B4): un Admin de Seccional
+// del MISMO sindicato hace su propia tormenta en paralelo. Además de los
+// criterios de siempre, su catálogo de filtros tiene que traer UNA seccional
+// (la suya): si trae más, el alcance se rompió bajo carga.
+const ADMIN2_CUIT = __ENV.ADMIN2_CUIT || '';
+const ADMIN2_CLAVE = __ENV.ADMIN2_CLAVE || '';
+// Usuarios de los lectores: los 1.000 de carga/usuarios.csv, o los del lote
+// bancario (USUARIOS_CSV=../usuarios_bancaria.csv).
+const USUARIOS_CSV = __ENV.USUARIOS_CSV || '../usuarios.csv';
 
 const FASE_BASE_MS = 60 * 1000;
-const LECTORES = 20;
+const LECTORES = parseInt(__ENV.LECTORES || '20', 10);
 const CAMBIOS_DE_FILTRO = 30;
 const ABANDONO = '250ms';        // a los cuántos ms el "navegador" abandona cada pedido
 
 const errores500 = new Rate('errores_500');     // 500+ salvo 503 (503 = ocupado, esperado)
 const panel503 = new Counter('panel_503');
 const panelPedidos = new Counter('panel_pedidos');
+const alcanceViolado = new Rate('alcance_violado');   // el admin de seccional vio otras
 
 const usuarios = new SharedArray('usuarios', function () {
-  return open('../usuarios.csv')
+  return open(USUARIOS_CSV)
     .split('\n')
     .slice(1)
     .filter((l) => l.trim())
     .map((l) => {
       const [cuil, clave] = l.trim().split(',');
       return { cuil, clave };
-    });
+    })
+    .filter((u) => u.clave);
 });
 
 export const options = {
@@ -74,6 +85,14 @@ export const options = {
       maxDuration: '90s',
       exec: 'adminFrenetico',
     },
+    ...(ADMIN2_CLAVE ? { admin_seccional: {
+      executor: 'per-vu-iterations',
+      vus: 1,
+      iterations: CAMBIOS_DE_FILTRO,
+      startTime: '60s',
+      maxDuration: '90s',
+      exec: 'adminSeccional',
+    } } : {}),
   },
   thresholds: {
     errores_500: ['rate==0'],
@@ -95,6 +114,7 @@ export function setup() {
   // en vez de correr 2 minutos de lectores sin tormenta y dar un veredicto
   // vacío (pasó en la primera corrida contra Pruebas, 2026-09-19).
   entrarComoAdmin();
+  if (ADMIN2_CLAVE) entrarComoAdmin(ADMIN2_CUIT, ADMIN2_CLAVE, true);
   return { inicio: Date.now() };
 }
 
@@ -138,6 +158,8 @@ const PANELES = ['kpis', 'serie-recibos', 'validacion', 'diferencias-empresa',
 
 let logueado = false;
 let idsEmpresas = [];
+let logueado2 = false;
+let idsEmpresas2 = [];
 
 function fechaISO(dias) {
   // AAAA-MM-DD en UTC, de "hoy - dias". Se pide desde AYER: el servidor valida
@@ -146,8 +168,8 @@ function fechaISO(dias) {
   return new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
 }
 
-function entrarComoAdmin() {
-  http.post(`${BASE_URL}/admin/login`, { usuario: ADMIN_CUIT, clave: ADMIN_CLAVE },
+function entrarComoAdmin(cuit = ADMIN_CUIT, clave = ADMIN_CLAVE, acotado = false) {
+  http.post(`${BASE_URL}/admin/login`, { usuario: cuit, clave: clave },
     { redirects: 5, tags: { grupo: 'admin', paso: 'login' } });
   // Si el login falló no hay cookie y /filtros da 403; si el sindicato no tiene
   // el módulo, también 403. Un solo mensaje que nombra las dos causas.
@@ -156,9 +178,46 @@ function entrarComoAdmin() {
     throw new Error(`/admin/dashboard/filtros devolvió ${filtros.status}: revisar ADMIN_CUIT / ADMIN_CLAVE ` +
                     'y que el sindicato tenga el módulo dashboard.');
   }
-  idsEmpresas = (filtros.json('empresas') || []).map((e) => e.id);
-  if (idsEmpresas.length === 0) throw new Error('El sindicato del admin no tiene empresas para filtrar.');
+  const ids = (filtros.json('empresas') || []).map((e) => e.id);
+  if (ids.length === 0) throw new Error('El sindicato del admin no tiene empresas para filtrar.');
+  if (acotado) {
+    alcanceViolado.add((filtros.json('seccionales') || []).length > 1);
+    return ids;
+  }
+  idsEmpresas = ids;
   logueado = true;
+  return ids;
+}
+
+function tormenta(ids, tags) {
+  const n = __ITER;
+  const elegidas = [ids[n % ids.length]];
+  if (n % 3 === 1) elegidas.push(ids[(n + 1) % ids.length]);
+  const query = `desde=${fechaISO(31)}&hasta=${fechaISO(1)}&empresas=${elegidas.join(',')}`;
+  const respuestas = http.batch(PANELES.map((p) => ({
+    method: 'GET',
+    url: `${BASE_URL}/admin/dashboard/${p}?${query}${p.startsWith('explorador') ? '&page=1&page_size=10' : ''}`,
+    params: { timeout: ABANDONO, tags: tags },
+  })));
+  for (const r of respuestas) {
+    panelPedidos.add(1);
+    if (r.status === 503) panel503.add(1);
+    if (r.status !== 0) registrar(r);
+  }
+  sleep(2);
+}
+
+export function adminSeccional() {
+  if (!logueado2) {
+    idsEmpresas2 = entrarComoAdmin(ADMIN2_CUIT, ADMIN2_CLAVE, true);
+    logueado2 = true;
+  } else if (__ITER % 10 === 0) {
+    // Cada tanto vuelve a pedir el catálogo: el alcance tiene que sostenerse
+    // en plena tormenta, no solo al entrar.
+    const f = http.get(`${BASE_URL}/admin/dashboard/filtros`, { tags: { grupo: 'admin2', paso: 'filtros' } });
+    if (f.status === 200) alcanceViolado.add((f.json('seccionales') || []).length > 1);
+  }
+  tormenta(idsEmpresas2, { grupo: 'panel', fase: 'tormenta', admin: 'seccional' });
 }
 
 export function adminFrenetico() {
@@ -208,12 +267,17 @@ export function handleSummary(data) {
     tasa_falla_lectores: fallaLectores,
     pedidos_del_panel: data.metrics.panel_pedidos ? data.metrics.panel_pedidos.values.count : 0,
     respuestas_503_del_panel: data.metrics.panel_503 ? data.metrics.panel_503.values.count : 0,
+    admin_seccional: !!ADMIN2_CLAVE,
+    tasa_alcance_violado: data.metrics.alcance_violado ? data.metrics.alcance_violado.values.rate : null,
   };
   // Sin tormenta no hay veredicto: 30 cambios x 12 paneles = 360 pedidos. Si el
   // admin no pudo entrar, los lectores solos "aprueban" cualquier cosa.
-  veredicto.tormenta_ejecutada = veredicto.pedidos_del_panel >= CAMBIOS_DE_FILTRO * PANELES.length * 0.9;
+  veredicto.tormenta_ejecutada = veredicto.pedidos_del_panel >=
+    CAMBIOS_DE_FILTRO * PANELES.length * (ADMIN2_CLAVE ? 2 : 1) * 0.9;
+  veredicto.criterio_alcance = !ADMIN2_CLAVE || veredicto.tasa_alcance_violado === 0;
   veredicto.aprobado = veredicto.tormenta_ejecutada && veredicto.criterio_2x &&
-    veredicto.criterio_cero_500 && fallaLectores !== null && fallaLectores < 0.01;
+    veredicto.criterio_cero_500 && veredicto.criterio_alcance &&
+    fallaLectores !== null && fallaLectores < 0.01;
   const linea = (k, v) => `  ${k.padEnd(34)} ${v}\n`;
   const texto = '\n=== Test 3: filtro frenético ===\n' +
     linea('p95 lectores, fase base', base === null ? 's/d' : base.toFixed(0) + ' ms') +
@@ -221,6 +285,7 @@ export function handleSummary(data) {
     linea('razón tormenta / base (<= 2)', razon === null ? 's/d' : razon.toFixed(2)) +
     linea('respuestas 500 (deben ser 0)', e500 === null ? 's/d' : (e500 * 100).toFixed(2) + ' %') +
     linea('fallas de lectores (< 1 %)', fallaLectores === null ? 's/d' : (fallaLectores * 100).toFixed(2) + ' %') +
+    (ADMIN2_CLAVE ? linea('admin de seccional vio otras', veredicto.criterio_alcance ? 'no' : 'SÍ') : '') +
     linea('pedidos del panel / 503', `${veredicto.pedidos_del_panel} / ${veredicto.respuestas_503_del_panel}`) +
     linea('VEREDICTO', veredicto.aprobado ? 'APROBADO'
       : (veredicto.tormenta_ejecutada ? 'NO APROBADO' : 'NO APROBADO: la tormenta no se ejecutó')) + '\n';

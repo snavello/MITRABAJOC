@@ -52,3 +52,16 @@ Mapeo de rutas: como "Mis Aportes" y "Credencial" son pestañas dentro de
 `/app` (no páginas propias), el journey de lecturas usa `/app/inicio`
 (home), `/app/notificaciones` (novedades), `/app` (recibo + aportes) y
 `/api/credencial/qr` (credencial) -- ver `carga/k6/test1_lecturas.js`.
+
+**Lote bancario (tests 4 en adelante)** -- plan en `PLAN_PRUEBAS_BANCARIA.md`,
+§5, con un comando por prueba. En corto:
+```
+python carga/lote_bancaria.py extraer                      # zips -> carga/recibos_bancaria/
+DATABASE_URL=... python carga/preparar_bancaria.py --si    # 50 empleados + usuarios_bancaria.csv
+BASE_URL=https://mitrabajo-pruebas.onrender.com ESCENARIO=rafagas \
+  k6 run --out json=carga/log/<carpeta>/test4.ndjson carga/k6/test4_bancaria.js
+python carga/probar_lote_bancaria.py --base-url ... --etiqueta sonnet-5-5 --muestra 60 --si   # IA real
+DATABASE_URL=... python carga/preparar_bancaria.py --limpiar --si --con-conceptos
+```
+`test4_bancaria.js` usa `k6/experimental/fs` (k6 0.54 o más nuevo): los
+recibos se cargan una vez y se comparten entre VUs.
