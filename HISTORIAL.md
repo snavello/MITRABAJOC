@@ -9689,3 +9689,29 @@ letras), y una línea sin código también se busca por ese código.
 sobre los 10 recibos del piloto tal como los leyó la IA: antes 10 con
 diferencias; ahora 5 OK y 5 con diferencias solo por los aportes sin tope.
 Tests: `test_conceptos_bancos.py`.
+
+## Lo no remunerativo impreso entre los haberes sumaba a los aportes (2026-11-03, Trabajador 0.57.05)
+
+Segunda tirada del lote bancario en Pruebas (20 recibos al azar con Sonnet 5.5,
+ya con la corrección de la cuota): 19 de 20 dieron lo esperado. El que no,
+`galicia/27425555478_2026-07.pdf`, esperaba una jubilación de $473.380,02 y la
+correcta (la del recibo) es $460.180,02: la app sumaba a la base los $120.000
+de «Compensación no remunerativa».
+
+**Causa.** Galicia imprime esa línea en la columna de HABERES (no tiene
+columna aparte para lo no remunerativo). La primera vez que la IA la vio la
+ubicó entre los haberes, y el concepto se dio de alta como remunerativo; desde
+entonces `_es_remunerativa` creía al concepto aunque estuviera pendiente de
+revisión, y aunque en otro recibo la IA la hubiera puesto entre los no
+remunerativos.
+
+**Corrección.** Para un concepto PENDIENTE de revisión mandan el recibo: no
+suma a la base si la línea está entre los no remunerativos o si su nombre dice
+que no es remunerativa (`validador.dice_no_remunerativo`: «no remunerativ»,
+«no rem.», «no remun»). Un concepto ya revisado por el sindicato sigue
+mandando. Y un concepto nuevo con ese nombre nace no remunerativo.
+
+**Verificado** con el catálogo actual de La Bancaria en Pruebas sobre los 30
+recibos de las dos tiradas, tal como los leyó la IA: 30 de 30 dan lo esperado
+(17 OK y 13 con diferencias, todas por aportes sin tope, que es un error real
+de esos recibos del lote). Tests en `test_conceptos_bancos.py`.

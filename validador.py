@@ -488,15 +488,34 @@ def _zona_catalogo(m) -> str:
     return concepto.get("tipo")
 
 
+def dice_no_remunerativo(descripcion) -> bool:
+    """¿El nombre impreso dice que no es remunerativo? («Compensación no
+    remunerativa», «Suma no rem.», «Asig. no remunerativa»). Es el término
+    legal y los bancos lo escriben en el nombre aunque lo impriman en la
+    misma columna que los haberes (Galicia, prueba del lote bancario,
+    2026-11-03)."""
+    t = normalizar(descripcion).replace(".", " ")
+    return "NO REMUNERATIV" in t or " NO REM " in f" {t} " or "NO REMUN" in t
+
+
 def _es_remunerativa(m) -> bool:
     """¿Suma a la base de los aportes esta línea de haberes? Lo dice el
-    concepto si es un haber en el catálogo. Si está entre los haberes por lo
-    que leyó la IA y no por el catálogo (un concepto cargado como descuento),
-    la marca de remunerativo de ese concepto no significa nada y lo dice la
-    sección: la columna de no remunerativos no suma."""
-    if m["concepto"].get("tipo") == "ingreso":
-        return bool(m["concepto"].get("remunerativo", True))
-    return seccion_de(m) != "no_remunerativos"
+    concepto si es un haber del catálogo ya REVISADO por el sindicato. Si el
+    concepto está pendiente de revisión (lo dio de alta la IA con lo que vio
+    en un recibo), mandan el recibo: no suma si está impresa entre los no
+    remunerativos o si su nombre dice que no es remunerativa. Si está entre
+    los haberes por lo que leyó la IA y no por el catálogo (un concepto
+    cargado como descuento), la marca de remunerativo de ese concepto no
+    significa nada y lo dice la sección: la columna de no remunerativos no
+    suma."""
+    concepto = m["concepto"]
+    if concepto.get("tipo") == "ingreso" and not concepto.get("pendiente_revision"):
+        return bool(concepto.get("remunerativo", True))
+    if seccion_de(m) == "no_remunerativos" or dice_no_remunerativo(m.get("descripcion")):
+        return False
+    if concepto.get("tipo") == "ingreso":
+        return bool(concepto.get("remunerativo", True))
+    return True
 
 
 def _es_aporte_de_ley(linea) -> bool:
@@ -1192,7 +1211,8 @@ def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -
             # Para un descuento no significa nada (la base solo suma haberes),
             # pero se guarda en False para que no quede un "remunerativo" que
             # nadie eligió si después alguien le cambia el tipo.
-            "remunerativo": tipo == "ingreso" and seccion_de(ln) != "no_remunerativos",
+            "remunerativo": (tipo == "ingreso" and seccion_de(ln) != "no_remunerativos"
+                             and not dice_no_remunerativo(ln.get("descripcion"))),
             "reintegro": reintegro,
             "categoria_universal": ln.get("categoria_universal"),
         })
