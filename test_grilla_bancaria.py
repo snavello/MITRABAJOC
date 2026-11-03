@@ -95,22 +95,24 @@ def _validar_como_la_app(sid, recibo):
     import db
     import validador
     from db import Concepto
-    from main import CATEGORIAS_UNIVERSALES
     from sqlmodel import select
     cuit_emp = recibo["empleador"]["cuit"]
     nuevos = validador.detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"], cuit_emp)
     with db.get_session() as s:
         catalogo = s.exec(select(Concepto).where(Concepto.sindicato_id == sid)).all()
         existentes = {(c.codigo, c.cuit_empleador or "") for c in catalogo}
-        genericos = {c.codigo for c in catalogo if not c.cuit_empleador}
+        genericos = [{"codigo": c.codigo, "cuit_empleador": None,
+                      "categoria_sindical": c.categoria_sindical}
+                     for c in catalogo if not c.cuit_empleador]
         for n in nuevos:
             if (n["codigo"], cuit_emp) in existentes:
                 continue
-            universal = CATEGORIAS_UNIVERSALES.get(n.get("categoria_universal"))
+            generico = validador.generico_de_categoria(n.get("categoria_universal"), genericos)
+            universal = generico["codigo"] if generico and generico["codigo"] != n["codigo"] else None
             s.add(Concepto(sindicato_id=sid, codigo=n["codigo"], nombre=n["descripcion"],
                            tipo=n["tipo"], remunerativo=n.get("remunerativo", n["tipo"] == "ingreso"),
                            alias=[n["descripcion"]], pendiente_revision=True, cuit_empleador=cuit_emp,
-                           codigo_generico=universal if universal in genericos else None))
+                           codigo_generico=universal))
             existentes.add((n["codigo"], cuit_emp))
         s.commit()
     return validador.validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,

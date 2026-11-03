@@ -84,7 +84,7 @@ from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_compar
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
                         error_de_expresion, totales_leidos, clasificacion_vista,
-                        CATEGORIAS_UNIVERSALES)
+                        generico_de_categoria)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -1060,15 +1060,20 @@ def api_validar(request: Request, payload: dict):
             # la fórmula del genérico (bug real encontrado con un recibo de
             # AFIP: el concepto quedaba creado pero la fórmula de JUBILACION
             # nunca lo encontraba).
-            genericos_actuales = {c.codigo for c in catalogo_actual if not c.cuit_empleador}
+            # Para la cuota vale también el genérico marcado como cuota de
+            # afiliación aunque no se llame CUOTA_SINDICAL (validador.
+            # generico_de_categoria): sin eso, la cuota de cada banco nuevo de
+            # La Bancaria nacía sin vincular a su regla.
+            genericos_dicts = [{"codigo": c.codigo, "cuit_empleador": c.cuit_empleador,
+                                "categoria_sindical": c.categoria_sindical}
+                               for c in catalogo_actual if not c.cuit_empleador]
             for n in nuevos:
                 clave = (n["codigo"], cuit_empleador or "")
                 if clave not in existentes:
-                    codigo_universal = CATEGORIAS_UNIVERSALES.get(n.get("categoria_universal"))
+                    generico = generico_de_categoria(n.get("categoria_universal"), genericos_dicts)
                     codigo_generico = (
-                        codigo_universal
-                        if codigo_universal and codigo_universal in genericos_actuales
-                        and codigo_universal != n["codigo"]
+                        generico["codigo"]
+                        if generico and generico["codigo"] != n["codigo"]
                         else None
                     )
                     s.add(Concepto(
@@ -6081,10 +6086,8 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
         # primero, y solo se cae a la búsqueda por parecido si no aplica.
         p["generico_sugerido"] = None
         if p["cuit_empleador"]:
-            codigo_universal = CATEGORIAS_UNIVERSALES.get(p.get("categoria_universal"))
-            generico_universal = next(
-                (c for c in genericos_actuales if c["codigo"] == codigo_universal), None
-            ) if codigo_universal else None
+            generico_universal = generico_de_categoria(p.get("categoria_universal"),
+                                                       genericos_actuales)
             if generico_universal:
                 p["generico_sugerido"] = {
                     "codigo": generico_universal["codigo"], "nombre": generico_universal["nombre"],

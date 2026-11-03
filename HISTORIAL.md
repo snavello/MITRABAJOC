@@ -9640,3 +9640,52 @@ otro módulo de la app importa pypdfium2 (`extractor.py` y `rag.py` usan
 `mapa_funcional.py` solo lo nombra), y toda función de `lectores.py` que abre
 un `PdfDocument` lo hace dentro de `with _candado_pdf`. Medido: ~29 ms por
 recibo con y sin candado; tomarlo sin competencia, ~0,2 µs.
+
+## Los recibos de bancos nuevos se validaban mal (2026-11-03, Trabajador 0.57.04)
+
+Lo encontró la prueba piloto del lote bancario en Pruebas (10 recibos al azar
+con Sonnet 5.5, `PLAN_PRUEBAS_BANCARIA.md` §5 bis en la rama
+`claude/busy-fermi-pvxggf`): la IA leyó bien los 10 y la app dio los 10 con
+diferencias. Dos causas en la app; la tercera era del lote (aportes calculados
+sin el tope, que la app marca bien).
+
+**1. La cuota de un banco nuevo no se vinculaba con la regla del sindicato.**
+La IA etiqueta la línea «Cuota sindical Asoc. Bancaria 2%» como
+`cuota_sindical`, y `CATEGORIAS_UNIVERSALES` la mandaba al código
+`CUOTA_SINDICAL`, que ningún sindicato tiene por defecto (los universales que
+se siembran son jubilación, PAMI y obra social). La Bancaria la llama `CUOTA`.
+El concepto del banco nacía sin `codigo_generico` y la regla `CUOTA` decía «El
+recibo no incluye 'Asoc Bancaria'» en todos los recibos. Ahora
+`validador.generico_de_categoria` busca el genérico por el código universal y,
+para la cuota, si no está, el genérico marcado `categoria_sindical =
+"afiliacion"` (si hay uno solo). Lo usan el alta de conceptos nuevos de
+`/api/validar`, la sugerencia de Aprendizaje y `matchear_lineas`, que además
+valida contra la regla del genérico un concepto del banco todavía pendiente y
+sin vincular (marcado `chequeo_automatico`): así los conceptos que ya quedaron
+mal creados en Pruebas también se arreglan sin tocar la base. **Resguardo**:
+para la IA, el aporte solidario de convenio (el del no afiliado) también es
+«un aporte al gremio»; si el sindicato tiene cargado un genérico de convenio
+además del de afiliación, la etiqueta no alcanza y no se elige ninguno (la
+línea queda pendiente para que el sindicato la confirme en Conceptos).
+
+**El texto de la cuota que falta** (decisión de SDN, 2026-11-03): la regla de
+la cuota se le sigue exigiendo a todos, también al no afiliado, pero el
+recibo ya no dice «El recibo no incluye 'Asoc Bancaria'» sino «Sin cuota de
+aporte sindical.» o, si trae aporte solidario (concepto de convenio o
+«solidari» en el nombre), «Con aporte solidario, sin cuota de aporte
+sindical.» (`validador.detalle_cuota_faltante`; la discrepancia lleva además
+`cuota_sindical` y `aporte_solidario`). Las demás reglas conservan su texto.
+
+**2. Códigos provisorios que chocaban.** Un recibo sin códigos (Galicia) recibe
+un código inventado por concepto: eran las 12 primeras letras del nombre, y
+«Antigüedad (16 años)» y «Antigüedad (24 años)» daban los dos `NUEVO-ANTIGUEDAD
+(`. El segundo no se creaba porque "ya existía", la línea no encajaba con
+ninguno y salía de la suma de haberes (en el recibo de Galicia del piloto,
+$3.877.810,84 contra $4.258.348,65 impresos). Ahora `validador.codigo_provisorio`
+saca lo que va entre paréntesis y los números (`NUEVO-ANTIGUEDAD`, hasta 24
+letras), y una línea sin código también se busca por ese código.
+
+**Verificado** con el catálogo y las reglas reales de La Bancaria en Pruebas,
+sobre los 10 recibos del piloto tal como los leyó la IA: antes 10 con
+diferencias; ahora 5 OK y 5 con diferencias solo por los aportes sin tope.
+Tests: `test_conceptos_bancos.py`.
