@@ -136,3 +136,33 @@ def test_la_primera_vez_se_crea_un_solo_concepto_para_las_dos_antiguedades():
     lineas = [_linea("Antigüedad (16 años)", 100.0), _linea("Antigüedad (24 años)", 200.0)]
     nuevos = V.detectar_nuevos([], lineas, GALICIA)
     assert [n["codigo"] for n in nuevos] == ["NUEVO-ANTIGUEDAD"]
+
+
+# ------------------------------------- 3. el texto de la cuota que falta --
+def test_sin_cuota_el_texto_lo_dice_claro():
+    """SDN, 2026-11-03: la regla de la cuota se le exige a todos, pero el
+    texto tiene que decir qué pasó en vez de «El recibo no incluye 'Asoc
+    Bancaria'»."""
+    cat = [CUOTA, _pendiente("001", "Sueldo básico", BBVA)]
+    sin_nada = _recibo([_linea("Sueldo básico", 2500000, codigo="001")], BBVA, 2500000, 0, 2500000)
+    d = next(x for x in V.validar(cat, [FORMULA_CUOTA], sin_nada)["discrepancias"]
+             if x["tipo"] == "concepto_faltante")
+    assert d["detalle"] == "Sin cuota de aporte sindical." and not d["aporte_solidario"]
+
+    solidario = _recibo([_linea("Sueldo básico", 2500000, codigo="001"),
+                         _linea("Aporte solidario CCT 18/75", 25000, "descuentos", "515",
+                                "aporte_trabajador")],
+                        BBVA, 2500000, 25000, 2475000)
+    d = next(x for x in V.validar(cat, [FORMULA_CUOTA], solidario)["discrepancias"]
+             if x["tipo"] == "concepto_faltante")
+    assert d["detalle"] == "Con aporte solidario, sin cuota de aporte sindical."
+    assert d["aporte_solidario"] and d["cuota_sindical"]
+
+
+def test_otro_concepto_faltante_sigue_con_su_texto():
+    formula = {**FORMULA_CUOTA, "target": "JUBILACION", "descripcion": "Jubilación 11%",
+               "expr": "0.11 * base_remunerativa"}
+    cat = [JUBILACION, _pendiente("001", "Sueldo básico", BBVA)]
+    rec = _recibo([_linea("Sueldo básico", 2500000, codigo="001")], BBVA, 2500000, 0, 2500000)
+    d = next(x for x in V.validar(cat, [formula], rec)["discrepancias"] if x["tipo"] == "concepto_faltante")
+    assert d["detalle"] == "El recibo no incluye 'Jubilación 11%'."

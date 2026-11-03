@@ -9668,6 +9668,14 @@ para la IA, el aporte solidario de convenio (el del no afiliado) también es
 además del de afiliación, la etiqueta no alcanza y no se elige ninguno (la
 línea queda pendiente para que el sindicato la confirme en Conceptos).
 
+**El texto de la cuota que falta** (decisión de SDN, 2026-11-03): la regla de
+la cuota se le sigue exigiendo a todos, también al no afiliado, pero el
+recibo ya no dice «El recibo no incluye 'Asoc Bancaria'» sino «Sin cuota de
+aporte sindical.» o, si trae aporte solidario (concepto de convenio o
+«solidari» en el nombre), «Con aporte solidario, sin cuota de aporte
+sindical.» (`validador.detalle_cuota_faltante`; la discrepancia lleva además
+`cuota_sindical` y `aporte_solidario`). Las demás reglas conservan su texto.
+
 **2. Códigos provisorios que chocaban.** Un recibo sin códigos (Galicia) recibe
 un código inventado por concepto: eran las 12 primeras letras del nombre, y
 «Antigüedad (16 años)» y «Antigüedad (24 años)» daban los dos `NUEVO-ANTIGUEDAD

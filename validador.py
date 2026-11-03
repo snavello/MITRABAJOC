@@ -362,6 +362,33 @@ def generico_de_categoria(categoria_universal, conceptos) -> dict | None:
     return None
 
 
+def es_cuota_de_afiliacion(codigo, conceptos) -> bool:
+    """¿El código de esta regla es la cuota sindical del sindicato? El genérico
+    marcado como cuota de afiliación, o el código universal de la cuota."""
+    codigo = _clave(codigo)
+    if codigo == CATEGORIAS_UNIVERSALES["cuota_sindical"]:
+        return True
+    return any(isinstance(c, dict) and not c.get("cuit_empleador")
+               and _clave(c.get("codigo")) == codigo and c.get("categoria_sindical") == "afiliacion"
+               for c in conceptos)
+
+
+def trae_aporte_solidario(lineas: list, matcheadas: list) -> bool:
+    """¿El recibo trae un aporte solidario de convenio (el que paga el no
+    afiliado)? Por el concepto (`categoria_sindical = "convenio"`) o por el
+    nombre impreso."""
+    if any((m.get("concepto") or {}).get("categoria_sindical") == "convenio" for m in matcheadas):
+        return True
+    return any("SOLIDARI" in normalizar(ln.get("descripcion")) for ln in lineas if isinstance(ln, dict))
+
+
+def detalle_cuota_faltante(con_solidario: bool) -> str:
+    """El texto de una cuota sindical que el recibo no trae (definido por SDN,
+    2026-11-03): la regla se le exige a todos, y el texto dice qué pasó."""
+    return ("Con aporte solidario, sin cuota de aporte sindical." if con_solidario
+            else "Sin cuota de aporte sindical.")
+
+
 def matchear_lineas(lineas: list, idx: dict):
     """Matchea cada línea del recibo contra el catálogo (por código o por
     nombre/alias normalizado). Si una línea no matchea así pero la IA la
@@ -835,10 +862,18 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             # No figura la línea: se retuvo 0, que es menos de lo esperado.
             if sujeto_a_tope:
                 conceptos_tope_retuvo_de_menos.append(f["descripcion"])
-            discrepancias.append({
-                "tipo": "concepto_faltante", "codigo": codigo,
-                "detalle": f"El recibo no incluye '{f['descripcion']}'.",
-            })
+            if es_cuota_de_afiliacion(codigo, conceptos):
+                con_solidario = trae_aporte_solidario(lineas, matcheadas)
+                discrepancias.append({
+                    "tipo": "concepto_faltante", "codigo": codigo, "cuota_sindical": True,
+                    "aporte_solidario": con_solidario,
+                    "detalle": detalle_cuota_faltante(con_solidario),
+                })
+            else:
+                discrepancias.append({
+                    "tipo": "concepto_faltante", "codigo": codigo,
+                    "detalle": f"El recibo no incluye '{f['descripcion']}'.",
+                })
             continue
 
         variables_f = variables
