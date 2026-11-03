@@ -166,3 +166,38 @@ def test_otro_concepto_faltante_sigue_con_su_texto():
     rec = _recibo([_linea("Sueldo básico", 2500000, codigo="001")], BBVA, 2500000, 0, 2500000)
     d = next(x for x in V.validar(cat, [formula], rec)["discrepancias"] if x["tipo"] == "concepto_faltante")
     assert d["detalle"] == "El recibo no incluye 'Jubilación 11%'."
+
+
+# ------------------- 4. lo no remunerativo impreso entre los haberes ------
+def test_lo_no_remunerativo_entre_los_haberes_no_suma_a_la_base():
+    """Galicia imprime «Compensación no remunerativa» en la columna de haberes.
+    El concepto lo dio de alta la IA como remunerativo y sumaba $120.000 a la
+    base de los aportes en todos sus recibos (galicia/27425555478_2026-07:
+    esperaba jubilación $473.380,02 y la correcta es $460.180,02)."""
+    formula = {**FORMULA_CUOTA, "target": "JUBILACION", "descripcion": "Jubilación 11%",
+               "expr": "0.11 * base_remunerativa", "tolerancia": 5000.0}
+    lineas = [_linea("Sueldo básico", 3429061.28), _linea("Antigüedad (17 años)", 582940.42),
+              _linea("Adicional por título", 171453.06), _linea("Compensación no remunerativa", 120000.0),
+              _linea("Jubilación 11%", 460180.02, "descuentos", tipo="aporte_trabajador", cat="jubilacion")]
+    recibo = _recibo(lineas, GALICIA, 4303454.76, 460180.02, 3843274.74, "2026-07")
+    # Como quedó en Pruebas: dada de alta remunerativa desde un recibo anterior.
+    pendiente = _pendiente("NUEVO-COMPENSACION NO REMUNE", "Compensación no remunerativa", GALICIA)
+    otros = [_pendiente(n["codigo"], n["descripcion"], GALICIA, n["tipo"])
+             for n in V.detectar_nuevos([JUBILACION, pendiente], lineas, GALICIA)]
+    res = V.validar([JUBILACION, pendiente] + otros, [formula], recibo)
+    assert round(res["totales"]["remunerativo"], 2) == 4183454.76
+    assert res["estado"] == "OK", res["discrepancias"]
+    # Si el sindicato YA lo revisó y dijo que es remunerativo, manda el catálogo.
+    revisado = {**pendiente, "pendiente_revision": False}
+    res = V.validar([JUBILACION, revisado] + otros, [formula], recibo)
+    assert round(res["totales"]["remunerativo"], 2) == 4303454.76
+
+
+def test_un_concepto_nuevo_que_dice_no_remunerativo_nace_no_remunerativo():
+    nuevos = V.detectar_nuevos([], [_linea("Compensación no remunerativa", 120000.0),
+                                    _linea("Suma no rem. acuerdo", 50000.0),
+                                    _linea("Sueldo básico", 1000.0)], GALICIA)
+    por = {n["descripcion"]: n["remunerativo"] for n in nuevos}
+    assert por == {"Compensación no remunerativa": False, "Suma no rem. acuerdo": False,
+                   "Sueldo básico": True}
+    assert not V.dice_no_remunerativo("Remuneración normal y habitual")
