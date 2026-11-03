@@ -84,9 +84,12 @@ LECTURA_MINIMA_MS = 1000
 # llegaban juntos al mismo worker lo mataban con "double free or corruption"
 # o lo dejaban colgado (encontrado el 2026-11-02 con el lote bancario,
 # PLAN_PRUEBAS_BANCARIA.md §7). TODO uso de pypdfium2 -- abrir, leer, dibujar
-# y cerrar -- va adentro de este candado. Cuesta poco: un recibo digital se
-# lee y se dibuja en unos 50 ms.
-_candado_pdf = threading.Lock()
+# y cerrar -- va adentro de este candado, y lo que se crea (página, texto,
+# bitmap) se CIERRA adentro: si lo cerrara el recolector de basura, el
+# destructor de C correría en cualquier hilo y fuera del candado.
+# Reentrante porque `_palabras_pagina` corre adentro de `palabras_pdf`.
+# Cuesta poco: un recibo digital se lee y se dibuja en ~30-50 ms.
+_candado_pdf = threading.RLock()
 
 
 def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]]:
@@ -99,7 +102,14 @@ def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]
     with _candado_pdf:
         pdf = pdfium.PdfDocument(contenido)
         try:
-            return [_palabras_pagina(pdf[i], i, escala) for i in range(len(pdf))]
+            salida = []
+            for i in range(len(pdf)):
+                pagina = pdf[i]
+                try:
+                    salida.append(_palabras_pagina(pagina, i, escala))
+                finally:
+                    pagina.close()
+            return salida
         finally:
             pdf.close()
 
@@ -107,6 +117,13 @@ def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]
 def _palabras_pagina(pagina, n: int, escala: float) -> list[Palabra]:
     alto_pag = pagina.get_height()
     tp = pagina.get_textpage()
+    try:
+        return _palabras_de_textos(tp, alto_pag, n, escala)
+    finally:
+        tp.close()
+
+
+def _palabras_de_textos(tp, alto_pag: float, n: int, escala: float) -> list[Palabra]:
     palabras: list[Palabra] = []
     actual: list[tuple[str, tuple]] = []
 
@@ -138,7 +155,6 @@ def _palabras_pagina(pagina, n: int, escala: float) -> list[Palabra]:
                 cerrar()
         actual.append((ch, caja))
     cerrar()
-    tp.close()
     return palabras
 
 
@@ -149,7 +165,7 @@ def imagenes_pdf(contenido: bytes, escala: float = ESCALA) -> list:
     with _candado_pdf:
         pdf = pdfium.PdfDocument(contenido)
         try:
-            return [pdf[i].render(scale=escala).to_pil().convert("RGB") for i in range(len(pdf))]
+            return [_render(pdf, i, escala) for i in range(len(pdf))]
         finally:
             pdf.close()
 
@@ -161,9 +177,24 @@ def imagen_pdf(contenido: bytes, pagina: int = 0, escala: float = ESCALA):
     with _candado_pdf:
         pdf = pdfium.PdfDocument(contenido)
         try:
-            return pdf[pagina].render(scale=escala).to_pil().convert("RGB")
+            return _render(pdf, pagina, escala)
         finally:
             pdf.close()
+
+
+def _render(pdf, n: int, escala: float):
+    """La página `n` como imagen PIL propia (`convert` copia los píxeles: no
+    queda nada apuntando a la memoria de PDFium). Se llama con el candado
+    tomado y cierra el bitmap y la página antes de devolver."""
+    pagina = pdf[n]
+    try:
+        bitmap = pagina.render(scale=escala)
+        try:
+            return bitmap.to_pil().convert("RGB")
+        finally:
+            bitmap.close()
+    finally:
+        pagina.close()
 
 
 def abrir_imagen(contenido: bytes):
