@@ -53,6 +53,17 @@ def test_los_errores_a_proposito_y_lo_que_se_espera(lote):
     assert L.esperado(errores["CUIL_DV_INVALIDO"]) == "E-RECIBO-04"
 
 
+def test_los_recibos_que_superan_el_tope_se_esperan_con_diferencias(lote):
+    """El generador del lote no aplicó el tope de aportes: la app lo marca, con
+    razón (prueba piloto del 2026-11-03, 5 de 10). 271 de los 600."""
+    filas = L.manifiesto()
+    sobre = [f for f in filas if L.supera_tope(f)]
+    assert len(sobre) == 271
+    assert all(L.esperado(f) == "CON_DISCREPANCIAS" for f in sobre if not f["error_intencional"])
+    debajo = next(f for f in filas if not L.supera_tope(f) and not f["error_intencional"])
+    assert L.esperado(debajo) == "OK"
+
+
 def test_la_muestra_es_siempre_la_misma_reparte_y_lleva_los_errores(lote):
     filas = L.manifiesto()
     a, b = L.muestra(filas, 60), L.muestra(filas, 60)

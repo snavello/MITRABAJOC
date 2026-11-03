@@ -98,8 +98,30 @@ def solo_digitos(cuil: str) -> str:
     return "".join(c for c in (cuil or "") if c.isdigit())
 
 
+# Lo que el lote paga como no remunerativo: $ 120.000 en los 600 recibos
+# (verificado leyendo los 480 PDF el 2026-11-03).
+NO_REMUNERATIVO = 120000.0
+
+
+def supera_tope(fila: dict) -> bool:
+    """¿El remunerativo de este recibo pasa el tope de la seguridad social?
+    El generador del lote calculó los aportes sobre el sueldo completo
+    siempre, así que en esos recibos la app marca, con razón, que se retuvo de
+    más (alerta `tope_no_aplicado` + diferencias en las fórmulas). Son 271 de
+    los 600: prueba piloto del 2026-11-03."""
+    import grilla_bancaria
+    t = grilla_bancaria.tope_ss(fila["periodo"])
+    return bool(t) and float(fila["total_haberes"]) - NO_REMUNERATIVO > float(t["maximo"])
+
+
 def esperado(fila: dict) -> str:
-    return ESPERADO_POR_ERROR.get(fila.get("error_intencional") or "", "CON_DISCREPANCIAS")
+    """Lo que la app debería concluir de este recibo. Un recibo que supera el
+    tope tiene un error real (aportes sin tope) aunque el manifiesto no lo
+    marque como error a propósito."""
+    error = fila.get("error_intencional") or ""
+    if not error and supera_tope(fila):
+        return "CON_DISCREPANCIAS"
+    return ESPERADO_POR_ERROR.get(error, "CON_DISCREPANCIAS")
 
 
 def muestra(filas: list[dict], n: int, incluir_errores: bool = True) -> list[dict]:

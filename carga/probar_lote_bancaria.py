@@ -9,9 +9,10 @@ cuánto costaría. A mano, nunca en CI, nunca contra la demo.
 
 El modelo NO se elige acá: es el que tenga puesto la app en `/plataforma` →
 Uso de IA → Modelos → "Lectura de recibos". La corrida lleva una `--etiqueta`
-(ej. `sonnet-5-5`) para poder comparar después; si hay DATABASE_URL, además
-se lee de UsoIA qué modelo corrió de verdad, los tokens y el costo, y si
-corrió el mock (`MOCK_EXTRACTOR=1`) la corrida se marca inválida.
+(ej. `sonnet-5-5`) para poder comparar después; además
+se lee de UsoIA qué modelo corrió de verdad, los tokens y el costo, si se da
+`USO_IA_DATABASE_URL` (la base del entorno medido, no la local). Si el
+servidor responde con el mock (`MOCK_EXTRACTOR=1`) la corrida se corta.
 
 Uso:
     python carga/lote_bancaria.py extraer
@@ -207,9 +208,14 @@ def probar_uno(base: str, fila: dict, clave: str, validar: bool) -> dict:
 
 
 def uso_ia_desde(inicio: str, cuils: set) -> dict | None:
-    """Modelo(s), tokens y costo de UsoIA para esta corrida (si hay DATABASE_URL)."""
-    if not os.getenv("DATABASE_URL"):
+    """Modelo(s), tokens y costo de UsoIA para esta corrida. Solo con
+    `USO_IA_DATABASE_URL` (la base del entorno MEDIDO): el DATABASE_URL de la
+    PC o del contenedor es la base local, que no registró nada de esta corrida.
+    Sin ella, el costo se lee en /plataforma → Uso de IA → Consumo y costo."""
+    url = os.getenv("USO_IA_DATABASE_URL")
+    if not url:
         return None
+    os.environ["DATABASE_URL"] = url
     from sqlmodel import select
     import db
     import precios_ia

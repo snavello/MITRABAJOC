@@ -1,0 +1,37 @@
+== bbva/20185331424_2026-04.pdf
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== bbva/20210333577_2026-04.pdf
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== galicia/20202038361_2026-01.pdf
+   formula | Ley 19.032 (PAMI) = 3% del remunerativo: esperado $114,701.19, figura $159,648.29 (diferencia $44,947.10).
+   formula | Aporte jubilacion : esperado $420,571.02, figura $585,377.08 (diferencia $164,806.06).
+   formula | Obra Social = 3% del remunerativo: esperado $114,701.19, figura $159,648.29 (diferencia $44,947.10).
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== galicia/20311447034_2025-12.pdf
+   formula | Ley 19.032 (PAMI) = 3% del remunerativo: esperado $111,936.36, figura $124,150.46 (diferencia $12,214.10).
+   formula | Aporte jubilacion : esperado $410,433.32, figura $455,218.35 (diferencia $44,785.03).
+   formula | Obra Social = 3% del remunerativo: esperado $111,936.36, figura $124,150.46 (diferencia $12,214.10).
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+   total_inconsistente | Suma de remuneraciones ($3,877,810.84) no coincide con el impreso ($4,258,348.65). Puede ser un error de lectura; conviene revisar la foto antes de reportar.
+   total_inconsistente | Suma de neto ($3,086,674.60) no coincide con el impreso ($3,467,212.41). Puede ser un error de lectura; conviene revisar la foto antes de reportar.
+== galicia/20354674808_2026-07.pdf
+   formula | Ley 19.032 (PAMI) = 3% del remunerativo: esperado $135,287.02, figura $158,351.68 (diferencia $23,064.66).
+   formula | Aporte jubilacion : esperado $496,052.42, figura $580,622.84 (diferencia $84,570.42).
+   formula | Obra Social = 3% del remunerativo: esperado $135,287.02, figura $158,351.68 (diferencia $23,064.66).
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== galicia/27224480232_2026-03.pdf
+   formula | Ley 19.032 (PAMI) = 3% del remunerativo: esperado $90,156.05, figura $101,270.58 (diferencia $11,114.53).
+   formula | Aporte jubilacion : esperado $330,572.19, figura $371,325.46 (diferencia $40,753.27).
+   formula | Obra Social = 3% del remunerativo: esperado $90,156.05, figura $101,270.58 (diferencia $11,114.53).
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+   total_inconsistente | Suma de remuneraciones ($3,005,201.74) no coincide con el impreso ($3,495,686.04). Puede ser un error de lectura; conviene revisar la foto antes de reportar.
+   total_inconsistente | Suma de neto ($2,358,971.40) no coincide con el impreso ($2,849,455.70). Puede ser un error de lectura; conviene revisar la foto antes de reportar.
+== industrial/27283427701_2026-01.pdf
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== industrial/27409519275_2025-10.pdf
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== industrial/27409519275_2025-11.pdf
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.
+== nacion/20292831545_2026-05.pdf
+   formula | Aporte jubilacion : esperado $473,398.09, figura $489,649.50 (diferencia $16,251.41).
+   concepto_faltante | El recibo no incluye 'Asoc Bancaria'.

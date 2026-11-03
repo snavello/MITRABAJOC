@@ -1,0 +1,46 @@
+{
+ "recibos": 10,
+ "aciertos": 0,
+ "leidos": 10,
+ "lectura_ok": 10,
+ "errores_app": {},
+ "errores_lote_detectados": 0,
+ "errores_lote": 0,
+ "ms_leer_p50": 7547.5,
+ "ms_leer_p95": 8327,
+ "por": {
+  "banco": {
+   "bbva": {
+    "recibos": 2,
+    "aciertos": 0,
+    "lectura_ok": 2
+   },
+   "galicia": {
+    "recibos": 4,
+    "aciertos": 0,
+    "lectura_ok": 4
+   },
+   "industrial": {
+    "recibos": 3,
+    "aciertos": 0,
+    "lectura_ok": 3
+   },
+   "nacion": {
+    "recibos": 1,
+    "aciertos": 0,
+    "lectura_ok": 1
+   }
+  },
+  "formato": {
+   "pdf": {
+    "recibos": 10,
+    "aciertos": 0,
+    "lectura_ok": 10
+   }
+  }
+ },
+ "uso_ia": {},
+ "etiqueta": "sonnet-5-5",
+ "base_url": "https://mitrabajo-pruebas.onrender.com",
+ "inicio": "2026-11-03 16:34"
+}

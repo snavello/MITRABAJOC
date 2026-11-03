@@ -173,6 +173,33 @@ python carga/probar_lote_bancaria.py --base-url https://mitrabajo-pruebas.onrend
     --etiqueta sonnet-5-5 --azar 10 --semilla 20261103 --paralelo 1 --si
 ```
 
+**Resultado (2026-11-03 16:34, Pruebas, Sonnet 5.5, mock apagado)**, en
+`carga/log/lote_bancaria/2026-11-03_1634_sonnet-5-5.*`:
+
+- **Tiempos** (de punta a punta, visto desde afuera: subida + tapado + IA +
+  respuesta): lectura entre 6,5 y 8,3 s, **mediana 7,5 s, p95 8,3 s**; la
+  validación, 0,1 a 0,4 s. Es la mitad de los 15 s del mock de septiembre:
+  para la carga con Sonnet 5.5, `MOCK_EXTRACTOR_LATENCIA=8`.
+- **Lectura: 10 de 10 exactas** (los tres totales y el período).
+- **Validación: 0 de 10 "OK"**, por tres causas que no son de lectura:
+  1. **Configuración de La Bancaria en Pruebas** (10 de 10): la regla `CUOTA`
+     («Asoc Bancaria», 2%) espera el concepto `CUOTA`, y la línea de cada banco
+     («Cuota sindical Asoc. Bancaria 2%», código 510 o sin código) no está
+     vinculada a él. Es el paso que haría un sindicato en Conceptos con los
+     primeros recibos de cada banco; hay que hacerlo antes de A1.
+  2. **El lote** (5 de 10): el generador calculó los aportes sin el tope de la
+     seguridad social, y en los sueldos altos o con aguinaldo la app marca, con
+     razón, que se retuvo de más. Son **271 de los 600**; `lote_bancaria.esperado`
+     ya los espera con diferencias.
+  3. **Un defecto de la app** (2 de 10, Galicia): sin códigos impresos, la app
+     arma el código provisorio con las 12 primeras letras del nombre, y
+     «Antigüedad (16 años)» choca con el de «Antigüedad (24 años)». El concepto
+     nuevo no se crea, la línea no encaja con ninguno y **sale de la suma**:
+     total inconsistente falso y base de aportes más chica.
+- **Costo**: no se leyó de UsoIA (el script miraba la base local; corregido,
+  ahora pide `USO_IA_DATABASE_URL`). Estimado US$ 0,32; el real está en
+  `/plataforma` → Uso de IA.
+
 ## 6. Modelos de lectura
 
 Para empezar, **Sonnet 5.5**; **Haiku 5.5** como alternativa a comparar (los dos
