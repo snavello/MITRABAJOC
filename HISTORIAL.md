@@ -9593,3 +9593,32 @@ Tests: `test_publicaciones_color.py`; `test_noticias.py` y
 `test_beneficios.py` miran ahora la normalizada en la portada;
 `test_rutas_sin_sesion.py` y `test_regularizar_cuit.py` con las rutas y la
 columna nuevas declaradas.
+
+## Dos PDF a la vez tumbaban el servidor (2026-11-02, Trabajador 0.57.02)
+
+Lo encontró la primera prueba local de los recursos del plan de La Bancaria
+(`PLAN_PRUEBAS_BANCARIA.md` §7, en la rama `claude/busy-fermi-pvxggf`): con `carga/probar_lote_bancaria.py
+--paralelo 8` contra un uvicorn con `ENMASCARADO=activo`, el proceso murió dos
+veces sin dejar traceback, solo `double free or corruption` de glibc.
+
+**Causa.** `/api/leer` y `/api/aportes` corren `preparacion.preparar` en el
+threadpool (`run_in_threadpool`), y el enmascarado de un PDF digital usa
+`pypdfium2` (`lectores.palabras_pdf`, `imagen_pdf`, `imagenes_pdf`). PDFium no
+admite uso simultáneo desde varios hilos: dos PDF en el mismo worker al mismo
+tiempo corrompen su memoria. Aislado, ocho hilos leyendo PDF dieron una
+corrida colgada y dos caídas en tres. Las fotos van por Tesseract, que ya
+tenía su propio cupo, y por eso el test de carga de septiembre (solo JPG)
+nunca lo vio. Pruebas y Demo corren con el enmascarado activo desde
+2026-09-24 y 2026-10-23: el riesgo estaba en los dos.
+
+**Corrección.** Un `threading.Lock` de módulo (`lectores._candado_pdf`) que
+envuelve TODO uso de pypdfium2: abrir, leer, dibujar y cerrar. Lo que sale de
+ahí son copias (palabras y imágenes PIL), así que nada de PDFium vive fuera
+del candado. Cuesta poco: ~33 ms por recibo entre leer y dibujar, y la espera
+cuenta dentro del presupuesto del enmascarado como cualquier otra. Un módulo
+nuevo que use pypdfium2 tiene que tomar el mismo candado.
+
+**Verificado.** `test_lectores.py::test_pdf_desde_varios_hilos_a_la_vez_no_tumba_el_proceso`
+(8 hilos × 25 lecturas; sin el candado el proceso del test se cae), 320
+lecturas en 8 hilos sin caída, y 5 corridas de 60 recibos con 8 en paralelo
+contra el servidor local: 300 subidas, 0 errores (antes se caía en 2 de 5).

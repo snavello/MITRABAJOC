@@ -79,6 +79,15 @@ LECTURA_MINIMA_MS = 1000
 
 # ======================= PDF digital =======================
 
+# PDFium no admite uso simultáneo desde varios hilos (lo dice pypdfium2), y
+# las rutas de lectura corren el enmascarado en el threadpool: dos PDF que
+# llegaban juntos al mismo worker lo mataban con "double free or corruption"
+# o lo dejaban colgado (encontrado el 2026-11-02 con el lote bancario,
+# PLAN_PRUEBAS_BANCARIA.md §7). TODO uso de pypdfium2 -- abrir, leer, dibujar
+# y cerrar -- va adentro de este candado. Cuesta poco: un recibo digital se
+# lee y se dibuja en unos 50 ms.
+_candado_pdf = threading.Lock()
+
 
 def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]]:
     """Una lista de palabras por página, en píxeles de la imagen que sale de
@@ -87,11 +96,12 @@ def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]
     tiene que leer el OCR."""
     import pypdfium2 as pdfium
 
-    pdf = pdfium.PdfDocument(contenido)
-    try:
-        return [_palabras_pagina(pdf[i], i, escala) for i in range(len(pdf))]
-    finally:
-        pdf.close()
+    with _candado_pdf:
+        pdf = pdfium.PdfDocument(contenido)
+        try:
+            return [_palabras_pagina(pdf[i], i, escala) for i in range(len(pdf))]
+        finally:
+            pdf.close()
 
 
 def _palabras_pagina(pagina, n: int, escala: float) -> list[Palabra]:
@@ -136,22 +146,24 @@ def imagenes_pdf(contenido: bytes, escala: float = ESCALA) -> list:
     """Cada página como imagen PIL, a la misma escala que `palabras_pdf`."""
     import pypdfium2 as pdfium
 
-    pdf = pdfium.PdfDocument(contenido)
-    try:
-        return [pdf[i].render(scale=escala).to_pil().convert("RGB") for i in range(len(pdf))]
-    finally:
-        pdf.close()
+    with _candado_pdf:
+        pdf = pdfium.PdfDocument(contenido)
+        try:
+            return [pdf[i].render(scale=escala).to_pil().convert("RGB") for i in range(len(pdf))]
+        finally:
+            pdf.close()
 
 
 def imagen_pdf(contenido: bytes, pagina: int = 0, escala: float = ESCALA):
     """Una sola página como imagen PIL (la IA hoy recibe solo la primera)."""
     import pypdfium2 as pdfium
 
-    pdf = pdfium.PdfDocument(contenido)
-    try:
-        return pdf[pagina].render(scale=escala).to_pil().convert("RGB")
-    finally:
-        pdf.close()
+    with _candado_pdf:
+        pdf = pdfium.PdfDocument(contenido)
+        try:
+            return pdf[pagina].render(scale=escala).to_pil().convert("RGB")
+        finally:
+            pdf.close()
 
 
 def abrir_imagen(contenido: bytes):
