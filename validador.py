@@ -339,7 +339,9 @@ def generico_de_categoria(categoria_universal, conceptos) -> dict | None:
     genérico que marcó como cuota de afiliación (`categoria_sindical =
     "afiliacion"`), si hay uno solo: así se llama en La Bancaria (`CUOTA`) y en
     cualquier sindicato dado de alta a mano. Antes la cuota de un banco nuevo
-    no se vinculaba nunca y su regla decía «el recibo no incluye la cuota»."""
+    no se vinculaba nunca y su regla decía «el recibo no incluye la cuota».
+    Si además hay un genérico de convenio (aporte solidario), no se elige: la
+    etiqueta de la IA no distingue uno de otro."""
     codigo = CATEGORIAS_UNIVERSALES.get(categoria_universal)
     if not codigo:
         return None
@@ -350,7 +352,12 @@ def generico_de_categoria(categoria_universal, conceptos) -> dict | None:
             return c
     if categoria_universal == "cuota_sindical":
         cuotas = [c for c in genericos.values() if c.get("categoria_sindical") == "afiliacion"]
-        if len(cuotas) == 1:
+        de_convenio = [c for c in genericos.values() if c.get("categoria_sindical") == "convenio"]
+        # Para la IA, el aporte solidario de convenio (el del no afiliado) también
+        # es "un aporte al gremio". Si el sindicato tiene cargados los dos, la
+        # etiqueta no alcanza para saber cuál es: no se elige, y la línea queda
+        # pendiente para que el sindicato la confirme en Conceptos.
+        if len(cuotas) == 1 and not de_convenio:
             return cuotas[0]
     return None
 

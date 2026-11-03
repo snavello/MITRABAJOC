@@ -9662,7 +9662,11 @@ para la cuota, si no está, el genérico marcado `categoria_sindical =
 `/api/validar`, la sugerencia de Aprendizaje y `matchear_lineas`, que además
 valida contra la regla del genérico un concepto del banco todavía pendiente y
 sin vincular (marcado `chequeo_automatico`): así los conceptos que ya quedaron
-mal creados en Pruebas también se arreglan sin tocar la base.
+mal creados en Pruebas también se arreglan sin tocar la base. **Resguardo**:
+para la IA, el aporte solidario de convenio (el del no afiliado) también es
+«un aporte al gremio»; si el sindicato tiene cargado un genérico de convenio
+además del de afiliación, la etiqueta no alcanza y no se elige ninguno (la
+línea queda pendiente para que el sindicato la confirme en Conceptos).
 
 **2. Códigos provisorios que chocaban.** Un recibo sin códigos (Galicia) recibe
 un código inventado por concepto: eran las 12 primeras letras del nombre, y

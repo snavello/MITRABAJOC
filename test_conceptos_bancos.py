@@ -62,6 +62,26 @@ def test_la_cuota_se_vincula_al_concepto_marcado_como_afiliacion():
     assert V.generico_de_categoria(None, [CUOTA]) is None
 
 
+def test_con_aporte_solidario_cargado_no_se_elige_solo():
+    """Para la IA, el aporte solidario de convenio también es «un aporte al
+    gremio»: si el sindicato tiene los dos conceptos, no se adivina cuál es."""
+    solidario = {**CUOTA, "codigo": "SOLIDARIO", "nombre": "Aporte solidario",
+                 "categoria_sindical": "convenio"}
+    assert V.generico_de_categoria("cuota_sindical", [CUOTA, solidario]) is None
+    # El código universal exacto sigue mandando.
+    universal = {**CUOTA, "codigo": "CUOTA_SINDICAL", "categoria_sindical": None}
+    assert V.generico_de_categoria("cuota_sindical", [universal, solidario]) is universal
+    # Y la línea queda sin vincular (la regla de la cuota no la toma).
+    cat = [CUOTA, solidario, _pendiente("515", "Aporte solidario CCT 18/75", BBVA, "descuento"),
+           _pendiente("001", "Sueldo básico", BBVA)]
+    recibo = _recibo([_linea("Sueldo básico", 2500000, codigo="001"),
+                      _linea("Aporte solidario CCT 18/75", 25000, "descuentos", "515",
+                             "aporte_trabajador", "cuota_sindical")],
+                     BBVA, 2500000, 25000, 2475000)
+    m, _ = V.matchear_lineas(recibo["lineas"], V.indexar_conceptos(cat, BBVA))
+    assert not next(x for x in m if x["codigo"] == "515").get("chequeo_automatico")
+
+
 def test_la_cuota_de_un_banco_nuevo_ya_pendiente_se_valida_contra_la_regla():
     """El caso de los 10 recibos: el banco ya tenía su `510` pendiente y sin
     vincular. Antes: «El recibo no incluye 'Asoc Bancaria'»."""
