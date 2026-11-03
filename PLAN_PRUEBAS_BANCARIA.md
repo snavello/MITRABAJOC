@@ -200,6 +200,17 @@ python carga/probar_lote_bancaria.py --base-url https://mitrabajo-pruebas.onrend
   ahora pide `USO_IA_DATABASE_URL`). Estimado US$ 0,32; el real está en
   `/plataforma` → Uso de IA.
 
+**Variantes del nombre de la cuota (2026-11-03, Sonnet 5.5, 8 lecturas en
+Pruebas)**: `carga/variantes_cuota.py`, resultado en
+`carga/log/lote_bancaria/2026-11-03_variantes_cuota.json`. La IA etiquetó como
+cuota sindical las 7 formas de llamarla («Cuota gremial», «Aporte sindical»,
+«Asoc. Bancaria», «La Bancaria 2%», «Cuota afiliado AB», «Retención gremio»,
+«Cuota sindical»), y NO etiquetó «Aporte solidario CCT 18/75» ni las trampas
+(«Seguro de sepelio Asoc. Bancaria», «Cuota préstamo personal»). Con la app
+corregida (snavello/MITRABAJOC#196) las 7 dan OK. Queda abierto: la regla `CUOTA` de
+La Bancaria se le exige también al no afiliado, que paga aporte solidario
+(«El recibo no incluye 'Asoc Bancaria'»).
+
 ## 6. Modelos de lectura
 
 Para empezar, **Sonnet 5.5**; **Haiku 5.5** como alternativa a comparar (los dos
