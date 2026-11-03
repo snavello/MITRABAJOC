@@ -43,41 +43,104 @@ def test_pdf_digital_coincide_con_los_datos_de_prueba():
     assert leidas == [x[0] for x in d["palabras"]]
 
 
-def test_pdf_desde_varios_hilos_a_la_vez_no_tumba_el_proceso():
-    """PDFium no admite uso simultáneo: sin el candado, ocho hilos leyendo y
-    dibujando PDF a la vez mataban el proceso con "double free or corruption"
-    (2026-11-02, plan de pruebas de La Bancaria). Con el candado terminan todos y
-    dan exactamente lo mismo que de a uno."""
-    contenido = PDF.read_bytes()
-    esperado = [[(p.texto, p.x0, p.y0) for p in pag] for pag in lectores.palabras_pdf(contenido)]
-    tamano = lectores.imagen_pdf(contenido).size
-    errores, resultados = [], []
-
-    def leer():
-        try:
-            for _ in range(25):
-                pags = lectores.palabras_pdf(contenido)
-                resultados.append([[(p.texto, p.x0, p.y0) for p in pag] for pag in pags])
-                assert lectores.imagen_pdf(contenido).size == tamano
-                assert len(lectores.imagenes_pdf(contenido)) == 2
-        except Exception as e:  # noqa: BLE001
-            errores.append(e)
-
-    hilos = [threading.Thread(target=leer) for _ in range(8)]
-    for h in hilos:
-        h.start()
-    for h in hilos:
-        h.join(timeout=60)
-    assert not any(h.is_alive() for h in hilos), "un hilo quedó colgado"
-    assert errores == []
-    assert len(resultados) == 8 * 25 and all(r == esperado for r in resultados)
-
-
 def test_pdf_escaneado_no_trae_texto():
     """Un PDF que es solo una imagen devuelve páginas vacías: lo lee el OCR."""
     buf = io.BytesIO()
     Image.new("RGB", (600, 800), "white").save(buf, format="PDF")
     assert lectores.palabras_pdf(buf.getvalue()) == [[]]
+
+
+# ======================= PDF desde varios hilos =======================
+
+# El guion corre en un proceso APARTE: sin el candado, PDFium muere con
+# "double free or corruption" o se cuelga, y eso adentro de pytest se llevaría
+# la suite entera en vez de fallar este test.
+_GUION_HILOS = r"""
+import hashlib, sys, threading
+sys.path.insert(0, sys.argv[1])
+import lectores
+
+archivos = [open(f, "rb").read() for f in sys.argv[2:]]
+
+def huella(c):
+    pal = [(p.texto, round(p.x0, 3), round(p.y0, 3), round(p.x1, 3), round(p.y1, 3), p.pagina)
+           for pag in lectores.palabras_pdf(c) for p in pag]
+    h = hashlib.sha256(repr(pal).encode())
+    for img in [lectores.imagen_pdf(c)] + lectores.imagenes_pdf(c):
+        h.update(repr(img.size).encode())
+        h.update(img.tobytes())
+    return h.hexdigest()
+
+de_a_uno = [huella(c) for c in archivos]
+resultados, errores = {}, []
+
+def trabajar(h):
+    try:
+        for vuelta in range(2):
+            for i, c in enumerate(archivos):
+                resultados[(h, vuelta, i)] = huella(c)
+    except Exception as e:
+        errores.append(repr(e))
+
+hilos = [threading.Thread(target=trabajar, args=(h,)) for h in range(8)]
+[t.start() for t in hilos]
+[t.join() for t in hilos]
+assert not errores, errores
+assert len(resultados) == 8 * 2 * len(archivos)
+distintos = [k for k, v in resultados.items() if v != de_a_uno[k[2]]]
+assert not distintos, distintos
+print("OK", len(resultados))
+"""
+
+
+def test_pdf_desde_varios_hilos_no_rompe_pdfium_y_lee_lo_mismo():
+    """/api/leer y /api/aportes preparan el archivo en el pool de hilos de
+    FastAPI: dos PDF juntos en el mismo worker entran a PDFium a la vez, y
+    PDFium no es thread-safe (2026-11-02: el proceso moría con "double free or
+    corruption" o se colgaba). Ocho hilos leyendo los recibos de prueba tienen
+    que terminar y dar exactamente lo mismo que de a uno."""
+    import subprocess
+    import sys
+    raiz = Path(__file__).parent
+    pdfs = sorted((raiz / "docs" / "recibos-bancaria-prueba").glob("*.pdf")) + [PDF]
+    assert len(pdfs) >= 5
+    r = subprocess.run([sys.executable, "-c", _GUION_HILOS, str(raiz), *map(str, pdfs)],
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and r.stdout.startswith("OK"), (r.returncode, r.stdout, r.stderr[-2000:])
+
+
+def test_pypdfium2_solo_se_usa_en_lectores():
+    """El candado vive en lectores.py: un módulo de la app que importara
+    pypdfium2 por su cuenta volvería a abrir la puerta a la caída."""
+    import ast
+    raiz = Path(__file__).parent
+    afuera = []
+    for py in raiz.glob("*.py"):
+        if py.name == "lectores.py" or py.name.startswith("test_"):
+            continue
+        for nodo in ast.walk(ast.parse(py.read_text(encoding="utf-8"))):
+            nombres = ([a.name for a in nodo.names] if isinstance(nodo, ast.Import)
+                       else [nodo.module or ""] if isinstance(nodo, ast.ImportFrom) else [])
+            if any(n.split(".")[0] == "pypdfium2" for n in nombres):
+                afuera.append(py.name)
+    assert afuera == [], f"usan pypdfium2 sin pasar por el candado de lectores.py: {afuera}"
+
+
+def test_todo_uso_de_pdfium_en_lectores_va_con_el_candado():
+    """Las tres funciones públicas que abren un PDF lo hacen adentro de
+    `with _candado_pdf`."""
+    import ast
+    arbol = ast.parse((Path(__file__).parent / "lectores.py").read_text(encoding="utf-8"))
+    for fn in (n for n in arbol.body if isinstance(n, ast.FunctionDef)):
+        abre = any(isinstance(n, ast.Attribute) and n.attr == "PdfDocument" for n in ast.walk(fn))
+        if not abre:
+            continue
+        candados = [w for w in ast.walk(fn) if isinstance(w, ast.With)
+                    and any(isinstance(i.context_expr, ast.Name) and i.context_expr.id == "_candado_pdf"
+                            for i in w.items)]
+        assert candados, f"{fn.name} abre un PDF sin el candado"
+        assert any(isinstance(n, ast.Attribute) and n.attr == "PdfDocument"
+                   for w in candados for n in ast.walk(w)), f"{fn.name} abre el PDF fuera del candado"
 
 
 # ======================= Foto derecha =======================

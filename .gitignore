@@ -59,3 +59,6 @@ backup_regularizacion_*
 
 # Archivos de trabajo de XSD (capturas, hallazgos, informes): pesan y se regeneran.
 xsd-trabajo/
+
+# Volcados que deja cysignals (tesserocr) cuando un proceso muere
+cysignals_crash_logs/

@@ -9622,3 +9622,21 @@ nuevo que use pypdfium2 tiene que tomar el mismo candado.
 (8 hilos × 25 lecturas; sin el candado el proceso del test se cae), 320
 lecturas en 8 hilos sin caída, y 5 corridas de 60 recibos con 8 en paralelo
 contra el servidor local: 300 subidas, 0 errores (antes se caía en 2 de 5).
+
+**Complemento (2026-11-03, Trabajador 0.57.03).** Una segunda sesión había
+llegado al mismo arreglo en paralelo y se integró encima: (1) lo que se crea
+adentro del candado (página, texto de la página, bitmap del render) se CIERRA
+adentro, para que su destructor de C no corra después en el hilo y el
+momento que elija el recolector, fuera del candado; el candado pasó a
+`RLock` porque `_palabras_pagina` corre dentro de `palabras_pdf`. No se pudo
+hacer caer la versión anterior por ese camino (4 corridas de 8 hilos con
+`gc.collect()` forzado), así que es defensa, no la corrección de un caso
+visto. (2) El test de hilos corre en un proceso APARTE: sin el candado se
+cae ese test y no toda la suite; lee los diez recibos de
+`docs/recibos-bancaria-prueba/` más el ficticio, con palabras, cajas e
+imágenes iguales a las de leer de a uno. (3) Dos guardas con `ast`: ningún
+otro módulo de la app importa pypdfium2 (`extractor.py` y `rag.py` usan
+`pdf2image`, que corre poppler en un proceso aparte, y `pypdf`, Python puro;
+`mapa_funcional.py` solo lo nombra), y toda función de `lectores.py` que abre
+un `PdfDocument` lo hace dentro de `with _candado_pdf`. Medido: ~29 ms por
+recibo con y sin candado; tomarlo sin competencia, ~0,2 µs.
