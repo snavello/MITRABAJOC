@@ -242,3 +242,35 @@ def test_archivos_limite_se_generan_y_se_evaluan(lote, tmp_path):
     assert AL.evaluar(503, {"codigo": "E-SERVIDOR-01"}) == "codigo"
     assert AL.evaluar(422, {"detail": "x"}) == "FALLA"
     assert AL.evaluar(500, {"codigo": "E-INTERNO-00"}) == "FALLA"
+
+
+# ------------------------------------------- tirada al azar por el panel --
+def test_la_muestra_al_azar_se_repite_con_la_misma_semilla(lote):
+    filas = L.manifiesto()
+    a, b = L.muestra_azar(filas, 10, 20261103), L.muestra_azar(filas, 10, 20261103)
+    assert [f["archivo"] for f in a] == [f["archivo"] for f in b] and len(a) == 10
+    assert [f["archivo"] for f in L.muestra_azar(filas, 10, 7)] != [f["archivo"] for f in a]
+
+
+def test_las_claves_cumplen_la_minima_de_la_app():
+    import alta_por_panel as AP
+    import preparar_bancaria as PB
+    import main
+    assert len(AP.clave_de("20-18533142-4")) == len(PB.clave_de("20185331424")) == main.CLAVE_MINIMA
+
+
+def test_alta_por_panel_agrega_al_csv_sin_pisar(tmp_path):
+    import alta_por_panel as AP
+    ruta = tmp_path / "u.csv"
+    AP.guardar([{"cuil": "1", "clave": "a", "banco": "x", "seccional_id": "", "estado": "registrado"}], ruta)
+    AP.guardar([{"cuil": "2", "clave": "b", "banco": "y", "seccional_id": "", "estado": "registrado"},
+                {"cuil": "1", "clave": "c", "banco": "x", "seccional_id": "", "estado": "ya_entraba"}], ruta)
+    filas = {r["cuil"]: r for r in csv.DictReader(open(ruta, encoding="utf-8"))}
+    assert set(filas) == {"1", "2"} and filas["1"]["clave"] == "c"
+
+
+def test_alta_por_panel_se_niega_contra_la_demo():
+    import alta_por_panel as AP
+    with pytest.raises(SystemExit):
+        AP.main(["--base-url", "https://mitrabajo.onrender.com", "--admin-clave", "x",
+                 "--azar", "1", "--semilla", "1"])

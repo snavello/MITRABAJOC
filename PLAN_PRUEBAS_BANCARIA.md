@@ -140,6 +140,7 @@ Además de las pruebas de carga, se prueba **el cambio de plan en sí**:
 |---|---|---|
 | todas | `carga/lote_bancaria.py extraer` / `verificar` | zips → `carga/recibos_bancaria/` (fuera de git) + `k6.json`; controla los 600 y sus CUIL |
 | todas | `carga/preparar_bancaria.py [--si] [--limpiar --si --con-conceptos]` | empadrona a los 50 en La Bancaria (clave = 5 primeros dígitos del CUIL, sin pisar una clave existente, repartidos por seccional) y escribe `carga/usuarios_bancaria.csv`; `--limpiar` borra lo que dejaron las pruebas. Sin `--si` no escribe |
+| todas, sin base | `carga/alta_por_panel.py --base-url … --admin-clave … --azar N --semilla S [--si]` | lo mismo que el anterior pero por la app (alta en el padrón como el admin + registro como el afiliado), para unos pocos CUIL y sin la URL de la base |
 | A1, A4, modelos | `carga/probar_lote_bancaria.py --base-url … --etiqueta … [--muestra N] [--si]` | cada recibo por `/api/leer` + `/api/validar` con la sesión de su CUIL; CSV por recibo y resumen; sin `--si` dice cuánto costaría. Con DATABASE_URL lee de UsoIA el modelo que corrió, tokens y USD, y marca inválida una corrida con el mock |
 | comparar modelos | `probar_lote_bancaria.py --comparar a.csv b.csv` | tabla por corrida (aciertos, lectura exacta, errores detectados, tiempo, USD por recibo) y los recibos donde no coinciden |
 | B1, B2 | `k6/test4_bancaria.js` `ESCENARIO=rafagas` (`FORMATO=pdf\|jpg`) | 200 lectores + ráfagas 2/5/10/20/40 con los recibos del lote, cada uno con su dueño |
@@ -155,6 +156,22 @@ Además de las pruebas de carga, se prueba **el cambio de plan en sí**:
 con La Bancaria), y volcar los tests 3 y 4 al informe comparado
 (`consolidar.py` hoy solo entiende los tests 1 y 2; el 3 y el 4 dejan su
 propio JSON con veredicto).
+
+## 5 bis. Prueba piloto: 10 recibos al azar con Sonnet 5.5
+
+Antes del plan general, una sola tirada para tomar tiempos reales:
+`--azar 10 --semilla 20261103` (9 personas: Galicia, Nación, Industrial,
+BBVA y Santander), secuencial (`--paralelo 1`) para que cada tiempo sea el de
+un recibo solo. Necesita en Pruebas el mock apagado y Sonnet 5.5 en Lectura de
+recibos; costo estimado US$ 0,32.
+
+```
+python carga/lote_bancaria.py extraer
+python carga/alta_por_panel.py --base-url https://mitrabajo-pruebas.onrender.com \
+    --admin-clave <clave del admin de La Bancaria> --azar 10 --semilla 20261103 --si
+python carga/probar_lote_bancaria.py --base-url https://mitrabajo-pruebas.onrender.com \
+    --etiqueta sonnet-5-5 --azar 10 --semilla 20261103 --paralelo 1 --si
+```
 
 ## 6. Modelos de lectura
 

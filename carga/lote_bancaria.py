@@ -125,6 +125,14 @@ def muestra(filas: list[dict], n: int, incluir_errores: bool = True) -> list[dic
     return sorted(elegidos, key=lambda f: f["archivo"])
 
 
+def muestra_azar(filas: list[dict], n: int, semilla: int) -> list[dict]:
+    """`n` recibos al azar, repetibles con la misma `semilla` (así el alta de
+    sus dueños y la corrida eligen exactamente los mismos)."""
+    import random
+    return sorted(random.Random(semilla).sample(list(filas), min(n, len(filas))),
+                  key=lambda f: f["archivo"])
+
+
 def verificar() -> list[str]:
     """Problemas del lote extraído; lista vacía = está todo."""
     import cuit

@@ -21,7 +21,7 @@ Opciones: --sindicato "La Bancaria" (por nombre, sin distinguir mayúsculas),
 Qué hace con cada CUIL:
 - Lo empadrona (Trabajador) con el CUIT del banco como empleador.
 - Nombre y domicilio en la persona (db.guardar_datos_personales).
-- Clave = los 5 primeros dígitos del CUIL (convención de los lotes), SOLO si
+- Clave = los 6 primeros dígitos del CUIL (la mínima de la app), SOLO si
   la cuenta no tenía clave. Si ya tenía una, no se toca y el CSV la deja en
   blanco: ese CUIL no se usa en las pruebas (no pisamos la clave de nadie).
 
@@ -54,7 +54,8 @@ CSV_SALIDA = Path(__file__).resolve().parent / "usuarios_bancaria.csv"
 
 
 def clave_de(cuil: str) -> str:
-    return L.solo_digitos(cuil)[:5]
+    # 6: la clave mínima de la app (main.CLAVE_MINIMA). Igual que alta_por_panel.py.
+    return L.solo_digitos(cuil)[:6]
 
 
 def _sindicato(s, nombre: str) -> Sindicato:

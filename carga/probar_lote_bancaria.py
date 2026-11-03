@@ -54,6 +54,17 @@ HOSTS_PROHIBIDOS = ("mitrabajo.onrender.com", "mitrabajo-demo")
 # prompt de entrada, JSON de ~17 líneas de salida). El costo real sale de UsoIA.
 TOKENS_ESTIMADOS = (5000, 2200)
 
+# El nombre que devuelve extractor._RECIBO_MOCK: si aparece, no hubo lectura real.
+MOCK_NOMBRE = "Demo Carga, Trabajador"
+
+
+PERMITIR_MOCK = False     # --permitir-mock: solo para probar el script contra un servidor local
+
+
+class CorrioElMock(Exception):
+    """El servidor tiene MOCK_EXTRACTOR=1: la corrida no mide nada."""
+
+
 CAMPOS = ["archivo", "banco", "formato", "cuil", "periodo", "error_intencional",
           "esperado", "obtenido", "acierto", "lectura_ok", "dif_haberes",
           "dif_descuentos", "dif_neto", "periodo_ok", "cuil_leido",
@@ -180,6 +191,9 @@ def probar_uno(base: str, fila: dict, clave: str, validar: bool) -> dict:
             r.update(ms_leer=ms_leer, http_leer=rl.status_code)
             return r
         leido = rl.json()
+        if (not PERMITIR_MOCK and
+                ((leido.get("recibo") or {}).get("empleado") or {}).get("apellido_nombre") == MOCK_NOMBRE):
+            raise CorrioElMock()
         res_val, ms_val = None, None
         if validar:
             t1 = time.monotonic()
@@ -273,17 +287,22 @@ def main(argv=None):
     ap.add_argument("--base-url")
     ap.add_argument("--etiqueta")
     ap.add_argument("--muestra", type=int, default=60)
+    ap.add_argument("--azar", type=int, default=0, help="N recibos al azar (con --semilla)")
+    ap.add_argument("--semilla", type=int, default=0)
     ap.add_argument("--banco")
     ap.add_argument("--solo-errores", action="store_true")
     ap.add_argument("--paralelo", type=int, default=2)
     ap.add_argument("--sin-validar", action="store_true")
     ap.add_argument("--modelo-estimado", default="claude-sonnet-5-5")
     ap.add_argument("--si", action="store_true")
+    ap.add_argument("--permitir-mock", action="store_true", help="solo para probar el script")
     ap.add_argument("--comparar", nargs="+")
     a = ap.parse_args(argv)
     if a.comparar:
         print(comparar(a.comparar))
         return
+    global PERMITIR_MOCK
+    PERMITIR_MOCK = a.permitir_mock
     if not a.base_url or not a.etiqueta:
         ap.error("--base-url y --etiqueta son obligatorios")
     base = a.base_url.rstrip("/")
@@ -294,7 +313,7 @@ def main(argv=None):
         filas = [f for f in filas if f["archivo"].startswith(a.banco + "/")]
     if a.solo_errores:
         filas = [f for f in filas if f.get("error_intencional")]
-    filas = L.muestra(filas, a.muestra)
+    filas = L.muestra_azar(filas, a.azar, a.semilla) if a.azar else L.muestra(filas, a.muestra)
     claves = _claves()
     sin_clave = [f for f in filas if L.solo_digitos(f["cuil"]) not in claves]
     filas = [f for f in filas if L.solo_digitos(f["cuil"]) in claves]
@@ -307,9 +326,13 @@ def main(argv=None):
         return
     import fechas
     inicio = fechas.ahora().strftime("%Y-%m-%d %H:%M")
-    with ThreadPoolExecutor(max_workers=max(1, a.paralelo)) as ex:
-        resultados = list(ex.map(
-            lambda f: probar_uno(base, f, claves[L.solo_digitos(f["cuil"])], not a.sin_validar), filas))
+    try:
+        with ThreadPoolExecutor(max_workers=max(1, a.paralelo)) as ex:
+            resultados = list(ex.map(
+                lambda f: probar_uno(base, f, claves[L.solo_digitos(f["cuil"])], not a.sin_validar), filas))
+    except CorrioElMock:
+        raise SystemExit("El servidor respondió con el mock (MOCK_EXTRACTOR=1): no hubo lectura "
+                         "real. Apagarlo en Render y volver a correr.")
     for r in resultados:
         r["etiqueta"] = a.etiqueta
     SALIDA.mkdir(parents=True, exist_ok=True)
