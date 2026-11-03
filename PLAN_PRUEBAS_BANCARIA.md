@@ -200,6 +200,15 @@ python carga/probar_lote_bancaria.py --base-url https://mitrabajo-pruebas.onrend
   ahora pide `USO_IA_DATABASE_URL`). Estimado US$ 0,32; el real está en
   `/plataforma` → Uso de IA.
 
+**Segunda tirada: 20 recibos al azar (2026-11-03 19:14, semilla 20261104,
+Pruebas ya con snavello/MITRABAJOC#196)**, en
+`carga/log/lote_bancaria/2026-11-03_1914_sonnet-5-5-20casos.*`: lectura 20 de 20
+exacta, mediana 8,0 s y p95 12,3 s; **19 de 20 dieron lo esperado**. El que no
+(Galicia, julio) destapó otro defecto: «Compensación no remunerativa», impresa
+entre los haberes, sumaba $120.000 a la base de los aportes. Corregido en
+snavello/MITRABAJOC#197; con esa corrección, las dos tiradas (30 recibos) dan 30
+de 30.
+
 **Variantes del nombre de la cuota (2026-11-03, Sonnet 5.5, 8 lecturas en
 Pruebas)**: `carga/variantes_cuota.py`, resultado en
 `carga/log/lote_bancaria/2026-11-03_variantes_cuota.json`. La IA etiquetó como
