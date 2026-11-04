@@ -1,0 +1,56 @@
+{
+ "recibos": 40,
+ "aciertos": 37,
+ "leidos": 40,
+ "lectura_ok": 40,
+ "errores_app": {},
+ "errores_lote_detectados": 0,
+ "errores_lote": 1,
+ "ms_leer_p50": 8337.0,
+ "ms_leer_p95": 11645,
+ "por": {
+  "banco": {
+   "bbva": {
+    "recibos": 7,
+    "aciertos": 7,
+    "lectura_ok": 7
+   },
+   "galicia": {
+    "recibos": 9,
+    "aciertos": 9,
+    "lectura_ok": 9
+   },
+   "industrial": {
+    "recibos": 11,
+    "aciertos": 11,
+    "lectura_ok": 11
+   },
+   "nacion": {
+    "recibos": 6,
+    "aciertos": 4,
+    "lectura_ok": 6
+   },
+   "santander": {
+    "recibos": 7,
+    "aciertos": 6,
+    "lectura_ok": 7
+   }
+  },
+  "formato": {
+   "pdf": {
+    "recibos": 33,
+    "aciertos": 31,
+    "lectura_ok": 33
+   },
+   "jpg": {
+    "recibos": 7,
+    "aciertos": 6,
+    "lectura_ok": 7
+   }
+  }
+ },
+ "uso_ia": null,
+ "etiqueta": "sonnet-5-5-40casos-2simult",
+ "base_url": "https://mitrabajo-pruebas.onrender.com",
+ "inicio": "2026-11-03 22:47"
+}

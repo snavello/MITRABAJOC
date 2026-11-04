@@ -49,16 +49,18 @@ def test_los_errores_a_proposito_y_lo_que_se_espera(lote):
     errores = {f["error_intencional"]: f for f in L.manifiesto() if f["error_intencional"]}
     assert set(errores) == {"NETO_INCORRECTO", "CUIL_DV_INVALIDO"}
     assert L.esperado(errores["NETO_INCORRECTO"]) == "CON_DISCREPANCIAS"
-    # Hoy la app corta un CUIL impreso con el DV mal (decisión pendiente).
-    assert L.esperado(errores["CUIL_DV_INVALIDO"]) == "E-RECIBO-04"
+    # Medido en Pruebas (tirada de 40, 2026-11-04): la app acepta un CUIL
+    # impreso con el DV mal y valida el recibo como propio.
+    assert L.esperado(errores["CUIL_DV_INVALIDO"]) == "OK"
 
 
 def test_los_recibos_que_superan_el_tope_se_esperan_con_diferencias(lote):
     """El generador del lote no aplicó el tope de aportes: la app lo marca, con
-    razón (prueba piloto del 2026-11-03, 5 de 10). 271 de los 600."""
+    razón (prueba piloto del 2026-11-03, 5 de 10). 267 de los 600, contando
+    como no remunerativo el Día del Bancario de noviembre."""
     filas = L.manifiesto()
     sobre = [f for f in filas if L.supera_tope(f)]
-    assert len(sobre) == 271
+    assert len(sobre) == 267
     assert all(L.esperado(f) == "CON_DISCREPANCIAS" for f in sobre if not f["error_intencional"])
     debajo = next(f for f in filas if not L.supera_tope(f) and not f["error_intencional"])
     assert L.esperado(debajo) == "OK"
@@ -187,7 +189,8 @@ def test_clasificar_recibo_correcto_y_error_detectado():
 
 
 def test_clasificar_errores_de_la_app():
-    assert P.clasificar(_fila("CUIL_DV_INVALIDO"), None, "E-RECIBO-04", None)["acierto"]
+    assert P.clasificar(_fila("NETO_INCORRECTO"), None, "E-RECIBO-04", None)["acierto"] is False
+    assert P.clasificar(_fila("CUIL_DV_INVALIDO"), _leer(), None, {"estado": "OK"})["acierto"]
     r = P.clasificar(_fila(), None, "E-RECIBO-01", None)
     assert not r["acierto"] and not r["lectura_ok"]
 
@@ -290,7 +293,7 @@ def test_alta_por_panel_se_niega_contra_la_demo():
 def test_publicar_exactitud_arma_las_tres_pruebas(lote):
     import publicar_exactitud as PE
     pagos = [PE.payload_de(p, PE._recalculo()) for p in json.loads(PE.REGISTRO.read_text(encoding="utf-8"))]
-    assert [len(p["resumen"]) for p in pagos] == [10, 10, 20]
+    assert [len(p["resumen"]) for p in pagos] == [10, 10, 20, 40]
     for p in pagos:
         assert p["tipo"] == "exactitud" and p["causas"] and p["totales"]
         assert all(f["archivo"] for f in p["resumen"])

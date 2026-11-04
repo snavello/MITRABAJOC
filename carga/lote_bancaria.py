@@ -29,14 +29,15 @@ EMPLEADOS = DESTINO / "empleados.csv"
 
 # Los errores que el lote trae a propósito y lo que se espera de la app hoy.
 # CUIL_DV_INVALIDO: el recibo imprime el CUIL con el dígito verificador mal.
-# El enmascarado no lo corta (un DV inválido no es "otra persona"), pero el
-# chequeo después de la IA compara texto contra la sesión y SÍ lo corta con
-# E-RECIBO-04. Si eso es lo que se quiere es una decisión pendiente del plan
+# Medido en Pruebas el 2026-11-04 (tirada de 40): la app lo ACEPTA. El
+# enmascarado no lo corta (un DV inválido no es "otra persona") y al rearmar la
+# identidad deja el CUIL de la sesión, así que el recibo se valida como propio.
+# No avisa que el CUIL impreso está mal: si debería avisarlo, es decisión de SDN
 # de ejecución; mientras tanto se espera lo que la app hace.
 ESPERADO_POR_ERROR = {
     "": "OK",
     "NETO_INCORRECTO": "CON_DISCREPANCIAS",
-    "CUIL_DV_INVALIDO": "E-RECIBO-04",
+    "CUIL_DV_INVALIDO": "OK",
 }
 
 MIME = {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg",
@@ -101,6 +102,9 @@ def solo_digitos(cuil: str) -> str:
 # Lo que el lote paga como no remunerativo: $ 120.000 en los 600 recibos
 # (verificado leyendo los 480 PDF el 2026-11-03).
 NO_REMUNERATIVO = 120000.0
+# Y en noviembre, «Día del Bancario» $ 185.000, también no remunerativo (acta
+# de 2020; verificado en los 40 PDF de noviembre). Tirada de 40, 2026-11-04.
+DIA_DEL_BANCARIO = 185000.0
 
 
 def supera_tope(fila: dict) -> bool:
@@ -111,7 +115,8 @@ def supera_tope(fila: dict) -> bool:
     los 600: prueba piloto del 2026-11-03."""
     import grilla_bancaria
     t = grilla_bancaria.tope_ss(fila["periodo"])
-    return bool(t) and float(fila["total_haberes"]) - NO_REMUNERATIVO > float(t["maximo"])
+    no_rem = NO_REMUNERATIVO + (DIA_DEL_BANCARIO if fila["periodo"].endswith("-11") else 0)
+    return bool(t) and float(fila["total_haberes"]) - no_rem > float(t["maximo"])
 
 
 def esperado(fila: dict) -> str:

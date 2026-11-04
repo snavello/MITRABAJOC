@@ -12,7 +12,7 @@ el costo real vive en la base de Pruebas:
    origen y conclusión de cada prueba, escritos a mano) y los resultados de
    `carga/log/lote_bancaria/`, y deja todo listo en `carga/exactitud_pagos.json`.
    Lo que la app concluyó en el momento sale del CSV de la corrida; cómo da con
-   las correcciones posteriores, de `*_recalculo_con_correcciones.csv`.
+   las correcciones posteriores, de los `*_recalculo_*.csv`.
 
 2. **Publicar adentro de Pruebas** (Shell de Render de `mitrabajo-pruebas`):
        python carga/publicar_exactitud.py --directo [--si]
@@ -37,7 +37,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 REGISTRO = RAIZ / "carga" / "exactitud.json"
 PAGOS = RAIZ / "carga" / "exactitud_pagos.json"
-RECALCULO = RAIZ / "carga" / "log" / "lote_bancaria" / "2026-11-04_recalculo_con_correcciones.csv"
+# La misma lectura de la IA validada de nuevo con la app (y el catálogo) de hoy.
+RECALCULOS = sorted((RAIZ / "carga" / "log" / "lote_bancaria").glob("*_recalculo_*.csv"))
 ETIQUETA = {"OK": "OK", "CON_DISCREPANCIAS": "Con diferencias"}
 # Margen después del fin anotado de cada corrida para buscar sus lecturas.
 MARGEN_MIN = 3
@@ -141,10 +142,12 @@ def payload_de(prueba: dict, recalculo: dict) -> dict:
 
 
 def _recalculo() -> dict:
-    if not RECALCULO.exists():
-        return {}
-    with open(RECALCULO, encoding="utf-8") as f:
-        return {r["archivo"]: r["con_correccion"] for r in csv.DictReader(f)}
+    """{archivo: estado con las correcciones}; el recálculo más nuevo manda."""
+    salida = {}
+    for ruta in RECALCULOS:
+        with open(ruta, encoding="utf-8") as f:
+            salida.update({r["archivo"]: r["con_correccion"] for r in csv.DictReader(f)})
+    return salida
 
 
 def armar() -> list[dict]:

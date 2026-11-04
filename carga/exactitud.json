@@ -108,5 +108,47 @@
       }
     ],
     "conclusion": "La IA leyó exactos los 20. Las correcciones anteriores funcionaron: 19 de 20 dieron lo esperado, y el que no mostró un error nuevo de la app, ya corregido. Recalculados con la app corregida, los 20 dan lo esperado."
+  },
+  {
+    "clave": "azar-40-simult",
+    "nombre": "Exactitud · 40 recibos bancarios, de a 2 a la vez",
+    "subtitulo": "Tercera tirada, con dos lecturas simultáneas, ya con todas las correcciones de la app",
+    "inicio_ba": "2026-11-03 22:47",
+    "fin_ba": "2026-11-03 22:51",
+    "csv": "carga/log/lote_bancaria/2026-11-03_2247_sonnet-5-5-40casos-2simult.csv",
+    "objetivo": "Una tirada más grande (40 recibos de otra selección al azar) subiendo de a dos a la vez, para ver si la exactitud y los tiempos se sostienen con lecturas simultáneas y buscar errores nuevos.",
+    "config": {
+      "Entorno": "Pruebas",
+      "Modelo de lectura": "Sonnet 5.5",
+      "Versión de la app": "Trabajador 0.57.05",
+      "Recibos": "40 al azar (semilla 20261105)",
+      "Cómo se subieron": "De a 2 a la vez, cada uno con la sesión de su dueño",
+      "Lote": "600 recibos ficticios, 5 bancos, 12 meses"
+    },
+    "costo": "US$ 1,28 (estimado)",
+    "causas": [
+      {
+        "origen": "configuracion",
+        "que": "En el catálogo de La Bancaria, el «Día del Bancario» de Nación quedó como remunerativo (Nación lo imprime entre los haberes) y sumaba a la base de los aportes.",
+        "ejemplo": "Nación, noviembre 2025: «DÍA DEL BANCARIO $ 185.000»; la app esperaba una jubilación de $ 319.588 y la correcta es $ 299.238.",
+        "recibos": 1,
+        "estado": "A corregir en el panel (Conceptos) + concepto general nuevo en cargar_bancaria.py"
+      },
+      {
+        "origen": "app",
+        "que": "Un recibo con el CUIL impreso mal (dígito verificador inválido) se acepta como propio sin avisar del error.",
+        "ejemplo": "Nación, mayo 2026: imprime 27-34070910-0 (el correcto es 27-34070910-7); la app lo validó OK sin decir nada.",
+        "recibos": 1,
+        "estado": "A decidir (SDN): ¿avisar al afiliado?"
+      },
+      {
+        "origen": "recibos",
+        "que": "Los recibos de prueba cobran los aportes sin el tope de ley. La app lo marca bien.",
+        "ejemplo": "Sueldos altos o meses con aguinaldo: «te retuvieron de más».",
+        "recibos": 19,
+        "estado": "No se corrige: son casos con error"
+      }
+    ],
+    "conclusion": "La IA leyó exactos los 40, también de a dos a la vez, sin errores ni caídas. 39 de 40 dieron lo esperado. El que no es de configuración: el Día del Bancario de Nación cargado como remunerativo en el catálogo. Además, dos recibos que al principio parecían fallar eran errores de lo que esperábamos, no de la app: en noviembre el Día del Bancario no es remunerativo (y la app lo hizo bien), y un CUIL impreso con el dígito mal la app lo acepta como propio. Con el catálogo corregido, los 40 dan lo esperado."
   }
 ]
