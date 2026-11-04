@@ -380,3 +380,38 @@ if __name__ == "__main__":
     test_escalones_invalidos_caen_al_default()
     test_api_detalle_404_si_no_existe()
     print("Todo OK")
+
+
+def test_publicar_una_prueba_de_exactitud_y_verla():
+    """PLAN_PRUEBAS_BANCARIA.md: las pruebas de exactitud del lote bancario
+    (recibos reales leídos por la IA) se publican en la misma lista, con su
+    propia vista: totales, causas con su origen y recibo por recibo."""
+    pago = {
+        "tipo": "exactitud", "nombre": "Exactitud · 20 recibos al azar",
+        "subtitulo": "Sonnet 5.5", "inicio_ba": "2026-11-03 19:14", "fin_ba": "2026-11-03 19:17",
+        "config": {"Entorno": "Pruebas", "Modelo de lectura": "Sonnet 5.5"},
+        "totales": {"Lectura exacta": "20 de 20", "Dan lo esperado": "19 de 20"},
+        "causas": [{"origen": "app", "que": "Lo no remunerativo sumaba a los aportes",
+                    "ejemplo": "Compensación no remunerativa $ 120.000", "recibos": 1,
+                    "estado": "Corregido (#197)"}],
+        "veredicto": "19 de 20 dieron lo esperado.", "veredicto_ok": False,
+        "resumen": [{"archivo": "galicia/x_2026-07.pdf", "esperado": "OK", "obtenido": "CON_DISCREPANCIAS",
+                     "acierto": False, "lectura_ok": True, "segundos": 7.8, "con_correccion": True},
+                    {"archivo": "bbva/y_2026-05.pdf", "esperado": "OK", "obtenido": "OK",
+                     "acierto": True, "lectura_ok": True, "segundos": 6.6, "con_correccion": True}],
+    }
+    r = client.post("/entornos/tests/publicar", json=pago)
+    assert r.status_code == 200, r.text
+    tid = r.json()["id"]
+    fila = db.test_carga_por_id(tid)
+    assert fila["tipo"] == "exactitud" and fila["parametros"]["causas"][0]["origen"] == "app"
+    html = client.get(f"/entornos/tests/{tid}").text
+    for texto in ("Exactitud · 20 recibos al azar", "Qué se encontró", "La app",
+                  "Compensación no remunerativa $ 120.000", "Recibo por recibo",
+                  "galicia/x_2026-07.pdf", "Con la corrección", "Sonnet 5.5"):
+        assert texto in html, texto
+    assert "p95 por debajo de 1.000 ms" not in html     # el objetivo de carga no es el de esta prueba
+    assert "Cómo leer los números" not in html          # ni su glosario
+    # Sin un recibo por fila, se rechaza.
+    r = client.post("/entornos/tests/publicar", json={**pago, "resumen": [{"x": 1}]})
+    assert r.status_code == 400
