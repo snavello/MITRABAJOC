@@ -297,3 +297,19 @@ def test_publicar_exactitud_arma_las_tres_pruebas(lote):
         assert {c["origen"] for c in p["causas"]} <= {"app", "recibos", "configuracion"}
     assert pagos[0]["totales"]["Con las correcciones"] == "10 de 10"
     assert pagos[2]["totales"]["Dieron lo esperado"] == "19 de 20"
+
+
+def test_asignar_uso_pone_modelo_tiempo_y_costo_por_recibo(lote):
+    import publicar_exactitud as PE
+    pago = PE.armar()[1]                      # variantes: 8 lecturas de un mismo CUIL, 10 filas
+    usos = [{"cuil": pago["resumen"][0]["cuil"], "modelo": "claude-sonnet-5-5", "tokens_entrada": 4000,
+             "tokens_salida": 1500, "precio_entrada": 2.0, "precio_salida": 10.0}] * 8
+    assert PE.asignar_uso(pago, usos)
+    con_costo = [f for f in pago["resumen"] if f.get("costo_usd")]
+    assert len(con_costo) == 8 and all(f["costo_usd"] == 0.023 for f in con_costo)
+    assert all(f["modelo"] == "Sonnet 5.5" for f in pago["resumen"])
+    assert pago["totales"]["Costo total"] == "US$ 0,1840" and "Costo" not in pago["totales"]
+    # Si las cuentas no cierran, no se inventa nada.
+    otro = PE.armar()[1]
+    assert not PE.asignar_uso(otro, usos[:5])
+    assert not any("costo_usd" in f for f in otro["resumen"])

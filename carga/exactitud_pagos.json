@@ -1,0 +1,607 @@
+[
+ {
+  "tipo": "exactitud",
+  "nombre": "Exactitud · piloto de 10 recibos bancarios",
+  "subtitulo": "Lectura con IA (Sonnet 5.5) y validación de la app, recibo por recibo",
+  "objetivo": "Antes de armar el plan general, una sola tirada de 10 recibos del lote bancario elegidos al azar, para tomar tiempos reales con Sonnet 5.5 y ver si la app lee y valida bien recibos de cinco bancos distintos.",
+  "config": {
+   "Entorno": "Pruebas",
+   "Modelo de lectura": "Sonnet 5.5",
+   "Versión de la app": "Trabajador 0.57.02",
+   "Recibos": "10 al azar (semilla 20261103)",
+   "Cómo se subieron": "De a uno, cada uno con la sesión de su dueño",
+   "Lote": "600 recibos ficticios, 5 bancos, 12 meses"
+  },
+  "advertencias": [],
+  "veredicto": "4 de 10 dieron lo esperado en el momento; con las correcciones, 10 de 10.",
+  "veredicto_ok": true,
+  "conclusion": "La IA leyó exactos los 10 recibos. Los errores fueron de validación: tres de la app, ya corregidos, y uno de los recibos de prueba, que la app detecta bien. Recalculados con la app corregida sobre la misma lectura, los 10 dan lo esperado.",
+  "inicio_ba": "2026-11-03 16:34",
+  "fin_ba": "2026-11-03 16:36",
+  "terminado_en": "2026-11-03 16:36:00",
+  "totales": {
+   "Lectura exacta (IA)": "10 de 10",
+   "Dieron lo esperado": "4 de 10",
+   "Con las correcciones": "10 de 10",
+   "Lectura, mediana": "7,5 s",
+   "Lectura, la más lenta": "8,3 s",
+   "Costo": "US$ 0,32 (estimado)"
+  },
+  "causas": [
+   {
+    "origen": "app",
+    "que": "La app no reconocía la cuota sindical cuando el banco la llamaba distinto, y decía que faltaba.",
+    "ejemplo": "«Cuota sindical Asoc. Bancaria 2% — $ 56.337,60»: la app respondía «El recibo no incluye 'Asoc Bancaria'».",
+    "recibos": 10,
+    "estado": "Corregido (snavello/MITRABAJOC#196)"
+   },
+   {
+    "origen": "app",
+    "que": "En recibos sin códigos (Galicia), la antigüedad de una persona chocaba con la de otra y quedaba fuera de la suma de haberes.",
+    "ejemplo": "«Antigüedad (16 años) — $ 380.537,81» quedaba afuera: «los haberes suman $ 3.877.810 y el recibo dice $ 4.258.348».",
+    "recibos": 2,
+    "estado": "Corregido (snavello/MITRABAJOC#196)"
+   },
+   {
+    "origen": "app",
+    "que": "Lo no remunerativo impreso entre los haberes sumaba a la base de los aportes.",
+    "ejemplo": "«Compensación no remunerativa — $ 120.000» (Galicia la imprime en la columna de haberes) entraba en el cálculo de la jubilación.",
+    "recibos": 1,
+    "estado": "Corregido (snavello/MITRABAJOC#197)"
+   },
+   {
+    "origen": "recibos",
+    "que": "Los recibos de prueba cobran los aportes sobre el sueldo entero, sin el tope de ley. La app lo marca bien.",
+    "ejemplo": "Diciembre 2025: tope $ 3.731.212; sueldo $ 4.138.348; jubilación cobrada $ 455.218 en vez de $ 410.433.",
+    "recibos": 5,
+    "estado": "No se corrige: son casos con error (271 de los 600 del lote)"
+   }
+  ],
+  "resumen": [
+   {
+    "archivo": "bbva/20185331424_2026-04.pdf",
+    "cuil": "20185331424",
+    "lectura": "bbva/20185331424_2026-04.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 7.0,
+    "detalle": "concepto_faltante",
+    "con_correccion": true
+   },
+   {
+    "archivo": "bbva/20210333577_2026-04.pdf",
+    "cuil": "20210333577",
+    "lectura": "bbva/20210333577_2026-04.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 7.5,
+    "detalle": "concepto_faltante",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/20202038361_2026-01.pdf",
+    "cuil": "20202038361",
+    "lectura": "galicia/20202038361_2026-01.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 6.5,
+    "detalle": "concepto_faltante|formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/20311447034_2025-12.pdf",
+    "cuil": "20311447034",
+    "lectura": "galicia/20311447034_2025-12.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.5,
+    "detalle": "concepto_faltante|formula|total_inconsistente",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/20354674808_2026-07.pdf",
+    "cuil": "20354674808",
+    "lectura": "galicia/20354674808_2026-07.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.7,
+    "detalle": "concepto_faltante|formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/27224480232_2026-03.pdf",
+    "cuil": "27224480232",
+    "lectura": "galicia/27224480232_2026-03.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 8.3,
+    "detalle": "concepto_faltante|formula|total_inconsistente",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/27283427701_2026-01.pdf",
+    "cuil": "27283427701",
+    "lectura": "industrial/27283427701_2026-01.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 8.2,
+    "detalle": "concepto_faltante",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/27409519275_2025-10.pdf",
+    "cuil": "27409519275",
+    "lectura": "industrial/27409519275_2025-10.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 7.2,
+    "detalle": "concepto_faltante",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/27409519275_2025-11.pdf",
+    "cuil": "27409519275",
+    "lectura": "industrial/27409519275_2025-11.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 7.6,
+    "detalle": "concepto_faltante",
+    "con_correccion": true
+   },
+   {
+    "archivo": "nacion/20292831545_2026-05.pdf",
+    "cuil": "20292831545",
+    "lectura": "nacion/20292831545_2026-05.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.2,
+    "detalle": "concepto_faltante|formula",
+    "con_correccion": true
+   }
+  ]
+ },
+ {
+  "tipo": "exactitud",
+  "nombre": "Exactitud · nombres de la cuota sindical",
+  "subtitulo": "¿Reconoce la IA la cuota aunque cada banco la llame distinto?",
+  "objetivo": "Comprobar que la cuota sindical se reconoce por lo que es y no por cómo se escribe, y que no se confunde con otras líneas que nombran al gremio sin ser la cuota.",
+  "config": {
+   "Entorno": "Pruebas",
+   "Modelo de lectura": "Sonnet 5.5",
+   "Recibos": "8 ficticios, iguales salvo el nombre de la cuota",
+   "Trampas": "Aporte solidario, seguro de sepelio, cuota de préstamo"
+  },
+  "advertencias": [],
+  "veredicto": "10 de 10 dieron lo esperado.",
+  "veredicto_ok": true,
+  "conclusion": "La IA reconoció como cuota sindical las 7 formas de escribirla y no tomó como cuota el aporte solidario ni las dos trampas. Con la app corregida, las 7 dan OK.",
+  "inicio_ba": "2026-11-03 18:51",
+  "fin_ba": "2026-11-03 18:53",
+  "terminado_en": "2026-11-03 18:53:00",
+  "totales": {
+   "Cuotas reconocidas": "7 de 7",
+   "Trampas no confundidas": "3 de 3",
+   "Lectura, mediana": "6,3 s",
+   "Lectura, la más lenta": "10,0 s",
+   "Costo": "US$ 0,26 (estimado)"
+  },
+  "causas": [
+   {
+    "origen": "configuracion",
+    "que": "La regla de cuota de La Bancaria se le exige a todos, también al no afiliado, que paga aporte solidario. Decisión de SDN: se mantiene, con un texto claro.",
+    "ejemplo": "Antes: «El recibo no incluye 'Asoc Bancaria'». Ahora: «Con aporte solidario, sin cuota de aporte sindical».",
+    "recibos": 1,
+    "estado": "Texto corregido (snavello/MITRABAJOC#196)"
+   }
+  ],
+  "resumen": [
+   {
+    "archivo": "v1_cuota_gremial.jpg · «Cuota gremial»",
+    "cuil": "20185331424",
+    "lectura": "v1_cuota_gremial.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 6.5
+   },
+   {
+    "archivo": "v2_aporte_sindical.jpg · «Aporte sindical»",
+    "cuil": "20185331424",
+    "lectura": "v2_aporte_sindical.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 6.6
+   },
+   {
+    "archivo": "v3_asoc_bancaria.jpg · «Asoc. Bancaria»",
+    "cuil": "20185331424",
+    "lectura": "v3_asoc_bancaria.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 6.2
+   },
+   {
+    "archivo": "v4_la_bancaria.jpg · «La Bancaria 2%»",
+    "cuil": "20185331424",
+    "lectura": "v4_la_bancaria.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 10.0
+   },
+   {
+    "archivo": "v5_cuota_afiliado.jpg · «Cuota afiliado AB»",
+    "cuil": "20185331424",
+    "lectura": "v5_cuota_afiliado.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 6.2
+   },
+   {
+    "archivo": "v6_retencion_gremio.jpg · «Retención gremio»",
+    "cuil": "20185331424",
+    "lectura": "v6_retencion_gremio.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 5.5
+   },
+   {
+    "archivo": "v7_aporte_solidario.jpg · «Aporte solidario CCT 18/75»",
+    "cuil": "20185331424",
+    "lectura": "v7_aporte_solidario.jpg",
+    "esperado": "No es cuota",
+    "obtenido": "No es cuota",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 6.1
+   },
+   {
+    "archivo": "v8_con_trampas.jpg · «Cuota sindical»",
+    "cuil": "20185331424",
+    "lectura": "v8_con_trampas.jpg",
+    "esperado": "Cuota sindical",
+    "obtenido": "Cuota sindical",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": 6.5
+   },
+   {
+    "archivo": "v8_con_trampas.jpg · «Seguro de sepelio Asoc. Bancaria»",
+    "cuil": "20185331424",
+    "lectura": "v8_con_trampas.jpg",
+    "esperado": "No es cuota",
+    "obtenido": "No es cuota",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": null
+   },
+   {
+    "archivo": "v8_con_trampas.jpg · «Cuota préstamo personal»",
+    "cuil": "20185331424",
+    "lectura": "v8_con_trampas.jpg",
+    "esperado": "No es cuota",
+    "obtenido": "No es cuota",
+    "acierto": true,
+    "lectura_ok": null,
+    "segundos": null
+   }
+  ]
+ },
+ {
+  "tipo": "exactitud",
+  "nombre": "Exactitud · 20 recibos bancarios al azar",
+  "subtitulo": "Segunda tirada, ya con la corrección de la cuota y la antigüedad",
+  "objetivo": "Repetir con más recibos (20, de otra selección al azar) después de corregir la cuota y la antigüedad, para confirmar las correcciones y buscar errores nuevos.",
+  "config": {
+   "Entorno": "Pruebas",
+   "Modelo de lectura": "Sonnet 5.5",
+   "Versión de la app": "Trabajador 0.57.04",
+   "Recibos": "20 al azar (semilla 20261104)",
+   "Cómo se subieron": "De a uno, cada uno con la sesión de su dueño",
+   "Lote": "600 recibos ficticios, 5 bancos, 12 meses"
+  },
+  "advertencias": [],
+  "veredicto": "19 de 20 dieron lo esperado en el momento; con las correcciones, 20 de 20.",
+  "veredicto_ok": true,
+  "conclusion": "La IA leyó exactos los 20. Las correcciones anteriores funcionaron: 19 de 20 dieron lo esperado, y el que no mostró un error nuevo de la app, ya corregido. Recalculados con la app corregida, los 20 dan lo esperado.",
+  "inicio_ba": "2026-11-03 19:14",
+  "fin_ba": "2026-11-03 19:17",
+  "terminado_en": "2026-11-03 19:17:00",
+  "totales": {
+   "Lectura exacta (IA)": "20 de 20",
+   "Dieron lo esperado": "19 de 20",
+   "Con las correcciones": "20 de 20",
+   "Lectura, mediana": "8,0 s",
+   "Lectura, la más lenta": "12,3 s",
+   "Costo": "US$ 0,64 (estimado)"
+  },
+  "causas": [
+   {
+    "origen": "app",
+    "que": "Lo no remunerativo impreso entre los haberes sumaba a la base de los aportes.",
+    "ejemplo": "Galicia, julio 2026: la app esperaba una jubilación de $ 473.380 y la correcta (la del recibo) es $ 460.180, porque sumaba «Compensación no remunerativa $ 120.000».",
+    "recibos": 1,
+    "estado": "Corregido (snavello/MITRABAJOC#197)"
+   },
+   {
+    "origen": "recibos",
+    "que": "Los recibos de prueba cobran los aportes sin el tope de ley. La app lo marca bien.",
+    "ejemplo": "Sueldos altos o meses con aguinaldo: «te retuvieron de más».",
+    "recibos": 9,
+    "estado": "No se corrige: son casos con error"
+   }
+  ],
+  "resumen": [
+   {
+    "archivo": "bbva/20231459848_2026-07.pdf",
+    "cuil": "20231459848",
+    "lectura": "bbva/20231459848_2026-07.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.9,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "bbva/20393932199_2026-05.pdf",
+    "cuil": "20393932199",
+    "lectura": "bbva/20393932199_2026-05.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 6.6,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "bbva/20435949895_2026-02.pdf",
+    "cuil": "20435949895",
+    "lectura": "bbva/20435949895_2026-02.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.3,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "bbva/27350006171_2026-03.pdf",
+    "cuil": "27350006171",
+    "lectura": "bbva/27350006171_2026-03.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 10.5,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "bbva/27445669674_2025-12.pdf",
+    "cuil": "27445669674",
+    "lectura": "bbva/27445669674_2025-12.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.0,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/20327846621_2026-02.pdf",
+    "cuil": "20327846621",
+    "lectura": "galicia/20327846621_2026-02.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.6,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/20354674808_2026-05.pdf",
+    "cuil": "20354674808",
+    "lectura": "galicia/20354674808_2026-05.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 6.9,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "galicia/27425555478_2026-07.pdf",
+    "cuil": "27425555478",
+    "lectura": "galicia/27425555478_2026-07.pdf",
+    "esperado": "OK",
+    "obtenido": "Con diferencias",
+    "acierto": false,
+    "lectura_ok": true,
+    "segundos": 7.8,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/20443199285_2025-11.pdf",
+    "cuil": "20443199285",
+    "lectura": "industrial/20443199285_2025-11.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 9.3,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/20443199285_2026-05.pdf",
+    "cuil": "20443199285",
+    "lectura": "industrial/20443199285_2026-05.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.8,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/20446692845_2026-03.pdf",
+    "cuil": "20446692845",
+    "lectura": "industrial/20446692845_2026-03.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.8,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "industrial/27227563244_2025-11.pdf",
+    "cuil": "27227563244",
+    "lectura": "industrial/27227563244_2025-11.pdf",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 6.4,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "nacion/20206322714_2026-01.pdf",
+    "cuil": "20206322714",
+    "lectura": "nacion/20206322714_2026-01.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.1,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "nacion/27198455720_2026-03.pdf",
+    "cuil": "27198455720",
+    "lectura": "nacion/27198455720_2026-03.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.4,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "nacion/27267339177_2026-02.pdf",
+    "cuil": "27267339177",
+    "lectura": "nacion/27267339177_2026-02.pdf",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 7.8,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "santander/20339012041_2025-12.jpg",
+    "cuil": "20339012041",
+    "lectura": "santander/20339012041_2025-12.jpg",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.6,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "santander/27268819911_2025-09.jpg",
+    "cuil": "27268819911",
+    "lectura": "santander/27268819911_2025-09.jpg",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.5,
+    "detalle": "formula",
+    "con_correccion": true
+   },
+   {
+    "archivo": "santander/27283967668_2026-04.jpg",
+    "cuil": "27283967668",
+    "lectura": "santander/27283967668_2026-04.jpg",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 9.2,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "santander/27284513415_2025-09.jpg",
+    "cuil": "27284513415",
+    "lectura": "santander/27284513415_2025-09.jpg",
+    "esperado": "OK",
+    "obtenido": "OK",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 8.9,
+    "detalle": "",
+    "con_correccion": true
+   },
+   {
+    "archivo": "santander/27432217707_2025-09.jpg",
+    "cuil": "27432217707",
+    "lectura": "santander/27432217707_2025-09.jpg",
+    "esperado": "Con diferencias",
+    "obtenido": "Con diferencias",
+    "acierto": true,
+    "lectura_ok": true,
+    "segundos": 12.3,
+    "detalle": "formula",
+    "con_correccion": true
+   }
+  ]
+ }
+]
