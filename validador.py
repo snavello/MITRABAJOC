@@ -719,6 +719,37 @@ def _evaluar(expr: str, variables: dict) -> float:
     return float(_ev_nodo(arbol.body, variables))
 
 
+def cuil_impreso_con_error(cuil_leido, cuil_sesion) -> bool:
+    """¿El CUIL impreso es el de la persona con el dígito verificador mal?
+    Diez primeros dígitos iguales a los de la sesión y un verificador que no
+    cumple el módulo 11 (la sesión sí). Es un error de quien hizo el recibo:
+    un CUIL inválido no es de nadie, así que no es "otra persona" (tirada de
+    40 del lote bancario, 2026-11-04: Nación imprimió 27-34070910-0 en vez de
+    27-34070910-7)."""
+    a, b = _norm_cuil(cuil_leido), _norm_cuil(cuil_sesion)
+    return (len(a) == 11 and len(b) == 11 and a != b and a[:10] == b[:10]
+            and not cuit.es_valido(a) and cuit.es_valido(b))
+
+
+def cuil_impreso_invalido(candidatos, cuil_sesion) -> str | None:
+    """De lo leído en el documento (lo que leyó la IA, lo que leyó el tapado),
+    el primer CUIL que sea el de la sesión con el verificador mal, con guiones;
+    o None."""
+    for c in candidatos or []:
+        if cuil_impreso_con_error(c, cuil_sesion):
+            d = _norm_cuil(c)
+            return f"{d[:2]}-{d[2:10]}-{d[10]}"
+    return None
+
+
+def detalle_cuil_impreso(impreso: str, cuil_sesion: str) -> str:
+    d = _norm_cuil(cuil_sesion)
+    return (f"Tu recibo trae el CUIL mal impreso: dice {impreso} y el tuyo es "
+            f"{d[:2]}-{d[2:10]}-{d[10]}. El recibo se verificó igual, pero conviene "
+            "pedirle a tu empleador que lo corrija: un CUIL mal cargado puede "
+            "afectar tus aportes.")
+
+
 def cuiles_distintos(cuil_leido, cuil_sesion) -> bool:
     """¿Dos CUIL son distintos, normalizados? (Si alguno falta, no se puede
     afirmar que no coinciden -> False: no se bloquea con datos incompletos,
@@ -730,6 +761,8 @@ def cuiles_distintos(cuil_leido, cuil_sesion) -> bool:
     trabajador.
     """
     a, b = _norm_cuil(cuil_leido), _norm_cuil(cuil_sesion)
+    if cuil_impreso_con_error(a, b):
+        return False        # la misma persona, con el verificador mal impreso
     return bool(a and b and a != b)
 
 
@@ -971,6 +1004,14 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     } for ln in desconocidas]
 
     alertas = []
+
+    # El CUIL impreso con el verificador mal (lo marca /api/leer en
+    # `cuil_impreso_invalido`, con lo que se leyó del documento antes de
+    # rearmarlo). No frena nada: se avisa (SDN, 2026-11-04).
+    impreso = recibo.get("cuil_impreso_invalido")
+    if impreso and cuil_sesion and cuil_impreso_con_error(impreso, cuil_sesion):
+        alertas.append({"tipo": "cuil_impreso_invalido",
+                        "detalle": detalle_cuil_impreso(impreso, cuil_sesion)})
 
     # Líneas que la IA no pudo leer: quedaron afuera de todos los cálculos,
     # así que hay que decirlo -- si no, el trabajador ve un "todo en orden"
