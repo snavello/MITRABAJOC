@@ -9758,3 +9758,18 @@ publicación pasa a hacerse ADENTRO de Pruebas: `carga/publicar_exactitud.py
 recibo su lectura de `UsoIA` (por CUIL y por la ventana de la corrida; si las
 cuentas no cierran, no inventa: deja el estimado y lo dice) y reemplaza en la
 lista las pruebas de exactitud con el mismo nombre. No usa el PIN (XSK H-0023).
+
+## El Día del Bancario, no remunerativo desde el catálogo (2026-11-04)
+
+Tercera tirada del lote bancario en Pruebas (40 recibos al azar, de a 2 a la
+vez, Sonnet 5.5): lectura 40 de 40 exacta, sin errores con dos lecturas
+simultáneas, y 39 de 40 dieron lo esperado. El que no: Nación imprime «DÍA DEL
+BANCARIO $ 185.000» entre los haberes, su concepto se dio de alta remunerativo y
+la app sumaba esos $ 185.000 a la base de los aportes. Es no remunerativo por el
+acta de 2020. No es un defecto del validador (el catálogo manda una vez
+revisado) sino del catálogo: `cargar_bancaria.py` ahora siembra el concepto
+general «Día del Bancario» no remunerativo, con el que encaja por nombre la
+línea de cualquier banco nuevo. En La Bancaria de Pruebas hay que corregirlo a
+mano en Conceptos (el concepto `060` de Nación, CUIT 30500010912, a no
+remunerativo, y el general nuevo). Con eso, los 40 dan lo esperado. Además,
+`carga/publicar_exactitud.py` publica también esta cuarta prueba.

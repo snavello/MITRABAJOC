@@ -201,3 +201,22 @@ def test_un_concepto_nuevo_que_dice_no_remunerativo_nace_no_remunerativo():
     assert por == {"Compensación no remunerativa": False, "Suma no rem. acuerdo": False,
                    "Sueldo básico": True}
     assert not V.dice_no_remunerativo("Remuneración normal y habitual")
+
+
+# ------------------------------- 5. el Día del Bancario, no remunerativo --
+def test_el_dia_del_bancario_de_un_banco_nuevo_no_suma_a_la_base():
+    """cargar_bancaria.py siembra «Día del Bancario» no remunerativo (acta de
+    2020). Un banco nuevo que lo imprime entre los haberes (Nación) encaja con
+    ese concepto por nombre y no suma a la base: antes nacía remunerativo y
+    sumaba $185.000 (tirada de 40 en Pruebas, 2026-11-04)."""
+    import cargar_bancaria
+    cod, nombre, tipo, rem, _ = next(c for c in cargar_bancaria.CONCEPTOS if c[0] == "DIA_BANCARIO")
+    dia = {"codigo": cod, "nombre": nombre, "tipo": tipo, "remunerativo": rem, "alias": [nombre],
+           "pendiente_revision": False, "categoria_sindical": None, "cuit_empleador": None,
+           "codigo_generico": None}
+    nacion = "30500010912"
+    lineas = [_linea("SUELDO BÁSICO", 2176278.30, codigo="001"), _linea("DÍA DEL BANCARIO", 185000.0, codigo="060")]
+    assert [n["codigo"] for n in V.detectar_nuevos([dia], lineas, nacion)] == ["001"]
+    cat = [dia, _pendiente("001", "SUELDO BÁSICO", nacion)]
+    res = V.validar(cat, [], _recibo(lineas, nacion, 2361278.30, 0, 2361278.30, "2025-11"))
+    assert round(res["totales"]["remunerativo"], 2) == 2176278.30

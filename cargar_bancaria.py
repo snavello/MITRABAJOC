@@ -70,6 +70,12 @@ CONCEPTOS = [
     ("MAQCON", "Adicional máquinas de contabilidad (art. 24)", "ingreso", True, ""),
     ("PORTAV", "Adicional portavalores (art. 39)", "ingreso", True, ""),
     ("ZONA", "Adicional zona patagónica (art. 25)", "ingreso", True, ""),
+    # Día del Bancario (6 de noviembre): NO remunerativo por el acta de 2020.
+    # Sin este concepto, el primer recibo de un banco que lo imprime entre los
+    # haberes (Nación) lo daba de alta como remunerativo y la app sumaba los
+    # $ 185.000 a la base de los aportes (lote bancario, tirada de 40 en
+    # Pruebas, 2026-11-04). El nombre es el que encaja con las líneas impresas.
+    ("DIA_BANCARIO", "Día del Bancario", "ingreso", False, ""),
     # Los tres aportes de ley usan los códigos UNIVERSALES de la plataforma
     # (validador.CONCEPTOS_UNIVERSALES): todo sindicato nuevo los recibe solo
     # al darse de alta desde /plataforma. Inventarles un código propio los
