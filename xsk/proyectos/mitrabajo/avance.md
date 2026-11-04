@@ -90,3 +90,8 @@ Estado del kit: 10 Solucionado (todos verificados), 5 Parcial, 4 Pendiente,
 `arsantagati` entre o se le resetee la clave en Pruebas y Demo), **H-0008**
 (cierra con el perímetro INF-05) y **H-0020** (regularizar la Demo en la
 próxima promoción).
+
+**2026-11-04 — H-0023 abierto y corregido en código** (Plataforma 0.65.02):
+publicar y borrar la lista de Tests de Pruebas aceptaban el PIN por defecto en
+el header aunque el ingreso con PIN estaba apagado. Ahora el header vale solo
+con `PIN_ENTORNOS_HABILITADO`. Queda de SDN: un `PIN_ENTORNOS` propio en Pruebas.

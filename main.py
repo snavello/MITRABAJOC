@@ -9822,6 +9822,16 @@ def entornos_tests_correr(request: Request, tipo: str = Form("lecturas"),
     return RedirectResponse("/entornos?aviso=test_lanzado#tests", status_code=303)
 
 
+def _pin_de_script(pin: str) -> bool:
+    """El PIN que mandan los scripts de carga en el header X-Pin-Entornos.
+    Vale SOLO si el PIN de la landing está habilitado (PIN_ENTORNOS_HABILITADO,
+    apagado desde el cierre de R1): antes estas dos rutas lo aceptaban aunque
+    el ingreso con PIN estuviera apagado, y con el PIN por defecto, que está
+    escrito en el repositorio, cualquiera publicaba o borraba la lista de
+    Tests de Pruebas (XSK H-0023, 2026-11-04)."""
+    return entorno.PIN_LANDING_HABILITADO and entorno.verificar_pin(pin)
+
+
 @app.post("/entornos/tests/publicar")
 def entornos_tests_publicar(request: Request, payload: dict = Body(...),
                              x_pin_entornos: str = Header(default="")):
@@ -9837,8 +9847,8 @@ def entornos_tests_publicar(request: Request, payload: dict = Body(...),
     header X-Pin-Entornos (para que `correr.sh` lo llame de punta a punta
     sin login interactivo)."""
     _exigir_landing()
-    if not (_pase_landing(request) or entorno.verificar_pin(x_pin_entornos)):
-        raise HTTPException(403, "Ingresá el PIN de la landing (cookie o header X-Pin-Entornos).")
+    if not (_pase_landing(request) or _pin_de_script(x_pin_entornos)):
+        raise HTTPException(403, "Iniciá sesión en la landing (o, con el PIN habilitado, mandalo en X-Pin-Entornos).")
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "El test de carga solo corre en Pruebas.")
     tipo = payload.get("tipo")
@@ -9885,8 +9895,8 @@ def entornos_tests_borrar_todo(request: Request, x_pin_entornos: str = Header(de
     republicar la serie completa desde carga/experimentos.json cuando el
     contenido cambió de forma (ver db.borrar_todos_los_tests_carga)."""
     _exigir_landing()
-    if not (_pase_landing(request) or entorno.verificar_pin(x_pin_entornos)):
-        raise HTTPException(403, "Ingresá el PIN de la landing (cookie o header X-Pin-Entornos).")
+    if not (_pase_landing(request) or _pin_de_script(x_pin_entornos)):
+        raise HTTPException(403, "Iniciá sesión en la landing (o, con el PIN habilitado, mandalo en X-Pin-Entornos).")
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "Solo en Pruebas.")
     return {"borrados": db.borrar_todos_los_tests_carga()}
