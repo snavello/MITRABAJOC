@@ -163,7 +163,7 @@ export async function subir() {
   let codigo = '';
   try { codigo = res.status !== 200 ? (res.json('codigo') || '') : ''; } catch (e) { codigo = ''; }
   if (codigo === 'E-RECIBO-04') recibo04.add(1);
-  if (codigo === 'E-SESION-01' || res.status === 401) logueado = false;   // sesión vencida: reentra
+  if (codigo === 'E-SESION-01' || codigo === 'E-SESION-02' || res.status === 401) logueado = false;   // sesión vencida: reentra
   const ok = res.status === 200;
   erroresSubida.add(!ok);
   subidaMs.add(res.timings.duration, tags);
@@ -207,11 +207,16 @@ function umbrales() {
   if (ESCENARIO !== 'continuo') {
     t['subida_ms{formato:pdf}'] = ['p(95)<999999'];
     t['subida_ms{formato:jpg}'] = ['p(95)<999999'];
+    t['errores_subida{formato:pdf}'] = ['rate<=1'];
+    t['errores_subida{formato:jpg}'] = ['rate<=1'];
   }
   return t;
 }
 
-export const options = { scenarios: escenarios(), thresholds: umbrales() };
+// noCookiesReset: k6 vacía las cookies al terminar cada iteración, y el que
+// sube recibos se loguea una vez y sigue subiendo en las siguientes (sin esto,
+// de la segunda subida en adelante la app contesta E-SESION-02).
+export const options = { scenarios: escenarios(), thresholds: umbrales(), noCookiesReset: true };
 
 /* ---------------- Veredicto ---------------- */
 
@@ -236,13 +241,15 @@ export function handleSummary(data) {
   };
   for (const f of ['pdf', 'jpg']) {
     const x = valores(data, `subida_ms{formato:${f}}`);
-    if (x && x.count) v.por_formato[f] = { subidas: x.count, p50_ms: x.med, p95_ms: x['p(95)'] };
+    const e = valores(data, `errores_subida{formato:${f}}`);
+    const n = e ? (e.passes || 0) + (e.fails || 0) : 0;
+    if (x && n) v.por_formato[f] = { subidas: n, p50_ms: x.med, p95_ms: x['p(95)'] };
   }
   if (ESCENARIO === 'rafagas') {
     for (const n of RAFAGAS) {
       const x = valores(data, `subida_ms{scenario:rafaga_${n}}`);
       const e = valores(data, `errores_subida{scenario:rafaga_${n}}`);
-      v.escalones[n] = { subidas: x ? x.count : 0, p50_ms: x ? x.med : null,
+      v.escalones[n] = { subidas: e ? (e.passes || 0) + (e.fails || 0) : 0, p50_ms: x ? x.med : null,
         p95_ms: x ? x['p(95)'] : null, error: e ? e.rate : null };
     }
   }
