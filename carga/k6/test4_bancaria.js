@@ -158,7 +158,7 @@ export async function subir() {
   const nombre = r.archivo.split('/').pop();
   const res = http.post(`${BASE_URL}/api/leer`,
     { archivo: http.file(buf.buffer, nombre, MIME[ext] || 'application/octet-stream') },
-    { tags: Object.assign({ paso: 'subir_recibo' }, tags), timeout: '90s' });
+    { tags: Object.assign({ paso: 'subir_recibo' }, tags), timeout: '90s', responseType: 'text' });
   contar(res);
   let codigo = '';
   try { codigo = res.status !== 200 ? (res.json('codigo') || '') : ''; } catch (e) { codigo = ''; }
@@ -216,7 +216,12 @@ function umbrales() {
 // noCookiesReset: k6 vacía las cookies al terminar cada iteración, y el que
 // sube recibos se loguea una vez y sigue subiendo en las siguientes (sin esto,
 // de la segunda subida en adelante la app contesta E-SESION-02).
-export const options = { scenarios: escenarios(), thresholds: umbrales(), noCookiesReset: true };
+// discardResponseBodies: con 200 lectores y --out json, k6 guardaba cada HTML
+// y se quedó sin memoria (14 GB, muerto por el sistema a los 13 minutos de la
+// primera corrida en el plan Intermedio). El cuerpo solo hace falta en la
+// subida (el código de error), que lo pide con responseType.
+export const options = { scenarios: escenarios(), thresholds: umbrales(), noCookiesReset: true,
+  discardResponseBodies: true };
 
 /* ---------------- Veredicto ---------------- */
 

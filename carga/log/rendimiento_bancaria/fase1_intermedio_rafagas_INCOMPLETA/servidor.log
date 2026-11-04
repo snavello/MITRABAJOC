@@ -1,0 +1,35 @@
+{"ts": "2026-11-04T22:31:25.985488+00:00", "cpu_web": 0.0024198, "ram_web": 347115518.0, "cpu_db": 0.008033367, "ram_db": 97972220.0, "conexiones_db": 9.0, "nota": null}
+{"ts": "2026-11-04T22:31:58.303076+00:00", "cpu_web": 0.0024105334, "ram_web": 696311810.0, "cpu_db": 0.008798833, "ram_db": 122552320.0, "conexiones_db": 9.0, "nota": null}
+{"ts": "2026-11-04T22:32:29.816210+00:00", "cpu_web": 0.40126822669999995, "ram_web": 1123151860.0, "cpu_db": 0.033748, "ram_db": 165814270.0, "conexiones_db": 25.0, "nota": null}
+{"ts": "2026-11-04T22:33:01.311811+00:00", "cpu_web": 1.4410789666, "ram_web": 1121992700.0, "cpu_db": 0.7085781, "ram_db": 188465150.0, "conexiones_db": 25.0, "nota": null}
+{"ts": "2026-11-04T22:33:33.206454+00:00", "cpu_web": 2.0017966666, "ram_web": 1400057840.0, "cpu_db": 0.37636384, "ram_db": 211955710.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:34:04.950397+00:00", "cpu_web": 2.0017966666, "ram_web": 1454383100.0, "cpu_db": 0.5245415, "ram_db": 218054660.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:34:36.785116+00:00", "cpu_web": 1.8281116, "ram_web": 1417072600.0, "cpu_db": 0.67389065, "ram_db": 216682500.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:35:08.399043+00:00", "cpu_web": 1.880764, "ram_web": 1507659800.0, "cpu_db": 0.35195687, "ram_db": 218918910.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:35:39.912697+00:00", "cpu_web": 1.8218274, "ram_web": 1525829600.0, "cpu_db": 0.6082899, "ram_db": 212877310.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:36:11.450553+00:00", "cpu_web": 1.7818203, "ram_web": 1567572000.0, "cpu_db": 0.485658, "ram_db": 243855360.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:36:43.186250+00:00", "cpu_web": 2.0, "ram_web": 1616941000.0, "cpu_db": 0.6608698, "ram_db": 211636220.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:37:15.018872+00:00", "cpu_web": 1.6601396, "ram_web": 1653420000.0, "cpu_db": 0.5669352, "ram_db": 216580100.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:37:46.630260+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
+{"ts": "2026-11-04T22:38:17.663214+00:00", "cpu_web": 1.4312736, "ram_web": 1680109600.0, "cpu_db": 0.5443304, "ram_db": 229187580.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:38:49.207158+00:00", "cpu_web": 1.8437487, "ram_web": 1599529000.0, "cpu_db": 0.3645976, "ram_db": 219443200.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:39:20.729381+00:00", "cpu_web": 1.8990287, "ram_web": 1689260000.0, "cpu_db": 0.520544, "ram_db": 238620670.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:39:52.383401+00:00", "cpu_web": 2.0, "ram_web": 1776660500.0, "cpu_db": 0.5389306, "ram_db": 228167680.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:40:23.886808+00:00", "cpu_web": 1.6713125, "ram_web": 1927934000.0, "cpu_db": 0.61406136, "ram_db": 243105800.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:40:55.619869+00:00", "cpu_web": 1.6962714, "ram_web": 1931743200.0, "cpu_db": 0.49935463, "ram_db": 229912580.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:41:27.356486+00:00", "cpu_web": 1.9558372, "ram_web": 2009747500.0, "cpu_db": 0.5459586, "ram_db": 245055490.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:41:58.804974+00:00", "cpu_web": 1.1105471, "ram_web": 2051547100.0, "cpu_db": 0.61811054, "ram_db": 242192380.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:42:30.819142+00:00", "cpu_web": 2.0, "ram_web": 2071388200.0, "cpu_db": 0.44905847, "ram_db": 244412420.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:43:02.503396+00:00", "cpu_web": 2.0, "ram_web": 2000285700.0, "cpu_db": 0.4189606, "ram_db": 239919100.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:43:33.937616+00:00", "cpu_web": 1.22308, "ram_web": 2142158800.0, "cpu_db": 0.95049876, "ram_db": 266117120.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:44:05.658302+00:00", "cpu_web": 1.5949275, "ram_web": 2101686300.0, "cpu_db": 0.5129975, "ram_db": 246779900.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:44:37.152055+00:00", "cpu_web": 2.0, "ram_web": 2077925400.0, "cpu_db": 0.34962597, "ram_db": 263290880.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:45:08.836492+00:00", "cpu_web": 2.0, "ram_web": 1963077600.0, "cpu_db": 0.35123858, "ram_db": 199589890.0, "conexiones_db": 20.0, "nota": null}
+{"ts": "2026-11-04T22:45:40.490029+00:00", "cpu_web": 0.6394694, "ram_web": 1735966700.0, "cpu_db": 0.2379415, "ram_db": 200146940.0, "conexiones_db": 10.0, "nota": null}
+{"ts": "2026-11-04T22:46:11.927772+00:00", "cpu_web": 0.0053703, "ram_web": 1736228900.0, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
+{"ts": "2026-11-04T22:46:43.363412+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
+{"ts": "2026-11-04T22:47:14.465450+00:00", "cpu_web": 0.0045844335, "ram_web": 1733353500.0, "cpu_db": 0.0077438666, "ram_db": 194822140.0, "conexiones_db": 10.0, "nota": null}
+{"ts": "2026-11-04T22:47:45.760970+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
+{"ts": "2026-11-04T22:48:16.880484+00:00", "cpu_web": 0.0026977, "ram_web": 1697337300.0, "cpu_db": 0.0069671664, "ram_db": 192237570.0, "conexiones_db": 10.0, "nota": null}
+{"ts": "2026-11-04T22:48:48.151636+00:00", "cpu_web": 0.0297211, "ram_web": 1699926000.0, "cpu_db": 0.0081249, "ram_db": 184131580.0, "conexiones_db": 10.0, "nota": null}
+{"ts": "2026-11-04T22:49:19.834237+00:00", "cpu_web": 0.0259675, "ram_web": 1701793800.0, "cpu_db": 0.0081482, "ram_db": 203145220.0, "conexiones_db": 10.0, "nota": null}
