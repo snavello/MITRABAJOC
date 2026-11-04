@@ -91,6 +91,13 @@
   .barra i { display: block; height: 100%; border-radius: 3px; background: var(--exito); }
   .barra i.medio { background: var(--pruebas); }
   .barra i.alto { background: var(--alerta); }
+  .ex-td-izq { text-align: left !important; font-family: inherit !important; }
+  .origen { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px;
+    font-family: var(--mono); letter-spacing: .04em; white-space: nowrap; }
+  .origen.app { background: rgba(220,80,80,.18); color: #ffb3a8; }
+  .origen.recibos { background: rgba(240,180,60,.18); color: #ffd48a; }
+  .origen.configuracion { background: rgba(120,160,255,.18); color: #b9ccff; }
+  .estado-causa { font-size: 12.5px; color: rgba(255,255,255,.7); }
   .nota { font-size: 12.5px; color: rgba(255,255,255,.45); margin-top: 10px; line-height: 1.5; }
 
   .glosario { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap: 10px; margin-top: 14px; }
@@ -135,7 +142,13 @@
     <h2>Condiciones técnicas</h2>
     <p class="ayuda">La configuración exacta con la que corrió <em>este</em> test. Cada test de la lista corrió con una distinta: es justamente lo que se compara entre uno y otro.</p>
     {% set cfg = v.config %}
-    {% if cfg %}
+    {% if v.es_exactitud %}
+    <div class="grilla">
+      {% for k, valor in cfg.items() %}
+      <div class="dato"><div class="k">{{ k }}</div><div class="v" style="font-size:14px;">{{ valor }}</div></div>
+      {% endfor %}
+    </div>
+    {% elif cfg %}
     <div class="grilla">
       <div class="dato"><div class="k">Servicio web</div><div class="v" style="font-size:14px;">{{ cfg.plan_web_etiqueta or cfg.plan_web or '—' }}</div></div>
       <div class="dato"><div class="k">Postgres</div><div class="v" style="font-size:14px;">{{ cfg.plan_db_etiqueta or cfg.plan_db or '—' }}</div></div>
@@ -157,8 +170,71 @@
   {% if v.veredicto %}
   <div class="seccion">
     <h2>Resultado contra el objetivo</h2>
-    <div class="veredicto {{ 'ok' if 'Cumple' in v.veredicto else '' }}">{{ v.veredicto }}</div>
+    <div class="veredicto {{ 'ok' if ('Cumple' in v.veredicto or v.veredicto_ok) else '' }}">{{ v.veredicto }}</div>
+    {% if not v.es_exactitud %}
     <p class="ayuda" style="margin-top:10px;">El objetivo es el mismo para todos los tests: <b>p95 por debajo de 1.000 ms y menos de 1% de errores</b>. Todos los tiempos de esta página están en milisegundos (1.000 ms = 1 segundo).</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if v.es_exactitud %}
+  {% if v.totales %}
+  <div class="seccion">
+    <h2>En números</h2>
+    <div class="grilla">
+      {% for k, valor in v.totales.items() %}
+      <div class="dato"><div class="k">{{ k }}</div><div class="v">{{ valor }}</div></div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if v.causas %}
+  <div class="seccion">
+    <h2>Qué se encontró</h2>
+    <p class="ayuda">Cada problema, con de dónde viene: <b>la app</b> (un error del programa), <b>los recibos</b> (un error de los recibos de prueba) o <b>la configuración</b> (algo que el sindicato tiene que cargar).</p>
+    <div class="wrap-tabla">
+    <table>
+      <thead><tr><th>Origen</th><th class="ex-td-izq">Qué pasó</th><th class="ex-td-izq">Ejemplo</th><th>Recibos</th><th class="ex-td-izq">Estado</th></tr></thead>
+      <tbody>
+      {% for c in v.causas %}
+        <tr>
+          <td><span class="origen {{ c.origen }}">{{ {'app': 'La app', 'recibos': 'Los recibos', 'configuracion': 'Configuración'}.get(c.origen, c.origen) }}</span></td>
+          <td class="ex-td-izq">{{ c.que }}</td>
+          <td class="ex-td-izq">{{ c.ejemplo }}</td>
+          <td>{{ c.recibos }}</td>
+          <td class="ex-td-izq estado-causa">{{ c.estado }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% set con_costo = (v.recibos | selectattr('modelo', 'defined') | list | length) > 0 %}
+  <div class="seccion">
+    <h2>Recibo por recibo</h2>
+    <p class="ayuda"><b>Esperado</b> es lo que la app debería concluir de cada recibo; <b>dio</b>, lo que concluyó. <b>Lectura</b> dice si la IA leyó exactos los totales y el mes. Los tiempos son de punta a punta, en segundos: subir el archivo, tapar los datos personales, la lectura de la IA y la respuesta. El costo es el de la lectura de la IA, con el precio que regía ese día (al pasar el mouse, los tokens); una fila con «·» es la misma lectura que la de arriba.</p>
+    <div class="wrap-tabla">
+    <table>
+      <thead><tr><th>Recibo</th><th>Esperado</th><th>Dio</th><th>Acierto</th><th>Lectura</th><th>Tiempo (s)</th>{% if con_costo %}<th>Modelo</th><th>Costo (US$)</th>{% endif %}{% if v.recibos and 'con_correccion' in v.recibos[0] %}<th>Con la corrección</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for r in v.recibos %}
+        <tr>
+          <td title="{{ r.detalle or '' }}">{{ r.archivo }}</td>
+          <td>{{ r.esperado }}</td>
+          <td>{{ r.obtenido }}</td>
+          <td>{% if r.acierto %}<span class="cumple si">✓</span>{% else %}<span class="cumple no">✗</span>{% endif %}</td>
+          <td>{% if r.lectura_ok %}<span class="cumple si">✓</span>{% elif r.lectura_ok is none %}—{% else %}<span class="cumple no">✗</span>{% endif %}</td>
+          <td>{{ ('%.1f'|format(r.segundos)).replace('.', ',') if r.segundos is not none else '—' }}</td>
+          {% if con_costo %}<td>{{ r.modelo or '—' }}</td><td title="{{ ('tokens entrada / salida: ' ~ r.tokens) if r.tokens else '' }}">{% if r.costo_usd is not none and r.costo_usd is defined %}{{ ('%.4f'|format(r.costo_usd)).replace('.', ',') }}{% elif r.modelo %}·{% else %}—{% endif %}</td>{% endif %}
+          {% if 'con_correccion' in r %}<td>{% if r.con_correccion %}<span class="cumple si">✓</span>{% else %}<span class="cumple no">✗</span>{% endif %}</td>{% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
   </div>
   {% endif %}
 
@@ -242,6 +318,7 @@
   </div>
   {% endif %}
 
+  {% if not v.es_exactitud %}
   <div class="seccion">
     <h2>Cómo leer los números</h2>
     <div class="glosario">
@@ -257,6 +334,7 @@
       <a href="{{ url_informe }}">Ver el informe completo, con todos los tests comparados →</a>
     </div>
   </div>
+  {% endif %}
 </div>
 </body>
 </html>

@@ -84,7 +84,8 @@ from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_compar
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
                         error_de_expresion, totales_leidos, clasificacion_vista,
-                        CATEGORIAS_UNIVERSALES)
+                        cuil_impreso_invalido,
+                        generico_de_categoria)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -985,12 +986,22 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     db.registrar_uso_ia(sid or None, _cuil_seguro(request), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
+    # El CUIL impreso con el verificador mal (SDN, 2026-11-04): se guarda lo que
+    # dice el documento ANTES de rearmarlo (lo que leyó la IA y lo que leyó el
+    # tapado), para que /api/validar avise. No frena: un CUIL inválido no es
+    # de otra persona.
+    impreso = cuil_impreso_invalido(
+        [(recibo.get("empleado") or {}).get("cuil")]
+        + ([k.texto for k in prep.analisis.cajas if k.tipo == "cuil"] if prep.analisis else []),
+        _cuil_seguro(request))
     if prep.tapado:
         # Lo que se le tapó a la IA vuelve con lo leído acá (CUIL y CUIT del
         # documento; nombre de la persona). Antes de los chequeos de siempre,
         # que así siguen mirando el CUIL del recibo.
         preparacion.rearmar_recibo(recibo, prep.analisis, conocidos,
                                    lambda cuit: db.razon_social_de_cuit(sid, cuit))
+    if impreso:
+        recibo["cuil_impreso_invalido"] = impreso
     if recibo.get("confianza") == "baja":
         raise ErrorApp("E-RECIBO-02")
     # El recibo no es de quien inició sesión: cortar ACÁ, apenas se sabe.
@@ -1060,15 +1071,20 @@ def api_validar(request: Request, payload: dict):
             # la fórmula del genérico (bug real encontrado con un recibo de
             # AFIP: el concepto quedaba creado pero la fórmula de JUBILACION
             # nunca lo encontraba).
-            genericos_actuales = {c.codigo for c in catalogo_actual if not c.cuit_empleador}
+            # Para la cuota vale también el genérico marcado como cuota de
+            # afiliación aunque no se llame CUOTA_SINDICAL (validador.
+            # generico_de_categoria): sin eso, la cuota de cada banco nuevo de
+            # La Bancaria nacía sin vincular a su regla.
+            genericos_dicts = [{"codigo": c.codigo, "cuit_empleador": c.cuit_empleador,
+                                "categoria_sindical": c.categoria_sindical}
+                               for c in catalogo_actual if not c.cuit_empleador]
             for n in nuevos:
                 clave = (n["codigo"], cuit_empleador or "")
                 if clave not in existentes:
-                    codigo_universal = CATEGORIAS_UNIVERSALES.get(n.get("categoria_universal"))
+                    generico = generico_de_categoria(n.get("categoria_universal"), genericos_dicts)
                     codigo_generico = (
-                        codigo_universal
-                        if codigo_universal and codigo_universal in genericos_actuales
-                        and codigo_universal != n["codigo"]
+                        generico["codigo"]
+                        if generico and generico["codigo"] != n["codigo"]
                         else None
                     )
                     s.add(Concepto(
@@ -6081,10 +6097,8 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
         # primero, y solo se cae a la búsqueda por parecido si no aplica.
         p["generico_sugerido"] = None
         if p["cuit_empleador"]:
-            codigo_universal = CATEGORIAS_UNIVERSALES.get(p.get("categoria_universal"))
-            generico_universal = next(
-                (c for c in genericos_actuales if c["codigo"] == codigo_universal), None
-            ) if codigo_universal else None
+            generico_universal = generico_de_categoria(p.get("categoria_universal"),
+                                                       genericos_actuales)
             if generico_universal:
                 p["generico_sugerido"] = {
                     "codigo": generico_universal["codigo"], "nombre": generico_universal["nombre"],
@@ -9819,6 +9833,16 @@ def entornos_tests_correr(request: Request, tipo: str = Form("lecturas"),
     return RedirectResponse("/entornos?aviso=test_lanzado#tests", status_code=303)
 
 
+def _pin_de_script(pin: str) -> bool:
+    """El PIN que mandan los scripts de carga en el header X-Pin-Entornos.
+    Vale SOLO si el PIN de la landing está habilitado (PIN_ENTORNOS_HABILITADO,
+    apagado desde el cierre de R1): antes estas dos rutas lo aceptaban aunque
+    el ingreso con PIN estuviera apagado, y con el PIN por defecto, que está
+    escrito en el repositorio, cualquiera publicaba o borraba la lista de
+    Tests de Pruebas (XSK H-0023, 2026-11-04)."""
+    return entorno.PIN_LANDING_HABILITADO and entorno.verificar_pin(pin)
+
+
 @app.post("/entornos/tests/publicar")
 def entornos_tests_publicar(request: Request, payload: dict = Body(...),
                              x_pin_entornos: str = Header(default="")):
@@ -9834,17 +9858,27 @@ def entornos_tests_publicar(request: Request, payload: dict = Body(...),
     header X-Pin-Entornos (para que `correr.sh` lo llame de punta a punta
     sin login interactivo)."""
     _exigir_landing()
-    if not (_pase_landing(request) or entorno.verificar_pin(x_pin_entornos)):
-        raise HTTPException(403, "Ingresá el PIN de la landing (cookie o header X-Pin-Entornos).")
+    if not (_pase_landing(request) or _pin_de_script(x_pin_entornos)):
+        raise HTTPException(403, "Iniciá sesión en la landing (o, con el PIN habilitado, mandalo en X-Pin-Entornos).")
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "El test de carga solo corre en Pruebas.")
     tipo = payload.get("tipo")
-    if tipo not in ("lecturas", "recibos", "experimento"):
+    if tipo not in ("lecturas", "recibos", "experimento", "exactitud"):
         raise HTTPException(400, "Tipo de test inválido.")
     resumen = payload.get("resumen") or []
     if not resumen:
         raise HTTPException(400, "Falta el resumen del test.")
-    if tipo == "experimento":
+    if tipo == "exactitud":
+        # Una prueba de exactitud (PLAN_PRUEBAS_BANCARIA.md): recibos reales
+        # leídos por la IA y validados por la app, uno por fila, contra lo
+        # que se esperaba de cada uno. La arma carga/publicar_exactitud.py.
+        if not all(isinstance(f, dict) and f.get("archivo") for f in resumen):
+            raise HTTPException(400, "Una prueba de exactitud espera un recibo por fila, con 'archivo'.")
+        parametros = {k: payload.get(k) for k in
+                      ("nombre", "subtitulo", "objetivo", "config", "advertencias",
+                       "veredicto", "veredicto_ok", "conclusion", "inicio_ba", "fin_ba",
+                       "totales", "causas")}
+    elif tipo == "experimento":
         # Un experimento completo: varias fases (lecturas, recibos, lectores
         # en paralelo), cada una con sus escalones y la carga medida de web
         # y de Postgres. Lo arma carga/consolidar.py desde los datos crudos.
@@ -9872,8 +9906,8 @@ def entornos_tests_borrar_todo(request: Request, x_pin_entornos: str = Header(de
     republicar la serie completa desde carga/experimentos.json cuando el
     contenido cambió de forma (ver db.borrar_todos_los_tests_carga)."""
     _exigir_landing()
-    if not (_pase_landing(request) or entorno.verificar_pin(x_pin_entornos)):
-        raise HTTPException(403, "Ingresá el PIN de la landing (cookie o header X-Pin-Entornos).")
+    if not (_pase_landing(request) or _pin_de_script(x_pin_entornos)):
+        raise HTTPException(403, "Iniciá sesión en la landing (o, con el PIN habilitado, mandalo en X-Pin-Entornos).")
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "Solo en Pruebas.")
     return {"borrados": db.borrar_todos_los_tests_carga()}
@@ -11245,6 +11279,22 @@ def _vista_test(fila: dict) -> dict:
       sola, sin dos plantillas que puedan divergir."""
     resumen = fila.get("resumen") or []
     params = fila.get("parametros") or {}
+    if fila.get("tipo") == "exactitud":
+        return {
+            "es_exactitud": True, "es_experimento": True, "fases": [],
+            "recibos": resumen, "totales": params.get("totales") or {},
+            "causas": params.get("causas") or [],
+            "config": params.get("config") or {},
+            "veredicto": params.get("veredicto") or "",
+            "veredicto_ok": bool(params.get("veredicto_ok")),
+            "conclusion": params.get("conclusion") or "",
+            "objetivo": params.get("objetivo") or "",
+            "advertencias": params.get("advertencias") or [],
+            "titulo": params.get("nombre") or f"Test #{fila.get('id')}",
+            "subtitulo": params.get("subtitulo") or "",
+            "inicio_ba": params.get("inicio_ba") or "",
+            "fin_ba": params.get("fin_ba") or "",
+        }
     es_experimento = bool(resumen) and isinstance(resumen[0], dict) and "filas" in resumen[0]
     if es_experimento:
         return {

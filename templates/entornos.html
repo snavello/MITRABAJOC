@@ -1534,6 +1534,8 @@
 // y el panel de servidor + la lista se refrescan solos mientras algo esté
 // "corriendo", con backoff simple para no pedir por minutos si ya terminó.
 (function () {
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c =>
+    ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const form = document.getElementById('form-correr-test');
   if (!form) return;  // "Tests en Demo" no lo tiene
   const tipoSel = document.getElementById('tf-tipo');
@@ -1563,7 +1565,8 @@
     if (!tests.length) { cont.innerHTML = '<div class="vacio">Todavía no se corrió ningún test desde acá.</div>'; return; }
     cont.innerHTML = tests.map(t =>
       '<a class="test-fila-link" data-test-id="' + t.id + '" href="/entornos/tests/' + t.id + '">' +
-      '<span class="test-estado ' + t.estado + '">' + t.estado + '</span> <b>#' + t.id + '</b> · ' + t.tipo + ' · ' + t.creado_en +
+      '<span class="test-estado ' + t.estado + '">' + t.estado + '</span> <b>#' + t.id + '</b> · ' +
+      esc((t.parametros && t.parametros.nombre) || t.tipo) + ' · ' + t.creado_en +
       '<span style="margin-left:auto; opacity:.6; font-size:12.5px;">' + (t.avance || '') + '</span>' +
       '<span class="test-ver">Ver informe →</span></a>'
     ).join('');

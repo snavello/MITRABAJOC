@@ -302,6 +302,93 @@ def codigo_efectivo(concepto: dict) -> str:
     return _clave(concepto.get("codigo_generico")) or _clave(concepto.get("codigo"))
 
 
+def codigo_provisorio(descripcion) -> str:
+    """El código que se le inventa a una línea que el recibo imprime SIN
+    código (Galicia, por ejemplo), para darla de alta como concepto nuevo.
+
+    Sale del nombre SIN lo que cambia de una persona o de un mes a otro: lo que
+    va entre paréntesis y los números. Antes eran las 12 primeras letras del
+    nombre tal cual, y «Antigüedad (16 años)» y «Antigüedad (24 años)» daban
+    los dos `NUEVO-ANTIGUEDAD (`: el segundo concepto no se creaba porque "ya
+    existía", la línea no encajaba con ninguno y salía de la suma de haberes
+    (prueba piloto del lote bancario, 2026-11-03). Ahora las dos dan
+    `NUEVO-ANTIGUEDAD` y encajan con el mismo concepto."""
+    t = normalizar(descripcion)
+    sin_variable = re.sub(r"\([^)]*\)", " ", t)
+    sin_variable = " ".join(re.sub(r"[$%]|\d+(?:[.,/]\d+)*", " ", sin_variable).split())
+    return f"{PREFIJO_PROVISORIO}{(sin_variable or t)[:24]}"
+
+
+def _concepto_de_linea(ln: dict, idx: dict):
+    """El concepto del catálogo para una línea: por código, por nombre o alias
+    y, si la línea no trae código, por el código provisorio que se le habría
+    inventado al darla de alta."""
+    codigo = _clave(ln.get("codigo"))
+    concepto = idx.get(codigo) or idx.get(normalizar(ln.get("descripcion")))
+    if not concepto and not codigo:
+        concepto = idx.get(codigo_provisorio(ln.get("descripcion")))
+    return concepto
+
+
+def generico_de_categoria(categoria_universal, conceptos) -> dict | None:
+    """El concepto GENÉRICO del sindicato para una categoría universal que
+    puso la IA (jubilación, PAMI, obra social, cuota sindical), o None.
+
+    Primero por el código universal (`CATEGORIAS_UNIVERSALES`). Para la cuota
+    sindical, si el sindicato no tiene un `CUOTA_SINDICAL`, el concepto
+    genérico que marcó como cuota de afiliación (`categoria_sindical =
+    "afiliacion"`), si hay uno solo: así se llama en La Bancaria (`CUOTA`) y en
+    cualquier sindicato dado de alta a mano. Antes la cuota de un banco nuevo
+    no se vinculaba nunca y su regla decía «el recibo no incluye la cuota».
+    Si además hay un genérico de convenio (aporte solidario), no se elige: la
+    etiqueta de la IA no distingue uno de otro."""
+    codigo = CATEGORIAS_UNIVERSALES.get(categoria_universal)
+    if not codigo:
+        return None
+    valores = conceptos.values() if isinstance(conceptos, dict) else conceptos
+    genericos = {id(c): c for c in valores if isinstance(c, dict) and not c.get("cuit_empleador")}
+    for c in genericos.values():
+        if _clave(c.get("codigo")) == codigo:
+            return c
+    if categoria_universal == "cuota_sindical":
+        cuotas = [c for c in genericos.values() if c.get("categoria_sindical") == "afiliacion"]
+        de_convenio = [c for c in genericos.values() if c.get("categoria_sindical") == "convenio"]
+        # Para la IA, el aporte solidario de convenio (el del no afiliado) también
+        # es "un aporte al gremio". Si el sindicato tiene cargados los dos, la
+        # etiqueta no alcanza para saber cuál es: no se elige, y la línea queda
+        # pendiente para que el sindicato la confirme en Conceptos.
+        if len(cuotas) == 1 and not de_convenio:
+            return cuotas[0]
+    return None
+
+
+def es_cuota_de_afiliacion(codigo, conceptos) -> bool:
+    """¿El código de esta regla es la cuota sindical del sindicato? El genérico
+    marcado como cuota de afiliación, o el código universal de la cuota."""
+    codigo = _clave(codigo)
+    if codigo == CATEGORIAS_UNIVERSALES["cuota_sindical"]:
+        return True
+    return any(isinstance(c, dict) and not c.get("cuit_empleador")
+               and _clave(c.get("codigo")) == codigo and c.get("categoria_sindical") == "afiliacion"
+               for c in conceptos)
+
+
+def trae_aporte_solidario(lineas: list, matcheadas: list) -> bool:
+    """¿El recibo trae un aporte solidario de convenio (el que paga el no
+    afiliado)? Por el concepto (`categoria_sindical = "convenio"`) o por el
+    nombre impreso."""
+    if any((m.get("concepto") or {}).get("categoria_sindical") == "convenio" for m in matcheadas):
+        return True
+    return any("SOLIDARI" in normalizar(ln.get("descripcion")) for ln in lineas if isinstance(ln, dict))
+
+
+def detalle_cuota_faltante(con_solidario: bool) -> str:
+    """El texto de una cuota sindical que el recibo no trae (definido por SDN,
+    2026-11-03): la regla se le exige a todos, y el texto dice qué pasó."""
+    return ("Con aporte solidario, sin cuota de aporte sindical." if con_solidario
+            else "Sin cuota de aporte sindical.")
+
+
 def matchear_lineas(lineas: list, idx: dict):
     """Matchea cada línea del recibo contra el catálogo (por código o por
     nombre/alias normalizado). Si una línea no matchea así pero la IA la
@@ -313,13 +400,21 @@ def matchear_lineas(lineas: list, idx: dict):
     por el catálogo curado del sindicato."""
     matcheadas, desconocidas = [], []
     for ln in lineas:
-        concepto = idx.get(_clave(ln.get("codigo"))) or idx.get(normalizar(ln.get("descripcion")))
+        concepto = _concepto_de_linea(ln, idx)
         automatico = False
+        generico = generico_de_categoria(ln.get("categoria_universal"), idx)
         if not concepto:
-            codigo_universal = CATEGORIAS_UNIVERSALES.get(ln.get("categoria_universal"))
-            if codigo_universal:
-                concepto = idx.get(codigo_universal)
-                automatico = concepto is not None
+            concepto = generico
+            automatico = concepto is not None
+        elif (generico and concepto.get("cuit_empleador") and concepto.get("pendiente_revision")
+              and not concepto.get("codigo_generico")
+              and _clave(generico.get("codigo")) != _clave(concepto.get("codigo"))):
+            # El concepto del banco todavía sin revisar y sin vincular, pero la
+            # IA dijo qué es (la cuota de un banco nuevo, típicamente): se
+            # valida contra la regla del genérico, marcado como automático,
+            # hasta que el sindicato lo revise.
+            concepto = {**concepto, "codigo_generico": generico.get("codigo")}
+            automatico = True
         if concepto:
             entrada = {**ln, "concepto": concepto}
             if automatico:
@@ -393,15 +488,34 @@ def _zona_catalogo(m) -> str:
     return concepto.get("tipo")
 
 
+def dice_no_remunerativo(descripcion) -> bool:
+    """¿El nombre impreso dice que no es remunerativo? («Compensación no
+    remunerativa», «Suma no rem.», «Asig. no remunerativa»). Es el término
+    legal y los bancos lo escriben en el nombre aunque lo impriman en la
+    misma columna que los haberes (Galicia, prueba del lote bancario,
+    2026-11-03)."""
+    t = normalizar(descripcion).replace(".", " ")
+    return "NO REMUNERATIV" in t or " NO REM " in f" {t} " or "NO REMUN" in t
+
+
 def _es_remunerativa(m) -> bool:
     """¿Suma a la base de los aportes esta línea de haberes? Lo dice el
-    concepto si es un haber en el catálogo. Si está entre los haberes por lo
-    que leyó la IA y no por el catálogo (un concepto cargado como descuento),
-    la marca de remunerativo de ese concepto no significa nada y lo dice la
-    sección: la columna de no remunerativos no suma."""
-    if m["concepto"].get("tipo") == "ingreso":
-        return bool(m["concepto"].get("remunerativo", True))
-    return seccion_de(m) != "no_remunerativos"
+    concepto si es un haber del catálogo ya REVISADO por el sindicato. Si el
+    concepto está pendiente de revisión (lo dio de alta la IA con lo que vio
+    en un recibo), mandan el recibo: no suma si está impresa entre los no
+    remunerativos o si su nombre dice que no es remunerativa. Si está entre
+    los haberes por lo que leyó la IA y no por el catálogo (un concepto
+    cargado como descuento), la marca de remunerativo de ese concepto no
+    significa nada y lo dice la sección: la columna de no remunerativos no
+    suma."""
+    concepto = m["concepto"]
+    if concepto.get("tipo") == "ingreso" and not concepto.get("pendiente_revision"):
+        return bool(concepto.get("remunerativo", True))
+    if seccion_de(m) == "no_remunerativos" or dice_no_remunerativo(m.get("descripcion")):
+        return False
+    if concepto.get("tipo") == "ingreso":
+        return bool(concepto.get("remunerativo", True))
+    return True
 
 
 def _es_aporte_de_ley(linea) -> bool:
@@ -605,6 +719,37 @@ def _evaluar(expr: str, variables: dict) -> float:
     return float(_ev_nodo(arbol.body, variables))
 
 
+def cuil_impreso_con_error(cuil_leido, cuil_sesion) -> bool:
+    """¿El CUIL impreso es el de la persona con el dígito verificador mal?
+    Diez primeros dígitos iguales a los de la sesión y un verificador que no
+    cumple el módulo 11 (la sesión sí). Es un error de quien hizo el recibo:
+    un CUIL inválido no es de nadie, así que no es "otra persona" (tirada de
+    40 del lote bancario, 2026-11-04: Nación imprimió 27-34070910-0 en vez de
+    27-34070910-7)."""
+    a, b = _norm_cuil(cuil_leido), _norm_cuil(cuil_sesion)
+    return (len(a) == 11 and len(b) == 11 and a != b and a[:10] == b[:10]
+            and not cuit.es_valido(a) and cuit.es_valido(b))
+
+
+def cuil_impreso_invalido(candidatos, cuil_sesion) -> str | None:
+    """De lo leído en el documento (lo que leyó la IA, lo que leyó el tapado),
+    el primer CUIL que sea el de la sesión con el verificador mal, con guiones;
+    o None."""
+    for c in candidatos or []:
+        if cuil_impreso_con_error(c, cuil_sesion):
+            d = _norm_cuil(c)
+            return f"{d[:2]}-{d[2:10]}-{d[10]}"
+    return None
+
+
+def detalle_cuil_impreso(impreso: str, cuil_sesion: str) -> str:
+    d = _norm_cuil(cuil_sesion)
+    return (f"Tu recibo trae el CUIL mal impreso: dice {impreso} y el tuyo es "
+            f"{d[:2]}-{d[2:10]}-{d[10]}. El recibo se verificó igual, pero conviene "
+            "pedirle a tu empleador que lo corrija: un CUIL mal cargado puede "
+            "afectar tus aportes.")
+
+
 def cuiles_distintos(cuil_leido, cuil_sesion) -> bool:
     """¿Dos CUIL son distintos, normalizados? (Si alguno falta, no se puede
     afirmar que no coinciden -> False: no se bloquea con datos incompletos,
@@ -616,6 +761,8 @@ def cuiles_distintos(cuil_leido, cuil_sesion) -> bool:
     trabajador.
     """
     a, b = _norm_cuil(cuil_leido), _norm_cuil(cuil_sesion)
+    if cuil_impreso_con_error(a, b):
+        return False        # la misma persona, con el verificador mal impreso
     return bool(a and b and a != b)
 
 
@@ -767,10 +914,18 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             # No figura la línea: se retuvo 0, que es menos de lo esperado.
             if sujeto_a_tope:
                 conceptos_tope_retuvo_de_menos.append(f["descripcion"])
-            discrepancias.append({
-                "tipo": "concepto_faltante", "codigo": codigo,
-                "detalle": f"El recibo no incluye '{f['descripcion']}'.",
-            })
+            if es_cuota_de_afiliacion(codigo, conceptos):
+                con_solidario = trae_aporte_solidario(lineas, matcheadas)
+                discrepancias.append({
+                    "tipo": "concepto_faltante", "codigo": codigo, "cuota_sindical": True,
+                    "aporte_solidario": con_solidario,
+                    "detalle": detalle_cuota_faltante(con_solidario),
+                })
+            else:
+                discrepancias.append({
+                    "tipo": "concepto_faltante", "codigo": codigo,
+                    "detalle": f"El recibo no incluye '{f['descripcion']}'.",
+                })
             continue
 
         variables_f = variables
@@ -849,6 +1004,14 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     } for ln in desconocidas]
 
     alertas = []
+
+    # El CUIL impreso con el verificador mal (lo marca /api/leer en
+    # `cuil_impreso_invalido`, con lo que se leyó del documento antes de
+    # rearmarlo). No frena nada: se avisa (SDN, 2026-11-04).
+    impreso = recibo.get("cuil_impreso_invalido")
+    if impreso and cuil_sesion and cuil_impreso_con_error(impreso, cuil_sesion):
+        alertas.append({"tipo": "cuil_impreso_invalido",
+                        "detalle": detalle_cuil_impreso(impreso, cuil_sesion)})
 
     # Líneas que la IA no pudo leer: quedaron afuera de todos los cálculos,
     # así que hay que decirlo -- si no, el trabajador ve un "todo en orden"
@@ -1069,11 +1232,10 @@ def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -
         if not isinstance(ln, dict):
             continue
         codigo = _clave(ln.get("codigo"))
-        concepto = idx.get(codigo) or idx.get(normalizar(ln.get("descripcion")))
-        if concepto:
+        if _concepto_de_linea(ln, idx):
             continue
         # Clave para no duplicar si el mismo concepto nuevo aparece dos veces.
-        clave = codigo or normalizar(ln.get("descripcion"))
+        clave = codigo or codigo_provisorio(ln.get("descripcion"))
         if clave in vistos:
             continue
         vistos.add(clave)
@@ -1081,7 +1243,7 @@ def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -
         tipo = _zona_leida(ln)
         reintegro = tipo == "descuento" and importe * signo < 0
         nuevos.append({
-            "codigo": codigo or f"{PREFIJO_PROVISORIO}{clave[:12]}",
+            "codigo": clave,
             # a texto sí o sí: esta descripción termina como Concepto.nombre
             # en la base, y una columna de texto no acepta un número.
             "descripcion": str(ln.get("descripcion") or "(sin descripción)"),
@@ -1090,7 +1252,8 @@ def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -
             # Para un descuento no significa nada (la base solo suma haberes),
             # pero se guarda en False para que no quede un "remunerativo" que
             # nadie eligió si después alguien le cambia el tipo.
-            "remunerativo": tipo == "ingreso" and seccion_de(ln) != "no_remunerativos",
+            "remunerativo": (tipo == "ingreso" and seccion_de(ln) != "no_remunerativos"
+                             and not dice_no_remunerativo(ln.get("descripcion"))),
             "reintegro": reintegro,
             "categoria_universal": ln.get("categoria_universal"),
         })

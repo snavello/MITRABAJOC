@@ -9597,6 +9597,7 @@ columna nuevas declaradas.
 ## Dos PDF a la vez tumbaban el servidor (2026-11-02, Trabajador 0.57.02)
 
 Lo encontró la primera prueba local de los recursos del plan de La Bancaria
+(`PLAN_PRUEBAS_BANCARIA.md` §7, en la rama `claude/busy-fermi-pvxggf`): con `carga/probar_lote_bancaria.py
 (`PLAN_PRUEBAS_BANCARIA.md` §7): con `carga/probar_lote_bancaria.py
 --paralelo 8` contra un uvicorn con `ENMASCARADO=activo`, el proceso murió dos
 veces sin dejar traceback, solo `double free or corruption` de glibc.
@@ -9622,3 +9623,169 @@ nuevo que use pypdfium2 tiene que tomar el mismo candado.
 (8 hilos × 25 lecturas; sin el candado el proceso del test se cae), 320
 lecturas en 8 hilos sin caída, y 5 corridas de 60 recibos con 8 en paralelo
 contra el servidor local: 300 subidas, 0 errores (antes se caía en 2 de 5).
+
+**Complemento (2026-11-03, Trabajador 0.57.03).** Una segunda sesión había
+llegado al mismo arreglo en paralelo y se integró encima: (1) lo que se crea
+adentro del candado (página, texto de la página, bitmap del render) se CIERRA
+adentro, para que su destructor de C no corra después en el hilo y el
+momento que elija el recolector, fuera del candado; el candado pasó a
+`RLock` porque `_palabras_pagina` corre dentro de `palabras_pdf`. No se pudo
+hacer caer la versión anterior por ese camino (4 corridas de 8 hilos con
+`gc.collect()` forzado), así que es defensa, no la corrección de un caso
+visto. (2) El test de hilos corre en un proceso APARTE: sin el candado se
+cae ese test y no toda la suite; lee los diez recibos de
+`docs/recibos-bancaria-prueba/` más el ficticio, con palabras, cajas e
+imágenes iguales a las de leer de a uno. (3) Dos guardas con `ast`: ningún
+otro módulo de la app importa pypdfium2 (`extractor.py` y `rag.py` usan
+`pdf2image`, que corre poppler en un proceso aparte, y `pypdf`, Python puro;
+`mapa_funcional.py` solo lo nombra), y toda función de `lectores.py` que abre
+un `PdfDocument` lo hace dentro de `with _candado_pdf`. Medido: ~29 ms por
+recibo con y sin candado; tomarlo sin competencia, ~0,2 µs.
+
+## Los recibos de bancos nuevos se validaban mal (2026-11-03, Trabajador 0.57.04)
+
+Lo encontró la prueba piloto del lote bancario en Pruebas (10 recibos al azar
+con Sonnet 5.5, `PLAN_PRUEBAS_BANCARIA.md` §5 bis en la rama
+`claude/busy-fermi-pvxggf`): la IA leyó bien los 10 y la app dio los 10 con
+diferencias. Dos causas en la app; la tercera era del lote (aportes calculados
+sin el tope, que la app marca bien).
+
+**1. La cuota de un banco nuevo no se vinculaba con la regla del sindicato.**
+La IA etiqueta la línea «Cuota sindical Asoc. Bancaria 2%» como
+`cuota_sindical`, y `CATEGORIAS_UNIVERSALES` la mandaba al código
+`CUOTA_SINDICAL`, que ningún sindicato tiene por defecto (los universales que
+se siembran son jubilación, PAMI y obra social). La Bancaria la llama `CUOTA`.
+El concepto del banco nacía sin `codigo_generico` y la regla `CUOTA` decía «El
+recibo no incluye 'Asoc Bancaria'» en todos los recibos. Ahora
+`validador.generico_de_categoria` busca el genérico por el código universal y,
+para la cuota, si no está, el genérico marcado `categoria_sindical =
+"afiliacion"` (si hay uno solo). Lo usan el alta de conceptos nuevos de
+`/api/validar`, la sugerencia de Aprendizaje y `matchear_lineas`, que además
+valida contra la regla del genérico un concepto del banco todavía pendiente y
+sin vincular (marcado `chequeo_automatico`): así los conceptos que ya quedaron
+mal creados en Pruebas también se arreglan sin tocar la base. **Resguardo**:
+para la IA, el aporte solidario de convenio (el del no afiliado) también es
+«un aporte al gremio»; si el sindicato tiene cargado un genérico de convenio
+además del de afiliación, la etiqueta no alcanza y no se elige ninguno (la
+línea queda pendiente para que el sindicato la confirme en Conceptos).
+
+**El texto de la cuota que falta** (decisión de SDN, 2026-11-03): la regla de
+la cuota se le sigue exigiendo a todos, también al no afiliado, pero el
+recibo ya no dice «El recibo no incluye 'Asoc Bancaria'» sino «Sin cuota de
+aporte sindical.» o, si trae aporte solidario (concepto de convenio o
+«solidari» en el nombre), «Con aporte solidario, sin cuota de aporte
+sindical.» (`validador.detalle_cuota_faltante`; la discrepancia lleva además
+`cuota_sindical` y `aporte_solidario`). Las demás reglas conservan su texto.
+
+**2. Códigos provisorios que chocaban.** Un recibo sin códigos (Galicia) recibe
+un código inventado por concepto: eran las 12 primeras letras del nombre, y
+«Antigüedad (16 años)» y «Antigüedad (24 años)» daban los dos `NUEVO-ANTIGUEDAD
+(`. El segundo no se creaba porque "ya existía", la línea no encajaba con
+ninguno y salía de la suma de haberes (en el recibo de Galicia del piloto,
+$3.877.810,84 contra $4.258.348,65 impresos). Ahora `validador.codigo_provisorio`
+saca lo que va entre paréntesis y los números (`NUEVO-ANTIGUEDAD`, hasta 24
+letras), y una línea sin código también se busca por ese código.
+
+**Verificado** con el catálogo y las reglas reales de La Bancaria en Pruebas,
+sobre los 10 recibos del piloto tal como los leyó la IA: antes 10 con
+diferencias; ahora 5 OK y 5 con diferencias solo por los aportes sin tope.
+Tests: `test_conceptos_bancos.py`.
+
+## Lo no remunerativo impreso entre los haberes sumaba a los aportes (2026-11-03, Trabajador 0.57.05)
+
+Segunda tirada del lote bancario en Pruebas (20 recibos al azar con Sonnet 5.5,
+ya con la corrección de la cuota): 19 de 20 dieron lo esperado. El que no,
+`galicia/27425555478_2026-07.pdf`, esperaba una jubilación de $473.380,02 y la
+correcta (la del recibo) es $460.180,02: la app sumaba a la base los $120.000
+de «Compensación no remunerativa».
+
+**Causa.** Galicia imprime esa línea en la columna de HABERES (no tiene
+columna aparte para lo no remunerativo). La primera vez que la IA la vio la
+ubicó entre los haberes, y el concepto se dio de alta como remunerativo; desde
+entonces `_es_remunerativa` creía al concepto aunque estuviera pendiente de
+revisión, y aunque en otro recibo la IA la hubiera puesto entre los no
+remunerativos.
+
+**Corrección.** Para un concepto PENDIENTE de revisión mandan el recibo: no
+suma a la base si la línea está entre los no remunerativos o si su nombre dice
+que no es remunerativa (`validador.dice_no_remunerativo`: «no remunerativ»,
+«no rem.», «no remun»). Un concepto ya revisado por el sindicato sigue
+mandando. Y un concepto nuevo con ese nombre nace no remunerativo.
+
+**Verificado** con el catálogo actual de La Bancaria en Pruebas sobre los 30
+recibos de las dos tiradas, tal como los leyó la IA: 30 de 30 dan lo esperado
+(17 OK y 13 con diferencias, todas por aportes sin tope, que es un error real
+de esos recibos del lote). Tests en `test_conceptos_bancos.py`.
+
+## Las pruebas de exactitud, publicadas en Tests de /entornos (2026-11-03, Plataforma 0.65.01)
+
+Pedido de SDN: que las pruebas del lote bancario (recibos reales leídos por la
+IA y validados por la app) queden registradas donde ya están las de carga, la
+pestaña «Tests en Pruebas» de `/entornos`. La tabla `TestCarga` y la ruta
+`POST /entornos/tests/publicar` (PIN o pase de la landing) ya existían; se
+sumó un cuarto tipo, **`exactitud`**, sin migración (tipo y parámetros son
+libres): `resumen` lleva un recibo por fila (archivo, esperado, lo que dio,
+acierto, si la lectura fue exacta, segundos y, si hubo una corrección después,
+cómo da con ella) y los parámetros, la configuración (entorno, modelo,
+semilla), los totales y las **causas con su origen** (la app, los recibos de
+prueba o la configuración del sindicato). La página de detalle tiene su propia
+vista para este tipo y no muestra el objetivo ni el glosario de carga. La lista
+muestra el nombre de cada test en vez del tipo. Lo publica
+`carga/publicar_exactitud.py` (rama del plan de pruebas). Test en
+`test_tests_carga.py`.
+
+## El PIN por defecto todavía publicaba y borraba Tests (2026-11-04, Plataforma 0.65.02)
+
+Al publicar las pruebas de exactitud se vio que `POST /entornos/tests/publicar`
+y `POST /entornos/tests/borrar-todo` aceptaban el PIN en el header
+`X-Pin-Entornos` aunque el ingreso con PIN está apagado desde R1, y que Pruebas
+usa el PIN por defecto, escrito en el repositorio. Ahora el header vale solo si
+el PIN de la landing está habilitado (`main._pin_de_script`); sin eso, esas dos
+rutas piden la sesión nominal como el resto de la landing. Los scripts que
+publican (`carga/publicar.py`, `publicar_experimentos.py`,
+`publicar_exactitud.py`) necesitan, para correr, que se prenda el PIN con un
+valor propio, o publicar con sesión. XSK H-0023.
+
+## Las pruebas de exactitud, con tiempo, modelo y costo por recibo (2026-11-04, Plataforma 0.65.03)
+
+Pedido de SDN: al reporte le faltaban el tiempo, el modelo y el costo de cada
+recibo. La tabla «Recibo por recibo» de la página de detalle suma las columnas
+Modelo y Costo (US$), con los tokens al pasar el mouse, y «En números» el
+modelo que leyó, el costo total y el costo por recibo. El costo real está solo
+en la base de Pruebas (`UsoIA`, con el precio congelado en la fila), así que la
+publicación pasa a hacerse ADENTRO de Pruebas: `carga/publicar_exactitud.py
+--directo --si` en el Shell de Render lee `carga/exactitud_pagos.json` (lo arma
+`--exportar` desde la rama del plan, con el lote extraído), le asigna a cada
+recibo su lectura de `UsoIA` (por CUIL y por la ventana de la corrida; si las
+cuentas no cierran, no inventa: deja el estimado y lo dice) y reemplaza en la
+lista las pruebas de exactitud con el mismo nombre. No usa el PIN (XSK H-0023).
+
+## El Día del Bancario, no remunerativo desde el catálogo (2026-11-04)
+
+Tercera tirada del lote bancario en Pruebas (40 recibos al azar, de a 2 a la
+vez, Sonnet 5.5): lectura 40 de 40 exacta, sin errores con dos lecturas
+simultáneas, y 39 de 40 dieron lo esperado. El que no: Nación imprime «DÍA DEL
+BANCARIO $ 185.000» entre los haberes, su concepto se dio de alta remunerativo y
+la app sumaba esos $ 185.000 a la base de los aportes. Es no remunerativo por el
+acta de 2020. No es un defecto del validador (el catálogo manda una vez
+revisado) sino del catálogo: `cargar_bancaria.py` ahora siembra el concepto
+general «Día del Bancario» no remunerativo, con el que encaja por nombre la
+línea de cualquier banco nuevo. En La Bancaria de Pruebas hay que corregirlo a
+mano en Conceptos (el concepto `060` de Nación, CUIT 30500010912, a no
+remunerativo, y el general nuevo). Con eso, los 40 dan lo esperado. Además,
+`carga/publicar_exactitud.py` publica también esta cuarta prueba.
+
+## El CUIL impreso con el dígito verificador mal: se acepta y se avisa (2026-11-04, Trabajador 0.58.01)
+
+En la tirada de 40 del lote bancario, Nación imprimió 27-34070910-0 en vez de
+27-34070910-7. Con el tapado activo la app lo aceptaba como propio sin decir
+nada (el tapado da el CUIL por el de la sesión y al rearmar se pierde lo
+impreso); con el tapado apagado, en cambio, lo cortaba como E-RECIBO-04. SDN
+decidió: **se acepta y se avisa**. `validador.cuil_impreso_con_error`: diez
+dígitos iguales a los de la sesión y un verificador que no cumple el módulo 11
+(un CUIL inválido no es de nadie, así que no es otra persona). `/api/leer` toma
+lo impreso antes de rearmar (lo que leyó la IA y las cajas de CUIL del tapado)
+y lo deja en `recibo.cuil_impreso_invalido`; `validar` agrega la alerta
+`cuil_impreso_invalido` («Tu recibo trae el CUIL mal impreso: dice … y el tuyo
+es …»), y `cuiles_distintos` ya no lo cuenta como ajeno en ningún camino. Tests:
+`test_cuil_impreso.py`.
