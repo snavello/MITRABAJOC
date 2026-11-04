@@ -9744,3 +9744,17 @@ rutas piden la sesión nominal como el resto de la landing. Los scripts que
 publican (`carga/publicar.py`, `publicar_experimentos.py`,
 `publicar_exactitud.py`) necesitan, para correr, que se prenda el PIN con un
 valor propio, o publicar con sesión. XSK H-0023.
+
+## Las pruebas de exactitud, con tiempo, modelo y costo por recibo (2026-11-04, Plataforma 0.65.03)
+
+Pedido de SDN: al reporte le faltaban el tiempo, el modelo y el costo de cada
+recibo. La tabla «Recibo por recibo» de la página de detalle suma las columnas
+Modelo y Costo (US$), con los tokens al pasar el mouse, y «En números» el
+modelo que leyó, el costo total y el costo por recibo. El costo real está solo
+en la base de Pruebas (`UsoIA`, con el precio congelado en la fila), así que la
+publicación pasa a hacerse ADENTRO de Pruebas: `carga/publicar_exactitud.py
+--directo --si` en el Shell de Render lee `carga/exactitud_pagos.json` (lo arma
+`--exportar` desde la rama del plan, con el lote extraído), le asigna a cada
+recibo su lectura de `UsoIA` (por CUIL y por la ventana de la corrida; si las
+cuentas no cierran, no inventa: deja el estimado y lo dice) y reemplaza en la
+lista las pruebas de exactitud con el mismo nombre. No usa el PIN (XSK H-0023).
