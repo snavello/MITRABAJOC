@@ -9715,3 +9715,20 @@ mandando. Y un concepto nuevo con ese nombre nace no remunerativo.
 recibos de las dos tiradas, tal como los leyó la IA: 30 de 30 dan lo esperado
 (17 OK y 13 con diferencias, todas por aportes sin tope, que es un error real
 de esos recibos del lote). Tests en `test_conceptos_bancos.py`.
+
+## Las pruebas de exactitud, publicadas en Tests de /entornos (2026-11-03, Plataforma 0.65.01)
+
+Pedido de SDN: que las pruebas del lote bancario (recibos reales leídos por la
+IA y validados por la app) queden registradas donde ya están las de carga, la
+pestaña «Tests en Pruebas» de `/entornos`. La tabla `TestCarga` y la ruta
+`POST /entornos/tests/publicar` (PIN o pase de la landing) ya existían; se
+sumó un cuarto tipo, **`exactitud`**, sin migración (tipo y parámetros son
+libres): `resumen` lleva un recibo por fila (archivo, esperado, lo que dio,
+acierto, si la lectura fue exacta, segundos y, si hubo una corrección después,
+cómo da con ella) y los parámetros, la configuración (entorno, modelo,
+semilla), los totales y las **causas con su origen** (la app, los recibos de
+prueba o la configuración del sindicato). La página de detalle tiene su propia
+vista para este tipo y no muestra el objetivo ni el glosario de carga. La lista
+muestra el nombre de cada test en vez del tipo. Lo publica
+`carga/publicar_exactitud.py` (rama del plan de pruebas). Test en
+`test_tests_carga.py`.

@@ -9842,12 +9842,22 @@ def entornos_tests_publicar(request: Request, payload: dict = Body(...),
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "El test de carga solo corre en Pruebas.")
     tipo = payload.get("tipo")
-    if tipo not in ("lecturas", "recibos", "experimento"):
+    if tipo not in ("lecturas", "recibos", "experimento", "exactitud"):
         raise HTTPException(400, "Tipo de test inválido.")
     resumen = payload.get("resumen") or []
     if not resumen:
         raise HTTPException(400, "Falta el resumen del test.")
-    if tipo == "experimento":
+    if tipo == "exactitud":
+        # Una prueba de exactitud (PLAN_PRUEBAS_BANCARIA.md): recibos reales
+        # leídos por la IA y validados por la app, uno por fila, contra lo
+        # que se esperaba de cada uno. La arma carga/publicar_exactitud.py.
+        if not all(isinstance(f, dict) and f.get("archivo") for f in resumen):
+            raise HTTPException(400, "Una prueba de exactitud espera un recibo por fila, con 'archivo'.")
+        parametros = {k: payload.get(k) for k in
+                      ("nombre", "subtitulo", "objetivo", "config", "advertencias",
+                       "veredicto", "veredicto_ok", "conclusion", "inicio_ba", "fin_ba",
+                       "totales", "causas")}
+    elif tipo == "experimento":
         # Un experimento completo: varias fases (lecturas, recibos, lectores
         # en paralelo), cada una con sus escalones y la carga medida de web
         # y de Postgres. Lo arma carga/consolidar.py desde los datos crudos.
@@ -11248,6 +11258,22 @@ def _vista_test(fila: dict) -> dict:
       sola, sin dos plantillas que puedan divergir."""
     resumen = fila.get("resumen") or []
     params = fila.get("parametros") or {}
+    if fila.get("tipo") == "exactitud":
+        return {
+            "es_exactitud": True, "es_experimento": True, "fases": [],
+            "recibos": resumen, "totales": params.get("totales") or {},
+            "causas": params.get("causas") or [],
+            "config": params.get("config") or {},
+            "veredicto": params.get("veredicto") or "",
+            "veredicto_ok": bool(params.get("veredicto_ok")),
+            "conclusion": params.get("conclusion") or "",
+            "objetivo": params.get("objetivo") or "",
+            "advertencias": params.get("advertencias") or [],
+            "titulo": params.get("nombre") or f"Test #{fila.get('id')}",
+            "subtitulo": params.get("subtitulo") or "",
+            "inicio_ba": params.get("inicio_ba") or "",
+            "fin_ba": params.get("fin_ba") or "",
+        }
     es_experimento = bool(resumen) and isinstance(resumen[0], dict) and "filas" in resumen[0]
     if es_experimento:
         return {
