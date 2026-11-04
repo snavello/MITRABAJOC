@@ -84,6 +84,7 @@ from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_compar
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
                         error_de_expresion, totales_leidos, clasificacion_vista,
+                        cuil_impreso_invalido,
                         generico_de_categoria)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
@@ -985,12 +986,22 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     db.registrar_uso_ia(sid or None, _cuil_seguro(request), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
+    # El CUIL impreso con el verificador mal (SDN, 2026-11-04): se guarda lo que
+    # dice el documento ANTES de rearmarlo (lo que leyó la IA y lo que leyó el
+    # tapado), para que /api/validar avise. No frena: un CUIL inválido no es
+    # de otra persona.
+    impreso = cuil_impreso_invalido(
+        [(recibo.get("empleado") or {}).get("cuil")]
+        + ([k.texto for k in prep.analisis.cajas if k.tipo == "cuil"] if prep.analisis else []),
+        _cuil_seguro(request))
     if prep.tapado:
         # Lo que se le tapó a la IA vuelve con lo leído acá (CUIL y CUIT del
         # documento; nombre de la persona). Antes de los chequeos de siempre,
         # que así siguen mirando el CUIL del recibo.
         preparacion.rearmar_recibo(recibo, prep.analisis, conocidos,
                                    lambda cuit: db.razon_social_de_cuit(sid, cuit))
+    if impreso:
+        recibo["cuil_impreso_invalido"] = impreso
     if recibo.get("confianza") == "baja":
         raise ErrorApp("E-RECIBO-02")
     # El recibo no es de quien inició sesión: cortar ACÁ, apenas se sabe.

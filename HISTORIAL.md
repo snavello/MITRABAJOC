@@ -9773,3 +9773,18 @@ línea de cualquier banco nuevo. En La Bancaria de Pruebas hay que corregirlo a
 mano en Conceptos (el concepto `060` de Nación, CUIT 30500010912, a no
 remunerativo, y el general nuevo). Con eso, los 40 dan lo esperado. Además,
 `carga/publicar_exactitud.py` publica también esta cuarta prueba.
+
+## El CUIL impreso con el dígito verificador mal: se acepta y se avisa (2026-11-04, Trabajador 0.58.01)
+
+En la tirada de 40 del lote bancario, Nación imprimió 27-34070910-0 en vez de
+27-34070910-7. Con el tapado activo la app lo aceptaba como propio sin decir
+nada (el tapado da el CUIL por el de la sesión y al rearmar se pierde lo
+impreso); con el tapado apagado, en cambio, lo cortaba como E-RECIBO-04. SDN
+decidió: **se acepta y se avisa**. `validador.cuil_impreso_con_error`: diez
+dígitos iguales a los de la sesión y un verificador que no cumple el módulo 11
+(un CUIL inválido no es de nadie, así que no es otra persona). `/api/leer` toma
+lo impreso antes de rearmar (lo que leyó la IA y las cajas de CUIL del tapado)
+y lo deja en `recibo.cuil_impreso_invalido`; `validar` agrega la alerta
+`cuil_impreso_invalido` («Tu recibo trae el CUIL mal impreso: dice … y el tuyo
+es …»), y `cuiles_distintos` ya no lo cuenta como ajeno en ningún camino. Tests:
+`test_cuil_impreso.py`.
