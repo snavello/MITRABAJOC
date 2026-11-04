@@ -212,12 +212,13 @@
   </div>
   {% endif %}
 
+  {% set con_costo = (v.recibos | selectattr('modelo', 'defined') | list | length) > 0 %}
   <div class="seccion">
     <h2>Recibo por recibo</h2>
-    <p class="ayuda"><b>Esperado</b> es lo que la app debería concluir de cada recibo; <b>dio</b>, lo que concluyó. <b>Lectura</b> dice si la IA leyó exactos los totales y el mes. Los tiempos son de punta a punta, en segundos.</p>
+    <p class="ayuda"><b>Esperado</b> es lo que la app debería concluir de cada recibo; <b>dio</b>, lo que concluyó. <b>Lectura</b> dice si la IA leyó exactos los totales y el mes. Los tiempos son de punta a punta, en segundos: subir el archivo, tapar los datos personales, la lectura de la IA y la respuesta. El costo es el de la lectura de la IA, con el precio que regía ese día (al pasar el mouse, los tokens); una fila con «·» es la misma lectura que la de arriba.</p>
     <div class="wrap-tabla">
     <table>
-      <thead><tr><th>Recibo</th><th>Esperado</th><th>Dio</th><th>Acierto</th><th>Lectura</th><th>Seg.</th>{% if v.recibos and 'con_correccion' in v.recibos[0] %}<th>Con la corrección</th>{% endif %}</tr></thead>
+      <thead><tr><th>Recibo</th><th>Esperado</th><th>Dio</th><th>Acierto</th><th>Lectura</th><th>Tiempo (s)</th>{% if con_costo %}<th>Modelo</th><th>Costo (US$)</th>{% endif %}{% if v.recibos and 'con_correccion' in v.recibos[0] %}<th>Con la corrección</th>{% endif %}</tr></thead>
       <tbody>
       {% for r in v.recibos %}
         <tr>
@@ -226,7 +227,8 @@
           <td>{{ r.obtenido }}</td>
           <td>{% if r.acierto %}<span class="cumple si">✓</span>{% else %}<span class="cumple no">✗</span>{% endif %}</td>
           <td>{% if r.lectura_ok %}<span class="cumple si">✓</span>{% elif r.lectura_ok is none %}—{% else %}<span class="cumple no">✗</span>{% endif %}</td>
-          <td>{{ r.segundos if r.segundos is not none else '—' }}</td>
+          <td>{{ ('%.1f'|format(r.segundos)).replace('.', ',') if r.segundos is not none else '—' }}</td>
+          {% if con_costo %}<td>{{ r.modelo or '—' }}</td><td title="{{ ('tokens entrada / salida: ' ~ r.tokens) if r.tokens else '' }}">{% if r.costo_usd is not none and r.costo_usd is defined %}{{ ('%.4f'|format(r.costo_usd)).replace('.', ',') }}{% elif r.modelo %}·{% else %}—{% endif %}</td>{% endif %}
           {% if 'con_correccion' in r %}<td>{% if r.con_correccion %}<span class="cumple si">✓</span>{% else %}<span class="cumple no">✗</span>{% endif %}</td>{% endif %}
         </tr>
       {% endfor %}

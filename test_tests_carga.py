@@ -398,7 +398,8 @@ def test_publicar_una_prueba_de_exactitud_y_verla():
         "resumen": [{"archivo": "galicia/x_2026-07.pdf", "esperado": "OK", "obtenido": "CON_DISCREPANCIAS",
                      "acierto": False, "lectura_ok": True, "segundos": 7.8, "con_correccion": True},
                     {"archivo": "bbva/y_2026-05.pdf", "esperado": "OK", "obtenido": "OK",
-                     "acierto": True, "lectura_ok": True, "segundos": 6.6, "con_correccion": True}],
+                     "acierto": True, "lectura_ok": True, "segundos": 6.6, "con_correccion": True,
+                     "modelo": "Sonnet 5.5", "costo_usd": 0.0312, "tokens": "4.100 / 1.650"}],
     }
     r = client.post("/entornos/tests/publicar", json=pago)
     assert r.status_code == 200, r.text
@@ -408,7 +409,8 @@ def test_publicar_una_prueba_de_exactitud_y_verla():
     html = client.get(f"/entornos/tests/{tid}").text
     for texto in ("Exactitud · 20 recibos al azar", "Qué se encontró", "La app",
                   "Compensación no remunerativa $ 120.000", "Recibo por recibo",
-                  "galicia/x_2026-07.pdf", "Con la corrección", "Sonnet 5.5"):
+                  "galicia/x_2026-07.pdf", "Con la corrección", "Sonnet 5.5", "Tiempo (s)",
+                  "Costo (US$)", "0,0312", "6,6"):
         assert texto in html, texto
     assert "p95 por debajo de 1.000 ms" not in html     # el objetivo de carga no es el de esta prueba
     assert "Cómo leer los números" not in html          # ni su glosario
