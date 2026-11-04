@@ -9732,3 +9732,15 @@ vista para este tipo y no muestra el objetivo ni el glosario de carga. La lista
 muestra el nombre de cada test en vez del tipo. Lo publica
 `carga/publicar_exactitud.py` (rama del plan de pruebas). Test en
 `test_tests_carga.py`.
+
+## El PIN por defecto todavía publicaba y borraba Tests (2026-11-04, Plataforma 0.65.02)
+
+Al publicar las pruebas de exactitud se vio que `POST /entornos/tests/publicar`
+y `POST /entornos/tests/borrar-todo` aceptaban el PIN en el header
+`X-Pin-Entornos` aunque el ingreso con PIN está apagado desde R1, y que Pruebas
+usa el PIN por defecto, escrito en el repositorio. Ahora el header vale solo si
+el PIN de la landing está habilitado (`main._pin_de_script`); sin eso, esas dos
+rutas piden la sesión nominal como el resto de la landing. Los scripts que
+publican (`carga/publicar.py`, `publicar_experimentos.py`,
+`publicar_exactitud.py`) necesitan, para correr, que se prenda el PIN con un
+valor propio, o publicar con sesión. XSK H-0023.

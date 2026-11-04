@@ -415,3 +415,19 @@ def test_publicar_una_prueba_de_exactitud_y_verla():
     # Sin un recibo por fila, se rechaza.
     r = client.post("/entornos/tests/publicar", json={**pago, "resumen": [{"x": 1}]})
     assert r.status_code == 400
+
+
+def test_con_el_pin_apagado_el_header_no_abre_publicar_ni_borrar(monkeypatch):
+    """XSK H-0023: con el ingreso por PIN apagado (lo normal desde R1), el PIN
+    en el header ya no publica ni borra la lista de Tests. Antes sí, y el PIN
+    por defecto está escrito en el repositorio."""
+    import entorno
+    monkeypatch.setattr(entorno, "PIN_LANDING_HABILITADO", False)
+    c = TestClient(main.app)  # sin sesión, a propósito
+    antes = len(db.tests_carga_recientes(500))
+    r = c.post("/entornos/tests/publicar", json={"tipo": "lecturas", "resumen": [{"escalon": 50}]},
+               headers={"X-Pin-Entornos": "13571357"})
+    assert r.status_code == 403
+    r = c.post("/entornos/tests/borrar-todo", headers={"X-Pin-Entornos": "13571357"})
+    assert r.status_code == 403
+    assert len(db.tests_carga_recientes(500)) == antes
