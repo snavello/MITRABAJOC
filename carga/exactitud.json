@@ -1,0 +1,84 @@
+[
+  {
+    "clave": "piloto-10",
+    "nombre": "Exactitud · piloto de 10 recibos bancarios",
+    "subtitulo": "Lectura con IA (Sonnet 5.5) y validación de la app, recibo por recibo",
+    "inicio_ba": "2026-11-03 16:34",
+    "fin_ba": "2026-11-03 16:36",
+    "csv": "carga/log/lote_bancaria/2026-11-03_1634_sonnet-5-5.csv",
+    "objetivo": "Antes de armar el plan general, una sola tirada de 10 recibos del lote bancario elegidos al azar, para tomar tiempos reales con Sonnet 5.5 y ver si la app lee y valida bien recibos de cinco bancos distintos.",
+    "config": {
+      "Entorno": "Pruebas",
+      "Modelo de lectura": "Sonnet 5.5",
+      "Versión de la app": "Trabajador 0.57.02",
+      "Recibos": "10 al azar (semilla 20261103)",
+      "Cómo se subieron": "De a uno, cada uno con la sesión de su dueño",
+      "Lote": "600 recibos ficticios, 5 bancos, 12 meses"
+    },
+    "costo": "US$ 0,32 (estimado)",
+    "causas": [
+      {"origen": "app", "que": "La app no reconocía la cuota sindical cuando el banco la llamaba distinto, y decía que faltaba.",
+       "ejemplo": "«Cuota sindical Asoc. Bancaria 2% — $ 56.337,60»: la app respondía «El recibo no incluye 'Asoc Bancaria'».",
+       "recibos": 10, "estado": "Corregido (snavello/MITRABAJOC#196)"},
+      {"origen": "app", "que": "En recibos sin códigos (Galicia), la antigüedad de una persona chocaba con la de otra y quedaba fuera de la suma de haberes.",
+       "ejemplo": "«Antigüedad (16 años) — $ 380.537,81» quedaba afuera: «los haberes suman $ 3.877.810 y el recibo dice $ 4.258.348».",
+       "recibos": 2, "estado": "Corregido (snavello/MITRABAJOC#196)"},
+      {"origen": "app", "que": "Lo no remunerativo impreso entre los haberes sumaba a la base de los aportes.",
+       "ejemplo": "«Compensación no remunerativa — $ 120.000» (Galicia la imprime en la columna de haberes) entraba en el cálculo de la jubilación.",
+       "recibos": 1, "estado": "Corregido (snavello/MITRABAJOC#197)"},
+      {"origen": "recibos", "que": "Los recibos de prueba cobran los aportes sobre el sueldo entero, sin el tope de ley. La app lo marca bien.",
+       "ejemplo": "Diciembre 2025: tope $ 3.731.212; sueldo $ 4.138.348; jubilación cobrada $ 455.218 en vez de $ 410.433.",
+       "recibos": 5, "estado": "No se corrige: son casos con error (271 de los 600 del lote)"}
+    ],
+    "conclusion": "La IA leyó exactos los 10 recibos. Los errores fueron de validación: tres de la app, ya corregidos, y uno de los recibos de prueba, que la app detecta bien. Recalculados con la app corregida sobre la misma lectura, los 10 dan lo esperado."
+  },
+  {
+    "clave": "variantes-cuota",
+    "nombre": "Exactitud · nombres de la cuota sindical",
+    "subtitulo": "¿Reconoce la IA la cuota aunque cada banco la llame distinto?",
+    "inicio_ba": "2026-11-03 18:55",
+    "fin_ba": "2026-11-03 18:56",
+    "variantes": "carga/log/lote_bancaria/2026-11-03_variantes_cuota.json",
+    "objetivo": "Comprobar que la cuota sindical se reconoce por lo que es y no por cómo se escribe, y que no se confunde con otras líneas que nombran al gremio sin ser la cuota.",
+    "config": {
+      "Entorno": "Pruebas",
+      "Modelo de lectura": "Sonnet 5.5",
+      "Recibos": "8 ficticios, iguales salvo el nombre de la cuota",
+      "Trampas": "Aporte solidario, seguro de sepelio, cuota de préstamo"
+    },
+    "costo": "US$ 0,26 (estimado)",
+    "causas": [
+      {"origen": "configuracion", "que": "La regla de cuota de La Bancaria se le exige a todos, también al no afiliado, que paga aporte solidario. Decisión de SDN: se mantiene, con un texto claro.",
+       "ejemplo": "Antes: «El recibo no incluye 'Asoc Bancaria'». Ahora: «Con aporte solidario, sin cuota de aporte sindical».",
+       "recibos": 1, "estado": "Texto corregido (snavello/MITRABAJOC#196)"}
+    ],
+    "conclusion": "La IA reconoció como cuota sindical las 7 formas de escribirla y no tomó como cuota el aporte solidario ni las dos trampas. Con la app corregida, las 7 dan OK."
+  },
+  {
+    "clave": "azar-20",
+    "nombre": "Exactitud · 20 recibos bancarios al azar",
+    "subtitulo": "Segunda tirada, ya con la corrección de la cuota y la antigüedad",
+    "inicio_ba": "2026-11-03 19:14",
+    "fin_ba": "2026-11-03 19:17",
+    "csv": "carga/log/lote_bancaria/2026-11-03_1914_sonnet-5-5-20casos.csv",
+    "objetivo": "Repetir con más recibos (20, de otra selección al azar) después de corregir la cuota y la antigüedad, para confirmar las correcciones y buscar errores nuevos.",
+    "config": {
+      "Entorno": "Pruebas",
+      "Modelo de lectura": "Sonnet 5.5",
+      "Versión de la app": "Trabajador 0.57.04",
+      "Recibos": "20 al azar (semilla 20261104)",
+      "Cómo se subieron": "De a uno, cada uno con la sesión de su dueño",
+      "Lote": "600 recibos ficticios, 5 bancos, 12 meses"
+    },
+    "costo": "US$ 0,64 (estimado)",
+    "causas": [
+      {"origen": "app", "que": "Lo no remunerativo impreso entre los haberes sumaba a la base de los aportes.",
+       "ejemplo": "Galicia, julio 2026: la app esperaba una jubilación de $ 473.380 y la correcta (la del recibo) es $ 460.180, porque sumaba «Compensación no remunerativa $ 120.000».",
+       "recibos": 1, "estado": "Corregido (snavello/MITRABAJOC#197)"},
+      {"origen": "recibos", "que": "Los recibos de prueba cobran los aportes sin el tope de ley. La app lo marca bien.",
+       "ejemplo": "Sueldos altos o meses con aguinaldo: «te retuvieron de más».",
+       "recibos": 9, "estado": "No se corrige: son casos con error"}
+    ],
+    "conclusion": "La IA leyó exactos los 20. Las correcciones anteriores funcionaron: 19 de 20 dieron lo esperado, y el que no mostró un error nuevo de la app, ya corregido. Recalculados con la app corregida, los 20 dan lo esperado."
+  }
+]

@@ -285,3 +285,15 @@ def test_alta_por_panel_se_niega_contra_la_demo():
     with pytest.raises(SystemExit):
         AP.main(["--base-url", "https://mitrabajo.onrender.com", "--admin-clave", "x",
                  "--azar", "1", "--semilla", "1"])
+
+
+def test_publicar_exactitud_arma_las_tres_pruebas(lote):
+    import publicar_exactitud as PE
+    pagos = [PE.payload_de(p, PE._recalculo()) for p in json.loads(PE.REGISTRO.read_text(encoding="utf-8"))]
+    assert [len(p["resumen"]) for p in pagos] == [10, 10, 20]
+    for p in pagos:
+        assert p["tipo"] == "exactitud" and p["causas"] and p["totales"]
+        assert all(f["archivo"] for f in p["resumen"])
+        assert {c["origen"] for c in p["causas"]} <= {"app", "recibos", "configuracion"}
+    assert pagos[0]["totales"]["Con las correcciones"] == "10 de 10"
+    assert pagos[2]["totales"]["Dieron lo esperado"] == "19 de 20"
