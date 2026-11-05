@@ -1,0 +1,25 @@
+{
+  "escenario": "rafagas",
+  "formato": "todos",
+  "lectores": 200,
+  "lectores_p95_ms": 17881.101987099963,
+  "lectores_falla": 0.04993476455936425,
+  "respuestas_500": 0,
+  "respuestas_503": 423,
+  "e_recibo_04": 0,
+  "tu_dia_403": 0,
+  "por_formato": {},
+  "escalones": {
+      "10": {
+        "subidas": 186,
+        "p50_ms": 8992.875105,
+        "p95_ms": 20947.695633900003,
+        "error": 0.016129032258064516
+      }
+    },
+  "criterio_subidas": false,
+  "criterio_cero_500": true,
+  "criterio_pertenencia": true,
+  "criterio_lectores": true,
+  "aprobado": false
+}
