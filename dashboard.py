@@ -1337,8 +1337,9 @@ def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int]
             GROUP BY n.id"""), params).all()
         porcion = {f[0]: (f[1], f[2]) for f in filas}
         resultado, criterios = [], {}
+        con_adjunto = db._ids_con_bytes(s, db.Notificacion.adjunto_datos, porcion.keys())
         for nid in porcion:
-            n = s.get(db.Notificacion, nid)
+            n = s.get(db.Notificacion, nid, options=db._sin_bytes(db.Notificacion))
             if not n:
                 continue
             total_leidas = s.execute(text(
@@ -1349,7 +1350,7 @@ def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int]
                 "id": nid, "remitente": n.remitente, "texto": n.texto,
                 "enviado_en": n.enviado_en, "tipo": n.origen,
                 "etiqueta": TIPOS_NOTIF.get(n.origen, n.origen),
-                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "tiene_adjunto": nid in con_adjunto, "adjunto_nombre": n.adjunto_nombre,
                 "enviadas": porcion[nid][0], "leidas": porcion[nid][1],
                 "sin_leer": porcion[nid][0] - porcion[nid][1],
                 "total_enviadas": total_leidas[0], "total_leidas": total_leidas[1],
