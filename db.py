@@ -1663,9 +1663,12 @@ def guardar_recurso(titulo: str, descripcion: str, fecha: date, tipo: str, url: 
 
 
 def recurso(recurso_id: int) -> Optional[Recurso]:
-    """El recurso entero, bytes incluidos: solo para servirlo."""
+    """El recurso entero, bytes incluidos (que por defecto quedan diferidos):
+    solo para servirlo."""
+    from sqlalchemy.orm import undefer
     with Session(engine) as s:
-        return s.get(Recurso, recurso_id)
+        return s.get(Recurso, recurso_id,
+                     options=[undefer(Recurso.archivo_datos), undefer(Recurso.miniatura_datos)])
 
 
 def borrar_recurso(recurso_id: int) -> bool:
@@ -2724,6 +2727,32 @@ def init_db():
 
 
 # ---------- Accesos de conveniencia ----------
+# --- Los bytes no viajan si nadie los pide --------------------------------
+# Todas las columnas de bytes de todos los modelos (logos, firmas, contratos,
+# fotos de perfil, imágenes de noticias y beneficios, fotos de los modelos de
+# diseño, adjuntos) quedan DIFERIDAS: un `s.get(Sindicato, id)` o un
+# `select(Noticia)` traen la fila sin ellas, y recién se piden a la base si
+# el código lee el atributo (adentro de la sesión, como hacen las rutas que
+# sirven cada imagen). Antes, la fila del sindicato de La Bancaria (logo de
+# 1 MB + firma + contrato) se leía entera en cada pantalla, varias veces por
+# portada: con 200 personas navegando, la base se pasaba el tiempo mandando
+# bytes que nadie usaba (medido el 2026-11-05, PLAN_PRUEBAS_BANCARIA.md).
+# `test_paginas_sin_bytes.py` vigila que ninguna pantalla los traiga.
+# Para saber si hay imagen sin traerla: octet_length en SQL (ver
+# `marca_sindicato`, `tiene_foto_trabajador`, `_hay_bytes`).
+from sqlalchemy import LargeBinary as _LargeBinary
+from sqlalchemy.orm import Mapper as _Mapper
+
+
+@event.listens_for(_Mapper, "before_configured", once=True)
+def _diferir_columnas_de_bytes() -> None:
+    for mapper in list(SQLModel._sa_registry.mappers):
+        for prop in mapper.column_attrs:
+            if isinstance(prop.columns[0].type, _LargeBinary) and not prop.deferred:
+                prop.deferred = True
+                prop.strategy_key = (("deferred", True), ("instrument", True))
+
+
 def get_session() -> Session:
     return Session(engine)
 
@@ -2975,7 +3004,7 @@ def sindicatos_de_cuil(cuil: str) -> list:
         empadronamientos = s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all()
         resultado = []
         for e in empadronamientos:
-            sind = s.get(Sindicato, e.sindicato_id)
+            sind = s.get(Sindicato, e.sindicato_id, options=_sin_bytes(Sindicato))
             if sind and sind.activo:
                 resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
         return resultado
@@ -3283,10 +3312,18 @@ def guardar_foto_empleador(cuit: str, datos: bytes, mime: str) -> bool:
 
 def marca_sindicato(sindicato_id: int) -> dict:
     """Devuelve la marca (nombre, logo, colores) de un sindicato para pintar la app."""
+    from sqlalchemy import func
     with Session(engine) as s:
-        sind = s.get(Sindicato, sindicato_id)
-        if not sind:
+        # Sin el logo, la firma ni el contrato: esta función corre en cada
+        # pantalla. El largo en bytes lo calcula la base.
+        fila = s.exec(select(Sindicato,
+                             func.coalesce(func.octet_length(Sindicato.logo_datos), 0),
+                             func.coalesce(func.octet_length(Sindicato.firma_datos), 0))
+                      .options(*_sin_bytes(Sindicato))
+                      .where(Sindicato.id == sindicato_id)).first()
+        if not fila:
             return {}
+        sind, logo_v, firma_v = fila
         return {
             "id": sind.id, "nombre": sind.nombre, "logo": sind.logo,
             # Sello de versión (largo del binario) para romper el cache del
@@ -3294,7 +3331,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             # y /firma/{id} son la MISMA url antes y después de subir uno nuevo,
             # y el Cache-Control:max-age=3600 de esas rutas seguía sirviendo la
             # imagen vieja hasta que expiraba solo.
-            "logo_v": len(sind.logo_datos or b""), "firma_v": len(sind.firma_datos or b""),
+            "logo_v": logo_v, "firma_v": firma_v,
             "color_primario": sind.color_primario,
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
@@ -3328,7 +3365,7 @@ def apariencia_de(sindicato_id, cuil: str = "", rol: str = "afiliado", uid=None)
     sesión: la llaman las rutas de página, que no tienen una abierta."""
     import temas
     with Session(engine) as s:
-        sind = s.get(Sindicato, sindicato_id) if sindicato_id else None
+        sind = s.get(Sindicato, sindicato_id, options=_sin_bytes(Sindicato)) if sindicato_id else None
         defecto = (sind.tema_panel if rol == "panel" else sind.tema_afiliados) if sind else None
         propio = ""
         if not cuil and uid and rol == "panel":
@@ -3336,7 +3373,7 @@ def apariencia_de(sindicato_id, cuil: str = "", rol: str = "afiliado", uid=None)
             cuil = usuario.cuil if usuario else ""
         if cuil:
             modelo, columna = _cuenta_con_tema(rol)
-            cuenta = s.exec(select(modelo).where(columna == cuil)).first()
+            cuenta = s.exec(select(modelo).options(*_sin_bytes(modelo)).where(columna == cuil)).first()
             propio = cuenta.tema if cuenta else ""
         return {
             "tema": temas.resolver_tema(propio, defecto),
@@ -3453,14 +3490,15 @@ def _entre_0_y_1(v) -> float:
         return 0.5
 
 
-def _foto_dict(f: "FotoTema") -> dict:
+def _foto_dict(f: "FotoTema", v: int, v_color: int) -> dict:
+    """`v` y `v_color` son los largos en bytes calculados en SQL (sello de
+    versión de la url y «¿tiene color?»): la lista no trae las fotos."""
     return {"id": f.id, "tema": f.tema, "ancho": f.ancho, "alto": f.alto,
             "foco_x": f.foco_x, "foco_y": f.foco_y, "descripcion": f.descripcion,
             "publicada": f.publicada, "todos_los_sindicatos": f.todos_los_sindicatos,
             "sindicatos": list(f.sindicatos or []), "creada": f.creada,
-            "subida_por": f.subida_por, "v": len(f.datos or b""),
-            # La versión en color, si la tiene, con su propio sello de caché.
-            "color": bool(f.datos_color), "v_color": len(f.datos_color or b"")}
+            "subida_por": f.subida_por, "v": v or 0,
+            "color": bool(v_color), "v_color": v_color or 0}
 
 
 def reemplazar_archivo_foto_tema(foto_id: int, normalizada: dict) -> bool:
@@ -3484,9 +3522,13 @@ def reemplazar_archivo_foto_tema(foto_id: int, normalizada: dict) -> bool:
 
 def fotos_de_tema(tema: str) -> list:
     """Toda la biblioteca de un modelo, para plataforma (sin los bytes)."""
+    from sqlalchemy import func
     with Session(engine) as s:
-        return [_foto_dict(f) for f in s.exec(
-            select(FotoTema).where(FotoTema.tema == tema).order_by(FotoTema.id.desc())).all()]
+        filas = s.exec(select(FotoTema,
+                              func.coalesce(func.octet_length(FotoTema.datos), 0),
+                              func.coalesce(func.octet_length(FotoTema.datos_color), 0))
+                       .where(FotoTema.tema == tema).order_by(FotoTema.id.desc())).all()
+        return [_foto_dict(f, v, v_color) for f, v, v_color in filas]
 
 
 def fotos_disponibles(sindicato_id: int, tema: str) -> list:
@@ -3496,9 +3538,11 @@ def fotos_disponibles(sindicato_id: int, tema: str) -> list:
 
 
 def foto_tema(foto_id: int):
-    """La fila completa (con los bytes) o None."""
+    """La fila completa (CON los bytes, que por defecto quedan diferidos) o
+    None. Es la que usan las rutas que sirven la foto."""
+    from sqlalchemy.orm import undefer
     with Session(engine) as s:
-        return s.get(FotoTema, foto_id)
+        return s.get(FotoTema, foto_id, options=[undefer(FotoTema.datos), undefer(FotoTema.datos_color)])
 
 
 def editar_foto_tema(foto_id: int, **campos) -> bool:
@@ -3970,7 +4014,7 @@ def marca_plataforma() -> dict:
     """Marca de 'Mi Trabajo' para las pantallas sin sindicato (logins, panel de
     plataforma): degrada a los colores/logo de siempre si no se configuró nada."""
     with Session(engine) as s:
-        cfg = s.get(ConfiguracionPlataforma, 1)
+        cfg = s.get(ConfiguracionPlataforma, 1, options=_sin_bytes(ConfiguracionPlataforma))
         if not cfg:
             return {"logo": "", "logo_oscuro": "", "color_primario": "#152238",
                     "color_secundario": "#1a7a6b", "color_acento": "#b23a2e"}
@@ -4311,7 +4355,7 @@ def nombre_trabajador(cuil: str, sindicato_id: int = None) -> str:
     porque lo pasan una docena de llamadas y sacarlo de todas en el mismo
     cambio que mueve las columnas haría ilegible el diff."""
     with Session(engine) as s:
-        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        c = s.exec(select(CuentaTrabajador).options(*_sin_bytes(CuentaTrabajador)).where(CuentaTrabajador.cuil == cuil)).first()
         return c.nombre if c else ""
 
 
@@ -4325,7 +4369,7 @@ def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         if not t:
             return None
-        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        c = s.exec(select(CuentaTrabajador).options(*_sin_bytes(CuentaTrabajador)).where(CuentaTrabajador.cuil == cuil)).first()
         return _dict_personales(c) if c else None
 
 
@@ -4374,6 +4418,16 @@ def actualizar_dato_personal(cuil: str, dato: str, valor: str) -> bool:
             return False
         s.commit()
         return True
+
+
+def tiene_foto_trabajador(cuil: str) -> bool:
+    """Si la persona tiene foto de perfil, sin traerla (las portadas solo
+    dibujan el círculo; la foto la sirve la ruta de la foto, aparte)."""
+    from sqlalchemy import func
+    with Session(engine) as s:
+        largo = s.exec(select(func.coalesce(func.octet_length(CuentaTrabajador.foto_datos), 0))
+                       .where(CuentaTrabajador.cuil == cuil)).first()
+        return bool(largo)
 
 
 def foto_trabajador(cuil: str) -> Optional[dict]:
@@ -4521,13 +4575,23 @@ def _hay_bytes(columna):
     return func.coalesce(func.octet_length(columna), 0) > 0
 
 
-def _sin_imagenes(modelo):
-    """Opciones de carga que dejan AFUERA las columnas de bytes del modelo
-    (las imágenes y sus copias normalizadas). Una lista que las trajera
-    multiplica el tráfico con la base por la cantidad de filas."""
+def _sin_bytes(modelo):
+    """Opciones de carga que dejan AFUERA todas las columnas de bytes del
+    modelo (logos, firmas, contratos, fotos, imágenes y sus copias
+    normalizadas). Van en `s.get(Modelo, id, options=_sin_bytes(Modelo))` o
+    en `select(Modelo).options(*_sin_bytes(Modelo))`. Un `s.get(Sindicato)`
+    pelado trae el logo, la firma y el contrato (1,2 MB en La Bancaria), y
+    la fila del sindicato se lee en CADA pantalla: medido el 2026-11-05 con
+    200 personas navegando, la base se pasaba el tiempo mandando esos bytes
+    (PLAN_PRUEBAS_BANCARIA.md). Si una función necesita los bytes, los pide
+    aparte o accede al atributo adentro de la sesión (se cargan solos)."""
+    from sqlalchemy import LargeBinary
     from sqlalchemy.orm import defer
-    return [defer(getattr(modelo, c)) for c in modelo.model_fields
-            if c.endswith("_datos") or c.endswith("_norm")]
+    return [defer(getattr(modelo, c.key)) for c in modelo.__table__.columns
+            if isinstance(c.type, LargeBinary)]
+
+
+_sin_imagenes = _sin_bytes
 
 
 def _noticia_a_dict(n: "Noticia", tiene_imagen1: bool = None, tiene_imagen2: bool = None) -> dict:
@@ -4976,21 +5040,21 @@ def sindicatos_del_operador(cuil: str) -> list:
     con lo que el selector de después del login necesita mostrar. Ordenado
     por nombre del sindicato: el orden de la base no es un criterio."""
     with Session(engine) as s:
-        filas = s.exec(select(UsuarioSindicato, Sindicato).where(
+        filas = s.exec(select(UsuarioSindicato, Sindicato, _hay_bytes(Sindicato.logo_datos)).where(
             UsuarioSindicato.cuil == cuil, UsuarioSindicato.activo == True,
             Sindicato.id == UsuarioSindicato.sindicato_id,
             Sindicato.activo == True)).all()
         areas = {a.id: a.nombre for a in s.exec(select(Area).where(
-            Area.id.in_([u.area_id for u, _ in filas if u.area_id] or [0]))).all()}
+            Area.id.in_([u.area_id for u, _, _ in filas if u.area_id] or [0]))).all()}
         secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
-            Seccional.id.in_([u.seccional_id for u, _ in filas if u.seccional_id] or [0]))).all()}
+            Seccional.id.in_([u.seccional_id for u, _, _ in filas if u.seccional_id] or [0]))).all()}
         salida = [{
             "usuario_id": u.id, "sindicato_id": sind.id, "sindicato": sind.nombre,
-            "logo": bool(sind.logo_datos),
+            "logo": bool(logo),
             "rol": ("Super Admin" if u.es_super_admin else
                     "Admin de Seccional" if u.es_admin_seccional else "Usuario de área"),
             "area": areas.get(u.area_id, ""), "seccional": secs.get(u.seccional_id, ""),
-        } for u, sind in filas]
+        } for u, sind, logo in filas]
     return sorted(salida, key=lambda x: x["sindicato"].lower())
 
 

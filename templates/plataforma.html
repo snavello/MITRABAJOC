@@ -435,7 +435,7 @@
     <tr>
       <td>
         <div class="sind-cel">
-          {% if i.s.logo %}<img class="sind-logo" src="/logo/{{ i.s.id }}?v={{ i.s.logo_datos|length if i.s.logo_datos else 0 }}" alt="">{% endif %}
+          {% if i.s.logo %}<img class="sind-logo" src="/logo/{{ i.s.id }}?v={{ i.logo_v }}" alt="">{% endif %}
           <div><strong>{{ i.s.nombre }}</strong>{% if i.s.descripcion %}<br><span class="muted">{{ i.s.descripcion }}</span>{% endif %}</div>
         </div>
       </td>
@@ -449,7 +449,7 @@
       <td class="num" data-r="Admins"><button type="button" class="link-num" title="Ver los administradores" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td class="num" data-r="Trabajadores"><button type="button" class="link-num" title="Ver los trabajadores" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td class="acc nowrap" style="text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.tiene_contrato else ""} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>

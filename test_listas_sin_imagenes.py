@@ -44,7 +44,8 @@ def _sql_capturado(funcion, *args):
 def _columnas_seleccionadas(sql: str) -> set:
     """Nombres de columna que viajan en el SELECT (antes del FROM), sin
     contar las que solo aparecen adentro de octet_length(...)."""
-    cabeza = sql.split("FROM", 1)[0]
+    sql = re.sub(r"\s+", " ", sql)
+    cabeza = sql.split(" FROM ", 1)[0]
     cabeza = re.sub(r"octet_length\([^)]*\)", "", cabeza)
     return set(re.findall(r"\.(\w+)", cabeza))
 
