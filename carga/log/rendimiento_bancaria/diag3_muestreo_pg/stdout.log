@@ -1,0 +1,21 @@
+time="2026-11-05T00:08:18Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/app/inicio\": request timeout"
+time="2026-11-05T00:08:18Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/app/inicio\": request timeout"
+time="2026-11-05T00:08:18Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/app/inicio\": request timeout"
+time="2026-11-05T00:08:27Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:58044->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:08:55Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:58462->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:08:57Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/notificaciones\": read tcp 127.0.0.1:57754->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:09:13Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:57454->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:09:29Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:57010->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:09:34Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:57658->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:09:43Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:58086->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:09:52Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:56796->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:10:06Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/notificaciones\": read tcp 127.0.0.1:56944->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:10:19Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:55512->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:10:19Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:58354->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:10:29Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:57390->127.0.0.1:46429: read: connection reset by peer"
+
+=== Test 4: recibos bancarios (continuo, formato todos) ===
+  lectores p95 32.5 s, falla 17.93 %
+  500: 2   503: 536   E-RECIBO-04: 0
+  VEREDICTO: NO APROBADO
+

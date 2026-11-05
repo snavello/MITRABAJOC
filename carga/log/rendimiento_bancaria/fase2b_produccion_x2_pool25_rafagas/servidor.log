@@ -32,3 +32,5 @@
 {"ts": "2026-11-04T23:55:27.753693+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
 {"ts": "2026-11-04T23:55:59.029766+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": 1691930600.0, "conexiones_db": 191.0, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429"}
 {"ts": "2026-11-04T23:56:30.504905+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
+{"ts": "2026-11-04T23:57:01.892067+00:00", "cpu_web": 0.96878007, "ram_web": 7640772600.0, "cpu_db": 0.1722612, "ram_db": 1001893900.0, "conexiones_db": 120.0, "nota": null}
+{"ts": "2026-11-04T23:57:33.539236+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
