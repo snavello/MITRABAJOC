@@ -1,0 +1,133 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Luna, Carolina",
+   "cuil": "27267339177",
+   "legajo": "23496",
+   "categoria": "AYUDANTE",
+   "fecha_ingreso": "2004-08-16"
+  },
+  "empleador": {
+   "nombre": "BANCO DE LA NACION ARGENTINA",
+   "cuit": "30500010912"
+  },
+  "periodo": "2025-12",
+  "fecha_pago": "2026-01-06",
+  "lineas": [
+   {
+    "codigo": "001",
+    "descripcion": "SUELDO BÁSICO",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 2061246.45,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "010",
+    "descripcion": "ANTIGÜEDAD (21 AÑOS)",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 432861.75,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "050",
+    "descripcion": "S.A.C. 1/2 AGUINALDO",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 1247054.1,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "080",
+    "descripcion": "COMPENSACIÓN NO REMUNERATIVA",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "remuneracion",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "501",
+    "descripcion": "JUBILACIÓN 11%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -411527.85,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": "502",
+    "descripcion": "LEY 19.032 (PAMI) 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -112234.87,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": "503",
+    "descripcion": "OBRA SOCIAL 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -112234.87,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": "510",
+    "descripcion": "CUOTA SINDICAL ASOC. BANCARIA 2%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -74823.25,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": "520",
+    "descripcion": "SEGURO DE VIDA COLECTIVO",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 3861162.3,
+   "descuentos": -715670.84,
+   "neto": 3145491.46
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "Los descuentos figuran en columna DESCUENTOS sin signo impreso; se transcribieron como negativos según la convención. CUIT, CUIL, nombre y legajo ocultos.",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 3861162.3,
+  "descuentos": 715670.84,
+  "reintegros": 0,
+  "neto": 3145491.46
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}
