@@ -1256,6 +1256,9 @@
   {% if request.query_params.get('error') == 'formulaexpr' %}
   <div class="msg err">No se guardó la fórmula: {{ request.query_params.get('motivo') }}</div>
   {% endif %}
+  {% if request.query_params.get('tolalta') %}
+  <div class="aviso">Se guardó la regla. {{ request.query_params.get('tolalta') }}</div>
+  {% endif %}
   {% if request.query_params.get('error') == 'superposicion' %}
   <div class="msg err">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
   {% endif %}
@@ -1276,7 +1279,7 @@
     <tr>
       <td><code>{{ f.target }}</code>{% if f.target not in codigos_efectivos %}<span class="tag" style="background:#f8e5e2; color:var(--alerta);" title="Ningún concepto tiene este código: esta fórmula nunca va a matchear.">⚠ código inexistente</span>{% endif %}</td>
       <td>{{ f.descripcion }}</td>
-      <td><code>{{ f.expr }}</code></td><td class="num">{{ f.tolerancia|pesos }}</td>
+      <td><code>{{ f.expr }}</code></td><td class="num">{{ f.tolerancia|pesos }}{% if texto_tolerancia_alta(f.tolerancia) %}<div class="muted" style="font-size:12px;">⚠ {{ texto_tolerancia_alta(f.tolerancia) }}</div>{% endif %}</td>
       {# En castellano de persona (G4-11), no «(sin inicio) → vigente». #}
       <td>{{ vigencia_texto(f.fecha_desde, f.fecha_hasta) }}{% if f.fecha_hasta and f.fecha_hasta < hoy %} <span class="tag tag-neutro">Vencida</span>{% endif %}</td>
       <td>{% if f.sujeto_a_tope %}<span class="tag tag-si">Sí</span>{% else %}<span class="muted">No</span>{% endif %}</td>

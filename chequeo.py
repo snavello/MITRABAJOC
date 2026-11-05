@@ -234,6 +234,37 @@ else:
     aviso("Captcha (Turnstile) apagado: el registro no pide comprobar que es una persona")
     print(f"        → Falta(n): {', '.join(faltan)}. En producción tiene que estar prendido")
 
+# 11. Topes y tolerancias de la base (solo diagnóstico: avisa, no suma fallos).
+# Nació del lote 375 de La Bancaria: un tope de 2026-03 mal cargado y reglas
+# con tolerancia de $ 5.000 dieron OK a recibos con diferencias reales.
+print("\n11. Topes de la seguridad social y tolerancias de las reglas")
+try:
+    import csv
+    import db as _db
+    from sqlmodel import Session, select
+    from validador import TOLERANCIA_AVISO, diferencias_de_topes
+    with open("data/topes_ss.csv", newline="", encoding="utf-8") as _f:
+        _csv = list(csv.DictReader(_f))
+    _dif = diferencias_de_topes(_db.topes_como_dicts(), _csv)
+    if _dif:
+        for _d in _dif:
+            aviso(f"Topes: {_d}")
+        print("        → Corregí el valor en /plataforma → Topes (referencia: data/topes_ss.csv)")
+    else:
+        ok("La tabla de topes coincide con data/topes_ss.csv")
+    with Session(_db.engine) as _s:
+        _altas = [(f.sindicato_id, f.target, f.tolerancia)
+                  for f in _s.exec(select(_db.Formula)).all()
+                  if f.activa and f.tolerancia is not None and f.tolerancia > TOLERANCIA_AVISO]
+    if _altas:
+        for _sid, _tgt, _tol in _altas:
+            aviso(f"Sindicato {_sid}: la regla {_tgt} tiene tolerancia $ {_tol:,.0f} (más de $ {TOLERANCIA_AVISO})")
+        print("        → Una diferencia menor a la tolerancia no se marca. Revisala en Reglas")
+    else:
+        ok(f"Ninguna regla tiene tolerancia mayor a $ {TOLERANCIA_AVISO}")
+except Exception as e:
+    aviso(f"No se pudo revisar topes y tolerancias: {type(e).__name__}: {e}")
+
 # Resumen
 print("\n" + "=" * 45)
 if fallos == 0:
