@@ -469,9 +469,18 @@ def _zona_leida(linea) -> str:
     """'ingreso' o 'descuento' de una línea tal como se leyó, sin catálogo:
     por su sección y, solo si la IA no la dijo, por el signo."""
     seccion = seccion_de(linea)
+    importe = a_numero(linea.get("importe")) or 0
+    # Un aporte del trabajador (jubilación, PAMI, obra social, cuota sindical)
+    # con importe positivo es un descuento aunque la IA no lo haya ubicado
+    # entre los descuentos: en una tabla única con columnas Haberes /
+    # Descuentos y sin encabezados de sección, los descuentos vienen como
+    # positivos y la sección sale mal o en null (BBVA, lote bancario,
+    # 2026-11-05). Un aporte negativo no se toca: sigue por su sección/signo.
+    if linea.get("tipo") == "aporte_trabajador" and importe > 0 and seccion != "descuentos":
+        return "descuento"
     if seccion:
         return "descuento" if seccion == "descuentos" else "ingreso"
-    return "descuento" if (a_numero(linea.get("importe")) or 0) < 0 else "ingreso"
+    return "descuento" if importe < 0 else "ingreso"
 
 
 def _zona_catalogo(m) -> str:
