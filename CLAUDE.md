@@ -108,6 +108,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - temas.py — los dos modelos de diseño (`laguna` por defecto, `noticiero`) y
   las paletas (`colm3na` / `sindicato`); resuelve el que ve una persona: el
   suyo, el de su sindicato o el por defecto. Puro. Ver PLAN_TEMAS.md.
+- imagenes.py — achica toda imagen que se sube (`achicar(datos, perfil)`):
+  webp, con alfa si lo tiene, sin agrandar, perfiles y topes por tipo. Puro, no
+  importa `db`. `test_imagenes.py` clasifica con `ast` toda ruta con `UploadFile`.
 - fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
@@ -527,6 +530,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (manda el gremio, igual que en el encabezado) y **`Colm3na — <pantalla>`**
   donde no lo hay (ingresos, plataforma, verificación). Queda "Mi Trabajo"
   solo en documentación interna y comentarios de código.
+- **Toda imagen se achica en el servidor al subirla** (2026-11-05, SDN,
+  `imagenes.py`): lado mayor por perfil -- `logo` 512 px (admite SVG de hasta
+  200 KB), `firma` 800, `perfil` 512 (afiliado y empresa), `publicacion` 1.600
+  (noticias y beneficios), `adjunto` 1.600 (imágenes de notificaciones y
+  trámites; PDF y Word pasan tal cual). Siempre webp (con alfa si la original
+  lo tiene), nunca agranda, tope de entrada 8 MB, y un GIF animado queda fijo
+  (primer cuadro). Una imagen inválida da 400 / aviso en pantalla, nunca 500.
+  Quedan afuera a propósito los documentos para la IA, el contrato, el
+  convenio, Recursos y `fotos_tema`. Una puerta nueva de imagen pasa por
+  `imagenes.achicar` (lo exige `test_imagenes.py`).
 - **Logos sin fondo blanco forzado**: un PNG con fondo transparente se ve
   transparente de verdad; si un sindicato quiere fondo de color, lo sube ya
   incluido en el archivo. Excepción: el círculo de iniciales de fallback (sin
