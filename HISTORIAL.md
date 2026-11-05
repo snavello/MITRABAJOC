@@ -9789,3 +9789,122 @@ y lo deja en `recibo.cuil_impreso_invalido`; `validar` agrega la alerta
 `cuil_impreso_invalido` («Tu recibo trae el CUIL mal impreso: dice … y el tuyo
 es …»), y `cuiles_distintos` ya no lo cuenta como ajeno en ningún camino. Tests:
 `test_cuil_impreso.py`.
+
+## Rendimiento con el lote de La Bancaria: la base mandaba bytes que nadie usaba (2026-11-05, Trabajador 0.58.03, Admin 0.77.03)
+
+Etapa de rendimiento de `PLAN_PRUEBAS_BANCARIA.md` (sección R), hecha por Code con
+SDN el 4 y 5 de noviembre contra Pruebas. El Test 4 (`carga/k6/test4_bancaria.js`)
+sube recibos bancarios en ráfagas de 2, 5, 10, 20 y 40 a la vez mientras 200
+lectores navegan la app. La conclusión, después de seis horas y once corridas:
+**no faltaba máquina, sobraban bytes**. La app leía de la base columnas de imágenes
+(logos, fotos, contrato) que ninguna pantalla mostraba, y con 200 personas eso
+saturaba las conexiones del pool y la red entre la app y Postgres. Las dos
+correcciones (PR #203 y #204) no tocan CPU ni planes: dejan de traer lo que no se usa.
+
+### Preparación
+
+- `MOCK_EXTRACTOR=1` y `MOCK_EXTRACTOR_LATENCIA=8` en Pruebas: la lectura simula a
+  Sonnet 5.5 (8 s) sin gastar créditos; lo que se mide es la app, no la API.
+- 45 afiliados del lote de La Bancaria, con clave = los seis primeros dígitos del CUIL.
+- k6 v0.54 corrido desde la sesión de Code. Tres defectos del guion, encontrados
+  en las primeras pruebas y corregidos antes de medir nada:
+  - k6 vacía las cookies en cada iteración: la segunda subida de un lector
+    salía sin sesión (E-SESION-02). Se arregló con `noCookiesReset`.
+  - k6 guardaba cada HTML en memoria y murió a 14 GB con 200 lectores:
+    `discardResponseBodies`.
+  - Cada lector se logueaba cada 10 s (~20 logins por segundo, cada uno de 0,5 a
+    1 s de CPU por el PBKDF2 de 600k iteraciones): medía el login, no la
+    navegación. Ahora entra **una vez por VU**.
+
+### Cómo se encontró
+
+1. **Fase 1, Intermedio** (web 2c-4g con 2 workers, base 2c-4g), ráfagas con 200
+   lectores: NO APROBADO. CPU del web al 200 % de 200, subidas de 24 a 33 s típico,
+   27 % de 503 y 6 % de 502. La corrida quedó incompleta: el generador murió a
+   los 13 minutos (carpeta `fase1_intermedio_rafagas_INCOMPLETA`). Se pasó al
+   arranque real previsto para el día de cobro.
+2. **Fase 2, arranque real** (web 4c-8g × 2 instancias con 4 workers c/u, base
+   4c-16g). Con el cupo de conexiones de siempre (5+5 por worker, 80 en total) el
+   pool quedó clavado: 20 % de 503 (E-SERVIDOR-01, pool agotado) y pantallas de
+   6,8 s típico y 12,8 s el peor 5 %. Se subió el cupo a 15+10 por worker (200
+   conexiones): 10 % de 503, pero las conexiones llegaron otra vez al tope y las
+   pantallas empeoraron (4,5 s y 32 s). Más conexiones no era la respuesta.
+3. **Diagnósticos con solo lectores** (`diag1` a `diag5`): sin subidas, la navegación
+   sola era igual de lenta; con login único, igual (descartaba el PBKDF2 como causa).
+   `pg_stat_activity` muestreado desde un Job de Render mostró 100 o más
+   conexiones «idle in transaction» y la consulta de noticias esperando 8,5 s para
+   **escribirle al cliente** (`ClientWrite`): la base tenía el resultado y no
+   podía entregarlo. Las listas de noticias y beneficios traían las imágenes
+   completas (37 noticias y 10 beneficios en La Bancaria: unos 3 MB más la copia
+   normalizada, 4,4 MB por pedido, en cada portada y cada Novedades). → **PR #203**.
+4. **Después de #203**: p50 de pantallas 0,6 s, pero p95 de 18 a 20 s y 4 a 7 % de
+   503. Se descartó, en orden: el generador (un Job de Render como generador, dentro
+   del mismo centro de datos y sin el proxy de la sesión, dio lo mismo,
+   `fase2e_job_render_rafagas_2`, con k6 limitado con `GOMEMLIMIT=1500MiB` porque
+   el primer intento murió a 8 GiB); el tapado de datos (enmascarado), medido en la
+   base: 219 ms por PDF y 506 ms por foto, no explica nada. Quedaba lo que se
+   volvía a leer en cada pantalla: el logo de La Bancaria pesa **996 KB** (el de
+   SMATA 1,1 MB) y la fila del sindicato (logo + firma + contrato, 1,2 MB) se leía
+   entera con cada `s.get(Sindicato, id)`, tres o cuatro veces por portada
+   (`marca_sindicato`, `modulos_habilitados`, `apariencia_de`, `permisos_efectivos`,
+   `sindicatos_de_cuil`, `_nivel_color_de`). Igual con las fotos de perfil (se
+   traían enteras para un `bool()`) y las fotos de los modelos (enteras para un
+   `len()`). → **PR #204**.
+
+### Qué se cambió
+
+- **#203** (`fix/portada-sin-imagenes`): `noticias_del_sindicato` y
+  `beneficios_del_sindicato` van con `defer()` de las columnas `*_datos` / `*_norm` y
+  preguntan por la imagen en SQL (`octet_length(...) > 0`). `test_listas_sin_imagenes.py`
+  captura el SELECT y falla si viaja una columna de bytes.
+- **#204**: **todas las columnas `LargeBinary` de todos los modelos quedan diferidas
+  a nivel del mapeo** (`db._diferir_columnas_de_bytes`, evento `before_configured`):
+  una fila se trae sin ellas y se cargan solas si el código las lee adentro de la
+  sesión (las rutas que sirven cada imagen no cambian). Donde el atributo se leía
+  fuera de la sesión o solo para medirlo, ahora lo calcula SQL: `marca_sindicato`
+  (`logo_v` y `firma_v` con `octet_length`), `tiene_foto_trabajador` (nuevo),
+  `_foto_dict`, `sindicatos_del_operador`, `foto_tema` (con `undefer`, es la que
+  sirve la foto) y `/plataforma` (`logo_v` y `tiene_contrato`).
+  `test_paginas_sin_bytes.py` arma un sindicato con logo de 1 MB, firma, contrato,
+  foto de perfil, noticia y beneficio con imágenes, captura todo el SQL de
+  `/app/inicio`, `/app`, `/app/notificaciones`, `/api/tu-dia`, `/admin/inicio` y
+  `/admin` y falla si una columna de bytes viaja en un SELECT (contar con
+  `octet_length` o preguntar `IS NOT NULL` sí vale).
+
+Lección para el resto del código: **un modelo con columnas de bytes no se lee
+entero por defecto**. Una columna binaria nueva queda diferida sola, pero quien la
+use fuera de la sesión tiene que pedirla (`undefer`) o medirla en SQL.
+
+### Corridas
+
+Todas contra Pruebas, con 200 lectores, `MOCK_EXTRACTOR_LATENCIA=8`. Carpetas en
+`carga/log/rendimiento_bancaria/`. Los «—» son datos no registrados en el resumen de
+la corrida; las pantallas se miden con el p50 y p95 de los lectores.
+
+| Corrida | Configuración | Pantallas p50 / p95 | Subidas p50 / p95 | % 503 | CPU web | Conexiones |
+|---|---|---|---|---|---|---|
+| fase 1 (incompleta) | Intermedio: web 2c-4g, 2 workers; base 2c-4g | — | 24–33 s típico | 27 % (+ 6 % 502) | 200 % de 200 | — |
+| fase 2 | Arranque real: web 4c-8g × 2 (4 workers c/u), base 4c-16g, cupo 5+5 | — / 12,0 s (típico 6,8 s) | 14,4–19,6 s / 20,0–26,5 s | 20 % de las peticiones (5.225 503) | — | 80 justas, clavadas |
+| fase 2b | ídem, cupo 15+10 | — / 31,9 s (típico 4,5 s) | 8,7–16,3 s / 21,8–36,2 s | 10 % (1.860 503) | — | al tope otra vez (200) |
+| diag 1 y 2 | solo lectores, con y sin login único | — / 26 s | sin subidas | 582 y 681 503 | — | clavadas |
+| diag 3 | solo lectores + muestreo `pg_stat_activity` | — / 32,5 s | sin subidas | 536 503 | — | 100+ «idle in transaction» |
+| fase 2c (tras #203) | ídem 2b, listas sin imágenes | 0,6 s / 21,2 s | 8,7–9,3 s / 17,4–34,6 s | 4–7 % (1.705 503) | 38 % (antes de #203) | — |
+| fase 2e (Job de Render como generador) | ídem 2c | 0,6 s / 17,7 s | 8,7–12,3 s / 16,7–26,1 s | 4,4 % (1.197 503) | — | — |
+| diag 5 (tras #203, solo lectores) | sin subidas | — / 10,9 s | sin subidas | 2,6 % (207 503) | — | — |
+| fase 2f (tras #204) | ídem 2c | pendiente | pendiente | pendiente | pendiente | pendiente |
+
+Notas de lectura: la fase 2 reportó 9 respuestas 500 y la 2b 6; desde #203 no hubo
+ninguna. Ninguna corrida tuvo E-RECIBO-04 (la pertenencia del recibo se cumplió
+siempre). En la fase 2 la CPU del web fue del 38 % y la de la base del 30 % con las
+conexiones ya clavadas, que fue lo que mostró que el cuello no era de máquina.
+
+### Pendiente al momento de escribir
+
+- Corrida de ráfagas tras #204 (fase 2f) para confirmar que el p95 de las pantallas
+  baja de los 18–20 s.
+- Día de cobro (carga sostenida), cambio de plan en caliente y el cierre: volver
+  los planes de Render y las variables (`MOCK_EXTRACTOR*`, cupos de conexiones) a
+  su valor de siempre.
+- Ítem nuevo de `BACKLOG.md`: **tope de peso para logos e imágenes al subirlas**
+  (pedido de SDN; el logo de La Bancaria pesa 996 KB y ninguno necesita eso).
+  Con #204 dejaron de costar por pedido, pero seguían siendo bytes de más.
