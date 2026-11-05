@@ -1,0 +1,37 @@
+[
+ {
+  "key": "bbva",
+  "nombre": "Banco BBVA Argentina S.A.",
+  "cuit": "30-50000319-3",
+  "dom": "Reconquista 199, C.A.B.A.",
+  "fmt": "pdf"
+ },
+ {
+  "key": "galicia",
+  "nombre": "Banco de Galicia y Buenos Aires S.A.U.",
+  "cuit": "30-50000173-5",
+  "dom": "Tte. Gral. Juan D. Perón 407, C.A.B.A.",
+  "fmt": "pdf"
+ },
+ {
+  "key": "nacion",
+  "nombre": "Banco de la Nación Argentina",
+  "cuit": "30-50001091-2",
+  "dom": "Bartolomé Mitre 326, C.A.B.A.",
+  "fmt": "pdf"
+ },
+ {
+  "key": "santander",
+  "nombre": "Banco Santander Argentina S.A.",
+  "cuit": "30-50000845-4",
+  "dom": "Av. Juan de Garay 151, C.A.B.A.",
+  "fmt": "jpg"
+ },
+ {
+  "key": "industrial",
+  "nombre": "Banco Industrial S.A.",
+  "cuit": "30-68502995-9",
+  "dom": "Maipú 1210, C.A.B.A.",
+  "fmt": "pdf"
+ }
+]
