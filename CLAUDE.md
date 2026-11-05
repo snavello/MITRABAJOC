@@ -602,6 +602,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   para los filtros de empresa/afiliado). `test_dashboard_concurrencia.py` lo
   verifica sobre los endpoints del panel. Detalle en HISTORIAL.md.
 
+- **Los bytes de la base nunca viajan si nadie los pide** (2026-11-05, PR #203
+  a #206). Toda columna `LargeBinary` queda diferida a nivel del mapeo
+  (`db._diferir_columnas_de_bytes`): una fila se trae sin ella y solo se carga si
+  el código la lee adentro de la sesión. Para medir una imagen o preguntar si
+  existe se usa `octet_length(...)` o `IS NOT NULL` en SQL, nunca el atributo.
+  `test_paginas_sin_bytes.py` captura el SQL de las pantallas y falla si una
+  columna de bytes viaja. Con 200 lectores, un logo de 1 MB leído en cada pedido
+  clavaba el pool. Aparte, PBKDF2 baja a 300.000 vueltas por decisión de SDN con
+  medición (600k costaba 0,6 a 1 s de CPU por login; rehash al próximo login).
+
 - **Los datos personales del afiliado tienen UN SOLO dueño: la persona**
   (2026-09-22). Nombre, domicilio, teléfono y mail viven en
   `CuentaTrabajador` (una fila por CUIL); `Trabajador` quedó con lo que
@@ -1405,6 +1415,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de tapa y el carrusel de la portada; al abrir la noticia o el
     beneficio, la foto va siempre tal cual se subió. HISTORIAL.md, "Las
     fotos de noticias y beneficios, en gris o en color".
+
+42. **Rendimiento y exactitud del lote de La Bancaria** (2026-11-05,
+    Trabajador 0.58.03, Admin 0.77.03): el cuello con 200 lectores no era la
+    máquina sino los bytes que la base mandaba a cada pantalla (logos, firmas,
+    contrato, fotos e imágenes de noticias y beneficios). Corregido en los PR
+    #203 a #206 (listas sin imágenes, columnas de bytes diferidas, adjuntos
+    preguntados por su largo, PBKDF2 a 300.000). **Veredicto**: el arranque real
+    (web 4c-8g × 2, base 4c-16g) aprobó las ráfagas (lectores p95 299 ms, 0 de
+    503) y el día de cobro de 400 lectores (p95 470 ms, 0 % de falla). Con IA real
+    se leyeron 375 de 600 recibos (98,7 % dio lo esperado, US$ 0,0231 por recibo):
+    la cuenta de Anthropic llegó al tope de gasto del workspace, faltan 25 de
+    Sonnet y 200 de Haiku. Detalle en HISTORIAL.md, «Rendimiento con el lote de
+    La Bancaria», y Test 20 de `/entornos`.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

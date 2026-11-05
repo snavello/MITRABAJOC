@@ -9891,7 +9891,8 @@ la corrida; las pantallas se miden con el p50 y p95 de los lectores.
 | fase 2c (tras #203) | ídem 2b, listas sin imágenes | 0,6 s / 21,2 s | 8,7–9,3 s / 17,4–34,6 s | 4–7 % (1.705 503) | 38 % (antes de #203) | — |
 | fase 2e (Job de Render como generador) | ídem 2c | 0,6 s / 17,7 s | 8,7–12,3 s / 16,7–26,1 s | 4,4 % (1.197 503) | — | — |
 | diag 5 (tras #203, solo lectores) | sin subidas | — / 10,9 s | sin subidas | 2,6 % (207 503) | — | — |
-| fase 2f (tras #204) | ídem 2c | pendiente | pendiente | pendiente | pendiente | pendiente |
+| fase 2f (tras #204 y #205) | ídem 2c, bytes diferidos | 180 ms / 299 ms (p99 678 ms) | 8,5–8,9 s / 8,7–9,4 s (1.610 subidas) | 0 % (0 de 503, 0 de 500) | 496 % de 800 (base 77 % de 400) | 152 |
+| día de cobro (tras #206) | arranque real, 400 lectores + 20 subiendo, 10 min | 196 ms / 470 ms (p99 737 ms) | 8,6 s / 9,3 s (1.400 subidas) | 0 % (0/0/0; 102.132 pedidos) | 645 % de 800 (base 147 % de 400) | 102 |
 
 Notas de lectura: la fase 2 reportó 9 respuestas 500 y la 2b 6; desde #203 no hubo
 ninguna. Ninguna corrida tuvo E-RECIBO-04 (la pertenencia del recibo se cumplió
@@ -9908,3 +9909,56 @@ conexiones ya clavadas, que fue lo que mostró que el cuello no era de máquina.
 - Ítem nuevo de `BACKLOG.md`: **tope de peso para logos e imágenes al subirlas**
   (pedido de SDN; el logo de La Bancaria pesa 996 KB y ninguno necesita eso).
   Con #204 dejaron de costar por pedido, pero seguían siendo bytes de más.
+
+### Después de las correcciones: ráfagas y día de cobro, aprobados
+
+- **#205** (`fix/adjuntos-sin-bytes`): quince puntos con el mismo N+1 de adjuntos
+  (notificaciones, trámites, noticias, beneficios, contrato, miniatura) preguntaban
+  «¿tiene adjunto?» leyendo los bytes; ahora se pregunta por su largo en SQL. El QA
+  no encontró ninguna lectura de bytes fuera de sesión.
+- **Ráfagas, corrida 2f** (200 lectores, arranque real): subidas p50 8,5 a 8,9 s y
+  p95 8,7 a 9,4 s; lectores p50 180 ms, p95 299 ms, p99 678 ms; falla 0,01 %; 0 de
+  503 y 0 de 500; CPU del web 496 % de 800, base 77 % de 400, 152 conexiones;
+  1.610 subidas (contra 1.036 antes). Quedó el login: p50 4,2 s y p95 7,7 s.
+- **Decisión de SDN: PBKDF2 de 600.000 a 300.000 vueltas** con rehash al próximo
+  login exitoso en los cuatro ingresos (**PR #206**; H-0009 sigue Solucionado).
+  Argumentos: 600k costaban entre 0,6 y 1 s de CPU por login; 300k sigue 30 veces
+  sobre el mínimo de NIST y a la mitad de la guía OWASP 2023; lo que protege de
+  verdad es el largo de la clave más el freno por IP.
+- **Día de cobro** (`fase3_produccion_x2_dia_de_cobro`, 400 lectores y 20 subiendo,
+  10 minutos): 102.132 pedidos; lectores p50 196 ms, p95 470 ms, p99 737 ms, falla
+  0 %; 1.400 subidas con p50 8,6 s y p95 9,3 s, 0 % de error; 0 de 503, 0 de 500 y
+  0 de E-RECIBO-04; login p50 209 ms y p95 391 ms; CPU del web 645 % de 800, base
+  147 % de 400, 102 conexiones. Todos los criterios del plan se cumplen.
+- **Conclusión**: la configuración de arranque real (web 4c-8g × 2, base 4c-16g,
+  US$ 550 por mes de lista) aguanta el día de cobro con las correcciones; sin
+  ellas la misma máquina fallaba. **Decisión de SDN**: el cambio de plan en caliente
+  no se prueba (nunca se haría en pleno pico); queda para una hora de carga baja o
+  se descarta.
+
+### El lote completo con IA real: 375 de 600
+
+Test 20 de «Tests» en `/entornos` (los anteriores pasaron a 16–19). Se corrieron 400
+recibos con Sonnet 5.5: **375 leídos**, 370 dieron lo esperado (98,7 %), 203 de 208
+OK→OK, 167 de 167 con diferencias detectadas y 374 de 375 con lectura exacta.
+Mediana 7,4 s y p95 10,4 s. Costo real **US$ 8,6551** (US$ 0,0231 por recibo; 6.041
+tokens de entrada y 1.100 de salida en promedio). Proyección: a US$ 0,023 por
+lectura, 5.000 recibos por mes cuestan unos US$ 115.
+
+Los 25 últimos (Santander, JPG) y los 200 de Haiku 5.5 **no se leyeron**: la cuenta
+de Anthropic llegó al tope de gasto del workspace («You have reached your specified
+workspace API usage limits», hasta el 1/12 salvo que se suba el tope en la consola).
+No se cobró ninguno. Los 5 fallos (Galicia y Nación: se esperaba «con diferencias» y
+la app dijo OK) y la lectura inexacta de `bbva/20209792630_2025-10.pdf` quedan en
+análisis; el informe va aparte en `docs/chat/2026-11-05-analisis-lote-375.md`
+(pendiente, lo escribe otro agente). Herramientas: `probar_lote_bancaria.py` ganó
+`--desde/--hasta` y `publicar_exactitud.py` marca la prueba `sin_recalculo`.
+Registros en `carga/log/lote_bancaria/*sonnet-5-5-400*` y `carga/exactitud.json`.
+
+### Estado final de Pruebas
+
+Web 0.5c-512mb × 1 (un worker), base 0.1c-256mb, modelo de lectura Sonnet 5.5,
+`MOCK_EXTRACTOR=0`, `DB_POOL_SIZE=15` y `DB_MAX_OVERFLOW=10` (quedaron),
+`ENMASCARADO=activo`. Pendientes: subir el tope del workspace de Anthropic y
+completar los 25 de Sonnet y los 200 de Haiku; topes de peso de logos e imágenes
+(BACKLOG.md); cambio de plan en caliente (descartado por ahora).
