@@ -332,6 +332,51 @@ desde las ediciones del panel (E-IDENT-03): cambiarlo en una sola tabla
 cortaba la cuenta, los recibos y los trámites de la persona. Esta herramienta
 es la única vía.
 
+## Achicar las imágenes ya cargadas
+
+Desde el 2026-11-05 toda imagen que se sube se achica en el servidor
+(`imagenes.py`). Lo que ya estaba guardado sigue pesando lo que pesaba (el
+logo de La Bancaria, ~1 MB, viaja en cada pantalla). `achicar_imagenes.py` lo
+pasa por la misma función con el perfil de cada columna: logos y firma de
+sindicato, logo de Colm3na (claro y oscuro), foto de perfil de afiliado y de
+empresa, imágenes de noticias y beneficios y adjuntos que son imagen
+(notificaciones, notas y respuestas de trámites, de afiliado y de empresa).
+
+**Qué hace y qué no**
+- Solo toca lo que supera el peso objetivo de su perfil (logo y perfil 100 KB,
+  firma 150 KB, publicación y adjunto 400 KB) y solo escribe si el resultado
+  pesa a lo sumo el 90 % del original: una segunda corrida no cambia nada.
+- SVG, PDF y todo lo que `ImagenInvalida` rechaza (una imagen que no se abre,
+  de más de 8 MB) queda como está y se lista al final.
+- Noticias y beneficios: se regenera la versión normalizada (`*_norm`) desde la
+  achicada. El sello de versión de los logos (`logo_v`) sale del largo en
+  bytes, así que cambia solo y rompe el caché del navegador.
+- Una transacción por fila, con su commit (un Job no puede dejar una
+  transacción abierta más de 30 s). No hay tabla de trazas: **el log del Job es
+  la traza** (una línea por fila, `peso antes -> después`). Guardarlo.
+
+**Respaldo**: antes de escribir, confirmar que existe el backup diario de la
+base en Render (consola → la base → Recovery) y anotar su fecha. Si hubiera que
+volver atrás: «Recovery» → recuperación a un punto en el tiempo anterior a la
+corrida (crea una base nueva; no pisa la actual) y, con ella, copiar las
+columnas afectadas. Las imágenes originales no se guardan en otro lado.
+
+**Cómo se corre** (en cada entorno, con el código ya desplegado; en Pruebas es
+un Job de Render dentro del servicio, como `regularizar_cuit.py`). Desde
+`render_admin.crear_job`:
+```
+python achicar_imagenes.py diagnostico
+python achicar_imagenes.py aplicar                      # ensayo, no escribe
+python achicar_imagenes.py aplicar --si --quien SDN     # escribe
+python achicar_imagenes.py diagnostico                  # el después
+```
+`--tabla sindicato` (o `sindicato.logo_datos`) limita la corrida a una tabla o
+columna. Al empezar imprime contra qué base va: mirarla antes de seguir.
+
+**Demo**: no se toca hasta que su código llegue con la próxima promoción
+(`promover_demo.py`); recién ahí se corre el mismo Job (los cuatro comandos,
+en ese orden) en el servicio `mitrabajo-demo`.
+
 ## Backup manual de la base de demo
 Desde la PC de desarrollo, con el Docker local levantado (trae `pg_dump`
 sin instalar nada):
