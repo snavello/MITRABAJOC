@@ -1663,9 +1663,12 @@ def guardar_recurso(titulo: str, descripcion: str, fecha: date, tipo: str, url: 
 
 
 def recurso(recurso_id: int) -> Optional[Recurso]:
-    """El recurso entero, bytes incluidos: solo para servirlo."""
+    """El recurso entero, bytes incluidos (que por defecto quedan diferidos):
+    solo para servirlo."""
+    from sqlalchemy.orm import undefer
     with Session(engine) as s:
-        return s.get(Recurso, recurso_id)
+        return s.get(Recurso, recurso_id,
+                     options=[undefer(Recurso.archivo_datos), undefer(Recurso.miniatura_datos)])
 
 
 def borrar_recurso(recurso_id: int) -> bool:
