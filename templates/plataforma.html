@@ -403,6 +403,9 @@
 {% with marca_plataforma = (dict(marca_plataforma, logo_oscuro=False) if marca_plataforma and marca_plataforma.logo else marca_plataforma) %}
 {% include "_encabezado.html" %}
 {% endwith %}
+{% if request.query_params.get('error') == 'imagen' %}
+<div class="msg err" role="alert" onclick="this.remove()" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;max-width:90vw;cursor:pointer;">No se guardó la imagen: {{ request.query_params.get('aviso') or 'el archivo no es una imagen válida.' }}</div>
+{% endif %}
 <div class="flota-sesion">
 <a class="btn-home" href="/plataforma/inicio" title="Inicio">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>

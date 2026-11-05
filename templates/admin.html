@@ -1098,6 +1098,9 @@
    tira de pestañas; el sticky lo da .app-bar-fija, no el parcial. #}
 {% set enc_fondo_claro = True %}
 {% include "_encabezado.html" %}
+{% if request.query_params.get('error') == 'imagen' %}
+<div class="msg err" role="alert" onclick="this.remove()" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;max-width:90vw;cursor:pointer;">No se guardó la imagen: {{ request.query_params.get('aviso') or 'el archivo no es una imagen válida.' }}</div>
+{% endif %}
 {% if apariencia and apariencia.tema == 'laguna' %}
 {# El modelo Laguna pone el encabezado en blanco: ahí va el logo de Colm3na
    para fondo CLARO (el del parcial es el de fondo oscuro y se esconde). #}
