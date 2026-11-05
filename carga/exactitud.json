@@ -150,5 +150,48 @@
       }
     ],
     "conclusion": "La IA leyó exactos los 40, también de a dos a la vez, sin errores ni caídas. 39 de 40 dieron lo esperado. El que no es de configuración: el Día del Bancario de Nación cargado como remunerativo en el catálogo. Además, dos recibos que al principio parecían fallar eran errores de lo que esperábamos, no de la app: en noviembre el Día del Bancario no es remunerativo (y la app lo hizo bien), y un CUIL impreso con el dígito mal la app lo acepta como propio. Con el catálogo corregido, los 40 dan lo esperado."
+  },
+  {
+    "clave": "sonnet-375",
+    "nombre": "Exactitud · 400 recibos bancarios con Sonnet 5.5",
+    "subtitulo": "Los primeros 400 del lote, de a 2 a la vez: 375 se leyeron; los últimos 25 no, por el tope de gasto de la cuenta de IA",
+    "inicio_ba": "2026-11-05 00:45",
+    "fin_ba": "2026-11-05 01:13",
+    "csv": "carga/log/lote_bancaria/2026-11-05_0045_sonnet-5-5-375leidos.csv",
+    "objetivo": "Medir con Sonnet 5.5 la exactitud de lectura y validación sobre los primeros 400 recibos del lote bancario (BBVA, Galicia, Nación y Santander), subidos de a dos a la vez con la sesión de su dueño, para compararlos con Haiku 5.5 sobre los otros 200.",
+    "config": {
+      "Entorno": "Pruebas",
+      "Modelo de lectura": "Sonnet 5.5",
+      "Versión de la app": "Trabajador 0.58.05",
+      "Recibos": "400 primeros del manifiesto (375 leídos)",
+      "Cómo se subieron": "De a 2 a la vez, cada uno con la sesión de su dueño",
+      "Lote": "600 recibos ficticios, 5 bancos, 12 meses"
+    },
+    "costo": "US$ 8,66 (estimado)",
+    "causas": [
+      {
+        "origen": "configuracion",
+        "que": "A los últimos 25 recibos (Santander, JPG) la IA no llegó a leerlos: la cuenta de Anthropic alcanzó su tope de gasto del workspace (error 400) y la app respondió «no pudimos leer el recibo». No se cobró ninguno.",
+        "ejemplo": "santander/27283967668_2025-12.jpg: respuesta en 1 s, E-RECIBO-01.",
+        "recibos": 25,
+        "estado": "Fuera de la medición: se subió el tope del workspace (vuelve el 2026-12-01) y se repite"
+      },
+      {
+        "origen": "recibos",
+        "que": "Los recibos de prueba cobran los aportes sin el tope de ley o con otras diferencias intencionales; la app los marca. En 5 recibos (Galicia y Nación) se esperaba «con diferencias» y la app dijo OK.",
+        "ejemplo": "galicia/27425555478_2025-09.pdf: esperado con diferencias, la app respondió OK.",
+        "recibos": 5,
+        "estado": "A revisar"
+      },
+      {
+        "origen": "ia",
+        "que": "Un recibo de BBVA se leyó con los haberes y los descuentos desplazados en $ 972.900 (el neto, bien).",
+        "ejemplo": "bbva/20209792630_2025-10.pdf",
+        "recibos": 1,
+        "estado": "A revisar"
+      }
+    ],
+    "conclusion": "De 375 recibos leídos, 374 se leyeron exactos (99,7 %) y 370 dieron el resultado esperado (98,7 %); 500: ninguno. Mediana de lectura 7,4 s, p95 10,4 s. Los últimos 25 del bloque no se pudieron leer por el tope de gasto de la cuenta de IA, así que la comparación con Haiku 5.5 sobre los otros 200 no se pudo hacer.",
+    "sin_recalculo": true
   }
 ]
