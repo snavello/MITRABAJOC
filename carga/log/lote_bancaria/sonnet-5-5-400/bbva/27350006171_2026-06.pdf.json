@@ -1,0 +1,135 @@
+{
+ "recibo": {
+  "lineas": [
+   {
+    "tipo": "remuneracion",
+    "codigo": "001",
+    "unidad": null,
+    "importe": 2444009.19,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "Sueldo básico",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "010",
+    "unidad": null,
+    "importe": 342161.29,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "Antigüedad (14 años)",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "020",
+    "unidad": null,
+    "importe": 122200.46,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "Adicional por título",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "050",
+    "unidad": null,
+    "importe": 1393085.24,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "S.A.C. 1/2 aguinaldo",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "080",
+    "unidad": null,
+    "importe": 120000.0,
+    "seccion": "no_remunerativos",
+    "cantidad": null,
+    "descripcion": "Compensación no remunerativa",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "501",
+    "unidad": null,
+    "importe": 473160.18,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Jubilación 11%",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "502",
+    "unidad": null,
+    "importe": 129043.69,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "categoria_universal": "pami"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "503",
+    "unidad": null,
+    "importe": 129043.69,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Obra social 3%",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "510",
+    "unidad": null,
+    "importe": 86029.12,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "tipo": "otro",
+    "codigo": "520",
+    "unidad": null,
+    "importe": 4850.0,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Seguro de vida colectivo",
+    "categoria_universal": null
+   }
+  ],
+  "formato": "clasico",
+  "periodo": "2026-06",
+  "empleado": {
+   "cuil": "27350006171",
+   "legajo": "22660",
+   "categoria": "Auxiliar (CCT 18/75)",
+   "fecha_ingreso": "2012-06-02",
+   "apellido_nombre": "Castro, Claudia"
+  },
+  "confianza": "alta",
+  "empleador": {
+   "cuit": "30500003193",
+   "nombre": "Empleador: Banco BBVA Argentina S.A."
+  },
+  "fecha_pago": "2026-07-06",
+  "observaciones": null,
+  "ultimo_deposito": null,
+  "totales_impresos": {
+   "neto": 3599329.5,
+   "descuentos": 822126.68,
+   "remuneraciones": 4421456.18
+  },
+  "alerta_adulteracion": {
+   "motivo": null,
+   "detectada": false
+  },
+  "costo_laboral_total": null,
+  "contribuciones_patronales": []
+ },
+ "_origen": "ReciboVerificado.detalle.recibo id=30142 2026-11-05 00:46"
+}

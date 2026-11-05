@@ -70,3 +70,8 @@ carga/variantes_cuota/
 
 # Volcados que deja cysignals (tesserocr) cuando un proceso muere
 cysignals_crash_logs/
+# Lecturas crudas por recibo de las corridas del lote bancario (una carpeta por etiqueta)
+carga/log/lote_bancaria/*/
+!carga/log/lote_bancaria/sonnet-5-5-cache-40/
+!carga/log/lote_bancaria/sonnet-5-5-400/
+!carga/log/lote_bancaria/sonnet-5-5-nocache-40/

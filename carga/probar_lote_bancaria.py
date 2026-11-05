@@ -69,7 +69,8 @@ class CorrioElMock(Exception):
 CAMPOS = ["archivo", "banco", "formato", "cuil", "periodo", "error_intencional",
           "esperado", "obtenido", "acierto", "lectura_ok", "dif_haberes",
           "dif_descuentos", "dif_neto", "periodo_ok", "cuil_leido",
-          "discrepancias", "ms_leer", "ms_validar", "http_leer", "etiqueta"]
+          "discrepancias", "ms_leer", "ms_validar", "http_leer", "etiqueta",
+          "tokens_entrada", "tokens_salida", "tokens_cache_lectura", "tokens_cache_escritura"]
 
 
 # ---------------------------------------------------------------- puro ----
@@ -203,42 +204,105 @@ def probar_uno(base: str, fila: dict, clave: str, validar: bool) -> dict:
             ms_val = round((time.monotonic() - t1) * 1000)
             res_val = rv.json() if rv.status_code == 200 else {"estado": f"HTTP-{rv.status_code}"}
         r = clasificar(fila, leido, None, res_val)
-        r.update(ms_leer=ms_leer, ms_validar=ms_val, http_leer=200)
+        r.update(ms_leer=ms_leer, ms_validar=ms_val, http_leer=200, _lectura=leido,
+                 _t0=t0)
         return r
 
 
-def uso_ia_desde(inicio: str, cuils: set) -> dict | None:
-    """Modelo(s), tokens y costo de UsoIA para esta corrida. Solo con
+def _filas_uso_db(inicio: str, cuils: set) -> list | None:
+    """Filas de UsoIA (tipo recibo) desde `inicio`, como dicts. Solo con
     `USO_IA_DATABASE_URL` (la base del entorno MEDIDO): el DATABASE_URL de la
     PC o del contenedor es la base local, que no registró nada de esta corrida.
-    Sin ella, el costo se lee en /plataforma → Uso de IA → Consumo y costo."""
+    Sin ella, las filas se pueden traer con un Job de Render y pasarlas en
+    `--uso-ia-json` (lista de dicts con las mismas claves)."""
     url = os.getenv("USO_IA_DATABASE_URL")
     if not url:
         return None
     os.environ["DATABASE_URL"] = url
     from sqlmodel import select
     import db
-    import precios_ia
     from db import UsoIA
     with db.get_session() as s:
         filas = s.exec(select(UsoIA).where(UsoIA.tipo == "recibo", UsoIA.fecha >= inicio,
-                                           UsoIA.cuil.in_(cuils))).all()
+                                           UsoIA.cuil.in_(cuils)).order_by(UsoIA.id)).all()
+    return [{"id": u.id, "cuil": u.cuil, "modelo": u.modelo, "tokens_entrada": u.tokens_entrada,
+             "tokens_salida": u.tokens_salida, "tokens_cache_lectura": u.tokens_cache_lectura,
+             "tokens_cache_escritura": u.tokens_cache_escritura, "precio_entrada": u.precio_entrada,
+             "precio_salida": u.precio_salida, "duracion_ms": u.duracion_ms} for u in filas]
+
+
+def aplicar_uso(resultados: list[dict], filas_uso: list[dict]) -> None:
+    """Pone en cada resultado los tokens (con los de caché) de SU llamada: por
+    CUIL y en el orden en que se lanzaron. Puro."""
+    por_cuil = {}
+    for u in sorted(filas_uso, key=lambda u: u.get("id", 0)):
+        por_cuil.setdefault(u["cuil"], []).append(u)
+    for cuil, rs in _agrupar(resultados).items():
+        for r, u in zip(sorted(rs, key=lambda r: r.get("_t0") or 0), por_cuil.get(cuil, [])):
+            for k in ("tokens_entrada", "tokens_salida", "tokens_cache_lectura", "tokens_cache_escritura"):
+                r[k] = u.get(k, 0)
+
+
+def _agrupar(resultados):
+    g = {}
+    for r in resultados:
+        g.setdefault(r["cuil"], []).append(r)
+    return g
+
+
+def resumen_uso(filas_uso: list[dict]) -> dict:
+    """Por modelo: llamadas, tokens, costo REAL (con caché) y el que habría
+    sido SIN caché (todo lo de entrada a precio de entrada)."""
+    import precios_ia
     modelos = {}
-    for u in filas:
-        m = modelos.setdefault(u.modelo, {"llamadas": 0, "tokens_entrada": 0, "tokens_salida": 0,
-                                          "usd": 0.0, "duracion_ms": []})
+    for u in filas_uso:
+        m = modelos.setdefault(u["modelo"], {"llamadas": 0, "tokens_entrada": 0, "tokens_salida": 0,
+                                             "tokens_cache_lectura": 0, "tokens_cache_escritura": 0,
+                                             "usd": 0.0, "usd_sin_cache": 0.0, "duracion_ms": []})
+        pe, ps = ((u["precio_entrada"], u["precio_salida"]) if u.get("precio_entrada")
+                  else (precios_ia.precios(u["modelo"]) or (0, 0)))
+        cl, ce = u.get("tokens_cache_lectura", 0) or 0, u.get("tokens_cache_escritura", 0) or 0
         m["llamadas"] += 1
-        m["tokens_entrada"] += u.tokens_entrada
-        m["tokens_salida"] += u.tokens_salida
-        pe, ps = (u.precio_entrada, u.precio_salida) if u.precio_entrada else (precios_ia.precios(u.modelo) or (0, 0))
-        m["usd"] += precios_ia.costo(u.tokens_entrada, u.tokens_salida, pe, ps)
-        m["duracion_ms"].append(u.duracion_ms)
+        m["tokens_entrada"] += u["tokens_entrada"]
+        m["tokens_salida"] += u["tokens_salida"]
+        m["tokens_cache_lectura"] += cl
+        m["tokens_cache_escritura"] += ce
+        m["usd"] += precios_ia.costo(u["tokens_entrada"], u["tokens_salida"], pe, ps, cl, ce)
+        m["usd_sin_cache"] += precios_ia.costo(u["tokens_entrada"] + cl + ce, u["tokens_salida"], pe, ps)
+        m["duracion_ms"].append(u["duracion_ms"])
     for m in modelos.values():
         d = m.pop("duracion_ms")
+        n = m["llamadas"]
         m["duracion_ms_p50"] = statistics.median(d) if d else None
-        m["usd_por_recibo"] = round(m["usd"] / m["llamadas"], 5) if m["llamadas"] else None
+        m["usd_por_recibo"] = round(m["usd"] / n, 5) if n else None
+        m["usd_sin_cache_por_recibo"] = round(m["usd_sin_cache"] / n, 5) if n else None
+        m["cache_lectura_por_recibo"] = round(m["tokens_cache_lectura"] / n) if n else None
         m["usd"] = round(m["usd"], 4)
+        m["usd_sin_cache"] = round(m["usd_sin_cache"], 4)
     return modelos
+
+
+def uso_ia_desde(inicio: str, cuils: set) -> dict | None:
+    filas = _filas_uso_db(inicio, cuils)
+    return None if filas is None else resumen_uso(filas)
+
+
+# ------------------------------------------------- lecturas crudas -------
+def guardar_lectura(etiqueta: str, archivo: str, leido: dict) -> Path:
+    """La lectura cruda de la IA (lo que devolvió /api/leer) de un recibo, en
+    carga/log/lote_bancaria/<etiqueta>/<banco>/<archivo>.json."""
+    ruta = SALIDA / etiqueta / (archivo + ".json")
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text(json.dumps(leido, ensure_ascii=False, indent=1), encoding="utf-8")
+    return ruta
+
+
+def comparar_lecturas(vieja: Path, nueva: Path) -> str:
+    """Lectura contra lectura de los recibos que están en las dos carpetas:
+    totales impresos, período, CUIT/CUIL y líneas (extractor.comparar_lineas).
+    Un formato de número distinto no cuenta; un código o importe distinto sí."""
+    import comparar_lecturas as C
+    return C.comparar_carpetas(Path(vieja), Path(nueva))
 
 
 # ---------------------------------------------------------- comparar ------
@@ -305,9 +369,17 @@ def main(argv=None):
     ap.add_argument("--si", action="store_true")
     ap.add_argument("--permitir-mock", action="store_true", help="solo para probar el script")
     ap.add_argument("--comparar", nargs="+")
+    ap.add_argument("--comparar-lecturas", nargs=2, metavar=("VIEJA", "NUEVA"),
+                    help="compara las lecturas crudas guardadas en dos carpetas")
+    ap.add_argument("--lista", help="archivo de texto con un recibo del manifiesto por línea "
+                                    "(ej. bbva/27350006171_2025-09.pdf): corre exactamente esos")
+    ap.add_argument("--uso-ia-json", help="filas de UsoIA traídas con un Job (para los tokens por recibo)")
     a = ap.parse_args(argv)
     if a.comparar:
         print(comparar(a.comparar))
+        return
+    if a.comparar_lecturas:
+        print(comparar_lecturas(*a.comparar_lecturas))
         return
     global PERMITIR_MOCK
     PERMITIR_MOCK = a.permitir_mock
@@ -321,7 +393,14 @@ def main(argv=None):
         filas = [f for f in filas if f["archivo"].startswith(a.banco + "/")]
     if a.solo_errores:
         filas = [f for f in filas if f.get("error_intencional")]
-    if a.desde is not None or a.hasta is not None:
+    if a.lista:
+        pedidos = [l.strip() for l in Path(a.lista).read_text(encoding="utf-8").splitlines() if l.strip()]
+        por_archivo = {f["archivo"]: f for f in filas}
+        faltan = [p_ for p_ in pedidos if p_ not in por_archivo]
+        if faltan:
+            raise SystemExit(f"No están en el manifiesto: {faltan[:5]}")
+        filas = [por_archivo[p_] for p_ in pedidos]
+    elif a.desde is not None or a.hasta is not None:
         # Corte determinista sobre el orden del manifiesto (sin muestreo).
         filas = filas[a.desde or 0:a.hasta]
     else:
@@ -347,6 +426,16 @@ def main(argv=None):
                          "real. Apagarlo en Render y volver a correr.")
     for r in resultados:
         r["etiqueta"] = a.etiqueta
+        lectura = r.pop("_lectura", None)
+        if lectura is not None:
+            guardar_lectura(a.etiqueta, r["archivo"], lectura)
+    filas_uso = _filas_uso_db(inicio, {r["cuil"] for r in resultados})
+    if filas_uso is None and a.uso_ia_json:
+        filas_uso = json.loads(Path(a.uso_ia_json).read_text(encoding="utf-8"))
+    if filas_uso:
+        aplicar_uso(resultados, filas_uso)
+    for r in resultados:
+        r.pop("_t0", None)
     SALIDA.mkdir(parents=True, exist_ok=True)
     nombre = f"{inicio.replace(' ', '_').replace(':', '')}_{a.etiqueta}"
     with open(SALIDA / f"{nombre}.csv", "w", newline="", encoding="utf-8") as f:
@@ -354,7 +443,7 @@ def main(argv=None):
         w.writeheader()
         w.writerows(resultados)
     resumen = resumir(resultados)
-    resumen["uso_ia"] = uso_ia_desde(inicio, {r["cuil"] for r in resultados})
+    resumen["uso_ia"] = resumen_uso(filas_uso) if filas_uso else None
     resumen.update(etiqueta=a.etiqueta, base_url=base, inicio=inicio)
     if resumen["uso_ia"] and "mock" in resumen["uso_ia"]:
         resumen["invalida"] = "corrió el mock (MOCK_EXTRACTOR=1): no hubo lectura real"
