@@ -76,7 +76,7 @@ def recibos_de_corrida(prueba: dict, recalculo: dict) -> list[dict]:
                     "esperado": _esp(esperado), "obtenido": _esp(r["obtenido"]),
                     "acierto": r["obtenido"] == esperado, "lectura_ok": r["lectura_ok"] == "True",
                     "segundos": _seg(r["ms_leer"]), "detalle": r.get("discrepancias", "")}
-            if r["archivo"] in recalculo:
+            if r["archivo"] in recalculo and not prueba.get("sin_recalculo"):
                 fila["con_correccion"] = recalculo[r["archivo"]] == esperado
             filas.append(fila)
     return filas
