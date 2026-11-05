@@ -114,6 +114,24 @@ def test_svg_solo_en_logo_y_chico():
         imagenes.achicar(b'<!DOCTYPE svg [<!ENTITY a "b">]><svg/>', "logo", "l.svg")
 
 
+def test_bomba_de_pixeles_se_rechaza_sin_cargarla():
+    liso = Image.new("L", (11000, 11000), 0)
+    salida = BytesIO()
+    liso.save(salida, "PNG")
+    assert len(salida.getvalue()) < imagenes.TOPE_ENTRADA
+    with pytest.raises(imagenes.ImagenInvalida) as e:
+        imagenes.achicar(salida.getvalue(), "publicacion", "b.png")
+    assert "píxeles" in str(e.value)
+
+
+def test_svg_con_script_o_manejadores_se_rechaza():
+    for malo in (b'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>',
+                 b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+                 b'<svg xmlns="http://www.w3.org/2000/svg"><a href="javascript:alert(1)"/></svg>'):
+        with pytest.raises(imagenes.ImagenInvalida):
+            imagenes.achicar(malo, "logo", "l.svg")
+
+
 # ------------------------------------------------- las puertas, fail-closed
 
 # Rutas con UploadFile que NO son imágenes de la app: documentos que lee la IA,

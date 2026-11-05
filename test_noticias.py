@@ -6,6 +6,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_noticias.py -q
 
 
 import db
+from ayuda_imagenes import imagen_real
 import auth
 from db import Sindicato, UsuarioSindicato, Trabajador, Noticia
 from modulos import MODULOS_INICIALES
@@ -132,10 +133,7 @@ def test_miniatura_se_ve_en_el_feed_si_tiene_imagen1():
     # Bug real: la imagen se veía bien al abrir el detalle, pero la tarjeta
     # del feed (portada y pestaña Novedades) nunca mostraba una miniatura --
     # faltaba el <img> en el template, aunque tiene_imagen1 ya viajaba en el dict.
-    png_1x1 = bytes.fromhex(
-        "89504e470d0a1a0a0000000d494844520000000100000001080600000"
-        "01f15c4890000000a4944415478da6360000002000155"
-    )
+    png_1x1 = imagen_real()
     admin_client.post("/admin/noticia", data={
         "titulo": "Con miniatura", "bajada": "", "texto_completo": "",
         "fecha_desde": "2020-01-01", "fecha_hasta": "2030-12-31",
@@ -154,7 +152,7 @@ def test_miniatura_se_ve_en_el_feed_si_tiene_imagen1():
 
     r_img = trab_client.get(f"/noticia-imagen/{nid}/1")
     assert r_img.status_code == 200
-    assert r_img.headers["content-type"] == "image/png"
+    assert r_img.headers["content-type"] == "image/webp"
     print("OK  test_miniatura_se_ve_en_el_feed_si_tiene_imagen1")
 
 

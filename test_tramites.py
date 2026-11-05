@@ -9,6 +9,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_tramites.py -q
 import json
 
 
+from ayuda_imagenes import imagen_real
 import db
 import auth
 from db import Sindicato, UsuarioSindicato, Trabajador, TipoTramite, CampoTramite, Tramite, Notificacion, Seccional, Area
@@ -144,7 +145,7 @@ def test_jpeg_vale_como_jpg_y_al_reves():
         f"campo_{_campo_id('Solicitud')}": "Pido reintegro",
         f"campo_{_campo_id('CVU')}": "0" * 22,
         f"campo_{_campo_id('Monto')}": "1000",
-    }, files={f"archivo_{_campo_id('Comprobante')}": ("foto.JPEG", b"\xff\xd8\xff fake", "image/jpeg")})
+    }, files={f"archivo_{_campo_id('Comprobante')}": ("foto.JPEG", imagen_real("JPEG"), "image/jpeg")})
     assert r.status_code == 200, r.text
     with Session(db.engine) as s:
         campo = s.get(db.CampoTramite, _campo_id("Comprobante"))

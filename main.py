@@ -389,7 +389,8 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
         destino = _panel_de(request.url.path)
         if destino and destino != "/ingresar-empresa":
             from urllib.parse import quote
-            return RedirectResponse(f"{destino}?error=imagen&aviso={quote(str(exc.detail))}",
+            ancla = "#notificaciones" if request.url.path.startswith("/admin/notificacion") else ""
+            return RedirectResponse(f"{destino}?error=imagen&aviso={quote(str(exc.detail))}{ancla}",
                                     status_code=303)
     if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request):
         rol = _rol_de(request.url.path)

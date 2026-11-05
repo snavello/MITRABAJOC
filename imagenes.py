@@ -14,12 +14,14 @@ confía en eso: lo que se guarda en la base sale siempre de acá.
 - No toca las fotos de portada de los modelos (`fotos_tema`), que tienen su
   propio tratamiento, ni los documentos que lee la IA (recibos, comprobantes).
 """
+import re
 from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 TOPE_ENTRADA = 8 * 1024 * 1024   # más que esto se rechaza sin abrir la imagen
 TOPE_SVG = 200 * 1024
+PIXELES_MAXIMOS = 40_000_000     # 40 MP: un PNG liso de 11000x11000 pesa 100 KB y ocupa 600 MB al abrirlo
 
 # lado: tope del lado mayor en px; calidad: webp; svg: si admite SVG.
 PERFILES = {
@@ -50,9 +52,12 @@ def _es_svg(datos: bytes, nombre: str) -> bool:
 
 def _svg_valido(datos: bytes) -> bool:
     """XML bien formado con raíz `svg`. Sin entidades ni DTD: un SVG que las
-    declara no se acepta (evita la expansión de entidades)."""
+    declara no se acepta (evita la expansión de entidades), ni scripts, manejadores `on*=` o `javascript:`."""
     import xml.etree.ElementTree as ET
     if b"<!ENTITY" in datos or b"<!DOCTYPE" in datos.upper():
+        return False
+    bajo = datos.lower()
+    if b"<script" in bajo or b"javascript:" in bajo or re.search(rb"\son[a-z]+\s*=", bajo):
         return False
     try:
         raiz = ET.fromstring(datos)
@@ -82,6 +87,10 @@ def achicar(datos: bytes, perfil: str, nombre: str = "") -> dict:
                 "bytes_original": original}
     try:
         imagen = Image.open(BytesIO(datos))
+        if imagen.width * imagen.height > PIXELES_MAXIMOS:
+            raise ImagenInvalida(
+                f"La imagen mide {imagen.width}x{imagen.height} px; el máximo es "
+                f"{PIXELES_MAXIMOS // 1_000_000} millones de píxeles.")
         imagen.seek(0)       # GIF o WEBP animado: el primer cuadro
         imagen.load()
     except (UnidentifiedImageError, OSError, ValueError, EOFError,

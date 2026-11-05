@@ -42,9 +42,9 @@ def test_logo_claro_arma_el_oscuro_en_blanco():
 
 def test_lo_subido_a_mano_no_se_pisa():
     assert _marca(logo_oscuro=("logo.png", _logo(), "image/png")).status_code == 303
-    assert db.marca_plataforma()["logo_oscuro"] == "logo.png"
+    assert db.marca_plataforma()["logo_oscuro"] == "logo.webp"
     assert _marca(logo=("logo.png", _logo(), "image/png")).status_code == 303
-    assert db.marca_plataforma()["logo_oscuro"] == "logo.png"
+    assert db.marca_plataforma()["logo_oscuro"] == "logo.webp"
 
 
 def test_ruta_de_sindicato_con_tono():
