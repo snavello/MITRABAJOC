@@ -1,0 +1,133 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Álvarez, Lucía",
+   "cuil": "27248430562",
+   "legajo": "58654",
+   "categoria": "Ayudante",
+   "fecha_ingreso": "2010-05-14"
+  },
+  "empleador": {
+   "nombre": "Santander Argentina S.A. Banco",
+   "cuit": "30500008454"
+  },
+  "periodo": "2025-10",
+  "fecha_pago": "2025-11-06",
+  "lineas": [
+   {
+    "codigo": "001",
+    "descripcion": "Sueldo básico",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 1987050.0,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "010",
+    "descripcion": "Antigüedad (15 años)",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 298057.5,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "020",
+    "descripcion": "Adicional por título",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 99352.5,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "080",
+    "descripcion": "Compensación no remunerativa",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "remuneracion",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "501",
+    "descripcion": "Jubilación 11%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -262290.6,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": "502",
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -71533.8,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": "503",
+    "descripcion": "Obra social 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -71533.8,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": "510",
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -47689.2,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": "520",
+    "descripcion": "Seguro de vida colectivo",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 2504460.0,
+   "descuentos": -457897.4,
+   "neto": 2046562.6
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "El seguro de vida colectivo (520) aparece impreso entre los descuentos del trabajador; se transcribió como 'otro' por ser ambiguo. Los importes de descuentos se registraron con signo negativo según la convención, ya que el recibo los imprime sin signo.",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 2504460.0,
+  "descuentos": 457897.4,
+  "reintegros": 0,
+  "neto": 2046562.6
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}

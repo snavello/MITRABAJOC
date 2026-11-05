@@ -1,0 +1,133 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Cabrera, Carlos",
+   "cuil": "20446692845",
+   "legajo": "45804",
+   "categoria": "Subjefe de Departamento",
+   "fecha_ingreso": "06/09/2018"
+  },
+  "empleador": {
+   "nombre": "BINDBanco Industrial S.A.",
+   "cuit": "30685029959"
+  },
+  "periodo": "2026-08",
+  "fecha_pago": "2026-09-04",
+  "lineas": [
+   {
+    "codigo": "001",
+    "descripcion": "Sueldo básico",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 4829064.22,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "010",
+    "descripcion": "Antigüedad (7 años)",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 338034.5,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "020",
+    "descripcion": "Adicional por título",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 241453.21,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "080",
+    "descripcion": "Compensación no remunerativa",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "remuneracion",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "501",
+    "descripcion": "Jubilación 11%",
+    "cantidad": null,
+    "unidad": "%",
+    "importe": 594940.71,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": "502",
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "cantidad": null,
+    "unidad": "%",
+    "importe": 162256.56,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": "503",
+    "descripcion": "Obra social 3%",
+    "cantidad": null,
+    "unidad": "%",
+    "importe": 162256.56,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": "510",
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "cantidad": null,
+    "unidad": "%",
+    "importe": 108171.04,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": "520",
+    "descripcion": "Seguro de vida colectivo",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 5528551.93,
+   "descuentos": 1032474.87,
+   "neto": 4496077.06
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "Los importes de descuentos se transcriben sin signo, tal como figuran impresos. El seguro de vida colectivo aparece impreso entre los descuentos del trabajador, aunque suele ser contribución patronal; se transcribe tal cual figura. Empleador, nombre, CUIL y legajo cubiertos por rótulos de ocultamiento.",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 5528551.93,
+  "descuentos": 1032474.87,
+  "reintegros": 0,
+  "neto": 4496077.06
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}

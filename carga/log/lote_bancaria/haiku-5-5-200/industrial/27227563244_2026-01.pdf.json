@@ -1,0 +1,123 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Herrera, Paula",
+   "cuil": "27227563244",
+   "legajo": "94546",
+   "categoria": "Jefe de Departamento",
+   "fecha_ingreso": "15/07/2004"
+  },
+  "empleador": {
+   "nombre": "BINDBanco Industrial S.A.",
+   "cuit": "30685029959"
+  },
+  "periodo": "2026-01",
+  "fecha_pago": "2026-02-05",
+  "lineas": [
+   {
+    "codigo": "001",
+    "descripcion": "Sueldo básico",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 4828073.41,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "010",
+    "descripcion": "Antigüedad (21 años)",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 1013895.42,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "080",
+    "descripcion": "Compensación no remunerativa",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "remuneracion",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "501",
+    "descripcion": "Jubilación 11%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -642616.57,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": "502",
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -175259.06,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": "503",
+    "descripcion": "Obra social 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -175259.06,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": "510",
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -116839.38,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": "520",
+    "descripcion": "Seguro de vida colectivo",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 5961968.83,
+   "descuentos": 1114824.07,
+   "neto": 4847144.76
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "Los descuentos están impresos sin signo en la columna DESCUENTOS; se transcribieron como negativos según la convención. El 'Total descuentos' se transcribe tal como figura, sin signo. Empleador y datos del empleado ocultos por rectángulos de privacidad (devueltos como null).",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 5961968.83,
+  "descuentos": 1114824.07,
+  "reintegros": 0,
+  "neto": 4847144.76
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}
