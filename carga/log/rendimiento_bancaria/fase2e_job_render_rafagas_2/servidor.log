@@ -35,3 +35,5 @@
 {"ts": "2026-11-05T01:29:38.089059+00:00", "cpu_web": null, "ram_web": null, "cpu_db": null, "ram_db": null, "conexiones_db": null, "nota": "cpu_web:HTTP 429; ram_web:HTTP 429; cpu_db:HTTP 429; ram_db:HTTP 429; conexiones_db:HTTP 429"}
 {"ts": "2026-11-05T01:30:09.110176+00:00", "cpu_web": 0.07709099999999999, "ram_web": 8131764200.0, "cpu_db": 0.015596067, "ram_db": 1659703300.0, "conexiones_db": 120.0, "nota": null}
 {"ts": "2026-11-05T01:30:41.284738+00:00", "cpu_web": 0.016820533, "ram_web": 8131842000.0, "cpu_db": 0.008575766, "ram_db": 1635557400.0, "conexiones_db": 120.0, "nota": null}
+{"ts": "2026-11-05T01:31:13.589047+00:00", "cpu_web": 0.060558533, "ram_web": 8131629000.0, "cpu_db": 0.0133164665, "ram_db": 1652183000.0, "conexiones_db": 120.0, "nota": null}
+{"ts": "2026-11-05T01:31:44.901580+00:00", "cpu_web": 0.016841633, "ram_web": 8131477500.0, "cpu_db": 0.013523967, "ram_db": 1608708100.0, "conexiones_db": 120.0, "nota": null}
