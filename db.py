@@ -1052,6 +1052,12 @@ class UsoIA(SQLModel, table=True):
     # estimado con los precios de hoy, y la pantalla lo dice.
     precio_entrada: float = 0.0
     precio_salida: float = 0.0
+    # Caché de prompt (EXTRACTOR_CACHE=1). `tokens_entrada` es lo que la API
+    # llama input_tokens y NO incluye estos dos: la entrada total de la
+    # llamada es entrada + cache_lectura + cache_escritura. 0 en todo lo
+    # anterior y en lo que corre sin caché (la pantalla lo lee como «—»).
+    tokens_cache_lectura: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
+    tokens_cache_escritura: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
 
 
 class FotoTema(SQLModel, table=True):
@@ -5437,7 +5443,8 @@ def razon_social_de_cuit(sindicato_id: Optional[int], cuit: str) -> Optional[str
 
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
                       modelo: str, tokens_entrada: int, tokens_salida: int,
-                      duracion_ms: int = 0) -> None:
+                      duracion_ms: int = 0, tokens_cache_lectura: int = 0,
+                      tokens_cache_escritura: int = 0) -> None:
     """Guarda una fila de consumo de la API por cada llamada real -- se llama
     en el mismo request que hace la llamada (extraer/extraer_aportes), nunca
     se re-arma después, para que el conteo no dependa de que el trabajador
@@ -5454,6 +5461,8 @@ def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
             tokens_entrada=tokens_entrada, tokens_salida=tokens_salida,
             fecha=fechas.ahora_texto(), duracion_ms=duracion_ms or 0,
             precio_entrada=p[0], precio_salida=p[1],
+            tokens_cache_lectura=tokens_cache_lectura or 0,
+            tokens_cache_escritura=tokens_cache_escritura or 0,
         ))
         s.commit()
 
@@ -5481,10 +5490,12 @@ def _uso_ia_fila(f: UsoIA, nombres: dict) -> dict:
     duracion = 0 if f.modelo == precios_ia.MOCK else f.duracion_ms
     if f.precio_entrada or f.precio_salida:
         costo = precios_ia.costo(f.tokens_entrada, f.tokens_salida,
-                                 f.precio_entrada, f.precio_salida)
+                                 f.precio_entrada, f.precio_salida,
+                                 f.tokens_cache_lectura, f.tokens_cache_escritura)
         exacto = True
     else:
-        costo = precios_ia.costo_estimado(f.modelo, f.tokens_entrada, f.tokens_salida)
+        costo = precios_ia.costo_estimado(f.modelo, f.tokens_entrada, f.tokens_salida,
+                                          f.tokens_cache_lectura, f.tokens_cache_escritura)
         exacto = False
     return {
         "id": f.id, "sindicato": nombres.get(f.sindicato_id, "—"),
@@ -5492,6 +5503,8 @@ def _uso_ia_fila(f: UsoIA, nombres: dict) -> dict:
         "modelo": f.modelo, "modelo_nombre": precios_ia.nombre(f.modelo),
         "tokens_entrada": f.tokens_entrada,
         "tokens_salida": f.tokens_salida, "fecha": f.fecha,
+        "tokens_cache_lectura": f.tokens_cache_lectura or 0,
+        "tokens_cache_escritura": f.tokens_cache_escritura or 0,
         "duracion_ms": duracion, "duracion_txt": precios_ia.segundos(duracion),
         "costo": costo, "costo_exacto": exacto and costo is not None,
         "costo_txt": precios_ia.usd(costo),

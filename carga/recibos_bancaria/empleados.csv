@@ -1,0 +1,51 @@
+﻿banco,cuit_banco,cuil,cuil_valido,nombre,legajo,categoria,ingreso
+Banco BBVA Argentina S.A.,30-50000319-3,27-35000617-1,True,"Castro, Claudia",22660,Auxiliar,2012-06-02
+Banco BBVA Argentina S.A.,30-50000319-3,20-39393219-9,True,"Ortiz, Federico",98833,Ayudante,2013-02-11
+Banco BBVA Argentina S.A.,30-50000319-3,20-43594989-5,True,"Rodríguez, Ramiro",42855,Analista,2021-11-23
+Banco BBVA Argentina S.A.,30-50000319-3,20-36641632-4,True,"Cardozo, Walter",54802,Jefe de Departamento,2019-03-01
+Banco BBVA Argentina S.A.,30-50000319-3,20-18533142-4,True,"Bustos, Ramiro",69150,Administrativo,2021-05-12
+Banco BBVA Argentina S.A.,30-50000319-3,20-26836749-8,True,"Peralta, Walter",92561,Cajero,1999-10-09
+Banco BBVA Argentina S.A.,30-50000319-3,27-44566967-4,True,"Herrera, Gabriela",38459,Supervisor,2019-10-01
+Banco BBVA Argentina S.A.,30-50000319-3,20-21033357-7,True,"Gómez, Walter",27464,Administrativo Especializado,1997-10-11
+Banco BBVA Argentina S.A.,30-50000319-3,20-20979263-0,True,"Romero, Marcelo",13527,Subjefe de Departamento,2005-02-14
+Banco BBVA Argentina S.A.,30-50000319-3,20-23145984-8,True,"Rojas, Lucas",10667,Jefe de Sección,2003-08-16
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-37550761-8,True,"Castro, Leandro",22306,Ayudante,2015-08-19
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-20203836-1,True,"Varela, Matías",33934,Subjefe de Departamento,2001-07-25
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-31144703-4,True,"Sosa, Nicolás",55107,Cajero,2009-01-14
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-35467480-8,True,"Romero, Nicolás",78471,Jefe de Sección,2001-12-19
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-27235923-8,True,"Luna, Martín",42718,Auxiliar,1999-03-07
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-31501976-2,True,"Escobar, Sergio",24808,Administrativo,2018-03-22
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,27-22448023-2,True,"Ríos, Daniela",48195,Administrativo Especializado,2008-12-04
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,27-42555547-8,True,"Varela, Julieta",13300,Analista,2008-11-19
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-44464160-7,True,"Pérez, Matías",93722,Supervisor,2017-07-21
+Banco de Galicia y Buenos Aires S.A.U.,30-50000173-5,20-32784662-1,True,"Morales, Maximiliano",17744,Jefe de Departamento,2015-05-04
+Banco de la Nación Argentina,30-50001091-2,27-26733917-7,True,"Luna, Carolina",23496,Ayudante,2004-08-16
+Banco de la Nación Argentina,30-50001091-2,20-29283154-5,True,"Ruiz, Pablo",35162,Analista,1996-07-13
+Banco de la Nación Argentina,30-50001091-2,27-25457007-4,True,"Silva, Cecilia",66374,Jefe de Sección,2000-12-09
+Banco de la Nación Argentina,30-50001091-2,20-43684821-9,True,"Sánchez, Fernando",50511,Supervisor,2018-05-15
+Banco de la Nación Argentina,30-50001091-2,20-20632271-4,True,"Ríos, Maximiliano",96765,Administrativo Especializado,2016-12-10
+Banco de la Nación Argentina,30-50001091-2,27-22214511-8,True,"Giménez, Marina",75380,Jefe de Departamento,2013-06-12
+Banco de la Nación Argentina,30-50001091-2,27-34070910-7,True,"Ruiz, Julieta",59070,Auxiliar,2005-04-11
+Banco de la Nación Argentina,30-50001091-2,27-19845572-0,True,"López, Agustina",29196,Cajero,1999-05-18
+Banco de la Nación Argentina,30-50001091-2,20-41900565-8,True,"Rodríguez, Gustavo",64473,Administrativo,2000-11-20
+Banco de la Nación Argentina,30-50001091-2,20-28942472-6,True,"Benítez, Fernando",33119,Subjefe de Departamento,2003-01-01
+Banco Santander Argentina S.A.,30-50000845-4,20-42083955-4,True,"Sánchez, Gustavo",23440,Subjefe de Departamento,2009-01-21
+Banco Santander Argentina S.A.,30-50000845-4,27-28396766-8,True,"Peralta, Carolina",75567,Auxiliar,2018-11-16
+Banco Santander Argentina S.A.,30-50000845-4,27-43221770-7,True,"Cardozo, Gabriela",64274,Jefe de Sección,2007-05-03
+Banco Santander Argentina S.A.,30-50000845-4,27-26881991-1,True,"Benítez, Soledad",91213,Jefe de Departamento,2015-11-05
+Banco Santander Argentina S.A.,30-50000845-4,20-27755355-5,True,"Ruiz, Esteban",92279,Supervisor,2014-04-08
+Banco Santander Argentina S.A.,30-50000845-4,27-42929858-5,True,"Díaz, Mariana",30369,Administrativo,2011-01-12
+Banco Santander Argentina S.A.,30-50000845-4,27-24843056-2,True,"Álvarez, Lucía",58654,Ayudante,2010-05-14
+Banco Santander Argentina S.A.,30-50000845-4,20-20631772-9,True,"Ríos, Ramiro",83771,Administrativo Especializado,2000-05-18
+Banco Santander Argentina S.A.,30-50000845-4,20-33901204-1,True,"Torres, Leandro",16867,Analista,2007-09-08
+Banco Santander Argentina S.A.,30-50000845-4,27-28451341-5,True,"Rodríguez, Silvina",57002,Cajero,1999-06-21
+Banco Industrial S.A.,30-68502995-9,27-22756324-4,True,"Herrera, Paula",94546,Jefe de Departamento,2004-07-15
+Banco Industrial S.A.,30-68502995-9,27-22515589-0,True,"Vega, Romina",85960,Ayudante,2019-08-09
+Banco Industrial S.A.,30-68502995-9,20-44669284-5,True,"Cabrera, Carlos",45804,Subjefe de Departamento,2018-09-06
+Banco Industrial S.A.,30-68502995-9,27-28342770-1,True,"Aguirre, Silvina",73455,Auxiliar,1997-11-07
+Banco Industrial S.A.,30-68502995-9,20-37258115-9,True,"Ortiz, Marcelo",40032,Supervisor,2010-01-07
+Banco Industrial S.A.,30-68502995-9,27-40951927-5,True,"Torres, Agustina",60002,Administrativo Especializado,2001-10-18
+Banco Industrial S.A.,30-68502995-9,20-44319928-5,True,"Torres, Martín",54704,Cajero,2001-03-13
+Banco Industrial S.A.,30-68502995-9,27-18900927-0,True,"Medina, Valeria",12163,Analista,2013-11-22
+Banco Industrial S.A.,30-68502995-9,20-30583256-2,True,"Luna, Sergio",63026,Administrativo,1999-05-17
+Banco Industrial S.A.,30-68502995-9,27-36687279-0,True,"Benítez, Andrea",69184,Jefe de Sección,2020-05-28
