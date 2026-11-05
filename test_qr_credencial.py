@@ -6,6 +6,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_qr_credencial.py -q
 """
 
 
+from ayuda_imagenes import imagen_real
 import db
 from db import Sindicato, Trabajador, UsuarioSindicato, CuentaTrabajador
 import auth
@@ -169,7 +170,7 @@ def test_credencial_muestra_el_retrato_solo_si_hay_foto():
     RETRATO = '<div class="cred-retrato">'   # el bloque, no la regla CSS del mismo nombre
     trab = _sesion_trabajador()
     assert RETRATO not in trab.get("/app").text
-    r = trab.post("/api/perfil/foto", files={"foto": ("f.jpg", b"jpeg-falso", "image/jpeg")})
+    r = trab.post("/api/perfil/foto", files={"foto": ("f.jpg", imagen_real("JPEG"), "image/jpeg")})
     assert r.status_code == 200, r.text
     html = trab.get("/app").text
     assert RETRATO in html
