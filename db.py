@@ -4514,13 +4514,32 @@ def noticia_vigente(n: "Noticia | dict", hoy: str) -> bool:
     return bool(desde) and bool(hasta) and desde <= hoy <= hasta
 
 
-def _noticia_a_dict(n: "Noticia") -> dict:
+def _hay_bytes(columna):
+    """Expresión SQL: la columna de bytes tiene contenido. Para preguntar por
+    una imagen sin traerla."""
+    from sqlalchemy import func
+    return func.coalesce(func.octet_length(columna), 0) > 0
+
+
+def _sin_imagenes(modelo):
+    """Opciones de carga que dejan AFUERA las columnas de bytes del modelo
+    (las imágenes y sus copias normalizadas). Una lista que las trajera
+    multiplica el tráfico con la base por la cantidad de filas."""
+    from sqlalchemy.orm import defer
+    return [defer(getattr(modelo, c)) for c in modelo.model_fields
+            if c.endswith("_datos") or c.endswith("_norm")]
+
+
+def _noticia_a_dict(n: "Noticia", tiene_imagen1: bool = None, tiene_imagen2: bool = None) -> dict:
+    """`tiene_imagen1/2` vienen calculados en SQL cuando la noticia se cargó
+    sin las imágenes (las listas); si no se pasan, se miran los bytes."""
     return {
         "id": n.id, "sindicato_id": n.sindicato_id, "titulo": n.titulo,
         "bajada": n.bajada, "texto_completo": n.texto_completo,
         "fecha_desde": n.fecha_desde, "fecha_hasta": n.fecha_hasta, "creada": n.creada,
         "on_top": bool(n.on_top),
-        "tiene_imagen1": bool(n.imagen1_datos), "tiene_imagen2": bool(n.imagen2_datos),
+        "tiene_imagen1": bool(n.imagen1_datos) if tiene_imagen1 is None else bool(tiene_imagen1),
+        "tiene_imagen2": bool(n.imagen2_datos) if tiene_imagen2 is None else bool(tiene_imagen2),
         "destino_seccionales": n.destino_seccionales or [],
         "formulario_id": n.formulario_id,
         "encuesta_id": n.encuesta_id,
@@ -4553,14 +4572,23 @@ def noticias_del_sindicato(sindicato_id: int, alcance=None) -> list:
     primero. Con `alcance`, solo las que le llegan a la gente de esas
     seccionales (`publicacion_visible`), y cada una dice si quien mira puede
     editarla o borrarla (`propia`, ver `publicacion_en_alcance`)."""
+    # Las imágenes NO se traen: la lista solo necesita saber si existen
+    # (`tiene_imagen1/2`), y la portada del afiliado lee esta lista en cada
+    # pedido. Con las 37 noticias de La Bancaria eran 3 MB de la base por
+    # pedido (el doble desde que existe la copia normalizada), y con 200
+    # personas navegando la base se pasaba el tiempo mandando bytes que nadie
+    # usaba (medido el 2026-11-05, PLAN_PRUEBAS_BANCARIA.md). Las fotos se
+    # sirven por /noticia-imagen/{id}/{n}, de a una.
     with Session(engine) as s:
-        noticias = s.exec(select(Noticia).where(Noticia.sindicato_id == sindicato_id)
-                          .order_by(Noticia.creada.desc(), Noticia.id.desc())).all()
+        filas = s.exec(select(Noticia, _hay_bytes(Noticia.imagen1_datos), _hay_bytes(Noticia.imagen2_datos))
+                       .options(*_sin_imagenes(Noticia))
+                       .where(Noticia.sindicato_id == sindicato_id)
+                       .order_by(Noticia.creada.desc(), Noticia.id.desc())).all()
         salida = []
-        for n in noticias:
+        for n, tiene1, tiene2 in filas:
             if not publicacion_visible(n.destino_seccionales or [], alcance):
                 continue
-            d = _noticia_a_dict(n)
+            d = _noticia_a_dict(n, tiene1, tiene2)
             d["propia"] = publicacion_en_alcance(n.destino_seccionales or [], alcance)
             salida.append(d)
         return salida
@@ -4593,12 +4621,12 @@ def beneficio_vigente(b: "Beneficio | dict", hoy: str) -> bool:
     return bool(desde) and bool(hasta) and desde <= hoy <= hasta
 
 
-def _beneficio_a_dict(b: "Beneficio") -> dict:
+def _beneficio_a_dict(b: "Beneficio", tiene_imagen: bool = None) -> dict:
     return {
         "id": b.id, "sindicato_id": b.sindicato_id, "rubro": b.rubro,
         "descripcion": b.descripcion, "link": b.link,
         "fecha_desde": b.fecha_desde, "fecha_hasta": b.fecha_hasta, "creada": b.creada,
-        "tiene_imagen": bool(b.imagen_datos),
+        "tiene_imagen": bool(b.imagen_datos) if tiene_imagen is None else bool(tiene_imagen),
         "destino_seccionales": b.destino_seccionales or [],
         "formulario_id": b.formulario_id,
     }
@@ -4607,14 +4635,17 @@ def _beneficio_a_dict(b: "Beneficio") -> dict:
 def beneficios_del_sindicato(sindicato_id: int, alcance=None) -> list:
     """Los beneficios del sindicato para el panel de admin, más recientes
     primero. Mismo recorte y misma marca `propia` que noticias_del_sindicato."""
+    # Sin las imágenes, por lo mismo que noticias_del_sindicato.
     with Session(engine) as s:
-        beneficios = s.exec(select(Beneficio).where(Beneficio.sindicato_id == sindicato_id)
-                            .order_by(Beneficio.creada.desc(), Beneficio.id.desc())).all()
+        filas = s.exec(select(Beneficio, _hay_bytes(Beneficio.imagen_datos))
+                       .options(*_sin_imagenes(Beneficio))
+                       .where(Beneficio.sindicato_id == sindicato_id)
+                       .order_by(Beneficio.creada.desc(), Beneficio.id.desc())).all()
         salida = []
-        for b in beneficios:
+        for b, tiene in filas:
             if not publicacion_visible(b.destino_seccionales or [], alcance):
                 continue
-            d = _beneficio_a_dict(b)
+            d = _beneficio_a_dict(b, tiene)
             d["propia"] = publicacion_en_alcance(b.destino_seccionales or [], alcance)
             salida.append(d)
         return salida
