@@ -213,12 +213,23 @@ def _uso(msg, modelo: str, ms: int) -> dict:
     La duración se mide alrededor de la llamada y de nada más: pasar el PDF a
     imagen tarda lo mismo con cualquier modelo, y meterlo adentro haría que
     comparar dos modelos en el banco de pruebas diga cualquier cosa."""
+    u = msg.usage
     return {
         "modelo": modelo,
-        "tokens_entrada": msg.usage.input_tokens,
-        "tokens_salida": msg.usage.output_tokens,
+        # OJO: input_tokens de la API NO incluye los tokens de caché: son los
+        # que no se leyeron ni se escribieron en caché. La entrada total es
+        # input + cache_read + cache_creation (precios_ia.costo los cobra
+        # cada uno a su multiplicador).
+        "tokens_entrada": u.input_tokens,
+        "tokens_salida": u.output_tokens,
+        "tokens_cache_lectura": _entero(getattr(u, "cache_read_input_tokens", 0)),
+        "tokens_cache_escritura": _entero(getattr(u, "cache_creation_input_tokens", 0)),
         "duracion_ms": ms,
     }
+
+
+def _entero(x) -> int:
+    return x if isinstance(x, int) else 0
 
 
 # Tope de tokens de SALIDA. Estaba en 2.000 y era muy poco: el JSON de un
@@ -259,9 +270,35 @@ AVISO_ENMASCARADO = (
 )
 
 
-def _contenido(b64: str, media: str, esquema: str, aviso_enmascarado: bool) -> list:
-    partes = [{"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-              {"type": "text", "text": esquema}]
+# Caché de prompt (EXTRACTOR_CACHE=1, se lee en CADA llamada; default "0" =
+# el pedido de siempre, byte a byte). Hoy el prefijo idéntico entre lecturas
+# es solo SYSTEM (~440 tokens): la imagen cambia en cada recibo y el ESQUEMA
+# (~1.500 tokens, igual en todas) va DESPUÉS de ella, así que nunca entra en
+# el prefijo cacheable. Además el mínimo cacheable es 512 tokens en los
+# modelos 5.5 (1.024 en Sonnet 4.6): con 440 no se cachea nada. Con la
+# variable en "1" el esquema se muda al system, antes de la imagen, con la
+# marca de caché en el último bloque estable: el prefijo pasa a ~1.950
+# tokens y las lecturas siguientes (dentro de los 5 minutos de la caché) lo
+# pagan a 0,1x. Medido en tokens: ~15 % de ahorro por lectura. No cambia ni
+# una palabra de lo que ve el modelo, solo en qué mensaje va.
+def _cache_activo() -> bool:
+    return os.getenv("EXTRACTOR_CACHE", "0").strip() == "1"
+
+
+def _system_y_contenido(system: str, esquema: str, b64: str, media: str,
+                        aviso_enmascarado: bool) -> tuple:
+    """(system, contenido_del_usuario) del pedido, con o sin caché."""
+    if not _cache_activo():
+        return system, _contenido(b64, media, esquema, aviso_enmascarado)
+    sistema = [{"type": "text", "text": system},
+               {"type": "text", "text": esquema, "cache_control": {"type": "ephemeral"}}]
+    return sistema, _contenido(b64, media, None, aviso_enmascarado)
+
+
+def _contenido(b64: str, media: str, esquema: str | None, aviso_enmascarado: bool) -> list:
+    partes = [{"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}]
+    if esquema is not None:
+        partes.append({"type": "text", "text": esquema})
     if aviso_enmascarado:
         partes.append({"type": "text", "text": AVISO_ENMASCARADO})
     return partes
@@ -330,7 +367,8 @@ def _uso_mock(inicio: float) -> dict:
     mock prendido en Pruebas (ver carga/README.md), registrarla dejaba todas
     las filas en 15,0 s clavados y el tiempo mediano del panel dejaba de
     querer decir algo."""
-    return {"modelo": MOCK, "tokens_entrada": 0, "tokens_salida": 0, "duracion_ms": 0}
+    return {"modelo": MOCK, "tokens_entrada": 0, "tokens_salida": 0,
+            "tokens_cache_lectura": 0, "tokens_cache_escritura": 0, "duracion_ms": 0}
 
 
 def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
@@ -348,14 +386,14 @@ def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
     modelo = modelo or MODELO
     b64, media = imagen or preparar_imagen(contenido, content_type)
 
+    sistema, contenido_usuario = _system_y_contenido(SYSTEM, ESQUEMA, b64, media, aviso_enmascarado)
     inicio = time.perf_counter()
     msg = client.messages.create(
         model=modelo,
         max_tokens=MAX_TOKENS,
-        system=SYSTEM,
+        system=sistema,
         **_opciones(modelo),
-        messages=[{"role": "user",
-                   "content": _contenido(b64, media, ESQUEMA, aviso_enmascarado)}],
+        messages=[{"role": "user", "content": contenido_usuario}],
     )
     return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))
 
@@ -640,13 +678,14 @@ def extraer_aportes(contenido: bytes, content_type: str, modelo: str | None = No
     modelo = modelo or MODELO
     b64, media = imagen or preparar_imagen(contenido, content_type)
 
+    sistema, contenido_usuario = _system_y_contenido(SYSTEM_APORTES, ESQUEMA_APORTES, b64, media,
+                                                     aviso_enmascarado)
     inicio = time.perf_counter()
     msg = client.messages.create(
         model=modelo,
         max_tokens=MAX_TOKENS,
-        system=SYSTEM_APORTES,
+        system=sistema,
         **_opciones(modelo),
-        messages=[{"role": "user",
-                   "content": _contenido(b64, media, ESQUEMA_APORTES, aviso_enmascarado)}],
+        messages=[{"role": "user", "content": contenido_usuario}],
     )
     return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))

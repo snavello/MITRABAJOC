@@ -874,7 +874,8 @@ def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str)
     if not uso:
         return
     db.registrar_uso_ia(sindicato_id, cuil, tipo, uso["modelo"], uso["tokens_entrada"],
-                        uso["tokens_salida"], uso.get("duracion_ms", 0))
+                        uso["tokens_salida"], uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
 
 
 # ---------- Enmascarado antes de la IA (PLAN_ENMASCARADO.md) ----------
@@ -985,7 +986,8 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     # sea el resultado (confianza baja, o si el trabajador nunca confirma).
     db.registrar_uso_ia(sid or None, _cuil_seguro(request), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
-                         uso.get("duracion_ms", 0))
+                         uso.get("duracion_ms", 0),
+                         uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
     # El CUIL impreso con el verificador mal (SDN, 2026-11-04): se guarda lo que
     # dice el documento ANTES de rearmarlo (lo que leyó la IA y lo que leyó el
     # tapado), para que /api/validar avise. No frena: un CUIL inválido no es
@@ -1269,7 +1271,8 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
         raise ErrorApp("E-APORTE-01")
     db.registrar_uso_ia(sid or None, cuil, "aportes",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
-                         uso.get("duracion_ms", 0))
+                         uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
     if prep.tapado:
         preparacion.rearmar_aportes(datos, prep.analisis, conocidos)
     if datos.get("confianza") == "baja" or not datos.get("meses"):
@@ -6071,7 +6074,8 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
         leidos += 1
         db.registrar_uso_ia(sid, "", "aprendizaje",
                              uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
-                             uso.get("duracion_ms", 0))
+                             uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
         cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit")) or None
         for n in detectar_nuevos(conceptos_actuales, recibo["lineas"], cuit_empleador):
             clave = (n["codigo"], cuit_empleador or "")
@@ -6907,7 +6911,8 @@ async def plataforma_probar_modelos(request: Request,
             continue
         datos, uso = r
         db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
-                            uso["tokens_salida"], uso.get("duracion_ms", 0))
+                            uso["tokens_salida"], uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
         if es_tapado:
             # Lo que se le tapó vuelve con lo leído acá, como en las rutas de
             # verdad: la comparación es contra el recibo tal como lo usa la app.
@@ -10336,7 +10341,8 @@ async def api_bancaria_leer(request: Request, archivo: UploadFile = File(...)):
         _registrar_uso_fallido(e, None, "", "herramienta")
         raise HTTPException(422, "No se pudo leer el recibo. Probá con otra foto o el PDF original.")
     db.registrar_uso_ia(None, "", "herramienta", uso["modelo"], uso["tokens_entrada"],
-                        uso["tokens_salida"], uso.get("duracion_ms", 0))
+                        uso["tokens_salida"], uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
     leido = grilla_bancaria.mapear_recibo_leido(recibo)
     periodo = recibo.get("periodo") if recibo.get("periodo") in grilla_bancaria.GRILLAS else ""
     return {**leido, "periodo": recibo.get("periodo") or "",
@@ -10512,7 +10518,8 @@ def api_asistente_catalogo(request: Request):
 def _registrar_uso_asistente(uso: dict | None, sindicato_id) -> None:
     if uso:
         db.registrar_uso_ia(sindicato_id or None, "", "herramienta", uso["modelo"],
-                            uso["tokens_entrada"], uso["tokens_salida"], uso.get("duracion_ms", 0))
+                            uso["tokens_entrada"], uso["tokens_salida"], uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
 
 
 @app.post(API_ASISTENTE + "/entender")
@@ -10989,7 +10996,8 @@ async def _laboratorio_correr(request: Request, archivo: UploadFile, tipo: str, 
         datos, uso = r
         if es_anthropic:
             db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
-                                uso["tokens_salida"], uso.get("duracion_ms", 0))
+                                uso["tokens_salida"], uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
         if tapado:
             if tipo == "aportes":
                 preparacion.rearmar_aportes(datos, prep.analisis, None)

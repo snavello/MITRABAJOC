@@ -986,7 +986,7 @@
       </table>
     </div>
     <p class="ayuda" style="margin-top:12px;">
-      {% if precios_ia.modelos %}Precios de la <a href="{{ _fuente_url }}" target="_blank" rel="noopener">página de precios de Anthropic</a>, leídos el <time datetime="{{ precios_ia.leido }}"><strong>{{ _leido_txt }}</strong></time>. Son los de la API estándar, sin descuentos de cache ni Batch.{% else %}<strong>No se encontró data/precios_ia.json</strong>: sin catálogo no se puede calcular ningún costo.{% endif %}
+      {% if precios_ia.modelos %}Precios de la <a href="{{ _fuente_url }}" target="_blank" rel="noopener">página de precios de Anthropic</a>, leídos el <time datetime="{{ precios_ia.leido }}"><strong>{{ _leido_txt }}</strong></time>. Son los de la API estándar; la lectura de caché se cobra a 0,1x y la escritura a 1,25x, y no hay Batch.{% else %}<strong>No se encontró data/precios_ia.json</strong>: sin catálogo no se puede calcular ningún costo.{% endif %}
       Un costo con <span class="estimado">asterisco</span> es una llamada anterior a que se
       guardara el precio del momento: se muestra con los precios de hoy.</p>
   </div>
@@ -995,14 +995,17 @@
   <table>
     <tr><th>Fecha</th><th>Sindicato</th><th>Tipo</th><th>Modelo</th><th>CUIL</th>
         <th class="num">Tokens entrada</th><th class="num">Tokens salida</th>
+        <th class="num" title="Tokens leídos de la caché de prompt (a 0,1x). Vacío: la llamada no usó caché o es anterior.">Caché</th>
         <th class="num">Tiempo</th><th class="num">Costo</th></tr>
     {% for u in uso_ia %}
     <tr class="fila-usoia" data-sindicato="{{ u.sindicato }}" data-modelo="{{ u.modelo }}" data-tipo="{{ u.tipo }}"
         data-entrada="{{ u.tokens_entrada }}" data-salida="{{ u.tokens_salida }}"
+        data-cache="{{ u.tokens_cache_lectura }}"
         data-ms="{{ u.duracion_ms }}" data-costo="{% if u.costo is not none %}{{ u.costo }}{% endif %}"
         data-nombre="{{ u.modelo_nombre }}">
       <td class="nowrap">{{ u.fecha }}</td><td>{{ u.sindicato }}</td><td>{{ u.tipo }}</td><td>{{ u.modelo_nombre }}</td>
       <td class="nowrap">{{ u.cuil or '—' }}</td><td class="num">{{ u.tokens_entrada }}</td><td class="num">{{ u.tokens_salida }}</td>
+      <td class="num">{% if u.tokens_cache_lectura or u.tokens_cache_escritura %}{{ u.tokens_cache_lectura }}{% else %}—{% endif %}</td>
       <td class="num">{{ u.duracion_txt }}</td>
       <td class="num{% if not u.costo_exacto %} estimado{% endif %}"
           {% if u.costo is not none and not u.costo_exacto %}title="Estimado con los precios de hoy: esta llamada es anterior a que se guardara el precio del momento."{% endif %}>{{ u.costo_txt }}{% if u.costo is not none and not u.costo_exacto %} *{% endif %}</td>
@@ -1405,6 +1408,7 @@ function filtrarUsoIA() {
 
   const sumaEntrada = visibles.reduce((a, d) => a + Number(d.entrada || 0), 0);
   const sumaSalida = visibles.reduce((a, d) => a + Number(d.salida || 0), 0);
+  const sumaCache = visibles.reduce((a, d) => a + Number(d.cache || 0), 0);
   const conCosto = visibles.filter(d => d.costo !== '');
   const total = conCosto.reduce((a, d) => a + Number(d.costo), 0);
   const tiempos = visibles.filter(d => Number(d.ms) > 0).map(d => Number(d.ms));
@@ -1425,6 +1429,7 @@ function filtrarUsoIA() {
       bloque(tiempos.length ? segTxt(medianaDe(tiempos)) : '—', 'Tiempo mediano'),
       bloque(sumaEntrada.toLocaleString('es-AR') + ' / ' + sumaSalida.toLocaleString('es-AR'),
              'Tokens entrada / salida'),
+      bloque(sumaCache.toLocaleString('es-AR'), 'Tokens leídos de caché'),
     ].join('');
   }
 

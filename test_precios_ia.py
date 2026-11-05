@@ -166,7 +166,8 @@ def test_el_extractor_en_mock_no_inventa_una_duracion(monkeypatch):
     monkeypatch.setenv("MOCK_EXTRACTOR", "1")
     monkeypatch.setenv("MOCK_EXTRACTOR_LATENCIA", "0")
     _, uso = extractor.extraer(b"x", "image/png")
-    assert uso == {"modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0, "duracion_ms": 0}
+    assert uso == {"modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0, "tokens_cache_lectura": 0,
+                   "tokens_cache_escritura": 0, "duracion_ms": 0}
 
 
 # ---------------- 3. el modelo que elige plataforma es el que corre ----------------

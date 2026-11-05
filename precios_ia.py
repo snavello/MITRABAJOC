@@ -18,11 +18,10 @@ Dos reglas que explican todo lo demás:
    leer sin inventar. Por eso el archivo guarda la fecha de lectura y la
    pantalla la muestra.
 
-Lo que estos precios NO contemplan: descuentos de cache (una lectura
-cacheada sale ~0,1x) ni Batch (50%). El extractor no usa ninguno de los
-dos, así que para lo que hoy se registra en UsoIA el número es el real; el
-Asistente sí cachea su prompt de sistema, y el día que entre acá habría que
-sumar los tokens de cache a la cuenta.
+Caché de prompt: `costo()` cobra la lectura de caché a 0,1x y la escritura a
+1,25x del precio de entrada (MULT_CACHE_*). Lo que NO contempla es Batch
+(50%), que ninguno de los usos registrados en UsoIA usa. El Asistente sí
+cachea su prompt de sistema pero todavía no registra acá.
 """
 import json
 from pathlib import Path
@@ -114,19 +113,35 @@ def precios(modelo_id: str) -> tuple[float, float] | None:
     return float(m["entrada"]), float(m["salida"])
 
 
+# Multiplicadores de la API para la caché de prompt de 5 minutos, sobre el
+# precio de entrada del modelo (no hay precios por modelo aparte): leer de la
+# caché sale 0,1x y escribirla 1,25x. `usage.input_tokens` de la API NO
+# incluye los tokens de caché: son tres cantidades disjuntas.
+MULT_CACHE_LECTURA = 0.1
+MULT_CACHE_ESCRITURA = 1.25
+
+
 def costo(tokens_entrada: int, tokens_salida: int,
-          usd_entrada: float, usd_salida: float) -> float:
+          usd_entrada: float, usd_salida: float,
+          tokens_cache_lectura: int = 0, tokens_cache_escritura: int = 0) -> float:
     """Los dólares de UNA llamada, con los precios que se le pasen (los
-    congelados en la fila, o los de hoy para estimar una vieja)."""
-    return ((tokens_entrada or 0) * (usd_entrada or 0)
+    congelados en la fila, o los de hoy para estimar una vieja). La entrada
+    normal, la leída de caché (0,1x) y la escrita en caché (1,25x) se cobran
+    cada una a lo suyo."""
+    e = usd_entrada or 0
+    return ((tokens_entrada or 0) * e
+            + (tokens_cache_lectura or 0) * e * MULT_CACHE_LECTURA
+            + (tokens_cache_escritura or 0) * e * MULT_CACHE_ESCRITURA
             + (tokens_salida or 0) * (usd_salida or 0)) / 1_000_000
 
 
-def costo_estimado(modelo_id: str, tokens_entrada: int, tokens_salida: int) -> float | None:
+def costo_estimado(modelo_id: str, tokens_entrada: int, tokens_salida: int,
+                   tokens_cache_lectura: int = 0, tokens_cache_escritura: int = 0) -> float | None:
     """El costo con los precios de HOY, para las filas registradas antes de
     que se guardara el precio. None si el modelo no está en el catálogo."""
     p = precios(modelo_id)
-    return None if p is None else costo(tokens_entrada, tokens_salida, p[0], p[1])
+    return None if p is None else costo(tokens_entrada, tokens_salida, p[0], p[1],
+                                         tokens_cache_lectura, tokens_cache_escritura)
 
 
 def modelo_valido(modelo_id: str) -> bool:
