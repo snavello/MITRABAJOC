@@ -114,10 +114,21 @@ function login(u, tags) {
 
 /* ---------------- Lectores ---------------- */
 
+// Cada lector entra UNA vez (en su primera iteración) y después navega con su
+// sesión, como una persona real. Hasta el 2026-11-05 se logueaba en cada
+// iteración: con 200 lectores eran ~20 logins por segundo, y cada login
+// cuesta ~0,5 s de CPU por PBKDF2 (600.000 iteraciones, XSK H-0009) -- una
+// tormenta de logins que no existe ni el día de cobro y que tapaba todo lo demás.
+// Si la sesión vence o un pedido vuelve 303 al login, vuelve a entrar.
+let lectorLogueado = false;
+
 export function lector() {
   const u = lectores[(__VU - 1) % lectores.length];
   const tags = { grupo: 'lector' };
-  if (!login(u, tags)) { erroresLector.add(true); sleep(2); return; }
+  if (!lectorLogueado) {
+    lectorLogueado = login(u, tags);
+    if (!lectorLogueado) { erroresLector.add(true); sleep(2); return; }
+  }
   for (const [ruta, paso] of [['/app/inicio', 'home'], ['/api/tu-dia', 'tu_dia'],
                               ['/app/notificaciones', 'novedades'], ['/app', 'recibo']]) {
     sleep(1 + Math.random() * 2);
@@ -125,6 +136,7 @@ export function lector() {
     contar(res);
     if (paso === 'tu_dia' && res.status === 403) { tuDiaApagado.add(1); continue; }
     const ok = res.status >= 200 && res.status < 400;
+    if (res.status === 401 || (res.url && res.url.indexOf('/ingresar') !== -1)) lectorLogueado = false;
     erroresLector.add(!ok);
     check(res, { [`${paso} 2xx`]: () => ok });
   }

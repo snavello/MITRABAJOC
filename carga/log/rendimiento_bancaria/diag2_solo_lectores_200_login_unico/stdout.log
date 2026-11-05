@@ -1,0 +1,26 @@
+time="2026-11-05T00:03:05Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:51750->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:19Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/app/inicio\": request timeout"
+time="2026-11-05T00:03:19Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:50168->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:26Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:50488->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:50Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:50704->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:51Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:51802->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:51Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:50590->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:53Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:51882->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:03:55Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:51300->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:04:43Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:50368->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:04:44Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/notificaciones\": read tcp 127.0.0.1:51174->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:04:46Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:50196->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:04:48Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/notificaciones\": read tcp 127.0.0.1:51232->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:04:58Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:50930->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:05:06Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:51042->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:05:07Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:50738->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:05:22Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:51024->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:05:29Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/notificaciones\": read tcp 127.0.0.1:50500->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:05:40Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:50658->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T00:06:35Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": request timeout"
+
+=== Test 4: recibos bancarios (continuo, formato todos) ===
+  lectores p95 25.8 s, falla 17.14 %
+  500: 1   503: 681   E-RECIBO-04: 0
+  VEREDICTO: NO APROBADO
+

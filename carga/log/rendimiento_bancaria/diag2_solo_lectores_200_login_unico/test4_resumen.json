@@ -1,0 +1,18 @@
+{
+  "escenario": "continuo",
+  "formato": "todos",
+  "lectores": 200,
+  "lectores_p95_ms": 25818.566483,
+  "lectores_falla": 0.17135174773893913,
+  "respuestas_500": 1,
+  "respuestas_503": 681,
+  "e_recibo_04": 0,
+  "tu_dia_403": 0,
+  "por_formato": {},
+  "escalones": {},
+  "criterio_subidas": true,
+  "criterio_cero_500": false,
+  "criterio_pertenencia": true,
+  "criterio_lectores": true,
+  "aprobado": false
+}
