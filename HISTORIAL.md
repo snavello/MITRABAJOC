@@ -10014,7 +10014,11 @@ la base de Pruebas, verificada después:
 - **El caso 6** (`bbva/20209792630_2025-10`, lectura inexacta) **sí es de la app**:
   los descuentos impresos en positivo y fuera de la sección `descuentos` los
   contaba `validador.totales_leidos` como haberes. El veredicto salió bien igual;
-  el cierre aritmético no. **En curso** en `fix/zona-descuentos-positivos`.
+  el cierre aritmético no. **Corregido** en el PR #212 (Trabajador 0.58.08):
+  `validador._zona_leida` trata como descuento una línea con
+  `tipo == "aporte_trabajador"`, importe positivo y sección distinta de
+  `descuentos`; los reintegros y los aportes negativos siguen igual
+  (`test_zona_descuentos_positivos.py`, 5 casos).
 
 ### Caché de prompt y la línea «Compensación no remunerativa»
 
@@ -10042,11 +10046,11 @@ Vuelta atrás: `EXTRACTOR_CACHE=0`, sin deploy de código.
 Web `0.5c-512mb` × 1 con un worker, base `0.1c-256mb` (se bajó de plan al
 terminar), `MOCK_EXTRACTOR=0`, `EXTRACTOR_CACHE=1`, `DB_POOL_SIZE=15`,
 `DB_MAX_OVERFLOW=10`, `ENMASCARADO=activo`, modelo de recibos `claude-sonnet-5-5`.
-Versiones: Trabajador 0.58.07, Admin 0.77.05, Plataforma 0.65.05. Toda la medición
+Versiones: Trabajador 0.58.08, Admin 0.77.05, Plataforma 0.65.05. Toda la medición
 de carga (ráfagas, día de cobro) se hizo con `MOCK_EXTRACTOR`: **la IA no se midió
 bajo carga**, solo en exactitud, de a dos recibos a la vez.
 
-**Qué queda**: el PR de configuración y el del caso 6 (arriba); topes de peso de
+**Qué queda**: el PR de configuración (arriba); topes de peso de
 logos e imágenes, un workspace de Anthropic por entorno y el comentario viejo de
 `carga/lote_bancaria.py` sobre el CUIL impreso inválido (BACKLOG.md); y el cambio
 de plan en caliente, que **SDN decidió no probar** (nunca se haría en un día de
