@@ -2017,6 +2017,8 @@ def admin_login(request: Request, usuario: str = Form(...), clave: str = Form(..
         _login_fallo(request)
         return RedirectResponse("/admin?error=1", status_code=303)
     _login_ok(request)
+    if auth.necesita_rehash(cuenta.clave_hash):
+        _rehash_de_cuenta(db.CuentaPanel, cuenta.id, clave)
     if len(opciones) == 1:
         return _abrir_sesion_panel(opciones[0]["usuario_id"])
     token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
@@ -6380,6 +6382,8 @@ def _login_plataforma_nominal(usuario: str, clave: str, request: Request):
         return None
     if _clave_transitoria_vencida(fila.clave_vence):
         return "vencida"
+    if auth.necesita_rehash(fila.clave_hash):
+        _rehash_de_cuenta(db.UsuarioPlataforma, fila.id, clave)
     token = auth.crear_sesion("plataforma", id_usuario=fila.id, ident=fila.usuario)
     db.registrar_acceso("plataforma")
     db.registrar_log_plataforma("login", fila.usuario, ip=_ip_de(request))
@@ -7607,8 +7611,16 @@ def _aplicar_contrato_y_clausula(request: Request, sind: Sindicato, contrato_lei
     otra vez no reescribe la fecha), y se borran al desmarcarla."""
     if contrato_leido:
         sind.contrato_datos, sind.contrato_mime, sind.contrato_nombre = contrato_leido
-    if aceptada and not sind.contrato_datos:
-        return False
+    if aceptada and not contrato_leido:
+        # Sin contrato nuevo, «¿ya hay uno cargado?» se pregunta por su largo:
+        # leer `sind.contrato_datos` traería el PDF entero (columna diferida).
+        from sqlalchemy import func
+        from sqlalchemy.orm import object_session
+        largo = object_session(sind).exec(
+            select(func.coalesce(func.octet_length(Sindicato.contrato_datos), 0))
+            .where(Sindicato.id == sind.id)).one()
+        if not largo:
+            return False
     fila = _usuario_plataforma_de_sesion(request)
     quien = fila.usuario if fila else "generico"
     if aceptada and not sind.clausula_confidencialidad:
@@ -7992,6 +8004,21 @@ def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
     return resp
 
 
+def _rehash_si_hace_falta(s, fila, clave: str) -> None:
+    """Tras un login exitoso, pasa la clave guardada al costo vigente
+    (PBKDF2 300.000) si estaba a otro. Misma sesión de base del login."""
+    if fila is not None and auth.necesita_rehash(fila.clave_hash):
+        fila.clave_hash = auth.hashear_clave(clave)
+        s.add(fila)
+        s.commit()
+
+
+def _rehash_de_cuenta(modelo, id_, clave: str) -> None:
+    """Igual, para los logins que no tienen sesión abierta en ese punto."""
+    with db.get_session() as s:
+        _rehash_si_hace_falta(s, s.get(modelo, id_), clave)
+
+
 @app.post("/trabajador/login")
 def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(...)):
     if _login_bloqueado(request):
@@ -8002,6 +8029,7 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
             _login_fallo(request)
             return RedirectResponse("/ingresar?error=login", status_code=303)
+        _rehash_si_hace_falta(s, cuenta, clave)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
         temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
@@ -9348,6 +9376,7 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
             _login_fallo(request)
             return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
+        _rehash_si_hace_falta(s, cuenta, clave)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
         temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
@@ -11592,7 +11621,7 @@ def recursos_miniatura(ref: str, request: Request):
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
     if ref.isdigit():
-        r = db.recurso(int(ref))
+        r = db.recurso_miniatura(int(ref))
         if not r or not r.miniatura_datos:
             raise HTTPException(404, "Sin miniatura")
         return BinResponse(content=r.miniatura_datos, media_type=r.miniatura_mime or "image/jpeg",
