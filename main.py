@@ -60,6 +60,7 @@ import fechas
 import formato_ar
 import temas
 import fotos_tema
+import imagenes
 import logos
 import tu_dia
 import tu_dia_fuentes
@@ -342,6 +343,25 @@ async def error_de_base(request: Request, exc: OperationalError):
     return await error_no_manejado(request, exc)
 
 
+class ErrorImagen(HTTPException):
+    """Una imagen subida que `imagenes.achicar` rechazó (no es imagen, pesa de
+    más, SVG donde no va). 400 con el mensaje de `ImagenInvalida`: en un POST
+    de página el handler vuelve al panel con el aviso; en una llamada fetch/JS
+    es el JSON de siempre."""
+
+    def __init__(self, mensaje: str):
+        super().__init__(400, mensaje)
+        self.codigo = "imagen"
+
+
+def _achicar_o_error(datos: bytes, perfil: str, nombre: str = "") -> dict:
+    """`imagenes.achicar` con el error ya como respuesta HTTP."""
+    try:
+        return imagenes.achicar(datos, perfil, nombre)
+    except imagenes.ImagenInvalida as e:
+        raise ErrorImagen(str(e))
+
+
 @app.exception_handler(HTTPException)
 async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
     """Los formularios de /admin y /plataforma son POST de página completa
@@ -365,6 +385,13 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
     El resto de los 403 con sesión válida (módulo no habilitado, CUIL ajeno,
     llamadas fetch/JS) sigue devolviendo JSON como siempre: ahí el JSON es
     la respuesta correcta, porque quien la lee es código."""
+    if getattr(exc, "codigo", None) == "imagen" and _es_navegacion_de_pagina(request):
+        destino = _panel_de(request.url.path)
+        if destino and destino != "/ingresar-empresa":
+            from urllib.parse import quote
+            ancla = "#notificaciones" if request.url.path.startswith("/admin/notificacion") else ""
+            return RedirectResponse(f"{destino}?error=imagen&aviso={quote(str(exc.detail))}{ancla}",
+                                    status_code=303)
     if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request):
         rol = _rol_de(request.url.path)
         destino = _panel_de(request.url.path)
@@ -3316,12 +3343,12 @@ async def abm_noticia(
                 n.formulario_id = formulario
                 n.on_top = arriba
                 if imagen1 and imagen1.filename:
-                    datos, mime, _ = _leer_logo(imagen1)
+                    datos, mime, _ = _leer_logo(imagen1, "publicacion")
                     if datos:
                         n.imagen1_datos, n.imagen1_mime = datos, mime
                         n.imagen1_norm = db.normalizada_o_none(datos)
                 if imagen2 and imagen2.filename:
-                    datos, mime, _ = _leer_logo(imagen2)
+                    datos, mime, _ = _leer_logo(imagen2, "publicacion")
                     if datos:
                         n.imagen2_datos, n.imagen2_mime = datos, mime
                         n.imagen2_norm = db.normalizada_o_none(datos)
@@ -3329,10 +3356,10 @@ async def abm_noticia(
         else:
             imagen1_datos, imagen1_mime = None, ""
             if imagen1 and imagen1.filename:
-                imagen1_datos, imagen1_mime, _ = _leer_logo(imagen1)
+                imagen1_datos, imagen1_mime, _ = _leer_logo(imagen1, "publicacion")
             imagen2_datos, imagen2_mime = None, ""
             if imagen2 and imagen2.filename:
-                imagen2_datos, imagen2_mime, _ = _leer_logo(imagen2)
+                imagen2_datos, imagen2_mime, _ = _leer_logo(imagen2, "publicacion")
             s.add(Noticia(
                 sindicato_id=sid, titulo=titulo, bajada=bajada, texto_completo=texto_completo,
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
@@ -3383,7 +3410,7 @@ async def abm_beneficio(
                 b.destino_seccionales = destinos
                 b.formulario_id = formulario
                 if imagen and imagen.filename:
-                    datos, mime, _ = _leer_logo(imagen)
+                    datos, mime, _ = _leer_logo(imagen, "publicacion")
                     if datos:
                         b.imagen_datos, b.imagen_mime = datos, mime
                         b.imagen_norm = db.normalizada_o_none(datos)
@@ -3391,7 +3418,7 @@ async def abm_beneficio(
         else:
             imagen_datos, imagen_mime = None, ""
             if imagen and imagen.filename:
-                imagen_datos, imagen_mime, _ = _leer_logo(imagen)
+                imagen_datos, imagen_mime, _ = _leer_logo(imagen, "publicacion")
             s.add(Beneficio(
                 sindicato_id=sid, rubro=rubro, descripcion=descripcion, link=link,
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
@@ -3855,6 +3882,17 @@ def admin_empleador_importar(request: Request):
 MAX_ADJUNTO_NOTIFICACION = 5 * 1024 * 1024  # 5 MB, pedido explícito del plan
 
 
+def _adjunto_achicado(datos: bytes, mime: str, nombre: str):
+    """Si el adjunto es una imagen, la achica (perfil `adjunto`) y la guarda
+    como webp con el nombre cambiado a `.webp`; PDF, Word y demás pasan tal
+    cual. Devuelve (datos, mime, nombre); ErrorImagen si la imagen no sirve."""
+    import os
+    if not (mime or "").startswith("image/"):
+        return datos, mime, nombre
+    r = _achicar_o_error(datos, "adjunto", nombre)
+    return r["datos"], r["mime"], os.path.splitext(nombre)[0] + ".webp"
+
+
 def _leer_adjunto_notificacion(archivo: UploadFile):
     """Lee el adjunto de una notificación (imagen, PDF o Word) y devuelve
     (datos, mime, nombre_original). None/"" si el tipo no es válido, si está
@@ -3872,7 +3910,7 @@ def _leer_adjunto_notificacion(archivo: UploadFile):
     datos = archivo.file.read()
     if not datos or len(datos) > MAX_ADJUNTO_NOTIFICACION:
         return None, "", ""
-    return datos, mimes[ext], archivo.filename
+    return _adjunto_achicado(datos, mimes[ext], archivo.filename)
 
 
 @app.post("/admin/notificacion/preview")
@@ -4145,9 +4183,11 @@ async def api_subir_foto_perfil_empresa(request: Request, foto: UploadFile = Fil
     if (foto.content_type or "") not in MIMES_FOTO_PERFIL:
         raise HTTPException(400, "La foto tiene que ser JPEG, PNG o WEBP.")
     datos = await foto.read()
-    if not datos or len(datos) > MAX_FOTO_PERFIL:
-        raise HTTPException(400, "Foto vacía o demasiado pesada.")
-    if not db.guardar_foto_empleador(cuit, datos, foto.content_type):
+    if not datos:
+        raise HTTPException(400, "Foto vacía.")
+    r = _achicar_o_error(datos, "perfil", foto.filename or "")
+    datos = r["datos"]
+    if not db.guardar_foto_empleador(cuit, datos, r["mime"]):
         raise HTTPException(404, "No se encontró tu cuenta.")
     return {"ok": True}
 
@@ -4213,7 +4253,7 @@ def _leer_archivo_tramite(archivo: UploadFile):
     datos = archivo.file.read()
     if not datos or len(datos) > MAX_ARCHIVO_TRAMITE:
         return None, "", ""
-    return datos, ARCHIVO_MIMES_TRAMITE[ext], archivo.filename
+    return _adjunto_achicado(datos, ARCHIVO_MIMES_TRAMITE[ext], archivo.filename)
 
 
 def _notificar_cambio_tramite(sid: int, cuil: str, numero: str, texto: str) -> None:
@@ -5390,8 +5430,14 @@ async def api_enviar_tramite(request: Request):
                 errores.append(f'"{campo["etiqueta"]}": archivo vacío o supera los 10 MB.')
                 continue
             mime = ARCHIVO_MIMES_TRAMITE.get(f".{ext}", archivo.content_type or "application/octet-stream")
+            nombre_arch = archivo.filename
+            try:
+                datos, mime, nombre_arch = _adjunto_achicado(datos, mime, nombre_arch)
+            except ErrorImagen as e:
+                errores.append(f'"{campo["etiqueta"]}": {e.detail}')
+                continue
             respuestas.append({"campo_tramite_id": campo["id"], "archivo_datos": datos,
-                                "archivo_mime": mime, "archivo_nombre": archivo.filename})
+                                "archivo_mime": mime, "archivo_nombre": nombre_arch})
             continue
 
         valor = str(form.get(f'campo_{campo["id"]}') or "").strip()
@@ -5820,8 +5866,14 @@ async def api_enviar_tramite_empresa(request: Request):
                 errores.append(f'"{campo["etiqueta"]}": archivo vacío o supera los 10 MB.')
                 continue
             mime = ARCHIVO_MIMES_TRAMITE.get(f".{ext}", archivo.content_type or "application/octet-stream")
+            nombre_arch = archivo.filename
+            try:
+                datos, mime, nombre_arch = _adjunto_achicado(datos, mime, nombre_arch)
+            except ErrorImagen as e:
+                errores.append(f'"{campo["etiqueta"]}": {e.detail}')
+                continue
             respuestas.append({"campo_tramite_id": campo["id"], "archivo_datos": datos,
-                                "archivo_mime": mime, "archivo_nombre": archivo.filename})
+                                "archivo_mime": mime, "archivo_nombre": nombre_arch})
             continue
 
         valor = str(form.get(f'campo_{campo["id"]}') or "").strip()
@@ -7116,7 +7168,7 @@ async def plataforma_alta_sindicato(
         logo_datos, logo_mime, logo_flag = _leer_logo(logo)
     firma_datos, firma_mime, firma_flag = (None, "", "")
     if firma and firma.filename:
-        firma_datos, firma_mime, firma_flag = _leer_logo(firma)
+        firma_datos, firma_mime, firma_flag = _leer_logo(firma, "firma")
     with db.get_session() as s:
         sind = Sindicato(
             nombre=nombre, descripcion=descripcion, slug=slug,
@@ -7570,22 +7622,23 @@ def dashboard_catalogo_filtros(request: Request):
     }
 
 
-def _leer_logo(archivo: UploadFile):
-    """Lee el logo subido y devuelve (datos, mime, nombre_flag).
-    Guarda el binario en la base (Opción B), no en el disco efímero.
-    Acepta PNG y formatos de imagen compatibles."""
+def _leer_logo(archivo: UploadFile, perfil: str = "logo"):
+    """Lee una imagen subida y devuelve (datos, mime, nombre_flag): siempre
+    pasa por `imagenes.achicar` con el `perfil` que corresponda (logo,
+    firma, publicacion), así lo que se guarda en la base ya viene achicado y
+    en webp (el SVG solo en `logo`, tal cual). Extensión desconocida o
+    archivo vacío devuelven (None, "", ""); una imagen que no sirve levanta
+    ErrorImagen (400 / aviso en pantalla)."""
     import os
     ext = os.path.splitext(archivo.filename)[1].lower()
-    mimes = {
-        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-        ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml",
-    }
-    if ext not in mimes:
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"):
         return None, "", ""
     datos = archivo.file.read()
     if not datos:
         return None, "", ""
-    return datos, mimes[ext], f"logo{ext}"
+    r = _achicar_o_error(datos, perfil, archivo.filename)
+    nueva = ".svg" if r["mime"] == imagenes.MIME_SVG else ".webp"
+    return r["datos"], r["mime"], f"logo{nueva}"
 
 
 CONTRATO_MIMES = {".pdf": "application/pdf", ".png": "image/png",
@@ -7752,7 +7805,7 @@ async def plataforma_editar_sindicato(
                 if datos:
                     sind.logo_datos, sind.logo_mime, sind.logo = datos, mime, flag
             if firma and firma.filename:
-                datos, mime, flag = _leer_logo(firma)
+                datos, mime, flag = _leer_logo(firma, "firma")
                 if datos:
                     sind.firma_datos, sind.firma_mime, sind.firma = datos, mime, flag
             if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
@@ -9025,7 +9078,7 @@ def api_seccionales(request: Request):
             "mi_seccional_id": db.seccional_de_trabajador(cuil, sid)}
 
 
-MAX_FOTO_PERFIL = 1 * 1024 * 1024  # 1 MB -- de sobra: el cliente ya la redimensiona a un JPEG chico antes de subirla
+MAX_FOTO_PERFIL = imagenes.TOPE_ENTRADA  # el cliente ya la achica, pero el servidor no confía: una foto de celular sin achicar también entra y la achica `imagenes`
 MIMES_FOTO_PERFIL = {"image/jpeg", "image/png", "image/webp"}
 
 
@@ -9041,9 +9094,11 @@ async def api_subir_foto_perfil(request: Request, foto: UploadFile = File(...)):
     if (foto.content_type or "") not in MIMES_FOTO_PERFIL:
         raise HTTPException(400, "La foto tiene que ser JPEG, PNG o WEBP.")
     datos = await foto.read()
-    if not datos or len(datos) > MAX_FOTO_PERFIL:
-        raise HTTPException(400, "Foto vacía o demasiado pesada.")
-    if not db.guardar_foto_trabajador(cuil, datos, foto.content_type):
+    if not datos:
+        raise HTTPException(400, "Foto vacía.")
+    r = _achicar_o_error(datos, "perfil", foto.filename or "")
+    datos = r["datos"]
+    if not db.guardar_foto_trabajador(cuil, datos, r["mime"]):
         raise HTTPException(404, "No se encontró tu cuenta.")
     return {"ok": True}
 

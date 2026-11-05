@@ -8,6 +8,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_perfil_empleador.py -q
 
 
 import db
+from ayuda_imagenes import imagen_real
 import auth
 from db import Sindicato, Empleador, CuentaEmpleador, UsuarioSindicato
 from modulos import MODULOS_INICIALES
@@ -81,12 +82,12 @@ def test_perfil_requiere_sesion_empleador():
 
 def test_subir_foto_y_servirla():
     emp = _sesion_empleador("30111222339")
-    r = emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", b"contenido-fake-jpeg", "image/jpeg")})
+    r = emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", imagen_real("JPEG"), "image/jpeg")})
     assert r.status_code == 200, r.text
     r2 = emp.get("/perfil-empleador-foto/30111222339")
     assert r2.status_code == 200
-    assert r2.content == b"contenido-fake-jpeg"
-    assert r2.headers["content-type"] == "image/jpeg"
+    assert r2.content[:4] == b"RIFF"     # el servidor la guarda achicada, en webp
+    assert r2.headers["content-type"] == "image/webp"
     print("OK  test_subir_foto_y_servirla")
 
 
@@ -99,7 +100,7 @@ def test_foto_rechaza_tipo_no_permitido():
 
 def test_foto_solo_la_ve_el_dueno():
     emp = _sesion_empleador("30111222339")
-    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", b"foto de la constructora", "image/jpeg")})
+    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", imagen_real("JPEG"), "image/jpeg")})
     otro = _sesion_empleador("30999888776")
     r = otro.get("/perfil-empleador-foto/30111222339")
     assert r.status_code == 403
@@ -115,17 +116,17 @@ def test_sin_foto_devuelve_404():
 
 def test_admin_del_sindicato_puede_ver_la_foto_para_el_chat_de_tramites():
     emp = _sesion_empleador("30111222339")
-    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", b"foto para admin", "image/jpeg")})
+    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", imagen_real("JPEG"), "image/jpeg")})
     admin = _sesion_admin("20777777770", "admin-demo")
     r = admin.get("/perfil-empleador-foto/30111222339")
     assert r.status_code == 200
-    assert r.content == b"foto para admin"
+    assert r.content[:4] == b"RIFF"
     print("OK  test_admin_del_sindicato_puede_ver_la_foto_para_el_chat_de_tramites")
 
 
 def test_admin_de_otro_sindicato_no_puede_ver_la_foto():
     emp = _sesion_empleador("30111222339")
-    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", b"foto privada", "image/jpeg")})
+    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", imagen_real("JPEG"), "image/jpeg")})
     admin_ajeno = _sesion_admin("20888888880", "admin-demo")
     r = admin_ajeno.get("/perfil-empleador-foto/30111222339")
     assert r.status_code == 403

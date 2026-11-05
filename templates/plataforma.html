@@ -403,6 +403,9 @@
 {% with marca_plataforma = (dict(marca_plataforma, logo_oscuro=False) if marca_plataforma and marca_plataforma.logo else marca_plataforma) %}
 {% include "_encabezado.html" %}
 {% endwith %}
+{% if request.query_params.get('error') == 'imagen' %}
+<div class="msg err" role="alert" onclick="this.remove()" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;max-width:90vw;cursor:pointer;">No se guardó la imagen: {{ request.query_params.get('aviso') or 'el archivo no es una imagen válida.' }}</div>
+{% endif %}
 <div class="flota-sesion">
 <a class="btn-home" href="/plataforma/inicio" title="Inicio">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
@@ -601,7 +604,7 @@
             <span class="ayuda">Firma actual: subí una nueva para reemplazarla.</span>
           </div>
           <label class="zarch">
-            <input type="file" name="firma" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+            <input type="file" name="firma" accept="image/png,image/jpeg,image/webp,image/gif">
             <span class="zarch-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Elegir archivo</span>
             <span class="zarch-nombre" data-vacio="Ningún archivo elegido">Ningún archivo elegido</span>
           </label>

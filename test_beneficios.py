@@ -7,6 +7,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_beneficios.py -q
 
 
 import db
+from ayuda_imagenes import imagen_real
 import auth
 from db import Sindicato, UsuarioSindicato, Trabajador, Beneficio
 from modulos import MODULOS_INICIALES
@@ -34,10 +35,7 @@ trab_client = TestClient(main.app)
 trab_client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20111111119"))
 trab_client.cookies.set("cuil_trab", "20111111119")
 
-PNG_1X1 = bytes.fromhex(
-    "89504e470d0a1a0a0000000d494844520000000100000001080600000"
-    "01f15c4890000000a4944415478da6360000002000155"
-)
+PNG_1X1 = imagen_real()
 
 
 def test_vigencia_helper():
@@ -131,7 +129,7 @@ def test_imagen_del_beneficio_se_sirve():
     assert f'src="/beneficio-imagen/{bid}/normalizada"' in trab_client.get("/app/inicio").text
     r_img = trab_client.get(f"/beneficio-imagen/{bid}")
     assert r_img.status_code == 200
-    assert r_img.headers["content-type"] == "image/png"
+    assert r_img.headers["content-type"] == "image/webp"
     print("OK  test_imagen_del_beneficio_se_sirve")
 
 
