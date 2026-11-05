@@ -54,3 +54,21 @@ Qué cambiar: en `validador._zona_leida` (y/o en el prompt de `extractor.py` par
 ## `CUIL_DV_INVALIDO`
 
 `nacion/27340709107_2026-05.pdf`: el recibo imprime `27-34070910-0` (el verificador correcto es 7). Esperado OK, obtenido OK, lectura exacta. Es lo que el lote espera: `ESPERADO_POR_ERROR["CUIL_DV_INVALIDO"] = "OK"`, y el PR del aviso (a564418) mantiene el recibo aceptado y agrega la alerta `cuil_impreso_invalido`. Dos pendientes: (1) el comentario de `carga/lote_bancaria.py` (líneas 28-35) dice que la app no avisa y está desactualizado; (2) el CSV no guarda las alertas, así que esta corrida no prueba que el aviso salió (no se sabe si Pruebas ya tenía ese PR desplegado: el PR es del 04-nov 20:14; la corrida, del 05-nov 00:45). Conviene que `clasificar` guarde `alertas` y que el lote espere `cuil_impreso_invalido` para esa fila.
+
+## Verificación contra la base de Pruebas (Job de Render, sin IA): cierra los casos 1 a 5
+
+Se leyeron de Pruebas la tabla de topes, las fórmulas del sindicato 6 (La Bancaria) y las 5 filas de `ReciboVerificado`. **La hipótesis de topes distintos era cierta solo en un caso; la causa principal es otra.**
+
+- **Fórmulas de La Bancaria en Pruebas: `tolerancia = 5000.0`** en JUBILACION, PAMI y OBRASOCIAL (ids 22, 23, 24); en el repo (`cargar_bancaria.FORMULAS`) es 1.0. CUOTA lleva 2000. El motor da `ok = |dif| <= tolerancia`, así que una retención de más menor a $ 5.000 no se marca.
+- **Topes**: iguales al CSV en 2025-09, 2025-10, 2025-12 y 2026-02. **2026-03 está mal en Pruebas: 4.542.082,15 contra 4.045.590,45 del CSV (Res. ANSES 38/2026)**, y es mayor que el de 2026-04 (4.162.912,57): error de carga.
+- **Lectura**: la IA leyó los cinco exactos (líneas, importes, secciones, categorías universales y totales impresos iguales al manifiesto). No hay problema de lectura.
+
+| archivo | esperado | qué pasó en Pruebas | origen | qué cambiar |
+|---|---|---|---|---|
+| galicia/27425555478_2025-09 | con diferencias | tope correcto (3.505.701,35): esperado 385.627,15, impreso 385.990,00, dif 362,85, pasa por tolerancia 5.000 | **configuración** (tolerancia) | volver `tolerancia` de JUBILACION/PAMI/OBRASOCIAL a 1.0 en las reglas de La Bancaria en Pruebas |
+| galicia/27425555478_2025-10 | ídem | dif jubilación 446,87 | configuración (tolerancia) | ídem |
+| galicia/20444641607_2026-02 | ídem | dif 1.029,61 | configuración (tolerancia) | ídem |
+| nacion/27267339177_2025-12 | ídem | dif 1.094,53 | configuración (tolerancia) | ídem |
+| nacion/20292831545_2026-03 | ídem | tope de Pruebas 4.542.082,15 mayor que la base 4.312.266,90: el motor no topea y esperado = impreso (474.349,36) | **configuración** (tope mal cargado; con el tope correcto la dif es $ 29.334, que también supera 5.000) | corregir el tope 2026-03 a 4.045.590,45 en `/plataforma` → Topes |
+
+El motor no tiene defecto en estos cinco: aplicó el tope vigente y la tolerancia configurada. Mejora posible (decisión de producto): avisar en el panel cuando una tolerancia de fórmula supere, por ejemplo, $ 100, y que `chequeo.py` compare topes y tolerancias del entorno contra el repo.
