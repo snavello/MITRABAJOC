@@ -1437,7 +1437,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     fotos de noticias y beneficios, en gris o en color".
 
 42. **Rendimiento y exactitud del lote de La Bancaria** (2026-11-05,
-    Trabajador 0.58.08, Admin 0.77.05, Plataforma 0.65.05): el cuello con 200
+    Trabajador 0.58.08, Admin 0.77.06, Plataforma 0.65.06): el cuello con 200
     lectores no era la máquina sino los bytes que la base mandaba a cada
     pantalla; corregido en los PR #203 a #206 (listas sin imágenes, columnas
     de bytes diferidas, adjuntos preguntados por su largo, PBKDF2 a 300.000).
@@ -1449,8 +1449,9 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     el veredicto esperado (US$ 0,0231 por recibo, 0,0178 con caché); Haiku
     5.5 196/200 y 194/200 (US$ 0,00137), sin ser más rápido. **Los «no
     esperados» son configuración de Pruebas** (tolerancia $ 5.000 en vez de $ 1
-    y tope SS de 2026-03 mal cargado), no la app: **en curso**
-    `fix/config-bancaria-y-tolerancias`; y el caso 6 (descuentos en positivo
+    y tope SS de 2026-03 mal cargado), no la app: corregido en el PR #211 (base
+    de Pruebas, aviso de tolerancia > $ 100 en Reglas y chequeo de topes en
+    `chequeo.py`); y el caso 6 (descuentos en positivo
     fuera de su sección) sí era de la app: corregido en el PR #212. **Estado de Pruebas**: web 0.5c-512mb × 1,
     base 0.1c-256mb, `MOCK_EXTRACTOR=0`, `EXTRACTOR_CACHE=1`, modelo de recibos
     Sonnet 5.5. Detalle en HISTORIAL.md, «Rendimiento con el lote de La

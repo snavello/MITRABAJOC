@@ -10007,14 +10007,24 @@ la base de Pruebas, verificada después:
   en la base contra 4.045.590,45 de `data/topes_ss.csv`. La tabla es
   solo-si-vacío (`db.sembrar_topes_si_vacio`) y editable en `/plataforma`, así que
   un valor tecleado a mano nunca se corrige solo.
-- **En curso** (rama `fix/config-bancaria-y-tolerancias`): corrige la base de
-  Pruebas por Jobs de Render, suma un aviso en Reglas cuando la tolerancia supera
-  $ 100 y hace que `chequeo.py` compare topes y tolerancias contra el repo. Sin
-  resultado todavía.
+- **Corregido** en el PR #211 (Admin 0.77.06, Plataforma 0.65.06). En la base de
+  Pruebas, por Jobs de Render: las tolerancias de JUBILACION, PAMI y OBRASOCIAL
+  pasaron de $ 5.000 a $ 1 y la de CUOTA (regla creada a mano el 2025-10-16) de
+  $ 2.000 a $ 1; el tope de 2026-03 pasó de 4.542.082,15 a 4.045.590,45 (la única
+  diferencia con `data/topes_ss.csv`). **No se pudo saber quién puso los 5.000**:
+  ningún script del repo lo escribe y `/admin/formula` no deja bitácora. Código
+  nuevo: `validador.TOLERANCIA_AVISO = 100` con aviso en la pestaña Reglas (en la
+  fila y al guardar, no bloquea), `validador.diferencias_de_topes` y el chequeo 11
+  de `chequeo.py` (topes contra el CSV y tolerancias altas, solo diagnóstico),
+  `test_tolerancia_aviso.py`. Revalidados sin IA los 5 recibos con la
+  configuración corregida: **los 5 dan CON_DISCREPANCIAS** (PAMI/OS y JUBILACION,
+  por el tope), que es lo que el lote esperaba. Las filas ya guardadas en
+  `ReciboVerificado` siguen como OK: no se hizo backfill, a propósito (no se
+  reescribe lo guardado).
 - **El caso 6** (`bbva/20209792630_2025-10`, lectura inexacta) **sí es de la app**:
   los descuentos impresos en positivo y fuera de la sección `descuentos` los
   contaba `validador.totales_leidos` como haberes. El veredicto salió bien igual;
-  el cierre aritmético no. **Corregido** en el PR #212 (Trabajador 0.58.08):
+  el cierre aritmético no. **Corregido** en el PR #212 (Trabajador 0.58.08, verificado contra Pruebas con el recibo real releído por la IA: lectura exacta y veredicto esperado):
   `validador._zona_leida` trata como descuento una línea con
   `tipo == "aporte_trabajador"`, importe positivo y sección distinta de
   `descuentos`; los reintegros y los aportes negativos siguen igual
@@ -10046,11 +10056,11 @@ Vuelta atrás: `EXTRACTOR_CACHE=0`, sin deploy de código.
 Web `0.5c-512mb` × 1 con un worker, base `0.1c-256mb` (se bajó de plan al
 terminar), `MOCK_EXTRACTOR=0`, `EXTRACTOR_CACHE=1`, `DB_POOL_SIZE=15`,
 `DB_MAX_OVERFLOW=10`, `ENMASCARADO=activo`, modelo de recibos `claude-sonnet-5-5`.
-Versiones: Trabajador 0.58.08, Admin 0.77.05, Plataforma 0.65.05. Toda la medición
+Versiones: Trabajador 0.58.08, Admin 0.77.06, Plataforma 0.65.06. Toda la medición
 de carga (ráfagas, día de cobro) se hizo con `MOCK_EXTRACTOR`: **la IA no se midió
 bajo carga**, solo en exactitud, de a dos recibos a la vez.
 
-**Qué queda**: el PR de configuración (arriba); topes de peso de
+**Qué queda**: una bitácora de cambios de Reglas (BACKLOG.md); topes de peso de
 logos e imágenes, un workspace de Anthropic por entorno y el comentario viejo de
 `carga/lote_bancaria.py` sobre el CUIL impreso inválido (BACKLOG.md); y el cambio
 de plan en caliente, que **SDN decidió no probar** (nunca se haría en un día de

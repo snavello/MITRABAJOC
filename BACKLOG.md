@@ -4,6 +4,11 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Bitácora de cambios de Reglas** (2026-11-05): en Pruebas las tolerancias
+  de JUBILACION, PAMI y OBRASOCIAL estaban en $ 5.000 y no hay forma de saber
+  quién ni cuándo (`/admin/formula` no deja registro). Registrar quién, cuándo y
+  qué valor anterior en cada alta, edición o borrado de una regla.
+
 - [ ] **Un workspace de Anthropic por entorno** (2026-11-05, tanda de La
   Bancaria): el lote con IA real se cortó en el recibo 376 por el tope de gasto
   del workspace («workspace API usage limits», se sube en Console → Settings →
