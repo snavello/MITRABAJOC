@@ -1,0 +1,133 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Sánchez, Gustavo",
+   "cuil": "20420839554",
+   "legajo": null,
+   "categoria": "Subjefe de Departamento",
+   "fecha_ingreso": "2009-01-21"
+  },
+  "empleador": {
+   "nombre": "Banco Santander Argentina S.A.",
+   "cuit": "30500008454"
+  },
+  "periodo": "2026-03",
+  "fecha_pago": "2026-04-06",
+  "lineas": [
+   {
+    "codigo": "001",
+    "descripcion": "Sueldo básico",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 4438771.9,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "010",
+    "descripcion": "Antigüedad (17 años)",
+    "cantidad": 17,
+    "unidad": "años",
+    "importe": 754591.22,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "020",
+    "descripcion": "Adicional por título",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 221938.6,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "080",
+    "descripcion": "Compensación no remunerativa",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "remuneracion",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "501",
+    "descripcion": "Jubilación 11%",
+    "cantidad": 11,
+    "unidad": "%",
+    "importe": 595683.19,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": "502",
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "cantidad": 3,
+    "unidad": "%",
+    "importe": 162459.05,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": "503",
+    "descripcion": "Obra social 3%",
+    "cantidad": 3,
+    "unidad": "%",
+    "importe": 162459.05,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": "510",
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "cantidad": 2,
+    "unidad": "%",
+    "importe": 108306.03,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": "520",
+    "descripcion": "Seguro de vida colectivo",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 5535301.72,
+   "descuentos": 1033757.32,
+   "neto": 4501544.4
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "El total de haberes impreso (5.535.301,72) coincide con la suma de los conceptos remunerativos más la compensación no remunerativa. Nombre, CUIL, legajo, empleador y CUIT están ocultos en el documento.",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 5535301.72,
+  "descuentos": 1033757.32,
+  "reintegros": 0,
+  "neto": 4501544.4
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}

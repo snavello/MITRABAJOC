@@ -1,0 +1,31 @@
+{
+ "recibos": 25,
+ "aciertos": 25,
+ "leidos": 25,
+ "lectura_ok": 25,
+ "errores_app": {},
+ "errores_lote_detectados": 0,
+ "errores_lote": 0,
+ "ms_leer_p50": 7944,
+ "ms_leer_p95": 8975,
+ "por": {
+  "banco": {
+   "santander": {
+    "recibos": 25,
+    "aciertos": 25,
+    "lectura_ok": 25
+   }
+  },
+  "formato": {
+   "jpg": {
+    "recibos": 25,
+    "aciertos": 25,
+    "lectura_ok": 25
+   }
+  }
+ },
+ "uso_ia": null,
+ "etiqueta": "sonnet-5-5-400-resto",
+ "base_url": "https://mitrabajo-pruebas.onrender.com",
+ "inicio": "2026-11-05 10:37"
+}

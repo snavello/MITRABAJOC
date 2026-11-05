@@ -1,0 +1,6 @@
+
+=== Test 4: recibos bancarios (cobro, formato todos) ===
+  lectores p95 470 ms, falla 0.00 %
+  500: 0   503: 0   E-RECIBO-04: 0
+  VEREDICTO: APROBADO
+

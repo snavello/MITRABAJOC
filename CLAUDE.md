@@ -602,6 +602,36 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   para los filtros de empresa/afiliado). `test_dashboard_concurrencia.py` lo
   verifica sobre los endpoints del panel. Detalle en HISTORIAL.md.
 
+- **Los bytes de la base nunca viajan si nadie los pide** (2026-11-05, PR #203
+  a #206). Toda columna `LargeBinary` queda diferida a nivel del mapeo
+  (`db._diferir_columnas_de_bytes`): una fila se trae sin ella y solo se carga si
+  el código la lee adentro de la sesión. Para medir una imagen o preguntar si
+  existe se usa `octet_length(...)` o `IS NOT NULL` en SQL, nunca el atributo.
+  `test_paginas_sin_bytes.py` captura el SQL de las pantallas y falla si una
+  columna de bytes viaja. Con 200 lectores, un logo de 1 MB leído en cada pedido
+  clavaba el pool. Aparte, PBKDF2 baja a 300.000 vueltas por decisión de SDN con
+  medición (600k costaba 0,6 a 1 s de CPU por login; rehash al próximo login).
+
+- **PBKDF2 a 300.000 vueltas** (2026-11-05, decisión de SDN, `auth.ITERACIONES`,
+  `auth.necesita_rehash`): con 200 lectores logueándose, el hash a 600k comía el
+  CPU del web. Los hashes viejos (600k y 100k) se siguen validando y se rehashean
+  al próximo login en los cuatro ingresos (`test_pbkdf2_300k.py`). Lo que protege
+  de verdad es el largo de la clave más el freno por IP. H-0009 sigue Solucionado.
+
+- **Caché de prompt del extractor encendido** (2026-11-05, PR #208,
+  `EXTRACTOR_CACHE=1`, se lee en cada llamada): −25 % de costo por recibo
+  (US$ 0,0178 contra 0,0237) y lectura más pareja; `UsoIA` guarda los tokens de
+  caché y `precios_ia` cobra 0,1× la lectura y 1,25× la escritura. Vuelta atrás:
+  la variable en 0. Va con la regla de la línea «no remunerativa» en el `ESQUEMA`
+  (el lector ya era no determinista antes de la caché).
+
+- **Sonnet 5.5 es el modelo de lectura de recibos, no Haiku 5.5** (2026-11-05):
+  con 600 recibos reales de La Bancaria Haiku cuesta 12 veces menos pero no es
+  más rápido (mediana 9,0 s contra 7,4 s) y lee exacto algo menos (98,0 % contra
+  99,8 %); una lectura inexacta es una diferencia inventada contra un afiliado.
+  Se elige en `/plataforma` (`db.modelo_ia("recibos")`); se reevalúa si el costo
+  llegara a pesar.
+
 - **Los datos personales del afiliado tienen UN SOLO dueño: la persona**
   (2026-09-22). Nombre, domicilio, teléfono y mail viven en
   `CuentaTrabajador` (una fila por CUIL); `Trabajador` quedó con lo que
@@ -1029,7 +1059,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     hallazgo. Además, lote de fixes chicos: **H-0007 Parcial** (cabeceras de
     seguridad —nosniff, X-Frame-Options, Referrer-Policy, CSP, HSTS en
     demo/prod—; CSP permisiva por el inline, endurecer con nonces pendiente),
-    **H-0009 Solucionado** (PBKDF2 600k, formato versionado backward-compat) y
+    **H-0009 Solucionado** (PBKDF2 600k, luego bajado a 300k el 2026-11-05; formato versionado backward-compat) y
     **H-0013 Aceptado** (CUIL/CUIT es dato público). Estado: **5 Solucionado,
     3 Parcial, 8 Pendiente, 2 Aceptado; bloquean 3**. Trabajador 0.39.03,
     Admin 0.42.04, Plataforma 0.30.02. **Primera pasada dinámica hecha**
@@ -1405,6 +1435,28 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de tapa y el carrusel de la portada; al abrir la noticia o el
     beneficio, la foto va siempre tal cual se subió. HISTORIAL.md, "Las
     fotos de noticias y beneficios, en gris o en color".
+
+42. **Rendimiento y exactitud del lote de La Bancaria** (2026-11-05,
+    Trabajador 0.58.08, Admin 0.77.06, Plataforma 0.65.06): el cuello con 200
+    lectores no era la máquina sino los bytes que la base mandaba a cada
+    pantalla; corregido en los PR #203 a #206 (listas sin imágenes, columnas
+    de bytes diferidas, adjuntos preguntados por su largo, PBKDF2 a 300.000).
+    **Veredicto de carga**: el arranque real (web 4c-8g × 2, base 4c-16g,
+    ≈ US$ 550/mes de lista) aprobó ráfagas (lectores p95 299 ms, 0 de 503) y
+    el día de cobro de 400 (p95 470 ms, 0 % de falla), todo con
+    `MOCK_EXTRACTOR`; el cambio de plan en caliente no se prueba (SDN). **Con
+    IA real**, 600 recibos: Sonnet 5.5 399/400 lecturas exactas y 395/400 con
+    el veredicto esperado (US$ 0,0231 por recibo, 0,0178 con caché); Haiku
+    5.5 196/200 y 194/200 (US$ 0,00137), sin ser más rápido. **Los «no
+    esperados» son configuración de Pruebas** (tolerancia $ 5.000 en vez de $ 1
+    y tope SS de 2026-03 mal cargado), no la app: corregido en el PR #211 (base
+    de Pruebas, aviso de tolerancia > $ 100 en Reglas y chequeo de topes en
+    `chequeo.py`); y el caso 6 (descuentos en positivo
+    fuera de su sección) sí era de la app: corregido en el PR #212. **Estado de Pruebas**: web 0.5c-512mb × 1,
+    base 0.1c-256mb, `MOCK_EXTRACTOR=0`, `EXTRACTOR_CACHE=1`, modelo de recibos
+    Sonnet 5.5. Detalle en HISTORIAL.md, «Rendimiento con el lote de La
+    Bancaria», y Tests 20 a 28 de `/entornos`; plan en
+    `PLAN_PRUEBAS_BANCARIA.md`.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -2704,6 +2756,11 @@ se agrega ahí.
 - **La suite completa la corre el CI, no la sesión** (2026-10-11): en local
   se corren los `test_*.py` del área tocada; las 4 tandas del CI corren los
   127 archivos en ~4 minutos, contra 20 a 25 en un contenedor de la nube.
+- **Code planifica y coordina; los desarrollos, el QA y el deploy se delegan a
+  agentes** (Sonnet 5.5), varios en paralelo (regla de SDN, 2026-11-05). Los
+  reportes son cortos, con ejemplos, y **cada error se clasifica por origen: la
+  app, los recibos de prueba o la configuración** antes de tocar código (en la
+  tanda de La Bancaria casi todos los «fallos» eran de configuración).
 - **Reportes, no narración** (regla de SDN, 2026-10-11): no contar paso por
   paso lo que se va haciendo. Mientras dura el trabajo, un reporte cada ~10
   minutos o al terminar, con tres partes: qué se hizo, qué quedó listo y qué

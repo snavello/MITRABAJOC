@@ -1,0 +1,65 @@
+bbva/27350006171_2025-09.pdf.json: idéntica
+bbva/27350006171_2025-10.pdf.json: idéntica
+bbva/27350006171_2025-11.pdf.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: remuneracion · haberes | remuneracion · no_remunerativos
+bbva/27350006171_2025-12.pdf.json: idéntica
+bbva/27350006171_2026-01.pdf.json: idéntica
+bbva/27350006171_2026-02.pdf.json: idéntica
+bbva/27350006171_2026-03.pdf.json: idéntica
+bbva/27350006171_2026-04.pdf.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+bbva/27350006171_2026-05.pdf.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+bbva/27350006171_2026-06.pdf.json: idéntica
+galicia/20375507618_2025-09.pdf.json: DIFERENCIAS
+    línea — Compensación no remunerativa: remuneracion · no_remunerativos | remuneracion · haberes
+galicia/20375507618_2025-10.pdf.json: DIFERENCIAS
+    línea — Compensación no remunerativa: remuneracion · no_remunerativos | remuneracion · haberes
+galicia/20375507618_2025-11.pdf.json: idéntica
+galicia/20375507618_2025-12.pdf.json: idéntica
+galicia/20375507618_2026-01.pdf.json: DIFERENCIAS
+    línea — Compensación no remunerativa: remuneracion · no_remunerativos | remuneracion · haberes
+galicia/20375507618_2026-02.pdf.json: idéntica
+galicia/20375507618_2026-03.pdf.json: idéntica
+galicia/20375507618_2026-04.pdf.json: DIFERENCIAS
+    línea — Compensación no remunerativa: remuneracion · haberes | remuneracion · no_remunerativos
+galicia/20375507618_2026-05.pdf.json: DIFERENCIAS
+    línea — Compensación no remunerativa: otro · no_remunerativos | remuneracion · haberes
+galicia/20375507618_2026-06.pdf.json: DIFERENCIAS
+    línea — Compensación no remunerativa: remuneracion · no_remunerativos | remuneracion · haberes
+nacion/27267339177_2025-09.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: remuneracion · no_remunerativos | remuneracion · haberes
+nacion/27267339177_2025-10.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: otro · no_remunerativos | remuneracion · no_remunerativos
+nacion/27267339177_2025-11.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: remuneracion · no_remunerativos | remuneracion · haberes
+nacion/27267339177_2025-12.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: otro · no_remunerativos | remuneracion · no_remunerativos
+nacion/27267339177_2026-01.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: otro · no_remunerativos | remuneracion · no_remunerativos
+nacion/27267339177_2026-02.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: otro · no_remunerativos | remuneracion · no_remunerativos
+nacion/27267339177_2026-03.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: otro · no_remunerativos | remuneracion · no_remunerativos
+nacion/27267339177_2026-04.pdf.json: idéntica
+nacion/27267339177_2026-05.pdf.json: DIFERENCIAS
+    línea 080 COMPENSACIÓN NO REMUNERATIVA: otro · no_remunerativos | remuneracion · no_remunerativos
+nacion/27267339177_2026-06.pdf.json: idéntica
+santander/20420839554_2025-09.jpg.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+santander/20420839554_2025-10.jpg.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+santander/20420839554_2025-11.jpg.json: idéntica
+santander/20420839554_2025-12.jpg.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+santander/20420839554_2026-01.jpg.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+santander/20420839554_2026-02.jpg.json: idéntica
+santander/20420839554_2026-03.jpg.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+santander/20420839554_2026-04.jpg.json: idéntica
+santander/20420839554_2026-05.jpg.json: DIFERENCIAS
+    línea 080 Compensación no remunerativa: otro · no_remunerativos | remuneracion · no_remunerativos
+santander/20420839554_2026-06.jpg.json: idéntica
+
+17 de 40 idénticas.

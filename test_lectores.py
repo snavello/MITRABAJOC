@@ -43,6 +43,36 @@ def test_pdf_digital_coincide_con_los_datos_de_prueba():
     assert leidas == [x[0] for x in d["palabras"]]
 
 
+def test_pdf_desde_varios_hilos_a_la_vez_no_tumba_el_proceso():
+    """PDFium no admite uso simultáneo: sin el candado, ocho hilos leyendo y
+    dibujando PDF a la vez mataban el proceso con "double free or corruption"
+    (2026-11-02, PLAN_PRUEBAS_BANCARIA.md §7). Con el candado terminan todos y
+    dan exactamente lo mismo que de a uno."""
+    contenido = PDF.read_bytes()
+    esperado = [[(p.texto, p.x0, p.y0) for p in pag] for pag in lectores.palabras_pdf(contenido)]
+    tamano = lectores.imagen_pdf(contenido).size
+    errores, resultados = [], []
+
+    def leer():
+        try:
+            for _ in range(25):
+                pags = lectores.palabras_pdf(contenido)
+                resultados.append([[(p.texto, p.x0, p.y0) for p in pag] for pag in pags])
+                assert lectores.imagen_pdf(contenido).size == tamano
+                assert len(lectores.imagenes_pdf(contenido)) == 2
+        except Exception as e:  # noqa: BLE001
+            errores.append(e)
+
+    hilos = [threading.Thread(target=leer) for _ in range(8)]
+    for h in hilos:
+        h.start()
+    for h in hilos:
+        h.join(timeout=60)
+    assert not any(h.is_alive() for h in hilos), "un hilo quedó colgado"
+    assert errores == []
+    assert len(resultados) == 8 * 25 and all(r == esperado for r in resultados)
+
+
 def test_pdf_escaneado_no_trae_texto():
     """Un PDF que es solo una imagen devuelve páginas vacías: lo lee el OCR."""
     buf = io.BytesIO()

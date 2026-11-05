@@ -21,14 +21,15 @@ const BASE_URL = (__ENV.BASE_URL || 'https://mitrabajo-pruebas.onrender.com').re
 const errores = new Rate('errores_app');
 
 const usuarios = new SharedArray('usuarios', function () {
-  return open('../usuarios.csv')
+  return open(__ENV.USUARIOS_CSV || '../usuarios.csv')
     .split('\n')
     .slice(1)
     .filter((l) => l.trim())
     .map((l) => {
       const [cuil, clave] = l.trim().split(',');
       return { cuil, clave };
-    });
+    })
+    .filter((u) => u.clave);
 });
 
 // Escalones de 4 minutos cada uno: 30s de rampa + 3m30s sostenidos.
@@ -98,6 +99,15 @@ export default function () {
   // 2) home
   res = http.get(`${BASE_URL}/app/inicio`, { tags: { paso: 'home' } });
   marcar(res, 'home');
+  // 2b) «Tu día» (desde 2026-10-24 la portada lo pide después de dibujarse:
+  // clima de MET Norway y dólar del BCRA, con caché). Opcional para que una
+  // corrida pueda seguir comparándose con los tests 1-8, que no lo tenían:
+  // CON_TU_DIA=1. El sindicato de carga no tiene el módulo (403): usarlo con
+  // los usuarios de un sindicato que sí (USUARIOS_CSV=../usuarios_bancaria.csv).
+  if (__ENV.CON_TU_DIA === '1') {
+    res = http.get(`${BASE_URL}/api/tu-dia`, { tags: { paso: 'tu_dia' } });
+    marcar(res, 'tu_dia');
+  }
   pausa();
 
   // 3) novedades

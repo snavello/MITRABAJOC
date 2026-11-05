@@ -1,0 +1,8 @@
+time="2026-11-05T00:49:10Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": request timeout"
+
+=== Test 4: recibos bancarios (rafagas, formato todos) ===
+  ráfaga 10:  186 subidas, p50 9.0 s, p95 20.9 s, error 1.61 %
+  lectores p95 17.9 s, falla 4.99 %
+  500: 0   503: 423   E-RECIBO-04: 0
+  VEREDICTO: NO APROBADO
+

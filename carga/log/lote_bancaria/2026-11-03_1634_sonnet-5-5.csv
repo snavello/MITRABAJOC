@@ -1,0 +1,11 @@
+archivo,banco,formato,cuil,periodo,error_intencional,esperado,obtenido,acierto,lectura_ok,dif_haberes,dif_descuentos,dif_neto,periodo_ok,cuil_leido,discrepancias,ms_leer,ms_validar,http_leer,etiqueta
+bbva/20185331424_2026-04.pdf,bbva,pdf,20185331424,2026-04,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,20185331424,concepto_faltante,7045,193,200,sonnet-5-5
+bbva/20210333577_2026-04.pdf,bbva,pdf,20210333577,2026-04,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,20210333577,concepto_faltante,7484,195,200,sonnet-5-5
+galicia/20202038361_2026-01.pdf,galicia,pdf,20202038361,2026-01,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,20202038361,concepto_faltante|formula,6493,385,200,sonnet-5-5
+galicia/20311447034_2025-12.pdf,galicia,pdf,20311447034,2025-12,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,20311447034,concepto_faltante|formula|total_inconsistente,7468,202,200,sonnet-5-5
+galicia/20354674808_2026-07.pdf,galicia,pdf,20354674808,2026-07,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,20354674808,concepto_faltante|formula,7728,167,200,sonnet-5-5
+galicia/27224480232_2026-03.pdf,galicia,pdf,27224480232,2026-03,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,27224480232,concepto_faltante|formula|total_inconsistente,8327,223,200,sonnet-5-5
+industrial/27283427701_2026-01.pdf,industrial,pdf,27283427701,2026-01,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,27283427701,concepto_faltante,8246,211,200,sonnet-5-5
+industrial/27409519275_2025-10.pdf,industrial,pdf,27409519275,2025-10,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,27409519275,concepto_faltante,7161,123,200,sonnet-5-5
+industrial/27409519275_2025-11.pdf,industrial,pdf,27409519275,2025-11,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,27409519275,concepto_faltante,7611,176,200,sonnet-5-5
+nacion/20292831545_2026-05.pdf,nacion,pdf,20292831545,2026-05,,OK,CON_DISCREPANCIAS,False,True,0.0,0.0,0.0,True,20292831545,concepto_faltante|formula,8182,217,200,sonnet-5-5

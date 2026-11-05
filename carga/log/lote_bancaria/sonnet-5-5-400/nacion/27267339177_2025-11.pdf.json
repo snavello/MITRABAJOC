@@ -1,0 +1,125 @@
+{
+ "recibo": {
+  "lineas": [
+   {
+    "tipo": "remuneracion",
+    "codigo": "001",
+    "unidad": null,
+    "importe": 2020829.85,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "SUELDO BÁSICO",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "010",
+    "unidad": "años",
+    "importe": 424374.27,
+    "seccion": "haberes",
+    "cantidad": 21,
+    "descripcion": "ANTIGÜEDAD (21 AÑOS)",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "060",
+    "unidad": null,
+    "importe": 185000.0,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "DÍA DEL BANCARIO",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": "080",
+    "unidad": null,
+    "importe": 120000.0,
+    "seccion": "no_remunerativos",
+    "cantidad": null,
+    "descripcion": "COMPENSACIÓN NO REMUNERATIVA",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "501",
+    "unidad": "%",
+    "importe": 268972.45,
+    "seccion": "descuentos",
+    "cantidad": 11,
+    "descripcion": "JUBILACIÓN 11%",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "502",
+    "unidad": "%",
+    "importe": 73356.12,
+    "seccion": "descuentos",
+    "cantidad": 3,
+    "descripcion": "LEY 19.032 (PAMI) 3%",
+    "categoria_universal": "pami"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "503",
+    "unidad": "%",
+    "importe": 73356.12,
+    "seccion": "descuentos",
+    "cantidad": 3,
+    "descripcion": "OBRA SOCIAL 3%",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": "510",
+    "unidad": "%",
+    "importe": 48904.08,
+    "seccion": "descuentos",
+    "cantidad": 2,
+    "descripcion": "CUOTA SINDICAL ASOC. BANCARIA 2%",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "tipo": "otro",
+    "codigo": "520",
+    "unidad": null,
+    "importe": 4850.0,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "SEGURO DE VIDA COLECTIVO",
+    "categoria_universal": null
+   }
+  ],
+  "formato": "clasico",
+  "periodo": "2025-11",
+  "empleado": {
+   "cuil": "27267339177",
+   "legajo": "23496",
+   "categoria": "AYUDANTE",
+   "fecha_ingreso": "2004-08-16",
+   "apellido_nombre": "Luna, Carolina"
+  },
+  "confianza": "alta",
+  "empleador": {
+   "cuit": "30500010912",
+   "nombre": "BANCO DE LA NACION ARGENTINA"
+  },
+  "fecha_pago": "2025-12-04",
+  "observaciones": "Los descuentos figuran como importes sin signo en la columna DESCUENTOS. Recibo marcado como documento de prueba con datos ficticios.",
+  "ultimo_deposito": null,
+  "totales_impresos": {
+   "neto": 2280765.35,
+   "descuentos": 469438.77,
+   "remuneraciones": 2750204.12
+  },
+  "alerta_adulteracion": {
+   "motivo": null,
+   "detectada": false
+  },
+  "costo_laboral_total": null,
+  "contribuciones_patronales": []
+ },
+ "_origen": "ReciboVerificado.detalle.recibo id=30375 2026-11-05 01:02"
+}

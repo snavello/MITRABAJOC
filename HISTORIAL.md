@@ -9598,6 +9598,7 @@ columna nuevas declaradas.
 
 Lo encontró la primera prueba local de los recursos del plan de La Bancaria
 (`PLAN_PRUEBAS_BANCARIA.md` §7, en la rama `claude/busy-fermi-pvxggf`): con `carga/probar_lote_bancaria.py
+(`PLAN_PRUEBAS_BANCARIA.md` §7): con `carga/probar_lote_bancaria.py
 --paralelo 8` contra un uvicorn con `ENMASCARADO=activo`, el proceso murió dos
 veces sin dejar traceback, solo `double free or corruption` de glibc.
 
@@ -9788,3 +9789,289 @@ y lo deja en `recibo.cuil_impreso_invalido`; `validar` agrega la alerta
 `cuil_impreso_invalido` («Tu recibo trae el CUIL mal impreso: dice … y el tuyo
 es …»), y `cuiles_distintos` ya no lo cuenta como ajeno en ningún camino. Tests:
 `test_cuil_impreso.py`.
+
+## Rendimiento con el lote de La Bancaria: la base mandaba bytes que nadie usaba (2026-11-05, Trabajador 0.58.03, Admin 0.77.03)
+
+Etapa de rendimiento de `PLAN_PRUEBAS_BANCARIA.md` (sección R), hecha por Code con
+SDN el 4 y 5 de noviembre contra Pruebas. El Test 4 (`carga/k6/test4_bancaria.js`)
+sube recibos bancarios en ráfagas de 2, 5, 10, 20 y 40 a la vez mientras 200
+lectores navegan la app. La conclusión, después de seis horas y once corridas:
+**no faltaba máquina, sobraban bytes**. La app leía de la base columnas de imágenes
+(logos, fotos, contrato) que ninguna pantalla mostraba, y con 200 personas eso
+saturaba las conexiones del pool y la red entre la app y Postgres. Las dos
+correcciones (PR #203 y #204) no tocan CPU ni planes: dejan de traer lo que no se usa.
+
+### Preparación
+
+- `MOCK_EXTRACTOR=1` y `MOCK_EXTRACTOR_LATENCIA=8` en Pruebas: la lectura simula a
+  Sonnet 5.5 (8 s) sin gastar créditos; lo que se mide es la app, no la API.
+- 45 afiliados del lote de La Bancaria, con clave = los seis primeros dígitos del CUIL.
+- k6 v0.54 corrido desde la sesión de Code. Tres defectos del guion, encontrados
+  en las primeras pruebas y corregidos antes de medir nada:
+  - k6 vacía las cookies en cada iteración: la segunda subida de un lector
+    salía sin sesión (E-SESION-02). Se arregló con `noCookiesReset`.
+  - k6 guardaba cada HTML en memoria y murió a 14 GB con 200 lectores:
+    `discardResponseBodies`.
+  - Cada lector se logueaba cada 10 s (~20 logins por segundo, cada uno de 0,5 a
+    1 s de CPU por el PBKDF2 de 600k iteraciones): medía el login, no la
+    navegación. Ahora entra **una vez por VU**.
+
+### Cómo se encontró
+
+1. **Fase 1, Intermedio** (web 2c-4g con 2 workers, base 2c-4g), ráfagas con 200
+   lectores: NO APROBADO. CPU del web al 200 % de 200, subidas de 24 a 33 s típico,
+   27 % de 503 y 6 % de 502. La corrida quedó incompleta: el generador murió a
+   los 13 minutos (carpeta `fase1_intermedio_rafagas_INCOMPLETA`). Se pasó al
+   arranque real previsto para el día de cobro.
+2. **Fase 2, arranque real** (web 4c-8g × 2 instancias con 4 workers c/u, base
+   4c-16g). Con el cupo de conexiones de siempre (5+5 por worker, 80 en total) el
+   pool quedó clavado: 20 % de 503 (E-SERVIDOR-01, pool agotado) y pantallas de
+   6,8 s típico y 12,8 s el peor 5 %. Se subió el cupo a 15+10 por worker (200
+   conexiones): 10 % de 503, pero las conexiones llegaron otra vez al tope y las
+   pantallas empeoraron (4,5 s y 32 s). Más conexiones no era la respuesta.
+3. **Diagnósticos con solo lectores** (`diag1` a `diag5`): sin subidas, la navegación
+   sola era igual de lenta; con login único, igual (descartaba el PBKDF2 como causa).
+   `pg_stat_activity` muestreado desde un Job de Render mostró 100 o más
+   conexiones «idle in transaction» y la consulta de noticias esperando 8,5 s para
+   **escribirle al cliente** (`ClientWrite`): la base tenía el resultado y no
+   podía entregarlo. Las listas de noticias y beneficios traían las imágenes
+   completas (37 noticias y 10 beneficios en La Bancaria: unos 3 MB más la copia
+   normalizada, 4,4 MB por pedido, en cada portada y cada Novedades). → **PR #203**.
+4. **Después de #203**: p50 de pantallas 0,6 s, pero p95 de 18 a 20 s y 4 a 7 % de
+   503. Se descartó, en orden: el generador (un Job de Render como generador, dentro
+   del mismo centro de datos y sin el proxy de la sesión, dio lo mismo,
+   `fase2e_job_render_rafagas_2`, con k6 limitado con `GOMEMLIMIT=1500MiB` porque
+   el primer intento murió a 8 GiB); el tapado de datos (enmascarado), medido en la
+   base: 219 ms por PDF y 506 ms por foto, no explica nada. Quedaba lo que se
+   volvía a leer en cada pantalla: el logo de La Bancaria pesa **996 KB** (el de
+   SMATA 1,1 MB) y la fila del sindicato (logo + firma + contrato, 1,2 MB) se leía
+   entera con cada `s.get(Sindicato, id)`, tres o cuatro veces por portada
+   (`marca_sindicato`, `modulos_habilitados`, `apariencia_de`, `permisos_efectivos`,
+   `sindicatos_de_cuil`, `_nivel_color_de`). Igual con las fotos de perfil (se
+   traían enteras para un `bool()`) y las fotos de los modelos (enteras para un
+   `len()`). → **PR #204**.
+
+### Qué se cambió
+
+- **#203** (`fix/portada-sin-imagenes`): `noticias_del_sindicato` y
+  `beneficios_del_sindicato` van con `defer()` de las columnas `*_datos` / `*_norm` y
+  preguntan por la imagen en SQL (`octet_length(...) > 0`). `test_listas_sin_imagenes.py`
+  captura el SELECT y falla si viaja una columna de bytes.
+- **#204**: **todas las columnas `LargeBinary` de todos los modelos quedan diferidas
+  a nivel del mapeo** (`db._diferir_columnas_de_bytes`, evento `before_configured`):
+  una fila se trae sin ellas y se cargan solas si el código las lee adentro de la
+  sesión (las rutas que sirven cada imagen no cambian). Donde el atributo se leía
+  fuera de la sesión o solo para medirlo, ahora lo calcula SQL: `marca_sindicato`
+  (`logo_v` y `firma_v` con `octet_length`), `tiene_foto_trabajador` (nuevo),
+  `_foto_dict`, `sindicatos_del_operador`, `foto_tema` (con `undefer`, es la que
+  sirve la foto) y `/plataforma` (`logo_v` y `tiene_contrato`).
+  `test_paginas_sin_bytes.py` arma un sindicato con logo de 1 MB, firma, contrato,
+  foto de perfil, noticia y beneficio con imágenes, captura todo el SQL de
+  `/app/inicio`, `/app`, `/app/notificaciones`, `/api/tu-dia`, `/admin/inicio` y
+  `/admin` y falla si una columna de bytes viaja en un SELECT (contar con
+  `octet_length` o preguntar `IS NOT NULL` sí vale).
+
+Lección para el resto del código: **un modelo con columnas de bytes no se lee
+entero por defecto**. Una columna binaria nueva queda diferida sola, pero quien la
+use fuera de la sesión tiene que pedirla (`undefer`) o medirla en SQL.
+
+### Corridas
+
+Todas contra Pruebas, con 200 lectores, `MOCK_EXTRACTOR_LATENCIA=8`. Carpetas en
+`carga/log/rendimiento_bancaria/`. Los «—» son datos no registrados en el resumen de
+la corrida; las pantallas se miden con el p50 y p95 de los lectores.
+
+| Corrida | Configuración | Pantallas p50 / p95 | Subidas p50 / p95 | % 503 | CPU web | Conexiones |
+|---|---|---|---|---|---|---|
+| fase 1 (incompleta) | Intermedio: web 2c-4g, 2 workers; base 2c-4g | — | 24–33 s típico | 27 % (+ 6 % 502) | 200 % de 200 | — |
+| fase 2 | Arranque real: web 4c-8g × 2 (4 workers c/u), base 4c-16g, cupo 5+5 | — / 12,0 s (típico 6,8 s) | 14,4–19,6 s / 20,0–26,5 s | 20 % de las peticiones (5.225 503) | — | 80 justas, clavadas |
+| fase 2b | ídem, cupo 15+10 | — / 31,9 s (típico 4,5 s) | 8,7–16,3 s / 21,8–36,2 s | 10 % (1.860 503) | — | al tope otra vez (200) |
+| diag 1 y 2 | solo lectores, con y sin login único | — / 26 s | sin subidas | 582 y 681 503 | — | clavadas |
+| diag 3 | solo lectores + muestreo `pg_stat_activity` | — / 32,5 s | sin subidas | 536 503 | — | 100+ «idle in transaction» |
+| fase 2c (tras #203) | ídem 2b, listas sin imágenes | 0,6 s / 21,2 s | 8,7–9,3 s / 17,4–34,6 s | 4–7 % (1.705 503) | 38 % (antes de #203) | — |
+| fase 2e (Job de Render como generador) | ídem 2c | 0,6 s / 17,7 s | 8,7–12,3 s / 16,7–26,1 s | 4,4 % (1.197 503) | — | — |
+| diag 5 (tras #203, solo lectores) | sin subidas | — / 10,9 s | sin subidas | 2,6 % (207 503) | — | — |
+| fase 2f (tras #204 y #205) | ídem 2c, bytes diferidos | 180 ms / 299 ms (p99 678 ms) | 8,5–8,9 s / 8,7–9,4 s (1.610 subidas) | 0 % (0 de 503, 0 de 500) | 496 % de 800 (base 77 % de 400) | 152 |
+| día de cobro (tras #206) | arranque real, 400 lectores + 20 subiendo, 10 min | 196 ms / 470 ms (p99 737 ms) | 8,6 s / 9,3 s (1.400 subidas) | 0 % (0/0/0; 102.132 pedidos) | 645 % de 800 (base 147 % de 400) | 102 |
+
+Notas de lectura: la fase 2 reportó 9 respuestas 500 y la 2b 6; desde #203 no hubo
+ninguna. Ninguna corrida tuvo E-RECIBO-04 (la pertenencia del recibo se cumplió
+siempre). En la fase 2 la CPU del web fue del 38 % y la de la base del 30 % con las
+conexiones ya clavadas, que fue lo que mostró que el cuello no era de máquina.
+
+### Pendiente al momento de escribir
+
+- Corrida de ráfagas tras #204 (fase 2f) para confirmar que el p95 de las pantallas
+  baja de los 18–20 s.
+- Día de cobro (carga sostenida), cambio de plan en caliente y el cierre: volver
+  los planes de Render y las variables (`MOCK_EXTRACTOR*`, cupos de conexiones) a
+  su valor de siempre.
+- Ítem nuevo de `BACKLOG.md`: **tope de peso para logos e imágenes al subirlas**
+  (pedido de SDN; el logo de La Bancaria pesa 996 KB y ninguno necesita eso).
+  Con #204 dejaron de costar por pedido, pero seguían siendo bytes de más.
+
+### Después de las correcciones: ráfagas y día de cobro, aprobados
+
+- **#205** (`fix/adjuntos-sin-bytes`): quince puntos con el mismo N+1 de adjuntos
+  (notificaciones, trámites, noticias, beneficios, contrato, miniatura) preguntaban
+  «¿tiene adjunto?» leyendo los bytes; ahora se pregunta por su largo en SQL. El QA
+  no encontró ninguna lectura de bytes fuera de sesión.
+- **Ráfagas, corrida 2f** (200 lectores, arranque real): subidas p50 8,5 a 8,9 s y
+  p95 8,7 a 9,4 s; lectores p50 180 ms, p95 299 ms, p99 678 ms; falla 0,01 %; 0 de
+  503 y 0 de 500; CPU del web 496 % de 800, base 77 % de 400, 152 conexiones;
+  1.610 subidas (contra 1.036 antes). Quedó el login: p50 4,2 s y p95 7,7 s.
+- **Decisión de SDN: PBKDF2 de 600.000 a 300.000 vueltas** con rehash al próximo
+  login exitoso en los cuatro ingresos (**PR #206**; H-0009 sigue Solucionado).
+  Argumentos: 600k costaban entre 0,6 y 1 s de CPU por login; 300k sigue 30 veces
+  sobre el mínimo de NIST y a la mitad de la guía OWASP 2023; lo que protege de
+  verdad es el largo de la clave más el freno por IP.
+- **Día de cobro** (`fase3_produccion_x2_dia_de_cobro`, 400 lectores y 20 subiendo,
+  10 minutos): 102.132 pedidos; lectores p50 196 ms, p95 470 ms, p99 737 ms, falla
+  0 %; 1.400 subidas con p50 8,6 s y p95 9,3 s, 0 % de error; 0 de 503, 0 de 500 y
+  0 de E-RECIBO-04; login p50 209 ms y p95 391 ms; CPU del web 645 % de 800, base
+  147 % de 400, 102 conexiones. Todos los criterios del plan se cumplen.
+- **Conclusión**: la configuración de arranque real (web 4c-8g × 2, base 4c-16g,
+  US$ 550 por mes de lista) aguanta el día de cobro con las correcciones; sin
+  ellas la misma máquina fallaba. **Decisión de SDN**: el cambio de plan en caliente
+  no se prueba (nunca se haría en pleno pico); queda para una hora de carga baja o
+  se descarta.
+
+### El lote completo con IA real: 375 de 600
+
+Test 20 de «Tests» en `/entornos` (los anteriores pasaron a 16–19). Se corrieron 400
+recibos con Sonnet 5.5: **375 leídos**, 370 dieron lo esperado (98,7 %), 203 de 208
+OK→OK, 167 de 167 con diferencias detectadas y 374 de 375 con lectura exacta.
+Mediana 7,4 s y p95 10,4 s. Costo real **US$ 8,6551** (US$ 0,0231 por recibo; 6.041
+tokens de entrada y 1.100 de salida en promedio). Proyección: a US$ 0,023 por
+lectura, 5.000 recibos por mes cuestan unos US$ 115.
+
+Los 25 últimos (Santander, JPG) y los 200 de Haiku 5.5 **no se leyeron**: la cuenta
+de Anthropic llegó al tope de gasto del workspace («You have reached your specified
+workspace API usage limits», hasta el 1/12 salvo que se suba el tope en la consola).
+No se cobró ninguno. Los 5 fallos (Galicia y Nación: se esperaba «con diferencias» y
+la app dijo OK) y la lectura inexacta de `bbva/20209792630_2025-10.pdf` quedan en
+análisis; el informe va aparte en `docs/chat/2026-11-05-analisis-lote-375.md`
+(pendiente, lo escribe otro agente). Herramientas: `probar_lote_bancaria.py` ganó
+`--desde/--hasta` y `publicar_exactitud.py` marca la prueba `sin_recalculo`.
+Registros en `carga/log/lote_bancaria/*sonnet-5-5-400*` y `carga/exactitud.json`.
+
+### Estado final de Pruebas
+
+Web 0.5c-512mb × 1 (un worker), base 0.1c-256mb, modelo de lectura Sonnet 5.5,
+`MOCK_EXTRACTOR=0`, `DB_POOL_SIZE=15` y `DB_MAX_OVERFLOW=10` (quedaron),
+`ENMASCARADO=activo`. Pendientes: subir el tope del workspace de Anthropic y
+completar los 25 de Sonnet y los 200 de Haiku; topes de peso de logos e imágenes
+(BACKLOG.md); cambio de plan en caliente (descartado por ahora).
+
+### Cierre de la tanda: los 600 recibos con IA real y el modelo de lectura
+
+Corrido el tope del workspace de Anthropic (Console → Settings → Workspaces →
+Limits; vuelve solo el 1/12), se completó lo que había quedado afuera.
+`carga/probar_lote_bancaria.py` leyó los 25 de Santander (JPG) que faltaban con
+Sonnet 5.5 y los 200 de Haiku 5.5; todo queda en `carga/log/lote_bancaria/` y en
+`carga/exactitud.json` (publicados en «Tests» de `/entornos`, el 20 y los
+siguientes hasta el 28).
+
+- **Sonnet 5.5, 400 recibos**: **399 de 400 con lectura exacta (99,8 %) y 395 de
+  400 con el veredicto esperado (98,8 %)**. Mediana 7,9 s y p95 9,0 s en los 25
+  últimos; 7,4 s y 10,4 s en los primeros 375. Costo **US$ 0,0231 por recibo sin
+  caché de prompt y US$ 0,0178 con caché** (25 % menos).
+- **Haiku 5.5, 200 recibos**: 196 de 200 con lectura exacta (98,0 %), 194 de 200
+  con el veredicto esperado (97,0 %), **US$ 0,00137 por recibo** (12 veces menos).
+  **No fue más rápido**: mediana 9,0 s y p95 10,8 s contra 7,4 s de Sonnet,
+  porque razona y escribe más salida (2.057 tokens contra 1.050).
+- **Decisión: Sonnet 5.5 queda como modelo de lectura de recibos**
+  (`db.modelo_ia("recibos")` en Pruebas, elegido en `/plataforma`). Haiku cuesta
+  una fracción, pero no ahorra tiempo, falla algo más (4 lecturas inexactas
+  contra 1 de 400) y esa diferencia en un recibo real es una diferencia inventada
+  contra un afiliado; el ahorro absoluto, a 5.000 recibos por mes, es de unos
+  US$ 80. Si el costo llegara a pesar, Haiku se reevalúa con más recibos.
+- **La corrida se cortó una vez** en el recibo 376 con «You have reached your
+  specified workspace API usage limits» (error 400, la app lo mostró como
+  `E-RECIBO-01`; no se cobró ninguno). Es el tope de gasto del workspace, no la
+  cuenta. Queda en BACKLOG.md: un workspace de Anthropic por entorno, para que el
+  tope de una prueba no corte producción.
+
+### Los «no esperados»: configuración de Pruebas, casi todos
+
+Los 5 recibos de Sonnet y los 6 de Haiku donde se esperaba «con diferencias» y la
+app dijo OK **no son un defecto de la app ni de los recibos**: el informe
+`docs/chat/2026-11-05-analisis-lote-375.md` los reprodujo sin IA con el motor del
+repo (los 5 dan `CON_DISCREPANCIAS` con `tope_no_aplicado`) y la causa estaba en
+la base de Pruebas, verificada después:
+
+- La Bancaria en Pruebas tenía **tolerancia $ 5.000** en las fórmulas JUBILACION,
+  PAMI y OBRASOCIAL; el repo dice **$ 1**. Una diferencia de $ 362 en la
+  jubilación pasaba.
+- El **tope de la seguridad social de 2026-03** estaba mal cargado: 4.542.082,15
+  en la base contra 4.045.590,45 de `data/topes_ss.csv`. La tabla es
+  solo-si-vacío (`db.sembrar_topes_si_vacio`) y editable en `/plataforma`, así que
+  un valor tecleado a mano nunca se corrige solo.
+- **Corregido** en el PR #211 (Admin 0.77.06, Plataforma 0.65.06). En la base de
+  Pruebas, por Jobs de Render: las tolerancias de JUBILACION, PAMI y OBRASOCIAL
+  pasaron de $ 5.000 a $ 1 y la de CUOTA (regla creada a mano el 2025-10-16) de
+  $ 2.000 a $ 1; el tope de 2026-03 pasó de 4.542.082,15 a 4.045.590,45 (la única
+  diferencia con `data/topes_ss.csv`). **No se pudo saber quién puso los 5.000**:
+  ningún script del repo lo escribe y `/admin/formula` no deja bitácora. Código
+  nuevo: `validador.TOLERANCIA_AVISO = 100` con aviso en la pestaña Reglas (en la
+  fila y al guardar, no bloquea), `validador.diferencias_de_topes` y el chequeo 11
+  de `chequeo.py` (topes contra el CSV y tolerancias altas, solo diagnóstico),
+  `test_tolerancia_aviso.py`. Revalidados sin IA los 5 recibos con la
+  configuración corregida: **los 5 dan CON_DISCREPANCIAS** (PAMI/OS y JUBILACION,
+  por el tope), que es lo que el lote esperaba. Las filas ya guardadas en
+  `ReciboVerificado` siguen como OK: no se hizo backfill, a propósito (no se
+  reescribe lo guardado).
+- **El caso 6** (`bbva/20209792630_2025-10`, lectura inexacta) **sí es de la app**:
+  los descuentos impresos en positivo y fuera de la sección `descuentos` los
+  contaba `validador.totales_leidos` como haberes. El veredicto salió bien igual;
+  el cierre aritmético no. **Corregido** en el PR #212 (Trabajador 0.58.08, verificado contra Pruebas con el recibo real releído por la IA: lectura exacta y veredicto esperado):
+  `validador._zona_leida` trata como descuento una línea con
+  `tipo == "aporte_trabajador"`, importe positivo y sección distinta de
+  `descuentos`; los reintegros y los aportes negativos siguen igual
+  (`test_zona_descuentos_positivos.py`, 5 casos).
+
+### Caché de prompt y la línea «Compensación no remunerativa»
+
+`EXTRACTOR_CACHE=1` (PR #208, se lee en cada llamada; 0 = apagado) marca el prompt
+fijo del extractor para la caché de Anthropic. `UsoIA` guarda
+`tokens_cache_lectura` y `tokens_cache_escritura` (migración `d3e5f7a9b1c4`) y
+`precios_ia` cobra 0,1× la lectura y 1,25× la escritura, así que el costo mostrado
+es el real.
+
+El A/B de 40 recibos con y sin caché mostró una diferencia en una sola línea,
+«Compensación no remunerativa». Antes de culpar a la caché se midió el lector sin
+tocar nada: **ya era no determinista** (29 de 40 lecturas iguales entre dos
+corridas idénticas); la IA clasificaba esa línea como `otro` en 15 de 40, como
+remuneración entre los haberes en 6 a 11 y entre los no remunerativos en 19 a 29.
+Se escribió la regla en el `ESQUEMA` del extractor (línea «no remunerativa» →
+`tipo=remuneracion`, `seccion=no_remunerativos`; `otro` nunca para un haber; PR
+#209, Trabajador 0.58.07). Resultado: **40 de 40 iguales con y sin caché**, y
+contra la lectura vieja solo cambia esa clasificación (totales, período, CUIT,
+códigos, importes y veredictos idénticos). Con caché el recibo cuesta US$ 0,0178
+contra US$ 0,0237 y el p95 baja de 10,2 a 7,0 s. **Caché encendido en Pruebas.**
+Vuelta atrás: `EXTRACTOR_CACHE=0`, sin deploy de código.
+
+### Estado final de Pruebas (cierre de la tanda, 2026-11-05)
+
+Web `0.5c-512mb` × 1 con un worker, base `0.1c-256mb` (se bajó de plan al
+terminar), `MOCK_EXTRACTOR=0`, `EXTRACTOR_CACHE=1`, `DB_POOL_SIZE=15`,
+`DB_MAX_OVERFLOW=10`, `ENMASCARADO=activo`, modelo de recibos `claude-sonnet-5-5`.
+Versiones: Trabajador 0.58.08, Admin 0.77.06, Plataforma 0.65.06. Toda la medición
+de carga (ráfagas, día de cobro) se hizo con `MOCK_EXTRACTOR`: **la IA no se midió
+bajo carga**, solo en exactitud, de a dos recibos a la vez.
+
+**Qué queda**: una bitácora de cambios de Reglas (BACKLOG.md); topes de peso de
+logos e imágenes, un workspace de Anthropic por entorno y el comentario viejo de
+`carga/lote_bancaria.py` sobre el CUIL impreso inválido (BACKLOG.md); y el cambio
+de plan en caliente, que **SDN decidió no probar** (nunca se haría en un día de
+cobro en hora pico).
+
+### Cambio de método (2026-11-05, pedido de SDN)
+
+Code planifica y coordina; los desarrollos, el QA y el deploy se delegan a agentes
+(Sonnet 5.5), varios en paralelo, con reportes cortos con ejemplos y los errores
+clasificados por origen: **la app, los recibos de prueba o la configuración**. La
+clasificación nació en esta tanda, donde los 11 «no esperados» resultaron ser de
+configuración y no de la app, y se estuvo cerca de corregir el motor por algo que
+el motor ya hacía bien. Regla vigente en
+«Método de trabajo» de CLAUDE.md.

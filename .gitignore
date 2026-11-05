@@ -30,6 +30,8 @@ carga/usuarios.csv
 carga/log/*/test1_lecturas.json
 carga/log/*/test2_recibos.json
 carga/log/*/*.ndjson
+carga/log/*/*/*.ndjson
+carga/log/*/*/*.ndjson.gz
 
 # Modelos de OCR descargados para medir (PLAN_ENMASCARADO.md, bloque 2).
 modelos_ocr/
@@ -59,6 +61,19 @@ backup_regularizacion_*
 
 # Archivos de trabajo de XSD (capturas, hallazgos, informes): pesan y se regeneran.
 xsd-trabajo/
+# Lote bancario de prueba (PLAN_PRUEBAS_BANCARIA.md): los zips están en
+# datos_prueba/bancaria/; lo extraído, lo generado y las claves no se versionan.
+carga/recibos_bancaria/
+carga/archivos_limite/
+carga/usuarios_bancaria.csv
+carga/variantes_cuota/
 
 # Volcados que deja cysignals (tesserocr) cuando un proceso muere
 cysignals_crash_logs/
+# Lecturas crudas por recibo de las corridas del lote bancario (una carpeta por etiqueta)
+carga/log/lote_bancaria/*/
+!carga/log/lote_bancaria/sonnet-5-5-cache-40/
+!carga/log/lote_bancaria/sonnet-5-5-400/
+!carga/log/lote_bancaria/sonnet-5-5-nocache-40/
+!carga/log/lote_bancaria/sonnet-5-5-fix-40/
+!carga/log/lote_bancaria/sonnet-5-5-fix-cache-40/

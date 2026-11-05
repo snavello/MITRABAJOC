@@ -4,6 +4,39 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Bitácora de cambios de Reglas** (2026-11-05): en Pruebas las tolerancias
+  de JUBILACION, PAMI y OBRASOCIAL estaban en $ 5.000 y no hay forma de saber
+  quién ni cuándo (`/admin/formula` no deja registro). Registrar quién, cuándo y
+  qué valor anterior en cada alta, edición o borrado de una regla.
+
+- [ ] **Un workspace de Anthropic por entorno** (2026-11-05, tanda de La
+  Bancaria): el lote con IA real se cortó en el recibo 376 por el tope de gasto
+  del workspace («workspace API usage limits», se sube en Console → Settings →
+  Workspaces → Limits). Si Pruebas y producción comparten workspace, el tope de
+  una prueba corta la lectura de recibos de los afiliados reales. Separar la
+  clave de cada entorno en su propio workspace, con su tope.
+
+- [ ] **El lote bancario debería esperar la alerta `cuil_impreso_invalido`**
+  (2026-11-05): `carga/lote_bancaria.py` espera solo el veredicto OK en las filas
+  `CUIL_DV_INVALIDO`; desde Trabajador 0.58.01 la app además emite esa alerta y el
+  lote tendría que verificarla en esa fila (y `test_lote_bancaria.py` cubrirlo).
+
+- [ ] **Tope de peso para logos e imágenes al subirlas** (SDN, 2026-11-05,
+  pruebas de rendimiento de La Bancaria, `PLAN_PRUEBAS_BANCARIA.md` R): el
+  logo de La Bancaria pesa 996 KB y el de SMATA 1,1 MB; ningún logo necesita
+  eso. Hoy el servidor acepta lo que llega (`plataforma_editar_sindicato`,
+  `set_marca_plataforma`, firma, imágenes de noticias y beneficios; solo las
+  fotos de los modelos pasan por `fotos_tema.normalizar`, que las achica a
+  1.600 px/webp y rechaza más de 8 MB, y la foto de perfil se achica en el
+  navegador). Definir un límite práctico por tipo (logo y firma: achicar en
+  el servidor a un lado máximo chico —p. ej. 512 px— y recomprimir, con tope
+  de ~150 KB; imágenes de noticias y beneficios: normalizar como las fotos
+  de los modelos, lado largo 1.600 px y webp, tope de unos 300 KB), aplicarlo
+  en TODAS las puertas de subida (plataforma, panel, perfil) y regularizar lo
+  ya cargado. Las columnas de bytes ya no viajan en las pantallas (PR #203 y
+  #204), así que esto es por el ancho de banda de servir cada imagen y por
+  el tamaño de la base, no por la cola de la portada.
+
 - [ ] **Trámites: seis brechas verificadas contra el código** (2026-10-16,
   Parte 2 del cierre del Asistente de trámites, aprobadas por SDN; las
   mismas seis viven en `BRECHAS` de `asistente_tramites.py` cuando exista,

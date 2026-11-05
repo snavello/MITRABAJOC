@@ -1,0 +1,123 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Luna, Carolina",
+   "cuil": "27267339177",
+   "legajo": "23496",
+   "categoria": "AYUDANTE",
+   "fecha_ingreso": "2004-08-16"
+  },
+  "empleador": {
+   "nombre": "BANCO DE LA NACION ARGENTINA",
+   "cuit": "30500010912"
+  },
+  "periodo": "2026-05",
+  "fecha_pago": "2026-06-04",
+  "lineas": [
+   {
+    "codigo": "001",
+    "descripcion": "SUELDO BÁSICO",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 2233697.94,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "010",
+    "descripcion": "ANTIGÜEDAD (21 AÑOS)",
+    "cantidad": 21,
+    "unidad": "años",
+    "importe": 469076.57,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "080",
+    "descripcion": "COMPENSACIÓN NO REMUNERATIVA",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "otro",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": "501",
+    "descripcion": "JUBILACIÓN 11%",
+    "cantidad": 11,
+    "unidad": "%",
+    "importe": -297305.2,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": "502",
+    "descripcion": "LEY 19.032 (PAMI) 3%",
+    "cantidad": 3,
+    "unidad": "%",
+    "importe": -81083.24,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": "503",
+    "descripcion": "OBRA SOCIAL 3%",
+    "cantidad": 3,
+    "unidad": "%",
+    "importe": -81083.24,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": "510",
+    "descripcion": "CUOTA SINDICAL ASOC. BANCARIA 2%",
+    "cantidad": 2,
+    "unidad": "%",
+    "importe": -54055.49,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": "520",
+    "descripcion": "SEGURO DE VIDA COLECTIVO",
+    "cantidad": null,
+    "unidad": null,
+    "importe": -4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 2822774.51,
+   "descuentos": 518377.17,
+   "neto": 2304397.34
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "Los descuentos figuran impresos como valores positivos en la columna DESCUENTOS; se transcribieron con signo negativo según la columna. La compensación no remunerativa está en la columna de haberes, sin aportes (no suma a las remuneraciones con aportes pero sí al total de haberes impreso).",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 2822774.51,
+  "descuentos": 518377.17,
+  "reintegros": 0,
+  "neto": 2304397.34
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}

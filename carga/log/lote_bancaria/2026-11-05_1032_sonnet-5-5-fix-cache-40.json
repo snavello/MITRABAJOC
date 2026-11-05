@@ -1,0 +1,51 @@
+{
+ "recibos": 40,
+ "aciertos": 39,
+ "leidos": 40,
+ "lectura_ok": 40,
+ "errores_app": {},
+ "errores_lote_detectados": 0,
+ "errores_lote": 0,
+ "ms_leer_p50": 7544.0,
+ "ms_leer_p95": 8450,
+ "por": {
+  "banco": {
+   "bbva": {
+    "recibos": 10,
+    "aciertos": 10,
+    "lectura_ok": 10
+   },
+   "galicia": {
+    "recibos": 10,
+    "aciertos": 10,
+    "lectura_ok": 10
+   },
+   "nacion": {
+    "recibos": 10,
+    "aciertos": 9,
+    "lectura_ok": 10
+   },
+   "santander": {
+    "recibos": 10,
+    "aciertos": 10,
+    "lectura_ok": 10
+   }
+  },
+  "formato": {
+   "pdf": {
+    "recibos": 30,
+    "aciertos": 29,
+    "lectura_ok": 30
+   },
+   "jpg": {
+    "recibos": 10,
+    "aciertos": 10,
+    "lectura_ok": 10
+   }
+  }
+ },
+ "uso_ia": null,
+ "etiqueta": "sonnet-5-5-fix-cache-40",
+ "base_url": "https://mitrabajo-pruebas.onrender.com",
+ "inicio": "2026-11-05 10:32"
+}

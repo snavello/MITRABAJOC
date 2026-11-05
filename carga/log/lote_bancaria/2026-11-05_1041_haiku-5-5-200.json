@@ -1,0 +1,41 @@
+{
+ "recibos": 200,
+ "aciertos": 194,
+ "leidos": 200,
+ "lectura_ok": 196,
+ "errores_app": {},
+ "errores_lote_detectados": 1,
+ "errores_lote": 1,
+ "ms_leer_p50": 8958.5,
+ "ms_leer_p95": 10775,
+ "por": {
+  "banco": {
+   "santander": {
+    "recibos": 80,
+    "aciertos": 79,
+    "lectura_ok": 79
+   },
+   "industrial": {
+    "recibos": 120,
+    "aciertos": 115,
+    "lectura_ok": 117
+   }
+  },
+  "formato": {
+   "jpg": {
+    "recibos": 80,
+    "aciertos": 79,
+    "lectura_ok": 79
+   },
+   "pdf": {
+    "recibos": 120,
+    "aciertos": 115,
+    "lectura_ok": 117
+   }
+  }
+ },
+ "uso_ia": null,
+ "etiqueta": "haiku-5-5-200",
+ "base_url": "https://mitrabajo-pruebas.onrender.com",
+ "inicio": "2026-11-05 10:41"
+}

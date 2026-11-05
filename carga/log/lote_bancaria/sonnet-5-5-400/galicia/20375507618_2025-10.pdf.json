@@ -1,0 +1,125 @@
+{
+ "recibo": {
+  "lineas": [
+   {
+    "tipo": "remuneracion",
+    "codigo": null,
+    "unidad": null,
+    "importe": 1987050.0,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "Sueldo básico",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": null,
+    "unidad": null,
+    "importe": 198705.0,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "Antigüedad (10 años)",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": null,
+    "unidad": null,
+    "importe": 99352.5,
+    "seccion": "haberes",
+    "cantidad": null,
+    "descripcion": "Adicional por título",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "remuneracion",
+    "codigo": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "seccion": "no_remunerativos",
+    "cantidad": null,
+    "descripcion": "Compensación no remunerativa",
+    "categoria_universal": null
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": null,
+    "unidad": null,
+    "importe": 251361.83,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Jubilación 11%",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": null,
+    "unidad": null,
+    "importe": 68553.22,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "categoria_universal": "pami"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": null,
+    "unidad": null,
+    "importe": 68553.22,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Obra social 3%",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "tipo": "aporte_trabajador",
+    "codigo": null,
+    "unidad": null,
+    "importe": 45702.15,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "tipo": "otro",
+    "codigo": null,
+    "unidad": null,
+    "importe": 4850.0,
+    "seccion": "descuentos",
+    "cantidad": null,
+    "descripcion": "Seguro de vida colectivo",
+    "categoria_universal": null
+   }
+  ],
+  "formato": "clasico",
+  "periodo": "2025-10",
+  "empleado": {
+   "cuil": "20375507618",
+   "legajo": "22306",
+   "categoria": "Ayudante",
+   "fecha_ingreso": "2015-08-19",
+   "apellido_nombre": "Castro, Leandro"
+  },
+  "confianza": "alta",
+  "empleador": {
+   "cuit": "30500001735",
+   "nombre": "Galicia Banco de Galicia y Buenos Aires S.A.U. para el / duplicado para el"
+  },
+  "fecha_pago": "2025-11-06",
+  "observaciones": null,
+  "ultimo_deposito": null,
+  "totales_impresos": {
+   "neto": 1966087.08,
+   "descuentos": 439020.42,
+   "remuneraciones": 2405107.5
+  },
+  "alerta_adulteracion": {
+   "motivo": null,
+   "detectada": false
+  },
+  "costo_laboral_total": null,
+  "contribuciones_patronales": []
+ },
+ "_origen": "ReciboVerificado.detalle.recibo id=30254 2026-11-05 00:54"
+}

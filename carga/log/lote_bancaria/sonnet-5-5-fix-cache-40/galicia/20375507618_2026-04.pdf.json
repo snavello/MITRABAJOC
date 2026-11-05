@@ -1,0 +1,133 @@
+{
+ "recibo": {
+  "formato": "clasico",
+  "empleado": {
+   "apellido_nombre": "Castro, Leandro",
+   "cuil": "20375507618",
+   "legajo": "22306",
+   "categoria": "Ayudante",
+   "fecha_ingreso": "2015-08-19"
+  },
+  "empleador": {
+   "nombre": "Galicia Banco de Galicia y Buenos Aires S.A.U. para el / duplicado para el",
+   "cuit": "30500001735"
+  },
+  "periodo": "2026-04",
+  "fecha_pago": "2026-05-06",
+  "lineas": [
+   {
+    "codigo": null,
+    "descripcion": "Sueldo básico",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 2200687.62,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": null,
+    "descripcion": "Antigüedad (10 años)",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 220068.76,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": null,
+    "descripcion": "Adicional por título",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 110034.38,
+    "tipo": "remuneracion",
+    "seccion": "haberes",
+    "categoria_universal": null
+   },
+   {
+    "codigo": null,
+    "descripcion": "Compensación no remunerativa",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 120000.0,
+    "tipo": "remuneracion",
+    "seccion": "no_remunerativos",
+    "categoria_universal": null
+   },
+   {
+    "codigo": null,
+    "descripcion": "Jubilación 11%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 278386.98,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "jubilacion"
+   },
+   {
+    "codigo": null,
+    "descripcion": "Ley 19.032 (PAMI) 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 75923.72,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "pami"
+   },
+   {
+    "codigo": null,
+    "descripcion": "Obra social 3%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 75923.72,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "obra_social"
+   },
+   {
+    "codigo": null,
+    "descripcion": "Cuota sindical Asoc. Bancaria 2%",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 50615.82,
+    "tipo": "aporte_trabajador",
+    "seccion": "descuentos",
+    "categoria_universal": "cuota_sindical"
+   },
+   {
+    "codigo": null,
+    "descripcion": "Seguro de vida colectivo",
+    "cantidad": null,
+    "unidad": null,
+    "importe": 4850.0,
+    "tipo": "otro",
+    "seccion": "descuentos",
+    "categoria_universal": null
+   }
+  ],
+  "totales_impresos": {
+   "remuneraciones": 2650790.76,
+   "descuentos": 485700.24,
+   "neto": 2165090.52
+  },
+  "contribuciones_patronales": [],
+  "costo_laboral_total": null,
+  "ultimo_deposito": null,
+  "confianza": "alta",
+  "observaciones": "Los importes de descuentos figuran sin signo en el recibo. Convenio 18/75, Suc. 145.",
+  "alerta_adulteracion": {
+   "detectada": false,
+   "motivo": null
+  }
+ },
+ "conceptos_nuevos": [],
+ "totales_leidos": {
+  "ingresos": 2650790.76,
+  "descuentos": 485700.24,
+  "reintegros": 0,
+  "neto": 2165090.52
+ },
+ "advertencia_deposito": null,
+ "alerta_adulteracion": null
+}
