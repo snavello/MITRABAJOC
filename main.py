@@ -1984,7 +1984,7 @@ def admin_inicio(request: Request):
         "rol_admin": rol_admin,
         "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
         "area_admin": area_admin,
-        "tiene_foto_perfil": bool(cuil_admin and db.foto_trabajador(cuil_admin)),
+        "tiene_foto_perfil": bool(cuil_admin and db.tiene_foto_trabajador(cuil_admin)),
         "trabaja_en_varios": bool(cuil_admin) and len(db.sindicatos_del_operador(cuil_admin)) > 1,
         "tramites_nuevos": tramites_nuevos,
         "tramites_empresa_nuevos": tramites_empresa_nuevos,
@@ -6258,15 +6258,22 @@ def plataforma(request: Request):
     if _pendiente_de_completar(request):     # primer ingreso sin terminar
         return RedirectResponse("/plataforma/completar", status_code=303)
     with db.get_session() as s:
-        sindicatos = s.exec(select(Sindicato).order_by(Sindicato.id)).all()
+        from sqlalchemy import func
+        # El logo y el contrato no se traen (son bytes diferidos): el sello de
+        # versión del logo y «¿tiene contrato?» los calcula la base.
+        filas = s.exec(select(Sindicato,
+                              func.coalesce(func.octet_length(Sindicato.logo_datos), 0),
+                              func.coalesce(func.octet_length(Sindicato.contrato_datos), 0))
+                       .order_by(Sindicato.id)).all()
         # contar usuarios por sindicato
         info = []
-        for sind in sindicatos:
+        for sind, logo_v, contrato_v in filas:
             n_users = len(s.exec(select(UsuarioSindicato).where(
                 UsuarioSindicato.sindicato_id == sind.id)).all())
             n_trab = len(s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sind.id)).all())
-            info.append({"s": sind, "usuarios": n_users, "trabajadores": n_trab})
+            info.append({"s": sind, "usuarios": n_users, "trabajadores": n_trab,
+                         "logo_v": logo_v, "tiene_contrato": bool(contrato_v)})
     uso_ia = db.uso_ia_listado()
     topes = db.topes_listado()
     topes_json = [{"id": t.id, "vigencia_desde": t.vigencia_desde,
@@ -8437,7 +8444,7 @@ def app_trabajador(request: Request):
                 sid_activo, seccional_id=db.seccional_de_trabajador(cuil, sid_activo))),
             "modulos": _modulos_de(sid_activo),
             "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
-            "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
+            "tiene_foto_perfil": db.tiene_foto_trabajador(cuil),
             "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
             "apariencia": db.apariencia_de(sid_activo, cuil),
         }
@@ -8503,7 +8510,7 @@ def app_portada(request: Request):
             "mi_seccional": (db.seccional_del_sindicato(sid_activo, seccional_id)
                              if seccional_id else None),
             "etiquetas_precision": geo.ETIQUETAS_PRECISION,
-            "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
+            "tiene_foto_perfil": db.tiene_foto_trabajador(cuil),
             # Lo que la tarjeta principal de la portada dice de verdad:
             # cuántos recibos verificó este año y cómo salió el último.
             "recibos_resumen": db.resumen_recibos_trabajador(cuil, sid_activo),
