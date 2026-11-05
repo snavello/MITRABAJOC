@@ -81,7 +81,7 @@ from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, T
                 Convenio, DocumentoConvenio, FragmentoConvenio, ConsultaConvenio)
 from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_comparable,
                         comparar_lineas, ErrorLectura)
-from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
+from validador import (texto_tolerancia_alta, validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
                         error_de_expresion, totales_leidos, clasificacion_vista,
                         cuil_impreso_invalido,
@@ -734,6 +734,7 @@ templates = Jinja2Templates(directory="templates")
 # Entorno (local/pruebas/demo/prod) disponible en TODAS las plantillas sin
 # pasarlo en cada TemplateResponse: el distintivo de _entorno.html y la fila
 # del "Acerca de" lo leen de acá. Ver entorno.py.
+templates.env.globals["texto_tolerancia_alta"] = texto_tolerancia_alta
 templates.env.globals["entorno"] = entorno.ENTORNO
 templates.env.globals["distintivo_entorno"] = entorno.MUESTRA_DISTINTIVO
 
@@ -3271,6 +3272,10 @@ def abm_formula(
                           fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
                           sujeto_a_tope=sujeto_a_tope))
         s.commit()
+    # No bloquea: avisa. Una tolerancia alta deja pasar diferencias reales.
+    if texto_tolerancia_alta(tolerancia):
+        return RedirectResponse(f"/admin?tolalta={quote(texto_tolerancia_alta(tolerancia))}#formulas",
+                                status_code=303)
     return RedirectResponse("/admin#formulas", status_code=303)
 
 

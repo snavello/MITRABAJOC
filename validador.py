@@ -48,6 +48,44 @@ CATEGORIAS_UNIVERSALES = {
 # no decir nada -- tranquiliza justo en el caso en que al trabajador le
 # descontaron de más y conviene que consulte. Ese caso tiene su propia alerta
 # (tope_no_aplicado, más abajo).
+# Una regla con una tolerancia mayor a este monto (en pesos) deja pasar como
+# "correctas" diferencias que en un aporte son reales: un lote de la Bancaria
+# con tolerancia 5.000 dio OK recibos con $ 29.000 de diferencia. No se
+# bloquea (cada sindicato sabe lo que hace), pero Reglas y chequeo.py lo avisan.
+TOLERANCIA_AVISO = 100
+
+
+def texto_tolerancia_alta(tolerancia) -> str:
+    """El aviso de Reglas, o "" si la tolerancia no pasa de TOLERANCIA_AVISO."""
+    t = a_numero(tolerancia)
+    if t is None or t <= TOLERANCIA_AVISO:
+        return ""
+    return (f"Tolerancia alta: una diferencia menor a $ {t:,.0f} no se marca."
+            .replace(",", "."))
+
+
+def diferencias_de_topes(topes_bd: list, topes_csv: list) -> list:
+    """Compara la tabla de topes de un entorno con data/topes_ss.csv (la
+    referencia del repo). Cada elemento: dict con vigencia_desde y tope_maximo.
+    Devuelve frases legibles: vigencias que faltan o sobran, valores distintos
+    y un tope MAYOR que el del mes siguiente (un tope nunca baja)."""
+    bd = {t["vigencia_desde"]: float(t["tope_maximo"]) for t in topes_bd}
+    ref = {t["vigencia_desde"]: float(t["tope_maximo"]) for t in topes_csv}
+    out = []
+    for v in sorted(ref):
+        if v not in bd:
+            out.append(f"{v}: falta en la base (el CSV dice {ref[v]:,.2f})")
+        elif abs(bd[v] - ref[v]) > 0.005:
+            out.append(f"{v}: la base tiene {bd[v]:,.2f} y el CSV {ref[v]:,.2f}")
+    for v in sorted(set(bd) - set(ref)):
+        out.append(f"{v}: está en la base y no en el CSV ({bd[v]:,.2f})")
+    orden = sorted(bd)
+    for a, b in zip(orden, orden[1:]):
+        if bd[a] > bd[b]:
+            out.append(f"{a}: tope {bd[a]:,.2f} mayor que el de {b} ({bd[b]:,.2f})")
+    return out
+
+
 NOTA_TOPE_DISCREPANCIA = (
     "puede deberse a que tuviste más de un recibo este mes (otro empleador, "
     "un adelanto) y el tope se alcanzó entre los dos -- no se puede confirmar "
