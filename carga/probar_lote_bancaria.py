@@ -296,6 +296,8 @@ def main(argv=None):
     ap.add_argument("--azar", type=int, default=0, help="N recibos al azar (con --semilla)")
     ap.add_argument("--semilla", type=int, default=0)
     ap.add_argument("--banco")
+    ap.add_argument("--desde", type=int, default=None, help="corte del manifiesto: primer índice (con --hasta)")
+    ap.add_argument("--hasta", type=int, default=None, help="corte del manifiesto: índice final (excluido)")
     ap.add_argument("--solo-errores", action="store_true")
     ap.add_argument("--paralelo", type=int, default=2)
     ap.add_argument("--sin-validar", action="store_true")
@@ -319,7 +321,11 @@ def main(argv=None):
         filas = [f for f in filas if f["archivo"].startswith(a.banco + "/")]
     if a.solo_errores:
         filas = [f for f in filas if f.get("error_intencional")]
-    filas = L.muestra_azar(filas, a.azar, a.semilla) if a.azar else L.muestra(filas, a.muestra)
+    if a.desde is not None or a.hasta is not None:
+        # Corte determinista sobre el orden del manifiesto (sin muestreo).
+        filas = filas[a.desde or 0:a.hasta]
+    else:
+        filas = L.muestra_azar(filas, a.azar, a.semilla) if a.azar else L.muestra(filas, a.muestra)
     claves = _claves()
     sin_clave = [f for f in filas if L.solo_digitos(f["cuil"]) not in claves]
     filas = [f for f in filas if L.solo_digitos(f["cuil"]) in claves]
