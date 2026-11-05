@@ -1663,12 +1663,18 @@ def guardar_recurso(titulo: str, descripcion: str, fecha: date, tipo: str, url: 
 
 
 def recurso(recurso_id: int) -> Optional[Recurso]:
-    """El recurso entero, bytes incluidos (que por defecto quedan diferidos):
-    solo para servirlo."""
+    """El recurso con el ARCHIVO (los bytes quedan diferidos por defecto):
+    solo para servirlo. La miniatura, aparte: `recurso_miniatura`."""
     from sqlalchemy.orm import undefer
     with Session(engine) as s:
-        return s.get(Recurso, recurso_id,
-                     options=[undefer(Recurso.archivo_datos), undefer(Recurso.miniatura_datos)])
+        return s.get(Recurso, recurso_id, options=[undefer(Recurso.archivo_datos)])
+
+
+def recurso_miniatura(recurso_id: int) -> Optional[Recurso]:
+    """El recurso con SOLO la miniatura (sin el archivo, que puede pesar MB)."""
+    from sqlalchemy.orm import undefer
+    with Session(engine) as s:
+        return s.get(Recurso, recurso_id, options=[undefer(Recurso.miniatura_datos)])
 
 
 def borrar_recurso(recurso_id: int) -> bool:
@@ -4594,6 +4600,18 @@ def _sin_bytes(modelo):
 _sin_imagenes = _sin_bytes
 
 
+def _ids_con_bytes(s, columna, ids) -> set:
+    """Ids (de la tabla de `columna`) cuya columna de bytes tiene contenido,
+    en UNA consulta y sin traer los bytes. Es la respuesta a «¿tiene
+    adjunto?» de una lista: `bool(fila.adjunto_datos)` dispara un SELECT por
+    fila con el adjunto entero (N+1 de blobs)."""
+    ids = list(ids)
+    if not ids:
+        return set()
+    tabla = columna.class_
+    return set(s.exec(select(tabla.id).where(tabla.id.in_(ids), _hay_bytes(columna))).all())
+
+
 def _noticia_a_dict(n: "Noticia", tiene_imagen1: bool = None, tiene_imagen2: bool = None) -> dict:
     """`tiene_imagen1/2` vienen calculados en SQL cuando la noticia se cargó
     sin las imágenes (las listas); si no se pasan, se miran los bytes."""
@@ -4673,8 +4691,9 @@ def noticias_vigentes(sindicato_id: int, seccional_id: Optional[int] = None, lim
 
 def noticia_por_id(noticia_id: int) -> Optional[dict]:
     with Session(engine) as s:
-        n = s.get(Noticia, noticia_id)
-        return _noticia_a_dict(n) if n else None
+        fila = s.exec(select(Noticia, _hay_bytes(Noticia.imagen1_datos), _hay_bytes(Noticia.imagen2_datos))
+                      .where(Noticia.id == noticia_id)).first()
+        return _noticia_a_dict(fila[0], fila[1], fila[2]) if fila else None
 
 
 def beneficio_vigente(b: "Beneficio | dict", hoy: str) -> bool:
@@ -4726,8 +4745,9 @@ def beneficios_vigentes(sindicato_id: int, seccional_id: Optional[int] = None) -
 
 def beneficio_por_id(beneficio_id: int) -> Optional[dict]:
     with Session(engine) as s:
-        b = s.get(Beneficio, beneficio_id)
-        return _beneficio_a_dict(b) if b else None
+        fila = s.exec(select(Beneficio, _hay_bytes(Beneficio.imagen_datos))
+                      .where(Beneficio.id == beneficio_id)).first()
+        return _beneficio_a_dict(fila[0], fila[1]) if fila else None
 
 
 def _seccional_a_dict(sec: "Seccional") -> dict:
@@ -5629,13 +5649,14 @@ def notificaciones_del_sindicato(sindicato_id: int, usuario_id: Optional[int] = 
                 select(NotificacionDestinatario)).all() if d.cuil in propios}
             filas = [n for n in filas if n.id in visibles]
         resultado = []
+        con_adjunto = _ids_con_bytes(s, Notificacion.adjunto_datos, [n.id for n in filas])
         for n in filas:
             dests = s.exec(select(NotificacionDestinatario).where(
                 NotificacionDestinatario.notificacion_id == n.id)).all()
             leidos = sum(1 for d in dests if d.leida_en)
             resultado.append({
                 "id": n.id, "remitente": n.remitente, "texto": n.texto,
-                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "tiene_adjunto": n.id in con_adjunto, "adjunto_nombre": n.adjunto_nombre,
                 "criterio": n.criterio, "criterio_valores": n.criterio_valores or [],
                 "origen": n.origen, "enviado_en": n.enviado_en,
                 "cantidad_destinatarios": n.cantidad_destinatarios,
@@ -5705,9 +5726,10 @@ def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
             Encuesta.sindicato_id == sindicato_id)).all()
             if encuestas.acepta_respuestas(e.publicada, e.fecha_desde, e.fecha_hasta,
                                             hoy, e.cerrada_en)} if encuestas_ref else set()
+        con_adjunto = _ids_con_bytes(s, Notificacion.adjunto_datos, [n.id for n in notifs])
         return [{
             "id": n.id, "remitente": n.remitente, "texto": n.texto,
-            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "tiene_adjunto": n.id in con_adjunto, "adjunto_nombre": n.adjunto_nombre,
             "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
             "formulario_id": n.formulario_id if n.formulario_id in activos else None,
             "encuesta_id": n.encuesta_id if n.encuesta_id in abiertas else None,
@@ -5852,13 +5874,14 @@ def notificaciones_empleador_del_sindicato(sindicato_id: int) -> list:
             NotificacionEmpleador.sindicato_id == sindicato_id)
             .order_by(NotificacionEmpleador.id.desc())).all()
         resultado = []
+        con_adjunto = _ids_con_bytes(s, NotificacionEmpleador.adjunto_datos, [n.id for n in filas])
         for n in filas:
             dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
                 NotificacionEmpleadorDestinatario.notificacion_empleador_id == n.id)).all()
             leidos = sum(1 for d in dests if d.leida_en)
             resultado.append({
                 "id": n.id, "remitente": n.remitente, "texto": n.texto,
-                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "tiene_adjunto": n.id in con_adjunto, "adjunto_nombre": n.adjunto_nombre,
                 "criterio": n.criterio, "criterio_valores": n.criterio_valores or [],
                 "origen": n.origen, "enviado_en": n.enviado_en,
                 "cantidad_destinatarios": n.cantidad_destinatarios,
@@ -5897,9 +5920,10 @@ def notificaciones_de_empleador(cuit: str, sindicato_id: int) -> list:
             TipoTramiteEmpleador.id.in_(forms_ref),
             TipoTramiteEmpleador.sindicato_id == sindicato_id,
             TipoTramiteEmpleador.activo == True)).all()} if forms_ref else set()  # noqa: E712
+        con_adjunto = _ids_con_bytes(s, NotificacionEmpleador.adjunto_datos, [n.id for n in notifs])
         return [{
             "id": n.id, "remitente": n.remitente, "texto": n.texto,
-            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "tiene_adjunto": n.id in con_adjunto, "adjunto_nombre": n.adjunto_nombre,
             "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
             "formulario_id": n.formulario_id if n.formulario_id in activos else None,
         } for n in notifs]
@@ -6403,7 +6427,8 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
 
 
 def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict,
-                     ultimas_notas: Optional[dict] = None) -> dict:
+                     ultimas_notas: Optional[dict] = None,
+                     ultimas_con_adjunto: Optional[set] = None) -> dict:
     """`ultimas_notas` (tramite_id -> NotaTramite) lo pasa
     tramites_de_trabajador para la tarjeta "Necesita tu atención" de la
     pestaña Trámites (rediseño "Hilo", 2026-09-03): el último mensaje del
@@ -6418,7 +6443,7 @@ def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict,
         "novedad": not tr.visto_trabajador_en,
         "ultimo_mensaje": {
             "autor": ultima.autor, "texto": ultima.texto, "creado": ultima.creado,
-            "tiene_adjunto": bool(ultima.adjunto_datos), "formulario_id": ultima.formulario_id,
+            "tiene_adjunto": ultima.id in (ultimas_con_adjunto or ()), "formulario_id": ultima.formulario_id,
         } if ultima else None,
     }
 
@@ -6613,8 +6638,10 @@ def listado_tramites(sindicato_id: int, usuario_id: Optional[int], tipo_tramite_
         ids = [tr.id for tr in tramites]
         respuestas = {}
         if ids and campos:
-            for r in s.exec(select(RespuestaTramite).where(RespuestaTramite.tramite_id.in_(ids))).all():
-                respuestas[(r.tramite_id, r.campo_tramite_id)] = r.archivo_nombre if r.archivo_datos else r.valor_texto
+            filas_r = s.exec(select(RespuestaTramite).where(RespuestaTramite.tramite_id.in_(ids))).all()
+            con_archivo = _ids_con_bytes(s, RespuestaTramite.archivo_datos, [r.id for r in filas_r])
+            for r in filas_r:
+                respuestas[(r.tramite_id, r.campo_tramite_id)] = r.archivo_nombre if r.id in con_archivo else r.valor_texto
         titulos = {t.id: t.titulo for t in s.exec(select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
         secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(Seccional.sindicato_id == sindicato_id)).all()}
         areas = {a.id: a.nombre for a in s.exec(select(Area).where(Area.sindicato_id == sindicato_id)).all()}
@@ -6967,7 +6994,8 @@ def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
             for n in s.exec(select(NotaTramite).where(
                     NotaTramite.tramite_id.in_([t.id for t in tramites])).order_by(NotaTramite.id)).all():
                 ultimas[n.tramite_id] = n
-        return [_tramite_resumen(s, tr, titulos_tipo, ultimas) for tr in tramites]
+        con_adjunto = _ids_con_bytes(s, NotaTramite.adjunto_datos, [n.id for n in ultimas.values()])
+        return [_tramite_resumen(s, tr, titulos_tipo, ultimas, con_adjunto) for tr in tramites]
 
 
 def _orden_de_notas(notas: list, log: list) -> dict:
@@ -7022,6 +7050,8 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
         if forms_ref else {}
 
     orden_de_nota = _orden_de_notas(notas, log)
+    resp_con_archivo = _ids_con_bytes(s, RespuestaTramite.archivo_datos, [r.id for r in respuestas])
+    nota_con_adjunto = _ids_con_bytes(s, NotaTramite.adjunto_datos, [n.id for n in notas])
 
     # Trámites encadenados: el que ORIGINÓ este (el trabajador lo inició
     # desde el formulario adjunto en aquel chat) y los DERIVADOS que se
@@ -7046,13 +7076,13 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
             "campo_id": r.campo_tramite_id,
             "etiqueta": campos_por_id[r.campo_tramite_id].etiqueta if r.campo_tramite_id in campos_por_id else "—",
             "tipo_dato": campos_por_id[r.campo_tramite_id].tipo_dato if r.campo_tramite_id in campos_por_id else "texto",
-            "valor_texto": r.valor_texto, "tiene_archivo": bool(r.archivo_datos),
+            "valor_texto": r.valor_texto, "tiene_archivo": r.id in resp_con_archivo,
             "archivo_nombre": r.archivo_nombre, "respuesta_id": r.id,
         } for r in respuestas],
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "orden": orden_de_nota.get(n.id, 0),
-            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "tiene_adjunto": n.id in nota_con_adjunto, "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
             # El estado que fijó ESE mensaje (N9): el chat lo pinta pegado a
             # la burbuja en vez de como un movimiento aparte.
@@ -7374,6 +7404,8 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
     log = s.exec(select(TramiteEmpleadorLog).where(TramiteEmpleadorLog.tramite_id == tr.id)
                  .order_by(TramiteEmpleadorLog.id)).all()
     orden_de_nota = _orden_de_notas(notas, log)
+    resp_con_archivo = _ids_con_bytes(s, RespuestaTramiteEmpleador.archivo_datos, [r.id for r in respuestas])
+    nota_con_adjunto = _ids_con_bytes(s, NotaTramiteEmpleador.adjunto_datos, [n.id for n in notas])
     forms_ref = {n.formulario_id for n in notas if n.formulario_id}
     formularios = {t.id: t for t in s.exec(select(TipoTramiteEmpleador).where(
         TipoTramiteEmpleador.id.in_(forms_ref),
@@ -7400,13 +7432,13 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
             "campo_id": r.campo_tramite_id,
             "etiqueta": campos_por_id[r.campo_tramite_id].etiqueta if r.campo_tramite_id in campos_por_id else "—",
             "tipo_dato": campos_por_id[r.campo_tramite_id].tipo_dato if r.campo_tramite_id in campos_por_id else "texto",
-            "valor_texto": r.valor_texto, "tiene_archivo": bool(r.archivo_datos),
+            "valor_texto": r.valor_texto, "tiene_archivo": r.id in resp_con_archivo,
             "archivo_nombre": r.archivo_nombre, "respuesta_id": r.id,
         } for r in respuestas],
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "orden": orden_de_nota.get(n.id, 0),
-            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "tiene_adjunto": n.id in nota_con_adjunto, "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
             "formulario_titulo": formularios[n.formulario_id].titulo
                 if n.formulario_id in formularios else None,

@@ -7607,8 +7607,16 @@ def _aplicar_contrato_y_clausula(request: Request, sind: Sindicato, contrato_lei
     otra vez no reescribe la fecha), y se borran al desmarcarla."""
     if contrato_leido:
         sind.contrato_datos, sind.contrato_mime, sind.contrato_nombre = contrato_leido
-    if aceptada and not sind.contrato_datos:
-        return False
+    if aceptada and not contrato_leido:
+        # Sin contrato nuevo, «¿ya hay uno cargado?» se pregunta por su largo:
+        # leer `sind.contrato_datos` traería el PDF entero (columna diferida).
+        from sqlalchemy import func
+        from sqlalchemy.orm import object_session
+        largo = object_session(sind).exec(
+            select(func.coalesce(func.octet_length(Sindicato.contrato_datos), 0))
+            .where(Sindicato.id == sind.id)).one()
+        if not largo:
+            return False
     fila = _usuario_plataforma_de_sesion(request)
     quien = fila.usuario if fila else "generico"
     if aceptada and not sind.clausula_confidencialidad:
@@ -11592,7 +11600,7 @@ def recursos_miniatura(ref: str, request: Request):
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
     if ref.isdigit():
-        r = db.recurso(int(ref))
+        r = db.recurso_miniatura(int(ref))
         if not r or not r.miniatura_datos:
             raise HTTPException(404, "Sin miniatura")
         return BinResponse(content=r.miniatura_datos, media_type=r.miniatura_mime or "image/jpeg",
