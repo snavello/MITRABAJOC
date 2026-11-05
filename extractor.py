@@ -103,6 +103,11 @@ SYSTEM = (
     "'contribuciones_patronales'."
 )
 
+# 2026-11-05: regla «Línea no remunerativa» al final de las reglas de "seccion". El A/B de
+# 40 recibos bancarios (Sonnet 5.5) mostró que «Compensación no remunerativa» salía con
+# tipo=otro (15/40), remuneracion+haberes (5-11) o remuneracion+no_remunerativos
+# (19-29) según la corrida, aun sin caché. El resto (totales, importes, veredictos) era
+# idéntico: se fija solo esta clasificación, sin reescribir el prompt.
 ESQUEMA = """Extraé los datos con este esquema exacto:
 {
   "formato": "clasico",
@@ -140,6 +145,12 @@ Reglas para los campos nuevos:
   ajuste de un mes anterior) va con "haberes". Transcribí el importe con el signo
   impreso, sin corregirlo. Si el recibo no separa las secciones o no podés decidirlo,
   null.
+- Línea «no remunerativa»: una línea cuya descripción dice «no remunerativo/a» (o
+  «no rem.»), o que está impresa en la zona de conceptos no remunerativos, es un haber
+  sin aportes: va SIEMPRE con "tipo": "remuneracion" y "seccion": "no_remunerativos",
+  aunque el recibo la imprima en la misma columna que los demás haberes. "otro" se
+  reserva para lo que no es ni haber ni descuento del trabajador (anticipos, embargos,
+  ajustes, algo ambiguo): nunca para un haber.
 - "lineas[].categoria_universal": SOLO para líneas con tipo "aporte_trabajador", que
   además reconozcas con confianza como uno de estos 4 aportes de ley (son casi
   iguales en cualquier recibo argentino en blanco, cambia el nombre/código que le
