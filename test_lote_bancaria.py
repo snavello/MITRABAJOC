@@ -293,11 +293,12 @@ def test_alta_por_panel_se_niega_contra_la_demo():
 def test_publicar_exactitud_arma_las_tres_pruebas(lote):
     import publicar_exactitud as PE
     pagos = [PE.payload_de(p, PE._recalculo()) for p in json.loads(PE.REGISTRO.read_text(encoding="utf-8"))]
-    assert [len(p["resumen"]) for p in pagos] == [10, 10, 20, 40]
+    assert [len(p["resumen"]) for p in pagos][:4] == [10, 10, 20, 40]   # el registro creció con las tiradas de 400, 200, A/B y 25
     for p in pagos:
-        assert p["tipo"] == "exactitud" and p["causas"] and p["totales"]
+        assert p["tipo"] == "exactitud" and p["totales"]
         assert all(f["archivo"] for f in p["resumen"])
-        assert {c["origen"] for c in p["causas"]} <= {"app", "recibos", "configuracion"}
+        assert {c["origen"] for c in p["causas"]} <= {"app", "recibos", "configuracion", "ia"}
+    assert all(p["causas"] for p in pagos[:4])   # la tirada de los 25 que faltaban no tiene causas: salió todo bien
     assert pagos[0]["totales"]["Con las correcciones"] == "10 de 10"
     assert pagos[2]["totales"]["Dieron lo esperado"] == "19 de 20"
 

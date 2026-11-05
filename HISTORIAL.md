@@ -9962,3 +9962,102 @@ Web 0.5c-512mb × 1 (un worker), base 0.1c-256mb, modelo de lectura Sonnet 5.5,
 `ENMASCARADO=activo`. Pendientes: subir el tope del workspace de Anthropic y
 completar los 25 de Sonnet y los 200 de Haiku; topes de peso de logos e imágenes
 (BACKLOG.md); cambio de plan en caliente (descartado por ahora).
+
+### Cierre de la tanda: los 600 recibos con IA real y el modelo de lectura
+
+Corrido el tope del workspace de Anthropic (Console → Settings → Workspaces →
+Limits; vuelve solo el 1/12), se completó lo que había quedado afuera.
+`carga/probar_lote_bancaria.py` leyó los 25 de Santander (JPG) que faltaban con
+Sonnet 5.5 y los 200 de Haiku 5.5; todo queda en `carga/log/lote_bancaria/` y en
+`carga/exactitud.json` (publicados en «Tests» de `/entornos`, el 20 y los
+siguientes hasta el 28).
+
+- **Sonnet 5.5, 400 recibos**: **399 de 400 con lectura exacta (99,8 %) y 395 de
+  400 con el veredicto esperado (98,8 %)**. Mediana 7,9 s y p95 9,0 s en los 25
+  últimos; 7,4 s y 10,4 s en los primeros 375. Costo **US$ 0,0231 por recibo sin
+  caché de prompt y US$ 0,0178 con caché** (25 % menos).
+- **Haiku 5.5, 200 recibos**: 196 de 200 con lectura exacta (98,0 %), 194 de 200
+  con el veredicto esperado (97,0 %), **US$ 0,00137 por recibo** (12 veces menos).
+  **No fue más rápido**: mediana 9,0 s y p95 10,8 s contra 7,4 s de Sonnet,
+  porque razona y escribe más salida (2.057 tokens contra 1.050).
+- **Decisión: Sonnet 5.5 queda como modelo de lectura de recibos**
+  (`db.modelo_ia("recibos")` en Pruebas, elegido en `/plataforma`). Haiku cuesta
+  una fracción, pero no ahorra tiempo, falla algo más (4 lecturas inexactas
+  contra 1 de 400) y esa diferencia en un recibo real es una diferencia inventada
+  contra un afiliado; el ahorro absoluto, a 5.000 recibos por mes, es de unos
+  US$ 80. Si el costo llegara a pesar, Haiku se reevalúa con más recibos.
+- **La corrida se cortó una vez** en el recibo 376 con «You have reached your
+  specified workspace API usage limits» (error 400, la app lo mostró como
+  `E-RECIBO-01`; no se cobró ninguno). Es el tope de gasto del workspace, no la
+  cuenta. Queda en BACKLOG.md: un workspace de Anthropic por entorno, para que el
+  tope de una prueba no corte producción.
+
+### Los «no esperados»: configuración de Pruebas, casi todos
+
+Los 5 recibos de Sonnet y los 6 de Haiku donde se esperaba «con diferencias» y la
+app dijo OK **no son un defecto de la app ni de los recibos**: el informe
+`docs/chat/2026-11-05-analisis-lote-375.md` los reprodujo sin IA con el motor del
+repo (los 5 dan `CON_DISCREPANCIAS` con `tope_no_aplicado`) y la causa estaba en
+la base de Pruebas, verificada después:
+
+- La Bancaria en Pruebas tenía **tolerancia $ 5.000** en las fórmulas JUBILACION,
+  PAMI y OBRASOCIAL; el repo dice **$ 1**. Una diferencia de $ 362 en la
+  jubilación pasaba.
+- El **tope de la seguridad social de 2026-03** estaba mal cargado: 4.542.082,15
+  en la base contra 4.045.590,45 de `data/topes_ss.csv`. La tabla es
+  solo-si-vacío (`db.sembrar_topes_si_vacio`) y editable en `/plataforma`, así que
+  un valor tecleado a mano nunca se corrige solo.
+- **En curso** (rama `fix/config-bancaria-y-tolerancias`): corrige la base de
+  Pruebas por Jobs de Render, suma un aviso en Reglas cuando la tolerancia supera
+  $ 100 y hace que `chequeo.py` compare topes y tolerancias contra el repo. Sin
+  resultado todavía.
+- **El caso 6** (`bbva/20209792630_2025-10`, lectura inexacta) **sí es de la app**:
+  los descuentos impresos en positivo y fuera de la sección `descuentos` los
+  contaba `validador.totales_leidos` como haberes. El veredicto salió bien igual;
+  el cierre aritmético no. **En curso** en `fix/zona-descuentos-positivos`.
+
+### Caché de prompt y la línea «Compensación no remunerativa»
+
+`EXTRACTOR_CACHE=1` (PR #208, se lee en cada llamada; 0 = apagado) marca el prompt
+fijo del extractor para la caché de Anthropic. `UsoIA` guarda
+`tokens_cache_lectura` y `tokens_cache_escritura` (migración `d3e5f7a9b1c4`) y
+`precios_ia` cobra 0,1× la lectura y 1,25× la escritura, así que el costo mostrado
+es el real.
+
+El A/B de 40 recibos con y sin caché mostró una diferencia en una sola línea,
+«Compensación no remunerativa». Antes de culpar a la caché se midió el lector sin
+tocar nada: **ya era no determinista** (29 de 40 lecturas iguales entre dos
+corridas idénticas); la IA clasificaba esa línea como `otro` en 15 de 40, como
+remuneración entre los haberes en 6 a 11 y entre los no remunerativos en 19 a 29.
+Se escribió la regla en el `ESQUEMA` del extractor (línea «no remunerativa» →
+`tipo=remuneracion`, `seccion=no_remunerativos`; `otro` nunca para un haber; PR
+#209, Trabajador 0.58.07). Resultado: **40 de 40 iguales con y sin caché**, y
+contra la lectura vieja solo cambia esa clasificación (totales, período, CUIT,
+códigos, importes y veredictos idénticos). Con caché el recibo cuesta US$ 0,0178
+contra US$ 0,0237 y el p95 baja de 10,2 a 7,0 s. **Caché encendido en Pruebas.**
+Vuelta atrás: `EXTRACTOR_CACHE=0`, sin deploy de código.
+
+### Estado final de Pruebas (cierre de la tanda, 2026-11-05)
+
+Web `0.5c-512mb` × 1 con un worker, base `0.1c-256mb` (se bajó de plan al
+terminar), `MOCK_EXTRACTOR=0`, `EXTRACTOR_CACHE=1`, `DB_POOL_SIZE=15`,
+`DB_MAX_OVERFLOW=10`, `ENMASCARADO=activo`, modelo de recibos `claude-sonnet-5-5`.
+Versiones: Trabajador 0.58.07, Admin 0.77.05, Plataforma 0.65.05. Toda la medición
+de carga (ráfagas, día de cobro) se hizo con `MOCK_EXTRACTOR`: **la IA no se midió
+bajo carga**, solo en exactitud, de a dos recibos a la vez.
+
+**Qué queda**: el PR de configuración y el del caso 6 (arriba); topes de peso de
+logos e imágenes, un workspace de Anthropic por entorno y el comentario viejo de
+`carga/lote_bancaria.py` sobre el CUIL impreso inválido (BACKLOG.md); y el cambio
+de plan en caliente, que **SDN decidió no probar** (nunca se haría en un día de
+cobro en hora pico).
+
+### Cambio de método (2026-11-05, pedido de SDN)
+
+Code planifica y coordina; los desarrollos, el QA y el deploy se delegan a agentes
+(Sonnet 5.5), varios en paralelo, con reportes cortos con ejemplos y los errores
+clasificados por origen: **la app, los recibos de prueba o la configuración**. La
+clasificación nació en esta tanda, donde los 11 «no esperados» resultaron ser de
+configuración y no de la app, y se estuvo cerca de corregir el motor por algo que
+el motor ya hacía bien. Regla vigente en
+«Método de trabajo» de CLAUDE.md.

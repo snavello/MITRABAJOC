@@ -32,8 +32,10 @@ EMPLEADOS = DESTINO / "empleados.csv"
 # Medido en Pruebas el 2026-11-04 (tirada de 40): la app lo ACEPTA. El
 # enmascarado no lo corta (un DV inválido no es "otra persona") y al rearmar la
 # identidad deja el CUIL de la sesión, así que el recibo se valida como propio.
-# No avisa que el CUIL impreso está mal: si debería avisarlo, es decisión de SDN
-# de ejecución; mientras tanto se espera lo que la app hace.
+# Desde la alerta `cuil_impreso_invalido` (decisión de SDN, Trabajador 0.58.01) la
+# app SÍ avisa que el CUIL impreso está mal, con lo impreso y el CUIL correcto,
+# pero el veredicto sigue siendo OK. Pendiente (BACKLOG.md): que el lote espere
+# esa alerta en la fila, no solo el veredicto.
 ESPERADO_POR_ERROR = {
     "": "OK",
     "NETO_INCORRECTO": "CON_DISCREPANCIAS",

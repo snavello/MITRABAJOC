@@ -4,6 +4,18 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Un workspace de Anthropic por entorno** (2026-11-05, tanda de La
+  Bancaria): el lote con IA real se cortó en el recibo 376 por el tope de gasto
+  del workspace («workspace API usage limits», se sube en Console → Settings →
+  Workspaces → Limits). Si Pruebas y producción comparten workspace, el tope de
+  una prueba corta la lectura de recibos de los afiliados reales. Separar la
+  clave de cada entorno en su propio workspace, con su tope.
+
+- [ ] **El lote bancario debería esperar la alerta `cuil_impreso_invalido`**
+  (2026-11-05): `carga/lote_bancaria.py` espera solo el veredicto OK en las filas
+  `CUIL_DV_INVALIDO`; desde Trabajador 0.58.01 la app además emite esa alerta y el
+  lote tendría que verificarla en esa fila (y `test_lote_bancaria.py` cubrirlo).
+
 - [ ] **Tope de peso para logos e imágenes al subirlas** (SDN, 2026-11-05,
   pruebas de rendimiento de La Bancaria, `PLAN_PRUEBAS_BANCARIA.md` R): el
   logo de La Bancaria pesa 996 KB y el de SMATA 1,1 MB; ningún logo necesita
