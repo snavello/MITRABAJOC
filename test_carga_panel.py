@@ -32,7 +32,7 @@ def test_el_script_de_k6_es_javascript_valido():
 
 
 def test_reproduce_el_escenario_pedido():
-    assert "vus: LECTORES" in JS and "const LECTORES = 20;" in JS          # 20 lectores
+    assert "vus: LECTORES" in JS and "const LECTORES = parseInt(__ENV.LECTORES || '20', 10);" in JS          # 20 lectores
     assert "const CAMBIOS_DE_FILTRO = 30;" in JS                            # 30 cambios...
     assert "startTime: '60s'" in JS and "sleep(2)" in JS                    # ...en ~60 s
     assert "empresas=" in JS                                                # con filtro de empresa
