@@ -58,13 +58,16 @@ SECRETO = _requerido(
 IDLE_TIMEOUT_SEGUNDOS = 15 * 60
 
 # ---------- Hash de contraseñas ----------
-# PBKDF2-HMAC-SHA256. El costo (iteraciones) subió de 100.000 a 600.000, la
-# guía OWASP 2023 (XSK H-0009). El formato NUEVO incluye el número de
-# iteraciones (`sha256$600000$sal$hash`) para poder cambiarlo sin romper las
-# claves ya guardadas: un hash VIEJO (`sal$hash`, sin iteraciones) se sigue
-# validando a 100.000, y se re-hashea al costo nuevo la próxima vez que la
-# persona cambie la clave.
-ITERACIONES = 600_000
+# PBKDF2-HMAC-SHA256. El formato guardado incluye el número de iteraciones
+# (`sha256$300000$sal$hash`) para poder cambiarlo sin romper las claves ya
+# guardadas: las de 600.000 y las legado (`sal$hash`, 100.000) siguen
+# validando, y se re-hashean a ITERACIONES en el próximo login exitoso.
+# 300.000 por decisión de SDN (2026-11-05): se midió que 600.000 cuestan
+# ~0,6-1 s de CPU por login en Render y el día de cobro los amontona. Sigue
+# 30 veces arriba del mínimo de NIST y a la mitad de la guía genérica de
+# OWASP 2023; lo que protege la clave es su largo más el freno por IP
+# (XSK H-0008). Antes: 100.000 -> 600.000 (H-0009).
+ITERACIONES = 300_000
 ITERACIONES_LEGADO = 100_000
 
 
@@ -92,6 +95,12 @@ def verificar_clave(clave: str, clave_hash: str) -> bool:
         return False
     dk = hashlib.pbkdf2_hmac("sha256", clave.encode(), sal.encode(), iteraciones)
     return hmac.compare_digest(dk.hex(), guardado)
+
+
+def necesita_rehash(clave_hash: str) -> bool:
+    """True si el hash es legado o sus iteraciones difieren de ITERACIONES."""
+    partes = (clave_hash or "").split("$")
+    return not (len(partes) == 4 and partes[0] == "sha256" and partes[1] == str(ITERACIONES))
 
 
 def hash_desactualizado(clave_hash: str) -> bool:

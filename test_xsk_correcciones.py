@@ -215,12 +215,12 @@ def test_h0007_hsts_solo_en_demo_prod():
     assert "strict-transport-security" not in {k.lower() for k in r.headers}
 
 
-# ---- H-0009: PBKDF2 a 600.000 iteraciones, backward-compatible ----
+# ---- H-0009: PBKDF2 a 300.000 iteraciones, backward-compatible ----
 
-def test_h0009_hash_nuevo_usa_600k_y_verifica():
+def test_h0009_hash_nuevo_usa_300k_y_verifica():
     import auth
     h = auth.hashear_clave("secreta")
-    assert h.startswith("sha256$600000$")
+    assert h.startswith("sha256$300000$")
     assert auth.verificar_clave("secreta", h)
     assert not auth.verificar_clave("otra", h)
     assert not auth.hash_desactualizado(h)

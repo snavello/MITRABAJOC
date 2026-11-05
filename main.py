@@ -2017,6 +2017,8 @@ def admin_login(request: Request, usuario: str = Form(...), clave: str = Form(..
         _login_fallo(request)
         return RedirectResponse("/admin?error=1", status_code=303)
     _login_ok(request)
+    if auth.necesita_rehash(cuenta.clave_hash):
+        _rehash_de_cuenta(db.CuentaPanel, cuenta.id, clave)
     if len(opciones) == 1:
         return _abrir_sesion_panel(opciones[0]["usuario_id"])
     token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
@@ -6380,6 +6382,8 @@ def _login_plataforma_nominal(usuario: str, clave: str, request: Request):
         return None
     if _clave_transitoria_vencida(fila.clave_vence):
         return "vencida"
+    if auth.necesita_rehash(fila.clave_hash):
+        _rehash_de_cuenta(db.UsuarioPlataforma, fila.id, clave)
     token = auth.crear_sesion("plataforma", id_usuario=fila.id, ident=fila.usuario)
     db.registrar_acceso("plataforma")
     db.registrar_log_plataforma("login", fila.usuario, ip=_ip_de(request))
@@ -8000,6 +8004,21 @@ def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
     return resp
 
 
+def _rehash_si_hace_falta(s, fila, clave: str) -> None:
+    """Tras un login exitoso, pasa la clave guardada al costo vigente
+    (PBKDF2 300.000) si estaba a otro. Misma sesión de base del login."""
+    if fila is not None and auth.necesita_rehash(fila.clave_hash):
+        fila.clave_hash = auth.hashear_clave(clave)
+        s.add(fila)
+        s.commit()
+
+
+def _rehash_de_cuenta(modelo, id_, clave: str) -> None:
+    """Igual, para los logins que no tienen sesión abierta en ese punto."""
+    with db.get_session() as s:
+        _rehash_si_hace_falta(s, s.get(modelo, id_), clave)
+
+
 @app.post("/trabajador/login")
 def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(...)):
     if _login_bloqueado(request):
@@ -8010,6 +8029,7 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
             _login_fallo(request)
             return RedirectResponse("/ingresar?error=login", status_code=303)
+        _rehash_si_hace_falta(s, cuenta, clave)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
         temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
@@ -9356,6 +9376,7 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
             _login_fallo(request)
             return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
+        _rehash_si_hace_falta(s, cuenta, clave)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
         temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
