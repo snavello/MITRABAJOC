@@ -1,0 +1,30 @@
+time="2026-11-05T02:19:50Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:57274->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:19:54Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:56836->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:23:19Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:57196->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:24:19Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:56208->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:24:19Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:46158->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:28:41Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:56544->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:29:00Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:41402->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:29:38Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:41378->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:29:41Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:53542->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:29:42Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:41494->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:29:47Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:37162->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:30:35Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app\": read tcp 127.0.0.1:37132->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:30:36Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:56448->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:30:48Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/app/inicio\": read tcp 127.0.0.1:55708->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:30:51Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:39518->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:32:29Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:41972->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:32:36Z" level=warning msg="Request Failed" error="Get \"https://mitrabajo-pruebas.onrender.com/api/tu-dia\": read tcp 127.0.0.1:56992->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:32:40Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:39454->127.0.0.1:46429: read: connection reset by peer"
+time="2026-11-05T02:32:44Z" level=warning msg="Request Failed" error="Post \"https://mitrabajo-pruebas.onrender.com/api/leer\": read tcp 127.0.0.1:52418->127.0.0.1:46429: read: connection reset by peer"
+
+=== Test 4: recibos bancarios (rafagas, formato todos) ===
+  ráfaga  2:   40 subidas, p50 8.9 s, p95 9.1 s, error 0.00 %
+  ráfaga  5:  108 subidas, p50 8.5 s, p95 8.7 s, error 0.93 %
+  ráfaga 10:  208 subidas, p50 8.8 s, p95 9.2 s, error 0.00 %
+  ráfaga 20:  422 subidas, p50 8.5 s, p95 9.1 s, error 0.95 %
+  ráfaga 40:  832 subidas, p50 8.7 s, p95 9.4 s, error 0.48 %
+  lectores p95 299 ms, falla 0.01 %
+  500: 0   503: 0   E-RECIBO-04: 0
+  VEREDICTO: APROBADO
+
