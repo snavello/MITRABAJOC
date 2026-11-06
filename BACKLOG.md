@@ -21,21 +21,15 @@ se hace.
   `CUIL_DV_INVALIDO`; desde Trabajador 0.58.01 la app además emite esa alerta y el
   lote tendría que verificarla en esa fila (y `test_lote_bancaria.py` cubrirlo).
 
-- [ ] **Tope de peso para logos e imágenes al subirlas** (SDN, 2026-11-05,
-  pruebas de rendimiento de La Bancaria, `PLAN_PRUEBAS_BANCARIA.md` R): el
-  logo de La Bancaria pesa 996 KB y el de SMATA 1,1 MB; ningún logo necesita
-  eso. Hoy el servidor acepta lo que llega (`plataforma_editar_sindicato`,
-  `set_marca_plataforma`, firma, imágenes de noticias y beneficios; solo las
-  fotos de los modelos pasan por `fotos_tema.normalizar`, que las achica a
-  1.600 px/webp y rechaza más de 8 MB, y la foto de perfil se achica en el
-  navegador). Definir un límite práctico por tipo (logo y firma: achicar en
-  el servidor a un lado máximo chico —p. ej. 512 px— y recomprimir, con tope
-  de ~150 KB; imágenes de noticias y beneficios: normalizar como las fotos
-  de los modelos, lado largo 1.600 px y webp, tope de unos 300 KB), aplicarlo
-  en TODAS las puertas de subida (plataforma, panel, perfil) y regularizar lo
-  ya cargado. Las columnas de bytes ya no viajan en las pantallas (PR #203 y
-  #204), así que esto es por el ancho de banda de servir cada imagen y por
-  el tamaño de la base, no por la cola de la portada.
+- [x] **Tope de peso para logos e imágenes al subirlas** (SDN, 2026-11-05,
+  pruebas de rendimiento de La Bancaria): HECHO el mismo día. `imagenes.py` achica
+  toda imagen en el servidor al subirla (PR #216, Trabajador 0.58.09, Admin
+  0.77.07, Plataforma 0.65.07) y `achicar_imagenes.py` regulariza lo ya cargado
+  (PR #215). Se resolvió con un tope de LADO por tipo y webp, no con un tope de
+  bytes como proponía el ítem original (150/300 KB): los 100/150/400 KB son solo el
+  peso objetivo con el que el script decide qué filas tocar. Detalle en
+  HISTORIAL.md, «Toda imagen se achica al subirla: topes por tipo». Falta correr el
+  script en la Demo (con la próxima promoción).
 
 - [ ] **Trámites: seis brechas verificadas contra el código** (2026-10-16,
   Parte 2 del cierre del Asistente de trámites, aprobadas por SDN; las
