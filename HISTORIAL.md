@@ -8,6 +8,56 @@ detalle. `CLAUDE.md` tiene el resumen orientador ("Estado actual") con el
 mapa de qué existe; acá está el cómo y el por qué de cada punto de ese mapa,
 en el mismo orden cronológico en que se construyó.
 
+## Ingreso con Google (2026-11-06, Trabajador 0.59.01, Admin 0.77.08)
+
+Pedido de SDN: «incluir la posibilidad de ingresar autenticados con Google a
+aquellos que ya estén dados de alta en la plataforma y tengan los datos
+necesarios». Regla vigente (reemplaza el «NO se usa auth de terceros»): **auth
+propia; Google solo como identidad alternativa para cuentas YA registradas con
+mail confirmado, nunca crea cuentas ni reemplaza la clave.**
+
+- **Módulo** `google_auth.py`, sin dependencias nuevas (urllib, como `correo.py`):
+  `configurado()`, `url_autorizacion`, `canjear_codigo`, `mail_verificado`. Nada
+  lanza; ante cualquier duda devuelve `None` y el ingreso no se abre.
+- **Verificación del id_token**: firma RS256 contra las claves públicas de Google
+  (`/oauth2/v3/certs`, caché de 1 h, un solo reintento por minuto ante un `kid`
+  desconocido) hecha con enteros de Python (RSASSA-PKCS1-v1_5, RFC 8017), más
+  `alg` exactamente RS256, `iss`, `aud` = client id, `exp`, `email_verified`,
+  `sub`/`email` y `nonce`. Se prefirió a `tokeninfo` (Google lo desaconseja en
+  producción y suma un viaje por ingreso). El token además viene del endpoint de
+  tokens por TLS con el secreto del cliente.
+- **Rutas**: `GET /ingresar/google` y `GET /ingresar-empresa/google` mandan a
+  Google con un `state` firmado (`auth.firmar_paso`, 10 min, propósito `google`)
+  que lleva el rol y un nonce; el mismo nonce va en una cookie del navegador
+  (`google_estado`) y a Google, para que un enlace de retorno armado por un
+  tercero (login CSRF) no abra sesión en otro navegador. Una sola vuelta,
+  `GET /ingresar/google/callback`, para los dos roles (una URI que registrar por
+  entorno). La `redirect_uri` sale de `entorno.URLS` (no del Host: detrás del
+  proxy de Render el esquema llega como http).
+- **Qué cuenta**: `db.cuenta_para_google` busca primero por `google_sub` y después
+  por `mail_declarado` (minúsculas, sin espacios) con `mail_declarado_confirmado`
+  no vacío; una y solo una. No sirven `mail` (contacto) ni `mail_padron`. Un mail
+  cuya cuenta ya tiene OTRO `sub` no se reasigna. Una cuenta con clave temporal no
+  entra por Google. Abre la sesión con `_abrir_sesion_trabajador` /
+  `_abrir_sesion_empleador` (cookie del rol, `registrar_acceso`, selector si hay
+  pluriempleo): exactamente la del login con clave.
+- **Migración** `a5c7e9b1d3f6`: `google_sub` (texto, NOT NULL, default `''`, con
+  índice) en `cuentatrabajador` y `cuentaempleador`, como el resto de las columnas
+  de texto del proyecto.
+- **Restablecer la clave desde el panel** (Admin) ahora también borra `google_sub`
+  y `mail_declarado_confirmado`: restablecer es «le devuelvo la cuenta a su dueño
+  porque alguien llegó primero», y el mail confirmado del que llegó primero le
+  habría seguido abriendo la cuenta por Google. El mail queda guardado; la
+  persona lo reconfirma en Tu perfil. Efecto lateral buscado: el mail del
+  impostor deja de servir también para los códigos de recuperación.
+- **Fuera de alcance**: el panel del sindicato (`CuentaPanel`/`UsuarioSindicato`
+  no tienen mail confirmado; habría que agregar el campo y su flujo de
+  confirmación) y plataforma.
+- **Pantalla**: botón «Continuar con Google» (enlace, SVG en línea, sin cargar
+  nada de Google) debajo del formulario de ingreso, solo si hay claves
+  (`templates/_google_boton.html`); los ingresos son standalone, fuera de los dos
+  modelos de diseño. Tests: `test_google_login.py` (sin red).
+
 ## Auth — detalle de los dos fixes de sesión (2026-08-16)
 
 **Cookie de sesión separada por rol**: los tres roles (`sindicato`,

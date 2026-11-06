@@ -120,6 +120,10 @@
     {% if err == 'login' %}<div class="error">CUIT o clave incorrectos.</div>
     {% elif err == 'nohabilitado' %}<div class="error">Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador.</div>
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIT. Ingresá con tu clave.</div>
+    {% elif err == 'google' %}<div class="error">No pudimos ingresar con Google. Probá de nuevo o ingresá con tu clave.</div>
+    {% elif err == 'google_sinmail' %}<div class="error">No encontramos una cuenta con ese mail confirmado. Ingresá con tu CUIT y clave y confirmá tu mail en Tu perfil.</div>
+    {% elif err == 'google_varias' %}<div class="error">Ese mail está confirmado en más de una cuenta, así que no podemos elegir por vos. Ingresá con tu CUIT y clave.</div>
+    {% elif err == 'google_temporal' %}<div class="error">Tu clave fue restablecida por el sindicato. Ingresá con la clave temporal que te dieron para elegir una nueva.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
     {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
     {% elif err == 'codigo' %}<div class="error">El código no es correcto o venció. Pedí uno nuevo.</div>
@@ -141,6 +145,7 @@
       <input type="password" name="clave" required>
       <button class="enviar" type="submit">Ingresar</button>
       <a class="olvide" href="/ingresar-empresa/recuperar">Olvidé mi clave</a>
+      {% if google_activo %}{% set google_ruta = "/ingresar-empresa/google" %}{% include "_google_boton.html" %}{% endif %}
       <div class="ayuda">¿Primera vez? Tocá «Registrarme».</div>
     </form>
 
