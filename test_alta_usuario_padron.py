@@ -34,14 +34,14 @@ with db.get_session() as s:
     s.add(ros); s.add(cba); s.commit(); s.refresh(ros); s.refresh(cba)
     SEC_ROS, SEC_CBA = ros.id, cba.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=ADMIN, cuil=ADMIN, nombre="General",
-                           clave_hash=auth.hashear_clave("adm"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("adm"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local Rosario",
-                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("loc"), debe_cambiar_clave=False, es_admin_seccional=True,
                            seccional_id=SEC_ROS))
     # Un usuario del OTRO sindicato con el CUIL del afiliado de Córdoba: ya
     # tiene clave del panel.
     s.add(UsuarioSindicato(sindicato_id=otro.id, usuario=AFILIADO_CBA, cuil=AFILIADO_CBA,
-                           nombre="Fabián", clave_hash=auth.hashear_clave("otra"), es_super_admin=True))
+                           nombre="Fabián", clave_hash=auth.hashear_clave("otra"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Trabajador(sindicato_id=SID, cuil=AFILIADO, seccional_id=SEC_ROS, activo=True))
     s.add(Trabajador(sindicato_id=SID, cuil=AFILIADO_CBA, seccional_id=SEC_CBA, activo=True))
     db.asegurar_cuenta(s, AFILIADO).nombre = "Ana Pérez"
@@ -87,7 +87,7 @@ def test_4_el_admin_local_no_lee_el_padron_de_otra_seccional():
 def test_5_un_usuario_de_area_no_consulta():
     with db.get_session() as s:
         s.add(UsuarioSindicato(sindicato_id=SID, usuario="20666666667", cuil="20666666667",
-                               clave_hash=auth.hashear_clave("area"), seccional_id=SEC_ROS))
+                               clave_hash=auth.hashear_clave("area"), debe_cambiar_clave=False, seccional_id=SEC_ROS))
         s.commit()
     r = _cliente("20666666667", "area").get(f"/admin/usuario/padron?cuil={AFILIADO}",
                                             follow_redirects=False)

@@ -135,12 +135,17 @@ def test_las_exentas_son_solo_entrar_salir_y_las_pantallas():
     clave), que todavía no tiene sesión o la está cambiando.
     /admin/apariencia/mia (PLAN_TEMAS.md) es la única que no es pantalla:
     guarda el modelo de diseño de la PROPIA persona en su cuenta, no toca
-    nada del sindicato, y cualquier operador tiene que poder elegirlo."""
+    nada del sindicato, y cualquier operador tiene que poder elegirlo.
+    /admin/cambiar-clave y /admin/cuenta/clave (2026-11-06) son de la propia
+    persona sobre su propia clave: la primera es el primer ingreso (todavía
+    sin sesión, la puerta es un token firmado de 10 minutos) y la segunda
+    «Cambiar mi clave» de Tu cuenta, que pide la clave actual."""
     assert main.RUTAS_ADMIN_SIN_PERMISO == {
         "/admin", "/admin/inicio", "/admin/login", "/admin/salir",
         "/admin/dashboard", "/admin/dashboard-v2",
         "/admin/elegir", "/admin/cambiar-sindicato",
-        "/admin/apariencia/mia"}
+        "/admin/apariencia/mia",
+        "/admin/cambiar-clave", "/admin/cuenta/clave"}
     print("OK  test_las_exentas_son_solo_entrar_salir_y_las_pantallas")
 
 

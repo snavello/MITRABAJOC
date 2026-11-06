@@ -677,7 +677,7 @@
         <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="Ej.: 20-12345678-6"></div>
         <div class="campo full"><label>Nombre</label><input name="nombre"></div>
         <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required>
-          <span class="ayuda">La persona la cambia en su primer ingreso.</span></div>
+          <span class="ayuda">Es transitoria: pasásela a la persona por fuera de la app. En su primer ingreso al panel la app le pide elegir una propia.</span></div>
         <div class="campo"><label>Repetir clave inicial *</label><input id="na-repetir" required></div>
       </div>
       <div class="msg err" id="na-error" style="display:none; margin-top:12px;">Las claves no coinciden.</div>
@@ -694,8 +694,12 @@
   <div class="card">
     <div class="aviso-caja">
       <strong>Opción transitoria para pruebas.</strong> Permite resetear la clave de cualquier
-      administrador de sindicato o trabajador. Antes de usar la plataforma en producción,
-      conviene quitar esta opción o reemplazarla por un mecanismo de recuperación seguro.
+      administrador de sindicato o trabajador. La que escribas para un administrador de sindicato
+      es <b>transitoria</b>: en su próximo ingreso al panel tiene que elegir una propia. Es la salida
+      para quien trabaja en más de un sindicato o para un administrador general que perdió la clave
+      (el administrador general de su propio sindicato resetea al resto desde Áreas y Usuarios).
+      Antes de usar la plataforma en producción, conviene quitar esta opción o reemplazarla por un
+      mecanismo de recuperación seguro.
     </div>
     <form method="post" action="/plataforma/reset-clave" onsubmit="return confirmarClaves(this, 'rc-clave', 'rc-repetir', 'rc-error')">
       <div class="grid">

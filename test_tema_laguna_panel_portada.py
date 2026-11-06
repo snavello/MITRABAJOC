@@ -41,7 +41,7 @@ with db.get_session() as s:
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=SUPER, cuil=SUPER, nombre="Laura Méndez",
-                           clave_hash=auth.hashear_clave("super"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("super"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
 

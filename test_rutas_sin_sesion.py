@@ -67,6 +67,10 @@ PUBLICAS = {
     ("GET", "/ingresar/recuperar"): "pantalla de recuperación del afiliado",
     ("POST", "/ingresar/recuperar/iniciar"): "paso 1 de la recuperación del afiliado",
     ("POST", "/ingresar/recuperar"): "paso 3 de la recuperación del afiliado",
+    # Primer ingreso al panel del sindicato (2026-11-06): la puerta es el token
+    # firmado de /admin/login; sin él, muestra «el pedido venció» y no cambia nada.
+    ("GET", "/admin/cambiar-clave"): "primer ingreso al panel: elegir la clave propia (token firmado)",
+    ("POST", "/admin/cambiar-clave"): "primer ingreso al panel: elegir la clave propia (token firmado)",
     ("GET", "/ingresar/cambiar-clave"): "cambio de la clave temporal del afiliado",
     ("POST", "/ingresar/cambiar-clave"): "cambio de la clave temporal del afiliado",
     ("GET", "/ingresar-empresa/recuperar"): "pantalla de recuperación de la empresa",

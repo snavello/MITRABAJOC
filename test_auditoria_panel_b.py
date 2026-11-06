@@ -54,7 +54,7 @@ with db.get_session() as s:
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
     op = UsuarioSindicato(sindicato_id=SID, usuario=OPERADOR, nombre="Laura Méndez",
-                          clave_hash=auth.hashear_clave("clave-op"), es_super_admin=True)
+                          clave_hash=auth.hashear_clave("clave-op"), debe_cambiar_clave=False, es_super_admin=True)
     s.add(op); s.commit(); s.refresh(op)
     UID = op.id
     s.add(Noticia(sindicato_id=SID, titulo="Asamblea de delegados", bajada="Se votó el plan",

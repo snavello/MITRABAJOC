@@ -3763,7 +3763,7 @@
      seguía diciendo "Dar de alta un usuario": el formulario se llenaba con
      los datos de la persona pero encabezado por un alta. #}
   <h2 id="usuario-titulo">Dar de alta un usuario</h2>
-  <p class="muted">Entra a este panel con su CUIT/CUIL y la clave que le asignes -- va a tener que cambiarla en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.<br>
+  <p class="muted">Entra a este panel con su CUIT/CUIL y la clave inicial que le escribas acá: es <b>transitoria</b>, pasásela por fuera de la app (en mano o por un canal de confianza) y en su primer ingreso la app le pide elegir una propia. Si después la olvida, usá <b>Restablecer clave</b> en su fila: genera otra transitoria y la muestra una sola vez.<br>
   Si ese CUIL además está en el padrón del sindicato, el sistema lo vincula solo y lo marca como <b>empleado del sindicato</b> en Trabajadores. No hace falta elegir nada, y el orden no importa: funciona igual si primero se carga en el padrón o si primero se le da el usuario.</p>
   {# Un cartel por cada `err=` que emiten las rutas de usuarios de main.py.
      `sinarea` no estaba y era el peor de todos: bajar a alguien de
@@ -3777,6 +3777,12 @@
   <div class="msg err">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg err">CUIT/CUIL o clave inválidos.</div>
+  {% elif request.query_params.get('err') == 'clavepropia' %}
+  <div class="msg err">Tu propia clave no se restablece desde acá: cambiala en «Tu cuenta», en la portada, con tu clave actual.</div>
+  {% elif request.query_params.get('err') == 'clavecompartida' %}
+  <div class="msg err">Esa persona también trabaja en otro sindicato y su clave es una sola para todos: no se puede restablecer desde acá. Pedíselo a plataforma.</div>
+  {% elif request.query_params.get('err') == 'sinclave' %}
+  <div class="msg err">Esa persona todavía no tiene clave del panel, así que no hay nada que restablecer.</div>
   {% elif request.query_params.get('err') == 'cuilusuario' %}
   <div class="msg err">El CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'sinarea' %}
@@ -3906,6 +3912,13 @@
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick='editarUsuario({{ u | tojson }})'>Editar</button>
         {% if u.activo %}
+        {# Solo el administrador general, y no sobre sí mismo (para eso está
+           «Cambiar mi clave» en la portada): el servidor lo vuelve a exigir. #}
+        {% if es_super_admin and u.id != usuario_id_sesion and not u.sin_clave %}
+        <form method="post" action="/admin/usuario/restablecer-clave" style="display:inline;" onsubmit="return confirm('Se genera una clave transitoria nueva y la anterior deja de servir. La persona va a tener que elegir una propia al entrar. ¿Seguimos?');">
+          <input type="hidden" name="id" value="{{ u.id }}"><button class="mini">Restablecer clave</button>
+        </form>
+        {% endif %}
         <form method="post" action="/admin/usuario/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este administrador? Se puede reactivar después.');">
           <input type="hidden" name="id" value="{{ u.id }}"><button class="mini borrar">Baja</button>
         </form>

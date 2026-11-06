@@ -57,9 +57,9 @@ with db.get_session() as s:
     s.add(ros); s.add(cba); s.commit(); s.refresh(ros); s.refresh(cba)
     SEC_ROS, SEC_CBA = ros.id, cba.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=GENERAL, cuil=GENERAL, nombre="Laura Méndez",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("gen"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local Rosario",
-                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("loc"), debe_cambiar_clave=False, es_admin_seccional=True,
                            seccional_id=SEC_ROS))
     # 60 afiliados: 40 en Rosario y 20 en Córdoba. Uno con tilde para buscar.
     CUILES = []

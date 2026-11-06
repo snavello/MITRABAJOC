@@ -313,6 +313,12 @@ html[data-tema="laguna"] .tm-op:hover { background: var(--lg-agua-f2); }
 html[data-tema="laguna"] .tm-op.activa {
   background: var(--lg-turq); border-color: var(--lg-turq); color: #fff; font-weight: 600;
 }
+/* Tu clave: el formulario de «Cambiar mi clave» con los campos de la laguna. */
+html[data-tema="laguna"] .cc-form label { color: var(--lg-gris2); }
+html[data-tema="laguna"] .cc-form input {
+  border-color: var(--lg-linea); border-radius: 6px; color: var(--lg-tinta); font-family: var(--lg-fuente);
+}
+html[data-tema="laguna"] .cc-form input:focus-visible { outline-color: var(--lg-azul); }
 
 /* ---------- Portada clara (opción del sindicato) ----------
    La laguna arranca en papel y el saludo va en tinta; el resto no cambia.

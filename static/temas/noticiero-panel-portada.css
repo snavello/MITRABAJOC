@@ -398,6 +398,13 @@ html[data-tema="noticiero"] .tm-op {
   transition: background-color var(--mov-rapido) var(--ease-salida);
 }
 html[data-tema="noticiero"] .tm-op:hover { background: var(--nt-hoja-2); }
+/* Tu clave: el formulario de «Cambiar mi clave» con los campos del noticiero. */
+html[data-tema="noticiero"] .cc-form label { color: var(--nt-tinta-2); font-weight: 600; }
+html[data-tema="noticiero"] .cc-form input {
+  border-radius: 2px; border-color: var(--nt-linea-2); background: var(--nt-carta); color: var(--nt-tinta);
+  font-family: var(--nt-f-txt);
+}
+html[data-tema="noticiero"] .cc-form input:focus-visible { outline-color: var(--nt-coral-osc); }
 html[data-tema="noticiero"] .tm-op.activa {
   background: var(--nt-indigo); border-color: var(--nt-indigo); color: var(--nt-marfil); font-weight: 700;
 }

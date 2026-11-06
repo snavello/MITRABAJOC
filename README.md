@@ -33,7 +33,12 @@ narrativa de cómo se llegó a cada una, en [`HISTORIAL.md`](HISTORIAL.md).
   `claude-sonnet-5` es el Asistente del Panel Sindical (`asistente.py`).
   Los embeddings del convenio son locales (`fastembed` + `pgvector`).
 - **Auth propia:** claves con PBKDF2, sesiones como cookies firmadas, una
-  cookie por rol, vencimiento por inactividad (`auth.py`).
+  cookie por rol, vencimiento por inactividad (`auth.py`). **Alta de
+  administradores**: plataforma da de alta al primer administrador de cada
+  sindicato y este, desde «Áreas y Usuarios», al resto; la clave inicial es
+  transitoria (la escribe quien da el alta y se la pasa a la persona por fuera
+  de la app) y en el primer ingreso la app obliga a elegir una propia. Ver
+  "Alta de administradores y clave inicial" en `CLAUDE.md`.
 - **Frontend:** plantillas Jinja2 + `static/marca.css` (sistema de diseño
   compartido), PWA con Web Push para el trabajador.
 
