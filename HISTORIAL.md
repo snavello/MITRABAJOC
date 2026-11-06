@@ -10173,3 +10173,65 @@ se resolvió solo. Si vuelve a pasar: esperar un minuto y reintentar.
 
 **Método.** Tres agentes en paralelo (desarrollo, QA independiente en dos vueltas e
 implementación/deploy) coordinados por Code, según la regla del 2026-11-05.
+
+## El 502 del recibo de AFIP 2011: no se reprodujo, y la pantalla ya no se rompe (2026-11-06, Trabajador 0.58.10)
+
+**Qué pasó.** SDN subió desde la app del celular, en Pruebas, la foto de su recibo
+real de AFIP (septiembre 2011, el mismo de «CUIT OCULTO»). `POST /api/leer` anduvo
+y la pantalla «Revisá lo que leímos» mostró los datos. Al confirmar, `POST
+/api/validar` devolvió un **502 inmediato** y la pantalla mostró un error crudo del
+navegador. Pruebas corría `main` en 58a7970 (merge del 2026-11-05 21:24 -03), la
+misma noche de los merges #217 y #218, del Job de `achicar_imagenes.py` y de las
+pruebas de carga con cambios de plan.
+
+**Lo que se hizo para reproducirlo.** Se armó el JSON que `extractor.extraer()`
+devolvería para ese recibo (19 líneas, totales 27.892,56 / -11.654,42 / 16.238,14,
+período 2011-09, último depósito del 13/09/2011), se cargó un sindicato con los
+conceptos y las fórmulas de `data/seed_aefip.json` más los aportes de ley y se
+llamó a `/api/validar` con `TestClient` y la sesión del CUIL 20202790411. **Contesta
+200** con JSON, el neto da 16.238,14 y el sistema avisa `tope_no_verificable`
+(`data/topes_ss.csv` arranca en 2014-09: para 2011 no hay tope y se compara contra el
+sueldo entero, con el aviso). Lo mismo con el recibo subido por segunda vez (los
+conceptos ya cargados como pendientes), con los conceptos vinculados a los genéricos
+y con 24 variantes de lo que una IA puede devolver: importes como texto argentino,
+con `$` y miles, `null`, «NaN», `1e999`, cantidades como texto, códigos numéricos,
+líneas sin código ni descripción, período en letras / `09/2011` / `2011-9` /
+`2011-13` / nulo, depósito con barras, nulo o en texto, totales en texto o nulos,
+empleador o empleado nulos, CUIT numérico. Ninguna da 5xx. Tampoco encontré en el
+camino nada que mate un proceso: sin recursión, `NaN` e infinitos pasan por
+`a_numero` y no llegan al JSONB, y `error_no_manejado` / `_capturar_en_sentry` /
+`telegram.avisar_error` no lanzan ni bloquean. Un error de Python en esa ruta
+habría sido un **500 con JSON y código** (E-RECIBO-03), no un 502.
+
+**Causa: no confirmada.** Un 502 de Render no es una excepción de la app: es el
+proxy que no encontró la instancia (reinicio, deploy, falta de memoria, timeout).
+La lección de «El 502 y el JSON cortado» vale otra vez: la hipótesis se confirma
+con el log antes de contarla como causa. Hipótesis a contrastar con el log de
+Render de esa noche: (1) un `Instance ... restarted` por el deploy de #218 (21:24)
+o por un cambio de variable o de plan, que cae justo entre `/api/leer` y
+`/api/validar`; (2) `Out of memory (used over 512MB)` en el web de 0.5c-512mb:
+`/api/leer` con una foto de celular corre el OCR y, en Pruebas, guarda además dos
+imágenes de diagnóstico; el proceso queda cerca del tope y `/api/validar`, que casi
+no pide memoria, cae sobre la instancia ya muerta (no se pudo medir acá: no hay
+Tesseract en la PC); (3) un timeout del proxy, descartable por el «inmediato».
+
+**Lo que sí era un defecto, y se corrigió: la pantalla.** Los fetch del flujo del
+recibo hacían `if (!r.ok) { const e = await r.json(); ... }`. Un 502/503/504 de
+Render trae HTML o texto, así que `r.json()` reventaba con «Unexpected token '<'» y
+la persona veía eso. Ahora `/api/leer`, `/api/validar`, `/api/aportes`,
+`/api/reportar`, `/api/enviar-sindicato` y `/api/mis-recibos` pasan por
+`pedirJson()` (`templates/trabajador.html`): una red caída, una respuesta que no es
+JSON (aun siendo 200) o un 5xx sin cuerpo de la app muestran «El servidor no
+respondió. Probá de nuevo en un minuto.» con el código de estado en chiquito
+(«Código HTTP 502»); un JSON de la app (E-...) se muestra como siempre; un 422 con
+`detail` en lista ya no pinta «[object Object]»; y un error propio de la pantalla
+(un defecto de JS) queda en la consola con un mensaje de la app, no el del
+navegador. Con un error transitorio el panel suma un botón **Reintentar** que
+repite el mismo paso sin perder lo que ya se leyó (el «Volver a intentar» recarga y
+empieza de cero). Probado en el navegador con respuestas simuladas (502 HTML, 503,
+504 vacío, 200 HTML, 500 y 503 JSON, 422, 404, red caída) y sobre la página real de
+`/app`.
+
+**Test.** `test_recibo_afip_2011.py`: el recibo de punta a punta, repetido, las
+variantes, un payload roto (JSON siempre) y una puerta estática que falla si un
+fetch del flujo vuelve a leer JSON a ciegas.
