@@ -44,7 +44,18 @@ def _tam(n: int) -> str:
     return f"{n / (1024 * 1024):.0f} MB" if n >= 1024 * 1024 else f"{max(1, n // 1024)} KB"
 
 
+_MAGIA_RASTER = (b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"GIF8", b"BM")
+
+
+def _es_raster(datos: bytes) -> bool:
+    return datos.startswith(_MAGIA_RASTER) or (datos[:4] == b"RIFF" and datos[8:12] == b"WEBP")
+
+
 def _es_svg(datos: bytes, nombre: str) -> bool:
+    if _es_raster(datos):
+        # Un PNG con metadatos C2PA/XMP puede traer un "<svg" adentro (el logo
+        # de La Bancaria): por la firma del archivo, es una imagen de píxeles.
+        return False
     if nombre.lower().endswith(".svg"):
         return True
     return b"<svg" in datos[:4096].lower()

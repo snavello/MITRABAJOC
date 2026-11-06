@@ -325,3 +325,17 @@ def test_foto_de_perfil_grande_entra_y_sale_achicada():
     assert r.headers["content-type"] == "image/webp" and max(_abrir(r.content).size) <= 512
     r = c.post("/api/perfil/foto", files={"foto": ("f.png", b"nada", "image/png")})
     assert r.status_code == 400 and "imagen" in r.json()["detail"]
+
+
+def test_un_png_con_un_svg_en_los_metadatos_no_es_un_svg():
+    """El logo de La Bancaria es un PNG con metadatos C2PA que citan
+    `<svg ...>`: se achica como PNG, no se rechaza como SVG gigante."""
+    import struct
+    import zlib
+    base = _png((600, 600))
+    meta = b"image/svg+xml\x00<svg width=\"716\" height=\"716\" xmlns=\"x\">"
+    chunk = struct.pack(">I", len(meta)) + b"caBX" + meta + struct.pack(">I", zlib.crc32(b"caBX" + meta))
+    fin = base.rfind(b"\x00\x00\x00\x00IEND")
+    con_meta = base[:fin] + chunk + base[fin:]
+    r = imagenes.achicar(con_meta, "logo")
+    assert r["mime"] == "image/webp"
