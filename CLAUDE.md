@@ -58,7 +58,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Sesión por INACTIVIDAD, no por tiempo fijo desde el login: 15 minutos sin uso
   (`auth.IDLE_TIMEOUT_SEGUNDOS`). El middleware `renovar_sesion_por_actividad`
   (main.py) reemite la cookie en cada request autenticado; un usuario activo
-  nunca se desloguea solo. NO se usa auth de terceros.
+  nunca se desloguea solo. **Auth propia; Google solo como identidad alternativa
+  para cuentas YA registradas con mail confirmado, nunca crea cuentas ni
+  reemplaza la clave** (2026-11-06, decisión de SDN; `google_auth.py`, ver
+  "Ingreso con Google" en HISTORIAL.md).
   **Cookie separada por rol** (`COOKIES_POR_ROL` en main.py:
   `sesion_sindicato`/`sesion_plataforma`/`sesion_trabajador`/`sesion_empleador`)
   — cada rol lee y renueva SOLO su propia cookie, nunca una genérica
@@ -88,6 +91,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   el panel: `CuentaPanel` es la clave del operador (por CUIL) y
   `UsuarioSindicato` su rol en cada sindicato.
 - auth.py — hash de claves y sesiones.
+- google_auth.py — ingreso con Google (OpenID Connect, código de autorización,
+  urllib de la stdlib): URL de autorización, canje del código y `mail_verificado`
+  (firma RS256 contra las claves públicas de Google + `iss`/`aud`/`exp`/
+  `email_verified`/`nonce`; falla cerrado). Puro, no importa `db`. Google solo
+  identifica: el mail tiene que coincidir con `mail_declarado` YA confirmado de
+  una cuenta existente (`db.cuenta_para_google`). Alcance: trabajador y empresa.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
@@ -385,6 +394,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   registro cae a nivel 1. TURNSTILE_SITE_KEY / TURNSTILE_SECRET — captcha de
   los registros y la recuperación (`captcha.py`); sin las dos, apagado.
   Detalle y prerrequisitos (Cloudflare, Resend) en `DESPLIEGUE_RENDER.md`.
+- GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — cliente OAuth de Google Cloud para
+  «Continuar con Google» en `/ingresar` y `/ingresar-empresa` (`google_auth.py`);
+  sin las dos, apagado: el botón no se dibuja y las rutas dan 404. Lleva una
+  sola URL de retorno por entorno (`/ingresar/google/callback`). Pasos en
+  `DESPLIEGUE_RENDER.md`.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.

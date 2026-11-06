@@ -52,6 +52,7 @@ import correo
 import cuit
 import encuestas
 import esquema
+import google_auth
 import resumen_diario
 import telegram
 import precios_ia
@@ -2646,6 +2647,12 @@ def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
         clave = _clave_temporal_nueva()
         cuenta.clave_hash = auth.hashear_clave(clave)
         cuenta.clave_temporal = True
+        # El ingreso con Google se corta junto con la clave: si alguien llegó
+        # primero con su propio mail (y lo confirmó), no vuelve a entrar por ahí
+        # después de que el sindicato le devuelve la cuenta a su dueño. El mail
+        # queda guardado; hay que volver a confirmarlo en Tu perfil.
+        cuenta.google_sub = ""
+        cuenta.mail_declarado_confirmado = ""
         s.add(cuenta)
         s.commit()
         nombre = cuenta.nombre or cuil
@@ -3858,6 +3865,12 @@ def admin_empleador_restablecer_clave(request: Request, cuit: str = Form(...)):
         clave = _clave_temporal_nueva()
         cuenta.clave_hash = auth.hashear_clave(clave)
         cuenta.clave_temporal = True
+        # El ingreso con Google se corta junto con la clave: si alguien llegó
+        # primero con su propio mail (y lo confirmó), no vuelve a entrar por ahí
+        # después de que el sindicato le devuelve la cuenta a su dueño. El mail
+        # queda guardado; hay que volver a confirmarlo en Tu perfil.
+        cuenta.google_sub = ""
+        cuenta.mail_declarado_confirmado = ""
         s.add(cuenta)
         s.commit()
     log.info("panel: %s %s por usuario %s del sindicato %s",
@@ -8046,7 +8059,8 @@ def ingresar(request: Request):
     filtro por zona."""
     return templates.TemplateResponse("trabajador_login.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
-        "provincias": db.PROVINCIAS_AR, "clave_minima": CLAVE_MINIMA})
+        "provincias": db.PROVINCIAS_AR, "clave_minima": CLAVE_MINIMA,
+        "google_activo": google_auth.configurado()})
 
 
 def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
@@ -9415,7 +9429,7 @@ def ingresar_empresa(request: Request):
     """Pantalla de login/registro del empleador."""
     return templates.TemplateResponse("empresa_login.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
-        "clave_minima": CLAVE_MINIMA})
+        "clave_minima": CLAVE_MINIMA, "google_activo": google_auth.configurado()})
 
 
 def _abrir_sesion_empleador(cuit: str, cuenta_id: int):
@@ -9451,6 +9465,111 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
     resp = _abrir_sesion_empleador(cuit, cuenta_id)
     if resp is None:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
+    return resp
+
+
+# ---- Ingreso con Google (google_auth.py) ----
+# Google solo IDENTIFICA a quien YA tiene cuenta con un mail confirmado en la
+# app; nunca crea cuentas ni reemplaza la clave (decisión de SDN, 2026-11-06).
+# Todo es redirección del servidor (la CSP no deja cargar nada de Google):
+# GET /ingresar/google -> Google -> GET /ingresar/google/callback -> la misma
+# sesión que abre el login con clave. Una sola URL de retorno para los dos
+# roles (el `state` firmado dice cuál), así en Google Cloud se registra una.
+# Alcance: trabajador y empresa. El panel (CuentaPanel/UsuarioSindicato) no
+# tiene mail confirmado, así que queda afuera.
+_PROPOSITO_GOOGLE = "google"
+COOKIE_GOOGLE = "google_estado"
+_GOOGLE_ROLES = {
+    "trabajador": {"login": "/ingresar",
+                   "abrir": lambda numero, cuenta_id: _abrir_sesion_trabajador(numero, cuenta_id)},
+    "empleador": {"login": "/ingresar-empresa",
+                  "abrir": lambda numero, cuenta_id: _abrir_sesion_empleador(numero, cuenta_id)},
+}
+
+
+def _google_redirect_uri(request: Request) -> str:
+    """La URL de retorno EXACTA registrada en Google Cloud. En los entornos
+    desplegados sale de `entorno.URLS` (no se confía en el Host del pedido:
+    detrás del proxy de Render el esquema llega como http); en local, del
+    pedido (http://localhost:8000)."""
+    base = entorno.URLS.get(entorno.ENTORNO) or str(request.base_url)
+    return base.rstrip("/") + "/ingresar/google/callback"
+
+
+def _google_volver(rol: str, error: str, resp=None):
+    """Vuelta al login del rol con un aviso; borra la cookie del intento."""
+    destino = _GOOGLE_ROLES.get(rol, _GOOGLE_ROLES["trabajador"])["login"]
+    resp = RedirectResponse(f"{destino}?error={error}", status_code=303)
+    resp.delete_cookie(COOKIE_GOOGLE)
+    return resp
+
+
+def _google_iniciar(request: Request, rol: str):
+    if not google_auth.configurado():
+        raise HTTPException(404, "No encontrado")
+    if _login_bloqueado(request):
+        return _google_volver(rol, "espera")
+    nonce = secrets.token_urlsafe(16)
+    # El `state` va firmado y vence a los 10 minutos; el `nonce` viaja además en
+    # una cookie del navegador que inició el intento, así un enlace de retorno
+    # armado por un tercero (login CSRF) no abre sesión en otro navegador.
+    state = auth.firmar_paso({"rol": rol, "n": nonce}, minutos=10, proposito=_PROPOSITO_GOOGLE)
+    resp = RedirectResponse(
+        google_auth.url_autorizacion(_google_redirect_uri(request), state, nonce), status_code=303)
+    set_cookie_segura(resp, COOKIE_GOOGLE, nonce, max_age=600)
+    return resp
+
+
+@app.get("/ingresar/google")
+def ingresar_google(request: Request):
+    """Manda a Google a quien quiere ingresar como trabajador."""
+    return _google_iniciar(request, "trabajador")
+
+
+@app.get("/ingresar-empresa/google")
+def ingresar_empresa_google(request: Request):
+    """Lo mismo, para la empresa."""
+    return _google_iniciar(request, "empleador")
+
+
+@app.get("/ingresar/google/callback")
+def ingresar_google_callback(request: Request, code: str = "", state: str = "", error: str = ""):
+    """Vuelta de Google. Valida el `state` y que el intento sea de este
+    navegador, canjea el código, toma el mail verificado y abre la sesión del
+    rol con las mismas funciones del login con clave. Todo lo que no cierra
+    vuelve al login con un aviso; nunca se crea una cuenta."""
+    if not google_auth.configurado():
+        raise HTTPException(404, "No encontrado")
+    datos = auth.leer_paso(state, _PROPOSITO_GOOGLE)
+    rol = (datos or {}).get("rol", "")
+    nonce = str((datos or {}).get("n", ""))
+    cookie = request.cookies.get(COOKIE_GOOGLE, "")
+    if (rol not in _GOOGLE_ROLES or not nonce
+            or not secrets.compare_digest(cookie.encode(), nonce.encode())):
+        return _google_volver("trabajador", "google")
+    if _login_bloqueado(request):
+        return _google_volver(rol, "espera")
+    if error or not code:                      # canceló o Google rechazó
+        return _google_volver(rol, "google")
+    tokens = google_auth.canjear_codigo(code, _google_redirect_uri(request))
+    identidad = google_auth.mail_verificado(tokens, nonce) if tokens else None
+    if not identidad:
+        _login_fallo(request)
+        return _google_volver(rol, "google")
+    mail, sub = identidad
+    estado, cuenta_id, numero = db.cuenta_para_google(rol, mail, sub)
+    if estado == "ninguna":
+        return _google_volver(rol, "google_sinmail")
+    if estado == "varias":
+        return _google_volver(rol, "google_varias")
+    if estado == "temporal":
+        return _google_volver(rol, "google_temporal")
+    db.vincular_google(rol, cuenta_id, sub)
+    resp = _GOOGLE_ROLES[rol]["abrir"](numero, cuenta_id)
+    if resp is None:
+        return _google_volver(rol, "sinsind")
+    _login_ok(request)
+    resp.delete_cookie(COOKIE_GOOGLE)
     return resp
 
 

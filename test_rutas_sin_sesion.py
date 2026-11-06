@@ -72,6 +72,11 @@ PUBLICAS = {
     ("GET", "/ingresar-empresa/recuperar"): "pantalla de recuperación de la empresa",
     ("POST", "/ingresar-empresa/recuperar/iniciar"): "paso 1 de la recuperación de la empresa",
     ("POST", "/ingresar-empresa/recuperar"): "paso 3 de la recuperación de la empresa",
+    # Ingreso con Google: anterior a toda sesión por definición; el `state` va
+    # firmado y atado al navegador, y sin GOOGLE_CLIENT_ID/SECRET dan 404.
+    ("GET", "/ingresar/google"): "ingreso del afiliado con Google (redirección a Google)",
+    ("GET", "/ingresar/google/callback"): "vuelta de Google: abre sesión solo con state válido",
+    ("GET", "/ingresar-empresa/google"): "ingreso de la empresa con Google (redirección a Google)",
     ("GET", "/ingresar-empresa/cambiar-clave"): "cambio de la clave temporal de la empresa",
     ("POST", "/ingresar-empresa/cambiar-clave"): "cambio de la clave temporal de la empresa",
 }

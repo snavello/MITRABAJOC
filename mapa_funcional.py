@@ -39,7 +39,7 @@ FUNCIONALIDADES = [
     ("Común", "Portada pública", r"^/$", "inicio.html"),
     ("Común", "Marca de la plataforma", r"^/logo-plataforma", None),
 
-    ("Afiliado", "Ingreso y registro", r"^/(ingresar$|trabajador/|app/(elegir|cambiar))", "trabajador_login.html"),
+    ("Afiliado", "Ingreso y registro", r"^/(ingresar(/google(/callback)?)?$|trabajador/|app/(elegir|cambiar))", "trabajador_login.html"),
     ("Afiliado", "Recuperación de clave", r"^/ingresar/(recuperar|cambiar-clave)", "recuperar_clave.html"),
     ("Afiliado", "Confirmación de mail", r"^/app/confirmar-mail", "confirmar_mail.html"),
     ("Afiliado", "Portada", r"^/app/inicio$", "portada.html"),

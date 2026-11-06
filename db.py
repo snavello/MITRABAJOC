@@ -695,6 +695,11 @@ class CuentaTrabajador(SQLModel, table=True):
     # de la persona real tiene que quedar intacto.
     mail_declarado: str = ""
     mail_declarado_confirmado: str = ""    # cuándo se confirmó con un código; vacío = no
+    # Ingreso con Google (google_auth.py): el `sub` de la cuenta de Google con
+    # que se ingresó la primera vez, para que las próximas veces la cuenta se
+    # reconozca por él aunque el mail cambie. "" = nunca ingresó con Google.
+    # Google solo identifica: no crea cuentas ni reemplaza la clave.
+    google_sub: str = Field(default="", index=True)
     # La puso el admin del sindicato al restablecer la clave: el primer
     # ingreso obliga a cambiarla.
     clave_temporal: bool = Field(default=False)
@@ -788,6 +793,11 @@ class CuentaEmpleador(SQLModel, table=True):
     # es un impostor, el mail de la empresa real tiene que quedar intacto.
     mail_declarado: str = ""
     mail_declarado_confirmado: str = ""    # cuándo se confirmó con un código; vacío = no
+    # Ingreso con Google (google_auth.py): el `sub` de la cuenta de Google con
+    # que se ingresó la primera vez, para que las próximas veces la cuenta se
+    # reconozca por él aunque el mail cambie. "" = nunca ingresó con Google.
+    # Google solo identifica: no crea cuentas ni reemplaza la clave.
+    google_sub: str = Field(default="", index=True)
     # La puso el admin del sindicato al restablecer la clave: el primer
     # ingreso obliga a cambiarla.
     clave_temporal: bool = Field(default=False)
@@ -3020,6 +3030,65 @@ def sindicatos_de_cuil(cuil: str) -> list:
             if sind and sind.activo:
                 resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
         return resultado
+
+
+# ---------- Ingreso con Google: qué cuenta es la de este mail ----------
+# Google solo IDENTIFICA (google_auth.py): nunca crea una cuenta. La cuenta tiene
+# que existir y tener un mail CONFIRMADO por código en la app
+# (`mail_declarado` + `mail_declarado_confirmado`): el mail de contacto y el del
+# padrón no sirven, ver "Los TRES mails" en CuentaTrabajador. El panel del
+# sindicato queda afuera: CuentaPanel/UsuarioSindicato no tienen mail confirmado.
+_CUENTA_GOOGLE = {"trabajador": ("CuentaTrabajador", "cuil"),
+                  "empleador": ("CuentaEmpleador", "cuit")}
+
+
+def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
+    """(estado, cuenta_id, identificador) de la cuenta que le corresponde a una
+    identidad de Google. `estado`:
+    - "ok": una y una sola cuenta;
+    - "ninguna": no hay, o no tiene el mail confirmado, o ese mail ya está
+      atado a OTRA cuenta de Google (no se reasigna solo);
+    - "varias": más de una cuenta con ese mail confirmado (no se adivina);
+    - "temporal": la cuenta tiene clave temporal (el sindicato la restableció y
+      el primer ingreso obliga a elegir clave): por Google no se saltea eso.
+    Primero se busca por `google_sub` (sobrevive a un cambio de mail) y recién
+    después por el mail, en minúsculas y sin espacios."""
+    nombre_modelo, campo = _CUENTA_GOOGLE[rol]
+    modelo = globals()[nombre_modelo]
+    mail = (mail or "").strip().lower()
+    sub = (sub or "").strip()
+    if not mail or not sub:
+        return "ninguna", 0, ""
+    from sqlalchemy import func as _func
+    with Session(engine) as s:
+        confirmada = modelo.mail_declarado_confirmado != ""
+        cuentas = s.exec(select(modelo).where(modelo.google_sub == sub, confirmada)).all()
+        if not cuentas:
+            cuentas = s.exec(select(modelo).where(
+                _func.lower(_func.trim(modelo.mail_declarado)) == mail, confirmada)).all()
+            # Un mail cuya cuenta ya está atada a otro `sub` no se reasigna: el
+            # mail puede haber cambiado de manos en Google.
+            cuentas = [c for c in cuentas if not (c.google_sub or "")]
+        if not cuentas:
+            return "ninguna", 0, ""
+        if len(cuentas) > 1:
+            return "varias", 0, ""
+        c = cuentas[0]
+        if c.clave_temporal:
+            return "temporal", 0, ""
+        return "ok", c.id, getattr(c, campo)
+
+
+def vincular_google(rol: str, cuenta_id: int, sub: str) -> None:
+    """Guarda el `sub` de Google en la cuenta la primera vez (nunca lo pisa)."""
+    nombre_modelo, _ = _CUENTA_GOOGLE[rol]
+    modelo = globals()[nombre_modelo]
+    with Session(engine) as s:
+        c = s.get(modelo, cuenta_id)
+        if c and not (c.google_sub or "") and sub:
+            c.google_sub = sub
+            s.add(c)
+            s.commit()
 
 
 def importar_cuits_de_conceptos(sindicato_id: int, invalidos: Optional[list] = None) -> int:
