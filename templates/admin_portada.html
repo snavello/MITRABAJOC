@@ -50,6 +50,17 @@
     border: 1px solid var(--linea); background: #fff; color: var(--tinta); }
   .tm-op.activa { background: var(--tinta); border-color: var(--tinta); color: #fff; }
   .tm-nota { font-size: 12px; color: var(--gris); margin-top: 8px; }
+  /* Tu clave: «Cambiar mi clave» despliega el formulario en el mismo bloque,
+     con la píldora de Tu modelo como disparador. */
+  .cc-form { margin-top: 10px; }
+  .cc-form[hidden] { display: none; }
+  .cc-form label { display: block; font-size: 12px; font-weight: 600; color: var(--gris); margin: 10px 0 4px; }
+  .cc-form input { width: 100%; font: inherit; font-size: 16px; padding: 9px 11px; border-radius: 9px;
+    border: 1px solid var(--linea); background: #fff; color: var(--tinta); }
+  .cc-form input:focus-visible { outline: 2px solid var(--marca-acento); outline-offset: 1px; }
+  .cc-form .tm-ops { margin-top: 12px; }
+  .cc-nota-error { color: #c0392b; }
+  .cc-nota-ok { color: #0d7a5f; }
 
   /* Estructura común a los dos modelos (PLAN_TEMAS.md, pautas de SDN): el
      encabezado, el saludo y el Panel Sindical van juntos en .pt-heroe (el
@@ -349,6 +360,28 @@
       <div class="tm-nota" id="tm-nota">Vale para vos, en cualquier aparato.</div>
     </div>
     {% endif %}
+    {% if cuil_admin %}
+    {# Tu clave: la cambia la propia persona, con la actual por delante
+       (POST /admin/cuenta/clave). Es una sola para todos los sindicatos en
+       los que trabaja. #}
+    <div class="tm-bloque" id="cc-bloque">
+      <div class="tm-t">Tu clave</div>
+      <button type="button" class="tm-op" id="cc-abrir" aria-expanded="false" aria-controls="cc-form" onclick="abrirCambioClave()">Cambiar mi clave</button>
+      <form class="cc-form" id="cc-form" hidden autocomplete="off" onsubmit="return cambiarMiClave(event)">
+        <label for="cc-actual">Clave actual</label>
+        <input id="cc-actual" name="clave_actual" type="password" autocomplete="current-password" required>
+        <label for="cc-nueva">Clave nueva (al menos 8 caracteres)</label>
+        <input id="cc-nueva" name="clave" type="password" minlength="8" autocomplete="new-password" required>
+        <label for="cc-repetir">Repetí la clave nueva</label>
+        <input id="cc-repetir" name="clave2" type="password" minlength="8" autocomplete="new-password" required>
+        <div class="tm-ops">
+          <button type="submit" class="tm-op activa" id="cc-guardar">Guardar clave</button>
+          <button type="button" class="tm-op" onclick="cerrarCambioClave()">Cancelar</button>
+        </div>
+      </form>
+      <div class="tm-nota" id="cc-nota" role="status" aria-live="polite">Vale para todos los sindicatos en los que trabajás.</div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -393,6 +426,39 @@ function abrirPerfil() { document.getElementById('overlay-perfil').classList.add
 function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
 function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
 function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
+const NOTA_CLAVE = 'Vale para todos los sindicatos en los que trabajás.';
+function abrirCambioClave() {
+  document.getElementById('cc-form').hidden = false;
+  document.getElementById('cc-abrir').hidden = true;
+  document.getElementById('cc-abrir').setAttribute('aria-expanded', 'true');
+  document.getElementById('cc-actual').focus();
+}
+function cerrarCambioClave() {
+  const f = document.getElementById('cc-form');
+  f.reset(); f.hidden = true;
+  document.getElementById('cc-abrir').hidden = false;
+  document.getElementById('cc-abrir').setAttribute('aria-expanded', 'false');
+  const nota = document.getElementById('cc-nota');
+  nota.className = 'tm-nota'; nota.textContent = NOTA_CLAVE;
+}
+async function cambiarMiClave(ev) {
+  ev.preventDefault();
+  const f = document.getElementById('cc-form'), nota = document.getElementById('cc-nota');
+  const mostrar = (txt, clase) => { nota.className = 'tm-nota ' + clase; nota.textContent = txt; };
+  if (f.clave.value !== f.clave2.value) { mostrar('Las dos claves nuevas no coinciden.', 'cc-nota-error'); return false; }
+  const boton = document.getElementById('cc-guardar'); boton.disabled = true;
+  try {
+    const r = await fetch('/admin/cuenta/clave', { method: 'POST', body: new FormData(f) });
+    const dato = await r.json().catch(() => ({}));
+    if (!r.ok) { mostrar(dato.error || 'No se pudo cambiar la clave. Probá de nuevo en un momento.', 'cc-nota-error'); return false; }
+    f.reset(); f.hidden = true;
+    document.getElementById('cc-abrir').hidden = false;
+    document.getElementById('cc-abrir').setAttribute('aria-expanded', 'false');
+    mostrar('Listo: tu clave nueva ya vale.', 'cc-nota-ok');
+  } catch (e) { mostrar('No se pudo cambiar la clave. Probá de nuevo en un momento.', 'cc-nota-error'); }
+  finally { boton.disabled = false; }
+  return false;
+}
 async function elegirMiModelo(tema) {
   const nota = document.getElementById('tm-nota');
   const datos = new FormData(); datos.append('tema', tema);

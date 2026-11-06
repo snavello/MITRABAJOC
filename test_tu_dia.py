@@ -45,9 +45,9 @@ with db.get_session() as s:
     s.add(CuentaTrabajador(cuil=OTRO_AFILIADO, nombre="Ana Sol", clave_hash=auth.hashear_clave("x")))
     s.add(Trabajador(sindicato_id=SID_SIN, cuil=OTRO_AFILIADO, registrado=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=SUPER, cuil=SUPER, nombre="General",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("gen"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_SIN, usuario=SUPER_SIN, cuil=SUPER_SIN, nombre="General Sin",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("gen"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
 

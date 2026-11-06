@@ -44,9 +44,9 @@ with db.get_session() as s:
     s.add(ros); s.add(cba); s.commit(); s.refresh(ros); s.refresh(cba)
     SEC_ROS, SEC_CBA = ros.id, cba.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=GENERAL, cuil=GENERAL, nombre="General",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("gen"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local Rosario",
-                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("loc"), debe_cambiar_clave=False, es_admin_seccional=True,
                            seccional_id=SEC_ROS))
     # Un usuario de ÁREA de Rosario con las cuatro secciones de comunicación:
     # recibe la misma regla de alcance que el administrador de seccional.
@@ -55,7 +55,7 @@ with db.get_session() as s:
     for seccion in ("noticias", "beneficios", "notificaciones", "encuestas"):
         s.add(PermisoArea(area_id=area.id, seccion=seccion))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=DE_AREA, cuil=DE_AREA, nombre="Prensa Ros",
-                           clave_hash=auth.hashear_clave("area"), area_id=area.id,
+                           clave_hash=auth.hashear_clave("area"), debe_cambiar_clave=False, area_id=area.id,
                            seccional_id=SEC_ROS))
     s.commit()
 
@@ -65,7 +65,7 @@ with db.get_session() as s:
     s.add(sind2); s.commit(); s.refresh(sind2)
     s.add(Seccional(sindicato_id=sind2.id, nombre="Sede Única", latitud=-34.6, longitud=-58.4))
     s.add(UsuarioSindicato(sindicato_id=sind2.id, usuario=GENERAL_UNICO, cuil=GENERAL_UNICO,
-                           nombre="General Único", clave_hash=auth.hashear_clave("uni"),
+                           nombre="General Único", clave_hash=auth.hashear_clave("uni"), debe_cambiar_clave=False,
                            es_super_admin=True))
     s.commit()
 

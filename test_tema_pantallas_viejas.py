@@ -45,7 +45,7 @@ with db.get_session() as s:
     s.add(CuentaTrabajador(cuil=AFILIADO, nombre="Ana Pérez", clave_hash=auth.hashear_clave("x")))
     s.add(Trabajador(sindicato_id=SID, cuil=AFILIADO, registrado=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=OPERADOR, nombre="Laura Méndez",
-                           clave_hash=auth.hashear_clave("clave-op"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("clave-op"), debe_cambiar_clave=False, es_super_admin=True))
     # Tres avisos dados de alta en un orden que NO es el de su fecha de envío
     # (como un aviso programado o cargado con fecha).
     ids = {}

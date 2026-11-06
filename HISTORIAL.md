@@ -10356,3 +10356,69 @@ Apariencia, imágenes, rutas de áreas, mapa funcional y migraciones. Verificado
 además con un robot de navegador (Chromium, descartado) sobre la pantalla:
 subida inválida y chica con aviso, subida buena, foco, descripción, aparición
 en el selector, cambio de modelo y borrado.
+
+## Alta de administradores y clave inicial (2026-11-06, Admin 0.79.01, Plataforma 0.65.11)
+
+**El pedido de SDN**: «tenemos que clarificar dónde se dan de alta los
+administradores y cómo ingresa la clave, porque quedó en plataforma el alta y
+ponerle una clave inicial».
+
+**Qué había**: el primer Super Admin lo da de alta plataforma
+(`POST /plataforma/usuario`, con una `clave_inicial` escrita a mano) y los
+demás el Super Admin del sindicato (`POST /admin/usuario`, también con
+`clave_inicial`). Las dos pantallas decían «la persona la cambia en su primer
+ingreso», pero **nada lo exigía**: `debe_cambiar_clave` se escribía en True y
+nadie lo leía, la persona no podía cambiar su clave (solo plataforma) y el
+Super Admin tampoco podía restablecer la de su gente. La clave transitoria era
+en los hechos la definitiva. Los usuarios de plataforma sí tenían el flujo
+completo (`plataforma_completar.html`).
+
+**Qué se hizo**
+- **Documentación**: sección «Alta de administradores y clave inicial» en
+  `CLAUDE.md` (tabla de quién da de alta a quién y dónde, cómo nace la clave,
+  primer ingreso, cambio y restablecimiento), punto 36 cerrado, README.
+- **Primer ingreso obligatorio**: `POST /admin/login` valida la clave contra
+  `CuentaPanel`; si `debe_cambiar_clave`, NO abre la sesión y manda a
+  `/admin/cambiar-clave?token=` (`auth.firmar_paso`, propósito
+  `cambio_clave_panel`, 10 minutos). El POST vuelve a verificar la transitoria
+  (el token solo no alcanza), exige 8 caracteres (`CLAVE_MINIMA_PANEL`; el
+  afiliado sigue en 6) y distinta de la transitoria, cuenta los fallos en el
+  freno del login, fija la clave nueva con `db.fijar_clave_panel(..., False)` y
+  recién entonces abre la sesión o el selector de sindicato
+  (`_seguir_al_panel`, compartido con el login). Pantalla
+  `admin_cambiar_clave.html` sobre `_clave_base.html` (la misma del afiliado).
+- **Dónde vive la bandera**: en `CuentaPanel.debe_cambiar_clave` (ya existía,
+  **sin migración**). `UsuarioSindicato.debe_cambiar_clave` queda como puerta
+  de entrada de un alta (lo copia `_mover_clave_a_la_cuenta`).
+- **Cambiar mi clave**: «Tu cuenta» de la portada → `POST /admin/cuenta/clave`
+  (JSON). Pide la actual, 8 caracteres, distinta; vale para todos los
+  sindicatos de la persona. Ruta exenta de sección (`RUTAS_ADMIN_SIN_PERMISO`,
+  junto con `/admin/cambiar-clave`). Estilos en las hojas de los dos modelos.
+- **Restablecer clave** (`POST /admin/usuario/restablecer-clave`, sección
+  `SECCION_SUPER_ADMIN` + `_exigir_super_admin`): clave al azar de 8 (el mismo
+  alfabeto y la misma pantalla de una sola vista que el restablecimiento del
+  afiliado), transitoria. Rechaza: usuario de otro sindicato o dado de baja
+  (como inexistente), a uno mismo (`clavepropia`), a quien tiene fila en OTRO
+  sindicato aunque esté de baja (`clavecompartida`: la clave es una sola y
+  abre el otro panel) y a quien no tiene clave (`sinclave`).
+- **Plataforma**: `POST /plataforma/reset-clave` (tipo sindicato) ahora deja la
+  clave como transitoria (antes `debe_cambiar=False`: quien la recibía la
+  conservaba tal cual), y los textos del alta del primer admin y de la tarjeta
+  de reset lo dicen.
+- Mapa funcional: «Clave del operador (primer ingreso y cambio)».
+- Tests nuevos: `test_admin_clave_inicial.py`; ajustados `test_cuenta_panel.py`,
+  `test_areas_rutas.py` y `test_alcance_seccional_panel.py` (más las semillas
+  de otros tests, que ahora declaran `debe_cambiar_clave=False`).
+
+**Para el despliegue**: la bandera estaba en True desde el alta y nadie la
+leía, así que toda cuenta del panel que nunca pasó por un reseteo de
+plataforma hubiera tenido que elegir clave en su próximo ingreso, sin aviso
+(Pruebas y Demo incluidas). Al integrar la rama (2026-11-06) se sumó la
+migración de datos `b2d4f6a8c0e2`, que pone la bandera en False en todas las
+cuentas existentes: la obligación corre solo para las altas y los reseteos
+hechos desde esta versión.
+
+**Decisiones abiertas para SDN**: (1) la transitoria del panel no vence (la de
+plataforma vence a los 7 días); (2) lo que escribe quien da el alta no tiene
+largo mínimo (las semillas de los tests usan «x»); (3) la clave transitoria no
+se manda por mail a propósito.

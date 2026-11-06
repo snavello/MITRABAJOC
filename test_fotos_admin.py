@@ -44,18 +44,18 @@ with db.get_session() as s:
     s.add(prensa); s.commit(); s.refresh(prensa)
     s.add(PermisoArea(area_id=prensa.id, seccion="noticias"))
     s.add(UsuarioSindicato(sindicato_id=SID_A, usuario=GENERAL, cuil=GENERAL, nombre="General A",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True,
+                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True, debe_cambiar_clave=False,
                            seccional_id=central.id))
     s.add(UsuarioSindicato(sindicato_id=SID_A, usuario=LOCAL, cuil=LOCAL, nombre="Local A",
-                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True, debe_cambiar_clave=False,
                            seccional_id=ros.id))
     s.add(UsuarioSindicato(sindicato_id=SID_A, usuario=DE_AREA, cuil=DE_AREA, nombre="Prensa A",
-                           clave_hash=auth.hashear_clave("are"), area_id=prensa.id,
+                           clave_hash=auth.hashear_clave("are"), area_id=prensa.id, debe_cambiar_clave=False,
                            seccional_id=central.id))
     centro_b = Seccional(sindicato_id=SID_B, nombre="Sede Central", ve_todas=True)
     s.add(centro_b); s.commit(); s.refresh(centro_b)
     s.add(UsuarioSindicato(sindicato_id=SID_B, usuario=GENERAL_B, cuil=GENERAL_B, nombre="General B",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True,
+                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True, debe_cambiar_clave=False,
                            seccional_id=centro_b.id))
     s.commit()
 

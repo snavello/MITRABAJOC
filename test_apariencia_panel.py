@@ -44,13 +44,13 @@ with db.get_session() as s:
     for seccion in ("noticias", "trabajadores"):
         s.add(PermisoArea(area_id=prensa.id, seccion=seccion))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=GENERAL, cuil=GENERAL, nombre="General",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True,
+                           clave_hash=auth.hashear_clave("gen"), debe_cambiar_clave=False, es_super_admin=True,
                            seccional_id=central.id))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local",
-                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("loc"), debe_cambiar_clave=False, es_admin_seccional=True,
                            seccional_id=ros.id))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=DE_AREA, cuil=DE_AREA, nombre="Prensa",
-                           clave_hash=auth.hashear_clave("are"), area_id=prensa.id,
+                           clave_hash=auth.hashear_clave("are"), debe_cambiar_clave=False, area_id=prensa.id,
                            seccional_id=central.id))
     s.commit()
 
@@ -253,7 +253,7 @@ def test_sin_fotos_lo_dice():
         sin = Sindicato(nombre="Apariencia Sin Fotos", slug="apariencia-sin", color_base="#0f2240")
         s.add(sin); s.commit(); s.refresh(sin)
         s.add(UsuarioSindicato(sindicato_id=sin.id, usuario="20900000015", cuil="20900000015",
-                               nombre="Solo", clave_hash=auth.hashear_clave("solo"),
+                               nombre="Solo", clave_hash=auth.hashear_clave("solo"), debe_cambiar_clave=False,
                                es_super_admin=True))
         s.commit()
         sid_sin = sin.id

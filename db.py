@@ -484,7 +484,12 @@ class CuentaPanel(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     cuil: str = Field(index=True, unique=True)
     clave_hash: str = ""
-    # La clave la puso otra persona (el alta o un reseteo de plataforma).
+    # La clave la puso otra persona (el alta, o un reseteo de plataforma o del
+    # Super Admin del sindicato): es transitoria y `POST /admin/login` no abre
+    # la sesión hasta que la persona elija la suya (2026-11-06). La bandera
+    # vive ACÁ y no en `UsuarioSindicato.debe_cambiar_clave`, que solo es la
+    # puerta de entrada de un alta (`_mover_clave_a_la_cuenta`): la clave es
+    # una por persona y su estado también.
     debe_cambiar_clave: bool = True
     # El modelo de diseño que eligió para el panel (PLAN_TEMAS.md, D2).
     # "" = no eligió: vale el de su sindicato (Sindicato.tema_panel).
@@ -5158,7 +5163,9 @@ def cuenta_panel(cuil: str):
 
 def fijar_clave_panel(cuil: str, clave_hash: str, debe_cambiar: bool) -> None:
     """Única escritura de la clave del panel: la crea si no existe. La
-    llaman el reseteo de plataforma y el cambio de clave de la persona."""
+    llaman el reseteo de plataforma, el reseteo del Super Admin de un
+    sindicato (los dos con `debe_cambiar=True`: la clave la puso otro) y el
+    cambio de clave de la propia persona (`debe_cambiar=False`)."""
     with Session(engine) as s:
         c = s.exec(select(CuentaPanel).where(CuentaPanel.cuil == cuil)).first()
         if not c:
@@ -5167,6 +5174,18 @@ def fijar_clave_panel(cuil: str, clave_hash: str, debe_cambiar: bool) -> None:
         c.debe_cambiar_clave = debe_cambiar
         s.add(c)
         s.commit()
+
+
+def trabaja_en_otro_sindicato(cuil: str, sindicato_id: int) -> bool:
+    """¿Esa persona tiene un usuario del panel en algún sindicato que NO es
+    este, activo o no? Si sí, su clave (una sola, `CuentaPanel`) también abre
+    ese otro panel, y por eso un sindicato no puede restablecerla: quien la
+    fijara entraría al otro gremio con ella. Cuenta también las filas dadas de
+    baja, porque se pueden reactivar sin que nadie pase por acá."""
+    with Session(engine) as s:
+        return s.exec(select(UsuarioSindicato.id).where(
+            UsuarioSindicato.cuil == cuil,
+            UsuarioSindicato.sindicato_id != sindicato_id)).first() is not None
 
 
 def sindicatos_del_operador(cuil: str) -> list:

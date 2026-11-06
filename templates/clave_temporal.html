@@ -42,8 +42,9 @@
   <div class="caja">
     <div class="quien">{{ quien }} · <code>{{ ident }}</code></div>
     <div class="clave" id="clave-temporal">{{ clave }}</div>
-    <p class="nota">Dásela a la persona. Al entrar tiene que cambiarla por una propia.</p>
-    <p class="nota">La clave es una sola por persona: vale para todos los sindicatos donde esté empadronada.</p>
+    <p class="nota">Dásela a la persona por fuera de la app (en mano o por un canal de confianza). Al entrar tiene que cambiarla por una propia: hasta entonces no abre la sesión.</p>
+    {% if operador %}<p class="nota">Su clave del panel es una sola: el reseteo reemplaza la anterior, que ya no sirve.</p>
+    {% else %}<p class="nota">La clave es una sola por persona: vale para todos los sindicatos donde esté empadronada.</p>{% endif %}
     <p class="aviso">Se muestra una sola vez: no se puede volver a ver. Si la perdés, restablecé la clave de nuevo.</p>
     <a class="volver" href="{{ volver }}">Volver al panel</a>
   </div>

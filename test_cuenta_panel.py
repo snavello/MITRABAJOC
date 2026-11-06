@@ -38,9 +38,11 @@ with db.get_session() as s:
     s.add(area); s.commit(); s.refresh(area)
     SEC_A, AREA_A = sec.id, area.id
     s.add(UsuarioSindicato(sindicato_id=SID_A, usuario=ADMIN_A, nombre="Admin A",
-                           clave_hash=auth.hashear_clave("clave-a"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("clave-a"), debe_cambiar_clave=False,
+                           es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_B, usuario=ADMIN_B, nombre="Admin B",
-                           clave_hash=auth.hashear_clave("clave-b"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("clave-b"), debe_cambiar_clave=False,
+                           es_super_admin=True))
     s.commit()
 
 
@@ -67,6 +69,13 @@ def test_1_la_fila_nunca_guarda_la_clave_y_la_cuenta_nace_con_el_alta():
 
 
 def test_2_un_solo_sindicato_entra_directo():
+    # La clave del alta es transitoria: el primer ingreso pasa por «Elegí tu
+    # clave» (el flujo completo está en test_admin_clave_inicial.py). Acá se
+    # da por hecho que la persona ya eligió la suya, que sigue valiendo
+    # "primera", para probar lo que este archivo prueba: una clave por persona.
+    _, r = _cliente(PERSONA, "primera")
+    assert r.headers["location"].startswith("/admin/cambiar-clave?token=")
+    db.fijar_clave_panel(PERSONA, auth.hashear_clave("primera"), debe_cambiar=False)
     _, r = _cliente(PERSONA, "primera")
     assert r.status_code == 303 and r.headers["location"] == "/admin/inicio"
 
@@ -159,6 +168,12 @@ def test_9_el_reseteo_de_plataforma_cambia_la_clave_de_la_persona():
     r = c.post("/plataforma/reset-clave", data={"tipo": "sindicato", "identificador": PERSONA,
                                                 "clave_nueva": "nueva"}, follow_redirects=False)
     assert "reset=ok" in r.headers["location"]
+    # La clave que escribe plataforma es transitoria: antes de abrir la sesión
+    # (y del selector de sindicato) la persona tiene que elegir la suya.
+    assert db.cuenta_panel(PERSONA).debe_cambiar_clave is True
+    _, r = _cliente(PERSONA, "nueva")
+    assert r.headers["location"].startswith("/admin/cambiar-clave?token=")
+    db.fijar_clave_panel(PERSONA, auth.hashear_clave("nueva"), debe_cambiar=False)
     _, r = _cliente(PERSONA, "nueva")
     assert r.headers["location"].startswith("/admin/elegir")
     with Session(db.engine) as s:

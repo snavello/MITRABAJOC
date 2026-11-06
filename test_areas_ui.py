@@ -288,6 +288,13 @@ def _panel_de(cuil, clave):
     c = TestClient(main.app)
     r = c.post("/admin/login", data={"usuario": cuil, "clave": clave}, follow_redirects=False)
     assert r.status_code == 303
+    if r.headers["location"].startswith("/admin/cambiar-clave"):
+        # Un alta nace con clave transitoria. Acá se da por hecho que la persona
+        # ya la eligió (que sigue siendo `clave`); el primer ingreso se prueba
+        # en test_admin_clave_inicial.py.
+        db.fijar_clave_panel(cuil, auth.hashear_clave(clave), debe_cambiar=False)
+        r = c.post("/admin/login", data={"usuario": cuil, "clave": clave}, follow_redirects=False)
+        assert r.status_code == 303
     return c.get("/admin").text
 
 

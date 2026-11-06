@@ -450,7 +450,7 @@ def test_un_valor_ajeno_a_la_columna_solo_se_avisa(base):
 def test_usuario_que_no_es_un_numero_se_ignora(base):
     with db.get_session() as s:
         s.add(UsuarioSindicato(sindicato_id=base.a, usuario="admin-central", cuil="", nombre="Admin",
-                               clave_hash=HASH))
+                               clave_hash=HASH, debe_cambiar_clave=False))
         s.commit()
     assert "admin-central" not in _filas(_diagnostico())
 

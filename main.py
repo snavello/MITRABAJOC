@@ -1397,6 +1397,7 @@ PERMISOS_RUTAS = {
     "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
     "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
     "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
+    "/admin/usuario/restablecer-clave":     SECCION_SUPER_ADMIN,
     "/admin/area":                          SECCION_SUPER_ADMIN,
     "/admin/area/estado":                   SECCION_SUPER_ADMIN,
     # Apariencia del sindicato (PLAN_TEMAS.md, bloque 3): pasa la puerta de
@@ -1548,7 +1549,12 @@ RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/sa
                            "/admin/elegir", "/admin/cambiar-sindicato",
                            # Cada operador elige SU modelo de diseño: es una
                            # preferencia de la persona, no una sección del panel.
-                           "/admin/apariencia/mia"}
+                           "/admin/apariencia/mia",
+                           # La clave es de la persona, no una sección: elegir
+                           # la propia en el primer ingreso (todavía sin
+                           # sesión, la puerta es un token firmado) y
+                           # cambiarla después desde Tu cuenta.
+                           "/admin/cambiar-clave", "/admin/cuenta/clave"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -1812,6 +1818,7 @@ def admin(request: Request):
         "alcance_propio": alcance_propio,
         "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
         "usuarios_sindicato": usuarios_sindicato,
+        "usuario_id_sesion": uid,
         "permisos": permisos, "es_super_admin": es_super_admin,
         "administra_areas": administra,
         "seccionales_alcance": seccionales_alcance,
@@ -2071,13 +2078,118 @@ def admin_login(request: Request, usuario: str = Form(...), clave: str = Form(..
     _login_ok(request)
     if auth.necesita_rehash(cuenta.clave_hash):
         _rehash_de_cuenta(db.CuentaPanel, cuenta.id, clave)
+    if cuenta.debe_cambiar_clave:
+        # La clave es transitoria: la escribió quien dio el alta (o la
+        # restableció) y la persona no la eligió. NO se abre la sesión hasta
+        # que ponga la suya (2026-11-06). Mismo patrón que el afiliado: un
+        # token firmado de 10 minutos que solo sirve para esa pantalla.
+        token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_CAMBIO_CLAVE_PANEL)
+        return RedirectResponse(f"/admin/cambiar-clave?token={token}", status_code=303)
+    return _seguir_al_panel(cuil, opciones)
+
+
+_PROPOSITO_ELEGIR_PANEL = "elegir_panel"
+_PROPOSITO_CAMBIO_CLAVE_PANEL = "cambio_clave_panel"
+
+# Mínimo de la clave que elige el operador. Más alto que el del afiliado
+# (CLAVE_MINIMA = 6): el panel maneja el padrón y los trámites de todo un
+# gremio. Es el mismo piso que ya tiene la clave transitoria de plataforma.
+CLAVE_MINIMA_PANEL = 8
+
+
+def _seguir_al_panel(cuil: str, opciones: list):
+    """Con la clave ya resuelta: un solo sindicato entra directo, varios
+    eligen a cuál. Lo comparten el login y el cambio de la clave inicial."""
     if len(opciones) == 1:
         return _abrir_sesion_panel(opciones[0]["usuario_id"])
     token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
     return RedirectResponse(f"/admin/elegir?token={token}", status_code=303)
 
 
-_PROPOSITO_ELEGIR_PANEL = "elegir_panel"
+def _pagina_clave_panel(request: Request, token: str, error: str = "", status: int = 200):
+    d = auth.leer_paso(token, _PROPOSITO_CAMBIO_CLAVE_PANEL)
+    vigente = bool(d and d.get("cuil"))
+    return templates.TemplateResponse("admin_cambiar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "token": token if vigente else "", "vencido": not vigente, "error": error,
+        "clave_minima": CLAVE_MINIMA_PANEL}, status_code=status)
+
+
+@app.get("/admin/cambiar-clave", response_class=HTMLResponse)
+def admin_cambiar_clave_pagina(request: Request, token: str = ""):
+    """Primer ingreso (o ingreso tras un reseteo): elegir la clave propia."""
+    return _pagina_clave_panel(request, token)
+
+
+@app.post("/admin/cambiar-clave")
+def admin_cambiar_clave(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                        clave: str = Form(""), clave2: str = Form("")):
+    """Reemplaza la clave transitoria por la que elige la persona y RECIÉN ahí
+    abre la sesión (respetando el selector si trabaja en varios sindicatos).
+
+    Se vuelve a verificar la transitoria acá y no solo en el login: es lo que
+    impide que el token firmado, por sí solo, alcance para fijar una clave.
+    Los intentos con una transitoria equivocada cuentan para el freno de
+    los logins. El CUIL sale del token firmado, nunca de un campo del form."""
+    if _login_bloqueado(request):
+        return _pagina_clave_panel(request, token,
+                                   "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.", 429)
+    d = auth.leer_paso(token, _PROPOSITO_CAMBIO_CLAVE_PANEL)
+    if not d or not d.get("cuil"):
+        return _pagina_clave_panel(request, "")
+    cuil = d["cuil"]
+    if clave != clave2:
+        return _pagina_clave_panel(request, token, "Las dos claves no coinciden.", 400)
+    if len(clave) < CLAVE_MINIMA_PANEL:
+        return _pagina_clave_panel(
+            request, token, f"La clave nueva tiene que tener al menos {CLAVE_MINIMA_PANEL} caracteres.", 400)
+    if clave == clave_actual:
+        return _pagina_clave_panel(request, token, "Elegí una clave distinta de la transitoria.", 400)
+    cuenta = db.cuenta_panel(cuil)
+    opciones = db.sindicatos_del_operador(cuil)
+    if not cuenta or not cuenta.debe_cambiar_clave or not opciones:
+        return _pagina_clave_panel(request, "")      # ya la cambió, o se dio de baja
+    if not auth.verificar_clave(clave_actual, cuenta.clave_hash):
+        _login_fallo(request)
+        return _pagina_clave_panel(request, token, "La clave transitoria no es correcta.", 400)
+    db.fijar_clave_panel(cuil, auth.hashear_clave(clave), debe_cambiar=False)
+    _login_ok(request)
+    return _seguir_al_panel(cuil, opciones)
+
+
+@app.post("/admin/cuenta/clave")
+def admin_cuenta_clave(request: Request, clave_actual: str = Form(""), clave: str = Form(""),
+                       clave2: str = Form("")):
+    """«Cambiar mi clave» en Tu cuenta: la propia persona, con la sesión
+    abierta, de cualquier rol (no es una sección del panel). Pide la clave
+    actual: una sesión olvidada abierta no alcanza para quedarse con la
+    cuenta. La clave es de la persona (CuentaPanel), así que el cambio vale
+    para todos los sindicatos en los que trabaja. Responde JSON para el
+    formulario de la portada."""
+    exigir_sindicato(request)
+    if _login_bloqueado(request):
+        return JSONResponse({"error": "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar."},
+                            status_code=429)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, _uid_sesion(request))
+        cuil = u.cuil if u else ""
+    cuenta = db.cuenta_panel(cuil) if cuil else None
+    if not cuenta:
+        return JSONResponse({"error": "Tu cuenta no tiene una clave propia para cambiar."}, status_code=400)
+    if not auth.verificar_clave(clave_actual, cuenta.clave_hash):
+        _login_fallo(request)
+        return JSONResponse({"error": "La clave actual no es correcta."}, status_code=400)
+    if clave != clave2:
+        return JSONResponse({"error": "Las dos claves nuevas no coinciden."}, status_code=400)
+    if len(clave) < CLAVE_MINIMA_PANEL:
+        return JSONResponse({"error": f"La clave nueva tiene que tener al menos {CLAVE_MINIMA_PANEL} caracteres."},
+                            status_code=400)
+    if clave == clave_actual:
+        return JSONResponse({"error": "La clave nueva tiene que ser distinta de la actual."}, status_code=400)
+    db.fijar_clave_panel(cuil, auth.hashear_clave(clave), debe_cambiar=False)
+    _login_ok(request)
+    log.info("panel: cambio de clave propia, usuario %s", _uid_sesion(request))
+    return {"ok": True}
 
 
 def _abrir_sesion_panel(usuario_id: int):
@@ -2599,7 +2711,8 @@ def _clave_temporal_nueva() -> str:
     return "".join(secrets.choice(_ALFABETO_CLAVE_TEMPORAL) for _ in range(8))
 
 
-def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str, clave: str):
+def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str, clave: str,
+                           operador: bool = False):
     """La clave temporal se muestra UNA vez, en la respuesta del propio POST:
     no viaja en una URL (nada de redirect con la clave), no se guarda en
     claro en ningún lado y la página no se cachea. Recargar re-envía el POST
@@ -2612,6 +2725,7 @@ def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str
     return templates.TemplateResponse(
         "clave_temporal.html",
         {"request": request, "quien": quien, "ident": ident, "clave": clave, "volver": volver,
+         "operador": operador,
          "sindicato": marca.get("nombre", ""), "marca": marca,
          "marca_plataforma": db.marca_plataforma()},
         headers={"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"})
@@ -2686,9 +2800,10 @@ def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
 # sindicato (POST /plataforma/usuario, GET /plataforma/admins/{id}) -- un
 # sindicato no tenía forma de listar ni sumar administradores propios sin
 # pedírselo a plataforma. Alcance elegido a propósito (ver CLAUDE.md): alta
-# con clave inicial, editar nombre, activar/desactivar -- cambiarle la
-# clave a un admin YA EXISTENTE sigue siendo solo vía plataforma (mismo
-# criterio que el resto de la app: no ampliar ese flujo transitorio).
+# con clave inicial, editar nombre, activar/desactivar. Desde 2026-11-06
+# también restablecer la clave de un usuario del propio sindicato
+# (`/admin/usuario/restablecer-clave`, transitoria y de un solo uso); la de
+# quien trabaja en más de un sindicato sigue siendo solo de plataforma.
 
 def _volver_a_au(sub: str, err: str = "", ok: str = "") -> RedirectResponse:
     """Vuelve a "Áreas y Usuarios", a la SUB-PESTAÑA de la que se salió.
@@ -2803,6 +2918,46 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
         db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
                                 _secciones_que_puede_dar(request, bloquear), sid)
     return _volver_a_au("usuarios", ok="usuariocuenta" if ya_tiene_clave else "usuario")
+
+
+@app.post("/admin/usuario/restablecer-clave")
+def admin_usuario_restablecer_clave(request: Request, id: int = Form(...)):
+    """El Super Admin le pone una clave TRANSITORIA nueva a un usuario de SU
+    sindicato (2026-11-06): se genera al azar, se muestra una sola vez en la
+    respuesta de este POST y el próximo ingreso obliga a elegir una propia
+    (`CuentaPanel.debe_cambiar_clave`). Es la salida para quien olvidó su
+    clave sin pasar por plataforma.
+
+    Reglas, todas por aislamiento:
+    - Solo el administrador general: un admin de seccional no resetea a nadie
+      (podría quedarse con la cuenta de alguien de arriba).
+    - Solo si la persona tiene un usuario ACTIVO en este sindicato (el id
+      viaja en el form: uno de otro sindicato se trata como inexistente).
+    - Nunca a sí mismo: para eso está «Cambiar mi clave» en Tu cuenta, que
+      pide la actual.
+    - Nunca a quien también trabaja en otro sindicato: la clave es UNA por
+      persona (CuentaPanel), y quien la fijara entraría al panel del otro
+      gremio con ella. Ese caso lo resuelve plataforma.
+    - Quien todavía no tiene clave no pasa por acá: el alta ya se la pide."""
+    sid = exigir_sindicato(request)
+    _exigir_super_admin(request)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, id)
+        if not u or u.sindicato_id != sid or not u.activo or not u.cuil:
+            return _volver_a_au("usuarios")   # no existe: ni error ni "guardado"
+        cuil, nombre, uid = u.cuil, u.nombre, u.id
+    if uid == _uid_sesion(request):
+        return _volver_a_au("usuarios", err="clavepropia")
+    if db.trabaja_en_otro_sindicato(cuil, sid):
+        return _volver_a_au("usuarios", err="clavecompartida")
+    if not (c := db.cuenta_panel(cuil)) or not c.clave_hash:
+        return _volver_a_au("usuarios", err="sinclave")
+    clave = _clave_temporal_nueva()
+    db.fijar_clave_panel(cuil, auth.hashear_clave(clave), debe_cambiar=True)
+    log.info("panel: restablecer-clave del usuario %s por usuario %s del sindicato %s",
+             uid, _uid_sesion(request), sid)
+    return _pagina_clave_temporal(request, nombre or cuil, cuil,
+                                  "/admin?sub=usuarios#administradores", clave, operador=True)
 
 
 @app.get("/admin/usuario/padron")
@@ -7913,7 +8068,9 @@ def plataforma_reset_clave(
             # sindicatos en los que trabaja.
             u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.cuil == ident)).first()
             if u:
-                db.fijar_clave_panel(ident, hasheada, debe_cambiar=False)
+                # La escribió plataforma, no la persona: es transitoria y el
+                # próximo ingreso al panel obliga a elegir una propia.
+                db.fijar_clave_panel(ident, hasheada, debe_cambiar=True)
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
         elif tipo == "trabajador":
             # Desde que la fila de la persona nace con el alta del padrón, un

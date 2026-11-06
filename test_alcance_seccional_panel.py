@@ -45,9 +45,9 @@ with db.get_session() as s:
     s.add(ros); s.add(cba); s.commit(); s.refresh(ros); s.refresh(cba)
     SEC_ROS, SEC_CBA = ros.id, cba.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=GENERAL, cuil=GENERAL, nombre="General",
-                           clave_hash=auth.hashear_clave("gen"), es_super_admin=True))
+                           clave_hash=auth.hashear_clave("gen"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local Rosario",
-                           clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("loc"), debe_cambiar_clave=False, es_admin_seccional=True,
                            seccional_id=SEC_ROS))
     area_ros = Area(sindicato_id=SID, nombre="Mesa Rosario", seccional_id=SEC_ROS)
     area_cba = Area(sindicato_id=SID, nombre="Mesa Córdoba", seccional_id=SEC_CBA)
@@ -106,6 +106,8 @@ def _beneficio(rubro):
 ALCANCE_POR_PREFIJO = [
     ("/admin/login", "entrada"), ("/admin/salir", "entrada"), ("/admin/elegir", "entrada"),
     ("/admin/cambiar-sindicato", "entrada"), ("/admin/inicio", "entrada"),
+    # La clave propia (primer ingreso y «Cambiar mi clave»): es de la persona.
+    ("/admin/cambiar-clave", "entrada"), ("/admin/cuenta/clave", "entrada"),
     ("/admin/dashboard-v2", "entrada"), ("/admin/dashboard/", "seccional"),
     ("/admin/dashboard", "entrada"),
     # Catálogo del sindicato entero: no tiene seccional (bloque 5: solo
@@ -408,7 +410,7 @@ def test_5_el_general_de_una_seccional_que_ve_todas_no_esta_acotado():
         central = Seccional(sindicato_id=SID, nombre="Sede Central", ve_todas=True)
         s.add(central); s.commit(); s.refresh(central)
         s.add(UsuarioSindicato(sindicato_id=SID, usuario="27777777772", cuil="27777777772",
-                               nombre="Admin Central", clave_hash=auth.hashear_clave("cen"),
+                               nombre="Admin Central", clave_hash=auth.hashear_clave("cen"), debe_cambiar_clave=False,
                                es_admin_seccional=True, seccional_id=central.id))
         s.commit()
     uid = _uid("27777777772")
@@ -496,7 +498,7 @@ LOCAL_CBA = "23010101018"
 
 with db.get_session() as s:
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL_CBA, cuil=LOCAL_CBA, nombre="Local Córdoba",
-                           clave_hash=auth.hashear_clave("cba"), es_admin_seccional=True,
+                           clave_hash=auth.hashear_clave("cba"), debe_cambiar_clave=False, es_admin_seccional=True,
                            seccional_id=SEC_CBA))
     s.commit()
 

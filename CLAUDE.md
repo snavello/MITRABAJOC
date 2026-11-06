@@ -315,7 +315,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Los cuatro roles
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
-   sindicatos (con marca y logo) y sus admins. Login → `/plataforma/inicio`
+   sindicatos (con marca y logo) y **al primer administrador de cada uno**. Login → `/plataforma/inicio`
    (portada de tarjetas) → `/plataforma` (panel de siempre).
 2. Usuario de sindicato — /admin con CUIT + clave (una sola clave aunque
    trabaje en varios sindicatos: elige a cuál después del login). Gestiona conceptos, fórmulas,
@@ -329,6 +329,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    Super Admin (= Admin de Sede Central, el de siempre, ve las 14),
    Admin de Seccional (lo mismo pero solo sobre SU seccional) y usuario de
    área (solo las secciones que le dé su área, y solo sobre su alcance).
+   **Quién da de alta a quién y cómo nace la clave**: ver "Alta de
+   administradores y clave inicial" (abajo de los cuatro roles).
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
    la app se pinta con la marca del elegido. Login/elección → `/app/inicio`
@@ -340,6 +342,50 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    (portada) → `/empresa` (2 pestañas: Notificaciones, Trámites). Solo existe
    si el sindicato tiene el módulo `"empleadores"` habilitado — ver
    "Empleadores" en HISTORIAL.md.
+
+## Alta de administradores y clave inicial
+Una sola regla, sin excepciones (2026-11-06, pedido de SDN: «dónde se dan de
+alta los administradores y cómo ingresa la clave»):
+
+| Quién entra | Quién lo da de alta | Dónde | Qué escribe quien da el alta |
+|---|---|---|---|
+| **Primer administrador (Super Admin) de un sindicato** | el admin de **plataforma** | `/plataforma` → «Crear un administrador de sindicato» (`POST /plataforma/usuario`) | CUIL, nombre y una **clave inicial** |
+| **Cualquier otro usuario del sindicato** (otro Super Admin, Admin de Seccional, usuario de área) | el **Super Admin del sindicato** (un Admin de Seccional da de alta usuarios de SU seccional, nunca Super Admins) | `/admin` → «Áreas y Usuarios» → Usuarios (`POST /admin/usuario`) | CUIL, nombre, rol y una **clave inicial** (no se pide si la persona ya tiene clave del panel por otro sindicato: entra con la de siempre) |
+| **Usuario de plataforma** (otro rol, otra tabla) | un superadmin de plataforma | `/plataforma/usuarios` | usuario y **clave transitoria** (vence a los 7 días) |
+
+- **La clave inicial es transitoria**: la escribe quien da el alta, y **se la
+  pasa a la persona por fuera de la app** (en mano o por un canal de
+  confianza; la app no manda mails con claves). Nunca es la clave definitiva.
+- **Primer ingreso al panel** (`POST /admin/login`): con la clave transitoria
+  la clave es correcta pero **no se abre la sesión**. La app lleva a «Elegí tu
+  clave» (`/admin/cambiar-clave`, token firmado de 10 minutos): clave
+  transitoria + clave nueva (mínimo 8 caracteres, distinta de la transitoria)
+  + repetirla. Recién ahí se abre la sesión (o el selector de sindicato, si
+  trabaja en varios). Si el token vence, vuelve a ingresar con la transitoria.
+- **Dónde vive la bandera**: `CuentaPanel.debe_cambiar_clave` (la clave es una
+  por persona, su estado también). `UsuarioSindicato.debe_cambiar_clave` se
+  deja como estaba: es solo la puerta de entrada de un alta
+  (`_mover_clave_a_la_cuenta` la copia a la cuenta y la fila no la vuelve a
+  leer). Sin migración: la columna de la cuenta ya existía desde 2026-10-17.
+- **Después del primer ingreso**:
+  - **Cambiar la propia clave**: «Tu cuenta» (portada del panel) → «Cambiar
+    mi clave» (`POST /admin/cuenta/clave`): clave actual + nueva + repetir.
+    Lo puede hacer cualquier operador, sea cual sea su rol.
+  - **Olvidó la clave**: el **Super Admin de su sindicato** usa «Restablecer
+    clave» en la fila del usuario (`POST /admin/usuario/restablecer-clave`):
+    genera una clave transitoria al azar, la muestra **una sola vez** y el
+    próximo ingreso vuelve a pasar por «Elegí tu clave». Reglas de
+    aislamiento: solo el Super Admin (nunca un Admin de Seccional), solo a un
+    usuario activo de SU sindicato, nunca a sí mismo (para eso está «Cambiar
+    mi clave»), y **nunca a quien también trabaja en otro sindicato**, porque
+    la clave es una sola y abre el otro panel: ese caso lo resuelve plataforma.
+  - **Plataforma** puede resetear la clave de cualquier operador
+    (`POST /plataforma/reset-clave`, tipo sindicato): lo que escribe también
+    es transitorio y obliga a elegir una propia. Es la salida para el único
+    Super Admin que perdió su clave y para quien trabaja en varios sindicatos.
+- **Qué NO hay** (decisión abierta, a confirmar por SDN): la clave transitoria
+  del panel **no vence** (la de plataforma sí, 7 días) y la que escribe quien da
+  el alta no tiene largo mínimo (la que elige la persona sí: 8).
 
 ## Variables de entorno (Render)
 - DATABASE_URL — Internal Database URL del Postgres de Render. Si está, usa Postgres.
@@ -1320,8 +1366,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `/plataforma` la lista general "Usuarios de los paneles". Migración
     `b8d2f6a4c1e9`: si una persona tenía claves distintas, queda la de su fila
     activa más vieja. Ver la decisión en "Decisiones tomadas".
-    **Queda**: que el panel obligue a cambiar la clave inicial en el primer
-    ingreso y que la persona pueda cambiar la suya (hoy solo plataforma).
+    **Cerrado el 2026-11-06** (Admin 0.79.01, Plataforma 0.65.11): el panel
+    obliga a cambiar la clave inicial en el primer ingreso, la persona cambia
+    la suya desde «Tu cuenta» y el Super Admin del sindicato restablece la de
+    su gente — ver "Alta de administradores y clave inicial".
 
 37. **El alta de usuario consulta el padrón y el padrón ofrece dar usuario**
     (2026-10-17, Admin 0.57.01): al salir del campo CUIL en Áreas y Usuarios,
@@ -1541,6 +1589,23 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     y las elige con el selector de siempre. `FotoTema.sindicato_id`
     (migración `a9c2e4f6b8d1`). La pestaña Fotos de `/plataforma` queda como
     biblioteca global opcional. Ver la decisión en «Decisiones tomadas».
+
+45. **Alta de administradores y clave inicial** (2026-11-06, Admin 0.79.01,
+    Plataforma 0.65.11; pedido de SDN: «dónde se dan de alta los
+    administradores y cómo ingresa la clave»): documentado en "Alta de
+    administradores y clave inicial" (quién da de alta a quién, la clave
+    inicial transitoria que se pasa por fuera de la app) y construido lo que
+    faltaba: el login del panel no abre la sesión con una clave transitoria y
+    lleva a «Elegí tu clave» (`/admin/cambiar-clave`), «Cambiar mi clave» en
+    Tu cuenta (`/admin/cuenta/clave`) y «Restablecer clave» del Super Admin
+    sobre su gente (`/admin/usuario/restablecer-clave`). La columna
+    `CuentaPanel.debe_cambiar_clave` ya existía; la migración de datos
+    `b2d4f6a8c0e2` la pone en False en TODAS las cuentas existentes al
+    desplegar (estaba en True desde cada alta y nadie la leía: sin eso, toda
+    cuenta de Pruebas y Demo hubiera tenido que elegir clave sin aviso). La
+    obligación corre solo para las altas y los reseteos nuevos. Tests:
+    `test_admin_clave_inicial.py`. HISTORIAL.md, «Alta de administradores y
+    clave inicial».
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -2702,8 +2767,9 @@ seccional y área). Scopeada siempre al `sindicato_id`, y para un Admin de
 Seccional además a SU seccional. Solo la ven los dos roles de administrador
 — es la única sección que NO se puede asignar a un área
 (`permisos.SECCION_SUPER_ADMIN`, a propósito fuera de `SECCIONES`).
-Cambiar la clave de un usuario YA EXISTENTE sigue siendo solo vía
-plataforma. No se puede desactivar al último administrador activo —
+La clave inicial es transitoria y el Super Admin puede **restablecer** la de
+un usuario de su sindicato desde la fila («Restablecer clave») — ver "Alta
+de administradores y clave inicial". No se puede desactivar al último administrador activo —
 detalle en HISTORIAL.md.
 
 ## Alerta de posible adulteración en recibos
