@@ -1649,13 +1649,16 @@ function panelPaso(kicker, titulo, sub, estados, cuerpo, acciones) {
   </div>`;
 }
 
-function panelError(estados, mensaje) {
+function panelError(estados, mensaje, reintentar) {
   // "Algo salió mal" no sirve para todos los casos que caen acá: el más
   // común de los del paso 2 es el recibo que no es tuyo (E-RECIBO-04), donde
   // no salió nada mal -- lo frenamos a propósito. El motivo lo dice el
   // mensaje, que viene con su código.
   return panelPaso('Verificación detenida', 'No pudimos seguir', '', estados,
     `<div class="banner mal" style="margin:0;border-radius:0;">${mensaje}</div>`,
+    // Con un error transitorio (el servidor no contestó) se puede reintentar el
+    // mismo paso sin perder lo que ya se leyó; el reload empieza de cero.
+    (reintentar ? `<button class="rc-btn" onclick="${reintentar}">Reintentar</button>` : '') +
     `<button class="rc-btn sec" onclick="location.reload()">Volver a intentar</button>`);
 }
 
@@ -1750,15 +1753,14 @@ $('leer').onclick = async () => {
     'No cierres la app: suele tardar menos de un minuto.', [2, 3, 0]);
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
-    const r = await fetch('/api/leer', { method:'POST', body:fd });
-    if (!r.ok) { const e = await r.json(); throw new Error(textoError(e)); }
-    datosLeidos = await r.json();
+    datosLeidos = await pedirJson('/api/leer', { method:'POST', body:fd });
     $('resultado').innerHTML = '';
     renderPreview(datosLeidos);
     ver('preview');
     if (!semArcaCargado) semApagado(); // señal temprana de último depósito, si aplica
   } catch (err) {
-    $('resultado').innerHTML = panelError([2, 1, 0], err.message);
+    $('resultado').innerHTML = panelError([2, 1, 0], mensajeDeError(err),
+      err && err.transitorio ? "$('leer').onclick()" : '');
   }
 };
 
@@ -1909,8 +1911,69 @@ function setRemun(idx, valor, btn) {
 // apunta al traceback exacto en el log del servidor.
 function textoError(e) {
   const codigo = e && e.codigo ? e.codigo + (e.ref ? ' · ref ' + e.ref : '') : '';
-  const mensaje = (e && e.detail) || 'No se pudo completar la operación.';
+  // `detail` es texto cuando el error es nuestro; FastAPI lo manda como lista
+  // en un 422: ahí se usa el genérico en vez de pintar "[object Object]".
+  const mensaje = (e && typeof e.detail === 'string' && e.detail) || 'No se pudo completar la operación.';
   return codigo ? `${mensaje}<span class="cod-error">Código ${codigo}</span>` : mensaje;
+}
+
+// Qué ve la persona cuando la respuesta NO es un JSON de la app: un 502/503/504
+// de Render (la instancia se reinicia, se está desplegando o no contestó) trae
+// HTML o texto, y antes `await r.json()` reventaba con "Unexpected token '<'"
+// y el flujo del script se cortaba (SDN, Pruebas, 2026-11-05). El código de
+// estado va debajo, discreto, para que quien lo reporte diga exactamente qué vio.
+function textoErrorHttp(status, sinJson) {
+  const cod = status ? `<span class="cod-error">Código HTTP ${status}</span>` : '';
+  if (!status) {
+    return 'No pudimos comunicarnos con el servidor. Revisá tu conexión y probá de nuevo en un minuto.' + cod;
+  }
+  if (status >= 500 || sinJson) {
+    return 'El servidor no respondió. Probá de nuevo en un minuto.' + cod;
+  }
+  return 'No se pudo completar la operación. Probá de nuevo en un minuto.' + cod;
+}
+
+// Un error ya explicado, con el HTML listo para el banner. `transitorio` = vale
+// la pena reintentar sin volver a empezar (red caída, 5xx sin JSON, 502/503/504).
+function errorServidor(html, transitorio) {
+  const e = new Error(html);
+  e.esServidor = true;
+  e.transitorio = !!transitorio;
+  return e;
+}
+
+// fetch + JSON, sin sorpresas. Devuelve el cuerpo ya parseado o lanza un
+// error de servidor explicado: de red (fetch rechazado), de la app (JSON con
+// codigo/detail, como siempre) o de infraestructura (cualquier respuesta que no
+// sea JSON, aun siendo 200). Nunca deja pasar un error crudo del navegador.
+async function pedirJson(url, opciones) {
+  let r;
+  try {
+    r = await fetch(url, opciones);
+  } catch (_) {
+    throw errorServidor(textoErrorHttp(0), true);
+  }
+  let cuerpo = null, hayJson = true;
+  try { cuerpo = await r.json(); } catch (_) { hayJson = false; }
+  if (!r.ok) {
+    // Un JSON de la app (E-...) se muestra como siempre; el 503 del pool
+    // también es JSON y ya dice "servidor ocupado". Todo lo demás, genérico.
+    if (hayJson && cuerpo && typeof cuerpo.detail === 'string') {
+      throw errorServidor(textoError(cuerpo), r.status >= 502 && r.status <= 504);
+    }
+    throw errorServidor(textoErrorHttp(r.status), r.status >= 500);
+  }
+  if (!hayJson) throw errorServidor(textoErrorHttp(r.status, true), true);
+  return cuerpo;
+}
+
+// El texto del catch de un paso. Un error de servidor ya viene explicado;
+// cualquier otra excepción es un defecto de esta pantalla (no del servidor):
+// queda en la consola y la persona ve un mensaje de la app, no el del navegador.
+function mensajeDeError(err) {
+  if (err && err.esServidor) return err.message;
+  console.error(err);
+  return 'Algo no salió como esperábamos al mostrar tu recibo. Probá de nuevo.';
 }
 
 // Paso 2 → 3: confirmar y validar
@@ -1919,14 +1982,14 @@ $('continuar').onclick = async () => {
   $('resultado').innerHTML = cargandoIA('Paso 3 de 3 · en curso', 'Verificando los aportes',
     'Un momento: estamos haciendo las cuentas.', [2, 2, 3]);
   try {
-    const r = await fetch('/api/validar', {
+    const d = await pedirJson('/api/validar', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(datosLeidos)
     });
-    if (!r.ok) { const e = await r.json(); throw new Error(textoError(e)); }
-    renderResultado(await r.json());
+    renderResultado(d);
   } catch (err) {
-    $('resultado').innerHTML = panelError([2, 2, 1], err.message);
+    $('resultado').innerHTML = panelError([2, 2, 1], mensajeDeError(err),
+      err && err.transitorio ? "$('continuar').onclick()" : '');
   }
 };
 
@@ -2006,11 +2069,10 @@ async function reportar(d) {
   const btn = $('rep');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
   try {
-    const r = await fetch('/api/reportar', {
+    await pedirJson('/api/reportar', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ recibo: datosLeidos.recibo, resultado: d })
     });
-    if (!r.ok) throw new Error();
     // Reemplaza el botón EN EL LUGAR por un check animado: antes se agregaba
     // un cartel más abajo (pasaba desapercibido) y el botón quedaba trabado
     // en "Enviando…" porque `innerHTML +=` reconstruye todo el contenedor y
@@ -2027,7 +2089,7 @@ async function reportar(d) {
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = 'Reportar al sindicato'; }
     $('resultado').insertAdjacentHTML('beforeend',
-      `<div class="banner mal" style="margin-top:12px;">No se pudo enviar el reporte. Probá de nuevo.</div>`);
+      `<div class="banner mal" style="margin-top:12px;">${err && err.esServidor ? err.message : 'No se pudo enviar el reporte. Probá de nuevo.'}</div>`);
   }
 }
 
@@ -2035,15 +2097,20 @@ async function enviarASindicato(d, boton) {
   boton.disabled = true;
   boton.textContent = 'Enviando…';
   try {
-    const r = await fetch('/api/enviar-sindicato', {
+    await pedirJson('/api/enviar-sindicato', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ recibo: datosLeidos.recibo, resultado: d })
     });
-    if (!r.ok) throw new Error();
     boton.textContent = '✓ Enviado a tu sindicato';
   } catch (err) {
     boton.disabled = false;
     boton.textContent = 'No se pudo enviar, probá de nuevo';
+    // Un botón no alcanza para decir "el servidor no respondió" con su código:
+    // el aviso va debajo, igual que el de Reportar.
+    if (err && err.esServidor) {
+      boton.insertAdjacentHTML('afterend',
+        `<div class="banner mal" style="margin-top:12px;">${err.message}</div>`);
+    }
   }
 }
 
@@ -2055,11 +2122,9 @@ $('ver-historial').onclick = async () => {
   $('resultado').innerHTML = '';
   $('historial-contenido').innerHTML = `<div class="cargando" style="padding:30px 0;"><div class="spin"></div></div>`;
   try {
-    const r = await fetch('/api/mis-recibos');
-    if (!r.ok) throw new Error();
-    renderHistorial(await r.json());
+    renderHistorial(await pedirJson('/api/mis-recibos'));
   } catch (err) {
-    $('historial-contenido').innerHTML = `<div class="banner mal">No pudimos cargar tu historial.</div>`;
+    $('historial-contenido').innerHTML = `<div class="banner mal">${err && err.esServidor ? err.message : 'No pudimos cargar tu historial.'}</div>`;
   }
 };
 
@@ -2171,11 +2236,9 @@ async function semSubir(e) {
     <div style="font-weight:500; margin-top:16px;">Leyendo tu comprobante…</div></div>`;
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
-    const r = await fetch('/api/aportes', { method:'POST', body:fd });
-    if (!r.ok) { const err = await r.json(); throw new Error(textoError(err)); }
-    semRender(await r.json());
+    semRender(await pedirJson('/api/aportes', { method:'POST', body:fd }));
   } catch (err) {
-    semCuerpo.innerHTML = `<div style="padding:16px;"><div class="banner mal">${err.message}</div>
+    semCuerpo.innerHTML = `<div style="padding:16px;"><div class="banner mal">${mensajeDeError(err)}</div>
       <button class="btn sec" onclick="semApagado()" style="margin-top:10px;">Volver a intentar</button></div>`;
   }
 }

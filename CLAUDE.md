@@ -563,6 +563,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   perdió «Tu día» en La Bancaria (2026-10-24). Cualquier feature grande nueva evalúa
   primero si necesita su propia entrada acá (opt-in, no en
   `MODULOS_INICIALES`) en vez de estar siempre encendida para todos.
+- **Toda respuesta del servidor que la pantalla del afiliado lee pasa por
+  `pedirJson()`** (2026-11-06, `templates/trabajador.html`): un 502/503/504 de
+  Render trae HTML, y `await r.json()` a pelo mostraba «Unexpected token '<'».
+  `pedirJson` convierte red caída, cuerpo que no es JSON o 5xx sin cuerpo de la app
+  en «El servidor no respondió» con el código HTTP, y deja pasar los errores E-...
+  de siempre. Un fetch nuevo del flujo del recibo lo usa (`test_recibo_afip_2011.py`
+  lo verifica). Un 502 no es una excepción de la app: se confirma con el log de
+  Render antes de buscarle causa al código.
+
 - **Postgres y nada más, en todos lados** (2026-09-11). Desarrollo local
   con el `docker-compose.yml` de la raíz desde 2026-08-16, y desde el
   11-09 también **la suite**: `conftest.py` crea una base Postgres
