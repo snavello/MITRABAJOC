@@ -927,9 +927,23 @@ def _conocidos_trabajador(cuil: str):
     return preparacion.E.Conocidos(cuil=cuil, nombre=nombre, cuits=db.cuits_conocidos(cuil=cuil))
 
 
+def _exigir_imagen_manejable(contenido: bytes, content_type: str) -> None:
+    """Rechaza con 400 (E-IMAGEN-01) una imagen con más píxeles de los que el
+    servidor puede abrir, mirando solo la cabecera: no se decodifica nada. Va
+    ANTES de cualquier otro trabajo con el archivo, en el modo que sea (con el
+    enmascarado apagado la imagen no se abre acá, pero la IA y el diagnóstico sí
+    la miran). El OOM de Pruebas del 2026-11-06 fue una foto de celular; una
+    imagen absurda no puede tumbar la instancia entera."""
+    try:
+        lectores.exigir_tamano_razonable(contenido, content_type or "")
+    except lectores.ImagenDemasiadoGrande as e:
+        raise ErrorApp("E-IMAGEN-01", f"(Mide {str(e).removeprefix('mide ')}.)")
+
+
 async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid, tipo: str):
     """Tapa lo que identifica (si el modo lo pide) y deja el registro. En un
     hilo aparte, como la llamada a la IA: el OCR usa CPU."""
+    _exigir_imagen_manejable(contenido, content_type)
     if preparacion.modo() == "apagado":
         return preparacion.Preparado("apagado")
     try:
@@ -938,6 +952,9 @@ async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid,
         prep = preparacion.Preparado("apagado")
     rid = db.registrar_enmascarado(sid or None, tipo, prep.registro)
     await _guardar_diagnostico(rid, prep, contenido, content_type)
+    # La página (PIL, ~9 MB) solo la usa el diagnóstico: se suelta ya, y no se
+    # queda viva durante la llamada a la IA, que dura segundos.
+    prep.pagina = None
     return prep
 
 

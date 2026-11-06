@@ -38,6 +38,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import imagenes
+
 # Un hilo por lectura: el OCR no le saca el procesador al resto de los
 # pedidos. Tiene que estar ANTES de cargar Tesseract (lo lee OpenMP al iniciar).
 os.environ.setdefault("OMP_THREAD_LIMIT", "1")
@@ -57,10 +59,38 @@ except Exception:
 # 150 dpi, lo mismo que usa hoy extractor._imagen_desde_pdf.
 DPI = 150
 ESCALA = DPI / 72
-# Una foto de teléfono (4000 px) se lee achicada: el tiempo de Tesseract
-# crece con los píxeles y a este tamaño la letra de un recibo se lee bien.
-# Las cajas se devuelven en píxeles de la imagen ORIGINAL.
-LADO_MAXIMO_OCR = 2000
+# Una foto de teléfono (4000 px) se achica UNA vez, al abrirla (`abrir_imagen`),
+# a este lado: el tiempo de Tesseract crece con los píxeles y a este tamaño la
+# letra de un recibo se lee bien, la IA no necesita más (achica sola lo que pasa
+# de ~1.568 px) y el tapado y lo que viaja usan esa MISMA imagen, así que las
+# cajas del OCR caen exactamente sobre lo que se tapa. Una página de PDF más
+# grande que esto también se renderiza achicada (`_escala_de`).
+LADO_MAXIMO_OCR = imagenes.LADO_MAXIMO_LECTURA
+
+
+class ImagenDemasiadoGrande(ValueError):
+    """La imagen mide más píxeles de los que se pueden abrir sin poner en
+    riesgo el servidor. `mensaje` es para mostrar; se mira en la cabecera,
+    ANTES de decodificar."""
+
+
+def exigir_tamano_razonable(contenido: bytes, content_type: str = "") -> None:
+    """Levanta ImagenDemasiadoGrande si la imagen pasa del tope de píxeles de
+    entrada. Lee solo la cabecera (Pillow no decodifica hasta pedírselo): una
+    imagen absurda se rechaza en milisegundos y sin memoria. Un archivo que no
+    es una imagen (PDF, basura) no es asunto de acá: lo resuelve quien lo abre."""
+    if not (content_type or "image/").startswith("image/"):
+        return
+    from PIL import Image
+    try:
+        with Image.open(io.BytesIO(contenido)) as img:
+            ancho, alto, formato = img.width, img.height, img.format
+    except Exception:
+        return
+    tope = (imagenes.PIXELES_MAXIMOS_LECTURA_JPEG if formato == "JPEG"
+            else imagenes.PIXELES_MAXIMOS_LECTURA)
+    if ancho * alto > tope:
+        raise ImagenDemasiadoGrande(f"mide {ancho}x{alto} px")
 TESSDATA = Path(__file__).resolve().parent / "data" / "tessdata"
 
 
@@ -92,11 +122,22 @@ LECTURA_MINIMA_MS = 1000
 _candado_pdf = threading.RLock()
 
 
-def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]]:
+def _escala_de(pagina, escala: float | None) -> float:
+    """La escala con la que se dibuja una página: 150 dpi, salvo que la página
+    sea tan grande que pase de `LADO_MAXIMO_OCR` px de lado (un plano A3 a 150
+    dpi son 2.480 px). `palabras_pdf` y `_render` la calculan igual, así las
+    cajas siguen cayendo sobre la imagen. Con `escala` explícita se respeta."""
+    if escala is not None:
+        return escala
+    ancho, alto = pagina.get_size()
+    return min(ESCALA, LADO_MAXIMO_OCR / max(ancho, alto, 1.0))
+
+
+def palabras_pdf(contenido: bytes, escala: float | None = None) -> list[list[Palabra]]:
     """Una lista de palabras por página, en píxeles de la imagen que sale de
-    renderizar esa página a `escala` (origen arriba a la izquierda). Una
-    página sin texto (un escaneo metido en un PDF) devuelve lista vacía: la
-    tiene que leer el OCR."""
+    renderizar esa página (150 dpi con tope de lado, ver `_escala_de`; origen
+    arriba a la izquierda). Una página sin texto (un escaneo metido en un PDF)
+    devuelve lista vacía: la tiene que leer el OCR."""
     import pypdfium2 as pdfium
 
     with _candado_pdf:
@@ -106,7 +147,7 @@ def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]
             for i in range(len(pdf)):
                 pagina = pdf[i]
                 try:
-                    salida.append(_palabras_pagina(pagina, i, escala))
+                    salida.append(_palabras_pagina(pagina, i, _escala_de(pagina, escala)))
                 finally:
                     pagina.close()
             return salida
@@ -158,7 +199,7 @@ def _palabras_de_textos(tp, alto_pag: float, n: int, escala: float) -> list[Pala
     return palabras
 
 
-def imagenes_pdf(contenido: bytes, escala: float = ESCALA) -> list:
+def imagenes_pdf(contenido: bytes, escala: float | None = None) -> list:
     """Cada página como imagen PIL, a la misma escala que `palabras_pdf`."""
     import pypdfium2 as pdfium
 
@@ -170,7 +211,7 @@ def imagenes_pdf(contenido: bytes, escala: float = ESCALA) -> list:
             pdf.close()
 
 
-def imagen_pdf(contenido: bytes, pagina: int = 0, escala: float = ESCALA):
+def imagen_pdf(contenido: bytes, pagina: int = 0, escala: float | None = None):
     """Una sola página como imagen PIL (la IA hoy recibe solo la primera)."""
     import pypdfium2 as pdfium
 
@@ -188,7 +229,7 @@ def _render(pdf, n: int, escala: float):
     tomado y cierra el bitmap y la página antes de devolver."""
     pagina = pdf[n]
     try:
-        bitmap = pagina.render(scale=escala)
+        bitmap = pagina.render(scale=_escala_de(pagina, escala))
         try:
             return bitmap.to_pil().convert("RGB")
         finally:
@@ -198,12 +239,36 @@ def _render(pdf, n: int, escala: float):
 
 
 def abrir_imagen(contenido: bytes):
-    """La foto como imagen PIL, DERECHA: un teléfono guarda la rotación en
-    el EXIF, y al volver a codificar la imagen tapada ese dato se pierde --
-    la IA recibiría la foto acostada."""
+    """La foto como imagen PIL, DERECHA y ACHICADA a `LADO_MAXIMO_OCR` de lado
+    mayor: un teléfono guarda la rotación en el EXIF, y al volver a codificar la
+    imagen tapada ese dato se pierde -- la IA recibiría la foto acostada.
+
+    Es la ÚNICA decodificación de la foto en todo el camino de lectura, y está
+    hecha para gastar poca memoria: una foto de 12 MP son 36 MB por copia, y
+    abrirla entera, transponerla y convertirla dejaba tres copias vivas
+    (~110 MB) en un servicio de 512 MB que ya estaba en 356 (OOM de Pruebas,
+    2026-11-06). Un JPEG se decodifica YA reducido (`draft`: la librería salta
+    bloques al decodificar, sin pasar por el tamaño completo), y la rotación se
+    hace sobre la imagen chica y en el lugar. Levanta ImagenDemasiadoGrande si
+    la cabecera dice que pasa del tope de píxeles."""
     from PIL import Image, ImageOps
 
-    return ImageOps.exif_transpose(Image.open(io.BytesIO(contenido))).convert("RGB")
+    img = Image.open(io.BytesIO(contenido))
+    tope = (imagenes.PIXELES_MAXIMOS_LECTURA_JPEG if img.format == "JPEG"
+            else imagenes.PIXELES_MAXIMOS_LECTURA)
+    if img.width * img.height > tope:
+        raise ImagenDemasiadoGrande(f"mide {img.width}x{img.height} px")
+    if max(img.size) > LADO_MAXIMO_OCR:
+        if img.format == "JPEG":
+            # El tamaño EXACTO que se quiere (no el cuadrado de `thumbnail`, que
+            # pide el doble y por eso en una foto de 4000 px no reducía nada):
+            # libjpeg elige la escala 1/2, 1/4 o 1/8 más grande que lo cubra.
+            f = LADO_MAXIMO_OCR / max(img.size)
+            img.draft("RGB", (max(1, round(img.width * f)), max(1, round(img.height * f))))
+        if max(img.size) > LADO_MAXIMO_OCR:
+            img.thumbnail((LADO_MAXIMO_OCR, LADO_MAXIMO_OCR))
+    ImageOps.exif_transpose(img, in_place=True)
+    return img if img.mode == "RGB" else img.convert("RGB")
 
 
 # ======================= Foto (Tesseract) =======================

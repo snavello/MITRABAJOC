@@ -561,6 +561,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Quedan afuera a propósito los documentos para la IA, el contrato, el
   convenio, Recursos y `fotos_tema`. Una puerta nueva de imagen pasa por
   `imagenes.achicar` (lo exige `test_imagenes.py`).
+- **Una foto que lee la IA se decodifica UNA vez, ya reducida a 2.000 px** (2026-11-06,
+  OOM de Pruebas con una foto de celular: ~150 MiB de pico sobre un servicio de 512 MiB
+  que reposaba en 356). `lectores.abrir_imagen` (JPEG con `draft`, EXIF en el lugar) es la
+  única puerta; OCR, tapado y lo que viaja a la IA usan esa misma imagen
+  (`imagenes.LADO_MAXIMO_LECTURA`), y el tope de píxeles de entrada se mira en la cabecera
+  antes de decodificar (`E-IMAGEN-01`, 400; `main._exigir_imagen_manejable`). Una ruta
+  nueva que abra un documento para la IA pasa por `_preparar_para_ia`, y no abre los bytes
+  por su cuenta. `test_memoria_lectura.py` fija el pico (80 MiB con una foto de 12 MP).
+
 - **Logos sin fondo blanco forzado**: un PNG con fondo transparente se ve
   transparente de verdad; si un sindicato quiere fondo de color, lo sube ya
   incluido en el archivo. Excepción: el círculo de iniciales de fallback (sin

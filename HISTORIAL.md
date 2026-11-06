@@ -10239,7 +10239,7 @@ tienen estilo en laguna y noticiero, así que no hay CSS nuevo. El input
 `arca-file2` desaparece (un solo `arca-file`). Test nuevo en
 `test_semaforo_persistente.py`.
 
-## El 502 del recibo de AFIP 2011: no se reprodujo, y la pantalla ya no se rompe (2026-11-06, Trabajador 0.58.11)
+## El 502 del recibo de AFIP 2011: era memoria (OOM), no el código de validar (2026-11-06, Trabajador 0.58.11 y 0.59.02)
 
 **Qué pasó.** SDN subió desde la app del celular, en Pruebas, la foto de su recibo
 real de AFIP (septiembre 2011, el mismo de «CUIT OCULTO»). `POST /api/leer` anduvo
@@ -10268,17 +10268,20 @@ camino nada que mate un proceso: sin recursión, `NaN` e infinitos pasan por
 `telegram.avisar_error` no lanzan ni bloquean. Un error de Python en esa ruta
 habría sido un **500 con JSON y código** (E-RECIBO-03), no un 502.
 
-**Causa: no confirmada.** Un 502 de Render no es una excepción de la app: es el
-proxy que no encontró la instancia (reinicio, deploy, falta de memoria, timeout).
-La lección de «El 502 y el JSON cortado» vale otra vez: la hipótesis se confirma
-con el log antes de contarla como causa. Hipótesis a contrastar con el log de
-Render de esa noche: (1) un `Instance ... restarted` por el deploy de #218 (21:24)
-o por un cambio de variable o de plan, que cae justo entre `/api/leer` y
-`/api/validar`; (2) `Out of memory (used over 512MB)` en el web de 0.5c-512mb:
-`/api/leer` con una foto de celular corre el OCR y, en Pruebas, guarda además dos
-imágenes de diagnóstico; el proceso queda cerca del tope y `/api/validar`, que casi
-no pide memoria, cae sobre la instancia ya muerta (no se pudo medir acá: no hay
-Tesseract en la PC); (3) un timeout del proxy, descartable por el «inmediato».
+**Causa: confirmada después con el log y los eventos de Render, y no estaba en
+`/api/validar`.** Un 502 no es una excepción de la app; esta vez la hipótesis que
+había quedado anotada (falta de memoria en la lectura de la foto) fue la buena, y la
+de los deploys y reinicios por variables, la de la vez anterior, no. Los datos
+(Pruebas, 2026-11-06, UTC): a las 19:04:26 un `POST /api/leer` desde un Android (la
+foto del recibo de AFIP sacada con el celular) devolvió **502 a los 4.040 ms**; a las
+19:04:30 el evento `server_failed` dice `oomKilled` con `memoryLimit: 512Mi`; a las
+19:04:31 la instancia se reinició y recién a las 19:04:44 volvió a contestar (todo lo
+demás, hasta las 19:05:30, dio 502 en 1 a 7 ms: la app no estaba). **No hubo deploy ni
+cambio de variables** (el último fue horas antes). El 502 no fue en `/api/validar`
+como se contó al principio: ahí nunca se llegó en ese intento. La métrica de memoria
+mostraba la instancia **plana en 353-357 MiB** desde las 18:50 (205 MiB tras reiniciar,
+219 a los cinco minutos): el margen hasta los 512 MiB era de ~155 MiB y la lectura de
+una foto de celular lo pasó en cuatro segundos.
 
 **Lo que sí era un defecto, y se corrigió: la pantalla.** Los fetch del flujo del
 recibo hacían `if (!r.ok) { const e = await r.json(); ... }`. Un 502/503/504 de
@@ -10300,3 +10303,85 @@ empieza de cero). Probado en el navegador con respuestas simuladas (502 HTML, 50
 **Test.** `test_recibo_afip_2011.py`: el recibo de punta a punta, repetido, las
 variantes, un payload roto (JSON siempre) y una puerta estática que falla si un
 fetch del flujo vuelve a leer JSON a ciegas.
+
+### El pico de memoria de la lectura de una foto: de ~150 a ~40 MiB (Trabajador 0.59.02)
+
+**Qué pasaba.** Una foto de celular de 12 MP (4000x3000) son 36 MB por copia ya
+decodificada, y el camino de `/api/leer` hacía varias: `lectores.abrir_imagen`
+decodificaba, transponía por el EXIF y convertía a RGB (tres copias vivas, la última
+sin necesidad); `leer_foto` la achicaba a 2.000 px para el OCR; `enmascarado.tapar`
+hacía `convert("RGB").copy()` (dos copias de la imagen entera); `_codificar` la
+achicaba otra vez a 3.000 px; el diagnóstico de Pruebas
+(`ENMASCARADO_GUARDAR_IMAGENES`) decodificaba la enviada de nuevo; y la página
+quedaba en `prep.pagina` viva durante TODA la llamada a la IA, que dura segundos.
+Un PDF no estaba mejor: `pdf2image` dibujaba **todas** las páginas a 150 dpi y
+se quedaba con la primera.
+
+**Medido** (foto sintética de 12 MP con ruido, texto y EXIF 6; un Tesseract
+simulado que copia la imagen como `SetImage`; pico del working set sobre la línea de
+base de ~72 MiB, muestreado cada milisegundo en un proceso aparte):
+
+| etapa | antes | después |
+|---|---|---|
+| `preparar` (decodificar + EXIF + OCR + tapar + base64) | 151 MiB | 25 MiB |
+| diagnóstico (dos JPEG a 1.600 px) | 122 MiB (se sumaba a los 49 que seguían vivos) | 41 MiB |
+| payload a la API | 3 MiB | 3 MiB |
+| memoria que queda viva durante la llamada a la IA | 49 MiB | 3 MiB |
+| imagen que viaja (base64) | 2,3 MB (3.000 px) | 1,2 MB (2.000 px) |
+
+**Qué se hizo.** (1) **Se decodifica una sola vez y ya reducida**
+(`lectores.abrir_imagen`): la cabecera dice el tamaño, un JPEG se abre con `draft`
+(libjpeg lo decodifica a 1/2, 1/4 o 1/8 sin pasar por el tamaño completo: la foto
+de 12 MP se abre directamente en 2.000x1.500, 9 MB), la rotación del EXIF se hace en
+el lugar sobre la imagen chica y no se hace `convert` si ya es RGB. (2) **Un solo
+lado para todo**: `imagenes.LADO_MAXIMO_LECTURA = 2000`; OCR, tapado y lo que viaja
+usan la MISMA imagen, así que las cajas del OCR (factor 1, ya no escalan) caen sobre
+lo que se tapa. La IA achica sola lo que pasa de ~1.568 px, así que 2.000 no le
+quita lectura; y es el lado que el OCR ya usaba. (3) `tapar` hace una copia, no dos;
+`_codificar` y `_jpeg` no copian de más; el diagnóstico usa la página ya reducida
+en vez de abrir otra vez los bytes subidos; `_preparar_para_ia` suelta la página
+apenas termina el diagnóstico. (4) Una página de PDF se dibuja a 150 dpi con tope de
+lado (`lectores._escala_de`; un A4 sigue dando 1.240x1.754), y la ruta de
+`pdf2image` del extractor lee solo la primera página y con el mismo tope. (5) **Tope de
+entrada**, mirado en la cabecera antes de decodificar: más de 40 millones de píxeles
+para un JPEG (se abre reducido) o de 16 millones para cualquier otro formato (se
+decodifica entero) da **400 con `E-IMAGEN-01`** en `/api/leer` y `/api/aportes`
+(y en el aprendizaje y la calculadora, que pasan por `_preparar_para_ia`), con el
+enmascarado prendido o apagado, sin decodificar nada.
+
+**El test** (`test_memoria_lectura.py`) mide el pico con la foto de 12 MP en un
+proceso aparte y exige menos de **80 MiB**: con el cambio da ~42 y sin él ~151, así
+que cae con holgura si vuelve el camino de tres copias. Es la mitad del margen que
+tenía Pruebas (155 MiB) para lo que pasa por delante de Tesseract. También fija
+que la foto sale derecha (1.500x2.000 desde 4.000x3.000 con EXIF 6), que las cajas
+caen dentro de la imagen tapada, los 400 y la escala del PDF.
+
+**Lo que no se pudo medir.** Tesseract no está en la PC con Windows: el doble copia
+la imagen como `SetImage`, pero la memoria propia de Tesseract (la imagen de
+Leptonica y el reconocimiento LSTM de una página de 2.000 px) se estima en decenas de
+MiB y es la misma antes y después, porque el OCR ya leía a 2.000 px. Con el pico
+propio en ~40 MiB queda margen, pero no 155 menos nada: Tesseract va encima. Los
+lectores simultáneos no se limitan (el cupo de `ENMASCARADO_CUPO` es solo del OCR,
+la decodificación de dos fotos a la vez se suma).
+
+**Por qué la base en reposo era 356 MiB y no 205** (diagnóstico, sin cambios).
+Importar `main` solo cuesta ~135 MiB (FastAPI, SQLModel, el cliente de Anthropic,
+numpy, pypdf, pywebpush, sentry; medido en Windows). En Linux, con uvicorn, el OCR
+precargado, los hilos y el pool de la base, eso es el 205 que se vio al reiniciar. Los
+~150 MiB que se suman en horas no tienen un dueño medido en Render, pero hay
+candidatos, en este orden de probabilidad: (a) **el mapa funcional** (`/entornos/mapa`)
+se arma una vez por proceso y queda en memoria: medido, **+46 MiB** retenidos tras
+armarlo; (b) las 51 plantillas Jinja compiladas, que se cachean en el proceso:
++13 MiB; (c) la fragmentación de glibc con el threadpool de FastAPI (una arena de
+`malloc` por hilo): las pruebas de carga y los lotes de la noche del 5 de
+noviembre dejan el heap grande aunque el uso baje, y es lo que más suele inflar un
+Python en Linux; (d) las conexiones del pool y los cachés chicos (`logos._cache`, hasta
+64 logos recortados). El modelo de embeddings del convenio (2,1 GB) queda descartado:
+no cabría en 512 MiB, así que en Pruebas el RAG no se usa. **Recomendación para SDN**
+(la decide él): que el servicio de Pruebas no corra a menos de 1 GB mientras se prueben
+fotos reales (el plan de 512 MiB deja 155 MiB de margen, y un pico de lectura se come la
+mitad); poner `MALLOC_ARENA_MAX=2` en Render (cambia el reinicio y se mide: debería
+bajar el reposo sin tocar código); y, si se quiere seguir en 512 MiB, soltar el mapa
+funcional de la memoria después de servirlo (hoy no se vuelve a pedir solo). Para
+confirmarlo sin adivinar: reiniciar, mirar la memoria a los cinco minutos, abrir
+`/entornos/mapa` y volver a mirar.
