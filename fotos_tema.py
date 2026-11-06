@@ -13,10 +13,18 @@ pidieron verlas a veces en color (2026-10-29): cada uno elige, por modelo,
 cuánto color mostrar (`SATURACIONES`), y la pantalla funde la de color sobre
 la normalizada con esa opacidad. Nunca se elige por foto: es un ajuste del
 sindicato que vale para la foto que tenga de portada.
+
+**Un solo lugar para las reglas de imagen de portada** (2026-11-06): el
+formato aceptado, los tamaños y los niveles de color salen de las constantes
+de este archivo, y las dos pantallas que suben fotos (`/plataforma` ->
+Biblioteca de fotos y `/admin` -> Apariencia) leen sus textos de ayuda y los
+topes del JS de `reglas()`: ningún número se repite a mano en una plantilla.
 """
 from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+
+from imagenes import PIXELES_MAXIMOS
 
 LADO_MAXIMO = 1600      # px del lado largo: alcanza para una portada de escritorio
 LADO_MINIMO = 600       # una foto más chica se vería pixelada como fondo
@@ -25,6 +33,10 @@ RECORTE = 2             # % que se recorta en cada punta del histograma
 CALIDAD = 82            # webp de la normalizada
 CALIDAD_COLOR = 85      # webp de la original en color (se ve sin velo: un poco más)
 MAX_BYTES = 8 * 1024 * 1024
+MAX_MB = MAX_BYTES // (1024 * 1024)
+FORMATOS = "JPG, PNG o WEBP"      # lo que se le dice a la persona
+# Para el selector de archivos del navegador (el que decide es `normalizar`).
+ACCEPT = "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
 
 # Cuánto color muestra el sindicato sobre la normalizada: 0 = la normalizada
 # sola (la de siempre, teñida por el modelo), 100 = la original a todo color,
@@ -45,6 +57,14 @@ class FotoInvalida(ValueError):
     """La foto no se puede usar; el mensaje se muestra tal cual."""
 
 
+def reglas() -> dict:
+    """Las reglas de la foto de portada, para las plantillas y su JS: así el
+    texto de ayuda y los topes del navegador no repiten ningún número."""
+    return {"max_mb": MAX_MB, "max_bytes": MAX_BYTES, "lado_minimo": LADO_MINIMO,
+            "lado_maximo": LADO_MAXIMO, "formatos": FORMATOS, "accept": ACCEPT,
+            "saturaciones": SATURACIONES}
+
+
 def saturacion_valida(valor):
     """El nivel del catálogo que nombra `valor` (texto o número), o None."""
     try:
@@ -63,12 +83,17 @@ def normalizar(datos: bytes) -> dict:
     if not datos:
         raise FotoInvalida("No llegó ninguna foto.")
     if len(datos) > MAX_BYTES:
-        raise FotoInvalida("La foto pesa más de 8 MB.")
+        raise FotoInvalida(f"La foto pesa más de {MAX_MB} MB.")
     try:
         imagen = Image.open(BytesIO(datos))
+        # Los píxeles se miran ANTES de decodificar (como en imagenes.py): un
+        # PNG liso de 11.000 x 11.000 pesa poco y ocupa 600 MB al abrirlo. Ahora
+        # la ruta la usa también el Super Admin de cada sindicato.
+        if imagen.width * imagen.height > PIXELES_MAXIMOS:
+            raise FotoInvalida("La foto tiene demasiados píxeles: achicala antes de subirla.")
         imagen.load()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as e:
-        raise FotoInvalida("No se pudo leer la imagen: subí un JPG, PNG o WEBP.") from e
+        raise FotoInvalida(f"No se pudo leer la imagen: subí un {FORMATOS}.") from e
     # La orientación que guardó el teléfono, antes de cualquier otra cosa.
     imagen = ImageOps.exif_transpose(imagen)
     if max(imagen.size) < LADO_MINIMO:

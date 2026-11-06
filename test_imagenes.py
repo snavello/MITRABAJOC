@@ -151,6 +151,8 @@ EXCEPCIONES.update({
     "subir_documento_convenio": "PDF del convenio (RAG)",
     "plataforma_fotos_tema_subir": "biblioteca de fotos de portada: fotos_tema",
     "plataforma_fotos_tema_reemplazar": "biblioteca de fotos de portada: fotos_tema",
+    "admin_apariencia_fotos_subir": "fotos de portada propias del sindicato: fotos_tema",
+    "admin_apariencia_fotos_reemplazar": "fotos de portada propias del sindicato: fotos_tema",
     "recursos_subir": "Recursos de /entornos",
 })
 

@@ -1064,6 +1064,65 @@
   .ap-sat label:has(input:checked) { background:var(--tinta); color:#fff; }
   .ap-sat label:has(input:focus-visible) { outline:2px solid var(--tinta); outline-offset:2px; }
   .ap-sat-nota { font-size:12.5px; margin:8px 0 0; color:#8a5a1a; }
+  /* Fotos propias del sindicato (2026-11-06): alta, lista y editor. La elegida
+     se rellena entera, nunca con una barra al costado (D6). */
+  .ap-origen { font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.05em; }
+  .ap-fp-zona { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    padding:24px 16px; border:1.5px dashed #c9c4b8; border-radius:12px; background:#fbfaf7; text-align:center;
+    cursor:pointer; color:var(--tinta); font-size:14px; position:relative;
+    transition:background-color var(--mov-rapido, 160ms) ease, border-color var(--mov-rapido, 160ms) ease; }
+  .ap-fp-zona svg { width:26px; height:26px; stroke:currentColor; stroke-width:1.7; fill:none; }
+  .ap-fp-zona:hover, .ap-fp-zona:focus-within, .ap-fp-zona.encima { background:color-mix(in srgb, var(--marca-acento) 12%, #fff); border-color:var(--tinta); }
+  .ap-fp-zona strong { font-weight:600; }
+  .ap-fp-zona .muted { font-size:12px; }
+  .ap-fp-zona input[type=file] { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .ap-fp-ayuda { font-size:12.5px; color:var(--gris); margin:10px 0 0; max-width:720px; }
+  .ap-fp-subir { display:grid; grid-template-columns:minmax(0,1fr) 150px; gap:14px; align-items:start; }
+  .ap-fp-previa { margin:0; }
+  .ap-fp-previa img { width:100%; aspect-ratio:3 / 2; object-fit:cover; border-radius:9px; border:1px solid var(--linea); display:block; background:var(--papel); }
+  .ap-fp-previa figcaption { font-size:11.5px; color:var(--gris); margin-top:4px; }
+  @media (max-width:640px) { .ap-fp-subir { grid-template-columns:minmax(0,1fr); } }
+  .ap-fp-msg { margin:10px 0 0; font-size:13.5px; }
+  .ap-fp-msg.error { color:var(--alerta, #b23a2e); }
+  .ap-fp-msg.ok { color:#0f6e56; }
+  .ap-fp-trabajo { display:grid; grid-template-columns:minmax(0,1fr); gap:18px; align-items:start; }
+  .ap-fp-trabajo.editando { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); }
+  @media (max-width:900px) { .ap-fp-trabajo.editando { grid-template-columns:minmax(0,1fr); } }
+  .ap-fp-grilla { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+  button.sec.ap-fp-foto { display:flex; flex-direction:column; gap:6px; padding:8px; margin:0; text-align:left;
+    border-radius:12px; border:1px solid var(--linea); font-weight:400; font-size:12.5px; }
+  button.sec.ap-fp-foto:hover { border-color:color-mix(in srgb, var(--marca-acento) 45%, var(--linea)); opacity:1; }
+  button.sec.ap-fp-foto.elegida { background:color-mix(in srgb, var(--marca-acento) 14%, #fff);
+    border-color:color-mix(in srgb, var(--marca-acento) 70%, var(--tinta)); }
+  .ap-fp-foto img { width:100%; aspect-ratio:3 / 2; object-fit:cover; border-radius:7px; display:block; background:var(--papel); }
+  .ap-fp-desc { color:#333; line-height:1.35; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .ap-fp-desc:empty { display:none; }
+  .ap-fp-chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .ap-fp-chip { padding:1px 8px; border-radius:20px; font-size:11px; font-weight:700; background:#eceef2; color:var(--gris); }
+  .ap-fp-chip.aviso { background:#fdf3e7; color:#8a5a1a; }
+  .ap-fp-accion { margin-top:auto; font-size:12.5px; font-weight:700; color:var(--tinta); text-decoration:underline; text-underline-offset:3px; }
+  .ap-fp-editor { margin-top:0; }
+  .ap-fp-lienzo { position:relative; display:block; cursor:crosshair; border-radius:9px; overflow:hidden;
+    border:1px solid var(--linea); background:#eee; touch-action:manipulation; }
+  .ap-fp-lienzo:focus-visible { outline:2px solid var(--marca-primario); outline-offset:2px; }
+  .ap-fp-lienzo img { width:100%; display:block; user-select:none; -webkit-user-drag:none; }
+  .ap-fp-punto { position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+    background:color-mix(in srgb, var(--marca-acento) 70%, transparent); border:3px solid #fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.35); pointer-events:none;
+    transition:left var(--mov-rapido, 180ms) ease, top var(--mov-rapido, 180ms) ease; }
+  .ap-fp-recortes { display:flex; gap:10px; align-items:flex-end; margin-top:10px; }
+  .ap-fp-recortes figure { margin:0; display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--gris); }
+  .ap-fp-recortes img { display:block; object-fit:cover; border-radius:6px; border:1px solid var(--linea); background:#eee; }
+  .ap-fp-rec-ancho { width:180px; height:62px; }
+  .ap-fp-rec-alto { width:44px; height:78px; }
+  .ap-fp-color { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .ap-fp-color label { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .ap-fp-reponer { display:flex; flex-direction:column; gap:3px; align-items:flex-start; cursor:pointer; position:relative; }
+  .ap-fp-reponer-btn { display:inline-block; padding:6px 12px; border:1px solid #b4b2a9; border-radius:6px; background:#fff; font-size:13px; font-weight:600; }
+  .ap-fp-reponer input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .ap-fp-reponer:focus-within .ap-fp-reponer-btn { outline:2px solid var(--marca-primario); outline-offset:2px; }
+  .ap-fp-acciones { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .ap-fp [hidden] { display:none !important; }
 </style>
 {% include "_fondo_interior.html" %}
 {# Auditoría de diseño 2026-10, bloque 5b (panel A): rótulos de los filtros y
@@ -4003,7 +4062,7 @@
 
   <div class="card">
     <h3 style="margin-top:0;">Foto de portada</h3>
-    <p class="muted" style="margin-top:0;">Cada modelo tiene su biblioteca. La foto toma los colores del modelo al mostrarse, y vos elegís cuánto de su color original dejar ver.</p>
+    <p class="muted" style="margin-top:0;">Elegí la foto de cada modelo entre las que subió tu sindicato (<a href="#ap-fotos-propias">Tus fotos de portada</a>, más abajo) y las que Colm3na tiene disponibles. La foto toma los colores del modelo al mostrarse, y vos elegís cuánto de su color original dejar ver.</p>
     <div class="ap-dos">
     {% for m in ap.modelos %}
     {# --ap-sat es la opacidad de la capa en color de las miniaturas: la
@@ -4014,7 +4073,7 @@
     <div class="ap-fotos" role="radiogroup" aria-label="Foto de portada de {{ m.nombre }}">
       <label class="ap-op">
         <input type="radio" name="foto_{{ m.clave }}" value="auto" data-color="{{ '1' if m.auto_color else '0' }}" {% if not m.elegida %}checked{% endif %}>
-        <span class="ap-foto-auto">La más nueva de la biblioteca</span>
+        <span class="ap-foto-auto">La más nueva (las tuyas primero)</span>
         <span class="ap-op-t">Automática<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
       </label>
       {% for f in m.fotos %}
@@ -4027,6 +4086,7 @@
              style="object-position:{{ (f.foco_x * 100) | round(1) }}% {{ (f.foco_y * 100) | round(1) }}%;">{% endif %}
         </span>
         <span class="ap-op-t">{{ f.descripcion or ('Foto ' ~ f.id) }}<span class="ap-tilde" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></span>
+        <span class="ap-origen">{{ 'Tuya' if f.propia else 'De Colm3na' }}</span>
       </label>
       {% endfor %}
     </div>
@@ -4039,7 +4099,7 @@
     <p class="muted" style="font-size:12.5px; margin:8px 0 0;"><b>Normalizada</b> es la foto en gris con los colores del modelo; <b>Full color</b>, la original tal cual se subió; en el medio, una mezcla de las dos.</p>
     <p class="ap-sat-nota" data-ap-nota hidden>Esta foto se subió antes de que guardáramos el color: se va a mostrar normalizada hasta que Colm3na la vuelva a subir.</p>
     {% else %}
-    <p class="muted">Todavía no hay fotos para este modelo. Las carga Colm3na.</p>
+    <p class="muted">Todavía no hay fotos para este modelo. Subí la primera en <a href="#ap-fotos-propias">Tus fotos de portada</a>, más abajo.</p>
     {% endif %}
     {# Lo mismo para las fotos de noticias y beneficios en la portada (la
        nota de tapa y el carrusel), 2026-10-29. #}
@@ -4059,6 +4119,91 @@
     </div>
   </div>
   </form>
+
+  {# Las fotos PROPIAS del sindicato (2026-11-06, pedido de SDN): se suben acá,
+     sin depender de que plataforma las cargue antes. Va FUERA del formulario de
+     arriba (un <form> no se anida y sus campos no deben contar como cambios
+     sin guardar) y habla por JSON con /admin/apariencia/fotos
+     (static/fotos_propias.js). Formato, peso y tamaños salen de
+     fotos_tema.reglas() (global `fotos_reglas`): ningún número va a mano. #}
+  <div class="card ap-fp" id="ap-fotos-propias" style="margin-top:22px;"
+       data-max-bytes="{{ fotos_reglas.max_bytes }}" data-lado-minimo="{{ fotos_reglas.lado_minimo }}"
+       data-formatos="{{ fotos_reglas.formatos }}">
+    <h3 style="margin-top:0;">Tus fotos de portada</h3>
+    <p class="muted" style="margin-top:0; max-width:720px;">Subí las fotos de tu sindicato para la portada de cada modelo: no hace falta que Colm3na las cargue antes. Solo tu sindicato las ve en esta lista y puede usarlas. Una vez subida, elegila arriba en «Foto de portada» y guardá la apariencia.</p>
+    <div class="ap-sub">Modelo</div>
+    <div class="ap-sat" role="radiogroup" aria-label="Modelo de las fotos">
+      {% for m in ap.modelos %}
+      <label><input type="radio" name="ap-fp-tema" value="{{ m.clave }}" data-nombre="{{ m.nombre }}" {% if loop.first %}checked{% endif %}>{{ m.nombre }}</label>
+      {% endfor %}
+    </div>
+
+    <div class="ap-sub">Subir una foto a <span id="apfp-modelo-subir">{{ ap.modelos[0].nombre }}</span></div>
+    <div class="ap-fp-subir">
+      <div>
+        <label class="ap-fp-zona" id="apfp-zona" for="apfp-archivo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          <strong id="apfp-zona-txt">Arrastrá una foto acá o tocá para elegirla</strong>
+          <span class="muted">{{ fotos_reglas.formatos }}, hasta {{ fotos_reglas.max_mb }} MB, de al menos {{ fotos_reglas.lado_minimo }} px de lado.</span>
+          <input type="file" id="apfp-archivo" accept="{{ fotos_reglas.accept }}">
+        </label>
+        <p class="ap-fp-ayuda">De cada foto se guardan dos versiones: la <b>normalizada</b> (escala de grises con brillo y contraste parejos; el color lo pone el modelo) y la <b>original en color</b>, con el lado largo acotado a {{ fotos_reglas.lado_maximo }} px. Después elegís cuánto color mostrar: {{ fotos_reglas.saturaciones | map(attribute=1) | join(' · ') }}.</p>
+        <div class="campo" style="margin-top:12px;">
+          <label for="apfp-desc-nueva">Descripción (texto alternativo)</label>
+          <input id="apfp-desc-nueva" maxlength="300" placeholder="Ej: Asamblea en la puerta de la planta">
+        </div>
+        <button type="button" id="apfp-btn-subir" disabled>Subir foto</button>
+        <p class="ap-fp-msg" id="apfp-msg-subir" role="status" hidden></p>
+      </div>
+      <figure class="ap-fp-previa" id="apfp-previa" hidden>
+        <img id="apfp-previa-img" alt="Foto elegida, antes de subirla">
+        <figcaption>La que elegiste</figcaption>
+      </figure>
+    </div>
+
+    <div class="ap-sub">Tus fotos de <span id="apfp-modelo-lista">{{ ap.modelos[0].nombre }}</span> <small class="muted" id="apfp-cuenta"></small></div>
+    <div class="ap-fp-trabajo" id="apfp-trabajo">
+      <div>
+        <div class="ap-fp-grilla" id="apfp-grilla" aria-live="polite"></div>
+        <p class="muted" id="apfp-vacio" hidden></p>
+      </div>
+
+      <div class="card ap-fp-editor" id="apfp-editor" hidden>
+        <h3 style="margin-top:0;">Editar foto</h3>
+        <div class="ap-fp-lienzo" id="apfp-lienzo" tabindex="0" role="button"
+             aria-label="Tocá la foto para marcar el punto de interés. Con las flechas del teclado se mueve.">
+          <img id="apfp-ed-img" alt="" draggable="false">
+          <span class="ap-fp-punto" id="apfp-punto" aria-hidden="true"></span>
+        </div>
+        <p class="muted" style="margin:8px 0 0; font-size:12.5px;">Tocá la foto para marcar el <b>punto de interés</b>: el recorte de la portada lo deja siempre a la vista.</p>
+        <div class="ap-fp-recortes" aria-hidden="true">
+          <figure><img class="ap-fp-rec-ancho" id="apfp-rec-ancho" alt=""><figcaption>Escritorio</figcaption></figure>
+          <figure><img class="ap-fp-rec-alto" id="apfp-rec-alto" alt=""><figcaption>Teléfono</figcaption></figure>
+        </div>
+        <p class="muted" id="apfp-ficha" style="margin:8px 0 0; font-size:12.5px;"></p>
+        <div class="ap-fp-color">
+          <label id="apfp-ver-color-l"><input type="checkbox" id="apfp-ver-color"> Ver la versión en color</label>
+          <p class="ap-sat-nota" id="apfp-sin-color" hidden><b>Esta foto está solo en gris</b>: se subió antes de que guardáramos el color. Volvé a subir el mismo archivo para tener las dos versiones.</p>
+          <label class="ap-fp-reponer" for="apfp-archivo-reponer">
+            <span class="ap-fp-reponer-btn">Volver a subir el archivo</span>
+            <span class="muted" style="font-size:12px;">Mismas reglas; quedan el punto de interés y la descripción.</span>
+            <input type="file" id="apfp-archivo-reponer" accept="{{ fotos_reglas.accept }}">
+          </label>
+        </div>
+        <div class="campo" style="margin-top:14px;">
+          <label for="apfp-desc">Descripción (texto alternativo)</label>
+          <input id="apfp-desc" maxlength="300">
+        </div>
+        <div class="ap-fp-acciones">
+          <button type="button" id="apfp-guardar">Guardar cambios</button>
+          <button type="button" class="sec" id="apfp-cerrar">Cerrar</button>
+          <button type="button" class="peligro" id="apfp-borrar">Borrar foto</button>
+        </div>
+        <p class="ap-fp-msg" id="apfp-msg-editar" role="status" hidden></p>
+      </div>
+    </div>
+  </div>
+  <script src="/static/fotos_propias.js?v={{ sello_static('fotos_propias.js') }}"></script>
   <p class="muted" style="margin-top:14px;">Tu propio modelo lo elegís desde <b>Tu cuenta</b>, en la portada del panel.</p>
 
   {# «Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): la franja de la portada

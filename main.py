@@ -632,13 +632,23 @@ def _url_foto_portada(sindicato_id, tema: str) -> dict | None:
             "saturacion": saturacion}
 
 
+def _foto_tema_visible(f, request: Request) -> bool:
+    """¿Se le sirve esta foto a quien la pide? Las publicadas de la biblioteca
+    global y TODAS las propias de un sindicato son decorado de la app y se
+    sirven a cualquiera, como el logo (el aislamiento está en los listados y
+    en elegir/editar/borrar, no en la imagen); un borrador de la biblioteca
+    global solo lo ve plataforma."""
+    if not f:
+        return False
+    return f.sindicato_id is not None or f.publicada or bool(sesion_actual(request, "plataforma"))
+
+
 @app.get("/foto-tema/{foto_id}")
 def servir_foto_tema(foto_id: int, request: Request):
-    """Una foto de la biblioteca de un modelo (PLAN_TEMAS.md, D5). Las
-    publicadas son decorado de la app y se sirven a cualquiera, como el logo;
-    un borrador solo lo ve plataforma."""
+    """Una foto de la biblioteca de un modelo (PLAN_TEMAS.md, D5), global o
+    propia de un sindicato (`_foto_tema_visible`)."""
     f = db.foto_tema(foto_id)
-    if not f or (not f.publicada and not sesion_actual(request, "plataforma")):
+    if not _foto_tema_visible(f, request):
         raise HTTPException(404, "Sin foto")
     return BinResponse(content=f.datos, media_type=f.mime or "image/webp",
                        headers={"Cache-Control": "public, max-age=3600"})
@@ -649,7 +659,7 @@ def servir_foto_tema_color(foto_id: int, request: Request):
     """La misma foto, en su versión original a color (2026-10-29). Misma
     puerta que la normalizada; 404 si la foto se subió antes y no la tiene."""
     f = db.foto_tema(foto_id)
-    if not f or (not f.publicada and not sesion_actual(request, "plataforma")):
+    if not _foto_tema_visible(f, request):
         raise HTTPException(404, "Sin foto")
     if not f.datos_color:
         raise HTTPException(404, "Esta foto no tiene versión en color")
@@ -792,6 +802,10 @@ templates.env.globals["sello_static"] = _sello_static
 # Los colores de marca corregidos para que se lean (PLAN_TEMAS.md, bloque 7):
 # las plantillas los vuelcan como variables con templates/_paleta_legible.html.
 templates.env.globals["paleta_legible"] = temas.paleta_legible
+# Las reglas de la foto de portada (formato, tamaños, niveles de color) las
+# lee de acá TODA pantalla que las nombre: ningún número va a mano en una
+# plantilla (fotos_tema.py es el único lugar).
+templates.env.globals["fotos_reglas"] = fotos_tema.reglas()
 
 
 def _url_static(nombre: str) -> str:
@@ -1391,6 +1405,12 @@ PERMISOS_RUTAS = {
     # seccional: un admin local no la cambia para todos.
     "/admin/apariencia":                    SECCION_SUPER_ADMIN,
     "/admin/apariencia/tu-dia":             SECCION_SUPER_ADMIN,
+    # Las fotos propias del sindicato (2026-11-06): se suben, se editan y se
+    # borran desde Apariencia, y las rutas de datos exigen Super Admin igual.
+    "/admin/apariencia/fotos":              SECCION_SUPER_ADMIN,
+    "/admin/apariencia/fotos/{foto_id}":    SECCION_SUPER_ADMIN,
+    "/admin/apariencia/fotos/{foto_id}/archivo": SECCION_SUPER_ADMIN,
+    "/admin/apariencia/fotos/{foto_id}/borrar": SECCION_SUPER_ADMIN,
 
     "/admin/concepto":                      "conceptos",
     "/admin/concepto/borrar":               "conceptos",
@@ -6651,9 +6671,21 @@ def plataforma_prueba_lectura(request: Request, base: str = Query(""), primario:
     return {"avisos": temas.prueba_de_lectura(base, primario, acento, apoyo)}
 
 
+async def _normalizar_foto_subida(archivo: UploadFile) -> dict:
+    """Lee y normaliza (gris + color, `fotos_tema.normalizar`) la foto que
+    llegó en un formulario. Una foto que no sirve es un 400 con el motivo,
+    nunca un 500. Lo usan las dos puertas de fotos de portada: la biblioteca
+    de plataforma y las fotos propias del sindicato en Apariencia."""
+    try:
+        return fotos_tema.normalizar(await archivo.read())
+    except fotos_tema.FotoInvalida as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/plataforma/fotos-tema")
 def plataforma_fotos_tema(request: Request, tema: str = Query(temas.TEMA_DEFECTO)):
-    """La biblioteca de fotos de un modelo, sin los bytes."""
+    """La biblioteca GLOBAL de fotos de un modelo, sin los bytes (las propias
+    de cada sindicato no entran: son de ellos)."""
     exigir_plataforma(request)
     if temas.tema_valido(tema) is None:
         raise HTTPException(400, "Ese modelo no existe.")
@@ -6669,10 +6701,7 @@ async def plataforma_fotos_tema_subir(request: Request, tema: str = Form(...),
     exigir_plataforma(request)
     if temas.tema_valido(tema) is None:
         raise HTTPException(400, "Ese modelo no existe.")
-    try:
-        normalizada = fotos_tema.normalizar(await archivo.read())
-    except fotos_tema.FotoInvalida as e:
-        raise HTTPException(400, str(e))
+    normalizada = await _normalizar_foto_subida(archivo)
     fid = db.crear_foto_tema(temas.tema_valido(tema), normalizada, descripcion,
                              _quien_plataforma(request), foco_x, foco_y)
     db.registrar_log_plataforma("foto_tema_alta", _quien_plataforma(request), objetivo=str(fid),
@@ -6706,10 +6735,7 @@ async def plataforma_fotos_tema_reemplazar(request: Request, foto_id: int,
     2026-10-29 no tienen versión en color. Se normaliza igual que una nueva;
     el id, el foco, la publicación y la disponibilidad quedan como estaban."""
     exigir_plataforma(request)
-    try:
-        normalizada = fotos_tema.normalizar(await archivo.read())
-    except fotos_tema.FotoInvalida as e:
-        raise HTTPException(400, str(e))
+    normalizada = await _normalizar_foto_subida(archivo)
     if not db.reemplazar_archivo_foto_tema(foto_id, normalizada):
         raise HTTPException(404, "Sin foto")
     db.registrar_log_plataforma("foto_tema_archivo", _quien_plataforma(request), objetivo=str(foto_id),
@@ -7839,6 +7865,7 @@ def plataforma_borrar_sindicato(request: Request, id: int = Form(...)):
         for r in s.exec(select(Reporte).where(Reporte.sindicato_id == id)).all(): s.delete(r)
         for t in s.exec(select(Trabajador).where(Trabajador.sindicato_id == id)).all(): s.delete(t)
         for u in s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == id)).all(): s.delete(u)
+        for ft in s.exec(select(db.FotoTema).where(db.FotoTema.sindicato_id == id)).all(): s.delete(ft)
         sind = s.get(Sindicato, id)
         if sind: s.delete(sind)
         s.commit()
@@ -8863,6 +8890,81 @@ async def admin_apariencia_tu_dia(request: Request):
     db.set_tu_dia(sid, {"rubros": form.getlist("rubros"), "politicas": form.get("politicas") == "1",
                         "intervalo": form.get("intervalo", "")})
     return RedirectResponse("/admin?ok=tudia#apariencia", status_code=303)
+
+
+def _super_admin_del_sindicato(request: Request) -> int:
+    """Puerta común de las rutas de fotos propias: sesión de sindicato y Super
+    Admin. Devuelve el sindicato de la sesión; el sindicato NUNCA viene del
+    formulario ni de la url."""
+    sid = exigir_sindicato(request)
+    _exigir_super_admin(request)
+    return sid
+
+
+def _quien_sindicato(request: Request) -> str:
+    ses = sesion_actual(request, "sindicato") or {}
+    return f"sindicato:{ses.get('uid', 0)}"
+
+
+@app.get("/admin/apariencia/fotos")
+def admin_apariencia_fotos(request: Request, tema: str = Query(temas.TEMA_DEFECTO)):
+    """Las fotos PROPIAS del sindicato para un modelo, sin los bytes (mismo
+    contrato que `/plataforma/fotos-tema`)."""
+    sid = _super_admin_del_sindicato(request)
+    if temas.tema_valido(tema) is None:
+        raise HTTPException(400, "Ese modelo no existe.")
+    return {"tema": tema, "fotos": db.fotos_de_tema(tema, sid)}
+
+
+@app.post("/admin/apariencia/fotos")
+async def admin_apariencia_fotos_subir(request: Request, tema: str = Form(...),
+                                       archivo: UploadFile = File(...), descripcion: str = Form(""),
+                                       foco_x: float = Form(0.5), foco_y: float = Form(0.5)):
+    """El Super Admin sube una foto propia de portada para un modelo (2026-11-06):
+    se normaliza igual que las de plataforma (gris + original en color, mismos
+    topes: `fotos_tema`) y queda disponible para ESTE sindicato desde ya."""
+    sid = _super_admin_del_sindicato(request)
+    if temas.tema_valido(tema) is None:
+        raise HTTPException(400, "Ese modelo no existe.")
+    normalizada = await _normalizar_foto_subida(archivo)
+    fid = db.crear_foto_tema(temas.tema_valido(tema), normalizada, descripcion,
+                             _quien_sindicato(request), foco_x, foco_y, sindicato_id=sid)
+    return {"ok": True, "id": fid, "ancho": normalizada["ancho"], "alto": normalizada["alto"]}
+
+
+@app.post("/admin/apariencia/fotos/{foto_id}")
+def admin_apariencia_fotos_editar(request: Request, foto_id: int, descripcion: str = Form(None),
+                                  foco_x: float = Form(None), foco_y: float = Form(None)):
+    """Descripción (texto alternativo) y punto de interés de una foto propia.
+    Una foto de otro sindicato o de la biblioteca global es un 404."""
+    sid = _super_admin_del_sindicato(request)
+    campos = {k: v for k, v in {"descripcion": descripcion, "foco_x": foco_x, "foco_y": foco_y}.items()
+              if v is not None}
+    if not db.editar_foto_tema(foto_id, sindicato_id=sid, **campos):
+        raise HTTPException(404, "Sin foto")
+    return {"ok": True}
+
+
+@app.post("/admin/apariencia/fotos/{foto_id}/archivo")
+async def admin_apariencia_fotos_reemplazar(request: Request, foto_id: int,
+                                            archivo: UploadFile = File(...)):
+    """Vuelve a subir el archivo de una foto propia: se normaliza igual que una
+    nueva; el id, el foco y la descripción quedan como estaban."""
+    sid = _super_admin_del_sindicato(request)
+    normalizada = await _normalizar_foto_subida(archivo)
+    if not db.reemplazar_archivo_foto_tema(foto_id, normalizada, sindicato_id=sid):
+        raise HTTPException(404, "Sin foto")
+    return {"ok": True, "id": foto_id, "ancho": normalizada["ancho"], "alto": normalizada["alto"]}
+
+
+@app.post("/admin/apariencia/fotos/{foto_id}/borrar")
+def admin_apariencia_fotos_borrar(request: Request, foto_id: int):
+    """Borra una foto propia y la saca de la portada si estaba elegida (el
+    modelo vuelve a la automática)."""
+    sid = _super_admin_del_sindicato(request)
+    if not db.borrar_foto_tema(foto_id, sindicato_id=sid):
+        raise HTTPException(404, "Sin foto")
+    return {"ok": True}
 
 
 @app.post("/admin/apariencia/mia")

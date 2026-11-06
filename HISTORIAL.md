@@ -10300,3 +10300,59 @@ empieza de cero). Probado en el navegador con respuestas simuladas (502 HTML, 50
 **Test.** `test_recibo_afip_2011.py`: el recibo de punta a punta, repetido, las
 variantes, un payload roto (JSON siempre) y una puerta estática que falla si un
 fetch del flujo vuelve a leer JSON a ciegas.
+
+## Las fotos de portada las sube el sindicato en Apariencia (2026-11-06, Admin 0.78.01, Plataforma 0.65.10)
+
+**Pedido de SDN:** «La funcionalidad de subir fotos debiera quedar
+definitivamente en el admin del sindicato, sin la necesidad de que antes haya
+sido subida en plataforma. Dejemos un alta de imágenes (formato, colores, etc.)
+consistente en un solo lugar.» El dolor de fondo: la portada de La Bancaria
+«no se veía» (HISTORIAL, 2026-10-24) porque la biblioteca de Pruebas no tenía
+ninguna foto disponible para ese sindicato, y solo plataforma podía cargarla.
+
+**Qué cambió.**
+- `FotoTema.sindicato_id` (nullable, FK a `sindicato`, índice; migración
+  `a9c2e4f6b8d1`). NULL = biblioteca global de plataforma (todo lo existente,
+  sin cambio de comportamiento); con valor = foto propia de ese sindicato.
+  Una propia se guarda `publicada=True`, `todos_los_sindicatos=False`,
+  `sindicatos=[sindicato_id]` (coherente, pero no se edita: no hay borrador ni
+  alcance). Borrar un sindicato borra sus fotos propias.
+- `db.py`: `crear/editar/borrar/reemplazar_archivo_foto_tema` y `fotos_de_tema`
+  reciben el ámbito (`sindicato_id`; None = global). `_foto_del_ambito` hace que
+  una foto de otro ámbito sea como si no existiera: ni plataforma toca las
+  propias por su ruta, ni un sindicato toca las ajenas ni las globales (404).
+  `fotos_disponibles` = propias (más nuevas arriba) + globales publicadas para él.
+- Rutas nuevas, todas `SECCION_SUPER_ADMIN` y con `_exigir_super_admin`:
+  `GET/POST /admin/apariencia/fotos`, `POST .../fotos/{id}`, `.../{id}/archivo`,
+  `.../{id}/borrar`. Mismo contrato JSON que `/plataforma/fotos-tema`; el
+  sindicato sale SIEMPRE de la sesión. Ambas puertas con archivo normalizan con
+  `main._normalizar_foto_subida` (`fotos_tema.normalizar`) y quedaron como
+  excepciones declaradas en `test_imagenes.py`.
+- Pantalla: tarjeta «Tus fotos de portada» en Apariencia, fuera del formulario
+  de arriba (no se anidan formularios y sus campos no cuentan como «cambios sin
+  guardar»), con `static/fotos_propias.js`. El selector marca cada foto «Tuya» o
+  «De Colm3na». Tras cada cambio la página se recarga para que el selector (que
+  dibuja el servidor) lo vea y se reabre la misma foto; si el formulario de
+  arriba está sin guardar, no se recarga y se avisa.
+- **Un solo lugar para las reglas**: `fotos_tema.reglas()` (formato, 8 MB,
+  600 px, lado largo 1.600, niveles de color), global de Jinja `fotos_reglas`.
+  Los textos de ayuda de `/plataforma` y de Apariencia y los topes del JS de
+  las dos pantallas se leen de ahí. Los mensajes de `normalizar` también.
+- `fotos_tema.normalizar` ahora mira los píxeles antes de decodificar (tope de
+  `imagenes.PIXELES_MAXIMOS`): la ruta pasó a usarla cada Super Admin y no solo
+  plataforma.
+- La pestaña Fotos de `/plataforma` queda para la biblioteca global opcional y
+  su ayuda dice que cada sindicato sube las suyas desde Apariencia.
+
+**Decisión a confirmar por SDN:** `/foto-tema/{id}` y `/color` sirven una foto
+propia a cualquiera que tenga el id (como el logo y las globales publicadas);
+el aislamiento está en listar, editar, borrar y elegir. Los ids son
+consecutivos, así que alguien podría enumerarlas. Si se prefiere, se exige
+sesión del sindicato dueño (o del trabajador/empresa de ese sindicato) en esas
+dos rutas, a costa de que la portada pública (antes del login) no las muestre.
+
+**Tests:** `test_fotos_admin.py` (nuevo) más los existentes de fotos,
+Apariencia, imágenes, rutas de áreas, mapa funcional y migraciones. Verificado
+además con un robot de navegador (Chromium, descartado) sobre la pantalla:
+subida inválida y chica con aviso, subida buena, foco, descripción, aparición
+en el selector, cambio de modelo y borrado.
