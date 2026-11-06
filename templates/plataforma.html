@@ -780,9 +780,11 @@
      Todo por JSON contra /plataforma/fotos-tema: la lista se pide al abrir la
      pestaña y al cambiar de modelo. Lo que viene del servidor se dibuja con
      textContent, nunca como HTML. #}
-  <div class="ppanel" data-mov-vista id="pp-fotos">
+  <div class="ppanel" data-mov-vista id="pp-fotos"
+       data-max-bytes="{{ fotos_reglas.max_bytes }}" data-lado-minimo="{{ fotos_reglas.lado_minimo }}"
+       data-formatos="{{ fotos_reglas.formatos }}">
   <h2 class="titulo-pagina">Biblioteca de fotos</h2>
-  <p class="muted" style="margin-bottom:14px; max-width:700px;">Las fotos de portada de cada modelo de diseño. Una foto nueva queda en borrador hasta que la publiques; publicada, la pueden elegir todos los sindicatos o solo los que marques.</p>
+  <p class="muted" style="margin-bottom:14px; max-width:700px;">La biblioteca global, opcional, de fotos de portada de cada modelo de diseño. Una foto nueva queda en borrador hasta que la publiques; publicada, la pueden elegir todos los sindicatos o solo los que marques. <b>Cada sindicato sube sus propias fotos desde su Apariencia</b> (no hace falta que estén acá): esas no se ven en esta lista.</p>
   <div class="subtabs" role="tablist" aria-label="Modelo de diseño">
     <button type="button" class="ft-subtab activa" role="tab" aria-selected="true" data-ft-tema="laguna">Laguna (por defecto)</button>
     <button type="button" class="ft-subtab" role="tab" aria-selected="false" data-ft-tema="noticiero">Noticiero</button>
@@ -793,8 +795,8 @@
     <label class="ft-zona" id="ft-zona" for="ft-archivo">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
       <strong id="ft-zona-txt">Arrastrá una foto acá o tocá para elegirla</strong>
-      <span class="muted">JPG, PNG o WEBP, hasta 8 MB, de al menos 600 px de lado.</span>
-      <input type="file" id="ft-archivo" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+      <span class="muted">{{ fotos_reglas.formatos }}, hasta {{ fotos_reglas.max_mb }} MB, de al menos {{ fotos_reglas.lado_minimo }} px de lado.</span>
+      <input type="file" id="ft-archivo" accept="{{ fotos_reglas.accept }}">
     </label>
     <p class="ft-ayuda">De cada foto se guardan dos versiones: la <b>normalizada</b> (escala de grises con brillo y contraste parejos; el color lo pone el modelo) y la <b>original en color</b>. Cada sindicato elige en su Apariencia cuánto color mostrar.</p>
     <div class="campo" style="margin-top:12px;">
@@ -843,7 +845,7 @@
         <label class="ft-reponer" for="ft-archivo-reponer">
           <span class="ft-reponer-btn">Volver a subir el archivo</span>
           <span class="muted" style="font-size:12px;">Mismo tamaño mínimo; quedan el punto de interés, la descripción y la publicación.</span>
-          <input type="file" id="ft-archivo-reponer" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+          <input type="file" id="ft-archivo-reponer" accept="{{ fotos_reglas.accept }}">
         </label>
       </div>
 
@@ -1959,7 +1961,10 @@ function prepararEnvioTope(form) {
    Todo lo que viene del servidor (descripción, quién la subió, nombres) se
    escribe con textContent o como atributo: acá no se arma HTML con datos. */
 const FT_NOMBRES = {laguna: 'Laguna', noticiero: 'Noticiero'};
-const FT_MAX_BYTES = 8 * 1024 * 1024, FT_LADO_MINIMO = 600;
+// Los topes los dicta fotos_tema.py (reglas()); acá solo se leen.
+const FT_REGLAS = document.getElementById('pp-fotos').dataset;
+const FT_MAX_BYTES = Number(FT_REGLAS.maxBytes), FT_LADO_MINIMO = Number(FT_REGLAS.ladoMinimo);
+const FT_MAX_MB = Math.round(FT_MAX_BYTES / (1024 * 1024)), FT_FORMATOS = FT_REGLAS.formatos;
 const ft = {tema: 'laguna', fotos: [], elegida: null, archivo: null, urlOriginal: null,
             foco: {x: 0.5, y: 0.5}, cargado: false};
 const ft$ = id => document.getElementById(id);
@@ -2129,8 +2134,8 @@ async function ftReponer(file) {
   const f = ft.elegida;
   if (!f || !file) return;
   const tipoOk = /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name || '');
-  if (!tipoOk) { ftMsg('ft-msg-editar', 'Ese archivo no es una foto JPG, PNG o WEBP.', 'error'); return; }
-  if (file.size > FT_MAX_BYTES) { ftMsg('ft-msg-editar', 'La foto pesa más de 8 MB.', 'error'); return; }
+  if (!tipoOk) { ftMsg('ft-msg-editar', 'Ese archivo no es una foto ' + FT_FORMATOS + '.', 'error'); return; }
+  if (file.size > FT_MAX_BYTES) { ftMsg('ft-msg-editar', 'La foto pesa más de ' + FT_MAX_MB + ' MB.', 'error'); return; }
   const fd = new FormData();
   fd.append('archivo', file);
   ftMsg('ft-msg-editar', 'Subiendo y normalizando…');
@@ -2183,8 +2188,8 @@ function ftElegirArchivo(file) {
   ftMsg('ft-msg-subir', '');
   if (!file) return;
   const tipoOk = /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name || '');
-  if (!tipoOk) { ftReiniciarZona(); ftMsg('ft-msg-subir', 'Ese archivo no es una foto JPG, PNG o WEBP.', 'error'); return; }
-  if (file.size > FT_MAX_BYTES) { ftReiniciarZona(); ftMsg('ft-msg-subir', 'La foto pesa más de 8 MB.', 'error'); return; }
+  if (!tipoOk) { ftReiniciarZona(); ftMsg('ft-msg-subir', 'Ese archivo no es una foto ' + FT_FORMATOS + '.', 'error'); return; }
+  if (file.size > FT_MAX_BYTES) { ftReiniciarZona(); ftMsg('ft-msg-subir', 'La foto pesa más de ' + FT_MAX_MB + ' MB.', 'error'); return; }
   ft.archivo = file;
   if (ft.urlOriginal) URL.revokeObjectURL(ft.urlOriginal);
   ft.urlOriginal = URL.createObjectURL(file);

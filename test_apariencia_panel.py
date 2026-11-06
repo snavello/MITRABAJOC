@@ -262,7 +262,7 @@ def test_sin_fotos_lo_dice():
         db.editar_foto_tema(fid, todos_los_sindicatos=False, sindicatos=[SID])
     try:
         html = _cliente("20900000015", "solo").get("/admin").text
-        assert html.count("Todavía no hay fotos para este modelo. Las carga Colm3na.") == 2
+        assert html.count("Todavía no hay fotos para este modelo. Subí la primera en") == 2
         assert db.fotos_disponibles(sid_sin, "laguna") == []
     finally:
         for fid in (LAGUNA_1, LAGUNA_2, NOTICIERO_1):

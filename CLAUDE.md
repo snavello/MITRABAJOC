@@ -545,7 +545,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   inválida da 400 / aviso en pantalla, nunca 500. Lo ya guardado se achica con
   `achicar_imagenes.py` (ensayo y `--si`, `DESPLIEGUE_RENDER.md`).
   Quedan afuera a propósito los documentos para la IA, el contrato, el
-  convenio, Recursos y `fotos_tema`. Una puerta nueva de imagen pasa por
+  convenio, Recursos y `fotos_tema` (incluidas las fotos propias del sindicato). Una puerta nueva de imagen pasa por
   `imagenes.achicar` (lo exige `test_imagenes.py`).
 - **Logos sin fondo blanco forzado**: un PNG con fondo transparente se ve
   transparente de verdad; si un sindicato quiere fondo de color, lo sube ya
@@ -730,6 +730,28 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   abiertas, se ven tal cual se subieron. Detalle en HISTORIAL.md, "Las
   fotos de los modelos, también en color" y "Las fotos de noticias y
   beneficios, en gris o en color".
+
+- **La foto de portada la sube el sindicato en Apariencia; plataforma solo
+  mantiene una biblioteca global opcional** (2026-11-06, pedido de SDN: subir
+  la foto sin depender de que plataforma la cargue antes; en La Bancaria la
+  portada «no se veía» porque la biblioteca de Pruebas no tenía nada para
+  ese gremio). `FotoTema.sindicato_id`: NULL = biblioteca global (las de
+  siempre, sin cambios); con valor = foto PROPIA de ese sindicato, que solo
+  él lista, edita, borra y elige (un id ajeno o global por las rutas
+  `/admin/apariencia/fotos*` es **404**, nunca 403; `db._foto_del_ambito`).
+  Una propia nace disponible (`publicada=True`, sin borrador ni alcance).
+  `/plataforma/fotos-tema` lista y toca solo las globales. `GET
+  /foto-tema/{id}` y `/color` sirven una propia como una publicada (decorado
+  de la app, no secreto; el aislamiento está en listar/editar/borrar/elegir).
+  El selector de Apariencia lista primero las propias y después las globales
+  disponibles; «Automática» = la más nueva de esa lista. **Un solo lugar
+  para las reglas de imagen**: formato, 8 MB, 600 px mínimo, lado largo
+  1.600, 40 Mpx y los niveles de color viven en `fotos_tema.py`
+  (`reglas()`, global de Jinja `fotos_reglas`); los textos de ayuda y los
+  topes del JS de las dos pantallas los leen de ahí, nunca a mano
+  (`test_fotos_admin.py` lo verifica). Las dos puertas pasan por
+  `main._normalizar_foto_subida` (`fotos_tema.normalizar`; son excepciones
+  declaradas en `test_imagenes.py`). Detalle en HISTORIAL.md.
 
 - **Dos modelos de diseño; la elección de la persona vive en su CUENTA**
   (2026-10-23, `PLAN_TEMAS.md`). `laguna` (162) por defecto y `noticiero`
@@ -1487,6 +1509,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Pruebas ya corrida: 13,14 MB en 75 imágenes a 5,75 MB, el logo de La
     Bancaria de 996 KB a 28 KB; en la Demo con la próxima promoción).
     Detalle en HISTORIAL.md, «Toda imagen se achica al subirla: topes por tipo».
+
+44. **Las fotos de portada las sube el sindicato** (2026-11-06, Admin 0.78.01,
+    Plataforma 0.65.10, rama `fix/fotos-admin`): en `/admin` → Apariencia, el
+    Super Admin sube (por modelo), ve normalizada y en color, fija el punto de
+    interés, edita la descripción, vuelve a subir el archivo y borra sus
+    fotos propias (`/admin/apariencia/fotos*`, JSON, `static/fotos_propias.js`),
+    y las elige con el selector de siempre. `FotoTema.sindicato_id`
+    (migración `a9c2e4f6b8d1`). La pestaña Fotos de `/plataforma` queda como
+    biblioteca global opcional. Ver la decisión en «Decisiones tomadas».
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

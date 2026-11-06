@@ -1063,7 +1063,8 @@ class UsoIA(SQLModel, table=True):
 class FotoTema(SQLModel, table=True):
     """Una foto de la biblioteca de un modelo de diseño (PLAN_TEMAS.md, D5).
 
-    La carga plataforma y se guarda en dos versiones del mismo tamaño
+    La carga plataforma (biblioteca global) o el Super Admin del sindicato
+    (fotos propias, ver `sindicato_id`) y se guarda en dos versiones del mismo tamaño
     (`fotos_tema.normalizar`): `datos` es la NORMALIZADA (gris, niveles y
     brillo parejos, webp), a la que el modelo le pone el color al mostrarla;
     `datos_color` es la ORIGINAL en color (solo orientada y acotada), que el
@@ -1072,9 +1073,17 @@ class FotoTema(SQLModel, table=True):
     que plataforma la vuelva a subir. Bytes en la base, como el logo.
     `foco_x`/`foco_y` (0 a 1) es el punto de interés: el recorte de cada
     pantalla se centra ahí. Un borrador no lo ve ningún sindicato;
-    publicada, la ven todos o solo los de `sindicatos`."""
+    publicada, la ven todos o solo los de `sindicatos`.
+
+    `sindicato_id` (2026-11-06, pedido de SDN): NULL = foto de la biblioteca
+    GLOBAL de plataforma (todas las de antes); con valor = foto PROPIA de ese
+    sindicato, que solo él lista, edita, borra y puede elegir de portada. La
+    sube el Super Admin en Apariencia y está disponible desde el primer
+    momento: se guarda `publicada=True` y `sindicatos=[sindicato_id]` por
+    coherencia, pero nada de eso se edita (no hay borrador ni alcance)."""
     id: Optional[int] = Field(default=None, primary_key=True)
     tema: str = Field(index=True)
+    sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
     datos: bytes
     mime: str = "image/webp"
     datos_color: Optional[bytes] = None
@@ -3479,8 +3488,10 @@ def set_apariencia_sindicato(sindicato_id: int, tema_afiliados=None, tema_panel=
 
 
 def crear_foto_tema(tema: str, normalizada: dict, descripcion: str = "", subida_por: str = "",
-                    foco_x: float = 0.5, foco_y: float = 0.5) -> int:
-    """Guarda una foto YA normalizada como borrador del modelo. Devuelve el id."""
+                    foco_x: float = 0.5, foco_y: float = 0.5, sindicato_id: Optional[int] = None) -> int:
+    """Guarda una foto YA normalizada. Sin `sindicato_id` es de la biblioteca
+    global de plataforma y queda como borrador del modelo; con `sindicato_id`
+    es PROPIA de ese sindicato y queda disponible para él desde ya."""
     with Session(engine) as s:
         f = FotoTema(tema=tema, datos=normalizada["datos"], mime=normalizada["mime"],
                      datos_color=normalizada.get("datos_color"),
@@ -3489,6 +3500,9 @@ def crear_foto_tema(tema: str, normalizada: dict, descripcion: str = "", subida_
                      foco_x=_entre_0_y_1(foco_x), foco_y=_entre_0_y_1(foco_y),
                      descripcion=(descripcion or "").strip()[:300],
                      creada=fechas.ahora_texto(), subida_por=subida_por)
+        if sindicato_id is not None:
+            f.sindicato_id = sindicato_id
+            f.publicada, f.todos_los_sindicatos, f.sindicatos = True, False, [sindicato_id]
         s.add(f)
         s.commit()
         s.refresh(f)
@@ -3510,17 +3524,31 @@ def _foto_dict(f: "FotoTema", v: int, v_color: int) -> dict:
             "publicada": f.publicada, "todos_los_sindicatos": f.todos_los_sindicatos,
             "sindicatos": list(f.sindicatos or []), "creada": f.creada,
             "subida_por": f.subida_por, "v": v or 0,
-            "color": bool(v_color), "v_color": v_color or 0}
+            "color": bool(v_color), "v_color": v_color or 0,
+            "propia": f.sindicato_id is not None}
 
 
-def reemplazar_archivo_foto_tema(foto_id: int, normalizada: dict) -> bool:
-    """Plataforma vuelve a subir el archivo de una foto que ya existe (las
+def _foto_del_ambito(s, foto_id: int, sindicato_id: Optional[int]):
+    """La fila `foto_id` SOLO si pertenece al ámbito pedido: `sindicato_id`
+    None = la biblioteca global de plataforma; un id = las propias de ese
+    sindicato. Una foto de otro ámbito es como si no existiera (None): así
+    ni plataforma toca las propias de un sindicato por la ruta de la
+    biblioteca, ni un sindicato toca las ajenas o las globales."""
+    f = s.get(FotoTema, foto_id)
+    if f is None or f.sindicato_id != sindicato_id:
+        return None
+    return f
+
+
+def reemplazar_archivo_foto_tema(foto_id: int, normalizada: dict, sindicato_id: Optional[int] = None) -> bool:
+    """Se vuelve a subir el archivo de una foto que ya existe (las
     de antes del 2026-10-29 no tienen versión en color): cambian las dos
     versiones y el tamaño; quedan el id, el foco, la descripción, la
     publicación y la disponibilidad, así los sindicatos que la eligieron
-    no tienen que volver a elegirla."""
+    no tienen que volver a elegirla. `sindicato_id`: el ámbito, ver
+    `_foto_del_ambito`."""
     with Session(engine) as s:
-        f = s.get(FotoTema, foto_id)
+        f = _foto_del_ambito(s, foto_id, sindicato_id)
         if not f:
             return False
         f.datos, f.mime = normalizada["datos"], normalizada["mime"]
@@ -3532,21 +3560,28 @@ def reemplazar_archivo_foto_tema(foto_id: int, normalizada: dict) -> bool:
         return True
 
 
-def fotos_de_tema(tema: str) -> list:
-    """Toda la biblioteca de un modelo, para plataforma (sin los bytes)."""
+def fotos_de_tema(tema: str, sindicato_id: Optional[int] = None) -> list:
+    """Las fotos de un modelo, sin los bytes. Sin `sindicato_id`, la
+    biblioteca global de plataforma (las propias de los sindicatos NO
+    entran); con un id, solo las propias de ese sindicato."""
     from sqlalchemy import func
     with Session(engine) as s:
-        filas = s.exec(select(FotoTema,
-                              func.coalesce(func.octet_length(FotoTema.datos), 0),
-                              func.coalesce(func.octet_length(FotoTema.datos_color), 0))
-                       .where(FotoTema.tema == tema).order_by(FotoTema.id.desc())).all()
+        consulta = select(FotoTema,
+                          func.coalesce(func.octet_length(FotoTema.datos), 0),
+                          func.coalesce(func.octet_length(FotoTema.datos_color), 0)).where(FotoTema.tema == tema)
+        consulta = consulta.where(FotoTema.sindicato_id.is_(None) if sindicato_id is None
+                                  else FotoTema.sindicato_id == sindicato_id)
+        filas = s.exec(consulta.order_by(FotoTema.id.desc())).all()
         return [_foto_dict(f, v, v_color) for f, v, v_color in filas]
 
 
 def fotos_disponibles(sindicato_id: int, tema: str) -> list:
-    """Las fotos publicadas de un modelo que puede usar un sindicato."""
-    return [f for f in fotos_de_tema(tema)
-            if f["publicada"] and (f["todos_los_sindicatos"] or sindicato_id in f["sindicatos"])]
+    """Las fotos de un modelo que puede usar un sindicato: primero las
+    PROPIAS (las más nuevas arriba) y después las de la biblioteca global
+    que están publicadas para él."""
+    globales = [f for f in fotos_de_tema(tema)
+                if f["publicada"] and (f["todos_los_sindicatos"] or sindicato_id in f["sindicatos"])]
+    return fotos_de_tema(tema, sindicato_id) + globales
 
 
 def foto_tema(foto_id: int):
@@ -3557,11 +3592,13 @@ def foto_tema(foto_id: int):
         return s.get(FotoTema, foto_id, options=[undefer(FotoTema.datos), undefer(FotoTema.datos_color)])
 
 
-def editar_foto_tema(foto_id: int, **campos) -> bool:
+def editar_foto_tema(foto_id: int, sindicato_id: Optional[int] = None, **campos) -> bool:
     """Cambia descripción, foco, publicación y disponibilidad. Los ids de
-    sindicatos que no existen se descartan."""
+    sindicatos que no existen se descartan. `sindicato_id`: el ámbito (ver
+    `_foto_del_ambito`); en una foto propia solo valen descripción y foco:
+    no hay borrador ni alcance que cambiar."""
     with Session(engine) as s:
-        f = s.get(FotoTema, foto_id)
+        f = _foto_del_ambito(s, foto_id, sindicato_id)
         if not f:
             return False
         if "descripcion" in campos:
@@ -3569,23 +3606,25 @@ def editar_foto_tema(foto_id: int, **campos) -> bool:
         for eje in ("foco_x", "foco_y"):
             if eje in campos:
                 setattr(f, eje, _entre_0_y_1(campos[eje]))
-        if "publicada" in campos:
-            f.publicada = bool(campos["publicada"])
-        if "todos_los_sindicatos" in campos:
-            f.todos_los_sindicatos = bool(campos["todos_los_sindicatos"])
-        if "sindicatos" in campos:
-            pedidos = {int(x) for x in (campos["sindicatos"] or []) if str(x).isdigit()}
-            existentes = set(s.exec(select(Sindicato.id).where(Sindicato.id.in_(pedidos))).all()) if pedidos else set()
-            f.sindicatos = sorted(existentes)
+        if sindicato_id is None:
+            if "publicada" in campos:
+                f.publicada = bool(campos["publicada"])
+            if "todos_los_sindicatos" in campos:
+                f.todos_los_sindicatos = bool(campos["todos_los_sindicatos"])
+            if "sindicatos" in campos:
+                pedidos = {int(x) for x in (campos["sindicatos"] or []) if str(x).isdigit()}
+                existentes = set(s.exec(select(Sindicato.id).where(Sindicato.id.in_(pedidos))).all()) if pedidos else set()
+                f.sindicatos = sorted(existentes)
         s.add(f)
         s.commit()
         return True
 
 
-def borrar_foto_tema(foto_id: int) -> bool:
-    """Borra la foto y la saca de las portadas que la usaban."""
+def borrar_foto_tema(foto_id: int, sindicato_id: Optional[int] = None) -> bool:
+    """Borra la foto y la saca de las portadas que la usaban. `sindicato_id`:
+    el ámbito (ver `_foto_del_ambito`)."""
     with Session(engine) as s:
-        f = s.get(FotoTema, foto_id)
+        f = _foto_del_ambito(s, foto_id, sindicato_id)
         if not f:
             return False
         for sind in s.exec(select(Sindicato)).all():

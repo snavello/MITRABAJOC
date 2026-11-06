@@ -19,10 +19,10 @@ en "Estado actual" de CLAUDE.md y en BITACORA.md.
 - **D4. Paleta en variables.** Cada modelo declara sus colores por función (fondo, tinta, acento, superficie,
   degradé); con la paleta del sindicato esas funciones se derivan de `color_base/primario/acento/secundario`
   con `color-mix`, cuidando contraste ≥ 4,5:1. Los colores de estado (verde/ámbar/rojo) no cambian nunca.
-- **D5. Fotos por modelo, cargadas por plataforma.** Toda foto se **normaliza al subirla** (escala de grises,
+- **D5. Fotos por modelo (desde 2026-11-06 las sube el propio sindicato; plataforma solo mantiene una biblioteca global opcional).** Toda foto se **normaliza al subirla** (escala de grises,
   niveles y contraste parejos, tamaño máximo, webp) y el color se lo pone el modelo al mostrarla: así cualquier
   foto conserva los efectos difusos y luminosos. Se guarda el punto de interés para el recorte. Bytes en la
-  base, como todo (regla del proyecto). El sindicato elige su foto de portada de la biblioteca de su modelo.
+  base, como todo (regla del proyecto). El sindicato elige su foto de portada de entre las que subió él en Apariencia (`FotoTema.sindicato_id`) y las de la biblioteca global que tenga disponibles.
 - **D6. Selección sin "corchete" lateral** (SDN, ronda 10b): la opción elegida de un menú se pinta en el color
   del modelo (relleno o tinte, texto e ícono en contraste), nunca con una barra de color a un costado.
 - **D7. Lo que no cambia.** Contenido, campos, rutas y lógica de cada pantalla: el rediseño no saca nada

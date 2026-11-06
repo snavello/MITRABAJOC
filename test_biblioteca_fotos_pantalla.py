@@ -52,7 +52,7 @@ def test_la_pagina_trae_la_pestana_con_los_dos_modelos():
     assert 'data-ft-tema="laguna"' in html and "Laguna (por defecto)" in html
     assert 'data-ft-tema="noticiero"' in html and ">Noticiero<" in html
     # la pestaña se arma como las demás (test_modales lo exige a todas)
-    assert re.search(r'<div class="ppanel" data-mov-vista id="pp-fotos">', html)
+    assert re.search(r'<div class="ppanel" data-mov-vista id="pp-fotos"[\s>]', html)
 
 
 def test_la_zona_de_subida_y_su_ayuda():
