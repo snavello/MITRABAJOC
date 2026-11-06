@@ -10173,3 +10173,18 @@ se resolvió solo. Si vuelve a pasar: esperar un minuto y reintentar.
 
 **Método.** Tres agentes en paralelo (desarrollo, QA independiente en dos vueltas e
 implementación/deploy) coordinados por Code, según la regla del 2026-11-05.
+
+
+## El semáforo ya generado vuelve a ofrecer ir a ARCA (2026-11-06, Trabajador 0.58.10)
+
+Reportado por SDN en Pruebas: una vez generado el semáforo (o al volver a entrar con
+el dato guardado) la tarjeta de "Mis aportes" solo dejaba "Actualizar con otra
+captura", sin forma de volver a ARCA para regenerar la consulta (captcha y captura
+nueva). Ahora `semRender` muestra las mismas dos acciones que la primera vez, el
+enlace "1 · Consultar en ARCA" (otra pestaña) y "2 · Subir captura de ARCA", con una
+línea que explica "Para actualizarlo, consultá ARCA de nuevo y subí la captura".
+Las acciones salen de una sola función (`semAcciones`) que comparten `semApagado` y
+`semRender`; se reusan `.sem-acciones`, `.sem-paso`, `.th-acc` y `.th-tile`, que ya
+tienen estilo en laguna y noticiero, así que no hay CSS nuevo. El input
+`arca-file2` desaparece (un solo `arca-file`). Test nuevo en
+`test_semaforo_persistente.py`.

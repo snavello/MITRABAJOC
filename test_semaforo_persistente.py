@@ -59,6 +59,33 @@ def test_app_pinta_el_semaforo_guardado_sin_volver_a_subir_nada():
     print("OK  test_app_pinta_el_semaforo_guardado_sin_volver_a_subir_nada")
 
 
+def test_con_semaforo_guardado_sigue_el_acceso_a_arca_y_a_la_subida():
+    """Con el semáforo ya generado, el trabajador tiene que poder volver a ARCA
+    y subir una captura nueva: el enlace y el input de archivo salen de
+    semAcciones(), que usan tanto semApagado() como semRender()."""
+    import re
+    db.guardar_semaforo("20111111119", SID, DATOS_SEMAFORO)
+    html = client.get("/app").text
+    assert "semRender(" in html and "Todo al d" in html
+    # Las acciones se arman en UN solo lugar: enlace externo seguro + input.
+    m = re.search(r"function semAcciones\(.*?\n\}\n", html, re.S)
+    assert m, "debe existir semAcciones()"
+    acciones = m.group(0)
+    assert "https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" in acciones
+    assert 'target="_blank" rel="noopener"' in acciones
+    assert "se abre en otra pestaña" in acciones
+    assert 'type="file" id="arca-file"' in acciones
+    assert 'for="arca-file"' in acciones
+    # Y las dos pantallas la usan (con semáforo y sin él).
+    render = re.search(r"function semRender\(d\).*?\n\}\n", html, re.S).group(0)
+    apagado = re.search(r"function semApagado\(\).*?\n\}\n", html, re.S).group(0)
+    assert "semAcciones(" in render and "semEnlazarArchivo()" in render
+    assert "semAcciones(" in apagado and "semEnlazarArchivo()" in apagado
+    assert "consultá ARCA de nuevo" in render
+    assert "arca-file2" not in html
+    print("OK  test_con_semaforo_guardado_sigue_el_acceso_a_arca_y_a_la_subida")
+
+
 def test_api_aportes_persiste_al_calcular(monkeypatch):
     import main as m
 
@@ -81,6 +108,7 @@ if __name__ == "__main__":
     test_sin_consultar_nunca_no_hay_dato_guardado()
     test_guardar_semaforo_y_leerlo()
     test_app_pinta_el_semaforo_guardado_sin_volver_a_subir_nada()
+    test_con_semaforo_guardado_sigue_el_acceso_a_arca_y_a_la_subida()
     import types
     class _MP:
         def setattr(self, obj, name, value): setattr(obj, name, value)

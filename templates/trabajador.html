@@ -2123,6 +2123,28 @@ function renderHistorialDetalle(detalle) {
 const semCuerpo = document.getElementById('sem-cuerpo');
 let semArcaCargado = false;
 
+// Las acciones para (re)consultar: paso 1 va a ARCA, paso 2 sube la captura.
+// Las usan el estado apagado y el estado con semáforo, así el trabajador
+// siempre puede volver a ARCA para regenerar la consulta.
+function semAcciones(intro) {
+  return `<div class="sem-acciones">
+      <div class="sem-paso">${intro}</div>
+      <div class="th-acc">
+        <a class="th-tile cta externo" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+          <b>1 · Consultar en ARCA<span class="solo-lector"> (se abre en otra pestaña)</span></b></a>
+        <label class="th-tile" for="arca-file">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>
+          <b>2 · Subir captura de ARCA</b></label>
+      </div>
+      <input type="file" id="arca-file" accept="image/*,application/pdf" capture="environment">
+    </div>`;
+}
+function semEnlazarArchivo() {
+  const f = document.getElementById('arca-file');
+  if (f) f.onchange = semSubir;
+}
+
 function semApagado() {
   if (!semCuerpo) return;
   const adv = datosLeidos && datosLeidos.advertencia_deposito;
@@ -2137,19 +2159,8 @@ function semApagado() {
       </div>
     </div>
     ${avisoTemprano}
-    <div class="sem-acciones">
-      <div class="sem-paso"><b>Cómo funciona:</b> abrí ARCA, resolvé el "no soy un robot" y guardá la captura de la tabla. Después subila acá y armamos tu semáforo.</div>
-      <div class="th-acc">
-        <a class="th-tile cta externo" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
-          <b>1 · Consultar en ARCA<span class="solo-lector"> (se abre en otra pestaña)</span></b></a>
-        <label class="th-tile" for="arca-file">
-          <svg viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>
-          <b>2 · Subir captura de ARCA</b></label>
-      </div>
-      <input type="file" id="arca-file" accept="image/*,application/pdf" capture="environment">
-    </div>`;
-  document.getElementById('arca-file').onchange = semSubir;
+    ${semAcciones('<b>Cómo funciona:</b> abrí ARCA, resolvé el "no soy un robot" y guardá la captura de la tabla. Después subila acá y armamos tu semáforo.')}`;
+  semEnlazarArchivo();
 }
 
 async function semSubir(e) {
@@ -2209,10 +2220,8 @@ function semRender(d) {
       <span class="sem-dot" style="background:#d9685c;margin-left:8px;"></span>Impago / No presentada
     </div>
     <div class="sem-fuente">Datos de ARCA · consultado el ${hoy}</div>
-    <div style="padding:0 18px 16px;"><label class="btn sec" for="arca-file2">Actualizar con otra captura</label>
-      <input type="file" id="arca-file2" accept="image/*,application/pdf" style="display:none;"></div>`;
-  const f2 = document.getElementById('arca-file2');
-  if (f2) f2.onchange = semSubir;
+    ${semAcciones('Para actualizarlo, consultá ARCA de nuevo y subí la captura.')}`;
+  semEnlazarArchivo();
 }
 
 {% if semaforo_guardado %}
