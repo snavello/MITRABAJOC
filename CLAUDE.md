@@ -111,6 +111,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - imagenes.py — achica toda imagen que se sube (`achicar(datos, perfil)`):
   webp, con alfa si lo tiene, sin agrandar, perfiles y topes por tipo. Puro, no
   importa `db`. `test_imagenes.py` clasifica con `ast` toda ruta con `UploadFile`.
+- achicar_imagenes.py — achica las imágenes YA guardadas (15 columnas de 12
+  tablas) con el mismo `imagenes.achicar`: `diagnostico` / `aplicar` (ensayo) /
+  `aplicar --si --quien X`. Ver `DESPLIEGUE_RENDER.md`.
 - fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
@@ -535,8 +538,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   200 KB), `firma` 800, `perfil` 512 (afiliado y empresa), `publicacion` 1.600
   (noticias y beneficios), `adjunto` 1.600 (imágenes de notificaciones y
   trámites; PDF y Word pasan tal cual). Siempre webp (con alfa si la original
-  lo tiene), nunca agranda, tope de entrada 8 MB, y un GIF animado queda fijo
-  (primer cuadro). Una imagen inválida da 400 / aviso en pantalla, nunca 500.
+  lo tiene), nunca agranda, tope de entrada 8 MB **y de 40 millones de píxeles,
+  mirado ANTES de decodificar** (un PNG liso de 11.000x11.000 pesa 117 KB y ocupa
+  606 MB: una bomba para el web de 512 MB), y un GIF animado queda fijo (primer
+  cuadro). Un SVG con `<script`, `on*=` o `javascript:` se rechaza. Una imagen
+  inválida da 400 / aviso en pantalla, nunca 500. Lo ya guardado se achica con
+  `achicar_imagenes.py` (ensayo y `--si`, `DESPLIEGUE_RENDER.md`).
   Quedan afuera a propósito los documentos para la IA, el contrato, el
   convenio, Recursos y `fotos_tema`. Una puerta nueva de imagen pasa por
   `imagenes.achicar` (lo exige `test_imagenes.py`).
@@ -1470,6 +1477,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Sonnet 5.5. Detalle en HISTORIAL.md, «Rendimiento con el lote de La
     Bancaria», y Tests 20 a 28 de `/entornos`; plan en
     `PLAN_PRUEBAS_BANCARIA.md`.
+
+43. **Topes de imágenes** (2026-11-05, Trabajador 0.58.09, Admin 0.77.07,
+    Plataforma 0.65.07, PR #216 y #217 (falso positivo de SVG); pedido de SDN: «ningún logo necesita ser tan
+    grande», el de La Bancaria pesaba 996 KB): toda imagen se achica en el servidor
+    al subirla (`imagenes.py`, perfiles por tipo, webp), con tope de 40 Mpx contra la
+    bomba de píxeles y rechazo de SVG con script, ambos hallazgos del QA. Lo ya
+    guardado se achica con `achicar_imagenes.py` (PR #215, merge 70a9452, con ensayo y `--si`; en
+    Pruebas [[PENDIENTE: números de Pruebas]], en la Demo con la próxima promoción).
+    Detalle en HISTORIAL.md, «Toda imagen se achica al subirla: topes por tipo».
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

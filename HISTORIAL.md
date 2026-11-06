@@ -10075,3 +10075,87 @@ clasificación nació en esta tanda, donde los 11 «no esperados» resultaron se
 configuración y no de la app, y se estuvo cerca de corregir el motor por algo que
 el motor ya hacía bien. Regla vigente en
 «Método de trabajo» de CLAUDE.md.
+
+## Toda imagen se achica al subirla: topes por tipo (2026-11-05, Trabajador 0.58.09, Admin 0.77.07, Plataforma 0.65.07)
+
+**Qué se pidió.** SDN, durante las pruebas de rendimiento de La Bancaria: «ningún
+logo necesita ser tan grande». El logo de La Bancaria pesaba 996 KB y el de SMATA
+1,1 MB, y con 200 lectores esos bytes viajando en cada pantalla clavaban el pool
+(ya documentado en «Rendimiento con el lote de La Bancaria»; los PR #203 y #204
+dejaron de leerlos si nadie los pide, esto ataca el peso en sí: ancho de banda de
+servir cada imagen y tamaño de la base). El plan de una página se aprobó el
+2026-11-05 con dos decisiones de SDN: **un GIF animado queda como imagen fija del
+primer cuadro**, y **también se achica lo ya guardado**, con un script con ensayo y
+confirmación.
+
+**Qué se decidió (PR #216, merge 9ce5aac).** Toda imagen se achica en el servidor
+al subirla (`imagenes.achicar(datos, perfil, nombre)`, puro, no importa `db`); el
+servidor no confía en lo que haga el navegador (la foto de perfil ya se achicaba
+allá, y sigue). Tope de entrada de 8 MB. Perfiles, por lado mayor: `logo` 512 px
+(es el único que admite SVG, tal cual, hasta 200 KB), `firma` 800, `perfil` 512
+(afiliado y empresa), `publicacion` 1.600 (noticias y beneficios) y `adjunto`
+1.600 (imágenes de notificaciones y trámites). La salida es siempre webp, con
+canal alfa si la original lo tiene (sigue valiendo «Logos sin fondo blanco
+forzado»), con la orientación EXIF respetada y sin agrandar nunca: una imagen
+más chica que el tope solo se recomprime. Los adjuntos PDF y Word pasan intactos.
+Quedan **fuera a propósito**: el contrato, el convenio, los recibos y comprobantes
+que lee la IA, las fotos de portada de los modelos (`fotos_tema`, que ya tenían su
+normalización) y los Recursos de `/entornos`. Video: la app no acepta video; una
+noticia con video lleva el link. Una imagen inválida da 400 o un aviso en pantalla,
+nunca 500.
+
+**Lo que encontró el QA independiente antes del merge** (dos vueltas):
+- **Bomba de píxeles.** Un PNG gris de 11.000 x 11.000 pesa 117 KB, pasa el tope
+  de 8 MB y al decodificarse lleva el proceso a 606 MB; Pruebas corre con 512 MB,
+  así que una sola subida lo tumbaba. Ahora hay un tope de **40 millones de
+  píxeles que se mira ANTES de decodificar** (`PIXELES_MAXIMOS`, leyendo solo la
+  cabecera). Verificado en la segunda vuelta: el rechazo tarda 0,01 s y la
+  memoria no se mueve.
+- **SVG con código.** Un SVG con `<script`, manejadores `on*=` o `javascript:` se
+  aceptaba y se servía tal cual (defecto previo a este bloque, en los logos): ahora
+  se rechaza, igual que los que declaran entidades o DTD.
+- **Falso positivo de SVG (PR #217, merge ff75f42, Plataforma 0.65.09).** En la primera
+  corrida sobre lo ya guardado, el logo de La Bancaria quedó afuera: es un PNG real con
+  metadatos C2PA que mencionan `<svg` en los primeros 4 KB, `imagenes._es_svg` lo tomó por
+  SVG y lo rechazó («supera 200 KB»). Ahora un archivo con firma PNG, JPEG, GIF, WEBP o BMP
+  nunca es SVG (con test).
+- El selector de firma ofrecía SVG, que el servidor rechaza (se corrigió el
+  selector).
+- Siete archivos de tests viejos subían bytes falsos como si fueran una imagen y
+  dejaron de servir con la regla nueva: se pasaron a imágenes reales
+  (`ayuda_imagenes.imagen_real`).
+- El redirect de error de Notificaciones perdía su ancla.
+
+**La red de seguridad.** `test_imagenes.py` (18 tests) es fail-closed con `ast`:
+toda ruta cuya firma tenga un `UploadFile` queda clasificada (pasa por
+`imagenes.achicar` o está en la lista cerrada de excepciones, los documentos que
+no son imágenes), y una ruta nueva sin clasificar hace fallar el test. Es la
+misma idea que los demás tests de puertas de este proyecto.
+
+**Lo que ya estaba guardado (PR #215, merge 70a9452, Plataforma 0.65.08, `achicar_imagenes.py`).** Recorre 15
+columnas de 12 tablas (logos y firma del sindicato, los dos logos de plataforma,
+la foto de afiliado y de empresa, las dos imágenes de noticias, la de beneficios,
+los adjuntos de notificaciones y de trámites de los dos actores y los archivos de
+respuestas de trámite) con el MISMO `imagenes.achicar` y el perfil de cada columna.
+Tres modos: `diagnostico` (solo lectura, todo con `octet_length` en SQL: no trae
+bytes), `aplicar` (ensayo: dice «peso antes -> después» sin escribir) y `aplicar
+--si --quien X` (escribe; `--tabla` para acotar). Reglas: solo toca filas por
+encima del peso objetivo de su perfil (100 KB logos y fotos de perfil, 150 KB la
+firma, 400 KB publicaciones y adjuntos) y **solo escribe si el resultado pesa 90 %
+o menos del original**, por eso una segunda corrida no cambia nada. Una
+transacción con commit **por fila**: un Job de Render no puede sostener una
+transacción abierta más de 30 s (`idle_in_transaction_session_timeout`). En
+noticias y beneficios regenera la versión `_norm` desde la achicada. Lo que
+`imagenes` rechaza y los SVG quedan como están y se listan al final. **Sin tabla
+nueva**: la traza es el log del Job y el respaldo es el backup diario de Render
+más la recuperación a un punto en el tiempo. Procedimiento en `DESPLIEGUE_RENDER.md`,
+«Achicar las imágenes ya cargadas». La Demo se corre con la próxima promoción.
+Resultado en Pruebas: [[PENDIENTE: números de Pruebas (antes/después, filas
+cambiadas)]].
+
+**Incidente del día, origen GitHub.** Durante unos 10 minutos todo `git push` del
+repo falló con `remote: fatal error in commit_refs` mientras la API respondía bien;
+se resolvió solo. Si vuelve a pasar: esperar un minuto y reintentar.
+
+**Método.** Tres agentes en paralelo (desarrollo, QA independiente en dos vueltas e
+implementación/deploy) coordinados por Code, según la regla del 2026-11-05.
