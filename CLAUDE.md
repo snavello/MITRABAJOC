@@ -1484,7 +1484,8 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     al subirla (`imagenes.py`, perfiles por tipo, webp), con tope de 40 Mpx contra la
     bomba de píxeles y rechazo de SVG con script, ambos hallazgos del QA. Lo ya
     guardado se achica con `achicar_imagenes.py` (PR #215, merge 70a9452, con ensayo y `--si`; en
-    Pruebas [[PENDIENTE: números de Pruebas]], en la Demo con la próxima promoción).
+    Pruebas ya corrida: 13,14 MB en 75 imágenes a 5,75 MB, el logo de La
+    Bancaria de 996 KB a 28 KB; en la Demo con la próxima promoción).
     Detalle en HISTORIAL.md, «Toda imagen se achica al subirla: topes por tipo».
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el

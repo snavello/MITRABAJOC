@@ -10150,8 +10150,22 @@ noticias y beneficios regenera la versión `_norm` desde la achicada. Lo que
 nueva**: la traza es el log del Job y el respaldo es el backup diario de Render
 más la recuperación a un punto en el tiempo. Procedimiento en `DESPLIEGUE_RENDER.md`,
 «Achicar las imágenes ya cargadas». La Demo se corre con la próxima promoción.
-Resultado en Pruebas: [[PENDIENTE: números de Pruebas (antes/después, filas
-cambiadas)]].
+**Resultado en Pruebas** (Plataforma 0.65.09 desplegada; Jobs de Render
+diagnóstico, ensayo, `--si --quien SDN` y diagnóstico de nuevo, todos exitosos).
+Total: 13,14 MB en 75 imágenes pasaron a 5,75 MB. Había 10 imágenes sobre su
+objetivo y después quedaron 0: esas 10 pasaron de 7,91 MB a 0,52 MB, sin rechazos en
+la corrida final. Logo de La Bancaria (sindicato 6): 996.138 bytes a 28 KB (webp
+512 x 171; lo que sirve `/logo/6` baja de 338 KB a 60 KB, porque `logos.recortado`
+lo re-encoda a PNG); logo del sindicato 5: 1.100 KB a 18 KB (512 x 512); la columna
+de logos de sindicatos, de 2,09 MB a 0,11 MB. Logo de Colm3na: claro 237 a 14 KB,
+oscuro 161 a 15 KB. Noticias: imagen1 id 9 de 1.126 a 90 KB, id 101 de 1.100 a
+40 KB, imagen2 id 2 de 1.330 a 44 KB, con la `_norm` regenerada. Adjuntos de
+trámites (`respuestatramite`): 546 a 39 KB, 702 a 108 KB y 828 a 137 KB; la tabla,
+de 3,50 a 1,75 MB. Sin filas sobre el objetivo desde el principio: firmas, fotos de
+perfil, beneficios, notificaciones y notas de trámite. Respaldo: la base de Pruebas
+no tiene exportaciones manuales, así que se corrió con la recuperación a un punto en
+el tiempo (disponible desde el 2026-10-29). La Demo no se tocó: va con su próxima
+promoción.
 
 **Incidente del día, origen GitHub.** Durante unos 10 minutos todo `git push` del
 repo falló con `remote: fatal error in commit_refs` mientras la API respondía bien;
