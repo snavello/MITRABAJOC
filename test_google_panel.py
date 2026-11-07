@@ -403,3 +403,137 @@ def test_tu_cuenta_mail_pide_sesion():
                                   follow_redirects=False)
     assert r.status_code in (401, 403, 303)
     assert _cuenta(OPERA) is None or _cuenta(OPERA).mail != "a@b.com"
+
+
+# ---------------------------------------------------------------- SSO: una persona, una identidad
+def _afiliado_sso(cuil, sid=SID_A, declarado="", confirmado="2026-11-06 12:00", sub="", origen="",
+                  padron="", contacto=""):
+    """La cuenta de afiliado de la operadora, con el respaldo (`nivel_origen`) que se diga."""
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=sid, cuil=cuil, activo=True, registrado=True))
+        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(CLAVE), mail_declarado=declarado,
+                               mail_declarado_confirmado=confirmado if declarado else "",
+                               google_sub=sub, nivel_origen=origen, mail_padron=padron, mail=contacto,
+                               nivel_fiabilidad=3 if origen else 1))
+        s.commit()
+
+
+@pytest.mark.parametrize("origen", ["mail_padron", "recibo_propio", "presencial"])
+def test_entra_al_panel_por_el_sub_de_su_cuenta_de_afiliado(monkeypatch, origen):
+    _operadora(mail="")                                    # el panel no conoce su mail
+    _afiliado_sso(OPERA, sub=SUB, origen=origen, declarado="otro-mail@gmail.com")
+    c, r = _entra(monkeypatch, mail="cualquiera@gmail.com", sub=SUB)
+    assert r.headers["location"] == "/admin/inicio"
+    cuenta = _cuenta(OPERA)
+    assert cuenta.google_sub == SUB and cuenta.mail == "cualquiera@gmail.com"   # próxima vez, por sub directo
+
+
+def test_entra_al_panel_por_el_mail_confirmado_de_su_cuenta_de_afiliado(monkeypatch):
+    _operadora(mail="")
+    _afiliado_sso(OPERA, declarado="Afiliada@Gmail.com", origen="mail_padron")
+    c, r = _entra(monkeypatch, mail="afiliada@gmail.com", sub="sub-afiliada")
+    assert r.headers["location"] == "/admin/inicio"
+    assert _cuenta(OPERA).google_sub == "sub-afiliada"
+
+
+@pytest.mark.parametrize("caso", ["contacto", "declarado_sin_confirmar", "sub_sin_respaldo",
+                                  "declarado_confirmado_sin_respaldo", "cuil_padron"])
+def test_lo_que_escribio_quien_se_registro_no_abre_el_panel(monkeypatch, caso):
+    """El CUIL es público: alguien se registra como afiliado con el de la operadora
+    y cuelga su Gmail. Nada de eso alcanza sin respaldo (padrón, recibo, presencial)."""
+    _operadora(mail="")
+    mail = "impostor@gmail.com"
+    if caso == "contacto":
+        _afiliado_sso(OPERA, contacto=mail, origen="mail_padron")
+    elif caso == "declarado_sin_confirmar":
+        with db.get_session() as s:
+            s.add(Trabajador(sindicato_id=SID_A, cuil=OPERA, activo=True, registrado=True))
+            s.add(CuentaTrabajador(cuil=OPERA, clave_hash=auth.hashear_clave(CLAVE), mail_declarado=mail,
+                                   mail_declarado_confirmado="", nivel_origen="mail_padron"))
+            s.commit()
+    elif caso == "sub_sin_respaldo":
+        _afiliado_sso(OPERA, sub="sub-impostor", origen="mail_declarado")
+    elif caso == "declarado_confirmado_sin_respaldo":
+        _afiliado_sso(OPERA, declarado=mail, origen="mail_declarado")
+    else:
+        _afiliado_sso(OPERA, declarado=mail, sub="sub-impostor", origen="cuil_padron")
+    c, r = _entra(monkeypatch, mail=mail, sub="sub-impostor")
+    assert r.headers["location"] == "/admin?error=google_sinmail"
+    assert c.cookies.get(main.COOKIE_SINDICATO) is None
+    assert _cuenta(OPERA).google_sub == ""
+
+
+def test_el_aviso_del_panel_sugiere_la_misma_cuenta_de_google(monkeypatch):
+    html = TestClient(main.app).get("/admin?error=google_sinmail").text
+    assert "usá la misma cuenta de Google" in html
+
+
+def test_el_mail_de_otra_persona_en_su_cuenta_de_afiliado_cuenta_para_la_unicidad(monkeypatch):
+    """Dos operadoras que se reconocen por el mismo mail (una por el panel, otra por
+    su afiliado respaldado) no se adivinan: varias."""
+    _operadora(OPERA, mail=MAIL)
+    _operadora(OTRA, mail="")
+    _afiliado_sso(OTRA, declarado=MAIL, origen="mail_padron")
+    c, r = _entra(monkeypatch)
+    assert r.headers["location"] == "/admin?error=google_varias"
+
+
+def _empezar_afiliado():
+    c = TestClient(main.app)
+    r = c.get("/ingresar/google", follow_redirects=False)
+    q = parse_qs(urlsplit(r.headers["location"]).query)
+    return c, q["state"][0]
+
+
+def test_el_afiliado_que_entra_con_google_ata_la_cuenta_del_panel_del_mismo_cuil(monkeypatch):
+    _operadora(mail="")
+    _afiliado_sso(OPERA, padron="mi.padron@gmail.com", origen="mail_padron")   # respaldada por el padrón
+    _simular_google(monkeypatch, mail="mi.padron@gmail.com", sub="sub-unica")
+    c, state = _empezar_afiliado()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    assert _cuenta(OPERA).google_sub == "sub-unica"                      # una persona, una identidad
+    # Y ahora el panel la reconoce por ese sub, sin mail alguno cargado en el panel.
+    c2, r = _entra(monkeypatch, mail="mi.padron@gmail.com", sub="sub-unica")
+    assert r.headers["location"] == "/admin/inicio"
+
+
+def test_un_afiliado_sin_respaldo_no_ata_el_panel(monkeypatch):
+    """Se registró con el CUIL ajeno y puso su Gmail de contacto: entra como afiliado
+    (la ficha lo permite) pero no arrastra la cuenta del panel."""
+    _operadora(mail="")
+    _afiliado_sso(OPERA, contacto="impostor@gmail.com", origen="")
+    _simular_google(monkeypatch, mail="impostor@gmail.com", sub="sub-impostor")
+    c, state = _empezar_afiliado()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    assert _cuenta(OPERA).google_sub == ""
+    c2, r = _entra(monkeypatch, mail="impostor@gmail.com", sub="sub-impostor")
+    assert r.headers["location"] == "/admin?error=google_sinmail"
+    assert c2.cookies.get(main.COOKIE_SINDICATO) is None
+
+
+def _nota_del_mail(html):
+    """El texto de <div id="cm-actual"> (el JS de la página repite frases parecidas)."""
+    import re
+    return re.search(r'id="cm-actual">(.*?)</div>', html, re.S).group(1)
+
+
+def test_tu_cuenta_muestra_el_mail_del_perfil_de_afiliado():
+    _operadora(mail="")
+    _afiliado_sso(OPERA, declarado="del.perfil@gmail.com", origen="mail_padron")
+    portada = _sesion_de().get("/admin/inicio").text
+    assert "Tu mail (de tu perfil de afiliado): del.perfil@gmail.com" in _nota_del_mail(portada)
+    assert "Cargar otro mail" in portada
+
+
+def test_tu_cuenta_no_ofrece_el_mail_de_un_afiliado_sin_respaldo():
+    _operadora(mail="")
+    _afiliado_sso(OPERA, declarado="tipeado@gmail.com", origen="mail_declarado")
+    portada = _sesion_de().get("/admin/inicio").text
+    assert _nota_del_mail(portada).strip() == "Todavía no cargaste un mail."
+
+
+def test_el_mail_propio_del_panel_manda_sobre_el_del_perfil():
+    _operadora(mail="propio@gmail.com")
+    _afiliado_sso(OPERA, declarado="del.perfil@gmail.com", origen="mail_padron")
+    portada = _sesion_de().get("/admin/inicio").text
+    assert _nota_del_mail(portada).strip() == "Cargado: propio@gmail.com"

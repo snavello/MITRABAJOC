@@ -105,7 +105,7 @@
     <div class="chip-rol">Panel del sindicato</div>
     {% set err = request.query_params.get('error') %}
     {% if err == 'google' %}<div class="error">No pudimos ingresar con Google. Probá de nuevo o ingresá con tu clave.</div>
-    {% elif err == 'google_sinmail' %}<div class="error">No encontramos una cuenta del panel con ese mail. Ingresá con tu CUIL y clave y cargá tu mail en Tu cuenta.</div>
+    {% elif err == 'google_sinmail' %}<div class="error">No encontramos una cuenta del panel con ese mail. Ingresá con tu CUIL y clave y cargá tu mail en Tu cuenta. Si ya entraste con Google como afiliado, usá la misma cuenta de Google.</div>
     {% elif err == 'google_varias' %}<div class="error">Ese mail corresponde a más de una cuenta del panel, así que no podemos elegir por vos. Ingresá con tu CUIL y clave.</div>
     {% elif err == 'google_temporal' %}<div class="error">Tu clave es transitoria. Ingresá con tu CUIL y esa clave para elegir una propia; después podés usar Google.</div>
     {% elif err == 'espera' %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>

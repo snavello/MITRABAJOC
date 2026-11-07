@@ -2113,6 +2113,9 @@ def admin_inicio(request: Request):
         "usuario_admin": (usuario.usuario if usuario else ""),
         "cuil_admin": cuil_admin,
         "mail_panel": db.mail_panel_de(cuil_admin),
+        # El mail confirmado de su cuenta de afiliado (si esa cuenta prueba su
+        # identidad): el panel ya lo reconoce, no hace falta cargarlo de nuevo.
+        "mail_perfil_afiliado": db.mail_sso_de(cuil_admin) if cuil_admin else "",
         "rol_admin": rol_admin,
         "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
         "area_admin": area_admin,

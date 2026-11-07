@@ -69,8 +69,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   de la persona como la clave): lo cargan el alta de usuario (opcional, solo si la
   cuenta no tenía uno) o ella misma en «Tu cuenta»; también vale el
   `CuentaTrabajador.mail_padron` si está empadronada en alguno de SUS sindicatos.
-  Nunca el mail de contacto ni el declarado del afiliado (los escribe quien se
-  registre primero con ese CUIL). Una clave transitoria frena a Google.
+  Nunca el mail de contacto ni el declarado sin confirmar del afiliado (los escribe
+  quien se registre primero con ese CUIL). Una clave transitoria frena a Google.
+  **Una persona, una identidad: el `sub` de Google y el mail confirmado valen para
+  todos sus roles con el mismo CUIL** (2026-11-06): el panel también reconoce la
+  cuenta de afiliado del mismo CUIL por su `google_sub` o su `mail_declarado`
+  confirmado, **pero solo si esa cuenta prueba la identidad** (`nivel_origen` =
+  `mail_padron`, `recibo_propio` o `presencial`, `db.SSO_ORIGENES_VALIDOS`): una
+  cuenta de afiliado creada con el CUIL ajeno y un Gmail tipeado no abre el panel.
+  Al entrar un afiliado así respaldado, se ata también su `CuentaPanel`.
   **Cookie separada por rol** (`COOKIES_POR_ROL` en main.py:
   `sesion_sindicato`/`sesion_plataforma`/`sesion_trabajador`/`sesion_empleador`)
   — cada rol lee y renueva SOLO su propia cookie, nunca una genérica

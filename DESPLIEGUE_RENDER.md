@@ -138,7 +138,13 @@ plataforma, solo si la cuenta no tenía uno) o la persona en «Tu cuenta» → �
 mail»; además vale el mail que el sindicato cargó en el padrón
 (`mail_padron`) si la persona está empadronada en alguno de sus sindicatos. Con
 una clave transitoria (alta o restablecimiento) Google no entra: hay que elegir
-la clave primero.
+la clave primero. **Una persona, una identidad**: el panel también reconoce a la
+operadora por su cuenta de afiliado del mismo CUIL (su `sub` de Google o su mail
+declarado y confirmado), si esa cuenta prueba la identidad: mail del padrón,
+recibo propio leído por la IA o confirmación presencial del sindicato. Con una
+cuenta de afiliado de nivel 1 o con un mail solo tipeado, no: hay que cargar el
+mail en «Tu cuenta» del panel. El afiliado respaldado que entra con Google ata
+también su cuenta del panel.
 
 **Cómo identifica**: la verificación del mail la hace Google (`email_verified`);
 la app lo busca en la ficha de las cuentas ya registradas (con clave), en

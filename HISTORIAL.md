@@ -8,6 +8,39 @@ detalle. `CLAUDE.md` tiene el resumen orientador ("Estado actual") con el
 mapa de qué existe; acá está el cómo y el por qué de cada punto de ese mapa,
 en el mismo orden cronológico en que se construyó.
 
+## Una persona, una identidad de Google: el panel reconoce al afiliado (2026-11-06, Admin 0.80.02, Trabajador 0.59.05)
+
+**El caso de SDN en AEFIP.** Entraba con Google como trabajador (su mail está en su
+perfil de afiliado) y como administrador de AEFIP el panel le decía que no tenía
+mail: `CuentaPanel.mail` estaba vacío y el panel no miraba su cuenta de afiliado.
+Pero la persona es una (el CUIL) y sus datos viven en un solo lugar.
+
+**Qué se hizo.** `db._cuentas_panel_con_mail` suma, además de `CuentaPanel.mail` y
+`mail_padron`, la cuenta de AFILIADO del mismo CUIL cuando (a) su `google_sub` es
+el `sub` que llega (la misma persona ya entró con Google como afiliada) o (b) su
+`mail_declarado` coincide y está confirmado. Al entrar al panel por ahí se guardan
+`google_sub` (y el mail, si estaba vacío) en `CuentaPanel`; simétricamente, cuando
+la afiliada entra con Google (`entrar_con_google`) se ata también su `CuentaPanel`
+sin `google_sub`. «Tu cuenta» muestra «Tu mail (de tu perfil de afiliado)» en vez de
+pedir que se cargue de nuevo (`db.mail_sso_de`), y el aviso de «sin cuenta» del
+panel sugiere usar la misma cuenta de Google.
+
+**Desvío del pedido, por seguridad: la cuenta de afiliado tiene que PROBAR la
+identidad.** Tal cual se pidió ((a) y (b) a secas) había un camino de escalada: el
+CUIL de un operador es público y, con el canal de mail apagado, cualquiera se
+registra como afiliado con ese CUIL; el ingreso con Google del afiliado acepta el
+mail de contacto que esa persona tipeó, lo deja «declarado y confirmado» y guarda
+su `sub`; con (a)/(b) o con el atado simétrico, ese `sub` abría el panel del
+operador. «Confirmado» solo prueba que la persona controla un buzón, no que sea la
+del CUIL. Por eso (a), (b) y el atado simétrico exigen además que la cuenta de
+afiliado esté respaldada: `nivel_origen` en `db.SSO_ORIGENES_VALIDOS` =
+`mail_padron` (el mail lo cargó el sindicato), `recibo_propio` (un recibo del CUIL
+leído por la IA en `/api/leer`) o `presencial` (lo confirmó el sindicato). El mail
+de contacto y el declarado sin respaldo siguen sin valer. Consecuencia: una
+operadora cuyo afiliado es de nivel 1, o solo con un mail tipeado, tiene que
+cargar su mail en «Tu cuenta» del panel (con la clave) o subir un recibo propio.
+Aflojarlo es agrandar esa tupla: es una decisión de SDN.
+
 ## Google también para el panel del sindicato (2026-11-06, Admin 0.80.01, Plataforma 0.65.13)
 
 Pedido de SDN: que el ingreso a `/admin` también sea con Google «si las condiciones

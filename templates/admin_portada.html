@@ -366,8 +366,8 @@
        clave; cambiarlo pide la clave actual. #}
     <div class="tm-bloque" id="cm-bloque">
       <div class="tm-t">Tu mail</div>
-      <div class="tm-nota" id="cm-actual">{% if mail_panel %}Cargado: {{ mail_panel }}{% else %}Todavía no cargaste un mail.{% endif %}</div>
-      <button type="button" class="tm-op" id="cm-abrir" aria-expanded="false" aria-controls="cm-form" onclick="abrirMiMail()">{% if mail_panel %}Cambiar mi mail{% else %}Cargar mi mail{% endif %}</button>
+      <div class="tm-nota" id="cm-actual">{% if mail_panel %}Cargado: {{ mail_panel }}{% elif mail_perfil_afiliado %}Tu mail (de tu perfil de afiliado): {{ mail_perfil_afiliado }}. El panel ya lo reconoce con «Continuar con Google»; si querés, cargá otro propio.{% else %}Todavía no cargaste un mail.{% endif %}</div>
+      <button type="button" class="tm-op" id="cm-abrir" aria-expanded="false" aria-controls="cm-form" onclick="abrirMiMail()">{% if mail_panel %}Cambiar mi mail{% elif mail_perfil_afiliado %}Cargar otro mail{% else %}Cargar mi mail{% endif %}</button>
       <form class="cc-form" id="cm-form" hidden autocomplete="off" onsubmit="return guardarMiMail(event)">
         <label for="cm-mail">Tu mail</label>
         <input id="cm-mail" name="mail" type="email" maxlength="200" autocomplete="email" value="{{ mail_panel }}">

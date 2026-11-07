@@ -3068,16 +3068,47 @@ _CUENTA_GOOGLE = {"trabajador": ("CuentaTrabajador", "cuil"),
                   "panel": ("CuentaPanel", "cuil")}
 
 
-def _cuentas_panel_con_mail(s, mail: str) -> list:
+# Una persona, una identidad (SSO del panel): la cuenta de afiliado del MISMO CUIL
+# identifica a la operadora, pero solo si esa cuenta de afiliado está respaldada
+# por algo más que lo que escribió quien se registró: el mail del padrón (lo cargó
+# el sindicato), un recibo propio leído por la IA o la confirmación presencial.
+# Un afiliado de nivel 1/2 por `mail_declarado` (un mail tipeado o un ingreso con
+# Google con un mail de contacto) NO alcanza: el CUIL es público y, con el canal
+# de mail apagado, cualquiera se registra como afiliado con el CUIL de un operador
+# y le cuelga su Gmail. Si SDN decide aflojarlo, es esta tupla.
+SSO_ORIGENES_VALIDOS = ("mail_padron", "recibo_propio", "presencial")
+
+
+def _cuil_con_identidad_probada(c) -> bool:
+    """¿La cuenta de afiliado `c` prueba quién es la persona (ver arriba)?"""
+    return bool(c and c.clave_hash and (c.nivel_origen or "") in SSO_ORIGENES_VALIDOS)
+
+
+def mail_sso_de(cuil: str) -> str:
+    """El mail CONFIRMADO de la cuenta de afiliado de ese CUIL, si esa cuenta
+    prueba la identidad: es el que el panel reconoce sin que la persona lo cargue
+    de nuevo. "" si no hay."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if _cuil_con_identidad_probada(c) and (c.mail_declarado_confirmado or ""):
+            return (c.mail_declarado or "").strip()
+    return ""
+
+
+def _cuentas_panel_con_mail(s, mail: str, sub: str = "") -> list:
     """Las cuentas del PANEL (con clave y con algún usuario activo en un
     sindicato activo) a las que corresponde `mail`: el de la propia cuenta
-    (`CuentaPanel.mail`) o el que cargó el sindicato en el padrón
+    (`CuentaPanel.mail`), el que cargó el sindicato en el padrón
     (`CuentaTrabajador.mail_padron`) de esa persona, SOLO si está empadronada en
-    alguno de los sindicatos donde ella es operadora.
+    alguno de los sindicatos donde ella es operadora, o -- una persona, una
+    identidad -- la cuenta de AFILIADO del mismo CUIL cuando ya ingresó con ese
+    mismo `sub` de Google o tiene ese mail declarado y confirmado, siempre que esa
+    cuenta de afiliado pruebe la identidad (`SSO_ORIGENES_VALIDOS`).
 
     Deliberadamente NO cuenta el mail de contacto (`CuentaTrabajador.mail`) ni
-    el declarado: los escribe quien se registre primero como afiliado con ese
-    CUIL (que es público), y con ellos cualquiera entraría al panel de otro."""
+    el declarado sin confirmar: los escribe quien se registre primero como
+    afiliado con ese CUIL (que es público), y con ellos cualquiera entraría al
+    panel de otro."""
     from sqlalchemy import func as _func
     activos: dict = {}
     for cuil, sid in s.exec(select(UsuarioSindicato.cuil, UsuarioSindicato.sindicato_id).join(
@@ -3094,14 +3125,23 @@ def _cuentas_panel_con_mail(s, mail: str) -> list:
         if s.exec(select(Trabajador.id).where(
                 Trabajador.cuil == cuil, Trabajador.sindicato_id.in_(list(activos[cuil])))).first():
             del_padron.add(cuil)
-    cuils = [c for c in (propias | del_padron) if c in activos]
+    del_afiliado = set()
+    if sub:
+        del_afiliado |= {c for c in s.exec(select(CuentaTrabajador.cuil).where(
+            CuentaTrabajador.google_sub == sub, CuentaTrabajador.clave_hash != "",
+            CuentaTrabajador.nivel_origen.in_(SSO_ORIGENES_VALIDOS))).all()}
+    del_afiliado |= {c for c in s.exec(select(CuentaTrabajador.cuil).where(
+        _func.lower(_func.trim(CuentaTrabajador.mail_declarado)) == mail,
+        CuentaTrabajador.mail_declarado_confirmado != "", CuentaTrabajador.clave_hash != "",
+        CuentaTrabajador.nivel_origen.in_(SSO_ORIGENES_VALIDOS))).all()}
+    cuils = [c for c in (propias | del_padron | del_afiliado) if c in activos]
     if not cuils:
         return []
     return s.exec(select(CuentaPanel).where(
         CuentaPanel.cuil.in_(cuils), CuentaPanel.clave_hash != "")).all()
 
 
-def _cuentas_con_mail(s, rol: str, mail: str) -> list:
+def _cuentas_con_mail(s, rol: str, mail: str, sub: str = "") -> list:
     """Todas las cuentas REGISTRADAS (con clave) del rol que tienen `mail` en
     alguno de sus campos de mail, normalizado (minúsculas, sin espacios). Una
     fila del padrón sin clave todavía no es una cuenta: Google no la abre."""
@@ -3110,7 +3150,7 @@ def _cuentas_con_mail(s, rol: str, mail: str) -> list:
     def igual(col):
         return _func.lower(_func.trim(col)) == mail
     if rol == "panel":
-        return _cuentas_panel_con_mail(s, mail)
+        return _cuentas_panel_con_mail(s, mail, sub)
     if rol == "trabajador":
         return s.exec(select(CuentaTrabajador).where(
             CuentaTrabajador.clave_hash != "",
@@ -3150,7 +3190,7 @@ def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
             # Una cuenta del panel sin ningún usuario activo no entra a nada.
             cuentas = [c for c in cuentas if sindicatos_del_operador(c.cuil)]
         if not cuentas:
-            cuentas = _cuentas_con_mail(s, rol, mail)
+            cuentas = _cuentas_con_mail(s, rol, mail, sub)
             # La unicidad se cuenta sobre TODAS las cuentas; recién después se
             # descarta la que ya tiene otro `sub`.
             if len(cuentas) == 1 and (cuentas[0].google_sub or ""):
@@ -3210,6 +3250,15 @@ def entrar_con_google(rol: str, cuenta_id: int, sub: str, mail: str) -> None:
             elif acepta:
                 subir_nivel(s, c, "mail_declarado")
         s.add(c)
+        if rol == "trabajador" and sub and _cuil_con_identidad_probada(c):
+            # Una persona, una identidad de Google: si la misma persona tiene
+            # cuenta del panel sin vincular, queda atada al mismo `sub`. Solo si
+            # esta cuenta de afiliado PRUEBA quién es (ver SSO_ORIGENES_VALIDOS):
+            # si no, un afiliado registrado con el CUIL ajeno se ataría el panel.
+            cp = s.exec(select(CuentaPanel).where(CuentaPanel.cuil == c.cuil)).first()
+            if cp and cp.clave_hash and not (cp.google_sub or ""):
+                cp.google_sub = c.google_sub or sub
+                s.add(cp)
         s.commit()
 
 
