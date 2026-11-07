@@ -4,6 +4,21 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Promover a la demo la tanda del 2026-11-06** (SDN, 2026-11-06, guardado
+  para después): en Pruebas quedó verificado por SDN todo lo de ese día
+  (Trabajador 0.59.05, Admin 0.80.02, Plataforma 0.65.13: semáforo con vuelta a
+  ARCA, pantalla que explica los 502, lectura de fotos con pico de 29 MiB y cupo
+  de 2, mapa funcional fuera de memoria, fotos de portada en Apariencia, clave
+  inicial obligatoria con cambio y reseteo, Google para afiliado, empresa y
+  panel con identidad única por CUIL). Antes de `python promover_demo.py`:
+  1. Google Cloud: segundo cliente OAuth «Colm3na Demo» con la URI
+     `https://mitrabajo.onrender.com/ingresar/google/callback`, y cargar
+     `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` en el servicio MITRABAJO-demo
+     (sin eso la demo anda igual, sin el botón de Google).
+  2. Render, MITRABAJO-demo: `MALLOC_ARENA_MAX=2` como en Pruebas.
+  3. Después de promover: correr `achicar_imagenes.py` en la demo (pendiente
+     desde la promoción anterior) y mirar la memoria en reposo a los 5 minutos.
+
 - [ ] **Bitácora de cambios de Reglas** (2026-11-05): en Pruebas las tolerancias
   de JUBILACION, PAMI y OBRASOCIAL estaban en $ 5.000 y no hay forma de saber
   quién ni cuándo (`/admin/formula` no deja registro). Registrar quién, cuándo y
