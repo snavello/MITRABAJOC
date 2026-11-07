@@ -660,6 +660,8 @@
   <div class="card">
     {% if request.query_params.get('error') == 'cuil' %}
     <div class="msg err">No se creó el administrador: el CUIL no es válido. Revisá los 11 números.<br><small>Código E-IDENT-01</small></div>
+    {% elif request.query_params.get('error') == 'mail' %}
+    <div class="msg err">No se creó el administrador: el mail no parece válido. Revisalo o dejalo vacío.</div>
     {% endif %}
     {% if sindicatos %}
     <form method="post" action="/plataforma/usuario" id="form-nuevo-admin" onsubmit="return confirmarClaves(this, 'na-clave', 'na-repetir', 'na-error')">
@@ -676,6 +678,8 @@
         </div>
         <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="Ej.: 20-12345678-6"></div>
         <div class="campo full"><label>Nombre</label><input name="nombre"></div>
+        <div class="campo full"><label>Mail (opcional)</label><input name="mail" type="email" maxlength="200" autocomplete="off" placeholder="nombre@ejemplo.com">
+          <span class="ayuda">Con este mail la persona puede entrar con Google. Si ya tiene uno cargado en su cuenta, no se cambia.</span></div>
         <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required>
           <span class="ayuda">Es transitoria: pasásela a la persona por fuera de la app. En su primer ingreso al panel la app le pide elegir una propia.</span></div>
         <div class="campo"><label>Repetir clave inicial *</label><input id="na-repetir" required></div>

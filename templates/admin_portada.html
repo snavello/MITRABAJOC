@@ -361,6 +361,25 @@
     </div>
     {% endif %}
     {% if cuil_admin %}
+    {# Tu mail (POST /admin/cuenta/mail): el que Google verifica para entrar al
+       panel con «Continuar con Google». Es de la cuenta de la persona, como la
+       clave; cambiarlo pide la clave actual. #}
+    <div class="tm-bloque" id="cm-bloque">
+      <div class="tm-t">Tu mail</div>
+      <div class="tm-nota" id="cm-actual">{% if mail_panel %}Cargado: {{ mail_panel }}{% else %}Todavía no cargaste un mail.{% endif %}</div>
+      <button type="button" class="tm-op" id="cm-abrir" aria-expanded="false" aria-controls="cm-form" onclick="abrirMiMail()">{% if mail_panel %}Cambiar mi mail{% else %}Cargar mi mail{% endif %}</button>
+      <form class="cc-form" id="cm-form" hidden autocomplete="off" onsubmit="return guardarMiMail(event)">
+        <label for="cm-mail">Tu mail</label>
+        <input id="cm-mail" name="mail" type="email" maxlength="200" autocomplete="email" value="{{ mail_panel }}">
+        <label for="cm-clave">Tu clave actual</label>
+        <input id="cm-clave" name="clave_actual" type="password" autocomplete="current-password" required>
+        <div class="tm-ops">
+          <button type="submit" class="tm-op activa" id="cm-guardar">Guardar mail</button>
+          <button type="button" class="tm-op" onclick="cerrarMiMail()">Cancelar</button>
+        </div>
+      </form>
+      <div class="tm-nota" id="cm-nota" role="status" aria-live="polite">Con él podés entrar con «Continuar con Google». Vale para todos los sindicatos en los que trabajás.</div>
+    </div>
     {# Tu clave: la cambia la propia persona, con la actual por delante
        (POST /admin/cuenta/clave). Es una sola para todos los sindicatos en
        los que trabaja. #}
@@ -427,6 +446,41 @@ function cerrarPerfil() { document.getElementById('overlay-perfil').classList.re
 function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
 function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
 const NOTA_CLAVE = 'Vale para todos los sindicatos en los que trabajás.';
+const NOTA_MAIL = 'Con él podés entrar con «Continuar con Google». Vale para todos los sindicatos en los que trabajás.';
+function abrirMiMail() {
+  document.getElementById('cm-form').hidden = false;
+  document.getElementById('cm-abrir').hidden = true;
+  document.getElementById('cm-abrir').setAttribute('aria-expanded', 'true');
+  document.getElementById('cm-mail').focus();
+}
+function cerrarMiMail() {
+  const f = document.getElementById('cm-form');
+  f.hidden = true; document.getElementById('cm-clave').value = '';
+  document.getElementById('cm-abrir').hidden = false;
+  document.getElementById('cm-abrir').setAttribute('aria-expanded', 'false');
+  const nota = document.getElementById('cm-nota');
+  nota.className = 'tm-nota'; nota.textContent = NOTA_MAIL;
+}
+async function guardarMiMail(ev) {
+  ev.preventDefault();
+  const f = document.getElementById('cm-form'), nota = document.getElementById('cm-nota');
+  const mostrar = (txt, clase) => { nota.className = 'tm-nota ' + clase; nota.textContent = txt; };
+  const boton = document.getElementById('cm-guardar'); boton.disabled = true;
+  try {
+    const r = await fetch('/admin/cuenta/mail', { method: 'POST', body: new FormData(f) });
+    const dato = await r.json().catch(() => ({}));
+    if (!r.ok) { mostrar(dato.error || 'No se pudo guardar el mail. Probá de nuevo en un momento.', 'cc-nota-error'); return false; }
+    document.getElementById('cm-actual').textContent = dato.mail ? 'Cargado: ' + dato.mail : 'Todavía no cargaste un mail.';
+    document.getElementById('cm-abrir').textContent = dato.mail ? 'Cambiar mi mail' : 'Cargar mi mail';
+    document.getElementById('cm-mail').value = dato.mail || '';
+    f.hidden = true; document.getElementById('cm-clave').value = '';
+    document.getElementById('cm-abrir').hidden = false;
+    document.getElementById('cm-abrir').setAttribute('aria-expanded', 'false');
+    mostrar(dato.mail ? 'Listo: ya podés entrar con Google con ese mail.' : 'Listo: sacaste tu mail.', 'cc-nota-ok');
+  } catch (e) { mostrar('No se pudo guardar el mail. Probá de nuevo en un momento.', 'cc-nota-error'); }
+  finally { boton.disabled = false; }
+  return false;
+}
 function abrirCambioClave() {
   document.getElementById('cc-form').hidden = false;
   document.getElementById('cc-abrir').hidden = true;

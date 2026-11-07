@@ -65,7 +65,7 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
 | `RESEND_API_KEY` | clave del equipo "Demo" de Resend | clave del equipo "Pruebas" | Canal de mail del registro y la recuperación de clave (`correo.py`, PLAN_REGISTRO.md). Sin ella y sin `MAIL_REMITENTE` el canal queda apagado en silencio: el registro cae a nivel 1 visible y la recuperación deriva al sindicato (D9). Rotar en Resend → API Keys. |
 | `MAIL_REMITENTE` | `Colm3na <no-responder@avisos.colm3na.com.ar>` | ídem | Remitente de los códigos. El subdominio `avisos.colm3na.com.ar` tiene que estar verificado en Resend (DKIM/SPF en Cloudflare); el dominio raíz queda para el mail humano (Google Workspace). No es secreto. |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | sitio Turnstile "demo" | sitio Turnstile "pruebas" | Captcha de Cloudflare en los dos registros y en la recuperación (`captcha.py`). Sin las dos, apagado en silencio. La `SITE_KEY` se imprime en el HTML (no es secreta); el `SECRET` no sale nunca. Cambiarlas exige reiniciar el servicio: la CSP y el widget se fijan al arrancar. |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | cliente OAuth "Demo" de Google Cloud | cliente OAuth "Pruebas" | «Continuar con Google» en `/ingresar` y `/ingresar-empresa` (`google_auth.py`). Sin las dos, apagado en silencio: el botón no se dibuja y las rutas dan 404. Un cliente por entorno (cada uno con su URI de retorno). El `SECRET` no sale nunca. Pasos en «Ingreso con Google» más abajo. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | cliente OAuth "Demo" de Google Cloud | cliente OAuth "Pruebas" | «Continuar con Google» en `/ingresar`, `/ingresar-empresa` y `/admin` (`google_auth.py`). Sin las dos, apagado en silencio: el botón no se dibuja y las rutas dan 404. Un cliente por entorno (cada uno con su URI de retorno). El `SECRET` no sale nunca. Pasos en «Ingreso con Google» más abajo. |
 | `DASHSCOPE_API_KEY` | — | clave de Alibaba Cloud Model Studio (región Singapur) | Solo para el **Laboratorio de modelos** de `/entornos` → Herramientas (`laboratorio_modelos.py`, ficha `docs/LABORATORIO_MODELOS.md`): lee recibos con Qwen 3.8 para compararlo con Claude. No la usa ninguna ruta de la app. Sin ella, los modelos de Qwen se ven pero no se pueden elegir. Opcional `DASHSCOPE_BASE_URL` con el host del Workspace (si no, el host legado `dashscope-intl`). |
 | `MOONSHOT_API_KEY` | — | clave de platform.kimi.ai (plataforma internacional) | Ídem, para Kimi K3 / K3.1 Pro. Opcional `MOONSHOT_BASE_URL`. Las lecturas de estos proveedores NO van a Uso de IA de `/plataforma` (eso es el consumo de Anthropic): quedan en los ensayos del laboratorio. |
 | `OPENAI_API_KEY` | — | clave de platform.openai.com (prepago, mínimo US$ 5) | Ídem, para GPT-6.1 Sol / Terra y GPT-6 Luna / Astra. Opcional `OPENAI_BASE_URL`. Las tres claves se pueden pegar también desde la pantalla del laboratorio (quedan en `ConfiguracionPlataforma.claves_laboratorio`); la variable de Render manda. |
@@ -129,6 +129,16 @@ OpenID Connect): la CSP no cambia y no se carga nada de Google en las pantallas.
 no se muestra y `/ingresar/google`, `/ingresar-empresa/google` y
 `/ingresar/google/callback` responden 404. Es el estado de hoy en todos los
 entornos hasta que se creen los clientes.
+
+**Panel del sindicato** (`/admin`, «Continuar con Google» debajo de la clave): la
+vuelta es la MISMA `/ingresar/google/callback`, así que las URIs de Google no
+cambian. El mail del operador es de su cuenta (`CuentaPanel.mail`): lo carga
+quien da el alta (campo «Mail (opcional)» de Áreas y Usuarios y del alta de
+plataforma, solo si la cuenta no tenía uno) o la persona en «Tu cuenta» → «Tu
+mail»; además vale el mail que el sindicato cargó en el padrón
+(`mail_padron`) si la persona está empadronada en alguno de sus sindicatos. Con
+una clave transitoria (alta o restablecimiento) Google no entra: hay que elegir
+la clave primero.
 
 **Cómo identifica**: la verificación del mail la hace Google (`email_verified`);
 la app lo busca en la ficha de las cuentas ya registradas (con clave), en

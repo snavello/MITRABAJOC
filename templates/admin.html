@@ -3836,6 +3836,8 @@
   <div class="msg err">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg err">CUIT/CUIL o clave inválidos.</div>
+  {% elif request.query_params.get('err') == 'mail' %}
+  <div class="msg err">Ese mail no parece válido: revisalo (una sola dirección, con arroba y dominio).</div>
   {% elif request.query_params.get('err') == 'clavepropia' %}
   <div class="msg err">Tu propia clave no se restablece desde acá: cambiala en «Tu cuenta», en la portada, con tu clave actual.</div>
   {% elif request.query_params.get('err') == 'clavecompartida' %}
@@ -3865,6 +3867,10 @@
              seccional; si no, se avisa que nace como empleado sin afiliar. #}
           <span class="muted" style="font-size:12px;" id="usu-padron-aviso"></span></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
+        <div class="campo"><label>Mail (opcional)</label><input name="mail" id="usu-mail" type="email" maxlength="200" autocomplete="off" placeholder="nombre@ejemplo.com">
+          {# Con él la persona puede entrar con Google. Es de SU cuenta, como la
+             clave: si ya tiene uno cargado, este no lo pisa. #}
+          <span class="muted" style="font-size:12px;">Con este mail la persona puede entrar con Google. Si su cuenta ya tiene uno, no se cambia.</span></div>
         <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required>
           {# Una persona, una clave para todos los sindicatos (CuentaPanel). #}
           <span class="muted" style="font-size:12px;">Si la persona ya usa el panel en otro sindicato, entra con su clave de siempre y esta no se usa.</span></div>

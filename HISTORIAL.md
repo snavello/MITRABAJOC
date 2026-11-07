@@ -8,6 +8,54 @@ detalle. `CLAUDE.md` tiene el resumen orientador ("Estado actual") con el
 mapa de qué existe; acá está el cómo y el por qué de cada punto de ese mapa,
 en el mismo orden cronológico en que se construyó.
 
+## Google también para el panel del sindicato (2026-11-06, Admin 0.80.01, Plataforma 0.65.13)
+
+Pedido de SDN: que el ingreso a `/admin` también sea con Google «si las condiciones
+se cumplen». Ni `CuentaPanel` ni `UsuarioSindicato` tenían mail, así que la cuenta
+del operador ganó uno propio.
+
+- **Modelo**: `CuentaPanel.mail` y `CuentaPanel.google_sub` (texto, NOT NULL, default
+  `''`, con índice), migración `c6e8a0b2d4f7`. El mail es de la PERSONA, como la
+  clave: una cuenta por CUIL.
+- **De dónde sale el mail**: (a) el alta de usuario del panel (`POST /admin/usuario`,
+  también la edición) y la del primer admin de plataforma (`POST /plataforma/usuario`)
+  tienen «Mail (opcional)»; se guarda en la cuenta SOLO si estaba vacía
+  (`db.guardar_mail_panel(..., solo_si_vacio=True)`), igual que la clave en
+  `_mover_clave_a_la_cuenta`; un mail inválido corta el alta antes de escribir. (b)
+  «Tu cuenta» → «Tu mail» (`POST /admin/cuenta/mail`): la persona lo carga, cambia
+  o borra, pidiendo la clave actual (una sesión robada no alcanza para atarle un
+  Google ajeno); al cambiarlo se suelta el `google_sub`. (c) el `mail_padron`
+  (cargado por el sindicato) de su `CuentaTrabajador`, si está empadronada en
+  alguno de los sindicatos donde ella es operadora.
+- **Qué NO cuenta (desvío del pedido)**: el mail de CONTACTO y el declarado de la
+  ficha de afiliado. El CUIL es público y los escribe quien se registre primero
+  como afiliado con ese CUIL (con el canal de mail apagado el registro nace abierto):
+  habría bastado registrarse como afiliado de un operador, poner un Gmail propio y
+  entrar con Google a SU panel. El `mail_padron` lo escribe el sindicato (y un
+  sindicato solo toca el de las cuentas por las que responde, `padron_responde_por`).
+- **Identificar** (`db.cuenta_para_google("panel", ...)`, `_cuentas_panel_con_mail`):
+  primero por `google_sub`, después por mail; cuentas con clave y con algún usuario
+  activo en un sindicato activo; el mail tiene que ser de UNA sola cuenta contando
+  los dos orígenes (si no, «varias»); una cuenta atada a otro `sub` no se reasigna;
+  `debe_cambiar_clave` (clave transitoria) frena a Google (`google_temporal`).
+- **Rutas**: `GET /admin/google` (en `RUTAS_ADMIN_SIN_PERMISO`, como `/admin/login`,
+  no en `PERMISOS_RUTAS`) y la vuelta por la MISMA `/ingresar/google/callback`
+  con rol `panel` en el `state`: las URIs de Google Cloud no cambian. Al identificar
+  hace lo que `POST /admin/login` después de la clave (`_seguir_al_panel`: un
+  sindicato, sesión directa y `registrar_acceso("admin")`; varios, `/admin/elegir`).
+  Si la cuenta no tenía mail, queda el que verificó Google.
+- **Restablecer la clave** (Super Admin de un sindicato, o plataforma): al ser
+  siempre `fijar_clave_panel(..., debe_cambiar=True)`, esa función borra el
+  `google_sub`; el mail de la cuenta se deja (lo cargó un administrador o la
+  persona) y la clave transitoria ya frena a Google hasta que elija una propia.
+- **Pantallas**: botón en `admin_login.html` (global de Jinja `google_configurado`,
+  porque el login del panel se renderiza desde varias rutas), avisos propios del
+  panel, campo de mail en las dos altas y bloque «Tu mail» en la portada.
+- **Riesgo residual**: el `mail_padron` es compartido entre sindicatos (una fila por
+  persona): un sindicato donde la persona también es afiliada y por el que responde
+  podría cambiarlo y entrar al panel de otro. Es el mismo supuesto con que ya se
+  recupera la clave del afiliado por mail.
+
 ## Google acepta cualquier mail de la ficha (2026-11-06, Trabajador 0.59.04, Admin 0.79.02)
 
 **Qué pasó en Pruebas.** SDN probó «Continuar con Google»: Google lo autenticó bien

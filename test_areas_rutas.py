@@ -141,11 +141,11 @@ def test_las_exentas_son_solo_entrar_salir_y_las_pantallas():
     sin sesión, la puerta es un token firmado de 10 minutos) y la segunda
     «Cambiar mi clave» de Tu cuenta, que pide la clave actual."""
     assert main.RUTAS_ADMIN_SIN_PERMISO == {
-        "/admin", "/admin/inicio", "/admin/login", "/admin/salir",
+        "/admin", "/admin/inicio", "/admin/login", "/admin/salir", "/admin/google",
         "/admin/dashboard", "/admin/dashboard-v2",
         "/admin/elegir", "/admin/cambiar-sindicato",
         "/admin/apariencia/mia",
-        "/admin/cambiar-clave", "/admin/cuenta/clave"}
+        "/admin/cambiar-clave", "/admin/cuenta/clave", "/admin/cuenta/mail"}
     print("OK  test_las_exentas_son_solo_entrar_salir_y_las_pantallas")
 
 

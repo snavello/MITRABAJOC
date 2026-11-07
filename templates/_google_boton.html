@@ -2,7 +2,8 @@
    `google_activo`. Es un ENLACE (el servidor redirige a Google): no carga
    nada de Google, el ícono es un SVG en línea. Los ingresos son pantallas
    standalone, fuera de los modelos de diseño: un solo estilo. Variable:
-   `google_ruta` (/ingresar/google o /ingresar-empresa/google). #}
+   `google_ruta` (/ingresar/google, /ingresar-empresa/google o /admin/google) y,
+   opcional, `google_donde` (dónde se carga el mail; «Tu perfil» por defecto). #}
 <style>
   .o-sep { display:flex; align-items:center; gap:12px; margin:18px 0 14px; font-size:11px;
     letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.4); }
@@ -25,4 +26,4 @@
   </svg>
   Continuar con Google
 </a>
-<div class="ayuda">Solo si ya tenés cuenta y tu mail está cargado en «Tu perfil».</div>
+<div class="ayuda">Solo si ya tenés cuenta y tu mail está cargado en «{{ google_donde or 'Tu perfil' }}».</div>

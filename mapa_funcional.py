@@ -62,8 +62,8 @@ FUNCIONALIDADES = [
     ("Empresa", "Notificaciones", r"^/(api/empresa/notificacion|notificacion-empresa-adjunto)", "empresa.html"),
     ("Empresa", "Trámites", r"^/(api/empresa/tramite|tramite-empresa-)", "empresa.html"),
 
-    ("Sindicato", "Ingreso y portada", r"^/admin/(login|salir|inicio)$", None),
-    ("Sindicato", "Clave del operador (primer ingreso y cambio)", r"^/admin/(cambiar-clave|cuenta/clave)$", "admin_cambiar_clave.html"),
+    ("Sindicato", "Ingreso y portada", r"^/admin/(login|salir|inicio|google)$", None),
+    ("Sindicato", "Clave del operador (primer ingreso y cambio)", r"^/admin/(cambiar-clave|cuenta/(clave|mail))$", "admin_cambiar_clave.html"),
     ("Sindicato", "Página del panel (carga inicial)", r"^/admin$", None),
     ("Sindicato", "Panel Sindical", r"^/admin/dashboard", "dashboard_v2.html"),
     ("Sindicato", "Reportes", r"^/admin/reportes", "admin.html"),

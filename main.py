@@ -820,6 +820,10 @@ templates.env.globals["url_static"] = _url_static
 # Clave pública del widget de Turnstile; vacía = captcha apagado y el parcial
 # `_captcha.html` no dibuja nada. Se lee al arrancar, igual que la CSP.
 templates.env.globals["captcha_site_key"] = captcha.site_key()
+# ¿Se dibuja «Continuar con Google»? Se evalúa al renderizar (las variables se
+# leen en cada llamada, como en google_auth). El login del panel se renderiza
+# desde varias rutas, por eso es un global y no una variable de contexto.
+templates.env.globals["google_configurado"] = google_auth.configurado
 # Las fechas que lee una persona van en dd/mm/aaaa, también en las
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
@@ -1608,6 +1612,8 @@ PERMISOS_RUTAS = {
 # /admin/dashboard-v2 (la dirección del piloto de la v2) solo redirige a
 # /admin/dashboard, que es la que chequea.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
+                           # «Continuar con Google»: es ENTRAR, antes de toda sesión.
+                           "/admin/google",
                            "/admin/dashboard", "/admin/dashboard-v2",
                            "/admin/elegir", "/admin/cambiar-sindicato",
                            # Cada operador elige SU modelo de diseño: es una
@@ -1617,7 +1623,10 @@ RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/sa
                            # la propia en el primer ingreso (todavía sin
                            # sesión, la puerta es un token firmado) y
                            # cambiarla después desde Tu cuenta.
-                           "/admin/cambiar-clave", "/admin/cuenta/clave"}
+                           "/admin/cambiar-clave", "/admin/cuenta/clave",
+                           # El mail con que entra con Google también es de la
+                           # persona (CuentaPanel.mail), no una sección.
+                           "/admin/cuenta/mail"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -2103,6 +2112,7 @@ def admin_inicio(request: Request):
         "nombre_admin": nombre_admin,
         "usuario_admin": (usuario.usuario if usuario else ""),
         "cuil_admin": cuil_admin,
+        "mail_panel": db.mail_panel_de(cuil_admin),
         "rol_admin": rol_admin,
         "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
         "area_admin": area_admin,
@@ -2253,6 +2263,35 @@ def admin_cuenta_clave(request: Request, clave_actual: str = Form(""), clave: st
     _login_ok(request)
     log.info("panel: cambio de clave propia, usuario %s", _uid_sesion(request))
     return {"ok": True}
+
+
+@app.post("/admin/cuenta/mail")
+def admin_cuenta_mail(request: Request, clave_actual: str = Form(""), mail: str = Form("")):
+    """«Mi mail» en Tu cuenta: la propia persona carga, cambia o borra el mail de
+    su cuenta (el que Google verifica para entrar al panel). Pide la clave actual
+    por lo mismo que el cambio de clave: una sesión robada no alcanza para atarle
+    a la cuenta un Google ajeno. Al cambiarlo se suelta el vínculo con Google.
+    Vale para todos los sindicatos en los que trabaja. Responde JSON."""
+    exigir_sindicato(request)
+    if _login_bloqueado(request):
+        return JSONResponse({"error": "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar."},
+                            status_code=429)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, _uid_sesion(request))
+        cuil = u.cuil if u else ""
+    cuenta = db.cuenta_panel(cuil) if cuil else None
+    if not cuenta:
+        return JSONResponse({"error": "Tu cuenta no tiene una clave propia."}, status_code=400)
+    if not auth.verificar_clave(clave_actual, cuenta.clave_hash):
+        _login_fallo(request)
+        return JSONResponse({"error": "La clave actual no es correcta."}, status_code=400)
+    mail = (mail or "").strip()
+    if mail and not correo.destino_valido(mail):
+        return JSONResponse({"error": "Ese mail no parece válido: revisalo."}, status_code=400)
+    db.guardar_mail_panel(cuil, mail, solo_si_vacio=False)
+    _login_ok(request)
+    log.info("panel: cambio de mail propio, usuario %s", _uid_sesion(request))
+    return {"ok": True, "mail": mail.lower()}
 
 
 def _abrir_sesion_panel(usuario_id: int):
@@ -2899,7 +2938,7 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
                         clave_inicial: str = Form(""), rol: str = Form("area"),
                         area_id: str = Form(""), seccional_id: str = Form(""),
                         agregar: list[str] = Form(default=[]),
-                        bloquear: list[str] = Form(default=[])):
+                        bloquear: list[str] = Form(default=[]), mail: str = Form("")):
     """sindicato_id sale de la sesión, nunca de un campo del form -- un
     admin no puede darse de alta a sí mismo en otro sindicato.
 
@@ -2918,6 +2957,11 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     ya_tiene_clave = bool(len(cuit) == 11 and (c := db.cuenta_panel(cuit)) and c.clave_hash)
     if len(cuit) != 11 or (not clave_inicial and not ya_tiene_clave):
         return _volver_a_au("usuarios", err="datos")
+    # El mail es opcional (con él la persona puede entrar con Google), pero si
+    # viene tiene que ser un mail: se mira antes de escribir nada.
+    mail = (mail or "").strip()
+    if mail and not correo.destino_valido(mail):
+        return _volver_a_au("usuarios", err="mail")
     # El usuario ES el CUIL de la persona: nace acá, con su verificador.
     if _cuil_mal(cuit):
         return _volver_a_au("usuarios", err="cuilusuario")
@@ -2981,6 +3025,9 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     # si no está, se crea igual -- trabajar en el gremio sin estar afiliado
     # a él es un caso real.
     db.sincronizar_empleado(nuevo_id)
+    # El mail es de la CUENTA de la persona: solo se guarda si no tenía uno, así
+    # un sindicato no le cambia el mail con que entra al panel de otro.
+    db.guardar_mail_panel(cuit, mail, solo_si_vacio=True)
     if not es_super and not es_admin_local:
         db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
                                 _secciones_que_puede_dar(request, bloquear), sid)
@@ -3068,8 +3115,10 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
                           rol: str = Form("area"), area_id: str = Form(""),
                           seccional_id: str = Form(""),
                           agregar: list[str] = Form(default=[]),
-                          bloquear: list[str] = Form(default=[])):
-    """Edita nombre, rol, área, seccional y los ajustes individuales.
+                          bloquear: list[str] = Form(default=[]), mail: str = Form("")):
+    """Edita nombre, rol, área, seccional y los ajustes individuales. Si la
+    cuenta de la persona no tenía mail y se carga uno, queda (no pisa el que ya
+    tiene).
 
     No se puede degradar al último Super Admin activo, por el mismo motivo
     que no se lo puede desactivar: el sindicato quedaría sin nadie que pueda
@@ -3081,6 +3130,9 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
     sid = exigir_sindicato(request)
     quiere_super = (rol == "super")
     quiere_admin_local = (rol == "seccional")
+    mail = (mail or "").strip()
+    if mail and not correo.destino_valido(mail):
+        return _volver_a_au("usuarios", err="mail")
     if quiere_super:
         _exigir_super_admin(request)
     with db.get_session() as s:
@@ -3117,7 +3169,10 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
         u.area_id = None if (quiere_super or quiere_admin_local) else area
         u.seccional_id = seccional
         s.add(u); s.commit()
+        cuil_editado = u.cuil
     db.sincronizar_empleado(id)
+    if cuil_editado:
+        db.guardar_mail_panel(cuil_editado, mail, solo_si_vacio=True)
     # Un administrador (general o local) no lleva ajustes individuales: los
     # suyos se borran para que no reaparezcan si mañana lo degradan a
     # usuario de área.
@@ -7984,13 +8039,16 @@ def plataforma_ver_contrato(request: Request, sindicato_id: int):
 def plataforma_alta_usuario(
     request: Request,
     sindicato_id: int = Form(...), usuario: str = Form(...),
-    nombre: str = Form(""), clave_inicial: str = Form(...),
+    nombre: str = Form(""), clave_inicial: str = Form(...), mail: str = Form(""),
 ):
     exigir_plataforma(request)
     # El CUIL del primer admin nace acá: con su verificador, y antes de
     # escribir nada.
     if _cuil_mal(usuario):
         return RedirectResponse("/plataforma?error=cuil#admin", status_code=303)
+    mail = (mail or "").strip()
+    if mail and not correo.destino_valido(mail):
+        return RedirectResponse("/plataforma?error=mail#admin", status_code=303)
     with db.get_session() as s:
         s.add(UsuarioSindicato(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
@@ -8003,6 +8061,9 @@ def plataforma_alta_usuario(
         ))
         s.commit()
     db.sincronizar_por_cuil(sindicato_id, _norm_cuil(usuario))
+    # Mail opcional del administrador (para entrar con Google): a la cuenta de
+    # la persona, solo si todavía no tenía uno.
+    db.guardar_mail_panel(_norm_cuil(usuario), mail, solo_si_vacio=True)
     return RedirectResponse("/plataforma", status_code=303)
 
 
@@ -9803,8 +9864,8 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
 # GET /ingresar/google -> Google -> GET /ingresar/google/callback -> la misma
 # sesión que abre el login con clave. Una sola URL de retorno para los dos
 # roles (el `state` firmado dice cuál), así en Google Cloud se registra una.
-# Alcance: trabajador y empresa. El panel (CuentaPanel/UsuarioSindicato) no
-# tiene mail, así que queda afuera.
+# Alcance: trabajador, empresa y panel del sindicato. El mail del operador es de
+# su CUENTA (`CuentaPanel.mail`), como la clave: ver `db._cuentas_panel_con_mail`.
 _PROPOSITO_GOOGLE = "google"
 COOKIE_GOOGLE = "google_estado"
 _GOOGLE_ROLES = {
@@ -9812,6 +9873,12 @@ _GOOGLE_ROLES = {
                    "abrir": lambda numero, cuenta_id: _abrir_sesion_trabajador(numero, cuenta_id)},
     "empleador": {"login": "/ingresar-empresa",
                   "abrir": lambda numero, cuenta_id: _abrir_sesion_empleador(numero, cuenta_id)},
+    # El panel del sindicato: lo mismo que `POST /admin/login` DESPUÉS de la
+    # clave -- un sindicato, sesión directa; varios, el selector. La clave
+    # transitoria ya la frenó `db.cuenta_para_google` ("temporal").
+    "panel": {"login": "/admin",
+              "abrir": lambda cuil, cuenta_id: (
+                  _seguir_al_panel(cuil, ops) if (ops := db.sindicatos_del_operador(cuil)) else None)},
 }
 
 
@@ -9858,6 +9925,13 @@ def ingresar_google(request: Request):
 def ingresar_empresa_google(request: Request):
     """Lo mismo, para la empresa."""
     return _google_iniciar(request, "empleador")
+
+
+@app.get("/admin/google")
+def admin_google(request: Request):
+    """Lo mismo, para el panel del sindicato. La vuelta es la misma
+    `/ingresar/google/callback`: en Google Cloud no cambia ninguna URI."""
+    return _google_iniciar(request, "panel")
 
 
 @app.get("/ingresar/google/callback")

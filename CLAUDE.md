@@ -64,7 +64,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   HISTORIAL.md). Identifica contra CUALQUIER mail de la ficha de la cuenta
   (declarado, del padrón o de contacto); la verificación del mail la hace Google
   (`email_verified`); el mail tiene que ser de UNA sola cuenta entre todas las
-  del rol.
+  del rol. Alcance: trabajador, empresa y **panel del sindicato** (`/admin/google`,
+  desde 2026-11-06). El operador tiene su mail en su CUENTA (`CuentaPanel.mail`,
+  de la persona como la clave): lo cargan el alta de usuario (opcional, solo si la
+  cuenta no tenía uno) o ella misma en «Tu cuenta»; también vale el
+  `CuentaTrabajador.mail_padron` si está empadronada en alguno de SUS sindicatos.
+  Nunca el mail de contacto ni el declarado del afiliado (los escribe quien se
+  registre primero con ese CUIL). Una clave transitoria frena a Google.
   **Cookie separada por rol** (`COOKIES_POR_ROL` en main.py:
   `sesion_sindicato`/`sesion_plataforma`/`sesion_trabajador`/`sesion_empleador`)
   — cada rol lee y renueva SOLO su propia cookie, nunca una genérica
@@ -100,8 +106,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `email_verified`/`nonce`; falla cerrado). Puro, no importa `db`. Google solo
   identifica: el mail verificado tiene que estar en la ficha de UNA sola cuenta
   registrada, en cualquiera de sus campos (`db.cuenta_para_google`); al entrar
-  queda como declarado y confirmado (`db.entrar_con_google`). Alcance: trabajador
-  y empresa.
+  queda como declarado y confirmado (`db.entrar_con_google`). Alcance: trabajador,
+  empresa y panel (`CuentaPanel.mail`, ver "Auth").
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
@@ -359,6 +365,12 @@ alta los administradores y cómo ingresa la clave»):
 | **Cualquier otro usuario del sindicato** (otro Super Admin, Admin de Seccional, usuario de área) | el **Super Admin del sindicato** (un Admin de Seccional da de alta usuarios de SU seccional, nunca Super Admins) | `/admin` → «Áreas y Usuarios» → Usuarios (`POST /admin/usuario`) | CUIL, nombre, rol y una **clave inicial** (no se pide si la persona ya tiene clave del panel por otro sindicato: entra con la de siempre) |
 | **Usuario de plataforma** (otro rol, otra tabla) | un superadmin de plataforma | `/plataforma/usuarios` | usuario y **clave transitoria** (vence a los 7 días) |
 
+- **Mail opcional del administrador** (para entrar con Google, 2026-11-06): el
+  alta de usuario (`POST /admin/usuario`, también al editar) y la de plataforma
+  (`POST /plataforma/usuario`) tienen «Mail (opcional)». Va a la CUENTA de la
+  persona (`CuentaPanel.mail`) **solo si todavía no tenía uno**: un sindicato no le
+  cambia el mail con que entra al panel de otro. La persona lo carga o cambia en
+  «Tu cuenta» → «Tu mail» (`POST /admin/cuenta/mail`, pide la clave actual).
 - **La clave inicial es transitoria**: la escribe quien da el alta, y **se la
   pasa a la persona por fuera de la app** (en mano o por un canal de
   confianza; la app no manda mails con claves). Nunca es la clave definitiva.
@@ -450,7 +462,7 @@ alta los administradores y cómo ingresa la clave»):
   procesarse a la vez en un proceso (default 2) y cuántos segundos espera un pedido
   su turno antes de contestar 503 (default 45). Cada lectura pica ~30 MiB.
 - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — cliente OAuth de Google Cloud para
-  «Continuar con Google» en `/ingresar` y `/ingresar-empresa` (`google_auth.py`);
+  «Continuar con Google» en `/ingresar`, `/ingresar-empresa` y `/admin` (`google_auth.py`);
   sin las dos, apagado: el botón no se dibuja y las rutas dan 404. Lleva una
   sola URL de retorno por entorno (`/ingresar/google/callback`). Pasos en
   `DESPLIEGUE_RENDER.md`.

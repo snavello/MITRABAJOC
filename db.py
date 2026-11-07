@@ -494,6 +494,13 @@ class CuentaPanel(SQLModel, table=True):
     # El modelo de diseño que eligió para el panel (PLAN_TEMAS.md, D2).
     # "" = no eligió: vale el de su sindicato (Sindicato.tema_panel).
     tema: str = ""
+    # Ingreso con Google al panel (google_auth.py). El mail es de la PERSONA, como
+    # la clave: lo carga quien da el alta (solo si la cuenta no tenía uno) o la
+    # propia persona en «Tu cuenta», y Google lo verifica. `google_sub` es la
+    # cuenta de Google con que ingresó la primera vez; restablecer la clave lo
+    # borra. Vacíos = sin mail / nunca ingresó con Google.
+    mail: str = Field(default="", index=True)
+    google_sub: str = Field(default="", index=True)
 
 
 @event.listens_for(UsuarioSindicato, "before_insert")
@@ -3057,7 +3064,41 @@ def sindicatos_de_cuil(cuil: str) -> list:
 # (`entrar_con_google`). El panel del sindicato queda afuera: CuentaPanel y
 # UsuarioSindicato no tienen mail.
 _CUENTA_GOOGLE = {"trabajador": ("CuentaTrabajador", "cuil"),
-                  "empleador": ("CuentaEmpleador", "cuit")}
+                  "empleador": ("CuentaEmpleador", "cuit"),
+                  "panel": ("CuentaPanel", "cuil")}
+
+
+def _cuentas_panel_con_mail(s, mail: str) -> list:
+    """Las cuentas del PANEL (con clave y con algún usuario activo en un
+    sindicato activo) a las que corresponde `mail`: el de la propia cuenta
+    (`CuentaPanel.mail`) o el que cargó el sindicato en el padrón
+    (`CuentaTrabajador.mail_padron`) de esa persona, SOLO si está empadronada en
+    alguno de los sindicatos donde ella es operadora.
+
+    Deliberadamente NO cuenta el mail de contacto (`CuentaTrabajador.mail`) ni
+    el declarado: los escribe quien se registre primero como afiliado con ese
+    CUIL (que es público), y con ellos cualquiera entraría al panel de otro."""
+    from sqlalchemy import func as _func
+    activos: dict = {}
+    for cuil, sid in s.exec(select(UsuarioSindicato.cuil, UsuarioSindicato.sindicato_id).join(
+            Sindicato, Sindicato.id == UsuarioSindicato.sindicato_id).where(
+            UsuarioSindicato.activo == True, Sindicato.activo == True,  # noqa: E712
+            UsuarioSindicato.cuil != "")).all():
+        activos.setdefault(cuil, set()).add(sid)
+    propias = {c.cuil for c in s.exec(select(CuentaPanel).where(
+        CuentaPanel.clave_hash != "", _func.lower(_func.trim(CuentaPanel.mail)) == mail)).all()}
+    del_padron = set()
+    for cuil in s.exec(select(CuentaTrabajador.cuil).where(
+            _func.lower(_func.trim(CuentaTrabajador.mail_padron)) == mail,
+            CuentaTrabajador.cuil.in_(list(activos) or [""]))).all():
+        if s.exec(select(Trabajador.id).where(
+                Trabajador.cuil == cuil, Trabajador.sindicato_id.in_(list(activos[cuil])))).first():
+            del_padron.add(cuil)
+    cuils = [c for c in (propias | del_padron) if c in activos]
+    if not cuils:
+        return []
+    return s.exec(select(CuentaPanel).where(
+        CuentaPanel.cuil.in_(cuils), CuentaPanel.clave_hash != "")).all()
 
 
 def _cuentas_con_mail(s, rol: str, mail: str) -> list:
@@ -3068,6 +3109,8 @@ def _cuentas_con_mail(s, rol: str, mail: str) -> list:
 
     def igual(col):
         return _func.lower(_func.trim(col)) == mail
+    if rol == "panel":
+        return _cuentas_panel_con_mail(s, mail)
     if rol == "trabajador":
         return s.exec(select(CuentaTrabajador).where(
             CuentaTrabajador.clave_hash != "",
@@ -3103,6 +3146,9 @@ def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
     with Session(engine) as s:
         cuentas = s.exec(select(modelo).where(
             modelo.google_sub == sub, modelo.clave_hash != "")).all()
+        if rol == "panel" and cuentas:
+            # Una cuenta del panel sin ningún usuario activo no entra a nada.
+            cuentas = [c for c in cuentas if sindicatos_del_operador(c.cuil)]
         if not cuentas:
             cuentas = _cuentas_con_mail(s, rol, mail)
             # La unicidad se cuenta sobre TODAS las cuentas; recién después se
@@ -3114,7 +3160,9 @@ def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
         if len(cuentas) > 1:
             return "varias", 0, ""
         c = cuentas[0]
-        if c.clave_temporal:
+        # La clave transitoria (la puso otra persona) obliga a elegir la propia
+        # antes de abrir nada: por Google no se saltea.
+        if getattr(c, "clave_temporal", False) or getattr(c, "debe_cambiar_clave", False):
             return "temporal", 0, ""
         return "ok", c.id, getattr(c, campo)
 
@@ -3136,6 +3184,14 @@ def entrar_con_google(rol: str, cuenta_id: int, sub: str, mail: str) -> None:
             return
         if sub and not (c.google_sub or ""):
             c.google_sub = sub
+        if rol == "panel":
+            # El operador no tiene niveles ni mail declarado: si la cuenta no
+            # tenía mail, queda el que Google verificó.
+            if mail and not (c.mail or "").strip():
+                c.mail = mail
+            s.add(c)
+            s.commit()
+            return
         declarado = (c.mail_declarado or "").strip().lower()
         if mail and declarado in ("", mail):
             c.mail_declarado = mail
@@ -5224,8 +5280,39 @@ def fijar_clave_panel(cuil: str, clave_hash: str, debe_cambiar: bool) -> None:
             c = CuentaPanel(cuil=cuil)
         c.clave_hash = clave_hash
         c.debe_cambiar_clave = debe_cambiar
+        if debe_cambiar:
+            # La clave la puso otro (alta o restablecimiento): se corta el
+            # vínculo con Google. El mail de la cuenta se deja.
+            c.google_sub = ""
         s.add(c)
         s.commit()
+
+
+def guardar_mail_panel(cuil: str, mail: str, solo_si_vacio: bool) -> bool:
+    """El mail de la CUENTA del operador (de la persona, como la clave). Con
+    `solo_si_vacio` (altas y ediciones de un sindicato) no pisa uno ya cargado:
+    un sindicato no le cambia a la persona el mail con que entra a otro panel.
+    Sin él (la persona misma, en «Tu cuenta») lo reemplaza, y al cambiar se
+    suelta el vínculo con Google. Devuelve si escribió. La validez del mail la
+    mira quien llama (`correo.destino_valido`)."""
+    mail = (mail or "").strip().lower()
+    with Session(engine) as s:
+        c = s.exec(select(CuentaPanel).where(CuentaPanel.cuil == cuil)).first()
+        if not c:
+            return False
+        if solo_si_vacio and ((c.mail or "").strip() or not mail):
+            return False
+        if (c.mail or "").strip().lower() != mail:
+            c.google_sub = ""
+        c.mail = mail
+        s.add(c)
+        s.commit()
+        return True
+
+
+def mail_panel_de(cuil: str) -> str:
+    c = cuenta_panel(cuil) if cuil else None
+    return (c.mail or "") if c else ""
 
 
 def trabaja_en_otro_sindicato(cuil: str, sindicato_id: int) -> bool:

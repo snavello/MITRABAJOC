@@ -108,6 +108,8 @@ ALCANCE_POR_PREFIJO = [
     ("/admin/cambiar-sindicato", "entrada"), ("/admin/inicio", "entrada"),
     # La clave propia (primer ingreso y «Cambiar mi clave»): es de la persona.
     ("/admin/cambiar-clave", "entrada"), ("/admin/cuenta/clave", "entrada"),
+    # El mail con que entra con Google también es de la persona.
+    ("/admin/cuenta/mail", "entrada"), ("/admin/google", "entrada"),
     ("/admin/dashboard-v2", "entrada"), ("/admin/dashboard/", "seccional"),
     ("/admin/dashboard", "entrada"),
     # Catálogo del sindicato entero: no tiene seccional (bloque 5: solo
