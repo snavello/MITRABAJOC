@@ -2844,12 +2844,16 @@ def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
         clave = _clave_temporal_nueva()
         cuenta.clave_hash = auth.hashear_clave(clave)
         cuenta.clave_temporal = True
-        # El ingreso con Google se corta junto con la clave: si alguien llegó
-        # primero con su propio mail (y lo confirmó), no vuelve a entrar por ahí
-        # después de que el sindicato le devuelve la cuenta a su dueño. El mail
-        # queda guardado; hay que volver a confirmarlo en Tu perfil.
+        # El ingreso con Google se corta junto con la clave: Google acepta
+        # cualquier mail de la ficha, así que si alguien llegó primero con el
+        # suyo no puede volver a entrar por ahí después de que el sindicato le
+        # devuelve la cuenta a su dueño. Se borran el vínculo y los mails que
+        # pudo cargar quien llegó primero (declarado y de contacto); el del
+        # padrón, que es del sindicato, queda. La persona los vuelve a cargar.
         cuenta.google_sub = ""
+        cuenta.mail_declarado = ""
         cuenta.mail_declarado_confirmado = ""
+        cuenta.mail = ""
         s.add(cuenta)
         s.commit()
         nombre = cuenta.nombre or cuil
@@ -4103,11 +4107,12 @@ def admin_empleador_restablecer_clave(request: Request, cuit: str = Form(...)):
         clave = _clave_temporal_nueva()
         cuenta.clave_hash = auth.hashear_clave(clave)
         cuenta.clave_temporal = True
-        # El ingreso con Google se corta junto con la clave: si alguien llegó
-        # primero con su propio mail (y lo confirmó), no vuelve a entrar por ahí
-        # después de que el sindicato le devuelve la cuenta a su dueño. El mail
-        # queda guardado; hay que volver a confirmarlo en Tu perfil.
+        # El ingreso con Google se corta junto con la clave (ver el espejo del
+        # afiliado): se borran el vínculo y el mail declarado. El de contacto de
+        # la empresa vive en cada alta por sindicato (`Empleador.mail`) y este
+        # sindicato no toca las de los otros.
         cuenta.google_sub = ""
+        cuenta.mail_declarado = ""
         cuenta.mail_declarado_confirmado = ""
         s.add(cuenta)
         s.commit()
@@ -9791,14 +9796,15 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
 
 
 # ---- Ingreso con Google (google_auth.py) ----
-# Google solo IDENTIFICA a quien YA tiene cuenta con un mail confirmado en la
-# app; nunca crea cuentas ni reemplaza la clave (decisión de SDN, 2026-11-06).
+# Google solo IDENTIFICA a quien YA tiene cuenta y cuyo mail (verificado por
+# Google) figura en la ficha de UNA sola cuenta, en cualquiera de sus campos de
+# mail; nunca crea cuentas ni reemplaza la clave (decisión de SDN, 2026-11-06).
 # Todo es redirección del servidor (la CSP no deja cargar nada de Google):
 # GET /ingresar/google -> Google -> GET /ingresar/google/callback -> la misma
 # sesión que abre el login con clave. Una sola URL de retorno para los dos
 # roles (el `state` firmado dice cuál), así en Google Cloud se registra una.
 # Alcance: trabajador y empresa. El panel (CuentaPanel/UsuarioSindicato) no
-# tiene mail confirmado, así que queda afuera.
+# tiene mail, así que queda afuera.
 _PROPOSITO_GOOGLE = "google"
 COOKIE_GOOGLE = "google_estado"
 _GOOGLE_ROLES = {
@@ -9886,7 +9892,7 @@ def ingresar_google_callback(request: Request, code: str = "", state: str = "", 
         return _google_volver(rol, "google_varias")
     if estado == "temporal":
         return _google_volver(rol, "google_temporal")
-    db.vincular_google(rol, cuenta_id, sub)
+    db.entrar_con_google(rol, cuenta_id, sub, mail)
     resp = _GOOGLE_ROLES[rol]["abrir"](numero, cuenta_id)
     if resp is None:
         return _google_volver(rol, "sinsind")

@@ -98,7 +98,7 @@ correrlo con `DB_STATEMENT_TIMEOUT_MS=0`.
 ## Ingreso con Google (opcional)
 
 «Continuar con Google» deja ingresar con Google a quien YA tiene cuenta (afiliado
-o empresa) con el mail confirmado en la app. No crea cuentas, no reemplaza la
+o empresa) cuyo mail ya está cargado en la app. No crea cuentas, no reemplaza la
 clave y no alcanza al panel del sindicato. Es un flujo de servidor (OAuth 2.0 /
 OpenID Connect): la CSP no cambia y no se carga nada de Google en las pantallas.
 
@@ -130,12 +130,17 @@ no se muestra y `/ingresar/google`, `/ingresar-empresa/google` y
 `/ingresar/google/callback` responden 404. Es el estado de hoy en todos los
 entornos hasta que se creen los clientes.
 
-**Cómo identifica**: el mail verificado por Google tiene que ser el
-`mail_declarado` YA CONFIRMADO por código de una única cuenta. Sin cuenta,
-con el mail sin confirmar o repetido en dos cuentas vuelve al login con un aviso.
-La primera vez se guarda el `sub` de Google en la cuenta y desde entonces se la
-reconoce por él aunque el mail cambie. Cuando el sindicato restablece la clave de
-una cuenta, se corta el vínculo con Google y se pide reconfirmar el mail.
+**Cómo identifica**: la verificación del mail la hace Google (`email_verified`);
+la app lo busca en la ficha de las cuentas ya registradas (con clave), en
+cualquiera de sus mails: el declarado (confirmado o no), el del padrón y el de
+contacto (en la empresa, los de sus altas por sindicato). Tiene que ser de UNA
+sola cuenta entre todas las del rol: sin cuenta, o en más de una, vuelve al login
+con un aviso. **No hace falta el canal de mail** (Resend): Google es la
+confirmación. Al entrar, el mail queda como declarado y confirmado (salvo que ya
+haya otro declarado distinto) y se guarda el `sub` de Google; desde entonces se
+reconoce a la cuenta por él aunque el mail cambie. Cuando el sindicato restablece
+la clave de una cuenta, se corta el vínculo con Google y se borran sus mails
+declarado (y, en el afiliado, el de contacto): la persona los vuelve a cargar.
 
 ## Paso a paso — crear Pruebas (una vez)
 

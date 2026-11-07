@@ -84,25 +84,27 @@ def entorno_google(monkeypatch):
     return llamadas
 
 
-def _cuenta(cuil, declarado="", confirmado=AHORA, sids=(SID_A,), temporal=False, sub=""):
+def _cuenta(cuil, declarado="", confirmado=AHORA, sids=(SID_A,), temporal=False, sub="",
+            padron="", contacto="", clave=CLAVE):
     with db.get_session() as s:
         # Los tests comparten base: la cuenta empieza de cero en cada uno.
         s.exec(sa_delete(Trabajador).where(Trabajador.cuil == cuil))
         s.exec(sa_delete(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil))
         for sid in sids:
             s.add(Trabajador(sindicato_id=sid, cuil=cuil, activo=True, registrado=True))
-        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(CLAVE),
+        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(clave) if clave else "",
                                mail_declarado=declarado, mail_declarado_confirmado=confirmado,
+                               mail_padron=padron, mail=contacto,
                                clave_temporal=temporal, google_sub=sub))
         s.commit()
 
 
-def _empresa(cuit, declarado="", confirmado=AHORA):
+def _empresa(cuit, declarado="", confirmado=AHORA, padron="", contacto=""):
     with db.get_session() as s:
         s.exec(sa_delete(Empleador).where(Empleador.cuit == cuit))
         s.exec(sa_delete(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit))
         s.add(Empleador(sindicato_id=SID_A, cuit=cuit, razon_social="Empresa Google",
-                        activo=True, registrado=True))
+                        activo=True, registrado=True, mail_padron=padron, mail=contacto))
         s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(CLAVE),
                               mail_declarado=declarado, mail_declarado_confirmado=confirmado))
         s.commit()
@@ -323,16 +325,97 @@ def test_un_mail_atado_a_otro_sub_no_se_reasigna(monkeypatch):
     assert _cuenta_db("20512345671").google_sub == "sub-del-dueno"
 
 
-def test_mail_no_confirmado_no_entra(monkeypatch):
+def test_entra_por_mail_declarado_sin_confirmar_y_queda_confirmado(monkeypatch):
+    """Google es la confirmación: el declarado que nunca se confirmó por código
+    vale, y al entrar queda confirmado."""
     _cuenta("20606060603", declarado="sinconfirmar@gmail.com", confirmado="")
     _simular_google(monkeypatch, mail="sinconfirmar@gmail.com", sub="sub-nc")
     c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    cuenta = _cuenta_db("20606060603")
+    assert cuenta.google_sub == "sub-nc"
+    assert cuenta.mail_declarado == "sinconfirmar@gmail.com"
+    assert cuenta.mail_declarado_confirmado       # con fecha
+    assert cuenta.nivel_fiabilidad == 2 and cuenta.nivel_origen == "mail_declarado"
+
+
+def test_entra_por_el_mail_del_padron(monkeypatch):
+    _cuenta("20700000002", padron="Padron@Gmail.com ", declarado="", confirmado="")
+    _simular_google(monkeypatch, mail="padron@gmail.com", sub="sub-padron")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    cuenta = _cuenta_db("20700000002")
+    assert cuenta.google_sub == "sub-padron"
+    assert cuenta.mail_declarado == "padron@gmail.com" and cuenta.mail_declarado_confirmado
+    assert cuenta.mail_padron == "Padron@Gmail.com "          # el del sindicato no se toca
+    assert cuenta.nivel_fiabilidad == 2 and cuenta.nivel_origen == "mail_padron"
+
+
+def test_entra_por_el_mail_de_contacto(monkeypatch):
+    _cuenta("20111111112", contacto="contacto@gmail.com", declarado="", confirmado="")
+    _simular_google(monkeypatch, mail="contacto@gmail.com", sub="sub-contacto")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    cuenta = _cuenta_db("20111111112")
+    assert cuenta.google_sub == "sub-contacto"
+    assert cuenta.mail_declarado == "contacto@gmail.com" and cuenta.mail_declarado_confirmado
+    assert cuenta.mail == "contacto@gmail.com"
+
+
+def test_no_pisa_un_declarado_confirmado_distinto(monkeypatch):
+    _cuenta("20512345671", declarado="confirmado@gmail.com", padron="otro@gmail.com")
+    antes = _cuenta_db("20512345671").mail_declarado_confirmado
+    _simular_google(monkeypatch, mail="otro@gmail.com", sub="sub-otro")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    cuenta = _cuenta_db("20512345671")
+    assert cuenta.google_sub == "sub-otro"
+    assert cuenta.mail_declarado == "confirmado@gmail.com"
+    assert cuenta.mail_declarado_confirmado == antes
+
+
+def test_el_nivel_respeta_la_politica_del_sindicato(monkeypatch):
+    """Entrar con el mail de contacto no sube el nivel si el sindicato no acepta
+    mails declarados (misma regla que el registro); el mail igual queda."""
+    with db.get_session() as s:
+        estricto = Sindicato(nombre="Sindicato Google Estricto", slug="sindicato-google-estricto",
+                             color_base="#0f1b2d", acepta_mail_declarado=False,
+                             modulos_habilitados=list(MODULOS_INICIALES))
+        s.add(estricto)
+        s.commit()
+        s.refresh(estricto)
+        sid = estricto.id
+    _cuenta("20900000015", contacto="estricto@gmail.com", sids=(sid,), declarado="", confirmado="")
+    _simular_google(monkeypatch, mail="estricto@gmail.com", sub="sub-estricto")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
+    cuenta = _cuenta_db("20900000015")
+    assert cuenta.mail_declarado_confirmado and cuenta.nivel_fiabilidad == 1
+
+
+def test_una_fila_del_padron_sin_clave_no_es_una_cuenta(monkeypatch):
+    """El sindicato cargó el mail pero la persona nunca se registró: Google no abre ni cuenta."""
+    _cuenta("20800000008", padron="sinclave@gmail.com", declarado="", confirmado="", clave="")
+    _simular_google(monkeypatch, mail="sinclave@gmail.com", sub="sub-sinclave")
+    c, state, _ = _empezar()
     assert _volver(c, state).headers["location"] == "/ingresar?error=google_sinmail"
     assert c.cookies.get(main.COOKIE_TRABAJADOR) is None
-    assert _cuenta_db("20606060603").google_sub == ""
+    cuenta = _cuenta_db("20800000008")
+    assert cuenta.google_sub == "" and cuenta.mail_declarado == "" and not cuenta.clave_hash
+    # Y no cuenta para la unicidad de la que sí tiene cuenta.
+    _cuenta("20111111130", contacto="sinclave@gmail.com")
+    c2, state2, _ = _empezar()
+    assert _volver(c2, state2).headers["location"] == "/app/inicio"
+
+
+def test_sin_cuenta_el_aviso_no_pide_confirmar(monkeypatch):
+    _simular_google(monkeypatch, mail="nadie@gmail.com", sub="sub-nadie")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/ingresar?error=google_sinmail"
     html = c.get("/ingresar?error=google_sinmail").text
-    assert "No encontramos una cuenta con ese mail confirmado" in html
-    assert "confirmá tu mail en Tu perfil" in html
+    assert "No encontramos una cuenta con ese mail. Ingresá con tu CUIL y clave y cargá tu mail en Tu perfil." in html
+    assert "confirmá tu mail" not in html
+    assert "tu mail está cargado en «Tu perfil»" in html
 
 
 def test_mail_inexistente_no_crea_cuenta(monkeypatch):
@@ -344,17 +427,6 @@ def test_mail_inexistente_no_crea_cuenta(monkeypatch):
     assert _cuantas_cuentas() == antes
 
 
-def test_mail_de_contacto_o_del_padron_no_alcanza(monkeypatch):
-    with db.get_session() as s:
-        s.add(Trabajador(sindicato_id=SID_A, cuil="20700000002", activo=True, registrado=True))
-        s.add(CuentaTrabajador(cuil="20700000002", clave_hash=auth.hashear_clave(CLAVE),
-                               mail="contacto@gmail.com", mail_padron="contacto@gmail.com"))
-        s.commit()
-    _simular_google(monkeypatch, mail="contacto@gmail.com", sub="sub-contacto")
-    c, state, _ = _empezar()
-    assert _volver(c, state).headers["location"] == "/ingresar?error=google_sinmail"
-
-
 def test_dos_cuentas_con_el_mismo_mail_confirmado(monkeypatch):
     _cuenta("20111111130", declarado="familia@gmail.com")
     _cuenta("20111111147", declarado="familia@gmail.com")
@@ -364,6 +436,27 @@ def test_dos_cuentas_con_el_mismo_mail_confirmado(monkeypatch):
     assert c.cookies.get(main.COOKIE_TRABAJADOR) is None
     assert _cuenta_db("20111111130").google_sub == "" == _cuenta_db("20111111147").google_sub
     assert "más de una cuenta" in c.get("/ingresar?error=google_varias").text
+
+
+def test_el_mismo_mail_en_campos_distintos_de_dos_cuentas_es_varias(monkeypatch):
+    """La unicidad es entre cuentas, mirando los tres campos de todas."""
+    _cuenta("20111111130", padron="compartido@gmail.com")
+    _cuenta("20111111147", contacto="compartido@gmail.com")
+    _cuenta("20111111163", declarado="Compartido@gmail.com", confirmado="")
+    _simular_google(monkeypatch, mail="compartido@gmail.com", sub="sub-compartido")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/ingresar?error=google_varias"
+    assert c.cookies.get(main.COOKIE_TRABAJADOR) is None
+    for cuil in ("20111111130", "20111111147", "20111111163"):
+        cuenta = _cuenta_db(cuil)
+        assert cuenta.google_sub == ""
+
+
+def test_dos_mails_de_la_misma_cuenta_no_son_varias(monkeypatch):
+    _cuenta("20111111130", padron="mismo@gmail.com", contacto="MISMO@gmail.com", declarado="mismo@gmail.com")
+    _simular_google(monkeypatch, mail="mismo@gmail.com", sub="sub-mismo")
+    c, state, _ = _empezar()
+    assert _volver(c, state).headers["location"] == "/app/inicio"
 
 
 def test_clave_temporal_no_se_saltea_por_google(monkeypatch):
@@ -421,9 +514,33 @@ def test_la_empresa_entra_con_su_mail_confirmado(monkeypatch, entorno_google):
     assert _empresa_db("30999888778").google_sub == "sub-empresa"
 
 
-def test_la_empresa_sin_mail_confirmado_vuelve_al_ingreso_de_empresa(monkeypatch):
-    _empresa("30712345671", declarado="e2@gmail.com", confirmado="")
+def test_la_empresa_entra_por_el_mail_del_padron_y_por_el_de_contacto(monkeypatch, entorno_google):
+    _empresa("30712345671", padron="e2@gmail.com", declarado="", confirmado="")
     _simular_google(monkeypatch, mail="e2@gmail.com", sub="sub-e2")
+    c, state, _ = _empezar("/ingresar-empresa/google")
+    assert _volver(c, state).headers["location"] == "/empresa/inicio"
+    cuenta = _empresa_db("30712345671")
+    assert cuenta.google_sub == "sub-e2" and cuenta.mail_declarado == "e2@gmail.com"
+    assert cuenta.mail_declarado_confirmado and cuenta.nivel_origen == "mail_padron"
+    _empresa("30700000016", contacto="contacto-e@gmail.com", declarado="", confirmado="")
+    _simular_google(monkeypatch, mail="contacto-e@gmail.com", sub="sub-e3")
+    c, state, _ = _empezar("/ingresar-empresa/google")
+    assert _volver(c, state).headers["location"] == "/empresa/inicio"
+    assert _empresa_db("30700000016").google_sub == "sub-e3"
+
+
+def test_la_empresa_con_el_mail_en_dos_cuentas_es_varias(monkeypatch):
+    _empresa("30712345671", padron="dos@gmail.com")
+    _empresa("30700000016", declarado="dos@gmail.com", confirmado="")
+    _simular_google(monkeypatch, mail="dos@gmail.com", sub="sub-dos")
+    c, state, _ = _empezar("/ingresar-empresa/google")
+    assert _volver(c, state).headers["location"] == "/ingresar-empresa?error=google_varias"
+    assert c.cookies.get(main.COOKIE_EMPLEADOR) is None
+
+
+def test_la_empresa_sin_mail_vuelve_al_ingreso_de_empresa(monkeypatch):
+    _empresa("30712345671", declarado="e2@gmail.com", confirmado="")
+    _simular_google(monkeypatch, mail="otra@gmail.com", sub="sub-e4")
     c, state, _ = _empezar("/ingresar-empresa/google")
     assert _volver(c, state).headers["location"] == "/ingresar-empresa?error=google_sinmail"
     assert c.cookies.get(main.COOKIE_EMPLEADOR) is None
@@ -442,7 +559,8 @@ def test_un_mail_de_afiliado_no_abre_la_empresa(monkeypatch):
 # ---------------------------------------------------------------- 5. restablecer clave
 def test_restablecer_la_clave_corta_el_ingreso_con_google(monkeypatch):
     cuil = "20577777772"
-    _cuenta(cuil, declarado="impostor@gmail.com", sub="sub-impostor")
+    _cuenta(cuil, declarado="impostor@gmail.com", contacto="impostor@gmail.com", sub="sub-impostor",
+            padron="dueno@gmail.com")
     with db.get_session() as s:
         s.add(UsuarioSindicato(sindicato_id=SID_A, usuario="20577777771", cuil="20577777771",
                                nombre="Super", clave_hash=auth.hashear_clave("super-a"),
@@ -455,10 +573,18 @@ def test_restablecer_la_clave_corta_el_ingreso_con_google(monkeypatch):
     assert r.status_code == 200, r.text
     c = _cuenta_db(cuil)
     assert c.clave_temporal and c.google_sub == "" and c.mail_declarado_confirmado == ""
-    _simular_google(monkeypatch, mail="impostor@gmail.com", sub="sub-impostor")
+    assert c.mail_declarado == "" and c.mail == "" and c.mail_padron == "dueno@gmail.com"
+    # El mail del impostor ya no abre la cuenta, ni por el sub ni por el mail.
+    for mail, sub in (("impostor@gmail.com", "sub-impostor"), ("impostor@gmail.com", "otro-sub")):
+        _simular_google(monkeypatch, mail=mail, sub=sub)
+        cli, state, _ = _empezar()
+        assert _volver(cli, state).headers["location"] == "/ingresar?error=google_sinmail"
+        assert cli.cookies.get(main.COOKIE_TRABAJADOR) is None
+    # El del padrón (del sindicato) sigue siendo del dueño, pero con la clave
+    # temporal pendiente Google no se la saltea.
+    _simular_google(monkeypatch, mail="dueno@gmail.com", sub="sub-dueno")
     cli, state, _ = _empezar()
-    assert _volver(cli, state).headers["location"] == "/ingresar?error=google_sinmail"
-    assert cli.cookies.get(main.COOKIE_TRABAJADOR) is None
+    assert _volver(cli, state).headers["location"] == "/ingresar?error=google_temporal"
 
 
 # ---------------------------------------------------------------- 6. el id_token

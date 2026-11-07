@@ -59,9 +59,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (`auth.IDLE_TIMEOUT_SEGUNDOS`). El middleware `renovar_sesion_por_actividad`
   (main.py) reemite la cookie en cada request autenticado; un usuario activo
   nunca se desloguea solo. **Auth propia; Google solo como identidad alternativa
-  para cuentas YA registradas con mail confirmado, nunca crea cuentas ni
-  reemplaza la clave** (2026-11-06, decisión de SDN; `google_auth.py`, ver
-  "Ingreso con Google" en HISTORIAL.md).
+  para cuentas YA registradas, nunca crea cuentas ni reemplaza la clave**
+  (2026-11-06, decisión de SDN; `google_auth.py`, ver "Ingreso con Google" en
+  HISTORIAL.md). Identifica contra CUALQUIER mail de la ficha de la cuenta
+  (declarado, del padrón o de contacto); la verificación del mail la hace Google
+  (`email_verified`); el mail tiene que ser de UNA sola cuenta entre todas las
+  del rol.
   **Cookie separada por rol** (`COOKIES_POR_ROL` en main.py:
   `sesion_sindicato`/`sesion_plataforma`/`sesion_trabajador`/`sesion_empleador`)
   — cada rol lee y renueva SOLO su propia cookie, nunca una genérica
@@ -95,8 +98,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   urllib de la stdlib): URL de autorización, canje del código y `mail_verificado`
   (firma RS256 contra las claves públicas de Google + `iss`/`aud`/`exp`/
   `email_verified`/`nonce`; falla cerrado). Puro, no importa `db`. Google solo
-  identifica: el mail tiene que coincidir con `mail_declarado` YA confirmado de
-  una cuenta existente (`db.cuenta_para_google`). Alcance: trabajador y empresa.
+  identifica: el mail verificado tiene que estar en la ficha de UNA sola cuenta
+  registrada, en cualquiera de sus campos (`db.cuenta_para_google`); al entrar
+  queda como declarado y confirmado (`db.entrar_con_google`). Alcance: trabajador
+  y empresa.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).

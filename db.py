@@ -3047,22 +3047,49 @@ def sindicatos_de_cuil(cuil: str) -> list:
 
 
 # ---------- Ingreso con Google: qué cuenta es la de este mail ----------
-# Google solo IDENTIFICA (google_auth.py): nunca crea una cuenta. La cuenta tiene
-# que existir y tener un mail CONFIRMADO por código en la app
-# (`mail_declarado` + `mail_declarado_confirmado`): el mail de contacto y el del
-# padrón no sirven, ver "Los TRES mails" en CuentaTrabajador. El panel del
-# sindicato queda afuera: CuentaPanel/UsuarioSindicato no tienen mail confirmado.
+# Google solo IDENTIFICA (google_auth.py): nunca crea una cuenta. La verificación
+# del mail la hace Google (`email_verified`); la app acepta ese mail contra
+# CUALQUIERA de los mails que la cuenta ya tiene en su ficha -- el declarado
+# (confirmado o no), el del padrón y el de contacto -- siempre que sea de UNA
+# sola cuenta entre todas las del rol. Cambio del 2026-11-06 (Pruebas): con el
+# canal de mail apagado nadie tiene `mail_declarado_confirmado`, y pedirlo dejaba
+# a Google sin uso. Al entrar, el mail queda declarado y confirmado
+# (`entrar_con_google`). El panel del sindicato queda afuera: CuentaPanel y
+# UsuarioSindicato no tienen mail.
 _CUENTA_GOOGLE = {"trabajador": ("CuentaTrabajador", "cuil"),
                   "empleador": ("CuentaEmpleador", "cuit")}
+
+
+def _cuentas_con_mail(s, rol: str, mail: str) -> list:
+    """Todas las cuentas REGISTRADAS (con clave) del rol que tienen `mail` en
+    alguno de sus campos de mail, normalizado (minúsculas, sin espacios). Una
+    fila del padrón sin clave todavía no es una cuenta: Google no la abre."""
+    from sqlalchemy import func as _func
+
+    def igual(col):
+        return _func.lower(_func.trim(col)) == mail
+    if rol == "trabajador":
+        return s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.clave_hash != "",
+            or_(igual(CuentaTrabajador.mail_declarado), igual(CuentaTrabajador.mail_padron),
+                igual(CuentaTrabajador.mail)))).all()
+    # Empresa: el declarado vive en la cuenta; el del padrón y el de contacto, en
+    # sus altas por sindicato (`Empleador`, unidas por CUIT).
+    cuits = {e for e in s.exec(select(Empleador.cuit).where(
+        or_(igual(Empleador.mail_padron), igual(Empleador.mail)))).all()}
+    return s.exec(select(CuentaEmpleador).where(
+        CuentaEmpleador.clave_hash != "",
+        or_(igual(CuentaEmpleador.mail_declarado), CuentaEmpleador.cuit.in_(cuits)))).all()
 
 
 def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
     """(estado, cuenta_id, identificador) de la cuenta que le corresponde a una
     identidad de Google. `estado`:
     - "ok": una y una sola cuenta;
-    - "ninguna": no hay, o no tiene el mail confirmado, o ese mail ya está
-      atado a OTRA cuenta de Google (no se reasigna solo);
-    - "varias": más de una cuenta con ese mail confirmado (no se adivina);
+    - "ninguna": no hay ninguna con ese mail, o su cuenta ya está atada a OTRA
+      cuenta de Google (no se reasigna sola: el mail pudo cambiar de manos);
+    - "varias": el mail está en más de una cuenta del rol, en cualquiera de sus
+      campos (no se adivina);
     - "temporal": la cuenta tiene clave temporal (el sindicato la restableció y
       el primer ingreso obliga a elegir clave): por Google no se saltea eso.
     Primero se busca por `google_sub` (sobrevive a un cambio de mail) y recién
@@ -3073,16 +3100,15 @@ def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
     sub = (sub or "").strip()
     if not mail or not sub:
         return "ninguna", 0, ""
-    from sqlalchemy import func as _func
     with Session(engine) as s:
-        confirmada = modelo.mail_declarado_confirmado != ""
-        cuentas = s.exec(select(modelo).where(modelo.google_sub == sub, confirmada)).all()
+        cuentas = s.exec(select(modelo).where(
+            modelo.google_sub == sub, modelo.clave_hash != "")).all()
         if not cuentas:
-            cuentas = s.exec(select(modelo).where(
-                _func.lower(_func.trim(modelo.mail_declarado)) == mail, confirmada)).all()
-            # Un mail cuya cuenta ya está atada a otro `sub` no se reasigna: el
-            # mail puede haber cambiado de manos en Google.
-            cuentas = [c for c in cuentas if not (c.google_sub or "")]
+            cuentas = _cuentas_con_mail(s, rol, mail)
+            # La unicidad se cuenta sobre TODAS las cuentas; recién después se
+            # descarta la que ya tiene otro `sub`.
+            if len(cuentas) == 1 and (cuentas[0].google_sub or ""):
+                return "ninguna", 0, ""
         if not cuentas:
             return "ninguna", 0, ""
         if len(cuentas) > 1:
@@ -3093,16 +3119,42 @@ def cuenta_para_google(rol: str, mail: str, sub: str) -> tuple[str, int, str]:
         return "ok", c.id, getattr(c, campo)
 
 
-def vincular_google(rol: str, cuenta_id: int, sub: str) -> None:
-    """Guarda el `sub` de Google en la cuenta la primera vez (nunca lo pisa)."""
-    nombre_modelo, _ = _CUENTA_GOOGLE[rol]
+def entrar_con_google(rol: str, cuenta_id: int, sub: str, mail: str) -> None:
+    """Deja asentado el ingreso con Google en la cuenta: el `sub` la primera vez
+    (nunca lo pisa) y el mail, verificado por Google, como declarado y
+    confirmado -- solo si `mail_declarado` está vacío o ya es ese mail; un
+    declarado confirmado DISTINTO no se pisa. El nivel sube por el origen que
+    corresponde: `mail_padron` si Google probó el mail que cargó el sindicato,
+    y `mail_declarado` solo si la política de los sindicatos de la persona
+    acepta mails declarados (misma regla que el registro)."""
+    nombre_modelo, campo = _CUENTA_GOOGLE[rol]
     modelo = globals()[nombre_modelo]
+    mail = (mail or "").strip().lower()
     with Session(engine) as s:
         c = s.get(modelo, cuenta_id)
-        if c and not (c.google_sub or "") and sub:
+        if not c:
+            return
+        if sub and not (c.google_sub or ""):
             c.google_sub = sub
-            s.add(c)
-            s.commit()
+        declarado = (c.mail_declarado or "").strip().lower()
+        if mail and declarado in ("", mail):
+            c.mail_declarado = mail
+            if not (c.mail_declarado_confirmado or ""):
+                c.mail_declarado_confirmado = fechas.ahora_texto()
+            numero = getattr(c, campo)
+            if rol == "trabajador":
+                del_padron = (c.mail_padron or "").strip().lower() == mail
+                acepta = acepta_mail_declarado(s, numero)
+            else:
+                del_padron = any((e.mail_padron or "").strip().lower() == mail for e in s.exec(
+                    select(Empleador).where(Empleador.cuit == numero)).all())
+                acepta = acepta_mail_declarado_empresa(s, numero)
+            if del_padron:
+                subir_nivel(s, c, "mail_padron")
+            elif acepta:
+                subir_nivel(s, c, "mail_declarado")
+        s.add(c)
+        s.commit()
 
 
 def importar_cuits_de_conceptos(sindicato_id: int, invalidos: Optional[list] = None) -> int:

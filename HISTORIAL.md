@@ -8,7 +8,48 @@ detalle. `CLAUDE.md` tiene el resumen orientador ("Estado actual") con el
 mapa de qué existe; acá está el cómo y el por qué de cada punto de ese mapa,
 en el mismo orden cronológico en que se construyó.
 
+## Google acepta cualquier mail de la ficha (2026-11-06, Trabajador 0.59.04, Admin 0.79.02)
+
+**Qué pasó en Pruebas.** SDN probó «Continuar con Google»: Google lo autenticó bien
+y la app contestó «No encontramos una cuenta con ese mail confirmado», aunque su
+perfil tenía ese mail. Causa: la primera versión (abajo) exigía
+`mail_declarado_confirmado`, que solo escribe el registro o la confirmación por
+código, y en Pruebas y en Demo el canal de mail está apagado (sin `RESEND_API_KEY`
+ni `MAIL_REMITENTE`): nadie podía tenerlo. El mail que se ve en «Tu perfil» es el de
+contacto (`mail`) o el del padrón (`mail_padron`), que no contaban.
+
+**Decisión del coordinador.** Google mismo es la confirmación (`email_verified`).
+Ahora `db.cuenta_para_google` acepta el mail contra los tres de la ficha
+(`mail_declarado`, `mail_padron`, `mail`; en la empresa, `CuentaEmpleador.
+mail_declarado` más `Empleador.mail_padron`/`mail` de sus altas, unidas por CUIT),
+siempre que sea de UNA sola cuenta REGISTRADA (con clave) entre todas las del rol;
+una fila del padrón sin clave no es una cuenta ni cuenta para la unicidad. Sigue
+sin reasignarse una cuenta atada a otro `sub` y sigue la regla de la clave
+temporal. Al entrar, `db.entrar_con_google` guarda el `sub` y deja el mail como
+`mail_declarado` + `mail_declarado_confirmado` (si el declarado estaba vacío o era
+ese mail; uno confirmado distinto no se pisa) y sube el nivel a 2: por
+`mail_padron` si Google probó el mail del sindicato, por `mail_declarado` solo si
+la política de los sindicatos de la persona acepta mails declarados (como el
+registro). Textos: «No encontramos una cuenta con ese mail. Ingresá con tu CUIL y
+clave y cargá tu mail en Tu perfil».
+
+**Restablecer la clave.** Como ahora vale el mail de contacto, restablecer desde el
+panel borra además `mail_declarado` y, en el afiliado, `mail` (junto con
+`google_sub` y la confirmación): si no, quien llegó primero seguiría entrando por
+Google con su mail. Queda el `mail_padron` (del sindicato) y, en la empresa, el
+`Empleador.mail` de cada alta (es de cada sindicato; el panel de uno no toca el
+de otro).
+
+**Riesgo residual aceptado.** Una persona que cargue en SU cuenta el mail de otra
+(como mail de contacto o declarado) puede hacer que esa otra, si entra con Google
+sin tener ninguna cuenta con ese mail, caiga en la cuenta ajena. Lo mitigan la
+unicidad entre cuentas (si la otra tiene su cuenta con ese mail, es «varias» y no
+entra nadie) y que el encabezado muestra nombre y CUIL.
+
 ## Ingreso con Google (2026-11-06, Trabajador 0.59.01, Admin 0.77.08)
+
+> Reemplazado el 2026-11-06 por la sección de arriba: la versión inicial exigía
+> el mail declarado confirmado por código.
 
 Pedido de SDN: «incluir la posibilidad de ingresar autenticados con Google a
 aquellos que ya estén dados de alta en la plataforma y tengan los datos
