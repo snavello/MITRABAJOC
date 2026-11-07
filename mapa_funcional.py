@@ -685,9 +685,36 @@ def pagina(datos, vis_src, logo_src, fuente_src, acciones_html=""):
     """El HTML completo. Lo usan la versión local (main, abajo) y /entornos/mapa
     (main.py), cada uno con sus rutas a la librería del grafo, el isotipo y la
     fuente: en la app van por /static/ con su sello; en local, relativas."""
-    return (PAGINA.replace("__DATOS__", json.dumps(datos, ensure_ascii=False))
+    # `datos` puede venir ya serializado (armar_aparte): así quien sirve el mapa
+    # nunca tiene el grafo de objetos en memoria, solo el texto.
+    return (PAGINA.replace("__DATOS__", datos if isinstance(datos, str) else json.dumps(datos, ensure_ascii=False))
             .replace("__VIS__", vis_src).replace("__LOGO__", logo_src)
             .replace("__FUENTE__", fuente_src).replace("__ACCIONES__", acciones_html))
+
+
+def resumen_de(datos: dict) -> dict:
+    """Lo que muestra la tarjeta de la pestaña: cuándo se generó y cuánto hay."""
+    return {
+        "generado": datos["generado"], "commit": datos["commit"],
+        "apps": len({f["app"] for f in datos["funcionalidades"]}),
+        "funcionalidades": len(datos["funcionalidades"]),
+        "rutas": datos["total_rutas"], "sin_clasificar": len(datos["sin_clasificar"]),
+    }
+
+
+def armar_aparte(timeout: int = 180) -> tuple[dict, str]:
+    """(resumen, datos_json) armados en un PROCESO APARTE. Leer ~100 archivos con
+    `ast` (main.py solo son 11.700 líneas) levanta un pico de decenas de MiB y,
+    aunque después se libere, el proceso del servidor no devuelve esa memoria al
+    sistema: en Pruebas (512 MiB) se medían +46 MiB de más para siempre, por una
+    pantalla que casi nadie abre. En un hijo, el pico se va con el hijo.
+    Levanta si el hijo falla; quien llama decide qué hacer."""
+    r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--json"], cwd=str(RAIZ),
+                       capture_output=True, text=True, encoding="utf-8", timeout=timeout)
+    if r.returncode != 0:
+        raise RuntimeError("el mapa funcional no se pudo armar: " + (r.stderr or "")[-300:])
+    resumen_json, datos_json = r.stdout.strip().split("\n", 1)
+    return json.loads(resumen_json), datos_json
 
 
 PROMPT_MD = RAIZ / "docs" / "prompts" / "MAPA_FUNCIONAL.md"
@@ -748,6 +775,12 @@ def main():
     import fechas
     datos = armar()
     datos["generado"] = "Generado " + fechas.ahora_texto()
+    if "--json" in sys.argv:
+        # Para armar_aparte: dos líneas, el resumen y los datos, sin tocar el disco.
+        sys.stdout.reconfigure(encoding="utf-8")
+        print(json.dumps(resumen_de(datos), ensure_ascii=False))
+        print(json.dumps(datos, ensure_ascii=False))
+        return
     SALIDA.parent.mkdir(exist_ok=True)
     logo = RAIZ / "static" / "colmena_dorada.webp"   # el isotipo, sin la palabra
     logo_uri = ("data:image/webp;base64," + base64.b64encode(logo.read_bytes()).decode()) if logo.exists() else ""

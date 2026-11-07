@@ -63,9 +63,11 @@ class Preparado:
     analisis: E.Analisis | None = None
     pertenece: bool | None = None
     registro: dict = field(default_factory=dict)
-    # La página tal como se leyó (PIL, derecha y sin tapar). Solo vive en
-    # memoria durante el request: la usa el diagnóstico de Pruebas.
-    pagina: object = None
+    # (original, enviada) en JPEG para el diagnóstico de Pruebas, o None. Se
+    # arman DENTRO de `preparar`, mientras la imagen está en memoria, y son bytes
+    # de ~0,5 MB: así `preparar` no devuelve ninguna imagen PIL (9 MB cada una)
+    # y el diagnóstico no vuelve a decodificar nada.
+    diagnostico: tuple[bytes, bytes] | None = None
 
 
 def _codificar(img, content_type: str) -> tuple[str, str]:
@@ -114,7 +116,9 @@ def preparar(contenido: bytes, content_type: str, conocidos: E.Conocidos | None 
     prep = Preparado(m, registro=reg)
     try:
         img, palabras, camino, lectura = _leer(contenido, content_type)
-        prep.pagina = img
+        # Solo si el diagnóstico está prendido, y ANTES de tapar (la original
+        # tiene que verse sin tapones): ver `Preparado.diagnostico`.
+        original_jpeg = _jpeg_o_none(img) if img is not None and guardar_imagenes_habilitado() else None
         reg["camino"] = camino
         if lectura is not None:
             reg.update(motivo=lectura.motivo, espera_ms=lectura.espera_ms,
@@ -133,15 +137,26 @@ def preparar(contenido: bytes, content_type: str, conocidos: E.Conocidos | None 
                 prep.pertenece = E.pertenece(an, conocidos.cuil)
                 reg["pertenece"] = prep.pertenece
             if m == "activo" and an.cajas:
-                prep.imagen = _codificar(E.tapar(img, an.cajas),
-                                         "image/png" if content_type == "application/pdf" else content_type)
+                # Se tapa sobre la MISMA imagen (`en_lugar`): `img` no se usa
+                # más después de esto, y una copia son 9 MB al pedo.
+                tapada = E.tapar(img, an.cajas, en_lugar=True)
+                prep.imagen = _codificar(tapada, "image/png" if content_type == "application/pdf" else content_type)
                 prep.tapado = True
                 reg["tapado"] = True
+                if original_jpeg is not None:
+                    enviada_jpeg = _jpeg_o_none(tapada)
+                    prep.diagnostico = (original_jpeg, enviada_jpeg) if enviada_jpeg else None
+                del tapada
+        if original_jpeg is not None and prep.diagnostico is None and not prep.tapado:
+            # Nada que tapar (o sombra): lo que se manda es el original.
+            prep.diagnostico = (original_jpeg, original_jpeg)
+        del img
     except Exception as e:
         # Mejor esfuerzo: el recibo sigue como hoy. El tipo de error va al
         # registro (sin el mensaje, que podría traer texto del documento).
         reg["motivo"] = f"error:{type(e).__name__}"[:40]
         prep.imagen, prep.tapado, reg["tapado"] = None, False, False
+        prep.diagnostico = None
     reg["total_ms"] = int((time.perf_counter() - inicio) * 1000)
     if prep.imagen is None:
         # Sin tapar (sombra, nada que tapar o un problema): viaja el original,
@@ -185,18 +200,27 @@ def _jpeg(img) -> bytes:
     return buf.getvalue()
 
 
+def _jpeg_o_none(img):
+    """Un diagnóstico que no se puede armar no es motivo para frenar un recibo."""
+    try:
+        return _jpeg(img)
+    except Exception:
+        return None
+
+
 def imagenes_diagnostico(prep: Preparado, contenido: bytes, content_type: str):
     """(original, enviada) en JPEG, o None. La original es la página tal como
-    la vio el lector (ya achicada a `lectores.LADO_MAXIMO_OCR`: no se vuelve a
-    decodificar el archivo subido, que son decenas de MB); la enviada, lo que
-    efectivamente recibió la IA (tapado en activo, el original en sombra).
-    Nunca levanta: es diagnóstico."""
+    la vio el lector (ya achicada a `lectores.LADO_MAXIMO_OCR`); la enviada, lo
+    que efectivamente recibió la IA (tapado en activo, el original en sombra).
+    Casi siempre ya está armada por `preparar` (`prep.diagnostico`): acá solo
+    se arma, abriendo de nuevo el archivo, cuando `preparar` no pudo (modo
+    apagado o un error). Nunca levanta: es diagnóstico."""
     from PIL import Image
+    if prep.diagnostico is not None:
+        return prep.diagnostico
     try:
-        original = prep.pagina
-        if original is None:
-            original = (lectores.imagen_pdf(contenido, 0) if content_type == "application/pdf"
-                        else lectores.abrir_imagen(contenido))
+        original = (lectores.imagen_pdf(contenido, 0) if content_type == "application/pdf"
+                    else lectores.abrir_imagen(contenido))
         if prep.imagen is not None:
             enviada = Image.open(io.BytesIO(base64.b64decode(prep.imagen[0])))
         else:

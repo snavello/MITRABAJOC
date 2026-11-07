@@ -41,12 +41,15 @@ import main
 from db import Sindicato, Trabajador
 from fastapi.testclient import TestClient
 
-# Umbral del pico (MiB sobre la línea de base). Medido: ~41 con el cambio y ~151
-# sin él, con la foto de este archivo. El margen del servicio de Pruebas era de
-# ~155 MiB (512 de tope, 356 en reposo) y una lectura real suma además la
-# memoria propia de Tesseract; 80 deja a la mitad del margen lo que pasa por
-# delante de Tesseract y falla con holgura si vuelve el camino de tres copias.
-UMBRAL_MIB = 80
+# Umbral del pico (MiB sobre la línea de base), con el diagnóstico de Pruebas
+# prendido (el caso más pesado). Medido con la foto de este archivo: ~29 hoy,
+# ~42 antes de tapar en el lugar y de armar el diagnóstico dentro de `preparar`
+# (0.59.02) y ~151 antes de decodificar una sola vez (0.59.01). El margen del
+# servicio de Pruebas era de ~155 MiB (512 de tope, 356 en reposo) y una lectura
+# real suma además la memoria propia de Tesseract; 55 deja casi el doble de lo
+# medido para las diferencias entre plataformas y falla si vuelve cualquiera de
+# los dos caminos anteriores.
+UMBRAL_MIB = 55
 
 CUIL = "20202790411"
 db.crear_tablas()
@@ -87,6 +90,8 @@ _MEDIDOR = r'''
 import ctypes, gc, io, json, os, sys, threading, time, types
 sys.path.insert(0, os.getcwd())
 os.environ["ENMASCARADO"] = "activo"
+os.environ["ENTORNO"] = "pruebas"                       # como Pruebas: con el diagnóstico de imágenes
+os.environ["ENMASCARADO_GUARDAR_IMAGENES"] = "1"
 os.environ["ANTHROPIC_API_KEY"] = "x"
 os.environ["MOCK_EXTRACTOR"] = "0"
 
@@ -223,12 +228,12 @@ def test_las_cajas_del_ocr_caen_sobre_la_imagen_que_se_tapa(monkeypatch):
     monkeypatch.setattr(lectores, "leer_foto", lector_falso)
     prep = preparacion.preparar(foto_de_celular(), "image/jpeg",
                                 E.Conocidos(cuil=CUIL, nombre="Sdn"), "activo")
-    assert prep.tapado and prep.pagina is not None
-    assert recibido["tam"] == prep.pagina.size == (1500, 2000)
-    assert all(0 <= k.x0 < k.x1 <= prep.pagina.width and 0 <= k.y0 < k.y1 <= prep.pagina.height
-               for k in prep.analisis.cajas)
+    assert prep.tapado
+    ancho, alto = recibido["tam"]
+    assert (ancho, alto) == (1500, 2000)
+    assert all(0 <= k.x0 < k.x1 <= ancho and 0 <= k.y0 < k.y1 <= alto for k in prep.analisis.cajas)
     enviada = Image.open(io.BytesIO(__import__("base64").b64decode(prep.imagen[0])))
-    assert enviada.size == prep.pagina.size
+    assert enviada.size == (ancho, alto)
     print("OK  test_las_cajas_del_ocr_caen_sobre_la_imagen_que_se_tapa")
 
 
@@ -302,3 +307,112 @@ def test_una_pagina_de_pdf_grande_se_dibuja_con_tope_de_lado_y_un_a4_no_cambia()
     assert max(plano.size) <= lectores.LADO_MAXIMO_OCR + 1, plano.size
     assert plano.size[0] < plano.size[1]
     print("OK  test_una_pagina_de_pdf_grande_se_dibuja_con_tope_de_lado_y_un_a4_no_cambia")
+
+
+# ------------------------------------------------- ya no se retiene ninguna imagen
+
+def test_preparar_no_devuelve_imagenes_pil_y_arma_el_diagnostico_adentro(monkeypatch):
+    import preparacion
+    import enmascarado as E
+
+    def lector_falso(imagen, presupuesto_ms=None):
+        w, h = imagen.size
+        return lectores.LecturaFoto("ok", [
+            lectores.Palabra("CUIL:", w * .05, h * .05, w * .12, h * .07, 0),
+            lectores.Palabra("20-20279041-1", w * .13, h * .05, w * .30, h * .07, 0)])
+
+    monkeypatch.setattr(lectores, "leer_foto", lector_falso)
+    monkeypatch.setattr(preparacion, "guardar_imagenes_habilitado", lambda: True)
+    prep = preparacion.preparar(foto_de_celular(), "image/jpeg", E.Conocidos(cuil=CUIL, nombre="Sdn"), "activo")
+    assert not hasattr(prep, "pagina")                      # nada de 9 MB colgando del resultado
+    original, enviada = prep.diagnostico
+    assert original != enviada                              # la enviada lleva los tapones
+    assert max(Image.open(io.BytesIO(original)).size) == preparacion.LADO_IMAGEN_DIAGNOSTICO
+    assert preparacion.imagenes_diagnostico(prep, b"", "image/jpeg") == (original, enviada)  # sin reabrir nada
+    # Sin nada que tapar, lo que se manda es el original: las dos son la misma.
+    monkeypatch.setattr(lectores, "leer_foto", lambda imagen, presupuesto_ms=None: lectores.LecturaFoto("sin_ocr"))
+    prep2 = preparacion.preparar(foto_de_celular(), "image/jpeg", E.Conocidos(cuil=CUIL), "activo")
+    assert prep2.diagnostico[0] == prep2.diagnostico[1] and not prep2.tapado
+    # Con el diagnóstico apagado no se arma nada.
+    monkeypatch.setattr(preparacion, "guardar_imagenes_habilitado", lambda: False)
+    assert preparacion.preparar(foto_de_celular(), "image/jpeg", E.Conocidos(cuil=CUIL), "activo").diagnostico is None
+    print("OK  test_preparar_no_devuelve_imagenes_pil_y_arma_el_diagnostico_adentro")
+
+
+def test_tapar_en_el_lugar_no_copia_y_por_defecto_si():
+    import enmascarado as E
+    img = Image.new("RGB", (400, 200), "white")
+    caja = E.Caja(20, 20, 200, 50, 0, "cuil", "20-20279041-1", "")
+    copia = E.tapar(img, [caja])
+    assert copia is not img and img.getpixel((60, 35)) == (255, 255, 255) and copia.getpixel((60, 35)) != (255, 255, 255)
+    mismo = E.tapar(img, [caja], en_lugar=True)
+    assert mismo is img and img.getpixel((60, 35)) != (255, 255, 255)
+    print("OK  test_tapar_en_el_lugar_no_copia_y_por_defecto_si")
+
+
+# ------------------------------------------------------------ el cupo de lecturas
+
+def _correr_lecturas(monkeypatch, cuantas, cupo, espera_s="45", dura=0.25):
+    """Dispara `cuantas` lecturas a la vez en UN solo loop, con `preparar` simulado
+    (duerme `dura`) y devuelve (estado con el máximo en paralelo, resultados o excepciones)."""
+    import asyncio
+    import threading
+    import time
+    import preparacion
+
+    monkeypatch.setenv("LECTURA_CUPO", str(cupo))
+    monkeypatch.setenv("LECTURA_ESPERA_S", espera_s)
+    monkeypatch.setenv("ENMASCARADO", "sombra")
+    monkeypatch.setattr(db, "registrar_enmascarado", lambda *a, **k: None)
+    estado = {"ahora": 0, "maximo": 0}
+    candado = threading.Lock()
+
+    def preparar_falso(contenido, content_type, conocidos):
+        with candado:
+            estado["ahora"] += 1
+            estado["maximo"] = max(estado["maximo"], estado["ahora"])
+        time.sleep(dura)
+        with candado:
+            estado["ahora"] -= 1
+        return preparacion.Preparado("sombra")
+
+    monkeypatch.setattr(preparacion, "preparar", preparar_falso)
+
+    async def todas():
+        pedidos = [main._preparar_para_ia(b"x", "application/pdf", None, None, "recibo") for _ in range(cuantas)]
+        return await asyncio.gather(*pedidos, return_exceptions=True)
+
+    return estado, asyncio.run(todas())
+
+
+def test_el_cupo_limita_las_lecturas_simultaneas_y_nadie_se_rechaza(monkeypatch):
+    estado, resultados = _correr_lecturas(monkeypatch, cuantas=6, cupo=2)
+    assert estado["maximo"] == 2, estado                       # nunca más de dos a la vez
+    assert all(not isinstance(r, Exception) for r in resultados), resultados   # todas esperaron su turno
+    estado, _ = _correr_lecturas(monkeypatch, cuantas=4, cupo=1)
+    assert estado["maximo"] == 1, estado
+    print("OK  test_el_cupo_limita_las_lecturas_simultaneas_y_nadie_se_rechaza")
+
+
+def test_si_la_espera_pasa_el_tope_es_503_con_su_codigo(monkeypatch):
+    estado, resultados = _correr_lecturas(monkeypatch, cuantas=3, cupo=1, espera_s="0.1", dura=0.6)
+    errores = [r for r in resultados if isinstance(r, Exception)]
+    assert len(errores) == 2, resultados                       # una leyó, dos se cansaron de esperar
+    assert all(getattr(e, "codigo", "") == "E-SERVIDOR-04" and e.status_code == 503 for e in errores), errores
+    assert estado["maximo"] == 1
+    print("OK  test_si_la_espera_pasa_el_tope_es_503_con_su_codigo")
+
+
+def test_el_cupo_default_es_2_y_leer_y_aportes_pasan_por_el_mismo(monkeypatch):
+    import ast
+    monkeypatch.delenv("LECTURA_CUPO", raising=False)
+    assert main._lecturas_en_paralelo() == 2
+    monkeypatch.setenv("LECTURA_CUPO", "basura")
+    assert main._lecturas_en_paralelo() == 2
+    monkeypatch.setenv("LECTURA_CUPO", "0")
+    assert main._lecturas_en_paralelo() == 1                    # nunca cero: nadie leería
+    arbol = ast.parse(Path("main.py").read_text(encoding="utf-8"))
+    usan = {f.name for f in ast.walk(arbol) if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and any(isinstance(n, ast.Name) and n.id == "_preparar_para_ia" for n in ast.walk(f))}
+    assert {"api_leer", "api_aportes"} <= usan, usan
+    print("OK  test_el_cupo_default_es_2_y_leer_y_aportes_pasan_por_el_mismo")

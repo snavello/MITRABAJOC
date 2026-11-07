@@ -10507,3 +10507,71 @@ bajar el reposo sin tocar código); y, si se quiere seguir en 512 MiB, soltar el
 funcional de la memoria después de servirlo (hoy no se vuelve a pedir solo). Para
 confirmarlo sin adivinar: reiniciar, mirar la memoria a los cinco minutos, abrir
 `/entornos/mapa` y volver a mirar.
+
+### Memoria en reposo y por lectura, segunda vuelta (Trabajador 0.59.03, Plataforma 0.65.12)
+
+Pedido de SDN después del OOM: dejarlo lo más estable posible y ver si las copias de la
+imagen se pueden reducir todavía. Todo medido con el mismo método que la tanda anterior
+(working set muestreado cada milisegundo, foto sintética de 12 MP con EXIF 6, Tesseract
+simulado). En el mismo momento se puso `MALLOC_ARENA_MAX=2` en Pruebas por la API de
+Render (medirlo es de SDN, después del reinicio).
+
+**1. El mapa funcional ya no se queda con el grafo.** Armarlo lee ~100 archivos con
+`ast` (main.py son 11.700 líneas); el pico se libera en Python pero el proceso no lo
+devuelve al sistema, y lo que quedaba era memoria retenida por una pantalla que casi nadie
+abre. `mapa_funcional.armar_aparte()` lo arma en un **proceso hijo** y le devuelve al
+servidor dos líneas de texto (el resumen y los datos en JSON); el servidor arma el HTML y
+guarda solo `html_z`, el HTML **comprimido con zlib**, y el resumen. Si el hijo no puede
+arrancar, se arma en el servidor como antes. «Actualizar desde el código» rehace lo mismo.
+
+| | antes | después |
+|---|---|---|
+| memoria retenida al armarlo la primera vez | +51,1 MiB | **+3,4 MiB** |
+| al apretar «Actualizar» | +14,8 MiB más | **+0,0 MiB** |
+| lo que queda guardado | 233 KB de HTML más el grafo | 38 KB comprimidos |
+
+**2. Qué queda de las copias de la foto** (pico por lectura, con el diagnóstico de
+Pruebas prendido, que es el caso pesado): **de 41,7 a 29,4 MiB**, y lo que sigue
+vivo después de `preparar` mientras la IA contesta, **de 13,0 a 2,1 MiB**. Cuatro
+cambios chicos: (a) `enmascarado.tapar(..., en_lugar=True)` dibuja los tapones sobre la
+misma imagen en vez de copiarla (la original no se usa más: 9 MB menos); (b) el
+diagnóstico de Pruebas se arma **adentro de `preparar`**, mientras la imagen está en
+memoria, y viaja como dos JPEG de ~0,5 MB (`Preparado.diagnostico`): ya no se devuelve la
+página PIL (`Preparado.pagina` desapareció), no se vuelve a decodificar la enviada desde su
+base64 ni se reabren los bytes subidos; (c) `_preparar_para_ia` no necesita soltar nada
+porque nada queda colgado; (d) `getbuffer()` en vez de `getvalue()` al codificar. Lo
+que queda es el piso: la imagen reducida (9 MB), la rotación del EXIF que la duplica un
+instante, y la copia que hace Tesseract en `SetImage`. Bajar de ahí obligaría a rotar sin
+copiar (no se puede) o a leer a menos de 2.000 px (perdería lectura del OCR), así que no
+se toca. El base64 que viaja a la IA (1,2 MB) y el JPEG que lo origina no valen el cambio.
+
+**3. Cupo de lecturas simultáneas** (`LECTURA_CUPO`, default **2**; `LECTURA_ESPERA_S`,
+default 45). Con ~30 MiB de pico por documento, dos a la vez son ~60 MiB; cinco, los 155
+MiB de margen de Pruebas. Es un `asyncio.Semaphore` alrededor de `preparacion.preparar`
+en `_preparar_para_ia`, que comparten `/api/leer`, `/api/aportes`, el aprendizaje del admin
+y la calculadora: esperar no ocupa ningún hilo del threadpool (con un `threading.Semaphore`,
+cuarenta fotos en cola se hubieran llevado los hilos que necesitan las demás pantallas).
+Con el cupo lleno **el pedido espera su turno y se lee**; solo si espera más de 45 s
+contesta **503 `E-SERVIDOR-04`** («Estamos leyendo muchos documentos a la vez…»), y la
+pantalla del afiliado ya lo trata como transitorio y ofrece Reintentar. No se limita la
+llamada a la IA: lo que queda vivo mientras contesta son 2 MiB. Por qué 2 y no 1: la espera
+del OCR ya es de uno a la vez (`ENMASCARADO_CUPO`), así que lo que se superpone entre dos
+fotos es la decodificación y el tapado, que son CPU corta; con 1 una foto lenta le sumaría
+su OCR a la siguiente, y con 3 el peor caso (90 MiB) ya se come más de la mitad del margen.
+
+**4. Otros candidatos de la base en reposo.** El caché de logos (`logos._cache`, hasta 64
+entradas) **ya guardaba bytes codificados**, no imágenes PIL: no hay nada que cambiar. Las 51
+plantillas Jinja compiladas suman 13 MiB y se dejan (se compilan una vez y evitan CPU en cada
+pantalla). `empaquetar._cache_urls` / `_cache_paquetes` (64 entradas de fuentes, solo se
+llena al exportar un paquete) y los diccionarios de intentos por IP son kilobytes. El hilo
+del colector de métricas y el planificador no retienen datos. Lo que sigue sin dueño
+medido son los ~150 MiB que se suman en horas en Render: con el mapa fuera de la cuenta,
+el candidato que queda es la fragmentación de glibc con el threadpool, que es justamente lo
+que ataca `MALLOC_ARENA_MAX=2`.
+
+**Tests.** `test_memoria_lectura.py` (15): el pico queda bajo **55 MiB** (antes 80; mide
+29 hoy, 42 con la 0.59.02 y 151 con la 0.59.01, así que falla si vuelve cualquiera de las
+dos), `preparar` no devuelve imágenes y arma el diagnóstico dentro, `tapar` en el lugar, y el
+cupo (nunca más de 2 a la vez, nadie se rechaza, 503 con su código si la espera pasa el
+tope, mismo cupo para leer y aportes). `test_mapa_funcional.py` (+2): lo que queda en
+memoria es texto comprimido, y si el hijo falla se arma en el servidor.

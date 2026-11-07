@@ -921,7 +921,8 @@ def color_tapon() -> str:
     return c if c in COLORES else "gris"
 
 
-def tapar(imagen, cajas: list[Caja], margen: int = 3, color: str | None = None):
+def tapar(imagen, cajas: list[Caja], margen: int = 3, color: str | None = None,
+          en_lugar: bool = False):
     """Devuelve una COPIA de la imagen (PIL) con las cajas cubiertas por un
     rótulo que dice qué había ("CUIL OCULTO"). Palabras vecinas del mismo
     tipo se cubren con un solo rótulo. Un campo que dice qué había deja al
@@ -936,7 +937,9 @@ def tapar(imagen, cajas: list[Caja], margen: int = 3, color: str | None = None):
 
     relleno, borde, tinta = COLORES[color or color_tapon()]
     # UNA copia: convert("RGB") ya devuelve una copia aunque la imagen sea RGB.
-    img = imagen.convert("RGB")
+    # Con `en_lugar` (quien llama no necesita la original) se dibuja sobre la
+    # misma imagen, si ya es RGB: cero copias.
+    img = imagen if (en_lugar and imagen.mode == "RGB") else imagen.convert("RGB")
     dib = ImageDraw.Draw(img)
     for k in _unir(cajas):
         h = max(1.0, k.y1 - k.y0)

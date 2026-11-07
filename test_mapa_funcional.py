@@ -102,3 +102,29 @@ def test_un_script_module_trae_su_carpeta():
     assert {"panel_v2/app.js", "panel_v2/html.js"} <= set(js), js
     assert not any("vendor" in j for j in js), js
 
+
+
+def test_en_memoria_queda_el_texto_comprimido_y_no_el_grafo():
+    """El servidor de Pruebas (512 MiB) se quedaba con +46 MiB por haber armado
+    el mapa una vez: el pico del `ast` no se devuelve al sistema. Ahora se arma
+    en un proceso aparte y lo que queda es el HTML comprimido."""
+    import json
+    import zlib
+    resumen, datos_json = mapa_funcional.armar_aparte()
+    assert isinstance(datos_json, str) and resumen["rutas"] == json.loads(datos_json)["total_rutas"]
+    assert resumen["generado"].startswith("Generado ") and resumen["funcionalidades"] > 40
+    memoria = main._mapa_funcional(forzar=True)
+    assert set(memoria) == {"html_z", "resumen"}, set(memoria)       # ni el grafo ni el HTML sin comprimir
+    assert isinstance(memoria["html_z"], bytes) and len(memoria["html_z"]) < 400_000
+    assert b"vis-network" in zlib.decompress(memoria["html_z"])
+    assert memoria["resumen"]["rutas"] == resumen["rutas"]
+
+
+def test_si_el_proceso_aparte_falla_se_arma_en_el_servidor(monkeypatch):
+    def roto(*a, **k):
+        raise RuntimeError("sin subproceso")
+    monkeypatch.setattr(mapa_funcional, "armar_aparte", roto)
+    memoria = main._mapa_funcional(forzar=True)
+    assert memoria["resumen"]["funcionalidades"] > 40 and memoria["html_z"]
+    c = _con_pase()
+    assert "vis-network" in c.get("/entornos/mapa").text

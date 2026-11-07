@@ -108,6 +108,10 @@ MENSAJES = {
     "E-SERVIDOR-01": (503, "El servidor está ocupado y no pudo atender el pedido. "
                            "Esperá unos segundos y probá de nuevo."),
     "E-SERVIDOR-03": (503, "El panel está ocupado, reintentá en unos segundos."),
+    # Cupo de lecturas simultáneas (main._preparar_con_cupo): se esperó el turno
+    # y no llegó. No dice "foto": no es un error de lectura.
+    "E-SERVIDOR-04": (503, "Estamos leyendo muchos documentos a la vez y no hubo lugar a "
+                           "tiempo. Esperá un minuto y probá de nuevo."),
     "E-SERVIDOR-02": (503, "La consulta tardó más de lo permitido y se cortó. "
                            "Probá de nuevo con un rango de fechas más corto o menos "
                            "filtros; si sigue pasando, avisá a tu sindicato."),

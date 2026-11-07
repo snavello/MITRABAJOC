@@ -954,21 +954,67 @@ def _exigir_imagen_manejable(contenido: bytes, content_type: str) -> None:
         raise ErrorApp("E-IMAGEN-01", f"(Mide {str(e).removeprefix('mide ')}.)")
 
 
+# Cupo de lecturas simultáneas por proceso (2026-11-06). Abrir una foto, leerla con
+# el OCR y tapar son ~30 MiB de pico por documento (medido, foto de 12 MP): dos o
+# tres a la vez ya son 60 a 90 MiB sobre los ~155 MiB de margen que tenía Pruebas,
+# y cinco la tumban. Con el cupo lleno el pedido ESPERA su turno (no se rechaza);
+# solo si espera más de `LECTURA_ESPERA_S` se contesta 503 (E-SERVIDOR-04). Lo que
+# se guarda mientras la IA contesta (segundos) es 2 MiB: no hace falta cupo ahí.
+# Es un asyncio.Semaphore: esperar no ocupa ningún hilo del threadpool.
+_CUPO_LECTURA: dict = {"loop": None, "n": 0, "sem": None}
+
+
+def _lecturas_en_paralelo() -> int:
+    try:
+        return max(1, int(os.getenv("LECTURA_CUPO", "2").strip() or 2))
+    except ValueError:
+        return 2
+
+
+def _espera_de_lectura() -> float:
+    try:
+        return max(0.0, float(os.getenv("LECTURA_ESPERA_S", "45").strip() or 45))
+    except ValueError:
+        return 45.0
+
+
+def _cupo_de_lectura() -> asyncio.Semaphore:
+    """El semáforo del proceso. Se rehace si cambia el cupo o el loop (en la app
+    hay un solo loop; los tests de rutas con TestClient arman uno por pedido)."""
+    loop, n = asyncio.get_running_loop(), _lecturas_en_paralelo()
+    if _CUPO_LECTURA["loop"] is not loop or _CUPO_LECTURA["n"] != n:
+        _CUPO_LECTURA.update(loop=loop, n=n, sem=asyncio.Semaphore(n))
+    return _CUPO_LECTURA["sem"]
+
+
+async def _preparar_con_cupo(contenido: bytes, content_type: str, conocidos):
+    cupo = _cupo_de_lectura()
+    try:
+        await asyncio.wait_for(cupo.acquire(), timeout=_espera_de_lectura())
+    except asyncio.TimeoutError:
+        print(f"[E-SERVIDOR-04] lecturas en curso: {_lecturas_en_paralelo()}, sin lugar a tiempo")
+        raise ErrorApp("E-SERVIDOR-04")
+    try:
+        return await run_in_threadpool(preparacion.preparar, contenido, content_type, conocidos)
+    finally:
+        cupo.release()
+
+
 async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid, tipo: str):
     """Tapa lo que identifica (si el modo lo pide) y deja el registro. En un
-    hilo aparte, como la llamada a la IA: el OCR usa CPU."""
+    hilo aparte, como la llamada a la IA: el OCR usa CPU. Pasa por el cupo de
+    lecturas simultáneas (`LECTURA_CUPO`)."""
     _exigir_imagen_manejable(contenido, content_type)
     if preparacion.modo() == "apagado":
         return preparacion.Preparado("apagado")
     try:
-        prep = await run_in_threadpool(preparacion.preparar, contenido, content_type, conocidos)
+        prep = await _preparar_con_cupo(contenido, content_type, conocidos)
+    except ErrorApp:
+        raise
     except Exception:
         prep = preparacion.Preparado("apagado")
     rid = db.registrar_enmascarado(sid or None, tipo, prep.registro)
     await _guardar_diagnostico(rid, prep, contenido, content_type)
-    # La página (PIL, ~9 MB) solo la usa el diagnóstico: se suelta ya, y no se
-    # queda viva durante la llamada a la IA, que dura segundos.
-    prep.pagina = None
     return prep
 
 
@@ -10638,25 +10684,34 @@ PROMPT_MAPA_FUNCIONAL = "/recursos/prompt-mapa-funcional/archivo"
 
 
 def _mapa_funcional(forzar: bool = False) -> dict:
+    """Lo que queda en memoria es el HTML ya armado y COMPRIMIDO (`html_z`, unos
+    cientos de KB) y el resumen, nunca el grafo de objetos ni los árboles de
+    `ast`: el mapa se arma en un proceso aparte (`mapa_funcional.armar_aparte`) y
+    el servidor solo recibe texto. Medido: de +46 MiB retenidos a ~1. Si el hijo
+    no puede arrancar se arma acá, como antes."""
     with _MAPA_LOCK:
         if forzar or not _MAPA_FUNCIONAL:
+            import zlib
             import mapa_funcional
-            datos = mapa_funcional.armar()
-            datos["generado"] = "Generado " + fechas.ahora_texto()
+            try:
+                resumen, datos = mapa_funcional.armar_aparte()
+            except Exception as e:
+                print(f"[mapa-funcional] sin proceso aparte ({type(e).__name__}); se arma en el servidor")
+                datos = mapa_funcional.armar()
+                datos["generado"] = "Generado " + fechas.ahora_texto()
+                resumen = mapa_funcional.resumen_de(datos)
             acciones = (
                 '<a href="/entornos#mapa">← Entornos</a>'
                 '<form method="post" action="/entornos/mapa/actualizar">'
                 '<button type="submit" class="fuerte">Actualizar desde el código</button></form>'
                 f'<a href="{PROMPT_MAPA_FUNCIONAL}" target="_blank" rel="noopener">Prompt para otros proyectos</a>')
-            _MAPA_FUNCIONAL["html"] = mapa_funcional.pagina(
+            html = mapa_funcional.pagina(
                 datos, _url_static("vendor/vis-network/vis-network.min.js"),
                 _url_static("colmena_dorada.webp"), _url_static("fonts/barlow-condensed-bold.woff2"), acciones)
-            _MAPA_FUNCIONAL["resumen"] = {
-                "generado": datos["generado"], "commit": datos["commit"],
-                "apps": len({f["app"] for f in datos["funcionalidades"]}),
-                "funcionalidades": len(datos["funcionalidades"]),
-                "rutas": datos["total_rutas"], "sin_clasificar": len(datos["sin_clasificar"]),
-            }
+            _MAPA_FUNCIONAL.clear()
+            _MAPA_FUNCIONAL["html_z"] = zlib.compress(html.encode("utf-8"), 6)
+            _MAPA_FUNCIONAL["resumen"] = resumen
+            del datos, html
         return _MAPA_FUNCIONAL
 
 
@@ -10665,7 +10720,8 @@ def entornos_mapa(request: Request):
     _exigir_landing()
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
-    return HTMLResponse(_mapa_funcional()["html"])
+    import zlib
+    return HTMLResponse(zlib.decompress(_mapa_funcional()["html_z"]).decode("utf-8"))
 
 
 @app.post("/entornos/mapa/actualizar")

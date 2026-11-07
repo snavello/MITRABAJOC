@@ -254,9 +254,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   **Orientación, nunca fuente de verdad**: no ve llamadas dinámicas; ante la
   duda manda el código. **Es herramienta del proyecto en `/entornos` →
   pestaña "Mapa funcional"** (`/entornos/mapa`, mismo pase y 404 en demo):
-  el servidor lo arma del código DESPLEGADO una vez por proceso (2-3 s) y lo
-  guarda en memoria; se renueva solo con cada deploy y a pedido con
-  "Actualizar desde el código". Estética de la landing; vis-network va
+  el servidor lo arma del código DESPLEGADO una vez por proceso (2-3 s), **en un
+  proceso hijo** (`mapa_funcional.armar_aparte`), y guarda solo el HTML comprimido
+  (38 KB, no el grafo: eran +51 MiB retenidos); se renueva solo con cada deploy y a
+  pedido con "Actualizar desde el código". Estética de la landing; vis-network va
   VENDOREADO en `static/vendor/vis-network/` (la CSP no deja cargar CDN).
   En la PC, `python mapa_funcional.py` escribe y abre
   `mapa-funcional/mapa.html` (no se versiona). El prompt para usarlo en
@@ -440,6 +441,9 @@ alta los administradores y cómo ingresa la clave»):
   registro cae a nivel 1. TURNSTILE_SITE_KEY / TURNSTILE_SECRET — captcha de
   los registros y la recuperación (`captcha.py`); sin las dos, apagado.
   Detalle y prerrequisitos (Cloudflare, Resend) en `DESPLIEGUE_RENDER.md`.
+- LECTURA_CUPO / LECTURA_ESPERA_S — lecturas de documentos (foto o PDF) que pueden
+  procesarse a la vez en un proceso (default 2) y cuántos segundos espera un pedido
+  su turno antes de contestar 503 (default 45). Cada lectura pica ~30 MiB.
 - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — cliente OAuth de Google Cloud para
   «Continuar con Google» en `/ingresar` y `/ingresar-empresa` (`google_auth.py`);
   sin las dos, apagado: el botón no se dibuja y las rutas dan 404. Lleva una
@@ -614,7 +618,10 @@ alta los administradores y cómo ingresa la clave»):
   (`imagenes.LADO_MAXIMO_LECTURA`), y el tope de píxeles de entrada se mira en la cabecera
   antes de decodificar (`E-IMAGEN-01`, 400; `main._exigir_imagen_manejable`). Una ruta
   nueva que abra un documento para la IA pasa por `_preparar_para_ia`, y no abre los bytes
-  por su cuenta. `test_memoria_lectura.py` fija el pico (80 MiB con una foto de 12 MP).
+  por su cuenta. `test_memoria_lectura.py` fija el pico (55 MiB con una foto de 12 MP y el
+  diagnóstico de Pruebas prendido). Las lecturas simultáneas por proceso tienen **cupo**
+  (`LECTURA_CUPO`, 2; `LECTURA_ESPERA_S`, 45): el pedido espera su turno y solo pasado el
+  tope contesta 503 `E-SERVIDOR-04`. `Preparado` no guarda imágenes PIL, solo bytes.
 
 - **Logos sin fondo blanco forzado**: un PNG con fondo transparente se ve
   transparente de verdad; si un sindicato quiere fondo de color, lo sube ya
