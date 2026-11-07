@@ -935,7 +935,8 @@ def tapar(imagen, cajas: list[Caja], margen: int = 3, color: str | None = None):
     from PIL import ImageDraw, ImageFont
 
     relleno, borde, tinta = COLORES[color or color_tapon()]
-    img = imagen.convert("RGB").copy()
+    # UNA copia: convert("RGB") ya devuelve una copia aunque la imagen sea RGB.
+    img = imagen.convert("RGB")
     dib = ImageDraw.Draw(img)
     for k in _unir(cajas):
         h = max(1.0, k.y1 - k.y0)

@@ -35,6 +35,12 @@ MENSAJES = {
     "E-RECIBO-02": (422, "La imagen no es lo bastante clara para leerla con seguridad. "
                          "Sacá la foto de nuevo con buena luz, o subí el PDF."),
 
+    # Una imagen con más píxeles de los que se pueden abrir (se mira en la
+    # cabecera, sin decodificarla). No es un error de lectura y no dice "foto":
+    # lo que hay que cambiar es el tamaño, y el PDF es la salida.
+    "E-IMAGEN-01": (400, "La imagen es demasiado grande para procesarla. Usá una de menor "
+                         "resolución, o subí el PDF del documento."),
+
     # --- Verificación del recibo ------------------------------------------
     "E-RECIBO-03": (500, "No pudimos terminar de verificar este recibo. El recibo se "
                          "leyó bien: el problema está de nuestro lado."),

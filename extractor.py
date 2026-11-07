@@ -196,10 +196,17 @@ Reglas para los campos nuevos:
 
 def _imagen_desde_pdf(contenido: bytes) -> tuple[str, str]:
     from pdf2image import convert_from_bytes
-    paginas = convert_from_bytes(contenido, dpi=150)
+    import imagenes
+    # Solo la primera página: la IA recibe una sola, y sin `last_page` poppler
+    # dibujaba TODAS a 150 dpi y las dejaba en la lista (un PDF de 30 páginas
+    # eran cientos de MB). Y con el mismo tope de lado que la foto.
+    paginas = convert_from_bytes(contenido, dpi=150, first_page=1, last_page=1)
+    pagina = paginas[0]
+    if max(pagina.size) > imagenes.LADO_MAXIMO_LECTURA:
+        pagina.thumbnail((imagenes.LADO_MAXIMO_LECTURA, imagenes.LADO_MAXIMO_LECTURA))
     buf = io.BytesIO()
-    paginas[0].save(buf, format="PNG")
-    return base64.standard_b64encode(buf.getvalue()).decode(), "image/png"
+    pagina.save(buf, format="PNG")
+    return base64.standard_b64encode(buf.getbuffer()).decode(), "image/png"
 
 
 def preparar_imagen(contenido: bytes, content_type: str) -> tuple[str, str]:

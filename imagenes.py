@@ -23,6 +23,21 @@ TOPE_ENTRADA = 8 * 1024 * 1024   # más que esto se rechaza sin abrir la imagen
 TOPE_SVG = 200 * 1024
 PIXELES_MAXIMOS = 40_000_000     # 40 MP: un PNG liso de 11000x11000 pesa 100 KB y ocupa 600 MB al abrirlo
 
+# --- Lo que lee la IA (recibos y comprobantes) -------------------------------
+# El lado mayor con el que se trabaja una foto o una página de PDF, y se toma
+# UNA sola vez, al abrirla: el OCR, el tapado y lo que viaja a la IA usan la
+# MISMA imagen reducida, así las cajas del OCR siguen cayendo sobre lo que se
+# tapa. La IA achica por su cuenta lo que pasa de ~1.568 px de lado, así que
+# más no suma lectura; y una foto de celular de 12 MP (4000x3000) abierta
+# entera son 36 MB por copia, con tres copias vivas pasaba los 150 MB en un
+# servicio de 512 MB que ya estaba en 356 (Pruebas, 2026-11-06, OOM).
+LADO_MAXIMO_LECTURA = 2000
+# Tope de píxeles de ENTRADA, mirado en la cabecera ANTES de decodificar. Un
+# JPEG se abre ya reducido (decodificación a escala), así que admite más; el
+# resto (PNG, WEBP...) se decodifica entero y se acota más.
+PIXELES_MAXIMOS_LECTURA_JPEG = 40_000_000
+PIXELES_MAXIMOS_LECTURA = 16_000_000
+
 # lado: tope del lado mayor en px; calidad: webp; svg: si admite SVG.
 PERFILES = {
     "logo":        {"lado": 512,  "calidad": 85, "svg": True},

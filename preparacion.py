@@ -35,9 +35,12 @@ from extractor import preparar_imagen
 MODOS = ("apagado", "sombra", "activo")
 # Una página de PDF con menos palabras que esto es un escaneo: la lee el OCR.
 MINIMO_PALABRAS_PDF = 5
-# La IA achica internamente lo que pasa de ~1.600 px; mandar más no suma
-# lectura y sí peso (el límite de la API es 5 MB por imagen).
-LADO_MAXIMO_ENVIO = 3000
+# La IA achica internamente lo que pasa de ~1.568 px; mandar más no suma
+# lectura y sí peso (el límite de la API es 5 MB por imagen). Es el mismo lado
+# con el que `lectores` abre la foto: lo que se lee, se tapa y se manda es UNA
+# sola imagen, así que acá `_codificar` ya no tiene nada que achicar (queda como
+# red por si alguien le pasa una imagen más grande).
+LADO_MAXIMO_ENVIO = lectores.LADO_MAXIMO_OCR
 
 
 def modo() -> str:
@@ -77,7 +80,8 @@ def _codificar(img, content_type: str) -> tuple[str, str]:
     else:
         img.save(buf, format="PNG", optimize=True)
         media = "image/png"
-    return base64.standard_b64encode(buf.getvalue()).decode(), media
+    # getbuffer() en vez de getvalue(): no copia los bytes del búfer.
+    return base64.standard_b64encode(buf.getbuffer()).decode(), media
 
 
 def _leer(contenido: bytes, content_type: str):
@@ -169,7 +173,9 @@ def guardar_imagenes_habilitado() -> bool:
 
 
 def _jpeg(img) -> bytes:
-    img = img.convert("RGB")
+    # Sin convert() si ya es RGB (devolvería una copia entera de la imagen).
+    if img.mode != "RGB":
+        img = img.convert("RGB")
     lado = max(img.size)
     if lado > LADO_IMAGEN_DIAGNOSTICO:
         f = LADO_IMAGEN_DIAGNOSTICO / lado
@@ -181,8 +187,10 @@ def _jpeg(img) -> bytes:
 
 def imagenes_diagnostico(prep: Preparado, contenido: bytes, content_type: str):
     """(original, enviada) en JPEG, o None. La original es la página tal como
-    la vio el lector; la enviada, lo que efectivamente recibió la IA (tapado
-    en activo, el original en sombra). Nunca levanta: es diagnóstico."""
+    la vio el lector (ya achicada a `lectores.LADO_MAXIMO_OCR`: no se vuelve a
+    decodificar el archivo subido, que son decenas de MB); la enviada, lo que
+    efectivamente recibió la IA (tapado en activo, el original en sombra).
+    Nunca levanta: es diagnóstico."""
     from PIL import Image
     try:
         original = prep.pagina
