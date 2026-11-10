@@ -446,8 +446,9 @@ html[data-tema="laguna"] .pt-dia-esc { flex: 1 1 600px; max-width: 860px; height
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 18px 36px -24px rgba(0, 0, 0, .6);
   animation: lg-sube .9s .3s var(--lg-curva) both; }
-html[data-tema="laguna"] .pt-dia-esc .pt-dia-h { font-size: 22px; font-weight: 300; }
-html[data-tema="laguna"] .pt-dia-esc .pt-dia-f { margin-top: 3px; font-size: 10px; font-weight: 700; letter-spacing: .14em; color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .pt-dia-esc .pt-dia-h { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #fff; }
+html[data-tema="laguna"] .pt-dia-esc .pt-dia-f { font-size: 10px; font-weight: 700; letter-spacing: .14em; color: var(--lg-sobre-osc); }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-h { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--lg-turq-osc); }
 html[data-tema="laguna"] .pt-dia-esc .pt-dia-sep { height: 32px; background: rgba(255, 255, 255, .16); }
 html[data-tema="laguna"] .pt-dia-esc .pt-dia-ico svg { width: 28px; height: 28px; stroke: var(--lg-fluor-txt); stroke-width: 1.5; }
 html[data-tema="laguna"] .pt-dia-esc .pt-dia-temp { font-size: 22px; font-weight: 300; }
@@ -460,7 +461,8 @@ html[data-tema="laguna"] .pt-dia-esc.cargando { width: 600px; }
 html[data-tema="laguna"] .pt-dia-tel { margin: -28px 16px 0; height: 52px; gap: 8px; padding: 0 2px 0 10px; border-radius: 12px;
   color: var(--lg-azul); background: #fff;
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-azul) 8%, transparent), 0 14px 28px -20px color-mix(in oklab, var(--lg-azul) 55%, transparent); }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-clima { gap: 4px; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-clima { gap: 1px; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-clima-fila { gap: 4px; }
 html[data-tema="laguna"] .pt-dia-tel .pt-dia-ico svg { width: 21px; height: 21px; stroke: var(--lg-turq); stroke-width: 1.7; }
 html[data-tema="laguna"] .pt-dia-tel .pt-dia-temp { font-size: 17px; font-weight: 500; }
 html[data-tema="laguna"] .pt-dia-tel .pt-dia-sep { height: 26px; background: color-mix(in oklab, var(--lg-azul) 12%, transparent); }

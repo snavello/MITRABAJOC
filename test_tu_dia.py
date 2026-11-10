@@ -209,6 +209,11 @@ def test_met_norway_y_bcra_se_resumen_bien():
     assert c["temp"] == 14 and c["icono"] == "nublado" and c["texto"] == "Nublado"
     assert c["pronostico"] == [{"dia": "mañana", "icono": "lluvia", "max": 16},
                                {"dia": "lun", "icono": "sol", "max": 21}]
+    # La hoja del clima (2026-11-10): hoy + los días que vengan, con mínima y máxima, y el viento.
+    assert [d["dia"] for d in c["dias"]] == ["hoy", "mañana", "lun"]
+    assert c["dias"][0] == {"dia": "hoy", "fecha": "2026-10-24", "icono": "nublado", "texto": "Nublado", "max": 14, "min": 14}
+    assert c["dias"][2]["icono"] == "sol" and c["viento"] == 11 and "humedad" not in c
+    assert c["horas"] == []                      # la muestra no trae tramo horario después del primero
     assert fuentes._icono_met("heavyrainandthunder") == "tormenta"
     assert fuentes._icono_met("partlycloudy_night") == "parcial"
     assert fuentes._icono_met("cloudy", viento=12) == "viento"
