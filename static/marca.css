@@ -598,10 +598,18 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .pt-dia-punto svg { width: 10px; height: 10px; stroke-width: 3; }
 .pt-dia-temp { line-height: 1; font-variant-numeric: tabular-nums; }
 .pt-dia-pron { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
-.pt-dia-linea { flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; gap: 9px; padding: 0 6px !important; text-align: left; }
+/* El tema ocupa todo lo que sobra y el texto puede ir en DOS líneas dentro del
+   mismo alto (SDN, 2026-11-10: la línea se cortaba muy corta); la flecha es
+   un botón aparte, «Siguiente». */
+.pt-dia-linea { flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; gap: 9px; padding: 0 2px 0 6px !important; text-align: left; }
 .pt-dia-cuerpo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; overflow: hidden; }
 .pt-dia-chip { flex: none; display: inline-flex; align-items: center; white-space: nowrap; }
-.pt-dia-texto { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pt-dia-texto { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
+.pt-dia-sig { flex: none; width: 34px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 8px; opacity: .85;
+  transition: opacity var(--mov-rapido, 180ms) ease, transform var(--mov-presion, 120ms) var(--ease-salida, ease); }
+.pt-dia-sig:hover { opacity: 1; }
+.pt-dia-sig:active { transform: translateX(2px); }
 .pt-dia-flecha { flex: none; }
 .pt-dia.cargando { pointer-events: none; }
 /* Cambio de ítem: sale hacia arriba con fundido, entra desde abajo. */

@@ -9,8 +9,9 @@
      dispositivo solo la hace avanzar (nunca es la fuente de la fecha).
    - La línea rota cada `intervalo` segundos y se pausa con el mouse encima,
      con el foco adentro, con la hoja abierta o con la pestaña oculta.
-   - Tocar la línea abre la hoja de detalle (#overlay-tudia, familia de la
-     noticia): un artículo corto (título, párrafos, enlace a la fuente); tocar
+   - Tocar el tema abre la hoja de detalle (#overlay-tudia, familia de la
+     noticia); la flecha de la derecha pasa al siguiente ítem (no abre nada):
+     un artículo corto (título, párrafos, enlace a la fuente); tocar
      el clima, el pronóstico con su fuente.
    - Entretenimiento es la trivia del día: diez preguntas de a una, con
      explicación y fuente en cada una, y el puntaje al final con su comentario
@@ -89,11 +90,20 @@
     }
     if (items.length) {
       if (c) aside.appendChild(el('span', 'pt-dia-sep'));
+      // Dos botones (SDN, 2026-11-10): el tema abre la hoja; la flecha pasa
+      // al siguiente ítem sin abrir nada.
       var btn = el('button', 'pt-dia-linea'); btn.type = 'button';
       var cuerpo = el('span', 'pt-dia-cuerpo'), chip = el('span', 'pt-dia-chip'), txt = el('span', 'pt-dia-texto');
-      cuerpo.append(chip, txt); btn.append(cuerpo, ico('chevron', 'pt-dia-flecha'));
+      cuerpo.append(chip, txt); btn.appendChild(cuerpo);
       btn.addEventListener('click', function () { volverA = btn; abrir(items[i % items.length]); });
       aside.appendChild(btn);
+      if (items.length > 1) {
+        var sig = el('button', 'pt-dia-sig'); sig.type = 'button';
+        sig.setAttribute('aria-label', 'Siguiente'); sig.title = 'Siguiente';
+        sig.appendChild(ico('chevron', 'pt-dia-flecha'));
+        sig.addEventListener('click', function () { i++; pintar(true); ultimo = Date.now(); });
+        aside.appendChild(sig);
+      }
       partes.btn = btn; partes.cuerpo = cuerpo; partes.chip = chip; partes.txt = txt;
     }
     ['mouseenter', 'focusin'].forEach(function (ev) { aside.addEventListener(ev, function () { pausas++; }); });

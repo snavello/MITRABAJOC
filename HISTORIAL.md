@@ -10772,3 +10772,16 @@ entero, y el contenido curado: todo ítem con url https, 3 o 4 párrafos de 20
 palabras o más sin saltos de línea, el banco con título que termina en «?»,
 explicación de 30 caracteres o más y nivel del catálogo, sin preguntas
 repetidas y con banco para 20 tandas o más.
+
+**Segunda vuelta, misma tarde (Trabajador 0.60.02).** SDN vio la franja y
+pidió dos cosas: más lugar para el tema, sin ocupar más pantalla (la línea se
+cortaba muy corta), y que la flecha de la derecha pase al siguiente ítem,
+dejando que para entrar haya que tocar el tema. Lo primero se resolvió sin
+mover el alto: la franja de escritorio toma el ancho que sobra en la fila del
+saludo (`flex: 1 1 600px; max-width: 860px` en las dos hojas de modelo, antes
+`flex: 0 1`) y el texto puede ir en dos líneas dentro de los mismos 44 px
+(`-webkit-line-clamp: 2` en `.pt-dia-texto`, que antes era una línea con
+elipsis). Lo segundo son dos botones: `.pt-dia-linea` (chip + texto) abre la
+hoja y `.pt-dia-sig` (la flecha, «Siguiente», solo si hay más de un ítem)
+hace `i++` y vuelve a arrancar el reloj de la rotación. Verificado con
+Playwright en Laguna y Noticiero, escritorio y teléfono.

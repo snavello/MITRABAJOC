@@ -559,7 +559,7 @@ html[data-tema="noticiero"] .marca-barra .marca-nombre { font-family: var(--nt-f
 /* ---------- «Tu día» (docs/chat/2026-10-24-pedido-tu-dia.md): un recuadro de diario ---------- */
 html[data-tema="noticiero"] .pt-dia { color: var(--nt-tinta); background: var(--nt-carta);
   border: 1px solid var(--nt-linea); border-top: 3px solid var(--nt-tinta); border-radius: 0; }
-html[data-tema="noticiero"] .pt-dia-esc { flex: 0 1 620px; height: 60px; gap: 14px; padding: 0 6px 0 16px;
+html[data-tema="noticiero"] .pt-dia-esc { flex: 1 1 620px; max-width: 860px; height: 60px; gap: 14px; padding: 0 6px 0 16px;
   animation: nt-sube .8s .2s var(--nt-curva) both; }
 html[data-tema="noticiero"] .pt-dia-esc.cargando { width: 620px; }
 html[data-tema="noticiero"] .pt-dia-esc .pt-dia-h { font-family: var(--nt-f-tit); font-size: 24px; }
@@ -575,7 +575,7 @@ html[data-tema="noticiero"] .pt-dia-chip { height: 22px; padding: 0 8px; backgro
 html[data-tema="noticiero"] .pt-dia-chip.alerta { background: var(--nt-amb-fondo); color: var(--nt-amb); box-shadow: inset 0 0 0 1px var(--nt-amb); }
 html[data-tema="noticiero"] .pt-dia-punto { background: var(--nt-amb-fondo); box-shadow: inset 0 0 0 1px var(--nt-amb); }
 html[data-tema="noticiero"] .pt-dia-punto svg { stroke: var(--nt-amb); }
-html[data-tema="noticiero"] .pt-dia-flecha { width: 16px; height: 16px; stroke: var(--nt-tinta-3); stroke-width: 2.1; }
+html[data-tema="noticiero"] .pt-dia-flecha { width: 18px; height: 18px; stroke: var(--nt-tinta-3); stroke-width: 2.1; }
 html[data-tema="noticiero"] .pt-dia-tel { margin: 0 16px; height: 50px; gap: 10px; padding: 0 2px 0 12px; }
 html[data-tema="noticiero"] .pt-dia-tel .pt-dia-clima { gap: 6px; }
 html[data-tema="noticiero"] .pt-dia-tel .pt-dia-ico svg { width: 24px; height: 24px; }
