@@ -224,7 +224,7 @@ def item_trivia(items: list, hoy: date) -> dict | None:
         return None
     total = len(preguntas)
     return {"rubro": "juego", "chip": CHIPS["juego"],
-            "linea": f"La trivia de hoy: {total} preguntas, ¿cuántas sacás?",
+            "linea": f"{total} preguntas, ¿cuántas sacás?",
             "titulo": "La trivia de hoy",
             "texto": f"{total} preguntas, {TRIVIA_SEGUNDOS} segundos cada una, un punto por acierto. Mañana hay otras {total}.",
             "parrafos": [f"{total} preguntas, {TRIVIA_SEGUNDOS} segundos cada una, un punto por acierto. "

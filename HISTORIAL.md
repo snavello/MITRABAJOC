@@ -10802,3 +10802,16 @@ cerrar la hoja a mitad de una pregunta para el reloj y la pregunta vuelve a
 arrancar de cero al reabrir. Verificado con Playwright: 29 al segundo, rojo a
 los 2, vencida con `[null]`, la siguiente arranca en 30 con las tres opciones
 activas.
+
+**Cuarta vuelta, el clima (Trabajador 0.61.02).** SDN vio las capturas sin
+el clima y pidió no sacarlo, achicarlo si hacía falta. No se había sacado: el
+afiliado de prueba de la sesión no tenía localidad ni seccional con
+coordenadas, y sin eso el servidor no pide el clima. Verificado con el clima
+puesto (domicilio con coordenadas + respuesta de MET sembrada en
+`CacheExterna`): en escritorio entra todo; en el teléfono, con el clima a la
+vista, dos líneas no alcanzaban para una línea de 55 caracteres. Se achicó el
+bloque del clima del teléfono (ícono 24 → 21 px, temperatura 20 → 17 px en
+Laguna y 22 → 19 en Noticiero, menos aire) y **el chip pasa arriba del texto**
+(`.pt-dia-cuerpo` en columna por debajo de 900 px), así las dos líneas usan
+todo el ancho que deja el clima; la línea de la trivia dejó de repetir
+«Trivia:» (ya lo dice el chip). Capturas en los dos modelos.

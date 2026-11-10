@@ -611,6 +611,14 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .pt-dia-sig:hover { opacity: 1; }
 .pt-dia-sig:active { transform: translateX(2px); }
 .pt-dia-flecha { flex: none; }
+/* Teléfono: el chip va ARRIBA del texto, así las dos líneas usan todo el ancho
+   que deja el clima (que se queda, achicado: SDN, 2026-11-10). */
+@media (max-width: 899px) {
+  .pt-dia-sig { width: 28px; }
+  .pt-dia-cuerpo { flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; }
+  .pt-dia-chip { line-height: 1.1; }
+  .pt-dia-texto { font-size: 12.5px; line-height: 1.22; }
+}
 .pt-dia.cargando { pointer-events: none; }
 /* Cambio de ítem: sale hacia arriba con fundido, entra desde abajo. */
 .pt-dia-cuerpo.sale { animation: pt-dia-sale var(--mov-medio, 320ms) var(--ease-mueve, ease) both; }
