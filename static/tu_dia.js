@@ -11,8 +11,9 @@
      con el foco adentro, con la hoja abierta o con la pestaña oculta.
    - Tocar el tema abre la hoja de detalle (#overlay-tudia, familia de la
      noticia); la flecha de la derecha pasa al siguiente ítem (no abre nada):
-     un artículo corto (título, párrafos, enlace a la fuente); tocar
-     el clima, el pronóstico con su fuente.
+     un artículo corto (título, párrafos, enlace a la fuente); tocar el
+     clima, el pronóstico completo (ahora, próximas horas, próximos días con
+     mínima y máxima) con su fuente. La hora va debajo del clima.
    - Entretenimiento es la trivia del día: diez preguntas de a una, cada una
      con un reloj de 30 segundos que se consume (se acaba = no respondida), con
      explicación y fuente en cada una, y el puntaje al final con su comentario
@@ -65,32 +66,36 @@
     aside.classList.remove('cargando');
     aside.replaceChildren();
     var partes = {};
-    if (esc) {
-      var hora = el('div', 'pt-dia-hora'); partes.h = el('span', 'pt-dia-h'); partes.f = el('span', 'pt-dia-f');
-      hora.append(partes.h, partes.f); aside.append(hora, el('span', 'pt-dia-sep'));
-    }
     var c = datos.clima;
+    // La hora va DEBAJO del clima (SDN, 2026-11-10), en escritorio con la
+    // fecha al lado; sin clima, queda sola como primer bloque.
+    var hora = el('span', 'pt-dia-hora'); partes.h = el('span', 'pt-dia-h'); hora.appendChild(partes.h);
+    if (esc) { partes.f = el('span', 'pt-dia-f'); hora.appendChild(partes.f); }
     if (c) {
       var btnC = el('button', 'pt-dia-clima'); btnC.type = 'button';
       var frase = (c.localidad ? c.localidad + ': ' : '') + c.temp + ' grados, ' + (c.texto || '').toLowerCase() + '.';
       (c.pronostico || []).forEach(function (p) { frase += ' ' + p.dia.charAt(0).toUpperCase() + p.dia.slice(1) + ' ' + p.max + '.'; });
       btnC.setAttribute('aria-label', frase + ' Tocá para ver el pronóstico');
+      var fila = el('span', 'pt-dia-clima-fila');
       var ic = el('span', 'pt-dia-ico'); ic.appendChild(ico('clima-' + (c.icono || 'nublado')));
       if (datos.alerta) { var punto = el('span', 'pt-dia-punto'); punto.appendChild(ico('alerta')); ic.appendChild(punto); }
-      btnC.append(ic, el('span', 'pt-dia-temp', c.temp + '°'));
+      fila.append(ic, el('span', 'pt-dia-temp', c.temp + '°'));
       // Auditoría G2-03: cada máxima lleva su día escrito («DOM 20°»), como
       // la fecha de la hora; en un title no lo ve nadie con el dedo.
       if (esc) (c.pronostico || []).forEach(function (p) {
         var x = el('span', 'pt-dia-pron');
         x.append(el('span', 'pt-dia-pron-d', diaCorto(p.dia)), ico('clima-' + p.icono),
                  document.createTextNode(p.max + '°'));
-        btnC.appendChild(x);
+        fila.appendChild(x);
       });
+      btnC.append(fila, hora);
       btnC.addEventListener('click', function () { volverA = btnC; abrirClima(); });
       aside.appendChild(btnC);
+    } else {
+      aside.appendChild(hora);
     }
     if (items.length) {
-      if (c) aside.appendChild(el('span', 'pt-dia-sep'));
+      aside.appendChild(el('span', 'pt-dia-sep'));
       // Dos botones (SDN, 2026-11-10): el tema abre la hoja; la flecha pasa
       // al siguiente ítem sin abrir nada.
       var btn = el('button', 'pt-dia-linea'); btn.type = 'button';
@@ -114,7 +119,7 @@
 
   function ponerHora() {
     var t = horaTexto();
-    franjas.forEach(function (f) { var p = f._td; if (p && p.h) { p.h.textContent = t.h; p.f.textContent = t.f; } });
+    franjas.forEach(function (f) { var p = f._td; if (p && p.h) { p.h.textContent = t.h; if (p.f) p.f.textContent = t.f; } });
   }
 
   function pintar(animar) {
@@ -191,13 +196,56 @@
     }
     mostrarHoja();
   }
+  function tituloDia(d) { return d.charAt(0).toUpperCase() + d.slice(1); }
+  function fechaCorta(iso) {
+    var p = String(iso || '').split('-');
+    return p.length === 3 ? parseInt(p[2], 10) + '/' + parseInt(p[1], 10) : '';
+  }
   function abrirClima() {
+    // La hoja del clima (SDN, 2026-11-10): ahora, las próximas horas y los
+    // próximos días con sus íconos, mínimas y máximas.
     var c = datos.clima;
-    var parrafos = ['Ahora: ' + c.temp + '°, ' + (c.texto || '').toLowerCase() + '.'];
-    (c.pronostico || []).forEach(function (p) {
-      parrafos.push(p.dia.charAt(0).toUpperCase() + p.dia.slice(1) + ': máxima de ' + p.max + '°.');
-    });
-    llenarHoja('Clima', c.localidad ? 'El clima en ' + c.localidad : 'El clima', parrafos, c.fuente, c.url);
+    llenarHoja('Clima', c.localidad ? 'El clima en ' + c.localidad : 'El clima', [], c.fuente, c.url);
+    var extra = document.getElementById('td-det-extra');
+    var ahora = el('div', 'pt-clima-ahora');
+    var icg = el('span', 'pt-clima-ico'); icg.appendChild(ico('clima-' + (c.icono || 'nublado')));
+    var datosAhora = el('div', 'pt-clima-datos');
+    datosAhora.append(el('div', 'pt-clima-temp', c.temp + '°'), el('div', 'pt-clima-txt', c.texto || ''));
+    var detalles = [];
+    if (c.viento != null) detalles.push('Viento ' + c.viento + ' km/h');
+    if (c.humedad != null) detalles.push('Humedad ' + c.humedad + ' %');
+    var hoyD = (c.dias || [])[0];
+    if (hoyD) detalles.push('Hoy ' + hoyD.min + '° / ' + hoyD.max + '°');
+    if (detalles.length) datosAhora.appendChild(el('div', 'pt-clima-det', detalles.join(' · ')));
+    ahora.append(icg, datosAhora);
+    extra.appendChild(ahora);
+    if ((c.horas || []).length) {
+      extra.appendChild(el('h4', 'pt-clima-h', 'Las próximas horas'));
+      var tira = el('div', 'pt-clima-horas');
+      c.horas.forEach(function (h) {
+        var x = el('div', 'pt-clima-hora');
+        x.append(el('span', 'pt-clima-hora-h', h.hora + ' h'), ico('clima-' + h.icono), el('span', 'pt-clima-hora-t', h.temp + '°'));
+        tira.appendChild(x);
+      });
+      extra.appendChild(tira);
+    }
+    var dias = (c.dias || []).length ? c.dias : (c.pronostico || []).map(function (p) { return { dia: p.dia, icono: p.icono, max: p.max }; });
+    if (dias.length) {
+      extra.appendChild(el('h4', 'pt-clima-h', 'Los próximos días'));
+      var lista = el('div', 'pt-clima-dias');
+      dias.forEach(function (d) {
+        var fila = el('div', 'pt-clima-dia');
+        var nombre = el('span', 'pt-clima-dia-n', tituloDia(d.dia));
+        if (d.fecha) nombre.appendChild(el('small', null, ' ' + fechaCorta(d.fecha)));
+        var icd = el('span', 'pt-clima-dia-i'); icd.appendChild(ico('clima-' + d.icono));
+        var temps = el('span', 'pt-clima-dia-t');
+        if (d.min != null) temps.appendChild(el('span', 'pt-clima-min', d.min + '°'));
+        temps.appendChild(el('span', 'pt-clima-max', d.max + '°'));
+        fila.append(nombre, icd, el('span', 'pt-clima-dia-x', d.texto || ''), temps);
+        lista.appendChild(fila);
+      });
+      extra.appendChild(lista);
+    }
     mostrarHoja();
   }
 

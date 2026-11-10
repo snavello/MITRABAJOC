@@ -10815,3 +10815,26 @@ Laguna y 22 → 19 en Noticiero, menos aire) y **el chip pasa arriba del texto**
 (`.pt-dia-cuerpo` en columna por debajo de 900 px), así las dos líneas usan
 todo el ancho que deja el clima; la línea de la trivia dejó de repetir
 «Trivia:» (ya lo dice el chip). Capturas en los dos modelos.
+
+**Quinta vuelta, la hora y la hoja del clima (Trabajador 0.62.01).** SDN:
+«sacaste la hora, debajo del clima podés poner la hora» y «cuando se abra el
+detalle, un pronóstico con íconos más completo». La hora no se había sacado
+(en escritorio iba a la izquierda del clima; en el teléfono nunca estuvo, por
+la decisión original de que el teléfono ya la muestra). Ahora **la hora va
+debajo del clima en los dos anchos**: el botón del clima es una columna
+(`.pt-dia-clima-fila` con ícono, temperatura y, en escritorio, el pronóstico;
+`.pt-dia-hora` debajo, con la fecha al lado solo en escritorio), y sin clima
+la hora queda sola como primer bloque. El bloque grande de la hora de
+escritorio (22 px) desapareció: eso también le deja más ancho al tema.
+**La hoja del clima** pasó de tres renglones de texto a un pronóstico de
+verdad, armado con los mismos íconos del sprite: «ahora» (ícono grande,
+temperatura, estado, viento en km/h, humedad y la mínima/máxima de hoy),
+«las próximas horas» (una tira de hasta ocho tarjetas cada dos horas, con
+desplazamiento horizontal en el teléfono) y «los próximos días» (hoy más
+cinco, con ícono, estado, mínima y máxima). Lo arma el servidor:
+`tu_dia_fuentes.resumir_met` devuelve además `horas`, `dias`, `viento` y
+`humedad` (el tramo horario de MET dura unas 48 h y después viene cada 6 h:
+las horas se cortan donde se acaba `next_1_hours`; el ícono del día es el de
+las seis horas desde el mediodía, como antes). La franja sigue usando
+`pronostico` (mañana y pasado). Verificado con Playwright con un MET sembrado
+de 68 puntos en `CacheExterna`, Laguna y Noticiero, escritorio y teléfono.

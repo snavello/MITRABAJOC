@@ -94,32 +94,69 @@ def _a_ba(texto_utc: str) -> datetime:
     return datetime.fromisoformat(texto_utc.replace("Z", "+00:00")).astimezone(BA).replace(tzinfo=None)
 
 
+DIAS_CORTOS = ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
+DIAS_PRONOSTICO = 6      # hoy + cinco (la hoja del clima, 2026-11-10)
+HORAS_PRONOSTICO = 8     # las próximas horas, de a dos
+
+
+def _simbolo(punto: dict, *claves: str) -> str:
+    for k in claves:
+        s = ((punto.get(k) or {}).get("summary") or {}).get("symbol_code")
+        if s:
+            return s
+    return ""
+
+
 def resumir_met(datos: dict, hoy: date) -> dict | None:
-    """Puro: la respuesta de MET Norway -> lo que muestra la franja.
-    {"temp", "icono", "texto", "pronostico": [{"dia", "icono", "max"}, ...]}"""
+    """Puro: la respuesta de MET Norway -> lo que muestra la franja y la hoja.
+    {"temp", "icono", "texto", "viento", "humedad",
+     "pronostico": [{"dia", "icono", "max"}, ...]            (mañana y pasado: la franja)
+     "horas": [{"hora", "icono", "temp"}, ...]                (las próximas horas, de a dos)
+     "dias": [{"dia", "fecha", "icono", "texto", "max", "min"}, ...]}   (hoy + cinco)"""
     serie = (datos or {}).get("properties", {}).get("timeseries") or []
     if not serie:
         return None
     ahora = serie[0]["data"]
     det = ahora["instant"]["details"]
-    sim = ((ahora.get("next_1_hours") or ahora.get("next_6_hours") or {}).get("summary") or {}).get("symbol_code", "")
+    sim = _simbolo(ahora, "next_1_hours", "next_6_hours")
     icono = _icono_met(sim, det.get("wind_speed", 0))
-    pron = []
-    for n in (1, 2):
+    horas = [(p, _a_ba(p["time"])) for p in serie]
+
+    def nombre(n: int, dia: date) -> str:
+        return "hoy" if n == 0 else ("mañana" if n == 1 else DIAS_CORTOS[dia.weekday()])
+
+    dias, pron = [], []
+    for n in range(DIAS_PRONOSTICO):
         dia = hoy + timedelta(days=n)
-        horas = [(p, _a_ba(p["time"])) for p in serie]
         del_dia = [(p, t) for p, t in horas if t.date() == dia]
         if not del_dia:
             continue
-        maxima = max(p["data"]["instant"]["details"]["air_temperature"] for p, _ in del_dia)
+        temps = [p["data"]["instant"]["details"]["air_temperature"] for p, _ in del_dia]
         # El ícono del día: el pronóstico de las seis horas desde el mediodía.
         cerca = min(del_dia, key=lambda pt: abs(pt[1].hour - 12))[0]["data"]
-        s = ((cerca.get("next_6_hours") or cerca.get("next_12_hours") or cerca.get("next_1_hours") or {})
-             .get("summary") or {}).get("symbol_code", "")
-        pron.append({"dia": "mañana" if n == 1 else ("lun", "mar", "mié", "jue", "vie", "sáb", "dom")[dia.weekday()],
-                     "icono": _icono_met(s), "max": round(maxima)})
-    return {"temp": round(det["air_temperature"]), "icono": icono, "texto": TEXTO_CLIMA[icono],
-            "pronostico": pron}
+        ic = _icono_met(_simbolo(cerca, "next_6_hours", "next_12_hours", "next_1_hours"))
+        d = {"dia": nombre(n, dia), "fecha": dia.isoformat(), "icono": ic, "texto": TEXTO_CLIMA[ic],
+             "max": round(max(temps)), "min": round(min(temps))}
+        dias.append(d)
+        if n in (1, 2):
+            pron.append({"dia": d["dia"], "icono": ic, "max": d["max"]})
+    proximas = []
+    for p, t in horas[1:]:
+        if len(proximas) >= HORAS_PRONOSTICO:
+            break
+        if "next_1_hours" not in p["data"]:
+            break                                   # se acabó el tramo horario
+        if t.hour % 2:
+            continue
+        proximas.append({"hora": f"{t.hour:02d}", "icono": _icono_met(_simbolo(p["data"], "next_1_hours")),
+                         "temp": round(p["data"]["instant"]["details"]["air_temperature"])})
+    salida = {"temp": round(det["air_temperature"]), "icono": icono, "texto": TEXTO_CLIMA[icono],
+              "pronostico": pron, "horas": proximas, "dias": dias}
+    if det.get("wind_speed") is not None:
+        salida["viento"] = round(float(det["wind_speed"]) * 3.6)       # km/h
+    if det.get("relative_humidity") is not None:
+        salida["humedad"] = round(float(det["relative_humidity"]))
+    return salida
 
 
 def clima(latitud, longitud) -> dict | None:
