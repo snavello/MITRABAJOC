@@ -1,5 +1,5 @@
 {
- "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Desde 2026-11-10 cada ítem es un artículo corto: titulo + parrafos (3 o 4) + url de la fuente. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
  "revisado": false,
  "items": [
   {
@@ -10,7 +10,13 @@
    "texto": "El vendedor tiene que darte información cierta, clara y detallada sobre lo que comprás y las condiciones del contrato. Esa información es gratuita y te la tienen que dar por escrito si la pedís.",
    "fuente": "Ley 24.240, art. 4 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 4"
+   "norma": "Ley 24.240, art. 4",
+   "parrafos": [
+    "El artículo 4 de la Ley 24.240 de Defensa del Consumidor dice que quien vende un producto o presta un servicio tiene que darte información cierta, clara y detallada sobre las características de lo que ofrece y sobre las condiciones de la contratación. No alcanza con una letra chica ilegible o un dato dicho de pasada: la información debe poder entenderse.",
+    "Un ejemplo de todos los días: querés contratar internet y en el local te hablan de la velocidad, pero no te dicen que hay un costo de instalación ni que el contrato te ata por 12 meses. Esas condiciones tenían que informártelas antes de que firmes. Esa información es gratuita y, si la pedís, te la tienen que dar por escrito.",
+    "En la práctica, pedí los datos importantes antes de pagar y guardá capturas de pantalla, folletos o presupuestos. Si te ocultaron algo, primero reclamá en el comercio o la empresa. Si no te dan respuesta, podés presentar un reclamo ante la Defensa del Consumidor de tu provincia o municipio, o a través de la Ventanilla Única Federal de Reclamos. El plazo para reclamar judicialmente es de tres años."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-02",
@@ -20,7 +26,13 @@
    "texto": "Los comercios y empresas tienen que atenderte con trato digno y equitativo. No pueden hacerte pasar situaciones vergonzantes, intimidatorias o esperas abusivas.",
    "fuente": "Ley 24.240, art. 8 bis — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 8 bis"
+   "norma": "Ley 24.240, art. 8 bis",
+   "parrafos": [
+    "El artículo 8 bis de la Ley 24.240 obliga a los proveedores de bienes y servicios a dar un trato digno y equitativo a los consumidores, y a abstenerse de conductas que los pongan en situaciones vergonzantes, vejatorias o intimidatorias. También dice que no pueden someterte a esperas excesivas ni a condiciones de atención desiguales.",
+    "Pensá en un banco que te hace esperar horas de pie, sin asientos ni explicaciones, o en una empresa de telefonía que te trata con destrato cuando reclamás. Eso va en contra de la norma. Lo mismo vale para el comercio que te revisa la bolsa delante de todos sin motivo o te grita por pedir un cambio.",
+    "Si te pasa, pedí el libro de quejas o registrá el hecho por escrito, con fecha, hora y nombres si podés. Reclamá primero ante la empresa y, si no responde, ante la Defensa del Consumidor de tu zona o por la Ventanilla Única Federal. La ley prevé multas para quien incumple y, en casos graves, la persona puede además reclamar una indemnización en la justicia."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-03",
@@ -30,7 +42,13 @@
    "texto": "Cuando te reclaman una deuda fuera de un juicio, no pueden usar cartas, sellos ni formatos que parezcan una demanda judicial. Si lo hacen, es una práctica abusiva.",
    "fuente": "Ley 24.240, art. 8 bis — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 8 bis"
+   "norma": "Ley 24.240, art. 8 bis",
+   "parrafos": [
+    "Cuando una empresa te reclama una deuda fuera de un juicio, el artículo 8 bis de la Ley 24.240 prohíbe que use formularios, cartas o sellos que aparenten ser reclamos judiciales. La idea es que no te asusten haciéndote creer que ya hay una demanda en tu contra cuando todavía no existe.",
+    "Un caso común: te llega una carta con formato de cédula, con membretes parecidos a los de un tribunal y un plazo de 48 horas para pagar, pero en realidad no hay ningún expediente. Eso es una práctica abusiva. Una empresa puede reclamar una deuda, pero tiene que hacerlo de forma clara y sin aparentar ser una autoridad.",
+    "Si recibís algo así, no te asustes: guardá el sobre y la carta, y fijate si figura un juzgado y un número de causa. Podés reclamar ante la propia empresa y, si insisten, hacer la denuncia en la Defensa del Consumidor de tu provincia o a través de la Ventanilla Única Federal de Reclamos. Si te inician un juicio de verdad, consultá con un abogado."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-04",
@@ -40,7 +58,13 @@
    "texto": "Una oferta hecha al público obliga a quien la publica mientras dure. Si se niegan a venderte sin motivo, es una negativa injustificada de venta.",
    "fuente": "Ley 24.240, art. 7 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 7"
+   "norma": "Ley 24.240, art. 7",
+   "parrafos": [
+    "El artículo 7 de la Ley 24.240 establece que la oferta dirigida a consumidores potenciales indeterminados obliga a quien la emite durante el tiempo en que se realice, y que debe incluir la fecha precisa de comienzo y finalización, así como sus modalidades, condiciones o limitaciones. Es decir, lo que se publica compromete a quien lo publicó.",
+    "Si ves en una vidriera o en un aviso una heladera a un precio determinado y al llegar a la caja te dicen que no la venden a ese precio o que se terminó sin haber anunciado un tope de unidades, eso puede ser una negativa injustificada de venta. El comercio tiene que cumplir lo que ofreció mientras la oferta esté vigente.",
+    "En la práctica, sacá una foto del cartel o guardá la captura de la publicación con la fecha. Primero planteá el reclamo al comercio y pedí que lo registren por escrito. Si se niegan, podés reclamar ante la Defensa del Consumidor de tu provincia o municipio, o por la Ventanilla Única Federal. Tenés tres años para reclamar."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-05",
@@ -50,7 +74,13 @@
    "texto": "Las precisiones de una publicidad (precio, características, regalos) se tienen por incluidas en el contrato aunque no figuren en el papel que firmaste.",
    "fuente": "Ley 24.240, art. 8; Código Civil y Comercial, art. 1103 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 8; Código Civil y Comercial, art. 1103"
+   "norma": "Ley 24.240, art. 8; Código Civil y Comercial, art. 1103",
+   "parrafos": [
+    "Según el artículo 8 de la Ley 24.240 y el artículo 1103 del Código Civil y Comercial, las precisiones que contiene la publicidad, como el precio, las características del producto o los regalos que incluye, obligan a quien anuncia y se tienen por incluidas en el contrato, aunque no figuren en el papel que firmaste. Lo que se promete en el aviso también cuenta.",
+    "Por ejemplo, un local anuncia por radio una promoción con un obsequio incluido y después, al firmar el contrato, ese beneficio no aparece. Igual tienen que cumplirlo, porque la publicidad forma parte de lo acordado. Lo mismo ocurre con una prepaga que publicita una cobertura o un auto que se anuncia con determinados equipamientos.",
+    "Si te encontrás en esa situación, guardá el aviso, la captura, el folleto o el mensaje, que funcionan como prueba. Reclamá primero en la empresa por escrito y, si no te resuelven, acudí a la Defensa del Consumidor de tu provincia o presentá el reclamo en la Ventanilla Única Federal. Por la vía judicial tenés tres años para reclamar."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-06",
@@ -60,7 +90,13 @@
    "texto": "Las cosas muebles nuevas tienen una garantía legal de seis meses desde la entrega, y las usadas de tres. Rige aunque el vendedor no te dé un certificado.",
    "fuente": "Ley 24.240, art. 11 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 11"
+   "norma": "Ley 24.240, art. 11",
+   "parrafos": [
+    "El artículo 11 de la Ley 24.240 dice que, cuando se venden cosas muebles no consumibles, el consumidor tiene una garantía legal de seis meses a partir de la entrega si la cosa es nueva, y de tres meses si es usada. Esa garantía rige por ley, aunque el vendedor no te dé un certificado ni una factura especial.",
+    "Si compraste un celular nuevo y a los cuatro meses se le rompe la pantalla sin que hayas hecho nada, la garantía legal te cubre aunque en el local te digan que ya pasó la garantía del comercio. La reparación tiene que ser gratuita, incluyendo los costos de traslado y mano de obra. Las garantías que dan los fabricantes pueden ser más largas, pero nunca menores.",
+    "Conservá la factura o el ticket, que sirve para probar la fecha de compra. Hacé el reclamo en el comercio, el fabricante o el importador, y pedí que quede asentado. Si no responden, podés ir a la Defensa del Consumidor o a la Ventanilla Única Federal de Reclamos. Conviene reclamar dentro del plazo de la garantía."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-07",
@@ -70,7 +106,13 @@
    "texto": "El tiempo que el producto estuvo en reparación por garantía se suma al plazo que te quedaba. No perdés días de garantía por tenerlo en el taller.",
    "fuente": "Ley 24.240, art. 16 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 16"
+   "norma": "Ley 24.240, art. 16",
+   "parrafos": [
+    "El artículo 16 de la Ley 24.240 establece que el tiempo en que la cosa estuvo en reparación en cumplimiento de la garantía legal se suma al plazo de garantía que todavía te quedaba. Así, el período en el que no pudiste usar el producto no se descuenta de la protección que tenés.",
+    "Imaginá que compraste una lavadora y a los cuatro meses falla. La llevás a reparar y el servicio técnico la tiene un mes. Ese mes se suma al plazo de la garantía: no pierdas días por haber estado el producto en el taller. Además, la ley dice que el plazo vuelve a correr desde que el producto te es devuelto.",
+    "En la práctica, pedí siempre un comprobante de ingreso al servicio técnico, con la fecha en que lo dejaste, y otro de la fecha de devolución. Con esos papeles podés calcular cuánto te queda de garantía. Si te lo niegan, reclamá por escrito en la empresa y, si no hay solución, acudí a la Defensa del Consumidor de tu provincia o por la Ventanilla Única Federal."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-08",
@@ -80,7 +122,13 @@
    "texto": "Si te devuelven el producto y sigue sin funcionar bien, podés elegir: que te lo cambien por uno nuevo, que te devuelvan lo que pagaste o una rebaja proporcional del precio.",
    "fuente": "Ley 24.240, art. 17 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 17"
+   "norma": "Ley 24.240, art. 17",
+   "parrafos": [
+    "El artículo 17 de la Ley 24.240 prevé qué hacer cuando la cosa se entrega para reparar y la reparación no da resultado, o la cosa vuelve a fallar. En ese caso, el consumidor puede elegir entre tres opciones: pedir la sustitución del producto por otro de iguales características, pedir la devolución de lo que pagó, o aceptar una rebaja proporcional del precio.",
+    "Por ejemplo, llevás una notebook a reparar por una falla de la placa, te la devuelven y a las dos semanas vuelve a fallar. No estás obligado a seguir insistiendo con arreglos: podés exigir un equipo nuevo o que te devuelvan el dinero. La decisión es tuya, no del comercio.",
+    "Para reclamar, juntá la factura y los comprobantes de las reparaciones anteriores, y presentá el reclamo por escrito en el comercio o ante el fabricante. Si no te dan la solución que elegiste, podés ir a la Defensa del Consumidor de tu provincia o municipio, o hacer el reclamo por la Ventanilla Única Federal de Reclamos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-09",
@@ -90,7 +138,13 @@
    "texto": "Por la garantía responden juntos el fabricante, el importador, el distribuidor y el vendedor. Podés reclamarle a cualquiera de ellos.",
    "fuente": "Ley 24.240, art. 13 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 13"
+   "norma": "Ley 24.240, art. 13",
+   "parrafos": [
+    "El artículo 13 de la Ley 24.240 establece que son solidariamente responsables ante el consumidor, por la garantía legal, el productor, el importador, el distribuidor, el proveedor y el vendedor de la cosa. Solidariamente significa que podés reclamarle a cualquiera de ellos por el total, y que después ellos arreglan entre sí quién paga.",
+    "Si comprás un producto en una tienda y falla, el local no puede decirte que vayas a reclamarle al fabricante, ni el fabricante que es un problema del comercio. Vos elegís a quién dirigirte, y todos responden. Esta norma evita que el consumidor quede dando vueltas entre responsables cuando algo sale mal.",
+    "En la práctica, empezá por quien te resulte más cómodo, generalmente el comercio donde compraste, y pedí que el reclamo quede por escrito. Si no te solucionan nada, podés presentar el reclamo ante la Defensa del Consumidor de tu provincia o a través de la Ventanilla Única Federal. Tenés tres años para reclamar judicialmente."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-10",
@@ -100,7 +154,13 @@
    "texto": "Los fabricantes, importadores y vendedores tienen que asegurar un servicio técnico adecuado y el suministro de repuestos para lo que venden.",
    "fuente": "Ley 24.240, art. 12 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 12"
+   "norma": "Ley 24.240, art. 12",
+   "parrafos": [
+    "El artículo 12 de la Ley 24.240 impone a los fabricantes, importadores y vendedores la obligación de asegurar un servicio técnico adecuado y el suministro de partes y repuestos. Esta obligación rige mientras el producto se fabrique o se importe, y también durante un tiempo razonable después de dejar de hacerlo.",
+    "Un caso concreto: comprás un electrodoméstico y, cuando se rompe una pieza, te dicen que no hay repuestos o que el único taller autorizado queda a cientos de kilómetros. Eso puede ser un incumplimiento. Las marcas no pueden vender un producto y desentenderse de su arreglo.",
+    "Si te encontrás con esto, pedí por escrito la respuesta de la empresa sobre el repuesto o el servicio, y guardá la documentación de la compra. Reclamá ante el fabricante o el vendedor y, si no te dan respuesta, presentá el reclamo en la Defensa del Consumidor de tu provincia o por la Ventanilla Única Federal de Reclamos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-11",
@@ -110,7 +170,13 @@
    "texto": "Si el vendedor no cumple, podés exigir que cumpla, aceptar otro producto o servicio equivalente, o rescindir el contrato y recuperar lo pagado. Además podés reclamar los daños.",
    "fuente": "Ley 24.240, art. 10 bis — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 10 bis"
+   "norma": "Ley 24.240, art. 10 bis",
+   "parrafos": [
+    "El artículo 10 bis de la Ley 24.240 dice que, si el proveedor no cumple lo que se obligó, el consumidor puede, a su elección, exigir el cumplimiento forzado de la obligación, aceptar otro producto o prestación de servicio equivalente, o rescindir el contrato con derecho a la restitución de lo pagado. Todo esto, sin perjuicio de reclamar los daños y perjuicios.",
+    "Si pagaste un viaje y la agencia no lo cumple, o encargaste un mueble y nunca llegó, no tenés que conformarte con lo que te ofrezcan. Podés pedir que cumplan, aceptar un producto equivalente si te sirve, o dar por terminado el contrato y recuperar lo que pagaste. Además, podés reclamar por los perjuicios que te causó.",
+    "En la práctica, intimá al proveedor por escrito, por carta documento o por un medio que deje registro, fijando un plazo razonable. Si no responde, acudí a la Defensa del Consumidor de tu provincia o municipio, o a la Ventanilla Única Federal de Reclamos. La acción judicial prescribe a los tres años."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-12",
@@ -120,7 +186,13 @@
    "texto": "Si contrataste un servicio por teléfono, internet u otro medio a distancia, podés darlo de baja por ese mismo medio. No te pueden obligar a ir a una oficina.",
    "fuente": "Ley 24.240, art. 10 ter — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 10 ter"
+   "norma": "Ley 24.240, art. 10 ter",
+   "parrafos": [
+    "El artículo 10 ter de la Ley 24.240 dispone que, cuando la contratación de un servicio se haya realizado por medios electrónicos o similares, como teléfono o internet, la rescisión o baja podrá hacerse por ese mismo medio. La empresa no puede exigir que vayas a una oficina o mandes una carta si te dejaron contratar a distancia.",
+    "Por ejemplo, contrataste un servicio de cable o un gimnasio por una página web o por teléfono. Cuando quieras darlo de baja, tenés derecho a hacerlo de esa misma manera. Si te hacen dar mil vueltas o te piden presentarte en un local, estarían incumpliendo la norma. La empresa además tiene que darte una constancia de la baja.",
+    "Pedí el número de trámite y guardá la captura o la grabación. Si la empresa no te da la baja o sigue cobrándote, reclamá por escrito y, si no hay respuesta, acudí a la Defensa del Consumidor de tu zona o a la Ventanilla Única Federal de Reclamos. Podés pedir que te devuelvan lo cobrado de más."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-13",
@@ -130,7 +202,13 @@
    "texto": "Las empresas que venden servicios por internet tienen que mostrar en su página principal un acceso directo para pedir la baja, sin vueltas ni requisitos de más, y darte un código del trámite.",
    "fuente": "Res. SC 316/2018 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Res. SC 316/2018"
+   "norma": "Res. SC 316/2018",
+   "parrafos": [
+    "La Resolución 316/2018 de la Secretaría de Comercio obliga a las empresas que ofrecen servicios por internet a poner en la página principal de su sitio web un acceso directo, conocido como botón de baja, para que el usuario pueda cancelar el servicio. Es el modo de aplicar el derecho a la baja por el mismo medio que prevé la ley.",
+    "El botón debe estar a la vista, llevarte a un formulario simple y sin requisitos innecesarios, y la empresa tiene que darte un código de identificación del trámite. Así, si contrataste un servicio de streaming, de telefonía o de TV por internet, podés darte de baja sin tener que llamar a un 0800 ni esperar un turno de atención.",
+    "Si no encontrás el botón o no funciona, hacé una captura de pantalla y reclamá a la empresa. Si no responde, podés presentar el reclamo ante la Defensa del Consumidor de tu provincia o municipio o por la Ventanilla Única Federal. Guardá siempre el código de baja que te entreguen, porque prueba que cumpliste con el trámite."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-14",
@@ -140,7 +218,13 @@
    "texto": "En compras hechas fuera del local (internet, teléfono, a domicilio) podés revocar la compra dentro de los 10 días corridos desde la entrega o la firma, lo que pase último, sin dar explicaciones.",
    "fuente": "Ley 24.240, art. 34; Código Civil y Comercial, art. 1110 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 34; Código Civil y Comercial, art. 1110"
+   "norma": "Ley 24.240, art. 34; Código Civil y Comercial, art. 1110",
+   "parrafos": [
+    "El artículo 34 de la Ley 24.240 y el artículo 1110 del Código Civil y Comercial establecen el derecho de arrepentimiento. En las compras hechas fuera del local comercial, como las que hacés por internet, por teléfono o con un vendedor que va a tu casa, podés revocar la aceptación dentro de los 10 días corridos contados desde la entrega del producto o la celebración del contrato, lo que ocurra último.",
+    "No tenés que dar explicaciones ni justificar la decisión. Si compraste unas zapatillas online y al recibirlas no te convencen, podés devolverlas dentro de ese plazo y recuperar lo que pagaste. Este derecho no se puede renunciar ni limitar con una cláusula del contrato, y el vendedor tiene que informarte que lo tenés.",
+    "En la práctica, avisá por escrito, por el mismo medio de compra o por el botón de arrepentimiento, y guardá la constancia. Si el vendedor se niega, podés reclamar ante la Defensa del Consumidor de tu provincia o por la Ventanilla Única Federal de Reclamos. Conviene hacer todo dentro de los 10 días."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-15",
@@ -150,7 +234,13 @@
    "texto": "Las tiendas online tienen que mostrar un «botón de arrepentimiento» bien visible en la página de inicio, para que puedas revocar la compra sin registrarte ni hacer trámites previos.",
    "fuente": "Res. SCI 424/2020 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Res. SCI 424/2020"
+   "norma": "Res. SCI 424/2020",
+   "parrafos": [
+    "La Resolución 424/2020 de la Secretaría de Comercio Interior obliga a los sitios web que venden productos o servicios a incluir un botón de arrepentimiento en su página de inicio, bien visible y de fácil acceso. Sirve para que el consumidor pueda ejercer el derecho de revocar la compra de manera simple.",
+    "El botón tiene que llevarte a un formulario sencillo, sin exigirte que te registres ni que hagas trámites previos, y la empresa debe darte una constancia de que lo solicitaste. Por ejemplo, comprás un electrodoméstico en una tienda online y, al día siguiente, te arrepentís: con ese botón podés pedir la anulación sin llamar por teléfono ni mandar mails a distintas áreas.",
+    "Si el botón no existe, está escondido o no funciona, sacá una captura y reclamá a la empresa. Podés denunciarlo en la Defensa del Consumidor de tu provincia o a través de la Ventanilla Única Federal de Reclamos. Recordá que el derecho de arrepentimiento rige durante los 10 días corridos desde la entrega del producto."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-16",
@@ -160,7 +250,13 @@
    "texto": "Ejercer el derecho de revocación no puede implicarte ningún gasto. El envío de vuelta lo paga el vendedor.",
    "fuente": "Código Civil y Comercial, art. 1115 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Código Civil y Comercial, art. 1115"
+   "norma": "Código Civil y Comercial, art. 1115",
+   "parrafos": [
+    "El artículo 1115 del Código Civil y Comercial establece que, si ejercés el derecho de revocación en una compra a distancia o fuera del local, no podés tener ningún costo por haber ejercido ese derecho. Es decir, devolver un producto dentro del plazo de arrepentimiento no puede salirte nada.",
+    "Eso incluye los gastos de devolución: si comprás un abrigo por internet y lo devolvés porque no te gusta, el envío de vuelta lo paga el vendedor. Tampoco pueden cobrarte penalidades, cargos administrativos ni descuentos del reembolso por haber revocado la compra. Si te piden que pagues el flete, están incumpliendo la norma.",
+    "En la práctica, pedí instrucciones por escrito sobre cómo devolver el producto y guardá los comprobantes. Si te cobran algo indebido, reclamá a la empresa y, si no corrigen, presentá el reclamo en la Defensa del Consumidor de tu provincia o por la Ventanilla Única Federal de Reclamos. Podés pedir que te reintegren lo gastado en el envío."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-17",
@@ -170,7 +266,13 @@
    "texto": "Una empresa no puede mandarte algo que no pediste y cobrártelo si no contestás. Tu silencio no es aceptación y no estás obligado a devolver lo que te enviaron.",
    "fuente": "Ley 24.240, art. 35 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 35"
+   "norma": "Ley 24.240, art. 35",
+   "parrafos": [
+    "El artículo 35 de la Ley 24.240 prohíbe enviar al consumidor, sin que lo haya solicitado, cosas o servicios con la intención de cobrárselos. Establece que el silencio del destinatario no se considera aceptación, y que no estás obligado a pagar ni a devolver lo que te mandaron sin pedirlo.",
+    "Por ejemplo, te llega a casa una revista, una tarjeta o un producto que nunca pediste, con una carta que dice que si no lo devolvés en cinco días se te cobrará. Esa carta no te obliga a nada. Tampoco pueden cargarte un servicio adicional en la factura sin tu consentimiento.",
+    "Si te lo cobran, guardá lo recibido y la documentación, y reclamá por escrito a la empresa pidiendo que lo eliminen y te devuelvan el dinero. Si no lo hacen, presentá el reclamo ante la Defensa del Consumidor de tu provincia o a través de la Ventanilla Única Federal de Reclamos. Esto vale tanto para productos como para servicios."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-18",
@@ -180,7 +282,13 @@
    "texto": "En una compra en cuotas o un préstamo te tienen que informar el precio de contado, el monto financiado, la tasa de interés, el costo financiero total y la cantidad y monto de cada cuota. Si falta, podés pedir la nulidad.",
    "fuente": "Ley 24.240, art. 36 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 36"
+   "norma": "Ley 24.240, art. 36",
+   "parrafos": [
+    "El artículo 36 de la Ley 24.240 regula las operaciones de financiación o crédito para el consumo. Exige que el contrato consigne, entre otros datos, el precio de contado, el monto financiado, la tasa de interés efectiva anual, el costo financiero total, la cantidad, el monto y la periodicidad de las cuotas, y los gastos extras.",
+    "Si comprás un televisor en cuotas y el comprobante solo dice el valor de cada cuota, sin la tasa ni el total que vas a terminar pagando, falta información obligatoria. Con esos datos podés comparar ofertas y saber cuánto cuesta realmente financiar. Si la información falta o es incorrecta, el consumidor puede pedir la nulidad del contrato o de las cláusulas respectivas.",
+    "Antes de firmar, pedí que te muestren por escrito el costo financiero total. Si ya firmaste y falta algo, reclamá a la empresa y, si no responde, acudí a la Defensa del Consumidor de tu provincia o a la Ventanilla Única Federal de Reclamos. Para pedir la nulidad conviene asesorarte con un abogado de confianza."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-19",
@@ -190,7 +298,13 @@
    "texto": "Las cláusulas que limitan la responsabilidad de la empresa, te hacen renunciar a tus derechos o la favorecen de forma desproporcionada se tienen por no escritas.",
    "fuente": "Ley 24.240, art. 37; Código Civil y Comercial, arts. 988 y 1119 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 37; Código Civil y Comercial, arts. 988 y 1119"
+   "norma": "Ley 24.240, art. 37; Código Civil y Comercial, arts. 988 y 1119",
+   "parrafos": [
+    "El artículo 37 de la Ley 24.240 y los artículos 988 y 1119 del Código Civil y Comercial establecen que las cláusulas abusivas de los contratos de consumo se tienen por no convenidas, es decir, como si no estuvieran escritas. Se consideran abusivas, por ejemplo, las que limitan la responsabilidad de la empresa, desnaturalizan las obligaciones o hacen renunciar a derechos.",
+    "Imaginá un contrato de gimnasio con una cláusula que dice que la empresa no responde por ningún accidente, aunque sea por su culpa, o uno de telefonía que permite cambiar el precio sin avisarte. Aunque hayas firmado, esas cláusulas no te obligan. El resto del contrato sigue vigente.",
+    "Leé los contratos antes de firmar y pedí una copia. Si ya te aplicaron una cláusula abusiva, reclamá por escrito a la empresa y, si no la dejan sin efecto, acudí a la Defensa del Consumidor de tu provincia o a la Ventanilla Única Federal de Reclamos. La justicia también puede declararlas nulas."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-20",
@@ -200,7 +314,13 @@
    "texto": "Si una ley o un contrato de consumo admite dos lecturas, vale la más favorable para vos.",
    "fuente": "Ley 24.240, art. 3; Código Civil y Comercial, arts. 1094 y 1095 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 3; Código Civil y Comercial, arts. 1094 y 1095"
+   "norma": "Ley 24.240, art. 3; Código Civil y Comercial, arts. 1094 y 1095",
+   "parrafos": [
+    "El artículo 3 de la Ley 24.240 y los artículos 1094 y 1095 del Código Civil y Comercial establecen que, en caso de duda sobre la interpretación de la ley o del contrato, se debe estar siempre a la interpretación más favorable para el consumidor. Es un principio que atraviesa todo el derecho del consumo.",
+    "Por ejemplo, un contrato de seguro tiene una cláusula que puede leerse de dos formas: una que te deja cubierto y otra que no. La duda se resuelve a tu favor. Lo mismo pasa con una promoción cuyas condiciones son ambiguas: la empresa que redactó el texto es la que debe cargar con esa falta de claridad.",
+    "En la práctica, si una empresa te niega algo apoyándose en una cláusula confusa, pedí por escrito la explicación y recordale este principio. Si no cambian de postura, presentá el reclamo en la Defensa del Consumidor de tu provincia o por la Ventanilla Única Federal de Reclamos. Para casos complejos, conviene consultar con un abogado."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-21",
@@ -210,7 +330,13 @@
    "texto": "Las facturas de servicios públicos tienen que indicar si tenés deudas anteriores. Si no lo dicen, se presume que estás al día.",
    "fuente": "Ley 24.240, art. 30 bis — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 30 bis"
+   "norma": "Ley 24.240, art. 30 bis",
+   "parrafos": [
+    "El artículo 30 bis de la Ley 24.240 establece que las facturas de servicios públicos y las de otros servicios con débito automático tienen que informar si el usuario tiene deudas anteriores. Si la factura no dice nada, se presume que no existen deudas pendientes. La ley protege al usuario contra reclamos tardíos o sorpresivos.",
+    "Por ejemplo, recibís la boleta de luz y no figura ningún saldo anterior. Meses después, la empresa te reclama facturas viejas. Si esa boleta no lo mencionaba, no pueden presumir que debías algo, y la ley juega a tu favor. Tampoco pueden cortarte el servicio por deudas no informadas en la factura.",
+    "Guardá siempre las boletas y los comprobantes de pago. Ante un reclamo por una deuda que no figuraba, escribí a la empresa y pedí el detalle. Si insisten o te cortan el servicio, acudí al ente regulador de tu servicio, a la Defensa del Consumidor de tu provincia o a la Ventanilla Única Federal de Reclamos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-22",
@@ -220,7 +346,13 @@
    "texto": "Si un consumo supera en un 75% el promedio de los mismos períodos de los dos años anteriores, se presume un error y pagás solo el promedio hasta que la empresa lo aclare.",
    "fuente": "Ley 24.240, art. 31 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 31"
+   "norma": "Ley 24.240, art. 31",
+   "parrafos": [
+    "El artículo 31 de la Ley 24.240 establece que, cuando una factura de servicios públicos arroje un consumo que supere en un 75% el promedio de los consumos de los mismos períodos de los dos años anteriores, se presume que hay un error. Hasta que la empresa demuestre lo contrario, el usuario paga solo el promedio.",
+    "Por ejemplo, tu factura de gas de invierno llega con un importe altísimo, muy por encima de lo que pagaste los dos inviernos previos, sin que hayas cambiado tus hábitos. Podés reclamar y pagar el promedio de esos períodos hasta que se aclare. La carga de probar que el consumo fue real es de la empresa, no tuya.",
+    "En la práctica, reclamá por escrito ante la prestadora y pedí el detalle de las lecturas del medidor. Si no te responden, acudí al ente regulador del servicio, a la Defensa del Consumidor de tu provincia o a la Ventanilla Única Federal de Reclamos. Guardá siempre las facturas anteriores, que sirven para comparar los consumos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-23",
@@ -230,7 +362,13 @@
    "texto": "Las empresas de servicios públicos tienen que aplicar a los reintegros que te deben el mismo criterio de intereses que usan para cobrarte cuando pagás tarde.",
    "fuente": "Ley 24.240, art. 26 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 26"
+   "norma": "Ley 24.240, art. 26",
+   "parrafos": [
+    "El artículo 26 de la Ley 24.240 busca la equidad entre empresa y usuario: las empresas de servicios públicos tienen que aplicar, en los reintegros o devoluciones que te deban, el mismo criterio de intereses o recargos que utilizan para cobrarte cuando pagás con atraso. Lo que vale para uno, vale para el otro.",
+    "Por ejemplo, si te cobraron de más en la factura de agua y te lo devuelven, el reintegro debe actualizarse con la misma tasa que la empresa te aplicaría a vos por pagar tarde. No pueden cobrarte intereses por demora y devolverte lo suyo sin ningún interés. La norma apunta a una reciprocidad en el trato.",
+    "Si te devolvieron un cobro indebido sin intereses, reclamá por escrito la diferencia a la empresa, indicando cómo calculan ellos tus recargos. Si no te responden, presentá el reclamo ante el ente regulador, la Defensa del Consumidor de tu provincia o la Ventanilla Única Federal. Guardá las facturas y los comprobantes de pago."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-24",
@@ -240,7 +378,13 @@
    "texto": "En un servicio de reparación te tienen que dar un presupuesto con el trabajo a hacer, los materiales, el precio y el plazo de validez.",
    "fuente": "Ley 24.240, art. 21 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 21"
+   "norma": "Ley 24.240, art. 21",
+   "parrafos": [
+    "El artículo 21 de la Ley 24.240 establece que, en los servicios de reparación o mantenimiento, el prestador debe extender un presupuesto por escrito. Ese documento debe incluir la descripción del trabajo a realizar, una lista de los materiales y repuestos, el precio de ellos y de la mano de obra, el plazo de entrega y el tiempo durante el cual el presupuesto es válido.",
+    "Si llevás tu auto al taller o llamás a un técnico para arreglar el lavarropas, pedí el presupuesto antes de que empiecen. Así evitás sorpresas, como un precio final muy superior al estimado o trabajos que nunca pediste. Una vez aceptado el presupuesto, el prestador no puede cobrarte más sin tu autorización, salvo cambios que aprobaste.",
+    "Pedí siempre el presupuesto por escrito y firmado, y guardalo junto con la factura final. Si te cobran distinto, reclamá primero en el taller o con el técnico. Si no hay acuerdo, acudí a la Defensa del Consumidor de tu provincia o a la Ventanilla Única Federal de Reclamos, con el presupuesto como prueba."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-25",
@@ -250,7 +394,13 @@
    "texto": "Quien repara una cosa tiene que usar materiales o repuestos nuevos y adecuados, salvo que hayas aceptado por escrito otra cosa.",
    "fuente": "Ley 24.240, art. 20 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 20"
+   "norma": "Ley 24.240, art. 20",
+   "parrafos": [
+    "El artículo 20 de la Ley 24.240 dispone que, en los contratos de prestación de servicios de reparación o mantenimiento de cosas muebles, el prestador debe emplear materiales o repuestos nuevos y adecuados a la cosa que se repara, salvo que el usuario autorice por escrito a que sean usados. La cláusula es una forma de proteger la calidad del arreglo.",
+    "Por ejemplo, llevás tu heladera a arreglar y el técnico le coloca una pieza usada sin avisarte, pero te cobra como si fuera nueva. Eso no corresponde. Solo se pueden usar repuestos usados si vos lo aceptaste por escrito, en general a cambio de un precio menor.",
+    "Si no estás seguro de lo que usaron, pedí que detallen los repuestos en la factura o en el comprobante. Si encontrás que te colocaron algo distinto a lo acordado, reclamá primero al taller. Si no te lo resuelven, podés presentar la denuncia en la Defensa del Consumidor de tu provincia o a través de la Ventanilla Única Federal de Reclamos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-26",
@@ -260,7 +410,13 @@
    "texto": "Un comercio no puede condicionar la venta de un producto o servicio a que compres otro. Es una práctica que limita tu libertad de contratar.",
    "fuente": "Código Civil y Comercial, art. 1099 — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Código Civil y Comercial, art. 1099"
+   "norma": "Código Civil y Comercial, art. 1099",
+   "parrafos": [
+    "El artículo 1099 del Código Civil y Comercial establece que están prohibidas las prácticas que limitan la libertad de contratar del consumidor, en especial la subordinación de la provisión de productos o servicios a la compra de otros. Es lo que se conoce como venta atada.",
+    "Un ejemplo: un banco te dice que para darte el préstamo tenés que contratar un seguro de la casa o abrir una caja de ahorro que no querías. O un comercio que no te vende un celular si no comprás con él una funda o un servicio de línea. Si te lo exigen, es una práctica abusiva.",
+    "Podés decir que no a lo que no pediste y exigir que te vendan solo lo que querías. Si se niegan, pedí por escrito la razón, reclamá en la empresa y, si no hay solución, acudí a la Defensa del Consumidor de tu provincia o a la Ventanilla Única Federal de Reclamos. En el caso de bancos, también podés consultar al Banco Central."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-27",
@@ -270,7 +426,13 @@
    "texto": "Podés inscribir tu teléfono gratis en el Registro Nacional No Llame. Desde entonces las empresas no pueden llamarte ni mandarte mensajes para ofrecerte productos o servicios.",
    "fuente": "Ley 26.951 — Agencia de Acceso a la Información Pública",
    "dudosa": false,
-   "norma": "Ley 26.951"
+   "norma": "Ley 26.951",
+   "parrafos": [
+    "La Ley 26.951 creó el Registro Nacional No Llame, que protege a las personas de las llamadas y mensajes de publicidad, oferta, venta o regalo de bienes o servicios. Lo administra la Agencia de Acceso a la Información Pública. Inscribirte es gratuito y no necesitás intermediarios.",
+    "Una vez que registrás tu línea, las empresas ya no pueden llamarte ni enviarte mensajes con fines comerciales, y tienen que consultar el registro antes de hacer campañas. Por ejemplo, si te llaman seguido para ofrecerte planes de telefonía o seguros, o te mandan mensajes de promociones, podés inscribir tu número para que dejen de hacerlo.",
+    "Si después de inscribirte seguís recibiendo llamadas o mensajes, podés hacer la denuncia ante la Agencia de Acceso a la Información Pública, indicando el número que te llamó y la fecha. Conviene anotar o guardar capturas de los mensajes. La ley prevé sanciones para las empresas que incumplen. También podés pedir ayuda en la Defensa del Consumidor."
+   ],
+   "url": "https://www.argentina.gob.ar/aaip"
   },
   {
    "id": "co-28",
@@ -280,7 +442,13 @@
    "texto": "Tenés 30 días desde que recibís el resumen para cuestionar un cargo. El banco tiene que acusar recibo y responder en plazos fijos, y no puede cobrarte lo impugnado mientras lo revisa.",
    "fuente": "Ley 25.065, arts. 26 y 27 — Banco Central de la República Argentina — Secretaría de Comercio",
    "dudosa": true,
-   "norma": "Ley 25.065, arts. 26 y 27"
+   "norma": "Ley 25.065, arts. 26 y 27",
+   "parrafos": [
+    "La Ley 25.065 de Tarjetas de Crédito, en sus artículos 26 y 27, regula cómo cuestionar un cargo del resumen. Tenés un plazo de 30 días desde que recibís el resumen para impugnar lo que no reconozcas, y la entidad emisora está obligada a acusar recibo del reclamo y a responder dentro de los plazos que fija la ley.",
+    "Si ves en el resumen una compra que no hiciste o un cobro duplicado, avisá cuanto antes por escrito, por la vía que ofrezca tu banco, y pedí el número de reclamo. Mientras la entidad analiza el caso, no puede cobrarte intereses ni cargos sobre el importe impugnado. Podés pagar el resto del resumen para no caer en mora.",
+    "Si el banco no responde o rechaza el reclamo sin fundamento, podés acudir a la Defensa del Consumidor de tu provincia, a la Ventanilla Única Federal de Reclamos o presentar un reclamo ante el Banco Central, que tiene un servicio para usuarios de servicios financieros. Guardá siempre los resúmenes y las constancias."
+   ],
+   "url": "https://www.bcra.gob.ar"
   },
   {
    "id": "co-29",
@@ -290,7 +458,13 @@
    "texto": "Si una empresa no cumple sus obligaciones con el consumidor, el juez puede aplicarle una multa civil a tu favor, además de la reparación del daño.",
    "fuente": "Ley 24.240, art. 52 bis — Secretaría de Comercio",
    "dudosa": false,
-   "norma": "Ley 24.240, art. 52 bis"
+   "norma": "Ley 24.240, art. 52 bis",
+   "parrafos": [
+    "El artículo 52 bis de la Ley 24.240 prevé el daño punitivo: si el proveedor no cumple sus obligaciones legales o contractuales con el consumidor, el juez puede aplicarle una multa civil a favor de la persona damnificada, que se suma a las indemnizaciones por el perjuicio sufrido. Su objetivo es castigar conductas graves y desalentar que se repitan.",
+    "No se aplica a cualquier problema: se reserva para casos de incumplimientos especialmente reprochables, por ejemplo cuando una empresa ignora reiteradamente un reclamo justificado o actúa con desidia. Que haya o no daño punitivo lo decide un juez, según las circunstancias, y el monto se fija teniendo en cuenta la gravedad del hecho.",
+    "En la práctica, esta vía se transita en la justicia y conviene hacerlo con el asesoramiento de un abogado, aunque hay servicios gratuitos de patrocinio. Antes, siempre es útil agotar el reclamo en la empresa y en la Defensa del Consumidor o la Ventanilla Única Federal. Guardá todas las pruebas: facturas, mensajes y comprobantes de reclamos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   },
   {
    "id": "co-30",
@@ -300,7 +474,13 @@
    "texto": "Para reclamos de consumo existe una instancia de conciliación gratuita y rápida ante la Secretaría de Comercio, sin necesidad de pagar un abogado.",
    "fuente": "Ley 26.993 — Secretaría de Comercio",
    "dudosa": true,
-   "norma": "Ley 26.993"
+   "norma": "Ley 26.993",
+   "parrafos": [
+    "La Ley 26.993 creó el Servicio de Conciliación Previa en las Relaciones de Consumo, conocido como COPREC, que depende de la Secretaría de Comercio. Es una instancia gratuita y rápida para que consumidores y empresas intenten resolver el conflicto con la ayuda de un conciliador, antes de ir a juicio.",
+    "Para reclamos de consumo, no necesitás pagar un abogado para iniciar el trámite. Por ejemplo, si una empresa de electrodomésticos no te da una solución por un producto defectuoso, podés pedir una audiencia en el COPREC, donde ambas partes se sientan con un conciliador. Si llegan a un acuerdo, este tiene fuerza de sentencia y la empresa debe cumplirlo.",
+    "Para iniciar el reclamo, lo hacés por internet o en las dependencias habilitadas, con tus datos, los de la empresa y los documentos que respalden tu reclamo. Es recomendable haber reclamado antes a la empresa, y guardar las pruebas. Si no hay acuerdo, podés seguir por otras vías. También podés acudir a la Defensa del Consumidor o a la Ventanilla Única Federal de Reclamos."
+   ],
+   "url": "https://www.argentina.gob.ar/defensadelconsumidor"
   }
  ]
 }

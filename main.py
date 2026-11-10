@@ -8988,6 +8988,7 @@ def api_tu_dia(request: Request):
     if clima:
         clima["localidad"] = localidad
         clima["fuente"] = tu_dia_fuentes.ATRIBUCION_CLIMA
+        clima["url"] = tu_dia_fuentes.URL_CLIMA
     hoy = fechas.hoy()
     dolar = tu_dia_fuentes.dolar_oficial() if "mercados" in config["rubros"] else None
     persona = db.cumple_de(cuil)

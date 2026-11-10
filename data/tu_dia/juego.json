@@ -1,486 +1,3366 @@
 {
- "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "_nota": "Banco de la trivia diaria de «Tu día» (tu_dia.trivia_del_dia): diez preguntas por día, barajadas por tanda de len//10 días sin repetir. Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Cada pregunta: titulo, 3 opciones, correcta (0..2), explicacion, fuente, url, tema y nivel (facil/media/dificil).",
  "revisado": false,
  "items": [
   {
    "id": "ju-01",
-   "chip": "Juego",
-   "linea": "¿Quién creó la bandera argentina? Tocá para responder",
+   "tema": "historia",
+   "nivel": "facil",
    "titulo": "¿Quién creó la bandera argentina?",
-   "texto": "Pista: el Monumento a la Bandera lo recuerda en Rosario.",
-   "fuente": "Ministerio de Cultura de la Nación",
-   "dudosa": false,
    "opciones": [
     "Manuel Belgrano",
     "José de San Martín",
     "Mariano Moreno"
    ],
    "correcta": 0,
-   "explicacion": "Manuel Belgrano la izó por primera vez el 27 de febrero de 1812 a orillas del Paraná, en Rosario. Por eso el Monumento a la Bandera está en esa ciudad."
+   "explicacion": "Manuel Belgrano la izó por primera vez el 27 de febrero de 1812 a orillas del Paraná, en Rosario. Por eso el Monumento a la Bandera está en esa ciudad.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-02",
-   "chip": "Juego",
-   "linea": "¿En qué año se declaró la Independencia? Tocá para responder",
+   "tema": "historia",
+   "nivel": "facil",
    "titulo": "¿En qué año se declaró la Independencia argentina?",
-   "texto": "",
-   "fuente": "Casa Histórica de la Independencia — Ministerio de Cultura",
-   "dudosa": false,
    "opciones": [
     "1810",
     "1853",
     "1816"
    ],
    "correcta": 2,
-   "explicacion": "El Congreso reunido en San Miguel de Tucumán la declaró el 9 de julio de 1816. El 25 de mayo de 1810 fue la Revolución de Mayo, el primer gobierno patrio."
+   "explicacion": "El Congreso reunido en San Miguel de Tucumán la declaró el 9 de julio de 1816. El 25 de mayo de 1810 fue la Revolución de Mayo, el primer gobierno patrio.",
+   "fuente": "Casa Histórica de la Independencia — Ministerio de Cultura",
+   "url": "https://www.cultura.gob.ar/museos/casa-historica-de-la-independencia/",
+   "dudosa": false
   },
   {
    "id": "ju-03",
-   "chip": "Juego",
-   "linea": "¿Cuál es el pico más alto de América? Tocá para responder",
+   "tema": "geografia",
+   "nivel": "facil",
    "titulo": "¿Cuál es la montaña más alta de toda América?",
-   "texto": "Pista: está en Mendoza.",
-   "fuente": "Parque Provincial Aconcagua — Gobierno de Mendoza",
-   "dudosa": false,
    "opciones": [
     "Ojos del Salado",
     "Aconcagua",
     "Lanín"
    ],
    "correcta": 1,
-   "explicacion": "El Aconcagua, en Mendoza, mide unos 6.960 metros. Es la cumbre más alta fuera de Asia."
+   "explicacion": "El Aconcagua, en Mendoza, mide unos 6.960 metros. Es la cumbre más alta fuera de Asia.",
+   "fuente": "Parque Provincial Aconcagua — Gobierno de Mendoza",
+   "url": "https://www.mendoza.gov.ar",
+   "dudosa": false
   },
   {
    "id": "ju-04",
-   "chip": "Juego",
-   "linea": "¿En qué provincia están las Cataratas del Iguazú? Tocá para responder",
+   "tema": "geografia",
+   "nivel": "facil",
    "titulo": "¿En qué provincia están las Cataratas del Iguazú?",
-   "texto": "",
-   "fuente": "Administración de Parques Nacionales",
-   "dudosa": false,
    "opciones": [
     "Corrientes",
     "Misiones",
     "Entre Ríos"
    ],
    "correcta": 1,
-   "explicacion": "Están en Misiones, sobre la frontera con Brasil, dentro del Parque Nacional Iguazú. La Garganta del Diablo es el salto más conocido."
+   "explicacion": "Están en Misiones, sobre la frontera con Brasil, dentro del Parque Nacional Iguazú. La Garganta del Diablo es el salto más conocido.",
+   "fuente": "Administración de Parques Nacionales",
+   "url": "https://www.argentina.gob.ar/parquesnacionales",
+   "dudosa": false
   },
   {
    "id": "ju-05",
-   "chip": "Juego",
-   "linea": "¿Quién escribió el Martín Fierro? Tocá para responder",
+   "tema": "literatura",
+   "nivel": "media",
    "titulo": "¿Quién escribió el poema gauchesco «Martín Fierro»?",
-   "texto": "Pista: el Día de la Tradición recuerda su nacimiento.",
-   "fuente": "Biblioteca Nacional Mariano Moreno",
-   "dudosa": false,
    "opciones": [
     "José Hernández",
     "Leopoldo Lugones",
     "Esteban Echeverría"
    ],
    "correcta": 0,
-   "explicacion": "José Hernández publicó «El gaucho Martín Fierro» en 1872 y «La vuelta de Martín Fierro» en 1879. El Día de la Tradición, el 10 de noviembre, recuerda su nacimiento."
+   "explicacion": "José Hernández publicó «El gaucho Martín Fierro» en 1872 y «La vuelta de Martín Fierro» en 1879. El Día de la Tradición, el 10 de noviembre, recuerda su nacimiento.",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "url": "https://www.bn.gov.ar",
+   "dudosa": false
   },
   {
    "id": "ju-06",
-   "chip": "Juego",
-   "linea": "¿Quién escribió «El Aleph» y «Ficciones»? Tocá para responder",
+   "tema": "literatura",
+   "nivel": "facil",
    "titulo": "¿Qué autor argentino escribió «El Aleph» y «Ficciones»?",
-   "texto": "",
-   "fuente": "Biblioteca Nacional Mariano Moreno",
-   "dudosa": false,
    "opciones": [
     "Julio Cortázar",
     "Ernesto Sabato",
     "Jorge Luis Borges"
    ],
    "correcta": 2,
-   "explicacion": "Los dos libros de cuentos son de Jorge Luis Borges, que además dirigió la Biblioteca Nacional entre 1955 y 1973."
+   "explicacion": "Los dos libros de cuentos son de Jorge Luis Borges, que además dirigió la Biblioteca Nacional entre 1955 y 1973.",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "url": "https://www.bn.gov.ar",
+   "dudosa": false
   },
   {
    "id": "ju-07",
-   "chip": "Juego",
-   "linea": "¿Qué argentino ganó el Nobel de Medicina en 1947? Tocá para responder",
+   "tema": "ciencia",
+   "nivel": "media",
    "titulo": "¿Qué científico argentino ganó el Premio Nobel de Medicina en 1947?",
-   "texto": "",
-   "fuente": "Fundación Nobel (nobelprize.org)",
-   "dudosa": false,
    "opciones": [
     "Bernardo Houssay",
     "René Favaloro",
     "César Milstein"
    ],
    "correcta": 0,
-   "explicacion": "Bernardo Houssay lo recibió por sus estudios sobre la hipófisis y el metabolismo del azúcar. Fue el primer Nobel en ciencias de América Latina."
+   "explicacion": "Bernardo Houssay lo recibió por sus estudios sobre la hipófisis y el metabolismo del azúcar. Fue el primer Nobel en ciencias de América Latina.",
+   "fuente": "Fundación Nobel (nobelprize.org)",
+   "url": "https://www.nobelprize.org",
+   "dudosa": false
   },
   {
    "id": "ju-08",
-   "chip": "Juego",
-   "linea": "¿Qué Nobel ganó Luis Federico Leloir en 1970? Tocá para responder",
+   "tema": "ciencia",
+   "nivel": "media",
    "titulo": "¿En qué disciplina ganó Luis Federico Leloir el Premio Nobel en 1970?",
-   "texto": "",
-   "fuente": "Fundación Nobel (nobelprize.org)",
-   "dudosa": false,
    "opciones": [
     "Física",
     "Química",
     "Medicina"
    ],
    "correcta": 1,
-   "explicacion": "Ganó el Nobel de Química por descubrir cómo el cuerpo fabrica y usa los azúcares. Se le atribuye también la invención de la salsa golf."
+   "explicacion": "Ganó el Nobel de Química por descubrir cómo el cuerpo fabrica y usa los azúcares. Se le atribuye también la invención de la salsa golf.",
+   "fuente": "Fundación Nobel (nobelprize.org)",
+   "url": "https://www.nobelprize.org",
+   "dudosa": false
   },
   {
    "id": "ju-09",
-   "chip": "Juego",
-   "linea": "¿Quién creó el sistema de huellas dactilares? Tocá para responder",
+   "tema": "inventos",
+   "nivel": "media",
    "titulo": "¿Quién desarrolló en la Policía de La Plata el sistema de identificación por huellas dactilares?",
-   "texto": "",
-   "fuente": "Museo de la Policía de la Provincia de Buenos Aires",
-   "dudosa": false,
    "opciones": [
     "Florentino Ameghino",
     "Juan Vucetich",
     "Francisco Moreno"
    ],
    "correcta": 1,
-   "explicacion": "Juan Vucetich lo creó a fines del siglo XIX en La Plata. En 1892 se usó por primera vez para resolver un crimen, y su método se adoptó en muchos países."
+   "explicacion": "Juan Vucetich lo creó a fines del siglo XIX en La Plata. En 1892 se usó por primera vez para resolver un crimen, y su método se adoptó en muchos países.",
+   "fuente": "Museo de la Policía de la Provincia de Buenos Aires",
+   "url": "https://www.gba.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-10",
-   "chip": "Juego",
-   "linea": "¿Quién patentó el bolígrafo en la Argentina? Tocá para responder",
+   "tema": "inventos",
+   "nivel": "facil",
    "titulo": "¿Quién patentó en la Argentina el bolígrafo de tinta moderna?",
-   "texto": "Pista: en el país se lo llama por su apellido.",
-   "fuente": "Instituto Nacional de la Propiedad Industrial (INPI)",
-   "dudosa": false,
    "opciones": [
     "Ladislao Biro",
     "Raúl Pateras Pescara",
     "Quirino Cristiani"
    ],
    "correcta": 0,
-   "explicacion": "Ladislao Biro, nacido en Hungría y radicado en la Argentina, lo patentó en 1943. Por eso en el país al bolígrafo se le dice «birome»."
+   "explicacion": "Ladislao Biro, nacido en Hungría y radicado en la Argentina, lo patentó en 1943. Por eso en el país al bolígrafo se le dice «birome».",
+   "fuente": "Instituto Nacional de la Propiedad Industrial (INPI)",
+   "url": "https://www.argentina.gob.ar/inpi",
+   "dudosa": false
   },
   {
    "id": "ju-11",
-   "chip": "Juego",
-   "linea": "¿En qué año ganó Argentina su primer Mundial? Tocá para responder",
+   "tema": "deporte",
+   "nivel": "media",
    "titulo": "¿En qué año ganó la selección argentina su primera Copa del Mundo?",
-   "texto": "",
-   "fuente": "FIFA (fifa.com)",
-   "dudosa": false,
    "opciones": [
     "1986",
     "1930",
     "1978"
    ],
    "correcta": 2,
-   "explicacion": "La ganó en 1978, de local, con la final ante Países Bajos en el estadio Monumental. En 1930 había llegado a la final pero perdió con Uruguay."
+   "explicacion": "La ganó en 1978, de local, con la final ante Países Bajos en el estadio Monumental. En 1930 había llegado a la final pero perdió con Uruguay.",
+   "fuente": "FIFA (fifa.com)",
+   "url": "https://www.fifa.com",
+   "dudosa": false
   },
   {
    "id": "ju-12",
-   "chip": "Juego",
-   "linea": "¿Cuántos Mundiales ganó la selección masculina? Tocá para responder",
+   "tema": "deporte",
+   "nivel": "facil",
    "titulo": "¿Cuántas Copas del Mundo ganó la selección argentina masculina de fútbol?",
-   "texto": "",
-   "fuente": "FIFA (fifa.com)",
-   "dudosa": false,
    "opciones": [
     "Dos",
     "Tres",
     "Cuatro"
    ],
    "correcta": 1,
-   "explicacion": "Ganó tres: 1978, 1986 y 2022. La última fue en Qatar, por penales ante Francia."
+   "explicacion": "Ganó tres: 1978, 1986 y 2022. La última fue en Qatar, por penales ante Francia.",
+   "fuente": "FIFA (fifa.com)",
+   "url": "https://www.fifa.com",
+   "dudosa": false
   },
   {
    "id": "ju-13",
-   "chip": "Juego",
-   "linea": "¿Qué piloto argentino fue cinco veces campeón de F1? Tocá para responder",
+   "tema": "deporte",
+   "nivel": "facil",
    "titulo": "¿Qué piloto argentino ganó cinco campeonatos mundiales de Fórmula 1?",
-   "texto": "Pista: nació en Balcarce.",
-   "fuente": "Museo Juan Manuel Fangio (Balcarce)",
-   "dudosa": false,
    "opciones": [
     "Carlos Reutemann",
     "Froilán González",
     "Juan Manuel Fangio"
    ],
    "correcta": 2,
-   "explicacion": "Juan Manuel Fangio, de Balcarce, fue campeón en 1951, 1954, 1955, 1956 y 1957. Su récord de cinco títulos duró casi cincuenta años."
+   "explicacion": "Juan Manuel Fangio, de Balcarce, fue campeón en 1951, 1954, 1955, 1956 y 1957. Su récord de cinco títulos duró casi cincuenta años.",
+   "fuente": "Museo Juan Manuel Fangio (Balcarce)",
+   "url": "https://www.museofangio.com",
+   "dudosa": false
   },
   {
    "id": "ju-14",
-   "chip": "Juego",
-   "linea": "¿Qué Grand Slam ganó Gabriela Sabatini en 1990? Tocá para responder",
+   "tema": "deporte",
+   "nivel": "media",
    "titulo": "¿Qué torneo de Grand Slam ganó Gabriela Sabatini en 1990?",
-   "texto": "",
-   "fuente": "Women's Tennis Association (wtatennis.com)",
-   "dudosa": false,
    "opciones": [
     "El US Open",
     "Roland Garros",
     "Wimbledon"
    ],
    "correcta": 0,
-   "explicacion": "Ganó el Abierto de los Estados Unidos en 1990, venciendo en la final a Steffi Graf. Fue su único título de Grand Slam en singles."
+   "explicacion": "Ganó el Abierto de los Estados Unidos en 1990, venciendo en la final a Steffi Graf. Fue su único título de Grand Slam en singles.",
+   "fuente": "Women's Tennis Association (wtatennis.com)",
+   "url": "https://www.wtatennis.com",
+   "dudosa": false
   },
   {
    "id": "ju-15",
-   "chip": "Juego",
-   "linea": "¿Qué deporte juegan Las Leonas? Tocá para responder",
+   "tema": "deporte",
+   "nivel": "facil",
    "titulo": "¿Qué deporte juega la selección femenina conocida como Las Leonas?",
-   "texto": "",
-   "fuente": "Confederación Argentina de Hockey",
-   "dudosa": false,
    "opciones": [
     "Rugby",
     "Hockey sobre césped",
     "Vóley"
    ],
    "correcta": 1,
-   "explicacion": "Las Leonas son la selección de hockey sobre césped. Ganaron dos Mundiales (2002 y 2010) y varias medallas olímpicas."
+   "explicacion": "Las Leonas son la selección de hockey sobre césped. Ganaron dos Mundiales (2002 y 2010) y varias medallas olímpicas.",
+   "fuente": "Confederación Argentina de Hockey",
+   "url": "https://www.cah.org.ar",
+   "dudosa": false
   },
   {
    "id": "ju-16",
-   "chip": "Juego",
-   "linea": "¿Dónde ganó el oro olímpico la Generación Dorada? Tocá para responder",
+   "tema": "deporte",
+   "nivel": "media",
    "titulo": "¿En qué Juegos Olímpicos ganó la medalla de oro la selección de básquet de la Generación Dorada?",
-   "texto": "",
-   "fuente": "Comité Olímpico Argentino",
-   "dudosa": false,
    "opciones": [
     "Sídney 2000",
     "Pekín 2008",
     "Atenas 2004"
    ],
    "correcta": 2,
-   "explicacion": "Fue en Atenas 2004, con Manu Ginóbili como figura. Le ganaron la final a Italia."
+   "explicacion": "Fue en Atenas 2004, con Manu Ginóbili como figura. Le ganaron la final a Italia.",
+   "fuente": "Comité Olímpico Argentino",
+   "url": "https://www.coarg.org.ar",
+   "dudosa": false
   },
   {
    "id": "ju-17",
-   "chip": "Juego",
-   "linea": "¿Cuántas provincias tiene la Argentina? Tocá para responder",
+   "tema": "geografia",
+   "nivel": "facil",
    "titulo": "¿Cuántas provincias tiene la Argentina, sin contar la Ciudad de Buenos Aires?",
-   "texto": "",
-   "fuente": "Instituto Geográfico Nacional",
-   "dudosa": false,
    "opciones": [
     "23",
     "24",
     "22"
    ],
    "correcta": 0,
-   "explicacion": "Son 23 provincias. La Ciudad Autónoma de Buenos Aires no es una provincia: tiene un régimen autónomo propio."
+   "explicacion": "Son 23 provincias. La Ciudad Autónoma de Buenos Aires no es una provincia: tiene un régimen autónomo propio.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-18",
-   "chip": "Juego",
-   "linea": "¿Cuál es la capital de Chubut? Tocá para responder",
+   "tema": "geografia",
+   "nivel": "media",
    "titulo": "¿Cuál es la capital de la provincia del Chubut?",
-   "texto": "Pista: no es la ciudad más grande de la provincia.",
-   "fuente": "Instituto Geográfico Nacional",
-   "dudosa": false,
    "opciones": [
     "Trelew",
     "Comodoro Rivadavia",
     "Rawson"
    ],
    "correcta": 2,
-   "explicacion": "La capital es Rawson, aunque Comodoro Rivadavia y Trelew tienen más habitantes."
+   "explicacion": "La capital es Rawson, aunque Comodoro Rivadavia y Trelew tienen más habitantes.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-19",
-   "chip": "Juego",
-   "linea": "¿En qué provincia está la Quebrada de Humahuaca? Tocá para responder",
+   "tema": "geografia",
+   "nivel": "facil",
    "titulo": "¿En qué provincia está la Quebrada de Humahuaca?",
-   "texto": "",
-   "fuente": "UNESCO — Lista del Patrimonio Mundial",
-   "dudosa": false,
    "opciones": [
     "Salta",
     "Jujuy",
     "Catamarca"
    ],
    "correcta": 1,
-   "explicacion": "Está en Jujuy. La UNESCO la declaró Patrimonio de la Humanidad en 2003 por su paisaje y su historia de más de diez mil años."
+   "explicacion": "Está en Jujuy. La UNESCO la declaró Patrimonio de la Humanidad en 2003 por su paisaje y su historia de más de diez mil años.",
+   "fuente": "UNESCO — Lista del Patrimonio Mundial",
+   "url": "https://whc.unesco.org/en/list/1116",
+   "dudosa": false
   },
   {
    "id": "ju-20",
-   "chip": "Juego",
-   "linea": "¿Qué glaciar de Santa Cruz es famoso por sus rupturas? Tocá para responder",
+   "tema": "geografia",
+   "nivel": "facil",
    "titulo": "¿Qué glaciar de Santa Cruz es famoso por las rupturas de su frente de hielo?",
-   "texto": "",
-   "fuente": "Administración de Parques Nacionales",
-   "dudosa": false,
    "opciones": [
     "Perito Moreno",
     "Upsala",
     "Viedma"
    ],
    "correcta": 0,
-   "explicacion": "El Perito Moreno, en el Parque Nacional Los Glaciares, avanza sobre el Lago Argentino y cada tanto forma un dique de hielo que termina rompiéndose."
+   "explicacion": "El Perito Moreno, en el Parque Nacional Los Glaciares, avanza sobre el Lago Argentino y cada tanto forma un dique de hielo que termina rompiéndose.",
+   "fuente": "Administración de Parques Nacionales",
+   "url": "https://www.argentina.gob.ar/parquesnacionales",
+   "dudosa": false
   },
   {
    "id": "ju-21",
-   "chip": "Juego",
-   "linea": "¿Qué provincia produce más vino? Tocá para responder",
+   "tema": "cotidiano",
+   "nivel": "facil",
    "titulo": "¿Qué provincia es la mayor productora de vino de la Argentina?",
-   "texto": "",
-   "fuente": "Instituto Nacional de Vitivinicultura (INV)",
-   "dudosa": false,
    "opciones": [
     "San Juan",
     "Mendoza",
     "La Rioja"
    ],
    "correcta": 1,
-   "explicacion": "Mendoza concentra la mayor parte de los viñedos y de la producción del país. El Malbec es su cepa más conocida."
+   "explicacion": "Mendoza concentra la mayor parte de los viñedos y de la producción del país. El Malbec es su cepa más conocida.",
+   "fuente": "Instituto Nacional de Vitivinicultura (INV)",
+   "url": "https://www.argentina.gob.ar/inv",
+   "dudosa": false
   },
   {
    "id": "ju-22",
-   "chip": "Juego",
-   "linea": "¿Cuál es la flor nacional? Tocá para responder",
+   "tema": "naturaleza",
+   "nivel": "facil",
    "titulo": "¿Cuál es la flor nacional argentina?",
-   "texto": "Pista: sus flores son rojas.",
-   "fuente": "Ministerio de Cultura de la Nación",
-   "dudosa": false,
    "opciones": [
     "El jacarandá",
     "El ceibo",
     "La pasionaria"
    ],
    "correcta": 1,
-   "explicacion": "Es la flor del ceibo, declarada flor nacional en 1942. El árbol crece en las orillas de ríos y lagunas del noreste."
+   "explicacion": "Es la flor del ceibo, declarada flor nacional en 1942. El árbol crece en las orillas de ríos y lagunas del noreste.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-23",
-   "chip": "Juego",
-   "linea": "¿Qué ave se considera el ave nacional? Tocá para responder",
+   "tema": "naturaleza",
+   "nivel": "facil",
    "titulo": "¿Qué ave se considera el ave nacional de la Argentina?",
-   "texto": "Pista: construye su nido con barro.",
-   "fuente": "Aves Argentinas (Asociación Ornitológica del Plata)",
-   "dudosa": true,
    "opciones": [
     "El cóndor",
     "El hornero",
     "El ñandú"
    ],
    "correcta": 1,
-   "explicacion": "El hornero, famoso por su nido de barro con forma de horno, fue elegido ave nacional en 1928 por una encuesta entre escolares."
+   "explicacion": "El hornero, famoso por su nido de barro con forma de horno, fue elegido ave nacional en 1928 por una encuesta entre escolares.",
+   "fuente": "Aves Argentinas (Asociación Ornitológica del Plata)",
+   "url": "https://www.avesargentinas.org.ar",
+   "dudosa": true
   },
   {
    "id": "ju-24",
-   "chip": "Juego",
-   "linea": "¿Quién compuso la música del Himno Nacional? Tocá para responder",
+   "tema": "musica",
+   "nivel": "media",
    "titulo": "¿Quién compuso la música del Himno Nacional Argentino?",
-   "texto": "",
-   "fuente": "Ministerio de Cultura de la Nación",
-   "dudosa": false,
    "opciones": [
     "Vicente López y Planes",
     "Juan Pedro Esnaola",
     "Blas Parera"
    ],
    "correcta": 2,
-   "explicacion": "La música es de Blas Parera y la letra de Vicente López y Planes. La Asamblea del Año XIII lo aprobó en 1813."
+   "explicacion": "La música es de Blas Parera y la letra de Vicente López y Planes. La Asamblea del Año XIII lo aprobó en 1813.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-25",
-   "chip": "Juego",
-   "linea": "¿Qué instrumento es el alma del tango? Tocá para responder",
+   "tema": "musica",
+   "nivel": "facil",
    "titulo": "¿Qué instrumento de fuelle se volvió el sonido característico del tango?",
-   "texto": "",
-   "fuente": "Academia Nacional del Tango",
-   "dudosa": false,
    "opciones": [
     "El bandoneón",
     "El acordeón",
     "La armónica"
    ],
    "correcta": 0,
-   "explicacion": "El bandoneón llegó desde Alemania a fines del siglo XIX y se volvió inseparable del tango. Aníbal Troilo y Astor Piazzolla fueron dos de sus grandes intérpretes."
+   "explicacion": "El bandoneón llegó desde Alemania a fines del siglo XIX y se volvió inseparable del tango. Aníbal Troilo y Astor Piazzolla fueron dos de sus grandes intérpretes.",
+   "fuente": "Academia Nacional del Tango",
+   "url": "https://www.anacionaldeltango.org.ar",
+   "dudosa": false
   },
   {
    "id": "ju-26",
-   "chip": "Juego",
-   "linea": "¿Quién creó a Mafalda? Tocá para responder",
+   "tema": "cultura",
+   "nivel": "facil",
    "titulo": "¿Qué historietista creó a Mafalda?",
-   "texto": "",
-   "fuente": "Biblioteca Nacional Mariano Moreno",
-   "dudosa": false,
    "opciones": [
     "Quino",
     "Fontanarrosa",
     "Caloi"
    ],
    "correcta": 0,
-   "explicacion": "Mafalda es de Joaquín Salvador Lavado, Quino, que la publicó entre 1964 y 1973. Se tradujo a decenas de idiomas."
+   "explicacion": "Mafalda es de Joaquín Salvador Lavado, Quino, que la publicó entre 1964 y 1973. Se tradujo a decenas de idiomas.",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "url": "https://www.bn.gov.ar",
+   "dudosa": false
   },
   {
    "id": "ju-27",
-   "chip": "Juego",
-   "linea": "¿Cómo se llama el aguinaldo en la ley? Tocá para responder",
+   "tema": "trabajo",
+   "nivel": "facil",
    "titulo": "En la ley y en el recibo de sueldo, ¿cómo se llama el aguinaldo?",
-   "texto": "Pista: en el recibo aparece con una sigla de tres letras.",
-   "fuente": "Ley 20.744 de Contrato de Trabajo, art. 121 — Ministerio de Capital Humano",
-   "dudosa": false,
    "opciones": [
     "Sueldo Anual Complementario",
     "Premio Anual Laboral",
     "Bono Semestral Fijo"
    ],
    "correcta": 0,
-   "explicacion": "Se llama Sueldo Anual Complementario (SAC) y está en la Ley de Contrato de Trabajo. Se paga en dos cuotas, a mitad y a fin de año."
+   "explicacion": "Se llama Sueldo Anual Complementario (SAC) y está en la Ley de Contrato de Trabajo. Se paga en dos cuotas, a mitad y a fin de año.",
+   "fuente": "Ley 20.744 de Contrato de Trabajo, art. 121 — Ministerio de Capital Humano",
+   "url": "https://www.argentina.gob.ar/trabajo",
+   "dudosa": false
   },
   {
    "id": "ju-28",
-   "chip": "Juego",
-   "linea": "¿Qué número tiene la Ley de Contrato de Trabajo? Tocá para responder",
+   "tema": "trabajo",
+   "nivel": "media",
    "titulo": "¿Qué número tiene la Ley de Contrato de Trabajo?",
-   "texto": "",
-   "fuente": "Infoleg — Ministerio de Justicia",
-   "dudosa": false,
    "opciones": [
     "Ley 24.240",
     "Ley 20.744",
     "Ley 23.551"
    ],
    "correcta": 1,
-   "explicacion": "Es la Ley 20.744, de 1974, que regula la relación entre trabajador y empleador. La 23.551 es la de asociaciones sindicales y la 24.240 la de defensa del consumidor."
+   "explicacion": "Es la Ley 20.744, de 1974, que regula la relación entre trabajador y empleador. La 23.551 es la de asociaciones sindicales y la 24.240 la de defensa del consumidor.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
   },
   {
    "id": "ju-29",
-   "chip": "Juego",
-   "linea": "¿Qué dinosaurio gigante se halló en Plaza Huincul? Tocá para responder",
+   "tema": "naturaleza",
+   "nivel": "media",
    "titulo": "¿Qué dinosaurio gigante se descubrió cerca de Plaza Huincul, en Neuquén?",
-   "texto": "",
-   "fuente": "Museo Municipal Carmen Funes (Plaza Huincul)",
-   "dudosa": false,
    "opciones": [
     "Giganotosaurus",
     "Carnotaurus",
     "Argentinosaurus"
    ],
    "correcta": 2,
-   "explicacion": "El Argentinosaurus, un herbívoro de cuello largo, se halló a fines de los ochenta. Es uno de los animales terrestres más grandes que se conocen."
+   "explicacion": "El Argentinosaurus, un herbívoro de cuello largo, se halló a fines de los ochenta. Es uno de los animales terrestres más grandes que se conocen.",
+   "fuente": "Museo Municipal Carmen Funes (Plaza Huincul)",
+   "url": "https://www.conicet.gov.ar",
+   "dudosa": false
   },
   {
    "id": "ju-30",
-   "chip": "Juego",
-   "linea": "¿Cuándo fue la primera transmisión de radio? Tocá para responder",
+   "tema": "inventos",
+   "nivel": "media",
    "titulo": "¿En qué año se hizo la primera transmisión de radio en la Argentina?",
-   "texto": "",
-   "fuente": "Ente Nacional de Comunicaciones (ENACOM)",
-   "dudosa": false,
    "opciones": [
     "1920",
     "1935",
     "1910"
    ],
    "correcta": 0,
-   "explicacion": "El 27 de agosto de 1920 «Los locos de la azotea» transmitieron una ópera desde el Teatro Coliseo de Buenos Aires. Por eso ese día es el Día de la Radiodifusión."
+   "explicacion": "El 27 de agosto de 1920 «Los locos de la azotea» transmitieron una ópera desde el Teatro Coliseo de Buenos Aires. Por eso ese día es el Día de la Radiodifusión.",
+   "fuente": "Ente Nacional de Comunicaciones (ENACOM)",
+   "url": "https://www.enacom.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-01",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el planeta más grande del sistema solar?",
+   "opciones": [
+    "Saturno",
+    "Júpiter",
+    "Neptuno"
+   ],
+   "correcta": 1,
+   "explicacion": "Júpiter es un gigante gaseoso tan grande que cabrían más de mil Tierras en su interior. Su Gran Mancha Roja es una tormenta que se observa desde hace siglos y que, por sí sola, es más ancha que nuestro planeta.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-02",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿Qué planeta es conocido como el «planeta rojo»?",
+   "opciones": [
+    "Venus",
+    "Mercurio",
+    "Marte"
+   ],
+   "correcta": 2,
+   "explicacion": "Marte debe su color al óxido de hierro que cubre su suelo, algo parecido al herrumbre. Tiene el volcán más alto del sistema solar, el Monte Olimpo, que mide casi tres veces la altura del Everest.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-03",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿Cuántos planetas tiene el sistema solar?",
+   "opciones": [
+    "Ocho",
+    "Nueve",
+    "Siete"
+   ],
+   "correcta": 0,
+   "explicacion": "Son ocho: Mercurio, Venus, Tierra, Marte, Júpiter, Saturno, Urano y Neptuno. Plutón dejó de contarse como planeta en 2006, cuando la Unión Astronómica Internacional lo reclasificó como planeta enano, por no haber despejado su órbita.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-04",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿Qué fenómeno de los mares y océanos provoca principalmente la Luna?",
+   "opciones": [
+    "Las corrientes marinas",
+    "Las mareas",
+    "Los tsunamis"
+   ],
+   "correcta": 1,
+   "explicacion": "La atracción gravitatoria de la Luna estira un poco el agua de los océanos y produce la subida y bajada de las mareas. En el Río de la Plata también influyen el viento y las lluvias, por eso a veces el río sube más de lo previsto.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-05",
+   "tema": "ciencia",
+   "nivel": "media",
+   "titulo": "¿Qué planeta es el más caliente del sistema solar?",
+   "opciones": [
+    "Mercurio",
+    "Marte",
+    "Venus"
+   ],
+   "correcta": 2,
+   "explicacion": "Aunque Mercurio está más cerca del Sol, Venus es más caluroso: su atmósfera de dióxido de carbono atrapa el calor y la superficie supera los 460 grados. Es un efecto invernadero extremo.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-06",
+   "tema": "ciencia",
+   "nivel": "media",
+   "titulo": "¿Cuánto tarda en llegar a la Tierra la luz del Sol?",
+   "opciones": [
+    "Unos 8 minutos",
+    "Unos 8 segundos",
+    "Unas 8 horas"
+   ],
+   "correcta": 0,
+   "explicacion": "La luz viaja a unos 300.000 kilómetros por segundo y el Sol está a unos 150 millones de kilómetros, así que tarda cerca de 8 minutos en llegar. Si el Sol se apagara, lo notaríamos recién después de ese tiempo.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-07",
+   "tema": "ciencia",
+   "nivel": "dificil",
+   "titulo": "¿Cada cuántos días aproximadamente se repite la misma fase de la Luna?",
+   "opciones": [
+    "7 días",
+    "29 días y medio",
+    "15 días"
+   ],
+   "correcta": 1,
+   "explicacion": "La Luna tarda unos 29,5 días en pasar de luna nueva a luna nueva. Es menos que un mes del calendario pero más que los 27,3 días que demora en dar una vuelta completa a la Tierra, porque la Tierra también se desplaza alrededor del Sol.",
+   "fuente": "NASA",
+   "url": "https://www.nasa.gov",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-08",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿A qué temperatura hierve el agua al nivel del mar?",
+   "opciones": [
+    "90 °C",
+    "120 °C",
+    "100 °C"
+   ],
+   "correcta": 2,
+   "explicacion": "A nivel del mar y presión normal el agua hierve a 100 grados Celsius. En la montaña, como en la ciudad de La Quiaca, la presión es menor y el agua hierve antes, por eso los alimentos tardan más en cocinarse.",
+   "fuente": "CONICET",
+   "url": "https://www.conicet.gov.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-09",
+   "tema": "cuerpo",
+   "nivel": "media",
+   "titulo": "¿Qué porcentaje aproximado del cuerpo de un adulto es agua?",
+   "opciones": [
+    "Alrededor del 60 %",
+    "Alrededor del 30 %",
+    "Alrededor del 90 %"
+   ],
+   "correcta": 0,
+   "explicacion": "El agua representa cerca del 60 % del peso de un adulto y participa en casi todo lo que hace el organismo, desde regular la temperatura hasta transportar nutrientes. Por eso se recomienda tomar agua a lo largo del día.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-10",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿Cuál de estos materiales conduce mejor la electricidad?",
+   "opciones": [
+    "Goma",
+    "Cobre",
+    "Vidrio"
+   ],
+   "correcta": 1,
+   "explicacion": "El cobre es un excelente conductor y por eso se usa en la mayoría de los cables de las instalaciones eléctricas. La goma y el plástico, en cambio, son aislantes y recubren los cables para que nadie reciba una descarga.",
+   "fuente": "CONICET",
+   "url": "https://www.conicet.gov.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-11",
+   "tema": "ciencia",
+   "nivel": "facil",
+   "titulo": "¿Cuántos voltios tiene la tensión de la red eléctrica domiciliaria en la Argentina?",
+   "opciones": [
+    "110 voltios",
+    "380 voltios",
+    "220 voltios"
+   ],
+   "correcta": 2,
+   "explicacion": "En los hogares argentinos la tensión es de 220 voltios con una frecuencia de 50 hertz. Por eso un aparato pensado para 110 voltios, como los que se usan en Estados Unidos, necesita un transformador para funcionar acá.",
+   "fuente": "Ente Nacional Regulador de la Electricidad (ENRE)",
+   "url": "https://www.enre.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-12",
+   "tema": "inventos",
+   "nivel": "media",
+   "titulo": "¿Quién realizó en 1967 el primer bypass coronario con vena safena?",
+   "opciones": [
+    "René Favaloro",
+    "Luis Agote",
+    "Bernardo Houssay"
+   ],
+   "correcta": 0,
+   "explicacion": "El cirujano argentino René Favaloro lo hizo en la Cleveland Clinic, en Estados Unidos, usando una vena de la pierna para esquivar una arteria del corazón tapada. Años después volvió al país y fundó una fundación que lleva su nombre.",
+   "fuente": "Fundación Favaloro",
+   "url": "https://www.fundacionfavaloro.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-13",
+   "tema": "inventos",
+   "nivel": "dificil",
+   "titulo": "¿En qué año empezaron a circular en Buenos Aires los primeros colectivos?",
+   "opciones": [
+    "1908",
+    "1928",
+    "1948"
+   ],
+   "correcta": 1,
+   "explicacion": "Los primeros colectivos aparecieron en 1928, cuando algunos taxistas porteños empezaron a cobrar un boleto barato y a seguir un recorrido fijo con varios pasajeros a bordo. Con el tiempo, el invento se extendió por todo el país y se convirtió en el transporte más usado.",
+   "fuente": "Ministerio de Transporte de la Nación",
+   "url": "https://www.argentina.gob.ar/transporte",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-14",
+   "tema": "cocina",
+   "nivel": "facil",
+   "titulo": "¿Cuáles son los ingredientes básicos del dulce de leche?",
+   "opciones": [
+    "Leche y miel",
+    "Crema y chocolate",
+    "Leche y azúcar"
+   ],
+   "correcta": 2,
+   "explicacion": "El dulce de leche se hace cocinando leche con azúcar a fuego lento hasta que se espesa y, al caramelizarse, toma su color marrón. Es un símbolo de la cocina argentina y se usa en alfajores, panqueques, flanes y facturas.",
+   "fuente": "ANMAT — Código Alimentario Argentino",
+   "url": "https://www.argentina.gob.ar/anmat",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-15",
+   "tema": "inventos",
+   "nivel": "dificil",
+   "titulo": "¿Qué inventor argentino diseñó helicópteros en las décadas de 1910 y 1920?",
+   "opciones": [
+    "Raúl Pateras Pescara",
+    "Ladislao Biro",
+    "Juan Vucetich"
+   ],
+   "correcta": 0,
+   "explicacion": "Raúl Pateras Pescara, nacido en Buenos Aires, construyó helicópteros experimentales en Europa y en 1924 logró un récord de vuelo con uno de ellos. Sus ideas sobre el control de las palas anticiparon el funcionamiento de los helicópteros modernos.",
+   "fuente": "Museo Nacional de Aeronáutica — Ministerio de Defensa",
+   "url": "https://www.argentina.gob.ar/defensa",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-16",
+   "tema": "tecnologia",
+   "nivel": "media",
+   "titulo": "¿En qué ciudad tiene su sede la empresa INVAP, que construye satélites argentinos?",
+   "opciones": [
+    "Neuquén",
+    "San Carlos de Bariloche",
+    "Córdoba"
+   ],
+   "correcta": 1,
+   "explicacion": "INVAP nació en 1976 como empresa de la provincia de Río Negro y tiene su sede en San Carlos de Bariloche. Diseña y fabrica reactores nucleares, radares y satélites, y exporta tecnología a varios países.",
+   "fuente": "INVAP",
+   "url": "https://www.invap.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-17",
+   "tema": "tecnologia",
+   "nivel": "media",
+   "titulo": "¿Cómo se llama la empresa estatal que opera los satélites geoestacionarios de comunicaciones argentinos?",
+   "opciones": [
+    "CONAE",
+    "INTA",
+    "ARSAT"
+   ],
+   "correcta": 2,
+   "explicacion": "ARSAT opera los satélites ARSAT-1 y ARSAT-2, lanzados en 2014 y 2015 y construidos en el país por INVAP. Brindan servicios de televisión, datos y telefonía en toda la Argentina y gran parte de América.",
+   "fuente": "ARSAT",
+   "url": "https://www.arsat.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-18",
+   "tema": "tecnologia",
+   "nivel": "dificil",
+   "titulo": "¿Para qué sirven principalmente los satélites argentinos SAOCOM de la CONAE?",
+   "opciones": [
+    "Observar la Tierra con radar",
+    "Transmitir televisión",
+    "Explorar la Luna"
+   ],
+   "correcta": 0,
+   "explicacion": "Los SAOCOM llevan un radar que ve a través de las nubes y de noche. Miden, por ejemplo, la humedad del suelo para el campo y ayudan a seguir inundaciones e incendios. Son una de las misiones más importantes de la CONAE.",
+   "fuente": "CONAE — Ministerio de Ciencia",
+   "url": "https://www.argentina.gob.ar/ciencia/conae",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-19",
+   "tema": "tecnologia",
+   "nivel": "dificil",
+   "titulo": "¿En qué provincia está el Centro Espacial Teófilo Tabanera de la CONAE?",
+   "opciones": [
+    "Río Negro",
+    "Córdoba",
+    "Santa Fe"
+   ],
+   "correcta": 1,
+   "explicacion": "El Centro Espacial Teófilo Tabanera está en Falda del Cañete, provincia de Córdoba. Desde allí se controlan los satélites argentinos de observación de la Tierra y se reciben sus imágenes.",
+   "fuente": "CONAE — Ministerio de Ciencia",
+   "url": "https://www.argentina.gob.ar/ciencia/conae",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-20",
+   "tema": "tecnologia",
+   "nivel": "dificil",
+   "titulo": "¿Qué medía el instrumento Aquarius del satélite argentino SAC-D lanzado en 2011?",
+   "opciones": [
+    "La temperatura del aire",
+    "La capa de ozono",
+    "La salinidad del mar"
+   ],
+   "correcta": 2,
+   "explicacion": "El SAC-D/Aquarius fue una misión conjunta entre la CONAE y la NASA. Aquarius medía la cantidad de sal en la superficie de los océanos, un dato clave para estudiar las corrientes y el clima del planeta.",
+   "fuente": "CONAE — Ministerio de Ciencia",
+   "url": "https://www.argentina.gob.ar/ciencia/conae",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-21",
+   "tema": "cuerpo",
+   "nivel": "facil",
+   "titulo": "¿Cuántos huesos tiene el cuerpo de un adulto?",
+   "opciones": [
+    "206",
+    "106",
+    "306"
+   ],
+   "correcta": 0,
+   "explicacion": "Un adulto tiene 206 huesos, pero un bebé nace con unos 300 que se van uniendo a medida que crece. Más de la mitad de los huesos del cuerpo están en las manos y los pies.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-22",
+   "tema": "cuerpo",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el hueso más largo del cuerpo humano?",
+   "opciones": [
+    "La tibia",
+    "El fémur",
+    "El húmero"
+   ],
+   "correcta": 1,
+   "explicacion": "El fémur, el hueso del muslo, mide aproximadamente un cuarto de la altura de la persona. Es también uno de los más fuertes: soporta enormes cargas al caminar, correr y saltar.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-23",
+   "tema": "cuerpo",
+   "nivel": "facil",
+   "titulo": "¿Cuántas cavidades tiene el corazón humano?",
+   "opciones": [
+    "Dos",
+    "Tres",
+    "Cuatro"
+   ],
+   "correcta": 2,
+   "explicacion": "El corazón tiene cuatro cavidades: dos aurículas y dos ventrículos. Late unas 100.000 veces por día y bombea sangre a todo el cuerpo sin descansar jamás, desde antes del nacimiento hasta el último día de vida.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-24",
+   "tema": "cuerpo",
+   "nivel": "media",
+   "titulo": "¿Entre qué valores se considera normal la frecuencia cardíaca de un adulto en reposo?",
+   "opciones": [
+    "60 a 100 latidos por minuto",
+    "20 a 40 latidos por minuto",
+    "120 a 160 latidos por minuto"
+   ],
+   "correcta": 0,
+   "explicacion": "En reposo, el corazón de un adulto sano late entre 60 y 100 veces por minuto. Los deportistas entrenados suelen tener menos latidos, porque su corazón bombea más sangre con cada uno.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-25",
+   "tema": "cuerpo",
+   "nivel": "media",
+   "titulo": "¿Qué hormona, que se libera sobre todo de noche, ayuda a regular el sueño?",
+   "opciones": [
+    "Insulina",
+    "Melatonina",
+    "Adrenalina"
+   ],
+   "correcta": 1,
+   "explicacion": "La melatonina la produce una glándula del cerebro cuando oscurece y avisa al cuerpo que es hora de dormir. La luz de las pantallas por la noche puede demorar su liberación y hacer más difícil conciliar el sueño.",
+   "fuente": "CONICET",
+   "url": "https://www.conicet.gov.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-26",
+   "tema": "cuerpo",
+   "nivel": "media",
+   "titulo": "¿Contra qué enfermedad protege la vacuna Sabin?",
+   "opciones": [
+    "Sarampión",
+    "Tos convulsa",
+    "Poliomielitis"
+   ],
+   "correcta": 2,
+   "explicacion": "La vacuna Sabin, que se da en gotas, protege contra la poliomielitis, una enfermedad que puede causar parálisis. Gracias a la vacunación masiva, la polio está eliminada de las Américas desde 1994.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-27",
+   "tema": "cuerpo",
+   "nivel": "dificil",
+   "titulo": "¿Contra qué enfermedad protege la vacuna BCG, que se aplica a los recién nacidos?",
+   "opciones": [
+    "Formas graves de tuberculosis",
+    "Hepatitis A",
+    "Rubéola"
+   ],
+   "correcta": 0,
+   "explicacion": "La BCG se coloca al nacer y protege a los bebés de las formas graves de tuberculosis, como la meníngea. Deja una pequeña cicatriz en el brazo, y por eso muchos argentinos la reconocen en su propia piel.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-28",
+   "tema": "cuerpo",
+   "nivel": "facil",
+   "titulo": "¿Cómo son las vacunas del Calendario Nacional de Vacunación en la Argentina?",
+   "opciones": [
+    "Pagas y optativas",
+    "Gratuitas y obligatorias",
+    "Solo para adultos"
+   ],
+   "correcta": 1,
+   "explicacion": "Las vacunas del Calendario Nacional se dan sin costo en vacunatorios y hospitales públicos y son obligatorias, según la ley 27.491. Cubren desde el recién nacido hasta la adultez y la vejez, para proteger a cada persona y a toda la comunidad.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-29",
+   "tema": "cuerpo",
+   "nivel": "facil",
+   "titulo": "¿Qué vitamina produce el cuerpo cuando la piel recibe sol?",
+   "opciones": [
+    "Vitamina C",
+    "Vitamina B12",
+    "Vitamina D"
+   ],
+   "correcta": 2,
+   "explicacion": "Con la luz solar la piel fabrica vitamina D, que ayuda al cuerpo a absorber el calcio y a mantener los huesos firmes. Con unos minutos de sol varias veces por semana suele alcanzar, siempre con protección en las horas fuertes.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-30",
+   "tema": "cuerpo",
+   "nivel": "media",
+   "titulo": "¿Cuál es el órgano más grande del cuerpo humano?",
+   "opciones": [
+    "La piel",
+    "El hígado",
+    "El pulmón"
+   ],
+   "correcta": 0,
+   "explicacion": "Es la piel: en un adulto cubre cerca de dos metros cuadrados y pesa varios kilos. Protege del frío, de los golpes y de los microbios, y además nos permite sentir el tacto.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-31",
+   "tema": "cuerpo",
+   "nivel": "media",
+   "titulo": "¿Qué órgano produce la insulina, hormona que controla el azúcar en sangre?",
+   "opciones": [
+    "El estómago",
+    "El páncreas",
+    "El riñón"
+   ],
+   "correcta": 1,
+   "explicacion": "El páncreas produce la insulina, que permite que el azúcar de la sangre entre a las células y se use como energía. Cuando falla, aparece la diabetes, una enfermedad que se controla con alimentación, ejercicio y tratamiento médico.",
+   "fuente": "Ministerio de Salud de la Nación",
+   "url": "https://www.argentina.gob.ar/salud",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-32",
+   "tema": "matematica",
+   "nivel": "facil",
+   "titulo": "¿Cuántos minutos tiene un día completo?",
+   "opciones": [
+    "1.240",
+    "2.400",
+    "1.440"
+   ],
+   "correcta": 2,
+   "explicacion": "Un día tiene 24 horas y cada hora, 60 minutos, así que 24 por 60 da 1.440 minutos. Es una cuenta simple que sirve para dimensionar cuánto tiempo pasamos trabajando, durmiendo y descansando.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-33",
+   "tema": "matematica",
+   "nivel": "facil",
+   "titulo": "¿Cuánto es el 10 % de 250?",
+   "opciones": [
+    "25",
+    "10",
+    "50"
+   ],
+   "correcta": 0,
+   "explicacion": "Para sacar el 10 % de un número se lo divide por 10, así que 250 dividido 10 da 25. Es un truco útil para calcular rápido propinas, descuentos y recargos.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-34",
+   "tema": "matematica",
+   "nivel": "facil",
+   "titulo": "Si un sueldo de $100.000 aumenta un 10 %, ¿cuánto pasa a cobrarse?",
+   "opciones": [
+    "$101.000",
+    "$110.000",
+    "$120.000"
+   ],
+   "correcta": 1,
+   "explicacion": "El 10 % de 100.000 es 10.000, y al sumarlo queda 110.000. Ojo: un aumento del 10 % no es lo mismo que sumar 10 pesos, porque el porcentaje siempre se calcula sobre el valor de partida.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-35",
+   "tema": "matematica",
+   "nivel": "media",
+   "titulo": "¿Cuántos segundos tiene una hora?",
+   "opciones": [
+    "360",
+    "6.000",
+    "3.600"
+   ],
+   "correcta": 2,
+   "explicacion": "Una hora tiene 60 minutos y cada minuto, 60 segundos, así que 60 por 60 da 3.600 segundos. De ahí sale también que un día completo tenga 86.400 segundos, una cifra que conviene tener presente en cualquier cuenta de tiempo.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-36",
+   "tema": "matematica",
+   "nivel": "media",
+   "titulo": "¿Cuántos mililitros hay en un litro y cuarto?",
+   "opciones": [
+    "1.250",
+    "1.025",
+    "1.400"
+   ],
+   "correcta": 0,
+   "explicacion": "Un litro son 1.000 mililitros y un cuarto de litro son 250 mililitros, así que un litro y cuarto son 1.250. Esa cuenta aparece al leer envases de gaseosas, jugos y agua mineral.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-37",
+   "tema": "matematica",
+   "nivel": "dificil",
+   "titulo": "Si 5 máquinas hacen 5 piezas en 5 minutos, ¿cuánto tardan 100 máquinas en hacer 100 piezas?",
+   "opciones": [
+    "100 minutos",
+    "5 minutos",
+    "20 minutos"
+   ],
+   "correcta": 1,
+   "explicacion": "Cada máquina hace una pieza en 5 minutos. Entonces, 100 máquinas hacen 100 piezas en esos mismos 5 minutos, trabajando todas a la vez. Es un clásico de la lógica donde la intuición suele fallar y hace pensar en cien minutos.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-38",
+   "tema": "matematica",
+   "nivel": "media",
+   "titulo": "¿Cuál de estos números es primo?",
+   "opciones": [
+    "21",
+    "27",
+    "29"
+   ],
+   "correcta": 2,
+   "explicacion": "Un número primo solo se divide por 1 y por sí mismo. El 29 cumple, mientras que 21 se divide por 3 y por 7, y 27 por 3 y por 9. Los primos son la base de la seguridad de las claves y las compras en línea.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-39",
+   "tema": "lenguaje",
+   "nivel": "media",
+   "titulo": "¿De qué idioma viene la palabra «laburo»?",
+   "opciones": [
+    "Del italiano",
+    "Del francés",
+    "Del portugués"
+   ],
+   "correcta": 0,
+   "explicacion": "«Laburo» viene del italiano «lavoro», que significa trabajo. Llegó con la gran inmigración de fines del siglo XIX y principios del XX y se hizo lunfardo, de donde nació también el verbo «laburar».",
+   "fuente": "Academia Argentina de Letras",
+   "url": "https://www.aal.edu.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-40",
+   "tema": "lenguaje",
+   "nivel": "facil",
+   "titulo": "¿De qué idioma viene el saludo «chau»?",
+   "opciones": [
+    "Del inglés",
+    "Del italiano",
+    "Del alemán"
+   ],
+   "correcta": 1,
+   "explicacion": "«Chau» viene del italiano «ciao», que alguna vez significó algo así como «a su servicio». En el Río de la Plata se adaptó con esa grafía y hoy se usa en todo el país para despedirse.",
+   "fuente": "Real Academia Española — Diccionario de la lengua española",
+   "url": "https://dle.rae.es",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-41",
+   "tema": "lenguaje",
+   "nivel": "facil",
+   "titulo": "¿Qué significa «fiaca» en el habla argentina?",
+   "opciones": [
+    "Hambre",
+    "Frío",
+    "Pereza o desgano"
+   ],
+   "correcta": 2,
+   "explicacion": "«Fiaca» es el desgano, las pocas ganas de hacer algo. Viene del italiano «fiacca», cansancio, y se usa mucho en frases como «tengo fiaca» un lunes a la mañana, cuando cuesta arrancar la semana.",
+   "fuente": "Real Academia Española — Diccionario de la lengua española",
+   "url": "https://dle.rae.es",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-42",
+   "tema": "lenguaje",
+   "nivel": "facil",
+   "titulo": "¿Cuál es la forma voseante de «tú tienes»?",
+   "opciones": [
+    "Vos tenés",
+    "Vos tienes",
+    "Tú tenés"
+   ],
+   "correcta": 0,
+   "explicacion": "El voseo usa «vos» en lugar de «tú» y cambia la terminación del verbo: «vos tenés», «vos querés». Se usa en la Argentina y también en Uruguay, Paraguay y varios países de Centroamérica.",
+   "fuente": "Academia Argentina de Letras",
+   "url": "https://www.aal.edu.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-43",
+   "tema": "lenguaje",
+   "nivel": "media",
+   "titulo": "¿Qué fue, sobre todo, lo que enriqueció el lunfardo porteño a fines del siglo XIX?",
+   "opciones": [
+    "La llegada del tren",
+    "La inmigración europea",
+    "La radio"
+   ],
+   "correcta": 1,
+   "explicacion": "El lunfardo nació en Buenos Aires y el Río de la Plata y se llenó de palabras de los idiomas de los inmigrantes, en especial del italiano. El tango lo difundió luego a todo el país.",
+   "fuente": "Academia Argentina de Letras",
+   "url": "https://www.aal.edu.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-44",
+   "tema": "lenguaje",
+   "nivel": "dificil",
+   "titulo": "¿Cuántas letras tiene hoy el abecedario del español?",
+   "opciones": [
+    "29",
+    "30",
+    "27"
+   ],
+   "correcta": 2,
+   "explicacion": "Desde 2010 la Real Academia reconoce 27 letras: las 26 del alfabeto latino más la ñ. «Ch» y «ll» dejaron de contarse como letras separadas, aunque siguen siendo dígrafos de uso diario.",
+   "fuente": "Real Academia Española — Diccionario de la lengua española",
+   "url": "https://dle.rae.es",
+   "dudosa": false
+  },
+  {
+   "id": "ju-s-45",
+   "tema": "lenguaje",
+   "nivel": "media",
+   "titulo": "¿Qué letra del español no tiene sonido propio en la mayoría de las palabras?",
+   "opciones": [
+    "La h",
+    "La q",
+    "La x"
+   ],
+   "correcta": 0,
+   "explicacion": "La «h» es muda en español, salvo en el dígrafo «ch» y en algunas palabras prestadas como «hámster». Su presencia se explica por el origen de las palabras, como «hombre» y «hacer».",
+   "fuente": "Real Academia Española — Diccionario de la lengua española",
+   "url": "https://dle.rae.es",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-01",
+   "tema": "musica",
+   "nivel": "facil",
+   "titulo": "¿En qué ciudad murió Carlos Gardel en un accidente aéreo en 1935?",
+   "opciones": [
+    "Medellín",
+    "Bogotá",
+    "Cali"
+   ],
+   "correcta": 0,
+   "explicacion": "Gardel viajaba de gira por Colombia cuando su avión chocó con otro durante el despegue en el aeropuerto de Medellín, el 24 de junio de 1935.  Su figura se volvió leyenda: se dice que «cada día canta mejor».",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-02",
+   "tema": "musica",
+   "nivel": "media",
+   "titulo": "¿Qué músico marplatense renovó el género con el «tango nuevo», mezclándolo con jazz y música clásica?",
+   "opciones": [
+    "Aníbal Troilo",
+    "Astor Piazzolla",
+    "Osvaldo Pugliese"
+   ],
+   "correcta": 1,
+   "explicacion": "Astor Piazzolla, nacido en Mar del Plata en 1921, llevó el tango a las salas de concierto con obras como «Adiós Nonino» y «Libertango». Al principio lo criticaron mucho los puristas, pero hoy es el tanguista argentino más escuchado en el mundo.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-03",
+   "tema": "musica",
+   "nivel": "facil",
+   "titulo": "¿Qué apodo tenía la cantante folklórica tucumana Mercedes Sosa?",
+   "opciones": [
+    "La Morocha",
+    "La Gringa",
+    "La Negra"
+   ],
+   "correcta": 2,
+   "explicacion": "Mercedes Sosa nació en San Miguel de Tucumán en 1935 y la llamaban «la Negra» con cariño. Su voz llevó el folklore y el canto latinoamericano por todo el mundo, con temas como «Gracias a la vida» y «Todo cambia».",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-04",
+   "tema": "musica",
+   "nivel": "media",
+   "titulo": "¿En qué localidad cordobesa se hace cada enero el Festival Nacional de Folklore, desde 1961?",
+   "opciones": [
+    "Cosquín",
+    "Jesús María",
+    "Villa Carlos Paz"
+   ],
+   "correcta": 0,
+   "explicacion": "El Festival Nacional de Folklore de Cosquín nació en 1961 y se hace en la plaza Próspero Molina. Allí se consagraron generaciones de artistas, y el escenario Atahualpa Yupanqui es una de las grandes vidrieras del género en el país.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-05",
+   "tema": "musica",
+   "nivel": "facil",
+   "titulo": "¿Con qué dúo comenzó su carrera Charly García, junto a Nito Mestre?",
+   "opciones": [
+    "Almendra",
+    "Sui Generis",
+    "Los Gatos"
+   ],
+   "correcta": 1,
+   "explicacion": "Sui Generis nació a fines de los años sesenta y se volvió un símbolo del rock nacional con canciones como «Rasguña las piedras» y «Canción para mi muerte». Charly García siguió después con Serú Girán y una larga carrera solista.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-06",
+   "tema": "musica",
+   "nivel": "media",
+   "titulo": "¿Qué banda fundó Luis Alberto Spinetta en 1967, con «Muchacha ojos de papel» como gran éxito?",
+   "opciones": [
+    "Pescado Rabioso",
+    "Invisible",
+    "Almendra"
+   ],
+   "correcta": 2,
+   "explicacion": "Spinetta formó Almendra siendo adolescente, en Buenos Aires, y el grupo grabó solo dos discos en poco tiempo. Su música, poética y melódica, cambió el rock en castellano. Más tarde Spinetta creó Pescado Rabioso, Invisible y Spinetta Jade.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-07",
+   "tema": "musica",
+   "nivel": "media",
+   "titulo": "¿Qué tema de Los Gatos, de 1967, se considera el punto de partida del rock nacional?",
+   "opciones": [
+    "La balsa",
+    "Muchacha ojos de papel",
+    "Rasguña las piedras"
+   ],
+   "correcta": 0,
+   "explicacion": "«La balsa», escrita por Litto Nebbia y Tanguito, fue el primer gran éxito del rock cantado en castellano y vendió cientos de miles de copias. Los Gatos eran de Rosario y llegaron a Buenos Aires para grabar el disco.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-08",
+   "tema": "musica",
+   "nivel": "facil",
+   "titulo": "¿Cómo se llama la cumbia que nació en barrios del Gran Buenos Aires a fines de los años noventa?",
+   "opciones": [
+    "Cuarteto",
+    "Cumbia villera",
+    "Chamamé"
+   ],
+   "correcta": 1,
+   "explicacion": "La cumbia villera surgió hacia 1999, con letras que contaban la vida de los barrios populares del conurbano. Grupos como Damas Gratis o Pibes Chorros la llevaron a bailes y radios, y generó debate por sus textos y su sonido electrónico.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-09",
+   "tema": "musica",
+   "nivel": "media",
+   "titulo": "¿Qué ritmo correntino fue declarado Patrimonio Cultural Inmaterial por la Unesco en 2020?",
+   "opciones": [
+    "La chacarera",
+    "La zamba",
+    "El chamamé"
+   ],
+   "correcta": 2,
+   "explicacion": "El chamamé se baila y se canta en Corrientes, el Litoral y países vecinos, con acordeón, guitarra y bandoneón. En diciembre de 2020 la Unesco lo incluyó en su lista de patrimonio inmaterial, un reconocimiento a su valor cultural.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-10",
+   "tema": "musica",
+   "nivel": "dificil",
+   "titulo": "¿En qué año declaró la Unesco al tango como Patrimonio Cultural Inmaterial de la Humanidad?",
+   "opciones": [
+    "2009",
+    "1999",
+    "2019"
+   ],
+   "correcta": 0,
+   "explicacion": "En 2009 la Unesco reconoció al tango rioplatense como patrimonio inmaterial, con candidatura conjunta de Argentina y Uruguay. El tango nació a fines del siglo XIX en los arrabales de Buenos Aires y Montevideo, y hoy se baila en todo el mundo.",
+   "fuente": "Unesco — Patrimonio Cultural Inmaterial",
+   "url": "https://ich.unesco.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-11",
+   "tema": "cine",
+   "nivel": "media",
+   "titulo": "¿Qué película argentina ganó en 1986 el primer Oscar a mejor película extranjera para el país?",
+   "opciones": [
+    "El secreto de sus ojos",
+    "La historia oficial",
+    "Esperando la carroza"
+   ],
+   "correcta": 1,
+   "explicacion": "«La historia oficial», dirigida por Luis Puenzo y protagonizada por Norma Aleandro y Héctor Alterio, ganó el Oscar a mejor película de habla no inglesa. Fue la primera vez que una película latinoamericana recibía esa estatuilla.",
+   "fuente": "Museo del Cine — Ciudad de Buenos Aires",
+   "url": "https://www.buenosaires.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-12",
+   "tema": "cine",
+   "nivel": "facil",
+   "titulo": "¿Qué actor protagonizó «El secreto de sus ojos», ganadora del Oscar a mejor película extranjera en 2010?",
+   "opciones": [
+    "Guillermo Francella",
+    "Oscar Martínez",
+    "Ricardo Darín"
+   ],
+   "correcta": 2,
+   "explicacion": "La película de Juan José Campanella, estrenada en 2009, tiene a Ricardo Darín y Soledad Villamil como protagonistas. Fue el segundo Oscar para el cine argentino, y la escena del partido de fútbol filmada en un solo plano es muy famosa.",
+   "fuente": "INCAA — Instituto Nacional de Cine y Artes Audiovisuales",
+   "url": "https://www.argentina.gob.ar/cultura",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-13",
+   "tema": "cine",
+   "nivel": "facil",
+   "titulo": "En la película «Esperando la carroza», ¿cómo se llama la abuela que enloquece a toda la familia?",
+   "opciones": [
+    "Mamá Cora",
+    "Doña Rosa",
+    "Tita"
+   ],
+   "correcta": 0,
+   "explicacion": "Esta comedia de Alejandro Doria, de 1985, tiene a China Zorrilla como Mamá Cora, una abuela que pone en aprietos a sus hijos, entre enredos y discusiones de familia. Es una de las comedias argentinas más queridas y repetidas.",
+   "fuente": "INCAA — Instituto Nacional de Cine y Artes Audiovisuales",
+   "url": "https://www.argentina.gob.ar/cultura",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-14",
+   "tema": "cine",
+   "nivel": "facil",
+   "titulo": "¿Qué película argentina de 2014, de seis historias, fue nominada al Oscar a mejor película extranjera?",
+   "opciones": [
+    "Nueve reinas",
+    "Relatos salvajes",
+    "Wakolda"
+   ],
+   "correcta": 1,
+   "explicacion": "«Relatos salvajes», dirigida por Damián Szifron, reúne seis episodios sobre personas que pierden el control. Fue un éxito de taquilla y, además de la nominación al Oscar, ganó premios Goya y Ariel. Contó con Ricardo Darín y Érica Rivas en el elenco.",
+   "fuente": "INCAA — Instituto Nacional de Cine y Artes Audiovisuales",
+   "url": "https://www.argentina.gob.ar/cultura",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-15",
+   "tema": "cotidiano",
+   "nivel": "dificil",
+   "titulo": "¿En qué año se emitió por primera vez televisión en la Argentina, con la primera transmisión de Canal 7?",
+   "opciones": [
+    "1945",
+    "1965",
+    "1951"
+   ],
+   "correcta": 2,
+   "explicacion": "La televisión argentina comenzó el 17 de octubre de 1951 con una transmisión desde la Plaza de Mayo, a cargo de la emisora que hoy es la Televisión Pública. Eran muy pocos los aparatos receptores en las casas de aquel entonces.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-16",
+   "tema": "cine",
+   "nivel": "media",
+   "titulo": "¿Quién dirigió «Nueve reinas» (2000), la película de estafadores con Ricardo Darín y Gastón Pauls?",
+   "opciones": [
+    "Fabián Bielinsky",
+    "Juan José Campanella",
+    "Damián Szifron"
+   ],
+   "correcta": 0,
+   "explicacion": "Bielinsky debutó con «Nueve reinas», una historia de dos estafadores en Buenos Aires que tuvo mucho éxito en el país y en el exterior. Tiempo después, Hollywood la rehizo con el título «Criminal». Bielinsky falleció en 2006, a los 47 años.",
+   "fuente": "INCAA — Instituto Nacional de Cine y Artes Audiovisuales",
+   "url": "https://www.argentina.gob.ar/cultura",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-17",
+   "tema": "literatura",
+   "nivel": "facil",
+   "titulo": "¿Qué novela de Julio Cortázar, de 1963, se puede leer en más de un orden?",
+   "opciones": [
+    "Bestiario",
+    "Rayuela",
+    "Los premios"
+   ],
+   "correcta": 1,
+   "explicacion": "«Rayuela» propone al lector dos recorridos: seguirla de corrido o saltar de capítulo en capítulo según un tablero de dirección. Gracias a su estructura y a sus personajes, La Maga y Oliveira, es una de las novelas más influyentes de América Latina.",
+   "fuente": "Educ.ar — Ministerio de Educación",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-18",
+   "tema": "literatura",
+   "nivel": "dificil",
+   "titulo": "¿Qué cargo ocupó Jorge Luis Borges desde 1955, aun cuando ya casi no veía?",
+   "opciones": [
+    "Director del Teatro Colón",
+    "Rector de la UBA",
+    "Director de la Biblioteca Nacional"
+   ],
+   "correcta": 2,
+   "explicacion": "Borges dirigió la Biblioteca Nacional entre 1955 y 1973. Su ceguera avanzaba con los años, y él mismo lo contó en un poema sobre la ironía de recibir a la vez «los libros y la noche». Es uno de los escritores más leídos de la lengua.",
+   "fuente": "Biblioteca Nacional Mariano Moreno",
+   "url": "https://www.bn.gov.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-19",
+   "tema": "literatura",
+   "nivel": "media",
+   "titulo": "¿En qué provincia nació Quino, el creador de Mafalda?",
+   "opciones": [
+    "Mendoza",
+    "Córdoba",
+    "Santa Fe"
+   ],
+   "correcta": 0,
+   "explicacion": "Joaquín Salvador Lavado, Quino, nació en Mendoza en 1932 y su apodo viene de un tío, también llamado Joaquín, al que le decían Quino. Mafalda salió por primera vez en 1964 y se tradujo a decenas de idiomas. Su autor murió en 2020.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-20",
+   "tema": "literatura",
+   "nivel": "facil",
+   "titulo": "¿Qué comida detesta Mafalda, la nena de las tiras de Quino?",
+   "opciones": [
+    "El puré",
+    "La sopa",
+    "Las lentejas"
+   ],
+   "correcta": 1,
+   "explicacion": "Mafalda rechaza la sopa con una intensidad casi política, y varias tiras muestran su pelea diaria con el plato. Pero detrás del chiste hay una nena preocupada por el mundo, la paz y los derechos humanos, que es lo que la volvió inolvidable.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-21",
+   "tema": "literatura",
+   "nivel": "media",
+   "titulo": "¿Cómo se llama la segunda parte del poema de José Hernández, publicada en 1879?",
+   "opciones": [
+    "Cruz y Fierro",
+    "Los hijos de Fierro",
+    "La vuelta de Martín Fierro"
+   ],
+   "correcta": 2,
+   "explicacion": "La primera parte, «El gaucho Martín Fierro», salió en 1872. La segunda, «La vuelta de Martín Fierro», apareció siete años después y cuenta el regreso del gaucho, el reencuentro con sus hijos y el consejo final a la juventud.",
+   "fuente": "Educ.ar — Ministerio de Educación",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-22",
+   "tema": "literatura",
+   "nivel": "facil",
+   "titulo": "¿Qué escritora y cantautora creó a «Manuelita, la tortuga»?",
+   "opciones": [
+    "María Elena Walsh",
+    "Alfonsina Storni",
+    "Silvina Ocampo"
+   ],
+   "correcta": 0,
+   "explicacion": "María Elena Walsh escribió canciones, poemas y cuentos para chicos como «Manuelita, ¿dónde vas?» y «El reino del revés». Muchas generaciones de argentinos las cantaron en la escuela, y ella es una de las voces más queridas de la infancia.",
+   "fuente": "Educ.ar — Ministerio de Educación",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-23",
+   "tema": "cocina",
+   "nivel": "media",
+   "titulo": "¿Qué provincia concentra la mayor parte de la producción de yerba mate de la Argentina?",
+   "opciones": [
+    "Corrientes",
+    "Misiones",
+    "Chaco"
+   ],
+   "correcta": 1,
+   "explicacion": "La yerba mate se cultiva sobre todo en Misiones, donde la tierra colorada y el clima húmedo le sientan bien. Corrientes ocupa el segundo lugar. En 2013 el mate fue declarado infusión nacional, y en la Argentina se toma casi todos los días.",
+   "fuente": "Instituto Nacional de la Yerba Mate",
+   "url": "https://www.argentina.gob.ar/inym",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-24",
+   "tema": "cocina",
+   "nivel": "media",
+   "titulo": "¿En qué ciudad nació el alfajor marplatense de la marca Havanna, en 1947?",
+   "opciones": [
+    "Rosario",
+    "Córdoba",
+    "Mar del Plata"
+   ],
+   "correcta": 2,
+   "explicacion": "Havanna nació en Mar del Plata en 1947 y su alfajor, relleno de dulce de leche y bañado en chocolate, se convirtió en símbolo de la ciudad. Hoy se vende en todo el país y hasta en el exterior.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-25",
+   "tema": "cocina",
+   "nivel": "media",
+   "titulo": "¿Cómo se llama la salsa del asado hecha con ajo, perejil, ají molido, orégano, vinagre y aceite?",
+   "opciones": [
+    "Chimichurri",
+    "Salsa criolla",
+    "Provenzal"
+   ],
+   "correcta": 0,
+   "explicacion": "El chimichurri se prepara con ajo, perejil, ají molido, orégano, vinagre y aceite, y se deja descansar para que los sabores se integren. Acompaña choripanes y carnes en todo el país. La salsa criolla, en cambio, lleva tomate, cebolla y morrón.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-26",
+   "tema": "cocina",
+   "nivel": "dificil",
+   "titulo": "¿En qué localidad tucumana se hace la Fiesta Nacional de la Empanada?",
+   "opciones": [
+    "Tafí del Valle",
+    "Famaillá",
+    "Concepción"
+   ],
+   "correcta": 1,
+   "explicacion": "Famaillá, en Tucumán, es conocida como la Capital Nacional de la Empanada y cada año celebra una fiesta con concursos de cocineros. La empanada tucumana lleva carne cortada a cuchillo, cebolla de verdeo y comino, y se hace al horno.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-27",
+   "tema": "cocina",
+   "nivel": "facil",
+   "titulo": "¿Qué guiso patrio de maíz, porotos y carne se come tradicionalmente cada 25 de mayo?",
+   "opciones": [
+    "El puchero",
+    "La carbonada",
+    "El locro"
+   ],
+   "correcta": 2,
+   "explicacion": "El locro es un guiso de maíz blanco, porotos, zapallo y carne que viene de la cocina de los pueblos andinos. Se come en días patrios, como el 25 de mayo y el 9 de julio, porque es abundante y calienta en pleno otoño e invierno.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-28",
+   "tema": "cotidiano",
+   "nivel": "facil",
+   "titulo": "¿Qué comida se come en muchos hogares argentinos el día 29 de cada mes?",
+   "opciones": [
+    "Ñoquis",
+    "Ravioles",
+    "Canelones"
+   ],
+   "correcta": 0,
+   "explicacion": "La costumbre de comer ñoquis el 29 viene de la inmigración italiana y de la economía de fin de mes: eran un plato barato cuando se acababa la plata. Muchos ponen billetes debajo del plato para atraer la suerte del próximo mes.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-29",
+   "tema": "cotidiano",
+   "nivel": "facil",
+   "titulo": "¿Qué fecha se celebra el Día del Amigo en la Argentina?",
+   "opciones": [
+    "9 de julio",
+    "20 de julio",
+    "14 de febrero"
+   ],
+   "correcta": 1,
+   "explicacion": "El Día del Amigo se festeja el 20 de julio, por una propuesta del argentino Enrique Febbraro en 1969, inspirada en la llegada del hombre a la Luna. La idea se extendió a otros países, aunque en el calendario oficial no es feriado.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-30",
+   "tema": "cotidiano",
+   "nivel": "media",
+   "titulo": "En el truco, ¿cuál es la carta más fuerte de todas?",
+   "opciones": [
+    "El ancho de bastos",
+    "El siete de espadas",
+    "El ancho de espadas"
+   ],
+   "correcta": 2,
+   "explicacion": "En el truco, el as de espadas, o ancho de espadas, es la carta más alta, seguida por el ancho de bastos y los sietes de espadas y oros. Es el juego de cartas argentino por excelencia, con gestos, señas y mucha picardía.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-31",
+   "tema": "deporte",
+   "nivel": "facil",
+   "titulo": "¿Quién fue el máximo goleador del Mundial de 1978, con seis goles?",
+   "opciones": [
+    "Mario Kempes",
+    "Daniel Passarella",
+    "Leopoldo Luque"
+   ],
+   "correcta": 0,
+   "explicacion": "Mario Alberto Kempes, nacido en Bell Ville, Córdoba, fue el goleador y el mejor jugador del Mundial 1978. Marcó dos goles en la final contra los Países Bajos, que Argentina ganó 3 a 1 en el tiempo suplementario.",
+   "fuente": "AFA — Asociación del Fútbol Argentino",
+   "url": "https://www.afa.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-32",
+   "tema": "deporte",
+   "nivel": "facil",
+   "titulo": "¿Qué arquero argentino ganó el Guante de Oro al mejor del Mundial de Qatar 2022?",
+   "opciones": [
+    "Franco Armani",
+    "Emiliano «Dibu» Martínez",
+    "Sergio Romero"
+   ],
+   "correcta": 1,
+   "explicacion": "Emiliano Martínez atajó penales decisivos ante los Países Bajos y Francia, y recibió el Guante de Oro. Además, la FIFA lo premió como mejor arquero del torneo. Su personalidad, sus gestos y sus bromas fueron comentados en todo el planeta.",
+   "fuente": "AFA — Asociación del Fútbol Argentino",
+   "url": "https://www.afa.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-33",
+   "tema": "deporte",
+   "nivel": "facil",
+   "titulo": "¿Contra qué selección ganó Argentina por penales la final del Mundial de Qatar 2022?",
+   "opciones": [
+    "Croacia",
+    "Países Bajos",
+    "Francia"
+   ],
+   "correcta": 2,
+   "explicacion": "La final del 18 de diciembre de 2022 terminó 3 a 3 tras el alargue y Argentina ganó 4 a 2 por penales. Messi y Mbappé marcaron goles. Fue la tercera Copa del Mundo para el país, tras las de 1978 y 1986.",
+   "fuente": "AFA — Asociación del Fútbol Argentino",
+   "url": "https://www.afa.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-34",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿Cuántas veces ganó el Balón de Oro Lionel Messi hasta 2023?",
+   "opciones": [
+    "8",
+    "6",
+    "7"
+   ],
+   "correcta": 0,
+   "explicacion": "Messi ganó el Balón de Oro en 2009, 2010, 2011, 2012, 2015, 2019, 2021 y 2023, lo que da ocho. Es el jugador con más premios de la historia, y el último lo recibió en 2023, siendo campeón del mundo.",
+   "fuente": "AFA — Asociación del Fútbol Argentino",
+   "url": "https://www.afa.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-35",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿Qué club argentino ganó más veces la Copa Libertadores de América?",
+   "opciones": [
+    "Boca Juniors",
+    "Independiente",
+    "River Plate"
+   ],
+   "correcta": 1,
+   "explicacion": "Independiente ganó siete Copas Libertadores: 1964, 1965, 1972, 1973, 1974, 1975 y 1984. Boca Juniors, con seis, es su perseguidor más cercano en la lista de campeones del continente, y River Plate suma cuatro títulos.",
+   "fuente": "AFA — Asociación del Fútbol Argentino",
+   "url": "https://www.afa.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-36",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿En qué estadio ganó Argentina la Copa América 2021 frente a Brasil?",
+   "opciones": [
+    "Mineirão",
+    "Morumbi",
+    "Maracaná"
+   ],
+   "correcta": 2,
+   "explicacion": "El 10 de julio de 2021, en el Maracaná de Río de Janeiro, Argentina venció 1 a 0 a Brasil con gol de Ángel Di María. Fue el primer título con la selección mayor para Messi, y cortó una racha de 28 años sin copas.",
+   "fuente": "AFA — Asociación del Fútbol Argentino",
+   "url": "https://www.afa.com.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-37",
+   "tema": "deporte",
+   "nivel": "dificil",
+   "titulo": "¿Qué selección ganó el primer Campeonato Mundial de básquet, jugado en Buenos Aires en 1950?",
+   "opciones": [
+    "Argentina",
+    "Estados Unidos",
+    "Brasil"
+   ],
+   "correcta": 0,
+   "explicacion": "Argentina fue campeón del primer Mundial de básquet, en 1950, jugando de local y venciendo a Estados Unidos en el partido decisivo. Es un hito que sirve de antecedente a la Generación Dorada, que ganó el oro olímpico en 2004.",
+   "fuente": "FIBA — Federación Internacional de Baloncesto",
+   "url": "https://www.fiba.basketball",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-38",
+   "tema": "deporte",
+   "nivel": "facil",
+   "titulo": "¿A quién venció Juan Martín del Potro en la final del US Open 2009?",
+   "opciones": [
+    "Rafael Nadal",
+    "Roger Federer",
+    "Novak Djokovic"
+   ],
+   "correcta": 1,
+   "explicacion": "Del Potro, tandilense de 20 años, le ganó a Federer en cinco sets y obtuvo su único Grand Slam. Con 1,98 metros de altura, su derecha potente era una de las más temidas del circuito.",
+   "fuente": "Asociación Argentina de Tenis",
+   "url": "https://www.aat.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-39",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿Qué tenista argentino ganó Roland Garros y el US Open en 1977?",
+   "opciones": [
+    "José Luis Clerc",
+    "Gastón Gaudio",
+    "Guillermo Vilas"
+   ],
+   "correcta": 2,
+   "explicacion": "Guillermo Vilas tuvo un año extraordinario en 1977, con títulos a granel y dos Grand Slams. Tenía una derecha poderosa y un gran estado físico, y fue el primer argentino en ganar torneos grandes. Además escribía poesía.",
+   "fuente": "Asociación Argentina de Tenis",
+   "url": "https://www.aat.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-40",
+   "tema": "deporte",
+   "nivel": "dificil",
+   "titulo": "¿En qué ciudad ganó Argentina su primera Copa Davis, en 2016?",
+   "opciones": [
+    "Zagreb",
+    "Lille",
+    "Glasgow"
+   ],
+   "correcta": 0,
+   "explicacion": "Argentina venció a Croacia 3 a 2 en Zagreb, en una final muy sufrida, y el quinto punto lo ganó Del Potro. Tras varias finales perdidas, esa fue la primera Copa Davis para el país.",
+   "fuente": "Asociación Argentina de Tenis",
+   "url": "https://www.aat.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-41",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿Qué jugadora de hockey, apodada «la Maradona del hockey», es considerada la mejor de la historia argentina?",
+   "opciones": [
+    "Magdalena Aicega",
+    "Luciana Aymar",
+    "Mariela Antoniska"
+   ],
+   "correcta": 1,
+   "explicacion": "Luciana Aymar, nacida en Rosario, ganó dos Mundiales con Las Leonas y varias medallas olímpicas. Fue elegida repetidas veces mejor jugadora del mundo, y su gambeta y su velocidad la hicieron comparable al número diez de fútbol.",
+   "fuente": "Federación Internacional de Hockey",
+   "url": "https://www.fih.hockey",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-42",
+   "tema": "deporte",
+   "nivel": "dificil",
+   "titulo": "¿Qué puesto lograron Los Pumas en el Mundial de rugby 2007, en Francia?",
+   "opciones": [
+    "Segundo",
+    "Cuarto",
+    "Tercero"
+   ],
+   "correcta": 2,
+   "explicacion": "Los Pumas vencieron al local, Francia, en el partido inaugural y terminaron en el tercer puesto tras ganarle de nuevo por el bronce. Fue el mejor resultado de su historia en un Mundial, y su estilo de juego inolvidable.",
+   "fuente": "World Rugby",
+   "url": "https://www.world.rugby",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-43",
+   "tema": "deporte",
+   "nivel": "dificil",
+   "titulo": "¿Qué piloto argentino le dio a Ferrari su primera victoria en la Fórmula 1, en 1951?",
+   "opciones": [
+    "José Froilán González",
+    "Onofre Marimón",
+    "Carlos Menditeguy"
+   ],
+   "correcta": 0,
+   "explicacion": "En Silverstone, el 14 de julio de 1951, José Froilán González venció a Juan Manuel Fangio y le dio a Ferrari su primer triunfo en un Gran Premio de F1. Lo apodaban «el Cabezón», y años después Enzo Ferrari lo recordó con mucho cariño.",
+   "fuente": "Automóvil Club Argentino",
+   "url": "https://www.aca.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-44",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿En qué Juegos Olímpicos ganó el fútbol masculino argentino su primera medalla de oro?",
+   "opciones": [
+    "Sídney 2000",
+    "Atenas 2004",
+    "Pekín 2008"
+   ],
+   "correcta": 1,
+   "explicacion": "En Atenas 2004, Argentina venció a Paraguay 1 a 0 con gol de Carlos Tévez y logró su primer oro olímpico en fútbol. Cuatro años después, en Pekín 2008, repitió el título bajo la dirección de Sergio Batista.",
+   "fuente": "Comité Olímpico Argentino",
+   "url": "https://www.coarg.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-c-45",
+   "tema": "deporte",
+   "nivel": "media",
+   "titulo": "¿En qué deporte ganó Paula Pareto la medalla de oro en los Juegos Olímpicos de Río 2016?",
+   "opciones": [
+    "Taekwondo",
+    "Boxeo",
+    "Judo"
+   ],
+   "correcta": 2,
+   "explicacion": "Paula «Peque» Pareto, de la categoría hasta 48 kilos, ganó el oro en Río 2016 y había ganado el bronce en Pekín 2008. Es médica además de deportista, y fue una de las alegrías olímpicas más recordadas del país.",
+   "fuente": "Comité Olímpico Argentino",
+   "url": "https://www.coarg.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-01",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Cuál es la capital de Australia?",
+   "opciones": [
+    "Sídney",
+    "Canberra",
+    "Melbourne"
+   ],
+   "correcta": 1,
+   "explicacion": "Es Canberra, una ciudad planificada que se construyó a propósito para ser capital. Se eligió porque Sídney y Melbourne, las dos ciudades más grandes, se disputaban el título y ninguna quería cederlo a la otra.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-02",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el océano más grande del planeta?",
+   "opciones": [
+    "Atlántico",
+    "Índico",
+    "Pacífico"
+   ],
+   "correcta": 2,
+   "explicacion": "El Pacífico ocupa cerca de un tercio de la superficie de la Tierra, más que todas las tierras emergidas juntas. Además guarda la fosa de las Marianas, el punto más profundo conocido de los océanos.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-03",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Con cuántos países limita la Argentina?",
+   "opciones": [
+    "Cinco",
+    "Seis",
+    "Cuatro"
+   ],
+   "correcta": 0,
+   "explicacion": "Limita con Chile, Bolivia, Paraguay, Brasil y Uruguay. La frontera con Chile es la más larga: recorre la cordillera de los Andes de punta a punta, y por eso es una de las más extensas del continente.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-04",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Cuál es la capital de la provincia de Santa Cruz?",
+   "opciones": [
+    "Río Gallegos",
+    "El Calafate",
+    "Caleta Olivia"
+   ],
+   "correcta": 0,
+   "explicacion": "La capital es Río Gallegos, sobre el estuario del río del mismo nombre, cerca del Atlántico. El Calafate es más conocida por los turistas gracias al glaciar Perito Moreno, pero es una ciudad mucho más chica.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-05",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Cuál es la capital de la provincia de Entre Ríos?",
+   "opciones": [
+    "Concordia",
+    "Gualeguaychú",
+    "Paraná"
+   ],
+   "correcta": 2,
+   "explicacion": "Es la ciudad de Paraná, sobre la barranca del río que le da el nombre, frente a Santa Fe. Fue capital de la Confederación Argentina entre 1853 y 1861, antes de la organización definitiva del país.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-06",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es la capital de la provincia de Misiones?",
+   "opciones": [
+    "Posadas",
+    "Oberá",
+    "Eldorado"
+   ],
+   "correcta": 0,
+   "explicacion": "Es Posadas, a orillas del río Paraná y frente a la ciudad paraguaya de Encarnación. Se la conoce como la capital nacional de la yerba mate, ya que la provincia concentra buena parte de su cultivo.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-07",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es la capital de Brasil?",
+   "opciones": [
+    "Río de Janeiro",
+    "San Pablo",
+    "Brasilia"
+   ],
+   "correcta": 2,
+   "explicacion": "Es Brasilia, una ciudad inaugurada en 1960 y diseñada desde cero por el urbanista Lucio Costa y el arquitecto Oscar Niemeyer. Antes, la capital era Río de Janeiro. Desde el aire, su trazado recuerda a un avión.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-08",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Cuál es la capital de Canadá?",
+   "opciones": [
+    "Toronto",
+    "Ottawa",
+    "Montreal"
+   ],
+   "correcta": 1,
+   "explicacion": "Es Ottawa, y no Toronto, que es la ciudad más poblada. Está en la provincia de Ontario, sobre el límite con Quebec, y se eligió en el siglo XIX como un punto intermedio entre las comunidades de habla inglesa y francesa.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-09",
+   "tema": "geografia",
+   "nivel": "dificil",
+   "titulo": "¿Cuál es la capital de Turquía?",
+   "opciones": [
+    "Estambul",
+    "Ankara",
+    "Esmirna"
+   ],
+   "correcta": 1,
+   "explicacion": "Es Ankara, y no Estambul, aunque esta última es mucho más grande y famosa. Ankara fue elegida como capital en 1923, al fundarse la república moderna, por estar en el centro del país y lejos de las costas.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-10",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Cuál es la capital de Suiza?",
+   "opciones": [
+    "Zúrich",
+    "Ginebra",
+    "Berna"
+   ],
+   "correcta": 2,
+   "explicacion": "Es Berna, una ciudad medieval de casco antiguo declarado patrimonio mundial. Zúrich es la más poblada y Ginebra la más conocida por los organismos internacionales, pero el gobierno federal funciona en Berna.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-11",
+   "tema": "geografia",
+   "nivel": "dificil",
+   "titulo": "¿Cuál es la capital de Nueva Zelanda?",
+   "opciones": [
+    "Auckland",
+    "Wellington",
+    "Christchurch"
+   ],
+   "correcta": 1,
+   "explicacion": "Es Wellington, en el extremo sur de la isla Norte, y no Auckland, que es la ciudad más grande. Se la conoce por el viento fuerte y porque es una de las capitales más australes del mundo.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-12",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es la capital de Egipto?",
+   "opciones": [
+    "Alejandría",
+    "El Cairo",
+    "Luxor"
+   ],
+   "correcta": 1,
+   "explicacion": "Es El Cairo, sobre el río Nilo. Muy cerca, en Guiza, se levantan las pirámides, entre ellas la de Keops, que durante unos cuatro mil años fue la construcción más alta que levantó el ser humano.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-13",
+   "tema": "geografia",
+   "nivel": "dificil",
+   "titulo": "¿Cuál es la capital de Marruecos?",
+   "opciones": [
+    "Casablanca",
+    "Marrakech",
+    "Rabat"
+   ],
+   "correcta": 2,
+   "explicacion": "Es Rabat, sobre la costa del Atlántico. Muchos creen que es Casablanca porque es la ciudad más grande y la más conocida, pero el gobierno y la monarquía tienen su sede en Rabat desde hace décadas.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-14",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el continente más extenso de la Tierra?",
+   "opciones": [
+    "África",
+    "Asia",
+    "América"
+   ],
+   "correcta": 1,
+   "explicacion": "Asia ocupa casi un tercio de las tierras emergidas y reúne a más de la mitad de la población mundial. Además tiene la cima más alta, el Everest, y el lugar más bajo de los continentes, el mar Muerto.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-15",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cómo se llama la montaña más alta del mundo?",
+   "opciones": [
+    "K2",
+    "Everest",
+    "Kilimanjaro"
+   ],
+   "correcta": 1,
+   "explicacion": "El Everest, en el Himalaya, entre Nepal y el Tíbet, supera los 8.800 metros sobre el nivel del mar. Lleva el nombre de George Everest, un topógrafo británico que dirigió el relevamiento de la India en el siglo XIX.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-16",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el río más caudaloso del mundo?",
+   "opciones": [
+    "Nilo",
+    "Amazonas",
+    "Misisipi"
+   ],
+   "correcta": 1,
+   "explicacion": "El Amazonas lleva más agua que cualquier otro río, tanto que descarga en el Atlántico cerca de una quinta parte del agua dulce que llega a los mares. Su cuenca cubre la selva más extensa del planeta.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-17",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿En qué continente queda el desierto del Sahara?",
+   "opciones": [
+    "Asia",
+    "África",
+    "Oceanía"
+   ],
+   "correcta": 1,
+   "explicacion": "El Sahara está en el norte de África y es el mayor desierto cálido del mundo, de tamaño similar al de los Estados Unidos. Aunque se lo imagina todo de arena, buena parte es suelo rocoso y de grava.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-18",
+   "tema": "geografia",
+   "nivel": "dificil",
+   "titulo": "¿Cómo se llama la base argentina más antigua de la Antártida, ocupada sin pausa desde 1904?",
+   "opciones": [
+    "Marambio",
+    "Orcadas",
+    "Esperanza"
+   ],
+   "correcta": 1,
+   "explicacion": "Es la base Orcadas, en la isla Laurie, de las Orcadas del Sur. Funciona de manera ininterrumpida desde 1904, y por eso es el establecimiento científico con presencia permanente más antiguo de la Antártida.",
+   "fuente": "Dirección Nacional del Antártico",
+   "url": "https://www.argentina.gob.ar/antartida",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-19",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Qué ciudad argentina se presenta como la más austral del mundo?",
+   "opciones": [
+    "Ushuaia",
+    "Río Grande",
+    "Río Gallegos"
+   ],
+   "correcta": 0,
+   "explicacion": "Es Ushuaia, capital de Tierra del Fuego, sobre el canal Beagle. Desde su puerto salen la mayoría de los barcos hacia la Antártida, y por eso se la llama también la ciudad del fin del mundo.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-20",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Qué cerro, famoso entre los escaladores, domina el paisaje de El Chaltén en Santa Cruz?",
+   "opciones": [
+    "Torre",
+    "Cerro Fitz Roy",
+    "Cerro Catedral"
+   ],
+   "correcta": 1,
+   "explicacion": "El Fitz Roy, de unos 3.400 metros, está en el Parque Nacional Los Glaciares. Su nombre mapuche, Chaltén, significa «montaña que humea», porque las nubes suelen cubrir su cima como si fuera humo.",
+   "fuente": "Administración de Parques Nacionales",
+   "url": "https://www.argentina.gob.ar/parquesnacionales",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-21",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿En qué ciudad rionegrina está la sede del Parque Nacional Nahuel Huapi y su lago?",
+   "opciones": [
+    "Bariloche",
+    "Viedma",
+    "General Roca"
+   ],
+   "correcta": 0,
+   "explicacion": "San Carlos de Bariloche está a orillas del lago Nahuel Huapi, rodeada de cerros y bosques andinos. Fue el primer parque nacional de la Patagonia, y su paisaje la volvió un destino clásico de turismo de montaña.",
+   "fuente": "Administración de Parques Nacionales",
+   "url": "https://www.argentina.gob.ar/parquesnacionales",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-22",
+   "tema": "naturaleza",
+   "nivel": "facil",
+   "titulo": "¿Qué ballena llega cada año a Península Valdés, en Chubut, a reproducirse?",
+   "opciones": [
+    "Ballena azul",
+    "Ballena franca austral",
+    "Ballena jorobada"
+   ],
+   "correcta": 1,
+   "explicacion": "La ballena franca austral llega entre junio y diciembre a los golfos de Península Valdés para tener sus crías. El lugar fue declarado Patrimonio Mundial por la UNESCO en 1999 por su biodiversidad marina.",
+   "fuente": "UNESCO — Lista del Patrimonio Mundial",
+   "url": "https://whc.unesco.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-23",
+   "tema": "naturaleza",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el animal terrestre más veloz?",
+   "opciones": [
+    "Guepardo",
+    "León",
+    "Antílope"
+   ],
+   "correcta": 0,
+   "explicacion": "El guepardo alcanza unos 100 kilómetros por hora en carreras cortas, de pocos cientos de metros. Con ese esfuerzo se agota rápido, por lo que sus cacerías duran pocos segundos y debe descansar mucho después.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-24",
+   "tema": "naturaleza",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el animal más grande que existe en el planeta?",
+   "opciones": [
+    "Elefante africano",
+    "Tiburón ballena",
+    "Ballena azul"
+   ],
+   "correcta": 2,
+   "explicacion": "La ballena azul puede medir unos 30 metros y pesar más de 150 toneladas, más que cualquier dinosaurio conocido. Su corazón es del tamaño de un auto pequeño, y su canto se escucha a muchos kilómetros.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-25",
+   "tema": "naturaleza",
+   "nivel": "facil",
+   "titulo": "¿Qué ave argentina grande, corredora y que no puede volar, vive en la Pampa y la Patagonia?",
+   "opciones": [
+    "Ñandú",
+    "Chajá",
+    "Carancho"
+   ],
+   "correcta": 0,
+   "explicacion": "El ñandú es la mayor ave de la Argentina: llega a 1,5 metros de alto y corre a más de 50 kilómetros por hora. El macho cuida los huevos de varias hembras y se ocupa solo de los pichones.",
+   "fuente": "Aves Argentinas (Asociación Ornitológica del Plata)",
+   "url": "https://www.avesargentinas.org.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-26",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Qué ave voladora del país tiene mayor envergadura, de hasta unos tres metros con las alas abiertas?",
+   "opciones": [
+    "Cóndor andino",
+    "Águila mora",
+    "Albatros errante"
+   ],
+   "correcta": 0,
+   "explicacion": "El cóndor andino planea sobre la cordillera aprovechando las corrientes de aire casi sin mover las alas. Es uno de los vuelos más grandes entre las aves terrestres, y puede vivir más de cincuenta años.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-27",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Cuál es el felino más grande de América?",
+   "opciones": [
+    "Yaguareté",
+    "Puma",
+    "Ocelote"
+   ],
+   "correcta": 0,
+   "explicacion": "El yaguareté, o jaguar, es el mayor felino del continente y vive en la selva misionera y el Chaco. Está en peligro crítico en el país, por eso existen programas de reintroducción en los Esteros del Iberá.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-28",
+   "tema": "naturaleza",
+   "nivel": "dificil",
+   "titulo": "¿Qué camélido silvestre de los Andes tiene la fibra más fina y cotizada?",
+   "opciones": [
+    "Guanaco",
+    "Vicuña",
+    "Llama"
+   ],
+   "correcta": 1,
+   "explicacion": "La vicuña vive en las alturas del noroeste argentino y su fibra es de las más finas del mundo. Se esquila viva cada dos años mediante una técnica ancestral llamada chaku, de origen andino.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-29",
+   "tema": "naturaleza",
+   "nivel": "dificil",
+   "titulo": "¿Qué pingüino forma la colonia más numerosa de la Patagonia continental, en Punta Tombo?",
+   "opciones": [
+    "Pingüino emperador",
+    "Pingüino de Magallanes",
+    "Pingüino rey"
+   ],
+   "correcta": 1,
+   "explicacion": "En Punta Tombo, Chubut, anidan cientos de miles de pingüinos de Magallanes entre septiembre y marzo. Excavan sus nidos en la tierra y cada año vuelven a la misma colonia, incluso a la misma pareja.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-30",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Qué árbol milenario del sur argentino se protege en el Parque Nacional Los Alerces, en Chubut?",
+   "opciones": [
+    "Lenga",
+    "Alerce",
+    "Ciprés"
+   ],
+   "correcta": 1,
+   "explicacion": "El alerce patagónico puede superar los 2.600 años, lo que lo convierte en uno de los seres vivos más longevos del mundo. Los bosques de Los Alerces fueron declarados Patrimonio Mundial por la UNESCO en 2017.",
+   "fuente": "UNESCO — Lista del Patrimonio Mundial",
+   "url": "https://whc.unesco.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-31",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Cómo se llama el árbol de Neuquén cuyas semillas, los piñones, son un alimento tradicional mapuche?",
+   "opciones": [
+    "Pehuén",
+    "Quebracho",
+    "Algarrobo"
+   ],
+   "correcta": 0,
+   "explicacion": "El pehuén, o araucaria, crece en los bosques de la cordillera neuquina, cerca del volcán Lanín. Sus piñones se comen hervidos o tostados desde hace siglos y son sagrados para el pueblo mapuche.",
+   "fuente": "Administración de Parques Nacionales",
+   "url": "https://www.argentina.gob.ar/parquesnacionales",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-32",
+   "tema": "naturaleza",
+   "nivel": "dificil",
+   "titulo": "¿Cuál es el volcán más alto del mundo, ubicado en el límite entre Argentina y Chile?",
+   "opciones": [
+    "Llullaillaco",
+    "Ojos del Salado",
+    "Tupungato"
+   ],
+   "correcta": 1,
+   "explicacion": "El Ojos del Salado mide unos 6.890 metros y está entre Catamarca y Chile. Es el volcán más alto del planeta y la segunda cumbre de América, detrás del Aconcagua. En sus alturas hay un lago a 6.400 metros.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-33",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Cómo se llama el gran campo de hielo que comparten Argentina y Chile en la Patagonia?",
+   "opciones": [
+    "Campo de Hielo Patagónico Sur",
+    "Campo de Hielo Antártico",
+    "Campo de Hielo Fueguino"
+   ],
+   "correcta": 0,
+   "explicacion": "Es el Campo de Hielo Patagónico Sur, de donde bajan glaciares como el Upsala y el Viedma. Se lo considera la tercera mayor reserva de hielo y agua dulce del planeta, detrás de la Antártida y Groenlandia.",
+   "fuente": "Administración de Parques Nacionales",
+   "url": "https://www.argentina.gob.ar/parquesnacionales",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-34",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Cómo se llama el viento cálido y seco que baja de la cordillera en Mendoza y San Juan?",
+   "opciones": [
+    "Zonda",
+    "Pampero",
+    "Sudestada"
+   ],
+   "correcta": 0,
+   "explicacion": "El Zonda se forma cuando el aire húmedo cruza los Andes: pierde su humedad en el lado chileno y desciende caliente y seco hacia Cuyo. Puede levantar polvo, subir la temperatura y provocar incendios.",
+   "fuente": "Servicio Meteorológico Nacional",
+   "url": "https://www.smn.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-35",
+   "tema": "naturaleza",
+   "nivel": "media",
+   "titulo": "¿Qué nombre recibe el viento frío del sudoeste que suele cruzar la llanura pampeana?",
+   "opciones": [
+    "Pampero",
+    "Zonda",
+    "Chiflón"
+   ],
+   "correcta": 0,
+   "explicacion": "Se llama pampero y suele llegar con un frente frío, a menudo tras un día de calor y tormentas. Baja la temperatura de manera brusca y deja cielos despejados en pocas horas, según el Servicio Meteorológico Nacional.",
+   "fuente": "Servicio Meteorológico Nacional",
+   "url": "https://www.smn.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-36",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Qué dos grandes ríos forman el Río de la Plata?",
+   "opciones": [
+    "Paraná y Uruguay",
+    "Paraná y Pilcomayo",
+    "Uruguay y Colorado"
+   ],
+   "correcta": 0,
+   "explicacion": "El Paraná y el Uruguay se juntan frente a Buenos Aires y Colonia y desembocan juntos en el Atlántico. Es un estuario muy ancho, de unos 220 kilómetros en su boca, y de aguas color marrón por el barro.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-37",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cómo se llama la cordillera que recorre la Argentina de norte a sur, en su frontera con Chile?",
+   "opciones": [
+    "Los Andes",
+    "Los Alpes",
+    "Las Rocosas"
+   ],
+   "correcta": 0,
+   "explicacion": "Los Andes son la cordillera más larga del mundo, con unos 7.000 kilómetros de extensión de punta a punta del continente. En el tramo argentino están el Aconcagua y muchos volcanes, lagos y glaciares.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-38",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Cuál es la provincia más extensa de la Argentina?",
+   "opciones": [
+    "Santa Cruz",
+    "Buenos Aires",
+    "Chubut"
+   ],
+   "correcta": 1,
+   "explicacion": "Buenos Aires es la provincia más grande, con unos 307.000 kilómetros cuadrados, más que muchos países europeos. Le sigue Santa Cruz y, en el extremo opuesto del ranking, está Tucumán, la más pequeña del país.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-39",
+   "tema": "geografia",
+   "nivel": "dificil",
+   "titulo": "¿Cuál es la provincia más pequeña de la Argentina, sin contar la Ciudad de Buenos Aires?",
+   "opciones": [
+    "Tucumán",
+    "Misiones",
+    "Entre Ríos"
+   ],
+   "correcta": 0,
+   "explicacion": "Es Tucumán, con unos 22.500 kilómetros cuadrados. Por eso se la llama el jardín de la República, y aun siendo la más chica es una de las más densamente pobladas del país, además de ser la cuna de la Independencia.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-40",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Qué provincia argentina está ubicada más al norte?",
+   "opciones": [
+    "Salta",
+    "Jujuy",
+    "Formosa"
+   ],
+   "correcta": 1,
+   "explicacion": "Jujuy llega más al norte que ninguna otra provincia, con el punto extremo cerca de los 22 grados de latitud sur. Limita con Bolivia y Chile, y su territorio incluye quebradas, la puna y la selva de las yungas.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-41",
+   "tema": "geografia",
+   "nivel": "dificil",
+   "titulo": "¿Cuántos kilómetros tiene aproximadamente la Argentina continental de norte a sur?",
+   "opciones": [
+    "Unos 3.700 km",
+    "Unos 2.500 km",
+    "Unos 5.000 km"
+   ],
+   "correcta": 0,
+   "explicacion": "Mide unos 3.700 kilómetros en línea recta de norte a sur, entre el extremo de Jujuy y el de Santa Cruz, según el Instituto Geográfico Nacional. Es una de las mayores extensiones latitudinales entre los países del mundo.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-42",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Qué canal une el océano Atlántico con el Pacífico en América Central?",
+   "opciones": [
+    "Canal de Suez",
+    "Canal de Panamá",
+    "Canal de Beagle"
+   ],
+   "correcta": 1,
+   "explicacion": "El Canal de Panamá se inauguró en 1914 y evita que los barcos den la vuelta por el sur del continente. Usa un sistema de esclusas que sube y baja las embarcaciones hasta el nivel del lago Gatún.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-43",
+   "tema": "geografia",
+   "nivel": "media",
+   "titulo": "¿Qué estrecho del extremo sur de América une el Atlántico y el Pacífico y lleva el nombre de un navegante?",
+   "opciones": [
+    "Estrecho de Magallanes",
+    "Estrecho de Bering",
+    "Estrecho de Gibraltar"
+   ],
+   "correcta": 0,
+   "explicacion": "El Estrecho de Magallanes lleva el nombre del navegante portugués Fernão de Magalhães, quien lo cruzó en 1520 durante la primera vuelta al mundo. Está entre el continente y Tierra del Fuego, y fue ruta clave hasta el Canal de Panamá.",
+   "fuente": "Instituto Geográfico Nacional",
+   "url": "https://www.ign.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-44",
+   "tema": "geografia",
+   "nivel": "facil",
+   "titulo": "¿Cuál es el país más grande del mundo por su superficie?",
+   "opciones": [
+    "Rusia",
+    "Canadá",
+    "China"
+   ],
+   "correcta": 0,
+   "explicacion": "Rusia abarca más de 17 millones de kilómetros cuadrados y se extiende por once husos horarios, entre Europa y Asia. Es casi dos veces más grande que Canadá, el segundo país del ranking.",
+   "fuente": "Naciones Unidas — Geografía y países",
+   "url": "https://www.un.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-g-45",
+   "tema": "naturaleza",
+   "nivel": "facil",
+   "titulo": "¿Qué animal marino tiene tres corazones y sangre de color azul?",
+   "opciones": [
+    "Calamar",
+    "Medusa",
+    "Pulpo"
+   ],
+   "correcta": 2,
+   "explicacion": "El pulpo tiene tres corazones: dos bombean la sangre a las branquias y uno al resto del cuerpo. Su sangre es azulada porque transporta oxígeno con hemocianina, una proteína con cobre, y no con hemoglobina como la nuestra.",
+   "fuente": "Ministerio de Ambiente de la Nación",
+   "url": "https://www.argentina.gob.ar/ambiente",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-01",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Quién presidió la Primera Junta de gobierno, formada el 25 de mayo de 1810?",
+   "opciones": [
+    "Cornelio Saavedra",
+    "Mariano Moreno",
+    "Juan José Castelli"
+   ],
+   "correcta": 0,
+   "explicacion": "Cornelio Saavedra, jefe del regimiento de Patricios, presidió la Primera Junta. Mariano Moreno fue su secretario. Fue el primer gobierno propio tras la Revolución de Mayo, aunque aún decía gobernar en nombre del rey Fernando VII.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-02",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿En qué año cruzó los Andes el Ejército de los Andes comandado por San Martín?",
+   "opciones": [
+    "1814",
+    "1817",
+    "1821"
+   ],
+   "correcta": 1,
+   "explicacion": "El cruce se hizo en enero y febrero de 1817 por varios pasos de la cordillera, con unos cinco mil hombres. Terminó con la victoria de Chacabuco, en Chile, el 12 de febrero. Fue una de las operaciones militares más audaces de la época.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-03",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Dónde se reunió el Cabildo Abierto del 22 de mayo de 1810 en Buenos Aires?",
+   "opciones": [
+    "En el Fuerte",
+    "En la Catedral",
+    "En el Cabildo"
+   ],
+   "correcta": 2,
+   "explicacion": "El Cabildo Abierto se reunió en el edificio del Cabildo, en la actual Plaza de Mayo. Asistieron vecinos convocados, que debatieron el futuro del virrey. Hoy el edificio es museo y se puede visitar.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-04",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿En qué año se sancionó la Constitución Nacional argentina original?",
+   "opciones": [
+    "1853",
+    "1880",
+    "1816"
+   ],
+   "correcta": 0,
+   "explicacion": "La Constitución se sancionó en 1853 en Santa Fe, durante un Congreso Constituyente. Buenos Aires no participó al principio y se incorporó luego, tras la reforma de 1860. Desde entonces tuvo varias reformas, la última en 1994.",
+   "fuente": "Argentina.gob.ar",
+   "url": "https://www.argentina.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-05",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿Quién fue el primer presidente constitucional tras la Constitución de 1853?",
+   "opciones": [
+    "Bartolomé Mitre",
+    "Justo José de Urquiza",
+    "Domingo F. Sarmiento"
+   ],
+   "correcta": 1,
+   "explicacion": "Justo José de Urquiza asumió en 1854 y gobernó desde Paraná, que fue capital de la Confederación Argentina. Mitre fue presidente recién en 1862, cuando el país se unificó, y Sarmiento en 1868.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-06",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Qué día se celebra el Día del Maestro en la Argentina?",
+   "opciones": [
+    "17 de agosto",
+    "5 de junio",
+    "11 de septiembre"
+   ],
+   "correcta": 2,
+   "explicacion": "Se celebra el 11 de septiembre, aniversario de la muerte de Domingo F. Sarmiento en 1888. Sarmiento impulsó la educación pública y trajo maestras de Estados Unidos para fundar escuelas normales en el país.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-07",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿De qué país llegó la mayor cantidad de inmigrantes a la Argentina entre 1880 y 1930?",
+   "opciones": [
+    "Italia",
+    "Alemania",
+    "Polonia"
+   ],
+   "correcta": 0,
+   "explicacion": "La mayoría vino de Italia, seguida por España. Llegaron millones de personas en barco, muchas alojadas primero en el Hotel de Inmigrantes del puerto de Buenos Aires. Su influencia se nota en el idioma, la comida y los apellidos.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-08",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿Qué ley de 1884 estableció la educación primaria obligatoria, gratuita y laica?",
+   "opciones": [
+    "Ley Láinez",
+    "Ley 1420",
+    "Ley Sáenz Peña"
+   ],
+   "correcta": 1,
+   "explicacion": "La Ley 1420 de Educación Común, de 1884, fijó la escuela primaria obligatoria, gratuita y laica. Fue una de las bases para que la Argentina alcanzara en pocas décadas uno de los índices de alfabetización más altos de América Latina.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-09",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿En qué año se sancionó la ley que reconoció el voto femenino en la Argentina?",
+   "opciones": [
+    "1912",
+    "1955",
+    "1947"
+   ],
+   "correcta": 2,
+   "explicacion": "La Ley 13.010 se sancionó en 1947 y reconoció a las mujeres el derecho a elegir y ser elegidas. Votaron por primera vez en las elecciones nacionales de 1951, y fueron elegidas legisladoras nacionales por primera vez.",
+   "fuente": "Argentina.gob.ar",
+   "url": "https://www.argentina.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-10",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿En qué ciudad comenzó la Reforma Universitaria de 1918?",
+   "opciones": [
+    "Córdoba",
+    "La Plata",
+    "Rosario"
+   ],
+   "correcta": 0,
+   "explicacion": "Estalló en la Universidad Nacional de Córdoba, cuando los estudiantes reclamaron autonomía, cogobierno y libertad de cátedra. El movimiento se extendió por toda América Latina y cambió la universidad pública para siempre.",
+   "fuente": "Educ.ar — Ministerio de Capital Humano",
+   "url": "https://www.educ.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-11",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿En qué ciudad francesa murió José de San Martín en 1850?",
+   "opciones": [
+    "París",
+    "Boulogne-sur-Mer",
+    "Marsella"
+   ],
+   "correcta": 1,
+   "explicacion": "San Martín murió el 17 de agosto de 1850 en Boulogne-sur-Mer, donde vivía exiliado. Sus restos volvieron al país en 1880 y descansan en la Catedral Metropolitana de Buenos Aires.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-12",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Qué día se celebra el Día de la Bandera?",
+   "opciones": [
+    "27 de febrero",
+    "9 de julio",
+    "20 de junio"
+   ],
+   "correcta": 2,
+   "explicacion": "El 20 de junio, aniversario de la muerte de Manuel Belgrano en 1820. Belgrano murió pobre y casi olvidado en Buenos Aires. El 27 de febrero, en cambio, recuerda el día en que izó la bandera por primera vez.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-13",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿Qué mujer combatió en el Alto Perú y fue nombrada teniente coronel por Belgrano?",
+   "opciones": [
+    "Juana Azurduy",
+    "Manuela Sáenz",
+    "Mariquita Sánchez"
+   ],
+   "correcta": 0,
+   "explicacion": "Juana Azurduy encabezó tropas en la guerra de guerrillas del Alto Perú, la actual Bolivia. Belgrano la nombró teniente coronel en 1816. Murió pobre, pero hoy es una de las heroínas más recordadas de la independencia.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-14",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Qué se conmemora en la Argentina el 2 de abril?",
+   "opciones": [
+    "La Reconquista de Buenos Aires",
+    "Día del Veterano y Caídos de Malvinas",
+    "La fundación de Buenos Aires"
+   ],
+   "correcta": 1,
+   "explicacion": "El 2 de abril de 1982 comenzó el desembarco argentino en las Islas Malvinas. La fecha es feriado nacional y recuerda a los combatientes y a los caídos en la guerra, que terminó el 14 de junio de ese año.",
+   "fuente": "Argentina.gob.ar",
+   "url": "https://www.argentina.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-15",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿En qué año volvió la democracia al país tras el último gobierno militar?",
+   "opciones": [
+    "1976",
+    "1989",
+    "1983"
+   ],
+   "correcta": 2,
+   "explicacion": "El 10 de diciembre de 1983 asumió Raúl Alfonsín, elegido en las urnas en octubre. Desde ese día la Argentina tuvo presidentes elegidos por el voto de manera ininterrumpida, hasta hoy, un período muy largo en su historia.",
+   "fuente": "Argentina.gob.ar",
+   "url": "https://www.argentina.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-16",
+   "tema": "historia",
+   "nivel": "dificil",
+   "titulo": "¿En qué lenguas originarias se publicó el Acta de la Independencia, además del castellano?",
+   "opciones": [
+    "Quechua y aimara",
+    "Guaraní y mapuche",
+    "Tehuelche y ranquel"
+   ],
+   "correcta": 0,
+   "explicacion": "El Congreso de Tucumán mandó publicar el Acta de la Independencia también en quechua y aimara, para que la entendieran los pueblos del norte y del Alto Perú. Fue una forma de llegar a quienes no hablaban castellano.",
+   "fuente": "Casa Histórica de la Independencia — Ministerio de Cultura",
+   "url": "https://www.cultura.gob.ar/museos/casa-historica-de-la-independencia/",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-17",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿Qué virrey fue reemplazado por la Primera Junta en mayo de 1810?",
+   "opciones": [
+    "Rafael de Sobremonte",
+    "Baltasar Hidalgo de Cisneros",
+    "Juan José de Vértiz"
+   ],
+   "correcta": 1,
+   "explicacion": "Baltasar Hidalgo de Cisneros fue el último virrey del Río de la Plata. El 25 de mayo de 1810 quedó fuera del poder y la Primera Junta asumió el gobierno. Sobremonte había sido virrey antes, durante las invasiones inglesas.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-18",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Quién fue el héroe de la Reconquista de Buenos Aires frente a los ingleses en 1806?",
+   "opciones": [
+    "Cornelio Saavedra",
+    "Juan Martín de Pueyrredón",
+    "Santiago de Liniers"
+   ],
+   "correcta": 2,
+   "explicacion": "Santiago de Liniers organizó la Reconquista en agosto de 1806. Al año siguiente se repelió una segunda invasión, la Defensa, con ayuda del pueblo. Esos triunfos dieron confianza a los criollos y prepararon la Revolución de Mayo.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-19",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿En qué año funcionó el primer ferrocarril de la Argentina?",
+   "opciones": [
+    "1857",
+    "1880",
+    "1910"
+   ],
+   "correcta": 0,
+   "explicacion": "El Ferrocarril Oeste inauguró su primer tramo el 29 de agosto de 1857, con una locomotora llamada «La Porteña». Salía de Buenos Aires hacia el oeste. Con los años, las vías conectaron los campos con el puerto.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-20",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿Qué grupo de colonos llegó a la Patagonia en el barco Mimosa en 1865?",
+   "opciones": [
+    "Escoceses",
+    "Galeses",
+    "Alemanes"
+   ],
+   "correcta": 1,
+   "explicacion": "Unos 150 colonos galeses llegaron en el Mimosa a la costa del actual Chubut y fundaron Puerto Madryn. Con el tiempo se extendieron al valle del río Chubut, donde todavía se sirve té galés y se conservan sus capillas.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-21",
+   "tema": "historia",
+   "nivel": "media",
+   "titulo": "¿En qué año se inauguró el primer subte de Buenos Aires?",
+   "opciones": [
+    "1950",
+    "1930",
+    "1913"
+   ],
+   "correcta": 2,
+   "explicacion": "La Línea A, que unía Plaza de Mayo con Plaza Once, se abrió en 1913. Fue el primer subte de Latinoamérica y de todo el hemisferio sur. Sus coches de madera originales todavía circularon por décadas.",
+   "fuente": "Gobierno de la Ciudad de Buenos Aires",
+   "url": "https://www.buenosaires.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-22",
+   "tema": "historia",
+   "nivel": "facil",
+   "titulo": "¿Qué caudillo defendió la frontera norte de las invasiones realistas con sus gauchos en Salta?",
+   "opciones": [
+    "Martín Miguel de Güemes",
+    "Gregorio de Lamadrid",
+    "José Gervasio Artigas"
+   ],
+   "correcta": 0,
+   "explicacion": "Martín Miguel de Güemes organizó a los gauchos salteños para frenar los ataques realistas desde el Alto Perú. Murió en 1817, herido en combate. Su gesta hizo posible que San Martín planeara el cruce por Chile.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-23",
+   "tema": "historia",
+   "nivel": "dificil",
+   "titulo": "¿Qué día es el Día de la Soberanía Nacional?",
+   "opciones": [
+    "2 de abril",
+    "20 de noviembre",
+    "25 de mayo"
+   ],
+   "correcta": 1,
+   "explicacion": "El 20 de noviembre recuerda el combate de la Vuelta de Obligado, de 1845, sobre el río Paraná. Fuerzas argentinas resistieron a una flota anglo-francesa que intentaba navegar el río sin permiso. Es feriado nacional.",
+   "fuente": "Ministerio de Cultura de la Nación",
+   "url": "https://www.cultura.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-24",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿Qué ley de 1929 fijó la jornada máxima de 8 horas diarias?",
+   "opciones": [
+    "Ley 20.744",
+    "Ley 24.557",
+    "Ley 11.544"
+   ],
+   "correcta": 2,
+   "explicacion": "La Ley 11.544 estableció la jornada de 8 horas diarias y 48 semanales. Fue fruto de décadas de reclamos obreros. Hoy esos límites están en la Ley de Contrato de Trabajo, y las horas de más se pagan como extras.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-25",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿En qué ciudad ocurrieron en 1886 los hechos que dieron origen al 1° de Mayo?",
+   "opciones": [
+    "Chicago",
+    "Nueva York",
+    "Londres"
+   ],
+   "correcta": 0,
+   "explicacion": "En Chicago, miles de trabajadores hicieron huelga en mayo de 1886 para reclamar la jornada de ocho horas. Hubo graves hechos de violencia en la plaza Haymarket. En su memoria, el 1° de Mayo es el Día Internacional del Trabajador.",
+   "fuente": "Organización Internacional del Trabajo (OIT)",
+   "url": "https://www.ilo.org",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-26",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Cuántas horas semanales es el máximo de la jornada diurna según la ley argentina?",
+   "opciones": [
+    "40",
+    "48",
+    "44"
+   ],
+   "correcta": 1,
+   "explicacion": "La Ley de Contrato de Trabajo fija el máximo en 8 horas por día y 48 por semana para la jornada diurna. Muchos convenios colectivos pactan jornadas más cortas, por ejemplo de 40 horas.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-27",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿Cuántos días corridos de vacaciones corresponden con menos de cinco años de antigüedad?",
+   "opciones": [
+    "10",
+    "21",
+    "14"
+   ],
+   "correcta": 2,
+   "explicacion": "Corresponden 14 días corridos. Con más de cinco y hasta diez años, son 21; hasta veinte, 28; y con más de veinte, 35. Lo dice la Ley de Contrato de Trabajo, y esos días se pagan.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-28",
+   "tema": "trabajo",
+   "nivel": "dificil",
+   "titulo": "¿Cuántos días corridos de vacaciones corresponden con más de veinte años de antigüedad?",
+   "opciones": [
+    "35",
+    "30",
+    "28"
+   ],
+   "correcta": 0,
+   "explicacion": "Son 35 días corridos. La escala sube con la antigüedad: 14, 21, 28 y 35. Para tener derecho completo, el trabajador tiene que haber trabajado al menos la mitad de los días hábiles del año anterior.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-29",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿Hasta qué día de diciembre se debe pagar la segunda cuota del aguinaldo?",
+   "opciones": [
+    "Hasta el 24",
+    "Hasta el 18",
+    "Hasta el 31"
+   ],
+   "correcta": 1,
+   "explicacion": "La ley fija el 30 de junio para la primera cuota y el 18 de diciembre para la segunda. Cada cuota es la mitad de la mejor remuneración mensual del semestre, así que el pago del aguinaldo no se demora a fin de año.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-30",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Qué porcentaje del sueldo bruto aporta el trabajador a la obra social?",
+   "opciones": [
+    "11 %",
+    "6 %",
+    "3 %"
+   ],
+   "correcta": 2,
+   "explicacion": "El trabajador aporta el 3 % de su remuneración y el empleador, otro 6 %. Con ese dinero se financia la cobertura de salud de toda la familia, a través de la obra social elegida, sindical o no.",
+   "fuente": "Argentina.gob.ar",
+   "url": "https://www.argentina.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-31",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Qué porcentaje del sueldo bruto se descuenta para la jubilación?",
+   "opciones": [
+    "11 %",
+    "6 %",
+    "17 %"
+   ],
+   "correcta": 0,
+   "explicacion": "El aporte personal al sistema previsional es del 11 % del sueldo bruto. Además, el empleador hace su propia contribución. Con esos fondos se pagan las jubilaciones y pensiones de hoy, bajo un sistema de reparto.",
+   "fuente": "ANSES",
+   "url": "https://www.anses.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-32",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿En qué año se creó la ANSES?",
+   "opciones": [
+    "1946",
+    "1991",
+    "2008"
+   ],
+   "correcta": 1,
+   "explicacion": "La Administración Nacional de la Seguridad Social se creó en 1991. Se encarga de las jubilaciones, las pensiones y las asignaciones familiares, entre otras prestaciones, y tiene oficinas en todo el país.",
+   "fuente": "ANSES",
+   "url": "https://www.anses.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-33",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Cuántos años de aportes pide la ley previsional general para jubilarse?",
+   "opciones": [
+    "25",
+    "35",
+    "30"
+   ],
+   "correcta": 2,
+   "explicacion": "La Ley 24.241 pide 30 años de aportes y una edad mínima: 60 años para las mujeres y 65 para los varones. Quienes no llegan pueden acceder a otras alternativas, como la moratoria o la Pensión Universal para el Adulto Mayor.",
+   "fuente": "ANSES",
+   "url": "https://www.anses.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-34",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿Qué ley de 1995 creó el sistema de las ART?",
+   "opciones": [
+    "Ley 24.557",
+    "Ley 24.241",
+    "Ley 23.660"
+   ],
+   "correcta": 0,
+   "explicacion": "La Ley 24.557 de Riesgos del Trabajo, de 1995, creó las Aseguradoras de Riesgos del Trabajo. Cubren accidentes y enfermedades laborales, y las controla la Superintendencia de Riesgos del Trabajo.",
+   "fuente": "Superintendencia de Riesgos del Trabajo",
+   "url": "https://www.srt.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-35",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Quién paga la cuota de la ART de un trabajador en relación de dependencia?",
+   "opciones": [
+    "El trabajador",
+    "El empleador",
+    "El sindicato"
+   ],
+   "correcta": 1,
+   "explicacion": "La cuota de la ART la paga íntegramente el empleador. Al trabajador no se le descuenta nada del recibo. Si hay un accidente en el trabajo o en el camino, la ART cubre la atención médica y las prestaciones.",
+   "fuente": "Superintendencia de Riesgos del Trabajo",
+   "url": "https://www.srt.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-36",
+   "tema": "trabajo",
+   "nivel": "dificil",
+   "titulo": "¿Qué ley regula las convenciones colectivas de trabajo?",
+   "opciones": [
+    "Ley 23.551",
+    "Ley 24.013",
+    "Ley 14.250"
+   ],
+   "correcta": 2,
+   "explicacion": "La Ley 14.250 regula las convenciones colectivas, que son los acuerdos entre sindicatos y empleadores sobre salarios y condiciones de un sector. Una vez homologadas, rigen para todos los trabajadores de la actividad.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-37",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿En qué año se fundó la CGT, la Confederación General del Trabajo?",
+   "opciones": [
+    "1930",
+    "1943",
+    "1955"
+   ],
+   "correcta": 0,
+   "explicacion": "Se fundó en 1930, cuando se unieron la Confederación Obrera Argentina y la Unión Sindical Argentina. Hoy agrupa a la mayoría de los sindicatos del país y tiene su sede histórica en Buenos Aires, donde se reúnen sus delegados.",
+   "fuente": "Ministerio de Capital Humano — Secretaría de Trabajo",
+   "url": "https://www.argentina.gob.ar/trabajo",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-38",
+   "tema": "trabajo",
+   "nivel": "dificil",
+   "titulo": "¿En qué año se celebró por primera vez el 1° de Mayo en la Argentina?",
+   "opciones": [
+    "1886",
+    "1890",
+    "1904"
+   ],
+   "correcta": 1,
+   "explicacion": "El primer acto fue en 1890, en Buenos Aires. Las organizaciones obreras, en su mayoría de inmigrantes, se reunieron en el Prado Español para reclamar la jornada de ocho horas y mejores condiciones laborales.",
+   "fuente": "Ministerio de Capital Humano — Secretaría de Trabajo",
+   "url": "https://www.argentina.gob.ar/trabajo",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-39",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Qué día fijó la ley de 1905 como descanso semanal obligatorio?",
+   "opciones": [
+    "Sábado",
+    "Lunes",
+    "Domingo"
+   ],
+   "correcta": 2,
+   "explicacion": "La Ley 4661 de 1905 estableció el descanso dominical, primero en la Capital Federal. Fue una de las primeras leyes laborales argentinas. Hoy el descanso semanal es de 35 horas continuas.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-40",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Cuántos días dura la licencia por maternidad según la Ley de Contrato de Trabajo?",
+   "opciones": [
+    "90",
+    "60",
+    "120"
+   ],
+   "correcta": 0,
+   "explicacion": "Son 90 días, en general 45 antes del parto y 45 después. La trabajadora cobra una asignación de la seguridad social y no puede ser despedida durante el embarazo y los siete meses y medio posteriores al parto.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-41",
+   "tema": "trabajo",
+   "nivel": "media",
+   "titulo": "¿Cuántos días corridos de licencia da la ley por casamiento del trabajador?",
+   "opciones": [
+    "5",
+    "10",
+    "15"
+   ],
+   "correcta": 1,
+   "explicacion": "Son 10 días corridos, según la Ley de Contrato de Trabajo. Esa misma ley da licencias por otros hechos: tres días por fallecimiento de un padre o hijo, y dos días por el nacimiento de un hijo.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-42",
+   "tema": "trabajo",
+   "nivel": "dificil",
+   "titulo": "¿A partir de cuántos trabajadores corresponde elegir un delegado de personal?",
+   "opciones": [
+    "5",
+    "20",
+    "10"
+   ],
+   "correcta": 2,
+   "explicacion": "La Ley 23.551 de asociaciones sindicales dice que, cuando una empresa tiene entre 10 y 50 trabajadores, corresponde un delegado. Su tarea es representar a sus compañeros ante el empleador y el sindicato.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-43",
+   "tema": "trabajo",
+   "nivel": "facil",
+   "titulo": "¿Con qué recargo se pagan las horas extra en un día hábil?",
+   "opciones": [
+    "50 %",
+    "25 %",
+    "100 %"
+   ],
+   "correcta": 0,
+   "explicacion": "Se pagan con un 50 % de recargo en días hábiles. En sábados después de las 13 horas, domingos y feriados el recargo sube al 100 %. Así lo establece la Ley de Contrato de Trabajo.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-44",
+   "tema": "trabajo",
+   "nivel": "dificil",
+   "titulo": "¿En qué año se sancionó la primera ley de accidentes de trabajo?",
+   "opciones": [
+    "1943",
+    "1915",
+    "1974"
+   ],
+   "correcta": 1,
+   "explicacion": "La Ley 9688, de 1915, fue la primera en reconocer indemnizaciones por accidentes de trabajo. Fue pionera en la región, aunque cubría pocos casos. El actual sistema de ART nació recién en 1995.",
+   "fuente": "Infoleg — Ministerio de Justicia",
+   "url": "https://www.infoleg.gob.ar",
+   "dudosa": false
+  },
+  {
+   "id": "ju-h-45",
+   "tema": "trabajo",
+   "nivel": "dificil",
+   "titulo": "¿Qué oficio tenían los trabajadores de la Sociedad de 1857 considerada la primera organización obrera?",
+   "opciones": [
+    "Albañiles",
+    "Ferroviarios",
+    "Tipógrafos"
+   ],
+   "correcta": 2,
+   "explicacion": "La Sociedad Tipográfica Bonaerense, fundada en 1857, agrupó a los trabajadores de la imprenta. Se la considera la primera organización gremial argentina. Ofrecía ayuda mutua a sus socios y defendía sus condiciones laborales.",
+   "fuente": "Ministerio de Capital Humano — Secretaría de Trabajo",
+   "url": "https://www.argentina.gob.ar/trabajo",
+   "dudosa": false
   }
  ]
 }

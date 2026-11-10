@@ -122,10 +122,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   costo de cada llamada y los tres usos configurables. Puro, no importa db.
 - tu_dia.py — «Tu día», la franja de la portada del afiliado: rubros,
   configuración por sindicato (`Sindicato.tu_dia`), ítem del día
-  determinista y cumpleaños. Puro; el contenido vive en `data/tu_dia/*.json`
-  (lo marcado `dudosa` no se muestra nunca). `tu_dia_fuentes.py` habla con
+  determinista, **la trivia diaria** (`trivia_del_dia`: diez preguntas por
+  día, barajadas por tanda sin repetir, determinista por fecha de Buenos
+  Aires, así se renueva sola a la medianoche; `comentario_puntaje`) y
+  cumpleaños. Puro; el contenido vive en `data/tu_dia/*.json` (cada ítem es
+  un artículo: `titulo` + `parrafos` (3 o 4) + `url` https de la fuente; lo
+  marcado `dudosa` no se muestra nunca). `tu_dia_fuentes.py` habla con
   MET Norway (clima) y el BCRA (dólar oficial), con caché en `CacheExterna`;
-  `static/tu_dia.js` dibuja. Ver "Estado actual" 39.
+  `static/tu_dia.js` dibuja (la hoja con párrafos y enlace, la trivia con
+  avance en `localStorage` por día). Ver "Estado actual" 39 y 46.
 - geo.py — geocodificación de domicilios: Georef (provincia/localidad) +
   Nominatim (calle y altura). Ver "Georreferenciación" para las reglas.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
@@ -1646,6 +1651,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     obligación corre solo para las altas y los reseteos nuevos. Tests:
     `test_admin_clave_inicial.py`. HISTORIAL.md, «Alta de administradores y
     clave inicial».
+
+46. **Tu día: artículos con fuente y la trivia diaria** (2026-11-10,
+    Trabajador 0.60.01, Admin 0.80.03; pedido de SDN): la hoja de cada ítem es
+    un artículo corto (título, 3 o 4 párrafos, enlace a la fuente) en TODOS los
+    rubros, dólar y clima incluidos; Entretenimiento es una trivia de diez
+    preguntas con puntaje 0-10, comentario elogioso creciente desde 5 y aliento
+    por debajo, repaso al final y avance guardado por día en el navegador. El
+    kit se renueva solo con la fecha de Buenos Aires (`tu_dia.trivia_del_dia`,
+    determinista por tanda de `len(banco) // 10` días sin repetir; sin tarea
+    programada). Banco de 210 preguntas y 617 artículos escritos por 16 agentes
+    en paralelo: **todo sigue `revisado: false`** y las urls son portadas
+    institucionales sin abrir (los datos a confirmar están listados en
+    HISTORIAL.md, «Tu día: artículos con fuente y la trivia diaria»).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

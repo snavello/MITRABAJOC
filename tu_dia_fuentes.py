@@ -32,6 +32,7 @@ VIGENCIA_CLIMA = 30 * 60
 VIGENCIA_FALLA = 5 * 60
 VIGENCIA_CENTROIDE = 30 * 24 * 3600
 ATRIBUCION_CLIMA = "MET Norway (Instituto Meteorológico de Noruega), licencia CC BY 4.0"
+URL_CLIMA = "https://www.met.no/en"
 BA = timezone(timedelta(hours=-3))
 
 TEXTO_CLIMA = {"sol": "Despejado", "parcial": "Parcialmente nublado", "nublado": "Nublado",

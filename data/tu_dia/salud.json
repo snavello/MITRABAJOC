@@ -1,5 +1,5 @@
 {
- "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Desde 2026-11-10 cada ítem es un artículo corto: titulo + parrafos (3 o 4) + url de la fuente. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
  "revisado": false,
  "items": [
   {
@@ -15,7 +15,13 @@
     4,
     5,
     6
-   ]
+   ],
+   "parrafos": [
+    "La vacuna antigripal se aplica todos los años porque el virus de la gripe cambia y la composición se actualiza. El Ministerio de Salud de la Nación la ofrece sin costo en vacunatorios y hospitales públicos a quienes tienen más riesgo de complicarse: embarazadas, personal de salud, chicos de 6 a 24 meses, mayores de 65 y personas con enfermedades crónicas.",
+    "El mejor momento para darla es el otoño, antes de que llegue el frío y empiece la circulación fuerte de virus respiratorios. Después de la aplicación el cuerpo tarda un par de semanas en armar sus defensas, así que conviene no dejarla para último momento. Cada año hay que volver a vacunarse, porque la protección de la anterior no alcanza.",
+    "En una casa donde conviven abuelos, bebés o gente con problemas de salud, vacunarse también protege a los demás. Llevá tu documento y, si lo tenés, el carnet de vacunación. Ante cualquier duda sobre si te corresponde, consultá en tu centro de salud, donde además te informan los horarios de vacunación."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-02",
@@ -30,7 +36,13 @@
     4,
     5,
     6
-   ]
+   ],
+   "parrafos": [
+    "El neumococo es una bacteria que puede provocar neumonía, meningitis e infecciones en la sangre. Afecta sobre todo a personas mayores, a chicos pequeños y a quienes tienen defensas bajas o enfermedades crónicas. Por eso el Calendario Nacional de Vacunación incluye una vacuna contra el neumococo, gratuita, para mayores de 65 años y para personas con factores de riesgo.",
+    "Una neumonía en una persona mayor puede llevar a una internación larga y dejar secuelas, y la vacunación reduce mucho ese riesgo. Se puede aplicar el mismo día que la vacuna antigripal, en brazos distintos, así que se resuelve en una sola visita al vacunatorio. Los esquemas varían según la edad y las condiciones de cada persona.",
+    "Si tenés más de 65 años o convivís con una enfermedad como diabetes, problemas respiratorios o del corazón, preguntá por esta vacuna. Es gratis en vacunatorios y hospitales públicos de todo el país. Para saber qué esquema te corresponde, consultá en el centro de salud más cercano."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-03",
@@ -47,7 +59,13 @@
     2,
     3,
     4
-   ]
+   ],
+   "parrafos": [
+    "El mosquito que transmite el dengue, el Aedes aegypti, vive muy cerca de las casas y pone sus huevos en recipientes con agua limpia y quieta. Un balde olvidado, una maceta con plato, una botella tirada o una cubierta vieja alcanzan para que se críe. Los huevos pueden resistir secos varios meses y eclosionan cuando vuelven a mojarse.",
+    "Por eso la prevención más eficaz es el descacharrado: una vez por semana, vaciar, tapar, dar vuelta o tirar todo lo que acumule agua. También hay que cambiar el agua de los bebederos de las mascotas, fregar sus bordes para sacar los huevos adheridos, y mantener limpios patios, canaletas y terrazas. Dura pocos minutos y hace una gran diferencia.",
+    "El dengue no se controla solo con fumigación: depende del trabajo de cada familia y de cada barrio. Si juntás a vecinos y compañeros para revisar patios, lugares de trabajo y espacios comunes, el efecto se multiplica. Ante dudas sobre cómo eliminar criaderos en tu casa, consultá en el centro de salud de tu zona."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-04",
@@ -64,7 +82,13 @@
     2,
     3,
     4
-   ]
+   ],
+   "parrafos": [
+    "El dengue es una enfermedad viral que transmite el mosquito Aedes aegypti. Suele empezar con fiebre alta de repente, dolor de cabeza, dolor detrás de los ojos, dolores musculares y articulares, y a veces náuseas o erupciones en la piel. La mayoría de los casos se resuelve en una semana, pero algunos pueden complicarse.",
+    "Ante esos síntomas, lo indicado es consultar en el centro de salud o la guardia lo antes posible y no automedicarse. En particular, la aspirina y los antiinflamatorios como el ibuprofeno pueden aumentar el riesgo de sangrado y no deben tomarse sin indicación médica. Tomar mucho líquido y hacer reposo ayuda mientras tanto.",
+    "Hay señales de alarma que exigen consultar de inmediato: dolor abdominal intenso, vómitos persistentes, sangrado de encías o nariz, mucho sueño o decaimiento, o cuando la fiebre baja y la persona se siente peor. Ese momento es justamente cuando más hay que prestar atención. Ante cualquier duda, acercate a tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-05",
@@ -78,7 +102,13 @@
     12,
     1,
     2
-   ]
+   ],
+   "parrafos": [
+    "El golpe de calor ocurre cuando el cuerpo no logra regular su temperatura y se recalienta. Puede dar dolor de cabeza, mareos, piel muy caliente y seca o enrojecida, confusión y desmayos, y es una urgencia médica. Se previene con hábitos simples, sobre todo en los meses de más calor.",
+    "Tomá agua seguido aunque no tengas sed, evitá las bebidas con mucho azúcar o alcohol, y no hagas esfuerzo físico intenso entre las 11 y las 17, cuando el sol pega más fuerte. Elegí ropa liviana, holgada y clara, usá sombrero y buscá lugares frescos y ventilados. Hacé comidas livianas y con frutas y verduras.",
+    "Si trabajás al aire libre o en lugares muy calurosos, hacé pausas a la sombra y tomá agua con frecuencia durante la jornada. Si alguien muestra síntomas de golpe de calor, llevalo a un lugar fresco, mojale el cuerpo con agua y pedí atención médica enseguida. Ante dudas, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-06",
@@ -92,7 +122,13 @@
     12,
     1,
     2
-   ]
+   ],
+   "parrafos": [
+    "No todas las personas sienten el calor igual. Los bebés, los chicos pequeños y las personas mayores regulan peor su temperatura corporal y pueden deshidratarse sin darse cuenta, porque a veces no piden agua o no sienten sed. Por eso necesitan que alguien esté atento.",
+    "Ofrecé agua con frecuencia sin esperar a que la pidan, y a los bebés amamantados dales el pecho más seguido. Vestilos con ropa liviana, mantenelos en lugares ventilados y evitá la exposición al sol en las horas centrales. En una casa con un bebé o un abuelo, un ambiente fresco es parte del cuidado.",
+    "Una advertencia importante: nunca dejes a una persona ni a una mascota dentro de un auto estacionado, ni siquiera unos minutos. El interior del vehículo se calienta muy rápido y puede ser peligroso. Si notás irritabilidad, boca seca, poca orina o somnolencia en un bebé o un mayor, consultá de inmediato en el centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-07",
@@ -107,7 +143,13 @@
     6,
     7,
     8
-   ]
+   ],
+   "parrafos": [
+    "El monóxido de carbono es un gas que se produce cuando se queman mal combustibles como gas, leña, carbón o kerosene. No tiene olor, color ni sabor, y por eso es tan peligroso: se respira sin notarlo y en espacios cerrados puede ser mortal. Cada invierno hay intoxicaciones evitables.",
+    "La prevención está en los artefactos y en el aire. Dejá siempre una abertura que permita la entrada de aire, no uses hornallas ni hornos para calefaccionar, y no enciendas braseros ni parrillas dentro de la casa. Una vez al año hacé revisar calefactores, estufas y calefones por un gasista matriculado, y comprobá que tengan salida al exterior despejada.",
+    "Una pista que podés mirar vos mismo: la llama tiene que ser azul. Si es amarilla o anaranjada, o si hay hollín en las paredes, algo no está funcionando bien y conviene dejar de usar el artefacto hasta que lo revisen. Ante dudas sobre la seguridad de tu calefacción, consultá a un gasista y, por tu salud, en el centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-08",
@@ -122,7 +164,13 @@
     6,
     7,
     8
-   ]
+   ],
+   "parrafos": [
+    "La intoxicación por monóxido de carbono puede confundirse con un resfrío o un cuadro de cansancio. Los primeros síntomas son dolor de cabeza, mareos, náuseas o vómitos, debilidad y mucho sueño, y suelen aparecer en un ambiente cerrado con estufa, calefactor o calefón encendido.",
+    "Si varias personas de la casa se sienten mal a la vez, o los síntomas mejoran al salir a la calle, sospechá del monóxido. Apagá el artefacto, abrí puertas y ventanas, sacá a todos al aire libre y llamá a emergencias o andá a una guardia sin demora. No esperes a ver si se pasa, porque el gas sigue actuando en el organismo.",
+    "Las personas que duermen o los bebés pueden no avisar que se sienten mal, así que hay que ser más cuidadoso. Después de una intoxicación, no vuelvas a usar el artefacto hasta que un gasista matriculado lo revise. Ante cualquier duda, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-09",
@@ -134,7 +182,13 @@
    "dudosa": false,
    "meses": [
     10
-   ]
+   ],
+   "parrafos": [
+    "El cáncer de mama es el más frecuente entre las mujeres, pero detectado a tiempo tiene altas chances de curarse. Por eso la detección temprana es la herramienta más importante. El Instituto Nacional del Cáncer recomienda que las mujeres de 50 a 69 años se hagan una mamografía cada uno o dos años, aunque se sientan bien.",
+    "La mamografía puede mostrar un tumor antes de que se pueda sentir con la mano. Si tenés antecedentes familiares, como una madre o una hermana con cáncer de mama, hay que consultar antes de los 50 para ver qué controles te convienen. También es útil conocer tus mamas y consultar si notás un bulto, cambios en la piel o secreción por el pezón.",
+    "Los hospitales y centros de salud públicos realizan estudios de forma gratuita y pueden darte el turno. Si trabajás en una empresa con obra social, pedí también la orden. Un control cada tanto puede cambiar mucho el pronóstico. Para saber cuándo te corresponde, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-10",
@@ -144,7 +198,13 @@
    "texto": "La vacuna contra el HPV protege contra el cáncer de cuello de útero y otros cánceres. Es gratuita y obligatoria a los 11 años, para chicas y chicos.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "El virus del papiloma humano, o HPV, es muy común y se transmite por contacto íntimo. En la mayoría de los casos el cuerpo lo elimina solo, pero algunos tipos pueden provocar lesiones que con los años derivan en cáncer de cuello de útero, y también otros cánceres en ambos sexos. La vacuna previene esas infecciones.",
+    "La vacuna contra el HPV está incluida en el Calendario Nacional, es gratuita y obligatoria a los 11 años, tanto para chicas como para chicos. Funciona mejor cuando se aplica antes del inicio de las relaciones sexuales. Se da en vacunatorios, centros de salud y también en muchas escuelas, durante campañas de vacunación.",
+    "Si tenés hijos o sobrinos de esa edad, revisá el carnet y fijate si la recibieron. Quienes no la completaron en su momento pueden consultar si todavía les corresponde aplicarla. Vacunarse no reemplaza los controles ginecológicos periódicos. Ante dudas, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-11",
@@ -154,7 +214,13 @@
    "texto": "El PAP y el test de HPV permiten encontrar lesiones antes de que se transformen en cáncer. Se hacen gratis en centros de salud y hospitales públicos; preguntá cada cuánto te corresponde según tu edad.",
    "fuente": "Instituto Nacional del Cáncer – Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "El cáncer de cuello de útero se puede prevenir y detectar a tiempo. Dos estudios sencillos lo permiten: el Papanicolaou, o PAP, que busca células anormales en el cuello del útero, y el test de HPV, que detecta el virus que causa la mayoría de estas lesiones. Ambos encuentran cambios antes de que se transformen en cáncer.",
+    "Los estudios se hacen de forma gratuita en centros de salud y hospitales públicos, y llevan pocos minutos. La frecuencia depende de la edad y del método usado, y el Instituto Nacional del Cáncer recomienda priorizar a las mujeres de 30 a 64 años. No hace falta tener síntomas: justamente la gracia es detectar a tiempo, cuando no los hay.",
+    "Mucha gente posterga el control por vergüenza o falta de tiempo. Si trabajás en turnos o con horarios rígidos, preguntá si el centro de salud tiene jornadas especiales. Para saber cada cuánto te corresponde hacerlo según tu edad y tu historia, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-12",
@@ -166,7 +232,13 @@
    "dudosa": false,
    "meses": [
     5
-   ]
+   ],
+   "parrafos": [
+    "La hipertensión arterial, o presión alta, es una de las principales causas de infarto, ACV e insuficiencia renal. Se la suele llamar enemiga silenciosa porque muchas veces no da ningún síntoma, y quien la tiene puede enterarse recién cuando ya hay una complicación. Cada 17 de mayo se conmemora el Día Mundial de la Hipertensión para recordarlo.",
+    "La forma de saberlo es controlarse. Tomarte la presión es rápido, indoloro y gratuito en cualquier centro de salud, y se recomienda hacerlo al menos una vez al año, o más seguido si tenés antecedentes familiares, sobrepeso o más de 40 años. Un solo valor alto no alcanza para el diagnóstico: el equipo de salud te indicará cómo seguirlo.",
+    "Algunas medidas ayudan a mantener la presión bajo control: comer menos sal, moverte con regularidad, no fumar, limitar el alcohol y manejar el estrés. Si ya te dijeron que sos hipertenso, no abandones la medicación aunque te sientas bien. Para controlarte, acercate al centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-13",
@@ -176,7 +248,13 @@
    "texto": "Se recomienda no pasar de 5 gramos de sal por día, más o menos una cucharadita, contando la que ya traen los alimentos procesados. Probá la comida antes de salarla y sacá el salero de la mesa.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "El exceso de sal es uno de los principales factores que elevan la presión arterial. La recomendación es no pasar de 5 gramos por día, más o menos una cucharadita de té, pero en la Argentina se consume bastante más. Lo que pesa no es solo la que agregamos al plato, sino sobre todo la que ya traen los alimentos.",
+    "Los fiambres, embutidos, caldos, sopas instantáneas, snacks, panificados y las comidas listas contienen mucha sal escondida. Mirar la etiqueta ayuda a comparar productos. En casa, probá la comida antes de salarla, usá condimentos como pimentón, ajo, orégano o limón para dar sabor, y sacá el salero de la mesa.",
+    "Los paladares se acostumbran: después de unas semanas con menos sal, la comida con mucha sal empieza a parecer excesiva. Reducir la sal es un cambio pequeño que suma, sobre todo para quienes ya tienen presión alta o antecedentes familiares. Si tenés dudas sobre tu alimentación, consultá en el centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-14",
@@ -188,7 +266,13 @@
    "dudosa": false,
    "meses": [
     10
-   ]
+   ],
+   "parrafos": [
+    "La salud mental es parte de la salud, igual que el corazón o los pulmones. Abarca cómo pensamos, sentimos y nos relacionamos, y todos pasamos por momentos difíciles. Cada 10 de octubre se conmemora el Día Mundial de la Salud Mental para hablar del tema sin vergüenza ni prejuicios.",
+    "Algunas señales de que conviene pedir ayuda son sentir angustia o tristeza durante muchos días, perder el sueño o dormir en exceso, irritarse con facilidad, aislarse, o tener dificultades para sostener el trabajo y las tareas cotidianas. El trabajo, el estrés, las deudas y las pérdidas pueden pesar mucho, y no es una debilidad sentirse así.",
+    "Hablalo con alguien de confianza, un familiar, un amigo o un compañero de trabajo, y no esperes a sentirte mal del todo. En los centros de salud y hospitales públicos hay equipos de salud mental que atienden de forma gratuita. Si estás atravesando un momento difícil, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-15",
@@ -198,7 +282,13 @@
    "texto": "La atención en salud mental es un derecho y se brinda en hospitales y centros de salud públicos. Si vos o alguien cercano está pasando un mal momento, acercate y consultá: no hace falta esperar a que sea grave.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "La atención en salud mental es un derecho. La Ley Nacional de Salud Mental establece que las personas deben recibir tratamiento respetando su dignidad y sus derechos, preferentemente en la comunidad y no en el encierro. Hoy esa atención se brinda en hospitales generales y centros de salud públicos de todo el país.",
+    "No hace falta esperar a que una situación sea grave para consultar. Un periodo de mucho estrés, un duelo, el insomnio o los problemas con el alcohol u otras sustancias son motivos válidos. En el primer encuentro, el equipo escucha, evalúa y propone un camino que puede incluir terapia, acompañamiento o medicación, según el caso.",
+    "Si alguien cercano atraviesa un mal momento, escucharlo sin juzgar y acompañarlo a la consulta ayuda mucho. Si hay riesgo inmediato para su vida, hay que ir a una guardia o llamar a emergencias. Para conocer los servicios cercanos y los horarios, acercate a tu centro de salud y consultá."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-16",
@@ -208,7 +298,13 @@
    "texto": "Con agua y jabón, frotá palmas, dorsos, entre los dedos y las uñas durante 40 a 60 segundos. Hacelo antes de comer o cocinar, después de ir al baño y al volver de la calle.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "Lavarse las manos es una de las formas más simples y efectivas de evitar infecciones. Muchas enfermedades, como diarreas, gripe, resfríos y bronquiolitis, se transmiten por las manos que tocaron superficies o personas. Con agua y jabón se eliminan la mayoría de los gérmenes.",
+    "La técnica importa: mojate las manos, enjabonalas y frotá las palmas, los dorsos, entre los dedos, las uñas y las muñecas durante 40 a 60 segundos, más o menos lo que lleva cantar dos veces el feliz cumpleaños. Después enjuagá bien y secate con una toalla limpia o descartable. El alcohol en gel sirve cuando no hay agua, pero no reemplaza al lavado si las manos están sucias.",
+    "Los momentos clave son antes de comer o cocinar, después de ir al baño, al volver de la calle, de tocar basura o animales, y después de sonarte la nariz. En los lugares de trabajo, tener jabón y agua disponibles es parte del cuidado de todos. Ante dudas sobre prevención de infecciones, consultá en el centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-17",
@@ -218,7 +314,13 @@
    "texto": "Las vacunas del Calendario Nacional son gratuitas y obligatorias, y se aplican en vacunatorios, centros de salud y hospitales públicos de todo el país. Llevá tu carnet para que te digan cuáles te faltan.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "El Calendario Nacional de Vacunación reúne las vacunas que el Estado considera necesarias para cada etapa de la vida: bebés, chicos, adolescentes, adultos, embarazadas y mayores. Las vacunas incluidas son gratuitas y obligatorias, y se aplican en vacunatorios, centros de salud y hospitales públicos de todo el país.",
+    "Muchos adultos creen que vacunarse es cosa de la infancia, pero hay vacunas que se refuerzan durante toda la vida, como la doble adultos, y otras que corresponden a ciertas situaciones, como el embarazo o un trabajo en salud. Con el paso del tiempo es fácil perder la cuenta de qué dosis se recibieron.",
+    "Por eso conviene llevar tu carnet de vacunación o, si no lo encontrás, tu documento: en el vacunatorio revisan tu historial y te dicen cuáles te faltan. Completar el calendario protege a vos y a la gente que te rodea. Para consultar qué vacunas te corresponden, acercate a tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-18",
@@ -228,7 +330,13 @@
    "texto": "La vacuna doble adultos protege contra el tétanos y la difteria. Necesita un refuerzo cada 10 años durante toda la vida; si no te acordás cuándo te la diste, consultá en un vacunatorio.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "La vacuna doble adultos protege contra dos enfermedades graves: el tétanos y la difteria. El tétanos se contrae por heridas contaminadas con tierra u objetos oxidados, y la difteria es una infección que afecta la garganta y puede ser muy grave. Ambas se previenen con vacunación.",
+    "La protección no dura toda la vida: después de completar el esquema inicial, se necesita un refuerzo cada 10 años. Muchas personas no recuerdan cuándo fue su última dosis y la dejan pasar. En una herida profunda o sucia, el médico puede indicar un refuerzo antes, según la fecha de la última aplicación.",
+    "La vacuna es gratuita en vacunatorios, centros de salud y hospitales públicos. En trabajos con riesgo de cortes, golpes o contacto con tierra, como la construcción, la jardinería o el campo, tenerla al día es especialmente importante. Si no te acordás cuándo te la diste, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-19",
@@ -238,7 +346,13 @@
    "texto": "La vacuna contra la hepatitis B es universal: está indicada para toda la población y es gratuita. Se completa con tres dosis; si no la tenés, podés empezar en cualquier momento.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "La hepatitis B es una infección del hígado causada por un virus que se transmite por sangre y por relaciones sexuales sin protección, y también de madre a hijo durante el parto. Puede volverse crónica y, con los años, provocar cirrosis o cáncer de hígado. Hay una vacuna muy eficaz para prevenirla.",
+    "En la Argentina la vacuna contra la hepatitis B es universal: está indicada para toda la población, desde recién nacidos hasta adultos, y es gratuita. El esquema se completa con tres dosis, aplicadas en distintos momentos, y si no la tenés podés empezar en cualquier momento, sin importar la edad.",
+    "Es particularmente importante para el personal de salud y de limpieza, y para quienes trabajan con riesgo de contacto con sangre. Si no tenés registro de haberla recibido, preguntá en un vacunatorio, donde revisan tu caso. Para saber cómo seguir, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-20",
@@ -248,7 +362,13 @@
    "texto": "Las personas nacidas después de 1965 necesitan dos dosis de vacuna con componente contra el sarampión, como la triple viral. Revisá tu carnet: si te falta alguna, se aplica gratis.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "El sarampión es una enfermedad viral muy contagiosa, que se transmite por el aire al toser o estornudar. Provoca fiebre alta y manchas en la piel, y puede complicarse con neumonía o encefalitis, sobre todo en chicos pequeños. Después de años de control, los brotes pueden volver cuando baja la cobertura de vacunación.",
+    "Las personas nacidas después de 1965 necesitan haber recibido dos dosis de vacuna con componente contra el sarampión, como la triple viral, que protege además contra la rubéola y las paperas. La indicación vale para adultos que no completaron el esquema o no pueden acreditarlo, y se aplica gratis en vacunatorios y hospitales públicos.",
+    "Es de especial importancia antes de viajar, sobre todo a países con circulación del virus, y para quienes trabajan con muchas personas, como docentes o personal de salud. Revisá tu carnet: si te falta alguna dosis, podés ponerla al día. Para saber qué te corresponde, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-21",
@@ -261,7 +381,13 @@
    "meses": [
     2,
     3
-   ]
+   ],
+   "parrafos": [
+    "Al empezar la primaria, a los 5 o 6 años, el Calendario Nacional de Vacunación indica refuerzos de varias vacunas que los chicos recibieron de bebés. Entre ellas están las que protegen contra la difteria, el tétanos y la tos convulsa, la poliomielitis, el sarampión, la rubéola y las paperas, entre otras.",
+    "Estos refuerzos son necesarios porque con el tiempo la protección de las primeras dosis puede disminuir. Además, en la escuela los chicos comparten muchas horas en un mismo espacio y los virus circulan con más facilidad. Vacunarlos cuida a cada uno y también a los compañeros que no pueden vacunarse por razones médicas.",
+    "Conviene organizarse antes del inicio de clases, porque a veces se piden constancias y los vacunatorios tienen más demanda en esas semanas. Las vacunas son gratuitas en vacunatorios, centros de salud y hospitales públicos. Llevá el carnet de tu hijo y consultá en el centro de salud si hay alguna que le falte."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-22",
@@ -273,7 +399,13 @@
    "dudosa": false,
    "meses": [
     5
-   ]
+   ],
+   "parrafos": [
+    "Dejar de fumar es una de las mejores decisiones para la salud, y sus beneficios empiezan enseguida. A las pocas horas el cuerpo comienza a mejorar la oxigenación, y con los años baja de manera importante el riesgo de infarto, de ACV, de enfermedades pulmonares y de varios tipos de cáncer. No importa cuánto tiempo hayas fumado: siempre vale la pena.",
+    "La nicotina genera dependencia, por eso muchas personas necesitan varios intentos antes de lograrlo, y eso es normal. Tener un día elegido para dejar, contarlo en la familia y en el trabajo, y evitar las situaciones que disparan las ganas ayuda. El apoyo profesional aumenta mucho las chances de éxito.",
+    "En los centros de salud y hospitales públicos hay ayuda gratuita para dejar de fumar, con acompañamiento y, cuando corresponde, medicación. También existe una línea telefónica nacional de ayuda. Dejar de fumar además mejora el bolsillo. Para empezar, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-23",
@@ -283,7 +415,13 @@
    "texto": "Para los adultos se recomienda al menos 150 minutos por semana de actividad moderada, como caminar rápido. Se pueden repartir en ratos cortos: subir escaleras o bajarse una parada antes también suma.",
    "fuente": "Ministerio de Salud de la Nación",
    "dudosa": false,
-   "meses": []
+   "meses": [],
+   "parrafos": [
+    "Moverse con regularidad protege el corazón, ayuda a controlar el peso, mejora el ánimo, el sueño y la presión arterial, y reduce el riesgo de diabetes. Para los adultos se recomienda al menos 150 minutos por semana de actividad física moderada, como caminar rápido, andar en bicicleta o bailar.",
+    "No hace falta anotarse en un gimnasio ni hacerlo todo de una vez: esos minutos se pueden repartir en ratos cortos de diez o quince. Subir escaleras en lugar de usar el ascensor, bajarse una parada antes del colectivo o caminar durante el almuerzo también suma. Lo importante es la constancia más que la intensidad.",
+    "Para quienes pasan la jornada sentados o con tareas muy repetitivas, las pausas activas de unos minutos para estirar y caminar ayudan a la espalda y al cuerpo en general. Si tenés una enfermedad previa o hace mucho que no hacés actividad, consultá en tu centro de salud antes de empezar."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-24",
@@ -299,7 +437,13 @@
     1,
     2,
     3
-   ]
+   ],
+   "parrafos": [
+    "La radiación ultravioleta del sol daña la piel aunque no te quemes, y esos daños se acumulan a lo largo de la vida. La exposición excesiva aumenta el riesgo de envejecimiento prematuro, de lesiones en los ojos y de cáncer de piel, uno de los más frecuentes y que muchas veces se puede prevenir.",
+    "Las horas de mayor radiación son las centrales del día, aproximadamente entre las 10 y las 16. En ese lapso conviene buscar la sombra y usar sombrero de ala ancha, anteojos con filtro UV y ropa que cubra. El protector solar se aplica 20 minutos antes de salir y hay que renovarlo cada dos horas o después de transpirar o mojarse.",
+    "Los chicos son especialmente sensibles: los bebés menores de un año no deben exponerse al sol directo. Quienes trabajan al aire libre, en la construcción, el campo o el reparto, reciben mucha radiación durante años y deben cuidarse todos los días, también en invierno. Si notás un lunar que cambia, consultá en el centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-25",
@@ -315,7 +459,13 @@
     1,
     2,
     3
-   ]
+   ],
+   "parrafos": [
+    "El síndrome urémico hemolítico, o SUH, es una enfermedad que afecta los riñones y la sangre, y que se presenta sobre todo en chicos menores de cinco años. La Argentina tiene una de las tasas más altas del mundo. Se origina por una bacteria, Escherichia coli, que puede estar en la carne mal cocida, en verduras mal lavadas o en agua sin tratar.",
+    "Se previene con cuidados simples en la cocina. Cociná la carne hasta que no quede rosada por dentro, en especial la picada y las hamburguesas. Lavá bien frutas y verduras, y no uses el mismo cuchillo ni la misma tabla para la carne cruda y los alimentos ya cocidos o listos para comer. Lavate las manos antes de cocinar.",
+    "También conviene usar agua segura, no bañar a los chicos en aguas de calidad dudosa y mantener la heladera a baja temperatura. Una diarrea con sangre en un chico es motivo de consulta inmediata. Para recibir más información sobre cómo cuidarte, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-26",
@@ -327,7 +477,13 @@
    "dudosa": false,
    "meses": [
     11
-   ]
+   ],
+   "parrafos": [
+    "La diabetes es una enfermedad en la que el cuerpo no logra controlar bien el nivel de azúcar en la sangre. Mucha gente la tiene sin saberlo, porque al principio puede no dar síntomas. Si no se trata, con los años puede dañar los ojos, los riñones, los nervios y el corazón. Cada 14 de noviembre se celebra el Día Mundial de la Diabetes.",
+    "Detectarla es sencillo: un análisis de glucemia en sangre. Conviene hacérselo si tenés sobrepeso, antecedentes familiares de diabetes, más de 45 años, presión alta, o síntomas como mucha sed, ganas frecuentes de orinar, cansancio, visión borrosa o heridas que cicatrizan lento. El diagnóstico temprano permite controlarla mejor.",
+    "Una alimentación equilibrada, con menos azúcares y harinas refinadas, y la actividad física regular ayudan a prevenir la diabetes tipo 2 y a controlarla. Los controles de glucemia se pueden hacer gratis en centros de salud y hospitales públicos. Si tenés alguno de estos factores, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-27",
@@ -339,7 +495,13 @@
    "dudosa": false,
    "meses": [
     12
-   ]
+   ],
+   "parrafos": [
+    "Cada 1 de diciembre se conmemora el Día Mundial del Sida, una fecha para recordar la importancia del diagnóstico temprano, la prevención y el respeto hacia las personas que viven con VIH. El VIH es el virus que, sin tratamiento, debilita las defensas del cuerpo; hoy, con tratamiento, se puede vivir con una vida plena.",
+    "El único modo de saber si tenés el virus es hacerte el test. En hospitales y centros de salud públicos es gratuito y confidencial, y el resultado se entrega de manera reservada. Lo recomendable es hacerlo ante una situación de riesgo y, en general, al menos una vez en la vida. También se ofrece a las embarazadas.",
+    "El tratamiento antirretroviral también es gratuito y, cuando se sigue de forma sostenida, permite controlar el virus y evitar transmitirlo. Usar preservativo en cada relación sexual es la mejor forma de prevenir. La discriminación por vivir con VIH está prohibida por ley, incluso en el trabajo. Para hacerte el test, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-28",
@@ -351,7 +513,13 @@
    "dudosa": false,
    "meses": [
     11
-   ]
+   ],
+   "parrafos": [
+    "El 9 de noviembre se celebra en la Argentina el Día Nacional del Donante Voluntario de Sangre. La fecha recuerda que, en 1914, el médico argentino Luis Agote realizó con éxito la primera transfusión con sangre citrada, un método que permitió conservar la sangre y hacer la transfusión mucho más segura y práctica.",
+    "Donar sangre es un acto seguro y solidario, y lleva menos de una hora entre la entrevista, el chequeo y la extracción en sí. Pueden hacerlo personas sanas de entre 16 y 65 años que pesen más de 50 kilos, y se necesita ir con documento. Con una donación se pueden ayudar a varias personas, porque la sangre se separa en componentes.",
+    "La sangre no se puede fabricar, y los hospitales necesitan que haya donantes de manera permanente, no solo en emergencias. En el sistema público hay servicios de hemoterapia y campañas de donación en distintos lugares, incluidos algunos sindicatos y lugares de trabajo. Para saber dónde y cuándo podés donar, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   },
   {
    "id": "sa-29",
@@ -363,7 +531,13 @@
    "dudosa": false,
    "meses": [
     5
-   ]
+   ],
+   "parrafos": [
+    "El 30 de mayo se celebra el Día Nacional de la Donación de Órganos y Tejidos. Es una jornada para recordar que miles de personas esperan un trasplante y para hablar del tema en familia. El organismo que coordina la donación y el trasplante en el país es el INCUCAI.",
+    "Desde la Ley 27.447 de 2018, conocida como Ley Justina, toda persona mayor de 18 años es considerada donante, salvo que haya expresado en vida su voluntad contraria. Esa decisión puede registrarse en el INCUCAI o al sacar o renovar el DNI, y puede cambiarse en cualquier momento. Quien no se manifestó en contra queda como donante.",
+    "Aun así, en la práctica la familia es consultada y conoce la voluntad del paciente, por eso es tan importante conversarlo. Si querés ser donante, contárselo a tus seres queridos hace que tu decisión se respete cuando llegue el momento. Para obtener más información sobre cómo expresar tu voluntad, podés consultar en tu centro de salud."
+   ],
+   "url": "https://www.incucai.gov.ar"
   },
   {
    "id": "sa-30",
@@ -378,7 +552,13 @@
     6,
     7,
     8
-   ]
+   ],
+   "parrafos": [
+    "La bronquiolitis es una infección respiratoria que afecta a los bronquios más finos de los bebés menores de dos años, y es muy frecuente durante el otoño y el invierno. La mayoría de los casos son leves y se resuelven en casa, pero algunos bebés necesitan internación, sobre todo los más chiquitos o los prematuros.",
+    "Se contagia por las gotitas de saliva y por las manos. Para cuidar a los bebés, lavate las manos con agua y jabón antes de tocarlos, ventilá los ambientes, no fumes cerca de ellos y evitá el contacto con personas con tos o resfrío. Dar el pecho ayuda a protegerlos, y no conviene llevarlos a lugares cerrados y muy concurridos.",
+    "Consultá de inmediato si el bebé respira rápido o con dificultad, se le hunde el pecho al respirar, tiene silbidos, rechaza el alimento, está muy decaído o tiene los labios morados. Ante estos signos no esperes: acercate a una guardia. Para cualquier duda sobre la salud de tu bebé, consultá en tu centro de salud."
+   ],
+   "url": "https://www.argentina.gob.ar/salud"
   }
  ]
 }

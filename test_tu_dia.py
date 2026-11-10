@@ -123,6 +123,71 @@ def test_el_item_del_dia_es_el_mismo_para_todos_ese_dia():
     assert len(otros) > 5
 
 
+def test_cada_item_es_un_articulo_con_parrafos_y_enlace():
+    """Pedido de SDN (2026-11-10): la hoja de detalle trae título, 3 o 4
+    párrafos y el enlace a la fuente; un ítem viejo con solo `texto` sigue
+    saliendo con ese texto como único párrafo, y una url que no es https no
+    viaja como enlace."""
+    nuevo = [{"id": "a", "linea": "L", "titulo": "T", "texto": "Resumen", "fuente": "F",
+              "parrafos": ["Uno", " Dos ", "", "Tres"], "url": "https://www.argentina.gob.ar/salud"}]
+    it = tu_dia.item_del_dia("salud", nuevo, date(2026, 11, 10))
+    assert it["parrafos"] == ["Uno", "Dos", "Tres"] and it["url"] == "https://www.argentina.gob.ar/salud"
+    viejo = [{"id": "b", "linea": "L", "texto": "Solo texto", "fuente": "F", "url": "javascript:alert(1)"}]
+    it = tu_dia.item_del_dia("curiosos", viejo, date(2026, 11, 10))
+    assert it["parrafos"] == ["Solo texto"] and it["url"] == ""
+    d = tu_dia.item_dolar({"fecha": "2026-11-09", "valor": 1500.0, "anterior": None})
+    assert len(d["parrafos"]) >= 3 and d["url"].startswith("https://www.bcra.gob.ar")
+
+
+def _banco(n):
+    return [{"id": f"q{k}", "titulo": f"¿P{k}?", "opciones": ["a", "b", "c"], "correcta": k % 3,
+             "explicacion": "x", "fuente": "f", "url": "https://x.y", "nivel": tu_dia.NIVELES[k % 3]}
+            for k in range(n)]
+
+
+def test_la_trivia_da_diez_por_dia_sin_repetir_en_la_tanda():
+    banco = _banco(47)                                   # 4 tandas de 10 días, 7 sobran por tanda
+    dias = [date(2026, 11, 1) + __import__("datetime").timedelta(days=k) for k in range(60)]
+    kits = [tu_dia.trivia_del_dia(banco, d) for d in dias]
+    assert all(len(k) == 10 for k in kits)
+    # Determinista: todos ven lo mismo el mismo día.
+    assert [q["id"] for q in tu_dia.trivia_del_dia(banco, dias[3])] == [q["id"] for q in kits[3]]
+    # Dentro de una tanda (47 // 10 = 4 días) ninguna pregunta se repite.
+    por_tanda = len(banco) // 10
+    for d, k in zip(dias, kits):
+        tanda = d.toordinal() // por_tanda
+        vecinos = [kk for dd, kk in zip(dias, kits) if dd.toordinal() // por_tanda == tanda]
+        ids = [q["id"] for kk in vecinos for q in kk]
+        assert len(ids) == len(set(ids)), d
+    # Dos días seguidos no son el mismo kit, y el kit va de fácil a difícil.
+    assert [q["id"] for q in kits[0]] != [q["id"] for q in kits[1]]
+    for k in kits:
+        niveles = [tu_dia.NIVELES.index(q["nivel"]) for q in k]
+        assert niveles == sorted(niveles)
+    # Lo dudoso y lo que no tiene tres opciones no entra; con poco banco salen las que hay.
+    chico = _banco(4) + [{"id": "mal", "opciones": ["a"], "correcta": 0}, dict(_banco(1)[0], id="dud", dudosa=True)]
+    assert sorted(q["id"] for q in tu_dia.trivia_del_dia(chico, dias[0])) == ["q0", "q1", "q2", "q3"]
+    assert tu_dia.trivia_del_dia([], dias[0]) == []
+
+
+def test_el_comentario_alienta_hasta_cuatro_y_elogia_desde_cinco():
+    textos = [tu_dia.comentario_puntaje(n) for n in range(11)]
+    assert len(tu_dia.COMENTARIOS_PUNTAJE) == 11 and len({t["titulo"] for t in textos}) == 11
+    for n in range(5):
+        assert "mañana" in textos[n]["texto"].lower(), n          # ánimo para la próxima
+        assert "!" not in textos[n]["titulo"] or n == 1
+    assert textos[5]["titulo"].startswith("¡Aprobado")
+    for n in range(5, 11):
+        assert textos[n]["titulo"].startswith("¡"), n            # elogio creciente
+    assert "Diez de diez" in textos[10]["titulo"]
+    assert tu_dia.comentario_puntaje(3, 5) == tu_dia.comentario_puntaje(6)   # se escala
+    assert tu_dia.comentario_puntaje(99) == textos[10] and tu_dia.comentario_puntaje(-1) == textos[0]
+    it = tu_dia.item_trivia(_banco(30), date(2026, 11, 10))
+    assert it["rubro"] == "juego" and it["chip"] == "Trivia" and len(it["preguntas"]) == 10
+    assert len(it["comentarios"]) == 11 and it["comentarios"][7]["titulo"] == textos[7]["titulo"]
+    assert "10 preguntas" in it["linea"]
+
+
 def test_salud_solo_en_sus_meses():
     lista = [{"id": "a", "linea": "Antigripal", "meses": [3, 4, 5, 6], "fuente": "x"},
              {"id": "b", "linea": "Lavado de manos", "meses": [], "fuente": "x"}]
@@ -178,6 +243,9 @@ def test_la_respuesta_trae_clima_items_y_nunca_coordenadas():
     assert d["intervalo"] == 10 and d["alerta"] is None
     assert d["clima"]["localidad"] == "Río Cuarto" and "MET Norway" in d["clima"]["fuente"]
     assert [i["rubro"] for i in d["items"]][:1] == ["mercados"]
+    assert d["clima"]["url"].startswith("https://")
+    for i in d["items"]:
+        assert i["parrafos"] and all(i["parrafos"]), i["rubro"]
     texto = json.dumps(d)
     assert "-33.1" not in texto and "-64.3" not in texto and "latitud" not in texto
     assert d["hora_ba"].startswith(HOY.isoformat())
@@ -203,6 +271,16 @@ def test_el_cumple_se_saluda_una_sola_vez():
     assert c.post("/api/tu-dia/cumple-visto").json() == {"ok": True}
     assert c.get("/api/tu-dia").json()["cumple"] is None
     assert TestClient(main.app).post("/api/tu-dia/cumple-visto").status_code == 401
+
+
+def test_la_ruta_trae_el_kit_de_la_trivia_entero():
+    db.set_tu_dia(SID, {"rubros": ["juego"]})
+    d = _afiliado().get("/api/tu-dia").json()
+    (it,) = d["items"]
+    assert it["rubro"] == "juego" and len(it["preguntas"]) == tu_dia.TRIVIA_PREGUNTAS
+    assert all(len(q["opciones"]) == 3 and q["explicacion"] and q["url"].startswith("https://") for q in it["preguntas"])
+    assert len(it["comentarios"]) == 11
+    assert len({q["id"] for q in it["preguntas"]}) == 10
 
 
 def test_la_configuracion_es_de_cada_sindicato():
@@ -274,16 +352,33 @@ def test_el_contenido_curado_cumple_las_reglas(rubro):
     assert items and len({i["id"] for i in items}) == len(items)
     for i in items:
         assert i.get("fuente", "").strip(), i["id"]
+        assert i.get("url", "").startswith("https://"), i["id"]       # el enlace al origen (2026-11-10)
         assert len(i.get("chip", "")) <= 14, i["id"]
+        if rubro == "juego":
+            # El banco de la trivia: pregunta, tres opciones, explicación con su fuente.
+            assert 0 < len(i["titulo"]) <= 120 and i["titulo"].endswith("?"), i["id"]
+            assert len(i["opciones"]) == 3 and i["correcta"] in (0, 1, 2), i["id"]
+            assert len(i.get("explicacion", "")) >= 30 and i.get("nivel") in tu_dia.NIVELES, i["id"]
+            continue
         assert 0 < len(i.get("linea", "")) <= 80, i["id"]
+        # El artículo de la hoja: 3 o 4 párrafos de verdad.
+        assert 3 <= len(i.get("parrafos") or []) <= 4, i["id"]
+        assert all(len(p.split()) >= 20 and "\n" not in p for p in i["parrafos"]), i["id"]
         if rubro == "consumidor":
             assert i.get("norma"), i["id"]
-        if rubro == "juego":
-            assert len(i["opciones"]) == 3 and i["correcta"] in (0, 1, 2), i["id"]
         if rubro == "efemerides":
             mes, dia = (int(x) for x in i["mmdd"].split("-"))
             date(2024, mes, dia)
             assert i["tipo"] in ("nacional", "obrera") and isinstance(i.get("politica"), bool), i["id"]
+
+
+def test_el_banco_de_la_trivia_alcanza_para_semanas_sin_repetir():
+    """Con diez por día, el banco tiene que dar varias semanas de kits sin
+    repetir una pregunta (una tanda = len // 10 días)."""
+    datos = json.loads(Path("data/tu_dia/juego.json").read_text(encoding="utf-8"))["items"]
+    vivas = [i for i in datos if not i.get("dudosa")]
+    assert len(vivas) // tu_dia.TRIVIA_PREGUNTAS >= 20
+    assert len({i["titulo"].strip().lower() for i in vivas}) == len(vivas)      # sin preguntas repetidas
 
 
 def test_las_efemerides_cubren_el_anio():
