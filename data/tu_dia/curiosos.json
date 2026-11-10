@@ -1,5 +1,5 @@
 {
- "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Desde 2026-11-10 cada ítem es un artículo corto: titulo + parrafos (3 o 4) + url de la fuente. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
  "revisado": false,
  "items": [
   {
@@ -9,7 +9,13 @@
    "titulo": "El colectivo, un invento porteño",
    "texto": "En septiembre de 1928 un grupo de taxistas porteños empezó a llevar varios pasajeros a la vez por un recorrido fijo, cobrando por asiento. Así nació el colectivo, que después se convirtió en el transporte más usado del país.",
    "fuente": "Gobierno de la Ciudad de Buenos Aires",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "En septiembre de 1928 un grupo de taxistas porteños tuvo una idea simple: en vez de llevar a una sola persona, juntar varios pasajeros en el mismo auto, con un recorrido fijo y cobrando por asiento. Así nació el colectivo, que se llama de esa manera justamente porque transporta a un grupo, a un colectivo de gente.",
+    "Al principio eran autos comunes con el chofer al volante. Competían con los tranvías, que iban sobre rieles y no llegaban a todos los barrios, y con los taxis, que costaban bastante más. El boleto barato y la frecuencia hicieron que el sistema se multiplicara en muy pocos años por toda la ciudad.",
+    "Con el tiempo los autos dieron paso a vehículos cada vez más grandes y las líneas se extendieron a todo el país. Hoy el colectivo es el transporte público más usado de la Argentina, y para millones de trabajadores es el primer paso de cada jornada: un invento porteño que terminó siendo parte de la vida cotidiana de todos."
+   ],
+   "url": "https://buenosaires.gob.ar"
   },
   {
    "id": "cu-02",
@@ -18,7 +24,13 @@
    "titulo": "La birome y Ladislao Biro",
    "texto": "Ladislao Biro, un periodista húngaro radicado en el país, patentó en 1943 el bolígrafo de tinta con bolita. Por eso el Día del Inventor se celebra el 29 de septiembre, el día de su nacimiento.",
    "fuente": "Instituto Nacional de la Propiedad Industrial (INPI)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Ladislao Biro era un periodista húngaro que llegó a la Argentina huyendo de la guerra en Europa. En 1943 patentó acá un bolígrafo con una bolita en la punta que iba soltando tinta espesa y de secado rápido. La idea le surgió observando que la tinta de imprenta de los diarios se secaba enseguida y no manchaba el papel.",
+    "Con su hermano György, que era químico, perfeccionó el invento, y la lapicera empezó a fabricarse en el país. En la Argentina todavía hoy se le dice birome a cualquier bolígrafo, igual que en otros lugares se dice «Bic»: el nombre del inventor terminó convertido en la palabra de todos los días.",
+    "Por eso el 29 de septiembre, el día en que nació Biro, se celebra el Día del Inventor. Es una buena ocasión para recordar que muchos objetos cotidianos, de la lapicera a las herramientas de cualquier taller, nacieron de la observación y de la insistencia de alguien que quiso resolver un problema concreto."
+   ],
+   "url": "https://www.argentina.gob.ar/inpi"
   },
   {
    "id": "cu-03",
@@ -27,7 +39,13 @@
    "titulo": "El origen del dulce de leche",
    "texto": "La versión más contada dice que nació en 1829 en una estancia de Cañuelas, cuando una leche con azúcar quedó olvidada en el fuego. Es una leyenda: Uruguay y otros países también lo reclaman como propio.",
    "fuente": "Municipalidad de Cañuelas",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La versión más contada sobre el dulce de leche transcurre en 1829, en una estancia de Cañuelas. Se dice que una criada puso a calentar leche con azúcar para el mate de Juan Manuel de Rosas, se distrajo, y al volver encontró una pasta marrón y espesa. Probaron, les gustó y quedó inaugurado el dulce.",
+    "El problema es que la historia es una leyenda, sin documentos que la confirmen. Otros países de la región, como Uruguay, Chile o Paraguay, cuentan sus propias versiones y también lo reclaman como creación local. Lo más probable es que leche con azúcar cocida a fuego lento se haya preparado en muchos lugares y épocas distintas.",
+    "Lo que sí es cierto es que en la Argentina el dulce de leche tiene un lugar enorme: está en las facturas, los alfajores, los helados y las tostadas de la merienda. Cada familia tiene su marca preferida, y la discusión sobre quién lo inventó sigue siendo una charla de sobremesa que nadie termina de ganar."
+   ],
+   "url": "https://www.canuelas.gob.ar"
   },
   {
    "id": "cu-04",
@@ -36,7 +54,13 @@
    "titulo": "La línea A, pionera",
    "texto": "La línea A del subte porteño se inauguró el 1 de diciembre de 1913, entre Plaza de Mayo y Plaza Once. Fue el primer subterráneo de América Latina y del hemisferio sur.",
    "fuente": "Subterráneos de Buenos Aires (SBASE)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El 1 de diciembre de 1913 se abrió al público la línea A del subte porteño, entre Plaza de Mayo y Plaza Once. Fue el primer subterráneo de América Latina y de todo el hemisferio sur, en una ciudad que crecía rápido y necesitaba moverse sin quedar atrapada en el tránsito de tranvías y carruajes.",
+    "Los primeros coches eran de madera, con faroles y detalles de gran elegancia, y varios de ellos siguieron circulando durante casi un siglo, algo muy poco común en el mundo. Esos vagones históricos, conocidos como La Brugeoise por la empresa belga que los fabricó, se retiraron del servicio recién en 2013, cuando la línea cumplió cien años.",
+    "Desde entonces el subte se fue ampliando con nuevas líneas, y hoy lo usan cada día cientos de miles de personas para ir a trabajar, estudiar o hacer trámites. Para muchos trabajadores porteños y del conurbano, un viaje de pocos minutos bajo tierra se convirtió en la forma más previsible de llegar a horario."
+   ],
+   "url": "https://www.buenosaires.gob.ar"
   },
   {
    "id": "cu-05",
@@ -45,7 +69,13 @@
    "titulo": "Vucetich y la dactiloscopia",
    "texto": "Juan Vucetich, de la policía de la provincia de Buenos Aires, creó en 1891 un sistema para clasificar huellas dactilares. En 1892 sirvió para resolver un crimen en Necochea, uno de los primeros casos del mundo aclarados por una huella.",
    "fuente": "Museo de la Policía de la Provincia de Buenos Aires",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Juan Vucetich, un funcionario croata radicado en la Argentina que trabajaba en la policía de la provincia de Buenos Aires, ideó en 1891 un método para clasificar las huellas dactilares. Su sistema permitía ordenar millones de fichas y encontrar una en pocos minutos, algo que antes era imposible con los registros de la época.",
+    "La primera prueba de fuego llegó en 1892, en Necochea, con el caso de dos niños asesinados. La madre acusaba a un vecino, pero una huella ensangrentada en una puerta resultó ser de ella misma. Fue uno de los primeros crímenes del mundo resueltos gracias a una huella dactilar, y puso a Vucetich en los libros de historia.",
+    "Su método, llamado dactiloscopia, se difundió por América Latina y otros países. Hoy la huella digital sirve también para cosas muy cotidianas: sacar el documento, firmar la entrada a un trabajo, desbloquear un teléfono o verificar una identidad. Todo eso se apoya en la idea de que ningún dedo es igual a otro."
+   ],
+   "url": "https://www.gba.gob.ar"
   },
   {
    "id": "cu-06",
@@ -54,7 +84,13 @@
    "titulo": "La transfusión con sangre citrada",
    "texto": "En noviembre de 1914, en el Hospital Rawson, Luis Agote hizo una transfusión con sangre a la que le había agregado citrato para que no se coagulara. Ese paso permitió conservar sangre y no depender de pasarla de brazo a brazo.",
    "fuente": "Facultad de Medicina de la Universidad de Buenos Aires",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Antes de 1914 las transfusiones de sangre eran difíciles y arriesgadas: la sangre se coagulaba en pocos minutos, así que había que pasarla directamente del brazo del donante al del paciente. El médico argentino Luis Agote encontró una manera de evitarlo agregándole citrato de sodio, una sustancia que impide que la sangre se coagule.",
+    "En noviembre de 1914, en el Hospital Rawson de Buenos Aires, Agote realizó con éxito una de las primeras transfusiones con sangre citratada. Esto significaba que la sangre podía extraerse, guardarse un tiempo y usarse después, sin que donante y paciente tuvieran que estar uno al lado del otro.",
+    "Ese paso abrió el camino a los bancos de sangre y a la medicina de urgencia tal como la conocemos. Hoy cada vez que una persona dona sangre para una cirugía, un parto complicado o un accidente, se usa el mismo principio: conservar la sangre para tenerla lista cuando alguien la necesita. Por eso se recuerda a Agote como un pionero."
+   ],
+   "url": "https://www.fmed.uba.ar"
   },
   {
    "id": "cu-07",
@@ -63,7 +99,13 @@
    "titulo": "El techo de América",
    "texto": "El Aconcagua, en Mendoza, mide casi 7.000 metros: las mediciones lo ubican cerca de los 6.960. Es la cumbre más alta fuera de Asia.",
    "fuente": "Instituto Geográfico Nacional (IGN)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El cerro Aconcagua, en la cordillera de los Andes mendocina, tiene casi 7.000 metros de altura: las mediciones modernas lo ubican cerca de los 6.960. Es la montaña más alta de América y la más alta del mundo fuera de Asia, donde se concentran los gigantes del Himalaya y del Karakórum.",
+    "Su nombre viene de las lenguas originarias de la zona, aunque no hay acuerdo sobre el significado exacto. La primera ascensión documentada fue en 1897, a cargo del suizo Matthias Zurbriggen, integrante de una expedición inglesa. Desde entonces es un destino para andinistas de todo el planeta, que lo suben cada verano por distintas rutas.",
+    "Medir una montaña así no es sencillo: se usan equipos satelitales de precisión y se repite la medición a lo largo de los años, porque los valores se ajustan con mejores tecnologías. Ese trabajo lo hace el Instituto Geográfico Nacional, que además mantiene los mapas oficiales del país y mide cuánto cambia el territorio con el tiempo."
+   ],
+   "url": "https://www.ign.gob.ar"
   },
   {
    "id": "cu-08",
@@ -72,7 +114,13 @@
    "titulo": "El primer Día del Trabajador",
    "texto": "El 1 de mayo de 1890 se hizo en Buenos Aires el primer acto por el Día del Trabajador, en el Prado Español. Lo organizaron grupos obreros, en buena parte inmigrantes.",
    "fuente": "Archivo General de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El 1 de mayo de 1890 se realizó en Buenos Aires el primer acto por el Día del Trabajador, en el Prado Español. Lo organizaron grupos obreros, entre ellos muchos inmigrantes que habían llegado a la ciudad en busca de empleo. Era la primera vez que la fecha se conmemoraba en el país, solo unos meses después de que se la propusiera en el plano internacional.",
+    "En esos años la jornada laboral podía ser muy larga, no existían los descansos garantizados por ley y era frecuente que se trabajara de domingo a domingo. Los reclamos por la reducción de la jornada y por mejores condiciones fueron el corazón del movimiento obrero, y la fecha del 1 de mayo se transformó en su día simbólico.",
+    "Con el tiempo se convirtió en feriado nacional y hoy se recuerda en todo el país. Más de un siglo después, aquella primera reunión en el Prado Español es parte de una historia larga de organización y derechos conquistados que todavía está presente en la vida laboral de cada trabajador y trabajadora."
+   ],
+   "url": "https://www.argentina.gob.ar/interior/archivo-general-de-la-nacion"
   },
   {
    "id": "cu-09",
@@ -81,7 +129,13 @@
    "titulo": "El domingo, día de descanso",
    "texto": "La Ley 4.661, de 1905, estableció el descanso obligatorio los domingos en la Capital. La impulsó Alfredo Palacios, el primer diputado socialista de América.",
    "fuente": "Biblioteca del Congreso de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Ley 4.661, sancionada en 1905, estableció el descanso obligatorio los días domingo en la Capital Federal. Hasta entonces, muchos trabajadores no tenían un día libre garantizado, y se trabajaba prácticamente toda la semana. La norma fue una de las primeras leyes laborales del país.",
+    "La impulsó Alfredo Palacios, el primer diputado socialista de América, que había llegado al Congreso en 1904 por el barrio de La Boca. Palacios llevó al recinto muchos de los reclamos obreros de la época y presentó proyectos sobre jornada, trabajo de mujeres y menores y accidentes laborales, varios de los cuales se convirtieron en ley.",
+    "El descanso semanal fue después ampliándose y quedó incorporado en la legislación laboral y en la Constitución. Hoy es un derecho tan natural que cuesta imaginar la época en que había que pelear por un día libre, pero fue una de las primeras conquistas que cambiaron para siempre la vida de quienes trabajan."
+   ],
+   "url": "https://www.bcn.gob.ar"
   },
   {
    "id": "cu-10",
@@ -90,7 +144,13 @@
    "titulo": "El sueldo anual complementario",
    "texto": "El aguinaldo, que la ley llama sueldo anual complementario, se creó por decreto a fines de 1945 y después lo ratificó una ley. Hoy se paga en dos cuotas, en junio y en diciembre.",
    "fuente": "InfoLEG – Ministerio de Justicia de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El sueldo anual complementario, que todos conocen como aguinaldo, se creó a fines de 1945 por decreto y fue ratificado después por una ley. Se pensó para que los trabajadores tuvieran un ingreso extra a fin de año, cuando los gastos suelen aumentar con las fiestas y las vacaciones.",
+    "Hoy equivale a la mitad de la mejor remuneración mensual del semestre y se paga en dos cuotas: la primera hasta el 30 de junio y la segunda hasta el 18 de diciembre, con un plazo adicional de cuatro días hábiles. Está contemplado en la Ley de Contrato de Trabajo y alcanza a todos los trabajadores en relación de dependencia.",
+    "Al revisar el recibo de sueldo de junio o de diciembre conviene ver que figure el aguinaldo bien calculado, con los descuentos correspondientes. Es justamente el tipo de dato que una persona puede controlar con su recibo en la mano, y ante cualquier duda se puede consultar con el sindicato."
+   ],
+   "url": "https://www.infoleg.gob.ar"
   },
   {
    "id": "cu-11",
@@ -99,7 +159,13 @@
    "titulo": "Iguazú, un parque de agua",
    "texto": "Las Cataratas del Iguazú, en Misiones, suman alrededor de 275 saltos. El parque nacional que las protege es Patrimonio de la Humanidad desde 1984.",
    "fuente": "Administración de Parques Nacionales",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Las Cataratas del Iguazú, en la provincia de Misiones, forman un conjunto de alrededor de 275 saltos de agua que caen entre la selva misionera. El río Iguazú marca allí la frontera con Brasil, y el sector argentino permite recorrer pasarelas muy cerca de las caídas, incluida la famosa Garganta del Diablo.",
+    "El Parque Nacional Iguazú protege este paisaje y la selva paranaense que lo rodea, uno de los ambientes con más variedad de especies del país: yaguaretés, tucanes, mariposas y cientos de aves. La Unesco lo declaró Patrimonio de la Humanidad en 1984, por la belleza de las cataratas y por la riqueza de su naturaleza.",
+    "Además de cuidar el ambiente, el parque es una fuente de trabajo para toda la región: guardaparques, guías, personal de transporte y de hotelería dependen de la actividad que genera. Visitarlo es una experiencia inolvidable, y por eso es uno de los lugares más elegidos tanto por turistas del país como de otros lugares del mundo."
+   ],
+   "url": "https://www.argentina.gob.ar/parquesnacionales"
   },
   {
    "id": "cu-12",
@@ -108,7 +174,13 @@
    "titulo": "El regalo del Perito Moreno",
    "texto": "En 1903 Francisco Pascasio Moreno donó tierras junto al lago Nahuel Huapi para que fueran de uso público. Sobre esa base nació el primer parque nacional del país, hoy Parque Nacional Nahuel Huapi.",
    "fuente": "Administración de Parques Nacionales",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Francisco Pascasio Moreno, al que todos conocen como el Perito Moreno, fue un explorador y científico que recorrió la Patagonia a fines del siglo XIX. Por su trabajo, el Estado le reconoció tierras en la zona del lago Nahuel Huapi, cerca de la actual ciudad de San Carlos de Bariloche.",
+    "En 1903 Moreno donó tres leguas de esas tierras con la condición de que se conservaran para uso público y no se destinaran a negocios particulares. Sobre esa base se creó, en 1922, el Parque Nacional del Sud, el primero del país, que más tarde pasó a llamarse Parque Nacional Nahuel Huapi.",
+    "Esa donación fue el punto de partida del sistema de parques nacionales, hoy a cargo de la Administración de Parques Nacionales, y de la idea de que algunos paisajes pertenecen a todos. Hoy el sistema de parques nacionales protege millones de hectáreas, desde la Patagonia hasta el Chaco, y es un lugar de trabajo para guardaparques, científicos y quienes se dedican al turismo."
+   ],
+   "url": "https://www.argentina.gob.ar/parquesnacionales"
   },
   {
    "id": "cu-13",
@@ -117,7 +189,13 @@
    "titulo": "Fileteado, arte de la calle",
    "texto": "El fileteado, el dibujo de líneas, flores y letras que adornaba carros, camiones y colectivos, fue reconocido por la UNESCO en 2015 como Patrimonio Cultural Inmaterial de la Humanidad.",
    "fuente": "UNESCO",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El fileteado porteño es un estilo de dibujo hecho de líneas, volutas, flores y letras que se pintaba a mano sobre carros, camiones, colectivos y carteles. Nació en Buenos Aires a principios del siglo XX y, además de decorar, solía llevar frases, dichos y refranes de los trabajadores del volante.",
+    "Los fileteadores trabajan con pinceles muy finos y de un solo trazo, sin apuntes previos, y cada obra lleva el sello personal del artista. Muchas obras llevan frases de cariño, humor o sabiduría popular, una forma muy porteña de decir algo con unas pocas palabras y mucho adorno.",
+    "En 2015 la UNESCO lo inscribió como Patrimonio Cultural Inmaterial de la Humanidad y reconoció a los maestros fileteadores como portadores de una tradición viva. Hoy se lo ve en los carteles de comercios, en murales, en el subte y en vehículos de transporte de todo el país."
+   ],
+   "url": "https://ich.unesco.org"
   },
   {
    "id": "cu-14",
@@ -126,7 +204,13 @@
    "titulo": "Tango, del Río de la Plata al mundo",
    "texto": "En 2009 la UNESCO declaró al tango Patrimonio Cultural Inmaterial de la Humanidad, a pedido conjunto de la Argentina y Uruguay.",
    "fuente": "UNESCO",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El tango nació a fines del siglo XIX en los barrios populares de Buenos Aires y Montevideo, a orillas del Río de la Plata, donde se mezclaban inmigrantes europeos con criollos y descendientes de africanos. Era música, baile y poesía a la vez, y al principio se bailaba en patios, cafés y salones de barrio.",
+    "Con Carlos Gardel, Aníbal Troilo, Astor Piazzolla y tantos otros, el tango se convirtió en una de las expresiones más conocidas de la Argentina en el exterior. Sus letras hablan de amores, de nostalgia, de barrio y también de trabajo, y muchas retratan la vida de los obreros y de las personas comunes.",
+    "En 2009 la UNESCO lo declaró Patrimonio Cultural Inmaterial de la Humanidad, a pedido conjunto de la Argentina y Uruguay. Hoy se baila y se enseña en milongas y escuelas de todo el mundo, y cada 11 de diciembre, día de los nacimientos de Gardel y de Julio De Caro, se celebra el Día Nacional del Tango."
+   ],
+   "url": "https://ich.unesco.org"
   },
   {
    "id": "cu-15",
@@ -135,7 +219,13 @@
    "titulo": "El Apóstol, de 1917",
    "texto": "El Apóstol, de Quirino Cristiani, se estrenó en Buenos Aires en 1917 y es considerado el primer largometraje de animación del mundo. No se conserva ninguna copia.",
    "fuente": "Museo del Cine Pablo Ducrós Hicken",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Apóstol, de Quirino Cristiani, se estrenó en Buenos Aires en 1917 y es considerado el primer largometraje de animación de la historia del cine. Duraba alrededor de una hora y era una sátira política, hecha con recortes de papel articulados que se movían cuadro por cuadro.",
+    "Se calcula que se necesitaron decenas de miles de dibujos para completarlo, hechos a mano en un tiempo muy corto y con medios artesanales. Cristiani, un joven artista de origen italiano radicado en el país, trabajó con un equipo reducido y a pura paciencia, años antes de que Walt Disney lanzara su primer largometraje animado.",
+    "Lamentablemente no se conserva ninguna copia: las películas de aquella época se hacían con un material inflamable y muchas se perdieron en incendios y con el paso del tiempo. Quedan fotos, notas de la prensa y el recuerdo de que, en el Río de la Plata, un dibujante se animó a hacer algo que nadie había hecho antes."
+   ],
+   "url": "https://buenosaires.gob.ar"
   },
   {
    "id": "cu-16",
@@ -144,7 +234,13 @@
    "titulo": "Los locos de la azotea",
    "texto": "El 27 de agosto de 1920 un grupo de jóvenes transmitió la ópera Parsifal desde la terraza del Teatro Coliseo de Buenos Aires. Por eso ese día es el Día de la Radiodifusión.",
    "fuente": "Ente Nacional de Comunicaciones (ENACOM)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "En la noche del 27 de agosto de 1920, un grupo de jóvenes encabezados por Enrique Telémaco Susini transmitió por primera vez una emisión de radio en la Argentina. Lo hicieron desde la terraza del Teatro Coliseo, en Buenos Aires, y emitieron la ópera Parsifal, de Richard Wagner, que se estaba representando en la sala.",
+    "Los llamaron «los locos de la azotea» porque casi nadie tenía todavía un receptor y parecía una aventura sin futuro. Al principio se estima que solo unas decenas de personas pudieron escucharlos, pero la idea de transmitir sonido por el aire sin cables enseguida despertó curiosidad, y pronto aparecieron nuevas emisoras.",
+    "La radio fue durante décadas el medio principal para enterarse de las noticias, escuchar música y seguir el fútbol. Hoy sigue acompañando a millones de personas en el trabajo, el colectivo o la cocina, y cada 27 de agosto se celebra el Día de la Radiodifusión en recuerdo de aquella primera transmisión."
+   ],
+   "url": "https://www.enacom.gob.ar"
   },
   {
    "id": "cu-17",
@@ -153,7 +249,13 @@
    "titulo": "Un país enorme",
    "texto": "Por la superficie de su territorio continental americano, la Argentina está entre los diez países más extensos del planeta: ocupa el octavo lugar.",
    "fuente": "Instituto Geográfico Nacional (IGN)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Argentina es uno de los países más grandes del mundo. Su territorio continental americano ocupa unos 2,78 millones de kilómetros cuadrados, lo que la ubica en el octavo lugar entre los países más extensos del planeta, después de Rusia, Canadá, China, Estados Unidos, Brasil, Australia e India.",
+    "Esa extensión se nota en la variedad de paisajes: va desde la selva misionera y el Chaco hasta los glaciares y la estepa patagónica, con la cordillera de los Andes al oeste y el mar al este. Entre el punto más al norte y el más al sur hay más de 3.700 kilómetros en línea recta.",
+    "Las distancias grandes también influyen en la vida cotidiana y en el trabajo: el transporte de mercaderías, los costos de los servicios, la llegada de internet y hasta los viajes de una seccional sindical a otra. Quien quiera repasar los números exactos del país puede consultarlos en los mapas y datos oficiales que publica el Instituto Geográfico Nacional."
+   ],
+   "url": "https://www.ign.gob.ar"
   },
   {
    "id": "cu-18",
@@ -162,7 +264,13 @@
    "titulo": "Día Nacional del Mate",
    "texto": "Desde 2015 una ley fija el 30 de noviembre como Día Nacional del Mate, en recuerdo del nacimiento de Andrés Guacurarí, caudillo misionero. La yerba se produce sobre todo en Misiones y el norte de Corrientes.",
    "fuente": "Instituto Nacional de la Yerba Mate (INYM)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Desde 2015 una ley establece el 30 de noviembre como Día Nacional del Mate. La fecha recuerda el nacimiento de Andrés Guacurarí, conocido como Andresito, un caudillo misionero de origen guaraní que fue gobernador de Misiones en tiempos de la independencia y que defendió los intereses de los pueblos de la región.",
+    "El mate es una bebida que ya tomaban los pueblos guaraníes antes de la llegada de los españoles, que preparaban infusiones con hojas de yerba. Hoy la yerba mate se produce sobre todo en Misiones y en el norte de Corrientes, y cada año se cosechan cientos de miles de toneladas que van a mesas de todo el país.",
+    "Compartir un mate es un gesto que se repite en casas, oficinas, plazas y lugares de trabajo. Entre colegas, la ronda de mate es muchas veces la excusa para charlar a la hora del descanso. Para miles de familias de la zona productora, además, la yerba es una fuente de empleo y de trabajo rural."
+   ],
+   "url": "https://www.inym.org.ar"
   },
   {
    "id": "cu-19",
@@ -171,7 +279,13 @@
    "titulo": "La bandera, a orillas del Paraná",
    "texto": "El 27 de febrero de 1812 Manuel Belgrano hizo izar por primera vez la bandera celeste y blanca, frente a las baterías Libertad e Independencia, en Rosario.",
    "fuente": "Monumento Nacional a la Bandera",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El 27 de febrero de 1812, Manuel Belgrano hizo izar por primera vez la bandera celeste y blanca en las barrancas del río Paraná, en la ciudad de Rosario, frente a las baterías Libertad e Independencia. Belgrano estaba al mando del ejército que defendía esa zona de ataques de barcos realistas.",
+    "El gobierno de Buenos Aires, que aún no había declarado la independencia, le pidió que retirara la bandera y usara la escarapela que ya tenía el ejército. Belgrano había actuado por su cuenta, y hay historiadores que cuentan que siguió usándola después, por ejemplo en su marcha hacia el norte.",
+    "Hoy esa historia se recuerda cada 20 de junio, el Día de la Bandera, fecha de la muerte de Belgrano en 1820. En Rosario, el Monumento Nacional a la Bandera, inaugurado en 1957 a orillas del Paraná, recuerda aquel primer izamiento y es uno de los lugares más visitados de la ciudad."
+   ],
+   "url": "https://www.rosario.gob.ar"
   },
   {
    "id": "cu-20",
@@ -180,7 +294,13 @@
    "titulo": "La marcha patriótica",
    "texto": "La Asamblea del Año XIII aprobó el 11 de mayo de 1813 la letra de Vicente López y Planes. La música es de Blas Parera. Por eso el 11 de mayo es el Día del Himno.",
    "fuente": "Archivo General de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El 11 de mayo de 1813, la Asamblea General Constituyente, conocida como Asamblea del Año XIII, aprobó la letra de la Marcha Patriótica, escrita por Vicente López y Planes. Con los años se convirtió en el Himno Nacional Argentino, que hoy se canta en escuelas, actos y partidos.",
+    "La música es de Blas Parera, un compositor de origen catalán que trabajaba en Buenos Aires. El texto original era mucho más largo que el que conocemos hoy, pues tenía nueve estrofas, y en 1900 un decreto estableció que se cantaran solo la primera y la última, con el estribillo, por razones de duración.",
+    "Por eso cada 11 de mayo se celebra el Día del Himno Nacional. Más allá de las ceremonias, el himno es una canción que casi todos aprendieron de chicos, y que muchas veces vuelve a la memoria en los momentos colectivos, como una final de fútbol o una fecha patria, aunque pocos recuerden todas sus estrofas."
+   ],
+   "url": "https://www.argentina.gob.ar/interior/archivo-general-de-la-nacion"
   },
   {
    "id": "cu-21",
@@ -189,7 +309,13 @@
    "titulo": "Ocho horas de trabajo",
    "texto": "La Ley 11.544, de 1929, fijó la jornada laboral en 8 horas diarias o 48 semanales. Fue el resultado de décadas de reclamos de los trabajadores.",
    "fuente": "InfoLEG – Ministerio de Justicia de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Ley 11.544, sancionada en 1929, fijó la jornada laboral en un máximo de 8 horas diarias o 48 semanales. Era el resultado de décadas de reclamos de los trabajadores, que desde fines del siglo XIX exigían reducir las larguísimas jornadas de aquellos tiempos y contar con tiempo para el descanso y la familia.",
+    "La consigna de las ocho horas se había hecho conocida en todo el mundo con el movimiento obrero: ocho horas de trabajo, ocho de descanso y ocho de recreación. En la Argentina, la discusión recorrió el Congreso durante años, con proyectos de diputados como Alfredo Palacios, hasta que se logró una norma de alcance nacional.",
+    "Con el tiempo, otras leyes y convenios colectivos fueron ajustando los detalles, como las horas extra, los descansos y las jornadas nocturnas o insalubres. Hoy el recibo de sueldo y el convenio de cada sector son los lugares donde se puede controlar si la jornada y su pago están bien aplicados."
+   ],
+   "url": "https://www.infoleg.gob.ar"
   },
   {
    "id": "cu-22",
@@ -198,7 +324,13 @@
    "titulo": "La Ley Sáenz Peña",
    "texto": "La Ley 8.871, de 1912, estableció el voto secreto y obligatorio para los varones mayores de 18 años, con padrón militar. Cambió para siempre la forma de votar en el país.",
    "fuente": "Biblioteca del Congreso de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Ley 8.871, sancionada en 1912 durante la presidencia de Roque Sáenz Peña, estableció el voto secreto y obligatorio para los varones argentinos mayores de 18 años, con un padrón basado en el registro militar. Es conocida por el apellido del presidente, aunque la impulsó también el ministro Indalecio Gómez.",
+    "Antes de la ley, el voto era público y las elecciones estaban atravesadas por presiones y fraudes frecuentes. Con el cuarto oscuro y el sobre cerrado, cada elector podía decidir sin que nadie lo viera, y la obligación buscaba que votara una mayor parte de la población, algo que hasta entonces no ocurría.",
+    "Las primeras elecciones con la nueva ley fueron en 1912 en Santa Fe y en 1916 en todo el país, y trajeron cambios en la política nacional. Más adelante el derecho se amplió a las mujeres, y hoy votar sigue siendo una de las formas en que los ciudadanos participan, también en los sindicatos y otras organizaciones."
+   ],
+   "url": "https://www.bcn.gob.ar"
   },
   {
    "id": "cu-23",
@@ -207,7 +339,13 @@
    "titulo": "El voto femenino",
    "texto": "La Ley 13.010, de 1947, reconoció a las mujeres el derecho a votar y a ser elegidas. Lo ejercieron por primera vez en las elecciones nacionales de 1951.",
    "fuente": "Archivo General de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Ley 13.010, sancionada en septiembre de 1947, reconoció a las mujeres argentinas el derecho a votar y a ser elegidas. Fue el resultado de décadas de reclamos de mujeres que se habían organizado en el país desde comienzos del siglo XX, con figuras como Julieta Lanteri, Alicia Moreau de Justo y Elvira Rawson de Dellepiane.",
+    "La ley se promulgó en 1947 y el empadronamiento femenino se hizo en los años siguientes. Las mujeres votaron por primera vez en elecciones nacionales el 11 de noviembre de 1951, y en esos comicios también resultaron elegidas las primeras legisladoras nacionales del país.",
+    "Desde entonces, la participación de las mujeres en la política, los sindicatos y el mundo del trabajo fue creciendo, aunque todavía quedan desafíos. Hoy el voto femenino se recuerda como una conquista de derechos que, junto con otras, fue ampliando quiénes podían participar en las decisiones colectivas del país."
+   ],
+   "url": "https://www.argentina.gob.ar/interior/archivo-general-de-la-nacion"
   },
   {
    "id": "cu-24",
@@ -216,7 +354,13 @@
    "titulo": "Un glaciar que se renueva",
    "texto": "El Perito Moreno, en Santa Cruz, avanza sobre el Lago Argentino hasta cerrar un brazo del lago; con los años el agua lo perfora y el frente se derrumba. Está en el Parque Nacional Los Glaciares, Patrimonio de la Humanidad desde 1981.",
    "fuente": "Administración de Parques Nacionales",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El glaciar Perito Moreno, en la provincia de Santa Cruz, es un río de hielo de unos 30 kilómetros de largo que baja desde el Campo de Hielo Patagónico Sur y llega al Lago Argentino. Se lo conoce en todo el mundo porque, a diferencia de otros glaciares, se mantiene relativamente estable.",
+    "Su frente avanza sobre el lago hasta tocar la península de Magallanes y cerrar un brazo del agua, el Brazo Rico. El nivel de ese brazo sube durante años hasta que el agua perfora el hielo y se forma un túnel que termina derrumbándose en un espectáculo de estruendo y enormes bloques que caen al agua.",
+    "El glaciar forma parte del Parque Nacional Los Glaciares, declarado Patrimonio de la Humanidad por la Unesco en 1981. Allí trabajan guardaparques, guías y científicos que cuidan el paisaje y lo estudian, y las pasarelas permiten verlo de frente, a unos pocos cientos de metros, de manera segura."
+   ],
+   "url": "https://www.argentina.gob.ar/parquesnacionales"
   },
   {
    "id": "cu-25",
@@ -225,7 +369,13 @@
    "titulo": "Ischigualasto, el Valle de la Luna",
    "texto": "En Ischigualasto se hallaron fósiles de algunos de los dinosaurios más antiguos que se conocen, como el Eoraptor, de unos 230 millones de años. El parque es Patrimonio de la Humanidad desde 2000, junto con Talampaya.",
    "fuente": "Parque Provincial Ischigualasto",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "En el Parque Provincial Ischigualasto, en el noreste de la provincia de San Juan, el viento y el agua tallaron durante millones de años formas extrañas en la roca, tanto que el lugar se conoce como Valle de la Luna. Sus capas de sedimentos guardan uno de los registros fósiles más completos de la era de los dinosaurios.",
+    "Allí se encontraron restos del Eoraptor, un dinosaurio pequeño de unos 230 millones de años, que figura entre los más antiguos que se conocen. También aparecieron fósiles de otros animales y de plantas, que permiten reconstruir cómo era la vida en el período Triásico, cuando los dinosaurios recién empezaban a aparecer.",
+    "El parque es Patrimonio de la Humanidad desde el año 2000, junto con el vecino Parque Nacional Talampaya, en La Rioja. Cada año lo visitan turistas y científicos de muchos países, y para la provincia es una fuente de empleo en actividades como la guía, la conservación y el turismo."
+   ],
+   "url": "https://www.sanjuan.gob.ar"
   },
   {
    "id": "cu-26",
@@ -234,7 +384,13 @@
    "titulo": "El Argentinosaurus",
    "texto": "El Argentinosaurus huinculensis, hallado cerca de Plaza Huincul, es uno de los animales terrestres más grandes que se conocen: se calcula que medía más de 30 metros de largo.",
    "fuente": "Museo Municipal Carmen Funes (Plaza Huincul)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Argentinosaurus huinculensis es uno de los animales terrestres más grandes que se conocen. Se calcula que medía más de 30 metros de largo y que pesaba decenas de toneladas. Pertenece al grupo de los titanosaurios, dinosaurios de cuello largo que se alimentaban de plantas.",
+    "Sus restos se hallaron en la década de 1980 en la zona de Plaza Huincul, en la provincia de Neuquén, a partir del aviso de un poblador que encontró un gran hueso. Se conservaron algunas vértebras y huesos de las patas, y con ellos los paleontólogos reconstruyeron el tamaño del animal comparándolo con otros parientes.",
+    "La Patagonia es una de las regiones del mundo más ricas en fósiles de dinosaurios, y en Neuquén hay museos y sitios donde se puede ver parte de ese patrimonio. En el Museo Carmen Funes, de Plaza Huincul, se exhiben restos de los gigantes de la región y se explica cómo trabajan quienes los estudian."
+   ],
+   "url": "https://www.plazahuincul.gob.ar"
   },
   {
    "id": "cu-27",
@@ -243,7 +399,13 @@
    "titulo": "La ruta más larga",
    "texto": "La Ruta Nacional 40 va de La Quiaca, en Jujuy, a Cabo Vírgenes, en Santa Cruz, siguiendo la cordillera. Cruza once provincias y es la más larga del país.",
    "fuente": "Dirección Nacional de Vialidad",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Ruta Nacional 40 es la más larga de la Argentina. Empieza en La Quiaca, en Jujuy, en el límite con Bolivia, y llega hasta Cabo Vírgenes, en Santa Cruz, cerca del extremo sur del continente, con un recorrido de más de 5.000 kilómetros que sigue la cordillera de los Andes de norte a sur.",
+    "Atraviesa once provincias y pasa por paisajes muy distintos: quebradas y salares del noroeste, viñedos de Cuyo, lagos y bosques de la Patagonia andina y la estepa del sur. Cruza también varios de los pasos de mayor altura del país, y algunas partes del camino son de ripio y se recorren despacio.",
+    "Para quienes viven cerca, la ruta 40 es mucho más que una postal: conecta pueblos, lleva mercaderías y es el camino de camioneros, productores y trabajadores de todo el país. Su mantenimiento depende de Vialidad Nacional, que se ocupa de las rutas del Estado y de cuidar que se pueda transitar de manera segura."
+   ],
+   "url": "https://www.argentina.gob.ar/obras-publicas/vialidad-nacional"
   },
   {
    "id": "cu-28",
@@ -252,7 +414,13 @@
    "titulo": "La Academia Porteña del Lunfardo",
    "texto": "La Academia Porteña del Lunfardo se fundó en 1962 para estudiar el habla popular de Buenos Aires. El 5 de septiembre es el Día del Lunfardo.",
    "fuente": "Academia Porteña del Lunfardo",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El lunfardo es un conjunto de palabras que nació en las calles de Buenos Aires a fines del siglo XIX, entre criollos e inmigrantes, sobre todo italianos. Se fue mezclando con el habla de todos los días, y hoy palabras como «laburo», «mina», «guita» o «pibe» las usa mucha gente sin pensarlo.",
+    "La Academia Porteña del Lunfardo se fundó en 1962 con el fin de estudiar y preservar ese vocabulario popular. La integran escritores, poetas, investigadores y músicos que reúnen palabras, analizan su origen y publican trabajos sobre cómo habla la gente, y por eso se la considera una institución sobre la lengua de los barrios.",
+    "El lunfardo está muy unido al tango, cuyas letras están llenas de palabras de ese habla, y también aparece en el humor y en el cine. Cada 5 de septiembre se celebra el Día del Lunfardo, una fecha para recordar que el idioma no se detiene y que lo van haciendo, día tras día, los que trabajan, charlan y viven en la ciudad."
+   ],
+   "url": "https://www.academiaportenadellunfardo.org.ar"
   },
   {
    "id": "cu-29",
@@ -261,7 +429,13 @@
    "titulo": "La huelga de 1878",
    "texto": "En 1878 los trabajadores de la Unión Tipográfica de Buenos Aires pararon para reclamar por salarios y jornada. Es considerada la primera huelga organizada del país.",
    "fuente": "Archivo General de la Nación",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "En 1878, los trabajadores gráficos de Buenos Aires, reunidos en la Unión Tipográfica, declararon una huelga para reclamar por sus salarios y por las condiciones de trabajo en las imprentas. Fue una medida de fuerza organizada, con comisión y reclamos concretos, y por eso se la considera la primera huelga organizada del país.",
+    "Los tipógrafos eran obreros calificados, muchos de ellos inmigrantes, que componían a mano las páginas de diarios y libros. Su oficio era clave para la prensa de la época, así que el paro tuvo repercusión y mostró que se podía discutir con los patrones de manera colectiva en vez de hacerlo uno a uno.",
+    "Con los años aparecieron más organizaciones de oficio, mutuales y sociedades de resistencia, que dieron origen a los sindicatos que conocemos hoy. Aquella primera huelga se recuerda como un punto de partida en la historia del movimiento obrero argentino, que tuvo siempre en los gráficos a protagonistas destacados."
+   ],
+   "url": "https://www.argentina.gob.ar/interior/archivo-general-de-la-nacion"
   },
   {
    "id": "cu-30",
@@ -270,7 +444,13 @@
    "titulo": "El Obelisco porteño",
    "texto": "Se inauguró el 23 de mayo de 1936, a los 400 años de la primera fundación de Buenos Aires. Está donde estaba la iglesia de San Nicolás, en la que se izó por primera vez la bandera en la ciudad.",
    "fuente": "Gobierno de la Ciudad de Buenos Aires",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Obelisco de Buenos Aires se inauguró el 23 de mayo de 1936, para conmemorar los cuatrocientos años de la primera fundación de la ciudad, que se atribuye a Pedro de Mendoza en 1536. Se levantó en muy poco tiempo, en cuestión de semanas, en el cruce de las avenidas 9 de Julio y Corrientes.",
+    "Está ubicado donde estaba la iglesia de San Nicolás de Bari, en la que se izó por primera vez la bandera nacional en la ciudad, en 1812. Para abrir la avenida 9 de Julio fue necesario demoler esa iglesia, y la torre blanca de unos 67 metros de altura quedó como recuerdo del lugar.",
+    "El Obelisco, obra del arquitecto Alberto Prebisch, generó discusiones cuando se construyó, pero con los años se convirtió en uno de los símbolos de Buenos Aires. Hoy es el punto de reunión de festejos deportivos, marchas y celebraciones, y la postal más reconocible de la ciudad."
+   ],
+   "url": "https://buenosaires.gob.ar"
   }
  ]
 }

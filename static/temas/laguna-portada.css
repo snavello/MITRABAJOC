@@ -441,7 +441,7 @@ html[data-tema="laguna"] .marca-barra .marca-nombre { font-family: var(--lg-fuen
    7%): sobre una foto real, con ese vidrio el texto blanco no llega a 4,5:1
    en las partes claras; el azul del modelo al 55% sí. Teléfono: una tarjeta
    blanca montada sobre el final de la laguna. */
-html[data-tema="laguna"] .pt-dia-esc { flex: 0 1 600px; height: 60px; gap: 14px; padding: 0 8px 0 16px; border-radius: 12px;
+html[data-tema="laguna"] .pt-dia-esc { flex: 1 1 600px; max-width: 860px; height: 60px; gap: 14px; padding: 0 8px 0 16px; border-radius: 12px;
   color: #fff; background: color-mix(in oklab, var(--lg-azul) 55%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 18px 36px -24px rgba(0, 0, 0, .6);
@@ -455,20 +455,20 @@ html[data-tema="laguna"] .pt-dia-esc .pt-dia-pron { font-size: 12px; color: var(
 html[data-tema="laguna"] .pt-dia-esc .pt-dia-pron svg { width: 17px; height: 17px; stroke-width: 1.6; }
 html[data-tema="laguna"] .pt-dia-esc .pt-dia-linea { font-size: 13.5px; font-weight: 500; }
 html[data-tema="laguna"] .pt-dia-esc .pt-dia-chip { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--lg-fluor-txt); }
-html[data-tema="laguna"] .pt-dia-esc .pt-dia-flecha { width: 16px; height: 16px; stroke: var(--lg-agua); stroke-width: 2; }
+html[data-tema="laguna"] .pt-dia-esc .pt-dia-flecha { width: 18px; height: 18px; stroke: var(--lg-agua); stroke-width: 2; }
 html[data-tema="laguna"] .pt-dia-esc.cargando { width: 600px; }
-html[data-tema="laguna"] .pt-dia-tel { margin: -28px 16px 0; height: 52px; gap: 10px; padding: 0 4px 0 12px; border-radius: 12px;
+html[data-tema="laguna"] .pt-dia-tel { margin: -28px 16px 0; height: 52px; gap: 8px; padding: 0 2px 0 10px; border-radius: 12px;
   color: var(--lg-azul); background: #fff;
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--lg-azul) 8%, transparent), 0 14px 28px -20px color-mix(in oklab, var(--lg-azul) 55%, transparent); }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-clima { gap: 6px; }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-ico svg { width: 24px; height: 24px; stroke: var(--lg-turq); stroke-width: 1.6; }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-temp { font-size: 20px; font-weight: 400; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-clima { gap: 4px; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-ico svg { width: 21px; height: 21px; stroke: var(--lg-turq); stroke-width: 1.7; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-temp { font-size: 17px; font-weight: 500; }
 html[data-tema="laguna"] .pt-dia-tel .pt-dia-sep { height: 26px; background: color-mix(in oklab, var(--lg-azul) 12%, transparent); }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-linea { font-size: 13px; font-weight: 500; gap: 7px; }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-chip { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-linea { font-size: 13px; font-weight: 500; gap: 6px; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-chip { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--lg-turq-osc); }
 html[data-tema="laguna"] .pt-dia-tel .pt-dia-flecha { width: 15px; height: 15px; stroke: var(--lg-azgris); stroke-width: 2; }
 html[data-tema="laguna"] .pt-dia-chip.alerta { height: 22px; padding: 0 8px; border-radius: 4px; background: var(--lg-amb-f); color: var(--lg-amb); letter-spacing: .08em; }
-html[data-tema="laguna"] .pt-dia-tel .pt-dia-chip.alerta { height: 20px; }
+html[data-tema="laguna"] .pt-dia-tel .pt-dia-chip.alerta { height: 15px; padding: 0 5px; }
 html[data-tema="laguna"] .pt-dia-punto { background: var(--lg-amb-f); }
 html[data-tema="laguna"] .pt-dia-punto svg { stroke: var(--lg-amb); }
 /* El saludo de cumpleaños, en la laguna. */

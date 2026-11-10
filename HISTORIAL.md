@@ -10697,3 +10697,121 @@ dos), `preparar` no devuelve imágenes y arma el diagnóstico dentro, `tapar` en
 cupo (nunca más de 2 a la vez, nadie se rechaza, 503 con su código si la espera pasa el
 tope, mismo cupo para leer y aportes). `test_mapa_funcional.py` (+2): lo que queda en
 memoria es texto comprimido, y si el hijo falla se arma en el servidor.
+
+## Tu día: artículos con fuente y la trivia diaria de diez preguntas (2026-11-10, Trabajador 0.60.01, Admin 0.80.03)
+
+Pedido de SDN: lo que abre la franja «Tu día» era «una ventana con un contenido
+mínimo» (un párrafo); los artículos de interés tienen que tener título, tres o
+cuatro párrafos con lo interesante y un enlace al origen, en TODOS los rubros;
+y Entretenimiento pasa a ser una trivia más divertida: diez preguntas, puntaje
+de 1 a 10, comentarios elogiosos crecientes a partir de 5 y un mensaje de
+ánimo por debajo, con un kit de preguntas por día que se renueva solo a la
+madrugada o con el primero que entra. (SDN escribió «comentarios religiosos»;
+se tomó como «elogiosos», que es lo que cierra con el resto del pedido.)
+
+**El artículo.** Cada ítem de `data/tu_dia/*.json` lleva ahora `parrafos`
+(lista de 3 o 4) y `url` (https, a la institución que nombra `fuente`), además
+de lo que ya tenía; `texto` queda como resumen. `tu_dia.parrafos_de` devuelve
+los párrafos o, si un ítem no los tuviera, su `texto` como único párrafo (la
+hoja nunca queda vacía); `url_de` solo deja pasar `https://` (lo que viaja se
+dibuja como enlace). La hoja (`static/tu_dia.js`, `llenarHoja`) pinta los
+párrafos con `textContent` y la fuente como enlace que se abre aparte
+(`rel=noopener`), con el ícono `ic-externo` sumado al sprite de la portada. El
+dólar y el clima también llevan su enlace (`tu_dia.URL_BCRA`,
+`tu_dia_fuentes.URL_CLIMA`). **El contenido lo escribieron 12 agentes en
+paralelo** (10 para las 497 efemérides, 2 para los otros cuatro rubros) con
+las instrucciones de `INSTRUCCIONES_PARRAFOS.md` (redacción propia, sin
+contradecir lo que ya decía el ítem, sin opinión política, sin inventar lo que
+no se sabe), fusionados por un script que exigió 3 o 4 párrafos y url https en
+cada uno. Sigue todo `revisado: false`: las urls son en su mayoría portadas
+institucionales (los agentes no abrieron ninguna) y hay datos para confirmar
+que los propios agentes señalaron: el INADI ya no existe (ef-0725-1 apunta a
+Derechos Humanos), el Día del Libro de 1908 (ef-0615-2), siembra directa en
+ef-0707-1, Ley 22.250 y Dto 911/96 en ef-0722-2, y dominios que no recordaban
+con certeza (academiaportenadellunfardo.org.ar, plazahuincul.gob.ar,
+dna.gov.ar, na-sa.com.ar, oac.unc.edu.ar, sanmartiniano.gob.ar,
+manuelbelgrano.gob.ar, museofangio.com, cah.org.ar).
+
+**La trivia.** `data/tu_dia/juego.json` pasó de 30 preguntas a un **banco de
+210** (4 agentes: historia argentina y trabajo, geografía y naturaleza,
+cultura y deporte, ciencia y vida cotidiana; 45 cada uno más las 30 de antes
+con url, tema y nivel), cada una con `titulo`, 3 `opciones`, `correcta`,
+`explicacion`, `fuente`, `url`, `tema` y `nivel` (facil / media / dificil).
+`tu_dia.trivia_del_dia(items, hoy)` elige las diez de hoy: el banco se baraja
+de forma determinista por TANDA (una tanda dura `len(banco) // 10` días, hoy
+21) y cada día toma su tajada, así en una tanda ninguna pregunta se repite y
+todos ven el mismo kit el mismo día; dentro del kit van de fácil a difícil.
+**Cómo «se renueva sola»**: depende solo de `fechas.hoy()` (Buenos Aires), así
+que a la medianoche el primer pedido ya trae el kit nuevo; no hay tarea
+programada, ni fila en la base, ni nada que falle si el web estaba reiniciando
+a esa hora. `comentario_puntaje(n)` da título y texto para cada puntaje
+(`COMENTARIOS_PUNTAJE`, 11 entradas: aliento con «mañana» hasta 4, elogio
+creciente desde «¡Aprobado!» hasta «¡Diez de diez! Impecable»), y
+`item_trivia` manda el kit entero con los 11 comentarios para que el navegador
+no invente textos. En la hoja: pregunta de a una con «Pregunta N de 10», diez
+puntos que se van pintando (verde / rojo, colores de estado fijos), chip del
+nivel, las tres opciones, la explicación con su fuente al responder y
+«Siguiente»; al final el puntaje grande que corre hasta su número, el
+comentario, «mañana hay diez nuevas» y «Repasar las 10 preguntas» (cada una
+plegada con lo que respondiste, la correcta, la explicación y la fuente). El
+avance se guarda en `localStorage` **por día y por kit** (`tudia_trivia`:
+fecha + ids): una recarga retoma donde estaba, terminada se vuelve a ver el
+resultado, y mañana arranca de cero; la línea de la franja dice «vas por la
+pregunta 4 de 10» o «sacaste 7 de 10. Tocá para repasar». Verificado con
+Playwright en Laguna y Noticiero, escritorio y teléfono, sin errores de
+consola. El `RUBROS["juego"].desc` que ve el panel en Apariencia cambió
+(«La trivia del día: diez preguntas con puntaje, un kit nuevo cada
+madrugada»), por eso sube Admin.
+
+**Tests** (`test_tu_dia.py`, 29): el artículo (párrafos, `texto` de respaldo,
+url que no es https no viaja, el dólar con párrafos y enlace), la trivia
+(diez por día, determinista, sin repetir en la tanda, de fácil a difícil, lo
+dudoso y lo que no tiene tres opciones afuera), los comentarios (11 distintos,
+ánimo hasta 4, elogio desde 5, escalado para otro total), la ruta con el kit
+entero, y el contenido curado: todo ítem con url https, 3 o 4 párrafos de 20
+palabras o más sin saltos de línea, el banco con título que termina en «?»,
+explicación de 30 caracteres o más y nivel del catálogo, sin preguntas
+repetidas y con banco para 20 tandas o más.
+
+**Segunda vuelta, misma tarde (Trabajador 0.60.02).** SDN vio la franja y
+pidió dos cosas: más lugar para el tema, sin ocupar más pantalla (la línea se
+cortaba muy corta), y que la flecha de la derecha pase al siguiente ítem,
+dejando que para entrar haya que tocar el tema. Lo primero se resolvió sin
+mover el alto: la franja de escritorio toma el ancho que sobra en la fila del
+saludo (`flex: 1 1 600px; max-width: 860px` en las dos hojas de modelo, antes
+`flex: 0 1`) y el texto puede ir en dos líneas dentro de los mismos 44 px
+(`-webkit-line-clamp: 2` en `.pt-dia-texto`, que antes era una línea con
+elipsis). Lo segundo son dos botones: `.pt-dia-linea` (chip + texto) abre la
+hoja y `.pt-dia-sig` (la flecha, «Siguiente», solo si hay más de un ítem)
+hace `i++` y vuelve a arrancar el reloj de la rotación. Verificado con
+Playwright en Laguna y Noticiero, escritorio y teléfono.
+
+**Tercera vuelta, el reloj (Trabajador 0.61.01).** SDN: «para darle un poco
+más de emoción, cada pregunta tiene 30 segundos y lo mostrás en un reloj
+segundero que va consumiéndose». Los segundos los manda el servidor con el kit
+(`tu_dia.TRIVIA_SEGUNDOS`, `item_trivia(...)["segundos"]`), y la hoja dibuja
+en la cabecera de cada pregunta un aro SVG que se consume (`stroke-dashoffset`
+sobre la circunferencia) con el número de segundos adentro; en los últimos
+cinco se pone rojo (color de estado, fijo) y el número late (sin latido con
+«reducir movimiento»). Se acaba = la pregunta queda como **no respondida**
+(`null` en `respuestas`, cuenta como error, muestra la correcta y «Se acabó el
+tiempo» con la explicación); al responder el aro se para y se atenúa. El inicio
+de la pregunta se guarda junto con el avance (`g.inicio`), así una recarga a
+mitad de la pregunta sigue desde donde iba y no regala 30 segundos nuevos;
+cerrar la hoja a mitad de una pregunta para el reloj y la pregunta vuelve a
+arrancar de cero al reabrir. Verificado con Playwright: 29 al segundo, rojo a
+los 2, vencida con `[null]`, la siguiente arranca en 30 con las tres opciones
+activas.
+
+**Cuarta vuelta, el clima (Trabajador 0.61.02).** SDN vio las capturas sin
+el clima y pidió no sacarlo, achicarlo si hacía falta. No se había sacado: el
+afiliado de prueba de la sesión no tenía localidad ni seccional con
+coordenadas, y sin eso el servidor no pide el clima. Verificado con el clima
+puesto (domicilio con coordenadas + respuesta de MET sembrada en
+`CacheExterna`): en escritorio entra todo; en el teléfono, con el clima a la
+vista, dos líneas no alcanzaban para una línea de 55 caracteres. Se achicó el
+bloque del clima del teléfono (ícono 24 → 21 px, temperatura 20 → 17 px en
+Laguna y 22 → 19 en Noticiero, menos aire) y **el chip pasa arriba del texto**
+(`.pt-dia-cuerpo` en columna por debajo de 900 px), así las dos líneas usan
+todo el ancho que deja el clima; la línea de la trivia dejó de repetir
+«Trivia:» (ya lo dice el chip). Capturas en los dos modelos.

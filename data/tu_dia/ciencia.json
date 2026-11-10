@@ -1,5 +1,5 @@
 {
- "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
+ "_nota": "Contenido de «Tu día» (tu_dia.py). Borrador: redacción propia, revisado=false hasta que una persona lo revise. Lo marcado dudosa=true NO se muestra. Desde 2026-11-10 cada ítem es un artículo corto: titulo + parrafos (3 o 4) + url de la fuente. Formato y reglas en docs/chat/2026-10-24-pedido-tu-dia.md.",
  "revisado": false,
  "items": [
   {
@@ -9,7 +9,13 @@
    "titulo": "Bernardo Houssay, Nobel 1947",
    "texto": "Bernardo Houssay recibió en 1947 el Premio Nobel de Medicina por sus estudios sobre el papel de la hipófisis en el manejo del azúcar en el cuerpo. Fue el primer latinoamericano en ganar un Nobel de ciencia.",
    "fuente": "Fundación Nobel (nobelprize.org)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Bernardo Houssay fue el primer latinoamericano en ganar un Premio Nobel de ciencia. En 1947 recibió el de Medicina por descubrir el papel que cumple la hipófisis, una pequeña glándula ubicada en la base del cerebro, en el manejo del azúcar en el cuerpo. Compartió el premio con el matrimonio de científicos Carl y Gerty Cori.",
+    "Sus experimentos mostraron que una hormona de la hipófisis influye en cuánta azúcar usa el organismo y cuánta insulina hace falta. Eso ayudó a entender mejor la diabetes, una enfermedad que hoy afecta a millones de personas y que se controla con alimentación, ejercicio y, cuando hace falta, medicación.",
+    "Houssay formó a generaciones de investigadores y fundó en Buenos Aires el Instituto de Biología y Medicina Experimental. Defendió siempre que la ciencia necesita trabajo constante y apoyo del Estado, y por eso se lo recuerda también por haber impulsado la creación del CONICET. Su Nobel sigue siendo un orgullo para la ciencia argentina."
+   ],
+   "url": "https://www.nobelprize.org/prizes/medicine/1947/houssay/facts/"
   },
   {
    "id": "ci-02",
@@ -18,7 +24,13 @@
    "titulo": "Luis Federico Leloir",
    "texto": "Leloir descubrió cómo el organismo fabrica y guarda los azúcares, a partir de unas moléculas llamadas nucleótidos-azúcar. Por eso recibió el Nobel de Química en 1970, trabajando en un laboratorio modesto de Buenos Aires.",
    "fuente": "Fundación Instituto Leloir",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Luis Federico Leloir descubrió cómo el cuerpo fabrica y almacena los azúcares. Encontró unas moléculas llamadas nucleótidos-azúcar, que funcionan como ladrillos listos para construir sustancias más grandes, como el glucógeno, la reserva de energía de los músculos y del hígado. Por ese trabajo recibió el Premio Nobel de Química en 1970.",
+    "Lo hizo en un laboratorio modesto de Buenos Aires, con pocos recursos y un equipo pequeño, en el Instituto de Investigaciones Bioquímicas que funcionaba con apoyo de la Fundación Campomar. Hoy esa institución se llama Fundación Instituto Leloir y sigue investigando. Leloir era conocido por su humildad y por trabajar codo a codo con sus colaboradores.",
+    "Sus hallazgos ayudaron a comprender enfermedades en las que el organismo no procesa bien algunos azúcares, como la galactosemia, que afecta a bebés y se detecta con análisis hechos poco después del nacimiento. Es un ejemplo de cómo una pregunta de ciencia básica termina teniendo efectos en la salud de la gente."
+   ],
+   "url": "https://www.nobelprize.org/prizes/chemistry/1970/leloir/facts/"
   },
   {
    "id": "ci-03",
@@ -27,7 +39,13 @@
    "titulo": "César Milstein y los anticuerpos",
    "texto": "César Milstein, nacido en Bahía Blanca, desarrolló junto a Georges Köhler la técnica para producir anticuerpos monoclonales. Recibió el Nobel de Medicina en 1984; hoy esa técnica se usa en diagnósticos y tratamientos de todo el mundo.",
    "fuente": "Fundación Nobel (nobelprize.org)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "César Milstein nació en Bahía Blanca, estudió en la Universidad de Buenos Aires y desarrolló buena parte de su carrera en Cambridge, Inglaterra. Allí, junto con el alemán Georges Köhler, ideó una técnica para producir anticuerpos monoclonales: copias idénticas de un anticuerpo capaz de reconocer una sola sustancia en particular.",
+    "Los anticuerpos son las defensas con que el cuerpo se protege de virus y bacterias. Milstein y Köhler lograron fusionar una célula inmune con una célula tumoral para obtener una fábrica que produce siempre el mismo anticuerpo. Por ese avance recibieron el Nobel de Medicina en 1984, junto con Niels Jerne, por sus estudios sobre el sistema inmune.",
+    "Hoy los anticuerpos monoclonales se usan en tests de diagnóstico, en laboratorios y en tratamientos para algunos tipos de cáncer y enfermedades autoinmunes. Milstein nunca patentó la técnica, para que los científicos de todo el mundo pudieran usarla, y su aporte sigue presente cada vez que se realiza un análisis clínico moderno."
+   ],
+   "url": "https://www.nobelprize.org/prizes/medicine/1984/milstein/facts/"
   },
   {
    "id": "ci-04",
@@ -36,7 +54,13 @@
    "titulo": "El nacimiento del CONICET",
    "texto": "El Consejo Nacional de Investigaciones Científicas y Técnicas se creó en 1958 para impulsar la investigación en el país. Su primer presidente fue Bernardo Houssay.",
    "fuente": "CONICET",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Consejo Nacional de Investigaciones Científicas y Técnicas, conocido como CONICET, se creó en 1958 para promover y financiar la investigación científica en el país. Su primer presidente fue Bernardo Houssay, Premio Nobel de Medicina, que había insistido durante años en que la Argentina necesitaba un organismo estable para sostener a sus investigadores.",
+    "Con los años el CONICET se convirtió en el principal organismo científico del país. Tiene institutos y centros de investigación en todas las provincias y reúne a miles de investigadores, becarios y personal técnico y de apoyo que trabajan en temas que van desde la biología y la medicina hasta la historia, la física o la agronomía.",
+    "Parte de lo que se produce ahí llega a la vida diaria: desarrollos de vacunas y de equipos de diagnóstico, mejoras de cultivos, estudios sobre el cambio climático o sobre la sociedad. Cada vez que se oye hablar de un descubrimiento hecho por científicos argentinos, es probable que haya algún investigador del CONICET detrás."
+   ],
+   "url": "https://www.conicet.gov.ar"
   },
   {
    "id": "ci-05",
@@ -45,7 +69,13 @@
    "titulo": "Un Nobel en la cocina",
    "texto": "Se cuenta que en los años veinte, en un club de Mar del Plata, Leloir mezcló mayonesa con kétchup para acompañar unos langostinos. La historia la repitió él mismo, pero no hay registro que la confirme.",
    "fuente": "Fundación Instituto Leloir",
-   "dudosa": true
+   "dudosa": true,
+   "parrafos": [
+    "Se cuenta que en los años veinte, en un club de Mar del Plata, el joven Luis Federico Leloir mezcló mayonesa con kétchup para acompañar unos langostinos. El invento habría dado origen a la salsa golf, hoy muy conocida en los restaurantes argentinos y que se sirve con langostinos, ensalada de palmitos y otros platos.",
+    "La anécdota la repitió el propio Leloir, pero no hay ningún registro que la confirme: otras personas y otros lugares también se atribuyen el invento. Por eso conviene tomarla como una linda historia más que como un dato comprobado, de esas que se cuentan en las sobremesas y que se transmiten de boca en boca.",
+    "Lo que sí está documentado es su trabajo científico, que lo llevó al Nobel de Química en 1970. Sus colegas lo recordaban como una persona sencilla, curiosa y de buen humor, y quizás por eso la historia de la salsa golf se mantuvo: un científico del más alto nivel que también disfrutaba de una comida con amigos."
+   ],
+   "url": "https://www.leloir.org.ar"
   },
   {
    "id": "ci-06",
@@ -54,7 +84,13 @@
    "titulo": "Instituto Nacional de Tecnología Industrial",
    "texto": "El INTI se creó en 1957 para dar apoyo técnico a la industria: ensayos, certificaciones y desarrollo de procesos. Trabaja con fábricas grandes y con pequeños talleres de todo el país.",
    "fuente": "INTI",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Instituto Nacional de Tecnología Industrial, el INTI, se creó en 1957 con el objetivo de ayudar a la industria argentina a producir mejor. Hace ensayos de materiales y productos, certifica que cumplan normas de calidad y desarrolla procesos y tecnologías que pueden usar las empresas, sean grandes fábricas o pequeños talleres.",
+    "Tiene centros y laboratorios en distintas ciudades del país y trabaja en temas muy variados: alimentos, textiles, plásticos, maquinaria, energía, construcción, envases y mucho más. Sus técnicos analizan, por ejemplo, si un producto resiste lo que promete o si una máquina funciona de manera segura.",
+    "Muchas veces su trabajo pasa inadvertido, pero llega a la vida cotidiana: la calidad de un alimento envasado, la seguridad de un juguete o la eficiencia de una heladera pasan por controles que hace el INTI o que se basan en sus normas. Además, apoya a emprendedores y pymes que necesitan mejorar su producción y generar empleo."
+   ],
+   "url": "https://www.argentina.gob.ar/inti"
   },
   {
    "id": "ci-07",
@@ -63,7 +99,13 @@
    "titulo": "El kilo y el metro oficiales",
    "texto": "El INTI es el instituto de metrología de la Argentina: mantiene los patrones nacionales de masa, longitud, temperatura y otras magnitudes. Con ellos se calibran balanzas, surtidores y medidores.",
    "fuente": "INTI",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Cuando una persona carga nafta, compra fiambre en una balanza o paga por el gas que consume, confía en que el instrumento mide bien. Esa confianza se apoya en la metrología, la ciencia de las mediciones. En la Argentina, el INTI es el instituto nacional de metrología y mantiene los patrones oficiales de masa, longitud, temperatura, tiempo y otras magnitudes.",
+    "Un patrón es una referencia muy precisa con la que se comparan otros instrumentos. Con ellos el INTI calibra las balanzas, los surtidores y los medidores que usan laboratorios, fábricas y comercios, y esas calibraciones se van encadenando hacia abajo hasta llegar a los aparatos que se usan todos los días.",
+    "Medir bien importa para el comercio justo, para la salud y para la industria. En 2019 las unidades internacionales, incluido el kilogramo, pasaron a definirse a partir de constantes de la naturaleza, y los institutos de metrología de cada país, entre ellos el INTI, se encargan de que esas definiciones lleguen a la práctica."
+   ],
+   "url": "https://www.argentina.gob.ar/inti"
   },
   {
    "id": "ci-08",
@@ -72,7 +114,13 @@
    "titulo": "Instituto Nacional de Tecnología Agropecuaria",
    "texto": "El INTA se creó en 1956 para investigar y llevar mejoras técnicas al campo. Tiene estaciones experimentales y agencias de extensión en todas las regiones del país.",
    "fuente": "INTA",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Instituto Nacional de Tecnología Agropecuaria, el INTA, se creó en 1956 para investigar y llevar mejoras técnicas al campo. Cuenta con estaciones experimentales y agencias de extensión en todas las regiones del país, donde se estudian cultivos, suelos, animales, agua y también formas de producir cuidando el ambiente.",
+    "Sus técnicos no solo investigan, sino que también acompañan a los productores en el terreno: enseñan cómo mejorar una cosecha, cómo cuidar el suelo o cómo conservar mejor un alimento. Trabajan con grandes productores y con pequeños agricultores familiares, y también con comunidades de zonas rurales alejadas.",
+    "Uno de sus programas más conocidos es Pro Huerta, que desde 1990 entrega semillas y asesoramiento a familias de todo el país para que armen su propia huerta. Así, el trabajo del INTA llega a muchas mesas: ayuda a que haya mejores cosechas, alimentos más sanos y más trabajo en los pueblos del interior."
+   ],
+   "url": "https://www.argentina.gob.ar/inta"
   },
   {
    "id": "ci-09",
@@ -81,7 +129,13 @@
    "titulo": "Comisión Nacional de Actividades Espaciales",
    "texto": "La CONAE se creó en 1991 para diseñar y llevar adelante el plan espacial del país. Sus satélites se usan para el agro, las emergencias y el cuidado del ambiente.",
    "fuente": "CONAE",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Comisión Nacional de Actividades Espaciales, la CONAE, se creó en 1991 para diseñar y llevar adelante el plan espacial argentino. Su centro principal es el Centro Espacial Teófilo Tabanera, en Córdoba, cerca de Falda del Carmen, desde donde se controlan los satélites y se reciben los datos que envían desde el espacio.",
+    "Los satélites de la CONAE no son de comunicaciones, sino de observación de la Tierra. Sacan imágenes y miden cosas como la humedad del suelo, el estado de los cultivos, el tamaño de los incendios o el avance de una inundación. Con esos datos se pueden tomar mejores decisiones antes y después de una emergencia.",
+    "Esa información la usan el campo, los organismos de emergencia, los científicos del clima y también los servicios de salud, que la emplean para estudiar enfermedades vinculadas con el ambiente. Es una forma de que lo que pasa a cientos de kilómetros sobre nuestras cabezas termine ayudando a resolver problemas de acá abajo."
+   ],
+   "url": "https://www.argentina.gob.ar/ciencia/conae"
   },
   {
    "id": "ci-10",
@@ -90,7 +144,13 @@
    "titulo": "SAC-D / Aquarius",
    "texto": "Lanzado en 2011, el satélite SAC-D llevó el instrumento Aquarius de la NASA, que midió la salinidad de la superficie del mar en todo el planeta. Fue construido en la Argentina por INVAP para la CONAE.",
    "fuente": "CONAE",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El SAC-D fue un satélite científico argentino lanzado en junio de 2011 desde Estados Unidos. Llevaba varios instrumentos y, entre ellos, uno muy especial: Aquarius, un aparato de la NASA que midió la salinidad de la superficie de los océanos de todo el planeta. Lo construyó INVAP, en Bariloche, para la CONAE.",
+    "La sal del mar parece un dato menor, pero influye en las corrientes oceánicas y en cómo el agua intercambia calor y humedad con la atmósfera. Cuando cambia, por ejemplo por la lluvia o el deshielo, también cambia el clima. Medirla desde el espacio permitió tener mapas de todo el mundo, algo que no se podía hacer con barcos.",
+    "El SAC-D dejó de funcionar en 2015, después de una falla en su sistema de energía, pero sus datos siguen sirviendo para estudios del clima y del mar. La misión mostró que la Argentina podía construir un satélite complejo, con instrumentos de varios países, y trabajar con la NASA y otras agencias en proyectos científicos en conjunto."
+   ],
+   "url": "https://www.argentina.gob.ar/ciencia/conae"
   },
   {
    "id": "ci-11",
@@ -99,7 +159,13 @@
    "titulo": "Los satélites SAOCOM",
    "texto": "SAOCOM 1A (2018) y 1B (2020) llevan un radar que funciona aunque esté nublado o sea de noche. Miden la humedad del suelo y ayudan a anticipar inundaciones y a planificar siembras.",
    "fuente": "CONAE",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Los satélites SAOCOM 1A y 1B se lanzaron en 2018 y 2020. Son dos satélites argentinos que llevan un radar de apertura sintética, un instrumento que funciona de día y de noche y también cuando hay nubes, algo que las cámaras comunes no pueden hacer. Los diseñó la CONAE y los construyó INVAP.",
+    "El radar emite ondas hacia la Tierra y mide lo que vuelve, y con eso se puede calcular cuánta humedad tiene el suelo, aun debajo de los cultivos. Esa información sirve para decidir qué sembrar y cuándo, para estimar el riesgo de sequía y para anticipar el riesgo de inundaciones en zonas bajas del país.",
+    "Los SAOCOM trabajan junto con satélites de Italia como parte de un sistema conjunto. Además de ayudar al campo, sirven para seguir manchas de petróleo en el mar, monitorear zonas de desastre y estudiar glaciares. Son un ejemplo de tecnología espacial pensada para ayudar a resolver problemas de la gente."
+   ],
+   "url": "https://www.argentina.gob.ar/ciencia/conae"
   },
   {
    "id": "ci-12",
@@ -108,7 +174,13 @@
    "titulo": "ARSAT-1, en órbita desde 2014",
    "texto": "ARSAT-1, lanzado en octubre de 2014, fue el primer satélite geoestacionario de telecomunicaciones construido en América Latina. Lo fabricó INVAP en Bariloche; en 2015 lo siguió el ARSAT-2.",
    "fuente": "ARSAT",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El ARSAT-1 se lanzó en octubre de 2014 desde la Guayana Francesa y fue el primer satélite geoestacionario de telecomunicaciones construido en América Latina. Se llama geoestacionario porque está a unos 36.000 kilómetros sobre el Ecuador y gira a la misma velocidad que la Tierra, de modo que parece quieto en el cielo.",
+    "Lo fabricó INVAP, en Bariloche, para la empresa estatal ARSAT. En 2015 se sumó el ARSAT-2, con un diseño similar. Entre los dos cubren la Argentina, países vecinos y parte de Centroamérica, y permiten enviar señales de televisión, datos y comunicaciones a lugares donde un cable o una antena terrestre no llegan.",
+    "Estos satélites sirven a empresas, escuelas rurales y comunidades alejadas que necesitan conectarse. Además, construirlos dejó capacidades técnicas en el país: ingenieros, técnicos y empresas proveedoras que aprendieron a fabricar tecnología de punta, y que hoy siguen trabajando en nuevos proyectos espaciales."
+   ],
+   "url": "https://www.arsat.com.ar"
   },
   {
    "id": "ci-13",
@@ -117,7 +189,13 @@
    "titulo": "INVAP, tecnología desde la Patagonia",
    "texto": "INVAP es una empresa tecnológica de la provincia de Río Negro, creada en 1976. Diseña y construye reactores nucleares, satélites, radares y equipos médicos.",
    "fuente": "INVAP",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "INVAP es una empresa de tecnología de la provincia de Río Negro, con sede en San Carlos de Bariloche. Se creó en 1976, a partir de un acuerdo entre la Comisión Nacional de Energía Atómica y el gobierno provincial, con el propósito de aplicar el conocimiento de los científicos formados en el Instituto Balseiro.",
+    "Con los años creció y hoy diseña y construye reactores nucleares de investigación, satélites, radares meteorológicos y de control aéreo, equipos médicos y sistemas para la industria. Muchos de sus productos se exportan, y ha trabajado para clientes de distintos países, algo poco común en una empresa de tecnología de la región.",
+    "INVAP emplea a ingenieros, técnicos, físicos y trabajadores de muchos oficios, y en Bariloche generó una red de proveedores y de nuevos emprendimientos. Es un ejemplo de cómo la ciencia y la industria pueden trabajar juntas en el interior del país y producir tecnología que se usa en la salud, el ambiente y las comunicaciones."
+   ],
+   "url": "https://www.invap.com.ar"
   },
   {
    "id": "ci-14",
@@ -126,7 +204,13 @@
    "titulo": "El reactor OPAL",
    "texto": "INVAP diseñó y construyó el reactor de investigación OPAL, en Sídney, que funciona desde 2007. Produce radioisótopos para medicina y sirve para investigación. La empresa también hizo reactores para Perú, Argelia y Egipto.",
    "fuente": "INVAP",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "OPAL es un reactor nuclear de investigación que funciona desde 2007 en Lucas Heights, en las afueras de Sídney, Australia. Lo diseñó y construyó INVAP, tras ganar una licitación internacional, y es uno de los trabajos más conocidos de la empresa en el exterior. No genera electricidad: sirve para investigar y producir radioisótopos.",
+    "Los radioisótopos son átomos que emiten radiación y se usan en medicina nuclear. Uno de los más importantes, el molibdeno-99, da origen al tecnecio-99m, que se emplea en millones de estudios al año para diagnosticar problemas del corazón, de los huesos o del cuerpo en general. El reactor también sirve para investigar materiales.",
+    "INVAP también construyó reactores de investigación para Perú, Argelia y Egipto. Detrás de estas obras hay equipos de ingenieros y técnicos argentinos que trabajaron años en cada proyecto. Es un caso de exportación de tecnología con valor agregado, que además ayuda a que otros países puedan investigar y producir insumos para su salud."
+   ],
+   "url": "https://www.invap.com.ar"
   },
   {
    "id": "ci-15",
@@ -135,7 +219,13 @@
    "titulo": "El RA-1, de 1958",
    "texto": "El reactor de investigación RA-1, en el Centro Atómico Constituyentes, empezó a funcionar en enero de 1958. Fue el primero de América Latina y se construyó en el país.",
    "fuente": "Comisión Nacional de Energía Atómica (CNEA)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El RA-1 es un reactor nuclear de investigación que empezó a funcionar en enero de 1958 en el Centro Atómico Constituyentes, en el partido de General San Martín, provincia de Buenos Aires. Fue el primer reactor de América Latina y se construyó en el país, con tecnología y trabajo de científicos e ingenieros argentinos.",
+    "Un reactor de investigación es mucho más pequeño que el de una central eléctrica y se usa para estudiar cómo se comportan los materiales y las partículas, entrenar especialistas y producir radioisótopos. El RA-1 le permitió a la Argentina formar un grupo de profesionales que luego trabajaron en otros proyectos nucleares.",
+    "Su puesta en marcha fue un hito de la historia de la tecnología nacional, que mostró que el país podía diseñar, construir y operar instalaciones nucleares complejas. Con los años esa experiencia abrió el camino a los reactores de investigación que se hicieron para otros países y a las centrales nucleares que hoy aportan electricidad a la red."
+   ],
+   "url": "https://www.argentina.gob.ar/cnea"
   },
   {
    "id": "ci-16",
@@ -144,7 +234,13 @@
    "titulo": "Comisión Nacional de Energía Atómica",
    "texto": "La CNEA se creó en 1950. Además de reactores, produce radioisótopos que se usan en hospitales para diagnosticar y tratar enfermedades.",
    "fuente": "Comisión Nacional de Energía Atómica (CNEA)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La Comisión Nacional de Energía Atómica, la CNEA, se creó en 1950. Es el organismo que impulsa el uso pacífico de la energía nuclear en el país: investiga, forma especialistas y desarrolla tecnología. Tiene centros atómicos en Constituyentes, Ezeiza y Bariloche, entre otros lugares, y trabaja junto con universidades y empresas.",
+    "Además de diseñar reactores, la CNEA produce radioisótopos que se usan en hospitales de todo el país. Con ellos se hacen estudios de diagnóstico por imágenes y se tratan algunas enfermedades, como ciertos problemas de la glándula tiroides y algunos tipos de cáncer. Son insumos que, de no producirse en el país, habría que importar.",
+    "La CNEA también hace investigación en materiales, en el cuidado del ambiente y en la gestión de residuos radiactivos, y participa en la formación de físicos e ingenieros a través del Instituto Balseiro. Muchos de sus profesionales trabajan en la industria nuclear, que emplea a miles de personas en el país."
+   ],
+   "url": "https://www.argentina.gob.ar/cnea"
   },
   {
    "id": "ci-17",
@@ -153,7 +249,13 @@
    "titulo": "Instituto Balseiro, en Bariloche",
    "texto": "Fundado en 1955 por la CNEA y la Universidad Nacional de Cuyo, forma físicos e ingenieros nucleares, mecánicos y en telecomunicaciones. Lleva el nombre de José Antonio Balseiro, su primer director.",
    "fuente": "Instituto Balseiro",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Instituto Balseiro funciona en Bariloche desde 1955. Lo crearon la Comisión Nacional de Energía Atómica y la Universidad Nacional de Cuyo para formar físicos e ingenieros de alto nivel. Lleva el nombre de José Antonio Balseiro, el físico que fue su primer director y que armó un equipo de profesores nacionales y extranjeros.",
+    "Hoy ofrece carreras de Física y de ingeniería nuclear, mecánica, en telecomunicaciones y otras, además de posgrados. Es una institución chica, de grupos reducidos y estudio intensivo, con una fuerte relación con los laboratorios del Centro Atómico Bariloche, donde los alumnos hacen sus trabajos finales y aprenden de científicos en actividad.",
+    "Sus egresados trabajan en la CNEA, en INVAP y en universidades y empresas del país y del exterior. Entre ellos hay desde ingenieros que diseñan reactores o satélites hasta físicos de renombre internacional, como Juan Maldacena. Muchas de las tecnologías nucleares y espaciales argentinas tienen su origen en las aulas del Balseiro."
+   ],
+   "url": "https://www.ib.edu.ar"
   },
   {
    "id": "ci-18",
@@ -162,7 +264,13 @@
    "titulo": "La central Atucha I",
    "texto": "La central nuclear Atucha I, en Lima, partido de Zárate, entró en servicio en 1974. Fue la primera central nuclear de potencia de América Latina.",
    "fuente": "Nucleoeléctrica Argentina (NA-SA)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Atucha I es la central nuclear que está en Lima, en el partido de Zárate, provincia de Buenos Aires, a orillas del río Paraná. Entró en servicio en 1974 y fue la primera central nuclear de potencia de América Latina, es decir, la primera que produjo electricidad para la red eléctrica de un país de la región.",
+    "Una central nuclear funciona parecido a una central térmica, con la diferencia de que el calor para producir vapor sale de la fisión del uranio y no de quemar gas o carbón. Atucha I usa uranio natural y agua pesada, una combinación que el país aprendió a manejar y que desarrolló con tecnología propia con los años.",
+    "Con el tiempo se sumaron la central de Embalse, en Córdoba, y Atucha II, que entró en operación en 2014. Entre las tres aportan una parte de la electricidad del país y emplean a miles de trabajadores de distintas especialidades. Atucha I, además, es hoy un símbolo de la capacidad nuclear de la Argentina."
+   ],
+   "url": "https://www.na-sa.com.ar"
   },
   {
    "id": "ci-19",
@@ -171,7 +279,13 @@
    "titulo": "El reactor CAREM",
    "texto": "La CNEA desarrolla el CAREM, un reactor nuclear pequeño y modular pensado para dar electricidad a zonas alejadas de las grandes redes. El prototipo está ubicado en Lima, junto al complejo Atucha.",
    "fuente": "Comisión Nacional de Energía Atómica (CNEA)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El CAREM es un proyecto de reactor nuclear pequeño y modular, diseñado por la Comisión Nacional de Energía Atómica. A diferencia de los grandes reactores de las centrales, este tipo de reactor produce menos energía, pero se puede instalar en lugares más chicos o alejados de las grandes redes eléctricas, como una ciudad aislada o una zona industrial.",
+    "Su diseño tiene una particularidad: todos los componentes principales están dentro de un mismo recipiente, lo que simplifica la construcción. También tiene sistemas de seguridad que funcionan por principios físicos sencillos, como la circulación natural del agua, y no dependen de bombas ni de una fuente externa de energía.",
+    "El prototipo, llamado CAREM-25, se ubica en Lima, junto al complejo nuclear Atucha. Ha sido un proyecto de ingenieros y técnicos argentinos, y es parte de una tendencia mundial hacia reactores más chicos. Si funciona como se espera, podría ser una nueva forma de llevar electricidad a regiones donde hoy es difícil."
+   ],
+   "url": "https://www.argentina.gob.ar/cnea"
   },
   {
    "id": "ci-20",
@@ -180,7 +294,13 @@
    "titulo": "René Favaloro",
    "texto": "En 1967, en la Clínica Cleveland de Estados Unidos, el cirujano René Favaloro sistematizó el bypass aortocoronario con vena safena. La técnica se usa en todo el mundo para tratar arterias del corazón obstruidas.",
    "fuente": "Fundación Favaloro",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "René Favaloro nació en La Plata, estudió medicina y trabajó varios años como médico rural en Jacinto Aráuz, un pueblo de La Pampa. Más tarde viajó a Estados Unidos y en 1967, en la Clínica Cleveland, sistematizó la técnica del bypass aortocoronario con vena safena, una operación que se usa en todo el mundo para tratar el corazón.",
+    "El bypass consiste en tomar un trozo de vena de la pierna y usarlo para armar un desvío que lleve sangre al corazón, esquivando una arteria obstruida. Así se recupera la circulación en el músculo cardíaco y se evitan infartos. La técnica ha salvado la vida de millones de personas y alivió los síntomas de muchas más.",
+    "Favaloro volvió a la Argentina en 1971 y creó la Fundación Favaloro, un centro de salud con docencia e investigación, que atiende a pacientes y forma médicos. Siempre defendió la idea de que la medicina debe estar al servicio de las personas y no al revés. Falleció en el año 2000 y es recordado por su vocación de servicio."
+   ],
+   "url": "https://www.fundacionfavaloro.org"
   },
   {
    "id": "ci-21",
@@ -189,7 +309,13 @@
    "titulo": "Domingo Liotta",
    "texto": "El cirujano Domingo Liotta diseñó el corazón artificial total que en 1969 se implantó por primera vez en una persona, en Houston, como paso previo a un trasplante.",
    "fuente": "Academia Nacional de Medicina",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Domingo Liotta fue un cirujano argentino que se dedicó a investigar cómo reemplazar el corazón cuando ya no funciona. Diseñó un corazón artificial total, una bomba mecánica capaz de hacer el trabajo del corazón, pensada para sostener la vida de una persona hasta que apareciera un órgano para trasplantar.",
+    "En 1969, en Houston, Estados Unidos, ese corazón artificial se implantó por primera vez en una persona. Lo hizo el cirujano Denton Cooley, con el dispositivo que había diseñado Liotta. El paciente vivió unos tres días con el aparato, hasta que se consiguió un corazón para trasplantar. Fue un paso muy importante.",
+    "Aquel primer ensayo mostró que era posible mantener a alguien con vida con un corazón mecánico, algo que hasta entonces parecía ciencia ficción. Con los años la tecnología mejoró mucho: hoy existen dispositivos de asistencia cardíaca que ayudan a pacientes con insuficiencia cardíaca grave. Liotta es una de las figuras fundadoras de esa línea de trabajo."
+   ],
+   "url": "https://www.anm.edu.ar"
   },
   {
    "id": "ci-22",
@@ -198,7 +324,13 @@
    "titulo": "Florentino Ameghino",
    "texto": "A fines del siglo XIX, Florentino Ameghino y su hermano Carlos recorrieron la Pampa y la Patagonia juntando miles de fósiles. Gran parte de su trabajo se conserva en el Museo de La Plata y en el Museo Argentino de Ciencias Naturales.",
    "fuente": "Museo de La Plata",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Florentino Ameghino nació en Luján en 1854 y fue maestro de escuela, pero su gran pasión era la paleontología, el estudio de los fósiles. Junto con su hermano Carlos, que fue un explorador incansable, recorrió la Pampa y la Patagonia durante décadas buscando huesos y restos de animales que vivieron hace millones de años.",
+    "Entre los dos reunieron miles de fósiles, entre ellos los restos de mamíferos gigantes ya extinguidos, como los gliptodontes, parientes lejanos de los actuales peludos y mulitas. Florentino publicó numerosos trabajos describiendo especies nuevas y se transformó en una figura científica reconocida, incluso fuera del país.",
+    "Gran parte de lo que juntaron se conserva en el Museo de La Plata y en el Museo Argentino de Ciencias Naturales, que Ameghino dirigió. Hoy esas colecciones siguen siendo materia de estudio para científicos de todo el mundo. Cuentan cómo era la vida en el territorio argentino mucho antes de que existiera el país."
+   ],
+   "url": "https://www.museo.fcnym.unlp.edu.ar"
   },
   {
    "id": "ci-23",
@@ -207,7 +339,13 @@
    "titulo": "La Uranometría Argentina",
    "texto": "El Observatorio de Córdoba empezó a trabajar en 1871. Desde ahí Benjamin Gould y su equipo publicaron la Uranometría Argentina, un catálogo de las estrellas visibles desde el hemisferio sur.",
    "fuente": "Observatorio Astronómico de Córdoba (UNC)",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Observatorio Astronómico de Córdoba empezó a trabajar en 1871, durante la presidencia de Domingo Faustino Sarmiento, que invitó a un astrónomo estadounidense, Benjamin Gould, para dirigirlo. Gould llegó con un grupo de ayudantes y se propuso mapear las estrellas del cielo del sur, que estaba mucho menos estudiado que el del hemisferio norte.",
+    "Con su equipo observó miles de estrellas, anotó su brillo y su posición a ojo y con telescopios, noche tras noche. El resultado fue la Uranometría Argentina, un catálogo publicado a fines de la década de 1870 que reunía las estrellas visibles a simple vista desde el hemisferio sur, con sus magnitudes, y que fue un trabajo de referencia durante mucho tiempo.",
+    "Aquel observatorio fue además una escuela de astronomía: formó a los primeros astrónomos del país y sigue funcionando hoy como parte de la Universidad Nacional de Córdoba. El cielo austral, donde se ven la Cruz del Sur y las Nubes de Magallanes, sigue atrayendo a científicos y aficionados de todo el mundo."
+   ],
+   "url": "https://oac.unc.edu.ar"
   },
   {
    "id": "ci-24",
@@ -216,7 +354,13 @@
    "titulo": "Observatorio Pierre Auger",
    "texto": "En Malargüe, Mendoza, funciona el Observatorio Pierre Auger: unos 1.600 detectores repartidos en 3.000 km² registran rayos cósmicos de energía altísima. Participan científicos de más de quince países.",
    "fuente": "Observatorio Pierre Auger",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Observatorio Pierre Auger está en Malargüe, en el sur de la provincia de Mendoza. Es una enorme red de unos 1.600 detectores repartidos en 3.000 kilómetros cuadrados, una superficie más grande que la de la Ciudad de Buenos Aires, que registran las partículas que llegan desde el espacio con energías altísimas, los llamados rayos cósmicos.",
+    "Cuando un rayo cósmico choca con la atmósfera, produce una lluvia de partículas que llega al suelo. Los detectores, que son tanques con agua, captan la luz que esas partículas generan y los científicos reconstruyen de dónde vino el rayo y cuánta energía traía. El nombre homenajea al físico francés Pierre Auger, que descubrió estas lluvias.",
+    "En el observatorio participan investigadores de más de quince países, y en 2017 sus datos mostraron que los rayos cósmicos de mayor energía vienen de fuera de nuestra galaxia. Además de ciencia, el proyecto trajo empleo y desarrollo a Malargüe, donde trabajan técnicos, ingenieros y personal de apoyo de la zona."
+   ],
+   "url": "https://www.auger.org.ar"
   },
   {
    "id": "ci-25",
@@ -225,7 +369,13 @@
    "titulo": "Base Orcadas",
    "texto": "La Argentina ocupa la base Orcadas, en las islas Orcadas del Sur, desde 1904. Es la presencia permanente más antigua en la Antártida y tiene registros meteorológicos sin interrupción desde entonces.",
    "fuente": "Instituto Antártico Argentino",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "La base Orcadas está en la isla Laurie, en el archipiélago de las Orcadas del Sur, en el sector antártico. Tiene una historia curiosa: la instaló una expedición escocesa en 1903 y, en febrero de 1904, la Argentina se hizo cargo de ella. Desde entonces el país mantiene allí una presencia ininterrumpida, la más antigua en la Antártida.",
+    "En la base trabajan técnicos y científicos que viven meses en lugares de clima extremo, con mucho frío, viento y aislamiento. Entre sus tareas está la de tomar registros meteorológicos, que se hacen sin interrupciones desde los primeros años de la base, lo que da una de las series de datos más largas de toda la región antártica.",
+    "Esos registros ayudan a los científicos a entender cómo cambió el clima a lo largo de más de un siglo y a mejorar los modelos que usan para prever lo que viene. La Antártida es un lugar clave para estudiar el planeta, y Orcadas es un ejemplo de cómo el trabajo paciente y sostenido, año tras año, termina dando conocimiento valioso."
+   ],
+   "url": "https://www.dna.gov.ar"
   },
   {
    "id": "ci-26",
@@ -234,7 +384,13 @@
    "titulo": "El trigo HB4",
    "texto": "El equipo de la investigadora Raquel Chan, del CONICET y la Universidad Nacional del Litoral, identificó un gen del girasol que ayuda a soportar la sequía. A partir de ese hallazgo se desarrolló el trigo HB4.",
    "fuente": "CONICET",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Raquel Chan es una bióloga argentina que trabaja en el CONICET y en la Universidad Nacional del Litoral, en Santa Fe. Su equipo estudió cómo las plantas soportan situaciones difíciles y descubrió en el girasol un gen, llamado HaHB4, que le ayuda a resistir mejor la sequía. Es un hallazgo de ciencia básica que tuvo una aplicación práctica.",
+    "Con ese gen se desarrolló el trigo HB4, en un trabajo conjunto entre el equipo del CONICET y una empresa argentina. La idea es que la planta pueda aguantar períodos con poca agua y mantener un rendimiento aceptable. Es un tema importante porque las sequías son cada vez más frecuentes y golpean duro a los productores.",
+    "El caso es un ejemplo de cómo una investigación de laboratorio puede llegar al campo. Desarrollos como este, junto con la mejora de cultivos y el estudio del clima, buscan que la producción de alimentos sea más segura. Chan recibió varios reconocimientos y es una referencia para muchas jóvenes científicas."
+   ],
+   "url": "https://www.conicet.gov.ar"
   },
   {
    "id": "ci-27",
@@ -243,7 +399,13 @@
    "titulo": "Salvador Mazza y la MEPRA",
    "texto": "Desde Jujuy, el médico Salvador Mazza dirigió en los años treinta y cuarenta una misión que recorrió el norte estudiando enfermedades regionales. Confirmó cientos de casos de Chagas y mostró su importancia en el país.",
    "fuente": "ANLIS Dr. Carlos G. Malbrán",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Salvador Mazza fue un médico argentino que dedicó su carrera al estudio de las enfermedades del norte del país. En 1926 fundó en Jujuy la Misión de Estudios de Patología Regional Argentina, la MEPRA, un equipo que recorría pueblos y parajes del noroeste con un laboratorio móvil, para estudiar a la gente en el lugar donde vivía.",
+    "Su trabajo fue clave para mostrar que el mal de Chagas, una enfermedad que transmite la vinchuca, era un problema real en la Argentina. Mazza confirmó cientos de casos en las décadas de 1930 y 1940, cuando mucha gente todavía no lo conocía, y describió cómo se manifestaba y quiénes la padecían.",
+    "Hoy se sabe que el Chagas se puede detectar con un análisis de sangre y tratar, sobre todo si se diagnostica a tiempo. Ante cualquier duda, se puede consultar en el centro de salud más cercano. Mazza es recordado como un pionero de la salud pública que llevó la ciencia a donde estaba la gente."
+   ],
+   "url": "https://www.argentina.gob.ar/anlis"
   },
   {
    "id": "ci-28",
@@ -252,7 +414,13 @@
    "titulo": "El Instituto Malbrán",
    "texto": "El Instituto Bacteriológico, hoy ANLIS Malbrán, abrió en 1916 en Buenos Aires. Es el laboratorio nacional de referencia para diagnosticar y vigilar enfermedades infecciosas.",
    "fuente": "ANLIS Dr. Carlos G. Malbrán",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "El Instituto Bacteriológico abrió en Buenos Aires en 1916, con el fin de estudiar y controlar enfermedades infecciosas. Con los años pasó a llamarse Instituto Nacional de Microbiología Dr. Carlos G. Malbrán, en homenaje al médico que lo impulsó, y hoy forma parte de la ANLIS, la Administración Nacional de Laboratorios e Institutos de Salud.",
+    "Es el laboratorio nacional de referencia: recibe muestras de todo el país, hace diagnósticos que otros laboratorios no pueden hacer, confirma casos de enfermedades poco frecuentes y sigue la evolución de virus y bacterias. También produce algunos reactivos y controla la calidad de los análisis de otros laboratorios de la red.",
+    "Esa tarea silenciosa de vigilancia sirve para detectar brotes a tiempo, desde una gripe hasta una enfermedad transmitida por mosquitos. Durante la pandemia de COVID-19, el Malbrán fue uno de los laboratorios clave en el diagnóstico y el estudio de las variantes del virus. Su trabajo ayuda a que el sistema de salud pueda reaccionar rápido."
+   ],
+   "url": "https://www.argentina.gob.ar/anlis"
   },
   {
    "id": "ci-29",
@@ -261,7 +429,13 @@
    "titulo": "Eduardo De Robertis",
    "texto": "En los años cincuenta, con el microscopio electrónico, Eduardo De Robertis describió las vesículas sinápticas: las pequeñas bolsas donde las neuronas guardan las sustancias con que se pasan mensajes.",
    "fuente": "Facultad de Medicina de la Universidad de Buenos Aires",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Eduardo De Robertis fue un médico y científico argentino que se dedicó a estudiar las células y, en particular, las del sistema nervioso. En los años cincuenta usó el microscopio electrónico, un aparato que permite ver cosas miles de veces más chicas que lo que se ve con un microscopio común, para observar en detalle las neuronas.",
+    "Gracias a esas imágenes describió las vesículas sinápticas, unas pequeñas bolsas que están en el extremo de las neuronas y donde se guardan las sustancias con las que se comunican. Cuando llega una señal, esas bolsas liberan su contenido y el mensaje pasa de una neurona a la siguiente. Otros investigadores en el mundo hicieron observaciones parecidas en la misma época.",
+    "Entender cómo se pasan mensajes las neuronas ayudó a explicar el funcionamiento del cerebro, de la memoria y de muchos medicamentos que actúan sobre esa comunicación. De Robertis, además, formó discípulos e impulsó la biología celular y molecular en la Argentina. Sus aportes figuran entre los más importantes de la ciencia argentina del siglo XX."
+   ],
+   "url": "https://www.fmed.uba.ar"
   },
   {
    "id": "ci-30",
@@ -270,7 +444,13 @@
    "titulo": "Juan Maldacena",
    "texto": "El físico Juan Maldacena, formado en el Instituto Balseiro, propuso en 1997 una relación entre la gravedad y la física de partículas que hoy es una de las ideas más citadas de la física teórica.",
    "fuente": "Instituto de Estudios Avanzados de Princeton",
-   "dudosa": false
+   "dudosa": false,
+   "parrafos": [
+    "Juan Maldacena nació en Buenos Aires, estudió Física en el Instituto Balseiro, en Bariloche, y después se doctoró en la Universidad de Princeton, en Estados Unidos. Hoy es investigador en el Instituto de Estudios Avanzados de Princeton y es uno de los físicos teóricos más reconocidos del mundo, con varios premios internacionales.",
+    "En 1997 propuso una idea muy audaz: que una teoría que describe la gravedad en un espacio con dimensiones adicionales es equivalente a otra teoría, más simple, que describe partículas en el borde de ese espacio. Es como un holograma, donde una imagen plana contiene la información de un objeto en tres dimensiones.",
+    "Esa relación, conocida como correspondencia AdS/CFT, es una de las ideas más citadas de la física teórica. Se usa para estudiar los agujeros negros y también ciertos problemas de la materia en condiciones extremas. No tiene una aplicación inmediata en la vida diaria, pero es el tipo de ciencia básica que cambia la forma de entender el universo."
+   ],
+   "url": "https://www.ias.edu"
   }
  ]
 }
