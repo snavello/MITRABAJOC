@@ -186,6 +186,7 @@ def test_el_comentario_alienta_hasta_cuatro_y_elogia_desde_cinco():
     assert it["rubro"] == "juego" and it["chip"] == "Trivia" and len(it["preguntas"]) == 10
     assert len(it["comentarios"]) == 11 and it["comentarios"][7]["titulo"] == textos[7]["titulo"]
     assert "10 preguntas" in it["linea"]
+    assert it["segundos"] == tu_dia.TRIVIA_SEGUNDOS == 30 and "30 segundos" in it["texto"]
 
 
 def test_salud_solo_en_sus_meses():

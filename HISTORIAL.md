@@ -10785,3 +10785,20 @@ elipsis). Lo segundo son dos botones: `.pt-dia-linea` (chip + texto) abre la
 hoja y `.pt-dia-sig` (la flecha, «Siguiente», solo si hay más de un ítem)
 hace `i++` y vuelve a arrancar el reloj de la rotación. Verificado con
 Playwright en Laguna y Noticiero, escritorio y teléfono.
+
+**Tercera vuelta, el reloj (Trabajador 0.61.01).** SDN: «para darle un poco
+más de emoción, cada pregunta tiene 30 segundos y lo mostrás en un reloj
+segundero que va consumiéndose». Los segundos los manda el servidor con el kit
+(`tu_dia.TRIVIA_SEGUNDOS`, `item_trivia(...)["segundos"]`), y la hoja dibuja
+en la cabecera de cada pregunta un aro SVG que se consume (`stroke-dashoffset`
+sobre la circunferencia) con el número de segundos adentro; en los últimos
+cinco se pone rojo (color de estado, fijo) y el número late (sin latido con
+«reducir movimiento»). Se acaba = la pregunta queda como **no respondida**
+(`null` en `respuestas`, cuenta como error, muestra la correcta y «Se acabó el
+tiempo» con la explicación); al responder el aro se para y se atenúa. El inicio
+de la pregunta se guarda junto con el avance (`g.inicio`), así una recarga a
+mitad de la pregunta sigue desde donde iba y no regala 30 segundos nuevos;
+cerrar la hoja a mitad de una pregunta para el reloj y la pregunta vuelve a
+arrancar de cero al reabrir. Verificado con Playwright: 29 al segundo, rojo a
+los 2, vencida con `[null]`, la siguiente arranca en 30 con las tres opciones
+activas.

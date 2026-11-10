@@ -48,6 +48,7 @@ CHIPS = {"curiosos": "¿Sabías?", "ciencia": "Ciencia", "salud": "Salud", "jueg
 # niveles dentro del kit (de fácil a difícil) y el comentario de cada puntaje:
 # aliento hasta 4, elogio creciente de 5 en adelante (pedido de SDN).
 TRIVIA_PREGUNTAS = 10
+TRIVIA_SEGUNDOS = 30          # por pregunta; se acaba = cuenta como no respondida
 NIVELES = ("facil", "media", "dificil")
 COMENTARIOS_PUNTAJE = (
     ("Hoy no fue.", "No pasa nada: mañana a la madrugada hay diez preguntas nuevas. Leé las respuestas, "
@@ -225,9 +226,10 @@ def item_trivia(items: list, hoy: date) -> dict | None:
     return {"rubro": "juego", "chip": CHIPS["juego"],
             "linea": f"La trivia de hoy: {total} preguntas, ¿cuántas sacás?",
             "titulo": "La trivia de hoy",
-            "texto": f"{total} preguntas, un punto por cada acierto. Mañana hay otras {total}.",
-            "parrafos": [f"{total} preguntas, un punto por cada acierto. Mañana hay otras {total}."],
-            "fuente": "", "url": "", "preguntas": preguntas,
+            "texto": f"{total} preguntas, {TRIVIA_SEGUNDOS} segundos cada una, un punto por acierto. Mañana hay otras {total}.",
+            "parrafos": [f"{total} preguntas, {TRIVIA_SEGUNDOS} segundos cada una, un punto por acierto. "
+                         f"Mañana hay otras {total}."],
+            "fuente": "", "url": "", "preguntas": preguntas, "segundos": TRIVIA_SEGUNDOS,
             "comentarios": [comentario_puntaje(n, total) for n in range(total + 1)]}
 
 

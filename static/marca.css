@@ -655,6 +655,19 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .pt-triv-puntos i[data-r="no"] { background: #b3261e; }
 .pt-triv-puntos i.actual { box-shadow: 0 0 0 2px currentColor; }
 .pt-triv-nivel { padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(127,127,127,.45); letter-spacing: .04em; }
+/* El reloj de la pregunta: un aro que se consume, el número adentro; en los
+   últimos cinco segundos se pone rojo (color de estado) y late. */
+.pt-triv-reloj { position: relative; flex: none; width: 36px; height: 36px; display: grid; place-items: center; letter-spacing: 0; }
+.pt-triv-reloj svg { position: absolute; inset: 0; width: 36px; height: 36px; transform: rotate(-90deg); fill: none; }
+.pt-triv-reloj-f { stroke: rgba(127,127,127,.25); stroke-width: 3; }
+.pt-triv-reloj-a { stroke: var(--marca-primario-relleno, var(--marca-primario, #1b3a5c)); stroke-width: 3; stroke-linecap: round;
+  transition: stroke-dashoffset 120ms linear, stroke var(--mov-medio, 320ms) ease; }
+.pt-triv-reloj-n { position: relative; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pt-triv-reloj.urgente .pt-triv-reloj-a { stroke: #b3261e; }
+.pt-triv-reloj.urgente .pt-triv-reloj-n { color: #b3261e; animation: pt-triv-late 1s var(--ease-salida, ease) infinite; }
+.pt-triv-reloj.parado { opacity: .55; }
+@keyframes pt-triv-late { 0% { transform: scale(1); } 20% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .pt-triv-reloj.urgente .pt-triv-reloj-n { animation: none; } }
 .pt-triv-preg { margin: 14px 0 2px; font-family: var(--fuente-display); font-weight: 700; font-size: 22px; line-height: 1.25; }
 .pt-triv-fuente { margin-top: 8px; font-size: 12.5px; opacity: .8; }
 .pt-triv-sig { display: flex; justify-content: flex-end; margin-top: 14px; }

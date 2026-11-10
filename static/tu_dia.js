@@ -13,9 +13,10 @@
      noticia); la flecha de la derecha pasa al siguiente ítem (no abre nada):
      un artículo corto (título, párrafos, enlace a la fuente); tocar
      el clima, el pronóstico con su fuente.
-   - Entretenimiento es la trivia del día: diez preguntas de a una, con
+   - Entretenimiento es la trivia del día: diez preguntas de a una, cada una
+     con un reloj de 30 segundos que se consume (se acaba = no respondida), con
      explicación y fuente en cada una, y el puntaje al final con su comentario
-     (los textos los manda el servidor). El avance se guarda en localStorage
+     (los textos y los segundos los manda el servidor). El avance se guarda en localStorage
      POR DÍA, así una recarga retoma donde estaba y, terminada, la hoja muestra
      el resultado; mañana el kit es otro y arranca de cero.
    - El cumpleaños no rota: es un saludo de ocho segundos que se ve una sola
@@ -243,33 +244,65 @@
     else preguntaTrivia(it, g);
     mostrarHoja();
   }
+  // ---- El reloj de cada pregunta (SDN, 2026-11-10: «para darle más emoción»)
+  var relojActivo = null;
+  function pararReloj() { if (relojActivo) { clearInterval(relojActivo); relojActivo = null; } }
+  function reloj(segundos) {
+    // Un aro que se consume con el número adentro; rojo y latiendo al final.
+    var r = 14, largo = 2 * Math.PI * r;
+    var caja = el('span', 'pt-triv-reloj'); caja.setAttribute('role', 'timer'); caja.setAttribute('aria-live', 'off');
+    var svg = document.createElementNS(SVG, 'svg'); svg.setAttribute('viewBox', '0 0 34 34'); svg.setAttribute('aria-hidden', 'true');
+    var fondo = document.createElementNS(SVG, 'circle'), aro = document.createElementNS(SVG, 'circle');
+    [fondo, aro].forEach(function (c) { c.setAttribute('cx', '17'); c.setAttribute('cy', '17'); c.setAttribute('r', String(r)); });
+    fondo.setAttribute('class', 'pt-triv-reloj-f'); aro.setAttribute('class', 'pt-triv-reloj-a');
+    aro.style.strokeDasharray = String(largo); aro.style.strokeDashoffset = '0';
+    svg.append(fondo, aro);
+    var num = el('span', 'pt-triv-reloj-n', String(segundos));
+    caja.append(svg, num);
+    return { nodo: caja, poner: function (restan) {
+      var frac = Math.max(0, Math.min(1, restan / segundos));
+      aro.style.strokeDashoffset = String(largo * (1 - frac));
+      num.textContent = String(Math.max(0, Math.ceil(restan)));
+      caja.classList.toggle('urgente', restan <= 5.05 && restan > 0);
+      caja.setAttribute('aria-label', Math.ceil(restan) + ' segundos');
+    } };
+  }
   function preguntaTrivia(it, g) {
     var k = g.respuestas.length, q = it.preguntas[k], total = it.preguntas.length;
+    var segundos = Number(it.segundos) > 0 ? Number(it.segundos) : 30;
     var extra = document.getElementById('td-det-extra'); extra.replaceChildren();
+    pararReloj();
     var caja = el('div', 'pt-triv-caja entra');
     var cab = el('div', 'pt-triv-cab');
     var num = el('span', null, 'Pregunta ' + (k + 1) + ' de ' + total);
     cab.append(num, puntos(it, g, k));
     if (NIVELES[q.nivel]) cab.appendChild(el('span', 'pt-triv-nivel', NIVELES[q.nivel]));
+    var rl = reloj(segundos); cab.appendChild(rl.nodo);
     var preg = el('h4', 'pt-triv-preg', q.titulo);
     var ops = el('div', 'pt-dia-opciones'), res = el('div', 'pt-dia-respuesta'), pie = el('div', 'pt-triv-sig');
     res.hidden = true; pie.hidden = true;
+    // n = índice elegido, o null si se acabó el tiempo.
+    function responder(n, boton) {
+      if (g.respuestas.length !== k) return;
+      pararReloj();
+      g.respuestas.push(n); delete g.inicio; guardarAvance(g);
+      Array.prototype.forEach.call(ops.children, function (x, j) { x.disabled = true; if (j === q.correcta) x.dataset.ok = 'si'; });
+      if (boton && n !== q.correcta) boton.dataset.ok = 'no';
+      var ok = n === q.correcta;
+      var cabeza = ok ? '¡Bien! ' : (n == null ? 'Se acabó el tiempo. Era «' + q.opciones[q.correcta] + '». '
+                                              : 'Era «' + q.opciones[q.correcta] + '». ');
+      res.replaceChildren(el('b', null, cabeza), document.createTextNode(q.explicacion || ''));
+      if (q.fuente || esUrl(q.url)) { var f = el('div', 'pt-triv-fuente'); f.appendChild(enlaceFuente(q.fuente, q.url)); res.appendChild(f); }
+      res.hidden = false; pie.hidden = false;
+      cab.replaceChild(puntos(it, g, k), cab.children[1]);
+      rl.nodo.classList.add('parado'); rl.nodo.classList.remove('urgente');
+      if (n == null) rl.poner(0);
+      var sig = pie.querySelector('button'); if (sig) sig.focus();
+      pintar(false);
+    }
     q.opciones.forEach(function (o, n) {
       var b = el('button', null, o); b.type = 'button';
-      b.addEventListener('click', function () {
-        if (g.respuestas.length !== k) return;
-        g.respuestas.push(n); guardarAvance(g);
-        Array.prototype.forEach.call(ops.children, function (x, j) { x.disabled = true; if (j === q.correcta) x.dataset.ok = 'si'; });
-        if (n !== q.correcta) b.dataset.ok = 'no';
-        var ok = n === q.correcta;
-        res.replaceChildren(el('b', null, ok ? '¡Bien! ' : 'Era «' + q.opciones[q.correcta] + '». '),
-                            document.createTextNode(q.explicacion || ''));
-        if (q.fuente || esUrl(q.url)) { var f = el('div', 'pt-triv-fuente'); f.appendChild(enlaceFuente(q.fuente, q.url)); res.appendChild(f); }
-        res.hidden = false; pie.hidden = false;
-        cab.replaceChild(puntos(it, g, k), cab.children[1]);
-        var sig = pie.querySelector('button'); if (sig) sig.focus();
-        pintar(false);
-      });
+      b.addEventListener('click', function () { responder(n, b); });
       ops.appendChild(b);
     });
     var sig = el('button', null, k + 1 < total ? 'Siguiente' : 'Ver mi puntaje'); sig.type = 'button';
@@ -280,6 +313,15 @@
     caja.append(cab, preg, ops, res, pie);
     extra.appendChild(caja);
     var cuerpo = ov.querySelector('.modal-articulo-body'); if (cuerpo) cuerpo.scrollTop = 0;
+    // El reloj arranca cuando la pregunta se ve; una recarga a mitad de la
+    // pregunta sigue desde donde iba (el inicio queda guardado con el avance).
+    if (!g.inicio) { g.inicio = Date.now(); guardarAvance(g); }
+    function tic() {
+      var restan = segundos - (Date.now() - g.inicio) / 1000;
+      rl.poner(restan);
+      if (restan <= 0) responder(null, null);
+    }
+    tic(); relojActivo = setInterval(tic, 100);
   }
   function resultadoTrivia(it, g, recien) {
     var total = it.preguntas.length, n = aciertos(it, g);
@@ -296,7 +338,8 @@
       var d = el('details'); d.dataset.r = g.respuestas[k] === q.correcta ? 'si' : 'no';
       var sm = el('summary', null, q.titulo); d.appendChild(sm);
       var cuerpo = el('div', 'pt-triv-rep-cuerpo');
-      if (g.respuestas[k] !== q.correcta) cuerpo.appendChild(el('p', null, 'Respondiste «' + q.opciones[g.respuestas[k]] + '». Era «' + q.opciones[q.correcta] + '».'));
+      if (g.respuestas[k] == null) cuerpo.appendChild(el('p', null, 'Se acabó el tiempo. Era «' + q.opciones[q.correcta] + '».'));
+      else if (g.respuestas[k] !== q.correcta) cuerpo.appendChild(el('p', null, 'Respondiste «' + q.opciones[g.respuestas[k]] + '». Era «' + q.opciones[q.correcta] + '».'));
       else cuerpo.appendChild(el('p', null, '«' + q.opciones[q.correcta] + '», correcto.'));
       cuerpo.appendChild(el('p', null, q.explicacion || ''));
       if (q.fuente || esUrl(q.url)) { var f = el('div', 'pt-triv-fuente'); f.appendChild(enlaceFuente(q.fuente, q.url)); cuerpo.appendChild(f); }
@@ -324,6 +367,10 @@
   }
   window.cerrarTuDia = function () {
     if (!ov || !abierta) return;
+    if (relojActivo) {
+      pararReloj();
+      try { var g = JSON.parse(localStorage.getItem(CLAVE_TRIVIA) || 'null'); if (g && g.inicio) { delete g.inicio; guardarAvance(g); } } catch (e) { /* nada */ }
+    }
     ov.classList.remove('abierto'); abierta = false;
     i++; pintar(false); ultimo = Date.now();
     if (volverA) volverA.focus();
