@@ -144,6 +144,7 @@ EXCEPCIONES = {
     "api_bancaria_leer": "recibo para la calculadora (IA)",
     "api_laboratorio_correr": "laboratorio de modelos (IA)",
     "api_laboratorio_correr_en_vivo": "laboratorio de modelos (IA)",
+    "api_identidad_verificar": "verificación de identidad (Didit): no se guarda ninguna imagen",
 }
 EXCEPCIONES.update({
     "plataforma_probar_modelos": "banco de pruebas de modelos de IA",

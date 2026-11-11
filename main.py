@@ -102,6 +102,7 @@ import grilla_bancaria
 import asistente_tramites
 import asistente_tramites_ia
 import laboratorio_modelos
+import identidad
 import listas as listas_mod
 import render_planes
 from observabilidad import panel as observabilidad_panel
@@ -11728,6 +11729,122 @@ def entornos_laboratorio_csv(request: Request):
     contenido = "﻿" + salida.getvalue()
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="ensayos-laboratorio-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramienta "Verificación de identidad" ====================
+# Prueba interna (2026-11-11, pedido de SDN): el flujo de identidad que algún día
+# puede ir en la app del afiliado (selfie + foto del DNI + datos), corrido acá
+# donde lo ve solo quien tiene el pase. Motor en identidad.py; ninguna ruta de la
+# app real lo importa. Las imágenes NO se guardan: salen hacia Didit y vuelven
+# estados y puntajes, y el caso guardado no lleva CUIL, nombre ni DNI.
+HERRAMIENTA_IDENTIDAD = identidad.HERRAMIENTA
+API_IDENTIDAD = "/api/entornos/herramientas/identidad"
+IDENTIDAD_MIMES_CARA = ("image/jpeg", "image/png", "image/webp")
+IDENTIDAD_MIMES_DOC = IDENTIDAD_MIMES_CARA + ("application/pdf",)
+
+
+@app.get("/entornos/herramientas/identidad", response_class=HTMLResponse)
+def entornos_identidad(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("identidad.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": db.ESTADOS_CASO, "api": API_IDENTIDAD,
+    })
+
+
+@app.get(API_IDENTIDAD + "/estado")
+def api_identidad_estado(request: Request):
+    _exigir_herramientas(request)
+    return {"configurado": identidad.configurado(), "sandbox": identidad.es_sandbox(),
+            "guarda_sesion": identidad.guardar_sesion(), "tope_intentos": identidad.tope_intentos(),
+            "pasos": [{"clave": c, "nombre": n, "gasta": g} for c, n, g in identidad.PASOS]}
+
+
+async def _imagen_identidad(archivo, tope: int, permitidos: tuple, que: str):
+    """(nombre, bytes, mime) de una imagen subida, o None si no vino. 422 con
+    un texto que entiende quien la subió si pesa de más o no es del tipo."""
+    if archivo is None or not archivo.filename:
+        return None
+    datos = await archivo.read()
+    if not datos:
+        return None
+    if len(datos) > tope:
+        raise HTTPException(422, f"{que} pesa más de {tope // 1048576} MB.")
+    mime = (archivo.content_type or "").split(";")[0].strip().lower()
+    if mime not in permitidos:
+        raise HTTPException(422, f"{que}: formato no admitido (usá JPG, PNG o WebP"
+                                 + (" o PDF" if "application/pdf" in permitidos else "") + ").")
+    return ("imagen" + {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+                        "application/pdf": ".pdf"}[mime], datos, mime)
+
+
+@app.post(API_IDENTIDAD + "/verificar")
+async def api_identidad_verificar(request: Request, selfie: UploadFile = File(None), frente: UploadFile = File(None),
+                                  dorso: UploadFile = File(None), cuil: str = Form(""), dni: str = Form(""),
+                                  nombre: str = Form(""), apellido: str = Form(""), nacimiento: str = Form(""),
+                                  genero: str = Form(""), pasos: list[str] = Form([]), nota: str = Form("")):
+    """Corre los pasos y guarda el caso (solo resultados). Los pasos que gastan
+    se cortan apenas uno rechaza, y hay un tope de intentos por persona y hora
+    (`IDENTIDAD_TOPE_INTENTOS`) para que probar no sea una canilla abierta."""
+    quien = _exigir_herramientas(request)
+    if not identidad.configurado():
+        raise HTTPException(422, "Falta la variable DIDIT_API_KEY en este entorno.")
+    claves_validas = {c for c, _, _ in identidad.PASOS}
+    pedidos = [p for p in dict.fromkeys(pasos) if p in claves_validas] or None
+    cuil = cuit.normalizar(cuil)
+    declarado = {"cuil": cuil, "dni": dni, "nombre": nombre.strip(), "apellido": apellido.strip(),
+                 "nacimiento": nacimiento, "genero": genero.strip().upper()}
+    img_selfie = await _imagen_identidad(selfie, identidad.TOPE_CARA_BYTES, IDENTIDAD_MIMES_CARA, "La selfie")
+    img_frente = await _imagen_identidad(frente, identidad.TOPE_DOCUMENTO_BYTES, IDENTIDAD_MIMES_DOC, "El frente del DNI")
+    img_dorso = await _imagen_identidad(dorso, identidad.TOPE_DOCUMENTO_BYTES, IDENTIDAD_MIMES_DOC, "El dorso del DNI")
+    if img_selfie is None or img_frente is None:
+        raise HTTPException(422, "Faltan la selfie o el frente del DNI.")
+    if identidad.intentos_usados(cuil) >= identidad.tope_intentos():
+        raise HTTPException(429, "Ese CUIL ya usó sus intentos de esta hora. Probá más tarde o subí el tope "
+                                 "(IDENTIDAD_TOPE_INTENTOS).")
+    try:
+        resultado = await run_in_threadpool(identidad.correr, declarado, img_selfie, img_frente, img_dorso,
+                                            None, pedidos)
+    except Exception as e:
+        print(f"[identidad] fallo inesperado: {type(e).__name__}: {e}")
+        raise HTTPException(502, "No se pudo completar la verificación.")
+    gasto = identidad.gasto_estimado(resultado["pasos"])
+    if gasto:
+        identidad.anotar_intento(cuil)
+    distintos = sum(1 for p in resultado["pasos"] for c in (p.get("chequeos") or []) if c["ok"] is False)
+    caso_id = db.guardar_caso_herramienta(
+        herramienta=HERRAMIENTA_IDENTIDAD, quien=quien, grilla="sandbox" if identidad.es_sandbox() else "real",
+        banco="", nota=str(nota or "").strip()[:2000],
+        entrada={"pasos": pedidos or "todos", "llamadas_pagas": gasto, "sandbox": identidad.es_sandbox(),
+                 "tiene_dorso": img_dorso is not None, "guarda_sesion": identidad.guardar_sesion(),
+                 "bytes": {"selfie": len(img_selfie[1]), "frente": len(img_frente[1]),
+                           "dorso": len(img_dorso[1]) if img_dorso else 0}},
+        esperado={}, real=resultado, diferencias={}, distintos=distintos)
+    return {**resultado, "id": caso_id, "llamadas_pagas": gasto, "sandbox": identidad.es_sandbox(),
+            "intentos": {"usados": identidad.intentos_usados(cuil), "tope": identidad.tope_intentos()}}
+
+
+@app.get(API_IDENTIDAD + "/casos")
+def api_identidad_casos(request: Request):
+    _exigir_herramientas(request)
+    return {"casos": [{"id": c.id, "creado": c.creado, "quien": c.quien, "estado": c.estado, "nota": c.nota,
+                       "modo": c.grilla, "veredicto": ((c.real or {}).get("veredicto") or {}).get("resultado"),
+                       "motivos": ((c.real or {}).get("veredicto") or {}).get("motivos", []),
+                       "ms": (c.real or {}).get("ms"), "llamadas_pagas": (c.entrada or {}).get("llamadas_pagas", 0)}
+                      for c in db.casos_herramienta(HERRAMIENTA_IDENTIDAD)]}
+
+
+@app.post(API_IDENTIDAD + "/casos/{caso_id}/estado")
+def api_identidad_caso_estado(request: Request, caso_id: int, payload: dict = Body(...)):
+    quien = _exigir_herramientas(request)
+    try:
+        if not db.cambiar_estado_caso(HERRAMIENTA_IDENTIDAD, caso_id, str(payload.get("estado") or ""), quien):
+            raise HTTPException(404, "No existe ese caso.")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
 
 
 # ==================== Solapa "Observabilidad" ====================

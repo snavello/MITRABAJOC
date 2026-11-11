@@ -463,6 +463,12 @@ alta los administradores y cómo ingresa la clave»):
   SOLO para el Laboratorio de modelos de `/entornos`; ninguna ruta de la
   app las usa. Sin ellas, esos modelos se ven pero no se eligen (también se
   pegan desde la misma pantalla).
+- DIDIT_API_KEY — clave de Didit (verificación de identidad: documento, prueba de
+  vida, cara y RENAPER) SOLO para la herramienta «Verificación de identidad» de
+  `/entornos`; ninguna ruta de la app real la usa. Las claves `sk_test_` son
+  sandbox (todo simulado). `IDENTIDAD_TOPE_INTENTOS` (5 por persona y hora) y
+  `DIDIT_GUARDAR_SESION=1` (Didit conserva la sesión; por defecto no). Sin la
+  clave, apagada en silencio.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
 - RESEND_API_KEY / MAIL_REMITENTE — canal de mail del registro y la
@@ -1664,6 +1670,24 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     en paralelo: **todo sigue `revisado: false`** y las urls son portadas
     institucionales sin abrir (los datos a confirmar están listados en
     HISTORIAL.md, «Tu día: artículos con fuente y la trivia diaria»).
+
+47. **Verificación de identidad, herramienta de `/entornos`** (2026-11-11,
+    Plataforma 0.66.01; pedido de SDN: probar internamente el flujo selfie + foto
+    del DNI antes de llevarlo a la app del afiliado o a un tag de delegado).
+    `identidad.py` (motor, intermediario **Didit**, una sola cuenta de Colm3na)
+    corre en orden y corta apenas un paso rechaza, para no gastar: chequeos
+    locales (CUIL con módulo 11, DNI = dígitos del CUIL, género vs prefijo) →
+    documento (lectura + autenticidad) → prueba de vida → selfie contra el
+    retrato → RENAPER. Veredicto aprobable / revisar / rechazar (aprobable NO es
+    aprobado: pasa a la mesa del sindicato). **Ninguna imagen se guarda y el caso
+    (`CasoHerramienta`, herramienta `identidad`) no lleva CUIL, nombre ni DNI.**
+    Tope de intentos pagos por persona y hora. Un error de red o de saldo no es
+    un rechazo de la persona. La aprobación del sindicato como compuerta
+    obligatoria NO rige la regla de «ningún nivel esconde nada» (SDN, 2026-11-11).
+    Pendiente: probar con la key real (puntaje del face-match con
+    `save_api_request=false`, valores de género), elegir proveedor definitivo
+    (comparar con otro) y decidir quién paga la verificación. Ver
+    `test_identidad.py` y `test_identidad_rutas.py`.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

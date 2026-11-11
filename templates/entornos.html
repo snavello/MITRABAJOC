@@ -524,6 +524,17 @@
         </div>
         <div class="mapa-estado" id="laboratorio-estado">Se lee al abrir esta pestaña…</div>
       </div>
+      {# Verificación de identidad (2026-11-11): selfie + foto del DNI + datos,
+         contra Didit (documento, prueba de vida, cara y RENAPER). Solo lo ve
+         quien tiene el pase; ninguna imagen se guarda. Motor: identidad.py. #}
+      <div class="sala-tarjeta">
+        <p><b>Verificación de identidad.</b> El flujo que algún día puede ir en la app del afiliado, probado acá primero: subís una selfie y el frente del DNI, cargás los datos, y corre los chequeos en orden, cortando apenas uno rechaza para no gastar: el CUIL y el DNI (gratis), la lectura del documento, la prueba de vida, la cara contra el retrato y RENAPER. Da un veredicto (aprobable, revisar o rechazar) y guarda el caso <b>sin imágenes ni datos personales</b>. Con la clave de sandbox de Didit todo es simulado; con la real, mide de verdad. Tope de intentos por persona y hora.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/herramientas/identidad">Abrir la verificación</a>
+          <a class="boton suave" href="/entornos/herramientas/identidad#casos">Casos guardados</a>
+        </div>
+        <div class="mapa-estado" id="identidad-estado">Se lee al abrir esta pestaña…</div>
+      </div>
     </div>
 
     <div class="panel-etab" data-panel="xsanders" hidden>
@@ -858,8 +869,17 @@
       })
       .catch(() => { estadoLab.textContent = 'No se pudo leer cuántos ensayos hay.'; });
   }
-  tab.addEventListener('click', () => { cargar(); cargarAsistente(); cargarLaboratorio(); });
-  if (location.hash === '#herramientas') { cargar(); cargarAsistente(); cargarLaboratorio(); }
+  const estadoIdent = document.getElementById('identidad-estado');
+  function cargarIdentidad() {
+    fetch('/api/entornos/herramientas/identidad/casos', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        estadoIdent.textContent = d.casos.length ? `${d.casos.length} verificaciones guardadas.` : 'Todavía no hay verificaciones guardadas.';
+      })
+      .catch(() => { estadoIdent.textContent = 'No se pudo leer cuántas verificaciones hay.'; });
+  }
+  tab.addEventListener('click', () => { cargar(); cargarAsistente(); cargarLaboratorio(); cargarIdentidad(); });
+  if (location.hash === '#herramientas') { cargar(); cargarAsistente(); cargarLaboratorio(); cargarIdentidad(); }
 })();
 
 // Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe

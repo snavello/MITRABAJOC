@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Verificación de identidad</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  /* Herramientas de /entornos (2026-11-11): Verificación de identidad. Misma
+     "colmena nocturna" que la Calculadora bancaria y el Laboratorio, standalone,
+     sin marca.css: existe solo donde existe /entornos. */
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --ambar: #ffb020; --bien: #3ecfae; --mal: #ff6b6b; --leve: #ffd27a;
+    --linea: rgba(255,255,255,.12); --suave: rgba(255,255,255,.62);
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  html { background:#0d1626; }
+  body { min-height:100vh; padding:22px 16px 70px; color:#fff;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 22%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 75%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  a { color:var(--ambar); }
+  [hidden] { display:none !important; }
+  .pagina { max-width:1180px; margin:0 auto; }
+  .cab .volver { font-size:13px; text-decoration:none; color:var(--suave); display:block; margin-bottom:6px; }
+  .cab h1 { font-family:var(--fuente-display); font-size:42px; line-height:1; letter-spacing:2px; text-transform:uppercase; }
+  .cab .lede { font-size:13.5px; color:var(--suave); margin:6px 0 16px; max-width:760px; line-height:1.45; }
+  .aviso { border:1px solid rgba(255,176,32,.5); background:rgba(255,176,32,.1); border-radius:12px; padding:10px 14px; font-size:13px; margin-bottom:14px; line-height:1.45; }
+  .aviso.rojo { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.1); }
+  .aviso b { color:var(--ambar); }
+  .grid { display:grid; grid-template-columns:400px 1fr; gap:18px; align-items:start; }
+  @media (max-width:980px) { .grid { grid-template-columns:1fr; } }
+  .tarjeta { background:rgba(9,15,26,.55); border:1px solid var(--linea); border-radius:16px; padding:18px; }
+  .tarjeta + .tarjeta { margin-top:14px; }
+  .tarjeta h2 { font-family:var(--fuente-display); font-size:22px; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+  .campo { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .campo > span { font-size:12px; color:var(--suave); }
+  .dos { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  input[type=file], input[type=text], select, textarea {
+    width:100%; background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.18);
+    border-radius:9px; padding:9px 10px; font-size:14px; }
+  select option { color:#000; }
+  textarea { min-height:54px; resize:vertical; }
+  input:focus-visible, button:focus-visible, select:focus-visible { outline:2px solid var(--ambar); outline-offset:1px; }
+  .tilde { display:flex; align-items:flex-start; gap:9px; font-size:13.5px; margin-bottom:8px; line-height:1.3; }
+  .tilde input { width:17px; height:17px; accent-color:var(--ambar); margin-top:1px; flex:none; }
+  .tilde small { color:var(--suave); }
+  .gasta { font-family:var(--mono); font-size:11px; color:var(--leve); margin-left:4px; }
+  button.principal { background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:11px 18px; font:700 15px system-ui; cursor:pointer; width:100%; }
+  button.principal:disabled { opacity:.5; cursor:wait; }
+  button.chico { background:rgba(255,255,255,.12); color:#fff; border:0; border-radius:8px; padding:5px 10px; font:600 12px system-ui; cursor:pointer; }
+  .veredicto { border-radius:14px; padding:14px 16px; margin-bottom:14px; border:1px solid var(--linea); }
+  .veredicto.aprobable { border-color:rgba(62,207,174,.6); background:rgba(62,207,174,.12); }
+  .veredicto.revisar { border-color:rgba(255,210,122,.6); background:rgba(255,210,122,.12); }
+  .veredicto.rechazar { border-color:rgba(255,107,107,.6); background:rgba(255,107,107,.12); }
+  .veredicto h3 { font-family:var(--fuente-display); font-size:30px; letter-spacing:1px; text-transform:uppercase; }
+  .veredicto p { font-size:13px; color:var(--suave); margin-top:4px; line-height:1.4; }
+  .paso { border:1px solid var(--linea); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .paso .cab-paso { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .paso .cab-paso b { font-size:15px; }
+  .chip { font-family:var(--mono); font-size:11.5px; padding:2px 9px; border-radius:999px; background:rgba(255,255,255,.12); }
+  .chip.aprobado { background:rgba(62,207,174,.25); color:var(--bien); }
+  .chip.revisar { background:rgba(255,210,122,.22); color:var(--leve); }
+  .chip.rechazado, .chip.error { background:rgba(255,107,107,.25); color:var(--mal); }
+  .chip.sin_correr { opacity:.7; }
+  .tiempo { font-family:var(--mono); font-size:11.5px; color:var(--suave); margin-left:auto; }
+  .paso ul { list-style:none; margin-top:8px; font-size:13px; line-height:1.5; }
+  .paso li.ok::before { content:'✓ '; color:var(--bien); }
+  .paso li.mal::before { content:'✗ '; color:var(--mal); }
+  .paso li.nd::before { content:'– '; color:var(--suave); }
+  .datos { font-family:var(--mono); font-size:12px; color:var(--suave); margin-top:6px; }
+  .tabla { width:100%; border-collapse:collapse; font-size:13px; }
+  .tabla th, .tabla td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--linea); vertical-align:top; }
+  .tabla th { color:var(--suave); font-weight:600; font-size:12px; }
+  .vacio { color:var(--suave); font-size:13px; padding:8px 0; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="cab">
+    <a class="volver" href="/entornos#herramientas">← Herramientas</a>
+    <h1>Verificación de identidad</h1>
+    <p class="lede">Selfie + foto del DNI + datos declarados, contra Didit. Los pasos corren en orden y se cortan apenas uno rechaza, para no gastar. <b>Ninguna imagen se guarda</b>: salen hacia Didit y vuelven estados y puntajes; el caso guardado no lleva CUIL, nombre ni DNI.</p>
+  </div>
+
+  <div id="estado-clave" class="aviso" hidden></div>
+  <div class="aviso"><b>Probá con tus datos o con los de quien lo autorice.</b> La cara y el DNI son datos sensibles (Ley 25.326). Con una clave de <i>sandbox</i> todo se aprueba aunque la foto sea cualquier cosa: sirve para probar la conexión, no la calidad.</div>
+
+  <div class="grid">
+    <form id="form" class="tarjeta" autocomplete="off">
+      <h2>Datos y fotos</h2>
+      <label class="campo"><span>CUIL</span><input type="text" name="cuil" inputmode="numeric" placeholder="20-12345678-3" required></label>
+      <div class="dos">
+        <label class="campo"><span>DNI</span><input type="text" name="dni" inputmode="numeric" placeholder="12345678" required></label>
+        <label class="campo"><span>Género (como figura en el DNI)</span>
+          <select name="genero" required><option value="">—</option><option value="M">M</option><option value="F">F</option></select></label>
+      </div>
+      <div class="dos">
+        <label class="campo"><span>Nombre/s</span><input type="text" name="nombre" required></label>
+        <label class="campo"><span>Apellido/s</span><input type="text" name="apellido" required></label>
+      </div>
+      <label class="campo"><span>Fecha de nacimiento</span><input type="text" name="nacimiento" placeholder="AAAA-MM-DD o DD/MM/AAAA" required></label>
+      <label class="campo"><span>Selfie (JPG, PNG o WebP, hasta 5 MB)</span><input type="file" name="selfie" accept="image/jpeg,image/png,image/webp" capture="user" required></label>
+      <label class="campo"><span>DNI, frente (imagen o PDF, hasta 10 MB)</span><input type="file" name="frente" accept="image/*,application/pdf" required></label>
+      <label class="campo"><span>DNI, dorso (opcional)</span><input type="file" name="dorso" accept="image/*,application/pdf"></label>
+      <h2 style="margin-top:6px;">Qué correr</h2>
+      <div id="pasos"></div>
+      <label class="campo"><span>Nota (opcional, sin datos personales)</span><textarea name="nota" placeholder="Ej.: selfie con poca luz"></textarea></label>
+      <button class="principal" id="correr" type="submit">Verificar</button>
+      <p id="error" class="aviso rojo" style="margin:12px 0 0;" hidden></p>
+    </form>
+
+    <div>
+      <div id="resultado" class="tarjeta"><h2>Resultado</h2><p class="vacio">Todavía no corriste ninguna verificación.</p></div>
+      <div id="casos" class="tarjeta"><h2>Casos guardados</h2><div id="lista-casos"><p class="vacio">Leyendo…</p></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const API = {{ api|tojson }};
+  const ESTADOS = {{ estados|tojson }};
+  const NOMBRES = { aprobable: 'Aprobable', revisar: 'Revisar', rechazar: 'Rechazar' };
+  const EXPLICA = {
+    aprobable: 'Todo en verde. No significa aprobado: pasa a la mesa del sindicato.',
+    revisar: 'Algún paso no pudo decidir solo. Lo mira una persona.',
+    rechazar: 'Un paso rechazó la identidad. No se gastó en los pasos siguientes.',
+  };
+  const form = document.getElementById('form');
+  const err = document.getElementById('error');
+
+  function el(tag, props, ...hijos) {
+    const n = document.createElement(tag);
+    Object.assign(n, props || {});
+    hijos.flat().forEach(h => n.append(h));
+    return n;
+  }
+
+  // ---- estado de la clave y pasos
+  let pasosDef = [];
+  fetch(API + '/estado', { cache: 'no-store' }).then(r => r.json()).then(d => {
+    pasosDef = d.pasos;
+    const aviso = document.getElementById('estado-clave');
+    if (!d.configurado) {
+      aviso.hidden = false; aviso.className = 'aviso rojo';
+      aviso.textContent = 'Falta la variable DIDIT_API_KEY en este entorno: la herramienta no puede verificar.';
+    } else {
+      aviso.hidden = false;
+      aviso.textContent = (d.sandbox ? 'Clave de SANDBOX: las respuestas son simuladas. ' : 'Clave real: cada paso con costo gasta crédito. ')
+        + 'Tope: ' + d.tope_intentos + ' intentos pagos por persona y hora. '
+        + (d.guarda_sesion ? 'Didit CONSERVA la sesión (DIDIT_GUARDAR_SESION=1).' : 'Didit no conserva la sesión ni enrola la cara.');
+    }
+    const caja = document.getElementById('pasos');
+    d.pasos.forEach(p => {
+      const cb = el('input', { type: 'checkbox', name: 'pasos', value: p.clave, checked: true });
+      const txt = el('span', {}, p.nombre, p.gasta ? el('span', { className: 'gasta', textContent: 'paga' }) : '');
+      caja.append(el('label', { className: 'tilde' }, cb, txt));
+    });
+  });
+
+  // ---- mostrar un resultado
+  function dibujarResultado(r) {
+    const caja = document.getElementById('resultado');
+    caja.replaceChildren(el('h2', { textContent: 'Resultado' }));
+    const v = r.veredicto;
+    const cab = el('div', { className: 'veredicto ' + v.resultado },
+      el('h3', { textContent: NOMBRES[v.resultado] }),
+      el('p', { textContent: EXPLICA[v.resultado] + ' · ' + (r.ms / 1000).toFixed(1) + ' s · ' + r.llamadas_pagas + ' llamada(s) paga(s)' + (r.sandbox ? ' · SANDBOX' : '') }));
+    if (v.motivos.length) cab.append(el('p', {}, v.motivos.join(' ')));
+    cab.append(el('p', { textContent: 'Intentos pagos de esta persona en la hora: ' + r.intentos.usados + ' de ' + r.intentos.tope }));
+    caja.append(cab);
+    const nombres = Object.fromEntries(pasosDef.map(p => [p.clave, p.nombre]));
+    r.pasos.forEach(p => {
+      const estado = v.estados[p.clave];
+      const c = el('div', { className: 'paso' },
+        el('div', { className: 'cab-paso' },
+          el('b', { textContent: nombres[p.clave] || p.clave }),
+          el('span', { className: 'chip ' + estado, textContent: estado.replace('_', ' ') }),
+          el('span', { className: 'tiempo', textContent: p.omitido ? '' : (p.ms || 0) + ' ms' })));
+      if (p.error) c.append(el('div', { className: 'datos', textContent: p.error }));
+      if (p.omitido) c.append(el('div', { className: 'datos', textContent: p.motivo }));
+      if (p.chequeos && p.chequeos.length) {
+        const ul = el('ul');
+        p.chequeos.forEach(k => ul.append(el('li', { className: k.ok === true ? 'ok' : k.ok === false ? 'mal' : 'nd', textContent: k.detalle })));
+        c.append(ul);
+      }
+      const datos = [];
+      if (p.estado) datos.push('estado: ' + p.estado);
+      if (p.coincidencia) datos.push('coincidencia: ' + p.coincidencia);
+      if (p.puntaje !== undefined && p.puntaje !== null) datos.push('puntaje: ' + p.puntaje);
+      if (p.alertas && p.alertas.length) datos.push('alertas: ' + p.alertas.join(', '));
+      if (datos.length) c.append(el('div', { className: 'datos', textContent: datos.join(' · ') }));
+      caja.append(c);
+    });
+  }
+
+  // ---- enviar
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    err.hidden = true;
+    const boton = document.getElementById('correr');
+    boton.disabled = true; boton.textContent = 'Verificando…';
+    try {
+      const r = await fetch(API + '/verificar', { method: 'POST', body: new FormData(form) });
+      let d = null;
+      try { d = await r.json(); } catch (e) { /* respuesta que no es JSON */ }
+      if (!r.ok) throw new Error((d && d.detail) || ('El servidor contestó ' + r.status));
+      dibujarResultado(d);
+      cargarCasos();
+    } catch (e) {
+      err.hidden = false; err.textContent = e.message;
+    } finally {
+      boton.disabled = false; boton.textContent = 'Verificar';
+    }
+  });
+
+  // ---- casos guardados
+  function cargarCasos() {
+    fetch(API + '/casos', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      const caja = document.getElementById('lista-casos');
+      if (!d.casos.length) { caja.replaceChildren(el('p', { className: 'vacio', textContent: 'Todavía no hay casos guardados.' })); return; }
+      const t = el('table', { className: 'tabla' }, el('thead', {}, el('tr', {}, ['#', 'Cuándo', 'Resultado', 'Modo', 'Pagas', 'Estado', 'Nota'].map(h => el('th', { textContent: h })))));
+      const cuerpo = el('tbody');
+      d.casos.forEach(c => {
+        const sel = el('select', {}, ESTADOS.map(e => el('option', { value: e, textContent: e, selected: e === c.estado })));
+        sel.addEventListener('change', () => fetch(API + '/casos/' + c.id + '/estado', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: sel.value }) }));
+        cuerpo.append(el('tr', {},
+          el('td', { textContent: c.id }), el('td', { textContent: c.creado }),
+          el('td', { textContent: NOMBRES[c.veredicto] || '—', title: (c.motivos || []).join(' ') }),
+          el('td', { textContent: c.modo }), el('td', { textContent: c.llamadas_pagas }),
+          el('td', {}, sel), el('td', { textContent: c.nota })));
+      });
+      t.append(cuerpo);
+      caja.replaceChildren(t);
+    });
+  }
+  cargarCasos();
+})();
+</script>
+</body>
+</html>

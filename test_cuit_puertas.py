@@ -701,6 +701,9 @@ REFERENCIAS = {
     "admin_empleador_confirmar_identidad", "admin_empleador_restablecer_clave",
     # Recuperación de clave autoservicio: busca la cuenta tal cual, no da de alta.
     "recuperar_iniciar", "empresa_recuperar_iniciar",
+    # Herramienta de verificación de identidad (Entornos): no da de alta nada; el
+    # CUIL es el dato que se está verificando y el motor informa si no es válido.
+    "api_identidad_verificar",
 }
 # Un campo llamado `usuario` que no es un CUIL: el alias de un usuario nominal
 # de plataforma ("jperez").
