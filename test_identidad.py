@@ -45,6 +45,8 @@ def test_dni_del_cuil_y_fechas_y_nombres():
     assert idn.dni_del_cuil("123") == ""
     assert idn.fecha_iso("15/01/1990") == "1990-01-15" and idn.fecha_iso("1990-1-5") == "1990-01-05"
     assert idn.fecha_iso("ayer") == ""
+    assert idn.fecha_iso("31/02/1990") == "" and idn.fecha_iso("1990-02-30") == ""   # el día no existe
+    assert idn.fecha_iso("29/02/1992") == "1992-02-29"                                  # bisiesto
     assert idn.mismo_nombre("JUAN PABLO", "Juan") and idn.mismo_nombre("Pérez", "PEREZ")
     assert not idn.mismo_nombre("Juan", "Pedro") and not idn.mismo_nombre("", "Juan")
 
@@ -62,6 +64,14 @@ def test_chequeos_locales_buenos_y_malos():
     cuil7 = base + str(cuit.digito_verificador(base))
     d7 = idn.chequeos_locales({**DECLARADO, "cuil": cuil7, "dni": "9999999"})
     assert next(c for c in d7 if c["clave"] == "dni_es_del_cuil")["ok"]
+
+
+def test_fecha_de_nacimiento_imposible_o_futura_se_avisa_claro():
+    malo = {c["clave"]: c for c in idn.chequeos_locales({**DECLARADO, "nacimiento": "31/02/1990"})}
+    assert not malo["nacimiento_dato"]["ok"] and "calendario" in malo["nacimiento_dato"]["detalle"]
+    futura = {c["clave"]: c for c in idn.chequeos_locales({**DECLARADO, "nacimiento": "2999-01-01"})}
+    assert not futura["nacimiento_plausible"]["ok"]
+    assert all(c["ok"] for c in idn.chequeos_locales(DECLARADO))
 
 
 # --------------------------------------------------------------- el flujo

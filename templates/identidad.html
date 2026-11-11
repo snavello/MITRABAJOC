@@ -10,106 +10,108 @@
     font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
     src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
   }
-  /* Herramientas de /entornos (2026-11-11): Verificación de identidad. Misma
-     "colmena nocturna" que la Calculadora bancaria y el Laboratorio, standalone,
-     sin marca.css: existe solo donde existe /entornos. El flujo es el que vería
-     el afiliado: datos, selfie con la cámara en vivo, DNI (cámara asistida o
-     archivo) y revisión. */
+  /* Herramientas de /entornos (2026-11-11): Verificación de identidad. Tema CLARO
+     (pedido de SDN: la captura se usa con el celular en la mano y de día).
+     Standalone, sin marca.css. El visor de la cámara sigue oscuro. */
   :root {
-    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --tinta: #15202e;
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
-    --ambar: #ffb020; --bien: #3ecfae; --mal: #ff6b6b; --leve: #ffd27a;
-    --linea: rgba(255,255,255,.12); --suave: rgba(255,255,255,.62);
+    --fondo: #eef3f8; --papel: #ffffff; --borde: #d5dde7; --suave: #5a6b7d;
+    --ambar: #ffb020; --rojo: #e5383b; --rojo-oscuro: #c92a2d;
+    --bien: #0e8a6d; --mal: #c9302c; --leve: #9a6b00;
     --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
     --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
-  html { background:#0d1626; }
-  body { min-height:100vh; padding:22px 16px 70px; color:#fff;
-    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 22%, transparent), transparent 62%),
-               linear-gradient(160deg, #0d1626 20%, var(--tinta) 75%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
-  a { color:var(--ambar); }
+  html { background:var(--fondo); }
+  body { min-height:100vh; padding:22px 16px 70px; color:var(--tinta);
+    background:radial-gradient(900px 420px at 82% -10%, color-mix(in srgb, var(--agua) 12%, transparent), transparent 65%), var(--fondo); }
+  a { color:#0b5fb3; }
   [hidden] { display:none !important; }
   .pagina { max-width:1180px; margin:0 auto; }
+  .cab { margin-bottom:16px; }
   .cab .volver { font-size:13px; text-decoration:none; color:var(--suave); display:block; margin-bottom:6px; }
-  .cab h1 { font-family:var(--fuente-display); font-size:42px; line-height:1; letter-spacing:2px; text-transform:uppercase; }
-  .cab .lede { font-size:13.5px; color:var(--suave); margin:6px 0 16px; max-width:760px; line-height:1.45; }
-  .aviso { border:1px solid rgba(255,176,32,.5); background:rgba(255,176,32,.1); border-radius:12px; padding:10px 14px; font-size:13px; margin-bottom:14px; line-height:1.45; }
-  .aviso.rojo { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.1); }
-  .aviso b { color:var(--ambar); }
+  .cab h1 { font-family:var(--fuente-display); font-size:40px; line-height:1; letter-spacing:2px; text-transform:uppercase; }
+  .aviso { border:1px solid rgba(201,48,44,.45); background:rgba(229,56,59,.08); border-radius:12px; padding:10px 14px; font-size:13.5px; margin:12px 0 0; line-height:1.45; color:#8f1d1a; }
   .grid { display:grid; grid-template-columns:minmax(0,560px) 1fr; gap:18px; align-items:start; }
   @media (max-width:1000px) { .grid { grid-template-columns:1fr; } }
-  .tarjeta { background:rgba(9,15,26,.55); border:1px solid var(--linea); border-radius:16px; padding:18px; }
+  .tarjeta { background:var(--papel); border:1px solid var(--borde); border-radius:16px; padding:18px; box-shadow:0 1px 3px rgba(21,32,46,.06); }
   .tarjeta + .tarjeta { margin-top:14px; }
   .tarjeta h2 { font-family:var(--fuente-display); font-size:22px; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
   .campo { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
   .campo > span { font-size:12px; color:var(--suave); }
   .dos { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  input[type=text], select, textarea {
-    width:100%; background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.18);
-    border-radius:9px; padding:9px 10px; font-size:14px; }
-  select option { color:#000; }
+  input[type=text], input[type=date], select, textarea {
+    width:100%; background:#fff; color:var(--tinta); border:1px solid #b9c5d3;
+    border-radius:9px; padding:10px 11px; font-size:15px; }
   textarea { min-height:54px; resize:vertical; }
-  input:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible { outline:2px solid var(--ambar); outline-offset:1px; }
+  input:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible { outline:2px solid #0b5fb3; outline-offset:1px; }
   .tilde { display:flex; align-items:flex-start; gap:9px; font-size:13.5px; margin-bottom:8px; line-height:1.3; }
-  .tilde input { width:17px; height:17px; accent-color:var(--ambar); margin-top:1px; flex:none; }
+  .tilde input { width:17px; height:17px; accent-color:#0b5fb3; margin-top:1px; flex:none; }
   .gasta { font-family:var(--mono); font-size:11px; color:var(--leve); margin-left:4px; }
   button { font-family:system-ui,sans-serif; }
-  button.principal { background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:11px 18px; font:700 15px system-ui; cursor:pointer; }
-  button.principal:disabled { opacity:.45; cursor:not-allowed; }
-  button.suave { background:rgba(255,255,255,.12); color:#fff; border:0; border-radius:10px; padding:11px 16px; font:600 14px system-ui; cursor:pointer; }
-  button.chico { background:rgba(255,255,255,.12); color:#fff; border:0; border-radius:8px; padding:7px 12px; font:600 13px system-ui; cursor:pointer; }
-  button.chico.fuerte { background:var(--ambar); color:#1b1508; }
+  button.principal { background:var(--tinta); color:#fff; border:0; border-radius:10px; padding:12px 20px; font:700 15px system-ui; cursor:pointer; }
+  button.principal:disabled { opacity:.4; cursor:not-allowed; }
+  button.suave { background:#e4ebf3; color:var(--tinta); border:0; border-radius:10px; padding:12px 16px; font:600 14px system-ui; cursor:pointer; }
+  button.chico { background:#e4ebf3; color:var(--tinta); border:0; border-radius:8px; padding:9px 14px; font:600 13.5px system-ui; cursor:pointer; }
+  button.chico.fuerte { background:var(--tinta); color:#fff; }
+  /* El botón de captura: grande y rojo, como el obturador. */
+  button.captura { background:var(--rojo); color:#fff; border:0; border-radius:999px; padding:18px 36px; min-width:220px;
+    font:800 19px system-ui; letter-spacing:.5px; cursor:pointer; box-shadow:0 4px 14px rgba(229,56,59,.4); }
+  button.captura:hover:not(:disabled) { background:var(--rojo-oscuro); }
+  button.captura::before { content:'● '; }
+  button.captura:disabled { opacity:.35; cursor:not-allowed; box-shadow:none; }
 
   /* pasos */
   .pasos { display:flex; gap:6px; margin-bottom:16px; list-style:none; padding:0; flex-wrap:wrap; }
   .pasos li { font-size:12px; color:var(--suave); display:flex; align-items:center; gap:6px; }
-  .pasos li .num { width:22px; height:22px; border-radius:50%; border:1px solid var(--linea); display:grid; place-items:center; font:700 11px var(--mono); }
-  .pasos li.actual { color:#fff; }
-  .pasos li.actual .num { background:var(--ambar); color:#1b1508; border-color:var(--ambar); }
-  .pasos li.hecho .num { background:rgba(62,207,174,.25); color:var(--bien); border-color:rgba(62,207,174,.5); }
-  .pasos li + li::before { content:''; width:18px; height:1px; background:var(--linea); }
+  .pasos li button { all:unset; display:flex; align-items:center; gap:6px; cursor:default; }
+  .pasos li.salto button { cursor:pointer; }
+  .pasos li .num { width:22px; height:22px; border-radius:50%; border:1px solid var(--borde); display:grid; place-items:center; font:700 11px var(--mono); }
+  .pasos li.actual { color:var(--tinta); font-weight:700; }
+  .pasos li.actual .num { background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  .pasos li.hecho .num { background:rgba(14,138,109,.15); color:var(--bien); border-color:rgba(14,138,109,.5); }
+  .pasos li + li::before { content:''; width:18px; height:1px; background:var(--borde); }
   .navegacion { display:flex; gap:10px; justify-content:space-between; margin-top:16px; }
   .ayuda { font-size:13px; color:var(--suave); line-height:1.45; margin-bottom:12px; }
 
-  /* visor de cámara */
-  .visor { position:relative; width:100%; background:#05090f; border-radius:14px; overflow:hidden; border:1px solid var(--linea); }
+  /* visor de cámara (oscuro a propósito) */
+  .visor { position:relative; width:100%; background:#05090f; border-radius:14px; overflow:hidden; border:1px solid var(--borde); color:#fff; }
   .visor.selfie { aspect-ratio:3/4; width:min(100%, 44vh); margin:0 auto; }
   .visor.documento { aspect-ratio:4/3; }
   .visor video, .visor img.foto { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .visor.selfie video { transform:scaleX(-1); }       /* espejo solo en pantalla: lo que se envía no se invierte */
   .visor .vacio-visor { position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:20px;
-    color:var(--suave); font-size:13.5px; line-height:1.5; }
+    color:rgba(255,255,255,.7); font-size:13.5px; line-height:1.5; }
   .visor svg.guia { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
   .visor .pista { position:absolute; left:10px; right:10px; bottom:10px; text-align:center; font-size:13px; font-weight:600;
-    padding:7px 10px; border-radius:9px; background:rgba(5,9,15,.78); }
-  .visor .pista.ok { color:var(--bien); }
-  .visor .pista.atencion { color:var(--leve); }
-  .acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
-  .acciones .sep { flex:1; }
-  .nota-archivo { font-size:12.5px; color:var(--suave); }
+    padding:7px 10px; border-radius:9px; background:rgba(5,9,15,.8); }
+  .visor .pista.ok { color:#3ecfae; }
+  .visor .pista.atencion { color:#ffd27a; }
+  .acciones { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; justify-content:center; }
+  .nota-archivo { font-size:12.5px; color:var(--suave); width:100%; text-align:center; }
   .resumen-fotos { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
-  .resumen-fotos figure { border:1px solid var(--linea); border-radius:10px; padding:6px; text-align:center; }
+  .resumen-fotos figure { border:1px solid var(--borde); border-radius:10px; padding:6px; text-align:center; }
   .resumen-fotos img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:7px; display:block; background:#05090f; }
   .resumen-fotos figcaption { font-size:11.5px; color:var(--suave); margin-top:5px; }
-  details.opciones { margin:12px 0; border:1px solid var(--linea); border-radius:12px; padding:10px 14px; }
+  details.opciones { margin:12px 0; border:1px solid var(--borde); border-radius:12px; padding:10px 14px; }
   details.opciones summary { cursor:pointer; font-size:13.5px; color:var(--suave); }
   details.opciones[open] summary { margin-bottom:10px; }
 
   /* resultado */
-  .veredicto { border-radius:14px; padding:14px 16px; margin-bottom:14px; border:1px solid var(--linea); }
-  .veredicto.aprobable { border-color:rgba(62,207,174,.6); background:rgba(62,207,174,.12); }
-  .veredicto.revisar { border-color:rgba(255,210,122,.6); background:rgba(255,210,122,.12); }
-  .veredicto.rechazar { border-color:rgba(255,107,107,.6); background:rgba(255,107,107,.12); }
+  .veredicto { border-radius:14px; padding:14px 16px; margin-bottom:14px; border:1px solid var(--borde); }
+  .veredicto.aprobable { border-color:rgba(14,138,109,.55); background:rgba(14,138,109,.1); }
+  .veredicto.revisar { border-color:rgba(154,107,0,.5); background:rgba(255,176,32,.14); }
+  .veredicto.rechazar { border-color:rgba(201,48,44,.5); background:rgba(229,56,59,.09); }
   .veredicto h3 { font-family:var(--fuente-display); font-size:30px; letter-spacing:1px; text-transform:uppercase; }
   .veredicto p { font-size:13px; color:var(--suave); margin-top:4px; line-height:1.4; }
-  .paso { border:1px solid var(--linea); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .paso { border:1px solid var(--borde); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
   .paso .cab-paso { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .paso .cab-paso b { font-size:15px; }
-  .chip { font-family:var(--mono); font-size:11.5px; padding:2px 9px; border-radius:999px; background:rgba(255,255,255,.12); }
-  .chip.aprobado { background:rgba(62,207,174,.25); color:var(--bien); }
-  .chip.revisar { background:rgba(255,210,122,.22); color:var(--leve); }
-  .chip.rechazado, .chip.error { background:rgba(255,107,107,.25); color:var(--mal); }
+  .chip { font-family:var(--mono); font-size:11.5px; padding:2px 9px; border-radius:999px; background:#e4ebf3; color:var(--suave); }
+  .chip.aprobado { background:rgba(14,138,109,.16); color:var(--bien); }
+  .chip.revisar { background:rgba(255,176,32,.25); color:var(--leve); }
+  .chip.rechazado, .chip.error { background:rgba(229,56,59,.15); color:var(--mal); }
   .chip.sin_correr { opacity:.7; }
   .tiempo { font-family:var(--mono); font-size:11.5px; color:var(--suave); margin-left:auto; }
   .paso ul { list-style:none; margin-top:8px; font-size:13px; line-height:1.5; padding:0; }
@@ -117,22 +119,20 @@
   .paso li.mal::before { content:'✗ '; color:var(--mal); }
   .paso li.nd::before { content:'– '; color:var(--suave); }
   .datos { font-family:var(--mono); font-size:12px; color:var(--suave); margin-top:6px; }
+  .botones-resultado { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
   .tabla { width:100%; border-collapse:collapse; font-size:13px; }
-  .tabla th, .tabla td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--linea); vertical-align:top; }
+  .tabla th, .tabla td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--borde); vertical-align:top; }
   .tabla th { color:var(--suave); font-weight:600; font-size:12px; }
   .vacio { color:var(--suave); font-size:13px; padding:8px 0; }
 </style>
+
 </head>
 <body>
 <div class="pagina">
   <div class="cab">
     <a class="volver" href="/entornos#herramientas">← Herramientas</a>
     <h1>Verificación de identidad</h1>
-    <p class="lede">El mismo recorrido que haría el afiliado: sus datos, una selfie con la cámara en vivo y la foto de su DNI (con la cámara guiada, o subiendo el archivo). Los chequeos corren en orden y se cortan apenas uno rechaza, para no gastar. <b>Ninguna imagen se guarda</b>: salen hacia Didit y vuelven estados y puntajes; el caso guardado no lleva CUIL, nombre ni DNI.</p>
   </div>
-
-  <div id="estado-clave" class="aviso" hidden></div>
-  <div class="aviso"><b>Probá con tus datos o con los de quien lo autorice.</b> La cara y el DNI son datos sensibles (Ley 25.326). Con una clave de <i>sandbox</i> todo se aprueba aunque la foto sea cualquier cosa: sirve para probar la conexión, no la calidad.</div>
 
   <div class="grid">
     <div>
@@ -154,7 +154,7 @@
               <label class="campo"><span>Nombre/s</span><input type="text" name="nombre" required></label>
               <label class="campo"><span>Apellido/s</span><input type="text" name="apellido" required></label>
             </div>
-            <label class="campo"><span>Fecha de nacimiento</span><input type="text" name="nacimiento" placeholder="AAAA-MM-DD o DD/MM/AAAA" required></label>
+            <label class="campo"><span>Fecha de nacimiento</span><input type="date" name="nacimiento" min="1900-01-01" required></label>
           </form>
           <p id="error-datos" class="aviso rojo" hidden></p>
         </section>
@@ -295,7 +295,7 @@
     visor.append(vacio, video, imagen, guia, pista);
 
     const bCamara = el('button', { type: 'button', className: 'chico fuerte', textContent: 'Abrir cámara' });
-    const bCapturar = el('button', { type: 'button', className: 'chico fuerte', textContent: 'Capturar' });
+    const bCapturar = el('button', { type: 'button', className: 'captura', textContent: 'Capturar' });
     const bRepetir = el('button', { type: 'button', className: 'chico', textContent: 'Repetir' });
     const archivo = el('input', { type: 'file', accept: permitePdf ? 'image/*,application/pdf' : 'image/*' });
     archivo.hidden = true;
@@ -413,6 +413,7 @@
     { clave: 'datos', nombre: 'Datos' }, { clave: 'selfie', nombre: 'Selfie' }, { clave: 'frente', nombre: 'DNI frente' },
     { clave: 'dorso', nombre: 'DNI dorso' }, { clave: 'revisar', nombre: 'Verificar' }];
   let actual = 0;
+  let corrigiendo = false;          // viene de un resultado: se conservan datos y fotos
   const secciones = Object.fromEntries([...document.querySelectorAll('[data-paso]')].map(s => [s.dataset.paso, s]));
   const indicador = document.getElementById('indicador');
   const bAtras = document.getElementById('atras'), bSiguiente = document.getElementById('siguiente');
@@ -429,11 +430,25 @@
     bAtras.hidden = actual === 0;
     bSiguiente.hidden = ORDEN[actual].clave === 'revisar';
     bSiguiente.disabled = !puedeAvanzar();
-    bSiguiente.textContent = ORDEN[actual].clave === 'dorso' && !foto.dorso ? 'Omitir →' : 'Siguiente →';
+    const volver = corrigiendo && foto.selfie && foto.frente && ORDEN[actual].clave === 'datos';
+    bSiguiente.textContent = volver ? 'Volver a verificar →'
+      : ORDEN[actual].clave === 'dorso' && !foto.dorso ? 'Omitir →' : 'Siguiente →';
+  }
+  // Se puede saltar a un paso si lo anterior que hace falta ya está (datos completos, selfie, frente).
+  function alcanzable(i) {
+    if (i >= 1 && !datosCompletos()) return false;
+    if (i >= 2 && !foto.selfie) return false;
+    if (i >= 3 && !foto.frente) return false;
+    return true;
   }
   function dibujarIndicador() {
-    indicador.replaceChildren(...ORDEN.map((p, i) => el('li', { className: i === actual ? 'actual' : i < actual ? 'hecho' : '' },
-      el('span', { className: 'num', textContent: i < actual ? '✓' : String(i + 1) }), p.nombre)));
+    indicador.replaceChildren(...ORDEN.map((p, i) => {
+      const salto = i !== actual && alcanzable(i);
+      const b = el('button', { type: 'button', disabled: !salto },
+        el('span', { className: 'num', textContent: i < actual ? '✓' : String(i + 1) }), p.nombre);
+      b.addEventListener('click', () => ir(i));
+      return el('li', { className: (i === actual ? 'actual' : i < actual ? 'hecho' : '') + (salto ? ' salto' : '') }, b);
+    }));
   }
   function ir(i) {
     Object.values(capturadores).forEach(c => c.apagar());
@@ -449,6 +464,7 @@
       const e = document.getElementById('error-datos');
       if (!datosCompletos()) { e.hidden = false; e.textContent = 'Completá todos los datos para seguir.'; return; }
       e.hidden = true;
+      if (corrigiendo && foto.selfie && foto.frente) { ir(ORDEN.length - 1); return; }
     }
     ir(actual + 1);
   });
@@ -468,16 +484,6 @@
   let pasosDef = [];
   fetch(API + '/estado', { cache: 'no-store' }).then(r => r.json()).then(d => {
     pasosDef = d.pasos;
-    const aviso = document.getElementById('estado-clave');
-    aviso.hidden = false;
-    if (!d.configurado) {
-      aviso.className = 'aviso rojo';
-      aviso.textContent = 'Falta la variable DIDIT_API_KEY en este entorno: la herramienta no puede verificar.';
-    } else {
-      aviso.textContent = (d.sandbox ? 'Clave de SANDBOX: las respuestas son simuladas. ' : 'Clave real: cada paso con costo gasta crédito. ')
-        + 'Tope: ' + d.tope_intentos + ' intentos pagos por persona y hora. '
-        + (d.guarda_sesion ? 'Didit CONSERVA la sesión (DIDIT_GUARDAR_SESION=1).' : 'Didit no conserva la sesión ni enrola la cara.');
-    }
     const caja = document.getElementById('pasos');
     d.pasos.forEach(p => {
       const cb = el('input', { type: 'checkbox', value: p.clave, checked: true });
@@ -520,12 +526,15 @@
       if (datos.length) c.append(el('div', { className: 'datos', textContent: datos.join(' · ') }));
       caja.append(c);
     });
-    const otra = el('button', { type: 'button', className: 'suave', textContent: 'Nueva verificación', style: 'margin-top:6px;' });
+    const corregir = el('button', { type: 'button', className: 'principal', textContent: 'Corregir datos y volver a verificar' });
+    corregir.addEventListener('click', () => { corrigiendo = true; ir(0); });
+    const otra = el('button', { type: 'button', className: 'suave', textContent: 'Empezar de cero' });
     otra.addEventListener('click', nueva);
-    caja.append(otra);
+    caja.append(el('div', { className: 'botones-resultado' }, corregir, otra));
   }
 
   function nueva() {
+    corrigiendo = false;
     ['selfie', 'frente', 'dorso'].forEach(k => capturadores[k].repetir());
     formDatos.reset();
     document.getElementById('nota').value = '';

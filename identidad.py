@@ -30,6 +30,7 @@ Reglas de privacidad (Ley 25.326: la cara y el DNI son datos sensibles):
 Puro salvo `_post`, que es la única que habla con la red; los tests la
 reemplazan por un cliente simulado (`cliente=`).
 """
+import datetime
 import hashlib
 import json
 import os
@@ -148,16 +149,25 @@ def mismo_nombre(a, b) -> bool:
     return bool(pa and pb) and (pa <= pb or pb <= pa)
 
 
+def _fecha_real(anio, mes, dia) -> str:
+    """AAAA-MM-DD si el día existe en el calendario (31/02 no), vacío si no."""
+    try:
+        return datetime.date(int(anio), int(mes), int(dia)).isoformat()
+    except ValueError:
+        return ""
+
+
 def fecha_iso(valor) -> str:
     """AAAA-MM-DD a partir de AAAA-MM-DD o DD/MM/AAAA (lo que escribe una
-    persona o lo que lee un documento). Vacío si no se entiende."""
+    persona o lo que lee un documento). Vacío si no se entiende o si el día no
+    existe (31/02)."""
     v = str(valor or "").strip()
     m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", v)
     if m:
-        return "%s-%02d-%02d" % (m[1], int(m[2]), int(m[3]))
+        return _fecha_real(m[1], m[2], m[3])
     m = re.fullmatch(r"(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})", v)
     if m:
-        return "%s-%02d-%02d" % (m[3], int(m[2]), int(m[1]))
+        return _fecha_real(m[3], m[2], m[1])
     return ""
 
 
@@ -190,7 +200,11 @@ def chequeos_locales(declarado: dict) -> list:
               else "El género no es el que indica el prefijo %s del CUIL." % prefijo)
     nacimiento = fecha_iso(declarado.get("nacimiento"))
     sumar("nacimiento_dato", bool(nacimiento), "Fecha de nacimiento informada."
-          if nacimiento else "La fecha de nacimiento no se entiende (AAAA-MM-DD).")
+          if nacimiento else "La fecha de nacimiento no es una fecha válida: elegila en el calendario.")
+    if nacimiento:
+        plausible = "1900-01-01" <= nacimiento <= fechas.hoy_texto()
+        sumar("nacimiento_plausible", plausible, "La fecha de nacimiento es posible."
+              if plausible else "La fecha de nacimiento es futura o anterior a 1900.")
     sumar("nombre_dato", bool(palabras(declarado.get("nombre")) and palabras(declarado.get("apellido"))),
           "Nombre y apellido informados." if palabras(declarado.get("nombre")) and palabras(declarado.get("apellido"))
           else "Faltan el nombre o el apellido.")
