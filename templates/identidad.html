@@ -12,7 +12,9 @@
   }
   /* Herramientas de /entornos (2026-11-11): Verificación de identidad. Misma
      "colmena nocturna" que la Calculadora bancaria y el Laboratorio, standalone,
-     sin marca.css: existe solo donde existe /entornos. */
+     sin marca.css: existe solo donde existe /entornos. El flujo es el que vería
+     el afiliado: datos, selfie con la cámara en vivo, DNI (cámara asistida o
+     archivo) y revisión. */
   :root {
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
@@ -35,27 +37,66 @@
   .aviso { border:1px solid rgba(255,176,32,.5); background:rgba(255,176,32,.1); border-radius:12px; padding:10px 14px; font-size:13px; margin-bottom:14px; line-height:1.45; }
   .aviso.rojo { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.1); }
   .aviso b { color:var(--ambar); }
-  .grid { display:grid; grid-template-columns:400px 1fr; gap:18px; align-items:start; }
-  @media (max-width:980px) { .grid { grid-template-columns:1fr; } }
+  .grid { display:grid; grid-template-columns:minmax(0,560px) 1fr; gap:18px; align-items:start; }
+  @media (max-width:1000px) { .grid { grid-template-columns:1fr; } }
   .tarjeta { background:rgba(9,15,26,.55); border:1px solid var(--linea); border-radius:16px; padding:18px; }
   .tarjeta + .tarjeta { margin-top:14px; }
   .tarjeta h2 { font-family:var(--fuente-display); font-size:22px; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
   .campo { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
   .campo > span { font-size:12px; color:var(--suave); }
   .dos { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  input[type=file], input[type=text], select, textarea {
+  input[type=text], select, textarea {
     width:100%; background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.18);
     border-radius:9px; padding:9px 10px; font-size:14px; }
   select option { color:#000; }
   textarea { min-height:54px; resize:vertical; }
-  input:focus-visible, button:focus-visible, select:focus-visible { outline:2px solid var(--ambar); outline-offset:1px; }
+  input:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible { outline:2px solid var(--ambar); outline-offset:1px; }
   .tilde { display:flex; align-items:flex-start; gap:9px; font-size:13.5px; margin-bottom:8px; line-height:1.3; }
   .tilde input { width:17px; height:17px; accent-color:var(--ambar); margin-top:1px; flex:none; }
-  .tilde small { color:var(--suave); }
   .gasta { font-family:var(--mono); font-size:11px; color:var(--leve); margin-left:4px; }
-  button.principal { background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:11px 18px; font:700 15px system-ui; cursor:pointer; width:100%; }
-  button.principal:disabled { opacity:.5; cursor:wait; }
-  button.chico { background:rgba(255,255,255,.12); color:#fff; border:0; border-radius:8px; padding:5px 10px; font:600 12px system-ui; cursor:pointer; }
+  button { font-family:system-ui,sans-serif; }
+  button.principal { background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:11px 18px; font:700 15px system-ui; cursor:pointer; }
+  button.principal:disabled { opacity:.45; cursor:not-allowed; }
+  button.suave { background:rgba(255,255,255,.12); color:#fff; border:0; border-radius:10px; padding:11px 16px; font:600 14px system-ui; cursor:pointer; }
+  button.chico { background:rgba(255,255,255,.12); color:#fff; border:0; border-radius:8px; padding:7px 12px; font:600 13px system-ui; cursor:pointer; }
+  button.chico.fuerte { background:var(--ambar); color:#1b1508; }
+
+  /* pasos */
+  .pasos { display:flex; gap:6px; margin-bottom:16px; list-style:none; padding:0; flex-wrap:wrap; }
+  .pasos li { font-size:12px; color:var(--suave); display:flex; align-items:center; gap:6px; }
+  .pasos li .num { width:22px; height:22px; border-radius:50%; border:1px solid var(--linea); display:grid; place-items:center; font:700 11px var(--mono); }
+  .pasos li.actual { color:#fff; }
+  .pasos li.actual .num { background:var(--ambar); color:#1b1508; border-color:var(--ambar); }
+  .pasos li.hecho .num { background:rgba(62,207,174,.25); color:var(--bien); border-color:rgba(62,207,174,.5); }
+  .pasos li + li::before { content:''; width:18px; height:1px; background:var(--linea); }
+  .navegacion { display:flex; gap:10px; justify-content:space-between; margin-top:16px; }
+  .ayuda { font-size:13px; color:var(--suave); line-height:1.45; margin-bottom:12px; }
+
+  /* visor de cámara */
+  .visor { position:relative; width:100%; background:#05090f; border-radius:14px; overflow:hidden; border:1px solid var(--linea); }
+  .visor.selfie { aspect-ratio:3/4; width:min(100%, 44vh); margin:0 auto; }
+  .visor.documento { aspect-ratio:4/3; }
+  .visor video, .visor img.foto { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .visor.selfie video { transform:scaleX(-1); }       /* espejo solo en pantalla: lo que se envía no se invierte */
+  .visor .vacio-visor { position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:20px;
+    color:var(--suave); font-size:13.5px; line-height:1.5; }
+  .visor svg.guia { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .visor .pista { position:absolute; left:10px; right:10px; bottom:10px; text-align:center; font-size:13px; font-weight:600;
+    padding:7px 10px; border-radius:9px; background:rgba(5,9,15,.78); }
+  .visor .pista.ok { color:var(--bien); }
+  .visor .pista.atencion { color:var(--leve); }
+  .acciones { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
+  .acciones .sep { flex:1; }
+  .nota-archivo { font-size:12.5px; color:var(--suave); }
+  .resumen-fotos { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+  .resumen-fotos figure { border:1px solid var(--linea); border-radius:10px; padding:6px; text-align:center; }
+  .resumen-fotos img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:7px; display:block; background:#05090f; }
+  .resumen-fotos figcaption { font-size:11.5px; color:var(--suave); margin-top:5px; }
+  details.opciones { margin:12px 0; border:1px solid var(--linea); border-radius:12px; padding:10px 14px; }
+  details.opciones summary { cursor:pointer; font-size:13.5px; color:var(--suave); }
+  details.opciones[open] summary { margin-bottom:10px; }
+
+  /* resultado */
   .veredicto { border-radius:14px; padding:14px 16px; margin-bottom:14px; border:1px solid var(--linea); }
   .veredicto.aprobable { border-color:rgba(62,207,174,.6); background:rgba(62,207,174,.12); }
   .veredicto.revisar { border-color:rgba(255,210,122,.6); background:rgba(255,210,122,.12); }
@@ -71,7 +112,7 @@
   .chip.rechazado, .chip.error { background:rgba(255,107,107,.25); color:var(--mal); }
   .chip.sin_correr { opacity:.7; }
   .tiempo { font-family:var(--mono); font-size:11.5px; color:var(--suave); margin-left:auto; }
-  .paso ul { list-style:none; margin-top:8px; font-size:13px; line-height:1.5; }
+  .paso ul { list-style:none; margin-top:8px; font-size:13px; line-height:1.5; padding:0; }
   .paso li.ok::before { content:'✓ '; color:var(--bien); }
   .paso li.mal::before { content:'✗ '; color:var(--mal); }
   .paso li.nd::before { content:'– '; color:var(--suave); }
@@ -87,35 +128,77 @@
   <div class="cab">
     <a class="volver" href="/entornos#herramientas">← Herramientas</a>
     <h1>Verificación de identidad</h1>
-    <p class="lede">Selfie + foto del DNI + datos declarados, contra Didit. Los pasos corren en orden y se cortan apenas uno rechaza, para no gastar. <b>Ninguna imagen se guarda</b>: salen hacia Didit y vuelven estados y puntajes; el caso guardado no lleva CUIL, nombre ni DNI.</p>
+    <p class="lede">El mismo recorrido que haría el afiliado: sus datos, una selfie con la cámara en vivo y la foto de su DNI (con la cámara guiada, o subiendo el archivo). Los chequeos corren en orden y se cortan apenas uno rechaza, para no gastar. <b>Ninguna imagen se guarda</b>: salen hacia Didit y vuelven estados y puntajes; el caso guardado no lleva CUIL, nombre ni DNI.</p>
   </div>
 
   <div id="estado-clave" class="aviso" hidden></div>
   <div class="aviso"><b>Probá con tus datos o con los de quien lo autorice.</b> La cara y el DNI son datos sensibles (Ley 25.326). Con una clave de <i>sandbox</i> todo se aprueba aunque la foto sea cualquier cosa: sirve para probar la conexión, no la calidad.</div>
 
   <div class="grid">
-    <form id="form" class="tarjeta" autocomplete="off">
-      <h2>Datos y fotos</h2>
-      <label class="campo"><span>CUIL</span><input type="text" name="cuil" inputmode="numeric" placeholder="20-12345678-3" required></label>
-      <div class="dos">
-        <label class="campo"><span>DNI</span><input type="text" name="dni" inputmode="numeric" placeholder="12345678" required></label>
-        <label class="campo"><span>Género (como figura en el DNI)</span>
-          <select name="genero" required><option value="">—</option><option value="M">M</option><option value="F">F</option></select></label>
+    <div>
+      <div class="tarjeta" id="asistente">
+        <ol class="pasos" id="indicador"></ol>
+
+        <!-- 1. datos -->
+        <section data-paso="datos">
+          <h2>Tus datos</h2>
+          <p class="ayuda">Tal como figuran en el DNI.</p>
+          <form id="form-datos" autocomplete="off" novalidate>
+            <label class="campo"><span>CUIL</span><input type="text" name="cuil" inputmode="numeric" placeholder="20-12345678-3" required></label>
+            <div class="dos">
+              <label class="campo"><span>DNI</span><input type="text" name="dni" inputmode="numeric" placeholder="12345678" required></label>
+              <label class="campo"><span>Género (como figura en el DNI)</span>
+                <select name="genero" required><option value="">—</option><option value="M">M</option><option value="F">F</option></select></label>
+            </div>
+            <div class="dos">
+              <label class="campo"><span>Nombre/s</span><input type="text" name="nombre" required></label>
+              <label class="campo"><span>Apellido/s</span><input type="text" name="apellido" required></label>
+            </div>
+            <label class="campo"><span>Fecha de nacimiento</span><input type="text" name="nacimiento" placeholder="AAAA-MM-DD o DD/MM/AAAA" required></label>
+          </form>
+          <p id="error-datos" class="aviso rojo" hidden></p>
+        </section>
+
+        <!-- 2. selfie -->
+        <section data-paso="selfie" hidden>
+          <h2>Tu selfie</h2>
+          <p class="ayuda">Mirá de frente a la cámara, con la cara completa dentro del óvalo, sin anteojos oscuros ni gorra y con buena luz de frente. La foto se toma en el momento: no se puede usar una ya guardada.</p>
+          <div data-captura="selfie"></div>
+        </section>
+
+        <!-- 3. DNI frente -->
+        <section data-paso="frente" hidden>
+          <h2>DNI, frente</h2>
+          <p class="ayuda">Apoyá el DNI sobre una superficie lisa y encuadralo dentro del marco, con las cuatro esquinas visibles, sin reflejos ni dedos encima. Si tu documento es la tarjeta, es la cara con tu foto. Si preferís, subí un archivo (imagen o PDF).</p>
+          <div data-captura="frente"></div>
+        </section>
+
+        <!-- 4. DNI dorso -->
+        <section data-paso="dorso" hidden>
+          <h2>DNI, dorso</h2>
+          <p class="ayuda">El reverso del documento (la cara con el domicilio y el código). Es opcional, pero ayuda a leer el documento completo.</p>
+          <div data-captura="dorso"></div>
+        </section>
+
+        <!-- 5. revisar -->
+        <section data-paso="revisar" hidden>
+          <h2>Revisá y verificá</h2>
+          <div class="resumen-fotos" id="resumen-fotos"></div>
+          <details class="opciones">
+            <summary>Opciones de prueba (qué pasos correr, nota)</summary>
+            <div id="pasos"></div>
+            <label class="campo"><span>Nota (opcional, sin datos personales)</span><textarea id="nota" placeholder="Ej.: selfie con poca luz"></textarea></label>
+          </details>
+          <button class="principal" id="correr" type="button" style="width:100%;">Verificar</button>
+          <p id="error" class="aviso rojo" style="margin:12px 0 0;" hidden></p>
+        </section>
+
+        <div class="navegacion">
+          <button class="suave" id="atras" type="button">← Atrás</button>
+          <button class="principal" id="siguiente" type="button">Siguiente →</button>
+        </div>
       </div>
-      <div class="dos">
-        <label class="campo"><span>Nombre/s</span><input type="text" name="nombre" required></label>
-        <label class="campo"><span>Apellido/s</span><input type="text" name="apellido" required></label>
-      </div>
-      <label class="campo"><span>Fecha de nacimiento</span><input type="text" name="nacimiento" placeholder="AAAA-MM-DD o DD/MM/AAAA" required></label>
-      <label class="campo"><span>Selfie (JPG, PNG o WebP, hasta 5 MB)</span><input type="file" name="selfie" accept="image/jpeg,image/png,image/webp" capture="user" required></label>
-      <label class="campo"><span>DNI, frente (imagen o PDF, hasta 10 MB)</span><input type="file" name="frente" accept="image/*,application/pdf" required></label>
-      <label class="campo"><span>DNI, dorso (opcional)</span><input type="file" name="dorso" accept="image/*,application/pdf"></label>
-      <h2 style="margin-top:6px;">Qué correr</h2>
-      <div id="pasos"></div>
-      <label class="campo"><span>Nota (opcional, sin datos personales)</span><textarea name="nota" placeholder="Ej.: selfie con poca luz"></textarea></label>
-      <button class="principal" id="correr" type="submit">Verificar</button>
-      <p id="error" class="aviso rojo" style="margin:12px 0 0;" hidden></p>
-    </form>
+    </div>
 
     <div>
       <div id="resultado" class="tarjeta"><h2>Resultado</h2><p class="vacio">Todavía no corriste ninguna verificación.</p></div>
@@ -134,7 +217,7 @@
     revisar: 'Algún paso no pudo decidir solo. Lo mira una persona.',
     rechazar: 'Un paso rechazó la identidad. No se gastó en los pasos siguientes.',
   };
-  const form = document.getElementById('form');
+  const TOPES = { selfie: 5 * 1048576, frente: 10 * 1048576, dorso: 10 * 1048576 };
   const err = document.getElementById('error');
 
   function el(tag, props, ...hijos) {
@@ -143,30 +226,267 @@
     hijos.flat().forEach(h => n.append(h));
     return n;
   }
+  function svg(tag, attrs) {
+    const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => n.setAttribute(k, v));
+    return n;
+  }
 
-  // ---- estado de la clave y pasos
+  // ===================================================== fotos tomadas
+  const foto = { selfie: null, frente: null, dorso: null };   // {blob, url, nombre, pdf}
+  const capturadores = {};
+
+  // ---- medición liviana de la imagen (luz, nitidez, movimiento)
+  const mini = document.createElement('canvas');
+  function medir(fuente, w, h, anterior) {
+    const ancho = 160, alto = Math.max(8, Math.round(ancho * h / w));
+    mini.width = ancho; mini.height = alto;
+    const ctx = mini.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(fuente, 0, 0, ancho, alto);
+    const d = ctx.getImageData(0, 0, ancho, alto).data;
+    const n = ancho * alto, g = new Float32Array(n);
+    let suma = 0;
+    for (let i = 0; i < n; i++) { g[i] = 0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2]; suma += g[i]; }
+    let s = 0, s2 = 0, c = 0;
+    for (let y = 1; y < alto - 1; y++) for (let x = 1; x < ancho - 1; x++) {
+      const p = y * ancho + x, lap = 4 * g[p] - g[p - 1] - g[p + 1] - g[p - ancho] - g[p + ancho];
+      s += lap; s2 += lap * lap; c++;
+    }
+    let mov = 0;
+    if (anterior && anterior.length === n) { for (let i = 0; i < n; i++) mov += Math.abs(g[i] - anterior[i]); mov /= n; }
+    return { media: suma / n, nitidez: s2 / c - (s / c) * (s / c), mov, g };
+  }
+  function consejo(m, modo) {
+    if (m.media < 60) return { texto: 'Falta luz: buscá un lugar más iluminado.', ok: false };
+    if (m.media > 215) return { texto: 'Hay demasiado brillo: evitá la luz directa o los reflejos.', ok: false };
+    if (m.mov > 14) return { texto: 'Mantené el celular quieto.', ok: false };
+    if (m.nitidez < 18) return { texto: modo === 'selfie' ? 'Se ve borrosa: acercate un poco y esperá a que enfoque.' : 'Se ve borroso: acercalo un poco y esperá a que enfoque.', ok: false };
+    return { texto: 'Se ve bien: podés capturar.', ok: true };
+  }
+
+  // ---- un capturador por foto
+  function capturador(clave, modo, permitePdf) {
+    const cont = document.querySelector('[data-captura="' + clave + '"]');
+    const visor = el('div', { className: 'visor ' + modo });
+    const video = el('video', { playsInline: true, muted: true, autoplay: true });
+    video.hidden = true;
+    const imagen = el('img', { className: 'foto', alt: '' });
+    imagen.hidden = true;
+    const vacio = el('div', { className: 'vacio-visor', textContent: modo === 'selfie' ? 'Abrí la cámara para sacarte la selfie.' : 'Abrí la cámara para fotografiar el documento, o subí un archivo.' });
+    const guia = svg('svg', { class: 'guia', viewBox: '0 0 100 100', preserveAspectRatio: 'none' });
+    guia.style.display = 'none';
+    if (modo === 'selfie') {
+      guia.setAttribute('viewBox', '0 0 300 400');
+      const mascara = svg('path', { d: 'M0 0H300V400H0Z M150 40 C 215 40 250 100 250 175 C 250 255 205 325 150 325 C 95 325 50 255 50 175 C 50 100 85 40 150 40Z',
+        fill: 'rgba(5,9,15,.55)', 'fill-rule': 'evenodd' });
+      const borde = svg('ellipse', { cx: 150, cy: 182, rx: 100, ry: 143, fill: 'none', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 2.5, 'stroke-dasharray': '8 6' });
+      guia.append(mascara, borde);
+    } else {
+      guia.setAttribute('viewBox', '0 0 400 300');
+      const w = 340, h = Math.round(w / 1.586), x = (400 - w) / 2, y = (300 - h) / 2 - 8;
+      const mascara = svg('path', { d: 'M0 0H400V300H0Z M' + (x + 14) + ' ' + y + 'H' + (x + w - 14) + 'Q' + (x + w) + ' ' + y + ' ' + (x + w) + ' ' + (y + 14) +
+        'V' + (y + h - 14) + 'Q' + (x + w) + ' ' + (y + h) + ' ' + (x + w - 14) + ' ' + (y + h) + 'H' + (x + 14) + 'Q' + x + ' ' + (y + h) + ' ' + x + ' ' + (y + h - 14) +
+        'V' + (y + 14) + 'Q' + x + ' ' + y + ' ' + (x + 14) + ' ' + y + 'Z', fill: 'rgba(5,9,15,.5)', 'fill-rule': 'evenodd' });
+      const borde = svg('rect', { x, y, width: w, height: h, rx: 14, fill: 'none', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 2.5, 'stroke-dasharray': '10 7' });
+      guia.append(mascara, borde);
+    }
+    const pista = el('div', { className: 'pista' });
+    pista.hidden = true;
+    visor.append(vacio, video, imagen, guia, pista);
+
+    const bCamara = el('button', { type: 'button', className: 'chico fuerte', textContent: 'Abrir cámara' });
+    const bCapturar = el('button', { type: 'button', className: 'chico fuerte', textContent: 'Capturar' });
+    const bRepetir = el('button', { type: 'button', className: 'chico', textContent: 'Repetir' });
+    const archivo = el('input', { type: 'file', accept: permitePdf ? 'image/*,application/pdf' : 'image/*' });
+    archivo.hidden = true;
+    const bArchivo = el('button', { type: 'button', className: 'chico', textContent: permitePdf ? 'Subir archivo' : 'No tengo cámara: subir una foto' });
+    const nota = el('span', { className: 'nota-archivo' });
+    const acciones = el('div', { className: 'acciones' }, bCamara, bCapturar, bRepetir, bArchivo, el('span', { className: 'sep' }), nota, archivo);
+    cont.append(visor, acciones);
+
+    let flujo = null, cinta = null, previo = null;
+
+    function vista(estado) {   // inicio | camara | listo
+      video.hidden = estado !== 'camara';
+      imagen.hidden = estado !== 'listo';
+      vacio.hidden = estado !== 'inicio';
+      guia.style.display = estado === 'camara' ? '' : 'none';
+      pista.hidden = estado === 'inicio';
+      bCamara.hidden = estado !== 'inicio';
+      bCapturar.hidden = estado !== 'camara';
+      bRepetir.hidden = estado !== 'listo';
+      bArchivo.hidden = estado === 'listo';
+    }
+    function apagar() {
+      if (cinta) { clearInterval(cinta); cinta = null; }
+      if (flujo) { flujo.getTracks().forEach(t => t.stop()); flujo = null; }
+      video.srcObject = null; previo = null;
+    }
+    function soltar() { if (foto[clave] && foto[clave].url) URL.revokeObjectURL(foto[clave].url); foto[clave] = null; }
+    function listo(f, aviso) {
+      soltar(); foto[clave] = f;
+      vista('listo');
+      if (f.pdf) { imagen.removeAttribute('src'); imagen.hidden = true; vacio.hidden = false; vacio.textContent = 'Archivo PDF: ' + f.nombre; }
+      else { imagen.src = f.url; vacio.hidden = true; }
+      pista.className = 'pista ' + (aviso && !aviso.ok ? 'atencion' : 'ok');
+      pista.textContent = aviso ? aviso.texto : 'Lista.';
+      nota.textContent = '';
+      actualizarNavegacion();
+    }
+
+    async function abrir() {
+      nota.textContent = '';
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        nota.textContent = 'Este navegador no deja usar la cámara (hace falta HTTPS). Subí un archivo.'; return;
+      }
+      try {
+        flujo = await navigator.mediaDevices.getUserMedia({ audio: false, video: modo === 'selfie'
+          ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }
+          : { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      } catch (e) {
+        nota.textContent = e && e.name === 'NotAllowedError' ? 'Permiso de cámara denegado: habilitalo en el navegador o subí un archivo.'
+          : 'No se pudo abrir la cámara (' + (e && e.name || 'error') + '). Subí un archivo.';
+        return;
+      }
+      video.srcObject = flujo;
+      try { await video.play(); } catch (e) { /* el autoplay la inicia igual */ }
+      vista('camara');
+      bCapturar.disabled = true;      // se habilita con la primera imagen real: un fotograma negro no sirve
+      pista.className = 'pista'; pista.textContent = 'Buscando la imagen…';
+      cinta = setInterval(() => {
+        if (!video.videoWidth || video.readyState < 2) return;
+        const m = medir(video, video.videoWidth, video.videoHeight, previo);
+        previo = m.g;
+        if (m.media > 8) bCapturar.disabled = false;
+        const c = consejo(m, modo);
+        pista.className = 'pista ' + (c.ok ? 'ok' : 'atencion'); pista.textContent = c.texto;
+      }, 450);
+    }
+    function capturar() {
+      if (!video.videoWidth) return;
+      const w = video.videoWidth, h = video.videoHeight, k = Math.min(1, 1600 / Math.max(w, h));
+      const lienzo = document.createElement('canvas');
+      lienzo.width = Math.round(w * k); lienzo.height = Math.round(h * k);
+      lienzo.getContext('2d').drawImage(video, 0, 0, lienzo.width, lienzo.height);   // sin espejo: se envía como la ve la cámara
+      const m = medir(lienzo, lienzo.width, lienzo.height, null);
+      if (m.media <= 8) { nota.textContent = 'La imagen salió negra: esperá un segundo y volvé a capturar.'; bCapturar.disabled = true; return; }
+      const c = consejo({ ...m, mov: 0 }, modo);
+      lienzo.toBlob(blob => {
+        if (!blob) { nota.textContent = 'No se pudo tomar la foto. Probá de nuevo.'; return; }
+        apagar();
+        listo({ blob, url: URL.createObjectURL(blob), nombre: clave + '.jpg', pdf: false }, c);
+      }, 'image/jpeg', 0.9);
+    }
+    function repetir() { soltar(); apagar(); vista('inicio'); actualizarNavegacion(); }
+
+    bCamara.addEventListener('click', abrir);
+    bCapturar.addEventListener('click', capturar);
+    bRepetir.addEventListener('click', repetir);
+    bArchivo.addEventListener('click', () => archivo.click());
+    archivo.addEventListener('change', () => {
+      const f = archivo.files[0]; archivo.value = '';
+      if (!f) return;
+      const pdf = f.type === 'application/pdf';
+      if (pdf && !permitePdf) { nota.textContent = 'La selfie tiene que ser una imagen.'; return; }
+      if (!pdf && !/^image\/(jpeg|png|webp)$/.test(f.type)) { nota.textContent = 'Usá una imagen JPG, PNG o WebP' + (permitePdf ? ' o un PDF.' : '.'); return; }
+      if (f.size > TOPES[clave]) { nota.textContent = 'El archivo pesa más de ' + (TOPES[clave] / 1048576) + ' MB.'; return; }
+      apagar();
+      if (pdf) { listo({ blob: f, url: null, nombre: f.name, pdf: true }, { texto: 'PDF cargado.', ok: true }); return; }
+      const url = URL.createObjectURL(f);
+      const prueba = new Image();
+      prueba.onload = () => {
+        const m = medir(prueba, prueba.naturalWidth, prueba.naturalHeight, null);
+        listo({ blob: f, url, nombre: f.name, pdf: false }, consejo({ ...m, mov: 0 }, modo));
+      };
+      prueba.onerror = () => { URL.revokeObjectURL(url); nota.textContent = 'No se pudo leer la imagen.'; };
+      prueba.src = url;
+    });
+    vista('inicio');
+    return { apagar, repetir };
+  }
+  capturadores.selfie = capturador('selfie', 'selfie', false);
+  capturadores.frente = capturador('frente', 'documento', true);
+  capturadores.dorso = capturador('dorso', 'documento', true);
+
+  // ===================================================== pasos del asistente
+  const ORDEN = [
+    { clave: 'datos', nombre: 'Datos' }, { clave: 'selfie', nombre: 'Selfie' }, { clave: 'frente', nombre: 'DNI frente' },
+    { clave: 'dorso', nombre: 'DNI dorso' }, { clave: 'revisar', nombre: 'Verificar' }];
+  let actual = 0;
+  const secciones = Object.fromEntries([...document.querySelectorAll('[data-paso]')].map(s => [s.dataset.paso, s]));
+  const indicador = document.getElementById('indicador');
+  const bAtras = document.getElementById('atras'), bSiguiente = document.getElementById('siguiente');
+  const formDatos = document.getElementById('form-datos');
+
+  function datosCompletos() { return [...formDatos.elements].every(e => !e.required || e.value.trim()); }
+  function puedeAvanzar() {
+    const c = ORDEN[actual].clave;
+    if (c === 'selfie') return !!foto.selfie;
+    if (c === 'frente') return !!foto.frente;
+    return true;
+  }
+  function actualizarNavegacion() {
+    bAtras.hidden = actual === 0;
+    bSiguiente.hidden = ORDEN[actual].clave === 'revisar';
+    bSiguiente.disabled = !puedeAvanzar();
+    bSiguiente.textContent = ORDEN[actual].clave === 'dorso' && !foto.dorso ? 'Omitir →' : 'Siguiente →';
+  }
+  function dibujarIndicador() {
+    indicador.replaceChildren(...ORDEN.map((p, i) => el('li', { className: i === actual ? 'actual' : i < actual ? 'hecho' : '' },
+      el('span', { className: 'num', textContent: i < actual ? '✓' : String(i + 1) }), p.nombre)));
+  }
+  function ir(i) {
+    Object.values(capturadores).forEach(c => c.apagar());
+    actual = Math.max(0, Math.min(ORDEN.length - 1, i));
+    Object.entries(secciones).forEach(([k, s]) => { s.hidden = k !== ORDEN[actual].clave; });
+    if (ORDEN[actual].clave === 'revisar') dibujarResumen();
+    dibujarIndicador(); actualizarNavegacion();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  bAtras.addEventListener('click', () => ir(actual - 1));
+  bSiguiente.addEventListener('click', () => {
+    if (ORDEN[actual].clave === 'datos') {
+      const e = document.getElementById('error-datos');
+      if (!datosCompletos()) { e.hidden = false; e.textContent = 'Completá todos los datos para seguir.'; return; }
+      e.hidden = true;
+    }
+    ir(actual + 1);
+  });
+  formDatos.addEventListener('submit', ev => ev.preventDefault());
+  formDatos.addEventListener('input', () => { document.getElementById('error-datos').hidden = true; });
+
+  function dibujarResumen() {
+    const caja = document.getElementById('resumen-fotos');
+    caja.replaceChildren(...[['selfie', 'Selfie'], ['frente', 'DNI frente'], ['dorso', 'DNI dorso']].map(([k, n]) => {
+      const f = foto[k];
+      const media = f && !f.pdf ? el('img', { src: f.url, alt: n }) : el('div', { className: 'vacio', textContent: f ? 'PDF: ' + f.nombre : 'Sin cargar' });
+      return el('figure', {}, media, el('figcaption', { textContent: n }));
+    }));
+  }
+
+  // ===================================================== estado de la clave y pasos de prueba
   let pasosDef = [];
   fetch(API + '/estado', { cache: 'no-store' }).then(r => r.json()).then(d => {
     pasosDef = d.pasos;
     const aviso = document.getElementById('estado-clave');
+    aviso.hidden = false;
     if (!d.configurado) {
-      aviso.hidden = false; aviso.className = 'aviso rojo';
+      aviso.className = 'aviso rojo';
       aviso.textContent = 'Falta la variable DIDIT_API_KEY en este entorno: la herramienta no puede verificar.';
     } else {
-      aviso.hidden = false;
       aviso.textContent = (d.sandbox ? 'Clave de SANDBOX: las respuestas son simuladas. ' : 'Clave real: cada paso con costo gasta crédito. ')
         + 'Tope: ' + d.tope_intentos + ' intentos pagos por persona y hora. '
         + (d.guarda_sesion ? 'Didit CONSERVA la sesión (DIDIT_GUARDAR_SESION=1).' : 'Didit no conserva la sesión ni enrola la cara.');
     }
     const caja = document.getElementById('pasos');
     d.pasos.forEach(p => {
-      const cb = el('input', { type: 'checkbox', name: 'pasos', value: p.clave, checked: true });
-      const txt = el('span', {}, p.nombre, p.gasta ? el('span', { className: 'gasta', textContent: 'paga' }) : '');
-      caja.append(el('label', { className: 'tilde' }, cb, txt));
+      const cb = el('input', { type: 'checkbox', value: p.clave, checked: true });
+      cb.dataset.opcion = p.clave;
+      caja.append(el('label', { className: 'tilde' }, cb, el('span', {}, p.nombre, p.gasta ? el('span', { className: 'gasta', textContent: 'paga' }) : '')));
     });
   });
 
-  // ---- mostrar un resultado
+  // ===================================================== resultado
   function dibujarResultado(r) {
     const caja = document.getElementById('resultado');
     caja.replaceChildren(el('h2', { textContent: 'Resultado' }));
@@ -200,21 +520,41 @@
       if (datos.length) c.append(el('div', { className: 'datos', textContent: datos.join(' · ') }));
       caja.append(c);
     });
+    const otra = el('button', { type: 'button', className: 'suave', textContent: 'Nueva verificación', style: 'margin-top:6px;' });
+    otra.addEventListener('click', nueva);
+    caja.append(otra);
   }
 
-  // ---- enviar
-  form.addEventListener('submit', async ev => {
-    ev.preventDefault();
+  function nueva() {
+    ['selfie', 'frente', 'dorso'].forEach(k => capturadores[k].repetir());
+    formDatos.reset();
+    document.getElementById('nota').value = '';
+    document.getElementById('resultado').replaceChildren(el('h2', { textContent: 'Resultado' }), el('p', { className: 'vacio', textContent: 'Todavía no corriste ninguna verificación.' }));
+    ir(0);
+  }
+
+  // ===================================================== enviar
+  document.getElementById('correr').addEventListener('click', async () => {
     err.hidden = true;
     const boton = document.getElementById('correr');
+    if (!datosCompletos() || !foto.selfie || !foto.frente) {
+      err.hidden = false; err.textContent = 'Faltan datos o fotos: volvé a los pasos anteriores.'; return;
+    }
+    const fd = new FormData(formDatos);
+    fd.append('selfie', foto.selfie.blob, foto.selfie.nombre);
+    fd.append('frente', foto.frente.blob, foto.frente.nombre);
+    if (foto.dorso) fd.append('dorso', foto.dorso.blob, foto.dorso.nombre);
+    document.querySelectorAll('input[data-opcion]:checked').forEach(cb => fd.append('pasos', cb.value));
+    fd.append('nota', document.getElementById('nota').value);
     boton.disabled = true; boton.textContent = 'Verificando…';
     try {
-      const r = await fetch(API + '/verificar', { method: 'POST', body: new FormData(form) });
+      const r = await fetch(API + '/verificar', { method: 'POST', body: fd });
       let d = null;
       try { d = await r.json(); } catch (e) { /* respuesta que no es JSON */ }
       if (!r.ok) throw new Error((d && d.detail) || ('El servidor contestó ' + r.status));
       dibujarResultado(d);
       cargarCasos();
+      document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
       err.hidden = false; err.textContent = e.message;
     } finally {
@@ -222,7 +562,7 @@
     }
   });
 
-  // ---- casos guardados
+  // ===================================================== casos guardados
   function cargarCasos() {
     fetch(API + '/casos', { cache: 'no-store' }).then(r => r.json()).then(d => {
       const caja = document.getElementById('lista-casos');
@@ -244,6 +584,8 @@
     });
   }
   cargarCasos();
+  window.addEventListener('pagehide', () => Object.values(capturadores).forEach(c => c.apagar()));
+  ir(0);
 })();
 </script>
 </body>

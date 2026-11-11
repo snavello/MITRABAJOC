@@ -1681,6 +1681,11 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     retrato → RENAPER. Veredicto aprobable / revisar / rechazar (aprobable NO es
     aprobado: pasa a la mesa del sindicato). **Ninguna imagen se guarda y el caso
     (`CasoHerramienta`, herramienta `identidad`) no lleva CUIL, nombre ni DNI.**
+    La pantalla es el recorrido del afiliado (0.66.02): datos → **selfie con la
+    cámara en vivo** (óvalo guía, consejos de luz, nitidez y movimiento, sin subir
+    una foto vieja) → **DNI con cámara guiada o archivo** (imagen o PDF) → dorso
+    opcional → revisar. Un fotograma negro se rechaza; la selfie se muestra en
+    espejo pero se envía sin invertir.
     Tope de intentos pagos por persona y hora. Un error de red o de saldo no es
     un rechazo de la persona. La aprobación del sindicato como compuerta
     obligatoria NO rige la regla de «ningún nivel esconde nada» (SDN, 2026-11-11).
