@@ -1686,6 +1686,11 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     una foto vieja) → **DNI con cámara guiada o archivo** (imagen o PDF) → dorso
     opcional → revisar. Un fotograma negro se rechaza; la selfie se muestra en
     espejo pero se envía sin invertir.
+    Sin paso de revisión: el último paso verifica directo y la espera es el **aro
+    con reloj y fases del análisis de recibo**, que termina en un tilde verde, una
+    X roja (o «!» ámbar si pide revisión) dentro del mismo aro, a la vista sin
+    bajar; los cuatro pasos van en una sola línea para que la foto entre sin
+    scroll en el celular (0.66.04).
     Tope de intentos pagos por persona y hora. Un error de red o de saldo no es
     un rechazo de la persona. La aprobación del sindicato como compuerta
     obligatoria NO rige la regla de «ningún nivel esconde nada» (SDN, 2026-11-11).

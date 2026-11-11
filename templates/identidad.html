@@ -11,8 +11,9 @@
     src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
   }
   /* Herramientas de /entornos (2026-11-11): Verificación de identidad. Tema CLARO
-     (pedido de SDN: la captura se usa con el celular en la mano y de día).
-     Standalone, sin marca.css. El visor de la cámara sigue oscuro. */
+     y compacto: se usa con el celular en la mano, así que la foto y el botón de
+     captura tienen que entrar sin scroll. Standalone, sin marca.css. El visor de
+     la cámara sigue oscuro. El aro de espera es el mismo del análisis de recibo. */
   :root {
     --tinta: #15202e;
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
@@ -29,10 +30,9 @@
   a { color:#0b5fb3; }
   [hidden] { display:none !important; }
   .pagina { max-width:1180px; margin:0 auto; }
-  .cab { margin-bottom:16px; }
-  .cab .volver { font-size:13px; text-decoration:none; color:var(--suave); display:block; margin-bottom:6px; }
+  .cab { margin-bottom:14px; }
+  .cab .volver { font-size:13px; text-decoration:none; color:var(--suave); display:block; margin-bottom:4px; }
   .cab h1 { font-family:var(--fuente-display); font-size:40px; line-height:1; letter-spacing:2px; text-transform:uppercase; }
-  .aviso { border:1px solid rgba(201,48,44,.45); background:rgba(229,56,59,.08); border-radius:12px; padding:10px 14px; font-size:13.5px; margin:12px 0 0; line-height:1.45; color:#8f1d1a; }
   .grid { display:grid; grid-template-columns:minmax(0,560px) 1fr; gap:18px; align-items:start; }
   @media (max-width:1000px) { .grid { grid-template-columns:1fr; } }
   .tarjeta { background:var(--papel); border:1px solid var(--borde); border-radius:16px; padding:18px; box-shadow:0 1px 3px rgba(21,32,46,.06); }
@@ -56,28 +56,28 @@
   button.chico { background:#e4ebf3; color:var(--tinta); border:0; border-radius:8px; padding:9px 14px; font:600 13.5px system-ui; cursor:pointer; }
   button.chico.fuerte { background:var(--tinta); color:#fff; }
   /* El botón de captura: grande y rojo, como el obturador. */
-  button.captura { background:var(--rojo); color:#fff; border:0; border-radius:999px; padding:18px 36px; min-width:220px;
+  button.captura { background:var(--rojo); color:#fff; border:0; border-radius:999px; padding:16px 34px; min-width:200px;
     font:800 19px system-ui; letter-spacing:.5px; cursor:pointer; box-shadow:0 4px 14px rgba(229,56,59,.4); }
-  button.captura:hover:not(:disabled) { background:var(--rojo-oscuro); }
   button.captura::before { content:'● '; }
+  button.captura:hover:not(:disabled) { background:var(--rojo-oscuro); }
   button.captura:disabled { opacity:.35; cursor:not-allowed; box-shadow:none; }
 
-  /* pasos */
-  .pasos { display:flex; gap:6px; margin-bottom:16px; list-style:none; padding:0; flex-wrap:wrap; }
-  .pasos li { font-size:12px; color:var(--suave); display:flex; align-items:center; gap:6px; }
+  /* pasos: una sola línea, solo el actual lleva nombre */
+  .pasos { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; margin-bottom:14px; list-style:none; padding:0; }
+  .pasos li { flex:none; font-size:12.5px; color:var(--suave); white-space:nowrap; }
+  .pasos li.con { flex:1 1 8px; min-width:6px; height:1px; background:var(--borde); }
   .pasos li button { all:unset; display:flex; align-items:center; gap:6px; cursor:default; }
   .pasos li.salto button { cursor:pointer; }
-  .pasos li .num { width:22px; height:22px; border-radius:50%; border:1px solid var(--borde); display:grid; place-items:center; font:700 11px var(--mono); }
+  .pasos li .num { width:24px; height:24px; border-radius:50%; border:1px solid var(--borde); display:grid; place-items:center; font:700 11px var(--mono); flex:none; }
   .pasos li.actual { color:var(--tinta); font-weight:700; }
   .pasos li.actual .num { background:var(--tinta); color:#fff; border-color:var(--tinta); }
   .pasos li.hecho .num { background:rgba(14,138,109,.15); color:var(--bien); border-color:rgba(14,138,109,.5); }
-  .pasos li + li::before { content:''; width:18px; height:1px; background:var(--borde); }
-  .navegacion { display:flex; gap:10px; justify-content:space-between; margin-top:16px; }
-  .ayuda { font-size:13px; color:var(--suave); line-height:1.45; margin-bottom:12px; }
+  .navegacion { display:flex; gap:10px; justify-content:space-between; margin-top:14px; }
 
   /* visor de cámara (oscuro a propósito) */
   .visor { position:relative; width:100%; background:#05090f; border-radius:14px; overflow:hidden; border:1px solid var(--borde); color:#fff; }
-  .visor.selfie { aspect-ratio:3/4; width:min(100%, 44vh); margin:0 auto; }
+  .visor.selfie { aspect-ratio:3/4; width:min(100%, 40vh); margin:0 auto; }
+  @supports (height:1dvh) { .visor.selfie { width:min(100%, 40dvh); } }
   .visor.documento { aspect-ratio:4/3; }
   .visor video, .visor img.foto { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .visor.selfie video { transform:scaleX(-1); }       /* espejo solo en pantalla: lo que se envía no se invierte */
@@ -88,17 +88,49 @@
     padding:7px 10px; border-radius:9px; background:rgba(5,9,15,.8); }
   .visor .pista.ok { color:#3ecfae; }
   .visor .pista.atencion { color:#ffd27a; }
-  .acciones { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; justify-content:center; }
+  .acciones { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; align-items:center; justify-content:center; }
   .nota-archivo { font-size:12.5px; color:var(--suave); width:100%; text-align:center; }
-  .resumen-fotos { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
-  .resumen-fotos figure { border:1px solid var(--borde); border-radius:10px; padding:6px; text-align:center; }
-  .resumen-fotos img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:7px; display:block; background:#05090f; }
-  .resumen-fotos figcaption { font-size:11.5px; color:var(--suave); margin-top:5px; }
-  details.opciones { margin:12px 0; border:1px solid var(--borde); border-radius:12px; padding:10px 14px; }
-  details.opciones summary { cursor:pointer; font-size:13.5px; color:var(--suave); }
+  details.opciones { margin-top:14px; border:1px solid var(--borde); border-radius:12px; padding:10px 14px; background:var(--papel); }
+  details.opciones summary { cursor:pointer; font-size:13px; color:var(--suave); }
   details.opciones[open] summary { margin-bottom:10px; }
 
-  /* resultado */
+  /* la espera y el resultado: el mismo aro con reloj del análisis de recibo */
+  .proceso { text-align:center; padding:6px 0 2px; }
+  .aro { position:relative; width:148px; height:148px; margin:0 auto; }
+  .aro svg.anillo { width:100%; height:100%; transform:rotate(-90deg); }
+  .aro .pista-aro { fill:none; stroke:#e4ebf3; stroke-width:7; }
+  .aro .avance { fill:none; stroke:var(--ambar); stroke-width:7; stroke-linecap:round;
+    stroke-dasharray:414; stroke-dashoffset:414; transition:stroke-dashoffset .95s linear, stroke .3s; }
+  .aro .centro { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .aro .centro .n { font-family:var(--mono); font-size:32px; font-weight:600; letter-spacing:-1px; }
+  .aro .centro .et { font-size:9.5px; letter-spacing:2px; text-transform:uppercase; color:var(--suave); }
+  .aro.ok .avance { stroke:var(--bien); stroke-dashoffset:0; }
+  .aro.mal .avance { stroke:var(--mal); stroke-dashoffset:0; }
+  .aro.rev .avance { stroke:#e0a000; stroke-dashoffset:0; }
+  .aro .icono { width:84px; height:84px; }
+  .aro .icono path { fill:none; stroke-width:5.5; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:64; stroke-dashoffset:64; animation:dibuja .55s .1s ease-out forwards; }
+  .aro.ok .icono path { stroke:var(--bien); }
+  .aro.mal .icono path { stroke:var(--mal); }
+  .aro.rev .icono path { stroke:#e0a000; }
+  @keyframes dibuja { to { stroke-dashoffset:0; } }
+  .proceso h3 { font-family:var(--fuente-display); font-size:30px; letter-spacing:1px; text-transform:uppercase; margin-top:12px; }
+  .proceso h3.ok { color:var(--bien); } .proceso h3.mal { color:var(--mal); } .proceso h3.rev { color:var(--leve); }
+  .proceso .sub { font-size:13px; color:var(--suave); line-height:1.4; margin:4px auto 0; max-width:340px; }
+  .fases { display:grid; gap:1px; background:var(--borde); border:1px solid var(--borde); border-radius:12px; overflow:hidden; margin:16px 0 0; text-align:left; }
+  .fase { background:#fff; padding:10px 14px; display:flex; align-items:center; gap:11px; font-size:13.5px; color:var(--suave); }
+  .fase .pt { width:9px; height:9px; border-radius:50%; background:var(--borde); flex:none; }
+  .fase.hecha { color:var(--tinta); } .fase.hecha .pt { background:var(--bien); }
+  .fase.activa { color:var(--tinta); font-weight:600; }
+  .fase.activa .pt { background:var(--ambar); box-shadow:0 0 0 0 color-mix(in srgb, var(--ambar) 60%, transparent); animation:pulso 1.6s ease-out infinite; }
+  @keyframes pulso { to { box-shadow:0 0 0 10px transparent; } }
+  .fase .marca { margin-left:auto; font:800 15px system-ui; }
+  .fase .marca.aprobado { color:var(--bien); } .fase .marca.rechazado, .fase .marca.error { color:var(--mal); }
+  .fase .marca.revisar { color:#e0a000; } .fase .marca.sin_correr { color:var(--suave); font-weight:400; }
+  .botones-resultado { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
+  @media (prefers-reduced-motion:reduce) { .fase.activa .pt { animation:none; } .aro .avance { transition:none; } .aro .icono path { animation:none; stroke-dashoffset:0; } }
+
+  /* detalle del resultado */
   .veredicto { border-radius:14px; padding:14px 16px; margin-bottom:14px; border:1px solid var(--borde); }
   .veredicto.aprobable { border-color:rgba(14,138,109,.55); background:rgba(14,138,109,.1); }
   .veredicto.revisar { border-color:rgba(154,107,0,.5); background:rgba(255,176,32,.14); }
@@ -119,13 +151,23 @@
   .paso li.mal::before { content:'✗ '; color:var(--mal); }
   .paso li.nd::before { content:'– '; color:var(--suave); }
   .datos { font-family:var(--mono); font-size:12px; color:var(--suave); margin-top:6px; }
-  .botones-resultado { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
   .tabla { width:100%; border-collapse:collapse; font-size:13px; }
   .tabla th, .tabla td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--borde); vertical-align:top; }
   .tabla th { color:var(--suave); font-weight:600; font-size:12px; }
   .vacio { color:var(--suave); font-size:13px; padding:8px 0; }
-</style>
 
+  /* celular: todo más junto para que la foto entre sin scroll */
+  @media (max-width:700px) {
+    body { padding:10px 10px 40px; }
+    .cab { margin-bottom:8px; }
+    .cab h1 { font-size:22px; letter-spacing:1px; }
+    .cab .volver { font-size:12px; margin-bottom:2px; }
+    .tarjeta { padding:12px; border-radius:14px; }
+    .pasos { margin-bottom:10px; }
+    .navegacion { margin-top:10px; }
+    button.captura { padding:14px 26px; min-width:170px; font-size:18px; }
+  }
+</style>
 </head>
 <body>
 <div class="pagina">
@@ -141,8 +183,6 @@
 
         <!-- 1. datos -->
         <section data-paso="datos">
-          <h2>Tus datos</h2>
-          <p class="ayuda">Tal como figuran en el DNI.</p>
           <form id="form-datos" autocomplete="off" novalidate>
             <label class="campo"><span>CUIL</span><input type="text" name="cuil" inputmode="numeric" placeholder="20-12345678-3" required></label>
             <div class="dos">
@@ -156,52 +196,34 @@
             </div>
             <label class="campo"><span>Fecha de nacimiento</span><input type="date" name="nacimiento" min="1900-01-01" required></label>
           </form>
-          <p id="error-datos" class="aviso rojo" hidden></p>
+          <p id="error-datos" class="vacio" style="color:var(--mal);" hidden></p>
         </section>
 
         <!-- 2. selfie -->
-        <section data-paso="selfie" hidden>
-          <h2>Tu selfie</h2>
-          <p class="ayuda">Mirá de frente a la cámara, con la cara completa dentro del óvalo, sin anteojos oscuros ni gorra y con buena luz de frente. La foto se toma en el momento: no se puede usar una ya guardada.</p>
-          <div data-captura="selfie"></div>
-        </section>
-
+        <section data-paso="selfie" hidden><div data-captura="selfie"></div></section>
         <!-- 3. DNI frente -->
-        <section data-paso="frente" hidden>
-          <h2>DNI, frente</h2>
-          <p class="ayuda">Apoyá el DNI sobre una superficie lisa y encuadralo dentro del marco, con las cuatro esquinas visibles, sin reflejos ni dedos encima. Si tu documento es la tarjeta, es la cara con tu foto. Si preferís, subí un archivo (imagen o PDF).</p>
-          <div data-captura="frente"></div>
-        </section>
-
+        <section data-paso="frente" hidden><div data-captura="frente"></div></section>
         <!-- 4. DNI dorso -->
-        <section data-paso="dorso" hidden>
-          <h2>DNI, dorso</h2>
-          <p class="ayuda">El reverso del documento (la cara con el domicilio y el código). Es opcional, pero ayuda a leer el documento completo.</p>
-          <div data-captura="dorso"></div>
-        </section>
+        <section data-paso="dorso" hidden><div data-captura="dorso"></div></section>
 
-        <!-- 5. revisar -->
-        <section data-paso="revisar" hidden>
-          <h2>Revisá y verificá</h2>
-          <div class="resumen-fotos" id="resumen-fotos"></div>
-          <details class="opciones">
-            <summary>Opciones de prueba (qué pasos correr, nota)</summary>
-            <div id="pasos"></div>
-            <label class="campo"><span>Nota (opcional, sin datos personales)</span><textarea id="nota" placeholder="Ej.: selfie con poca luz"></textarea></label>
-          </details>
-          <button class="principal" id="correr" type="button" style="width:100%;">Verificar</button>
-          <p id="error" class="aviso rojo" style="margin:12px 0 0;" hidden></p>
-        </section>
+        <!-- la espera y el resultado -->
+        <section data-paso="proceso" hidden><div class="proceso" id="proceso"></div></section>
 
-        <div class="navegacion">
+        <div class="navegacion" id="navegacion">
           <button class="suave" id="atras" type="button">← Atrás</button>
           <button class="principal" id="siguiente" type="button">Siguiente →</button>
         </div>
       </div>
+
+      <details class="opciones">
+        <summary>Opciones de prueba (qué pasos correr, nota)</summary>
+        <div id="pasos"></div>
+        <label class="campo"><span>Nota (opcional, sin datos personales)</span><textarea id="nota" placeholder="Ej.: selfie con poca luz"></textarea></label>
+      </details>
     </div>
 
     <div>
-      <div id="resultado" class="tarjeta"><h2>Resultado</h2><p class="vacio">Todavía no corriste ninguna verificación.</p></div>
+      <div id="resultado" class="tarjeta"><h2>Detalle</h2><p class="vacio">Todavía no corriste ninguna verificación.</p></div>
       <div id="casos" class="tarjeta"><h2>Casos guardados</h2><div id="lista-casos"><p class="vacio">Leyendo…</p></div></div>
     </div>
   </div>
@@ -211,14 +233,16 @@
 (function () {
   const API = {{ api|tojson }};
   const ESTADOS = {{ estados|tojson }};
-  const NOMBRES = { aprobable: 'Aprobable', revisar: 'Revisar', rechazar: 'Rechazar' };
+  const NOMBRES = { aprobable: 'Aprobable', revisar: 'Revisar', rechazar: 'Rechazado' };
   const EXPLICA = {
-    aprobable: 'Todo en verde. No significa aprobado: pasa a la mesa del sindicato.',
-    revisar: 'Algún paso no pudo decidir solo. Lo mira una persona.',
-    rechazar: 'Un paso rechazó la identidad. No se gastó en los pasos siguientes.',
+    aprobable: 'Todo en verde. Pasa a la mesa del sindicato.',
+    revisar: 'Algún paso no pudo decidir solo: lo mira una persona.',
+    rechazar: 'Un paso rechazó la identidad.',
   };
+  const FASES = { local: 'Controlando tus datos', documento: 'Leyendo el documento', vida: 'Prueba de vida',
+                  cara: 'Comparando la cara', renaper: 'Consultando RENAPER' };
   const TOPES = { selfie: 5 * 1048576, frente: 10 * 1048576, dorso: 10 * 1048576 };
-  const err = document.getElementById('error');
+  const IA_ARO = 414;   // 2·PI·66, el perímetro del círculo del SVG
 
   function el(tag, props, ...hijos) {
     const n = document.createElement(tag);
@@ -301,7 +325,7 @@
     archivo.hidden = true;
     const bArchivo = el('button', { type: 'button', className: 'chico', textContent: permitePdf ? 'Subir archivo' : 'No tengo cámara: subir una foto' });
     const nota = el('span', { className: 'nota-archivo' });
-    const acciones = el('div', { className: 'acciones' }, bCamara, bCapturar, bRepetir, bArchivo, el('span', { className: 'sep' }), nota, archivo);
+    const acciones = el('div', { className: 'acciones' }, bCamara, bCapturar, bRepetir, bArchivo, nota, archivo);
     cont.append(visor, acciones);
 
     let flujo = null, cinta = null, previo = null;
@@ -410,12 +434,14 @@
 
   // ===================================================== pasos del asistente
   const ORDEN = [
-    { clave: 'datos', nombre: 'Datos' }, { clave: 'selfie', nombre: 'Selfie' }, { clave: 'frente', nombre: 'DNI frente' },
-    { clave: 'dorso', nombre: 'DNI dorso' }, { clave: 'revisar', nombre: 'Verificar' }];
+    { clave: 'datos', nombre: 'Datos' }, { clave: 'selfie', nombre: 'Selfie' },
+    { clave: 'frente', nombre: 'DNI frente' }, { clave: 'dorso', nombre: 'DNI dorso' }];
   let actual = 0;
   let corrigiendo = false;          // viene de un resultado: se conservan datos y fotos
+  let ocupado = false;              // verificando: no se toca nada
   const secciones = Object.fromEntries([...document.querySelectorAll('[data-paso]')].map(s => [s.dataset.paso, s]));
   const indicador = document.getElementById('indicador');
+  const navegacion = document.getElementById('navegacion');
   const bAtras = document.getElementById('atras'), bSiguiente = document.getElementById('siguiente');
   const formDatos = document.getElementById('form-datos');
 
@@ -428,11 +454,11 @@
   }
   function actualizarNavegacion() {
     bAtras.hidden = actual === 0;
-    bSiguiente.hidden = ORDEN[actual].clave === 'revisar';
     bSiguiente.disabled = !puedeAvanzar();
-    const volver = corrigiendo && foto.selfie && foto.frente && ORDEN[actual].clave === 'datos';
+    const c = ORDEN[actual].clave;
+    const volver = corrigiendo && foto.selfie && foto.frente && c === 'datos';
     bSiguiente.textContent = volver ? 'Volver a verificar →'
-      : ORDEN[actual].clave === 'dorso' && !foto.dorso ? 'Omitir →' : 'Siguiente →';
+      : c === 'dorso' ? (foto.dorso ? 'Verificar →' : 'Omitir y verificar →') : 'Siguiente →';
   }
   // Se puede saltar a un paso si lo anterior que hace falta ya está (datos completos, selfie, frente).
   function alcanzable(i) {
@@ -442,45 +468,45 @@
     return true;
   }
   function dibujarIndicador() {
-    indicador.replaceChildren(...ORDEN.map((p, i) => {
+    const hijos = [];
+    ORDEN.forEach((p, i) => {
       const salto = i !== actual && alcanzable(i);
-      const b = el('button', { type: 'button', disabled: !salto },
-        el('span', { className: 'num', textContent: i < actual ? '✓' : String(i + 1) }), p.nombre);
+      const b = el('button', { type: 'button', disabled: !salto, 'aria-label': p.nombre },
+        el('span', { className: 'num', textContent: i < actual ? '✓' : String(i + 1) }), i === actual ? p.nombre : '');
       b.addEventListener('click', () => ir(i));
-      return el('li', { className: (i === actual ? 'actual' : i < actual ? 'hecho' : '') + (salto ? ' salto' : '') }, b);
-    }));
+      if (i) hijos.push(el('li', { className: 'con' }));
+      hijos.push(el('li', { className: (i === actual ? 'actual' : i < actual ? 'hecho' : '') + (salto ? ' salto' : '') }, b));
+    });
+    indicador.replaceChildren(...hijos);
+  }
+  function mostrar(clave) {
+    Object.entries(secciones).forEach(([k, s]) => { s.hidden = k !== clave; });
   }
   function ir(i) {
+    if (ocupado) return;
     Object.values(capturadores).forEach(c => c.apagar());
     actual = Math.max(0, Math.min(ORDEN.length - 1, i));
-    Object.entries(secciones).forEach(([k, s]) => { s.hidden = k !== ORDEN[actual].clave; });
-    if (ORDEN[actual].clave === 'revisar') dibujarResumen();
+    mostrar(ORDEN[actual].clave);
+    indicador.hidden = false; navegacion.hidden = false;
     dibujarIndicador(); actualizarNavegacion();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   bAtras.addEventListener('click', () => ir(actual - 1));
   bSiguiente.addEventListener('click', () => {
-    if (ORDEN[actual].clave === 'datos') {
+    const c = ORDEN[actual].clave;
+    if (c === 'datos') {
       const e = document.getElementById('error-datos');
       if (!datosCompletos()) { e.hidden = false; e.textContent = 'Completá todos los datos para seguir.'; return; }
       e.hidden = true;
-      if (corrigiendo && foto.selfie && foto.frente) { ir(ORDEN.length - 1); return; }
+      if (corrigiendo && foto.selfie && foto.frente) { verificar(); return; }
     }
+    if (c === 'dorso') { verificar(); return; }
     ir(actual + 1);
   });
   formDatos.addEventListener('submit', ev => ev.preventDefault());
   formDatos.addEventListener('input', () => { document.getElementById('error-datos').hidden = true; });
 
-  function dibujarResumen() {
-    const caja = document.getElementById('resumen-fotos');
-    caja.replaceChildren(...[['selfie', 'Selfie'], ['frente', 'DNI frente'], ['dorso', 'DNI dorso']].map(([k, n]) => {
-      const f = foto[k];
-      const media = f && !f.pdf ? el('img', { src: f.url, alt: n }) : el('div', { className: 'vacio', textContent: f ? 'PDF: ' + f.nombre : 'Sin cargar' });
-      return el('figure', {}, media, el('figcaption', { textContent: n }));
-    }));
-  }
-
-  // ===================================================== estado de la clave y pasos de prueba
+  // ===================================================== pasos de prueba
   let pasosDef = [];
   fetch(API + '/estado', { cache: 'no-store' }).then(r => r.json()).then(d => {
     pasosDef = d.pasos;
@@ -491,11 +517,98 @@
       caja.append(el('label', { className: 'tilde' }, cb, el('span', {}, p.nombre, p.gasta ? el('span', { className: 'gasta', textContent: 'paga' }) : '')));
     });
   });
+  function pasosElegidos() {
+    const marcados = [...document.querySelectorAll('input[data-opcion]:checked')].map(cb => cb.value);
+    return marcados.length || pasosDef.length ? marcados : Object.keys(FASES);
+  }
 
-  // ===================================================== resultado
-  function dibujarResultado(r) {
+  // ===================================================== la espera y el resultado
+  let cronometro = null;
+  function nuevoAro() {
+    const anillo = svg('svg', { class: 'anillo', viewBox: '0 0 148 148', 'aria-hidden': 'true' });
+    anillo.append(svg('circle', { class: 'pista-aro', cx: 74, cy: 74, r: 66 }), svg('circle', { class: 'avance', cx: 74, cy: 74, r: 66 }));
+    return el('div', { className: 'aro' }, anillo,
+      el('div', { className: 'centro' }, el('span', { className: 'n', textContent: '00:00' }), el('span', { className: 'et', textContent: 'Segundos' })));
+  }
+  function icono(tipo) {   // ok | mal | rev
+    const s = svg('svg', { class: 'icono', viewBox: '0 0 52 52', 'aria-hidden': 'true' });
+    if (tipo === 'ok') s.append(svg('path', { d: 'M12 27 L22 37 L40 15' }));
+    else if (tipo === 'mal') s.append(svg('path', { d: 'M14 14 L38 38' }), svg('path', { d: 'M38 14 L14 38' }));
+    else s.append(svg('path', { d: 'M26 11 L26 29' }), svg('path', { d: 'M26 39 L26 39.4' }));
+    return s;
+  }
+  function pararCronometro() { if (cronometro) { clearInterval(cronometro); cronometro = null; } }
+
+  function mostrarProceso(pasos) {
+    ocupado = true;
+    Object.values(capturadores).forEach(c => c.apagar());
+    mostrar('proceso');
+    indicador.hidden = true; navegacion.hidden = true;
+    const caja = document.getElementById('proceso');
+    const aro = nuevoAro();
+    const fases = el('div', { className: 'fases' }, pasos.map((c, i) => el('div', { className: 'fase' + (i === 0 ? ' activa' : '') },
+      el('span', { className: 'pt' }), el('span', { textContent: FASES[c] || c }))));
+    caja.replaceChildren(aro, el('h3', { textContent: 'Verificando…' }), el('p', { className: 'sub', textContent: 'No cierres esta pantalla.' }), fases);
+    window.scrollTo({ top: 0 });
+    const n = aro.querySelector('.n'), avance = aro.querySelector('.avance');
+    let s = 0;
+    const mmss = v => String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0');
+    pararCronometro();
+    const tic = () => {
+      n.textContent = mmss(s);
+      avance.style.strokeDashoffset = IA_ARO - IA_ARO * ((s % 45) / 45);
+      const fase = Math.min(pasos.length - 1, Math.floor(s / 2));
+      fases.querySelectorAll('.fase').forEach((e, i) => { e.classList.toggle('activa', i === fase); e.classList.toggle('hecha', i < fase); });
+      s++;
+    };
+    tic(); cronometro = setInterval(tic, 1000);
+  }
+
+  function botonesFinales(caja) {
+    const corregir = el('button', { type: 'button', className: 'principal', textContent: 'Corregir datos y volver a verificar' });
+    corregir.addEventListener('click', () => { ocupado = false; corrigiendo = true; ir(0); });
+    const otra = el('button', { type: 'button', className: 'suave', textContent: 'Empezar de cero' });
+    otra.addEventListener('click', () => { ocupado = false; nueva(); });
+    caja.append(el('div', { className: 'botones-resultado' }, corregir, otra));
+  }
+
+  function finalizar(r) {
+    pararCronometro();
+    ocupado = false;
+    const v = r.veredicto;
+    const clase = v.resultado === 'aprobable' ? 'ok' : v.resultado === 'rechazar' ? 'mal' : 'rev';
+    const caja = document.getElementById('proceso');
+    const aro = nuevoAro();
+    aro.className = 'aro ' + clase;
+    aro.querySelector('.centro').replaceChildren(icono(clase));
+    const lista = el('div', { className: 'fases' }, r.pasos.map(p => {
+      const e = v.estados[p.clave];
+      const simbolo = e === 'aprobado' ? '✓' : e === 'rechazado' || e === 'error' ? '✗' : e === 'revisar' ? '!' : '–';
+      return el('div', { className: 'fase' + (e === 'sin_correr' ? '' : ' hecha') },
+        el('span', { className: 'pt' }), el('span', { textContent: FASES[p.clave] || p.clave }),
+        el('span', { className: 'marca ' + e, textContent: simbolo }));
+    }));
+    const motivo = (v.motivos && v.motivos[0]) || EXPLICA[v.resultado];
+    caja.replaceChildren(aro, el('h3', { className: clase, textContent: NOMBRES[v.resultado] }),
+      el('p', { className: 'sub', textContent: motivo + ' · ' + (r.ms / 1000).toFixed(1) + ' s' + (r.sandbox ? ' · SANDBOX' : '') }), lista);
+    botonesFinales(caja);
+    window.scrollTo({ top: 0 });   // el ícono grande se ve sin bajar
+  }
+  function finalizarError(mensaje) {
+    pararCronometro();
+    ocupado = false;
+    const caja = document.getElementById('proceso');
+    const aro = nuevoAro();
+    aro.className = 'aro mal';
+    aro.querySelector('.centro').replaceChildren(icono('mal'));
+    caja.replaceChildren(aro, el('h3', { className: 'mal', textContent: 'No se pudo verificar' }), el('p', { className: 'sub', textContent: mensaje }));
+    botonesFinales(caja);
+  }
+
+  // ---- el detalle completo, en la tarjeta de al lado (o debajo en el celular)
+  function dibujarDetalle(r) {
     const caja = document.getElementById('resultado');
-    caja.replaceChildren(el('h2', { textContent: 'Resultado' }));
+    caja.replaceChildren(el('h2', { textContent: 'Detalle' }));
     const v = r.veredicto;
     const cab = el('div', { className: 'veredicto ' + v.resultado },
       el('h3', { textContent: NOMBRES[v.resultado] }),
@@ -526,11 +639,6 @@
       if (datos.length) c.append(el('div', { className: 'datos', textContent: datos.join(' · ') }));
       caja.append(c);
     });
-    const corregir = el('button', { type: 'button', className: 'principal', textContent: 'Corregir datos y volver a verificar' });
-    corregir.addEventListener('click', () => { corrigiendo = true; ir(0); });
-    const otra = el('button', { type: 'button', className: 'suave', textContent: 'Empezar de cero' });
-    otra.addEventListener('click', nueva);
-    caja.append(el('div', { className: 'botones-resultado' }, corregir, otra));
   }
 
   function nueva() {
@@ -538,38 +646,34 @@
     ['selfie', 'frente', 'dorso'].forEach(k => capturadores[k].repetir());
     formDatos.reset();
     document.getElementById('nota').value = '';
-    document.getElementById('resultado').replaceChildren(el('h2', { textContent: 'Resultado' }), el('p', { className: 'vacio', textContent: 'Todavía no corriste ninguna verificación.' }));
+    document.getElementById('resultado').replaceChildren(el('h2', { textContent: 'Detalle' }), el('p', { className: 'vacio', textContent: 'Todavía no corriste ninguna verificación.' }));
     ir(0);
   }
 
   // ===================================================== enviar
-  document.getElementById('correr').addEventListener('click', async () => {
-    err.hidden = true;
-    const boton = document.getElementById('correr');
-    if (!datosCompletos() || !foto.selfie || !foto.frente) {
-      err.hidden = false; err.textContent = 'Faltan datos o fotos: volvé a los pasos anteriores.'; return;
-    }
+  async function verificar() {
+    if (ocupado) return;
+    if (!datosCompletos() || !foto.selfie || !foto.frente) { ir(0); return; }
     const fd = new FormData(formDatos);
     fd.append('selfie', foto.selfie.blob, foto.selfie.nombre);
     fd.append('frente', foto.frente.blob, foto.frente.nombre);
     if (foto.dorso) fd.append('dorso', foto.dorso.blob, foto.dorso.nombre);
-    document.querySelectorAll('input[data-opcion]:checked').forEach(cb => fd.append('pasos', cb.value));
+    const pasos = pasosElegidos();
+    pasos.forEach(c => fd.append('pasos', c));
     fd.append('nota', document.getElementById('nota').value);
-    boton.disabled = true; boton.textContent = 'Verificando…';
+    mostrarProceso(pasos);
     try {
       const r = await fetch(API + '/verificar', { method: 'POST', body: fd });
       let d = null;
       try { d = await r.json(); } catch (e) { /* respuesta que no es JSON */ }
       if (!r.ok) throw new Error((d && d.detail) || ('El servidor contestó ' + r.status));
-      dibujarResultado(d);
+      dibujarDetalle(d);
+      finalizar(d);
       cargarCasos();
-      document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
-      err.hidden = false; err.textContent = e.message;
-    } finally {
-      boton.disabled = false; boton.textContent = 'Verificar';
+      finalizarError(e.message);
     }
-  });
+  }
 
   // ===================================================== casos guardados
   function cargarCasos() {
