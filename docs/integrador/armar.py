@@ -142,7 +142,7 @@ def glosario() -> str:
     if not terminos:
         return ""
     filas = "".join(
-        f"<dt>{html.escape(t)}</dt><dd>{html.escape(d)}</dd>" for _, (t, d) in sorted(terminos.items())
+        f"<div class=\"glo\"><dt>{html.escape(t)}</dt><dd>{html.escape(d)}</dd></div>" for _, (t, d) in sorted(terminos.items())
     )
     return (
         '<section class="capitulo" id="glosario"><header class="cap-cab"><span class="cap-num">A</span>'

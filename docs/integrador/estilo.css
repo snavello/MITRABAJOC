@@ -158,10 +158,11 @@ ol.pasos>li>b:first-child{display:block;font-size:16px}
 .chip.violeta{background:var(--violeta-sua);color:var(--violeta);border-color:#d8cdee}
 
 /* ---------- Glosario ---------- */
-dl.glosario{display:grid;grid-template-columns:200px minmax(0,1fr);gap:0;margin:1em 0;font-size:14.5px}
-dl.glosario dt{font-weight:700;color:var(--tinta);padding:9px 12px 9px 0;border-bottom:1px solid var(--linea2)}
-dl.glosario dd{margin:0;padding:9px 0;border-bottom:1px solid var(--linea2);color:var(--texto)}
-@media (max-width:700px){dl.glosario{grid-template-columns:1fr}dl.glosario dt{border:0;padding-bottom:0}}
+dl.glosario{columns:2;column-gap:32px;margin:1em 0;font-size:14px}
+dl.glosario .glo{break-inside:avoid;padding:8px 0;border-bottom:1px solid var(--linea2)}
+dl.glosario dt{font-weight:700;color:var(--tinta)}
+dl.glosario dd{margin:2px 0 0;color:var(--texto);line-height:1.45}
+@media (max-width:700px){dl.glosario{columns:1}}
 
 .cita{border-left:3px solid var(--miel);padding:4px 0 4px 16px;margin:1.2em 0;font-size:17px;color:var(--tinta);font-style:italic}
 .pie{padding:30px clamp(18px,5vw,64px) 40px;border-top:1px solid var(--linea);font-size:12.5px;color:var(--texto2);background:var(--suave2)}
@@ -188,11 +189,19 @@ dl.glosario dd{margin:0;padding:9px 0;border-bottom:1px solid var(--linea2);colo
   .nota,.tarjeta,.cifra,.tabla tr,.fig,.par-capturas,.lado{break-inside:avoid}
   .nota,.tarjeta.oscura,.chip,.cifra,.fig.diagrama,.tabla th,.tabla tr:nth-child(even) td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   a{color:inherit;text-decoration:none}
-  .fig.captura.movil img{max-width:56mm;border-width:4px;border-radius:16px}
-  .fig.captura.movil.entera img{max-height:230mm;width:auto}
-  .fig.captura img{max-height:190mm;width:auto}
-  .fig.diagrama{padding:10px}
-  .fig.diagrama svg{max-height:150mm}
+  .fig.captura.movil img{max-width:50mm;border-width:3px;border-radius:14px}
+  .fig.captura.movil.entera img{max-height:150mm;width:auto}
+  .fig.captura img{max-height:150mm;width:auto;max-width:100%}
+  .fig.diagrama{padding:8px}
+  .fig.diagrama svg{max-height:125mm}
+  .capitulo>.fig.captura.movil,.capitulo>.lado>.fig.captura.movil{float:right;width:58mm;margin:0 0 5mm 7mm}
+  .capitulo>.fig.captura.movil figcaption{font-size:8pt}
+  .lado,.lado.izq{display:block}
+  .lado::after{content:"";display:block;clear:both}
+  h3,h4,.tabla-cont,.grilla-2,.grilla-3,.grilla-4,.fig.diagrama,.par-capturas,.cifras{clear:both}
+  .par-capturas{gap:10px}
+  dl.glosario{font-size:8.6pt;column-gap:8mm}
+  dl.glosario .glo{padding:3px 0}
   .tabla-cont{overflow:visible}
   .no-imprimir{display:none!important}
 }

@@ -65,6 +65,19 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "documento-integrador",
+        "titulo": "Colm3na, de punta a punta: documento integrador",
+        "descripcion": "Para quien se suma al equipo o necesita ponerse al día: el ecosistema, actores y "
+                       "módulos, ventajas, el mapa de las cuatro aplicaciones y /entornos, cada funcionalidad "
+                       "con capturas reales (recibos, trámites, padrón, notificaciones, encuestas, "
+                       "configuración y marca), el modelo técnico, la seguridad y la implementación. "
+                       "Imprimible en A4. Se regenera con docs/integrador/armar.py.",
+        "fecha": date(2026, 11, 12),
+        "archivo": "colm3na-integrador.html",
+        "miniatura": "colm3na-integrador.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "instructivo-montaje",
         "titulo": "Instructivo de montaje: cuentas y entornos a nombre de XP",
         "descripcion": "Paso a paso para rearmar las cuentas de Colm3na a nombre de XP sin cortar nada: "
