@@ -220,3 +220,109 @@
 </svg>
 <figcaption>El Asistente: la IA entiende el relato, pero lo que se muestra, se advierte y se importa lo decide código propio.</figcaption>
 </figure>
+
+<p>El <b>veredicto</b> son seis preguntas con respuesta: ¿ya se puede importar?, ¿conviene terminarlo a mano en el constructor?, ¿hay que preparar algo antes (un área, un módulo, una lista con datos)?, ¿hace falta desarrollar algo y de qué complejidad (baja, media o alta)?, ¿se completa un formulario que ya existe?, ¿hay que construir otro formulario antes? Lo que Colm3na todavía no hace se lista como <b>brecha</b> (por ejemplo, abrir y cerrar un formulario por fechas), con su tamaño y una salida provisoria; cuando algo se desarrolla, deja de ser brecha. La pestaña Brechas suma qué sindicatos pidieron cada cosa, y así el inventario de lo que falta desarrollar sale de casos reales.</p>
+<p>Al <b>importar</b>, el Asistente crea el tipo de trámite como <i>borrador</i> en el sindicato elegido, con áreas, campos, requisitos y pases resueltos por nombre. Lo que no pudo resolver queda listado como pendiente. Nada se publica solo: una persona lo revisa y lo publica desde el constructor. Todo el trabajo se guarda como caso, sin nombres de personas, para retomarlo o compararlo.</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Motor puro: <code>asistente_tramites.py</code> (<code>resolver</code>, <code>veredicto</code>, <code>plan_importacion</code>, <code>BRECHAS</code>). Llamada a la IA: <code>asistente_tramites_ia.py</code>, con herramienta de esquema cerrado; todo pasa por <code>sanear_propuesta</code>, que descarta lo que no está en el catálogo. Es el cuarto uso de IA configurable (<code>db.modelo_ia("asistente_tramites")</code>) y se registra en <code>UsoIA</code>. Un test compara el catálogo del asistente contra el del constructor, para que ninguno se desactualice. Importador: <code>main._importar_tramite</code>. Casos: <code>CasoHerramienta</code>.</p></div>
+
+<div class="nota pendiente"><span class="rot">Pendiente</span><p>Falta probar el Asistente de punta a punta con un trámite real acordado con La Bancaria, sumar la entrada por foto o PDF del formulario actual y habilitar su uso desde el panel del sindicato. Hoy es una herramienta del equipo de Colm3na.</p></div>
+
+
+<h3 id="cap-5-padron"><span class="n">5.6</span>Padrón, seccionales y listas</h3>
+
+<p class="lead">Los trámites, las notificaciones y los reportes necesitan saber quién es quién en el sindicato. Esta sección explica el padrón de afiliados, las seccionales (con su mapa), las listas que el sindicato sube desde sus planillas y el padrón de empresas.</p>
+
+<h4>El padrón de afiliados</h4>
+<p>En el panel, la pestaña <b>Trabajadores</b> es el padrón del sindicato. Tiene tres sub-pestañas: el <b>Listado</b> (paginado, con buscador y recortado al alcance del operador), el <b>Alta manual</b> y el <b>Alta masiva</b> por planilla CSV. Un administrador de seccional solo ve y da de alta gente de su propia seccional; una fila de otra seccional en la carga masiva se omite con aviso.</p>
+<figure class="fig captura" data-captura="s-trabajadores"><figcaption>El padrón en el panel: una fila por afiliado empadronado, con su seccional y el nivel de fiabilidad de su cuenta.</figcaption></figure>
+<p>Hay una idea que ordena todo: <b>la persona y el empadronamiento son dos cosas distintas</b>.</p>
+<ul>
+<li>La <b>persona</b> (una fila por CUIL en toda la plataforma) es dueña de sus datos personales: nombre, domicilio, teléfono, mail, fecha de nacimiento. Los carga ella al registrarse o desde su perfil. Si un administrador corrige un dato, lo corrige para esa persona en todos sus gremios; la pantalla lo avisa.</li>
+<li>El <b>empadronamiento</b> es lo que cambia de un sindicato a otro: la seccional, el número de credencial, el CUIT del empleador, si está activo, y la <b>fecha de afiliación</b>, que escribe solo el sindicato.</li>
+</ul>
+<p>La persona existe desde que su CUIL entra al padrón, no desde que se registra: sin clave elegida, no puede entrar. Un afiliado con pluriempleo (dos sindicatos) tiene una persona y dos empadronamientos.</p>
+
+<figure class="fig diagrama">
+<svg viewBox="0 0 860 380" role="img" aria-label="Relación entre persona, empadronamiento, seccional, lista y trámite">
+<defs><marker id="f5b5-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
+<rect x="20" y="20" width="230" height="130" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="135" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">PERSONA (por CUIL)</text>
+<text x="135" y="70" font-size="12" text-anchor="middle" fill="#16243a">CuentaTrabajador</text>
+<text x="135" y="92" font-size="12" text-anchor="middle" fill="#16243a">nombre, domicilio, teléfono,</text>
+<text x="135" y="108" font-size="12" text-anchor="middle" fill="#16243a">mail, fecha de nacimiento,</text>
+<text x="135" y="124" font-size="12" text-anchor="middle" fill="#16243a">clave y nivel de fiabilidad</text>
+<rect x="320" y="20" width="250" height="130" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+<text x="445" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#a86400">EMPADRONAMIENTO</text>
+<text x="445" y="70" font-size="12" text-anchor="middle" fill="#16243a">Trabajador (uno por sindicato)</text>
+<text x="445" y="92" font-size="12" text-anchor="middle" fill="#16243a">seccional, credencial, CUIT</text>
+<text x="445" y="108" font-size="12" text-anchor="middle" fill="#16243a">del empleador, activo,</text>
+<text x="445" y="124" font-size="12" text-anchor="middle" fill="#16243a">fecha de afiliación</text>
+<rect x="640" y="20" width="200" height="130" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+<text x="740" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#0d7a5f">SECCIONAL</text>
+<text x="740" y="70" font-size="12" text-anchor="middle" fill="#16243a">domicilio estructurado,</text>
+<text x="740" y="86" font-size="12" text-anchor="middle" fill="#16243a">coordenadas, contacto,</text>
+<text x="740" y="102" font-size="12" text-anchor="middle" fill="#16243a">horario. Acota qué ve</text>
+<text x="740" y="118" font-size="12" text-anchor="middle" fill="#16243a">cada operador</text>
+<path d="M250 85 H318" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<text x="284" y="76" font-size="12" text-anchor="middle" fill="#4c5d75">1 a N</text>
+<path d="M570 85 H638" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<rect x="20" y="230" width="270" height="120" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="155" y="256" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#6b4fa0">LISTAS DEL SINDICATO</text>
+<text x="155" y="280" font-size="12" text-anchor="middle" fill="#16243a">grupo familiar, datos del afiliado,</text>
+<text x="155" y="296" font-size="12" text-anchor="middle" fill="#16243a">lista simple. Se buscan por el CUIL</text>
+<text x="155" y="312" font-size="12" text-anchor="middle" fill="#16243a">(y una segunda clave opcional)</text>
+<text x="155" y="334" font-size="12" text-anchor="middle" fill="#16243a">Carga por CSV con ensayo</text>
+<rect x="350" y="230" width="250" height="120" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
+<text x="475" y="256" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#b8860b">TRÁMITE DEL AFILIADO</text>
+<text x="475" y="280" font-size="12" text-anchor="middle" fill="#16243a">Sus validaciones consultan</text>
+<text x="475" y="296" font-size="12" text-anchor="middle" fill="#16243a">la lista y el padrón con</text>
+<text x="475" y="312" font-size="12" text-anchor="middle" fill="#16243a">el CUIL de la sesión,</text>
+<text x="475" y="328" font-size="12" text-anchor="middle" fill="#16243a">nunca uno tipeado</text>
+<path d="M290 290 H348" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<path d="M445 150 V228" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<text x="457" y="196" font-size="12" fill="#4c5d75">lo consulta también</text>
+<rect x="640" y="230" width="200" height="120" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
+<text x="740" y="256" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#16243a">EL MAPA</text>
+<text x="740" y="280" font-size="12" text-anchor="middle" fill="#16243a">Georef + Nominatim,</text>
+<text x="740" y="296" font-size="12" text-anchor="middle" fill="#16243a">siempre desde el servidor</text>
+<text x="740" y="312" font-size="12" text-anchor="middle" fill="#16243a">y con caché. Ninguna API</text>
+<text x="740" y="328" font-size="12" text-anchor="middle" fill="#16243a">bloquea un alta</text>
+<path d="M740 150 V228" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+</svg>
+<figcaption>Cómo se relacionan la persona, su empadronamiento en un sindicato, la seccional y las listas. Los datos personales tienen un solo dueño; lo que cambia de un gremio a otro vive en el empadronamiento.</figcaption>
+</figure>
+
+<p>En cada fila el sindicato ve el <b>nivel de fiabilidad</b> de la cuenta (de 1, solo el CUIL figura en el padrón, a 4, identidad confirmada por el sindicato) y puede actuar: confirmar la identidad o restablecer una clave temporal. Un sindicato solo responde por una cuenta si la persona ya estaba en <i>su</i> padrón cuando la creó; si no, no puede tocarle la clave ni pisarle los datos. El detalle de niveles y claves está en la sección 5.13.</p>
+<p>Desde la fila del padrón, <b>«Dar usuario del panel»</b> abre el alta de un operador con el CUIL, el nombre y la seccional ya cargados. Padrón y equipo del gremio son pestañas separadas a propósito: estar afiliado no es trabajar en el sindicato, y viceversa. Al escribir un CUIL en el alta de usuario, la pantalla consulta si la persona está en el padrón y si ya tiene clave del panel por otro sindicato (en ese caso no se le pide clave inicial).</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>CuentaTrabajador</code> (persona) y <code>Trabajador</code> (empadronamiento). Toda escritura de datos personales pasa por <code>db.guardar_datos_personales</code> / <code>db.asegurar_cuenta</code>; toda lectura del padrón, por <code>db.padron_del_sindicato(s, sid, alcance)</code> o un JOIN por CUIL, nunca por una columna local. Un test compara los campos que pide el registro con los del perfil. <code>Trabajador.fecha_afiliacion</code> la carga solo el sindicato; <code>CuentaTrabajador.fecha_nacimiento</code>, la persona. El CUIL se valida con módulo 11 (<code>cuit.py</code>) donde nace, y no se cambia desde una edición.</p></div>
+
+<h4>Seccionales y mapa</h4>
+<p>Una <b>seccional</b> es una delegación del sindicato: tiene domicilio, teléfono, WhatsApp, mail y horario. Se administra en la pestaña <b>Seccionales</b>. El alta es guiada: se carga provincia, localidad, calle y altura, se busca, y la app propone el punto en un mapa. Para la seccional se exige la dirección completa y que el <b>globo esté en la puerta</b>: o la dirección se ubicó con precisión, o alguien movió el globo a mano y responde por ese punto. Un centroide de localidad no alcanza, porque mandaría al afiliado al centro de la ciudad sin avisarle. Nace una «Sede Central» que ve todas las seccionales; las demás acotan lo que ve cada operador.</p>
+<figure class="fig captura" data-captura="s-seccionales"><figcaption>La pestaña Seccionales del panel, con el mapa y el estado de ubicación de cada delegación.</figcaption></figure>
+<p>La ubicación de domicilios se resuelve <b>siempre en el servidor</b>, con dos servicios públicos y gratuitos: Georef (provincia y localidad, también para las sugerencias mientras se escribe) y Nominatim de OpenStreetMap (calle y altura), este último solo cuando alguien aprieta «Buscar», nunca tecla a tecla. El servidor controla la tasa que esos servicios permiten, guarda las respuestas en caché por 90 días y, si cambia el formato de uno, se arregla en un solo archivo. <b>Ninguna caída de esas APIs bloquea un alta</b>: la fila se guarda como «sin ubicar» y el panel la marca como pendiente. Si Georef y Nominatim no responden, el asistente igual abre el mapa para marcar el punto a mano.</p>
+<p>El domicilio del afiliado usa el mismo bloque de campos, pero se le pide menos: solo provincia y localidad, para poder agrupar y dirigir por zona; la altura y el mapa son opcionales. Las altas masivas no geocodifican (cien direcciones a un pedido por segundo serían cien segundos colgado): las ubica después el botón «Georreferenciar pendientes», en segundo plano.</p>
+
+<div class="lado izq"><figure class="fig captura" data-captura="t-seccionales"><figcaption>«Seccionales cerca de mí» en la app del afiliado: las delegaciones ordenadas por distancia.</figcaption></figure>
+<div>
+<p>El afiliado, por su parte, tiene <b>«Seccionales cerca de mí»</b>. El permiso de ubicación se pide recién al tocar el enlace (nunca al abrir la app), la distancia la calcula el propio teléfono y la posición <b>no viaja al servidor ni se guarda</b>. Si el afiliado niega el permiso, nada se rompe: se mide desde el domicilio que declaró y, sin domicilio, se ordena por provincia. Las teselas del mapa no se guardan en caché, y sin conexión se ve la dirección en texto.</p>
+<p>El Panel Sindical usa estas coordenadas para su mapa de burbujas por seccional, que devuelve solo agregados.</p>
+</div></div>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>geo.py</code> (Georef y Nominatim, caché <code>GeoCache</code> con TTL de 90 días, <code>geo.USER_AGENT</code>), <code>geo.CAMPOS_DOMICILIO</code> compartidos por <code>Seccional</code> y <code>CuentaTrabajador</code> (un test impide que las dos tablas se separen), <code>OBLIGATORIOS_SECCIONAL</code> / <code>OBLIGATORIOS_AFILIADO</code>. Precisiones: <code>exacta</code>, <code>aproximada</code>, <code>manual</code> y <code>sin_geo</code>; sin coordenadas válidas se fuerza <code>sin_geo</code>. Leaflet va vendoreado en <code>static/vendor/leaflet/</code>, jamás desde un CDN. El avance de la georreferenciación en lote vive en la tabla <code>GeoPadron</code>.</p></div>
+
+<h4>Listas del sindicato</h4>
+<p>Muchos sindicatos tienen datos en sus planillas que Colm3na no conoce: el grupo familiar de cada afiliado, una categoría, los beneficiarios de una campaña. La pestaña <b>Listas</b> permite subirlos para que las validaciones de Trámites los consulten.</p>
+<figure class="fig captura" data-captura="s-listas"><figcaption>La pestaña Listas: las listas cargadas por el sindicato y la plantilla de cada una.</figcaption></figure>
+<p>Cada lista parte de una <b>plantilla tipada</b>, que fija qué columnas tiene y de qué tipo (CUIL, DNI, texto, fecha). Hay tres: <b>Grupo familiar</b> (una fila por familiar, para validar el DNI de un hijo), <b>Datos del afiliado</b> (un dato por CUIL que el padrón no tiene) y <b>Lista simple</b> (solo CUIL: «está» o «no está»). El sindicato descarga el CSV modelo, lo completa y lo sube. Siempre hay un <b>ensayo</b> antes: la pantalla muestra qué filas entran y cuáles se rechazan con su número de línea y el motivo, y recién al confirmar la carga <b>reemplaza la lista entera</b>. El CUIL se exige con dígito verificador válido, y las fechas se aceptan como AAAA-MM-DD o DD/MM/AAAA. Un administrador de seccional solo carga y ve las de su seccional.</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>listas.py</code> (plantillas y <code>parsear_csv</code>, puro: ensayo y carga usan el mismo parseo), tablas <code>ListaSindicato</code> y <code>FilaLista</code> (datos en JSONB), permiso <code>listas</code>. La puerta de consulta es <code>db.buscar_en_lista(sid, plantilla, cuil, clave2, seccional_id)</code>. Una plantilla nueva es una entrada en <code>listas.PLANTILLAS</code>, no un modelo nuevo.</p></div>
+
+<h4>Empleadores</h4>
+<p>Con el módulo <code>empleadores</code> habilitado, el sindicato tiene una pestaña <b>Empleadores</b>: el padrón de empresas con razón social, CUIT, domicilio, teléfono y mail, con alta, edición y baja lógica. Un botón importa los CUIT que ya aparecen en los conceptos de recibos, para no cargarlos a mano. Las empresas se autorregistran en <code>/ingresar-empresa</code> (el CUIT tiene que existir ya en algún padrón de empresas) y, desde ahí, reciben notificaciones y presentan trámites externos. Un mismo CUIT puede estar en varios sindicatos, igual que un afiliado con pluriempleo. El administrador de seccional no ve esta pestaña, porque las empresas no tienen seccional.</p>
+<figure class="fig captura" data-captura="s-empleadores"><figcaption>El padrón de empresas del sindicato en la pestaña Empleadores.</figcaption></figure>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Identidad en dos niveles, como el afiliado: <code>CuentaEmpleador</code> (CUIT y clave, global) y <code>Empleador</code> (una fila por sindicato). Aislamiento total del sistema de afiliados: tablas y rutas duplicadas por decisión. El empleador todavía no unifica sus datos personales en una cuenta (sigue con un bloque por sindicato y el domicilio como texto libre); está anotado en BACKLOG.md.</p></div>
+
+</section>

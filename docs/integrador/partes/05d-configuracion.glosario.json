@@ -1,0 +1,20 @@
+[
+{"termino":"Módulo","definicion":"Funcionalidad que Colm3na enciende sindicato por sindicato (Trámites, Encuestas, Panel Sindical, etc.). Apagado, el servidor la rechaza además de esconderla."},
+{"termino":"Super Admin","definicion":"Administrador de Sede Central de un sindicato: ve todas las secciones contratadas sobre todas las seccionales y gestiona áreas y usuarios."},
+{"termino":"Admin de Seccional","definicion":"Administrador acotado a una seccional: mismas secciones que el Super Admin pero solo sobre su padrón."},
+{"termino":"Área","definicion":"Equipo del sindicato (Prensa, Trámites) al que se le asigna un perfil de permisos. Dice qué hace una persona."},
+{"termino":"Seccional","definicion":"Delegación territorial del sindicato. Dice sobre quiénes trabaja un usuario."},
+{"termino":"Permiso efectivo","definicion":"Lo que realmente puede tocar un usuario: ((área + agregados) − bloqueados) ∩ secciones de los módulos contratados."},
+{"termino":"Alcance","definicion":"Conjunto de seccionales sobre las que trabaja un usuario: todas, una o ninguna. Se aplica dentro de la consulta."},
+{"termino":"Fail-closed","definicion":"Criterio de diseño: ante un olvido o un dato dudoso se rechaza o no se muestra nada, en vez de permitir."},
+{"termino":"Módulo 11","definicion":"Dígito verificador del CUIL/CUIT. Se exige donde el número nace y no se cambia después desde una edición."},
+{"termino":"Mail del padrón","definicion":"Mail que carga el sindicato para un CUIL; es el destino de los códigos de registro y de recuperación de clave."},
+{"termino":"Mail declarado","definicion":"Mail que la persona declara al registrarse y confirma con un código, cuando el padrón no tiene uno y el sindicato lo acepta."},
+{"termino":"Nivel de fiabilidad","definicion":"Grado de certeza (1 a 4) de que una cuenta es de quien dice ser. Sube y no baja; no oculta funciones de la app."},
+{"termino":"Turnstile","definicion":"Captcha de Cloudflare usado en los registros y la recuperación de clave."},
+{"termino":"Clave transitoria","definicion":"Clave inicial o restablecida que obliga a la persona a elegir una propia en su primer ingreso."},
+{"termino":"Modelo de diseño","definicion":"Apariencia completa de las pantallas: Laguna (por defecto) o Noticiero. Cada persona elige el suyo."},
+{"termino":"Paleta legible","definicion":"Cálculo que corrige los colores del sindicato hasta alcanzar contraste WCAG suficiente, conservando el tono."},
+{"termino":"Punto de interés","definicion":"Posición de una foto de portada que el recorte de cada pantalla debe respetar."},
+{"termino":"Verificación de identidad","definicion":"Herramienta interna de prueba (selfie, DNI, RENAPER vía Didit) que todavía no está en la app del afiliado."}
+]
