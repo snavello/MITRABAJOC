@@ -9669,6 +9669,14 @@ def fiesta_operador_por_usuario(s: Session, evento_id: int, usuario: str) -> Opt
         FiestaOperador.usuario == (usuario or "").strip().lower())).first()
 
 
+def fiesta_usuarios_admin(s: Session, evento_id: int) -> list:
+    """Los usuarios de los administradores activos del evento, para que la
+    tarjeta de Herramientas muestre qué quedó guardado (solo el usuario)."""
+    return list(s.exec(select(FiestaOperador.usuario).where(
+        FiestaOperador.evento_id == evento_id, FiestaOperador.rol == "admin",
+        FiestaOperador.activo == True).order_by(FiestaOperador.id)).all())  # noqa: E712
+
+
 def fiesta_hay_admin(s: Session, evento_id: int) -> bool:
     return s.exec(select(FiestaOperador.id).where(
         FiestaOperador.evento_id == evento_id, FiestaOperador.rol == "admin",

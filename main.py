@@ -12815,7 +12815,7 @@ def api_fiesta_sind_entrar(request: Request, datos: dict = Body(...)):
         # Con usuario inexistente se verifica igual contra un hash de relleno: el
         # tiempo de respuesta no revela si el usuario existe.
         hash_a_probar = op.clave_hash if op else _HASH_RELLENO_FIESTA
-        clave_ok = auth.verificar_clave(str(datos.get("clave", "")), hash_a_probar)
+        clave_ok = auth.verificar_clave(str(datos.get("clave", "")).strip(), hash_a_probar)
         if not op or not op.activo or not clave_ok:
             _login_fallo(request, _intentos_fiesta_op)
             raise ErrorApp("E-FIESTA-10")
@@ -12840,7 +12840,7 @@ def api_fiesta_sind_clave(request: Request, datos: dict = Body(...)):
     """Cambio de clave propio (también el primer ingreso con la transitoria)."""
     _exigir_landing()
     _fiesta_cookie(request, "fiesta_op")
-    actual, nueva, repetir = (str(datos.get(k, "")) for k in ("actual", "nueva", "repetir"))
+    actual, nueva, repetir = (str(datos.get(k, "")).strip() for k in ("actual", "nueva", "repetir"))
     with db.get_session() as s:
         ev = _fiesta_evento_o_404(s)
         op = _fiesta_operador(request, s, ev, pendiente_ok=True)
@@ -13321,9 +13321,38 @@ def api_fiesta_arranque_estado(request: Request):
         ev = db.fiesta_evento_activo(s)
         return {"hay_evento": bool(ev),
                 "hay_admin": bool(ev) and db.fiesta_hay_admin(s, ev.id),
+                "administradores": db.fiesta_usuarios_admin(s, ev.id) if ev else [],
                 "evento": db.fiesta_evento_dict(s, ev) if ev else None,
                 "mp_modo": mercadopago.modo(), "mp_faltantes": mercadopago.faltantes(),
                 "contadores": db.fiesta_contadores(s, ev) if ev else None}
+
+
+@app.post(API_FIESTA_ARRANQUE + "/restablecer-admin")
+def api_fiesta_restablecer_admin(request: Request, datos: dict = Body(...)):
+    """La salida para el primer administrador que no puede entrar (clave mal
+    tipeada en el arranque, olvidada): quien tiene el pase de /entornos le pone
+    una clave transitoria nueva, que obliga a elegir una propia al entrar. Si el
+    usuario no existe, se crea como admin. Nunca toca a un operador `puerta`
+    existente: esos los restablece el admin desde la app."""
+    quien = _exigir_herramientas(request)
+    usuario = str(datos.get("usuario", "")).strip().lower()
+    clave = str(datos.get("clave_inicial", "")).strip()
+    if not _RE_USUARIO_FIESTA.match(usuario):
+        raise HTTPException(400, "El usuario: 3 a 30 letras minúsculas, números, punto, guion o guion bajo.")
+    if len(clave) < CLAVE_INICIAL_MINIMA_FIESTA:
+        raise HTTPException(400, f"La clave tiene que tener al menos {CLAVE_INICIAL_MINIMA_FIESTA} caracteres.")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = db.fiesta_operador_por_usuario(s, ev.id, usuario)
+        if op and op.rol != "admin":
+            raise HTTPException(409, "Ese usuario no es administrador: lo restablece el admin desde la app.")
+        if not op:
+            op = db.FiestaOperador(evento_id=ev.id, usuario=usuario, rol="admin", nombre=usuario)
+        op.clave_hash, op.debe_cambiar_clave, op.activo = auth.hashear_clave(clave), True, True
+        s.add(op)
+        s.commit()
+        log.info("fiesta: clave del admin %s restablecida desde /entornos por %s", usuario, quien)
+    return {"ok": True, "usuario": usuario}
 
 
 @app.post(API_FIESTA_ARRANQUE + "/arranque")
@@ -13332,7 +13361,9 @@ def api_fiesta_arranque(request: Request, datos: dict = Body(...)):
     Con evento y admin ya creados no hace nada (409): se cambia desde la app."""
     _exigir_herramientas(request)
     usuario = str(datos.get("usuario", "")).strip().lower()
-    clave = str(datos.get("clave_inicial", ""))
+    # Sin espacios en las puntas, como la recorta el login: el teclado del
+    # celular suele pegar un espacio al aceptar una sugerencia.
+    clave = str(datos.get("clave_inicial", "")).strip()
     if not _RE_USUARIO_FIESTA.match(usuario):
         raise HTTPException(400, "El usuario: 3 a 30 letras minúsculas, números, punto, guion o guion bajo.")
     if len(clave) < CLAVE_INICIAL_MINIMA_FIESTA:

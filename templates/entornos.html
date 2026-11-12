@@ -561,12 +561,24 @@
             <label>Precio por persona ($)<input name="precio" type="number" min="0" value="30000" required></label>
             <label>Tope por afiliado<input name="tope_por_afiliado" type="number" min="1" value="4" required></label>
             <label>Tope general<input name="tope_general" type="number" min="1" value="1000" required></label>
-            <label>Usuario administrador<input name="usuario" required autocapitalize="none"></label>
+            <label>Usuario administrador<input name="usuario" required autocapitalize="none" autocorrect="off" spellcheck="false"></label>
             <label>Nombre del administrador<input name="nombre_op" required></label>
-            <label>Clave inicial (transitoria)<input name="clave_inicial" required minlength="6"></label>
+            <label>Clave inicial (transitoria)<input name="clave_inicial" required minlength="6" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
           </div>
           <button class="boton" type="submit">Crear el evento y el administrador</button>
           <div class="mapa-estado" id="fiesta-arranque-msg" hidden></div>
+        </form>
+        {# Con la fiesta armada: qué administradores hay y la salida para uno
+           que no puede entrar (clave transitoria nueva; obliga a elegir una
+           propia al ingresar). #}
+        <form id="fiesta-restablecer" class="fiesta-arranque" autocomplete="off" hidden>
+          <p><b>Administradores:</b> <span id="fiesta-admins">—</span>. La configuración del evento, el padrón, las cortesías y los operadores se manejan desde la <a href="/fiesta/sindicato" target="_blank" rel="noopener">app del sindicato</a>, pestaña Configuración, entrando como administrador. Si un administrador no puede entrar, ponele acá una clave transitoria nueva (si el usuario no existe, se crea como administrador).</p>
+          <div class="fiesta-grid">
+            <label>Usuario<input name="usuario" required autocapitalize="none" autocorrect="off" spellcheck="false"></label>
+            <label>Clave transitoria nueva<input name="clave_inicial" required minlength="6" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
+          </div>
+          <button class="boton suave" type="submit">Restablecer la clave</button>
+          <div class="mapa-estado" id="fiesta-restablecer-msg" hidden></div>
         </form>
       </div>
     </div>
@@ -924,9 +936,25 @@
           ? `${d.evento.nombre}: ${c.pagadas || 0} reservas pagadas, ${c.pendientes || 0} pendientes, ${c.disponibles != null ? c.disponibles : '—'} lugares disponibles; MercadoPago en ${mp}.` + (d.hay_admin ? '' : ' Falta el primer administrador.')
           : 'Todavía no hay evento creado.';
         formFiesta.hidden = !!(d.hay_evento && d.hay_admin);
+        formRestablecer.hidden = !d.hay_evento;
+        document.getElementById('fiesta-admins').textContent = (d.administradores || []).join(', ') || 'ninguno';
       })
       .catch(() => { estadoFiesta.textContent = 'No se pudo leer el estado de la fiesta.'; });
   }
+  const formRestablecer = document.getElementById('fiesta-restablecer');
+  formRestablecer.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const datos = Object.fromEntries(new FormData(formRestablecer).entries());
+    const msg = document.getElementById('fiesta-restablecer-msg');
+    fetch('/api/entornos/herramientas/fiesta/restablecer-admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+      .then(r => r.json().catch(() => ({})).then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        msg.hidden = false;
+        msg.textContent = ok ? `Listo: ${d.usuario} entra con la clave nueva y la app le pide elegir una propia.` : (typeof d.detail === 'string' ? d.detail : 'No se pudo restablecer.');
+        if (ok) { formRestablecer.reset(); cargarFiesta(); }
+      })
+      .catch(() => { msg.hidden = false; msg.textContent = 'El servidor no respondió.'; });
+  });
   formFiesta.addEventListener('submit', ev => {
     ev.preventDefault();
     const datos = Object.fromEntries(new FormData(formFiesta).entries());
