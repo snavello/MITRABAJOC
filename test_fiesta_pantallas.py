@@ -341,3 +341,9 @@ def test_afiliado_las_plantillas_renderizan_con_el_contexto_del_backend():
     assert "Entrada no válida" in h
     h = t.get_template("fiesta_mp_simulado.html").render(request=None, evento=ev, reserva=res, importe_texto="$ 1,00")
     assert "MP_MOCK" in h
+
+
+def test_formulario_de_arranque_respeta_hidden():
+    from pathlib import Path
+    html = (Path(__file__).parent / "templates" / "entornos.html").read_text(encoding="utf-8")
+    assert ".fiesta-arranque[hidden]" in html

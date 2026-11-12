@@ -9270,6 +9270,7 @@ class FiestaReserva(SQLModel, table=True):
     vence: str = ""                       # vacío en cortesías
     pagada_en: str = ""
     mp_preference_id: str = ""
+    mp_init_point: str = ""               # el checkout real que devolvió MercadoPago
     mp_payment_id: str = Field(default="", index=True)
     mp_estado: str = ""
     sobrecupo: bool = False               # D9: pagó después de vencer y ya no había lugar
@@ -9466,8 +9467,6 @@ def fiesta_aplicar_pago(s: Session, evento: FiestaEvento, reserva_id: int, pago:
         s.commit()
         return {"resultado": "reserva inexistente", "estado": None}
     r.mp_estado = status
-    if payment_id and not r.mp_payment_id:
-        r.mp_payment_id = payment_id
     if status == "approved":
         try:
             monto_ok = abs(float(pago.get("transaction_amount") or 0) - float(r.importe)) < 0.01
@@ -9476,13 +9475,23 @@ def fiesta_aplicar_pago(s: Session, evento: FiestaEvento, reserva_id: int, pago:
         if not monto_ok:
             aviso.resultado = "monto distinto: no se marcó pagada"
         elif r.estado == "pagada":
-            aviso.resultado = "ya estaba pagada"
+            if r.mp_payment_id and payment_id and r.mp_payment_id != payment_id:
+                # Segundo pago aprobado sobre la misma reserva: no cambia el estado,
+                # pero el sindicato tiene que verlo para devolverlo.
+                aviso.resultado = "duplicado"
+                r.nota = (r.nota + " | " if r.nota else "") + \
+                    f"Pago duplicado {payment_id}: devolver desde MercadoPago"
+            else:
+                aviso.resultado = "ya estaba pagada"
         else:
             tarde = r.estado in ("vencida", "anulada")
             if tarde:
                 en_uso = fiesta.ocupadas(_fiesta_activas(s, evento_id))
                 tope = s.exec(select(FiestaEvento.tope_general).where(FiestaEvento.id == evento_id)).first()
                 r.sobrecupo = en_uso + r.cantidad > (tope or 0)
+            if r.estado == "anulada":
+                r.nota = (r.nota + " | " if r.nota else "") + \
+                    "Pago recibido sobre una reserva anulada: revisar o devolver desde MercadoPago"
             r.estado, r.pagada_en, r.mp_payment_id = "pagada", fiesta.sello(), payment_id or r.mp_payment_id
             aviso.resultado = "pagada tarde (D9)" if tarde else "pagada"
     else:
@@ -9641,7 +9650,8 @@ def fiesta_cargar_padron(s: Session, evento_id: int, filas: list) -> dict:
     for f in filas:
         p = existentes.get(f["legajo"])
         if p:
-            p.dni, p.nombre, p.mail, p.activo = f["dni"], f["nombre"], f.get("mail", ""), True
+            # No se reactiva: quien lo desactivó a mano sigue desactivado.
+            p.dni, p.nombre, p.mail = f["dni"], f["nombre"], f.get("mail", "")
             actualizados += 1
         else:
             p = FiestaPadron(evento_id=evento_id, legajo=f["legajo"], dni=f["dni"],

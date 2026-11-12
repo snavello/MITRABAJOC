@@ -111,7 +111,10 @@ def crear_preferencia(reserva_id: int, titulo: str, importe: int, base_url: str,
     try:
         r = _post_json("/checkout/preferences", cuerpo)
         if r.get("id") and r.get("init_point"):
-            return {"id": str(r["id"]), "init_point": r["init_point"]}
+            salida = {"id": str(r["id"]), "init_point": r["init_point"]}
+            if r.get("sandbox_init_point"):
+                salida["sandbox_init_point"] = r["sandbox_init_point"]
+            return salida
         log.warning("mercadopago: la preferencia volvió sin id/init_point")
     except Exception as e:          # red, 4xx/5xx o JSON roto: nunca hacia la ruta
         log.warning("mercadopago: no se pudo crear la preferencia (%s)", type(e).__name__)

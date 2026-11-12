@@ -12380,6 +12380,7 @@ CLAVE_MINIMA_FIESTA = 8
 CLAVE_INICIAL_MINIMA_FIESTA = 6
 FIESTA_TOPE_CSV_BYTES = 2 * 1024 * 1024
 from sqlalchemy import func as _sa_func
+_HASH_RELLENO_FIESTA = auth.hashear_clave(secrets.token_hex(8))
 _RE_USUARIO_FIESTA = re.compile(r"^[a-z0-9._-]{3,30}$")
 
 
@@ -12448,6 +12449,9 @@ def _fiesta_url_pago(r) -> str:
         return ""
     if mercadopago.modo() == "mock":
         return f"/fiesta/mp-simulado/{r.id}"
+    if r.mp_init_point:
+        return r.mp_init_point
+    # Sin el checkout guardado (reservas de antes): se reconstruye con el id.
     return (f"https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id={r.mp_preference_id}"
             if r.mp_preference_id else "")
 
@@ -12667,6 +12671,7 @@ def api_fiesta_reservar(request: Request, datos: dict = Body(...)):
             db.fiesta_anular_reserva(s, r)
             raise ErrorApp("E-FIESTA-04")
         r.mp_preference_id = pref["id"]
+        r.mp_init_point = pref["init_point"]
         s.add(r)
         s.commit()
         return {"reserva_id": r.id, "init_point": pref["init_point"]}
@@ -12807,7 +12812,11 @@ def api_fiesta_sind_entrar(request: Request, datos: dict = Body(...)):
     with db.get_session() as s:
         ev = _fiesta_evento_o_404(s)
         op = db.fiesta_operador_por_usuario(s, ev.id, str(datos.get("usuario", "")))
-        if not op or not op.activo or not auth.verificar_clave(str(datos.get("clave", "")), op.clave_hash):
+        # Con usuario inexistente se verifica igual contra un hash de relleno: el
+        # tiempo de respuesta no revela si el usuario existe.
+        hash_a_probar = op.clave_hash if op else _HASH_RELLENO_FIESTA
+        clave_ok = auth.verificar_clave(str(datos.get("clave", "")), hash_a_probar)
+        if not op or not op.activo or not clave_ok:
             _login_fallo(request, _intentos_fiesta_op)
             raise ErrorApp("E-FIESTA-10")
         _login_ok(request, _intentos_fiesta_op)
@@ -13108,7 +13117,7 @@ def api_fiesta_sind_config_guardar(request: Request, datos: dict = Body(...)):
     if not fiesta.parsear(fecha_hora):
         raise HTTPException(400, "La fecha y hora no se entienden (AAAA-MM-DDTHH:MM).")
     valores = {
-        "precio": _fiesta_entero(datos, "precio", 0, 100_000_000, "El precio"),
+        "precio": _fiesta_entero(datos, "precio", 1, 100_000_000, "El precio"),
         "tope_por_afiliado": _fiesta_entero(datos, "tope_por_afiliado", 1, 100, "El tope por afiliado"),
         "tope_general": _fiesta_entero(datos, "tope_general", 1, 100_000, "El tope general"),
         "horas_antes": _fiesta_entero(datos, "horas_antes", 0, 720, "Las horas antes"),
@@ -13339,7 +13348,7 @@ def api_fiesta_arranque(request: Request, datos: dict = Body(...)):
             ev = db.FiestaEvento(
                 nombre=str(datos["nombre"]).strip()[:200], fecha_hora=fecha_hora,
                 lugar=str(datos.get("lugar", "")).strip()[:200],
-                precio=_fiesta_entero(datos, "precio", 0, 100_000_000, "El precio"),
+                precio=_fiesta_entero(datos, "precio", 1, 100_000_000, "El precio"),
                 tope_por_afiliado=_fiesta_entero(datos, "tope_por_afiliado", 1, 100, "El tope por afiliado"),
                 tope_general=_fiesta_entero(datos, "tope_general", 1, 100_000, "El tope general"))
             s.add(ev)

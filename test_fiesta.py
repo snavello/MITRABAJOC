@@ -446,7 +446,7 @@ def test_modo_real_guarda_la_preferencia(fest, monkeypatch):
     assert r["init_point"] == "https://mp.test/pagar"
     assert visto["importe"] == 60000 and visto["titulo"].endswith("×2") and visto["vence"].endswith("-03:00")
     fila = c.get(f"{API}/reserva/{r['reserva_id']}").json()
-    assert fila["url_pago"] == "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=PREF-9"
+    assert fila["url_pago"] == "https://mp.test/pagar"     # el guardado, no uno reconstruido
 
 
 # =====================================================================
@@ -1035,3 +1035,109 @@ def test_cortesia_acota_la_leyenda(fest):
     assert r.status_code == 200
     with db.get_session() as s:
         assert len(s.get(db.FiestaReserva, r.json()["reserva_id"]).leyenda) == 100
+
+
+# =====================================================================
+# Lote final de correcciones
+# =====================================================================
+def test_cargar_padron_no_reactiva_a_quien_se_desactivo(fest):
+    with db.get_session() as s:
+        p = s.get(db.FiestaPadron, fest.padron["100"])
+        p.activo = False
+        s.add(p)
+        s.commit()
+        r = db.fiesta_cargar_padron(s, fest.ev, [
+            {"legajo": "100", "dni": "11111111", "nombre": "Ana Nueva", "mail": ""},
+            {"legajo": "777", "dni": "77777777", "nombre": "Recién", "mail": ""}])
+        assert r == {"nuevos": 1, "actualizados": 1}
+        s.expire_all()
+        assert s.get(db.FiestaPadron, fest.padron["100"]).activo is False
+        assert s.get(db.FiestaPadron, fest.padron["100"]).nombre == "Ana Nueva"
+        nuevo = s.exec(select(db.FiestaPadron).where(db.FiestaPadron.legajo == "777",
+                                                      db.FiestaPadron.evento_id == fest.ev)).one()
+        assert nuevo.activo is True
+
+
+def test_pago_aprobado_sobre_anulada_queda_pagada_con_nota(fest):
+    c = _afiliado()
+    rid = _reservar(c, 2).json()["reserva_id"]
+    c.post(f"{API}/reserva/{rid}/anular")
+    mercadopago.registrar_pago_mock("ANU-1", "approved", rid, 60000)
+    assert _webhook(TestClient(main.app), "ANU-1").status_code == 200
+    with db.get_session() as s:
+        r = s.get(db.FiestaReserva, rid)
+        assert r.estado == "pagada" and "reserva anulada" in r.nota and "devolver" in r.nota
+
+
+def test_segundo_pago_aprobado_se_registra_como_duplicado(fest):
+    c, rid = _reserva_pagada(fest, cantidad=2)
+    mercadopago.registrar_pago_mock("DUP-2", "approved", rid, 60000)
+    r = _webhook(TestClient(main.app), "DUP-2")
+    assert r.json()["resultado"] == "duplicado"
+    with db.get_session() as s:
+        res = s.get(db.FiestaReserva, rid)
+        assert res.estado == "pagada" and "Pago duplicado DUP-2" in res.nota
+        aviso = s.exec(select(db.FiestaAvisoPago).where(db.FiestaAvisoPago.mp_payment_id == "DUP-2")).one()
+        assert aviso.resultado == "duplicado" and aviso.procesado
+
+
+def test_rechazado_antes_no_hace_duplicado_el_primer_aprobado(fest):
+    c = _afiliado()
+    rid = _reservar(c, 1).json()["reserva_id"]
+    mercadopago.registrar_pago_mock("R-1", "rejected", rid, 30000)
+    _webhook(TestClient(main.app), "R-1")
+    mercadopago.registrar_pago_mock("R-2", "approved", rid, 30000)
+    assert _webhook(TestClient(main.app), "R-2").json()["resultado"] == "pagada"
+    with db.get_session() as s:
+        assert s.get(db.FiestaReserva, rid).nota == ""
+
+
+def test_precio_minimo_uno_en_configuracion_y_arranque(fest):
+    op = _operador()
+    base = {"nombre": "F", "fecha_hora": "2026-12-31T22:00", "lugar": "L", "precio": 1,
+            "tope_por_afiliado": 2, "tope_general": 50, "horas_antes": 12, "minutos_vencimiento": 45}
+    assert op.post(SIND + "/configuracion", json=base).status_code == 200
+    r = op.post(SIND + "/configuracion", json={**base, "precio": 0})
+    assert r.status_code == 400 and "precio" in r.json()["detail"].lower()
+    with db.get_session() as s:
+        s.exec(db.text("UPDATE fiestaevento SET activo = false"))
+        s.commit()
+    r = _con_plataforma().post("/api/entornos/herramientas/fiesta/arranque", json={
+        **base, "precio": 0, "usuario": "supara2", "clave_inicial": "inicial1"})
+    assert r.status_code == 400
+
+
+def test_se_guarda_el_init_point_real_y_pagar_ahora_lo_devuelve(fest, monkeypatch):
+    import json as _json
+    from io import BytesIO
+    monkeypatch.delenv("MP_MOCK", raising=False)
+    monkeypatch.setenv("MP_ACCESS_TOKEN", "TEST-token")
+
+    class _R(BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+    monkeypatch.setattr(mercadopago.urllib.request, "urlopen", lambda p, timeout=0: _R(_json.dumps({
+        "id": "PREF-7", "init_point": "https://mp.test/real", "sandbox_init_point": "https://mp.test/sbx"}).encode()))
+    c = _afiliado()
+    rid = _reservar(c, 1).json()["reserva_id"]
+    with db.get_session() as s:
+        assert s.get(db.FiestaReserva, rid).mp_init_point == "https://mp.test/real"
+    fila = c.get(f"{API}/reserva/{rid}").json()
+    assert fila["url_pago"] == fila["init_point"] == "https://mp.test/real"
+    with db.get_session() as s:                                    # sin lo guardado: reconstruye
+        r = s.get(db.FiestaReserva, rid)
+        r.mp_init_point = ""
+        s.add(r)
+        s.commit()
+    assert c.get(f"{API}/reserva/{rid}").json()["url_pago"].endswith("pref_id=PREF-7")
+    assert mercadopago.crear_preferencia(1, "F", 10, "https://x.test")["sandbox_init_point"] == "https://mp.test/sbx"
+
+
+def test_login_operador_inexistente_sigue_dando_e_fiesta_10(fest):
+    c = TestClient(main.app)
+    r = c.post(SIND + "/entrar", json={"usuario": "fantasma", "clave": "lo-que-sea"})
+    assert r.status_code == 401 and r.json()["codigo"] == "E-FIESTA-10"
+    assert main.auth.verificar_clave("x", main._HASH_RELLENO_FIESTA) is False

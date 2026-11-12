@@ -108,6 +108,7 @@ def upgrade() -> None:
     sa.Column('vence', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('pagada_en', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('mp_preference_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('mp_init_point', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('mp_payment_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('mp_estado', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('sobrecupo', sa.Boolean(), nullable=False),

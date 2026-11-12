@@ -2354,6 +2354,10 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   afiliado se redirige al `init_point`; el pago se confirma SOLO por el
   webhook (o el simulado, mismo camino `_fiesta_procesar_pago`), nunca por
   la `back_url`. Colm3na no cobra comisión ni toca fondos.
+- **Nunca se pierde un pago**: aprobado sobre una vencida o una anulada →
+  pagada (+ `sobrecupo` si supera el tope, y una nota); un segundo aprobado
+  sobre una ya pagada no cambia nada y deja la nota «Pago duplicado …:
+  devolver desde MercadoPago». El monto tiene que coincidir con `importe`.
 - Lo que sale del tope: pendientes vigentes + pagadas; vencidas y anuladas
   no. Anular desde el panel solo una pendiente o una cortesía; un pago hecho
   se devuelve desde MercadoPago.

@@ -25,8 +25,11 @@ Con `MP_MOCK=1` el pago se simula adentro de la app, sin salir a internet.
 3. En «Credenciales de prueba» copiá el **Access Token** (empieza con `TEST-`).
    Es el valor de `MP_ACCESS_TOKEN`.
 4. En «Webhooks» (o «Notificaciones») → modo de pruebas → URL:
-   `https://<servicio-de-pruebas>.onrender.com/api/fiesta/mp/webhook`, evento **Pagos**.
-   Guardá y copiá la **clave secreta** que muestra: es `MP_WEBHOOK_SECRET`.
+   `https://mitrabajo-pruebas.onrender.com/api/fiesta/mp/webhook`, evento **Pagos**.
+   Guardá y copiá la **clave secreta**: es `MP_WEBHOOK_SECRET`. Es una sola por aplicación
+   (la misma para prueba y producción); se revela con el ojo en Webhooks → Configurar
+   notificaciones, y «Restablecer» genera otra (hay que actualizar la variable). La
+   **Public Key** no se usa.
 5. En Render, servicio de Pruebas → Environment: cargá `MP_ACCESS_TOKEN` y
    `MP_WEBHOOK_SECRET`, y **sacá** `MP_MOCK` (si está, gana y se simula todo). Redeploy.
 6. En `/fiesta/sindicato` → Configuración, el estado de MercadoPago tiene que decir
