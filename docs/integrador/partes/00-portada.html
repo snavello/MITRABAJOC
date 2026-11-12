@@ -1,0 +1,38 @@
+<header class="portada">
+  <img class="logo" src="{{LOGO}}" alt="Colm3na">
+  <span class="kicker">Documento integrador</span>
+  <h1>Colm3na,<br>de punta <em>a punta</em></h1>
+  <p class="bajada">Qué es la plataforma, cómo funciona, qué le cambia al afiliado, al sindicato y a la empresa, cómo se ve cada aplicación por dentro, con qué está construida, cómo se cuida y cómo se pone en marcha en un sindicato. Para quien se suma al equipo y para quien necesita ponerse al día.</p>
+  <div class="datos">
+    <div><b>{{FECHA}}</b>Estado del proyecto</div>
+    <div><b>Trabajador {{V_TRABAJADOR}}</b>App del afiliado</div>
+    <div><b>Admin {{V_ADMIN}}</b>Panel del sindicato</div>
+    <div><b>Plataforma {{V_PLATAFORMA}}</b>Configuración y entornos</div>
+  </div>
+</header>
+
+<div class="cuerpo">
+{{INDICE}}
+
+<section class="intro" id="como-leer">
+  <h3>Cómo leer este documento</h3>
+  <p class="lead">Este documento junta en un solo lugar lo que el proyecto fue escribiendo por partes: planes, fichas técnicas, informes y la bitácora. Está escrito con el código a la vista: donde un documento anterior quedó atrasado, acá manda lo que hoy corre en la plataforma.</p>
+  <p>Cada tema se cuenta primero en castellano llano, con capturas reales de la aplicación. Lo técnico va aparte, en los recuadros <b>Para técnicos</b>, con los nombres reales de módulos, tablas y rutas. Quien no programa puede saltearlos sin perder el hilo.</p>
+  <div class="grilla-3">
+    <div class="tarjeta miel"><h4>Si recién llegás</h4><p>Leé los capítulos 1, 2 y 3 de corrido: en media hora tenés el cuadro completo. Después, el 4 para ubicarte en las pantallas.</p></div>
+    <div class="tarjeta azul"><h4>Si trabajás con sindicatos</h4><p>Sumá el capítulo 5 (qué hace cada módulo y cómo se configura) y el 8 (cómo se implementa en un gremio).</p></div>
+    <div class="tarjeta verde"><h4>Si vas a desarrollar</h4><p>El 6 (modelo técnico) y el 7 (seguridad) son los tuyos, junto con los recuadros técnicos del 5. Al final, el glosario.</p></div>
+  </div>
+  <h4>Las marcas que vas a encontrar</h4>
+  <div class="tabla-cont"><table class="tabla">
+    <thead><tr><th>Marca</th><th>Qué significa</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip verde">Hecho</span></td><td>Construido, probado y desplegado en el entorno de Pruebas.</td></tr>
+      <tr><td><span class="chip ambar">En prueba</span></td><td>Construido, pero todavía en evaluación o apagado hasta configurar un servicio.</td></tr>
+      <tr><td><span class="chip violeta">Pendiente</span></td><td>Acordado o planeado, todavía no construido.</td></tr>
+      <tr><td><span class="chip miel">Regla vigente</span></td><td>Una decisión del proyecto que no se rediscute sin motivo: explica por qué algo es como es.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="nota"><span class="rot">De dónde sale</span><p>Las fuentes, en orden de autoridad: el código de la rama principal, el archivo de estado del proyecto (<code>CLAUDE.md</code>), el historial técnico (<code>HISTORIAL.md</code>), la bitácora (<code>BITACORA.md</code>), los planes y los documentos de Recursos. Las capturas son de la aplicación real corriendo con los datos sintéticos de la demo: ningún dato de una persona real.</p></div>
+</section>
+</div>
