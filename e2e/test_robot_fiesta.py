@@ -248,7 +248,9 @@ def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
     sind.locator('.fs-tab[data-tab="config"]').click()
     expect(sind.locator('#form-config input[name="nombre"]')).to_have_value(re.compile("SUPARA"))
     sind.fill('#form-config input[name="tope_general"]', "20")
-    sind.locator("#form-config button[type=submit]").click()
+    with sind.expect_response(lambda r: r.url.endswith("/configuracion") and r.request.method == "POST") as guardado:
+        sind.locator("#form-config button[type=submit]").click()
+    assert guardado.value.status == 200, guardado.value.status
     expect(sind.locator("#config-msg")).to_have_text("Guardado.")
     expect(sind.locator("#mp-pildora")).to_have_text("Modo simulado")
     sind.set_input_files("#foto-archivo", files=[{"name": "fondo.png", "mimeType": "image/png", "buffer": _png_de_prueba()}])
@@ -387,10 +389,13 @@ def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
     expect(afil.locator("#qr-caja")).to_have_count(0)
     captura(afil, "18-ticket-en-espera")
 
-    sind.locator('.fs-tab[data-tab="config"]').click()
-    expect(sind.locator('#form-config input[name="horas_antes"]')).to_have_value("24")   # esperar a que cargue
+    with sind.expect_response(lambda r: r.url.endswith("/api/fiesta/sindicato/configuracion") and r.request.method == "GET"):
+        sind.locator('.fs-tab[data-tab="config"]').click()                  # recarga el formulario: esperarlo
+    expect(sind.locator('#form-config input[name="horas_antes"]')).to_have_value("24")
     sind.fill('#form-config input[name="horas_antes"]', "100")
-    sind.locator("#form-config button[type=submit]").click()
+    with sind.expect_response(lambda r: r.url.endswith("/configuracion") and r.request.method == "POST") as guardado:
+        sind.locator("#form-config button[type=submit]").click()
+    assert guardado.value.status == 200, guardado.value.status
     expect(sind.locator("#config-msg")).to_have_text("Guardado.")
 
     afil.reload()
@@ -497,6 +502,7 @@ def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
 
     # ================================================================ 6
     informe.paso("6. PANEL: contadores coherentes, filtros y CSV")
+    sind.goto("about:blank")                       # una navegación de verdad (solo cambiar el # no recarga)
     sind.goto(f"{BASE}/fiesta/sindicato#panel")
     expect(sind.locator("#contadores .fs-cont")).to_have_count(8)
     cont = {c.locator("span").inner_text(): c.locator("b").inner_text() for c in sind.locator("#contadores .fs-cont").all()}
