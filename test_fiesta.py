@@ -1141,3 +1141,49 @@ def test_login_operador_inexistente_sigue_dando_e_fiesta_10(fest):
     r = c.post(SIND + "/entrar", json={"usuario": "fantasma", "clave": "lo-que-sea"})
     assert r.status_code == 401 and r.json()["codigo"] == "E-FIESTA-10"
     assert main.auth.verificar_clave("x", main._HASH_RELLENO_FIESTA) is False
+
+
+def test_arranque_recorta_la_clave_y_el_login_tambien(fest):
+    """El teclado del celular pega un espacio o una mayúscula: la clave se
+    guarda sin espacios en las puntas y el login la compara igual (así pasó
+    en Pruebas el 2026-11-12: el primer admin no pudo entrar)."""
+    with db.get_session() as s:
+        s.exec(db.text("UPDATE fiestaevento SET activo = false"))
+        s.commit()
+    c = _con_plataforma()
+    body = {"nombre": "Fiesta", "fecha_hora": "2026-11-14T21:00", "lugar": "x", "precio": 1000,
+            "tope_por_afiliado": 2, "tope_general": 10, "usuario": "Recorte",
+            "nombre_op": "R", "clave_inicial": " inicial1 "}
+    assert c.post("/api/entornos/herramientas/fiesta/arranque", json=body).status_code == 200
+    assert c.get("/api/entornos/herramientas/fiesta/estado").json()["administradores"] == ["recorte"]
+    assert TestClient(main.app).post(SIND + "/entrar", json={"usuario": "recorte", "clave": "inicial1 "}).status_code == 200
+
+
+def test_restablecer_admin_desde_entornos(fest):
+    """Un admin que no puede entrar recibe una clave transitoria nueva desde la
+    tarjeta de Herramientas; un usuario nuevo nace admin; uno de puerta no se toca."""
+    with db.get_session() as s:
+        s.exec(db.text("UPDATE fiestaevento SET activo = false"))
+        s.commit()
+    c = _con_plataforma()
+    body = {"nombre": "Fiesta", "fecha_hora": "2026-11-14T21:00", "lugar": "x", "precio": 1000,
+            "tope_por_afiliado": 2, "tope_general": 10, "usuario": "jefa",
+            "nombre_op": "J", "clave_inicial": "perdida1"}
+    assert c.post("/api/entornos/herramientas/fiesta/arranque", json=body).status_code == 200
+    R = "/api/entornos/herramientas/fiesta/restablecer-admin"
+    assert TestClient(main.app).post(R, json={"usuario": "jefa", "clave_inicial": "nueva123"}).status_code == 403
+    assert c.post(R, json={"usuario": "jefa", "clave_inicial": "corta"}).status_code == 400
+    assert c.post(R, json={"usuario": "jefa", "clave_inicial": "nueva123"}).status_code == 200
+    assert TestClient(main.app).post(SIND + "/entrar", json={"usuario": "jefa", "clave": "perdida1"}).status_code == 401
+    r = TestClient(main.app).post(SIND + "/entrar", json={"usuario": "jefa", "clave": "nueva123"})
+    assert r.status_code == 200 and r.json()["debe_cambiar_clave"] is True
+    # Uno nuevo nace admin
+    assert c.post(R, json={"usuario": "segundo", "clave_inicial": "nueva123"}).status_code == 200
+    assert sorted(c.get("/api/entornos/herramientas/fiesta/estado").json()["administradores"]) == ["jefa", "segundo"]
+    # Un operador de puerta no se restablece por acá
+    with db.get_session() as s:
+        ev = db.fiesta_evento_activo(s)
+        s.add(db.FiestaOperador(evento_id=ev.id, usuario="porton", rol="puerta", nombre="P",
+                                clave_hash=auth.hashear_clave("puerta12"), debe_cambiar_clave=False))
+        s.commit()
+    assert c.post(R, json={"usuario": "porton", "clave_inicial": "nueva123"}).status_code == 409
