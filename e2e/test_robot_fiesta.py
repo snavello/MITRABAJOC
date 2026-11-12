@@ -398,7 +398,7 @@ def _recorrido(informe, tmp_path, estado, nuevo_actor):
     # ================================================================ 4
     informe.paso("4. TICKET: en espera, se habilita desde Configuración, QR descodificable, verificación pública")
     afil.goto(f"{BASE}/fiesta/entrada/{estado['reserva_pagada']}")
-    expect(afil.locator(".te-lacre")).to_contain_text("Todavía no se habilita")
+    expect(afil.locator(".te-lacre")).to_contain_text("Entrada confirmada")
     expect(afil.locator("#qr-caja")).to_have_count(0)
     captura(afil, "18-ticket-en-espera")
 

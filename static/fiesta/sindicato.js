@@ -160,7 +160,7 @@
     try {
       var d = await pedirJson(B + 'resumen'), c = d.contadores || {};
       var fichas = [
-        ['Padrón cargado', c.padron, false, c.padron_total > c.padron ? (c.padron_total - c.padron) + ' desactivados' : ''],
+        ['Padrón cargado', c.padron, false, c.padron_total > c.padron ? (c.padron_total - c.padron) + (c.padron_total - c.padron === 1 ? ' desactivado' : ' desactivados') : ''],
         ['Personas pagadas', c.personas_pagadas, true], ['Reservas pagadas', c.pagadas],
         ['Pendientes de pago', c.pendientes], ['Disponibles', c.disponibles, true],
         ['Ya ingresaron', c.ingresadas], ['Recaudado', pesos(c.recaudado)],
