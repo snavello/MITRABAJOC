@@ -168,13 +168,13 @@ dl.glosario dd{margin:0;padding:9px 0;border-bottom:1px solid var(--linea2);colo
 .separador{height:1px;background:var(--linea);margin:2em 0}
 
 /* ---------- Impresión (A4) ---------- */
-@page{size:A4;margin:16mm 15mm 18mm}
+@page{size:A4;margin:14mm 14mm 16mm}
 @page{@bottom-right{content:counter(page);font:600 9pt "Barlow Condensed",sans-serif;color:#7a889c}
       @bottom-left{content:"Colm3na · Documento integrador";font:600 9pt "Barlow Condensed",sans-serif;color:#7a889c;letter-spacing:.8pt}}
 @page :first{@bottom-right{content:none}@bottom-left{content:none}}
 @media print{
   html,body{background:#fff}
-  body{display:block;font-size:10.4pt;line-height:1.5}
+  body{display:block;font-size:10pt;line-height:1.47}
   .riel{display:none!important}
   .doc{max-width:none;box-shadow:none}
   .cuerpo{padding:0}
@@ -188,9 +188,11 @@ dl.glosario dd{margin:0;padding:9px 0;border-bottom:1px solid var(--linea2);colo
   .nota,.tarjeta,.cifra,.tabla tr,.fig,.par-capturas,.lado{break-inside:avoid}
   .nota,.tarjeta.oscura,.chip,.cifra,.fig.diagrama,.tabla th,.tabla tr:nth-child(even) td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   a{color:inherit;text-decoration:none}
-  .fig.captura.movil img{max-width:62mm;border-width:4px}
+  .fig.captura.movil img{max-width:56mm;border-width:4px;border-radius:16px}
   .fig.captura.movil.entera img{max-height:230mm;width:auto}
-  .fig.captura img{max-height:200mm;width:auto}
+  .fig.captura img{max-height:190mm;width:auto}
+  .fig.diagrama{padding:10px}
+  .fig.diagrama svg{max-height:150mm}
   .tabla-cont{overflow:visible}
   .no-imprimir{display:none!important}
 }
