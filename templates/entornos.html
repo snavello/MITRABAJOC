@@ -264,6 +264,13 @@
   .mapa-botones a.boton { text-decoration:none; display:inline-block; }
   .mapa-estado { flex:1 1 100%; font-family:var(--mono); font-size:12.5px; color:rgba(255,255,255,.65); }
   .mapa-estado b { color:var(--pruebas); font-weight:600; }
+  .fiesta-arranque { flex:1 1 100%; border-top:1px solid rgba(255,255,255,.14); padding-top:16px; display:grid; gap:12px; }
+  .fiesta-arranque[hidden] { display:none; }
+  .fiesta-arranque p { margin:0; }
+  .fiesta-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  .fiesta-grid label { display:flex; flex-direction:column; gap:4px; font-size:12.5px; color:rgba(255,255,255,.7); }
+  .fiesta-grid input { padding:9px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font:14px inherit; }
+  .fiesta-arranque .boton { justify-self:start; }
 
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
@@ -534,6 +541,33 @@
           <a class="boton suave" href="/entornos/herramientas/identidad#casos">Casos guardados</a>
         </div>
         <div class="mapa-estado" id="identidad-estado">Se lee al abrir esta pestaña…</div>
+      </div>
+      {# Fiesta de Fin de Año (2026-11-12, PLAN_FIESTA.md): entradas con QR para
+         un evento de un sindicato. Dos apps públicas (afiliado y sindicato) y,
+         acá, el arranque: crear el evento y el primer administrador. #}
+      <div class="sala-tarjeta" id="fiesta-tarjeta">
+        <p><b>Fiesta de Fin de Año (entradas con QR).</b> Un subproducto aparte para resolverle a un sindicato la venta de entradas de un evento: el afiliado reserva con legajo y DNI, paga por MercadoPago (la plata va a la cuenta del sindicato) y recibe su entrada con QR; el sindicato carga el padrón, ve las reservas, emite cortesías y escanea en la puerta. Los dos enlaces son públicos (no piden el PIN): el del afiliado se manda por los canales del sindicato y el del sindicato lo usa su personal con su usuario y clave.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/fiesta" target="_blank" rel="noopener">App del afiliado</a>
+          <a class="boton" href="/fiesta/sindicato" target="_blank" rel="noopener">App del sindicato</a>
+        </div>
+        <div class="mapa-estado" id="fiesta-estado">Se lee al abrir esta pestaña…</div>
+        <form id="fiesta-arranque" class="fiesta-arranque" autocomplete="off" hidden>
+          <p><b>Arranque.</b> Todavía falta el evento o el primer administrador: completá y se crean juntos.</p>
+          <div class="fiesta-grid">
+            <label>Nombre del evento<input name="nombre" value="Fiesta de Fin de Año SUPARA 2026" required></label>
+            <label>Fecha y hora<input name="fecha_hora" type="datetime-local" value="2026-11-14T21:00" required></label>
+            <label>Lugar<input name="lugar" value="Palacio Anchorena" required></label>
+            <label>Precio por persona ($)<input name="precio" type="number" min="0" value="30000" required></label>
+            <label>Tope por afiliado<input name="tope_por_afiliado" type="number" min="1" value="4" required></label>
+            <label>Tope general<input name="tope_general" type="number" min="1" value="1000" required></label>
+            <label>Usuario administrador<input name="usuario" required autocapitalize="none"></label>
+            <label>Nombre del administrador<input name="nombre_op" required></label>
+            <label>Clave inicial (transitoria)<input name="clave_inicial" required minlength="6"></label>
+          </div>
+          <button class="boton" type="submit">Crear el evento y el administrador</button>
+          <div class="mapa-estado" id="fiesta-arranque-msg" hidden></div>
+        </form>
       </div>
     </div>
 
@@ -878,8 +912,37 @@
       })
       .catch(() => { estadoIdent.textContent = 'No se pudo leer cuántas verificaciones hay.'; });
   }
-  tab.addEventListener('click', () => { cargar(); cargarAsistente(); cargarLaboratorio(); cargarIdentidad(); });
-  if (location.hash === '#herramientas') { cargar(); cargarAsistente(); cargarLaboratorio(); cargarIdentidad(); }
+  const estadoFiesta = document.getElementById('fiesta-estado');
+  const formFiesta = document.getElementById('fiesta-arranque');
+  function cargarFiesta() {
+    fetch('/api/entornos/herramientas/fiesta/estado', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        const c = d.contadores || {};
+        const mp = { real: 'cobro real', mock: 'cobro simulado', apagado: 'cobro apagado' }[d.mp_modo] || d.mp_modo;
+        estadoFiesta.textContent = d.hay_evento
+          ? `${d.evento.nombre}: ${c.pagadas || 0} reservas pagadas, ${c.pendientes || 0} pendientes, ${c.disponibles != null ? c.disponibles : '—'} lugares disponibles; MercadoPago en ${mp}.` + (d.hay_admin ? '' : ' Falta el primer administrador.')
+          : 'Todavía no hay evento creado.';
+        formFiesta.hidden = !!(d.hay_evento && d.hay_admin);
+      })
+      .catch(() => { estadoFiesta.textContent = 'No se pudo leer el estado de la fiesta.'; });
+  }
+  formFiesta.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const datos = Object.fromEntries(new FormData(formFiesta).entries());
+    ['precio', 'tope_por_afiliado', 'tope_general'].forEach(k => { datos[k] = Number(datos[k]); });
+    const msg = document.getElementById('fiesta-arranque-msg');
+    fetch('/api/entornos/herramientas/fiesta/arranque', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
+      .then(r => r.json().catch(() => ({})).then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        msg.hidden = false;
+        msg.textContent = ok ? 'Listo: evento y administrador creados. Pasale al administrador su clave inicial por fuera de la app.' : (typeof d.detail === 'string' ? d.detail : 'No se pudo crear.');
+        if (ok) cargarFiesta();
+      })
+      .catch(() => { msg.hidden = false; msg.textContent = 'El servidor no respondió.'; });
+  });
+  tab.addEventListener('click', () => { cargar(); cargarAsistente(); cargarLaboratorio(); cargarIdentidad(); cargarFiesta(); });
+  if (location.hash === '#herramientas') { cargar(); cargarAsistente(); cargarLaboratorio(); cargarIdentidad(); cargarFiesta(); }
 })();
 
 // Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe

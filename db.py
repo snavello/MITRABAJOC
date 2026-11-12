@@ -9214,3 +9214,462 @@ def quien_es_usuario_sindicato(usuario_id: int) -> str:
         if not u:
             return ""
         return f"{u.nombre} ({u.usuario})" if u.nombre else u.usuario
+
+
+# =====================================================================
+# Fiesta de Fin de Año: entradas con pago por MercadoPago (PLAN_FIESTA.md)
+# =====================================================================
+# Subproducto aparte, en Herramientas de /entornos. Las reglas puras (cupo,
+# topes, ventana de la entrada, CSV) viven en fiesta.py; acá los modelos y el
+# acceso a datos. Toda función RECIBE la sesión: una sesión por request.
+from fastapi import HTTPException
+import fiesta
+
+class FiestaEvento(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str = ""
+    fecha_hora: str = ""                  # ISO "2026-11-14T21:00"
+    lugar: str = ""
+    leyenda_ticket: str = ""              # texto libre del ticket
+    precio: int = 0                       # pesos por entrada
+    tope_por_afiliado: int = 4
+    tope_general: int = 1000
+    horas_antes: int = 24                 # la entrada se habilita tantas horas antes
+    minutos_vencimiento: int = 30         # lo que dura una reserva sin pagar (D3)
+    leyenda_cortesia: str = "Invitado Especial"
+    activo: bool = Field(default=True, index=True)
+    creado: str = Field(default_factory=fechas.ahora_con_segundos)
+    foto_datos: Optional[bytes] = Field(default=None, sa_column=Column(_LargeBinary, nullable=True))
+    foto_mime: str = ""
+
+
+class FiestaPadron(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("evento_id", "legajo", name="uq_fiestapadron_evento_legajo"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    evento_id: int = Field(index=True)
+    legajo: str = ""
+    dni: str = Field(default="", index=True)       # solo dígitos
+    nombre: str = ""
+    mail: str = ""
+    activo: bool = True
+    creado: str = Field(default_factory=fechas.ahora_con_segundos)
+
+
+class FiestaReserva(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    evento_id: int = Field(index=True)
+    padron_id: Optional[int] = Field(default=None, index=True)
+    tipo: str = "afiliado"                # afiliado | cortesia
+    legajo: str = ""
+    dni: str = Field(default="", index=True)
+    nombre: str = ""                      # copia del padrón o de la cortesía
+    cantidad: int = 1
+    importe: int = 0
+    estado: str = Field(default="pendiente", index=True)   # pendiente|pagada|vencida|anulada
+    creada: str = Field(default_factory=fechas.ahora_con_segundos)
+    vence: str = ""                       # vacío en cortesías
+    pagada_en: str = ""
+    mp_preference_id: str = ""
+    mp_init_point: str = ""               # el checkout real que devolvió MercadoPago
+    mp_payment_id: str = Field(default="", index=True)
+    mp_estado: str = ""
+    sobrecupo: bool = False               # D9: pagó después de vencer y ya no había lugar
+    token: str = Field(default="", sa_column_kwargs={"unique": True})
+    ingresados: int = 0
+    ultimo_ingreso: str = ""
+    nota: str = ""
+    leyenda: str = ""                     # la de la cortesía
+    emitida_por: str = ""
+
+
+class FiestaIngreso(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    reserva_id: int = Field(index=True)
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)
+    cantidad: int = 0
+    modo: str = "qr"                      # qr | documento
+    quien: str = ""
+    motivo: str = ""
+
+
+class FiestaOperador(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("evento_id", "usuario", name="uq_fiestaoperador_evento_usuario"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    evento_id: int = Field(index=True)
+    usuario: str = ""
+    nombre: str = ""
+    clave_hash: str = ""
+    rol: str = "puerta"                   # admin | puerta
+    activo: bool = True
+    creado: str = Field(default_factory=fechas.ahora_con_segundos)
+    debe_cambiar_clave: bool = True
+
+
+class FiestaAvisoPago(SQLModel, table=True):
+    """Cada aviso de MercadoPago (o del simulado) que llegó: la idempotencia y
+    la prueba de qué pasó con cada pago."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    evento_id: int = Field(index=True)
+    mp_payment_id: str = Field(default="", index=True)
+    accion: str = ""                      # el status del pago: approved, rejected...
+    recibido: str = Field(default_factory=fechas.ahora_con_segundos)
+    cuerpo: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    procesado: bool = False
+    resultado: str = ""
+
+
+def fiesta_evento_activo(s: Session) -> Optional[FiestaEvento]:
+    """El evento que muestran las dos apps (la tabla admite varios; se ve el
+    activo más nuevo). Sin los bytes de la foto."""
+    return s.exec(select(FiestaEvento).options(*_sin_bytes(FiestaEvento))
+                  .where(FiestaEvento.activo == True)       # noqa: E712
+                  .order_by(FiestaEvento.id.desc())).first()
+
+
+def fiesta_tiene_foto(s: Session, evento_id: int) -> bool:
+    from sqlalchemy import func
+    n = s.exec(select(func.coalesce(func.octet_length(FiestaEvento.foto_datos), 0))
+               .where(FiestaEvento.id == evento_id)).first()
+    return bool(n)
+
+
+def fiesta_evento_dict(s: Session, e: FiestaEvento) -> dict:
+    return {"id": e.id, "nombre": e.nombre, "fecha_hora": e.fecha_hora,
+            "fecha_texto": fiesta.fecha_texto(e.fecha_hora), "lugar": e.lugar,
+            "leyenda_ticket": e.leyenda_ticket, "precio": e.precio,
+            "tope_por_afiliado": e.tope_por_afiliado, "tope_general": e.tope_general,
+            "horas_antes": e.horas_antes, "minutos_vencimiento": e.minutos_vencimiento,
+            "leyenda_cortesia": e.leyenda_cortesia,
+            "foto": fiesta_tiene_foto(s, e.id)}
+
+
+def fiesta_vencer_pendientes(s: Session, evento_id: int, commit: bool = True) -> int:
+    """Vencimiento perezoso: pasa a `vencida` toda pendiente cuyo `vence` ya
+    pasó. Se llama antes de contar o listar, así no hace falta un proceso.
+    Con `commit=False` no suelta el lock del evento (lo usan las altas)."""
+    r = s.exec(text(
+        "UPDATE fiestareserva SET estado = 'vencida' WHERE evento_id = :e "
+        "AND estado = 'pendiente' AND vence <> '' AND vence < :ahora"
+    ).bindparams(e=evento_id, ahora=fiesta.sello()))
+    if commit:
+        s.commit()
+    return r.rowcount or 0
+
+
+def _fiesta_activas(s: Session, evento_id: int, padron_id: int = None) -> list:
+    q = select(FiestaReserva.cantidad, FiestaReserva.estado, FiestaReserva.vence).where(
+        FiestaReserva.evento_id == evento_id,
+        FiestaReserva.estado.in_(("pendiente", "pagada")))
+    if padron_id is not None:
+        q = q.where(FiestaReserva.padron_id == padron_id)
+    return [{"cantidad": c, "estado": est, "vence": v} for c, est, v in s.exec(q).all()]
+
+
+def fiesta_disponibles(s: Session, evento: FiestaEvento, padron_id: int = None) -> int:
+    """Lo que queda del tope general (o del tope del afiliado si se pasa su
+    padron_id). Vence primero lo que haya que vencer."""
+    fiesta_vencer_pendientes(s, evento.id)
+    if padron_id is None:
+        return fiesta.disponibles(evento.tope_general, _fiesta_activas(s, evento.id))
+    return fiesta.disponibles_afiliado(evento.tope_por_afiliado, _fiesta_activas(s, evento.id, padron_id))
+
+
+def fiesta_crear_reserva(s: Session, evento: FiestaEvento, padron: FiestaPadron,
+                         cantidad: int) -> FiestaReserva:
+    """Cuenta y descuenta en LA MISMA transacción, con el evento bloqueado
+    (SELECT ... FOR UPDATE): dos personas reservando las últimas entradas a la
+    vez no pueden pasarse del tope. Lanza E-FIESTA-02 (sin cupo general) o
+    E-FIESTA-03 (pasa el tope del afiliado)."""
+    n = fiesta.cantidad_valida(cantidad)
+    if not n:
+        raise HTTPException(400, "Elegí cuántas entradas querés reservar.")
+    evento_id, precio, minutos = evento.id, evento.precio, evento.minutos_vencimiento
+    padron_id, legajo, dni, nombre = padron.id, padron.legajo, padron.dni, padron.nombre
+    s.commit()                            # cierra lo anterior: el lock arranca limpio
+    bloqueado = s.exec(select(FiestaEvento).options(*_sin_bytes(FiestaEvento))
+                       .where(FiestaEvento.id == evento_id).with_for_update()).one()
+    fiesta_vencer_pendientes(s, evento_id, commit=False)
+    if n > fiesta.disponibles_afiliado(bloqueado.tope_por_afiliado,
+                                       _fiesta_activas(s, evento_id, padron_id)):
+        s.rollback()
+        raise errores.ErrorApp("E-FIESTA-03")
+    if n > fiesta.disponibles(bloqueado.tope_general, _fiesta_activas(s, evento_id)):
+        s.rollback()
+        raise errores.ErrorApp("E-FIESTA-02")
+    r = FiestaReserva(evento_id=evento_id, padron_id=padron_id, tipo="afiliado",
+                      legajo=legajo, dni=dni, nombre=nombre,
+                      cantidad=n, importe=precio * n, estado="pendiente",
+                      vence=fiesta.vence_en(minutos), token=fiesta.nuevo_token())
+    s.add(r)
+    s.commit()
+    s.refresh(r)
+    return r
+
+
+def fiesta_crear_cortesia(s: Session, evento: FiestaEvento, nombre: str, dni: str,
+                          cantidad: int, leyenda: str, quien: str) -> FiestaReserva:
+    """Entrada de cortesía (D7): descuenta del tope general, no pasa por MP.
+    Nace pagada, importe 0 y sin vencimiento."""
+    n = fiesta.cantidad_valida(cantidad)
+    if not n:
+        raise HTTPException(400, "Indicá cuántas entradas.")
+    evento_id = evento.id
+    s.commit()
+    bloqueado = s.exec(select(FiestaEvento).options(*_sin_bytes(FiestaEvento))
+                       .where(FiestaEvento.id == evento_id).with_for_update()).one()
+    fiesta_vencer_pendientes(s, evento_id, commit=False)
+    if n > fiesta.disponibles(bloqueado.tope_general, _fiesta_activas(s, evento_id)):
+        s.rollback()
+        raise errores.ErrorApp("E-FIESTA-02")
+    r = FiestaReserva(evento_id=evento_id, padron_id=None, tipo="cortesia", dni=dni,
+                      nombre=nombre, cantidad=n, importe=0, estado="pagada",
+                      pagada_en=fiesta.sello(), vence="", token=fiesta.nuevo_token(),
+                      leyenda=(leyenda or "").strip() or bloqueado.leyenda_cortesia
+                      or fiesta.LEYENDA_CORTESIA, emitida_por=quien)
+    s.add(r)
+    s.commit()
+    s.refresh(r)
+    return r
+
+
+def fiesta_aplicar_pago(s: Session, evento: FiestaEvento, reserva_id: int, pago: dict) -> dict:
+    """Aplica un pago a una reserva (lo llaman el webhook y el simulado, por el
+    MISMO camino). `pago`: {id, status, external_reference, transaction_amount}.
+    Idempotente: cada aviso queda en FiestaAvisoPago y el mismo (pago, estado)
+    ya procesado no hace nada. Devuelve {"resultado", "estado"}.
+
+    - approved -> pagada. Si estaba vencida o anulada se toma igual (D9: la
+      persona pagó, nunca se pierde un pago) y, si con eso se pasa el tope
+      general, queda `sobrecupo`.
+    - El monto tiene que coincidir con el importe: si no, se registra y NO se
+      marca pagada.
+    - rejected / cancelled / pending: la reserva sigue pendiente hasta que venza."""
+    evento_id = evento.id
+    payment_id = str(pago.get("id", ""))
+    status = str(pago.get("status", ""))
+    s.commit()
+    # Mismo orden de bloqueo que crear_reserva: primero el evento, después la reserva.
+    s.exec(select(FiestaEvento.id).where(FiestaEvento.id == evento_id).with_for_update()).first()
+    previo = s.exec(select(FiestaAvisoPago).where(
+        FiestaAvisoPago.evento_id == evento_id, FiestaAvisoPago.mp_payment_id == payment_id,
+        FiestaAvisoPago.accion == status, FiestaAvisoPago.procesado == True)).first()   # noqa: E712
+    if previo:
+        s.rollback()
+        return {"resultado": "duplicado", "estado": None}
+    aviso = FiestaAvisoPago(evento_id=evento_id, mp_payment_id=payment_id, accion=status,
+                            cuerpo={k: pago.get(k) for k in
+                                    ("id", "status", "external_reference", "transaction_amount")})
+    s.add(aviso)
+    r = s.exec(select(FiestaReserva).where(
+        FiestaReserva.id == reserva_id, FiestaReserva.evento_id == evento_id).with_for_update()).first()
+    if not r:
+        aviso.resultado, aviso.procesado = "reserva inexistente", True
+        s.commit()
+        return {"resultado": "reserva inexistente", "estado": None}
+    r.mp_estado = status
+    if status == "approved":
+        try:
+            monto_ok = abs(float(pago.get("transaction_amount") or 0) - float(r.importe)) < 0.01
+        except (TypeError, ValueError):
+            monto_ok = False
+        if not monto_ok:
+            aviso.resultado = "monto distinto: no se marcó pagada"
+        elif r.estado == "pagada":
+            if r.mp_payment_id and payment_id and r.mp_payment_id != payment_id:
+                # Segundo pago aprobado sobre la misma reserva: no cambia el estado,
+                # pero el sindicato tiene que verlo para devolverlo.
+                aviso.resultado = "duplicado"
+                r.nota = (r.nota + " | " if r.nota else "") + \
+                    f"Pago duplicado {payment_id}: devolver desde MercadoPago"
+            else:
+                aviso.resultado = "ya estaba pagada"
+        else:
+            tarde = r.estado in ("vencida", "anulada")
+            if tarde:
+                en_uso = fiesta.ocupadas(_fiesta_activas(s, evento_id))
+                tope = s.exec(select(FiestaEvento.tope_general).where(FiestaEvento.id == evento_id)).first()
+                r.sobrecupo = en_uso + r.cantidad > (tope or 0)
+            if r.estado == "anulada":
+                r.nota = (r.nota + " | " if r.nota else "") + \
+                    "Pago recibido sobre una reserva anulada: revisar o devolver desde MercadoPago"
+            r.estado, r.pagada_en, r.mp_payment_id = "pagada", fiesta.sello(), payment_id or r.mp_payment_id
+            aviso.resultado = "pagada tarde (D9)" if tarde else "pagada"
+    else:
+        aviso.resultado = f"estado {status or '?'}: la reserva sigue como estaba"
+    aviso.procesado = True
+    s.add(r)
+    s.commit()
+    return {"resultado": aviso.resultado, "estado": r.estado}
+
+
+def fiesta_anular_reserva(s: Session, reserva: FiestaReserva) -> None:
+    reserva.estado = "anulada"
+    s.add(reserva)
+    s.commit()
+
+
+def fiesta_registrar_ingreso(s: Session, reserva_id: int, cantidad: Optional[int],
+                             modo: str, quien: str, motivo: str = "") -> dict:
+    """Marca el ingreso de N personas de una reserva pagada (o cortesía), con
+    la reserva bloqueada para que dos puertas no la cuenten dos veces.
+    E-FIESTA-09 si no está pagada, E-FIESTA-08 si ya entraron todos."""
+    s.commit()
+    r = s.exec(select(FiestaReserva).where(FiestaReserva.id == reserva_id).with_for_update()).first()
+    if not r:
+        raise HTTPException(404, "No existe esa reserva.")
+    if r.estado != "pagada":
+        s.rollback()
+        raise errores.ErrorApp("E-FIESTA-09")
+    faltan = r.cantidad - r.ingresados
+    if faltan <= 0:
+        s.rollback()
+        raise errores.ErrorApp("E-FIESTA-08")
+    n = faltan if cantidad in (None, 0) else fiesta.cantidad_valida(cantidad)
+    if not n:
+        s.rollback()
+        raise HTTPException(400, "Indicá cuántas personas ingresan.")
+    if n > faltan:
+        s.rollback()
+        raise HTTPException(400, f"Solo faltan ingresar {faltan}.")
+    ya = r.ingresados
+    r.ingresados += n
+    r.ultimo_ingreso = fiesta.sello()
+    s.add(r)
+    s.add(FiestaIngreso(reserva_id=r.id, cantidad=n, modo=modo, quien=quien,
+                        motivo=(motivo or "").strip()))
+    s.commit()
+    s.refresh(r)
+    return {"ya_ingresados": ya, "ingresaron": n, "faltan": r.cantidad - r.ingresados,
+            "reserva": fiesta_reserva_dict(r)}
+
+
+def fiesta_reserva_dict(r: FiestaReserva, evento: FiestaEvento = None) -> dict:
+    d = {"id": r.id, "numero": fiesta.numero_reserva(r.id), "tipo": r.tipo, "legajo": r.legajo,
+         "dni": r.dni, "nombre": r.nombre, "cantidad": r.cantidad, "importe": r.importe,
+         "estado": r.estado, "creada": r.creada, "vence": r.vence, "pagada_en": r.pagada_en,
+         "mp_estado": r.mp_estado, "sobrecupo": r.sobrecupo, "ingresados": r.ingresados,
+         "ultimo_ingreso": r.ultimo_ingreso, "nota": r.nota,
+         "leyenda": fiesta.leyenda_entrada(r.tipo, r.leyenda), "emitida_por": r.emitida_por}
+    if evento is not None:
+        hab, desde = fiesta.ventana_entrada(evento.fecha_hora, evento.horas_antes)
+        d["entrada_habilitada"] = hab and r.estado == "pagada"
+        d["entrada_desde"] = fiesta.fecha_texto(desde)
+    return d
+
+
+def fiesta_reservas_del_padron(s: Session, evento_id: int, padron_id: int) -> list:
+    return list(s.exec(select(FiestaReserva).where(
+        FiestaReserva.evento_id == evento_id, FiestaReserva.padron_id == padron_id)
+        .order_by(FiestaReserva.id.desc())).all())
+
+
+def fiesta_listar_reservas(s: Session, evento_id: int, estado: str = "", tipo: str = "",
+                           q: str = "", ingreso: str = "todas") -> list:
+    fiesta_vencer_pendientes(s, evento_id)
+    cond = [FiestaReserva.evento_id == evento_id]
+    if estado in fiesta.ESTADOS:
+        cond.append(FiestaReserva.estado == estado)
+    if tipo in fiesta.TIPOS:
+        cond.append(FiestaReserva.tipo == tipo)
+    if ingreso == "si":
+        cond.append(FiestaReserva.ingresados > 0)
+    elif ingreso == "no":
+        cond.append(FiestaReserva.ingresados == 0)
+    q = (q or "").strip()
+    if q:
+        patron = f"%{q}%"
+        cond.append(or_(FiestaReserva.nombre.ilike(patron), FiestaReserva.legajo.ilike(patron),
+                        FiestaReserva.dni.like(f"%{fiesta.normalizar_dni(q) or q}%")))
+    return list(s.exec(select(FiestaReserva).where(*cond).order_by(FiestaReserva.id.desc())).all())
+
+
+def fiesta_buscar_para_puerta(s: Session, evento_id: int, q: str) -> list:
+    """Reservas pagadas y cortesías por DNI, legajo o nombre (D8)."""
+    q = (q or "").strip()
+    if len(q) < 3:
+        return []
+    patron = f"%{q}%"
+    filas = s.exec(select(FiestaReserva).where(
+        FiestaReserva.evento_id == evento_id, FiestaReserva.estado == "pagada",
+        or_(FiestaReserva.nombre.ilike(patron), FiestaReserva.legajo.ilike(patron),
+            FiestaReserva.dni.like(f"%{fiesta.normalizar_dni(q) or q}%")))
+        .order_by(FiestaReserva.nombre).limit(30)).all()
+    return list(filas)
+
+
+def fiesta_contadores(s: Session, evento: FiestaEvento) -> dict:
+    from sqlalchemy import func
+    fiesta_vencer_pendientes(s, evento.id)
+    filas = s.exec(select(FiestaReserva.estado, FiestaReserva.tipo, func.count(),
+                          func.coalesce(func.sum(FiestaReserva.cantidad), 0),
+                          func.coalesce(func.sum(FiestaReserva.importe), 0),
+                          func.coalesce(func.sum(FiestaReserva.ingresados), 0))
+                   .where(FiestaReserva.evento_id == evento.id)
+                   .group_by(FiestaReserva.estado, FiestaReserva.tipo)).all()
+    c = {"tope_general": evento.tope_general, "reservadas": 0, "pagadas": 0, "pendientes": 0,
+         "vencidas": 0, "cortesias": 0, "personas_pagadas": 0, "ingresadas": 0,
+         "disponibles": 0, "recaudado": 0, "sobrecupo": 0}
+    ocupan = 0
+    for estado, tipo, reservas, personas, importe, ingresadas in filas:
+        if estado in ("pendiente", "pagada"):
+            ocupan += int(personas)
+        if estado == "pagada":
+            c["personas_pagadas"] += int(personas)
+            c["ingresadas"] += int(ingresadas)
+            if tipo == "cortesia":
+                c["cortesias"] += int(personas)
+            else:
+                c["pagadas"] += int(reservas)
+                c["recaudado"] += int(importe)
+        elif estado == "pendiente":
+            c["pendientes"] += int(reservas)
+        elif estado == "vencida":
+            c["vencidas"] += int(reservas)
+    c["reservadas"] = ocupan
+    c["disponibles"] = max(0, evento.tope_general - ocupan)
+    c["sobrecupo"] = s.exec(select(func.count()).select_from(FiestaReserva).where(
+        FiestaReserva.evento_id == evento.id, FiestaReserva.sobrecupo == True)).one()   # noqa: E712
+    return c
+
+
+def fiesta_padron_por_credenciales(s: Session, evento_id: int, legajo: str, dni: str) -> Optional[FiestaPadron]:
+    """Legajo + DNI tienen que coincidir los dos con el padrón activo (D1)."""
+    p = s.exec(select(FiestaPadron).where(
+        FiestaPadron.evento_id == evento_id, FiestaPadron.legajo == fiesta.normalizar_legajo(legajo),
+        FiestaPadron.activo == True)).first()                                          # noqa: E712
+    if p and p.dni and fiesta.normalizar_dni(dni) == p.dni:
+        return p
+    return None
+
+
+def fiesta_cargar_padron(s: Session, evento_id: int, filas: list) -> dict:
+    """Alta o actualización por (evento, legajo). Devuelve {nuevos, actualizados}."""
+    nuevos = actualizados = 0
+    existentes = {p.legajo: p for p in s.exec(select(FiestaPadron).where(
+        FiestaPadron.evento_id == evento_id)).all()}
+    for f in filas:
+        p = existentes.get(f["legajo"])
+        if p:
+            # No se reactiva: quien lo desactivó a mano sigue desactivado.
+            p.dni, p.nombre, p.mail = f["dni"], f["nombre"], f.get("mail", "")
+            actualizados += 1
+        else:
+            p = FiestaPadron(evento_id=evento_id, legajo=f["legajo"], dni=f["dni"],
+                             nombre=f["nombre"], mail=f.get("mail", ""))
+            existentes[f["legajo"]] = p
+            nuevos += 1
+        s.add(p)
+    s.commit()
+    return {"nuevos": nuevos, "actualizados": actualizados}
+
+
+def fiesta_operador_por_usuario(s: Session, evento_id: int, usuario: str) -> Optional[FiestaOperador]:
+    return s.exec(select(FiestaOperador).where(
+        FiestaOperador.evento_id == evento_id,
+        FiestaOperador.usuario == (usuario or "").strip().lower())).first()
+
+
+def fiesta_hay_admin(s: Session, evento_id: int) -> bool:
+    return s.exec(select(FiestaOperador.id).where(
+        FiestaOperador.evento_id == evento_id, FiestaOperador.rol == "admin",
+        FiestaOperador.activo == True)).first() is not None                             # noqa: E712

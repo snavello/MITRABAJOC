@@ -35,6 +35,19 @@ db.crear_tablas()
 
 # Públicas a propósito: (método, path) -> por qué.
 PUBLICAS = {
+    # Fiesta de Fin de Año (PLAN_FIESTA.md): subproducto con login propio; solo
+    # existe donde existe /entornos. Estas son públicas a propósito.
+    ("GET", "/fiesta"): "página del afiliado (login + inicio)",
+    ("GET", "/fiesta/sindicato"): "página del sindicato (login + app)",
+    ("GET", "/fiesta/pago/vuelta"): "back_url de MercadoPago: redirige a /fiesta",
+    ("GET", "/fiesta/foto/{evento_id}"): "foto de fondo del evento (decorado, como el logo)",
+    ("GET", "/fiesta/entrada/{reserva_id}"): "el ticket: sesión del afiliado o token de la reserva; sin ninguno va a /fiesta",
+    ("GET", "/api/fiesta/entrada/{reserva_id}/qr"): "renovación del QR: sesión del afiliado o token; sin ninguno 404",
+    ("GET", "/fiesta/e/{token}"): "verificación pública del QR; sin código vigente no muestra nada",
+    ("POST", "/api/fiesta/entrar"): "login del afiliado (legajo + DNI), con freno por IP",
+    ("POST", "/api/fiesta/salir"): "cierra la sesión",
+    ("POST", "/api/fiesta/sindicato/entrar"): "login del personal del sindicato, con freno por IP",
+    ("POST", "/api/fiesta/sindicato/salir"): "cierra la sesión",
     ("GET", "/"): "landing con las tres entradas",
     ("GET", "/sw.js"): "service worker de la PWA",
     ("GET", "/healthz"): "health check de Render, no toca la base",

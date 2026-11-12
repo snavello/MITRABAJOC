@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f1f">
+<meta name="robots" content="noindex">
+<title>{% if evento %}{{ evento.nombre }}{% else %}Fiesta{% endif %} — Sindicato</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/fiesta/fiesta.css?v={{ sello_static('fiesta/fiesta.css') }}">
+<link rel="stylesheet" href="/static/fiesta/sindicato.css?v={{ sello_static('fiesta/sindicato.css') }}">
+</head>
+<body class="fs" data-rol="{{ operador.rol if operador else '' }}" data-debe="{{ '1' if operador and operador.debe_cambiar_clave else '' }}" data-mp-modo="{{ mp_modo }}">
+<div class="fs-fondo" aria-hidden="true"></div>
+
+<header class="fs-enc">
+  <img class="fs-logo" src="/static/fiesta/logo_supara_oro.png?v={{ sello_static('fiesta/logo_supara_oro.png') }}" alt="SUPARA">
+  <div class="fs-enc-txt">
+    <b>{% if evento %}{{ evento.nombre }}{% else %}Fiesta{% endif %}</b>
+    <span>{% if operador %}{{ operador.nombre }} · {{ 'Administración' if operador.rol == 'admin' else 'Puerta' }}{% else %}Panel del sindicato{% endif %}</span>
+  </div>
+  {% if operador %}<button type="button" class="fs-btn fs-btn-fino" id="btn-salir">Salir</button>{% endif %}
+</header>
+
+<main class="fs-main">
+{% if not operador %}
+  {# ---- Login ---- #}
+  <section class="fs-login fs-vidrio" data-mov-vista id="vista-login">
+    <h1 class="fs-titulo">Ingreso del personal</h1>
+    <p class="fs-suave">Usuario y clave del evento. Te los da quien organiza la fiesta.</p>
+    <form id="form-login" autocomplete="off">
+      <label>Usuario<input name="usuario" required autocapitalize="none" autocomplete="username"></label>
+      <label>Clave<input name="clave" type="password" required autocomplete="current-password"></label>
+      <p class="fs-aviso fs-error" id="login-error" role="alert" hidden></p>
+      <button class="fs-btn fs-btn-oro" type="submit">Entrar</button>
+    </form>
+  </section>
+{% elif operador.debe_cambiar_clave %}
+  {# ---- Primer ingreso: elegir clave ---- #}
+  <section class="fs-login fs-vidrio" data-mov-vista id="vista-clave">
+    <h1 class="fs-titulo">Elegí tu clave</h1>
+    <p class="fs-suave">Es tu primer ingreso. La clave que te dieron es transitoria: elegí una propia de al menos 8 caracteres.</p>
+    <form id="form-clave" autocomplete="off">
+      <label>Clave actual<input name="actual" type="password" required autocomplete="current-password"></label>
+      <label>Clave nueva<input name="nueva" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label>Repetí la clave nueva<input name="repetir" type="password" required minlength="8" autocomplete="new-password"></label>
+      <p class="fs-aviso fs-error" id="clave-error" role="alert" hidden></p>
+      <button class="fs-btn fs-btn-oro" type="submit">Guardar y entrar</button>
+    </form>
+  </section>
+{% else %}
+  <nav class="fs-tabs" role="tablist" id="tabs">
+    {% if operador.rol == 'admin' %}
+    <button type="button" role="tab" class="fs-tab" data-tab="panel" aria-selected="true">Panel</button>
+    {% endif %}
+    <button type="button" role="tab" class="fs-tab" data-tab="puerta" aria-selected="{{ 'true' if operador.rol != 'admin' else 'false' }}">Puerta</button>
+    {% if operador.rol == 'admin' %}
+    <button type="button" role="tab" class="fs-tab" data-tab="padron" aria-selected="false">Padrón</button>
+    <button type="button" role="tab" class="fs-tab" data-tab="cortesias" aria-selected="false">Cortesías</button>
+    <button type="button" role="tab" class="fs-tab" data-tab="config" aria-selected="false">Configuración</button>
+    {% endif %}
+  </nav>
+
+  {% if operador.rol == 'admin' %}
+  {# ================= PANEL ================= #}
+  <section class="fs-panel" data-panel="panel" data-mov-vista>
+    <div class="fs-contadores" id="contadores" aria-live="polite"></div>
+    <form class="fs-filtros fs-vidrio" id="filtros" autocomplete="off">
+      <label>Buscar<input name="q" type="search" placeholder="Nombre, legajo o DNI"></label>
+      <label>Estado
+        <select name="estado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="pagada">Pagada</option><option value="vencida">Vencida</option><option value="anulada">Anulada</option></select></label>
+      <label>Tipo
+        <select name="tipo"><option value="">Todos</option><option value="afiliado">Afiliado</option><option value="cortesia">Cortesía</option></select></label>
+      <label>Ingreso
+        <select name="ingreso"><option value="todas">Todas</option><option value="si">Ya ingresaron</option><option value="no">Sin ingresar</option></select></label>
+      <a class="fs-btn fs-btn-sec" id="btn-csv" href="/fiesta/sindicato/reservas.csv" download>Descargar CSV</a>
+    </form>
+    <p class="fs-suave fs-cuenta" id="reservas-cuenta"></p>
+    <div class="fs-tabla-caja"><table class="fs-tabla" id="tabla-reservas">
+      <thead><tr><th>Nombre</th><th>Legajo</th><th>DNI</th><th class="num">Pers.</th><th>Estado</th><th>Ingresos</th><th>Acciones</th></tr></thead>
+      <tbody></tbody></table></div>
+    <p class="fs-vacio" id="reservas-vacio" hidden>No hay reservas con esos filtros.</p>
+  </section>
+  {% endif %}
+
+  {# ================= PUERTA ================= #}
+  <section class="fs-panel" data-panel="puerta" data-mov-vista {% if operador.rol == 'admin' %}hidden{% endif %}>
+    <div class="fs-visor fs-vidrio">
+      <div class="fs-video-caja" id="video-caja">
+        <video id="video" playsinline muted></video>
+        <canvas id="lienzo" hidden></canvas>
+        <div class="fs-mira" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <p class="fs-video-msg" id="camara-msg">La cámara está apagada.</p>
+      </div>
+      <div class="fs-visor-acc">
+        <button type="button" class="fs-btn fs-btn-oro" id="btn-camara">Activar cámara</button>
+        <span class="fs-suave" id="camara-estado"></span>
+      </div>
+      <label class="fs-check"><input type="checkbox" id="chk-elegir"> Elegir cuántas personas pasan en cada lectura</label>
+      <form class="fs-pegar" id="form-pegar" autocomplete="off">
+        <label>Si no anda la cámara, pegá acá el texto del QR
+          <input name="texto" id="texto-qr" placeholder="https://…/fiesta/e/…?k=…" autocapitalize="none"></label>
+        <button class="fs-btn fs-btn-sec" type="submit">Comprobar</button>
+      </form>
+    </div>
+
+    <div class="fs-vidrio fs-doc">
+      <h2 class="fs-h2">Ingreso con documento</h2>
+      <p class="fs-suave">Para quien perdió el teléfono o no puede mostrar la entrada. Buscá por DNI, legajo o nombre.</p>
+      <form class="fs-buscar" id="form-buscar" autocomplete="off">
+        <input name="q" type="search" placeholder="DNI, legajo o nombre" required inputmode="search">
+        <button class="fs-btn fs-btn-oro" type="submit">Buscar</button>
+      </form>
+      <p class="fs-aviso fs-error" id="buscar-error" role="alert" hidden></p>
+      <div id="buscar-res" class="fs-lista"></div>
+    </div>
+  </section>
+
+  {% if operador.rol == 'admin' %}
+  {# ================= PADRÓN ================= #}
+  <section class="fs-panel" data-panel="padron" data-mov-vista hidden>
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">Cargar el padrón con un CSV</h2>
+      <p class="fs-suave">Columnas: legajo;dni;nombre;mail (la cabecera es opcional). Primero se ensaya: ves qué se va a cargar y qué filas tienen error, y recién después confirmás.</p>
+      <form id="form-csv" autocomplete="off">
+        <input type="file" name="archivo" id="csv-archivo" accept=".csv,text/csv,text/plain" required>
+        <button class="fs-btn fs-btn-sec" type="submit">Ensayar</button>
+      </form>
+      <div id="csv-ensayo" hidden>
+        <p id="csv-resumen" class="fs-resumen"></p>
+        <div class="fs-tabla-caja" id="csv-errores-caja" hidden>
+          <table class="fs-tabla"><thead><tr><th class="num">Línea</th><th>Problema</th></tr></thead><tbody id="csv-errores"></tbody></table></div>
+        <button class="fs-btn fs-btn-oro" type="button" id="btn-csv-confirmar">Confirmar la carga</button>
+      </div>
+      <p class="fs-aviso" id="csv-msg" role="status" hidden></p>
+    </div>
+
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">Agregar una persona</h2>
+      <form class="fs-grid-form" id="form-padron" autocomplete="off">
+        <label>Legajo<input name="legajo" required></label>
+        <label>DNI<input name="dni" required inputmode="numeric"></label>
+        <label>Nombre y apellido<input name="nombre" required></label>
+        <label>Mail (opcional)<input name="mail" type="email"></label>
+        <button class="fs-btn fs-btn-oro" type="submit">Agregar</button>
+      </form>
+      <p class="fs-aviso" id="padron-msg" role="status" hidden></p>
+    </div>
+
+    <div class="fs-bloque-lista">
+      <form class="fs-buscar" id="form-padron-q" autocomplete="off">
+        <input name="q" type="search" placeholder="Buscar en el padrón: nombre, legajo o DNI">
+      </form>
+      <p class="fs-suave fs-cuenta" id="padron-cuenta"></p>
+      <div class="fs-tabla-caja"><table class="fs-tabla" id="tabla-padron">
+        <thead><tr><th>Nombre</th><th>Legajo</th><th>DNI</th><th>Mail</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody></tbody></table></div>
+      <p class="fs-vacio" id="padron-vacio" hidden>El padrón todavía está vacío.</p>
+    </div>
+  </section>
+
+  {# ================= CORTESÍAS ================= #}
+  <section class="fs-panel" data-panel="cortesias" data-mov-vista hidden>
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">Emitir una cortesía</h2>
+      <p class="fs-suave">Una entrada a nombre de una persona invitada. No pasa por MercadoPago y descuenta del cupo general.</p>
+      <form class="fs-grid-form" id="form-cortesia" autocomplete="off">
+        <label>Nombre y apellido<input name="nombre" required></label>
+        <label>DNI<input name="dni" required inputmode="numeric"></label>
+        <label>Cantidad de personas<input name="cantidad" type="number" min="1" max="20" value="1" required></label>
+        <label>Leyenda<input name="leyenda" id="cortesia-leyenda" placeholder="Invitado Especial"></label>
+        <label class="fs-ancho">Mail (opcional, para mandarle el enlace)<input name="mail" type="email"></label>
+        <button class="fs-btn fs-btn-oro" type="submit">Emitir cortesía</button>
+      </form>
+      <p class="fs-aviso fs-error" id="cortesia-error" role="alert" hidden></p>
+      <div class="fs-enlace" id="cortesia-ok" hidden>
+        <p class="fs-resumen" id="cortesia-texto"></p>
+        <input id="cortesia-url" readonly>
+        <div class="fs-fila-btn">
+          <button type="button" class="fs-btn fs-btn-oro" id="btn-copiar">Copiar enlace</button>
+          <button type="button" class="fs-btn fs-btn-sec" id="btn-compartir" hidden>Compartir</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ================= CONFIGURACIÓN ================= #}
+  <section class="fs-panel" data-panel="config" data-mov-vista hidden>
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">El evento</h2>
+      <form class="fs-grid-form" id="form-config" autocomplete="off">
+        <label class="fs-ancho">Nombre<input name="nombre" required></label>
+        <label>Fecha y hora<input name="fecha_hora" type="datetime-local" required></label>
+        <label>Lugar<input name="lugar" required></label>
+        <label>Precio por persona ($)<input name="precio" type="number" min="0" step="1" required></label>
+        <label>Tope por afiliado<input name="tope_por_afiliado" type="number" min="1" required></label>
+        <label>Tope general<input name="tope_general" type="number" min="1" required></label>
+        <label>La entrada se habilita (horas antes)<input name="horas_antes" type="number" min="0" required></label>
+        <label>La reserva sin pagar vence (minutos)<input name="minutos_vencimiento" type="number" min="1" required></label>
+        <label>Leyenda de las cortesías<input name="leyenda_cortesia" placeholder="Invitado Especial"></label>
+        <label class="fs-ancho">Texto del ticket (opcional)<input name="leyenda_ticket"></label>
+        <button class="fs-btn fs-btn-oro" type="submit">Guardar</button>
+      </form>
+      <p class="fs-aviso" id="config-msg" role="status" hidden></p>
+    </div>
+
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">Foto de fondo</h2>
+      <p class="fs-suave">Se ve detrás de la app del afiliado y del ticket, con un velo oscuro encima. Se achica sola al subirla.</p>
+      <div class="fs-foto">
+        <div class="fs-foto-vista" id="foto-vista"><span class="fs-suave" id="foto-vacia">Sin foto: se usa el fondo de gala.</span></div>
+        <div class="fs-fila-btn">
+          <label class="fs-btn fs-btn-sec fs-subir">Elegir una foto<input type="file" id="foto-archivo" accept="image/*" hidden></label>
+          <button type="button" class="fs-btn fs-btn-fino" id="btn-foto-quitar" hidden>Quitar la foto</button>
+        </div>
+      </div>
+      <p class="fs-aviso" id="foto-msg" role="status" hidden></p>
+    </div>
+
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">MercadoPago</h2>
+      <p><span class="fs-pildora" id="mp-pildora">…</span></p>
+      <p class="fs-suave" id="mp-texto"></p>
+    </div>
+
+    <div class="fs-vidrio fs-bloque">
+      <h2 class="fs-h2">Operadores</h2>
+      <p class="fs-suave">Quienes entran a esta app. <b>Administración</b> ve todo; <b>Puerta</b> solo escanea y registra ingresos.</p>
+      <div class="fs-tabla-caja"><table class="fs-tabla" id="tabla-ops">
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody></tbody></table></div>
+      <h3 class="fs-h3">Agregar un operador</h3>
+      <form class="fs-grid-form" id="form-op" autocomplete="off">
+        <label>Usuario<input name="usuario" required autocapitalize="none"></label>
+        <label>Nombre<input name="nombre" required></label>
+        <label>Rol<select name="rol"><option value="puerta">Puerta</option><option value="admin">Administración</option></select></label>
+        <label>Clave inicial<input name="clave_inicial" required minlength="6"></label>
+        <button class="fs-btn fs-btn-oro" type="submit">Agregar</button>
+      </form>
+      <p class="fs-suave">La clave inicial es transitoria: se la pasás a la persona por fuera de la app y la cambia al entrar.</p>
+      <p class="fs-aviso" id="op-msg" role="status" hidden></p>
+    </div>
+  </section>
+  {% endif %}
+{% endif %}
+</main>
+
+{# Resultado de la puerta: bloque de color pleno, a pantalla completa. #}
+<div class="fs-res" id="res" hidden role="alertdialog" aria-live="assertive" aria-labelledby="res-titulo">
+  <div class="fs-res-cuerpo">
+    <div class="fs-res-icono" id="res-icono" aria-hidden="true"></div>
+    <h2 class="fs-res-titulo" id="res-titulo"></h2>
+    <p class="fs-res-nombre" id="res-nombre"></p>
+    <p class="fs-res-detalle" id="res-detalle"></p>
+    <div class="fs-res-menos" id="res-menos" hidden>
+      <label>¿Cuántas pasan ahora?
+        <span class="fs-cant"><button type="button" id="cant-menos" aria-label="Una menos">−</button><b id="cant-valor">1</b><button type="button" id="cant-mas" aria-label="Una más">+</button></span>
+      </label>
+      <button type="button" class="fs-btn fs-btn-claro" id="btn-registrar-menos">Registrar solo esas</button>
+    </div>
+    <button type="button" class="fs-btn fs-btn-claro" id="res-cerrar">Seguir escaneando</button>
+  </div>
+</div>
+
+<div class="fs-toast" id="toast" role="status" hidden></div>
+
+<script src="/static/numeros_ar.js?v={{ sello_static('numeros_ar.js') }}"></script>
+<script src="/static/vendor/jsqr/jsQR.js?v={{ sello_static('vendor/jsqr/jsQR.js') }}"></script>
+<script src="/static/fiesta/sindicato.js?v={{ sello_static('fiesta/sindicato.js') }}"></script>
+</body>
+</html>

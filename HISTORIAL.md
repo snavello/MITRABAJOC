@@ -10838,3 +10838,78 @@ las horas se cortan donde se acaba `next_1_hours`; el ícono del día es el de
 las seis horas desde el mediodía, como antes). La franja sigue usando
 `pronostico` (mañana y pasado). Verificado con Playwright con un MET sembrado
 de 68 puntos en `CacheExterna`, Laguna y Noticiero, escritorio y teléfono.
+
+## Fiesta SUPARA: entradas de un evento masivo con MercadoPago (2026-11-12, Plataforma 0.67.01)
+
+**El pedido.** SDN tiene a la vista un trabajo chico para un sindicato
+(SUPARA): los afiliados reservan entradas para la fiesta de fin de año, pagan
+por MercadoPago a la cuenta del gremio y reciben una entrada con QR que se
+escanea en la puerta. No es parte de Colm3na, es una manera de entrar al
+sindicato resolviéndole rápido y gratis algo que no sabe resolver. La única
+pieza que nunca habíamos hecho era el pago. Plan completo en `PLAN_FIESTA.md`;
+guía para operar en `docs/FIESTA.md`.
+
+**Qué se decidió antes de escribir** (cuatro preguntas a SDN): el afiliado
+entra con legajo + DNI contra el padrón que carga el sindicato (sin clave, sin
+mail); Checkout Pro por redirección con la aplicación de MercadoPago del
+sindicato en variables de entorno, y un modo simulado (`MP_MOCK=1`) para
+construir sin las claves; el vencimiento de una reserva sin pagar lo elige el
+sindicato (30 min por defecto); el personal entra con usuario y clave propios
+del evento, con un rol `puerta` que solo escanea.
+
+**Cómo se hizo.** Tres desarrolladores en paralelo sobre un contrato escrito
+(rutas, campos y contexto de cada plantilla fijados en el plan): backend
+(`fiesta.py` puro, `mercadopago.py` sin SDK con `urllib` como `correo.py`,
+seis modelos `Fiesta*`, migración `d7a1c3e5f9b2`, rutas en main.py), app del
+afiliado con el ticket, y app del sindicato con el escáner. Los dos frontends
+probaron contra stubs y después contra uvicorn real; las cuatro diferencias
+de contrato que encontraron (valores del simulado, `init_point`,
+`solo_verificar` en el escáner, 401 contra 403) se alinearon antes de cerrar.
+Después dos QA: suite y revisión adversaria del código, y robot Playwright de
+punta a punta (`e2e/test_robot_fiesta.py`).
+
+**Lo que importa del diseño técnico.**
+- Cupo general y tope por afiliado se cuentan y descuentan en la MISMA
+  transacción, con `SELECT ... FOR UPDATE` sobre el evento: dos personas por
+  las últimas entradas no pueden superarlo. El tope por afiliado es acumulado
+  (vencidas y anuladas no cuentan).
+- El vencimiento es perezoso: antes de contar o listar se pasan a `vencida`
+  las pendientes con `vence < ahora` y el cupo vuelve. No hay tarea programada.
+- El pago se confirma SOLO por el webhook. `x-signature` se valida con el
+  manifest `id:...;request-id:...;ts:...;` y HMAC-SHA256 contra
+  `MP_WEBHOOK_SECRET`, en tiempo constante; sin secreto o con firma mala, 401.
+  Después `GET /v1/payments/{id}`: `approved` con el monto igual al importe →
+  pagada; monto distinto → se registra y NO se marca. Cada aviso queda en
+  `FiestaAvisoPago` y el mismo `payment_id` no se procesa dos veces. D9: un
+  pago aprobado sobre una reserva ya vencida se toma igual (la persona pagó)
+  y, si supera el tope, queda `sobrecupo` para que el sindicato lo resuelva.
+- El simulado (`/fiesta/mp-simulado/{id}`, solo con `MP_MOCK=1` y solo para
+  el dueño de la reserva) aplica el resultado por el mismo
+  `_fiesta_procesar_pago` que el webhook: lo que se prueba es el camino real.
+- El QR del ticket es el de la credencial: `qr.codigo_efimero(token)` de 10
+  minutos, renovado solo; la puerta valida con `verificar_codigo_efimero`. La
+  URL no lleva DNI. El ticket no genera QR hasta que la entrada está
+  habilitada (`horas_antes`).
+- La puerta lee con `BarcodeDetector` si existe y si no con jsQR 1.4.0
+  (Apache-2.0, vendoreado con `ORIGEN.md` y SHA-256); sin cámara, se pega el
+  texto. «Elegir cuántas pasan» consulta con `solo_verificar` y recién
+  después registra. El ingreso con documento exige motivo y queda con quién y
+  cuándo (`FiestaIngreso`).
+- Sesiones propias (`sesion_fiesta`, `sesion_fiesta_op`), freno por IP en
+  los dos logins, 401 sin sesión en todas las rutas del sindicato, y 404 en
+  demo para todo, webhook incluido.
+
+**Diseño.** De gala: noche con luces bokeh en oro, tarjetas en vidrio
+oscuro, Cinzel y Playfair Display (OFL, vendoreadas) para los títulos y el
+ticket, que es de papel crema con la filigrana de `filigrana.py` encima del
+fondo, talón perforado con el QR y «ADMITE N PERSONAS»; las cortesías llevan
+la banda «INVITADO ESPECIAL». Todo en tokens `--f-*` de
+`static/fiesta/fiesta.css`, para cambiar al modelo del catálogo XSD que elija
+SDN sin tocar las plantillas. El logo de SUPARA (celeste y negro, poco
+elegante sobre las tarjetas) se pasó a un solo tono en tres versiones.
+«Colm3na» no aparece: es el producto del sindicato.
+
+**Queda.** Que SDN cree la aplicación en MercadoPago y cargue
+`MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de prueba en Pruebas (la URL del
+webhook es `https://<pruebas>/api/fiesta/mp/webhook`); probar la cámara en un
+teléfono real (en Pruebas hay https); el modelo de diseño del catálogo XSD.

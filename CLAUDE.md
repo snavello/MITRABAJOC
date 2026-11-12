@@ -235,6 +235,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Moonshot, Qwen de Alibaba; Anthropic sale de `precios_ia`). Mismo prompt del extractor;
   ensayos en `CasoHerramienta` sin identidad. Ninguna ruta de la app lo
   importa. Ver "Herramientas".
+- fiesta.py + mercadopago.py — **Fiesta SUPARA**, el subproducto de entradas
+  de un evento masivo (`PLAN_FIESTA.md`, `docs/FIESTA.md`): `fiesta.py` es el
+  motor puro (cupo, topes acumulados, vencimiento, ventana de la entrada,
+  contenido del QR, CSV del padrón) y `mercadopago.py` el cobro por Checkout
+  Pro sin SDK (preferencia, firma del webhook, consulta del pago, modo
+  simulado). Modelos `Fiesta*` en db.py; rutas `/fiesta*` en main.py.
+  Vive en Herramientas de `/entornos`; no es parte de Colm3na. Ver
+  "Herramientas" y "Estado actual" 48.
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
   **Carga la demo AL IMPORTARSE** (no tiene `if __name__`): nunca importarlo
   para leer una constante. Sus números viejos → nuevos, en `identificadores_demo.py`.
@@ -479,6 +487,12 @@ alta los administradores y cómo ingresa la clave»):
 - LECTURA_CUPO / LECTURA_ESPERA_S — lecturas de documentos (foto o PDF) que pueden
   procesarse a la vez en un proceso (default 2) y cuántos segundos espera un pedido
   su turno antes de contestar 503 (default 45). Cada lectura pica ~30 MiB.
+- MP_ACCESS_TOKEN / MP_WEBHOOK_SECRET / MP_MOCK — MercadoPago de la **Fiesta
+  SUPARA** (`mercadopago.py`), con las credenciales de la aplicación de
+  Checkout Pro del sindicato (para la prueba, la de SDN). `MP_MOCK=1` simula
+  el pago sin salir (checkout propio en `/fiesta/mp-simulado/{id}`); sin
+  token ni mock, el cobro está apagado y reservar da E-FIESTA-05. El webhook
+  falla cerrado sin `MP_WEBHOOK_SECRET`. Paso a paso en `docs/FIESTA.md`.
 - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — cliente OAuth de Google Cloud para
   «Continuar con Google» en `/ingresar`, `/ingresar-empresa` y `/admin` (`google_auth.py`);
   sin las dos, apagado: el botón no se dibuja y las rutas dan 404. Lleva una
@@ -1699,6 +1713,35 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (comparar con otro) y decidir quién paga la verificación. Ver
     `test_identidad.py` y `test_identidad_rutas.py`.
 
+48. **Fiesta SUPARA: entradas de un evento masivo con MercadoPago** (2026-11-12,
+    Plataforma 0.67.01, `PLAN_FIESTA.md`; pedido de SDN: un trabajo chico y
+    gratuito para un sindicato, aparte de Colm3na, como puerta de entrada). Dos
+    apps en Herramientas de `/entornos` (404 en demo): la del **afiliado**
+    (`/fiesta`: entra con legajo + DNI contra el padrón que cargó el sindicato,
+    reserva hasta el tope por persona, paga por Checkout Pro y ve el pago
+    reflejado al volver; la entrada es un ticket de espectáculo con filigrana,
+    talón y QR firmado y efímero que se habilita `horas_antes` del evento) y la
+    del **sindicato** (`/fiesta/sindicato`, usuario y clave propios con roles
+    `admin` y `puerta`: panel con contadores y reservas, padrón por CSV con
+    ensayo, cortesías «Invitado Especial» con enlace, configuración del evento y
+    foto de fondo, operadores, y la **Puerta**: escáner con la cámara y jsQR
+    vendoreado o texto pegado, resultado en verde/ámbar/rojo, ingreso parcial e
+    **ingreso con documento** para quien perdió el teléfono). El sindicato no
+    maneja dinero: la plata va de MercadoPago a su cuenta con sus credenciales.
+    Reglas que importan: cupo general y tope por afiliado se descuentan en la
+    misma transacción con `FOR UPDATE`; el vencimiento (lo elige el sindicato)
+    es perezoso y devuelve cupo; el webhook se valida con `x-signature` y falla
+    cerrado, un pago con monto distinto no marca pagada, el mismo `payment_id`
+    no se procesa dos veces, y un pago aprobado sobre una reserva vencida se
+    toma igual y queda `sobrecupo` (D9). Con `MP_MOCK=1` el checkout es
+    simulado por el mismo camino que el webhook. Diseño «de gala» todo en
+    tokens `--f-*` (`static/fiesta/fiesta.css`): SDN elige un modelo del
+    catálogo XSD y se cambia esa hoja. Hecho por tres desarrolladores y dos QA
+    (Sonnet 5.5) en paralelo. Tests `test_fiesta.py`, `test_mercadopago.py`,
+    `test_fiesta_pantallas.py`, robot `e2e/test_robot_fiesta.py`. **Queda de
+    SDN**: crear la aplicación en MercadoPago y cargar `MP_ACCESS_TOKEN` y
+    `MP_WEBHOOK_SECRET` de prueba en Pruebas; probar la cámara en un teléfono.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -2293,6 +2336,31 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   nadie, todos en empate). Confianza y Formato no impactan. Determinista,
   en el resultado y en cada ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
+
+**Fiesta SUPARA** (`fiesta.py`, `mercadopago.py`, `templates/fiesta_*.html`,
+`static/fiesta/`, `static/vendor/jsqr/`; `PLAN_FIESTA.md` D1–D10, guía
+`docs/FIESTA.md`; 2026-11-12):
+- **No es parte de Colm3na**: padrón propio (`FiestaPadron`, legajo + DNI),
+  cuentas propias (`FiestaOperador`), cookies propias (`sesion_fiesta`,
+  `sesion_fiesta_op` en `COOKIES_POR_ROL`). Las páginas del afiliado y el
+  webhook son públicas (sin PIN): el afiliado y MercadoPago no tienen pase.
+  La tarjeta de Herramientas (con pase) tiene el **arranque**: crear el
+  evento y el primer admin.
+- **Una reserva es una entrada con N personas** (no nominal), con `token`
+  opaco; el QR lleva `/fiesta/e/{token}?k=<código efímero de qr.py>` y la
+  puerta lo valida con `verificar_codigo_efimero`. Una cortesía es una
+  reserva `tipo="cortesia"` pagada en $ 0.
+- **El cobro lo hace el servidor con las credenciales del sindicato**: el
+  afiliado se redirige al `init_point`; el pago se confirma SOLO por el
+  webhook (o el simulado, mismo camino `_fiesta_procesar_pago`), nunca por
+  la `back_url`. Colm3na no cobra comisión ni toca fondos.
+- **Nunca se pierde un pago**: aprobado sobre una vencida o una anulada →
+  pagada (+ `sobrecupo` si supera el tope, y una nota); un segundo aprobado
+  sobre una ya pagada no cambia nada y deja la nota «Pago duplicado …:
+  devolver desde MercadoPago». El monto tiene que coincidir con `importe`.
+- Lo que sale del tope: pendientes vigentes + pagadas; vencidas y anuladas
+  no. Anular desde el panel solo una pendiente o una cortesía; un pago hecho
+  se devuelve desde MercadoPago.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

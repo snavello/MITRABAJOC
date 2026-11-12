@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Pago simulado — {{ evento.nombre }}</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/fiesta/fiesta.css?v={{ sello_static('fiesta/fiesta.css') }}">
+<style>
+  /* Un checkout de mentira, a propósito poco festivo: tiene que notarse que no es un cobro. */
+  body.f-body { background: #e9ecf1; color: #1c2230; }
+  .sim { max-width: 460px; margin: 0 auto; padding: 18px 16px 48px; position: relative; }
+  .sim-franja { background: repeating-linear-gradient(135deg, #f1c40f 0 14px, #1c2230 14px 28px); color: #fff; border-radius: 10px 10px 0 0; height: 12px; }
+  .sim-marca { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 14px 18px; border-bottom: 1px solid #dde1e8; }
+  .sim-marca b { font: 700 18px/1 var(--f-texto-fuente); color: #009ee3; letter-spacing: -.01em; }
+  .sim-chapa { font: 700 11px/1 var(--f-mono); letter-spacing: .08em; padding: 6px 9px; border-radius: 6px; background: #1c2230; color: #f1c40f; }
+  .sim-caja { background: #fff; padding: 22px 18px 24px; border-radius: 0 0 10px 10px; box-shadow: 0 10px 30px rgba(28, 34, 48, .12); }
+  .sim-caja h1 { margin: 0 0 4px; font: 700 20px/1.25 var(--f-texto-fuente); }
+  .sim-caja p { margin: 0; color: #5a6275; font-size: 14px; }
+  .sim-resumen { margin: 18px 0; padding: 14px; border: 1px solid #dde1e8; border-radius: 8px; display: grid; gap: 6px; font-size: 15px; }
+  .sim-resumen div { display: flex; justify-content: space-between; gap: 12px; }
+  .sim-resumen .tot { border-top: 1px solid #dde1e8; padding-top: 10px; margin-top: 4px; font-weight: 700; font-size: 18px; }
+  .sim-resumen .tot span:last-child { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+  .sim-acc { display: grid; gap: 10px; }
+  .sim-acc button { appearance: none; min-height: 50px; border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+    font: 700 15px/1 var(--f-texto-fuente); transition: scale var(--mov-presion) var(--ease-salida), filter var(--mov-rapido) var(--ease-salida); }
+  .sim-acc button:active { scale: .98; }
+  .sim-acc button:focus-visible { outline: 2px solid #1c2230; outline-offset: 2px; }
+  .sim-acc button[disabled] { opacity: .5; cursor: default; }
+  .sim-acc .ok { background: #009ee3; color: #fff; }
+  .sim-acc .no { background: #fff; color: #b3261e; border-color: #e3b5b1; }
+  .sim-acc .pend { background: #fff; color: #1c2230; border-color: #cdd2dc; }
+  .sim-err { margin-top: 14px; padding: 12px; border-radius: 8px; background: #fdecea; border: 1px solid #e3b5b1; color: #7a1c14; font-size: 14px; }
+  .sim-pie { margin-top: 16px; text-align: center; font-size: 12px; color: #6c7488; }
+  .f-oculto { display: none !important; }
+</style>
+</head>
+<body class="f-body">
+<main class="sim" id="sim" data-reserva="{{ reserva.id }}" data-mov-vista>
+  <div class="sim-franja"></div>
+  <div class="sim-marca"><b>mercado pago</b><span class="sim-chapa">PAGO SIMULADO · MP_MOCK</span></div>
+  <div class="sim-caja">
+    <h1>Pagar {{ importe_texto }}</h1>
+    <p>Esto es una simulación: no se cobra nada y no sale a MercadoPago. Elegí cómo termina el pago.</p>
+    <div class="sim-resumen">
+      <div><span>Compra</span><span>{{ evento.nombre }}</span></div>
+      <div><span>Reserva</span><span class="f-cifra">{{ reserva.numero }}</span></div>
+      <div><span>A nombre de</span><span>{{ reserva.nombre }}</span></div>
+      <div><span>Personas</span><span class="f-cifra">{{ reserva.cantidad }}</span></div>
+      <div class="tot"><span>Total</span><span>{{ importe_texto }}</span></div>
+    </div>
+    <div class="sim-acc">
+      <button type="button" class="ok" data-res="approved">Aprobar el pago</button>
+      <button type="button" class="no" data-res="rejected">Rechazar el pago</button>
+      <button type="button" class="pend" data-res="pending">Dejar pendiente</button>
+    </div>
+    <div class="sim-err f-oculto" id="sim-err" role="alert"></div>
+    <div class="sim-pie">Los avisos de pago de esta simulación siguen el mismo camino que los reales.</div>
+  </div>
+</main>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script>
+(function () {
+  var raiz = document.getElementById('sim'), id = raiz.dataset.reserva;
+  var err = document.getElementById('sim-err');
+  var botones = raiz.querySelectorAll('button[data-res]');
+  botones.forEach(function (b) {
+    b.addEventListener('click', async function () {
+      var res = b.dataset.res;
+      err.classList.add('f-oculto');
+      botones.forEach(function (x) { x.disabled = true; });
+      try {
+        var r = await fetch('/api/fiesta/mp-simulado/' + id, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ resultado: res }) });
+        if (!r.ok) {
+          var msg = 'El servidor no respondió. Probá de nuevo.';
+          try { var j = await r.json(); if (typeof j.detail === 'string') msg = j.detail; } catch (_) { /* HTML de un 5xx */ }
+          throw new Error(msg);
+        }
+        location.href = '/fiesta/pago/vuelta?reserva=' + encodeURIComponent(id) + '&estado=' + encodeURIComponent(res);
+      } catch (e) {
+        err.textContent = e.message;
+        err.classList.remove('f-oculto');
+        botones.forEach(function (x) { x.disabled = false; });
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

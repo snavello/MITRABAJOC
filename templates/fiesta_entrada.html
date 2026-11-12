@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f1f">
+<meta name="robots" content="noindex">
+<title>Tu entrada — {{ evento.nombre }}</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/fiesta/fiesta.css?v={{ sello_static('fiesta/fiesta.css') }}">
+<style>
+  .te-pagina { max-width: 940px; }
+  .te-volver { display: inline-block; margin: 6px 0 14px; color: var(--f-texto-suave); font-size: 14px; text-decoration: none; padding: 8px 0; }
+  .te-volver:hover { color: var(--f-oro-claro); }
+  /* La sombra va en el contenedor: el recorte de las muescas (mask) se la comería al ticket. */
+  .te-sombra { filter: drop-shadow(0 22px 34px rgba(0, 0, 0, .55)); animation: te-entra var(--mov-entrada) var(--ease-entrada) backwards; }
+  @keyframes te-entra { from { opacity: 0; translate: 0 22px; scale: .975; } }
+
+  .te-ticket {
+    --stub: 250px; --ojal: 14px;
+    position: relative; display: grid; grid-template-columns: 1fr var(--stub); min-height: 340px; overflow: hidden;
+    background: linear-gradient(135deg, #fbf8f0, var(--f-papel) 55%, #efe8d6); color: var(--f-tinta);
+    border-radius: 18px;
+    -webkit-mask:
+      radial-gradient(circle var(--ojal) at calc(100% - var(--stub)) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--ojal) at calc(100% - var(--stub)) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+            mask:
+      radial-gradient(circle var(--ojal) at calc(100% - var(--stub)) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--ojal) at calc(100% - var(--stub)) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+  }
+  /* marco fino de oro, hacia adentro */
+  .te-ticket::before { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(154, 125, 62, .55); border-radius: 12px; pointer-events: none; z-index: 3; }
+  /* un brillo que cruza una sola vez */
+  .te-ticket::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .55) 50%, transparent 62%);
+    translate: -120% 0; animation: te-brillo 1800ms var(--ease-mueve) 500ms forwards; }
+  @keyframes te-brillo { to { translate: 120% 0; } }
+  .te-fondo { position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: multiply; opacity: .55; }
+  .te-fondo svg { width: 100%; height: 100%; display: block; }
+
+  .te-cuerpo { position: relative; z-index: 2; padding: 34px 34px 30px 38px; display: flex; flex-direction: column; min-width: 0; }
+  .te-marca { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .te-marca img { height: 46px; width: auto; display: block; opacity: .9; }
+  .te-num { font: 600 12px/1 var(--f-mono); letter-spacing: .14em; color: var(--f-oro-oscuro); text-transform: uppercase; }
+  .te-evento { font: 700 clamp(26px, 4.6vw, 40px)/1.08 var(--f-display); letter-spacing: .03em; margin: 20px 0 8px; color: var(--f-tinta); text-wrap: balance; }
+  .te-cuando { font: italic 400 clamp(16px, 3.6vw, 20px)/1.35 'Playfair Display', Georgia, serif; color: #4a4636; margin: 0; }
+  .te-cuando b { font-weight: 700; color: var(--f-tinta); }
+  .te-hilo { height: 1px; margin: 20px 0 16px; border: 0; background: linear-gradient(90deg, var(--f-oro-oscuro), rgba(154, 125, 62, 0)); }
+  .te-nombre-r { font: 600 11px/1 var(--f-texto-fuente); letter-spacing: .16em; text-transform: uppercase; color: #6c6552; }
+  .te-nombre { font: 700 clamp(19px, 4vw, 24px)/1.2 var(--f-texto-fuente); margin: 6px 0 0; overflow-wrap: anywhere; }
+  .te-admite { margin-top: auto; padding-top: 18px; font: 700 clamp(22px, 4.4vw, 30px)/1 var(--f-display); letter-spacing: .1em; color: var(--f-oro-oscuro); }
+  .te-banda { position: relative; z-index: 2; margin: 22px 0 0; padding: 9px 16px; text-align: center;
+    background: linear-gradient(90deg, var(--f-oro-oscuro), var(--f-oro), var(--f-oro-oscuro)); color: var(--f-tinta);
+    font: 700 14px/1.2 var(--f-display); letter-spacing: .3em; text-transform: uppercase; }
+
+  .te-talon { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    padding: 30px 24px; background: rgba(154, 125, 62, .08); border-left: 2px dashed rgba(18, 24, 40, .32); }
+  .te-qr { position: relative; width: 196px; height: 196px; padding: 10px; border-radius: 10px; background: #fff;
+    box-shadow: 0 0 0 1px rgba(18, 24, 40, .12); line-height: 0; transition: opacity var(--mov-medio) var(--ease-salida); }
+  .te-qr svg { width: 100%; height: 100%; display: block; }
+  .te-qr.renovando { opacity: .4; }
+  .te-aro { display: flex; align-items: center; gap: 8px; font: 600 12px/1 var(--f-mono); color: #5a5442; }
+  .te-aro svg { width: 22px; height: 22px; rotate: -90deg; }
+  .te-aro circle { fill: none; stroke-width: 3; }
+  .te-aro .pista { stroke: rgba(18, 24, 40, .14); }
+  .te-aro .avance { stroke: var(--f-oro-oscuro); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+  .te-aro.vencido { color: #a8372f; }
+  .te-aviso-qr { font-size: 12px; text-align: center; color: #5a5442; max-width: 200px; margin: 0; }
+
+  /* en espera: el talón está sellado */
+  .te-lacre { text-align: center; max-width: 210px; }
+  .te-lacre svg { width: 54px; height: 54px; color: var(--f-oro-oscuro); margin-bottom: 10px; }
+  .te-lacre b { display: block; font: 700 15px/1.3 var(--f-display); letter-spacing: .06em; }
+  .te-lacre span { display: block; margin-top: 6px; font-size: 14px; color: #4a4636; }
+  .te-espera .te-cuerpo { opacity: .78; }
+
+  /* ingresó */
+  .te-sello { position: absolute; z-index: 5; left: 34%; top: 66%; translate: -50% -50%; rotate: -11deg; pointer-events: none;
+    padding: 10px 26px 8px; border: 4px double #1f7a52; border-radius: 10px; color: #1f7a52; text-align: center;
+    background: rgba(247, 243, 234, .35); animation: te-sella var(--mov-lento) var(--ease-entrada) 600ms backwards; }
+  .te-sello b { display: block; font: 700 clamp(30px, 6vw, 46px)/1 var(--f-display); letter-spacing: .18em; }
+  .te-sello span { display: block; font: 600 13px/1.3 var(--f-mono); letter-spacing: .06em; margin-top: 4px; }
+  @keyframes te-sella { from { opacity: 0; scale: 1.5; } }
+  .te-ingreso .te-qr { opacity: .18; }
+
+  .te-acciones { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
+  .te-acciones .f-btn { flex: 0 1 240px; }
+  .te-pie { text-align: center; color: var(--f-texto-suave); font-size: 14px; margin: 14px auto 0; max-width: 560px; }
+  .te-nota-estado { text-align: center; margin: 14px auto 0; max-width: 560px; }
+
+  @media (max-width: 720px) {
+    .te-ticket { --stub: 360px; grid-template-columns: 1fr; grid-template-rows: 1fr var(--stub); min-height: 0;
+      -webkit-mask:
+        radial-gradient(circle var(--ojal) at 0 calc(100% - var(--stub)), #0000 97%, #000) left / 51% 100% no-repeat,
+        radial-gradient(circle var(--ojal) at 100% calc(100% - var(--stub)), #0000 97%, #000) right / 51% 100% no-repeat;
+              mask:
+        radial-gradient(circle var(--ojal) at 0 calc(100% - var(--stub)), #0000 97%, #000) left / 51% 100% no-repeat,
+        radial-gradient(circle var(--ojal) at 100% calc(100% - var(--stub)), #0000 97%, #000) right / 51% 100% no-repeat; }
+    .te-cuerpo { padding: 28px 24px 22px 26px; }
+    .te-banda { margin: 20px 0 0; padding: 9px 12px; }
+    .te-admite { margin-top: 20px; }
+    .te-talon { border-left: 0; border-top: 2px dashed rgba(18, 24, 40, .32); padding: 22px 20px 26px; }
+    .te-sello { left: 50%; top: 60%; }
+    .te-acciones .f-btn { flex: 1 1 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .te-sombra, .te-sello { animation: none; }
+    .te-ticket::after { animation: none; opacity: 0; }
+  }
+</style>
+</head>
+<body class="f-body">
+<div class="f-fondo{% if evento.foto %} con-foto{% endif %}"{% if evento.foto %} style="--f-foto: url('/fiesta/foto/{{ evento.id }}')"{% endif %} aria-hidden="true">
+  <div class="f-bokeh"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="f-grano"></div>
+</div>
+
+<main class="f-contenedor te-pagina" id="entrada" data-mov-vista
+      data-renovar="{{ url_renovar }}" data-vence="{{ qr_vence_en|default(600) }}"
+      data-titulo="{{ evento.nombre }}">
+  {% if reserva.tipo == 'afiliado' %}<a class="te-volver" href="/fiesta">← Tus entradas</a>{% else %}<div style="height:22px"></div>{% endif %}
+
+{% if reserva.estado in ('vencida', 'anulada') %}
+  <div class="f-tarjeta f-oro" style="text-align:center">
+    <h1 class="f-titulo" style="font-size:24px">Esta entrada ya no es válida</h1>
+    <p class="f-sub">{{ 'La reserva venció antes de pagarse.' if reserva.estado == 'vencida' else 'La reserva fue anulada.' }}</p>
+    {% if reserva.tipo == 'afiliado' %}<p><a class="f-btn f-sec" href="/fiesta" style="margin-top:8px">Volver a las entradas</a></p>{% endif %}
+  </div>
+{% elif reserva.estado != 'pagada' %}
+  <div class="f-tarjeta f-oro" style="text-align:center">
+    <h1 class="f-titulo" style="font-size:24px">Esta reserva todavía no está paga</h1>
+    <p class="f-sub">La entrada aparece acá apenas se acredite el pago.</p>
+    {% if reserva.tipo == 'afiliado' %}<p><a class="f-btn" href="/fiesta" style="margin-top:8px">Volver a Tus entradas</a></p>{% endif %}
+  </div>
+{% else %}
+  {% set entro_todo = reserva.ingresados >= reserva.cantidad %}
+  <div class="te-sombra" data-armado>
+  <article class="te-ticket{% if not habilitada %} te-espera{% endif %}{% if entro_todo %} te-ingreso{% endif %}" aria-label="Entrada">
+    <div class="te-fondo" aria-hidden="true">{{ filigrana|safe }}</div>
+
+    <div class="te-cuerpo">
+      <div class="te-marca">
+        <img src="/static/fiesta/logo_supara_tinta.png?v={{ sello_static('fiesta/logo_supara_tinta.png') }}" alt="SUPARA" width="46" height="46">
+        <span class="te-num">{{ reserva.numero }}</span>
+      </div>
+      <h1 class="te-evento">{{ evento.nombre }}</h1>
+      <p class="te-cuando">{% if evento.fecha_texto %}<b>{{ evento.fecha_texto }}</b>{% endif %}{% if evento.lugar %}<br>{{ evento.lugar }}{% endif %}</p>
+      <hr class="te-hilo">
+      <div class="te-nombre-r">A nombre de</div>
+      <p class="te-nombre">{{ reserva.nombre }}</p>
+      <div class="te-admite">ADMITE {{ reserva.cantidad }} {{ 'PERSONA' if reserva.cantidad == 1 else 'PERSONAS' }}</div>
+      {% if reserva.tipo == 'cortesia' %}<div class="te-banda">{{ (reserva.leyenda or 'Invitado Especial')|upper }}</div>{% endif %}
+    </div>
+
+    <div class="te-talon">
+    {% if habilitada %}
+      <div class="te-qr" id="qr-caja">{{ qr_svg|safe }}</div>
+      <div class="te-aro" id="qr-aro" aria-live="off">
+        <svg viewBox="0 0 22 22" aria-hidden="true"><circle class="pista" cx="11" cy="11" r="9"/><circle class="avance" id="qr-avance" cx="11" cy="11" r="9" stroke-dasharray="56.5" stroke-dashoffset="0"/></svg>
+        <span id="qr-leyenda">Se renueva solo</span>
+      </div>
+      <p class="te-aviso-qr">Mostralo en la puerta. No sirve una captura: el código cambia cada pocos minutos.</p>
+    {% else %}
+      <div class="te-lacre">
+        <svg viewBox="0 0 54 54" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="12" y="24" width="30" height="22" rx="4"/><path d="M18 24v-6a9 9 0 0 1 18 0v6"/><circle cx="27" cy="35" r="2.4" fill="currentColor"/></svg>
+        <b>Todavía no se habilita</b>
+        <span>Se habilita {{ entrada_desde }}</span>
+      </div>
+    {% endif %}
+    </div>
+
+    {% if entro_todo %}
+      <div class="te-sello" role="status"><b>INGRESÓ</b>{% if reserva.ultimo_ingreso %}<span>{{ reserva.ultimo_ingreso[11:16] if reserva.ultimo_ingreso|length >= 16 else reserva.ultimo_ingreso }}</span>{% endif %}</div>
+    {% endif %}
+  </article>
+  </div>
+
+  {% if reserva.ingresados > 0 and not entro_todo %}
+    <div class="f-aviso info te-nota-estado" role="status">Ya ingresaron {{ reserva.ingresados }} de {{ reserva.cantidad }}. Faltan {{ reserva.cantidad - reserva.ingresados }}{% if reserva.ultimo_ingreso and reserva.ultimo_ingreso|length >= 16 %} · último ingreso a las {{ reserva.ultimo_ingreso[11:16] }}{% endif %}.</div>
+  {% endif %}
+
+  <div class="te-acciones" data-armado>
+    <button type="button" class="f-btn f-sec" id="btn-compartir">Compartir enlace</button>
+  </div>
+  <p class="te-pie" id="msg-compartir" role="status">Guardá este enlace: desde acá volvés a ver tu entrada.</p>
+{% endif %}
+</main>
+
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script src="/static/fiesta/entrada.js?v={{ sello_static('fiesta/entrada.js') }}"></script>
+</body>
+</html>

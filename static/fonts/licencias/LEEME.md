@@ -10,3 +10,5 @@ desde /static/fonts (la CSP no deja cargar fuentes de terceros). Subconjunto lat
 | manrope.woff2 | Manrope | peso 300–800 (variable) | Google Fonts, 2026-10-23 | modelo Laguna (PLAN_TEMAS.md) |
 | anton.woff2 | Anton | 400 | Google Fonts, 2026-10-23 | titulares del modelo Noticiero |
 | archivo.woff2 | Archivo | peso 100–900, ancho 62–125% (variable) | Google Fonts, 2026-10-23 | texto del modelo Noticiero |
+| cinzel-700.woff2 | Cinzel | 700 | Google Fonts, 2026-11-12 | títulos de la Fiesta (`static/fiesta/fiesta.css`) |
+| playfair-italic.woff2 | Playfair Display | itálica 400–900 (variable) | Google Fonts, 2026-11-12 | detalles en cursiva de la Fiesta |

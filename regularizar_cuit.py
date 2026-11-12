@@ -293,6 +293,11 @@ EXCLUIDAS = {
     "casoherramienta.esperado": "caso de la Calculadora bancaria: importes calculados, sin CUIL a propósito",
     "casoherramienta.real": "caso de la Calculadora bancaria: importes cargados a mano, sin CUIL a propósito",
     "casoherramienta.diferencias": "caso de la Calculadora bancaria: diferencias de importes, sin CUIL a propósito",
+    # -- Fiesta SUPARA (PLAN_FIESTA.md): padrón propio por legajo + DNI, sin CUIL.
+    "fiestapadron.dni": "DNI del padrón del evento (no es CUIL; el evento no usa CUIL)",
+    "fiestareserva.dni": "DNI copiado a la reserva o de la cortesía (no es CUIL)",
+    "fiestaoperador.usuario": "usuario del operador del evento, un nombre elegido, no un CUIL",
+    "fiestaavisopago.cuerpo": "el aviso crudo de MercadoPago: bitácora del webhook, no se reescribe (D5)",
     "cambioidentificador.anterior": "la traza de ESTA herramienta: es la historia y no se reescribe (D5)",
     "cambioidentificador.nuevo": "la traza de ESTA herramienta: es la historia y no se reescribe (D5)",
     "cambioidentificador.detalle": "la traza de ESTA herramienta: conteo de filas por tabla.columna",
