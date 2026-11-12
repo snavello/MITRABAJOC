@@ -103,6 +103,13 @@ FUNCIONALIDADES = [
     ("Entornos", "Planes de Render", r"^/(entornos|api/entornos)/planes", "_planes.html"),
     ("Entornos", "Tests de carga", r"^/(entornos|api/entornos)/(tests|informe)", None),
     ("Entornos", "Mapa funcional", r"^/(entornos|api/entornos)/mapa", None),
+    # Fiesta de Fin de Año (PLAN_FIESTA.md): subproducto con sus dos apps y el webhook.
+    ("Entornos", "Fiesta: Arranque (Herramientas de /entornos)", r"^/api/entornos/herramientas/fiesta", None),
+    ("Entornos", "Fiesta: Webhook de MercadoPago", r"^/api/fiesta/mp/webhook$", None),
+    ("Entornos", "Fiesta: App del sindicato (panel y puerta)", r"^/(fiesta/sindicato|api/fiesta/sindicato)", "fiesta_sindicato.html"),
+    ("Entornos", "Fiesta: Checkout simulado de MercadoPago", r"^/(fiesta|api/fiesta)/mp-simulado", "fiesta_mp_simulado.html"),
+    ("Entornos", "Fiesta: Entrada y verificación del QR", r"^/(fiesta/(entrada|e)/|api/fiesta/entrada)", "fiesta_entrada.html"),
+    ("Entornos", "Fiesta: App del afiliado (reserva y pago)", r"^/(fiesta($|/)|api/fiesta)", "fiesta_afiliado.html"),
     ("Entornos", "Herramientas (Calculadora bancaria, Asistente de trámites, Laboratorio de modelos, Verificación de identidad)", r"^/(entornos|api/entornos)/herramientas", None),
 ]
 

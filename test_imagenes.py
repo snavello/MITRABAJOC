@@ -155,6 +155,7 @@ EXCEPCIONES.update({
     "admin_apariencia_fotos_subir": "fotos de portada propias del sindicato: fotos_tema",
     "admin_apariencia_fotos_reemplazar": "fotos de portada propias del sindicato: fotos_tema",
     "recursos_subir": "Recursos de /entornos",
+    "api_fiesta_sind_padron_csv": "CSV del padrón de la Fiesta (texto, no imagen)",
 })
 
 

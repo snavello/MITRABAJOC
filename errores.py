@@ -116,6 +116,21 @@ MENSAJES = {
                            "Probá de nuevo con un rango de fechas más corto o menos "
                            "filtros; si sigue pasando, avisá a tu sindicato."),
 
+    # --- Fiesta de Fin de Año: entradas (PLAN_FIESTA.md) --------------------
+    # Ninguno habla de la foto. El 01 no dice cuál de los dos datos está mal.
+    "E-FIESTA-01": (401, "El legajo o el DNI no coinciden con el padrón del sindicato. "
+                         "Revisalos; si siguen sin entrar, consultá en tu sindicato."),
+    "E-FIESTA-02": (409, "No quedan tantas entradas disponibles."),
+    "E-FIESTA-03": (409, "Con esa cantidad pasás el máximo de entradas por afiliado."),
+    "E-FIESTA-04": (502, "MercadoPago no respondió y no se reservó nada. Probá de nuevo."),
+    "E-FIESTA-05": (503, "El cobro no está configurado todavía. Avisale al sindicato."),
+    "E-FIESTA-06": (403, "La entrada todavía no está habilitada."),
+    "E-FIESTA-07": (403, "El código del QR venció: que la persona renueve la pantalla."),
+    "E-FIESTA-08": (409, "Ya ingresaron todas las personas de esta entrada."),
+    "E-FIESTA-09": (409, "Esta reserva no está pagada: no habilita el ingreso."),
+    "E-FIESTA-10": (401, "Usuario o clave incorrectos."),
+    "E-FIESTA-11": (422, "Hay una fila del padrón con datos inválidos."),
+
     # --- Red de seguridad --------------------------------------------------
     "E-INTERNO-00": (500, "Se produjo un error inesperado y no pudimos completar la "
                           "operación. Probá de nuevo en un momento; si vuelve a "

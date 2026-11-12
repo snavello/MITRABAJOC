@@ -103,6 +103,8 @@ import asistente_tramites
 import asistente_tramites_ia
 import laboratorio_modelos
 import identidad
+import fiesta
+import mercadopago
 import listas as listas_mod
 import render_planes
 from observabilidad import panel as observabilidad_panel
@@ -6547,11 +6549,17 @@ COOKIE_SINDICATO = "sesion_sindicato"
 COOKIE_PLATAFORMA = "sesion_plataforma"
 COOKIE_TRABAJADOR = "sesion_trabajador"
 COOKIE_EMPLEADOR = "sesion_empleador"
+# Fiesta de Fin de Año (PLAN_FIESTA.md): el afiliado que reserva y el personal
+# del sindicato que cobra la puerta. Dos cookies propias; ninguna abre /admin.
+COOKIE_FIESTA = "sesion_fiesta"
+COOKIE_FIESTA_OP = "sesion_fiesta_op"
 COOKIES_POR_ROL = {
     "sindicato": COOKIE_SINDICATO,
     "plataforma": COOKIE_PLATAFORMA,
     "trabajador": COOKIE_TRABAJADOR,
     "empleador": COOKIE_EMPLEADOR,
+    "fiesta": COOKIE_FIESTA,
+    "fiesta_op": COOKIE_FIESTA_OP,
 }
 
 
@@ -12352,3 +12360,993 @@ def recursos_miniatura(ref: str, request: Request):
     # La URL lleva ?v= (recursos._sello), así que se puede cachear una hora
     # como /static/ (CLAUDE.md, "Todo lo que sale de /static/ va con sello").
     return FileResponse(item["miniatura"], headers={"Cache-Control": "public, max-age=3600"})
+
+
+# =====================================================================
+# Fiesta de Fin de Año: entradas con pago por MercadoPago (PLAN_FIESTA.md)
+# =====================================================================
+# Subproducto aparte de Colm3na, en Herramientas de /entornos: existe donde
+# existe la landing (local y Pruebas, 404 en Demo). Dos apps -- la del afiliado
+# (/fiesta) y la del sindicato (/fiesta/sindicato) -- con login propio cada una
+# y sus cookies (sesion_fiesta / sesion_fiesta_op). Las del afiliado y el
+# webhook son públicas (sin PIN): ni el afiliado ni MercadoPago tienen el pase.
+# Reglas puras en fiesta.py, MercadoPago en mercadopago.py, datos en db.py.
+# El sindicato nunca maneja dinero: la plata va de MercadoPago a su cuenta.
+_intentos_fiesta: dict[str, list] = {}       # freno por IP del login del afiliado
+_intentos_fiesta_op: dict[str, list] = {}    # ... y del personal del sindicato
+API_FIESTA = "/api/fiesta"
+API_FIESTA_SIND = "/api/fiesta/sindicato"
+CLAVE_MINIMA_FIESTA = 8
+CLAVE_INICIAL_MINIMA_FIESTA = 6
+FIESTA_TOPE_CSV_BYTES = 2 * 1024 * 1024
+from sqlalchemy import func as _sa_func
+_RE_USUARIO_FIESTA = re.compile(r"^[a-z0-9._-]{3,30}$")
+
+
+def _base_url(request: Request) -> str:
+    """El origen público de la app (https en Pruebas, detrás del proxy)."""
+    return str(request.base_url).rstrip("/")
+
+
+def _fiesta_cookie(request: Request, rol: str) -> None:
+    """401 apenas se ve que no hay una sesión vigente de ese rol, ANTES de mirar
+    si hay evento o qué se mandó: sin sesión no se responde nada más."""
+    if not sesion_actual(request, rol):
+        raise HTTPException(401, "Tu sesión venció. Volvé a entrar.")
+
+
+def _fiesta_evento_o_404(s):
+    ev = db.fiesta_evento_activo(s)
+    if not ev:
+        raise HTTPException(404, "Todavía no hay una fiesta activa.")
+    return ev
+
+
+def _fiesta_afiliado(request: Request, s, ev):
+    """El padrón del afiliado con sesión vigente, o None."""
+    ses = sesion_actual(request, "fiesta")
+    if not ses or not ev:
+        return None
+    try:
+        padron_id = int(ses.get("ident") or 0)
+    except ValueError:
+        return None
+    p = s.get(db.FiestaPadron, padron_id) if padron_id else None
+    return p if p and p.evento_id == ev.id and p.activo else None
+
+
+def _fiesta_exigir_afiliado(request: Request, s, ev):
+    p = _fiesta_afiliado(request, s, ev)
+    if not p:
+        raise HTTPException(401, "Tu sesión venció. Volvé a entrar con tu legajo y DNI.")
+    return p
+
+
+def _fiesta_operador(request: Request, s, ev, admin: bool = False, pendiente_ok: bool = False):
+    """El operador del sindicato con sesión vigente. 401 sin sesión; 403 si la
+    ruta es solo del rol admin o si todavía tiene que elegir su clave."""
+    ses = sesion_actual(request, "fiesta_op")
+    op = s.get(db.FiestaOperador, int(ses.get("uid") or 0)) if ses else None
+    if not op or not op.activo or op.evento_id != ev.id:
+        raise HTTPException(401, "Tu sesión venció. Volvé a entrar.")
+    if op.debe_cambiar_clave and not pendiente_ok:
+        raise HTTPException(403, "Elegí tu clave antes de seguir.")
+    if admin and op.rol != "admin":
+        raise HTTPException(403, "Esta acción es del administrador de la fiesta.")
+    return op
+
+
+def _fiesta_autorizar_admin(request: Request) -> None:
+    """Para las rutas async que leen un archivo: se autoriza ANTES de leerlo."""
+    with db.get_session() as s:
+        _fiesta_operador(request, s, _fiesta_evento_o_404(s), admin=True)
+
+
+def _fiesta_url_pago(r) -> str:
+    """A dónde vuelve «Pagar ahora» de una reserva pendiente."""
+    if r.estado != "pendiente":
+        return ""
+    if mercadopago.modo() == "mock":
+        return f"/fiesta/mp-simulado/{r.id}"
+    return (f"https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id={r.mp_preference_id}"
+            if r.mp_preference_id else "")
+
+
+def _fiesta_reserva_publica(r, ev) -> dict:
+    d = db.fiesta_reserva_dict(r, ev)
+    d["vence_en"] = fiesta.segundos_restantes(r.vence) if r.estado == "pendiente" else 0
+    d["url_entrada"] = f"/fiesta/entrada/{r.id}" if r.estado == "pagada" else ""
+    d["url_pago"] = _fiesta_url_pago(r)
+    d["init_point"] = d["url_pago"]          # el JS acepta los dos nombres
+    d.pop("emitida_por", None)
+    d.pop("sobrecupo", None)
+    d.pop("nota", None)
+    return d
+
+
+def _fiesta_procesar_pago(s, pago: dict) -> dict:
+    """UN solo camino para el webhook y para el checkout simulado: ubica la
+    reserva por `external_reference` y la manda a db.fiesta_aplicar_pago."""
+    try:
+        reserva_id = int(pago.get("external_reference") or 0)
+    except ValueError:
+        reserva_id = 0
+    r = s.get(db.FiestaReserva, reserva_id) if reserva_id else None
+    if not r:
+        return {"resultado": "reserva inexistente", "estado": None}
+    ev = s.get(db.FiestaEvento, r.evento_id)
+    return db.fiesta_aplicar_pago(s, ev, reserva_id, pago)
+
+
+# ---------- Afiliado: páginas ----------
+@app.get("/fiesta", response_class=HTMLResponse)
+def fiesta_afiliado_pagina(request: Request):
+    _exigir_landing()
+    with db.get_session() as s:
+        ev = db.fiesta_evento_activo(s)
+        evento = db.fiesta_evento_dict(s, ev) if ev else None
+        p = _fiesta_afiliado(request, s, ev)
+        sesion = {"nombre": p.nombre, "legajo": p.legajo, "padron_id": p.id} if p else None
+    return templates.TemplateResponse("fiesta_afiliado.html", {
+        "request": request, "hay_evento": bool(ev), "evento": evento, "sesion": sesion,
+        "mp_modo": mercadopago.modo()})
+
+
+@app.get("/fiesta/pago/vuelta")
+def fiesta_pago_vuelta(reserva: int = 0, estado: str = ""):
+    """back_url de MercadoPago: la pantalla del afiliado confirma por polling."""
+    _exigir_landing()
+    return RedirectResponse(f"/fiesta#reserva-{int(reserva)}" if reserva > 0 else "/fiesta",
+                            status_code=303)
+
+
+@app.get("/fiesta/foto/{evento_id}")
+def fiesta_foto(evento_id: int):
+    _exigir_landing()
+    with db.get_session() as s:
+        if not db.fiesta_tiene_foto(s, evento_id):
+            raise HTTPException(404, "Sin foto")
+        e = s.get(db.FiestaEvento, evento_id)
+        return BinResponse(content=e.foto_datos, media_type=e.foto_mime or "image/webp",
+                           headers={"Cache-Control": "private, max-age=60"})
+
+
+def _fiesta_entrada_de(request: Request, s, reserva_id: int, t: str = ""):
+    """(evento, reserva) si quien pide puede ver esa entrada: el afiliado dueño
+    con su sesión, o quien trae el token de la reserva (las cortesías, que
+    llegan por enlace). 404 si no."""
+    r = s.get(db.FiestaReserva, reserva_id)
+    ev = s.get(db.FiestaEvento, r.evento_id) if r else None
+    if not r or not ev:
+        raise HTTPException(404, "No existe esa entrada.")
+    con_token = bool(t) and secrets.compare_digest(t, r.token)
+    if not con_token:
+        p = _fiesta_afiliado(request, s, ev)
+        if not p or r.padron_id != p.id:
+            raise HTTPException(404, "No existe esa entrada.")
+    return ev, r
+
+
+@app.get("/fiesta/entrada/{reserva_id}", response_class=HTMLResponse)
+def fiesta_entrada_pagina(reserva_id: int, request: Request, t: str = ""):
+    _exigir_landing()
+    with db.get_session() as s:
+        try:
+            ev, r = _fiesta_entrada_de(request, s, reserva_id, t)
+        except HTTPException:
+            if not t and not sesion_actual(request, "fiesta"):
+                return RedirectResponse("/fiesta", status_code=303)
+            raise
+        db.fiesta_vencer_pendientes(s, ev.id)
+        s.refresh(r)
+        if r.estado == "pendiente":
+            return RedirectResponse(f"/fiesta#reserva-{r.id}", status_code=303)
+        if r.estado != "pagada":
+            raise HTTPException(404, "Esta entrada ya no está disponible.")
+        evento = db.fiesta_evento_dict(s, ev)
+        reserva = db.fiesta_reserva_dict(r, ev)
+        habilitada, desde = fiesta.ventana_entrada(ev.fecha_hora, ev.horas_antes)
+        token = r.token
+    base = _base_url(request)
+    qr_texto, vence_en = "", 0
+    if habilitada:
+        codigo, vence_en = codigo_efimero(token)
+        qr_texto = fiesta.contenido_qr(base, token, codigo)
+    return templates.TemplateResponse("fiesta_entrada.html", {
+        "request": request, "evento": evento, "reserva": reserva, "habilitada": habilitada,
+        "entrada_desde": fiesta.fecha_texto(desde), "qr_svg": qr_svg(qr_texto) if qr_texto else "",
+        "qr_vence_en": vence_en, "filigrana": filigrana_svg("SUPARA", "#9a7d3e", "#efdfb4"),
+        "url_renovar": f"{API_FIESTA}/entrada/{reserva_id}/qr" + (f"?t={t}" if t else ""),
+        "url_verificar": qr_texto})
+
+
+@app.get(API_FIESTA + "/entrada/{reserva_id}/qr")
+def api_fiesta_entrada_qr(reserva_id: int, request: Request, t: str = ""):
+    """Renovación del QR efímero (10 min): la pantalla lo pide antes de que venza."""
+    _exigir_landing()
+    with db.get_session() as s:
+        ev, r = _fiesta_entrada_de(request, s, reserva_id, t)
+        if r.estado != "pagada":
+            raise ErrorApp("E-FIESTA-09")
+        if not fiesta.ventana_entrada(ev.fecha_hora, ev.horas_antes)[0]:
+            raise ErrorApp("E-FIESTA-06")
+        token = r.token
+    codigo, vence_en = codigo_efimero(token)
+    texto = fiesta.contenido_qr(_base_url(request), token, codigo)
+    return JSONResponse({"svg": qr_svg(texto), "vence_en": vence_en, "url_verificar": texto},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.get("/fiesta/e/{token}", response_class=HTMLResponse)
+def fiesta_verificar(token: str, request: Request, k: str = ""):
+    """Lo que abre cualquier lector de QR. Sin código, o con uno vencido o
+    falso, no muestra a quién pertenece la entrada."""
+    _exigir_landing()
+    motivo, reserva = "", None
+    with db.get_session() as s:
+        ev = db.fiesta_evento_activo(s)
+        r = s.exec(select(db.FiestaReserva).where(db.FiestaReserva.token == token)).first()
+        if ev is None and r is not None:
+            ev = s.get(db.FiestaEvento, r.evento_id)
+        evento = db.fiesta_evento_dict(s, ev) if ev else None
+        if not k or not r or not verificar_codigo_efimero(token, k):
+            motivo = "El código venció o no es válido: pedile a la persona que renueve su pantalla."
+        elif r.estado != "pagada":
+            motivo = "Esta entrada no está vigente."
+        else:
+            reserva = db.fiesta_reserva_dict(r)
+    return templates.TemplateResponse("fiesta_verificar.html", {
+        "request": request, "valido": reserva is not None, "motivo": motivo,
+        "evento": evento, "reserva": reserva})
+
+
+# ---------- Afiliado: API ----------
+@app.post(API_FIESTA + "/entrar")
+def api_fiesta_entrar(request: Request, datos: dict = Body(...)):
+    """Legajo + DNI: los dos tienen que coincidir con el padrón (D1). El error
+    no dice cuál de los dos está mal."""
+    _exigir_landing()
+    if _login_bloqueado(request, _intentos_fiesta):
+        raise ErrorApp("E-REGISTRO-05")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        p = db.fiesta_padron_por_credenciales(s, ev.id, str(datos.get("legajo", "")),
+                                              str(datos.get("dni", "")))
+        if not p:
+            _login_fallo(request, _intentos_fiesta)
+            raise ErrorApp("E-FIESTA-01")
+        _login_ok(request, _intentos_fiesta)
+        resp = JSONResponse({"ok": True, "nombre": p.nombre})
+        set_cookie_segura(resp, COOKIE_FIESTA, auth.crear_sesion("fiesta", p.id, ev.id, ident=str(p.id)))
+    return resp
+
+
+@app.post(API_FIESTA + "/salir")
+def api_fiesta_salir():
+    _exigir_landing()
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie(COOKIE_FIESTA)
+    return resp
+
+
+@app.get(API_FIESTA + "/estado")
+def api_fiesta_estado(request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        p = _fiesta_exigir_afiliado(request, s, ev)
+        db.fiesta_vencer_pendientes(s, ev.id)
+        generales = db.fiesta_disponibles(s, ev)
+        mias = min(db.fiesta_disponibles(s, ev, p.id), generales)
+        reservas = [_fiesta_reserva_publica(r, ev)
+                    for r in db.fiesta_reservas_del_padron(s, ev.id, p.id)]
+        return JSONResponse({"evento": db.fiesta_evento_dict(s, ev),
+                             "afiliado": {"nombre": p.nombre, "legajo": p.legajo},
+                             "disponibles_generales": generales, "disponibles_mias": mias,
+                             "reservas": reservas, "mp_modo": mercadopago.modo()},
+                            headers={"Cache-Control": "no-store"})
+
+
+@app.post(API_FIESTA + "/reservar")
+def api_fiesta_reservar(request: Request, datos: dict = Body(...)):
+    """Crea la reserva pendiente (descuenta cupo con el evento bloqueado) y el
+    checkout de MercadoPago. Si MercadoPago no responde, la reserva se anula."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        p = _fiesta_exigir_afiliado(request, s, ev)
+        if not mercadopago.habilitado():
+            raise ErrorApp("E-FIESTA-05")
+        r = db.fiesta_crear_reserva(s, ev, p, datos.get("cantidad"))
+        pref = mercadopago.crear_preferencia(
+            r.id, f"{ev.nombre} ×{r.cantidad}", r.importe, _base_url(request),
+            fiesta.vence_iso_con_zona(r.vence))
+        if not pref:
+            db.fiesta_anular_reserva(s, r)
+            raise ErrorApp("E-FIESTA-04")
+        r.mp_preference_id = pref["id"]
+        s.add(r)
+        s.commit()
+        return {"reserva_id": r.id, "init_point": pref["init_point"]}
+
+
+def _fiesta_reserva_del_afiliado(request: Request, s, reserva_id: int):
+    ev = _fiesta_evento_o_404(s)
+    p = _fiesta_exigir_afiliado(request, s, ev)
+    db.fiesta_vencer_pendientes(s, ev.id)
+    r = s.get(db.FiestaReserva, reserva_id)
+    if not r or r.padron_id != p.id:
+        raise HTTPException(404, "No existe esa reserva.")
+    return ev, r
+
+
+@app.get(API_FIESTA + "/reserva/{reserva_id}")
+def api_fiesta_reserva(reserva_id: int, request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta")
+    with db.get_session() as s:
+        ev, r = _fiesta_reserva_del_afiliado(request, s, reserva_id)
+        return JSONResponse(_fiesta_reserva_publica(r, ev), headers={"Cache-Control": "no-store"})
+
+
+@app.post(API_FIESTA + "/reserva/{reserva_id}/anular")
+def api_fiesta_reserva_anular(reserva_id: int, request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta")
+    with db.get_session() as s:
+        ev, r = _fiesta_reserva_del_afiliado(request, s, reserva_id)
+        if r.estado != "pendiente":
+            raise HTTPException(409, "Solo se puede anular una reserva pendiente de pago.")
+        db.fiesta_anular_reserva(s, r)
+        return {"ok": True}
+
+
+# ---------- MercadoPago: checkout simulado y webhook ----------
+def _fiesta_exigir_mock():
+    if mercadopago.modo() != "mock":
+        raise HTTPException(404, "No existe")
+
+
+@app.get("/fiesta/mp-simulado/{reserva_id}", response_class=HTMLResponse)
+def fiesta_mp_simulado_pagina(reserva_id: int, request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta")
+    _fiesta_exigir_mock()
+    with db.get_session() as s:
+        ev, r = _fiesta_reserva_del_afiliado(request, s, reserva_id)
+        evento = db.fiesta_evento_dict(s, ev)
+        reserva = {"id": r.id, "numero": fiesta.numero_reserva(r.id), "nombre": r.nombre,
+                   "cantidad": r.cantidad, "importe": r.importe}
+    return templates.TemplateResponse("fiesta_mp_simulado.html", {
+        "request": request, "evento": evento, "reserva": reserva,
+        "importe_texto": formato_ar.pesos(reserva["importe"])})
+
+
+_MOCK_RESULTADOS = {"approved": "approved", "rejected": "rejected", "pending": "in_process",
+                    "aprobar": "approved", "rechazar": "rejected", "pendiente": "in_process"}
+
+
+@app.post(API_FIESTA + "/mp-simulado/{reserva_id}")
+def api_fiesta_mp_simulado(reserva_id: int, request: Request, datos: dict = Body(...)):
+    """El resultado que 'eligió' la persona en la página simulada, aplicado por
+    el MISMO camino que el webhook. Solo con MP_MOCK=1."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta")
+    _fiesta_exigir_mock()
+    status = _MOCK_RESULTADOS.get(str(datos.get("resultado", "")))
+    if not status:
+        raise HTTPException(400, "Elegí aprobar, rechazar o dejar pendiente.")
+    with db.get_session() as s:
+        ev, r = _fiesta_reserva_del_afiliado(request, s, reserva_id)
+        n = s.exec(select(db.FiestaAvisoPago).where(
+            db.FiestaAvisoPago.mp_payment_id.like(f"MOCK-{r.id}-%"))).all()
+        pago = mercadopago.registrar_pago_mock(f"MOCK-{r.id}-{len(n) + 1}", status, r.id, r.importe)
+        res = _fiesta_procesar_pago(s, pago)
+    return {"ok": True, "estado": res.get("estado"), "resultado": res.get("resultado"),
+            "vuelta": f"/fiesta#reserva-{reserva_id}"}
+
+
+@app.post(API_FIESTA + "/mp/webhook")
+async def api_fiesta_mp_webhook(request: Request):
+    """Aviso de MercadoPago. Firma inválida (o sin clave configurada) -> 401:
+    falla cerrado. Otro tipo de aviso -> 200 y nada. Se confirma el pago
+    consultando a MercadoPago (nunca se le cree al cuerpo del aviso)."""
+    _exigir_landing()
+    q = request.query_params
+    data_id = q.get("data.id") or q.get("id") or ""
+    if not data_id:
+        try:
+            data_id = str(((await request.json()).get("data") or {}).get("id") or "")
+        except Exception:
+            data_id = ""
+    firma_ok = mercadopago.validar_firma(request.headers.get("x-signature", ""),
+                                         request.headers.get("x-request-id", ""),
+                                         data_id, os.getenv("MP_WEBHOOK_SECRET", "").strip())
+    if not firma_ok:
+        raise HTTPException(401, "Firma inválida.")
+    if (q.get("type") or q.get("topic") or "") != "payment":
+        return {"ok": True, "ignorado": True}
+
+    def _trabajo():
+        pago = mercadopago.obtener_pago(data_id)
+        if pago is None:
+            return None
+        with db.get_session() as s:
+            return _fiesta_procesar_pago(s, pago)
+    res = await run_in_threadpool(_trabajo)
+    if res is None:
+        # No se pudo confirmar con MercadoPago: un 503 hace que reintente.
+        return JSONResponse({"ok": False, "detail": "No se pudo consultar el pago."}, status_code=503)
+    return {"ok": True, "resultado": res.get("resultado")}
+
+
+# ---------- Sindicato: páginas y sesión ----------
+@app.get("/fiesta/sindicato", response_class=HTMLResponse)
+def fiesta_sindicato_pagina(request: Request):
+    _exigir_landing()
+    with db.get_session() as s:
+        ev = db.fiesta_evento_activo(s)
+        evento = db.fiesta_evento_dict(s, ev) if ev else None
+        operador = None
+        ses = sesion_actual(request, "fiesta_op")
+        op = s.get(db.FiestaOperador, int(ses.get("uid") or 0)) if ses and ev else None
+        if op and op.activo and op.evento_id == ev.id:
+            operador = {"usuario": op.usuario, "nombre": op.nombre, "rol": op.rol,
+                        "debe_cambiar_clave": op.debe_cambiar_clave}
+    return templates.TemplateResponse("fiesta_sindicato.html", {
+        "request": request, "evento": evento, "operador": operador, "mp_modo": mercadopago.modo()})
+
+
+@app.post(API_FIESTA_SIND + "/entrar")
+def api_fiesta_sind_entrar(request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    if _login_bloqueado(request, _intentos_fiesta_op):
+        raise ErrorApp("E-REGISTRO-05")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = db.fiesta_operador_por_usuario(s, ev.id, str(datos.get("usuario", "")))
+        if not op or not op.activo or not auth.verificar_clave(str(datos.get("clave", "")), op.clave_hash):
+            _login_fallo(request, _intentos_fiesta_op)
+            raise ErrorApp("E-FIESTA-10")
+        _login_ok(request, _intentos_fiesta_op)
+        resp = JSONResponse({"ok": True, "rol": op.rol, "nombre": op.nombre,
+                             "debe_cambiar_clave": op.debe_cambiar_clave})
+        set_cookie_segura(resp, COOKIE_FIESTA_OP,
+                          auth.crear_sesion("fiesta_op", op.id, ev.id, ident=op.usuario))
+    return resp
+
+
+@app.post(API_FIESTA_SIND + "/salir")
+def api_fiesta_sind_salir():
+    _exigir_landing()
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie(COOKIE_FIESTA_OP)
+    return resp
+
+
+@app.post(API_FIESTA_SIND + "/clave")
+def api_fiesta_sind_clave(request: Request, datos: dict = Body(...)):
+    """Cambio de clave propio (también el primer ingreso con la transitoria)."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    actual, nueva, repetir = (str(datos.get(k, "")) for k in ("actual", "nueva", "repetir"))
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = _fiesta_operador(request, s, ev, pendiente_ok=True)
+        if not auth.verificar_clave(actual, op.clave_hash):
+            raise HTTPException(400, "La clave actual no es correcta.")
+        if len(nueva) < CLAVE_MINIMA_FIESTA:
+            raise HTTPException(400, f"La clave nueva tiene que tener al menos {CLAVE_MINIMA_FIESTA} caracteres.")
+        if nueva != repetir:
+            raise HTTPException(400, "Las dos claves nuevas no coinciden.")
+        if nueva == actual:
+            raise HTTPException(400, "La clave nueva tiene que ser distinta de la actual.")
+        op.clave_hash, op.debe_cambiar_clave = auth.hashear_clave(nueva), False
+        s.add(op)
+        s.commit()
+    return {"ok": True}
+
+
+# ---------- Sindicato: panel ----------
+@app.get(API_FIESTA_SIND + "/resumen")
+def api_fiesta_sind_resumen(request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = _fiesta_operador(request, s, ev)
+        return JSONResponse({"evento": db.fiesta_evento_dict(s, ev),
+                             "contadores": db.fiesta_contadores(s, ev),
+                             "mp_modo": mercadopago.modo(), "rol": op.rol},
+                            headers={"Cache-Control": "no-store"})
+
+
+def _fiesta_reserva_sindicato(r, base: str = "") -> dict:
+    d = db.fiesta_reserva_dict(r)
+    d["url_entrada"] = f"{base}/fiesta/entrada/{r.id}?t={r.token}" if r.estado == "pagada" else ""
+    return d
+
+
+@app.get(API_FIESTA_SIND + "/reservas")
+def api_fiesta_sind_reservas(request: Request, estado: str = "", tipo: str = "", q: str = "",
+                             ingreso: str = "todas"):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        filas = db.fiesta_listar_reservas(s, ev.id, estado, tipo, q, ingreso)
+        return JSONResponse({"reservas": [_fiesta_reserva_sindicato(r) for r in filas[:1000]],
+                             "total": len(filas)}, headers={"Cache-Control": "no-store"})
+
+
+@app.post(API_FIESTA_SIND + "/reserva/{reserva_id}/anular")
+def api_fiesta_sind_reserva_anular(reserva_id: int, request: Request):
+    """Anula una pendiente o una cortesía (devuelven el cupo). Una pagada por
+    MercadoPago no se anula acá: se devuelve en MercadoPago."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        r = s.get(db.FiestaReserva, reserva_id)
+        if not r or r.evento_id != ev.id:
+            raise HTTPException(404, "No existe esa reserva.")
+        if not (r.estado == "pendiente" or (r.tipo == "cortesia" and r.estado == "pagada")):
+            raise HTTPException(409, "Solo se anula una reserva pendiente o una cortesía. "
+                                     "Un pago hecho se devuelve desde MercadoPago.")
+        db.fiesta_anular_reserva(s, r)
+        return {"ok": True}
+
+
+@app.post(API_FIESTA_SIND + "/reserva/{reserva_id}/nota")
+def api_fiesta_sind_reserva_nota(reserva_id: int, request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        r = s.get(db.FiestaReserva, reserva_id)
+        if not r or r.evento_id != ev.id:
+            raise HTTPException(404, "No existe esa reserva.")
+        r.nota = str(datos.get("nota", "")).strip()[:500]
+        s.add(r)
+        s.commit()
+        return {"ok": True}
+
+
+def _csv_seguro(valor) -> str:
+    """Una celda que Excel no pueda tomar por fórmula (=, +, -, @)."""
+    txt = str(valor if valor is not None else "")
+    return "'" + txt if txt[:1] in ("=", "+", "-", "@") else txt
+
+
+@app.get("/fiesta/sindicato/reservas.csv")
+def fiesta_sind_reservas_csv(request: Request, estado: str = "", tipo: str = "", q: str = "",
+                             ingreso: str = "todas"):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    import csv as _csv
+    import io as _io
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        filas = db.fiesta_listar_reservas(s, ev.id, estado, tipo, q, ingreso)
+        buf = _io.StringIO()
+        w = _csv.writer(buf, delimiter=";")
+        w.writerow(["Reserva", "Tipo", "Nombre", "Legajo", "DNI", "Cantidad", "Importe", "Estado",
+                    "Creada", "Pagada", "Ingresados", "Ultimo ingreso", "Sobrecupo", "Nota"])
+        for r in filas:
+            w.writerow([fiesta.numero_reserva(r.id), r.tipo, _csv_seguro(r.nombre), _csv_seguro(r.legajo),
+                        r.dni, r.cantidad, r.importe, r.estado, r.creada, r.pagada_en, r.ingresados,
+                        r.ultimo_ingreso, "si" if r.sobrecupo else "", _csv_seguro(r.nota)])
+    return BinResponse(content=("﻿" + buf.getvalue()).encode("utf-8"),
+                       media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": 'attachment; filename="reservas-fiesta.csv"'})
+
+
+# ---------- Sindicato: padrón ----------
+def _fiesta_padron_dict(p) -> dict:
+    return {"id": p.id, "legajo": p.legajo, "dni": p.dni, "nombre": p.nombre, "mail": p.mail,
+            "activo": p.activo}
+
+
+@app.get(API_FIESTA_SIND + "/padron")
+def api_fiesta_sind_padron(request: Request, q: str = ""):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        cond = [db.FiestaPadron.evento_id == ev.id]
+        q = q.strip()
+        if q:
+            patron = f"%{q}%"
+            cond.append(db.or_(db.FiestaPadron.nombre.ilike(patron), db.FiestaPadron.legajo.ilike(patron),
+                               db.FiestaPadron.dni.like(f"%{fiesta.normalizar_dni(q) or q}%")))
+        filas = s.exec(select(db.FiestaPadron).where(*cond).order_by(db.FiestaPadron.nombre)
+                       .limit(300)).all()
+        total = s.exec(select(_sa_func.count()).select_from(db.FiestaPadron)
+                       .where(db.FiestaPadron.evento_id == ev.id)).one()
+        return JSONResponse({"padron": [_fiesta_padron_dict(p) for p in filas], "total": total})
+
+
+@app.post(API_FIESTA_SIND + "/padron")
+def api_fiesta_sind_padron_alta(request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    _fiesta_autorizar_admin(request)       # primero quién es; después qué mandó
+    legajo = fiesta.normalizar_legajo(datos.get("legajo"))
+    dni, nombre = fiesta.normalizar_dni(datos.get("dni")), str(datos.get("nombre", "")).strip()
+    mail = str(datos.get("mail", "")).strip()
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        motivo = fiesta.validar_fila(legajo, dni, nombre, mail)
+        if motivo:
+            raise ErrorApp("E-FIESTA-11", motivo)
+        r = db.fiesta_cargar_padron(s, ev.id, [{"legajo": legajo, "dni": dni, "nombre": nombre, "mail": mail}])
+        return {"ok": True, **r}
+
+
+def _fiesta_decodificar_csv(datos: bytes) -> str:
+    try:
+        return datos.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return datos.decode("latin-1")
+
+
+@app.post(API_FIESTA_SIND + "/padron/csv")
+async def api_fiesta_sind_padron_csv(request: Request, archivo: UploadFile = File(...),
+                                     confirmar: str = Form("")):
+    """Ensayo por defecto (muestra qué se cargaría y las filas con error);
+    con confirmar=1 escribe. Las filas buenas entran aunque otras fallen."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    await run_in_threadpool(_fiesta_autorizar_admin, request)
+    datos = await archivo.read(FIESTA_TOPE_CSV_BYTES + 1)
+    if len(datos) > FIESTA_TOPE_CSV_BYTES:
+        raise HTTPException(413, "El archivo pesa más de 2 MB.")
+    parseo = fiesta.parsear_padron(_fiesta_decodificar_csv(datos))
+
+    def _trabajo():
+        with db.get_session() as s:
+            ev = _fiesta_evento_o_404(s)
+            _fiesta_operador(request, s, ev, admin=True)
+            existentes = set(s.exec(select(db.FiestaPadron.legajo).where(
+                db.FiestaPadron.evento_id == ev.id)).all())
+            nuevos = sum(1 for f in parseo["filas"] if f["legajo"] not in existentes)
+            salida = {"ensayo": confirmar != "1", "filas": len(parseo["filas"]), "nuevos": nuevos,
+                      "actualizados": len(parseo["filas"]) - nuevos, "errores": parseo["errores"],
+                      "muestra": parseo["filas"][:20]}
+            if confirmar == "1":
+                db.fiesta_cargar_padron(s, ev.id, parseo["filas"])
+            return salida
+    return await run_in_threadpool(_trabajo)
+
+
+@app.post(API_FIESTA_SIND + "/padron/{padron_id}/activo")
+def api_fiesta_sind_padron_activo(padron_id: int, request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        p = s.get(db.FiestaPadron, padron_id)
+        if not p or p.evento_id != ev.id:
+            raise HTTPException(404, "No existe esa persona en el padrón.")
+        p.activo = bool(datos.get("activo"))
+        s.add(p)
+        s.commit()
+        return {"ok": True, "activo": p.activo}
+
+
+# ---------- Sindicato: cortesías ----------
+@app.post(API_FIESTA_SIND + "/cortesia")
+def api_fiesta_sind_cortesia(request: Request, datos: dict = Body(...)):
+    """Entrada a nombre de una persona (D7): sin pago, descuenta del tope general.
+    Si se da un mail y el canal está prendido, se le manda el enlace."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    _fiesta_autorizar_admin(request)       # primero quién es; después qué mandó
+    nombre = str(datos.get("nombre", "")).strip()
+    dni = fiesta.normalizar_dni(datos.get("dni"))
+    mail = str(datos.get("mail", "")).strip()
+    if not nombre:
+        raise HTTPException(400, "Falta el nombre.")
+    if not fiesta.dni_valido(dni):
+        raise HTTPException(400, "El DNI tiene que tener 7 u 8 dígitos.")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = _fiesta_operador(request, s, ev, admin=True)
+        r = db.fiesta_crear_cortesia(s, ev, nombre, dni, datos.get("cantidad") or 1,
+                                     str(datos.get("leyenda", "")), op.usuario)
+        url = f"{_base_url(request)}/fiesta/entrada/{r.id}?t={r.token}"
+        enviado = False
+        if mail and correo.habilitado():
+            enviado = correo.enviar(
+                mail, f"Tu entrada: {ev.nombre}",
+                f"Hola {nombre}, esta es tu entrada para {ev.nombre} ({fiesta.fecha_texto(ev.fecha_hora)}"
+                f", {ev.lugar}), para {r.cantidad} persona(s).\n\n{url}\n\n"
+                f"Se habilita {ev.horas_antes} horas antes del evento. Mostrá el código QR en la puerta.")
+        return {"reserva_id": r.id, "url_entrada": url, "mail_enviado": enviado}
+
+
+# ---------- Sindicato: configuración ----------
+@app.get(API_FIESTA_SIND + "/configuracion")
+def api_fiesta_sind_config(request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        return {"evento": db.fiesta_evento_dict(s, ev), "mp_modo": mercadopago.modo(),
+                "mp_faltantes": mercadopago.faltantes()}
+
+
+def _fiesta_entero(datos: dict, clave: str, minimo: int, maximo: int, que: str) -> int:
+    try:
+        n = int(datos.get(clave))
+    except (TypeError, ValueError):
+        raise HTTPException(400, f"{que}: poné un número.")
+    if not minimo <= n <= maximo:
+        raise HTTPException(400, f"{que}: tiene que estar entre {minimo} y {maximo}.")
+    return n
+
+
+@app.post(API_FIESTA_SIND + "/configuracion")
+def api_fiesta_sind_config_guardar(request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    _fiesta_autorizar_admin(request)       # primero quién es; después qué mandó
+    nombre, lugar = str(datos.get("nombre", "")).strip(), str(datos.get("lugar", "")).strip()
+    if not nombre:
+        raise HTTPException(400, "Falta el nombre de la fiesta.")
+    fecha_hora = str(datos.get("fecha_hora", "")).strip().replace(" ", "T")
+    if not fiesta.parsear(fecha_hora):
+        raise HTTPException(400, "La fecha y hora no se entienden (AAAA-MM-DDTHH:MM).")
+    valores = {
+        "precio": _fiesta_entero(datos, "precio", 0, 100_000_000, "El precio"),
+        "tope_por_afiliado": _fiesta_entero(datos, "tope_por_afiliado", 1, 100, "El tope por afiliado"),
+        "tope_general": _fiesta_entero(datos, "tope_general", 1, 100_000, "El tope general"),
+        "horas_antes": _fiesta_entero(datos, "horas_antes", 0, 720, "Las horas antes"),
+        "minutos_vencimiento": _fiesta_entero(datos, "minutos_vencimiento", 1, 1440, "El vencimiento"),
+    }
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        ev.nombre, ev.lugar, ev.fecha_hora = nombre[:200], lugar[:200], fecha_hora
+        ev.leyenda_ticket = str(datos.get("leyenda_ticket", "")).strip()[:500]
+        ev.leyenda_cortesia = (str(datos.get("leyenda_cortesia", "")).strip()[:100]
+                               or fiesta.LEYENDA_CORTESIA)
+        for k, v in valores.items():
+            setattr(ev, k, v)
+        s.add(ev)
+        s.commit()
+        return {"ok": True, "evento": db.fiesta_evento_dict(s, ev)}
+
+
+@app.post(API_FIESTA_SIND + "/foto")
+async def api_fiesta_sind_foto(request: Request, archivo: UploadFile = File(None),
+                               quitar: str = Form("")):
+    """Foto de fondo del evento: se achica como cualquier imagen publicada."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    await run_in_threadpool(_fiesta_autorizar_admin, request)
+    datos = await archivo.read(imagenes.TOPE_ENTRADA + 1) if archivo is not None and archivo.filename else b""
+    achicada = _achicar_o_error(datos, "publicacion", archivo.filename) if datos and quitar != "1" else None
+
+    def _trabajo():
+        with db.get_session() as s:
+            ev = _fiesta_evento_o_404(s)
+            _fiesta_operador(request, s, ev, admin=True)
+            if quitar == "1":
+                ev.foto_datos, ev.foto_mime = None, ""
+            elif achicada:
+                ev.foto_datos, ev.foto_mime = achicada["datos"], achicada["mime"]
+            else:
+                raise HTTPException(400, "Elegí una imagen.")
+            s.add(ev)
+            s.commit()
+            return {"ok": True, "foto": db.fiesta_tiene_foto(s, ev.id)}
+    return await run_in_threadpool(_trabajo)
+
+
+# ---------- Sindicato: operadores ----------
+def _fiesta_operador_dict(o) -> dict:
+    return {"id": o.id, "usuario": o.usuario, "nombre": o.nombre, "rol": o.rol, "activo": o.activo,
+            "debe_cambiar_clave": o.debe_cambiar_clave}
+
+
+@app.get(API_FIESTA_SIND + "/operadores")
+def api_fiesta_sind_operadores(request: Request):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        filas = s.exec(select(db.FiestaOperador).where(db.FiestaOperador.evento_id == ev.id)
+                       .order_by(db.FiestaOperador.usuario)).all()
+        return {"operadores": [_fiesta_operador_dict(o) for o in filas]}
+
+
+@app.post(API_FIESTA_SIND + "/operador")
+def api_fiesta_sind_operador_alta(request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    _fiesta_autorizar_admin(request)       # primero quién es; después qué mandó
+    usuario = str(datos.get("usuario", "")).strip().lower()
+    rol, clave = str(datos.get("rol", "")), str(datos.get("clave_inicial", ""))
+    if not _RE_USUARIO_FIESTA.match(usuario):
+        raise HTTPException(400, "El usuario: 3 a 30 letras minúsculas, números, punto, guion o guion bajo.")
+    if rol not in fiesta.ROLES:
+        raise HTTPException(400, "El rol es admin o puerta.")
+    if len(clave) < CLAVE_INICIAL_MINIMA_FIESTA:
+        raise HTTPException(400, f"La clave inicial tiene que tener al menos {CLAVE_INICIAL_MINIMA_FIESTA} caracteres.")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev, admin=True)
+        if db.fiesta_operador_por_usuario(s, ev.id, usuario):
+            raise HTTPException(409, "Ese usuario ya existe.")
+        o = db.FiestaOperador(evento_id=ev.id, usuario=usuario, rol=rol,
+                              nombre=str(datos.get("nombre", "")).strip()[:100] or usuario,
+                              clave_hash=auth.hashear_clave(clave), debe_cambiar_clave=True)
+        s.add(o)
+        s.commit()
+        return {"ok": True, "operador": _fiesta_operador_dict(o)}
+
+
+@app.post(API_FIESTA_SIND + "/operador/{operador_id}/activo")
+def api_fiesta_sind_operador_activo(operador_id: int, request: Request, datos: dict = Body(...)):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        yo = _fiesta_operador(request, s, ev, admin=True)
+        o = s.get(db.FiestaOperador, operador_id)
+        if not o or o.evento_id != ev.id:
+            raise HTTPException(404, "No existe ese usuario.")
+        activo = bool(datos.get("activo"))
+        if o.id == yo.id and not activo:
+            raise HTTPException(409, "No podés desactivarte a vos mismo.")
+        o.activo = activo
+        s.add(o)
+        s.commit()
+        return {"ok": True, "activo": o.activo}
+
+
+@app.post(API_FIESTA_SIND + "/operador/{operador_id}/restablecer")
+def api_fiesta_sind_operador_restablecer(operador_id: int, request: Request):
+    """Clave transitoria al azar, que se muestra UNA vez y obliga a elegir otra."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        yo = _fiesta_operador(request, s, ev, admin=True)
+        o = s.get(db.FiestaOperador, operador_id)
+        if not o or o.evento_id != ev.id:
+            raise HTTPException(404, "No existe ese usuario.")
+        if o.id == yo.id:
+            raise HTTPException(409, "Tu clave se cambia desde «Cambiar mi clave».")
+        clave = secrets.token_urlsafe(8)
+        o.clave_hash, o.debe_cambiar_clave = auth.hashear_clave(clave), True
+        s.add(o)
+        s.commit()
+        return JSONResponse({"ok": True, "clave": clave}, headers={"Cache-Control": "no-store"})
+
+
+# ---------- Sindicato: puerta ----------
+@app.post(API_FIESTA_SIND + "/ingreso/qr")
+def api_fiesta_sind_ingreso_qr(request: Request, datos: dict = Body(...)):
+    """Lo que leyó el escáner. `token` y `k` (o `texto`, la URL entera del QR).
+    Sin `cantidad` registra a todos los que faltan; con `cantidad`, solo esas
+    personas. Con `solo_verificar` no registra nada: devuelve cómo está."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    token, k = str(datos.get("token", "")).strip(), str(datos.get("k", "")).strip()
+    if not token and datos.get("texto"):
+        token, k = fiesta.leer_qr(str(datos["texto"]))
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = _fiesta_operador(request, s, ev)
+        r = s.exec(select(db.FiestaReserva).where(
+            db.FiestaReserva.token == token, db.FiestaReserva.evento_id == ev.id)).first() if token else None
+        if not r:
+            raise HTTPException(404, "Esa entrada no existe.")
+        if not verificar_codigo_efimero(token, k):
+            raise ErrorApp("E-FIESTA-07")
+        if r.estado != "pagada":
+            raise ErrorApp("E-FIESTA-09")
+        if datos.get("solo_verificar"):
+            return {"ok": True, "registrado": False, "reserva": db.fiesta_reserva_dict(r),
+                    "ya_ingresados": r.ingresados, "faltan": r.cantidad - r.ingresados}
+        res = db.fiesta_registrar_ingreso(s, r.id, datos.get("cantidad"), "qr", op.usuario)
+        return {"ok": True, "registrado": True, **res}
+
+
+@app.post(API_FIESTA_SIND + "/ingreso/documento")
+def api_fiesta_sind_ingreso_documento(request: Request, datos: dict = Body(...)):
+    """Ingreso alternativo (D8): se busca a la persona, se confirma con su
+    documento y se anota el motivo, quién lo hizo y cuándo."""
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    motivo = str(datos.get("motivo", "")).strip()
+    if not motivo:
+        raise HTTPException(400, "Escribí el motivo del ingreso (por ejemplo: perdió el teléfono).")
+    try:
+        reserva_id = int(datos.get("reserva_id"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Falta la reserva.")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        op = _fiesta_operador(request, s, ev)
+        r = s.get(db.FiestaReserva, reserva_id)
+        if not r or r.evento_id != ev.id:
+            raise HTTPException(404, "No existe esa reserva.")
+        res = db.fiesta_registrar_ingreso(s, r.id, datos.get("cantidad"), "documento", op.usuario, motivo[:300])
+        return {"ok": True, **res}
+
+
+@app.get(API_FIESTA_SIND + "/buscar")
+def api_fiesta_sind_buscar(request: Request, q: str = ""):
+    _exigir_landing()
+    _fiesta_cookie(request, "fiesta_op")
+    with db.get_session() as s:
+        ev = _fiesta_evento_o_404(s)
+        _fiesta_operador(request, s, ev)
+        filas = db.fiesta_buscar_para_puerta(s, ev.id, q)
+        return JSONResponse({"reservas": [db.fiesta_reserva_dict(r) for r in filas]},
+                            headers={"Cache-Control": "no-store"})
+
+
+# ---------- Arranque (Herramientas de /entornos, con pase) ----------
+API_FIESTA_ARRANQUE = "/api/entornos/herramientas/fiesta"
+
+
+@app.get(API_FIESTA_ARRANQUE + "/estado")
+def api_fiesta_arranque_estado(request: Request):
+    _exigir_herramientas(request)
+    with db.get_session() as s:
+        ev = db.fiesta_evento_activo(s)
+        return {"hay_evento": bool(ev),
+                "hay_admin": bool(ev) and db.fiesta_hay_admin(s, ev.id),
+                "evento": db.fiesta_evento_dict(s, ev) if ev else None,
+                "mp_modo": mercadopago.modo(), "mp_faltantes": mercadopago.faltantes(),
+                "contadores": db.fiesta_contadores(s, ev) if ev else None}
+
+
+@app.post(API_FIESTA_ARRANQUE + "/arranque")
+def api_fiesta_arranque(request: Request, datos: dict = Body(...)):
+    """Crea el evento y el primer administrador cuando todavía no hay ninguno.
+    Con evento y admin ya creados no hace nada (409): se cambia desde la app."""
+    _exigir_herramientas(request)
+    usuario = str(datos.get("usuario", "")).strip().lower()
+    clave = str(datos.get("clave_inicial", ""))
+    if not _RE_USUARIO_FIESTA.match(usuario):
+        raise HTTPException(400, "El usuario: 3 a 30 letras minúsculas, números, punto, guion o guion bajo.")
+    if len(clave) < CLAVE_INICIAL_MINIMA_FIESTA:
+        raise HTTPException(400, f"La clave inicial tiene que tener al menos {CLAVE_INICIAL_MINIMA_FIESTA} caracteres.")
+    with db.get_session() as s:
+        ev = db.fiesta_evento_activo(s)
+        if ev and db.fiesta_hay_admin(s, ev.id):
+            raise HTTPException(409, "La fiesta ya está armada: se configura desde la app del sindicato.")
+        if not ev:
+            fecha_hora = str(datos.get("fecha_hora", "")).strip().replace(" ", "T")
+            if not str(datos.get("nombre", "")).strip() or not fiesta.parsear(fecha_hora):
+                raise HTTPException(400, "Falta el nombre o la fecha y hora (AAAA-MM-DDTHH:MM).")
+            ev = db.FiestaEvento(
+                nombre=str(datos["nombre"]).strip()[:200], fecha_hora=fecha_hora,
+                lugar=str(datos.get("lugar", "")).strip()[:200],
+                precio=_fiesta_entero(datos, "precio", 0, 100_000_000, "El precio"),
+                tope_por_afiliado=_fiesta_entero(datos, "tope_por_afiliado", 1, 100, "El tope por afiliado"),
+                tope_general=_fiesta_entero(datos, "tope_general", 1, 100_000, "El tope general"))
+            s.add(ev)
+            s.commit()
+            s.refresh(ev)
+        s.add(db.FiestaOperador(evento_id=ev.id, usuario=usuario, rol="admin",
+                                nombre=str(datos.get("nombre_op", "")).strip()[:100] or usuario,
+                                clave_hash=auth.hashear_clave(clave), debe_cambiar_clave=True))
+        s.commit()
+        return {"ok": True, "evento": db.fiesta_evento_dict(s, ev)}
