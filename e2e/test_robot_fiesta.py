@@ -62,21 +62,13 @@ INVITADA, INVITADA_DNI = "Invitada Especial", "30123456"
 
 AVISOS_DISENO = []       # lo que se vio mal en pantalla: se informa al final
 DEFECTOS_CONOCIDOS = []  # defectos fuera del alcance de este arreglo: se anotan, no frenan
-_MARCAS = {}
 
 
 # ---------------------------------------------------------------- utilidades
-def _cdp(page):
-    if page not in _MARCAS:
-        _MARCAS[page] = page.context.new_cdp_session(page)
-    return _MARCAS[page]
-
-
 def _tamano(page, ancho, alto):
-    """Tamaño de ventana a deviceScaleFactor 2 (los contextos de nuevo_actor
-    no traen el factor: se lo pone el protocolo, sin tocar la fixture)."""
-    _cdp(page).send("Emulation.setDeviceMetricsOverride", {
-        "width": ancho, "height": alto, "deviceScaleFactor": 2, "mobile": False})
+    """Tamaño de ventana. El deviceScaleFactor 2 lo trae el contexto (`_actor`);
+    cambiar el viewport no lo pierde."""
+    page.set_viewport_size({"width": ancho, "height": alto})
     page.wait_for_timeout(150)
 
 
@@ -108,6 +100,8 @@ def captura_una(page, nombre, tamano=MOVIL):
     """Para una capa que se cierra sola (resultado de la puerta): una sola foto, rápida."""
     SALIDA.mkdir(parents=True, exist_ok=True)
     sufijo = "movil" if tamano[0] < 600 else "escritorio"
+    if page.viewport_size["width"] != tamano[0]:
+        _tamano(page, *tamano)
     page.screenshot(path=str(SALIDA / f"{nombre}-{sufijo}.png"), full_page=False)
 
 
@@ -157,7 +151,7 @@ def _descodificar_qr(page, selector="#qr-caja svg"):
 
 
 # ------------------------------------------------------------------- el robot
-def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
+def test_fiesta_de_punta_a_punta(browser, informe, tmp_path):
     SALIDA.mkdir(parents=True, exist_ok=True)
     for viejo in SALIDA.glob("*.png"):
         viejo.unlink()
@@ -165,6 +159,25 @@ def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
     DEFECTOS_CONOCIDOS.clear()
     estado = {}
 
+    contextos = []
+
+    def nuevo_actor(nombre):
+        """Una «persona»: su propio contexto (sesión y cookies aparte), con
+        deviceScaleFactor 2 para las capturas. No es la fixture `nuevo_actor`
+        de conftest porque esa no deja elegir el factor."""
+        ctx = browser.new_context(viewport={"width": ESCRITORIO[0], "height": ESCRITORIO[1]},
+                                  device_scale_factor=2, locale="es-AR")
+        contextos.append(ctx)
+        return ctx.new_page()
+
+    try:
+        _recorrido(informe, tmp_path, estado, nuevo_actor)
+    finally:
+        for ctx in contextos:
+            ctx.close()
+
+
+def _recorrido(informe, tmp_path, estado, nuevo_actor):
     analista = nuevo_actor("analista")
     sind = nuevo_actor("sindicato")
     afil = nuevo_actor("afiliada")
@@ -549,11 +562,18 @@ def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
 
     # ================================================================ 7
     informe.paso("7. AISLAMIENTO: la cookie del operador no abre /admin; una reserva ajena no se abre sin sesión")
-    r = sind.request.get(f"{BASE}/admin", max_redirects=0)
-    cuerpo = r.text()
-    assert "/admin/dashboard" not in cuerpo and "Cambiar de sindicato" not in cuerpo, "el operador de la fiesta entró al panel"
+    # con la cookie del operador de la fiesta, el panel del sindicato y el de plataforma
+    # siguen pidiendo su propio ingreso (la pantalla de login, nunca el panel)
+    for ruta, titulo in (("/admin", "Ingreso del sindicato"), ("/admin/inicio", "Ingreso del sindicato"),
+                         ("/plataforma/inicio", "Administración de plataforma")):
+        r = sind.request.get(f"{BASE}{ruta}", max_redirects=0)
+        cuerpo = r.text()
+        assert titulo in cuerpo and 'type="password"' in cuerpo, f"{ruta}: el operador de la fiesta no vio el login ({r.status})"
+        assert "Cambiar de sindicato" not in cuerpo and "/admin/dashboard" not in cuerpo, f"{ruta}: se abrió el panel"
+    sind.goto(f"{BASE}/admin")                                  # y en el navegador, igual
+    expect(sind.locator('input[name="clave"]')).to_be_visible()
     assert sind.request.get(f"{BASE}/api/entornos/herramientas/fiesta/estado").status in (401, 403, 404)
-    assert sind.request.get(f"{BASE}/plataforma/inicio", max_redirects=0).status in (301, 302, 303, 307, 401, 403)
+    assert sind.request.get(f"{BASE}/admin/dashboard/kpis", max_redirects=0).status in (301, 302, 303, 307, 401, 403)
     assert anon.request.get(f"{BASE}/api/fiesta/sindicato/resumen").status == 401
     # sin sesión y sin ?t= la entrada de Ana no se abre (redirige al ingreso)
     anon2 = nuevo_actor("sin_sesion")
@@ -579,6 +599,7 @@ def test_fiesta_de_punta_a_punta(nuevo_actor, informe, tmp_path):
     informe.dato("Aislamiento", "operador sin /admin; entrada ajena redirige/403; cortesía con ?t= abre")
 
     # cierre: salir de cada app
+    sind.goto(f"{BASE}/fiesta/sindicato")
     sind.locator("#btn-salir").click()
     expect(sind.locator("#form-login")).to_be_visible()
     afil.goto(f"{BASE}/fiesta")
@@ -598,7 +619,7 @@ def test_en_la_demo_no_existe_nada_de_esto(informe):
         pytest.skip("Falta E2E_DEMO_URL: levantar un segundo servidor con ENTORNO=demo y apuntarlo ahí.")
     informe.paso("8. DEMO: /fiesta, /fiesta/sindicato y el webhook dan 404")
     for ruta, metodo in (("/fiesta", "GET"), ("/fiesta/sindicato", "GET"), ("/api/fiesta/mp/webhook", "POST"),
-                         ("/api/fiesta/mp/webhook", "GET"), ("/fiesta/mp-simulado/1", "GET")):
+                         ("/fiesta/mp-simulado/1", "GET"), ("/fiesta/entrada/1", "GET")):
         codigo = _http(DEMO + ruta, metodo)
         informe.dato(f"{metodo} {ruta}", codigo)
         assert codigo == 404, (ruta, codigo)
