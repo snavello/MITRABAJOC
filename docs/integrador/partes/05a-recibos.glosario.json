@@ -1,0 +1,21 @@
+[
+{"termino":"Módulo","definicion":"Funcionalidad que Colm3na prende o apaga por sindicato. Un módulo apagado no se ve y el servidor lo rechaza igual."},
+{"termino":"Extractor","definicion":"El componente (extractor.py) que manda el recibo a la IA y recibe un JSON con período, líneas, totales y confianza."},
+{"termino":"Anexo III","definicion":"Formato de recibo posterior a la Reforma Laboral (Decreto 407/2026) que además informa contribuciones patronales, costo laboral y último depósito."},
+{"termino":"Enmascarado","definicion":"Tapar en la imagen los datos que identifican a la persona antes de mandarla a la IA. Es de mejor esfuerzo: si falla, el recibo se analiza igual."},
+{"termino":"OCR","definicion":"Reconocimiento óptico de caracteres: leer el texto de una imagen para saber dónde están el CUIL o el nombre y poder taparlos."},
+{"termino":"E-RECIBO-04","definicion":"Código de error que corta el análisis cuando el CUIL del recibo no es el de la persona logueada."},
+{"termino":"Validador","definicion":"El motor determinista (validador.py) que compara lo impreso en el recibo con lo que dicen las reglas del convenio. No usa IA."},
+{"termino":"Concepto","definicion":"Un renglón del recibo (sueldo básico, jubilación, cuota sindical) catalogado por el sindicato, con sus alias."},
+{"termino":"Regla","definicion":"Fórmula de control de un aporte, con tolerancia y vigencia por período. Antes de setiembre de 2026 se llamaba Fórmula."},
+{"termino":"Base remunerativa","definicion":"Suma de los haberes que cuentan para calcular aportes. Sobre ella se aplican los porcentajes de las reglas."},
+{"termino":"Tope de base imponible","definicion":"Máximo y mínimo de la base sobre la que se calculan los aportes de seguridad social (art. 9, Ley 24.241), distinto para cada período."},
+{"termino":"Tope sindical","definicion":"Límite del 2 % de la remuneración para las cargas sindicales de convenio (art. 133, Ley 27.802). Lo configura solo plataforma."},
+{"termino":"Reintegro","definicion":"Línea entre los descuentos con signo contrario (por ejemplo, devolución de Ganancias). No suma al bruto ni a la base; entra al neto."},
+{"termino":"Semáforo ARCA","definicion":"Tablero verde, amarillo o rojo del estado de los aportes mes por mes, armado con el comprobante de ARCA que sube el afiliado."},
+{"termino":"Afiliado cotizante","definicion":"Afiliado al que el sindicato puede acreditar como aportante (art. 21 bis, Decreto 407/2026). Un recibo enviado sirve de prueba."},
+{"termino":"Cláusula de confidencialidad","definicion":"Marca en la ficha del sindicato, con contrato firmado, que permite ver las filas anonimizadas de recibos no enviados."},
+{"termino":"Panel Sindical","definicion":"Tablero del administrador del sindicato con indicadores, gráficos filtrables, mapa, explorador y Asistente."},
+{"termino":"Asistente del Panel","definicion":"Chat que traduce una pregunta en lenguaje natural a los filtros del Panel Sindical y resume con los números reales."},
+{"termino":"Motor v2","definicion":"Plan (todavía no construido) de leer en tres pasadas cortas, con confianza por renglón y cierre aritmético antes de juzgar."}
+]

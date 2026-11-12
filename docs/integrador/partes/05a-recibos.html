@@ -1,0 +1,338 @@
+<section class="capitulo" id="cap-5">
+  <header class="cap-cab">
+    <span class="cap-num">05</span>
+    <h2>Descripción funcional</h2>
+    <p class="cap-bajada">Qué hace cada pieza de Colm3na, paso a paso, con las pantallas reales y las reglas que la gobiernan. Se empieza por el corazón del producto: auditar el recibo de sueldo.</p>
+  </header>
+  <p class="lead">Este capítulo recorre la plataforma funcionalidad por funcionalidad. Cada sección dice primero qué ve y qué hace la persona, y después, en recuadros marcados, cómo está hecho. Las primeras secciones (5.1 a 5.4) cubren el circuito que le da sentido al producto: el afiliado sube su recibo, la plataforma lo lee y lo controla contra el convenio, y el sindicato ve el resultado agregado sin exponer a nadie.</p>
+
+  <h3 id="cap-5-panorama"><span class="n">5.1</span>Panorama y catálogo de módulos</h3>
+  <p>Colm3na no se entrega como un bloque cerrado. Cada sindicato contrata las funcionalidades que necesita, y la plataforma las prende o apaga por sindicato. Cada una se llama <b>módulo</b>. Un módulo apagado no se ve (la tarjeta del afiliado y la pestaña del panel desaparecen) y además el servidor lo rechaza con un 403 aunque alguien arme el pedido a mano: esconder el botón no alcanza.</p>
+  <p>Hay dos tipos de módulo. Los <b>de origen</b> se prenden solos al dar de alta un sindicato nuevo. Los <b>opt-in</b> arrancan apagados: ningún sindicato los estrena sin pedirlos. Aparte hay dos secciones que no dependen de ningún módulo y están siempre: <b>Trabajadores</b> (el padrón) y <b>Seccionales</b>.</p>
+  <div class="tabla-cont"><table class="tabla">
+    <thead><tr><th>Módulo</th><th>Cómo se llama en pantalla</th><th>Arranca</th><th>Se describe en</th></tr></thead>
+    <tbody>
+      <tr><td><code>recibos</code></td><td>Tu recibo</td><td>De origen</td><td><a href="#cap-5-recibos">5.2</a> y <a href="#cap-5-envio">5.4</a></td></tr>
+      <tr><td><code>aportes</code></td><td>Mis aportes</td><td>De origen</td><td><a href="#cap-5-aportes">5.3</a></td></tr>
+      <tr><td><code>credencial</code></td><td>Credencial</td><td>De origen</td><td>5.10</td></tr>
+      <tr><td><code>capacitacion</code></td><td>Capacitación</td><td>De origen</td><td>5.10</td></tr>
+      <tr><td><code>noticias</code></td><td>Noticias</td><td>De origen</td><td>5.8</td></tr>
+      <tr><td><code>beneficios</code></td><td>Beneficios</td><td>De origen</td><td>5.8</td></tr>
+      <tr><td><code>tu_dia</code></td><td>Tu día en la portada</td><td>De origen</td><td>5.10</td></tr>
+      <tr><td><code>notificaciones</code></td><td>Notificaciones</td><td>Opt-in</td><td>5.7</td></tr>
+      <tr><td><code>tramites</code></td><td>Trámites</td><td>Opt-in</td><td>5.5</td></tr>
+      <tr><td><code>empleadores</code></td><td>Empleadores</td><td>Opt-in</td><td>5.6</td></tr>
+      <tr><td><code>convenio</code></td><td>Consultas sobre el convenio</td><td>Opt-in (piloto)</td><td>5.10</td></tr>
+      <tr><td><code>dashboard</code></td><td>Panel Sindical</td><td>Opt-in</td><td><a href="#cap-5-panel">5.4</a></td></tr>
+      <tr><td><code>encuestas</code></td><td>Encuestas</td><td>Opt-in</td><td>5.9</td></tr>
+    </tbody>
+  </table></div>
+  <p>Son trece módulos en total: siete de origen y seis opt-in. «Tu día» es el último que se sumó a los de origen. La mecánica de habilitarlos (quién los prende, qué pasa al guardar una ficha) se cuenta en 5.11. Y, dentro de lo que un sindicato contrató, no todos los usuarios del panel ven todo: eso lo regulan los permisos de 5.12.</p>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>El catálogo es el diccionario <code>MODULOS</code> de <code>modulos.py</code> y la lista de los que nacen prendidos es <code>MODULOS_INICIALES</code>. Un módulo no es lo mismo que un permiso: <code>modulos.py</code> dice qué <i>contrató</i> el sindicato; <code>permisos.py</code> dice qué <i>puede tocar</i> cada usuario dentro de eso.</p></div>
+
+  <h3 id="cap-5-recibos"><span class="n">5.2</span>Auditoría de recibos</h3>
+  <p>Es la función central. Un trabajador sindicalizado quiere saber una cosa: <b>¿mi empleador me descontó bien la jubilación, la obra social y la cuota sindical?</b> Colm3na se lo responde en un minuto, con el convenio de su sindicato como vara.</p>
+
+  <h4>El recorrido del afiliado: Subí · Revisá · Resultado</h4>
+  <p>La pestaña «Tu Recibo» de la app del afiliado guía en tres pasos, siempre visibles arriba de la pantalla.</p>
+  <ol class="pasos">
+    <li><b>Subí.</b> Se saca una foto con el celular o se sube el PDF que manda la empresa. La pantalla da tres consejos para que la lectura salga bien: que entre completo (las cuatro esquinas, incluido el pie con los totales), con luz pareja y sin flash de frente, y con el recibo apoyado sobre una mesa, derecho, sin dobleces.</li>
+    <li><b>Revisá.</b> La IA lee el documento y la app muestra lo que entendió: período, empleador, cada línea con su importe y los totales. El afiliado confirma o corrige antes de que se juzgue nada. Este paso es la red de seguridad contra una lectura equivocada.</li>
+    <li><b>Resultado.</b> «Todo en orden» o «Hay N diferencias», con el detalle de cada aporte: lo que figura en el recibo, lo que debería ser según el convenio y la diferencia en pesos.</li>
+  </ol>
+  <div class="par-capturas">
+    <figure class="fig captura" data-captura="t-recibo-subir"><figcaption>Paso 1, «Subí tu recibo»: los tres consejos para sacar la foto y los dos botones, «Sacar foto» y «Subir un PDF».</figcaption></figure>
+    <figure class="fig captura" data-captura="t-recibo-espera"><figcaption>La espera de la lectura: un aro con reloj y fases, para que se sepa que la app está trabajando.</figcaption></figure>
+    <figure class="fig captura" data-captura="t-recibo-revisar"><figcaption>Paso 2, «Confirmá los datos»: lo que la IA leyó, listo para que la persona lo confirme.</figcaption></figure>
+  </div>
+  <div class="par-capturas">
+    <figure class="fig captura" data-captura="t-recibo-resultado"><figcaption>Paso 3, el resultado en el celular, con el veredicto arriba y el detalle de cada aporte.</figcaption></figure>
+    <figure class="fig captura" data-captura="t-recibo-resultado-escritorio"><figcaption>El mismo resultado en una pantalla de escritorio.</figcaption></figure>
+  </div>
+  <p>Cuando hay diferencias, la persona puede <b>reportarlas</b> al sindicato; cuando todo está en orden, puede <b>enviar el recibo</b> a su sindicato si quiere. Ambos caminos están en <a href="#cap-5-envio">5.4</a>. Y todo lo que verificó queda en su historial privado, «Mis recibos verificados», lo haya enviado o no.</p>
+
+  <h4>La cadena completa, de la foto al resultado</h4>
+  <p>Entre que la persona toca «Leer recibo» y ve el resultado pasan seis etapas. La lectura la hace una IA; el <b>juicio</b> sobre si el recibo está bien lo hace código determinista, sin IA, para que dos recibos iguales den siempre el mismo veredicto.</p>
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 300" role="img" aria-label="Cadena de lectura y validación de un recibo: foto, preparación, enmascarado, IA, JSON, validador y resultado">
+      <defs><marker id="f5a-fl1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="10" y="30" width="108" height="76" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+      <text x="64" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">1. Foto o PDF</text>
+      <text x="64" y="78" text-anchor="middle" font-size="12" fill="#16243a">sube el afiliado</text>
+      <text x="64" y="94" text-anchor="middle" font-size="12" fill="#16243a">desde el celular</text>
+      <rect x="140" y="30" width="108" height="76" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
+      <text x="194" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">2. Preparación</text>
+      <text x="194" y="78" text-anchor="middle" font-size="12" fill="#16243a">se achica a 2.000 px</text>
+      <text x="194" y="94" text-anchor="middle" font-size="12" fill="#16243a">una sola vez</text>
+      <rect x="270" y="30" width="108" height="76" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+      <text x="324" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">3. Enmascarado</text>
+      <text x="324" y="78" text-anchor="middle" font-size="12" fill="#16243a">tapa CUIL, nombre,</text>
+      <text x="324" y="94" text-anchor="middle" font-size="12" fill="#16243a">legajo (mejor esfuerzo)</text>
+      <rect x="400" y="30" width="108" height="76" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+      <text x="454" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">4. IA lectora</text>
+      <text x="454" y="78" text-anchor="middle" font-size="12" fill="#16243a">extractor.py</text>
+      <text x="454" y="94" text-anchor="middle" font-size="12" fill="#16243a">modelo elegible</text>
+      <rect x="530" y="30" width="108" height="76" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
+      <text x="584" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">5. JSON</text>
+      <text x="584" y="78" text-anchor="middle" font-size="12" fill="#16243a">se rearma la identidad</text>
+      <text x="584" y="94" text-anchor="middle" font-size="12" fill="#16243a">y se chequea el CUIL</text>
+      <rect x="660" y="30" width="108" height="76" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="714" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">6. Validador</text>
+      <text x="714" y="78" text-anchor="middle" font-size="12" fill="#16243a">validador.py</text>
+      <text x="714" y="94" text-anchor="middle" font-size="12" fill="#16243a">sin IA, determinista</text>
+      <path d="M118 68H138" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
+      <path d="M248 68H268" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
+      <path d="M378 68H398" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
+      <path d="M508 68H528" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
+      <path d="M638 68H658" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
+      <path d="M714 106V150" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
+      <rect x="610" y="152" width="208" height="56" rx="10" fill="#ffffff" stroke="#0a1421" stroke-width="1.5"/>
+      <text x="714" y="176" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Resultado</text>
+      <text x="714" y="196" text-anchor="middle" font-size="12" fill="#16243a">«Todo en orden» o «Hay N diferencias»</text>
+      <rect x="10" y="150" width="560" height="120" rx="10" fill="#ffffff" stroke="#dbe2ea" stroke-width="1.5"/>
+      <text x="26" y="174" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Qué corta la cadena antes de llegar al final</text>
+      <text x="26" y="198" font-size="13" fill="#16243a"><tspan fill="#c0392b" font-weight="700">E-RECIBO-04</tspan>: el CUIL leído no es el de la sesión. Se corta apenas se lee.</text>
+      <text x="26" y="220" font-size="13" fill="#16243a"><tspan fill="#c0392b" font-weight="700">E-RECIBO-01/02</tspan>: imagen ilegible o poco clara. Es el único caso de «probá con otra foto».</text>
+      <text x="26" y="242" font-size="13" fill="#16243a"><tspan fill="#b8860b" font-weight="700">Enmascarado que falla</tspan>: no corta. El recibo se analiza igual y queda registrado.</text>
+      <text x="26" y="262" font-size="13" fill="#16243a"><tspan fill="#b8860b" font-weight="700">Línea sin importe legible</tspan>: queda afuera del cálculo, con alerta; nunca vale $ 0.</text>
+    </svg>
+    <figcaption>Las seis etapas de un recibo. La IA interviene solo en la cuarta; el veredicto lo da el validador, que es código. Abajo, lo que puede cortar o degradar el recorrido.</figcaption>
+  </figure>
+
+  <h4>La lectura por IA</h4>
+  <p>Leer un recibo argentino es más difícil de lo que parece: cada empleador imprime el suyo, hay fotos torcidas, PDFs digitales y escaneos. Por eso la lectura la hace un modelo de IA de Anthropic y no un OCR de reglas. El modelo devuelve un JSON con un esquema fijo: período, empleador, empleado, cada línea (código, descripción, importe, <i>y en qué sección del recibo está impresa</i>), los totales impresos, un grado de confianza y un indicador de posible adulteración.</p>
+  <p>Entiende los <b>dos formatos</b> que conviven desde la Reforma Laboral (Decreto 407/2026): el recibo clásico y el del Anexo III, que además informa contribuciones patronales, costo laboral total y la fecha del último depósito de aportes.</p>
+  <div class="nota regla"><span class="rot">Regla vigente: el modelo se elige desde plataforma</span><p>Hay tres usos de IA con un modelo por defecto cada uno: Sonnet 4.6 para leer recibos, Opus 5 para las consultas al convenio y Sonnet 5 para el Asistente del Panel. Pero <b>no son fijos</b>: desde el 13 de septiembre de 2026 el equipo de plataforma elige el modelo de cada uso en <code>/plataforma</code> → Uso de IA → Modelos. Hoy, en Pruebas, <b>los recibos se leen con Sonnet 5.5</b> (decisión del 5 de noviembre de 2026, ver más abajo). Un modelo que no esté en el catálogo de precios no se guarda, para que un error de tipeo no se descubra en la pantalla del afiliado.</p></div>
+
+  <h4>Tapar los datos personales antes de mandar a la IA</h4>
+  <p>Antes de que el recibo salga hacia la IA, el servidor intenta <b>tapar lo que identifica a la persona</b>: CUIL, nombre, DNI, legajo, número de cuenta, y el CUIT y la razón social del empleador. Esos datos se sustituyen en la imagen por un tapón rotulado («CUIL OCULTO», «DATO OCULTO») y se <b>vuelven a poner del lado de Colm3na</b> con lo que el servidor leyó localmente. La IA ve el recibo completo menos quién es la persona.</p>
+  <div class="nota regla"><span class="rot">Regla vigente: mejor esfuerzo, nunca estorba</span><p>El enmascarado es un agregado de confidencialidad, no una condición del análisis. Si un dato no se pudo tapar, si el OCR falla o no está, o si el cupo está lleno, <b>el recibo se analiza igual</b> y queda un registro para revisar. Se tolera la fuga eventual de un CUIT o un nombre: lo que importa es que la lectura sea lo más precisa posible. Por la misma razón, tapar de más es más riesgoso que tapar de menos: un concepto tapado por error es una evaluación peor. Lo que no se relaja es la <b>verificación de pertenencia</b> (el recibo es del CUIL logueado), que es seguridad y no enmascarado.</p></div>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>enmascarado.py</code> es puro: decide <i>qué</i> se tapa (lo conocido, patrones de CUIL/CUIT, rótulos como «Apellido y nombre» o «Legajo», y la vecindad de lo encontrado, con una lista blanca para fechas e importes). <code>lectores.py</code> hace el OCR (PDF digital con pypdfium2; fotos con Tesseract vía <code>tesserocr</code>). <code>preparacion.py</code> es el enganche en las rutas y <code>rearmar_recibo</code> repone la identidad. Un CUIL o CUIT se tapa solo si después se puede volver a poner con certeza. La variable <code>ENMASCARADO</code> vale <code>apagado</code>, <code>sombra</code> o <code>activo</code> (en Pruebas, <code>activo</code>). Medido con la IA real sobre 12 recibos, tapar no cambió totales, cantidad de líneas, período ni categoría; queda abierta una línea ambigua («A cuenta futuros aumentos») que varió en el tapado, y antes de llevar esto a la demo hay que medirlo sobre un conjunto más variado de recibos reales. Ficha rectora: <code>docs/ENMASCARADO.md</code>.</p></div>
+  <div class="nota tecnico"><span class="rot">Para técnicos: una foto se decodifica una sola vez</span><p>Una foto de celular pesa mucho en memoria. <code>lectores.abrir_imagen</code> es la única puerta: la decodifica reducida a 2.000 px y OCR, tapado y lo que viaja a la IA usan esa misma imagen. Las lecturas simultáneas por proceso tienen cupo (<code>LECTURA_CUPO</code>, 2); el pedido espera su turno y pasado el tope contesta 503 <code>E-SERVIDOR-04</code>. El pico de memoria medido es de unos 55 MiB con una foto de 12 megapíxeles.</p></div>
+
+  <h4>Un recibo ajeno se corta apenas se lee</h4>
+  <p>Cada afiliado solo puede auditar <b>su propio</b> recibo. Apenas la IA devuelve el CUIL, el servidor lo compara con el de la sesión; si no coinciden, corta con el error <code>E-RECIBO-04</code> y <b>no muestra nada</b>: ni nombre, ni empleador, ni importes de otra persona. Con el comprobante de aportes pasa lo mismo (<code>E-APORTE-03</code>). Antes de esta regla el recibo ajeno se leía entero y recién al confirmar se descubría. El mismo chequeo se repite en <code>/api/validar</code>, porque esa ruta se puede llamar sola con cualquier contenido.</p>
+
+  <h4>La validación: qué se compara con qué</h4>
+  <p>Con el recibo confirmado, el <b>validador</b> (<code>validador.py</code>) lo contrasta contra lo que el sindicato cargó para su convenio. Son tres piezas, todas propias de cada sindicato (aislamiento total):</p>
+  <div class="grilla-3">
+    <div class="tarjeta miel"><h4>Conceptos</h4><p>El catálogo de renglones que aparecen en los recibos: cada uno con código, nombre, si es un ingreso o un descuento, si es remunerativo, y alias (los nombres con que lo escribe cada empleador). Un concepto puede ser genérico o específico de un empleador.</p></div>
+    <div class="tarjeta azul"><h4>Reglas</h4><p>Las fórmulas de control, una por aporte: por ejemplo «jubilación = 11 % de la base remunerativa». Cada regla tiene una tolerancia en pesos, una vigencia por período y, si corresponde, se aplica con los topes de la seguridad social.</p></div>
+    <div class="tarjeta verde"><h4>Topes y límites</h4><p>El tope máximo y el piso mínimo de la base imponible (art. 9 de la Ley 24.241), que rigen según el período del recibo, y el tope del 2 % para las cargas sindicales de convenio.</p></div>
+  </div>
+  <p>El motor calcula la <b>base remunerativa</b> sumando los haberes del recibo, evalúa cada regla con esa base y compara lo que dice el recibo contra lo esperado. Si la diferencia supera la tolerancia (por defecto, $ 1), el aporte queda marcado.</p>
+  <ul>
+    <li><b>Topes de base imponible.</b> Las reglas de jubilación, PAMI y obra social recortan la base al tope vigente <i>en el período de ese recibo</i>, no al de hoy. Si el recibo no tiene tope cargado para su período, se evalúa igual sin tope y se avisa. Hay una aclaración especial cuando la diferencia puede deberse a que el tope se alcanzó entre dos recibos.</li>
+    <li><b>Tope sindical del 2 %.</b> Si la suma de cargas sindicales «de convenio» supera el 2 % de la remuneración (art. 133, Ley 27.802), sale una alerta de posible retención en exceso. La cuota de afiliación no cuenta para el tope, pero sí se reporta al sindicato. El porcentaje lo configura solo plataforma.</li>
+    <li><b>Reintegros entre los descuentos.</b> Si dentro de los descuentos aparece una línea con el signo contrario (por ejemplo, una devolución de Ganancias), no se suma al bruto ni a la base de los aportes: es un reintegro, y entra al neto. La clasificación la decide dónde está <i>impresa</i> la línea, nunca el signo.</li>
+  </ul>
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 330" role="img" aria-label="Cómo se reparte una línea del recibo según la sección donde está impresa">
+      <defs><marker id="f5a-fl2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="10" y="10" width="250" height="300" rx="10" fill="#ffffff" stroke="#dbe2ea" stroke-width="1.5"/>
+      <text x="135" y="36" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">El recibo impreso</text>
+      <rect x="26" y="50" width="218" height="68" rx="8" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="38" y="72" font-size="13" font-weight="700" fill="#0d7a5f">HABERES</text>
+      <text x="38" y="92" font-size="12" fill="#16243a">Sueldo básico · Antigüedad</text>
+      <text x="38" y="108" font-size="12" fill="#16243a">Presentismo</text>
+      <rect x="26" y="128" width="218" height="52" rx="8" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+      <text x="38" y="150" font-size="13" font-weight="700" fill="#2e5c8a">NO REMUNERATIVOS</text>
+      <text x="38" y="168" font-size="12" fill="#16243a">Sumas fijas del acuerdo</text>
+      <rect x="26" y="190" width="218" height="104" rx="8" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
+      <text x="38" y="212" font-size="13" font-weight="700" fill="#c0392b">DESCUENTOS</text>
+      <text x="38" y="232" font-size="12" fill="#16243a">Jubilación · Obra social</text>
+      <text x="38" y="248" font-size="12" fill="#16243a">Cuota sindical</text>
+      <text x="38" y="270" font-size="12" fill="#16243a">Devolución de Ganancias</text>
+      <text x="38" y="285" font-size="11" fill="#4c5d75">(con signo contrario)</text>
+      <path d="M244 84H330" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
+      <path d="M244 154H330" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
+      <path d="M244 226H330" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
+      <path d="M244 276C290 276 290 276 330 276" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
+      <rect x="332" y="60" width="240" height="46" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="452" y="88" text-anchor="middle" font-size="13" fill="#16243a">Suma a la base remunerativa</text>
+      <rect x="332" y="130" width="240" height="46" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+      <text x="452" y="158" text-anchor="middle" font-size="13" fill="#16243a">Suma al bruto, no a la base</text>
+      <rect x="332" y="202" width="240" height="46" rx="10" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
+      <text x="452" y="230" text-anchor="middle" font-size="13" fill="#16243a">Se controla contra la regla</text>
+      <rect x="332" y="254" width="240" height="46" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
+      <text x="452" y="282" text-anchor="middle" font-size="13" fill="#16243a">Reintegro: entra al neto</text>
+      <rect x="610" y="60" width="240" height="240" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+      <text x="730" y="86" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Por qué importa</text>
+      <text x="624" y="112" font-size="12" fill="#16243a">Una devolución de Ganancias</text>
+      <text x="624" y="128" font-size="12" fill="#16243a">no es un haber: si se sumara</text>
+      <text x="624" y="144" font-size="12" fill="#16243a">a la base, todos los aportes</text>
+      <text x="624" y="160" font-size="12" fill="#16243a">esperados saldrían de más.</text>
+      <text x="624" y="190" font-size="12" fill="#16243a">Tampoco manda el catálogo:</text>
+      <text x="624" y="206" font-size="12" fill="#16243a">ser reintegro es cosa del</text>
+      <text x="624" y="222" font-size="12" fill="#16243a">mes, no del concepto.</text>
+      <text x="624" y="252" font-size="12" fill="#16243a">Si con la sección leída cierran</text>
+      <text x="624" y="268" font-size="12" fill="#16243a">los totales impresos y con el</text>
+      <text x="624" y="284" font-size="12" fill="#16243a">catálogo no, manda el recibo.</text>
+      <path d="M572 154H608" stroke="#a86400" stroke-width="1.5" stroke-dasharray="4 3"/>
+    </svg>
+    <figcaption>Cómo se reparte cada línea según la sección donde está impresa. «Haber o descuento» lo dice el lugar del recibo, no el signo del importe.</figcaption>
+  </figure>
+
+  <h4>Alertas que acompañan al resultado</h4>
+  <p>La salida de una IA no es un contrato: a veces un importe viene vacío o ilegible. El validador está pensado para <b>no inventar diferencias</b>:</p>
+  <ul>
+    <li><code>importe_ilegible</code>: una línea sin importe legible queda afuera de todos los cálculos y se avisa. Nunca se la trata como $ 0.</li>
+    <li><code>formula_invalida</code>: una regla que no se puede evaluar saltea <i>su</i> chequeo, pero no tumba el recibo entero. Para que esto casi no ocurra, el panel prueba cada fórmula antes de guardarla.</li>
+    <li><code>concepto_mal_clasificado</code>: el catálogo dice una cosa y lo impreso, que cierra con los totales, dice otra. Se toma el recibo y se avisa.</li>
+    <li><code>tope_sindical</code> y la advertencia de tope no aplicado, descriptas arriba.</li>
+  </ul>
+  <p>Además, el sistema avisa si una regla tiene una tolerancia mayor a $ 100: no la bloquea (cada sindicato sabe lo que hace), pero una tolerancia de $ 5.000 dejó pasar como correctos recibos con $ 29.000 de diferencia en una prueba real.</p>
+  <div class="nota tecnico"><span class="rot">Para técnicos: un resultado, dos estados</span><p><code>validador.validar()</code> devuelve <code>estado</code> en <code>OK</code> o <code>CON_DISCREPANCIAS</code>; «en revisión» no existe a nivel de recibo. <code>repartir_por_zona</code> es la única implementación del reparto por sección: la usan la validación, la pantalla de confirmar y la detección de conceptos nuevos. Todo importe pasa por <code>validador.a_numero()</code> antes de entrar a una cuenta. Las fórmulas se parsean con <code>ast</code> y se recorren a mano: no hay <code>eval</code>.</p></div>
+
+  <h4>La alerta de posible adulteración</h4>
+  <p>El modelo también mira si el recibo parece <b>editado</b> (números tachados, corregidos, tipografías distintas en un total). Solo marca cuando tiene un grado de certeza alto. No bloquea al afiliado: la verificación sigue su curso. Pero el archivo se guarda como <code>ReciboSospechoso</code> y lo ve únicamente el equipo de plataforma, en «Recibos con alerta». Los tapones del enmascarado están hechos de modo de no confundirse con una edición.</p>
+
+  <h4>Cuando aparece un concepto nuevo: Aprendizaje y Conceptos</h4>
+  <p>Un convenio no queda cargado de una vez. Cada empleador usa códigos propios y conceptos que el catálogo todavía no conoce. El panel del sindicato tiene dos pestañas hermanas para eso.</p>
+  <ul>
+    <li><b>Aprendizaje.</b> El sindicato sube varios recibos de uno o más empleadores; la IA los lee y la pestaña propone los <b>conceptos nuevos</b>, deduplicados por código y CUIT del empleador, con cuántas veces apareció cada uno. Antes de aprobar el lote avisa si alguno se parece a un concepto que ya existe (para no crear duplicados) y, si es específico de un empleador, sugiere a qué concepto genérico corresponde, para que la regla de siempre lo controle.</li>
+    <li><b>Conceptos.</b> El catálogo en sí: se crea, edita, fusiona o borra cada concepto. Un renglón que apareció en un recibo real y no estaba en el catálogo queda «pendiente de revisión»; la pestaña muestra en qué sección del recibo lo leyó la IA y ofrece «Confirmar como…» o «Pasar a…».</li>
+  </ul>
+  <p>Y la pestaña <b>Reglas</b> (que hasta setiembre de 2026 se llamaba «Fórmulas») es donde el sindicato escribe cada control con la vigencia por período y la tolerancia. No pueden superponerse dos reglas del mismo concepto en el mismo período.</p>
+  <figure class="fig captura" data-captura="s-reglas"><figcaption>La pestaña Reglas del panel: una fórmula de control por aporte, con su tolerancia y su vigencia.</figcaption></figure>
+  <div class="par-capturas">
+    <figure class="fig captura" data-captura="s-conceptos"><figcaption>La pestaña Conceptos: el catálogo del convenio, con los renglones pendientes de revisión.</figcaption></figure>
+    <figure class="fig captura" data-captura="s-aprendizaje"><figcaption>La pestaña Aprendizaje: se suben recibos y la IA propone los conceptos nuevos para aprobar.</figcaption></figure>
+  </div>
+
+  <h4>Cuánto acierta y cuánto cuesta: la medición real</h4>
+  <p>El 4 y 5 de noviembre de 2026 se midió el sistema con <b>600 recibos reales-simulados del lote de La Bancaria</b> (convenio 18/75), con la IA de verdad y no con un simulador. Se compararon dos modelos.</p>
+  <div class="cifras">
+    <div class="cifra"><b>399 / 400</b><span>lecturas exactas con Sonnet 5.5 (99,8 %)</span></div>
+    <div class="cifra"><b>395 / 400</b><span>con el veredicto esperado, Sonnet 5.5</span></div>
+    <div class="cifra"><b>US$ 0,0231</b><span>por recibo con Sonnet 5.5</span></div>
+    <div class="cifra"><b>US$ 0,0178</b><span>por recibo con la caché de prompt encendida (−25 %)</span></div>
+  </div>
+  <p>Haber probado también Haiku 5.5 sirvió para una decisión: es unas <b>doce veces más barato</b> (US$ 0,00137 por recibo), pero <b>no es más rápido</b> (mediana de 9,0 segundos contra 7,4) y lee exacto algo menos (98,0 % contra 99,8 %). Una lectura inexacta es una diferencia inventada contra un afiliado, así que el modelo de lectura es Sonnet 5.5. Se reevalúa si el costo llegara a pesar.</p>
+  <p>Los casos en que el veredicto no fue el esperado se clasificaron por origen antes de tocar código. Casi todos eran <b>configuración de Pruebas</b> (una tolerancia de $ 5.000 en lugar de $ 1 y un tope de seguridad social de marzo de 2026 mal cargado), no la aplicación; de ahí salieron el aviso de tolerancia alta y un chequeo de topes. Sí fue un defecto de la app el caso de descuentos en positivo fuera de su sección, ya corregido.</p>
+  <div class="nota pendiente"><span class="rot">Pendiente: Motor de recibos v2</span><p>Existe un plan acordado el 4 de septiembre de 2026 (<code>PLAN_MOTOR_V2.md</code>) para una versión más exigente del motor: tres lecturas cortas en vez de una grande, <b>confianza por renglón</b> y no por recibo, y un <b>cierre aritmético</b> como compuerta (si lo leído no cierra contra los totales impresos, se dice «lectura incierta» en lugar de inventar una diferencia). <b>No está construido</b>: lo que corre hoy es el motor descripto en esta sección, y el plan convivirá detrás de la variable <code>MOTOR_V2</code>. Primero hay que armar un conjunto de 60 recibos reales anotados a mano como vara de comparación. Los documentos de <code>recursos/</code> que hablan del motor v2 describen el diseño, no el estado actual.</p></div>
+
+  <h3 id="cap-5-aportes"><span class="n">5.3</span>Aportes y semáforo ARCA</h3>
+  <p>El recibo muestra lo que el empleador <i>dice</i> que descontó. Falta saber si lo <b>depositó</b>. Esa pregunta la contesta ARCA (ex AFIP) y la responde la pestaña «Mis Aportes», con un semáforo.</p>
+  <ol class="pasos">
+    <li><b>El afiliado va a ARCA con un botón</b> y consulta sus aportes con su clave fiscal.</li>
+    <li><b>Resuelve el captcha él mismo.</b></li>
+    <li><b>Sube la captura o el PDF</b> del comprobante a Colm3na.</li>
+    <li><b>La IA lo lee</b> (<code>/api/aportes</code>) y la app arma el semáforo mes por mes, para jubilación y obra social.</li>
+  </ol>
+  <div class="lado izq">
+    <figure class="fig captura" data-captura="t-aportes"><figcaption>Mis Aportes: el semáforo general y el estado de cada mes.</figcaption></figure>
+    <div>
+      <p>El color global resume todo el período: <span class="chip verde">verde</span> si todos los meses están pagados, <span class="chip ambar">amarillo</span> si hay pagos parciales pero ningún mes malo, y <span class="chip rojo">rojo</span> si hay al menos un mes impago, no presentado o no declarado. Sin datos, gris.</p>
+      <p>Cada mes y cada rubro tiene su estado: <b>pagado</b>, <b>parcial</b>, <b>impago</b>, <b>no presentada</b> (la declaración jurada), <b>no declarado</b> e <b>informado</b>. Este último aparece en comprobantes que dicen «INFORMADO» en lugar de «PAGO»; se trata como pagado, y «NO INFORMADO» como impago.</p>
+      <p>Si hay meses sin aportar, la persona puede <b>reportarlo al sindicato</b> desde la misma pantalla.</p>
+    </div>
+  </div>
+  <h4>Una señal temprana, antes de ir a ARCA</h4>
+  <p>El recibo del Anexo III declara la fecha del <b>último depósito de aportes</b>. Si esa fecha es de tres meses o más antes del período del recibo, la app muestra una advertencia: puede ser un atraso del empleador y conviene confirmarlo en ARCA. Es complementaria: no reemplaza la consulta, sirve mientras el afiliado todavía no la hizo.</p>
+  <div class="nota regla"><span class="rot">Regla vigente: qué cubre y qué no</span><p>ARCA cubre <b>jubilación y obra social</b>. <b>No cubre ART</b> (riesgos del trabajo), que se paga por otro circuito; el semáforo no dice nada sobre ella.</p></div>
+  <div class="nota regla"><span class="rot">Por qué no se automatiza el captcha</span><p>Se decidió que sea el afiliado quien entre a ARCA y resuelva el captcha. Automatizarlo sería frágil (cualquier cambio de ARCA lo rompe) y está en una zona gris legal. Hacerlo así tiene además una ventaja: la clave fiscal nunca pasa por Colm3na. Como en el recibo, el comprobante de otra persona se corta en seco (<code>E-APORTE-03</code>), y el estado del semáforo se guarda como el propio del afiliado.</p></div>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>La lógica es <code>semaforo.py</code> (<code>calcular_semaforo</code> y <code>advertencia_ultimo_deposito</code>, con <code>MESES_ATRASO_ALERTA = 3</code>). El lector de comprobantes es el mismo <code>extractor.py</code>, con su propio prompt, registrado en <code>UsoIA</code> con tipo <code>aportes</code>. Los códigos <code>E-APORTE-01</code> y <code>-02</code> son los otros dos que pueden decir «probá con otra captura».</p></div>
+
+  <h3 id="cap-5-envio"><span class="n">5.4</span>Envío al sindicato, Reportes y Panel Sindical</h3>
+  <h4>El afiliado decide qué comparte</h4>
+  <p>Auditar un recibo es <b>privado por defecto</b>: lo que el afiliado verifica queda en su historial y el sindicato no ve a quién pertenece. Compartirlo es un acto explícito, con un aviso (disclaimer) que dice qué se comparte. Hay dos caminos:</p>
+  <ul>
+    <li><b>«Enviar a mi sindicato»</b> (<code>/api/enviar-sindicato</code>): lo usa quien quiere compartir un recibo sin discrepancias. Comparte los datos del recibo, incluida la retención de cuota sindical, y sirve como <b>prueba de afiliado cotizante</b> (art. 21 bis, Decreto 407/2026): la forma en que el sindicato acredita quién le aporta.</li>
+    <li><b>«Reportar al sindicato»</b> (<code>/api/reportar</code>): para recibos con diferencias. Además de alertar al sindicato, cuenta también como prueba de cotizante, porque un recibo con diferencias igual prueba que hubo retención.</li>
+  </ul>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Las dos rutas comparten <code>_envio_del_afiliado</code>: el CUIL sale de la sesión firmada, nunca del cuerpo del pedido, y el recibo tiene que ser del afiliado (<code>_recibo_propio</code>). Antes un afiliado podía marcar como enviado el recibo de otro (hallazgo H-0021 del Security Kit). Se guarda en <code>EnvioSindicato</code> y se marca <code>ReciboVerificado.enviado_sindicato</code>.</p></div>
+
+  <h4>Qué ve el sindicato de cada recibo</h4>
+  <p>El sindicato necesita ver el conjunto para actuar, pero no tiene derecho a identificar a quien no quiso compartir. La plataforma lo resuelve con una regla simple, aplicada en el servidor y no en la pantalla.</p>
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 310" role="img" aria-label="Qué ve el sindicato de un recibo según si fue enviado o no">
+      <defs><marker id="f5a-fl3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="10" y="110" width="170" height="80" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+      <text x="95" y="142" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Recibo verificado</text>
+      <text x="95" y="162" text-anchor="middle" font-size="12" fill="#16243a">por el afiliado</text>
+      <path d="M180 135C220 120 230 80 270 70" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5a-fl3)"/>
+      <path d="M180 165C220 180 230 230 270 240" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5a-fl3)"/>
+      <rect x="272" y="30" width="210" height="80" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="377" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">ENVIADO por el afiliado</text>
+      <text x="377" y="78" text-anchor="middle" font-size="12" fill="#16243a">nombre, CUIL, empresa</text>
+      <text x="377" y="94" text-anchor="middle" font-size="12" fill="#16243a">e importes a la vista</text>
+      <rect x="272" y="200" width="210" height="80" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
+      <text x="377" y="228" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">NO enviado</text>
+      <text x="377" y="248" text-anchor="middle" font-size="12" fill="#16243a">se borran nombre, CUIL,</text>
+      <text x="377" y="264" text-anchor="middle" font-size="12" fill="#16243a">legajo y empresa</text>
+      <path d="M482 70H540" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl3)"/>
+      <path d="M482 240H540" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl3)"/>
+      <rect x="542" y="20" width="308" height="100" rx="10" fill="#ffffff" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="556" y="44" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">En Reportes y en el explorador</text>
+      <text x="556" y="66" font-size="12" fill="#16243a">Fila completa, identificada.</text>
+      <text x="556" y="84" font-size="12" fill="#16243a">Entra al padrón de cotizantes.</text>
+      <text x="556" y="102" font-size="12" fill="#16243a">Los números del Panel la cuentan.</text>
+      <rect x="542" y="150" width="308" height="140" rx="10" fill="#ffffff" stroke="#b8860b" stroke-width="1.5"/>
+      <text x="556" y="174" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Sin identidad, y con una condición</text>
+      <text x="556" y="196" font-size="12" fill="#16243a">Los números y gráficos la cuentan siempre.</text>
+      <text x="556" y="216" font-size="12" fill="#16243a">La fila anónima solo se lista si plataforma</text>
+      <text x="556" y="232" font-size="12" fill="#16243a">marcó la «cláusula de confidencialidad»,</text>
+      <text x="556" y="248" font-size="12" fill="#16243a">con el contrato firmado ya cargado.</text>
+      <text x="556" y="272" font-size="12" fill="#16243a">La búsqueda por CUIL o nombre solo mira enviados.</text>
+    </svg>
+    <figcaption>La privacidad se decide en el servidor, en la consulta SQL: lo que la pantalla muestra ya viene filtrado.</figcaption>
+  </figure>
+  <div class="nota regla"><span class="rot">Regla vigente: Reportes y la cláusula</span><p>Desde el 24 de septiembre de 2026, Reportes y Cotizantes son una sola pestaña, «Reportes», sobre <b>todos</b> los recibos verificados, paginada en el servidor y con tilde verde o rojo de diferencias. Los no enviados salen anonimizados, y solo si la ficha del sindicato tiene marcada la <b>cláusula de confidencialidad</b>, para lo cual plataforma debe haber cargado el contrato firmado. La búsqueda por CUIL o nombre mira únicamente entre los enviados: si no, el filtro identificaría la fila anónima. Los números y los gráficos del Panel cuentan todo, con o sin cláusula.</p></div>
+  <figure class="fig captura" data-captura="s-reportes"><figcaption>La pestaña Reportes: recibos enviados con su identidad y no enviados anonimizados, con filtros por período, resultado y envío.</figcaption></figure>
+
+  <h4 id="cap-5-panel">El Panel Sindical</h4>
+  <p>Es la función estrella para el administrador del sindicato: un tablero para ver, en segundos, cómo viene el gremio. Es un módulo opt-in (<code>dashboard</code>) y es la <b>versión 2</b>, construida con Preact y que reemplazó a la primera el 25 de octubre de 2026.</p>
+  <figure class="fig captura" data-captura="s-panel-sindical"><figcaption>El Panel Sindical: la barra de período y filtros arriba, los indicadores sobre la tarjeta oscura y los gráficos debajo.</figcaption></figure>
+  <div class="grilla-3">
+    <div class="tarjeta miel"><h4>Indicadores y gráficos</h4><p>Diez indicadores (recibos, porcentaje con diferencias, afiliados registrados, trámites, notificaciones…) y gráficos de evolución, validación, diferencias por empresa y trámites por seccional.</p></div>
+    <div class="tarjeta azul"><h4>Filtros cruzados</h4><p>Se filtra por período, seccional, empresa, formato de recibo, resultado o rango de salario, y <b>todo el tablero responde</b>. Tocar una barra o una burbuja también filtra. El estado viaja en el enlace: se puede compartir una vista.</p></div>
+    <div class="tarjeta verde"><h4>Semáforo por empresa</h4><p>Cada empleador queda en verde, amarillo o rojo según cuántos días atrasó sus aportes, con umbrales configurables por plataforma (35 y 60 días por defecto).</p></div>
+  </div>
+  <div class="par-capturas">
+    <figure class="fig captura" data-captura="s-panel-mapa"><figcaption>El mapa de seccionales: el tamaño de cada burbuja es una cantidad y el borde, su escala de color; seleccionar una burbuja filtra todo el panel.</figcaption></figure>
+    <figure class="fig captura" data-captura="s-panel-explorador"><figcaption>El explorador de datos: las filas paginadas detrás de los gráficos.</figcaption></figure>
+  </div>
+  <p>Debajo de los gráficos está el <b>explorador</b>, una tabla paginada de los casos que quedaron con el filtro puesto. Al tocar una fila se abre el modal <b>«Ver»</b>, con el detalle de ese recibo, trámite o notificación. El <b>mapa</b> pone una burbuja por seccional con sus indicadores; ignora el filtro de seccional elegido porque él mismo es el selector.</p>
+  <figure class="fig captura" data-captura="s-panel-ver"><figcaption>El modal «Ver»: el detalle de un recibo. En un recibo no enviado, nombre, CUIL y empleador no aparecen.</figcaption></figure>
+  <div class="nota regla"><span class="rot">Reglas vigentes del panel</span><p><b>Alcance:</b> un Admin de Seccional o un usuario de área ve solo su seccional. El recorte se impone en un solo lugar y los detalles del «Ver» fuera de alcance devuelven 404. <b>Privacidad:</b> los agregados cuentan todo; las filas de recibos no enviados salen solo con cláusula, y el detalle de un no enviado se borra antes de responder. <b>Rendimiento:</b> los agregados se calculan 100 % en SQL con índices; medido con 50.000 recibos, el peor endpoint tardó 80 ms. Un cupo por proceso evita que el panel agote las conexiones: si no hay lugar, responde 503 en vez de colgarse.</p></div>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Backend: <code>dashboard.py</code> y los endpoints <code>/admin/dashboard/*</code> de <code>main.py</code> (el <code>sindicato_id</code> sale siempre de la cookie, jamás de un parámetro). Frontend: módulos Preact + htm vendoreados en <code>static/panel_v2/</code> (sin build, sin CDN) y Chart.js 4.4.9 vendoreado; mapas con Leaflet vendoreado. El «hoy» del panel lo dice el servidor (<code>data-hoy</code>), no el reloj del dispositivo. Los gráficos toman sus colores de las variables <code>--graf-*</code> del modelo de diseño activo.</p></div>
+
+  <h4>El Asistente del Panel</h4>
+  <p>En vez de combinar filtros a mano, el administrador puede <b>preguntar como habla</b>: «quiero las notificaciones no leídas de la sucursal Rosario» o «recibos con diferencias de agosto en una empresa». El Asistente traduce la pregunta a los filtros que el panel ya tiene, <b>los aplica</b> (el tablero entero cambia y el explorador muestra los casos) y contesta en una o dos frases con los números reales.</p>
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 190" role="img" aria-label="Cómo trabaja el Asistente del Panel: pregunta, IA, filtros, panel y respuesta">
+      <defs><marker id="f5a-fl4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="10" y="40" width="150" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+      <text x="85" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Pregunta</text>
+      <text x="85" y="92" text-anchor="middle" font-size="12" fill="#16243a">escrita o dictada</text>
+      <text x="85" y="108" text-anchor="middle" font-size="12" fill="#16243a">por voz</text>
+      <rect x="205" y="40" width="190" height="90" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+      <text x="300" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">IA (Sonnet 5)</text>
+      <text x="300" y="92" text-anchor="middle" font-size="12" fill="#16243a">resuelve sinónimos,</text>
+      <text x="300" y="108" text-anchor="middle" font-size="12" fill="#16243a">tipeos y fechas relativas</text>
+      <rect x="440" y="40" width="190" height="90" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+      <text x="535" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Filtros del panel</text>
+      <text x="535" y="92" text-anchor="middle" font-size="12" fill="#16243a">solo los que el panel ya</text>
+      <text x="535" y="108" text-anchor="middle" font-size="12" fill="#16243a">tiene, más el alcance</text>
+      <rect x="675" y="40" width="175" height="90" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="762" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Panel + respuesta</text>
+      <text x="762" y="92" text-anchor="middle" font-size="12" fill="#16243a">el tablero se filtra y</text>
+      <text x="762" y="108" text-anchor="middle" font-size="12" fill="#16243a">se resume con números</text>
+      <path d="M160 85H203" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl4)"/>
+      <path d="M395 85H438" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl4)"/>
+      <path d="M630 85H673" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl4)"/>
+      <text x="430" y="170" text-anchor="middle" font-size="13" fill="#4c5d75">Al modelo nunca le llegan CUIL ni nombres de trabajadores: solo la pregunta, nombres de seccionales y empresas, y totales.</text>
+    </svg>
+    <figcaption>El Asistente no genera SQL ni ve filas: traduce lenguaje natural a los filtros que el panel ya sabe aplicar.</figcaption>
+  </figure>
+  <figure class="fig captura" data-captura="s-panel-asistente"><figcaption>El Asistente del Panel abierto sobre el tablero, con su mensaje de bienvenida.</figcaption></figure>
+  <ul>
+    <li><b>No es el bot del convenio</b> del afiliado ni un RAG: no lee documentos. Es una mejora del Panel Sindical; todo sindicato con el módulo <code>dashboard</code> lo tiene.</li>
+    <li>Si el panel no filtra algo, lo dice («eso el tablero no lo filtra») y no inventa. «Limpiá los filtros» se resuelve sin IA, de forma determinista.</li>
+    <li>Si la pregunta no menciona período y el panel está en «Hoy», se va solo a los últimos 30 días y lo dice.</li>
+    <li>El <b>dictado por voz</b> usa el navegador (costo cero) y se envía solo tras una pausa de cuatro segundos, con cuenta regresiva a la vista. En el celular el cajón es una hoja inferior.</li>
+    <li>Tope de 300 preguntas por sindicato por día.</li>
+  </ul>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>asistente.py</code>; ruta <code>POST /admin/dashboard/asistente</code>, con el mismo guardián que el explorador (<code>_exigir_dashboard_detalle</code>), de modo que si algún día se separan versiones STD y PRO, el Asistente queda del lado PRO cambiando un solo helper. La herramienta devuelve siempre el <i>estado completo</i> de los filtros, nunca un delta. El modelo es <code>claude-sonnet-5</code> por defecto, elegible desde plataforma. Un set de aceptación (<code>probar_asistente.py</code>) se corre a mano contra la API real, nunca en el CI, porque gasta créditos. Ficha: <code>docs/ASISTENTE_PANEL.md</code>.</p></div>
+</section>
