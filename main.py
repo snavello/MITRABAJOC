@@ -12519,7 +12519,7 @@ def _fiesta_entrada_de(request: Request, s, reserva_id: int, t: str = ""):
     ev = s.get(db.FiestaEvento, r.evento_id) if r else None
     if not r or not ev:
         raise HTTPException(404, "No existe esa entrada.")
-    con_token = bool(t) and secrets.compare_digest(t, r.token)
+    con_token = bool(t) and secrets.compare_digest(t.encode("utf-8"), r.token.encode("utf-8"))
     if not con_token:
         p = _fiesta_afiliado(request, s, ev)
         if not p or r.padron_id != p.id:
@@ -13062,7 +13062,7 @@ def api_fiesta_sind_cortesia(request: Request, datos: dict = Body(...)):
         ev = _fiesta_evento_o_404(s)
         op = _fiesta_operador(request, s, ev, admin=True)
         r = db.fiesta_crear_cortesia(s, ev, nombre, dni, datos.get("cantidad") or 1,
-                                     str(datos.get("leyenda", "")), op.usuario)
+                                     str(datos.get("leyenda", "")).strip()[:100], op.usuario)
         url = f"{_base_url(request)}/fiesta/entrada/{r.id}?t={r.token}"
         enviado = False
         if mail and correo.habilitado():

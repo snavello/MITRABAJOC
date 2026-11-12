@@ -38,8 +38,12 @@ def solo_digitos(texto) -> str:
 
 
 def normalizar_dni(texto) -> str:
-    """El DNI como dígitos pelados ("12.345.678" -> "12345678")."""
-    return solo_digitos(texto)
+    """El DNI como dígitos pelados ("12.345.678" -> "12345678"). Solo se
+    aceptan como separadores el punto, el espacio y el guion: si queda
+    cualquier otra cosa (letras) no es un DNI y vuelve "" -- antes las letras
+    se descartaban en silencio y "12A345678" pasaba por un DNI válido."""
+    crudo = re.sub(r"[.\s\-]", "", str(texto or ""))
+    return crudo if crudo.isascii() and crudo.isdigit() else ""
 
 
 def dni_valido(texto) -> bool:
@@ -215,14 +219,16 @@ def parsear_padron(texto: str) -> dict:
     ensayo y la carga usan este mismo parseo. Un legajo repetido dentro del
     archivo queda como error (la segunda aparición)."""
     texto = (texto or "").lstrip("﻿")
-    muestra = texto.split("\n", 1)[0]
+    muestra = next((l for l in texto.splitlines() if l.strip()), "")
     sep = ";" if muestra.count(";") >= muestra.count(",") and ";" in muestra else ","
     filas, errores, vistos = [], [], set()
+    primera = True
     for n, campos in enumerate(csv.reader(io.StringIO(texto), delimiter=sep), start=1):
         campos = [c.strip() for c in campos]
         if not any(campos):
             continue
-        if n == 1 and campos[0].lower() in ("legajo", "n legajo", "nro legajo", "numero"):
+        es_primera, primera = primera, False
+        if es_primera and campos[0].lower() in ("legajo", "n legajo", "nro legajo", "numero"):
             continue                       # cabecera
         if len(campos) < 3:
             errores.append({"linea": n, "motivo": "Faltan columnas: legajo;dni;nombre;mail."})

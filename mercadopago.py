@@ -146,7 +146,7 @@ def validar_firma(x_signature: str, x_request_id: str, data_id: str, secreto: st
     manifest = f"id:{did};request-id:{x_request_id or ''};ts:{ts};"
     esperada = hmac.new(secreto.encode("utf-8"), manifest.encode("utf-8"),
                         hashlib.sha256).hexdigest()
-    return hmac.compare_digest(esperada, v1.lower())
+    return hmac.compare_digest(esperada.encode("utf-8"), v1.lower().encode("utf-8"))
 
 
 def firmar(data_id: str, x_request_id: str, ts: str, secreto: str) -> str:

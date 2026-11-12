@@ -984,3 +984,54 @@ def test_lo_deferido_de_la_foto_no_viaja_en_las_pantallas(fest):
         ev = db.fiesta_evento_activo(s)
         assert "foto_datos" in ev.__dict__.get("_sa_instance_state").unloaded
         assert db.fiesta_evento_dict(s, ev)["foto"] is True
+
+
+# =====================================================================
+# Endurecimiento del QA de código (2026-11-12)
+# =====================================================================
+def test_dni_con_letras_no_es_un_dni():
+    assert fiesta.normalizar_dni("12.345.678") == "12345678"
+    assert fiesta.normalizar_dni(" 12 345 678 ") == "12345678"
+    assert fiesta.normalizar_dni("12A345678") == "" and not fiesta.dni_valido("12A345678")
+    assert fiesta.normalizar_dni("１２３４５６７８") == ""           # dígitos no ASCII
+    r = fiesta.parsear_padron("1;12A345678;Ana;\n2;12-345-678;Bea;\n")
+    assert [f["legajo"] for f in r["filas"]] == ["2"] and "DNI" in r["errores"][0]["motivo"]
+
+
+def test_csv_con_linea_en_blanco_antes_de_la_cabecera():
+    r = fiesta.parsear_padron("\n\nlegajo;dni;nombre;mail\n1;12345678;Ana, María;\n2;22345678;Luis;\n")
+    assert [f["legajo"] for f in r["filas"]] == ["1", "2"] and not r["errores"]
+    assert r["filas"][0]["nombre"] == "Ana, María"
+
+
+def test_csv_de_5000_filas_se_parsea_rapido():
+    import time
+    texto = "legajo;dni;nombre;mail\n" + "".join(
+        f"{i};{10000000 + i};Nombre {i};n{i}@x.com\n" for i in range(5000))
+    t0 = time.time()
+    assert len(fiesta.parsear_padron(texto)["filas"]) == 5000
+    assert time.time() - t0 < 3
+
+
+def test_codigo_o_token_con_no_ascii_no_rompe_con_500(fest):
+    c, rid = _reserva_pagada(fest)
+    tk = _token(rid)
+    sin_romper = TestClient(main.app, raise_server_exceptions=False)
+    assert sin_romper.get(f"/fiesta/entrada/{rid}?t=ñandú", follow_redirects=False).status_code == 404
+    assert sin_romper.get(f"{API}/entrada/{rid}/qr?t=ñandú").status_code == 404
+    assert TestClient(main.app, raise_server_exceptions=False).get(
+        f"/fiesta/e/{tk}?k=99999999999.ñ").status_code == 200       # página "no válido"
+    o = _operador()
+    op = TestClient(main.app, raise_server_exceptions=False)
+    op.cookies.update(o.cookies)
+    assert op.post(SIND + "/ingreso/qr", json={"token": tk, "k": "99999999999.ñ"}).status_code == 403
+    assert qr.verificar_codigo_efimero(tk, "99999999999.ñ") is False
+    assert mercadopago.validar_firma("ts=1,v1=ñ", "a", "1", "secreto") is False
+
+
+def test_cortesia_acota_la_leyenda(fest):
+    r = _operador().post(SIND + "/cortesia", json={"nombre": "Zoe", "dni": "44444444", "cantidad": 1,
+                                                  "leyenda": "L" * 5000})
+    assert r.status_code == 200
+    with db.get_session() as s:
+        assert len(s.get(db.FiestaReserva, r.json()["reserva_id"]).leyenda) == 100

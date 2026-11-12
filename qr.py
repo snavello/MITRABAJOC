@@ -69,7 +69,8 @@ def verificar_codigo_efimero(token: str, codigo: str, ahora: float = None) -> bo
     vence = int(vence_txt)
     if vence < (time.time() if ahora is None else ahora):
         return False
-    return hmac.compare_digest(firma, _firma(token, vence))
+    # En bytes: compare_digest sobre texto con no-ASCII lanza TypeError (500).
+    return hmac.compare_digest(firma.encode("utf-8"), _firma(token, vence).encode("utf-8"))
 
 
 def _firma(token: str, vence: int) -> str:
