@@ -1,0 +1,695 @@
+{
+ "t-ingreso": {
+  "archivo": "t-ingreso.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/ingresar",
+  "rol": "afiliado",
+  "descripcion": "Pantalla de ingreso del afiliado con CUIL y clave, y pestaña de registro."
+ },
+ "t-registro": {
+  "archivo": "t-registro.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/ingresar",
+  "rol": "afiliado",
+  "descripcion": "Primer paso del registro del afiliado: CUIL y captcha."
+ },
+ "t-portada": {
+  "archivo": "t-portada.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM 20111111112",
+  "descripcion": "Portada del afiliado de la UOM con accesos, noticias y beneficios."
+ },
+ "t-portada-entera": {
+  "archivo": "t-portada-entera.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 3842,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM 20111111112",
+  "descripcion": "Portada completa del afiliado: Tu día, noticias, beneficios."
+ },
+ "t-recibo-subir": {
+  "archivo": "t-recibo-subir.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Mis Recibos, paso 1: subir foto o PDF del recibo."
+ },
+ "t-recibo-espera": {
+  "archivo": "t-recibo-espera.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Espera de la lectura del recibo: aro con reloj y fases (lectura simulada)."
+ },
+ "t-recibo-revisar": {
+  "archivo": "t-recibo-revisar.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 2934,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Paso 2 Revisá: datos del recibo leído (lectura simulada), con los cinco conceptos y los totales, para confirmar antes de verificar."
+ },
+ "t-recibo-resultado": {
+  "archivo": "t-recibo-resultado.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 2598,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Paso 3 Resultado: «Hay 1 diferencia», chequeó 4 conceptos; la cuota sindical figura $20.000 y el convenio esperaba 2,5% = $25.000; jubilación, PAMI y obra social OK."
+ },
+ "t-portada-escritorio": {
+  "archivo": "t-portada-escritorio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM",
+  "descripcion": "Portada del afiliado en escritorio, dos columnas."
+ },
+ "t-recibo-resultado-escritorio": {
+  "archivo": "t-recibo-resultado-escritorio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 1175,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Resultado de la verificación en escritorio: 1 diferencia en la cuota sindical (esperado $25.000, figura $20.000) y tres controles OK."
+ },
+ "t-credencial": {
+  "archivo": "t-credencial.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Credencial: credencial digital del afiliado con QR de verificación vigente."
+ },
+ "t-credencial-verificacion": {
+  "archivo": "t-credencial-verificacion.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/v/{token}?k=...",
+  "rol": "público (quien escanea el QR)",
+  "descripcion": "Página pública de verificación de la credencial: afiliado vigente, sin DNI."
+ },
+ "t-tu-dia": {
+  "archivo": "t-tu-dia.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM",
+  "descripcion": "Hoja de un ítem de Tu día (efeméride): artículo con título, párrafos y enlace a la fuente."
+ },
+ "t-trivia": {
+  "archivo": "t-trivia.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM",
+  "descripcion": "Trivia diaria de Tu día: primera pregunta con opciones y reloj."
+ },
+ "t-novedades": {
+  "archivo": "t-novedades.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app?tab=novedades",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Novedades: listado de noticias vigentes del sindicato."
+ },
+ "t-noticia": {
+  "archivo": "t-noticia.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app?tab=novedades",
+  "rol": "afiliado UOM",
+  "descripcion": "Una noticia del sindicato abierta en su hoja de lectura."
+ },
+ "t-aportes": {
+  "archivo": "t-aportes.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app?tab=aportes",
+  "rol": "afiliado UOM",
+  "descripcion": "Mis Aportes: semáforo ARCA aún sin consultar, con los dos pasos (consultar en ARCA y subir la captura)."
+ },
+ "t-tramites": {
+  "archivo": "t-tramites.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app?tab=tramites",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Trámites: iniciar un trámite y bandeja de expedientes del afiliado."
+ },
+ "t-capacitacion": {
+  "archivo": "t-capacitacion.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app?tab=capacitacion",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Capacitación: contenido fijo sobre el nuevo recibo de sueldo."
+ },
+ "t-notificacion": {
+  "archivo": "t-notificacion.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/notificaciones",
+  "rol": "afiliado UOM",
+  "descripcion": "Bandeja de notificaciones del sindicato (domicilio electrónico) en línea de tiempo, con la primera ya leída."
+ },
+ "t-tramite-detalle": {
+  "archivo": "t-tramite-detalle.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 2676,
+  "url": "/app?tab=tramites",
+  "rol": "afiliado UOM",
+  "descripcion": "Un trámite del afiliado con su chat estilo WhatsApp entre afiliado y sindicato."
+ },
+ "t-tramite-formulario": {
+  "archivo": "t-tramite-formulario.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1692,
+  "url": "/app?tab=tramites",
+  "rol": "afiliado UOM",
+  "descripcion": "Formulario de un trámite (licencia gremial) con carátula, campos y validaciones."
+ },
+ "t-encuesta": {
+  "archivo": "t-encuesta.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 2438,
+  "url": "/app?tab=encuestas",
+  "rol": "afiliado UOM",
+  "descripcion": "Una encuesta abierta para responder, con su aviso de anonimato y las preguntas."
+ },
+ "t-perfil": {
+  "archivo": "t-perfil.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 3990,
+  "url": "/app/inicio (Tu perfil)",
+  "rol": "afiliado UOM",
+  "descripcion": "Hoja Tu perfil: datos personales y domicilio, elección de modelo de diseño (Laguna o Noticiero) y mapa de Mi seccional."
+ },
+ "t-seccionales": {
+  "archivo": "t-seccionales.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio (Seccionales cerca)",
+  "rol": "afiliado UOM",
+  "descripcion": "Seccionales cerca de mí: lista de seccionales del sindicato con dirección y contacto."
+ },
+ "t-portada-noticiero": {
+  "archivo": "t-portada-noticiero.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM (modelo Noticiero)",
+  "descripcion": "Portada del afiliado con el modelo de diseño Noticiero: papel claro, tinta índigo y cinta de noticias."
+ },
+ "s-ingreso": {
+  "archivo": "s-ingreso.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "sindicato (sin sesión)",
+  "descripcion": "Pantalla de ingreso al panel del sindicato: CUIT y clave."
+ },
+ "s-portada": {
+  "archivo": "s-portada.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/inicio",
+  "rol": "Super Admin UOM 20111111120",
+  "descripcion": "Portada del panel del sindicato: tarjetas de acceso a cada sección y Tu cuenta."
+ },
+ "s-reportes": {
+  "archivo": "s-reportes.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Reportes: todos los recibos verificados con tilde de diferencias, filtros y paginación."
+ },
+ "s-reglas": {
+  "archivo": "s-reglas.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin#formulas",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Reglas: reglas de control de aportes (jubilación 11%, PAMI 3%, obra social 3%, cuota UOM 2,5% del remunerativo)."
+ },
+ "s-conceptos": {
+  "archivo": "s-conceptos.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin#conceptos",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Conceptos: catálogo del sindicato (ingresos y descuentos, remunerativo, alias) con filtros por empleador."
+ },
+ "s-aprendizaje": {
+  "archivo": "s-aprendizaje.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Aprendizaje: carga de recibos para que la IA proponga conceptos nuevos del catálogo."
+ },
+ "s-trabajadores": {
+  "archivo": "s-trabajadores.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Trabajadores: padrón con nivel de fiabilidad de cada cuenta."
+ },
+ "s-noticias": {
+  "archivo": "s-noticias.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Noticias: formulario de alta de una noticia (título, vigencia, destino por seccional, imágenes) con la vista previa del afiliado."
+ },
+ "s-beneficios": {
+  "archivo": "s-beneficios.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Beneficios: formulario de alta de un beneficio para el carrusel, con vigencia, destino y vista previa del afiliado."
+ },
+ "s-notificaciones": {
+  "archivo": "s-notificaciones.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Notificaciones: nueva notificación con remitente, mensaje y destinatarios (por CUIL, empresa, seccional o provincia)."
+ },
+ "s-encuestas": {
+  "archivo": "s-encuestas.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin#encuestas (Crear encuesta)",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Encuestas, sub-pestaña Crear encuesta: constructor con modo anónimo o nominal, cortes y preguntas."
+ },
+ "s-tramites": {
+  "archivo": "s-tramites.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Trámites: bandeja de expedientes con pastillas de estado, filtros por formulario, estado y seccional, y descarga CSV."
+ },
+ "s-empleadores": {
+  "archivo": "s-empleadores.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Empleadores: alta de un empleador y listado de empresas cargadas con su nivel de fiabilidad."
+ },
+ "s-seccionales": {
+  "archivo": "s-seccionales.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Seccionales: alta guiada de una seccional (dirección, ubicación en el mapa, contacto) y listado de seccionales cargadas."
+ },
+ "s-listas": {
+  "archivo": "s-listas.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Listas: plantillas (grupo familiar, datos del afiliado, lista simple) y carga de una lista por CSV."
+ },
+ "s-areas-usuarios": {
+  "archivo": "s-areas-usuarios.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Áreas y Usuarios: alta de un área con su perfil de permisos por sección (sub-pestaña Usuarios aparte)."
+ },
+ "s-panel-sindical": {
+  "archivo": "s-panel-sindical.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 2600,
+  "url": "/admin/dashboard",
+  "rol": "Super Admin UOM",
+  "descripcion": "Panel Sindical: indicadores, gráficos con filtros cruzados, semáforo por empresa, mapa de seccionales y explorador de datos."
+ },
+ "s-panel-mapa": {
+  "archivo": "s-panel-mapa.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/dashboard",
+  "rol": "Super Admin UOM",
+  "descripcion": "Mapa de seccionales del Panel Sindical: burbujas por seccional, coloreadas por cantidad de afiliados."
+ },
+ "s-panel-explorador": {
+  "archivo": "s-panel-explorador.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/dashboard",
+  "rol": "Super Admin UOM",
+  "descripcion": "Explorador de datos del Panel: recibos con diferencias, trámites y notificaciones paginados."
+ },
+ "s-panel-ver": {
+  "archivo": "s-panel-ver.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/dashboard",
+  "rol": "Super Admin UOM",
+  "descripcion": "Modal \"Ver\": detalle de un recibo con diferencias detectadas (afiliado identificado porque lo envió al sindicato)."
+ },
+ "s-panel-asistente": {
+  "archivo": "s-panel-asistente.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/dashboard",
+  "rol": "Super Admin UOM",
+  "descripcion": "Asistente del Panel Sindical abierto con su mensaje de bienvenida y ejemplos de preguntas (sin consulta a la IA)."
+ },
+ "s-tramite-modal": {
+  "archivo": "s-tramite-modal.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin#tramites",
+  "rol": "Super Admin UOM",
+  "descripcion": "Un trámite abierto (solicitud de credencial): respuestas del formulario y conversación con el afiliado, con respuesta y cambio de estado."
+ },
+ "s-constructor": {
+  "archivo": "s-constructor.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 1854,
+  "url": "/admin#tramites (Crear / editar formularios)",
+  "rol": "Super Admin UOM",
+  "descripcion": "Constructor de formularios de trámite como hoja de trabajo (Reintegro de obra social): riel de pasos, campos y vista del afiliado."
+ },
+ "s-constructor-campo": {
+  "archivo": "s-constructor-campo.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin#tramites (Crear / editar formularios)",
+  "rol": "Super Admin UOM",
+  "descripcion": "Un campo del constructor abierto, con sus pasos de Ingreso y Validación."
+ },
+ "s-encuesta-resultados": {
+  "archivo": "s-encuesta-resultados.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 2600,
+  "url": "/admin/encuesta/<id>/resultados",
+  "rol": "Super Admin UOM",
+  "descripcion": "Resultados de «Clima laboral (3)»: participación, filtros por cortes, mapa por seccional, gráficos por pregunta y evolución entre tomas."
+ },
+ "s-apariencia": {
+  "archivo": "s-apariencia.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 2600,
+  "url": "/admin#apariencia",
+  "rol": "Super Admin UOM",
+  "descripcion": "Pestaña Apariencia: modelo de diseño por defecto, paleta, fotos de portada y configuración de Tu día."
+ },
+ "s-portada-noticiero": {
+  "archivo": "s-portada-noticiero.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/inicio",
+  "rol": "Super Admin UOM (modelo Noticiero)",
+  "descripcion": "Portada del panel del sindicato con el modelo Noticiero."
+ },
+ "s-acotado": {
+  "archivo": "s-acotado.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/admin/inicio",
+  "rol": "Admin de Seccional Rosario 20555555556",
+  "descripcion": "Portada del panel vista por la Admin de Seccional de Rosario: solo las secciones y el alcance de su seccional."
+ },
+ "p-ingreso": {
+  "archivo": "p-ingreso.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma",
+  "rol": "plataforma (sin sesión)",
+  "descripcion": "Ingreso del administrador de plataforma con usuario y clave."
+ },
+ "p-inicio": {
+  "archivo": "p-inicio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma/inicio",
+  "rol": "admin de plataforma",
+  "descripcion": "Portada de plataforma con tarjetas de acceso a cada área."
+ },
+ "p-panel": {
+  "archivo": "p-panel.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma",
+  "rol": "admin de plataforma",
+  "descripcion": "Panel de plataforma: lista de sindicatos con cantidad de trabajadores, empleadores y acciones."
+ },
+ "p-sindicato-ficha": {
+  "archivo": "p-sindicato-ficha.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 1739,
+  "url": "/plataforma (Editar sindicato)",
+  "rol": "admin de plataforma",
+  "descripcion": "Ficha de un sindicato (UOM): datos, marca y colores, módulos habilitados y opciones."
+ },
+ "p-uso-ia": {
+  "archivo": "p-uso-ia.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma (Uso de IA)",
+  "rol": "admin de plataforma",
+  "descripcion": "Uso de IA, consumo y costo: una fila por lectura con costo en dólares y duración."
+ },
+ "p-modelos": {
+  "archivo": "p-modelos.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma (Uso de IA → Modelos)",
+  "rol": "admin de plataforma",
+  "descripcion": "Uso de IA, Modelos: modelo elegido para cada uso de IA (recibos, convenio, asistente)."
+ },
+ "p-fotos": {
+  "archivo": "p-fotos.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma (Fotos)",
+  "rol": "admin de plataforma",
+  "descripcion": "Pestaña Fotos: biblioteca global de fotos de portada."
+ },
+ "p-usuarios": {
+  "archivo": "p-usuarios.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/plataforma/usuarios",
+  "rol": "admin de plataforma",
+  "descripcion": "Usuarios de plataforma (nombres sintéticos Operador Uno y Dos, rol superadmin) y formulario para crear usuarios."
+ },
+ "e-ingreso": {
+  "archivo": "e-ingreso.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/ingresar-empresa",
+  "rol": "empresa (sin sesión)",
+  "descripcion": "Ingreso de la empresa con CUIT y clave, y pestaña de registro."
+ },
+ "e-portada": {
+  "archivo": "e-portada.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/empresa/inicio",
+  "rol": "empresa multisindicato 30111222335 (UOM)",
+  "descripcion": "Portada de la empresa con un trámite en curso (nómina mensual de aportes, «Necesita tu atención» y 1 expediente con novedades) en el sindicato UOM."
+ },
+ "e-portada-escritorio": {
+  "archivo": "e-portada-escritorio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/empresa/inicio",
+  "rol": "empresa multisindicato 30111222335 (UOM)",
+  "descripcion": "Portada de la empresa en escritorio, con un trámite en curso."
+ },
+ "e-tramites": {
+  "archivo": "e-tramites.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/empresa (Trámites)",
+  "rol": "empresa multisindicato 30111222335 (UOM)",
+  "descripcion": "Pestaña Trámites de la empresa: iniciar un trámite, buscar expediente y la bandeja con el trámite F01EMP «En tratamiento»."
+ },
+ "x-entornos": {
+  "archivo": "x-entornos.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 2600,
+  "url": "/entornos",
+  "rol": "admin de plataforma",
+  "descripcion": "Landing interna /entornos: los ocho accesos (Pruebas y Demo) con la versión de cada uno, y debajo los Recursos documentales."
+ },
+ "x-mapa-funcional": {
+  "archivo": "x-mapa-funcional.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/entornos/mapa",
+  "rol": "admin de plataforma",
+  "descripcion": "Mapa funcional en vista Grafo: apps, funcionalidades y sus relaciones, leído del código."
+ },
+ "x-herramientas": {
+  "archivo": "x-herramientas.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/entornos (Herramientas)",
+  "rol": "admin de plataforma",
+  "descripcion": "Pestaña Herramientas de /entornos: tarjetas de los asistentes de implementación."
+ },
+ "x-seguridad": {
+  "archivo": "x-seguridad.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 2600,
+  "url": "/entornos (Seguridad)",
+  "rol": "admin de plataforma",
+  "descripcion": "Solapa Seguridad (XSK): estado de resolución de hallazgos, ranking por riesgo y cobertura."
+ },
+ "x-sala-de-mando": {
+  "archivo": "x-sala-de-mando.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/entornos/esquema",
+  "rol": "admin de plataforma",
+  "descripcion": "Sala de mando: esquema físico de la plataforma con zonas, servicios y estado en vivo."
+ },
+ "x-calculadora": {
+  "archivo": "x-calculadora.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 1283,
+  "url": "/entornos/herramientas/calculadora-bancaria-v2",
+  "rol": "admin de plataforma",
+  "descripcion": "Calculadora bancaria v2 en su estado inicial: categoría, adicionales y recibo real a comparar."
+ },
+ "x-asistente-tramites": {
+  "archivo": "x-asistente-tramites.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/entornos/herramientas/asistente-tramites",
+  "rol": "admin de plataforma",
+  "descripcion": "Asistente de trámites en su estado inicial: hoja de trabajo con el relato del trámite y la vista del afiliado."
+ },
+ "x-laboratorio": {
+  "archivo": "x-laboratorio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/entornos/herramientas/laboratorio-modelos",
+  "rol": "admin de plataforma",
+  "descripcion": "Laboratorio de modelos en su estado inicial: elección de modelos de varios proveedores y archivo a leer."
+ },
+ "x-identidad": {
+  "archivo": "x-identidad.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/entornos/herramientas/identidad",
+  "rol": "admin de plataforma",
+  "descripcion": "Verificación de identidad: primer paso (datos) del recorrido del afiliado."
+ },
+ "x-planes": {
+  "archivo": "x-planes.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/entornos (Planes)",
+  "rol": "admin de plataforma",
+  "descripcion": "Pestaña Planes: planes de Render del servicio web y de la base, con reglas semanales de subida y bajada (sin RENDER_API_KEY en local; se ocultó el aviso de error de consulta)."
+ },
+ "x-fiesta": {
+  "archivo": "x-fiesta.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/fiesta",
+  "rol": "afiliado de la Fiesta (padrón propio, legajo + DNI)",
+  "descripcion": "Fiesta SUPARA, app del afiliado: evento con fecha, lugar y precio, y la reserva de entradas (modo de pago simulado)."
+ }
+}

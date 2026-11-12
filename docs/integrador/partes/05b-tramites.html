@@ -1,0 +1,322 @@
+<section class="capitulo continua" id="cap-5b">
+
+<h3 id="cap-5-tramites"><span class="n">5.5</span>Trámites</h3>
+
+<p class="lead">Un trámite es un pedido formal del afiliado (o de una empresa) al sindicato: el kit escolar, un reintegro, una ayuda por nacimiento. Colm3na reemplaza la planilla, el mail y el mostrador por un formulario que arma el propio sindicato, un número de expediente y un chat donde las dos partes se entienden hasta cerrar el caso.</p>
+
+<div class="nota"><span class="rot">Para entender</span><p>El módulo <code>tramites</code> es opt-in: lo enciende Colm3na por sindicato. Apagado, el afiliado no ve la pestaña y el servidor rechaza las rutas con 403.</p></div>
+
+<h4>Qué es un trámite y cómo se numera</h4>
+<p>Cada sindicato define sus <b>tipos de trámite</b> (por ejemplo «F01 – Solicitud de reintegro») con un código corto. Al presentar uno nace un expediente como <code>F01AEFIP-2026-000123</code>: código del formulario, año y un correlativo de seis dígitos por tipo que <b>no se reinicia con el año</b>. El número es único en toda la plataforma: se genera en la misma transacción que crea el trámite, con reintento ante colisión.</p>
+<p>Un trámite recorre cinco estados, iguales en el panel y en la app, con colores fijos (nunca los de la marca del sindicato):</p>
+
+<figure class="fig diagrama">
+<svg viewBox="0 0 860 330" role="img" aria-label="Ciclo de vida de un trámite: cinco estados y quién mueve cada uno">
+<defs><marker id="f5b1-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
+<rect x="20" y="16" width="820" height="66" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="36" y="40" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">AFILIADO</text>
+<text x="36" y="62" font-size="13" fill="#16243a">Presenta el formulario (queda «Iniciado»), escribe y adjunta archivos en el chat.</text>
+<rect x="20" y="236" width="820" height="80" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+<text x="36" y="260" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#a86400">SINDICATO (el área a cargo)</text>
+<text x="36" y="282" font-size="13" fill="#16243a">Responde y cambia el estado en un solo acto: un único evento en el chat. Puede pasar el trámite a otra área.</text>
+<text x="36" y="302" font-size="13" fill="#16243a">Cada cambio enciende el globo de Trámites del afiliado y le manda un push (si lo activó).</text>
+<rect x="30" y="120" width="130" height="56" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
+<text x="95" y="153" font-size="14" text-anchor="middle" fill="#16243a" font-weight="700">Iniciado</text>
+<rect x="215" y="120" width="140" height="56" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
+<text x="285" y="153" font-size="14" text-anchor="middle" fill="#16243a" font-weight="700">En tratamiento</text>
+<rect x="410" y="120" width="130" height="56" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="475" y="153" font-size="14" text-anchor="middle" fill="#16243a" font-weight="700">Respondido</text>
+<rect x="590" y="108" width="130" height="80" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="655" y="142" font-size="13" text-anchor="middle" fill="#16243a" font-weight="700">A la espera de</text>
+<text x="655" y="160" font-size="13" text-anchor="middle" fill="#16243a" font-weight="700">información</text>
+<text x="655" y="178" font-size="13" text-anchor="middle" fill="#16243a" font-weight="700">del afiliado</text>
+<rect x="760" y="120" width="80" height="56" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+<text x="800" y="153" font-size="14" text-anchor="middle" fill="#16243a" font-weight="700">Terminado</text>
+<path d="M160 148 H213" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M355 148 H408" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M540 148 H588" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M720 148 H758" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M95 82 V118" stroke="#2e5c8a" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M285 236 V178" stroke="#a86400" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M475 236 V178" stroke="#a86400" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<path d="M800 236 V178" stroke="#a86400" stroke-width="1.5" fill="none" marker-end="url(#f5b1-fl)"/>
+<text x="655" y="210" font-size="12" text-anchor="middle" fill="#4c5d75">el sindicato lo mueve a cualquier estado</text>
+<text x="812" y="214" font-size="12" fill="#4c5d75" text-anchor="end">final</text>
+</svg>
+<figcaption>Los cinco estados. Arriba, lo que hace el afiliado; abajo, lo que hace el sindicato. Presentar el formulario crea el trámite «Iniciado»; <b>solo el sindicato mueve el estado</b>, y una respuesta del afiliado no lo cambia. «Terminado» es final: ni el panel ni la app aceptan más cambios ni mensajes.</figcaption>
+</figure>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Modelos en <code>db.py</code>: <code>TipoTramite</code>, <code>CampoTramite</code>, <code>Tramite</code>, <code>RespuestaTramite</code> (una fila por campo), <code>NotaTramite</code> (el chat), <code>TramiteLog</code> y <code>PaseTramite</code>. Estados: <code>db.ESTADOS_TRAMITE</code>. En <code>db.agregar_nota_tramite</code> el estado solo cambia si el autor es <code>admin</code>; la nota del afiliado solo marca el trámite como visto.</p></div>
+
+<h4>El recorrido, paso a paso</h4>
+<p>El orden natural: el sindicato arma el formulario (ver «El constructor»), el afiliado lo completa y el sindicato lo atiende. Primero, el lado del afiliado.</p>
+<div class="lado"><div>
+<p>En la app, la pestaña <b>Trámites</b> ofrece dos accesos grandes (iniciar un trámite y buscar un expediente por número, que exige que sea del CUIL logueado), filtros Todos / En curso / Terminados y la lista de expedientes con su último mensaje. Cuando hay un trámite con novedad aparece arriba la tarjeta <b>«Necesita tu atención»</b>, con el último mensaje del sindicato y los botones para responder.</p>
+</div>
+<figure class="fig captura" data-captura="t-tramites"><figcaption>La pestaña Trámites: «Iniciar un trámite» (siete formularios disponibles), «Buscar expediente», los filtros con sus cuentas y la lista, con estado y último mensaje de cada expediente.</figcaption></figure></div>
+
+<div class="par-capturas">
+<figure class="fig captura" data-captura="t-tramite-formulario"><figcaption>Un formulario: carátula con el título y el código, contador «Completaste 0 de 3», campos obligatorios con asterisco y «Enviar trámite». El número de expediente se asigna al enviar.</figcaption></figure>
+<figure class="fig captura" data-captura="t-tramite-detalle"><figcaption>El detalle de un trámite: número de expediente, estado y la barra de cuatro tramos (Iniciado, En tratamiento, Respondido, Terminado), los datos presentados y la conversación con el sindicato.</figcaption></figure>
+</div>
+
+<p>Si el formulario tiene <b>requisitos para iniciar</b> y no se cumplen, la app muestra los motivos en lugar de los campos («ya presentaste este trámite», «menos de seis meses de antigüedad»), así nadie completa algo que será rechazado. Los campos se validan al salir de cada uno y, para las validaciones «en vivo», el servidor responde pasa / no pasa al instante. Al enviar aparece el sello <b>ENVIADO</b> y la app salta al detalle.</p>
+<p>El <b>chat</b> es un hilo único: los mensajes del afiliado en verde, los del sindicato con el logo del gremio como avatar y los cambios de estado como píldoras. Ambas partes pueden adjuntar archivos, y el sindicato puede <b>adjuntar un formulario</b> (trámites encadenados). Al afiliado se le muestra siempre el <i>área</i> que escribió, nunca la persona.</p>
+<p>Cuando el sindicato responde o cambia el estado, el afiliado ve el globo de novedad en Trámites y, si instaló la app y aceptó los avisos, recibe un <b>push</b> que abre ese expediente. Un cambio en un trámite <b>no crea una notificación</b> en la bandeja de Notificaciones.</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>POST /api/tramite</code> lee <code>request.form()</code> crudo (<code>campo_{id}</code> / <code>archivo_{id}</code>) porque el esquema varía por formulario, y valida todo en el servidor. Requisitos al abrir: <code>GET /api/tramite/requisitos/{id}</code>. Validación en vivo: <code>POST /api/tramite/validar-campo</code> (diez intentos por sesión y formulario, para que nadie enumere una lista). El push sale de <code>push.notificar_tramite</code> (Web Push, apagado sin claves VAPID); el aviso in-app es el globo (visto vs. no visto).</p></div>
+
+<h4>Del lado de la empresa</h4>
+<p>Con el módulo <code>empleadores</code>, las empresas tienen su pestaña de Trámites en <code>/empresa</code>: formularios pensados para ellas (una declaración, un convenio de pago), con el mismo número de expediente y chat. Es un <b>espejo aislado</b> (<code>TipoTramiteEmpleador</code>, rutas <code>/api/empresa/tramite*</code> y <code>/admin/tramite-empresa*</code>), duplicado a propósito para que nada del lado del afiliado se filtre al de la empresa. Sus formularios son más simples: sin funciones ni campos calculados.</p>
+
+<h4>Del lado del sindicato: la bandeja</h4>
+<p>En el panel, la pestaña <b>Trámites</b> tiene dos sub-pestañas: <b>Ver trámites</b> (la bandeja, con un globo rojo de trámites nuevos que nadie tocó) y <b>Crear / editar formularios</b>. La bandeja se filtra por nombre o CUIL, expediente, formulario, estado y seccional (solo si el operador ve más de una), o con las pastillas «Sin terminar», «Le toca al sindicato», «Esperando al afiliado», «Terminados» y «Todos».</p>
+<figure class="fig captura" data-captura="s-tramites"><figcaption>La bandeja de Trámites: las dos sub-pestañas arriba, las pastillas con sus cuentas, los filtros, «Descargar CSV» y la lista con expediente, nombre, CUIL, tipo, estado y fecha de actualización.</figcaption></figure>
+<p><b>Descargar CSV</b> baja <i>exactamente lo que quedó a la vista</i>: una fila por trámite y, con un formulario elegido, una columna por pregunta. Como esos listados tienen nombres y documentos de familiares, el CSV respeta el alcance del operador y <b>cada descarga queda registrada</b> (quién, cuándo, filtros y filas) en <code>DescargaListado</code>.</p>
+<p>Al tocar «Ver» se abre el trámite: respuestas, adjuntos, las advertencias que dejaron las validaciones «avisa» y el chat. El operador <b>responde y cambia el estado en un solo acto</b>: no existe una ruta de cambio de estado suelta, para que el chat nunca diga una cosa y el estado otra.</p>
+<figure class="fig captura" data-captura="s-tramite-modal"><figcaption>El mismo expediente de la figura anterior, abierto en el panel: respuestas del formulario, la conversación (mensajes del sindicato a la derecha, el del afiliado a la izquierda, los cambios de estado como píldoras) y el botón «Responder…».</figcaption></figure>
+
+<h4>Ruteo al área y pase entre áreas</h4>
+<p>Cada formulario declara a qué <b>área</b> le cae el trámite: un mapa seccional por seccional («lo de Rosario lo atiende Legales Rosario») y un <b>área por defecto obligatoria</b> para las seccionales que nadie mapeó, porque sin ella una seccional nueva dejaría trámites sin dueño. El área se resuelve <b>al crear</b> el trámite y queda escrita: si el mapa cambia, los ya presentados no se mudan de bandeja. El <b>pase</b> es opcional: solo si el formulario lo habilita y solo hacia una <b>lista cerrada</b> de áreas; el área que derivó conserva lectura y el pase se anota en el chat nombrando áreas, nunca personas.</p>
+
+<figure class="fig diagrama">
+<svg viewBox="0 0 860 340" role="img" aria-label="Ruteo de un trámite al área por seccional o por defecto, y pase a un área de la lista cerrada">
+<defs><marker id="f5b2-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
+<rect x="20" y="30" width="170" height="64" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="105" y="58" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">AFILIADO PRESENTA</text>
+<text x="105" y="78" font-size="12" text-anchor="middle" fill="#16243a">su seccional: Rosario</text>
+<rect x="250" y="20" width="250" height="84" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+<text x="375" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#a86400">¿LA SECCIONAL ESTÁ MAPEADA?</text>
+<text x="375" y="68" font-size="12" text-anchor="middle" fill="#16243a">DestinoTipoTramite: seccional → área</text>
+<text x="375" y="86" font-size="12" text-anchor="middle" fill="#16243a">Si no, área por defecto del formulario</text>
+<rect x="560" y="30" width="280" height="64" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+<text x="700" y="58" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#0d7a5f">ÁREA A CARGO (queda escrita)</text>
+<text x="700" y="78" font-size="12" text-anchor="middle" fill="#16243a">Legales Rosario · bandeja del área</text>
+<path d="M190 62 H248" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b2-fl)"/>
+<path d="M500 62 H558" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b2-fl)"/>
+<rect x="560" y="170" width="280" height="150" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="700" y="196" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#6b4fa0">LISTA CERRADA DE PASES</text>
+<text x="700" y="216" font-size="12" text-anchor="middle" fill="#16243a">PaseTipoTramite, definida con el formulario</text>
+<rect x="590" y="232" width="220" height="30" rx="8" fill="#ffffff" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="700" y="252" font-size="13" text-anchor="middle" fill="#16243a">Secretaría Gremial</text>
+<rect x="590" y="272" width="220" height="30" rx="8" fill="#ffffff" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="700" y="292" font-size="13" text-anchor="middle" fill="#16243a">Administración</text>
+<path d="M700 94 V168" stroke="#6b4fa0" stroke-width="1.5" fill="none" marker-end="url(#f5b2-fl)"/>
+<text x="712" y="140" font-size="12" fill="#4c5d75">pase (si el formulario lo permite)</text>
+<rect x="20" y="170" width="480" height="150" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
+<text x="36" y="196" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#16243a">REGLAS</text>
+<text x="36" y="220" font-size="13" fill="#16243a">· El área se calcula una vez, al crear el trámite.</text>
+<text x="36" y="242" font-size="13" fill="#16243a">· Quien deriva conserva lectura del trámite.</text>
+<text x="36" y="264" font-size="13" fill="#16243a">· El chat nombra áreas, nunca personas.</text>
+<text x="36" y="286" font-size="13" fill="#16243a">· Un operador ve solo lo de su área y su seccional.</text>
+<text x="36" y="308" font-size="13" fill="#16243a">· Sin el tilde «permite pase», solo se le contesta al afiliado.</text>
+</svg>
+<figcaption>Cómo llega un trámite a su bandeja y cómo se puede derivar. El área y la seccional son dos ejes: el área dice qué hace el operador, la seccional sobre quiénes.</figcaption>
+</figure>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>TipoTramite.area_destino_default_id</code> (obligatorio al publicar), <code>DestinoTipoTramite</code>, <code>PaseTipoTramite</code>, <code>PaseTramite</code>; <code>Tramite.area_a_cargo_id</code> se escribe al crear (<code>db.area_destino_para</code>). El alcance se impone dentro de la consulta (<code>db.listado_tramites</code>). Áreas y alcance, en <a href="#cap-5-perfiles">5.12</a>.</p></div>
+
+<h4>El constructor de formularios</h4>
+<p>Los formularios los arma el propio sindicato, sin programar, desde <b>Trámites → Crear / editar formularios</b>. Es una <b>hoja de trabajo</b>: a la izquierda un riel con cuatro pasos y su estado, en el centro la hoja y a la derecha una vista previa permanente de cómo lo verá el afiliado.</p>
+<ol class="pasos">
+<li><b>El trámite</b>Título, código (da el prefijo del expediente), si está activo y visible para el afiliado.</li>
+<li><b>Quién lo recibe</b>El área, a qué seccionales alcanza, si permite pase y el mapa seccional por seccional.</li>
+<li><b>Los campos</b>Una fila por campo (número, etiqueta, tipo, ingreso, validación), reordenable arrastrando; cada campo elige su ancho y solo uno está abierto a la vez.</li>
+<li><b>Validar antes de abrir</b>Los requisitos para iniciar, evaluados al abrir el formulario y otra vez al enviar.</li>
+</ol>
+<p>Los tipos de campo son texto, número, fecha, archivo, selección, opción única, múltiple, sí/no, separador y el campo calculado. El constructor permite guardar un <b>borrador</b> (sin campos obligatorios ni área, invisible para el afiliado); publicar exige todo. Un banco de pruebas, el botón «Probar con un CUIL», ensaya el formulario contra un afiliado real del padrón. Borrar un formulario con trámites presentados está bloqueado: se lo desactiva.</p>
+<figure class="fig captura" data-captura="s-constructor"><figcaption>El constructor editando «Reintegro de obra social»: el riel de pasos a la izquierda, los pasos 1 a 4 en la hoja (con la tabla de campos) y, a la derecha, la vista del afiliado con el campo «Probar con un CUIL». Abajo, la tabla de los siete tipos cargados.</figcaption></figure>
+
+<h4>Ingreso y validación, dos cosas distintas</h4>
+<p>Cada campo tiene dos preguntas separadas. El <b>ingreso</b>: <i>¿de dónde sale el valor?</i> Lo carga el afiliado, se <b>extrae</b> de un dato que Colm3na ya conoce (edad, número de credencial, una columna de una lista) o se <b>calcula</b> con una fórmula. La <b>validación</b>, opcional: <i>¿cumple lo que pide el sindicato?</i> Contra un valor fijo, un rango, otro campo, un dato del afiliado, una lista o una fórmula; puede <b>bloquear</b> (frena el envío con un mensaje) o <b>avisar</b> (pasa y deja una advertencia para quien evalúa).</p>
+
+<figure class="fig diagrama">
+<svg viewBox="0 0 860 330" role="img" aria-label="Un campo tiene ingreso (carga, extrae o calcula) y validación opcional (bloquea o avisa)">
+<defs><marker id="f5b3-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
+<text x="20" y="24" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">1 · INGRESO: ¿de dónde sale el valor?</text>
+<rect x="20" y="36" width="190" height="62" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="115" y="62" font-size="13" text-anchor="middle" font-weight="700" fill="#16243a">Lo carga el afiliado</text>
+<text x="115" y="82" font-size="12" text-anchor="middle" fill="#4c5d75">escribe, elige o adjunta</text>
+<rect x="20" y="108" width="190" height="62" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="115" y="134" font-size="13" text-anchor="middle" font-weight="700" fill="#16243a">Se extrae</text>
+<text x="115" y="154" font-size="12" text-anchor="middle" fill="#4c5d75">sistema.afiliado.edad, lista…</text>
+<rect x="20" y="180" width="190" height="62" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="115" y="206" font-size="13" text-anchor="middle" font-weight="700" fill="#16243a">Se calcula</text>
+<text x="115" y="226" font-size="12" text-anchor="middle" fill="#4c5d75">una fórmula</text>
+<rect x="290" y="96" width="170" height="80" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+<text x="375" y="126" font-size="14" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#a86400">VALOR DEL CAMPO</text>
+<text x="375" y="148" font-size="12" text-anchor="middle" fill="#16243a">se muestra y el afiliado</text>
+<text x="375" y="164" font-size="12" text-anchor="middle" fill="#16243a">puede corregirlo</text>
+<path d="M210 67 H250 V130 H288" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b3-fl)"/>
+<path d="M210 139 H288" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b3-fl)"/>
+<path d="M210 211 H250 V146 H288" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b3-fl)"/>
+<text x="520" y="24" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#6b4fa0">2 · VALIDACIÓN (opcional, 0 a N por campo)</text>
+<rect x="520" y="36" width="320" height="130" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="536" y="60" font-size="13" fill="#16243a">· contra un valor fijo o un rango</text>
+<text x="536" y="82" font-size="13" fill="#16243a">· contra otro campo del formulario</text>
+<text x="536" y="104" font-size="13" fill="#16243a">· contra una fila de una lista del sindicato</text>
+<text x="536" y="126" font-size="13" fill="#16243a">· contra un dato del padrón (sistema.afiliado.*)</text>
+<text x="536" y="148" font-size="13" fill="#16243a">· con una fórmula (y / o / no, 9 funciones)</text>
+<path d="M460 136 H518" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b3-fl)"/>
+<rect x="520" y="196" width="150" height="62" rx="10" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
+<text x="595" y="222" font-size="13" text-anchor="middle" font-weight="700" fill="#16243a">BLOQUEA</text>
+<text x="595" y="242" font-size="12" text-anchor="middle" fill="#16243a">frena con mensaje</text>
+<rect x="690" y="196" width="150" height="62" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
+<text x="765" y="222" font-size="13" text-anchor="middle" font-weight="700" fill="#16243a">AVISA</text>
+<text x="765" y="242" font-size="12" text-anchor="middle" fill="#16243a">pasa y deja advertencia</text>
+<path d="M595 166 V194" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b3-fl)"/>
+<path d="M765 166 V194" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b3-fl)"/>
+<rect x="20" y="276" width="820" height="40" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
+<text x="430" y="301" font-size="13" text-anchor="middle" fill="#16243a">Un campo sin validación es declarativo: se toma como está. El único chequeo del ingreso es que no falte el dato.</text>
+</svg>
+<figcaption>Un campo tiene un ingreso (de dónde sale su valor) y, aparte, cero o más validaciones (si cumple lo que el sindicato pide).</figcaption>
+</figure>
+
+<figure class="fig captura" data-captura="s-constructor-campo"><figcaption>Un campo abierto («Monto a reintegrar», de tipo Número): el dato con su etiqueta, tipo, ancho y obligatoriedad; el ingreso con las tres opciones («Lo carga el afiliado», «Extraer un dato», «Calcular con una fórmula»); y el desplegable «+ Validar…».</figcaption></figure>
+
+<p>El afiliado puede corregir un dato propuesto (la edad extraída del padrón): si es propio de la persona, actualiza su perfil; si es del sindicato o un cálculo, queda como advertencia del trámite.</p>
+<p>Los requisitos y las validaciones «por función» usan <b>nombres cerrados</b> (<code>sistema.afiliado.edad</code>, <code>antiguedad_meses</code>, <code>credencial_vigente</code>, <code>tramites_de_este_tipo</code>, entre otros), y el catálogo se ve en el propio constructor, con buscador y ejemplos. Así, «una sola vez por afiliado» no necesita desarrollo: es el requisito <code>tramites_de_este_tipo == 0</code>.</p>
+
+<div class="nota ejemplo"><span class="rot">Ejemplo</span><p>Kit escolar. Requisito: <code>sistema.afiliado.antiguedad_meses &gt;= 6 y sistema.afiliado.tramites_de_este_tipo == 0</code>. El campo «DNI del hijo/a» se valida contra la lista Grupo familiar y frena el envío si no está. La «Edad del hijo/a» se calcula desde la fecha de nacimiento de esa lista y, si se pasa del rango, puede configurarse para que solo avise.</p></div>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>El motor es <code>validaciones_tramite.py</code>, puro: <code>evaluar_envio()</code> es la única implementación (envío real, su espejo de empresa, el banco de pruebas y el espejo JS en vivo). Fuentes: <code>fija</code> y <code>funcion</code> (origen <code>lista</code> o <code>sistema</code>); <code>externa</code> sigue en el BACKLOG. Las fórmulas se parsean con <code>ast</code>: <b>no hay <code>eval</code></b>. Espacios de nombres <code>campo.*</code>, <code>lista.*</code>, <code>sistema.afiliado.*</code>. El CUIL de la sesión es siempre la primera clave de una búsqueda en lista: un afiliado no consulta la familia de otro. Un dato faltante nunca vale 0.</p></div>
+
+<h4>El Asistente de trámites</h4>
+<p>Los sindicatos traen el trámite contado en palabras («con seis meses pueden pedir el kit escolar, hay que presentar el DNI del hijo…»). El <b>Asistente de trámites</b> es una herramienta interna de Colm3na, en <code>/entornos</code> → Herramientas (existe en Pruebas, no en la demo), que convierte ese relato en un formulario listo para el constructor, en cuatro pasos: el relato, lo que entendió, los datos y el veredicto.</p>
+<figure class="fig captura" data-captura="x-asistente-tramites"><figcaption>El Asistente en su paso 1: el riel con los cuatro pasos y la lista de «trámites tratados» a la izquierda, el cuadro del relato y la elección del sindicato al centro, y a la derecha «Así lo ve el afiliado» (una vista previa que todavía muestra solo los campos de nombre y CUIL).</figcaption></figure>
+
+<figure class="fig diagrama">
+<svg viewBox="0 0 860 250" role="img" aria-label="Flujo del Asistente de trámites: relato, la IA propone, el motor decide, veredicto e importación como borrador">
+<defs><marker id="f5b4-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
+<rect x="14" y="50" width="150" height="86" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
+<text x="89" y="80" font-size="14" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#16243a">EL RELATO</text>
+<text x="89" y="102" font-size="12" text-anchor="middle" fill="#16243a">texto libre del</text>
+<text x="89" y="118" font-size="12" text-anchor="middle" fill="#16243a">sindicato</text>
+<rect x="200" y="50" width="150" height="86" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="275" y="80" font-size="14" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#6b4fa0">LA IA PROPONE</text>
+<text x="275" y="102" font-size="12" text-anchor="middle" fill="#16243a">respuestas, campos</text>
+<text x="275" y="118" font-size="12" text-anchor="middle" fill="#16243a">y dudas con opciones</text>
+<rect x="386" y="50" width="150" height="86" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+<text x="461" y="80" font-size="14" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#a86400">EL CÓDIGO DECIDE</text>
+<text x="461" y="102" font-size="12" text-anchor="middle" fill="#16243a">motor puro: descarta</text>
+<text x="461" y="118" font-size="12" text-anchor="middle" fill="#16243a">lo que no existe</text>
+<rect x="572" y="50" width="130" height="86" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="637" y="80" font-size="14" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">VEREDICTO</text>
+<text x="637" y="102" font-size="12" text-anchor="middle" fill="#16243a">seis puntos y</text>
+<text x="637" y="118" font-size="12" text-anchor="middle" fill="#16243a">brechas</text>
+<rect x="738" y="50" width="110" height="86" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+<text x="793" y="80" font-size="14" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#0d7a5f">IMPORTAR</text>
+<text x="793" y="102" font-size="12" text-anchor="middle" fill="#16243a">crea el tipo</text>
+<text x="793" y="118" font-size="12" text-anchor="middle" fill="#16243a">como BORRADOR</text>
+<path d="M164 93 H198" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b4-fl)"/>
+<path d="M350 93 H384" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b4-fl)"/>
+<path d="M536 93 H570" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b4-fl)"/>
+<path d="M702 93 H736" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b4-fl)"/>
+<rect x="14" y="176" width="834" height="56" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
+<text x="431" y="200" font-size="13" text-anchor="middle" fill="#16243a">La IA solo propone: nada de lo que se afirma sobre Colm3na sale del modelo. El circuito, la instrucción,</text>
+<text x="431" y="220" font-size="13" text-anchor="middle" fill="#16243a">la vista previa y el JSON los arma código determinista contra el catálogo real de campos y funciones.</text>
+</svg>
+<figcaption>El Asistente: la IA entiende el relato, pero lo que se muestra, se advierte y se importa lo decide código propio.</figcaption>
+</figure>
+
+<p>El <b>veredicto</b> son seis preguntas: ¿ya se puede importar?, ¿conviene terminarlo a mano?, ¿hay que preparar algo (área, módulo, lista)?, ¿hace falta desarrollar y de qué complejidad?, ¿se completa un formulario existente?, ¿hay que construir otro antes? Lo que Colm3na todavía no hace se lista como <b>brecha</b>, con tamaño y salida provisoria. Al <b>importar</b>, crea el tipo como <i>borrador</i> en el sindicato elegido (áreas, campos, requisitos y pases por nombre; lo no resuelto queda listado). Nada se publica solo: una persona lo revisa en el constructor. El trabajo se guarda como caso, sin nombres de personas.</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Motor puro <code>asistente_tramites.py</code> (<code>resolver</code>, <code>veredicto</code>, <code>plan_importacion</code>, <code>BRECHAS</code>); IA en <code>asistente_tramites_ia.py</code> con herramienta de esquema cerrado, y todo pasa por <code>sanear_propuesta</code>, que descarta lo que no está en el catálogo. Cuarto uso de IA configurable (<code>db.modelo_ia("asistente_tramites")</code>), registrado en <code>UsoIA</code>. Un test compara su catálogo con el del constructor. Importador: <code>main._importar_tramite</code>; casos: <code>CasoHerramienta</code>.</p></div>
+
+<div class="nota pendiente"><span class="rot">Pendiente</span><p>Probarlo de punta a punta con un trámite real acordado con La Bancaria, sumar la entrada por foto o PDF y habilitarlo desde el panel del sindicato. Hoy es una herramienta del equipo de Colm3na.</p></div>
+
+
+<h3 id="cap-5-padron"><span class="n">5.6</span>Padrón, seccionales y listas</h3>
+
+<p class="lead">Los trámites, las notificaciones y los reportes necesitan saber quién es quién. Esta sección explica el padrón, las seccionales con su mapa, las listas que sube el sindicato y el padrón de empresas.</p>
+
+<h4>El padrón de afiliados</h4>
+<p>La pestaña <b>Trabajadores</b> es el padrón, con tres sub-pestañas: <b>Listado</b> (paginado, con buscador y recortado al alcance del operador), <b>Alta manual</b> y <b>Alta masiva</b> por CSV. Un administrador de seccional solo ve y da de alta gente de la suya; una fila de otra seccional en la carga masiva se omite con aviso.</p>
+<figure class="fig captura" data-captura="s-trabajadores"><figcaption>El padrón: arriba, la explicación de qué datos son de la persona y cuáles del sindicato; las sub-pestañas Listado, Alta manual y Alta masiva; y la tabla con CUIL, nombre, ubicación, seccional, CUIT del empleador, estado, nivel de fiabilidad y credencial.</figcaption></figure>
+<p>Hay una idea que ordena todo: <b>la persona y el empadronamiento son dos cosas distintas</b>.</p>
+<ul>
+<li>La <b>persona</b> (una fila por CUIL en toda la plataforma) es dueña de sus datos personales: nombre, domicilio, teléfono, mail, fecha de nacimiento. Si un administrador corrige uno, se corrige para esa persona en todos sus gremios, y la pantalla lo avisa.</li>
+<li>El <b>empadronamiento</b> es lo que cambia de un sindicato a otro: seccional, credencial, CUIT del empleador, si está activo y la <b>fecha de afiliación</b>, que escribe solo el sindicato.</li>
+</ul>
+<p>La persona existe desde que su CUIL entra al padrón, no desde que se registra: sin clave elegida no puede entrar. Un afiliado con pluriempleo tiene una persona y dos empadronamientos. El detalle de este modelo está en <a href="#cap-2-identidad">2.5</a>.</p>
+
+<figure class="fig diagrama">
+<svg viewBox="0 0 860 380" role="img" aria-label="Relación entre persona, empadronamiento, seccional, lista y trámite">
+<defs><marker id="f5b5-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
+<rect x="20" y="20" width="230" height="130" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+<text x="135" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">PERSONA (por CUIL)</text>
+<text x="135" y="70" font-size="12" text-anchor="middle" fill="#16243a">CuentaTrabajador</text>
+<text x="135" y="92" font-size="12" text-anchor="middle" fill="#16243a">nombre, domicilio, teléfono,</text>
+<text x="135" y="108" font-size="12" text-anchor="middle" fill="#16243a">mail, fecha de nacimiento,</text>
+<text x="135" y="124" font-size="12" text-anchor="middle" fill="#16243a">clave y nivel de fiabilidad</text>
+<rect x="320" y="20" width="250" height="130" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
+<text x="445" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#a86400">EMPADRONAMIENTO</text>
+<text x="445" y="70" font-size="12" text-anchor="middle" fill="#16243a">Trabajador (uno por sindicato)</text>
+<text x="445" y="92" font-size="12" text-anchor="middle" fill="#16243a">seccional, credencial, CUIT</text>
+<text x="445" y="108" font-size="12" text-anchor="middle" fill="#16243a">del empleador, activo,</text>
+<text x="445" y="124" font-size="12" text-anchor="middle" fill="#16243a">fecha de afiliación</text>
+<rect x="640" y="20" width="200" height="130" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+<text x="740" y="46" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#0d7a5f">SECCIONAL</text>
+<text x="740" y="70" font-size="12" text-anchor="middle" fill="#16243a">domicilio estructurado,</text>
+<text x="740" y="86" font-size="12" text-anchor="middle" fill="#16243a">coordenadas, contacto,</text>
+<text x="740" y="102" font-size="12" text-anchor="middle" fill="#16243a">horario. Acota qué ve</text>
+<text x="740" y="118" font-size="12" text-anchor="middle" fill="#16243a">cada operador</text>
+<path d="M250 85 H318" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<text x="284" y="76" font-size="12" text-anchor="middle" fill="#4c5d75">1 a N</text>
+<path d="M570 85 H638" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<rect x="20" y="230" width="270" height="120" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+<text x="155" y="256" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#6b4fa0">LISTAS DEL SINDICATO</text>
+<text x="155" y="280" font-size="12" text-anchor="middle" fill="#16243a">grupo familiar, datos del afiliado,</text>
+<text x="155" y="296" font-size="12" text-anchor="middle" fill="#16243a">lista simple. Se buscan por el CUIL</text>
+<text x="155" y="312" font-size="12" text-anchor="middle" fill="#16243a">(y una segunda clave opcional)</text>
+<text x="155" y="334" font-size="12" text-anchor="middle" fill="#16243a">Carga por CSV con ensayo</text>
+<rect x="350" y="230" width="250" height="120" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
+<text x="475" y="256" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#b8860b">TRÁMITE DEL AFILIADO</text>
+<text x="475" y="280" font-size="12" text-anchor="middle" fill="#16243a">Sus validaciones consultan</text>
+<text x="475" y="296" font-size="12" text-anchor="middle" fill="#16243a">la lista y el padrón con</text>
+<text x="475" y="312" font-size="12" text-anchor="middle" fill="#16243a">el CUIL de la sesión,</text>
+<text x="475" y="328" font-size="12" text-anchor="middle" fill="#16243a">nunca uno tipeado</text>
+<path d="M290 290 H348" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<path d="M445 150 V228" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+<text x="457" y="196" font-size="12" fill="#4c5d75">lo consulta también</text>
+<rect x="640" y="230" width="200" height="120" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
+<text x="740" y="256" font-size="15" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" fill="#16243a">EL MAPA</text>
+<text x="740" y="280" font-size="12" text-anchor="middle" fill="#16243a">Georef + Nominatim,</text>
+<text x="740" y="296" font-size="12" text-anchor="middle" fill="#16243a">siempre desde el servidor</text>
+<text x="740" y="312" font-size="12" text-anchor="middle" fill="#16243a">y con caché. Ninguna API</text>
+<text x="740" y="328" font-size="12" text-anchor="middle" fill="#16243a">bloquea un alta</text>
+<path d="M740 150 V228" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5b5-fl)"/>
+</svg>
+<figcaption>Cómo se relacionan la persona, su empadronamiento en un sindicato, la seccional y las listas. Los datos personales tienen un solo dueño; lo que cambia de un gremio a otro vive en el empadronamiento.</figcaption>
+</figure>
+
+<p>En cada fila el sindicato ve el <b>nivel de fiabilidad</b> de la cuenta (de 1, solo el CUIL en el padrón, a 4, identidad confirmada por el sindicato) y puede confirmarla o restablecer una clave temporal, pero solo si la persona ya estaba en <i>su</i> padrón cuando la creó (ver <a href="#cap-5-cuentas">5.13</a>). «Dar usuario del panel» abre el alta de un operador con CUIL, nombre y seccional ya cargados; padrón y equipo del gremio son pestañas separadas a propósito: estar afiliado no es trabajar en el sindicato.</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>CuentaTrabajador</code> (persona) y <code>Trabajador</code> (empadronamiento). La escritura de datos personales pasa por <code>db.guardar_datos_personales</code> / <code>db.asegurar_cuenta</code>; la lectura del padrón, por <code>db.padron_del_sindicato(s, sid, alcance)</code> o un JOIN por CUIL. El CUIL se valida con módulo 11 (<code>cuit.py</code>) donde nace y no se cambia desde una edición.</p></div>
+
+<h4>Seccionales y mapa</h4>
+<p>Una <b>seccional</b> es una delegación: domicilio, teléfono, WhatsApp, mail y horario. Se administra en la pestaña <b>Seccionales</b> con un alta guiada en tres pasos (dirección, confirmar en el mapa, contacto y guardar). Para la seccional se exige la dirección completa y el <b>globo en la puerta</b>: o se ubicó con precisión o alguien movió el globo a mano y responde por el punto, porque un centroide de localidad mandaría al afiliado al centro de la ciudad. Nace una «Sede Central» que ve todas las seccionales; las demás acotan lo que ve cada operador.</p>
+<figure class="fig captura" data-captura="s-seccionales"><figcaption>El alta de una seccional: los tres pasos arriba, los campos de dirección y la casilla «Sus usuarios ven todas las seccionales» (lo que hace «central» a una sede). Abajo empieza la lista de seccionales cargadas, con su estado de ubicación y su alcance.</figcaption></figure>
+<p>La ubicación se resuelve <b>siempre en el servidor</b>, con dos servicios públicos y gratuitos: Georef (provincia y localidad, también para sugerencias al escribir) y Nominatim de OpenStreetMap (calle y altura, solo cuando alguien aprieta «Buscar»). <b>Ninguna caída de esas APIs bloquea un alta</b>: la fila queda «sin ubicar» y el panel la marca como pendiente; si no responden, el asistente igual abre el mapa para marcar el punto a mano. Del afiliado solo se pide provincia y localidad; las altas masivas se ubican después con «Georreferenciar pendientes», en segundo plano.</p>
+
+<div class="lado izq"><figure class="fig captura" data-captura="t-seccionales"><figcaption>«Seccionales cerca de mí» en la app del afiliado: cada delegación con su dirección, horario y los botones «Llamar», «WhatsApp» y «Cómo llegar». La propia está marcada «tu seccional». Sin ubicación ni domicilio, se ordenan por provincia.</figcaption></figure>
+<div>
+<p>El afiliado tiene <b>«Seccionales cerca de mí»</b>. El permiso de ubicación se pide recién al tocar el enlace, la distancia la calcula el propio teléfono y la posición <b>no viaja al servidor ni se guarda</b>. Si la niega, nada se rompe: se mide desde el domicilio declarado y, sin domicilio, se ordena por provincia. El Panel Sindical usa las mismas coordenadas para su mapa de burbujas, que devuelve solo agregados.</p>
+</div></div>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>geo.py</code> (Georef, Nominatim, caché <code>GeoCache</code> de 90 días, <code>geo.USER_AGENT</code>); <code>geo.CAMPOS_DOMICILIO</code> compartidos por <code>Seccional</code> y <code>CuentaTrabajador</code>; <code>OBLIGATORIOS_SECCIONAL</code> / <code>OBLIGATORIOS_AFILIADO</code>. Precisiones <code>exacta</code>, <code>aproximada</code>, <code>manual</code>, <code>sin_geo</code> (sin coordenadas válidas se fuerza <code>sin_geo</code>). Leaflet vendoreado, nunca CDN. Avance en lote: <code>GeoPadron</code>.</p></div>
+
+<h4>Listas del sindicato</h4>
+<p>Muchos sindicatos tienen datos en planillas que Colm3na no conoce: el grupo familiar, una categoría, los beneficiarios de una campaña. La pestaña <b>Listas</b> permite subirlos para que las validaciones de Trámites los consulten.</p>
+<figure class="fig captura" data-captura="s-listas"><figcaption>La pestaña Listas: las tres plantillas (Grupo familiar, Datos del afiliado, Lista simple), cada una con sus columnas y «Descargar modelo», y abajo el formulario «Subir una lista» (plantilla, nombre, alcance y archivo CSV).</figcaption></figure>
+<p>Cada lista parte de una <b>plantilla tipada</b> con columnas de tipo fijo (CUIL, DNI, texto, fecha). El sindicato descarga el CSV modelo, lo completa y lo sube. Siempre hay un <b>ensayo</b> que muestra qué filas entran y cuáles se rechazan con su línea y motivo; al confirmar, la carga <b>reemplaza la lista entera</b>. El CUIL se exige con dígito verificador válido y las fechas entran como AAAA-MM-DD o DD/MM/AAAA.</p>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>listas.py</code> (plantillas y <code>parsear_csv</code>, puro: ensayo y carga comparten parseo), tablas <code>ListaSindicato</code> y <code>FilaLista</code> (JSONB), permiso <code>listas</code>, consulta por <code>db.buscar_en_lista</code>. Una plantilla nueva es una entrada en <code>listas.PLANTILLAS</code>.</p></div>
+
+<h4>Empleadores</h4>
+<p>Con el módulo <code>empleadores</code>, la pestaña <b>Empleadores</b> es el padrón de empresas (razón social, CUIT, domicilio, contacto), con alta, edición y baja lógica, y un botón que importa los CUIT que ya aparecen en los conceptos de recibos. Las empresas se autorregistran en <code>/ingresar-empresa</code> (el CUIT debe estar en algún padrón) y desde ahí reciben notificaciones y presentan trámites externos. El administrador de seccional no ve esta pestaña: las empresas no tienen seccional.</p>
+<figure class="fig captura" data-captura="s-empleadores"><figcaption>La pestaña Empleadores: sub-pestañas Empresas, Notificaciones y Trámites, el formulario de alta, «Importar CUIT de Conceptos» y la lista con el nivel de cuenta de cada empresa («sin cuenta» si aún no se registró).</figcaption></figure>
+
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Dos niveles, como el afiliado: <code>CuentaEmpleador</code> (CUIT y clave, global) y <code>Empleador</code> (uno por sindicato), con tablas y rutas duplicadas a propósito. El empleador todavía no unifica sus datos en la cuenta (sigue con un bloque por sindicato y el domicilio como texto libre; ver BACKLOG.md).</p></div>
+
+</section>

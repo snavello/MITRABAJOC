@@ -1,0 +1,74 @@
+[
+ {
+  "termino": "Aislamiento total",
+  "definicion": "Regla por la cual ningún sindicato puede ver datos de otro, aunque comparta la misma aplicación."
+ },
+ {
+  "termino": "Afiliado cotizante",
+  "definicion": "Afiliado que aporta cuota al sindicato. Enviar el recibo al gremio lo acredita (art. 21 bis, Dto 407/2026)."
+ },
+ {
+  "termino": "Anexo III",
+  "definicion": "Modelo único de recibo de sueldo aprobado por el Decreto 407/2026, vigente desde el 1 de junio de 2026."
+ },
+ {
+  "termino": "Contribuciones patronales",
+  "definicion": "Lo que paga el empleador por fuera del neto del trabajador: seguridad social, obra social, ART, entre otros."
+ },
+ {
+  "termino": "Tope sindical del 2 %",
+  "definicion": "Límite global de las cargas económicas de convenio a favor de asociaciones de trabajadores (art. 133, Ley 27.802)."
+ },
+ {
+  "termino": "Super Admin",
+  "definicion": "Administrador de Sede Central de un sindicato: ve todas las secciones del panel y todo el sindicato."
+ },
+ {
+  "termino": "Admin de Seccional",
+  "definicion": "Administrador con las mismas capacidades del Super Admin pero acotado a su seccional."
+ },
+ {
+  "termino": "Usuario de área",
+  "definicion": "Operador del panel que solo ve las secciones que le da su área y dentro de su alcance."
+ },
+ {
+  "termino": "Seccional",
+  "definicion": "Delegación territorial de un sindicato, con domicilio y padrón propios."
+ },
+ {
+  "termino": "Área",
+  "definicion": "Equipo del sindicato (Prensa, Trámites, Afiliaciones…) que define qué secciones del panel puede tocar un usuario."
+ },
+ {
+  "termino": "Módulo",
+  "definicion": "Funcionalidad que plataforma habilita o no para cada sindicato (por ejemplo Trámites o Encuestas)."
+ },
+ {
+  "termino": "Permiso (sección)",
+  "definicion": "Parte del panel que un usuario puede usar, dentro de lo que el sindicato tiene contratado."
+ },
+ {
+  "termino": "CuentaTrabajador",
+  "definicion": "Registro único de la persona por CUIL: dueño de sus datos personales."
+ },
+ {
+  "termino": "Empadronamiento",
+  "definicion": "Alta de una persona en el padrón de un sindicato (tabla Trabajador): seccional, credencial, empleador."
+ },
+ {
+  "termino": "Pluriempleo",
+  "definicion": "Caso de un trabajador que figura en el padrón de más de un sindicato; elige con cuál entrar."
+ },
+ {
+  "termino": "Panel Sindical",
+  "definicion": "Tablero del sindicato con indicadores, gráficos que se filtran entre sí, mapa y explorador de datos."
+ },
+ {
+  "termino": "Pruebas / Demo",
+  "definicion": "Los dos entornos de Render: Pruebas sigue cada cambio; Demo es una copia estable para mostrar."
+ },
+ {
+  "termino": "Fail-closed",
+  "definicion": "Criterio de seguridad: ante la duda o el olvido, el sistema rechaza en lugar de permitir."
+ }
+]

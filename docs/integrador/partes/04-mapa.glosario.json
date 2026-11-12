@@ -1,0 +1,19 @@
+[
+{"termino":"Portada","definicion":"Primera pantalla después del ingreso: tarjetas grandes con lo nuevo y los accesos. De ahí se pasa al panel interno."},
+{"termino":"Panel interno","definicion":"La pantalla de trabajo de cada app, con sus pestañas. Se entra desde la portada."},
+{"termino":"PWA","definicion":"App web instalable en el celular desde el navegador, con ícono propio y sin pasar por una tienda."},
+{"termino":"Pluriempleo","definicion":"Caso del afiliado empadronado en más de un sindicato: tiene un solo usuario y elige con cuál entrar."},
+{"termino":"Super Admin","definicion":"Operador con alcance sobre todo su sindicato y todas las secciones del panel."},
+{"termino":"Admin de Seccional","definicion":"Operador con las mismas secciones que un Super Admin pero acotado a su seccional."},
+{"termino":"Usuario de área","definicion":"Operador que solo ve las secciones asignadas a su área y sobre su alcance de seccional."},
+{"termino":"Módulo","definicion":"Funcionalidad que plataforma activa o no para cada sindicato; si no está, la pestaña no existe."},
+{"termino":"Plataforma","definicion":"La consola de Colm3na como operador: altas de sindicatos, marca, módulos y Uso de IA."},
+{"termino":"Usuario nominal","definicion":"Usuario de plataforma a nombre de una persona concreta, en lugar de una clave compartida."},
+{"termino":"Entornos","definicion":"Pruebas y Demo, los dos servicios desplegados; también el nombre de la landing interna /entornos."},
+{"termino":"Sala de mando","definicion":"Pantalla del esquema físico de la solución, con indicadores vivos de cada componente."},
+{"termino":"Mapa funcional","definicion":"Vista generada del código que lista apps, funcionalidades, pantallas, rutas y tablas."},
+{"termino":"Herramientas","definicion":"Asistentes internos de implementación en /entornos; no forman parte de las apps de los sindicatos."},
+{"termino":"Fiesta SUPARA","definicion":"Subproducto aparte para vender entradas con QR de un evento; no es parte de Colm3na."},
+{"termino":"Cookie por rol","definicion":"Cada rol guarda su sesión en su propia cookie para que dos pestañas con roles distintos no se pisen."},
+{"termino":"Modelo de diseño","definicion":"Aspecto visual elegido (laguna o noticiero); cambia la apariencia, no las funciones."}
+]

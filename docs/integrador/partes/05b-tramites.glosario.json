@@ -1,0 +1,82 @@
+[
+ {
+  "termino": "Expediente",
+  "definicion": "Número único de un trámite, con el código del formulario, el año y un correlativo de seis dígitos."
+ },
+ {
+  "termino": "Estado de un trámite",
+  "definicion": "Una de cinco etapas: iniciado, en tratamiento, respondido, a la espera de información del afiliado y terminado."
+ },
+ {
+  "termino": "Carátula",
+  "definicion": "Portada con la marca del sindicato que abre un formulario de trámite en la app del afiliado."
+ },
+ {
+  "termino": "Requisito para iniciar",
+  "definicion": "Condición que el afiliado debe cumplir para poder abrir un formulario; se evalúa al abrir y al enviar."
+ },
+ {
+  "termino": "Área a cargo",
+  "definicion": "Área del sindicato a cuya bandeja cae un trámite; se resuelve al crearlo y queda escrita."
+ },
+ {
+  "termino": "Pase entre áreas",
+  "definicion": "Derivación de un trámite a otra área, permitida solo hacia una lista cerrada que declara el formulario."
+ },
+ {
+  "termino": "Constructor de formularios",
+  "definicion": "Pantalla del panel donde el sindicato arma sus formularios de trámite sin programar."
+ },
+ {
+  "termino": "Borrador",
+  "definicion": "Formulario guardado a medias, sin exigencias, que el afiliado no ve hasta que se publica."
+ },
+ {
+  "termino": "Ingreso (de un campo)",
+  "definicion": "De dónde sale el valor de un campo: lo carga el afiliado, se extrae de un dato conocido o se calcula."
+ },
+ {
+  "termino": "Validación (de un campo)",
+  "definicion": "Chequeo opcional del valor de un campo; puede bloquear el envío o solo avisar."
+ },
+ {
+  "termino": "Bloquea / avisa",
+  "definicion": "Dos severidades de una validación: frenar el envío con un mensaje, o dejar pasar y registrar una advertencia."
+ },
+ {
+  "termino": "Validación por función",
+  "definicion": "Validación que consulta una lista del sindicato, un dato del padrón o una fórmula con nombres cerrados."
+ },
+ {
+  "termino": "Asistente de trámites",
+  "definicion": "Herramienta interna que convierte el relato de un trámite en un formulario importable, con veredicto y brechas."
+ },
+ {
+  "termino": "Brecha",
+  "definicion": "Algo que un sindicato necesita y Colm3na todavía no tiene; se lista con su tamaño y una salida provisoria."
+ },
+ {
+  "termino": "Empadronamiento",
+  "definicion": "Registro de una persona en el padrón de un sindicato; guarda seccional, credencial y fecha de afiliación."
+ },
+ {
+  "termino": "Seccional",
+  "definicion": "Delegación de un sindicato, con domicilio, contacto y mapa; acota lo que ve cada operador."
+ },
+ {
+  "termino": "Georef y Nominatim",
+  "definicion": "Servicios públicos de ubicación de domicilios que Colm3na consulta desde el servidor y con caché."
+ },
+ {
+  "termino": "Lista del sindicato",
+  "definicion": "Planilla cargada por CSV (grupo familiar, datos del afiliado o lista simple) que consultan las validaciones de Trámites."
+ },
+ {
+  "termino": "Ensayo de carga",
+  "definicion": "Simulación previa que muestra qué filas entrarían y cuáles se rechazan, sin escribir nada."
+ },
+ {
+  "termino": "Empleador",
+  "definicion": "Empresa dada de alta en el padrón de empresas de un sindicato, con login propio y trámites externos."
+ }
+]

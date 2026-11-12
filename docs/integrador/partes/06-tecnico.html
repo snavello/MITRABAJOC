@@ -1,0 +1,336 @@
+<section class="capitulo" id="cap-6">
+  <header class="cap-cab">
+    <span class="cap-num">06</span>
+    <h2>Modelo técnico</h2>
+    <p class="cap-bajada">Con qué está hecha Colm3na, cómo se desarrolla y se despliega un cambio, qué servicios de terceros usa, cómo se la vigila y cómo se aprovecha la IA.</p>
+  </header>
+
+  <p class="lead">El capítulo más técnico. Cada pieza viene con una frase llana de para qué está. Los nombres en código (<code>main.py</code>, <code>db.py</code>) son los reales del repositorio <code>MITRABAJOC</code>.</p>
+
+  <div class="cifras">
+    <div class="cifra"><b>1 repo</b><span>único: todo se lee, desarrolla y publica en <code>MITRABAJOC</code></span></div>
+    <div class="cifra"><b>Postgres</b><span>siempre; sin base no arranca (no hay SQLite)</span></div>
+    <div class="cifra"><b>2 entornos</b><span>Pruebas (sigue <code>main</code>) y Demo (sigue <code>demo</code>)</span></div>
+    <div class="cifra"><b>4</b><span>usos de IA, con modelo elegible desde el panel de plataforma</span></div>
+  </div>
+
+  <h3 id="cap-6-arquitectura"><span class="n">6.1</span>Arquitectura en una página</h3>
+  <p>Colm3na es una aplicación web clásica y simple de operar: <b>un servidor que arma las páginas y una base de datos</b>. No hay compilación de front ni aplicación de una sola página, para que un cambio sea un archivo editado y un push, y dos personas puedan sostenerlo.</p>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 400" role="img" aria-label="Arquitectura general: navegadores, servidor FastAPI en Render, base Postgres y servicios externos">
+      <defs><marker id="f6a-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="20" y="30" width="170" height="340" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
+      <text x="105" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Navegadores</text>
+      <rect x="35" y="72" width="140" height="48" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="105" y="101" text-anchor="middle" font-size="13" fill="#16243a">Afiliado (PWA)</text>
+      <rect x="35" y="130" width="140" height="48" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="105" y="159" text-anchor="middle" font-size="13" fill="#16243a">Panel del sindicato</text>
+      <rect x="35" y="188" width="140" height="48" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/><text x="105" y="217" text-anchor="middle" font-size="13" fill="#16243a">Plataforma</text>
+      <rect x="35" y="246" width="140" height="48" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="105" y="275" text-anchor="middle" font-size="13" fill="#16243a">Empresa</text>
+      <text x="105" y="330" text-anchor="middle" font-size="12" fill="#4c5d75">HTML + CSS + JS</text>
+      <text x="105" y="348" text-anchor="middle" font-size="12" fill="#4c5d75">(Preact solo en 2 pantallas)</text>
+
+      <rect x="250" y="30" width="330" height="340" rx="10" fill="#ffffff" stroke="#0a1421" stroke-width="1.5"/>
+      <text x="415" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Servidor web en Render (Python 3.12)</text>
+      <rect x="265" y="70" width="300" height="52" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
+      <text x="415" y="93" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">FastAPI + Jinja2</text><text x="415" y="111" text-anchor="middle" font-size="12" fill="#4c5d75">main.py: rutas y páginas armadas en el servidor</text>
+      <rect x="265" y="132" width="145" height="52" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="337" y="155" text-anchor="middle" font-size="13" fill="#16243a">auth.py</text><text x="337" y="173" text-anchor="middle" font-size="12" fill="#4c5d75">sesión firmada</text>
+      <rect x="420" y="132" width="145" height="52" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="492" y="155" text-anchor="middle" font-size="13" fill="#16243a">validador.py</text><text x="492" y="173" text-anchor="middle" font-size="12" fill="#4c5d75">reglas de aportes</text>
+      <rect x="265" y="194" width="145" height="52" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="337" y="217" text-anchor="middle" font-size="13" fill="#16243a">extractor.py</text><text x="337" y="235" text-anchor="middle" font-size="12" fill="#4c5d75">lee recibos con IA</text>
+      <rect x="420" y="194" width="145" height="52" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="492" y="217" text-anchor="middle" font-size="13" fill="#16243a">dashboard.py</text><text x="492" y="235" text-anchor="middle" font-size="12" fill="#4c5d75">agregados en SQL</text>
+      <rect x="265" y="256" width="300" height="52" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
+      <text x="415" y="279" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">db.py (SQLModel + SQLAlchemy)</text><text x="415" y="297" text-anchor="middle" font-size="12" fill="#4c5d75">modelos, acceso a datos, pool con techos</text>
+      <text x="415" y="335" text-anchor="middle" font-size="12" fill="#4c5d75">Hilos propios: indexación del convenio,</text>
+      <text x="415" y="352" text-anchor="middle" font-size="12" fill="#4c5d75">resumen diario, planificador, colector</text>
+
+      <rect x="640" y="30" width="200" height="130" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
+      <text x="740" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Postgres gestionado</text>
+      <text x="740" y="82" text-anchor="middle" font-size="12" fill="#16243a">Todo el estado: datos,</text><text x="740" y="99" text-anchor="middle" font-size="12" fill="#16243a">logos, fotos, adjuntos</text><text x="740" y="116" text-anchor="middle" font-size="12" fill="#16243a">(bytes), JSONB, vectores</text><text x="740" y="140" text-anchor="middle" font-size="12" fill="#4c5d75">Esquema: Alembic</text>
+      <rect x="640" y="200" width="200" height="170" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
+      <text x="740" y="226" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Servicios externos</text>
+      <text x="740" y="252" text-anchor="middle" font-size="12" fill="#16243a">API de Anthropic (IA)</text><text x="740" y="270" text-anchor="middle" font-size="12" fill="#16243a">Mail, Push, Georef, OSM</text><text x="740" y="288" text-anchor="middle" font-size="12" fill="#16243a">Clima, dólar, Google</text><text x="740" y="306" text-anchor="middle" font-size="12" fill="#16243a">MercadoPago, Didit</text><text x="740" y="334" text-anchor="middle" font-size="12" fill="#4c5d75">Casi todos se apagan solos</text><text x="740" y="351" text-anchor="middle" font-size="12" fill="#4c5d75">si faltan sus claves</text>
+      <path d="M190 200H250" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6a-flecha)"/>
+      <path d="M580 220H615V95H640" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6a-flecha)"/>
+      <path d="M580 300H640" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6a-flecha)"/>
+    </svg>
+    <figcaption>Las cuatro aplicaciones son páginas servidas por el mismo programa. Todo lo que se guarda va a Postgres; lo que viene de afuera entra por módulos puntuales y falla sin romper el resto.</figcaption>
+  </figure>
+
+  <h4>Las piezas, una por una</h4>
+  <div class="tabla-cont"><table class="tabla">
+    <thead><tr><th>Pieza</th><th>Para qué está</th></tr></thead>
+    <tbody>
+      <tr><td>FastAPI + Jinja2</td><td>El servidor arma cada página con sus datos ya puestos; no hay paso de compilación del front.</td></tr>
+      <tr><td>Preact + htm</td><td>Capa mínima de componentes, vendoreada (nunca desde un CDN), usada solo en el Panel Sindical y la Calculadora bancaria v2.</td></tr>
+      <tr><td>Postgres, siempre</td><td>Sin <code>DATABASE_URL</code> la app no arranca; producción, pruebas y la suite usan el mismo motor (SQLite se sacó el 11 de septiembre de 2026).</td></tr>
+      <tr><td>SQLModel + Alembic</td><td>Tablas como clases de Python; Alembic aplica los cambios de esquema sin borrar datos y corre solo antes de cada deploy.</td></tr>
+      <tr><td>Python 3.12.8</td><td>Fijado en <code>.python-version</code>; con 3.14 se rompe SQLModel.</td></tr>
+      <tr><td>Estáticos con sello y bytes en la base</td><td>Todo <code>/static/</code> lleva <code>?v=</code> (sin él, el navegador mostraba HTML nuevo con CSS viejo). Logos, fotos y adjuntos son bytes en Postgres: Render no tiene disco persistente.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="nota tecnico"><span class="rot">Reglas de código que ordenan todo</span>
+    <p><b>Bytes diferidos</b>: toda columna <code>LargeBinary</code> se trae solo si el código la lee (un logo de 1 MB leído en cada pedido clavaba el pool). <b>JSONB</b> vía <code>db.JSON_TIPO</code>; <code>test_migraciones.py</code> compara el esquema de <code>create_all</code> con el de Alembic. <b>Hora de Buenos Aires</b>: el servidor corre en UTC, así que el código usa <code>fechas.py</code> y nunca <code>datetime.now()</code>. <b>Una sesión de base por request</b>: dos conexiones por pedido con un pool de diez trabaron Pruebas.</p>
+  </div>
+
+  <h4>El recorrido de una petición y sus techos</h4>
+  <p>Tras un cuelgue del Panel Sindical en Pruebas (septiembre de 2026), <b>nada espera para siempre</b>: cada recurso escaso tiene un tope y, al superarlo, la app contesta un 503 con JSON que dice qué pasó, nunca un 500 genérico.</p>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 330" role="img" aria-label="Recorrido de un pedido con sus techos: sesión, cupo, pool de conexiones, consulta y respuesta">
+      <defs><marker id="f6b-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="15" y="40" width="120" height="70" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="75" y="70" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Pedido</text><text x="75" y="90" text-anchor="middle" font-size="12" fill="#4c5d75">del navegador</text>
+      <rect x="165" y="40" width="130" height="70" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="230" y="64" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Sesión y rol</text><text x="230" y="82" text-anchor="middle" font-size="12" fill="#4c5d75">cookie firmada,</text><text x="230" y="98" text-anchor="middle" font-size="12" fill="#4c5d75">15 min de inactividad</text>
+      <rect x="325" y="40" width="130" height="70" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="390" y="64" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Cupo</text><text x="390" y="82" text-anchor="middle" font-size="12" fill="#4c5d75">Panel: 4 a la vez</text><text x="390" y="98" text-anchor="middle" font-size="12" fill="#4c5d75">Lecturas IA: 2 a la vez</text>
+      <rect x="485" y="40" width="130" height="70" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="550" y="64" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Pool de base</text><text x="550" y="82" text-anchor="middle" font-size="12" fill="#4c5d75">5 + 5 conexiones</text><text x="550" y="98" text-anchor="middle" font-size="12" fill="#4c5d75">espera máx. 5 s</text>
+      <rect x="645" y="40" width="130" height="70" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="710" y="64" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Consulta</text><text x="710" y="82" text-anchor="middle" font-size="12" fill="#4c5d75">corte a los 15 s</text><text x="710" y="98" text-anchor="middle" font-size="12" fill="#4c5d75">inactiva en tx: 30 s</text>
+      <path d="M135 75H165M295 75H325M455 75H485M615 75H645" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6b-flecha)"/>
+      <path d="M775 75H820V170H75V150" stroke="#0d7a5f" stroke-width="1.5" fill="none" marker-end="url(#f6b-flecha)"/>
+      <text x="440" y="164" text-anchor="middle" font-size="12" fill="#0d7a5f">200: la página o el JSON de siempre</text>
+      <rect x="15" y="215" width="830" height="95" rx="10" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
+      <text x="30" y="240" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Si un techo se supera: 503 con JSON y código propio (nunca 500 ni cuelgue)</text>
+      <text x="30" y="263" font-size="12" fill="#16243a">E-SERVIDOR-01  pool agotado     E-SERVIDOR-02  consulta cortada por tiempo</text>
+      <text x="30" y="282" font-size="12" fill="#16243a">E-SERVIDOR-03  cupo del Panel lleno     E-SERVIDOR-04  cupo de lecturas de documentos lleno (tras 45 s de espera)</text>
+      <text x="30" y="301" font-size="12" fill="#4c5d75">El front del Panel pide de a cuatro y reintenta un 503; el afiliado ve un aviso, no una pantalla rota.</text>
+      <path d="M390 110V215M550 110V215M710 110V215" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#f6b-flecha)"/>
+    </svg>
+    <figcaption>Cada etapa del camino tiene un tope. Los valores son los de fábrica y se cambian con variables de entorno (<code>DB_POOL_SIZE</code>, <code>DB_POOL_TIMEOUT</code>, <code>DB_STATEMENT_TIMEOUT_MS</code>, <code>DASHBOARD_CUPO</code>, <code>LECTURA_CUPO</code>).</figcaption>
+  </figure>
+
+  <div class="nota tecnico"><span class="rot">Para técnicos</span>
+    <p>Las migraciones usan <code>db.engine_para_migraciones()</code>, sin esos techos. <code>/healthz</code> no toca la base y es el <i>Health Check Path</i> de Render; <code>/readyz</code> hace un <code>SELECT 1</code> y es solo para mirar a mano. Cada lectura de un documento pica unos 30 MiB: por eso la foto se decodifica una sola vez, ya reducida a 2.000 px.</p>
+  </div>
+
+  <h3 id="cap-6-desarrollo"><span class="n">6.2</span>Herramientas y entornos de desarrollo</h3>
+  <p>El producto lo construye el dueño del producto con asistentes de IA que escriben y revisan código bajo su criterio.</p>
+  <div class="tabla-cont"><table class="tabla">
+    <thead><tr><th>Herramienta</th><th>Qué se hace con ella</th></tr></thead>
+    <tbody>
+      <tr><td><b>Claude Code</b></td><td>Escribe y prueba el código, en la PC o en la nube (un hook levanta Postgres 16 con pgvector y el entorno Python). Reparte desarrollo, QA y deploy entre agentes en paralelo.</td></tr>
+      <tr><td><b>Claude (chat) y Cowork</b></td><td>Planes, documentos y análisis; lo que nace ahí viaja al repo como <code>docs/chat/…</code> o <code>PLAN_*.md</code>.</td></tr>
+      <tr><td><b>GitHub</b></td><td>Repo único <code>MITRABAJOC</code>, una rama por bloque (<code>feature/…</code>, <code>fix/…</code>) y Pull Request. Sobre <code>demo</code> no se programa.</td></tr>
+      <tr><td><b>pytest</b></td><td>Más de 200 archivos <code>test_*.py</code>, cada uno en su propio proceso; <code>conftest.py</code> crea una base Postgres descartable.</td></tr>
+      <tr><td><b>Playwright y k6</b></td><td>Robots de punta a punta en <code>e2e/</code> (sin leer recibos con IA real: gastaría créditos) y pruebas de carga en <code>carga/k6/</code>.</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 280" role="img" aria-label="Integración continua: pull request, cuatro tandas de tests en paralelo y auditoría, luego merge a main y deploy a Pruebas">
+      <defs><marker id="f6c-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="15" y="100" width="130" height="70" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="80" y="130" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Pull Request</text><text x="80" y="149" text-anchor="middle" font-size="12" fill="#4c5d75">rama del bloque</text>
+      <rect x="215" y="15" width="270" height="44" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="350" y="42" text-anchor="middle" font-size="13" fill="#16243a">Tests parte 0 (su Postgres)</text>
+      <rect x="215" y="68" width="270" height="44" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="350" y="95" text-anchor="middle" font-size="13" fill="#16243a">Tests parte 1</text>
+      <rect x="215" y="121" width="270" height="44" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="350" y="148" text-anchor="middle" font-size="13" fill="#16243a">Tests parte 2</text>
+      <rect x="215" y="174" width="270" height="44" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="350" y="201" text-anchor="middle" font-size="13" fill="#16243a">Tests parte 3</text>
+      <rect x="215" y="227" width="270" height="44" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/><text x="350" y="254" text-anchor="middle" font-size="13" fill="#16243a">Auditoría: ruff + bandit + dependencias</text>
+      <rect x="560" y="100" width="130" height="70" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="625" y="128" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Merge a main</text><text x="625" y="147" text-anchor="middle" font-size="12" fill="#4c5d75">todo en verde</text>
+      <rect x="735" y="100" width="110" height="70" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="790" y="128" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Pruebas</text><text x="790" y="147" text-anchor="middle" font-size="12" fill="#4c5d75">redeploy ~90 s</text>
+      <path d="M145 135H215M485 135H560M690 135H735" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6c-flecha)"/>
+    </svg>
+    <figcaption>El CI reparte los archivos de test entre cuatro trabajos que corren a la vez (<code>ci_reparto.py</code>), cada uno con su propio Postgres. Toda la suite tarda unos cuatro minutos, contra 20 a 25 en una sesión en la nube.</figcaption>
+  </figure>
+
+  <div class="nota regla"><span class="rot">Reglas de trabajo</span>
+    <p><b>Versionado</b>: <code>version.py</code> lleva una versión por aplicación (Trabajador, Admin, Plataforma) y sube sola en el mismo commit. <b>Autoría</b>: el autor del commit es la persona; el código que escribió Claude lleva el <i>co-author</i>. <b>Merge</b>: con el CI en verde, Code mergea sus propios PR. <b>Cierre de bloque</b>: una línea en <code>BITACORA.md</code>, el estado en <code>CLAUDE.md</code>, la narrativa en <code>HISTORIAL.md</code>.</p>
+  </div>
+  <p>Skills del proyecto: <b>diseno-mi-trabajo</b> (sistema de diseño), <b>xsk</b> (método de seguridad, 7.2), <b>xsd</b> (auditoría de diseño con catálogo de 60 estilos), <b>impeccable</b> y <b>emil-design-eng</b> (revisión y pulido de animación; ante un choque manda el sistema de diseño propio).</p>
+
+  <h3 id="cap-6-entornos"><span class="n">6.3</span>Entornos y deploy</h3>
+  <p>Hay tres lugares y cada uno tiene su propia base de datos. Lo que se hace en Pruebas no puede tocar la Demo.</p>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 340" role="img" aria-label="Ciclo de un cambio: PC, rama, main y Pruebas, promoción a demo y Demo, producción futura">
+      <defs><marker id="f6d-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="15" y="30" width="170" height="110" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="100" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Tu PC o la nube</text><text x="100" y="80" text-anchor="middle" font-size="12" fill="#16243a">rama del bloque</text><text x="100" y="98" text-anchor="middle" font-size="12" fill="#16243a">Postgres de Docker</text><text x="100" y="116" text-anchor="middle" font-size="12" fill="#4c5d75">cambia al guardar</text>
+      <rect x="250" y="30" width="170" height="110" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="335" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Pruebas</text><text x="335" y="80" text-anchor="middle" font-size="12" fill="#16243a">sigue la rama main</text><text x="335" y="98" text-anchor="middle" font-size="12" fill="#16243a">cada push redeploya</text><text x="335" y="116" text-anchor="middle" font-size="12" fill="#4c5d75">distintivo ámbar + /entornos</text>
+      <rect x="485" y="30" width="170" height="110" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="570" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Demo</text><text x="570" y="80" text-anchor="middle" font-size="12" fill="#16243a">sigue la rama demo</text><text x="570" y="98" text-anchor="middle" font-size="12" fill="#16243a">solo cambia al promover</text><text x="570" y="116" text-anchor="middle" font-size="12" fill="#4c5d75">sindicatos e inversor</text>
+      <rect x="690" y="30" width="155" height="110" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5" stroke-dasharray="6 4"/><text x="767" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Producción</text><text x="767" y="80" text-anchor="middle" font-size="12" fill="#16243a">futura, rama prod</text><text x="767" y="98" text-anchor="middle" font-size="12" fill="#16243a">recibe solo de demo</text><text x="767" y="116" text-anchor="middle" font-size="12" fill="#4c5d75">cuando haya gremio real</text>
+      <path d="M185 85H250M420 85H485M655 85H690" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6d-flecha)"/>
+      <text x="217" y="76" text-anchor="middle" font-size="12" fill="#4c5d75">merge</text><text x="452" y="76" text-anchor="middle" font-size="12" fill="#4c5d75">promover</text>
+      <rect x="15" y="175" width="830" height="150" rx="10" fill="#ffffff" stroke="#dbe2ea" stroke-width="1.5"/>
+      <text x="30" y="200" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Qué hace python promover_demo.py (nunca se pushea a demo a mano)</text>
+      <rect x="30" y="215" width="185" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="122" y="243" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">1. Backup</text><text x="122" y="263" text-anchor="middle" font-size="12" fill="#4c5d75">pg_dump de la base</text><text x="122" y="280" text-anchor="middle" font-size="12" fill="#4c5d75">de la demo</text>
+      <rect x="235" y="215" width="185" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="327" y="243" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">2. Merge</text><text x="327" y="263" text-anchor="middle" font-size="12" fill="#4c5d75">main entra en demo</text><text x="327" y="280" text-anchor="middle" font-size="12" fill="#4c5d75">(o --solo-pr)</text>
+      <rect x="440" y="215" width="185" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="532" y="243" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">3. Tag</text><text x="532" y="263" text-anchor="middle" font-size="12" fill="#4c5d75">demo-AAAA-MM-DD-vX.Y.Z</text><text x="532" y="280" text-anchor="middle" font-size="12" fill="#4c5d75">para volver atrás</text>
+      <rect x="645" y="215" width="185" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="737" y="243" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">4. Push</text><text x="737" y="263" text-anchor="middle" font-size="12" fill="#4c5d75">Render redeploya y</text><text x="737" y="280" text-anchor="middle" font-size="12" fill="#4c5d75">Alembic migra solo</text>
+    </svg>
+    <figcaption>El ciclo de un cambio. Pruebas es la única prueba que vale antes de la Demo: código real, Postgres real y migración aplicada de verdad.</figcaption>
+  </figure>
+
+  <ol class="pasos">
+    <li><b>Se programa en una rama</b>Con el Postgres local, tests del área tocada y, si cambió un modelo, la migración de Alembic en el mismo commit.</li>
+    <li><b>Se mergea a <code>main</code></b>Con el CI en verde. Render redeploya <code>mitrabajo-pruebas</code> en uno o dos minutos y el Pre-Deploy migra la base.</li>
+    <li><b>Se mira en Pruebas</b>En <code>/entornos</code> se ven los ocho logins (cuatro roles en dos entornos) y la versión que corre en cada uno. Esa landing existe solo donde hay distintivo de entorno: en la Demo responde 404 a propósito.</li>
+    <li><b>SDN aprueba y se promueve a la Demo</b>Con <code>promover_demo.py</code>. La Demo cambia solo así.</li>
+  </ol>
+
+  <div class="nota ejemplo"><span class="rot">Ejemplo</span>
+    <p>El 23 de octubre de 2026 la Demo se dejó idéntica a Pruebas, código y datos: en lugar de migrar su base se la reemplazó por una copia de la de Pruebas (un Job de Render con <code>pg_dump</code> y <code>pg_restore</code>), con respaldo de la anterior, y recién después se promovió el código.</p>
+  </div>
+
+  <h4>El plan por etapas</h4>
+  <p><code>PLAN_ENTORNOS.md</code> ordena el camino: <span class="chip verde">Etapas 0 y 1</span> (repo, Demo congelada y Pruebas creada, 3 de septiembre de 2026); <span class="chip violeta">Etapa 2</span> repo en una organización de GitHub y devcontainer; <span class="chip violeta">Etapa 3</span> runbook y accesos; <span class="chip violeta">Etapa 4</span> traspaso de la operación diaria a dos desarrolladores. La Producción (rama <code>prod</code>, Postgres Pro, backups fuera de Render) se planificó para cuando exista el primer sindicato real. Parte del CI y de la observabilidad ya se adelantó.</p>
+
+  <h4>Planes de Render desde la app</h4>
+  <p>El tráfico es muy desparejo (días de liquidación contra fines de semana con veinte veces menos gente) y Render cobra por segundo. La pestaña <b>Planes</b> de <code>/entornos</code> sube o baja el plan del servicio web y de la base, ahora o en un horario semanal. <b>Solo funciona en Pruebas</b>: cambiar de plan reinicia el web y deja la base cerca de un minuto con error.</p>
+  <figure class="fig captura" data-captura="x-planes">
+    <figcaption>La pestaña Planes de <code>/entornos</code>: «Ahora mismo» (el plan actual del web y de la base), «Cambiar ahora» con un selector de plan por servicio y su costo, y más abajo las reglas programadas. Se necesita <code>RENDER_API_KEY</code> en el entorno; sin ella la pantalla lo avisa.</figcaption>
+  </figure>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span>
+    <p><code>render_admin.py</code> aplica el cambio (al bajar, bajan primero los workers; al subir, después). <code>planificador.py</code> es un hilo dentro de la app, con 10 minutos de gracia y reclamo por UPDATE condicional. Los precios salen de <code>data/render_planes.json</code> (<code>actualizar_planes_render.py</code>); la bitácora <code>CambioPlan</code> existe porque Render no expone el historial de planes de las bases.</p>
+  </div>
+
+  <h3 id="cap-6-infra"><span class="n">6.4</span>Infraestructura y servicios</h3>
+  <h4>Render</h4>
+  <p>Render aloja los dos servicios web (Pruebas y Demo) y sus bases Postgres gestionadas. Pruebas hoy corre con una configuración mínima (0,5 CPU, 512 MB, una base chica); el detalle está en <code>DESPLIEGUE_RENDER.md</code>. Para ensayar el día de cobro se probó una configuración de arranque real:</p>
+
+  <div class="cifras">
+    <div class="cifra"><b>p95 470 ms</b><span>lectores en el día de cobro simulado (400 lectores y 20 subiendo, 10 min)</span></div>
+    <div class="cifra"><b>0 %</b><span>de fallas: 0 de 503 y 0 de 500 sobre 102.132 pedidos</span></div>
+    <div class="cifra"><b>8,6 s</b><span>mediana de una subida de recibo (1.400 subidas, sin error)</span></div>
+    <div class="cifra"><b>US$ 550</b><span>por mes de lista (web 4 CPU y 8 GB × 2, base 4 CPU y 16 GB)</span></div>
+  </div>
+  <div class="nota regla"><span class="rot">Cómo leer estas cifras</span>
+    <p>Se midieron en noviembre de 2026 con un lote sintético de La Bancaria y la lectura de IA simulada (<code>MOCK_EXTRACTOR</code>), después de corregir el cuello de botella: no era la máquina sino los bytes que la base mandaba a cada pantalla (PR #203 a #206; antes, la misma máquina devolvía 20 % de 503). El precio es de lista, no una factura. El cambio de plan en caliente no se probó.</p>
+  </div>
+
+
+  <h4>Servicios de terceros</h4>
+  <p>Los servicios externos son prescindibles: si faltan sus claves, la función se apaga en silencio y el resto sigue. Así una demo funciona sin cuentas contratadas.</p>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 420" role="img" aria-label="Mapa de servicios externos agrupados por función alrededor de la aplicación">
+      <defs><marker id="f6e-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="330" y="160" width="200" height="100" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="2"/><text x="430" y="196" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="20" fill="#0a1421">Colm3na</text><text x="430" y="218" text-anchor="middle" font-size="12" fill="#16243a">FastAPI en Render</text><text x="430" y="236" text-anchor="middle" font-size="12" fill="#4c5d75">+ Postgres</text>
+      <rect x="20" y="20" width="250" height="100" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/><text x="145" y="44" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Inteligencia</text><text x="145" y="68" text-anchor="middle" font-size="12" fill="#16243a">Anthropic (recibos, convenio,</text><text x="145" y="85" text-anchor="middle" font-size="12" fill="#16243a">asistentes)</text><text x="145" y="106" text-anchor="middle" font-size="12" fill="#4c5d75">OpenAI, Kimi, Qwen: solo banco de pruebas</text>
+      <rect x="20" y="150" width="250" height="100" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="145" y="174" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Identidad y acceso</text><text x="145" y="198" text-anchor="middle" font-size="12" fill="#16243a">Google (OAuth) · Resend (mail)</text><text x="145" y="215" text-anchor="middle" font-size="12" fill="#16243a">Cloudflare Turnstile (captcha)</text><text x="145" y="236" text-anchor="middle" font-size="12" fill="#4c5d75">Didit (verificar identidad, en prueba)</text>
+      <rect x="20" y="280" width="250" height="120" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="145" y="304" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Datos para el afiliado</text><text x="145" y="328" text-anchor="middle" font-size="12" fill="#16243a">Georef y Nominatim (domicilios)</text><text x="145" y="345" text-anchor="middle" font-size="12" fill="#16243a">MET Norway (clima) · BCRA (dólar)</text><text x="145" y="362" text-anchor="middle" font-size="12" fill="#16243a">Web Push (VAPID)</text><text x="145" y="386" text-anchor="middle" font-size="12" fill="#4c5d75">MercadoPago: solo la Fiesta</text>
+      <rect x="590" y="20" width="250" height="100" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/><text x="715" y="44" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Vigilancia</text><text x="715" y="68" text-anchor="middle" font-size="12" fill="#16243a">Grafana Cloud (uptime, métricas)</text><text x="715" y="85" text-anchor="middle" font-size="12" fill="#16243a">Sentry (errores)</text><text x="715" y="106" text-anchor="middle" font-size="12" fill="#16243a">Telegram (avisos al teléfono)</text>
+      <rect x="590" y="150" width="250" height="100" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="715" y="174" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Desarrollo y entrega</text><text x="715" y="198" text-anchor="middle" font-size="12" fill="#16243a">GitHub (repo, CI, colector)</text><text x="715" y="215" text-anchor="middle" font-size="12" fill="#16243a">Render (web, base, API de planes)</text><text x="715" y="236" text-anchor="middle" font-size="12" fill="#4c5d75">Docker en la PC</text>
+      <rect x="590" y="280" width="250" height="120" rx="10" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/><text x="715" y="304" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Perímetro (planeado)</text><text x="715" y="328" text-anchor="middle" font-size="12" fill="#16243a">Dominio propio delante de Render,</text><text x="715" y="345" text-anchor="middle" font-size="12" fill="#16243a">DNS y certificados en Cloudflare</text><text x="715" y="372" text-anchor="middle" font-size="12" fill="#4c5d75">Aún no operativo (ver tabla)</text>
+      <path d="M270 70L330 180M270 200H330M270 340L345 255M590 70L530 180M590 200H530M590 340L515 255" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6e-flecha)"/>
+    </svg>
+    <figcaption>Los servicios agrupados por función. Los de la derecha miran y entregan; los de la izquierda aportan datos o identidad al afiliado.</figcaption>
+  </figure>
+
+  <div class="tabla-cont"><table class="tabla">
+    <thead><tr><th>Servicio</th><th>Para qué</th><th>Estado</th><th>Sin claves</th></tr></thead>
+    <tbody>
+      <tr><td>Render</td><td>Aloja la app y las bases; su API cambia planes</td><td><span class="chip verde">Hecho</span></td><td>No aplica</td></tr>
+      <tr><td>API de Anthropic</td><td>Lee recibos, responde sobre el convenio, asistentes</td><td><span class="chip verde">Hecho</span></td><td>No hay lectura (con <code>MOCK_EXTRACTOR=1</code> se simula)</td></tr>
+      <tr><td>Georef y Nominatim</td><td>Provincias, localidades, calle y altura</td><td><span class="chip verde">Hecho</span></td><td>Públicas; si no responden el alta sigue sin ubicar</td></tr>
+      <tr><td>MET Norway y BCRA</td><td>Clima y dólar oficial de «Tu día»</td><td><span class="chip verde">Hecho</span></td><td>Públicas; un tercero caído no da 500</td></tr>
+      <tr><td>Grafana Cloud, Sentry, Telegram</td><td>Observabilidad (6.6)</td><td><span class="chip verde">Hecho, solo en Pruebas</span></td><td>No hacen nada</td></tr>
+      <tr><td>Resend (mail)</td><td>Códigos de registro y recuperación de clave</td><td><span class="chip violeta">Pendiente: código listo, falta configurar</span></td><td><span class="chip">Apagado sin claves</span>: el registro nace nivel 1</td></tr>
+      <tr><td>Cloudflare Turnstile</td><td>Captcha en registros y recuperación</td><td><span class="chip violeta">Pendiente: código listo, falta configurar</span></td><td><span class="chip">Apagado sin claves</span></td></tr>
+      <tr><td>Cloudflare (dominio y perímetro)</td><td>DNS, certificados y filtro delante de Render</td><td><span class="chip violeta">Pendiente (planeado)</span></td><td>La app responde en su dirección de Render</td></tr>
+      <tr><td>Web Push (VAPID)</td><td>Avisos de novedades de trámites a la app instalada</td><td><span class="chip">Apagado sin claves</span></td><td>Canal apagado</td></tr>
+      <tr><td>Google (OAuth)</td><td>«Continuar con Google» para cuentas ya registradas</td><td><span class="chip">Apagado sin claves</span></td><td>El botón no se dibuja y las rutas dan 404</td></tr>
+      <tr><td>MercadoPago</td><td>Cobro de entradas de la Fiesta (no de Colm3na)</td><td><span class="chip ambar">En prueba</span></td><td>Cobro apagado; con <code>MP_MOCK=1</code> se simula</td></tr>
+      <tr><td>Didit</td><td>Verificación de identidad, solo en <code>/entornos</code></td><td><span class="chip ambar">En prueba</span></td><td>Apagada</td></tr>
+      <tr><td>OpenAI, Moonshot, Alibaba</td><td>Solo el Laboratorio de modelos</td><td><span class="chip ambar">En prueba</span></td><td>Los modelos se ven pero no se eligen</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="nota pendiente"><span class="rot">No confirmado desde el repo</span>
+    <p>No consta si ya se delegó un dominio propio a Cloudflare, si se verificó el subdominio de mail en Resend ni si se creó el sitio de Turnstile: lo último escrito (<code>CLAUDE.md</code>, Pendientes) es que quedaban a cargo del dueño del producto. Mientras no se configuren, el canal de mail y el captcha están apagados. Por eso este documento no nombra ningún dominio propio.</p>
+  </div>
+
+  <h3 id="cap-6-ia"><span class="n">6.5</span>La IA</h3>
+  <p>La IA hace tres cosas: <b>leer</b> documentos, <b>responder</b> preguntas sobre el convenio y <b>traducir</b> pedidos en lenguaje natural a acciones del panel. Nunca decide sola: las cuentas las hace código propio y la IA propone. Los modelos son los <b>valores por defecto</b>; desde el 5 de noviembre de 2026 el elegido para recibos es Sonnet 5.5.</p>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 300" role="img" aria-label="Los usos de la IA, su modelo por defecto y el selector de plataforma">
+      <defs><marker id="f6f-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="15" y="20" width="250" height="60" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="140" y="46" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Lectura de recibos y comprobantes</text><text x="140" y="65" text-anchor="middle" font-size="12" fill="#4c5d75">extractor.py · Sonnet 4.6</text>
+      <rect x="15" y="95" width="250" height="60" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="140" y="121" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Consultas al convenio</text><text x="140" y="140" text-anchor="middle" font-size="12" fill="#4c5d75">rag.py · Opus 5</text>
+      <rect x="15" y="170" width="250" height="60" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="140" y="196" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Asistente del Panel Sindical</text><text x="140" y="215" text-anchor="middle" font-size="12" fill="#4c5d75">asistente.py · Sonnet 5</text>
+      <rect x="15" y="245" width="250" height="45" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="140" y="264" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Asistente de trámites</text><text x="140" y="281" text-anchor="middle" font-size="12" fill="#4c5d75">Sonnet 5 (solo en /entornos)</text>
+      <rect x="345" y="85" width="190" height="130" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="440" y="112" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">db.modelo_ia(uso)</text><text x="440" y="136" text-anchor="middle" font-size="12" fill="#16243a">se lee en cada llamada;</text><text x="440" y="153" text-anchor="middle" font-size="12" fill="#16243a">vacío = el default del módulo</text><text x="440" y="180" text-anchor="middle" font-size="12" fill="#4c5d75">lo elige plataforma en</text><text x="440" y="196" text-anchor="middle" font-size="12" fill="#4c5d75">Uso de IA → Modelos</text>
+      <rect x="615" y="20" width="230" height="80" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/><text x="730" y="46" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">API de Anthropic</text><text x="730" y="65" text-anchor="middle" font-size="12" fill="#4c5d75">caché de prompt (recibos)</text><text x="730" y="82" text-anchor="middle" font-size="12" fill="#4c5d75">effort bajo si el modelo razona</text>
+      <rect x="615" y="130" width="230" height="80" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="730" y="156" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">UsoIA</text><text x="730" y="175" text-anchor="middle" font-size="12" fill="#4c5d75">tokens, duración y PRECIO</text><text x="730" y="192" text-anchor="middle" font-size="12" fill="#4c5d75">congelado en cada fila</text>
+      <rect x="615" y="230" width="230" height="60" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5" stroke-dasharray="6 4"/><text x="730" y="256" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Laboratorio (aislado)</text><text x="730" y="274" text-anchor="middle" font-size="12" fill="#4c5d75">OpenAI, Kimi, Qwen</text>
+      <path d="M265 50H300V150H345M265 125H320V150H345M265 200H320V150H345M265 267H300V150H345" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6f-flecha)"/>
+      <path d="M535 150H575V60H615M535 150H575V170H615" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6f-flecha)"/>
+    </svg>
+    <figcaption>Los modelos de la figura son los valores por defecto (constantes <code>MODELO</code> de cada módulo). Plataforma puede cambiarlos sin tocar código; el costo queda registrado con el precio vigente en ese momento.</figcaption>
+  </figure>
+
+  <p>La tabla de la figura muestra el default de cada módulo. En el catálogo de <code>data/precios_ia.json</code> (leído el 11 de octubre de 2026) hay además Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5 y Haiku 4.5, con precios de lista en dólares por millón de tokens (Sonnet 5 a 2 de entrada y 10 de salida; Sonnet 4.6 a 3 y 15; Opus 5 a 5 y 25).</p>
+  <div class="par-capturas">
+  <figure class="fig captura" data-captura="p-modelos">
+    <figcaption>Uso de IA → Modelos, en <code>/plataforma</code>: un selector por uso, con el precio de cada modelo y el aviso de que el cambio rige desde la llamada siguiente para todos los sindicatos. Se ve el default (Sonnet 4.6) en recibos y Opus 5 en convenio.</figcaption>
+  </figure>
+  <figure class="fig captura" data-captura="p-uso-ia">
+    <figcaption>Uso de IA → Consumo y costo: filtros, totales (llamadas, costo, tiempo mediano, tokens) y una fila por llamada. Las tres filas de la captura dicen «mock — no hubo llamada a la API»: son lecturas simuladas y no aportan costo ni tiempo.</figcaption>
+  </figure>
+  </div>
+
+  <h4>Reglas que cuidan el costo y la exactitud</h4>
+  <ul>
+    <li><b>El precio queda congelado.</b> <code>UsoIA</code> guarda el precio por millón de tokens vigente al llamar y la duración; actualizar la lista de precios no reescribe el gasto anterior. Un modelo fuera del catálogo muestra «—», nunca «US$ 0,00».</li>
+    <li><b>Caché de prompt encendida</b> (<code>EXTRACTOR_CACHE=1</code>): baja el costo por recibo de US$ 0,0237 a 0,0178 (−25 %) con Sonnet 5.5.</li>
+    <li><b>Sonnet 5.5, no Haiku 5.5, lee los recibos</b> (decisión del 5 de noviembre de 2026). Con 600 recibos de prueba del lote de La Bancaria (armados con el convenio 18/75 y resultado esperado conocido), Haiku cuesta 12 veces menos pero no es más rápido y lee exacto algo menos (98,0 % contra 99,8 %); una lectura inexacta es una diferencia inventada contra un afiliado.</li>
+    <li><b><code>MAX_TOKENS</code> = 8.000 y no se baja</b>: con el tope viejo de 2.000 los modelos que razonan devolvían el JSON cortado. El tope no se paga; se paga lo generado.</li>
+    <li><b>Una lectura fallida también se registra</b>: ya se pagó.</li>
+    <li><b>El enmascarado es de mejor esfuerzo</b>: se tapan CUIL, nombre y datos de la empresa antes de mandar la imagen, pero si no se pudo tapar el recibo se analiza igual y queda un registro.</li>
+  </ul>
+
+  <h4>Banco de pruebas y Laboratorio</h4>
+  <p>El <b>Banco de pruebas</b> (en <code>/plataforma</code>) lee el mismo recibo con varios modelos de Anthropic y los compara línea por línea, no solo en los totales: dos modelos pueden coincidir en el neto y clasificar distinto un concepto, y eso mueve la retención sindical. El <b>Laboratorio de modelos</b> (herramienta de <code>/entornos</code>) hace lo mismo pero aislado de la app y abierto a otros proveedores por formato OpenAI (GPT, Kimi, Qwen): mismo prompt, ensayos guardados sin identidad, y no cambia el modelo de ningún uso real. Su referencia es el modelo que hoy lee recibos en producción, y la pantalla dice solo qué impacto tendría cada diferencia en el sistema.</p>
+  <figure class="fig captura" data-captura="x-laboratorio">
+    <figcaption>El Laboratorio de modelos: a la izquierda se elige el archivo y los modelos (cada uno con su precio de lista; el de producción viene marcado «producción hoy»); arriba, los avisos de que esta captura se tomó con el extractor simulado y el enmascarado apagado.</figcaption>
+  </figure>
+
+  <div class="nota tecnico"><span class="rot">Embeddings locales del convenio</span>
+    <p>Las consultas al convenio buscan fragmentos con embeddings calculados en el propio servidor: <code>fastembed</code> con <code>intfloat/multilingual-e5-large</code>, vectores de 1.024 dimensiones en pgvector (94 % de recall@8 contra 76 % y 47 % de otros dos modelos medidos). La librería va pinneada exacta porque una versión cambió el pooling y nada fallaba: los vectores viejos dejaban de ser comparables en silencio. La indexación corre en un hilo, no en el request.</p>
+  </div>
+
+  <h3 id="cap-6-observabilidad"><span class="n">6.6</span>Observabilidad</h3>
+  <p>La regla cero: <b>el observador vive afuera de lo que observa</b>. Si la app, la base o Render se caen, la vigilancia sigue y avisa. La app es la puerta para mirar, nunca el motor que mide.</p>
+
+  <figure class="fig diagrama">
+    <svg viewBox="0 0 860 380" role="img" aria-label="Observabilidad: la app y Render son observados desde afuera por Grafana, Sentry y Telegram">
+      <defs><marker id="f6g-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
+      <rect x="15" y="130" width="210" height="130" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/><text x="120" y="158" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Lo observado</text><text x="120" y="184" text-anchor="middle" font-size="12" fill="#16243a">App en Render</text><text x="120" y="201" text-anchor="middle" font-size="12" fill="#16243a">(/healthz, /readyz)</text><text x="120" y="224" text-anchor="middle" font-size="12" fill="#16243a">Base Postgres</text><text x="120" y="246" text-anchor="middle" font-size="12" fill="#4c5d75">Errores E-... con ref</text>
+      <rect x="320" y="15" width="270" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="455" y="40" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Grafana Cloud: uptime</text><text x="455" y="59" text-anchor="middle" font-size="12" fill="#4c5d75">sondas desde Ohio y São Paulo;</text><text x="455" y="76" text-anchor="middle" font-size="12" fill="#4c5d75">alerta solo si fallan todas</text><text x="455" y="94" text-anchor="middle" font-size="12" fill="#4c5d75">/healthz cada 2 min · /readyz cada 3</text>
+      <rect x="320" y="125" width="270" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="455" y="150" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Grafana Cloud: métricas</text><text x="455" y="169" text-anchor="middle" font-size="12" fill="#4c5d75">colector de la API de Render:</text><text x="455" y="186" text-anchor="middle" font-size="12" fill="#4c5d75">CPU, memoria, pedidos, 5xx, latencia,</text><text x="455" y="203" text-anchor="middle" font-size="12" fill="#4c5d75">conexiones; tres vías que se cubren</text>
+      <rect x="320" y="235" width="270" height="70" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/><text x="455" y="262" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Sentry</text><text x="455" y="281" text-anchor="middle" font-size="12" fill="#4c5d75">errores no previstos, sin personas</text><text x="455" y="297" text-anchor="middle" font-size="12" fill="#4c5d75">con ref, rol y sindicato</text>
+      <rect x="320" y="318" width="270" height="55" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="455" y="342" text-anchor="middle" font-size="13" fill="#16243a" font-weight="700">Telegram (Colm3na_bot)</text><text x="455" y="360" text-anchor="middle" font-size="12" fill="#4c5d75">error al instante · resumen 21:00</text>
+      <rect x="670" y="105" width="175" height="130" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/><text x="757" y="133" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Quien recibe</text><text x="757" y="158" text-anchor="middle" font-size="12" fill="#16243a">Mail de SDN: solo 4</text><text x="757" y="175" text-anchor="middle" font-size="12" fill="#16243a">eventos y mantenimiento</text><text x="757" y="198" text-anchor="middle" font-size="12" fill="#16243a">Teléfono: Telegram</text><text x="757" y="220" text-anchor="middle" font-size="12" fill="#4c5d75">repite cada 24 h</text>
+      <path d="M225 170L320 60M225 195H320M225 220L320 265M225 240L320 345" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6g-flecha)"/>
+      <path d="M590 60L670 140M590 170L670 170M590 270L670 200M590 345L670 215" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f6g-flecha)"/>
+    </svg>
+    <figcaption>Cada frente observa por su cuenta. Los avisos se limitan a lo que de verdad requiere acción, para no acostumbrar a ignorarlos.</figcaption>
+  </figure>
+
+  <ul>
+    <li><b>Grafana Cloud</b>: uptime sobre <code>/healthz</code> y <code>/readyz</code>, tablero «Pruebas · Estado general» y alertas de 5xx, CPU, memoria y colector mudo. La configuración vive como código en <code>observabilidad/config.json</code> (scripts <code>aplicar_*.py</code> idempotentes).</li>
+    <li><b>Colector de métricas</b> por tres vías que escriben lo mismo: GitHub Actions (que no dispara de forma confiable), un hilo de la app y un disparador de Grafana.</li>
+    <li><b>Sentry</b> recibe solo errores no previstos, con código, ruta, rol e ID de sindicato; sin cuerpos de pedidos, cookies, IP ni nombres. La persona ve en pantalla una <code>ref</code> de 8 caracteres para encontrar el error exacto.</li>
+    <li><b>Telegram</b>: errores al instante y resumen diario a las 21:00 de Buenos Aires.</li>
+    <li><b>Errores con código propio</b> (<code>errores.py</code>): todo error visible lleva un <code>E-...</code>; solo los de lectura pueden decir «probá con otra foto».</li>
+  </ul>
+  <div class="nota regla"><span class="rot">Alcance actual</span>
+    <p>La observabilidad está completa <b>solo en Pruebas</b>; replicarla en Demo y Producción tiene un procedimiento escrito (<code>docs/OBSERVABILIDAD.md</code>) y no se ejecutó. Faltan métricas propias de la app y el resumen de errores por sindicato.</p>
+  </div>
+
+
+  <figure class="fig captura" data-captura="x-sala-de-mando">
+    <figcaption>La Sala de mando (<code>/entornos/esquema</code>): el esquema físico de la plataforma, con las zonas de color (desarrollo, Render, servicios externos, seguridad, observabilidad), los dos entornos y los recorridos animados. Arriba a la derecha, el semáforo general; en esta captura figura «sin vigilancia configurada» porque se tomó en un entorno local sin Grafana.</figcaption>
+  </figure>
+  <p id="cap-6-sala">La <b>Sala de mando</b> y la pestaña <b>Observabilidad</b> de <code>/entornos</code> (gráficos de Grafana, errores de Sentry, vencimientos) son la <b>puerta</b>: leen con tokens de solo lectura. Los indicadores salen de la base del entorno, el estado de cada entorno de su <code>/api/version</code> y la seguridad del registro XSK. Existen solo donde hay distintivo de entorno (404 en Demo), detrás del PIN o de un usuario de plataforma.</p>
+
+  <h3 id="cap-6-conocimiento"><span class="n">6.7</span>Herramientas de conocimiento del código</h3>
+  <p>Con cientos de rutas y decenas de tablas, nadie tiene el sistema entero en la cabeza. Tres herramientas, generadas del propio código para no quedar atrasadas:</p>
+  <div class="grilla-3">
+    <div class="tarjeta miel"><h4>Mapa funcional</h4><p>Qué aplicación contiene qué funcionalidad, con sus pantallas, rutas, tablas y servicios, en lista y en grafo. Se arma con <code>ast</code> sobre el código desplegado y se renueva con cada deploy. Es orientación, no fuente de verdad.</p></div>
+    <div class="tarjeta azul"><h4>Documentación técnica generada</h4><p><code>docs/generador/</code> lee el código y arma <code>recursos/documentacion-tecnica.html</code> con diagramas SVG; se corre a mano tras cambios grandes.</p></div>
+    <div class="tarjeta verde"><h4>Recursos</h4><p>La documentación del proyecto catalogada en <code>/entornos</code>, con miniatura y fecha.</p></div>
+  </div>
+  <figure class="fig captura" data-captura="x-mapa-funcional">
+    <figcaption>El mapa funcional en vista de grafo: cada aplicación (afiliado, sindicato, plataforma, empresa, entornos) con sus funcionalidades alrededor; al hacer clic en una se despliegan sus pantallas, código, tablas y servicios. A la izquierda, la vista de lista con el total de rutas.</figcaption>
+  </figure>
+  <div class="nota pendiente"><span class="rot">Documentos atrasados</span>
+    <p>Varios documentos de <code>recursos/</code> (por ejemplo, <code>ESTADO_DEL_PROYECTO.md</code>, de agosto de 2026) están desactualizados. Manda el código y, después, <code>CLAUDE.md</code>; el mapa de documentos es <code>docs/INDICE.md</code>.</p>
+  </div>
+</section>

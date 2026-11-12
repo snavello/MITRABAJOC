@@ -1,0 +1,74 @@
+[
+ {
+  "termino": "XSK",
+  "definicion": "XSANDERS Security Kit: el método propio con que se evalúa, registra y corrige la seguridad de Colm3na, en diez etapas y nueve ejes."
+ },
+ {
+  "termino": "Hallazgo",
+  "definicion": "Un problema de seguridad registrado en un archivo, con su riesgo, su estado y su test de regresión. Nunca se borra, solo cambia de estado."
+ },
+ {
+  "termino": "Fail-closed",
+  "definicion": "Criterio de diseño: ante la duda o el olvido, el sistema rechaza en vez de permitir."
+ },
+ {
+  "termino": "Riesgo (XSK)",
+  "definicion": "Probabilidad (1 a 5) por daño (1 a 5). De 15 a 25 es Crítico, de 10 a 14 Alto, de 5 a 9 Medio y de 1 a 4 Bajo."
+ },
+ {
+  "termino": "Criterio de salida",
+  "definicion": "Condición para salir a producción: ningún hallazgo Crítico ni Alto abierto o en corrección, y el perímetro verificado."
+ },
+ {
+  "termino": "Perímetro",
+  "definicion": "La capa externa que frena ataques antes de que lleguen a la app (por ejemplo, Cloudflare con dominio propio)."
+ },
+ {
+  "termino": "Encargado del tratamiento",
+  "definicion": "Quien procesa datos personales por cuenta del responsable. Colm3na lo es respecto de la base de afiliados de cada sindicato."
+ },
+ {
+  "termino": "Ley 25.326",
+  "definicion": "Ley argentina de protección de datos personales; considera sensible la afiliación sindical."
+ },
+ {
+  "termino": "Enmascarado",
+  "definicion": "Tapar en el servidor los datos que identifican a la persona antes de mandar un documento a la IA. Es de mejor esfuerzo: nunca estorba a la lectura."
+ },
+ {
+  "termino": "PBKDF2",
+  "definicion": "Método para guardar claves de forma que no se puedan leer, repitiendo un cálculo muchas veces (hoy 300.000)."
+ },
+ {
+  "termino": "Cláusula de confidencialidad",
+  "definicion": "Acuerdo firmado que habilita al sindicato a ver, sin nombre ni empresa, los recibos que el afiliado no le envió."
+ },
+ {
+  "termino": "Umbral de encuestas",
+  "definicion": "Mínimo de respuestas por grupo para mostrar un resultado de una encuesta anónima; evita identificar personas en grupos chicos."
+ },
+ {
+  "termino": "CSP",
+  "definicion": "Política de seguridad de contenido: cabecera que limita qué puede cargar y ejecutar una página en el navegador."
+ },
+ {
+  "termino": "Alcance de seccional",
+  "definicion": "Recorte de lo que un usuario ve y toca según su seccional, aplicado dentro de la consulta a la base."
+ },
+ {
+  "termino": "Piloto",
+  "definicion": "Primera etapa con afiliados reales, en un grupo acotado de seccionales, antes de abrir a todo el padrón."
+ },
+ {
+  "termino": "Oleada",
+  "definicion": "Tanda de seccionales que se invitan juntas durante el despliegue general."
+ },
+ {
+  "termino": "Criterio de listo",
+  "definicion": "Lista verificable que debe cumplirse para dar por cerrada una fase de la implementación."
+ },
+ {
+  "termino": "UsoIA",
+  "definicion": "Tabla que registra cada lectura con la IA: modelo, tokens, duración y el precio vigente ese día."
+ }
+]

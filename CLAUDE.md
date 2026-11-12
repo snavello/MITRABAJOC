@@ -192,6 +192,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   de `diagramas.py` y los textos de `contenido.py`. Se corre a mano tras
   cambios grandes: `python docs/generador/extraer.py && python
   docs/generador/generar.py`.
+- docs/integrador/ — **Documento integrador** (`recursos/colm3na-integrador.html`,
+  «Colm3na, de punta a punta»): un HTML por capítulo en `partes/`, 77 capturas
+  reales en `capturas/` (`manifest.json`, `LISTA.md`), `estilo.css` y
+  `COMPONENTES.md` (cómo se escribe una parte). Se regenera a mano con
+  `python docs/integrador/armar.py` (`--pdf` mide las páginas A4 y rehace la
+  miniatura); conviene actualizarlo tras cambios grandes de funcionalidad.
 - correo.py — el canal de mail (Resend, un POST con urllib, sin librería):
   códigos de registro y de recuperación de clave. `destino_valido` es la
   única puerta por la que sale una dirección; `pista()` la muestra tapada.
@@ -1741,6 +1747,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `test_fiesta_pantallas.py`, robot `e2e/test_robot_fiesta.py`. **Queda de
     SDN**: crear la aplicación en MercadoPago y cargar `MP_ACCESS_TOKEN` y
     `MP_WEBHOOK_SECRET` de prueba en Pruebas; probar la cámara en un teléfono.
+
+49. **Documento integrador** (2026-11-12, Plataforma 0.68.02; pedido de SDN): para
+    quien se suma al equipo y para funcionarios de los sindicatos. Ocho capítulos
+    (ecosistema; actores y módulos; ventajas; mapa de las apps y `/entornos`;
+    descripción funcional con énfasis en recibos y trámites; modelo técnico;
+    seguridad y auditabilidad; implementación) más glosario, 32 diagramas y 74
+    capturas reales de la app con los datos sintéticos de la demo, todo contrastado
+    contra el código. HTML autocontenido, claro e imprimible (~118 páginas A4), en
+    Recursos de `/entornos`. Fuentes en `docs/integrador/`.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
