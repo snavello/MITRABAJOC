@@ -2,65 +2,50 @@
 
 <h3 id="cap-5-configuracion"><span class="n">5.11</span>Configuración general y módulos</h3>
 
-<p>Antes de que un afiliado suba su primer recibo, alguien tuvo que dar de alta al sindicato: ponerle nombre, logo y colores, decidir qué funcionalidades tiene contratadas y dejar a su primer administrador con la puerta abierta. Eso se hace en <b>plataforma</b>, el panel de Colm3na como operador. Un sindicato no se da de alta solo: es una decisión comercial y por eso la toma Colm3na.</p>
-
-<h4>El alta de un sindicato</h4>
-<p>La ficha del sindicato en <code>/plataforma</code> junta todo lo que lo define:</p>
-<div class="tabla-cont"><table class="tabla">
-<thead><tr><th>Dato</th><th>Para qué sirve</th></tr></thead>
-<tbody>
-<tr><td>Nombre, sigla y datos institucionales</td><td>Aparecen en el encabezado, la credencial, la verificación pública y los títulos del navegador (<em>Pantalla — Sindicato</em>).</td></tr>
-<tr><td>Logo</td><td>Se guarda en la base, se achica a webp en el servidor y se muestra a la izquierda de cada encabezado. Ver 5.14.</td></tr>
-<tr><td>Cuatro colores de marca</td><td>Base, primario, acento y apoyo. La <b>base tiene que ser oscura</b>: si se carga una clara, el alta se rechaza.</td></tr>
-<tr><td>Módulos habilitados</td><td>Qué funcionalidades tiene el sindicato (ver más abajo).</td></tr>
-<tr><td>Cláusula de confidencialidad y contrato</td><td>Plataforma sube el contrato firmado y marca la cláusula, con quién y cuándo. Sin ella el sindicato no ve las filas de recibos que el afiliado no envió, ni siquiera anonimizadas. Los números agregados del Panel cuentan todo igual.</td></tr>
-<tr><td>Política de mail declarado</td><td>Si el sindicato acepta que quien no tiene mail en el padrón se registre declarando uno (ver 5.13).</td></tr>
-<tr><td>Color destacado del Panel</td><td>Un color solo para selecciones y filtros activos del Panel Sindical. Lo edita únicamente plataforma.</td></tr>
-<tr><td>Modelo y paleta de diseño</td><td>Qué modelo ve por defecto su gente y si usa los colores de Colm3na o los suyos (ver 5.14).</td></tr>
-</tbody></table></div>
+<p>Antes de que un afiliado suba su primer recibo, alguien dio de alta al sindicato: nombre, logo, colores, funcionalidades contratadas y un primer administrador. Eso se hace en <b>plataforma</b>, el panel de Colm3na como operador. Un sindicato no se da de alta solo: es una decisión comercial.</p>
 
 <div class="par-capturas">
-<figure class="fig captura" data-captura="p-sindicato-ficha"><figcaption>La ficha de un sindicato en plataforma: datos, los cuatro colores, los módulos con casillas y la cláusula de confidencialidad.</figcaption></figure>
+<figure class="fig captura" data-captura="p-sindicato-ficha"><figcaption>La ficha de un sindicato (la de la UOM de la demo): datos del gremio, los cinco colores con la «Prueba de lectura», logo y firma de la autoridad, las casillas de módulos y, al final, el contrato, la cláusula de confidencialidad y la política de mail declarado. A la izquierda, el menú de plataforma.</figcaption></figure>
 </div>
 
-<h4>El primer Super Admin</h4>
-<p>Un sindicato recién creado está vacío: nadie puede entrar a su panel. Por eso, en la misma pantalla, plataforma usa «Crear un administrador de sindicato»: escribe el CUIL, el nombre y una <b>clave inicial</b> que le pasa a la persona por fuera de la app. En su primer ingreso esa clave la obliga a elegir una propia (se cuenta en 5.13). Desde ahí, ese Super Admin da de alta al resto de su equipo.</p>
+<div class="tabla-cont"><table class="tabla">
+<thead><tr><th>Dato de la ficha</th><th>Para qué sirve</th></tr></thead>
+<tbody>
+<tr><td>Nombre, CUIT, autoridad y su firma</td><td>Encabezado, credencial (lleva la firma), verificación pública y títulos del navegador.</td></tr>
+<tr><td>Logo y colores</td><td>Logo achicado a webp en el servidor (ver <a href="#cap-5-marca">5.14</a>). Colores base, primario, acento y apoyo, más un destacado solo para filtros del Panel. <b>La base tiene que ser oscura</b>: si no, el alta se rechaza.</td></tr>
+<tr><td>Módulos</td><td>Qué funcionalidades tiene el sindicato (abajo).</td></tr>
+<tr><td>Cláusula de confidencialidad y contrato</td><td>Con el contrato firmado cargado, el sindicato ve también los recibos que el afiliado no envió, siempre anonimizados. Los números agregados del Panel cuentan todo igual.</td></tr>
+<tr><td>Mail declarado</td><td>Si el sindicato acepta que se registre con un mail propio quien no tiene mail en el padrón (<a href="#cap-5-cuentas">5.13</a>).</td></tr>
+</tbody></table></div>
+
+<p>Un sindicato recién creado no tiene quién entre a su panel, así que plataforma usa «Nuevo admin»: escribe el CUIL, el nombre y una <b>clave inicial</b> que le pasa a la persona por fuera de la app. Ese primer Super Admin da de alta al resto del equipo (5.13).</p>
 
 <h4>Módulos habilitables</h4>
-<p>No todos los sindicatos contratan todo. Los <b>módulos</b> son las funcionalidades que Colm3na enciende sindicato por sindicato: Tu recibo, Mis aportes, Credencial, Capacitación, Noticias, Beneficios, Notificaciones, Trámites, Empleadores, Consultas sobre el convenio, Panel Sindical, Encuestas y Tu día. Los siete de origen (recibos, aportes, credencial, capacitación, noticias, beneficios y Tu día) nacen tildados en un alta nueva; los demás son opt-in: ningún sindicato los estrena sin pedirlos. Trabajadores y Seccionales no dependen de ningún módulo: siempre están.</p>
+<p>Los <b>módulos</b> son las funcionalidades que Colm3na enciende sindicato por sindicato. Son <b>13</b>: Tu recibo, Mis aportes, Credencial, Capacitación, Noticias, Beneficios y Tu día (los <b>7 de origen</b>, tildados en un alta nueva) y Notificaciones, Trámites, Empleadores, Consultas sobre el convenio, Panel Sindical y Encuestas (los <b>6 opt-in</b>, que nadie estrena sin pedirlos). Trabajadores y Seccionales no dependen de ningún módulo.</p>
 
-<div class="nota regla"><span class="rot">Regla vigente</span><p>Un módulo apagado no solo esconde el botón: el servidor lo rechaza con un 403 si alguien arma el pedido a mano. Ocultar en la pantalla sin cerrar la puerta del backend no sería seguridad.</p></div>
+<div class="nota regla"><span class="rot">Regla vigente</span><p>Un módulo apagado no solo esconde el botón: el servidor lo rechaza con 403 si alguien arma el pedido a mano. La ficha <b>solo cambia los módulos que mostró</b>: una pantalla abierta antes de que un módulo existiera no lo apaga al guardar (así se perdió «Tu día» en un sindicato en octubre de 2026).</p></div>
 
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>El catálogo vive en <code>modulos.py</code> (<code>MODULOS</code> y <code>MODULOS_INICIALES</code>); la lista habilitada es <code>Sindicato.modulos_habilitados</code> (JSONB) y el rechazo lo hace <code>_exigir_modulo</code> en <code>main.py</code>. La ficha de <code>/plataforma</code> <b>solo cambia los módulos que mostró</b> (<code>modulos_ofrecidos</code>, <code>_modulos_tras_editar</code>): una pantalla abierta antes de que un módulo existiera no lo apaga al guardar. Así se perdió «Tu día» en un sindicato en octubre de 2026, y de ahí nace la regla.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Catálogo en <code>modulos.py</code> (<code>MODULOS</code>, <code>MODULOS_INICIALES</code>); lista habilitada en <code>Sindicato.modulos_habilitados</code> (JSONB); rechazo en <code>_exigir_modulo</code> (<code>main.py</code>); edición segura con <code>modulos_ofrecidos</code> y <code>_modulos_tras_editar</code>.</p></div>
 
-<h4>Configuración propia de la plataforma</h4>
-<p>Hay parámetros que no son de ningún sindicato sino de toda la plataforma, y los toca solo el admin de plataforma (tabla <code>ConfiguracionPlataforma</code>, una única fila):</p>
-<ul>
-<li><b>Modelo de IA de cada uso</b>: lectura de recibos, consultas sobre el convenio, Asistente del Panel y Asistente de trámites. Vacío significa «el que viene por defecto en el código»; un modelo fuera del catálogo de precios no se guarda.</li>
-<li><b>Tope sindical</b> (2 % por defecto, art. 133 de la Ley 27.802): el límite a las cargas sindicales de convenio que el motor de validación controla en todos los recibos.</li>
-<li><b>Umbrales del semáforo por empresa</b> del Panel: verde hasta 35 días desde el último depósito, amarillo hasta 60, rojo después.</li>
-<li><b>Umbral mínimo de las encuestas</b> (5 respuestas): por debajo no se muestra ni se exporta un grupo.</li>
-<li><b>Marca de la propia plataforma</b> (logos claro y oscuro, colores de Colm3na) y el interruptor del carril «Consultas al asistente» del Panel, hoy apagado.</li>
-</ul>
-<p>La <b>tolerancia</b> con la que se compara un aporte calculado contra el del recibo no es global: es de cada regla (por defecto $ 1), y la edita el Super Admin del sindicato en la pestaña Reglas.</p>
+<h4>Configuración de toda la plataforma</h4>
+<p>Hay parámetros que no son de ningún sindicato y los toca solo plataforma (<code>ConfiguracionPlataforma</code>, una fila): el <b>modelo de IA de cada uso</b> (recibos, convenio, Asistente del Panel, Asistente de trámites; vacío = el default del código); el <b>tope sindical</b> (2 %, art. 133 de la Ley 27.802); los <b>umbrales del semáforo por empresa</b> (verde hasta 35 días desde el último depósito, amarillo hasta 60); el <b>umbral mínimo de encuestas</b> (5); y la marca de la propia plataforma. La <b>tolerancia</b> al comparar un aporte contra el del recibo no es global: es de cada regla ($ 1 por defecto) y la edita el Super Admin en <i>Reglas</i>.</p>
 
 <h3 id="cap-5-perfiles"><span class="n">5.12</span>Perfiles: roles, áreas, permisos y alcance</h3>
 
-<p>Hasta septiembre de 2026 el panel del sindicato era todo o nada: quien entraba veía todo. Eso no sirve en un gremio real, donde Prensa lanza las noticias, una seccional atiende solo a sus afiliados y la conducción únicamente lee resultados. El sistema de <b>Áreas V2</b> resolvió esto con dos ejes que se cruzan: el <b>área</b> dice <em>qué</em> hace una persona; la <b>seccional</b> dice <em>sobre quiénes</em>.</p>
+<p>Hasta septiembre de 2026 el panel era todo o nada. Eso no sirve en un gremio real, donde Prensa lanza las noticias, una seccional atiende solo a sus afiliados y la conducción únicamente lee resultados. El sistema de <b>Áreas V2</b> lo resolvió con dos ejes que se cruzan (la idea general, en el <a href="#cap-2">capítulo 2</a>): el <b>área</b> dice <em>qué</em> hace una persona; la <b>seccional</b> dice <em>sobre quiénes</em>.</p>
 
-<h4>Los tres roles del panel</h4>
 <div class="grilla-3">
-<div class="tarjeta miel"><h4>Super Admin</h4><p>El Admin de Sede Central. Ve todas las secciones que el sindicato contrató, sobre todas las seccionales. Es el único que maneja Áreas y Usuarios.</p></div>
-<div class="tarjeta azul"><h4>Admin de Seccional</h4><p>«El admin grande en chiquito»: las mismas secciones, pero acotado a su seccional. Da de alta usuarios de la suya, nunca Super Admins.</p></div>
-<div class="tarjeta verde"><h4>Usuario de área</h4><p>Ve solo las secciones que le da su área y solo sobre el alcance de su seccional. Prensa, Trámites, Afiliaciones: cada equipo con lo suyo.</p></div>
+<div class="tarjeta miel"><h4>Super Admin</h4><p>El Admin de Sede Central. Ve todo lo contratado sobre todas las seccionales y es el único que maneja Áreas y Usuarios.</p></div>
+<div class="tarjeta azul"><h4>Admin de Seccional</h4><p>«El admin grande en chiquito»: las mismas secciones, acotado a su seccional. Da de alta usuarios de la suya, <b>nunca un Super Admin</b>.</p></div>
+<div class="tarjeta verde"><h4>Usuario de área</h4><p>Solo las secciones que le da su área y solo sobre su seccional: Prensa, Trámites, Afiliaciones.</p></div>
 </div>
 
 <div class="par-capturas">
-<figure class="fig captura" data-captura="s-areas-usuarios"><figcaption>Áreas y Usuarios: a la izquierda las áreas con su perfil de permisos agrupados por Recibos, Padrón, Comunicación, Trámites y Empleadores; a la derecha los usuarios con rol, seccional y área.</figcaption></figure>
+<figure class="fig captura" data-captura="s-areas-usuarios"><figcaption>Áreas y Usuarios, sub-pestaña Áreas: el alta de un área (nombre y seccional) con sus permisos tildables, agrupados en Recibos, Padrón, Comunicación, Trámites y Empleadores. La otra sub-pestaña es Usuarios.</figcaption></figure>
 </div>
 
-<h4>De dónde sale lo que puede tocar cada persona</h4>
-<p>Los <b>módulos</b> dicen qué contrató el sindicato (lo decide plataforma); los <b>permisos</b> dicen qué puede tocar cada usuario dentro de eso (lo decide el Super Admin). Un módulo abre varias secciones, por eso el permiso se guarda por sección: «Recibos» abre Reportes, Reglas, Conceptos, Aprendizaje y Panel Sindical. Son 20 secciones agrupadas en Recibos, Padrón, Comunicación, Trámites y Empleadores; Trámites y Encuestas se parten en dos (responder o leer / diseñar o armar) porque en un gremio grande lo hacen personas distintas.</p>
+<h4 id="cap-5d-perfiles">Permisos efectivos y alcance</h4>
+<p>Los <b>módulos</b> dicen qué contrató el sindicato; los <b>permisos</b>, qué puede tocar cada usuario dentro de eso. Un módulo abre varias secciones, por eso el permiso se guarda por sección: son <b>20 secciones</b> más «Áreas y Usuarios» (exclusiva del Super Admin, no asignable). Trámites y Encuestas se parten en dos (responder o leer / diseñar o armar) porque en un gremio grande lo hacen personas distintas.</p>
 
 <figure class="fig diagrama">
 <svg viewBox="0 0 860 300" role="img" aria-label="Cálculo del permiso efectivo de un usuario de área">
@@ -100,91 +85,40 @@
 <figcaption>El permiso efectivo: ((área + agregados) − bloqueados) ∩ secciones de los módulos contratados. El bloqueo le gana al área y a un agregado; apagar un módulo quita los permisos viejos sin limpiar filas.</figcaption>
 </figure>
 
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Catálogo en <code>permisos.py</code> (<code>SECCIONES</code>; <code>areas_usuarios</code> es aparte, exclusiva del Super Admin, y nunca asignable). Cálculo en <code>permisos.calcular_efectivos</code> y <code>db.permisos_efectivos</code>, que se resuelve contra la base en <b>cada request</b> y no viaja en la cookie: quitar un permiso vale ya, no cuando vence la sesión. Super Admin y Admin de Seccional pasan por el mismo filtro de módulos. Tablas: <code>Area</code>, <code>PermisoArea</code>, <code>PermisoUsuario</code> (<code>agregar</code>/<code>bloquear</code>).</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>permisos.py</code> (<code>SECCIONES</code>, <code>calcular_efectivos</code>) y <code>db.permisos_efectivos</code>, que se resuelve contra la base en <b>cada request</b>: quitar un permiso vale ya, no cuando vence la sesión. Tablas <code>Area</code>, <code>PermisoArea</code>, <code>PermisoUsuario</code> (<code>agregar</code>/<code>bloquear</code>). Cada ruta <code>/admin/*</code> está clasificada en <code>PERMISOS_RUTAS</code> (118 rutas) y se verifica en <code>exigir_sindicato()</code>: <b>una ruta sin clasificar se rechaza</b>, así el olvido se nota en las pruebas.</p></div>
 
-<h4>Gateo fail-closed de las rutas</h4>
-<p>Cada ruta <code>/admin/*</code> está asignada a una sección en <code>PERMISOS_RUTAS</code> (<code>main.py</code>) y se verifica dentro de <code>exigir_sindicato()</code>. <b>Una ruta que nadie clasificó se rechaza</b>: el olvido se nota en las pruebas en vez de filtrarse a producción. Las únicas exentas (login, salir, portada) están en una lista corta y explícita.</p>
-
-<h4>El alcance: sobre quiénes</h4>
-<p>El área no dice sobre qué afiliados trabaja alguien: eso lo dice la <b>seccional</b>. Un usuario y su área tienen que ser de la misma seccional. La regla de alcance es una sola para los tres roles: <b>todas</b> las seccionales (Super Admin, o una seccional con la casilla «ve todas», como Sede Central), <b>solo la suya</b>, o ninguna (el caso defensivo de un dato incompleto: ante la duda, no ve nada antes que verlo todo).</p>
-
-<figure class="fig diagrama">
-<svg viewBox="0 0 860 330" role="img" aria-label="Alcance por seccional: qué ve cada rol del padrón de un sindicato">
-<defs><marker id="f5d-fl2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
-<rect x="300" y="20" width="260" height="46" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-<text x="430" y="48" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#0a1421">Padrón y trámites del sindicato</text>
-<rect x="40" y="120" width="170" height="60" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-<text x="125" y="146" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Sede Central</text>
-<text x="125" y="166" text-anchor="middle" font-size="12" fill="#4c5d75">ve_todas</text>
-<rect x="245" y="120" width="170" height="60" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-<text x="330" y="146" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Rosario</text>
-<text x="330" y="166" text-anchor="middle" font-size="12" fill="#4c5d75">seccional</text>
-<rect x="450" y="120" width="170" height="60" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-<text x="535" y="146" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Córdoba</text>
-<text x="535" y="166" text-anchor="middle" font-size="12" fill="#4c5d75">seccional</text>
-<rect x="655" y="120" width="170" height="60" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-<text x="740" y="146" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Otras seccionales</text>
-<text x="740" y="166" text-anchor="middle" font-size="12" fill="#4c5d75">seccional</text>
-<path d="M430 66L125 120" stroke="#4c5d75" stroke-width="1.2" fill="none" marker-end="url(#f5d-fl2)"/>
-<path d="M430 66L330 120" stroke="#4c5d75" stroke-width="1.2" fill="none" marker-end="url(#f5d-fl2)"/>
-<path d="M430 66L535 120" stroke="#4c5d75" stroke-width="1.2" fill="none" marker-end="url(#f5d-fl2)"/>
-<path d="M430 66L740 120" stroke="#4c5d75" stroke-width="1.2" fill="none" marker-end="url(#f5d-fl2)"/>
-<rect x="40" y="235" width="250" height="70" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-<text x="165" y="262" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Super Admin / usuario de Sede Central</text>
-<text x="165" y="284" text-anchor="middle" font-size="12" fill="#4c5d75">alcanza todas las seccionales</text>
-<rect x="320" y="235" width="250" height="70" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-<text x="445" y="262" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Admin de Seccional de Rosario</text>
-<text x="445" y="284" text-anchor="middle" font-size="12" fill="#4c5d75">solo Rosario, recortado en la consulta</text>
-<rect x="600" y="235" width="230" height="70" rx="10" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
-<text x="715" y="262" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Datos incompletos</text>
-<text x="715" y="284" text-anchor="middle" font-size="12" fill="#4c5d75">sin seccional: no ve nada</text>
-<path d="M165 235L125 180" stroke="#f0a01e" stroke-width="2" fill="none" marker-end="url(#f5d-fl2)"/>
-<path d="M445 235L330 180" stroke="#0d7a5f" stroke-width="2" fill="none" marker-end="url(#f5d-fl2)"/>
-</svg>
-<figcaption>Alcance por seccional: el usuario de Sede Central (con «ve todas») abarca todo el padrón; el de Rosario solo ve lo de Rosario, y el recorte se aplica dentro de la consulta, no después.</figcaption>
-</figure>
-
-<h4>Qué cambia para quien está acotado</h4>
+<p>El <b>alcance</b> responde sobre quiénes: <b>todas</b> las seccionales (Super Admin, o una seccional con «ve todas», como Sede Central), <b>solo la suya</b>, o <b>ninguna</b> si el dato está incompleto (ante la duda, no ve nada). Un usuario y su área deben ser de la misma seccional. Para quien está acotado:</p>
 <ul>
-<li><b>El recorte va en la consulta</b> (<code>db.alcance_seccional</code>): padrón, trámites, notificaciones, reportes, encuestas, listas y el Panel Sindical (<code>dashboard.imponer_alcance</code>). Nunca se trae todo para filtrar después.</li>
-<li><b>Altas solo en su seccional</b>: una alta o carga masiva con otra seccional es rechazada; vacía significa «la mía».</li>
-<li><b>Noticias, Beneficios y formularios</b>: ve los propios y los globales, pero edita o borra solo lo que cae entero dentro de su alcance.</li>
-<li><b>Catálogo en solo lectura</b>: Conceptos, Reglas, Aprendizaje y Convenio son del sindicato entero; el admin local los ve pero no los modifica.</li>
-<li><b>Sin Empleadores</b>: las empresas no tienen seccional, así que quien está acotado no ve esas tres secciones.</li>
+<li><b>El recorte va dentro de la consulta</b> (<code>db.alcance_seccional</code>): padrón, trámites, notificaciones, reportes, encuestas, listas y Panel Sindical (<code>dashboard.imponer_alcance</code>), nunca filtrando después.</li>
+<li><b>Altas solo en su seccional</b>; vacía significa «la mía», otra se rechaza.</li>
+<li><b>Noticias, Beneficios y formularios</b>: ve los suyos y los globales, edita solo lo que cae entero en su alcance.</li>
+<li><b>Catálogo en solo lectura</b> (Conceptos, Reglas, Aprendizaje, Convenio) y <b>sin Empleadores</b>, que no tienen seccional.</li>
 </ul>
 
 <div class="par-capturas">
-<figure class="fig captura" data-captura="s-acotado"><figcaption>El panel visto por un Admin de Seccional: mismas pestañas, menos filas, sin Empleadores y con el catálogo como lectura.</figcaption></figure>
+<figure class="fig captura" data-captura="s-acotado"><figcaption>La portada del panel vista por una Admin de Seccional de Rosario: «Admin de Seccional» bajo su nombre, y tarjetas con las cifras de su alcance (51 afiliados activos). No aparecen Empleadores ni Áreas y Usuarios.</figcaption></figure>
 </div>
 
-<div class="nota regla"><span class="rot">Regla vigente</span><p><b>La pantalla no ofrece lo que el servidor va a descartar.</b> Todo selector de seccional dibuja solo las que la persona alcanza; con una sola, es un texto fijo («Va a tu seccional»). Esta regla nació de ver a un admin local elegir otras seccionales como destino de una noticia: el servidor lo hubiera frenado, pero la pantalla no debía ofrecérselo.</p></div>
-
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Planes: <code>SPRINT_AREAS_V2.md</code> y <code>PLAN_ALCANCE_SECCIONAL.md</code> (seis bloques más el 7). Red de pruebas: <code>test_alcance_seccional_panel.py</code> clasifica toda ruta <code>/admin/*</code> por su relación con la seccional (fail-closed) y <code>test_alcance_seccional_pantalla.py</code> recorre las casillas del HTML. Un admin de seccional con <code>ve_todas</code> alcanza todo: es lo correcto para una regional que supervisa a otras.</p></div>
+<div class="nota regla"><span class="rot">Regla vigente</span><p><b>La pantalla no ofrece lo que el servidor va a descartar.</b> Todo selector de seccional dibuja solo las que la persona alcanza; con una sola, texto fijo («Va a tu seccional»). Nació de ver a un admin local elegir otras seccionales como destino de una noticia.</p></div>
 
 <h3 id="cap-5-cuentas"><span class="n">5.13</span>Cuentas, registro, niveles de fiabilidad y claves</h3>
 
-<h4>Una persona, una identidad</h4>
-<p>El CUIL (afiliado) y el CUIT (empresa) son la identidad en toda la plataforma: una persona tiene <b>una sola cuenta</b>, aunque esté empadronada en varios sindicatos (pluriempleo). La cuenta es la persona (<code>CuentaTrabajador</code>, una fila por CUIL, dueña de nombre, domicilio, teléfono y mail); el <em>empadronamiento</em> en cada sindicato (<code>Trabajador</code>) guarda solo lo que cambia de un gremio a otro. Lo que corrige el sindicato de un gremio lo ven la persona y los demás gremios, y esto se dice en pantalla.</p>
-<p>El número no se acepta cualquiera: se exige el <b>dígito verificador módulo 11</b> en el momento en que nace (altas, carga masiva, registros), y una vez cargado no se cambia desde ninguna edición, porque cambiarlo en una sola tabla cortaría la cuenta, los recibos y los trámites de la persona. La única vía es un script que lo cambia en todas las tablas a la vez y deja traza.</p>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>cuit.py</code> es la única implementación (<code>es_valido</code>, <code>normalizar</code>, <code>corregir</code>); <code>test_cuit.py</code> falla si otro módulo escribe los pesos. Donde se <em>referencia</em> un número ya existente (logins, filtros) se busca tal cual. Error de edición: <code>E-IDENT-03</code>; conversión masiva: <code>regularizar_cuit.py</code> con traza en <code>CambioIdentificador</code>.</p></div>
+<p>El CUIL (afiliado) y el CUIT (empresa) son la identidad en toda la plataforma: una persona tiene <b>una sola cuenta</b> aunque esté en varios sindicatos; la distinción entre cuenta y empadronamiento está en el <a href="#cap-2">capítulo 2</a>. El número se acepta solo con el <b>dígito verificador módulo 11</b> en el momento en que nace (altas, carga masiva, registros) y, una vez cargado, no se cambia desde ninguna edición: cambiarlo en una sola tabla cortaría la cuenta, los recibos y los trámites de la persona. La única vía es un script que lo cambia en todas las tablas y deja traza.</p>
 
-<h4>El registro del afiliado, en tres pasos</h4>
-<p>El CUIL es un dato público, así que no alcanza para probar que quien se registra es quien dice ser. Por eso el registro se confirma por mail:</p>
-<ol class="pasos">
-<li><b>CUIL, captcha y freno</b>Se ingresa el CUIL, se resuelve un captcha (Cloudflare Turnstile) y un freno por IP encarece el tanteo masivo de CUILes.</li>
-<li><b>Código al mail</b>Llega un código de 6 dígitos (vence a los 15 minutos, cinco intentos) al <b>mail del padrón</b>; si no hay y el sindicato lo acepta, a un mail que la persona declara.</li>
-<li><b>Clave y datos</b>Elige su clave y completa los mismos campos que después podrá editar en su perfil.</li>
-</ol>
-
-<div class="lado izq"><figure class="fig captura" data-captura="t-registro"><figcaption>El primer paso del registro en el teléfono: el CUIL y el captcha antes de que salga ningún código.</figcaption></figure>
+<h4>El registro en tres pasos</h4>
+<p>El CUIL es público, así que no prueba que quien se registra sea quien dice. Por eso el registro se confirma por mail:</p>
+<div class="lado izq"><figure class="fig captura" data-captura="t-registro"><figcaption>Primer paso del registro: la pestaña «Registrarme», los tres pasos numerados y el campo CUIL. Donde el captcha está configurado, se dibuja en este paso.</figcaption></figure>
 <div>
-<h5>Tres mails que no se mezclan</h5>
-<p>Una cuenta puede tener tres mails y cada uno cumple un rol distinto: el <b>del padrón</b> lo escribe solo el sindicato y es el destino de los códigos; el <b>declarado</b> lo escribe la persona y vale una vez confirmado; el <b>de contacto</b> lo edita la persona en su perfil y <em>no sirve</em> para recibir códigos. Separarlos evita que alguien se apropie de una cuenta cambiando su propio mail de contacto.</p>
-<p>La recuperación de clave por autoservicio sale solo al mail del padrón y responde lo mismo exista o no la cuenta.</p>
+<ol class="pasos">
+<li><b>CUIL, captcha y freno</b>Captcha (Cloudflare Turnstile) y freno por IP contra el tanteo de CUILes.</li>
+<li><b>Código al mail</b>Seis dígitos, válido 15 minutos, con cinco intentos, al <b>mail del padrón</b> o, si el sindicato lo acepta, a uno que la persona declara.</li>
+<li><b>Clave y datos</b>Los mismos campos que luego edita en su perfil.</li>
+</ol>
+<p>Una cuenta tiene <b>tres mails que no se mezclan</b>: el <b>del padrón</b> (lo escribe solo el sindicato; recibe los códigos), el <b>declarado</b> (lo escribe la persona; vale confirmado) y el <b>de contacto</b> (editable, no sirve para códigos). Así nadie se apropia de una cuenta cambiando su mail de contacto. La recuperación de clave sale solo al mail del padrón y responde igual exista o no la cuenta.</p>
 </div></div>
 
 <h4>Niveles de fiabilidad</h4>
-<p>Cada cuenta lleva un nivel que dice cuánta certeza hay de que es quien dice ser. <b>Sube y no baja.</b> El sindicato lo ve en Trabajadores y Empleadores y puede actuar. Importante: ningún nivel esconde funciones en la app; es un dato para el sindicato, no una barrera para el afiliado.</p>
+<p>Cada cuenta lleva un nivel que dice cuánta certeza hay de que es quien dice ser. <b>Sube y no baja.</b> El sindicato lo ve en Trabajadores y Empleadores y puede actuar; ningún nivel esconde funciones en la app.</p>
 
 <figure class="fig diagrama">
 <svg viewBox="0 0 860 330" role="img" aria-label="Los tres pasos del registro y los cuatro niveles de fiabilidad">
@@ -229,131 +163,66 @@
 <figcaption>Los tres pasos del registro y quién sube cada nivel. El nivel 3 se logra solo cuando la IA lee un recibo del propio CUIL, no por lo que el navegador declare.</figcaption>
 </figure>
 
-<div class="nota regla"><span class="rot">Regla vigente</span><p><b>Un sindicato solo responde por una cuenta si la persona ya estaba en SU padrón cuando la creó.</b> Si no, no le restablece la clave, no la confirma, no le pisa los datos y el panel no le muestra el nivel. Un administrador puede cargar cualquier CUIL (es público): sin esta regla, podría tomar cuentas de otro gremio dándolas de alta en el suyo.</p></div>
+<div class="nota regla"><span class="rot">Regla vigente</span><p><b>Un sindicato solo responde por una cuenta si la persona ya estaba en SU padrón cuando la creó.</b> Si no, no le restablece la clave, no la confirma, no le pisa los datos y el panel no le muestra el nivel. Un admin puede cargar cualquier CUIL (es público): sin esta regla podría tomar cuentas de otro gremio.</p></div>
 
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>db.NIVELES_FIABILIDAD</code> y <code>ORIGENES_NIVEL</code> (<code>cuil_padron</code> 1, <code>mail_padron</code>/<code>mail_declarado</code> 2, <code>recibo_propio</code> 3, <code>presencial</code> 4); la única escritura es <code>db.subir_nivel</code>. Códigos en <code>CodigoVerificacion</code> (tope por persona y por mail de destino); <code>correo.py</code> (Resend) y <code>captcha.py</code> (Turnstile, falla cerrado, CSP ensanchada solo en <code>/ingresar*</code>). Respuesta del padrón: <code>db.padron_responde_por</code>. Riesgo residual aceptado (H-0022): registro y recuperación revelan si un CUIL está afiliado; lo encarecen captcha y freno, lo cierra el perímetro.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>db.NIVELES_FIABILIDAD</code>/<code>ORIGENES_NIVEL</code>; única escritura <code>db.subir_nivel</code>. Códigos en <code>CodigoVerificacion</code>; <code>correo.py</code> (Resend) y <code>captcha.py</code> (falla cerrado). <code>cuit.py</code> es la única implementación del módulo 11. Riesgo residual aceptado (H-0022): registro y recuperación revelan si un CUIL está afiliado; lo encarecen captcha y freno, lo cierra el perímetro.</p></div>
 
 <div class="par-capturas">
-<figure class="fig captura" data-captura="t-perfil"><figcaption>Tu perfil: datos personales, domicilio y la elección del modelo de diseño. Los mismos campos que pide el registro.</figcaption></figure>
+<figure class="fig captura" data-captura="t-perfil"><figcaption>Tu perfil (hoja completa): datos personales y domicilio, con provincia y localidad obligatorias; la elección entre Laguna y Noticiero; y al final «Mi seccional» con su mapa y los botones Llamar, WhatsApp y Cómo llegar.</figcaption></figure>
 </div>
 
 <h4>Ingreso con Google</h4>
-<p>«Continuar con Google» es una identidad <b>alternativa</b> para cuentas que <em>ya existen</em>. Nunca crea una cuenta ni reemplaza la clave. Google verifica el mail y la plataforma lo busca en la ficha de una única cuenta del rol (afiliado, empresa o panel). Una clave transitoria frena a Google. Si una persona tiene cuentas con el mismo CUIL en varios roles, el <code>sub</code> de Google vale para todas, pero el panel solo reconoce una cuenta de afiliado cuando ésta prueba su identidad (mail del padrón, recibo propio o presencial): una cuenta de afiliado creada con un CUIL ajeno y un Gmail tipeado no abre el panel.</p>
+<p>«Continuar con Google» aparece <b>solo donde el entorno tiene configuradas las claves de Google</b> (no lo habilita el sindicato) y es una identidad <b>alternativa</b> para cuentas que <em>ya existen</em>: nunca crea una cuenta ni reemplaza la clave. Google verifica el mail y la plataforma lo busca en la ficha de una única cuenta del rol. El panel solo reconoce una cuenta de afiliado del mismo CUIL si esta prueba su identidad (mail del padrón, recibo propio o presencial): una cuenta creada con un CUIL ajeno y un Gmail tipeado no abre el panel.</p>
 
-<h4>La clave del panel: una por persona</h4>
-<p>Quien trabaja en el panel de más de un sindicato entra con <b>una única clave</b> (<code>CuentaPanel</code>, por CUIL) y elige el sindicato después del login. La fija el primer sindicato que da de alta a la persona; los siguientes no la pisan, porque si pudieran, el admin de un gremio entraría al panel de otro con una clave elegida por él.</p>
-
+<h4>Altas de administradores y claves del panel</h4>
+<p>Quien trabaja en el panel de varios sindicatos tiene <b>una sola clave</b> (<code>CuentaPanel</code>, por CUIL) y elige el sindicato después del login. La fija el primer sindicato que lo da de alta; los siguientes no la pisan, porque si pudieran el admin de un gremio entraría al panel de otro con una clave elegida por él.</p>
 <div class="tabla-cont"><table class="tabla">
 <thead><tr><th>Quién entra</th><th>Quién lo da de alta</th><th>Dónde</th></tr></thead>
 <tbody>
-<tr><td>Primer administrador de un sindicato</td><td>Plataforma</td><td><code>/plataforma</code> → «Crear un administrador de sindicato»</td></tr>
-<tr><td>Cualquier otro usuario del sindicato</td><td>El Super Admin (un Admin de Seccional, solo usuarios de su seccional)</td><td><code>/admin</code> → Áreas y Usuarios → Usuarios</td></tr>
-<tr><td>Usuario de plataforma</td><td>Un superadmin de plataforma</td><td><code>/plataforma/usuarios</code> (clave transitoria que vence a los 7 días)</td></tr>
+<tr><td>Primer administrador de un sindicato</td><td>Plataforma</td><td><code>/plataforma</code> → «Nuevo admin»</td></tr>
+<tr><td>Otro Super Admin</td><td>Un Super Admin del sindicato</td><td><code>/admin</code> → Áreas y Usuarios → Usuarios</td></tr>
+<tr><td>Admin de Seccional o usuario de área</td><td>El Super Admin, o un Admin de Seccional dentro de su seccional</td><td>La misma pantalla</td></tr>
+<tr><td>Usuario de plataforma</td><td>Un superadmin de plataforma</td><td><code>/plataforma/usuarios</code> (clave transitoria, vence a los 7 días)</td></tr>
 </tbody></table></div>
+<p>La <b>clave inicial es transitoria</b>: la escribe quien da el alta y se la pasa a la persona por fuera de la app. En el primer ingreso no abre la sesión: la app lleva a «Elegí tu clave» (la transitoria, una nueva de al menos 8 caracteres y repetirla). Después, «Cambiar mi clave» en Tu cuenta. Si alguien la olvida, el Super Admin usa «Restablecer clave»: genera una transitoria al azar, la muestra <b>una sola vez</b> y el próximo ingreso vuelve a pedir una propia. No puede restablecerse a sí mismo ni a quien trabaja también en otro sindicato; ese caso lo resuelve plataforma.</p>
+<div class="nota pendiente"><span class="rot">Pendiente</span><p>Decisión abierta: la clave transitoria del panel no vence (la de plataforma sí) y la que escribe quien da el alta no tiene largo mínimo (la que elige la persona, 8).</p></div>
+<p>La sesión vence por <b>inactividad</b> (15 minutos; cada pedido la renueva) y cada rol tiene <b>su propia cookie</b>, así dos pestañas con roles distintos no se pisan. Las claves usan PBKDF2 (300.000 vueltas) y la identidad va firmada dentro del token.</p>
 
-<p>La <b>clave inicial es transitoria</b>: la escribe quien da el alta y se la pasa a la persona por fuera de la app. En el primer ingreso la clave es correcta pero no abre la sesión: la app lleva a «Elegí tu clave» (clave transitoria, la nueva de al menos 8 caracteres, repetirla; el pase dura 10 minutos). Después, cualquier operador puede usar «Cambiar mi clave» desde Tu cuenta. Si alguien olvida la suya, el Super Admin usa «Restablecer clave» en la fila del usuario: se genera una transitoria al azar, se muestra <b>una sola vez</b> y el próximo ingreso vuelve a «Elegí tu clave». No puede restablecerse a sí mismo, ni a quien trabaja también en otro sindicato (esa clave abre otro panel): ese caso lo resuelve plataforma.</p>
-
-<div class="nota pendiente"><span class="rot">Pendiente</span><p>Decisión abierta: la clave transitoria del panel no vence (la de plataforma sí, a los 7 días) y la que escribe quien da el alta no tiene largo mínimo (la que elige la persona sí: 8). A confirmar con SDN.</p></div>
-
-<h4>Sesión y cookies</h4>
-<p>La sesión vence por <b>inactividad</b>: 15 minutos sin uso. Cada pedido autenticado la renueva, así que quien está trabajando nunca se desloguea solo. Cada rol tiene <b>su propia cookie</b> (sindicato, plataforma, trabajador, empleador): dos pestañas con roles distintos no se pisan la sesión. Las claves se guardan con PBKDF2 (300.000 vueltas) y la identidad del afiliado y de la empresa viaja firmada dentro del token, nunca en una cookie plana.</p>
-
-<h4>A futuro: verificar la identidad de verdad</h4>
-<div class="nota pendiente"><span class="rot">En prueba, no está en la app del afiliado</span><p>Hoy un nivel 3 prueba que la persona tiene un recibo suyo; no prueba que sea quien dice. Para avanzar hacia verificar a la persona, en <code>/entornos</code> → Herramientas hay una <b>Verificación de identidad</b> de uso interno con el proveedor Didit: selfie con cámara en vivo, foto del DNI (y dorso), prueba de vida, comparación de cara y consulta al RENAPER, con chequeos locales previos (CUIL módulo 11, DNI igual a los dígitos del CUIL). Corta apenas un paso rechaza, para no gastar. <b>Ninguna imagen se guarda</b> y los casos de prueba no llevan CUIL, nombre ni DNI. Quedan por decidir el proveedor definitivo y quién paga cada verificación.</p></div>
-<div class="par-capturas">
-<figure class="fig captura" data-captura="x-identidad"><figcaption>La herramienta de verificación de identidad en el teléfono: el recorrido que hoy se prueba internamente, antes de pensarlo para el afiliado.</figcaption></figure>
+<h4>Verificación de identidad: una prueba interna</h4>
+<div class="lado"><div>
+<p>Un nivel 3 prueba que la persona tiene un recibo suyo, no que sea quien dice. Para explorar algo más fuerte, en <code>/entornos</code> → Herramientas hay una <b>Verificación de identidad</b> de uso interno con el proveedor Didit: selfie con cámara en vivo, foto del DNI, prueba de vida, comparación de cara y consulta al RENAPER, con chequeos locales previos. Corta apenas un paso rechaza. <b>Ninguna imagen se guarda</b> y los casos no llevan CUIL, nombre ni DNI.</p>
+<div class="nota pendiente"><span class="rot">En prueba, no está en la app del afiliado</span><p>Quedan por decidir el proveedor definitivo y quién paga cada verificación.</p></div>
 </div>
+<figure class="fig captura" data-captura="x-identidad"><figcaption>La herramienta en el teléfono: el primer paso (datos) de cuatro, y debajo las opciones de prueba, el detalle y los casos guardados, todavía vacíos.</figcaption></figure></div>
 
 <h3 id="cap-5-marca"><span class="n">5.14</span>Imagen de marca y del sindicato</h3>
 
-<p>Un afiliado de la UOM y uno de La Bancaria usan la misma app, pero cada uno ve <em>su</em> sindicato: su logo, sus colores, su portada. Esa personalización está acotada a propósito para que ninguna combinación rompa la lectura ni confunda un estado de alerta.</p>
+<p>Un afiliado de la UOM y uno de La Bancaria usan la misma app, pero cada uno ve <em>su</em> sindicato: su logo, sus colores, su portada. La personalización está acotada para que ninguna combinación rompa la lectura ni confunda un estado de alerta.</p>
 
-<h4>Los cuatro colores</h4>
-<figure class="fig diagrama">
-<svg viewBox="0 0 860 340" role="img" aria-label="De los cuatro colores del sindicato a lo que pintan en pantalla">
-<defs><marker id="f5d-fl4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4c5d75"/></marker></defs>
-<rect x="20" y="20" width="200" height="60" rx="10" fill="#0a1421"/>
-<text x="120" y="46" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#ffffff">--marca-base</text>
-<text x="120" y="66" text-anchor="middle" font-size="12" fill="#ffffff">oscuro obligatorio</text>
-<rect x="20" y="100" width="200" height="60" rx="10" fill="#2e5c8a"/>
-<text x="120" y="126" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#ffffff">--marca-primario</text>
-<text x="120" y="146" text-anchor="middle" font-size="12" fill="#ffffff">color institucional</text>
-<rect x="20" y="180" width="200" height="60" rx="10" fill="#f0a01e"/>
-<text x="120" y="206" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">--marca-acento</text>
-<text x="120" y="226" text-anchor="middle" font-size="12" fill="#0a1421">acción</text>
-<rect x="20" y="260" width="200" height="60" rx="10" fill="#0d7a5f"/>
-<text x="120" y="286" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#ffffff">--marca-apoyo</text>
-<text x="120" y="306" text-anchor="middle" font-size="12" fill="#ffffff">apoyo</text>
-<rect x="320" y="120" width="190" height="100" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-<text x="415" y="148" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Paleta legible</text>
-<text x="415" y="170" text-anchor="middle" font-size="12" fill="#4c5d75">corrige cada color al</text>
-<text x="415" y="186" text-anchor="middle" font-size="12" fill="#4c5d75">contraste WCAG 4,5:1</text>
-<text x="415" y="206" text-anchor="middle" font-size="12" fill="#4c5d75">conserva el tono</text>
-<rect x="610" y="20" width="230" height="60" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-<text x="725" y="46" text-anchor="middle" font-size="13" fill="#16243a">Fondo de portada, encabezados,</text>
-<text x="725" y="64" text-anchor="middle" font-size="13" fill="#16243a">barra inferior</text>
-<rect x="610" y="100" width="230" height="60" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-<text x="725" y="126" text-anchor="middle" font-size="13" fill="#16243a">Bordes activos, detalles,</text>
-<text x="725" y="144" text-anchor="middle" font-size="13" fill="#16243a">logo de respaldo</text>
-<rect x="610" y="180" width="230" height="60" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-<text x="725" y="206" text-anchor="middle" font-size="13" fill="#16243a">Botón principal, tarjeta</text>
-<text x="725" y="224" text-anchor="middle" font-size="13" fill="#16243a">destacada, pestaña activa</text>
-<rect x="610" y="260" width="230" height="60" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-<text x="725" y="286" text-anchor="middle" font-size="13" fill="#16243a">Chips, fondos suaves,</text>
-<text x="725" y="304" text-anchor="middle" font-size="13" fill="#16243a">íconos secundarios</text>
-<path d="M220 50L320 150" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M220 130L320 160" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M220 210L320 185" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M220 290L320 200" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M510 150L610 50" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M510 160L610 130" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M510 180L610 210" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-<path d="M510 195L610 290" stroke="#4c5d75" stroke-width="1.3" fill="none" marker-end="url(#f5d-fl4)"/>
-</svg>
-<figcaption>De los cuatro colores cargados en el alta a lo que pintan, pasando por la paleta legible, que ajusta el tono solo cuando el contraste no alcanza.</figcaption>
-</figure>
-
-<p>Las superficies intermedias no se cargan: se derivan de la base con <code>color-mix</code>, así que un solo color genera toda la escala oscura.</p>
-
-<div class="nota regla"><span class="rot">Regla vigente</span><p><b>Los colores de estado no toman la marca nunca.</b> Verde pagado, amarillo parcial, rojo impago/error son fijos para todos los sindicatos, igual que la tipografía, los grises y los radios. Un sindicato con acento rojo no puede hacer que el semáforo confunda «impago» con «marca». Lo mismo, los avisos de error de los ingresos van en rojo fijo.</p></div>
-
-<h4>Logo y encabezado</h4>
-<p>El logo se sube una vez y se achica en el servidor (lado mayor de 512 px, siempre webp, con transparencia si la tiene; admite SVG liviano y sin scripts). Un PNG con fondo transparente se ve transparente de verdad: si el sindicato quiere un fondo, lo sube dentro del archivo. Las cuatro apps comparten <b>un único encabezado de una línea</b>: el logo del gremio a la izquierda, grande, y Colm3na a la derecha, chico. El gremio manda y Colm3na firma. Sin logo, aparece el nombre en texto.</p>
+<h4>Colores, logo y encabezado</h4>
+<p>Cuatro colores: la <b>base</b> (oscura obligatoria; fondo de portada y encabezados), el <b>primario</b> (bordes y detalles), el <b>acento</b> (botón principal y pestaña activa) y el <b>apoyo</b> (chips y fondos suaves). Las superficies intermedias se derivan de la base con <code>color-mix</code>.</p>
+<div class="nota regla"><span class="rot">Regla vigente</span><p><b>Los colores de estado no toman la marca nunca</b>: verde pagado, amarillo parcial y rojo impago o error son fijos para todos los sindicatos, igual que la tipografía y los grises. Así un acento rojo no confunde «impago» con «marca».</p></div>
+<p>El logo se sube una vez y se achica en el servidor (512 px, webp, SVG liviano y sin scripts); un PNG transparente se ve transparente. Las cuatro apps comparten <b>un encabezado de una línea</b>: logo del gremio a la izquierda, grande; Colm3na a la derecha, chico. El gremio manda y Colm3na firma.</p>
 
 <h4>Dos modelos de diseño</h4>
-<p>La plataforma ofrece dos modelos visuales completos, que se aplican a las cuatro pantallas principales: <b>Laguna</b> (por defecto: portada en verde agua, turquesa y azul, interior liviano y blanco) y <b>Noticiero</b> (papel claro, tinta índigo y un solo color vivo, como un diario). Quién decide:</p>
-<ul>
-<li>El <b>sindicato</b> elige el modelo por defecto de su gente (uno para afiliados y otro para operadores del panel).</li>
-<li>Cada <b>persona</b> puede cambiarlo en su cuenta (Tu perfil del afiliado; «Tu modelo» en Tu cuenta del panel). Su elección vale por encima de la del sindicato.</li>
-<li>La <b>paleta</b> —colores de Colm3na o colores del sindicato— la decide siempre el sindicato, nunca la persona.</li>
-</ul>
+<p><b>Laguna</b> (por defecto: portada en verde agua, turquesa y azul, interior liviano) y <b>Noticiero</b> (papel claro, tinta índigo y un solo color vivo, como un diario). El <b>sindicato</b> elige el modelo por defecto (uno para afiliados, otro para operadores) y la <b>persona</b> puede cambiarlo en su cuenta, por encima del sindicato. La <b>paleta</b> (colores de Colm3na o del sindicato) la decide siempre el sindicato.</p>
 <div class="par-capturas">
-<figure class="fig captura" data-captura="t-portada-noticiero"><figcaption>La portada del afiliado con el modelo Noticiero en el teléfono: papel claro, una nota de tapa y el acceso al recibo.</figcaption></figure>
-<figure class="fig captura" data-captura="s-portada-noticiero"><figcaption>La portada del panel del sindicato con el mismo modelo: el modelo cambia la ropa, no las funciones.</figcaption></figure>
+<figure class="fig captura" data-captura="t-portada-noticiero"><figcaption>La portada del afiliado en Noticiero: papel claro, títulos en condensada, cinta «Último» con las noticias, la franja de Tu día (25°, efeméride) y «Lo último» como nota de tapa.</figcaption></figure>
+<figure class="fig captura" data-captura="s-portada-noticiero"><figcaption>La portada del panel en Noticiero (Super Admin): las mismas tarjetas de acceso que en Laguna con otra ropa. El modelo cambia el aspecto, no las funciones.</figcaption></figure>
 </div>
-<div class="nota regla"><span class="rot">Regla vigente</span><p>Todo cambio visual se aplica a los dos modelos, salvo indicación expresa. Una condición escrita para uno solo es una señal de alarma: ya pasó que un logo oscuro funcionaba en Laguna y quedaba invisible sobre el encabezado gris claro de Noticiero.</p></div>
+<div class="nota regla"><span class="rot">Regla vigente</span><p>Todo cambio visual se aplica a los dos modelos, salvo indicación expresa: una condición escrita para uno solo es señal de alarma (un logo oscuro se veía en Laguna y quedaba invisible sobre el encabezado claro de Noticiero).</p></div>
 
-<h4>La prueba de lectura y la paleta legible</h4>
-<p>Si el sindicato elige sus propios colores, el modelo escribirá texto sobre ellos. Antes de aceptarlos, el Super Admin ve la <b>prueba de lectura</b>: cada combinación de texto y fondo con su contraste (WCAG 2.x: 4,5:1 para texto común, 3:1 para títulos grandes). La plataforma no bloquea una paleta floja: la <b>corrige sola</b>. La paleta legible calcula una vez los colores definitivos —el texto sobre el acento, el acento como texto, el primario y la base como fondo, la base como tinta— y los vuelca como variables. Un color que ya se lee queda tal cual; uno que no, se corre hacia el blanco o el negro lo justo, conservando el tono. La prueba muestra el color original y el corregido. Medido sobre las 52 vistas, una paleta adversaria pasó de cientos de textos ilegibles a cero.</p>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>temas.py</code> (catálogo, <code>resolver_tema</code>, <code>prueba_de_lectura</code>, <code>paleta_legible</code>; puro); parcial <code>templates/_paleta_legible.html</code>. Columnas: <code>CuentaTrabajador.tema</code>, <code>CuentaPanel.tema</code>, <code>CuentaEmpleador.tema</code>, <code>UsuarioPlataforma.tema</code>, <code>Sindicato.tema_afiliados</code>/<code>tema_panel</code>/<code>paleta_tema</code>. Una hoja por modelo y pantalla en <code>static/temas/</code>, cargada con sello <code>?v=</code>; el valor fuera del catálogo cae al modelo por defecto. Ver <code>PLAN_TEMAS.md</code>.</p></div>
+<h4>Prueba de lectura y paleta legible</h4>
+<p>Si el sindicato usa sus propios colores, el modelo escribirá texto sobre ellos. El Super Admin ve la <b>prueba de lectura</b> (contraste WCAG: 4,5:1 para texto común, 3:1 para títulos grandes), y la plataforma no bloquea una paleta floja: la <b>corrige sola</b> con la <i>paleta legible</i>, que corre el color hacia el blanco o el negro lo justo y conserva el tono. La prueba muestra el original y el corregido (en la ficha de arriba, un acento amarillo claro de 1,84:1 se oscurece donde hace falta).</p>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>temas.py</code> (puro: <code>resolver_tema</code>, <code>prueba_de_lectura</code>, <code>paleta_legible</code>) y <code>templates/_paleta_legible.html</code>. Columnas <code>tema</code> en las cuentas de afiliado, panel, empresa y plataforma, y <code>Sindicato.tema_afiliados</code>/<code>tema_panel</code>/<code>paleta_tema</code>. Una hoja por modelo y pantalla en <code>static/temas/</code>, con sello <code>?v=</code>.</p></div>
 
 <h4>Las fotos de portada</h4>
-<p>La portada puede llevar una foto de ambiente. Hay dos orígenes: una <b>biblioteca global</b> que mantiene plataforma (pestaña Fotos de <code>/plataforma</code>, opcional) y las <b>fotos propias</b> que el Super Admin sube desde <code>/admin</code> → Apariencia, sin depender de nadie. Las propias son solo de ese sindicato: ni se listan, ni se editan, ni se eligen desde otro (un id ajeno da 404).</p>
-<ul>
-<li><b>Normalizada y a color</b>: cada foto se guarda en gris, ajustada de brillo y contraste, para que el texto siempre se lea; y en su versión original en color.</li>
-<li><b>Nivel de color por modelo</b>: el sindicato elige cuánto color se ve (normalizada, 25, 50, 75 % o full color); la portada funde la de color sobre la normalizada con esa opacidad. Se elige por modelo, nunca por foto.</li>
-<li><b>Punto de interés</b>: se marca dónde está lo importante de la foto para que el recorte de cada pantalla no lo corte.</li>
-<li><b>Reglas únicas</b>: formato, 8 MB, mínimo 600 px, lado largo 1.600 px; las leen las dos pantallas de un solo lugar (<code>fotos_tema.reglas()</code>).</li>
-<li>Las fotos de <b>Noticias y Beneficios</b> siguen la misma idea con su propio nivel, que rige solo donde el modelo las usa de ambiente; abiertas, se ven tal cual se subieron.</li>
-</ul>
+<p>Hay dos orígenes: una <b>biblioteca global</b> opcional que mantiene plataforma y las <b>fotos propias</b> que el Super Admin sube en <code>/admin</code> → Apariencia, sin depender de nadie; las propias son solo de ese sindicato (un id ajeno da 404). Cada foto se guarda <b>normalizada</b> (grises, brillo y contraste parejos) y en <b>color</b>; el sindicato elige por modelo cuánto color mostrar (normalizada, 25, 50, 75 % o full color), con un segundo nivel para las fotos de Noticias y Beneficios. Se marca un <b>punto de interés</b> para que el recorte no corte lo importante, y las reglas de imagen (8 MB, mínimo 600 px) viven en un solo lugar, <code>fotos_tema.reglas()</code>.</p>
 <div class="par-capturas">
-<figure class="fig captura" data-captura="s-apariencia"><figcaption>La pestaña Apariencia: modelo y paleta por defecto, nivel de color de las fotos, fotos propias y la franja «Tu día».</figcaption></figure>
-<figure class="fig captura" data-captura="p-fotos"><figcaption>La biblioteca global de fotos en plataforma: original, normalizada, punto de interés y para qué sindicatos se publica.</figcaption></figure>
+<figure class="fig captura" data-captura="s-apariencia"><figcaption>Apariencia (hoja completa): modelo por defecto para afiliados y para operadores, paleta con la prueba de lectura, niveles de color de las fotos, «Tus fotos de portada» (todavía sin fotos en la demo) y, abajo, la configuración de Tu día con sus rubros.</figcaption></figure>
+<figure class="fig captura" data-captura="p-fotos"><figcaption>La biblioteca global en plataforma (pestaña Fotos): selector Laguna o Noticiero y el cuadro para subir una foto. En esta instancia de la demo la biblioteca está vacía.</figcaption></figure>
 </div>
 
-<h4>La mesa de las pantallas interiores</h4>
-<p>Las pantallas interiores claras (recibos, trámites, tablas) no van sobre un plano liso sino sobre una «mesa» de tres capas que no tocan el contenido: un gris frío de fondo, una textura fija de colmena muy tenue con dos halos de los colores del sindicato, y una franja de marca que baja del encabezado y se desvanece. En el teléfono todo eso se apaga. Los logins, las portadas y las pantallas ya oscuras quedan afuera, porque tienen su propio ambiente.</p>
-
-<div class="nota ejemplo"><span class="rot">Ejemplo</span><p>Un sindicato con acento amarillo claro carga su paleta. La prueba de lectura avisa que el texto blanco sobre ese acento da 1,3:1. No lo rechaza: la paleta legible usa tinta oscura sobre el acento y oscurece el amarillo cuando se lo usa como texto sobre fondo claro. El afiliado ve un amarillo reconocible y puede leer todo.</p></div>
+<p>Las pantallas interiores claras van sobre una «mesa» de tres capas que no tocan el contenido (gris frío, textura tenue de colmena con halos de los colores del sindicato y una franja de marca que baja del encabezado); en el teléfono se apaga. Logins y portadas tienen su propio ambiente.</p>
 
 </section>

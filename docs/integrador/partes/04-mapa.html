@@ -2,13 +2,13 @@
   <header class="cap-cab">
     <span class="cap-num">04</span>
     <h2>Mapa general de las aplicaciones</h2>
-    <p class="cap-bajada">Una vista aérea: cuántas pantallas tiene Colm3na, quién entra a cada una, por dónde y qué encuentra al llegar.</p>
+    <p class="cap-bajada">Una vista aérea: quién entra a cada pantalla, por dónde y qué encuentra al llegar.</p>
   </header>
 
-  <p class="lead">Colm3na no es una sola pantalla sino <b>cinco superficies</b> que comparten base de datos, marca y reglas pero se entran por puertas distintas: la app del afiliado, el panel del sindicato, la plataforma de configuración, la app de la empresa y un entorno interno para el equipo. Este capítulo las recorre una por una; lo que hace cada función por dentro se cuenta en el <a href="#cap-5">capítulo 5</a>.</p>
+  <p class="lead">Colm3na son <b>cinco superficies</b> que comparten base de datos, marca y reglas pero se entran por puertas distintas: la app del afiliado, el panel del sindicato, la plataforma, la app de la empresa y un entorno interno para el equipo. Este capítulo las recorre con capturas reales de la demo; lo que cada función hace por dentro está en el <a href="#cap-5">capítulo 5</a>.</p>
 
   <h3 id="cap-4-mapa"><span class="n">4.1</span>Mapa general</h3>
-  <p>Cuatro de las cinco superficies tienen el mismo recorrido: una <b>pantalla de ingreso</b> (login), una <b>portada</b> con tarjetas de acceso y un <b>panel interno</b> donde se trabaja. La quinta, <code>/entornos</code>, es de uso interno y no la ven ni los afiliados ni los sindicatos.</p>
+  <p>Cuatro superficies siguen el mismo recorrido: <b>ingreso</b> (login), <b>portada</b> con tarjetas de acceso y <b>panel interno</b> donde se trabaja. La quinta, <code>/entornos</code>, es de uso interno.</p>
 
   <figure class="fig diagrama">
     <svg viewBox="0 0 860 470" role="img" aria-label="Mapa de las cinco superficies de Colm3na con su ruta de ingreso, portada y panel">
@@ -73,14 +73,10 @@
       <text x="34" y="414" font-size="13" fill="#16243a">Accesos a Pruebas y Demo · Recursos · Observabilidad · Seguridad · Mapa funcional · Planes · Herramientas</text>
       <text x="34" y="436" font-size="12" fill="#4c5d75">Detrás de PIN o de una sesión de plataforma. No es una app de usuarios finales.</text>
     </svg>
-    <figcaption>Las cinco superficies. Las cuatro de arriba siguen el patrón ingreso → portada → panel; la de abajo es la sala de máquinas del equipo.</figcaption>
+    <figcaption>Las cinco superficies. Las cuatro de arriba siguen el patrón ingreso, portada, panel; la de abajo es la sala de máquinas del equipo.</figcaption>
   </figure>
 
-  <h4>El patrón «portada + panel interno»</h4>
-  <p>Después de ingresar, la persona no cae en una tabla ni en un formulario: cae en una <b>portada</b> con tarjetas grandes y poca información (qué hay de nuevo, qué puede hacer). Recién al tocar una tarjeta entra al <b>panel interno</b>, que tiene las pestañas de trabajo. La decisión es de diseño y de uso: el afiliado, que muchas veces entra una vez al mes desde el celular, ve primero lo importante; el operador del sindicato ve primero su cuenta y sus accesos.</p>
-  <p>Cualquier rol nuevo que se agregue a la plataforma tiene que seguir el mismo patrón y llevar su propia cookie de sesión.</p>
-
-  <h4>Un mismo encabezado, de una línea, en todo</h4>
+  <p>Después de ingresar, la persona no cae en una tabla sino en una <b>portada</b> con tarjetas grandes y poca información; recién al tocar una entra al <b>panel interno</b>. El afiliado, que muchas veces entra una vez al mes desde el celular, ve primero lo importante; el operador, su cuenta y sus accesos. Un rol nuevo debería seguir el mismo patrón y llevar su propia cookie de sesión.</p>
   <figure class="fig diagrama">
     <svg viewBox="0 0 860 190" role="img" aria-label="Esquema del encabezado común: logo del sindicato a la izquierda y Colm3na a la derecha, con el modelo de diseño y la marca del gremio">
       <rect x="20" y="16" width="820" height="62" rx="10" fill="#0a1421"/>
@@ -96,248 +92,124 @@
     </svg>
     <figcaption>El encabezado común (parcial <code>_encabezado.html</code>): el gremio a la izquierda, Colm3na firmando a la derecha. Fuera de este sistema quedan los logins sueltos y las herramientas internas.</figcaption>
   </figure>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Cada rol lee y renueva <b>solo su cookie</b> (<code>sesion_trabajador</code>, <code>sesion_sindicato</code>, <code>sesion_plataforma</code>, <code>sesion_empleador</code>; <code>COOKIES_POR_ROL</code> en <code>main.py</code>). La sesión vence a los 15 minutos de inactividad y un middleware la renueva en cada pedido. El modelo visual (<code>laguna</code> por defecto o <code>noticiero</code>) lo elige la persona o su sindicato y cambia el aspecto, no las funciones.</p></div>
+  <p>La app del afiliado es una <b>PWA</b>: se instala desde el navegador, sin tienda, con un banner discreto (y guía paso a paso en iPhone). Puede recibir avisos push cuando hay novedades en un trámite, si el canal está configurado.</p>
 
-  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Cada rol lee y renueva <b>solo su propia cookie</b> (<code>sesion_trabajador</code>, <code>sesion_sindicato</code>, <code>sesion_plataforma</code>, <code>sesion_empleador</code>; mapa <code>COOKIES_POR_ROL</code> en <code>main.py</code>), de modo que dos pestañas con roles distintos no se pisan. La sesión vence por inactividad (15 minutos) y un middleware la renueva en cada request. El modelo visual (<code>laguna</code> por defecto o <code>noticiero</code>) lo elige la persona o su sindicato y cambia el aspecto, no las funciones.</p></div>
-
-  <h4>Una app instalable</h4>
-  <p>La app del afiliado es una <b>PWA</b>: se instala en el celular desde el navegador, con el ícono de Colm3na, sin pasar por una tienda de aplicaciones. Un banner discreto lo ofrece, y en iPhone hay una guía paso a paso. Es la misma app que se ve en el navegador, y puede recibir avisos push cuando el sindicato responde un trámite (si el canal de notificaciones está configurado).</p>
-
-  <!-- ===================== 4.2 ===================== -->
   <h3 id="cap-4-afiliado"><span class="n">4.2</span>La app del afiliado</h3>
-  <p>Es la cara más visible de Colm3na y está pensada <b>primero para el celular</b>: pantallas verticales, botones grandes, una barra de pestañas abajo. El afiliado entra con su <b>CUIL y su clave</b> en <code>/ingresar</code>; si todavía no tiene cuenta, se registra ahí mismo (el alta se cuenta en el <a href="#cap-5">capítulo 5</a>, apartado de cuentas y registro). También puede entrar con Google, si su cuenta ya existe y el entorno tiene ese ingreso configurado.</p>
-
+  <p>Está pensada <b>primero para el celular</b>: pantallas verticales, botones grandes, barra de pestañas abajo. Se entra con <b>CUIL y clave</b> en <code>/ingresar</code>; quien no tiene cuenta se registra ahí mismo (<a href="#cap-5-cuentas">5.13</a>). Donde el <em>entorno</em> tiene configuradas las claves de Google también aparece «Continuar con Google», que solo sirve para cuentas ya registradas y nunca crea una. Con pluriempleo, después del login se elige con qué sindicato entrar y la app se pinta con su marca.</p>
   <div class="par-capturas">
-    <figure class="fig captura" data-captura="t-ingreso"><figcaption>Ingreso del afiliado en <code>/ingresar</code>: CUIL y clave. Donde el entorno tiene configurado el ingreso con Google, aparece también «Continuar con Google».</figcaption></figure>
-    <figure class="fig captura" data-captura="t-portada"><figcaption>La portada del afiliado, <code>/app/inicio</code>, en el celular: arriba el saludo y la franja «Tu día»; debajo, novedades y accesos.</figcaption></figure>
+    <figure class="fig captura" data-captura="t-ingreso"><figcaption>Ingreso del afiliado: CUIL y clave, la pestaña «Registrarme» para quien entra por primera vez y «Olvidé mi clave». Es una pantalla de Colm3na, sin marca de gremio.</figcaption></figure>
+    <figure class="fig captura" data-captura="t-portada"><figcaption>La portada en el celular: saludo con la seccional, la franja «Tu día» (clima y un dato del día) y las novedades del sindicato; los accesos están más abajo.</figcaption></figure>
   </div>
-
-  <h4>Si el CUIL está en más de un sindicato</h4>
-  <p>Quien trabaja para dos empleadores de gremios distintos (<b>pluriempleo</b>) tiene un solo usuario para toda la plataforma, pero está empadronado en cada sindicato. Después del login, si hay más de uno, Colm3na le pregunta <b>con cuál quiere entrar</b>; toda la app se pinta con la marca del sindicato elegido y se puede cambiar cuando quiera.</p>
-
-  <h4>La portada</h4>
-  <p>La portada es la tarjeta de presentación del gremio: foto de portada elegida por el sindicato, el saludo, la seccional del afiliado, la franja <b>Tu día</b> (hora, clima, un dato del día o la trivia), la nota de tapa más reciente, los beneficios en un carrusel y los accesos. En escritorio se ordena en dos columnas; en el celular, en una sola.</p>
-  <figure class="fig captura" data-captura="t-portada-entera"><figcaption>La portada completa, de arriba abajo: las novedades del sindicato, la tarjeta de «Mis recibos» con cuántos verificó este año, los accesos y los beneficios.</figcaption></figure>
-
-  <h4>Las pestañas de <code>/app</code></h4>
-  <p>La barra inferior de <code>/app</code> muestra solo lo que el sindicato tiene contratado. Hoy puede mostrar:</p>
+  <div class="lado izq">
+    <figure class="fig captura" data-captura="t-portada-entera"><figcaption>La portada entera, de arriba abajo: novedades, la tarjeta «Mis recibos», los accesos con sus globos de pendientes y el carrusel de beneficios.</figcaption></figure>
+    <div>
+      <p>La portada es la tarjeta de presentación del gremio: foto elegida por el sindicato, saludo, «Tu día» (hora, clima, un dato o la trivia), la nota de tapa, los beneficios en carrusel y los accesos. En escritorio se ordena en dos columnas (ver la figura de <a href="#cap-1-que-es">1.1</a>).</p>
+      <p>La barra inferior de <code>/app</code> muestra solo lo que el sindicato tiene contratado, así que la de un afiliado de La Bancaria puede no ser igual a la de uno de la UOM. En la portada viven además <b>Notificaciones</b> (el «domicilio electrónico»), <b>Seccionales cerca de mí</b> (mapa), <b>Tu perfil</b> (datos, foto, modelo de diseño) y, si el sindicato lo contrató, <b>Consultas al convenio</b>.</p>
+    </div>
+  </div>
   <div class="tabla-cont"><table class="tabla">
-    <thead><tr><th>Pestaña</th><th>Qué hace, en una línea</th></tr></thead>
+    <thead><tr><th>Pestaña de <code>/app</code></th><th>Qué hace</th></tr></thead>
     <tbody>
-      <tr><td><b>Mis Recibos</b></td><td>El afiliado sube la foto o el PDF de su recibo de sueldo; la IA lo lee y el sistema dice si los aportes están bien calculados según el convenio.</td></tr>
-      <tr><td><b>Credencial</b></td><td>La credencial digital del afiliado, con código verificable por terceros.</td></tr>
-      <tr><td><b>Trámites</b></td><td>Formularios del sindicato (kit escolar, subsidios, etc.), con el seguimiento y un chat con el sindicato como en un mensajero.</td></tr>
-      <tr><td><b>Novedades</b></td><td>Las noticias publicadas por el sindicato.</td></tr>
-      <tr><td><b>Encuestas</b></td><td>Encuestas anónimas o nominales para responder una sola vez.</td></tr>
-      <tr><td><b>Mis Aportes</b></td><td>El semáforo de aportes: ¿mi empleador depositó lo que me descontó? Se arma con el comprobante de ARCA que sube el afiliado.</td></tr>
-      <tr><td><b>Capacitación</b></td><td>Contenido de formación; hoy, cómo leer el nuevo recibo tras la reforma laboral.</td></tr>
+      <tr><td><b>Mis Recibos</b></td><td>Sube la foto o el PDF; la IA lo lee y el sistema dice si los aportes están bien calculados.</td></tr>
+      <tr><td><b>Credencial</b></td><td>Credencial digital con código verificable por terceros.</td></tr>
+      <tr><td><b>Trámites</b></td><td>Formularios del sindicato, con seguimiento y chat.</td></tr>
+      <tr><td><b>Novedades</b></td><td>Noticias publicadas por el sindicato.</td></tr>
+      <tr><td><b>Encuestas</b></td><td>Anónimas o nominales, para responder una sola vez.</td></tr>
+      <tr><td><b>Mis Aportes</b></td><td>Semáforo: ¿el empleador depositó lo que descontó? Se arma con el comprobante de ARCA.</td></tr>
+      <tr><td><b>Capacitación</b></td><td>Formación; hoy, cómo leer el nuevo recibo tras la reforma.</td></tr>
     </tbody>
   </table></div>
-  <p>Hay además accesos que viven en la portada y no en la barra: <b>Notificaciones</b> (el «domicilio electrónico», página <code>/app/notificaciones</code>), <b>Seccionales cerca de mí</b> (un mapa con las sedes del gremio), <b>Tu perfil</b> (datos personales, foto, elección del modelo de diseño) y, si el sindicato lo contrató, <b>Consultas al convenio</b>.</p>
 
-  <div class="nota regla"><span class="rot">Regla vigente</span><p>Cada pestaña existe solo si el sindicato tiene activo el módulo correspondiente. Por eso la barra de un afiliado de La Bancaria y la de uno de la UOM pueden no ser iguales.</p></div>
-  <div class="nota pendiente"><span class="rot">A confirmar</span><p>Algunos documentos del proyecto llaman «Tu Recibo» a la primera pestaña; en la plantilla vigente (<code>templates/trabajador.html</code>) el rótulo es <b>Mis Recibos</b>, y es el que usa este capítulo.</p></div>
-
-  <figure class="fig diagrama">
-    <svg viewBox="0 0 860 300" role="img" aria-label="Esquema de la app del afiliado: ingreso, elección de sindicato si hay pluriempleo, portada y las pestañas">
-      <defs><marker id="f42-fl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4c5d75"/></marker></defs>
-      <rect x="20" y="20" width="150" height="56" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="95" y="44" text-anchor="middle" font-size="14" fill="#16243a">/ingresar</text>
-      <text x="95" y="62" text-anchor="middle" font-size="12" fill="#4c5d75">CUIL + clave</text>
-      <rect x="215" y="20" width="170" height="56" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
-      <text x="300" y="44" text-anchor="middle" font-size="14" fill="#16243a">¿Más de un sindicato?</text>
-      <text x="300" y="62" text-anchor="middle" font-size="12" fill="#4c5d75">elige con cuál entrar</text>
-      <rect x="430" y="20" width="170" height="56" rx="10" fill="#ffffff" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="515" y="44" text-anchor="middle" font-size="14" fill="#16243a">/app/inicio</text>
-      <text x="515" y="62" text-anchor="middle" font-size="12" fill="#4c5d75">portada con la marca</text>
-      <rect x="645" y="20" width="195" height="56" rx="10" fill="#ffffff" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="742" y="44" text-anchor="middle" font-size="14" fill="#16243a">/app</text>
-      <text x="742" y="62" text-anchor="middle" font-size="12" fill="#4c5d75">barra de pestañas</text>
-      <line x1="170" y1="48" x2="213" y2="48" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f42-fl)"/>
-      <line x1="385" y1="48" x2="428" y2="48" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f42-fl)"/>
-      <line x1="600" y1="48" x2="643" y2="48" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f42-fl)"/>
-
-      <text x="20" y="116" font-size="13" fill="#4c5d75">En la barra de /app (según módulos):</text>
-      <rect x="20" y="126" width="110" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="75" y="151" text-anchor="middle" font-size="12" fill="#16243a">Mis Recibos</text>
-      <rect x="140" y="126" width="100" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="190" y="151" text-anchor="middle" font-size="12" fill="#16243a">Credencial</text>
-      <rect x="250" y="126" width="90" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="295" y="151" text-anchor="middle" font-size="12" fill="#16243a">Trámites</text>
-      <rect x="350" y="126" width="100" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="400" y="151" text-anchor="middle" font-size="12" fill="#16243a">Novedades</text>
-      <rect x="460" y="126" width="90" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="505" y="151" text-anchor="middle" font-size="12" fill="#16243a">Encuestas</text>
-      <rect x="560" y="126" width="110" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="615" y="151" text-anchor="middle" font-size="12" fill="#16243a">Mis Aportes</text>
-      <rect x="680" y="126" width="160" height="40" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="760" y="151" text-anchor="middle" font-size="12" fill="#16243a">Capacitación</text>
-
-      <text x="20" y="206" font-size="13" fill="#4c5d75">Accesos que viven en la portada:</text>
-      <rect x="20" y="216" width="190" height="40" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="115" y="241" text-anchor="middle" font-size="12" fill="#16243a">Notificaciones</text>
-      <rect x="225" y="216" width="190" height="40" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="320" y="241" text-anchor="middle" font-size="12" fill="#16243a">Seccionales cerca</text>
-      <rect x="430" y="216" width="190" height="40" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="525" y="241" text-anchor="middle" font-size="12" fill="#16243a">Tu perfil</text>
-      <rect x="635" y="216" width="205" height="40" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="737" y="241" text-anchor="middle" font-size="12" fill="#16243a">Consultas al convenio</text>
-    </svg>
-    <figcaption>Recorrido de la app del afiliado: de la pantalla de ingreso a la barra de pestañas, y los accesos que cuelgan de la portada.</figcaption>
-  </figure>
-
-  <!-- ===================== 4.3 ===================== -->
   <h3 id="cap-4-sindicato"><span class="n">4.3</span>El panel del sindicato</h3>
-  <p>Es el espacio de trabajo de quienes administran el gremio: se entra con <b>CUIL y clave</b> en <code>/admin</code>. Una sola clave sirve aunque la persona trabaje en varios sindicatos; si es el caso, elige a cuál entrar después del login. En el primer ingreso se pide cambiar la clave inicial por una propia.</p>
-
-  <figure class="fig captura" data-captura="s-ingreso"><figcaption>Ingreso del panel del sindicato, <code>/admin</code>. La pantalla lleva la marca de Colm3na; recién después del login el panel se pinta con los colores del gremio.</figcaption></figure>
-  <figure class="fig captura" data-captura="s-portada"><figcaption>La portada del panel, <code>/admin/inicio</code>: «Tu cuenta», el acceso grande al Panel Sindical y las tarjetas agrupadas por tarea. Cada persona ve solo las tarjetas de lo que puede tocar.</figcaption></figure>
-
-  <h4>La tira de pestañas</h4>
-  <p>El panel interno (<code>/admin</code>) tiene una tira de pestañas deslizable —en los modelos de diseño de escritorio, un riel lateral—. Estas son las entradas que existen hoy, tal como las rotula la plantilla:</p>
+  <p>Es el espacio de trabajo de quienes administran el gremio: <b>CUIL y clave</b> en <code>/admin</code>. Una sola clave sirve aunque la persona trabaje en varios sindicatos (elige a cuál entrar después del login) y en el primer ingreso se pide cambiar la clave inicial.</p>
+  <div class="par-capturas">
+    <figure class="fig captura" data-captura="s-ingreso"><figcaption>Ingreso del panel, <code>/admin</code>. Lleva la marca de Colm3na; el panel se pinta con los colores del gremio recién después del login. El pie recuerda que el alta de administradores la hace la organización.</figcaption></figure>
+    <figure class="fig captura" data-captura="s-portada"><figcaption>La portada del panel de la UOM: el acceso grande al Panel Sindical y una tarjeta por tarea, con su cifra viva (recibos con diferencias, trámites sin leer, trabajadores por registrar). Cada persona ve solo lo que puede tocar.</figcaption></figure>
+  </div>
+  <p>El panel interno (<code>/admin</code>) tiene una tira de pestañas deslizable (un riel lateral en los modelos de escritorio) con <b>diecisiete entradas posibles</b>. Ningún usuario las ve todas salvo el Super Admin de un sindicato con todos los módulos.</p>
   <div class="tabla-cont"><table class="tabla">
     <thead><tr><th>Entrada</th><th>Para qué sirve</th><th>Depende de</th></tr></thead>
     <tbody>
-      <tr><td><b>Panel Sindical</b></td><td>El tablero con indicadores, gráficos que se filtran entre sí, mapa, semáforo por empresa y explorador. Abre en otra página.</td><td>módulo <code>dashboard</code></td></tr>
-      <tr><td><b>Reportes</b></td><td>Todos los recibos verificados, con los datos personales solo de los que el afiliado envió.</td><td>módulo <code>recibos</code></td></tr>
-      <tr><td><b>Reglas</b></td><td>Las fórmulas de control de aportes del convenio.</td><td>módulo <code>recibos</code></td></tr>
-      <tr><td><b>Conceptos</b></td><td>El catálogo de conceptos del recibo (haberes, descuentos) y sus alias.</td><td>módulo <code>recibos</code></td></tr>
-      <tr><td><b>Trabajadores</b></td><td>El padrón: altas, carga masiva por planilla, niveles de fiabilidad de cada cuenta.</td><td>siempre visible</td></tr>
-      <tr><td><b>Aprendizaje</b></td><td>Revisión de conceptos que la IA vio y todavía no están en el catálogo.</td><td>módulo <code>recibos</code></td></tr>
-      <tr><td><b>Noticias</b> y <b>Beneficios</b></td><td>Lo que ven los afiliados en la portada y en Novedades.</td><td>módulos <code>noticias</code>, <code>beneficios</code></td></tr>
-      <tr><td><b>Notificaciones</b></td><td>Comunicaciones dirigidas al «domicilio electrónico» del afiliado.</td><td>módulo <code>notificaciones</code></td></tr>
-      <tr><td><b>Encuestas</b></td><td>Armar, publicar y leer los resultados.</td><td>módulo <code>encuestas</code></td></tr>
-      <tr><td><b>Trámites</b></td><td>La bandeja de pedidos recibidos y el constructor de formularios.</td><td>módulo <code>tramites</code></td></tr>
-      <tr><td><b>Empleadores</b></td><td>Empresas, y sus notificaciones y trámites.</td><td>módulo <code>empleadores</code></td></tr>
-      <tr><td><b>Convenio</b></td><td>Carga del convenio colectivo para las consultas de los afiliados.</td><td>módulo <code>convenio</code></td></tr>
-      <tr><td><b>Seccionales</b></td><td>Las sedes del gremio, con domicilio y mapa.</td><td>siempre visible</td></tr>
-      <tr><td><b>Listas</b></td><td>Planillas del sindicato (grupo familiar, datos del afiliado) para validar trámites.</td><td>permiso <code>listas</code></td></tr>
-      <tr><td><b>Áreas y Usuarios</b></td><td>Quién del equipo entra, con qué rol y a qué secciones.</td><td>solo administradores</td></tr>
-      <tr><td><b>Apariencia</b></td><td>Modelo de diseño, paleta, fotos de portada y la franja «Tu día».</td><td>solo Super Admin</td></tr>
+      <tr><td><b>Panel Sindical</b></td><td>Tablero con indicadores, gráficos cruzados, mapa, semáforo por empresa y explorador.</td><td>módulo <code>dashboard</code></td></tr>
+      <tr><td><b>Reportes</b></td><td>Todos los recibos verificados; datos personales solo de los enviados.</td><td>módulo <code>recibos</code></td></tr>
+      <tr><td><b>Reglas</b> y <b>Conceptos</b></td><td>Fórmulas de control y catálogo de conceptos del recibo, con sus alias.</td><td>módulo <code>recibos</code></td></tr>
+      <tr><td><b>Aprendizaje</b></td><td>Conceptos que la IA vio y no están en el catálogo.</td><td>módulo <code>recibos</code></td></tr>
+      <tr><td><b>Trabajadores</b></td><td>Padrón: altas, carga masiva, nivel de fiabilidad de cada cuenta.</td><td>siempre visible</td></tr>
+      <tr><td><b>Noticias</b> y <b>Beneficios</b></td><td>Lo que ve el afiliado en la portada y en Novedades.</td><td>módulos <code>noticias</code>, <code>beneficios</code></td></tr>
+      <tr><td><b>Notificaciones</b></td><td>Comunicaciones dirigidas al «domicilio electrónico».</td><td>módulo <code>notificaciones</code></td></tr>
+      <tr><td><b>Encuestas</b></td><td>Armar, publicar y leer resultados.</td><td>módulo <code>encuestas</code></td></tr>
+      <tr><td><b>Trámites</b></td><td>Bandeja de pedidos y constructor de formularios.</td><td>módulo <code>tramites</code></td></tr>
+      <tr><td><b>Empleadores</b></td><td>Empresas, sus notificaciones y trámites.</td><td>módulo <code>empleadores</code></td></tr>
+      <tr><td><b>Convenio</b></td><td>Carga del convenio para las consultas de los afiliados.</td><td>módulo <code>convenio</code></td></tr>
+      <tr><td><b>Seccionales</b></td><td>Sedes con domicilio y mapa.</td><td>siempre visible</td></tr>
+      <tr><td><b>Listas</b></td><td>Planillas (grupo familiar, datos del afiliado) para validar trámites.</td><td>permiso <code>listas</code></td></tr>
+      <tr><td><b>Áreas y Usuarios</b></td><td>Quién entra, con qué rol y a qué secciones.</td><td>solo administradores</td></tr>
+      <tr><td><b>Apariencia</b></td><td>Modelo de diseño, paleta, fotos de portada y «Tu día».</td><td>solo Super Admin</td></tr>
     </tbody>
   </table></div>
-  <p>Son <b>diecisiete entradas</b> posibles. Ningún usuario las ve todas juntas salvo el Super Admin de un sindicato con todos los módulos: lo habitual es ver menos.</p>
+  <p>Qué ve cada persona es la combinación de lo que contrató el sindicato, lo que le da su rol y área, y el alcance de su seccional; ese cálculo está en <a href="#cap-5-perfiles">5.12</a>.</p>
 
-  <h4>Módulos y roles: dos filtros distintos</h4>
-  <figure class="fig diagrama">
-    <svg viewBox="0 0 860 240" role="img" aria-label="Qué ve una persona en el panel: lo que contrató el sindicato intersecado con lo que le permite su área y su alcance de seccional">
-      <rect x="20" y="30" width="250" height="100" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
-      <text x="34" y="56" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#6b4fa0">1 · Módulos contratados</text>
-      <text x="34" y="80" font-size="12" fill="#16243a">Los activa plataforma, por sindicato.</text>
-      <text x="34" y="100" font-size="12" fill="#16243a">Si no está el módulo, la pestaña</text>
-      <text x="34" y="118" font-size="12" fill="#16243a">no existe ni responde (403).</text>
-      <rect x="305" y="30" width="250" height="100" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-      <text x="319" y="56" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#2e5c8a">2 · Permisos del usuario</text>
-      <text x="319" y="80" font-size="12" fill="#16243a">Los da el Super Admin: rol y área</text>
-      <text x="319" y="100" font-size="12" fill="#16243a">(qué secciones puede tocar).</text>
-      <rect x="590" y="30" width="250" height="100" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="604" y="56" font-size="15" font-family="Barlow Condensed" font-weight="700" fill="#0d7a5f">3 · Alcance de seccional</text>
-      <text x="604" y="80" font-size="12" fill="#16243a">Sobre quiénes: toda la sede central</text>
-      <text x="604" y="100" font-size="12" fill="#16243a">o solo su seccional.</text>
-      <rect x="20" y="160" width="820" height="56" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-      <text x="430" y="184" text-anchor="middle" font-size="14" fill="#16243a">Lo que ve cada persona es la intersección de los tres filtros</text>
-      <text x="430" y="203" text-anchor="middle" font-size="12" fill="#4c5d75">Aislamiento total: nadie ve datos de otro sindicato, y los sindicatos no se ven entre sí.</text>
-    </svg>
-    <figcaption>Tres filtros se combinan para decidir qué pestañas y qué filas aparecen. El detalle de roles y permisos está en el <a href="#cap-5">capítulo 5</a>.</figcaption>
-  </figure>
-  <p>Hay tres tipos de operador: el <b>Super Admin</b> (todo el sindicato), el <b>Admin de Seccional</b> (lo mismo, pero solo sobre su seccional) y el <b>usuario de área</b> (solo las secciones que le dé su área). Dos pestañas, Trabajadores y Seccionales, están siempre disponibles; el resto depende de los módulos.</p>
-  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Los módulos viven en <code>modulos.py</code> (qué contrató el gremio) y los permisos en <code>permisos.py</code> (qué puede tocar cada usuario). Todas las rutas <code>/admin/*</code> están clasificadas en <code>PERMISOS_RUTAS</code> y una ruta sin clasificar se rechaza: el olvido se nota en lugar de filtrarse.</p></div>
-
-  <!-- ===================== 4.4 ===================== -->
   <h3 id="cap-4-plataforma"><span class="n">4.4</span>La plataforma de configuración</h3>
-  <p>Es la consola de <b>Colm3na como operador</b>: la usa el equipo de Colm3na, nunca un sindicato. Se entra en <code>/plataforma</code> con un <b>usuario nominal</b> (cada persona del equipo tiene el suyo; no hay una clave compartida). Desde ahí se da de alta cada sindicato nuevo y a su <b>primer administrador</b>, que después se encarga de su propia gente.</p>
+  <p>Es la consola de <b>Colm3na como operador</b>; la usa el equipo, nunca un sindicato. Se entra en <code>/plataforma</code> con un <b>usuario nominal</b> (no hay clave compartida). Desde ahí se da de alta cada sindicato y a su <b>primer administrador</b>, que después se ocupa de su propia gente.</p>
   <div class="par-capturas">
-    <figure class="fig captura" data-captura="p-ingreso"><figcaption>Ingreso de plataforma, <code>/plataforma</code>.</figcaption></figure>
-    <figure class="fig captura" data-captura="p-inicio"><figcaption>Portada de plataforma, <code>/plataforma/inicio</code>: una tarjeta por tarea de configuración.</figcaption></figure>
+    <figure class="fig captura" data-captura="p-ingreso"><figcaption>Ingreso de plataforma: usuario y clave, con el rótulo «Plataforma». Nada de la marca de un gremio.</figcaption></figure>
+    <figure class="fig captura" data-captura="p-inicio"><figcaption>Portada de plataforma: la tarjeta grande de Sindicatos y una por tarea (usuarios, marca, fotos, configuración, topes, uso de IA, recibos con alerta).</figcaption></figure>
   </div>
-  <p>Las secciones del panel (<code>/plataforma</code>) son once:</p>
+  <figure class="fig captura" data-captura="p-panel"><figcaption>El panel de plataforma: a la izquierda, las once secciones; a la derecha, los tres sindicatos de la demo con su marca (cuatro colores), cantidad de administradores y de trabajadores. Debajo, plegada, la lista general de usuarios de los paneles.</figcaption></figure>
   <div class="tabla-cont"><table class="tabla">
     <thead><tr><th>Sección</th><th>Qué se hace ahí</th></tr></thead>
     <tbody>
-      <tr><td><b>Sindicatos</b></td><td>La lista de sindicatos y su ficha: logo, colores, módulos activos, modelo de diseño, cláusula de confidencialidad y contrato.</td></tr>
-      <tr><td><b>Nuevo sindicato</b></td><td>Alta de un gremio con su marca.</td></tr>
-      <tr><td><b>Nuevo admin</b></td><td>Alta del primer administrador de un sindicato, con una clave inicial transitoria.</td></tr>
-      <tr><td><b>Usuarios</b></td><td>Página aparte (solo superadmin): usuarios de plataforma y lista general de los usuarios de los paneles de sindicato.</td></tr>
-      <tr><td><b>Cambiar clave</b></td><td>Restablecer la clave de un operador. Es una herramienta transitoria, a retirar antes del uso real.</td></tr>
-      <tr><td><b>Marca</b></td><td>El logo y los colores de Colm3na.</td></tr>
-      <tr><td><b>Fotos</b></td><td>Biblioteca global opcional de fotos de portada (cada sindicato puede subir las suyas).</td></tr>
-      <tr><td><b>Configuración</b></td><td>Parámetros generales, como el tope de la cuota sindical.</td></tr>
-      <tr><td><b>Uso de IA</b></td><td>Consumo y costo en dólares de cada lectura, el modelo de cada uso y un banco de pruebas que compara modelos.</td></tr>
+      <tr><td><b>Sindicatos</b>, <b>Nuevo sindicato</b>, <b>Nuevo admin</b></td><td>Ficha del gremio (logo, colores, módulos, modelo de diseño, cláusula de confidencialidad, contrato), alta y primer administrador con clave inicial transitoria.</td></tr>
+      <tr><td><b>Usuarios</b> y <b>Cambiar clave</b></td><td>Usuarios de plataforma (solo superadmin) y lista de los operadores de los paneles; restablecer una clave (herramienta transitoria, a retirar antes del uso real).</td></tr>
+      <tr><td><b>Marca</b> y <b>Fotos</b></td><td>Logo y colores de Colm3na; biblioteca global opcional de fotos de portada.</td></tr>
+      <tr><td><b>Configuración</b> y <b>Topes de aportes</b></td><td>Parámetros generales (tope sindical) y topes de base imponible con su vigencia.</td></tr>
+      <tr><td><b>Uso de IA</b></td><td>Consumo y costo de cada lectura, modelo de cada uso y banco de pruebas.</td></tr>
       <tr><td><b>Recibos con alerta</b></td><td>Documentos con señales de posible adulteración.</td></tr>
-      <tr><td><b>Topes de aportes</b></td><td>Los topes de base imponible de la seguridad social, con su vigencia.</td></tr>
     </tbody>
   </table></div>
-  <figure class="fig captura" data-captura="p-usuarios"><figcaption>La página de Usuarios de plataforma: alta nominal de integrantes del equipo y lista de los usuarios de los paneles de cada sindicato.</figcaption></figure>
-  <div class="nota regla"><span class="rot">Regla vigente</span><p>Un sindicato no puede ver en qué otro sindicato trabaja una persona. Plataforma sí, porque es quien opera todos. Por eso el reseteo de clave de alguien que trabaja en varios gremios lo resuelve plataforma.</p></div>
+  <div class="nota regla"><span class="rot">Regla vigente</span><p>Un sindicato no ve en qué otro trabaja una persona; plataforma sí, porque opera todos. Por eso el reseteo de clave de quien trabaja en varios gremios lo resuelve plataforma.</p></div>
 
-  <!-- ===================== 4.5 ===================== -->
   <h3 id="cap-4-empresa"><span class="n">4.5</span>La app de la empresa</h3>
-  <p>Es la cuarta puerta: la usa el <b>empleador</b>. La empresa se autorregistra con su <b>CUIT</b> en <code>/ingresar-empresa</code> y, como el afiliado con pluriempleo, puede estar dada de alta en varios sindicatos (elige con cuál entrar). Solo existe en los sindicatos que contrataron el módulo <code>empleadores</code>.</p>
+  <p>La usa el <b>empleador</b>, que se autorregistra con su <b>CUIT</b> en <code>/ingresar-empresa</code> y, como el afiliado con pluriempleo, puede estar en varios sindicatos. Solo existe donde el sindicato contrató el módulo <code>empleadores</code>. Su panel (<code>/empresa</code>) tiene <b>dos pestañas</b>: Notificaciones (lo que el sindicato le comunica) y Trámites (formularios que presenta al gremio, con el mismo chat que el afiliado).</p>
   <div class="par-capturas">
-    <figure class="fig captura" data-captura="e-ingreso"><figcaption>Ingreso de la empresa, <code>/ingresar-empresa</code>: CUIT y clave.</figcaption></figure>
-    <figure class="fig captura" data-captura="e-portada"><figcaption>Portada de la empresa, <code>/empresa/inicio</code>: últimos mensajes del sindicato y dos accesos.</figcaption></figure>
+    <figure class="fig captura" data-captura="e-ingreso"><figcaption>Ingreso de la empresa: CUIT y clave, con pestaña de registro.</figcaption></figure>
+    <figure class="fig captura" data-captura="e-portada"><figcaption>Portada de una empresa de ejemplo recién registrada: dos accesos y la bandeja de últimos mensajes, todavía vacía.</figcaption></figure>
+    <figure class="fig captura" data-captura="e-tramites"><figcaption>Pestaña Trámites, sin expedientes: iniciar uno, buscar por número, y la barra inferior de dos pestañas.</figcaption></figure>
   </div>
-  <p>El panel interno (<code>/empresa</code>) tiene solo <b>dos pestañas</b>: <b>Notificaciones</b> (lo que el sindicato le comunica) y <b>Trámites</b> (formularios que la empresa presenta al sindicato, con el mismo chat de seguimiento que usa el afiliado).</p>
-  <figure class="fig captura" data-captura="e-tramites"><figcaption>La pestaña Trámites de la empresa, en el celular.</figcaption></figure>
-  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>La empresa es un sistema <b>espejo y aislado</b> del afiliado: tablas y rutas propias para notificaciones y trámites, aun a costa de repetir código. Fue una decisión explícita para que nada del mundo del trabajador pueda filtrarse al del empleador.</p></div>
+  <div class="nota tecnico"><span class="rot">Para técnicos</span><p>La empresa es un sistema <b>espejo y aislado</b> del afiliado: tablas y rutas propias para notificaciones y trámites, aun a costa de repetir código (decisión explícita, ver el capítulo <a href="#cap-2">2</a>).</p></div>
 
-  <!-- ===================== 4.6 ===================== -->
   <h3 id="cap-4-entornos"><span class="n">4.6</span>El entorno interno <code>/entornos</code></h3>
-  <p>Es la sala de máquinas del equipo. <b>No es una app para usuarios</b>: existe solo en el entorno local y en <b>Pruebas</b> (en la Demo responde 404 a propósito) y está detrás de una puerta: un PIN que deja un pase de 30 días en ese navegador, o una sesión de plataforma vigente.</p>
-  <figure class="fig captura" data-captura="x-entornos"><figcaption>La landing <code>/entornos</code>: los accesos a Pruebas y Demo con la versión que corre en cada una, y debajo los Recursos (la documentación del proyecto).</figcaption></figure>
-
-  <figure class="fig diagrama">
-    <svg viewBox="0 0 860 280" role="img" aria-label="Los dos entornos desplegados: Pruebas sigue la rama main, la Demo sigue la rama demo y solo cambia al promover">
-      <defs><marker id="f46-fl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#4c5d75"/></marker></defs>
-      <rect x="20" y="20" width="170" height="60" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-      <text x="105" y="46" text-anchor="middle" font-size="14" fill="#16243a">Tu PC</text>
-      <text x="105" y="66" text-anchor="middle" font-size="12" fill="#4c5d75">rama de trabajo</text>
-      <rect x="250" y="20" width="170" height="60" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
-      <text x="335" y="46" text-anchor="middle" font-size="14" fill="#16243a">GitHub · rama main</text>
-      <text x="335" y="66" text-anchor="middle" font-size="12" fill="#4c5d75">cada merge deploya</text>
-      <rect x="480" y="20" width="170" height="60" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
-      <text x="565" y="46" text-anchor="middle" font-size="14" fill="#16243a">Pruebas</text>
-      <text x="565" y="66" text-anchor="middle" font-size="12" fill="#4c5d75">hay /entornos</text>
-      <line x1="190" y1="50" x2="248" y2="50" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f46-fl)"/>
-      <line x1="420" y1="50" x2="478" y2="50" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f46-fl)"/>
-
-      <rect x="250" y="150" width="170" height="60" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="335" y="176" text-anchor="middle" font-size="14" fill="#16243a">GitHub · rama demo</text>
-      <text x="335" y="196" text-anchor="middle" font-size="12" fill="#4c5d75">nunca se programa</text>
-      <rect x="480" y="150" width="170" height="60" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="565" y="176" text-anchor="middle" font-size="14" fill="#16243a">Demo</text>
-      <text x="565" y="196" text-anchor="middle" font-size="12" fill="#4c5d75">/entornos da 404</text>
-      <line x1="420" y1="180" x2="478" y2="180" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f46-fl)"/>
-      <line x1="335" y1="82" x2="335" y2="148" stroke="#f0a01e" stroke-width="2.5" marker-end="url(#f46-fl)"/>
-      <text x="347" y="120" font-size="12" fill="#a86400">promover_demo.py</text>
-      <text x="347" y="136" font-size="12" fill="#4c5d75">backup + merge + tag</text>
-
-      <rect x="690" y="20" width="150" height="190" rx="10" fill="#ffffff" stroke="#dbe2ea" stroke-width="1.5"/>
-      <text x="765" y="46" text-anchor="middle" font-size="13" fill="#16243a">Cada uno tiene</text>
-      <text x="765" y="68" text-anchor="middle" font-size="12" fill="#4c5d75">su servicio web</text>
-      <text x="765" y="90" text-anchor="middle" font-size="12" fill="#4c5d75">su Postgres</text>
-      <text x="765" y="112" text-anchor="middle" font-size="12" fill="#4c5d75">sus variables</text>
-      <text x="765" y="134" text-anchor="middle" font-size="12" fill="#4c5d75">su distintivo</text>
-      <text x="765" y="156" text-anchor="middle" font-size="12" fill="#4c5d75">(solo Pruebas)</text>
-      <text x="430" y="248" text-anchor="middle" font-size="13" fill="#16243a">Migraciones de Alembic: corren solas en cada deploy.</text>
-      <text x="430" y="268" text-anchor="middle" font-size="12" fill="#4c5d75">El detalle de infraestructura está en el capítulo 6.</text>
-    </svg>
-    <figcaption>Los dos entornos desplegados. Pruebas sigue <code>main</code> y se actualiza con cada cambio; la Demo, la que ven sindicatos e inversores, solo cambia cuando alguien la promueve.</figcaption>
-  </figure>
-
-  <h4>Las pestañas de <code>/entornos</code></h4>
+  <p>Es la sala de máquinas del equipo y <b>no es una app para usuarios</b>: existe solo en local y en <b>Pruebas</b> (en la Demo responde 404 a propósito) y está detrás de un PIN que deja un pase de 30 días o de una sesión de plataforma. Los dos entornos y cómo se promueve uno al otro están en <a href="#cap-6">el capítulo 6</a>.</p>
+  <figure class="fig captura" data-captura="x-entornos"><figcaption>La landing <code>/entornos</code>: arriba las pestañas; debajo, los accesos a Pruebas y a Demo (cuatro ingresos cada uno, con la versión que corre) y, más abajo, los Recursos, la documentación del proyecto.</figcaption></figure>
   <div class="tabla-cont"><table class="tabla">
     <thead><tr><th>Pestaña</th><th>Qué hay</th></tr></thead>
     <tbody>
-      <tr><td><b>Accesos</b></td><td>Los ocho accesos (cuatro ingresos por cada entorno), la versión que corre en cada uno, y debajo <b>Recursos</b>: la documentación del proyecto catalogada.</td></tr>
-      <tr><td><b>Tests en Pruebas</b></td><td>Pruebas de carga y de lectura de recibos lanzadas desde la pantalla. La de Demo figura como no disponible.</td></tr>
-      <tr><td><b>Planes</b></td><td>Subir o bajar el plan de Render del web y de la base, ahora o en un horario. Solo en Pruebas.</td></tr>
-      <tr><td><b>Observabilidad</b></td><td>La <b>Sala de mando</b> (el esquema físico de la solución, vivo) y la observación técnica (Grafana, Sentry, avisos).</td></tr>
-      <tr><td><b>Mapa funcional</b></td><td>Cada app, funcionalidad, pantalla, ruta y tabla, leído del código, con vista de lista y de grafo.</td></tr>
+      <tr><td><b>Accesos</b></td><td>Los ocho accesos, la versión de cada entorno y los Recursos.</td></tr>
+      <tr><td><b>Tests en Pruebas</b></td><td>Pruebas de carga y de lectura de recibos lanzadas desde la pantalla.</td></tr>
+      <tr><td><b>Planes</b></td><td>Subir o bajar el plan de Render del web y la base, ahora o en horario (solo Pruebas).</td></tr>
+      <tr><td><b>Observabilidad</b></td><td>La Sala de mando (esquema físico vivo) y la observación técnica.</td></tr>
+      <tr><td><b>Mapa funcional</b></td><td>Cada app, funcionalidad, pantalla, ruta y tabla, leído del código.</td></tr>
       <tr><td><b>Herramientas</b></td><td>Asistentes de implementación, abajo.</td></tr>
-      <tr><td><b>Seguridad</b></td><td>El registro de hallazgos y el estado del método XSK.</td></tr>
+      <tr><td><b>Seguridad</b></td><td>Registro de hallazgos del método XSK.</td></tr>
     </tbody>
   </table></div>
 
   <h4>Herramientas</h4>
-  <p>Son desarrollos chicos que ayudan a poner en marcha un sindicato. No van en las apps de los sindicatos ni de los afiliados.</p>
-  <figure class="fig captura" data-captura="x-herramientas"><figcaption>La pestaña Herramientas: una tarjeta por asistente, con acceso al caso guardado más reciente.</figcaption></figure>
+  <p>Desarrollos chicos que ayudan a poner en marcha un sindicato; no van en las apps de sindicatos ni de afiliados.</p>
+  <figure class="fig captura" data-captura="x-herramientas"><figcaption>La pestaña Herramientas: una tarjeta por asistente, con su descripción y los botones para abrirlo y ver lo guardado (aquí todavía sin casos).</figcaption></figure>
   <ul>
-    <li><b>Calculadora bancaria:</b> calcula qué recibo corresponde según la grilla firmada de La Bancaria (CCT 18/75) y lo compara contra un recibo real, a mano o leído por la IA.</li>
-    <li><b>Asistente de trámites:</b> a partir del relato del sindicato arma el circuito, el formulario y un veredicto de qué falta; lo importa como borrador.</li>
-    <li><b>Laboratorio de modelos:</b> lee el mismo recibo con modelos de varios proveedores y compara tiempo, costo y exactitud, aislado de la app real.</li>
-    <li><b>Verificación de identidad:</b> prueba el flujo selfie + DNI con prueba de vida, sin guardar imágenes ni datos personales.</li>
-    <li><b>Fiesta SUPARA:</b> venta de entradas con QR para un evento masivo (cobro con MercadoPago).</li>
+    <li><b>Calculadora bancaria:</b> calcula el recibo que corresponde según la grilla firmada de La Bancaria (CCT 18/75) y lo compara con uno real, a mano o leído por la IA.</li>
+    <li><b>Asistente de trámites:</b> del relato del sindicato arma circuito, formulario y veredicto, y lo importa como borrador (<a href="#cap-5-tramites">cap. 5</a>).</li>
+    <li><b>Laboratorio de modelos:</b> lee el mismo recibo con modelos de varios proveedores y compara tiempo, costo y exactitud (<a href="#cap-6">cap. 6</a>).</li>
+    <li><b>Verificación de identidad:</b> prueba el flujo selfie + DNI con prueba de vida, sin guardar imágenes ni datos personales (<a href="#cap-5-cuentas">5.13</a>).</li>
+    <li><b>Fiesta SUPARA:</b> entradas con QR para un evento masivo, cobradas por MercadoPago.</li>
   </ul>
-  <figure class="fig captura" data-captura="x-calculadora"><figcaption>La Calculadora bancaria: la entrada a la izquierda, el recibo esperado y las diferencias contra el real a la derecha.</figcaption></figure>
-  <div class="nota alerta"><span class="rot">Cuidado</span><p><b>Fiesta SUPARA no es parte de Colm3na.</b> Es un subproducto aparte, con padrón, usuarios y cookies propios, que se ofrece a un sindicato como puerta de entrada. Sus dos enlaces (el del afiliado y el del sindicato) son públicos y no piden el PIN. Vive en Herramientas solo porque desde ahí se crea el evento.</p></div>
-  <figure class="fig captura" data-captura="x-fiesta"><figcaption>La app del afiliado de Fiesta SUPARA: reserva con legajo y DNI, pago por MercadoPago y entrada con QR.</figcaption></figure>
+  <figure class="fig captura" data-captura="x-calculadora"><figcaption>La Calculadora bancaria: a la izquierda, la entrada (rama, categoría, ROE, adicionales, descuentos); a la derecha, el recibo esperado con haberes, descuentos, totales y neto, y los botones para analizar un recibo real con IA o chequearlo a mano.</figcaption></figure>
+  <div class="lado">
+    <div>
+      <div class="nota alerta"><span class="rot">Cuidado</span><p><b>Fiesta SUPARA no es parte de Colm3na.</b> Es un subproducto aparte, con padrón, usuarios y cookies propios, ofrecido a un sindicato como puerta de entrada (en la pantalla figura como «Fiesta de Fin de Año»). Sus enlaces del afiliado y del sindicato son públicos y no piden el PIN; vive en Herramientas solo porque desde ahí se crea el evento. El sindicato no maneja dinero: el pago va de MercadoPago a su cuenta.</p></div>
+    </div>
+    <figure class="fig captura" data-captura="x-fiesta"><figcaption>La app del afiliado de la Fiesta: datos del evento, entradas reservadas (ninguna todavía) y el selector de personas con el valor de la reserva y el botón «Reservar y pagar».</figcaption></figure>
+  </div>
 </section>

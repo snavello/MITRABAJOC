@@ -2,131 +2,72 @@
 
 <h3 id="cap-5-notificaciones"><span class="n">5.7</span>Domicilio electrónico: las notificaciones</h3>
 
-<p class="lead">Las notificaciones son el canal formal del sindicato hacia cada afiliado: un mensaje dirigido, con su remitente, su fecha y su adjunto, que le llega a la bandeja de la app y queda registrado quién lo recibió y cuándo lo abrió. El equipo de producto lo llama <b>domicilio electrónico</b>.</p>
+<p class="lead">Las notificaciones son el canal formal del sindicato hacia cada afiliado: un mensaje dirigido, con remitente, fecha y adjunto, que llega a una bandeja propia en la app y deja registrado cuándo lo abrió cada destinatario. El equipo de producto lo llama <b>domicilio electrónico</b>.</p>
 
-<div class="nota alerta"><span class="rot">Cuidado con el nombre</span><p>«Domicilio electrónico» es el nombre que le da el dueño del producto en la conversación. En la aplicación y en el código el módulo se llama <b>Notificaciones</b> y la expresión «domicilio electrónico» no aparece. Este capítulo describe lo que el sistema hace hoy; no afirma que una notificación de Colm3na tenga valor de notificación fehaciente ante un tercero (un juzgado, el Ministerio de Trabajo, una empresa). Ver la nota de pendientes al final de la sección.</p></div>
+<div class="nota alerta"><span class="rot">Cuidado con el nombre</span><p>«Domicilio electrónico» es el nombre que usa el dueño del producto; en la app y en el código el módulo se llama <b>Notificaciones</b>. Este capítulo describe lo que el sistema hace hoy: <b>no se afirma que una notificación de Colm3na tenga valor de notificación fehaciente</b> ante un tercero. La única constancia es <code>leida_en</code>, la fecha y hora en que el destinatario la abrió; no hay acuerdo de adhesión, sello de tiempo externo ni comprobante firmado exportable. Si se quiere venderlo con peso legal, hay que definir qué constancia hace falta.</p></div>
 
-<h4>Qué ve cada actor</h4>
-<p>El <b>sindicato</b> redacta la notificación en la pestaña <i>Notificaciones</i> de su panel: elige a quién va dirigida, escribe el texto, opcionalmente agrega un remitente («Comisión Directiva», «Secretaría Gremial») y un adjunto (imagen, PDF o Word), y puede vincular un formulario de Trámites para que el afiliado lo abra con un toque. Antes de enviar, el panel muestra <b>cuántas personas</b> van a recibirla: ese número se calcula con la misma función que el envío real, así que el que se confirma es el que sale.</p>
-<p>El <b>afiliado</b> la ve en la bandeja de la app (la solapa <i>Novedades</i>, junto a las noticias), con un globo numérico que cuenta las no leídas. Al abrirla, queda marcada como leída; también puede marcar todas de una vez. La <b>empresa</b> tiene su propio circuito, idéntico en idea pero en tablas separadas.</p>
+<p>El <b>sindicato</b> redacta la notificación en su pestaña <i>Notificaciones</i>: elige destinatarios, escribe el texto, agrega si quiere un remitente («Comisión Directiva») y un adjunto (imagen, PDF o Word) y puede vincular un formulario de Trámites. Antes de enviar, el panel muestra cuántas personas la van a recibir, con la misma función que hace el envío real. El <b>afiliado</b> la recibe en una bandeja con forma de línea de tiempo, a la que entra desde la tarjeta Notificaciones de su portada (con un globo de no leídas) y que tiene filtros Todas, No leídas y Con adjunto. La <b>empresa</b> tiene un circuito idéntico en tablas aparte.</p>
 
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="s-notificaciones"><figcaption>Panel del sindicato, pestaña Notificaciones: el alta con el criterio de destinatarios, el contador previo al envío y el historial con «leídas sobre total» de cada envío.</figcaption></figure>
-</div>
-<div class="par-capturas">
-  <figure class="fig captura" data-captura="t-novedades"><figcaption>Solapa Novedades del afiliado: las noticias vigentes y la bandeja de notificaciones con su globo de no leídas.</figcaption></figure>
-  <figure class="fig captura" data-captura="t-notificacion"><figcaption>Una notificación abierta: remitente, fecha de envío, texto con enlaces activos y el adjunto si lo hay.</figcaption></figure>
+  <figure class="fig captura" data-captura="s-notificaciones"><figcaption>Alta de una notificación en el panel: remitente y mensaje, destinatarios (acá «Por CUIL», con los otros criterios en el desplegable), adjunto y formulario opcionales, y a la derecha la vista previa del afiliado.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-notificacion"><figcaption>La bandeja del afiliado: contador de no leídas, filtros, remitente con su círculo de iniciales, fecha y hora; las sin leer se distinguen con un fondo verdoso.</figcaption></figure>
 </div>
 
-<h4>A quién se puede dirigir</h4>
-<p>La notificación se dirige por uno de cuatro criterios. Cualquiera de ellos solo alcanza a los afiliados <b>activos de ese sindicato</b>: escribir un CUIL de otro gremio no suma destinatarios.</p>
 <div class="tabla-cont"><table class="tabla">
-  <thead><tr><th>Criterio</th><th>Qué significa</th><th>Ejemplo</th></tr></thead>
+  <thead><tr><th>Criterio</th><th>Llega a</th></tr></thead>
   <tbody>
-    <tr><td>Por CUIL</td><td>Personas puntuales, una o varias</td><td>Un aviso individual sobre un trámite</td></tr>
-    <tr><td>Por empresa (CUIT del empleador)</td><td>Todos los afiliados que trabajan en esa empresa</td><td>Aviso por una paritaria de empresa</td></tr>
-    <tr><td>Por seccional</td><td>Todos los afiliados empadronados en esas seccionales</td><td>Asamblea en la seccional Rosario</td></tr>
-    <tr><td>Por provincia</td><td>Todos los afiliados cuyo domicilio está en esa provincia</td><td>Cierre de oficinas por feriado local</td></tr>
+    <tr><td>Por CUIL</td><td>Las personas puntuales que se escriban</td></tr>
+    <tr><td>Por empresa (CUIT)</td><td>Los afiliados que trabajan en esa empresa</td></tr>
+    <tr><td>Por seccional</td><td>Los empadronados en esas seccionales</td></tr>
+    <tr><td>Por provincia</td><td>Los afiliados con domicilio en esa provincia</td></tr>
   </tbody>
 </table></div>
-<p>El alcance del operador también cuenta: un usuario de Prensa de Sede Central le puede escribir a todo el país, pero un Admin de Seccional (o un usuario de un área de una seccional) solo llega a su gente. El recorte se aplica en la consulta de destinatarios, tanto en el contador como en el envío.</p>
+<p>Cualquier criterio solo alcanza a afiliados <b>activos de ese sindicato</b>, y el alcance del operador también recorta: un Admin de Seccional solo llega a su gente (ver <a href="#cap-5d-perfiles">5.12</a>). La lista de destinatarios se <b>fija al enviar</b>: quien después cambia de seccional no gana ni pierde mensajes ya enviados. Por cada envío queda el remitente, el usuario del panel, la fecha, el criterio y la cantidad; por destinatario, su CUIL y cuándo la abrió. El sindicato ve «leídas sobre total» y quién la abrió y quién no, recortado a su alcance. El adjunto solo lo sirven a la seccional emisora y a los destinatarios reales.</p>
 
-<figure class="fig diagrama">
-<svg viewBox="0 0 860 380" role="img" aria-label="Recorrido de una notificación: del operador del sindicato al afiliado, y qué queda registrado en cada paso">
-  <defs><marker id="f5c1-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
-  <rect x="20" y="30" width="190" height="120" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-  <text x="115" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#0a1421">Operador del sindicato</text>
-  <text x="115" y="80" text-anchor="middle" font-size="13" fill="#16243a">Escribe el texto</text>
-  <text x="115" y="98" text-anchor="middle" font-size="13" fill="#16243a">Elige el criterio</text>
-  <text x="115" y="116" text-anchor="middle" font-size="13" fill="#16243a">Adjunta un archivo</text>
-  <text x="115" y="134" text-anchor="middle" font-size="12" fill="#4c5d75">(solo dentro de su alcance)</text>
-  <rect x="285" y="30" width="250" height="120" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-  <text x="410" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#0a1421">Servidor: se fija la lista</text>
-  <text x="410" y="80" text-anchor="middle" font-size="13" fill="#16243a">Resuelve los CUIL destinatarios</text>
-  <text x="410" y="98" text-anchor="middle" font-size="13" fill="#16243a">y los FIJA en ese momento</text>
-  <text x="410" y="116" text-anchor="middle" font-size="13" fill="#16243a">(foto, no se recalcula después)</text>
-  <text x="410" y="136" text-anchor="middle" font-size="12" fill="#a86400">Notificacion + una fila por CUIL</text>
-  <rect x="610" y="30" width="230" height="120" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-  <text x="725" y="56" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#0a1421">Afiliado (app)</text>
-  <text x="725" y="80" text-anchor="middle" font-size="13" fill="#16243a">Globo con las no leídas</text>
-  <text x="725" y="98" text-anchor="middle" font-size="13" fill="#16243a">Bandeja en Novedades</text>
-  <text x="725" y="116" text-anchor="middle" font-size="13" fill="#16243a">Abre: queda «leída»</text>
-  <text x="725" y="136" text-anchor="middle" font-size="12" fill="#4c5d75">Solo ve las suyas y su adjunto</text>
-  <line x1="210" y1="90" x2="283" y2="90" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c1-f)"/>
-  <line x1="535" y1="90" x2="608" y2="90" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c1-f)"/>
-  <rect x="20" y="200" width="820" height="160" rx="10" fill="#eef2f7" stroke="#dbe2ea" stroke-width="1.5"/>
-  <text x="40" y="228" font-family="Barlow Condensed" font-weight="700" font-size="18" fill="#0a1421">Qué queda registrado</text>
-  <text x="40" y="256" font-size="13" fill="#16243a">Al enviar:  remitente (texto libre) · usuario del panel que la envió · fecha y hora de envío · criterio y valores · cantidad de destinatarios.</text>
-  <text x="40" y="280" font-size="13" fill="#16243a">Por destinatario:  su CUIL y la fecha y hora en que la abrió (vacía mientras no la abrió).</text>
-  <text x="40" y="304" font-size="13" fill="#16243a">Para el sindicato:  «leídas sobre total» de cada envío y la lista de quién la abrió y quién no, recortada a su alcance.</text>
-  <text x="40" y="328" font-size="12" fill="#4c5d75">El adjunto solo se sirve al panel del sindicato emisor y a los destinatarios reales; no es público como el logo.</text>
-  <text x="40" y="347" font-size="12" fill="#4c5d75">La empresa tiene su propio circuito en tablas aparte (por CUIT, todas o por provincia).</text>
-</svg>
-<figcaption>De quién a quién viaja una notificación y qué se guarda. La lista de destinatarios se fija al enviar: un afiliado que después cambia de seccional no gana ni pierde mensajes ya enviados.</figcaption>
-</figure>
+<div class="nota regla"><span class="rot">Qué NO genera notificaciones</span><p>Hoy ningún código de la app crea notificaciones de origen «sistema» (solo los scripts de datos de demo). Los <b>trámites no crean notificaciones</b>: un cambio de estado se avisa con el globo de la pestaña Trámites y, si está configurado, con <b>Web Push</b>. Lo que sí sale del servidor con texto armado por él son los avisos de Encuestas (5.9), que dispara una persona con un clic.</p></div>
 
-<h4>Origen manual y origen de sistema</h4>
-<p>Cada notificación lleva un <b>origen</b>: <i>manual</i> (la compuso una persona desde el panel) o <i>sistema</i> (la generó el propio sistema, sin un operador detrás; en ese caso no hay usuario emisor). El panel las distingue en el listado. Hoy las únicas notificaciones que el sistema genera por su cuenta, sin que una persona las componga, son los avisos de Encuestas, que se disparan desde el panel con un clic pero salen con el texto armado por el servidor (ver 5.9).</p>
-<div class="nota pendiente"><span class="rot">Aclaración sobre trámites</span><p>Por decisión del 2 de septiembre de 2026, los cambios de estado y las respuestas de un trámite <b>no</b> generan una notificación en la bandeja: la novedad viaja por el globo de la pestaña Trámites y por Web Push. Documentos anteriores decían que el origen «sistema» lo producían los trámites; el código actual no lo hace (ver el reporte de dudas).</p></div>
-
-<h4>Los globos de aviso</h4>
-<p>El número de no leídas aparece en <b>tres niveles</b> de la interfaz, para que nadie dependa de entrar a una pantalla para enterarse: en la <b>portada</b> (sobre la tarjeta de notificaciones), en la <b>tira de pestañas</b> de la app, y dentro de la <b>solapa</b> misma, donde cada notificación sin abrir se distingue de las leídas. Los globos se refrescan cuando la PWA vuelve a primer plano, no solo al recargar la página.</p>
-
-<h4>Web Push a la app instalada</h4>
-<p>Si el afiliado instaló la app en su teléfono (es una PWA) y aceptó recibir avisos, el teléfono puede mostrar una notificación aunque la app esté cerrada. Este canal está <b>apagado hasta que se configuren tres claves VAPID</b> (privada, pública y un mail de contacto); sin ellas, el módulo no hace nada y la app funciona igual.</p>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>push.py</code> envía en un hilo aparte (pywebpush hace HTTP sincrónico contra el servicio de push de cada navegador) para no colgar el request. Las suscripciones viven en <code>SuscripcionPush</code> (un CUIL puede tener varias; el <i>endpoint</i> es único) y las muertas (HTTP 404/410) se borran solas. <b>Hoy el Web Push se dispara solo para las novedades de trámites</b> (<code>push.notificar_tramite</code>, llamado desde <code>main._notificar_cambio_tramite</code>); una notificación manual del panel no manda push, solo aparece en la bandeja y en los globos.</p></div>
-
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Tablas: <code>Notificacion</code> (sindicato, remitente, <code>usuario_id</code>, texto, adjunto, <code>criterio</code>, <code>criterio_valores</code>, <code>origen</code>, <code>enviado_en</code>, <code>cantidad_destinatarios</code>, <code>formulario_id</code>, <code>encuesta_id</code>) y <code>NotificacionDestinatario</code> (<code>cuil</code>, <code>leida_en</code>). Espejo para empresas: <code>NotificacionEmpleador</code> y <code>NotificacionEmpleadorDestinatario</code> (por CUIT), duplicadas a propósito para no mezclar identidades CUIL y CUIT. Rutas del afiliado: <code>GET /api/mis-notificaciones</code>, <code>POST /api/notificacion/{id}/leer</code>, <code>POST /api/notificaciones/leer-todas</code>. Módulo habilitable: <code>notificaciones</code>.</p></div>
-
-<div class="nota pendiente"><span class="rot">Para definir con el dueño</span><p><b>1.</b> ¿Se quiere presentar este canal, ante sindicatos y terceros, como «domicilio electrónico» formal? Eso supone un valor probatorio que hoy no está respaldado: no hay un acuerdo de adhesión en el que el afiliado acepte este canal como domicilio, ni sello de tiempo externo. <b>2.</b> Constancia de lectura: el modelo guarda <i>cuándo</i> abrió cada destinatario una notificación (fecha y hora de Buenos Aires, sin segundos) y nada más: no registra desde qué dispositivo, ni si abrió el adjunto, ni versión del texto, y el texto se puede consultar pero no hay un comprobante firmado que se pueda exportar. Si se quiere un domicilio electrónico con peso legal, hay que definir qué constancia hace falta.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Tablas <code>Notificacion</code> (con <code>criterio</code>, <code>origen</code>, <code>formulario_id</code>, <code>encuesta_id</code>) y <code>NotificacionDestinatario</code> (<code>cuil</code>, <code>leida_en</code>); espejo <code>NotificacionEmpleador*</code> por CUIT, duplicado a propósito. Rutas del afiliado: <code>GET /api/mis-notificaciones</code>, <code>POST /api/notificacion/{id}/leer</code>, <code>/api/notificaciones/leer-todas</code>; página <code>/app/notificaciones</code>. Módulo <code>notificaciones</code>. <b>Web Push</b> (<code>push.py</code>, hilo aparte, tabla <code>SuscripcionPush</code>, endpoints muertos 404/410 se borran) está apagado sin las tres claves VAPID y <b>se dispara solo por novedades de trámites</b> (<code>push.notificar_tramite</code>); una notificación manual del panel no manda push.</p></div>
 
 
 <h3 id="cap-5-noticias"><span class="n">5.8</span>Noticias y beneficios</h3>
 
-<p>Si las notificaciones son un mensaje a cada persona, las noticias y los beneficios son la <b>vidriera del sindicato</b>: lo que el gremio quiere que todos vean al abrir la app. Las dos funcionan igual: se cargan desde el panel, tienen un período de vigencia, pueden llevar imagen y se dirigen a todo el sindicato o a ciertas seccionales.</p>
+<p>Si las notificaciones son un mensaje a cada persona, las noticias y los beneficios son la <b>vidriera del sindicato</b>. Funcionan igual: se cargan desde el panel, tienen vigencia, pueden llevar imagen y se dirigen a todo el sindicato o a ciertas seccionales. Los dos formularios son de tres pasos y tienen a la derecha la vista previa del afiliado.</p>
 
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="s-noticias"><figcaption>Pestaña Noticias del panel: título, bajada, texto completo, vigencia, hasta dos imágenes, seccionales de destino y la marca «On top».</figcaption></figure>
-  <figure class="fig captura" data-captura="s-beneficios"><figcaption>Pestaña Beneficios: rubro, descripción, enlace, vigencia, imagen y destino por seccional.</figcaption></figure>
+  <figure class="fig captura" data-captura="s-noticias"><figcaption>Alta de una noticia: título, bajada y texto; vigencia «desde» y «hasta», casilla «On top» y casillas de seccional (ninguna marcada = todas); más abajo, las imágenes y el formulario asociado.</figcaption></figure>
+  <figure class="fig captura" data-captura="s-beneficios"><figcaption>Alta de un beneficio: rubro, descripción y enlace, vigencia y destino, imagen del carrusel. La vista previa muestra cómo se ve la tarjeta.</figcaption></figure>
 </div>
 
-<h4>Noticias</h4>
 <ul>
-  <li><b>Vigencia por fechas.</b> Toda noticia tiene fecha «desde» y fecha «hasta», las dos obligatorias. Está vigente si hoy (hora de Buenos Aires) cae entre ambas, inclusive: una noticia «hasta el 30» se ve todo el día 30. Pasada la fecha, desaparece sola de la app; no hace falta borrarla.</li>
-  <li><b>Texto.</b> Título, bajada (una línea que se ve en la portada) y texto completo, donde las direcciones web se vuelven enlaces automáticamente.</li>
-  <li><b>Hasta dos imágenes</b>, que se achican en el servidor al subirlas (ver 5.14) y se guardan en la base.</li>
-  <li><b>«On top».</b> Una noticia marcada como on top va primera mientras esté vigente, antes que las más nuevas, tanto en la portada como en Novedades. Si hay varias marcadas, entre ellas gana la más reciente. Las demás se ordenan de la más nueva a la más vieja.</li>
-  <li><b>Destino por seccional.</b> Sin seccionales elegidas va a todo el sindicato (incluidos los afiliados sin seccional asignada); con seccionales, solo a los afiliados de esas. Un Admin de Seccional solo ve y edita las noticias que caen enteras dentro de su alcance, más las generales en modo lectura.</li>
-  <li><b>Formulario asociado.</b> La noticia puede llevar un botón que abre un formulario de Trámites (por ejemplo: «completá la inscripción haciendo clic acá»), y una noticia que anuncia una encuesta lleva el botón para responderla.</li>
+  <li><b>Vigencia por fechas</b>, ambas obligatorias y inclusive (una noticia «hasta el 30» se ve todo el día 30). Pasada la fecha, desaparece sola.</li>
+  <li><b>Noticia:</b> título, bajada (se ve en la portada), texto completo con enlaces automáticos y hasta dos imágenes. Puede llevar un botón a un formulario de Trámites o a una encuesta.</li>
+  <li><b>«On top»:</b> la marcada va primera mientras esté vigente, en la portada y en Novedades; entre varias, la más reciente. Las demás, de la más nueva a la más vieja.</li>
+  <li><b>Beneficio:</b> un rubro corto (la «Óptica» con descuento), descripción, enlace opcional y una imagen; en la portada forma un carrusel con barra de tiempo, pausa al apoyar el mouse y arrastre.</li>
+  <li><b>Destino por seccional:</b> sin ninguna, va a todo el sindicato; con seccionales, solo a esas. Un Admin de Seccional edita solo lo que cae entero en su alcance y ve las generales en lectura.</li>
 </ul>
 
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="t-noticia"><figcaption>Una noticia abierta en la app del afiliado: imagen, texto completo y, si corresponde, el botón al formulario o a la encuesta asociada.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-novedades"><figcaption>La pestaña Novedades del afiliado: las noticias vigentes como línea de tiempo, con fecha, hora y «Leer». Las notificaciones no están acá: tienen su propia bandeja.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-noticia"><figcaption>Una noticia abierta en su hoja: sindicato, título, bajada, antigüedad y texto completo. Al abrirla, la imagen se ve tal cual se subió.</figcaption></figure>
 </div>
 
-<h4>Beneficios</h4>
-<p>Un beneficio es un descuento o ventaja para afiliados (una óptica, un hotel, un convenio con una farmacia). Lleva un <b>rubro</b> corto que se superpone a la imagen, una descripción, un enlace opcional, una sola imagen y la misma vigencia cerrada y el mismo destino por seccional que las noticias. Se muestran en la portada del afiliado como un <b>carrusel</b>: pasa solo con una barra de tiempo, se detiene al apoyar el mouse, se puede arrastrar y cada tarjeta lleva un chip con el rubro.</p>
-
 <h4>Gris o color: lo decide el sindicato, no la foto</h4>
-<p>Cada imagen se guarda dos veces: tal como se subió (en color) y una versión <i>normalizada</i> en escala de grises con luz pareja. En la portada, la nota de tapa y el carrusel funden la de color sobre la normalizada con la opacidad que el sindicato eligió en <i>Apariencia</i>: <b>0 % (solo normalizada), 25, 50, 75 o 100 % (a todo color)</b>. Es un ajuste por modelo de diseño, no por foto: así una portada con diez imágenes dispares se ve coherente. Cuando el afiliado abre la noticia o el beneficio, la imagen se ve siempre tal cual se subió.</p>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Tablas <code>Noticia</code> (<code>imagen1_datos</code>/<code>imagen2_datos</code> + <code>imagen1_norm</code>/<code>imagen2_norm</code>, <code>on_top</code>, <code>destino_seccionales</code>, <code>formulario_id</code>, <code>encuesta_id</code>) y <code>Beneficio</code>. Vigencia: <code>db.noticia_vigente</code>/<code>beneficio_vigente</code>; orden: <code>db.noticias_vigentes</code>. El nivel de color es <code>Sindicato.saturacion_publicaciones</code> (<code>fotos_tema.SATURACIONES</code>). La normalizada se calcula al subir y, en las anteriores, la primera vez que se pide (<code>db.imagen_normalizada</code>). Rutas de imagen: <code>/noticia-imagen/{id}/{n}</code> y su variante <code>/normalizada</code>, y lo mismo para <code>/beneficio-imagen/{id}</code>. Los bytes de las imágenes no viajan en los listados.</p></div>
-
-<div class="nota ejemplo"><span class="rot">Ejemplo</span><p>El sindicato publica «Paritaria: acuerdo salarial» con fecha hasta el 30, marcada «On top» y dirigida a todas las seccionales: es la nota de tapa de todos los afiliados hasta el 30 a la noche. Al mismo tiempo carga el beneficio «Óptica» solo para Rosario: únicamente los afiliados rosarinos lo ven en el carrusel.</p></div>
+<p>Cada imagen se guarda dos veces: en color y <i>normalizada</i> (grises con luz pareja). Donde el modelo de diseño usa las fotos de ambiente (nota de tapa y carrusel de la portada), se funde la de color sobre la normalizada con la opacidad que el sindicato eligió en <i>Apariencia</i>: 0, 25, 50, 75 o 100 %. Es un ajuste por modelo, no por foto, para que una portada con imágenes dispares se vea coherente.</p>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Tablas <code>Noticia</code> (<code>imagen1_datos</code>/<code>imagen2_datos</code>, <code>*_norm</code>, <code>on_top</code>, <code>destino_seccionales</code>, <code>formulario_id</code>, <code>encuesta_id</code>) y <code>Beneficio</code>. Vigencia en <code>db.noticia_vigente</code>/<code>beneficio_vigente</code>; orden en <code>db.noticias_vigentes</code>. Nivel de color: <code>Sindicato.saturacion_publicaciones</code> (<code>fotos_tema.SATURACIONES</code>). Los bytes de las imágenes no viajan en los listados.</p></div>
 
 
 <h3 id="cap-5-encuestas"><span class="n">5.9</span>Encuestas</h3>
 
-<p>Las encuestas le permiten al sindicato preguntarle algo a su padrón (¿cómo está el clima en la empresa?, ¿qué prioridad tiene la próxima paritaria?) y ver los resultados en un tablero. Su rasgo central es que pueden ser <b>anónimas</b> de verdad: no es una promesa de la pantalla, es una consecuencia de cómo están construidas las tablas.</p>
+<p>El sindicato le pregunta algo a su padrón (¿cómo está el clima en la empresa?, ¿qué prioridad tiene la paritaria?) y ve los resultados en un tablero. Pueden ser <b>anónimas</b> de verdad, y eso es consecuencia de cómo están hechas las tablas, no una promesa de la pantalla.</p>
 
-<h4>Dos modos</h4>
 <div class="grilla-3">
-  <div class="tarjeta verde"><h4>Anónima</h4><p>Nadie, ni el sindicato ni Colm3na, puede saber quién respondió qué. Solo se ven totales y, si la encuesta los habilitó, cortes por seccional, provincia o empleador, siempre con un mínimo de respuestas por grupo.</p></div>
+  <div class="tarjeta verde"><h4>Anónima</h4><p>Nadie, ni el sindicato ni Colm3na, puede saber quién respondió qué. Se ven totales y, si se habilitó, cortes por seccional, provincia o empleador, siempre con un mínimo de respuestas por grupo.</p></div>
   <div class="tarjeta azul"><h4>Nominal</h4><p>La respuesta queda asociada al afiliado, que lo sabe antes de responder. El sindicato ve respuesta por respuesta con nombre y CUIL y puede exportarlo.</p></div>
-  <div class="tarjeta miel"><h4>El disclaimer lo arma el servidor</h4><p>Lo que se le promete al afiliado antes de responder sale del modo y de los cortes elegidos, calculado en el servidor, de modo que la pantalla no puede prometer algo distinto de lo que se guarda.</p></div>
+  <div class="tarjeta miel"><h4>El aviso lo arma el servidor</h4><p>Lo que se le promete al afiliado sale del modo y de los cortes elegidos, calculado en el servidor: la pantalla no puede prometer algo distinto de lo que se guarda.</p></div>
 </div>
 
-<h4>Por qué una encuesta anónima es anónima</h4>
-<p>El sistema guarda dos cosas por separado y sin ningún vínculo entre ellas. El <b>padrón</b> de la encuesta dice quiénes pueden responder y si ya lo hicieron (sí o no). La <b>urna</b> contiene las respuestas, y ninguna fila de la urna tiene una columna que lleve a una persona. Tampoco hay hora: se guarda el día, no el instante, y el padrón no guarda cuándo respondió cada uno. Sin ninguna de esas pistas no hay cómo alinear una lista con la otra.</p>
+<h4>Por qué una anónima es anónima</h4>
+<p>El <b>padrón</b> de la encuesta guarda quiénes pueden responder y si ya lo hicieron. La <b>urna</b> guarda las respuestas, sin ninguna columna que lleve a una persona, y solo el día, no la hora. Sin pistas, no hay cómo alinear una lista con la otra.</p>
 
 <figure class="fig diagrama">
 <svg viewBox="0 0 860 400" role="img" aria-label="El padrón de la encuesta y la urna de respuestas son tablas separadas, sin ningún vínculo entre ellas en una encuesta anónima">
@@ -167,168 +108,79 @@
 <figcaption>Padrón y urna no se pueden cruzar. El padrón sabe QUIÉN respondió pero no QUÉ; la urna sabe QUÉ se respondió pero no QUIÉN.</figcaption>
 </figure>
 
-<div class="nota regla"><span class="rot">Qué no se promete</span><p>Las respuestas de una misma persona anónima entran juntas y tienen identificadores consecutivos, así que se puede saber <i>cuáles filas son de la misma persona</i>, pero no <i>quién es</i>. Eso no identifica a nadie mientras el padrón no se pueda alinear con la urna. Por eso, en una anónima, un grupo con pocas respuestas (por defecto menos de 5) <b>no se calcula ni se muestra</b>: filtrar «Rosario + Empresa X» y quedarse con dos filas sería identificar a dos personas.</p></div>
+<div class="nota regla"><span class="rot">Qué no se promete</span><p>Las respuestas de una misma persona anónima entran juntas, así que se sabe <i>cuáles filas son de la misma persona</i>, pero no <i>quién es</i>. Por eso un grupo con pocas respuestas (por defecto menos de 5) <b>no se calcula ni se muestra</b>: filtrar «Rosario + Empresa X» y quedarse con dos filas identificaría a dos personas.</p></div>
 
-<h4>Armar la encuesta</h4>
-<p>El constructor (pestaña <i>Encuestas</i> del panel) es parecido al de Trámites: reordenar arrastrando, anchos por pregunta, una vista previa del lado del afiliado. Hay <b>once tipos</b> de elemento: texto, número, fecha, lista desplegable, opción única, opción múltiple, Sí/No, escala 1 a 5, ranking (ordenar por prioridad), archivo adjunto y separador; diez de ellos son preguntas y uno solo divide el formulario. El <b>archivo adjunto existe solo en las nominales</b>: una foto lleva metadatos (modelo de teléfono, a veces GPS) y es la forma más fácil de romper un anonimato sin darse cuenta.</p>
-<p>En una anónima, el sindicato tilda además qué <b>cortes</b> se guardan pegados a cada respuesta (seccional, provincia, empleador); sin ninguno, la encuesta solo da totales. En una nominal están todos. Con respuestas ya cargadas, las preguntas se <b>congelan</b>: se puede corregir una errata de redacción (queda registrado) pero no agregar, borrar, reordenar ni cambiar el tipo o las opciones.</p>
+<h4>Armar y publicar</h4>
+<p>El constructor (pestaña <i>Encuestas</i>) tiene once tipos de elemento (diez preguntas más un separador): texto, número, fecha, lista, opción única o múltiple, Sí/No, escala 1 a 5, ranking, archivo y separador. El <b>archivo solo existe en las nominales</b>: una foto lleva metadatos y es la forma más fácil de romper un anonimato. En una anónima se tildan además los cortes que se guardan con cada respuesta. Con respuestas cargadas, las preguntas se <b>congelan</b>: solo se corrigen erratas.</p>
 
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="s-encuestas"><figcaption>Constructor de encuestas en el panel: modo, cortes de una anónima, tipos de pregunta y la vista previa del lado del afiliado.</figcaption></figure>
+  <figure class="fig captura" data-captura="s-encuestas"><figcaption>Constructor de encuestas (sub-pestaña «Crear encuesta»): título, selector anónima o nominal, fechas, preguntas y la casilla para mostrar resultados al cerrar. Las dos pastillas de arriba separan ver/editar de crear.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-encuesta"><figcaption>Una encuesta abierta en el teléfono (una nominal de la demo, por eso pide «con tu nombre»): barra de avance, preguntas con su ayuda y «Revisar y enviar». Se responde una sola vez.</figcaption></figure>
 </div>
 
-<h4>Publicar, avisar, recordar, cerrar</h4>
-<figure class="fig diagrama">
-<svg viewBox="0 0 860 220" role="img" aria-label="Ciclo de vida de una encuesta: borrador, publicar y fijar el padrón, avisar, abierta con recordatorios, cerrada y resultados">
-  <defs><marker id="f5c3-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
-  <rect x="10" y="40" width="130" height="90" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-  <text x="75" y="68" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Borrador</text>
-  <text x="75" y="90" text-anchor="middle" font-size="12" fill="#16243a">Se arma y</text>
-  <text x="75" y="106" text-anchor="middle" font-size="12" fill="#16243a">se previsualiza</text>
-  <rect x="180" y="40" width="150" height="90" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-  <text x="255" y="68" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Publicar</text>
-  <text x="255" y="90" text-anchor="middle" font-size="12" fill="#16243a">Fija el padrón y</text>
-  <text x="255" y="106" text-anchor="middle" font-size="12" fill="#16243a">congela el umbral</text>
-  <rect x="370" y="40" width="150" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-  <text x="445" y="68" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Avisar</text>
-  <text x="445" y="90" text-anchor="middle" font-size="12" fill="#16243a">Notificación + noticia</text>
-  <text x="445" y="106" text-anchor="middle" font-size="12" fill="#16243a">al padrón fijado</text>
-  <rect x="560" y="40" width="140" height="90" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-  <text x="630" y="68" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Abierta</text>
-  <text x="630" y="90" text-anchor="middle" font-size="12" fill="#16243a">Se responde una vez</text>
-  <text x="630" y="106" text-anchor="middle" font-size="12" fill="#16243a">1 recordatorio por día</text>
-  <rect x="740" y="40" width="110" height="90" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
-  <text x="795" y="68" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Cerrada</text>
-  <text x="795" y="90" text-anchor="middle" font-size="12" fill="#16243a">No se reabre</text>
-  <text x="795" y="106" text-anchor="middle" font-size="12" fill="#16243a">Resultados</text>
-  <line x1="140" y1="85" x2="178" y2="85" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c3-f)"/>
-  <line x1="330" y1="85" x2="368" y2="85" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c3-f)"/>
-  <line x1="520" y1="85" x2="558" y2="85" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c3-f)"/>
-  <line x1="700" y1="85" x2="738" y2="85" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c3-f)"/>
-  <text x="430" y="170" text-anchor="middle" font-size="13" fill="#16243a">El estado (borrador, programada, abierta, cerrada) no se guarda: se deriva de «publicada» y las dos fechas.</text>
-  <text x="430" y="192" text-anchor="middle" font-size="12" fill="#4c5d75">Si hace falta más gente, se duplica la encuesta y se lanza otra ronda (queda como una toma nueva).</text>
-</svg>
-<figcaption>El ciclo de una encuesta. Publicar deja al operador directo en el paso de avisar, porque publicar sin avisar es la falla más cara.</figcaption>
-</figure>
-<ul>
-  <li><b>Publicar fija el padrón.</b> Se crea una fila por destinatario y la lista no se recalcula: así «620 de 1.000» significa algo hasta el final. También se copia el umbral mínimo vigente, de modo que un cambio posterior de plataforma no altera lo que una encuesta ya cerrada venía mostrando.</li>
-  <li><b>Avisar.</b> Tras publicar, el panel ofrece (con borradores de texto armados por el servidor) la <b>notificación</b> al padrón fijado y la <b>noticia</b> pública que anuncia la encuesta, con su misma vigencia y la seccional de la encuesta si nació en una seccional. La notificación va siempre al padrón de la encuesta, nunca a otro criterio: así «leídas» y «respondieron» se miden sobre el mismo universo.</li>
-  <li><b>Recordatorio.</b> Va <b>solo a los que todavía no respondieron</b> (se sabe del padrón, sin mirar la urna, así que funciona igual en las anónimas) y se permite <b>uno por día</b>: con más, el afiliado apaga las notificaciones y se pierde el canal.</li>
-  <li><b>Cierre.</b> Cierra sola por fecha o antes, a mano. No se reabre.</li>
-</ul>
-
-<h4>Lo que ve el afiliado</h4>
-<p>En su solapa de encuestas, cada tarjeta contesta antes de entrar las tres preguntas que hacen que una encuesta se postergue: si es anónima, cuántas preguntas tiene y cuántos minutos lleva, y cuántos días faltan (contados por el servidor, no por el reloj del teléfono). Responde con revisión previa y <b>una sola vez</b>. Al cerrarse, si el sindicato lo habilitó, ve los totales generales: nunca los cortes ni los textos libres, que se sacan en el servidor.</p>
-<div class="par-capturas">
-  <figure class="fig captura" data-captura="t-encuesta"><figcaption>Una encuesta abierta en la app: el aviso de anonimato, la barra de avance y las preguntas con su línea de ayuda.</figcaption></figure>
-</div>
+<ol class="pasos">
+  <li><b>Publicar</b>Fija el padrón (una fila por destinatario, sin recalcular) y congela el umbral vigente, para que un cambio posterior no altere una encuesta ya cerrada.</li>
+  <li><b>Avisar</b>El panel ofrece, con textos armados por el servidor, la notificación al padrón fijado y una noticia pública con la misma vigencia. Siempre al padrón de la encuesta, para que «leídas» y «respondieron» se midan sobre el mismo universo.</li>
+  <li><b>Recordar</b>Solo a quienes faltan, y uno por día: con más, el afiliado apaga las notificaciones y se pierde el canal.</li>
+  <li><b>Cerrar</b>Sola por fecha o antes, a mano; no se reabre. El estado (borrador, programada, abierta, cerrada) se deriva de «publicada» y las fechas. Para otra ronda se duplica la encuesta y queda como una toma nueva.</li>
+</ol>
+<p>Cada tarjeta de encuesta del afiliado dice antes de entrar cuántas preguntas tiene, cuánto lleva y cuántos días faltan. Al cerrarse, si el sindicato lo habilitó, ve solo totales generales: nunca cortes ni textos libres.</p>
 
 <h4>Los resultados</h4>
-<p>Cada encuesta tiene su propio tablero. Abre con cuatro indicadores (participación, avisos leídos, ritmo de respuestas y estado) y sigue con un gráfico por pregunta, que se puede ver en barras, torta o tabla (la tabla da los números exactos); la escala muestra mediana y extremos, no solo el promedio.</p>
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="s-encuesta-resultados"><figcaption>El tablero de resultados de una encuesta de la demo: indicadores, gráficos por pregunta, pastillas de filtro con la cantidad de gente y el mapa de participación por seccional.</figcaption></figure>
+  <figure class="fig captura" data-captura="s-encuesta-resultados"><figcaption>Resultados de una encuesta anónima de la demo: pastillas de filtro con la cantidad de gente, cuatro indicadores (participación 58 de 106, avisos leídos, ritmo, estado), mapa de participación por seccional, un gráfico por pregunta y, al final, la evolución entre tomas.</figcaption></figure>
 </div>
 <div class="tabla-cont"><table class="tabla">
   <thead><tr><th>Función</th><th>Qué hace</th></tr></thead>
   <tbody>
-    <tr><td>Umbral en el SQL</td><td>Un grupo anónimo con menos respuestas que el mínimo no se calcula ni viaja al navegador. Rige en las anónimas; en una nominal el operador ya ve respuesta por respuesta.</td></tr>
-    <tr><td>Filtros asociativos</td><td>Pastillas multi-selección por cada corte, con la cantidad de gente al lado; al elegir una, las demás se recalculan contra ese recorte («Córdoba 3 / 11») y no siguen mostrando el total. También hay un calendario de rango sobre el día de respuesta.</td></tr>
-    <tr><td>Cruce</td><td>Tocar una respuesta dice dónde se concentra comparando con el general («Algo tenso: 44 % en Sede central contra 29 % general»). Contra los cortes siempre; contra otras preguntas solo en las nominales, porque en una anónima esa unión no existe.</td></tr>
-    <tr><td>Mapa de participación</td><td>Burbujas por seccional: el tamaño es cuánta gente respondió y el color qué porcentaje de su padrón es, sobre una escala fija de 0 a 100 %. Tocar una burbuja filtra como la pastilla.</td></tr>
-    <tr><td>Evolución entre tomas</td><td>Compara las tomas sucesivas de la misma encuesta (las que nacieron de duplicar), emparejando preguntas por orden y tipo. Una toma chica no aporta un punto que identifique gente.</td></tr>
-    <tr><td>Exportar CSV</td><td>El formato sale del modo: en una nominal, una fila por persona con nombre, CUIL y respuestas (todo el padrón, con columna «Respondió»); en una anónima, solo conteos y porcentajes con el umbral aplicado, nunca una fila por respuesta.</td></tr>
-    <tr><td>Historial</td><td>Cada descarga queda registrada (quién, cuándo, qué y cuántas filas), como las ediciones, prórrogas, cierres y recordatorios. Si alguna vez circula una planilla que no debía, hay a quién preguntarle.</td></tr>
+    <tr><td>Umbral en el SQL</td><td>Un grupo anónimo bajo el mínimo no se calcula ni viaja al navegador. En una nominal no rige: el operador ya ve respuesta por respuesta.</td></tr>
+    <tr><td>Filtros asociativos</td><td>Pastillas multi-selección; al elegir una, las demás se recalculan contra ese recorte («Córdoba 3 / 11»).</td></tr>
+    <tr><td>Cruce</td><td>Tocar una respuesta dice dónde se concentra frente al general («44 % en Sede central contra 29 %»). Contra otras preguntas, solo en nominales: en una anónima esa unión no existe.</td></tr>
+    <tr><td>Evolución</td><td>Compara las tomas sucesivas de la misma encuesta; una toma chica no aporta un punto que identifique gente.</td></tr>
+    <tr><td>Exportar CSV</td><td>Nominal: una fila por persona con nombre y CUIL. Anónima: solo conteos con el umbral aplicado, nunca una fila por respuesta. Cada descarga queda registrada.</td></tr>
   </tbody>
 </table></div>
 
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Tablas: <code>Encuesta</code>, <code>PreguntaEncuesta</code>, <code>RespuestaEncuesta</code> (la urna), <code>EncuestaParticipante</code> (el padrón), <code>RespuestaNominal</code> (solo nominales) y <code>EventoEncuesta</code> (historial). Reglas puras en <code>encuestas.py</code>; agregados SQL en <code>resultados_encuesta.py</code>. Módulo opt-in <code>encuestas</code> con dos permisos separados: armar (<code>encuestas</code>) y leer resultados (<code>encuestas_resultados</code>); en la demo, Prensa Central arma y lee y Prensa Córdoba solo lee. El Admin de Seccional <b>ve</b> las encuestas de sede central con los resultados recortados a su seccional, pero no puede editarlas, publicarlas, cerrarlas ni borrarlas (<code>_exigir_alcance_encuesta</code>, también contra un POST armado a mano). El umbral por defecto es 5 (<code>encuestas.UMBRAL_MINIMO_DEFAULT</code>, editable por plataforma). La curva de ritmo se cuenta sobre una pregunta testigo obligatoria, porque contar filas de la urna contaría opciones, no gente.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Tablas <code>Encuesta</code>, <code>PreguntaEncuesta</code>, <code>RespuestaEncuesta</code> (urna), <code>EncuestaParticipante</code> (padrón), <code>RespuestaNominal</code> (solo nominales; la flecha apunta de ahí a la urna) y <code>EventoEncuesta</code>. Reglas puras en <code>encuestas.py</code>, agregados SQL en <code>resultados_encuesta.py</code>; módulo opt-in con dos permisos, armar (<code>encuestas</code>) y leer resultados (<code>encuestas_resultados</code>). El umbral (5, editable por plataforma) y el recorte por seccional se aplican en la consulta; un Admin de Seccional ve las encuestas centrales recortadas, sin poder editarlas (<code>_exigir_alcance_encuesta</code>).</p></div>
 
 
 <h3 id="cap-5-credencial-tudia"><span class="n">5.10</span>Credencial, Tu día, Capacitación y Consultas al convenio</h3>
 
-<p>Cuatro funciones más del lado del afiliado, de naturaleza distinta: una identifica, una acompaña, una explica y una responde.</p>
+<p>Cuatro funciones del lado del afiliado: una identifica, una acompaña, una explica y una responde.</p>
 
 <h4>Credencial digital con QR</h4>
 <div class="lado">
 <div>
-<p>El afiliado lleva su credencial en el teléfono: logo y colores del sindicato, nombre, número de credencial, vigencia y su foto de perfil sobre un fondo con filigrana. El número y la vigencia los genera el sindicato desde la ficha del afiliado («Generar credencial»); hasta entonces la solapa muestra el estado «pendiente».</p>
-<p>La credencial lleva un <b>QR</b>. Quien lo escanea (en una guardia, en la puerta de una obra) llega a una <b>página pública de verificación</b> que confirma que la persona está activa en el sindicato y muestra nombre, CUIL, código y vigencia. <b>No muestra el DNI</b>: una foto de la credencial no tiene que filtrarlo.</p>
+<p>La credencial lleva logo y colores del sindicato, nombre, número de credencial, CUIL, DNI, vigencia, la firma de la autoridad y un <b>QR</b>. El número y la vigencia los genera el sindicato desde la ficha del afiliado; hasta entonces figura «pendiente». Quien escanea el QR llega a una <b>página pública de verificación</b> que confirma «Credencial válida» y muestra nombre, CUIL, número y vigencia, pero <b>no el DNI</b>.</p>
+<p>El QR es <b>efímero</b>: lleva el identificador de la credencial y un código firmado que <b>vence a los 10 minutos</b>; la app lo renueva sola («Se renueva en 9:53»). Una captura reenviada deja de verificar, y sin código vigente la página pública no muestra ningún dato.</p>
 </div>
-<figure class="fig captura" data-captura="t-credencial"><figcaption>La credencial del afiliado con su QR; el QR se renueva solo antes de vencer.</figcaption></figure>
+<figure class="fig captura" data-captura="t-credencial"><figcaption>La credencial en el teléfono, con el QR y su cuenta regresiva de renovación.</figcaption></figure>
 </div>
-<p>El QR es <b>efímero</b>: lleva el identificador permanente de la credencial más un código firmado que <b>vence a los 10 minutos</b>; la app emite uno nuevo cada vez que se abre la solapa y lo renueva antes de que venza. Una captura de pantalla reenviada por mensaje deja de verificar: sirve para mostrarla en el momento, no para pasarla. Sin un código vigente, la página pública no muestra ningún dato de la persona.</p>
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="t-credencial-verificacion"><figcaption>La página pública que ve quien escanea el QR: sindicato, nombre, CUIL, código y vigencia, sin DNI.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-credencial-verificacion"><figcaption>Lo que ve quien escanea el QR: «Credencial válida», nombre, CUIL, número y vigencia, con la aclaración de que no se muestra el documento.</figcaption></figure>
 </div>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Módulo <code>credencial</code>. <code>qr.py</code> genera el QR como SVG con <code>segno</code> (sin Pillow) y firma el código efímero (<code>TTL_QR_SEGUNDOS = 600</code>). Rutas: <code>GET /api/credencial/qr</code> (autenticada, renueva) y <code>GET /v/{token}</code> (pública, falla cerrado sin código válido). <code>Trabajador.token</code> es opaco; <code>codigo_credencial</code> y <code>vigencia_credencial</code> son del empadronamiento.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Módulo <code>credencial</code>. <code>qr.py</code> genera el QR en SVG y firma el código (<code>TTL_QR_SEGUNDOS = 600</code>). Rutas: <code>GET /api/credencial/qr</code> (autenticada) y <code>GET /v/{token}</code> (pública, falla cerrado). <code>codigo_credencial</code> y <code>vigencia_credencial</code> son del empadronamiento.</p></div>
 
 <h4>Tu día</h4>
-<p>«Tu día» es la franja de la portada del afiliado pensada para que abrir la app tenga un motivo que no sea un trámite. Muestra siempre la <b>hora y el clima</b> de su localidad y, debajo, un <b>rubro que rota</b> cada 6, 10 o 15 segundos a elección del sindicato. Cada ítem se abre en una hoja con un artículo corto (título, tres o cuatro párrafos y el enlace a la fuente).</p>
-<ul>
-  <li><b>Rubros disponibles:</b> efemérides nacionales y obreras, dólar oficial del BCRA, datos curiosos, ciencia y técnica, salud, tus derechos como consumidor y entretenimiento.</li>
-  <li><b>Clima</b> de MET Norway (con la atribución en la hoja); las coordenadas nunca llegan al navegador y, si el servicio externo cae, la franja no da error.</li>
-  <li><b>Trivia diaria.</b> El rubro Entretenimiento es una trivia de <b>diez preguntas por día</b>, con 30 segundos por pregunta, puntaje de 0 a 10, comentario de aliento por debajo de cinco y elogio creciente desde ahí, repaso de las respuestas al final y avance guardado por día en el navegador. El kit se renueva solo con la fecha de Buenos Aires, sin tarea programada, y no repite preguntas dentro de cada tanda.</li>
-  <li><b>Cumpleaños.</b> Una animación de ocho segundos que la persona ve una sola vez.</li>
-  <li><b>Configuración.</b> El Super Admin del sindicato elige qué rubros mostrar, la política y el intervalo en <i>Apariencia</i>. No hay feriados ni alertas del SMN (decisión de producto).</li>
-</ul>
+<p>Franja de la portada con la <b>hora y el clima</b> de la localidad (MET Norway; las coordenadas nunca llegan al navegador) y un <b>rubro que rota</b> cada 6, 10 o 15 segundos. Cada ítem abre un artículo corto con su fuente. Rubros: efemérides, dólar oficial del BCRA, curiosos, ciencia, salud, derechos del consumidor y entretenimiento. Este último es una <b>trivia diaria</b> de diez preguntas con reloj de 30 segundos, puntaje de 0 a 10 y avance guardado por día en el navegador; se renueva sola con la fecha de Buenos Aires. El cumpleaños dispara una animación de ocho segundos que se ve una vez. El Super Admin elige rubros e intervalo en <i>Apariencia</i>; no hay feriados ni alertas del SMN.</p>
 <div class="par-capturas">
-  <figure class="fig captura" data-captura="t-tu-dia"><figcaption>La hoja de un ítem de Tu día: artículo corto con su fuente.</figcaption></figure>
-  <figure class="fig captura" data-captura="t-trivia"><figcaption>La trivia diaria: pregunta, reloj de 30 segundos y avance de la tanda.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-tu-dia"><figcaption>La hoja de un ítem de Tu día (una efeméride): título, cuatro párrafos y, al pie, el enlace a la fuente.</figcaption></figure>
+  <figure class="fig captura" data-captura="t-trivia"><figcaption>La trivia: «Pregunta 1 de 10», dificultad, reloj de 28 segundos y tres opciones.</figcaption></figure>
 </div>
-<div class="nota pendiente"><span class="rot">Contenido sin revisar</span><p>Los artículos (617 en total, escritos con asistencia de IA) y las 210 preguntas de la trivia están <b>marcados <code>revisado: false</code></b>: ninguno pasó todavía por una revisión editorial humana, y los enlaces de fuente son portadas institucionales sin verificar una por una. Antes de ofrecer esta función a un sindicato real hay que revisarlos. Lo que se marque como dudoso no se muestra nunca.</p></div>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Módulo <code>tu_dia</code> (prendido por defecto). <code>tu_dia.py</code> es puro: catálogo de rubros, ítem del día determinista por fecha, <code>trivia_del_dia</code>. El contenido vive en <code>data/tu_dia/*.json</code>; <code>tu_dia_fuentes.py</code> consulta MET Norway y el BCRA con caché en <code>CacheExterna</code>; <code>static/tu_dia.js</code> dibuja. Configuración en <code>Sindicato.tu_dia</code>; el cumpleaños se registra en <code>CuentaTrabajador.cumple_visto</code>.</p></div>
+<div class="nota pendiente"><span class="rot">Contenido sin revisión editorial humana</span><p>Los 617 artículos y las 210 preguntas de la trivia, escritos con asistencia de IA, están marcados <code>revisado: false</code>, y los enlaces de fuente no se verificaron uno por uno. Hay que revisarlos antes de ofrecer la función a un sindicato real.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Módulo <code>tu_dia</code> (prendido por defecto). <code>tu_dia.py</code> (puro: rubros, ítem determinista por fecha, <code>trivia_del_dia</code>), contenido en <code>data/tu_dia/*.json</code>, <code>tu_dia_fuentes.py</code> (MET Norway y BCRA, con caché en <code>CacheExterna</code>), <code>static/tu_dia.js</code>. Configuración en <code>Sindicato.tu_dia</code>; cumpleaños en <code>CuentaTrabajador.cumple_visto</code>.</p></div>
 
 <h4>Capacitación</h4>
-<p>La solapa <i>Capacitación</i> trae hoy <b>una sola guía, igual para todos los sindicatos</b>: «Entendé tu nuevo recibo de sueldo». Explica las cuatro secciones del recibo bajo el modelo único vigente desde el 1 de junio de 2026 (Ley 27.802, Decreto 407/2026), la diferencia entre aportes (que se descuentan del sueldo) y contribuciones patronales (que paga el empleador) y qué mirar para detectar un problema. Es la misma para todos porque es ley nacional.</p>
-<div class="par-capturas">
-  <figure class="fig captura" data-captura="t-capacitacion"><figcaption>La guía fija de Capacitación sobre el nuevo recibo de sueldo.</figcaption></figure>
-</div>
-<div class="nota pendiente"><span class="rot">Pendiente</span><p>Falta diseñar cómo cada sindicato podría sumar <b>su propio contenido</b> de capacitación además de la guía fija de plataforma.</p></div>
+<div class="lado izq"><figure class="fig captura" data-captura="t-capacitacion"><figcaption>La guía fija: las cuatro secciones del recibo nuevo y el recuadro «aporte vs. contribución».</figcaption></figure>
+<div>
+<p>Hoy hay <b>una sola guía, igual para todos los sindicatos</b>: «Entendé tu nuevo recibo de sueldo». Explica las cuatro secciones del recibo bajo el modelo vigente desde el 1 de junio de 2026 (Ley 27.802, Decreto 407/2026), la diferencia entre aportes (se descuentan del sueldo) y contribuciones patronales (las paga el empleador) y qué mirar para detectar un problema.</p>
+<div class="nota pendiente"><span class="rot">Pendiente</span><p>Falta diseñar cómo cada sindicato sumaría <b>su propio contenido</b>.</p></div>
+</div></div>
 
-<h4>Consultas sobre el convenio</h4>
-<p>Es un piloto: el afiliado le hace una pregunta en lenguaje natural al convenio colectivo de su sindicato («¿cuántos días de licencia me corresponden por matrimonio?») y recibe una respuesta que <b>cita el artículo</b> del que sale. El administrador del sindicato carga el convenio y sus actas en PDF desde la pestaña <i>Convenio</i>; el sistema los lee, los parte en fragmentos y los indexa. Un sindicato puede tener varios convenios y el afiliado elige sobre cuál consultar.</p>
-
-<figure class="fig diagrama">
-<svg viewBox="0 0 860 250" role="img" aria-label="Cómo responde el piloto de consultas sobre el convenio: indexación del PDF y respuesta a una pregunta con cita del artículo">
-  <defs><marker id="f5c4-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs>
-  <text x="20" y="22" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#a86400">1 · UNA VEZ: el sindicato carga el convenio</text>
-  <rect x="20" y="34" width="150" height="62" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-  <text x="95" y="60" text-anchor="middle" font-size="13" fill="#16243a">PDF del CCT</text>
-  <text x="95" y="78" text-anchor="middle" font-size="12" fill="#4c5d75">y sus actas</text>
-  <rect x="215" y="34" width="150" height="62" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-  <text x="290" y="60" text-anchor="middle" font-size="13" fill="#16243a">Fragmentos</text>
-  <text x="290" y="78" text-anchor="middle" font-size="12" fill="#4c5d75">troceo por artículo</text>
-  <rect x="410" y="34" width="210" height="62" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
-  <text x="515" y="60" text-anchor="middle" font-size="13" fill="#16243a">Vectores locales (1024)</text>
-  <text x="515" y="78" text-anchor="middle" font-size="12" fill="#4c5d75">embeddings, sin servicio externo</text>
-  <rect x="665" y="34" width="175" height="62" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-  <text x="752" y="60" text-anchor="middle" font-size="13" fill="#16243a">Postgres + pgvector</text>
-  <text x="752" y="78" text-anchor="middle" font-size="12" fill="#4c5d75">en segundo plano</text>
-  <line x1="170" y1="65" x2="213" y2="65" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c4-f)"/>
-  <line x1="365" y1="65" x2="408" y2="65" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c4-f)"/>
-  <line x1="620" y1="65" x2="663" y2="65" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c4-f)"/>
-  <text x="20" y="142" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0d7a5f">2 · CADA PREGUNTA</text>
-  <rect x="20" y="154" width="150" height="66" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-  <text x="95" y="182" text-anchor="middle" font-size="13" fill="#16243a">Pregunta del</text>
-  <text x="95" y="200" text-anchor="middle" font-size="13" fill="#16243a">afiliado</text>
-  <rect x="215" y="154" width="190" height="66" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-  <text x="310" y="180" text-anchor="middle" font-size="13" fill="#16243a">Busca los 8 fragmentos</text>
-  <text x="310" y="198" text-anchor="middle" font-size="12" fill="#4c5d75">solo de SU sindicato y convenio</text>
-  <rect x="450" y="154" width="190" height="66" rx="10" fill="#fff6e5" stroke="#f0a01e" stroke-width="1.5"/>
-  <text x="545" y="180" text-anchor="middle" font-size="13" fill="#16243a">Modelo de IA responde</text>
-  <text x="545" y="198" text-anchor="middle" font-size="12" fill="#4c5d75">o dice «no lo encontré»</text>
-  <rect x="685" y="154" width="155" height="66" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-  <text x="762" y="180" text-anchor="middle" font-size="13" fill="#16243a">Respuesta + solo</text>
-  <text x="762" y="198" text-anchor="middle" font-size="13" fill="#16243a">los artículos citados</text>
-  <line x1="170" y1="187" x2="213" y2="187" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c4-f)"/>
-  <line x1="405" y1="187" x2="448" y2="187" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c4-f)"/>
-  <line x1="640" y1="187" x2="683" y2="187" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5c4-f)"/>
-</svg>
-<figcaption>Las consultas al convenio: se indexa una vez y cada pregunta busca fragmentos y se los pasa a la IA, que debe responder solo con ellos y citar el artículo.</figcaption>
-</figure>
-
-<div class="nota regla"><span class="rot">Reglas vigentes</span><p><b>El control de «no lo encontré» es el prompt, no un umbral.</b> Se midió que una pregunta del mismo tema que el convenio no contesta puntúa casi igual que la peor pregunta legítima; ningún número las separa. Por eso la respuesta la da un modelo grande (por defecto Claude Opus 5, elegible desde plataforma), instruido para no inventar. Al afiliado se le muestran solo las fuentes <b>citadas</b>, no los 8 fragmentos que recibió el modelo. El aislamiento entre sindicatos está en la consulta (<code>sindicato_id</code> + convenio + documentos vigentes), no en un filtro posterior.</p></div>
-<div class="nota pendiente"><span class="rot">Estado: piloto</span><p>El módulo <code>convenio</code> es <b>opt-in</b> y la pantalla del afiliado (<code>/app/convenio</code>) <b>no figura en el menú</b>, por decisión de producto del piloto. Que no esté en el menú no es control de acceso: exige sesión y módulo igual. Indexar un convenio tarda unos 9 minutos y corre en segundo plano; lo que quede «procesando» tras un reinicio se marca como error y se reintenta.</p></div>
-<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>rag.py</code>. Embeddings locales con <code>fastembed</code> (ONNX, sin torch), modelo <code>intfloat/multilingual-e5-large</code>, <code>vector(1024)</code>, con <code>passage_embed</code> para documentos y <code>query_embed</code> para preguntas (e5 es asimétrico). La versión de <code>fastembed</code> está fijada exacta: cambió el pooling de este modelo entre versiones y los vectores guardados dejarían de ser comparables sin que nada falle; por eso <code>db.MODELO_EMBEDDING</code> se escribe en cada fragmento. Tablas: <code>Convenio</code>, <code>DocumentoConvenio</code>, <code>FragmentoConvenio</code>, <code>ConsultaConvenio</code>. La medición que eligió el modelo está en <code>medicion_rag/</code>; plan en <code>PLAN_RAG_CONVENIO.md</code>.</p></div>
+<h4>Consultas sobre el convenio (piloto)</h4>
+<p>El afiliado le hace una pregunta en lenguaje natural al convenio de su sindicato y recibe una respuesta que <b>cita el artículo</b>. El sindicato carga el convenio y sus actas en PDF (pestaña <i>Convenio</i>); el sistema los trocea y los indexa en segundo plano (unos 9 minutos). Cada pregunta busca los 8 fragmentos más cercanos <b>solo de ese sindicato y convenio</b> y se los pasa a un modelo de IA, que responde solo con ellos o dice «no lo encontré». Al afiliado se le muestran solo las fuentes citadas.</p>
+<div class="nota regla"><span class="rot">Reglas vigentes</span><p><b>El control de «no lo encontré» es el prompt, no un umbral</b>: se midió que una pregunta del mismo tema que el convenio no contesta puntúa casi igual que la peor legítima, así que ningún número las separa. Por eso responde un modelo grande (por defecto Claude Opus 5, elegible desde plataforma). El aislamiento entre sindicatos está en el <code>WHERE</code> de la consulta, no en un filtro posterior.</p></div>
+<div class="nota pendiente"><span class="rot">Estado: piloto</span><p>Módulo <code>convenio</code> opt-in; la pantalla <code>/app/convenio</code> no figura en el menú por decisión de producto, pero exige sesión y módulo igual.</p></div>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>rag.py</code>: embeddings locales con <code>fastembed</code> (ONNX, <code>intfloat/multilingual-e5-large</code>, <code>vector(1024)</code>) en Postgres con pgvector, <code>passage_embed</code> para documentos y <code>query_embed</code> para preguntas. La versión de <code>fastembed</code> está fijada exacta porque un cambio de pooling dejaría los vectores incomparables sin que nada falle; <code>db.MODELO_EMBEDDING</code> se guarda en cada fragmento. Tablas <code>Convenio</code>, <code>DocumentoConvenio</code>, <code>FragmentoConvenio</code>, <code>ConsultaConvenio</code>; medición en <code>medicion_rag/</code>.</p></div>
 
 </section>
