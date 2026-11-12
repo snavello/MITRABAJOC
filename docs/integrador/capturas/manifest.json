@@ -1,0 +1,128 @@
+{
+ "t-ingreso": {
+  "archivo": "t-ingreso.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/ingresar",
+  "rol": "afiliado",
+  "descripcion": "Pantalla de ingreso del afiliado con CUIL y clave, y pestaña de registro."
+ },
+ "t-registro": {
+  "archivo": "t-registro.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/ingresar",
+  "rol": "afiliado",
+  "descripcion": "Primer paso del registro del afiliado: CUIL y captcha."
+ },
+ "t-portada": {
+  "archivo": "t-portada.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM 20111111112",
+  "descripcion": "Portada del afiliado de la UOM con accesos, noticias y beneficios."
+ },
+ "t-portada-entera": {
+  "archivo": "t-portada-entera.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 3842,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM 20111111112",
+  "descripcion": "Portada completa del afiliado: Tu día, noticias, beneficios."
+ },
+ "t-recibo-subir": {
+  "archivo": "t-recibo-subir.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Tu Recibo, paso 1: subir foto o PDF del recibo."
+ },
+ "t-recibo-espera": {
+  "archivo": "t-recibo-espera.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Espera de la lectura del recibo: aro con reloj y fases (lectura simulada)."
+ },
+ "t-recibo-revisar": {
+  "archivo": "t-recibo-revisar.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 3684,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Paso 2 Revisá: datos leídos del recibo (simulado), conceptos y totales, para confirmar."
+ },
+ "t-recibo-resultado": {
+  "archivo": "t-recibo-resultado.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 2188,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Paso 3 Resultado: veredicto de la validación de aportes contra el convenio."
+ },
+ "t-portada-escritorio": {
+  "archivo": "t-portada-escritorio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 900,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM",
+  "descripcion": "Portada del afiliado en escritorio, dos columnas."
+ },
+ "t-recibo-resultado-escritorio": {
+  "archivo": "t-recibo-resultado-escritorio.webp",
+  "tipo": "escritorio",
+  "ancho": 1440,
+  "alto": 1011,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Resultado de la verificación del recibo en escritorio."
+ },
+ "t-credencial": {
+  "archivo": "t-credencial.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app",
+  "rol": "afiliado UOM",
+  "descripcion": "Pestaña Credencial: credencial digital del afiliado con QR de verificación vigente."
+ },
+ "t-credencial-verificacion": {
+  "archivo": "t-credencial-verificacion.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/v/{token}?k=...",
+  "rol": "público (quien escanea el QR)",
+  "descripcion": "Página pública de verificación de la credencial: afiliado vigente, sin DNI."
+ },
+ "t-tu-dia": {
+  "archivo": "t-tu-dia.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM",
+  "descripcion": "Hoja de un ítem de Tu día (efeméride): artículo con título, párrafos y enlace a la fuente."
+ },
+ "t-trivia": {
+  "archivo": "t-trivia.webp",
+  "tipo": "movil",
+  "ancho": 780,
+  "alto": 1688,
+  "url": "/app/inicio",
+  "rol": "afiliado UOM",
+  "descripcion": "Trivia diaria de Tu día: primera pregunta con opciones y reloj."
+ }
+}
