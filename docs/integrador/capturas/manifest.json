@@ -42,7 +42,7 @@
   "alto": 1688,
   "url": "/app",
   "rol": "afiliado UOM",
-  "descripcion": "Pestaña Tu Recibo, paso 1: subir foto o PDF del recibo."
+  "descripcion": "Pestaña Mis Recibos, paso 1: subir foto o PDF del recibo."
  },
  "t-recibo-espera": {
   "archivo": "t-recibo-espera.webp",
@@ -57,19 +57,19 @@
   "archivo": "t-recibo-revisar.webp",
   "tipo": "movil",
   "ancho": 780,
-  "alto": 3684,
+  "alto": 2934,
   "url": "/app",
   "rol": "afiliado UOM",
-  "descripcion": "Paso 2 Revisá: datos leídos del recibo (simulado), conceptos y totales, para confirmar."
+  "descripcion": "Paso 2 Revisá: datos del recibo leído (lectura simulada), con los cinco conceptos y los totales, para confirmar antes de verificar."
  },
  "t-recibo-resultado": {
   "archivo": "t-recibo-resultado.webp",
   "tipo": "movil",
   "ancho": 780,
-  "alto": 2188,
+  "alto": 2598,
   "url": "/app",
   "rol": "afiliado UOM",
-  "descripcion": "Paso 3 Resultado: veredicto de la validación de aportes contra el convenio."
+  "descripcion": "Paso 3 Resultado: «Hay 1 diferencia», chequeó 4 conceptos; la cuota sindical figura $20.000 y el convenio esperaba 2,5% = $25.000; jubilación, PAMI y obra social OK."
  },
  "t-portada-escritorio": {
   "archivo": "t-portada-escritorio.webp",
@@ -84,10 +84,10 @@
   "archivo": "t-recibo-resultado-escritorio.webp",
   "tipo": "escritorio",
   "ancho": 1440,
-  "alto": 1011,
+  "alto": 1175,
   "url": "/app",
   "rol": "afiliado UOM",
-  "descripcion": "Resultado de la verificación del recibo en escritorio."
+  "descripcion": "Resultado de la verificación en escritorio: 1 diferencia en la cuota sindical (esperado $25.000, figura $20.000) y tres controles OK."
  },
  "t-credencial": {
   "archivo": "t-credencial.webp",
@@ -265,18 +265,18 @@
   "tipo": "escritorio",
   "ancho": 1440,
   "alto": 900,
-  "url": "/admin",
+  "url": "/admin#formulas",
   "rol": "Super Admin UOM",
-  "descripcion": "Pestaña Reglas: reglas de control (fórmulas) de los aportes del convenio."
+  "descripcion": "Pestaña Reglas: reglas de control de aportes (jubilación 11%, PAMI 3%, obra social 3%, cuota UOM 2,5% del remunerativo)."
  },
  "s-conceptos": {
   "archivo": "s-conceptos.webp",
   "tipo": "escritorio",
   "ancho": 1440,
   "alto": 900,
-  "url": "/admin",
+  "url": "/admin#conceptos",
   "rol": "Super Admin UOM",
-  "descripcion": "Pestaña Conceptos: catálogo de conceptos del recibo y su clasificación."
+  "descripcion": "Pestaña Conceptos: catálogo del sindicato (ingresos y descuentos, remunerativo, alias) con filtros por empleador."
  },
  "s-aprendizaje": {
   "archivo": "s-aprendizaje.webp",
@@ -555,7 +555,7 @@
   "alto": 900,
   "url": "/plataforma/usuarios",
   "rol": "admin de plataforma",
-  "descripcion": "Usuarios de plataforma y lista de usuarios de los paneles de los sindicatos."
+  "descripcion": "Usuarios de plataforma (nombres sintéticos Operador Uno y Dos, rol superadmin) y formulario para crear usuarios."
  },
  "e-ingreso": {
   "archivo": "e-ingreso.webp",
@@ -573,7 +573,7 @@
   "alto": 1688,
   "url": "/empresa/inicio",
   "rol": "empresa multisindicato 30111222335 (UOM)",
-  "descripcion": "Portada de la empresa: accesos a Notificaciones y Trámites del sindicato elegido."
+  "descripcion": "Portada de la empresa con un trámite en curso (nómina mensual de aportes, «Necesita tu atención» y 1 expediente con novedades) en el sindicato UOM."
  },
  "e-portada-escritorio": {
   "archivo": "e-portada-escritorio.webp",
@@ -582,7 +582,7 @@
   "alto": 900,
   "url": "/empresa/inicio",
   "rol": "empresa multisindicato 30111222335 (UOM)",
-  "descripcion": "Portada de la empresa en escritorio."
+  "descripcion": "Portada de la empresa en escritorio, con un trámite en curso."
  },
  "e-tramites": {
   "archivo": "e-tramites.webp",
@@ -591,7 +591,7 @@
   "alto": 1688,
   "url": "/empresa (Trámites)",
   "rol": "empresa multisindicato 30111222335 (UOM)",
-  "descripcion": "Pestaña Trámites de la empresa: formularios disponibles y bandeja de expedientes."
+  "descripcion": "Pestaña Trámites de la empresa: iniciar un trámite, buscar expediente y la bandeja con el trámite F01EMP «En tratamiento»."
  },
  "x-entornos": {
   "archivo": "x-entornos.webp",
@@ -681,7 +681,7 @@
   "alto": 900,
   "url": "/entornos (Planes)",
   "rol": "admin de plataforma",
-  "descripcion": "Pestaña Planes: planes de Render del servicio web y de la base, con reglas semanales de subida y bajada (sin credenciales de Render en este entorno local)."
+  "descripcion": "Pestaña Planes: planes de Render del servicio web y de la base, con reglas semanales de subida y bajada (sin RENDER_API_KEY en local; se ocultó el aviso de error de consulta)."
  },
  "x-fiesta": {
   "archivo": "x-fiesta.webp",

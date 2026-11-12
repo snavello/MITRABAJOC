@@ -10913,3 +10913,41 @@ elegante sobre las tarjetas) se pasó a un solo tono en tres versiones.
 `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de prueba en Pruebas (la URL del
 webhook es `https://<pruebas>/api/fiesta/mp/webhook`); probar la cámara en un
 teléfono real (en Pruebas hay https); el modelo de diseño del catálogo XSD.
+
+
+## Documento integrador «Colm3na, de punta a punta» (2026-11-12, Plataforma 0.68.02)
+
+Pedido de SDN (por audio): un documento para los nuevos integrantes del equipo y
+para funcionarios que no están al tanto, que integre lo ya escrito pero al día,
+gráfico y fácil de leer sin perder el criterio técnico, con capturas reales de la
+app (escritorio o teléfono), imprimible, HTML autocontenido y en Recursos.
+
+**Cómo se hizo.** Code armó la base (`docs/integrador/`: `estilo.css` claro e
+imprimible en A4 con Barlow Condensed y Manrope incrustadas, `COMPONENTES.md`,
+`capturas/LISTA.md` y `armar.py`, que junta las partes, arma índice, riel lateral y
+glosario e incrusta capturas, fuentes y logo). Ocho redactores en paralelo
+escribieron un capítulo cada uno contra el código (fuente de verdad: el código >
+CLAUDE.md > HISTORIAL > bitácora > planes > Recursos, varios atrasados); un agente
+levantó la app en una base local con la demo, el lote de la UOM y La Bancaria
+(`MOCK_EXTRACTOR=1`, sin gastar créditos) y sacó 77 capturas; cuatro editores
+recortaron el texto (de ~30.000 a ~24.000 palabras), sacaron lo repetido entre
+capítulos (mapa de «dueños» de cada tema) y reescribieron cada pie mirando la
+imagen.
+
+**Correcciones que salieron de contrastar con el código** (los documentos viejos
+decían otra cosa): los trámites NO crean notificaciones en la bandeja (solo Web
+Push, y solo por trámites); hay 13 módulos (7 de origen), 20 secciones de permiso,
+17 entradas posibles en el panel, 7 pestañas en la app del afiliado (la primera es
+«Mis Recibos») y 118 rutas `/admin` clasificadas; una respuesta del afiliado no
+cambia el estado de un trámite; los 600 recibos de la medición son recibos de
+prueba del lote de La Bancaria.
+
+**Encontrado de paso en la app**: el aviso de diferencia del resultado del recibo
+muestra los importes en formato de EE. UU. («$25,000.00», «$-5,000.00») mientras
+la tabla usa el argentino; la pestaña Observabilidad/Planes de `/entornos` muestra
+«TypeError: Cannot read properties of null (reading 'value')» cuando falta
+configuración.
+
+**Largo**: ~118 páginas A4 (el pedido era 40-60, aceptando más por las capturas):
+el glosario va a dos columnas y las capturas de teléfono sueltas flotan al lado del
+texto al imprimir. El PDF no se versiona (pesa ~37 MB con las capturas).
