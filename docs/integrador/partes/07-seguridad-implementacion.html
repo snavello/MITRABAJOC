@@ -7,14 +7,12 @@
   <p class="lead">Colm3na maneja dos cosas delicadas: recibos de sueldo y la lista de quiénes están afiliados a un sindicato. La segunda es, por ley, un dato sensible. Por eso la seguridad no se agregó al final: se diseñó con reglas simples, se mide con un método propio (XSK) y se puede auditar, porque cada acto importante deja una huella en una tabla.</p>
 
   <h3 id="cap-7-principios"><span class="n">7.1</span>Principios</h3>
-  <p>Seis ideas explican casi todas las decisiones de seguridad.</p>
-  <div class="grilla-3">
+  <p>Cuatro ideas explican casi todas las decisiones de seguridad.</p>
+  <div class="grilla-2">
     <div class="tarjeta miel"><h4>Aislamiento total</h4><p>Un sindicato no ve nada de otro. El recorte se hace <b>en la consulta a la base</b>, no en la pantalla: un dato ajeno no llega ni al servidor de aplicación.</p></div>
     <div class="tarjeta azul"><h4>Fail-closed</h4><p>Lo que nadie clasificó se rechaza. Una ruta sin permiso asignado da error, no acceso. El olvido se nota enseguida; no se filtra en silencio.</p></div>
-    <div class="tarjeta verde"><h4>Un solo dueño del dato</h4><p>Nombre, domicilio, teléfono y mail de una persona viven en un único lugar (su cuenta), no copiados en cada sindicato. Se corrigen una vez.</p></div>
     <div class="tarjeta violeta"><h4>Afiliación = dato sensible</h4><p>La Ley 25.326 trata la afiliación sindical como dato sensible. El sindicato es el responsable de la base y Colm3na la gestiona como <b>encargado del tratamiento</b>.</p></div>
     <div class="tarjeta rojo"><h4>Tapar antes de la IA</h4><p>Lo que identifica a la persona se oculta en el servidor antes de que el documento salga hacia el modelo, y la identidad se rearma del lado de Colm3na.</p></div>
-    <div class="tarjeta"><h4>Mínimo en los registros</h4><p>Los avisos de error no llevan cuerpos de pedidos, cookies, IP, variables ni nombres. Lo que no se guarda no se puede filtrar.</p></div>
   </div>
   <div class="nota ejemplo"><span class="rot">Ejemplo</span><p>Un administrador de seccional entra al padrón: la consulta ya pide solo la suya. Si arma a mano un pedido para editar una noticia de otra seccional, recibe un rechazo aunque el botón nunca se le haya mostrado.</p></div>
 
@@ -82,6 +80,7 @@
       <tr><td>Clave en la base (H-0009)</td><td>PBKDF2 con 100.000 vueltas.</td><td>Formato versionado, hoy 300.000 por decisión medida; los hashes viejos se rehashean al próximo ingreso.</td></tr>
       <tr><td>Plataforma (H-0016)</td><td>Una cuenta compartida, sin saber quién hizo qué.</td><td>Usuarios nominales con primer ingreso forzado y bitácora (<code>LogPlataforma</code>).</td></tr>
       <tr><td>Reportar al sindicato (H-0021)</td><td>CUIL y recibo venían del cuerpo del pedido.</td><td>El CUIL sale de la sesión y el recibo tiene que ser del afiliado.</td></tr>
+    </tbody></table></div>
 
   <h3 id="cap-7-controles"><span class="n">7.3</span>Controles técnicos</h3>
   <h4>Autenticación</h4>
@@ -97,7 +96,6 @@
   <div class="grilla-2">
     <div class="tarjeta miel"><h4>Anonimizado por diseño</h4><p>En Reportes y en el Panel, el recibo que el afiliado no envió al sindicato sale sin nombre, CUIL ni empresa; el borrado ocurre en el servidor, no en la pantalla. Esas filas aparecen solo si el sindicato firmó la <b>cláusula de confidencialidad</b>; los números y gráficos cuentan todo, con o sin cláusula.</p></div>
     <div class="tarjeta azul"><h4>Encuestas anónimas</h4><p>El padrón (quién fue consultado) y la urna (qué se respondió) son tablas separadas sin vínculo posible. Un grupo con menos respuestas que el umbral (por defecto 5, lo fija plataforma) no se calcula ni viaja, y el CSV anónimo trae solo conteos.</p></div>
-    <div class="tarjeta verde"><h4>Imágenes</h4><p>Toda imagen se achica en el servidor al subirla (webp, tope de 8 MB y de 40 millones de píxeles, mirado antes de decodificar). Un SVG con script, <code>on*=</code> o <code>javascript:</code> se rechaza.</p></div>
     <div class="tarjeta violeta"><h4>Navegador</h4><p>La política de seguridad de contenido (CSP) limita qué puede cargar cada página; la ampliación para el captcha vale solo en las pantallas de ingreso. Lo externo (mapas, gráficos) va vendoreado, nunca desde un CDN.</p></div>
   </div>
   <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Toda columna <code>LargeBinary</code> está diferida y un test captura el SQL de las pantallas para verificarlo. El estado entre pasos del registro viaja firmado (<code>auth.firmar_paso</code>).</p></div>
@@ -122,6 +120,7 @@
 </figure>
   <div class="nota regla"><span class="rot">Regla vigente</span><p>Lo que podría exponer datos sensibles al circular se registra en la base y no en un log del servidor que nadie mira: las descargas de listados de trámites y de resultados de encuestas dejan a quién preguntarle si alguna planilla circula donde no debía.</p></div>
   <h4>Trazabilidad del desarrollo</h4>
+  <ul>
     <li><b>Git y pull requests</b>: una rama por bloque y un PR por cambio, con CI que corre cada archivo de pruebas, <code>ruff</code> y <code>bandit</code> (frenan el PR) y la auditoría de dependencias.</li>
     <li><b>BITACORA.md</b> (una línea por bloque), <b>HISTORIAL.md</b> (narrativa) y <b>CLAUDE.md</b> (estado vigente); cada entorno informa su versión en <code>/api/version</code>.</li>
     <li><b>Entornos separados</b>: la Demo solo cambia al promover una versión probada en Pruebas, con respaldo previo (<a href="#cap-6-entornos">6.3</a>).</li>
@@ -166,6 +165,7 @@
     <li><b>Lanzamiento y operación</b> Oleadas de seccionales con capacitación previa; la app se instala desde un enlace, sin tienda. Mesa de ayuda en dos niveles (el sindicato atiende al afiliado, Colm3na al sindicato) y escalas al día en cada paritaria. <em>Listo cuando</em> se firma el acta de cierre.</li>
   </ol>
 
+  <h4>Indicadores del piloto</h4>
   <div class="tabla-cont"><table class="tabla">
     <thead><tr><th>Indicador del piloto</th><th>Meta propuesta (no acordada)</th></tr></thead>
     <tbody>

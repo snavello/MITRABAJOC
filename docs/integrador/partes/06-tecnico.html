@@ -5,7 +5,7 @@
     <p class="cap-bajada">Con qué está hecha Colm3na, cómo se desarrolla y se despliega un cambio, qué servicios de terceros usa, cómo se la vigila y cómo se aprovecha la IA.</p>
   </header>
 
-  <p class="lead">El capítulo más técnico. Cada pieza viene con una frase llana de para qué está. Los nombres en código (<code>main.py</code>, <code>db.py</code>) son los reales del repositorio <code>snavello/MITRABAJOC</code>.</p>
+  <p class="lead">El capítulo más técnico. Cada pieza viene con una frase llana de para qué está. Los nombres en código (<code>main.py</code>, <code>db.py</code>) son los reales del repositorio <code>MITRABAJOC</code>.</p>
 
   <div class="cifras">
     <div class="cifra"><b>1 repo</b><span>único: todo se lee, desarrolla y publica en <code>MITRABAJOC</code></span></div>
@@ -107,7 +107,7 @@
     <tbody>
       <tr><td><b>Claude Code</b></td><td>Escribe y prueba el código, en la PC o en la nube (un hook levanta Postgres 16 con pgvector y el entorno Python). Reparte desarrollo, QA y deploy entre agentes en paralelo.</td></tr>
       <tr><td><b>Claude (chat) y Cowork</b></td><td>Planes, documentos y análisis; lo que nace ahí viaja al repo como <code>docs/chat/…</code> o <code>PLAN_*.md</code>.</td></tr>
-      <tr><td><b>GitHub</b></td><td>Repo único <code>snavello/MITRABAJOC</code>, una rama por bloque (<code>feature/…</code>, <code>fix/…</code>) y Pull Request. Sobre <code>demo</code> no se programa.</td></tr>
+      <tr><td><b>GitHub</b></td><td>Repo único <code>MITRABAJOC</code>, una rama por bloque (<code>feature/…</code>, <code>fix/…</code>) y Pull Request. Sobre <code>demo</code> no se programa.</td></tr>
       <tr><td><b>pytest</b></td><td>Más de 200 archivos <code>test_*.py</code>, cada uno en su propio proceso; <code>conftest.py</code> crea una base Postgres descartable.</td></tr>
       <tr><td><b>Playwright y k6</b></td><td>Robots de punta a punta en <code>e2e/</code> (sin leer recibos con IA real: gastaría créditos) y pruebas de carga en <code>carga/k6/</code>.</td></tr>
     </tbody>
