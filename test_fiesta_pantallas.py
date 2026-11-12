@@ -182,3 +182,162 @@ def test_sindicato_la_tarjeta_de_entornos_apunta_a_las_rutas_de_arranque():
     reales = {r.path for r in main.app.routes if hasattr(r, "path")}
     if "/api/entornos/herramientas/fiesta/estado" in reales:
         assert "/api/entornos/herramientas/fiesta/arranque" in reales
+
+
+# ---------------------------------------------------------------------------
+# App del afiliado, el ticket y las páginas públicas (test_afiliado_*)
+# ---------------------------------------------------------------------------
+PLANTILLAS_AF = ["fiesta_afiliado.html", "fiesta_entrada.html", "fiesta_verificar.html",
+                 "fiesta_mp_simulado.html"]
+JS_AF = [Path("static") / "fiesta" / "afiliado.js", Path("static") / "fiesta" / "entrada.js"]
+CSS_FIESTA = Path("static") / "fiesta" / "fiesta.css"
+
+# Las rutas que las pantallas del afiliado pueden llamar (PLAN_FIESTA.md,
+# «Afiliado»). `{x}` = un parámetro de la ruta.
+RUTAS_AF_PLAN = {
+    "/api/fiesta/entrar", "/api/fiesta/salir", "/api/fiesta/estado", "/api/fiesta/reservar",
+    "/api/fiesta/reserva/{x}", "/api/fiesta/reserva/{x}/anular", "/api/fiesta/mp-simulado/{x}",
+    "/fiesta", "/fiesta/pago/vuelta", "/fiesta/entrada/{x}", "/fiesta/foto/{x}",
+}
+
+
+def _leer(ruta):
+    return Path(ruta).read_text(encoding="utf-8")
+
+
+def _normalizar_ruta(expr):
+    """'/api/fiesta/reserva/' + id + '/anular'  ->  /api/fiesta/reserva/{x}/anular"""
+    ruta = ""
+    for pieza in re.split(r"\s*\+\s*", expr.strip()):
+        if pieza[:1] in "'\"":
+            ruta += pieza[1:-1]
+        else:
+            ruta += "{x}"
+    return ruta.split("?")[0].split("#")[0]
+
+
+def _rutas_de_js_af():
+    salida = set()
+    for ruta in JS_AF:
+        js = _leer(ruta)
+        for expr in re.findall(r"(?:pedirJson|postJson|fetch)\(\s*((?:'[^']*'|\"[^\"]*\")(?:\s*\+\s*(?:'[^']*'|\"[^\"]*\"|[\w.]+))*)", js):
+            salida.add(_normalizar_ruta(expr))
+    return salida
+
+
+def test_afiliado_todo_static_con_sello():
+    for nombre in PLANTILLAS_AF:
+        html = _leer(Path("templates") / nombre)
+        refs = re.findall(r'(?:src|href)="(/static/[^"]+)"', html)
+        assert refs, nombre
+        for ref in refs:
+            assert "?v={{ sello_static(" in ref, f"{nombre}: {ref} sin sello ?v="
+    # y los url() de las hojas (fuentes) llevan el sello de la hoja que los carga
+    css = _leer(CSS_FIESTA)
+    for fuente in re.findall(r'url\("(/static/fonts/[^"]+)"\)', css):
+        assert (Path(fuente.lstrip("/"))).exists(), fuente
+
+
+def test_afiliado_los_fetch_apuntan_a_rutas_del_plan():
+    usadas = _rutas_de_js_af()
+    assert "/api/fiesta/estado" in usadas, "el regex no encontró las llamadas: el test no verifica nada"
+    assert usadas <= RUTAS_AF_PLAN, f"rutas que no están en el plan: {usadas - RUTAS_AF_PLAN}"
+    # la plantilla del simulado y el JS de la entrada
+    sim = _leer("templates/fiesta_mp_simulado.html")
+    assert "/api/fiesta/mp-simulado/' + id" in sim and "/fiesta/pago/vuelta?reserva=" in sim
+    assert "action=" not in "".join(_leer(Path("templates") / n) for n in PLANTILLAS_AF)
+    # si el backend ya las escribió, existen de verdad
+    reales = {re.sub(r"\{[^}]+\}", "{x}", r.path) for r in main.app.routes if hasattr(r, "path")}
+    if "/api/fiesta/estado" in reales:
+        faltan = {u for u in usadas if u not in reales}
+        assert not faltan, f"el JS llama a rutas que main.py no tiene: {faltan}"
+        for ruta in ("/fiesta/pago/vuelta", "/fiesta/entrada/{x}", "/fiesta/e/{x}"):
+            assert ruta in reales, ruta
+
+
+def test_afiliado_nada_de_innerhtml_con_datos():
+    for ruta in JS_AF + [Path("templates") / n for n in PLANTILLAS_AF]:
+        texto = _leer(ruta)
+        assert "innerHTML" not in texto, f"{ruta}: usar textContent"
+        assert "document.write" not in texto, ruta
+    # la única inserción de markup es el SVG del QR que arma el servidor
+    assert _leer(JS_AF[1]).count("insertAdjacentHTML") == 1
+
+
+def test_afiliado_las_vistas_llevan_data_mov_vista():
+    html = _leer("templates/fiesta_afiliado.html")
+    for vista in ("v-ingreso", "v-inicio", "v-sin-evento"):
+        assert re.search(r'id="%s"' % vista, html), vista
+        assert re.search(r'data-mov-vista[^>]*id="%s"' % vista, html), f"{vista} sin data-mov-vista"
+    assert "data-mov-vista" in _leer("templates/fiesta_entrada.html")
+    assert "data-mov-vista" in _leer("templates/fiesta_verificar.html")
+    # movimiento.css va ANTES de fiesta.css y el script que arma las vistas se carga con sello
+    for nombre in PLANTILLAS_AF:
+        h = _leer(Path("templates") / nombre)
+        assert h.index("movimiento.css") < h.index("fiesta/fiesta.css"), nombre
+        assert "modales.js?v={{ sello_static('modales.js') }}" in h, nombre
+
+
+def test_afiliado_las_duraciones_salen_de_movimiento_css():
+    css = _sin_comentarios_css(_leer(CSS_FIESTA))
+    assert not re.search(r"--(mov|ease)-[a-z]+\s*:", css), "fiesta.css define duraciones propias"
+    for nombre in PLANTILLAS_AF:
+        h = _leer(Path("templates") / nombre)
+        for dur in re.findall(r"(?:transition|animation)[^;{}]*?\b(\d+(?:\.\d+)?m?s)\b", _sin_comentarios_css(h)):
+            # los tiempos sueltos solo valen para animaciones decorativas largas (>= 900 ms)
+            assert dur.endswith("ms") and int(dur[:-2]) >= 900 or dur.endswith("s"), f"{nombre}: {dur}"
+
+
+def _sin_comentarios_css(t):
+    return re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+
+
+def test_afiliado_las_fuentes_nuevas_tienen_licencia():
+    css = _leer(CSS_FIESTA)
+    for fuente, licencia in (("cinzel-700.woff2", "OFL-cinzel.txt"), ("playfair-italic.woff2", "OFL-playfair.txt")):
+        assert (Path("static/fonts") / fuente).stat().st_size > 5000, fuente
+        assert fuente in css, fuente
+        txt = _leer(Path("static/fonts/licencias") / licencia)
+        assert "SIL Open Font License" in txt, licencia
+        assert fuente in _leer("static/fonts/licencias/LEEME.md"), fuente
+
+
+def test_afiliado_los_tokens_del_plan():
+    css = _leer(CSS_FIESTA)
+    for token in ("--f-noche", "--f-noche-2", "--f-tinta", "--f-papel", "--f-oro", "--f-oro-claro",
+                  "--f-oro-oscuro", "--f-texto", "--f-texto-suave", "--f-ok", "--f-aviso", "--f-error",
+                  "--f-info", "--f-display", "--f-texto-fuente", "--f-mono", "--f-radio",
+                  "--f-radio-chico", "--f-sombra", "--f-velo"):
+        assert re.search(re.escape(token) + r"\s*:", css), token
+    assert "prefers-reduced-motion" in css
+
+
+def test_afiliado_colm3na_no_aparece():
+    for nombre in PLANTILLAS_AF:
+        assert "colm3na" not in _leer(Path("templates") / nombre).lower(), nombre
+    for ruta in JS_AF + [CSS_FIESTA]:
+        assert "colm3na" not in _leer(ruta).lower(), ruta
+
+
+def test_afiliado_las_plantillas_renderizan_con_el_contexto_del_backend():
+    ev = dict(id=1, nombre="Fiesta", fecha_hora="2026-11-14T21:00", fecha_texto="sábado 14 de noviembre, 21:00",
+              lugar="Palacio", precio=30000, tope_por_afiliado=4, horas_antes=24, foto=True)
+    res = dict(id=1, numero="R-000001", nombre="Ana <b>Pérez</b>", cantidad=2, tipo="cortesia",
+               estado="pagada", leyenda="Invitado Especial", ingresados=1, ultimo_ingreso="2026-11-14T21:42:10",
+               importe=0)
+    t = main.templates.env
+    h = t.get_template("fiesta_afiliado.html").render(request=None, hay_evento=True, evento=ev, sesion=None, mp_modo="mock")
+    assert "/fiesta/foto/1" in h and "Fiesta" in h
+    h = t.get_template("fiesta_afiliado.html").render(request=None, hay_evento=False, evento=None, sesion=None, mp_modo="apagado")
+    assert "v-sin-evento" in h
+    h = t.get_template("fiesta_entrada.html").render(
+        request=None, evento=ev, reserva=res, habilitada=True, entrada_desde="el 13/11", qr_svg="<svg></svg>",
+        qr_vence_en=600, filigrana="<svg></svg>", url_renovar="/api/fiesta/entrada/1/qr", url_verificar="x")
+    assert "INVITADO ESPECIAL" in h and "ADMITE 2 PERSONAS" in h and "21:42" in h
+    assert "<b>Pérez</b>" not in h, "el nombre de la persona tiene que ir escapado"
+    h = t.get_template("fiesta_verificar.html").render(request=None, valido=True, motivo="", evento=ev, reserva=res)
+    assert "Entrada válida" in h and "dni" not in h.lower()
+    h = t.get_template("fiesta_verificar.html").render(request=None, valido=False, motivo="Venció", evento=ev, reserva=None)
+    assert "Entrada no válida" in h
+    h = t.get_template("fiesta_mp_simulado.html").render(request=None, evento=ev, reserva=res, importe_texto="$ 1,00")
+    assert "MP_MOCK" in h

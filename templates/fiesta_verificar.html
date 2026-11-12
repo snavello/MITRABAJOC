@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f1f">
+<meta name="robots" content="noindex">
+<title>Verificación de entrada — {{ evento.nombre if evento else 'Fiesta' }}</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/fiesta/fiesta.css?v={{ sello_static('fiesta/fiesta.css') }}">
+<style>
+  .fv-caja { text-align: center; margin-top: 30px; border-width: 2px; }
+  .fv-caja.ok { border-color: var(--f-ok); }
+  .fv-caja.mal { border-color: var(--f-error); }
+  .fv-icono { width: 76px; height: 76px; margin: 0 auto 10px; display: block; }
+  .fv-caja.ok .fv-icono { color: var(--f-ok); }
+  .fv-caja.mal .fv-icono { color: var(--f-error); }
+  .fv-estado { font: 700 clamp(24px, 6vw, 32px)/1.15 var(--f-display); letter-spacing: .06em; margin: 0; }
+  .fv-datos { margin: 20px auto 0; max-width: 360px; text-align: left; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 16px; }
+  .fv-datos dt { color: var(--f-texto-suave); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; align-self: center; }
+  .fv-datos dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+</style>
+</head>
+<body class="f-body">
+<div class="f-fondo" aria-hidden="true"><div class="f-bokeh"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="f-grano"></div></div>
+<header class="f-cabecera">
+  <img src="/static/fiesta/logo_supara_oro.png?v={{ sello_static('fiesta/logo_supara_oro.png') }}" alt="SUPARA" width="38" height="38">
+</header>
+<main class="f-contenedor" data-mov-vista>
+{% if valido and reserva %}
+  <section class="f-tarjeta fv-caja ok" role="status" data-armado>
+    <svg class="fv-icono" viewBox="0 0 76 76" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="38" cy="38" r="34"/><path d="M23 39l11 11 20-23"/></svg>
+    <h1 class="fv-estado" style="color:var(--f-ok)">Entrada válida</h1>
+    {% if evento %}<p class="f-sub">{{ evento.nombre }}</p>{% endif %}
+    <dl class="fv-datos">
+      <dt>A nombre de</dt><dd>{{ reserva.nombre }}</dd>
+      <dt>Admite</dt><dd>{{ reserva.cantidad }} {{ 'persona' if reserva.cantidad == 1 else 'personas' }}</dd>
+      <dt>Reserva</dt><dd class="f-cifra">{{ reserva.numero }}</dd>
+      {% if reserva.tipo == 'cortesia' %}<dt>Tipo</dt><dd>{{ reserva.leyenda or 'Invitado Especial' }}</dd>{% endif %}
+      <dt>Estado</dt><dd>{{ 'Ya ingresaron ' ~ reserva.ingresados ~ ' de ' ~ reserva.cantidad if reserva.ingresados else 'Pagada, sin ingresos' }}</dd>
+    </dl>
+  </section>
+{% else %}
+  <section class="f-tarjeta fv-caja mal" role="status" data-armado>
+    <svg class="fv-icono" viewBox="0 0 76 76" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><circle cx="38" cy="38" r="34"/><path d="M26 26l24 24M50 26L26 50"/></svg>
+    <h1 class="fv-estado" style="color:var(--f-error)">Entrada no válida</h1>
+    <p class="f-sub">{{ motivo or 'El código no corresponde a una entrada vigente.' }}</p>
+    <p class="f-suave" style="font-size:14px;margin-top:14px">Si la entrada es tuya, abrila de nuevo desde tu teléfono: el código se renueva cada pocos minutos.</p>
+  </section>
+{% endif %}
+</main>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+</body>
+</html>
