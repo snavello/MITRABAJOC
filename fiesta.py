@@ -173,6 +173,21 @@ def cantidad_valida(valor) -> int:
 
 
 # ---------- Entrada ----------
+def url_mapa(lugar: str, direccion: str) -> str:
+    """Enlace de búsqueda de Google Maps para "lugar, dirección". "" si no hay ninguno."""
+    from urllib.parse import quote
+    partes = [p for p in ((lugar or "").strip(), (direccion or "").strip()) if p]
+    if not partes:
+        return ""
+    return "https://www.google.com/maps/search/?api=1&query=" + quote(", ".join(partes), safe="")
+
+
+def horas_texto(horas) -> str:
+    """"1 hora" / "24 horas"."""
+    n = max(0, int(horas or 0))
+    return f"{n} hora" if n == 1 else f"{n} horas"
+
+
 def ventana_entrada(fecha_hora: str, horas_antes: int, ahora: datetime = None) -> tuple:
     """(habilitada, desde_iso): la entrada se habilita `horas_antes` del evento.
     Un evento sin fecha entendible queda siempre habilitado."""

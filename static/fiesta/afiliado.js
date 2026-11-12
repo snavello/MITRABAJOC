@@ -137,7 +137,10 @@
     $('ev-nombre').textContent = ev.nombre || '';
     $('ev-fecha').textContent = fechaLarga(ev.fecha_hora);
     $('ev-lugar').textContent = ev.lugar || '';
-    $('ev-precio').textContent = pesos(ev.precio);
+    $('ev-dir').textContent = ev.direccion || '';
+    var mapa = $('ev-mapa');
+    if (ev.url_mapa) { mapa.href = ev.url_mapa; mapa.hidden = false; } else mapa.hidden = true;
+    $('ev-dir-caja').hidden = !(ev.direccion || ev.url_mapa);
     var af = estado.afiliado || {};
     $('ev-saludo').textContent = af.nombre ? 'Hola, ' + af.nombre + (af.legajo ? ' · legajo ' + af.legajo : '') : '';
     var q = $('ev-quedan'), generales = estado.disponibles_generales;
@@ -172,7 +175,7 @@
     var cab = el('div', 'fa-res-cab');
     var izq = el('div');
     izq.appendChild(el('div', 'fa-res-cant', r.cantidad + (r.cantidad === 1 ? ' persona' : ' personas')));
-    izq.appendChild(el('div', 'fa-res-imp', pesos(r.importe)));
+    if (r.estado === 'pendiente') izq.appendChild(el('div', 'fa-res-imp', pesos(r.importe)));
     cab.appendChild(izq);
     var rot = ROTULO[r.estado] || ['tenue', r.estado];
     cab.appendChild(el('span', 'f-pildora ' + rot[0], rot[1]));
@@ -197,7 +200,8 @@
       if (r.ingresados > 0) {
         c.appendChild(el('div', 'f-suave', 'Ingresaron ' + r.ingresados + ' de ' + r.cantidad + '.'));
       } else if (!r.entrada_habilitada && r.entrada_desde) {
-        c.appendChild(el('div', 'f-suave', 'Tu entrada se habilita ' + r.entrada_desde + '.'));
+        var hs = Number(r.horas_antes != null ? r.horas_antes : (estado.evento || {}).horas_antes) || 0;
+        c.appendChild(el('div', 'f-suave', 'El QR para el ingreso va a aparecer al menos ' + hs + (hs === 1 ? ' hora' : ' horas') + ' antes del evento.'));
       }
       var pie2 = el('div', 'fa-res-pie');
       var enlace = el("a", "f-btn" + (r.entrada_habilitada ? "" : " f-sec"), "Ver tu entrada");

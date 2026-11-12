@@ -12550,6 +12550,7 @@ def fiesta_entrada_pagina(reserva_id: int, request: Request, t: str = ""):
         evento = db.fiesta_evento_dict(s, ev)
         reserva = db.fiesta_reserva_dict(r, ev)
         habilitada, desde = fiesta.ventana_entrada(ev.fecha_hora, ev.horas_antes)
+        ev_horas_antes = ev.horas_antes
         token = r.token
     base = _base_url(request)
     qr_texto, vence_en = "", 0
@@ -12558,7 +12559,8 @@ def fiesta_entrada_pagina(reserva_id: int, request: Request, t: str = ""):
         qr_texto = fiesta.contenido_qr(base, token, codigo)
     return templates.TemplateResponse("fiesta_entrada.html", {
         "request": request, "evento": evento, "reserva": reserva, "habilitada": habilitada,
-        "entrada_desde": fiesta.fecha_texto(desde), "qr_svg": qr_svg(qr_texto) if qr_texto else "",
+        "entrada_desde": fiesta.fecha_texto(desde),
+        "horas_antes": ev_horas_antes, "horas_texto": fiesta.horas_texto(ev_horas_antes), "qr_svg": qr_svg(qr_texto) if qr_texto else "",
         "qr_vence_en": vence_en, "filigrana": filigrana_svg("SUPARA", "#9a7d3e", "#efdfb4"),
         "url_renovar": f"{API_FIESTA}/entrada/{reserva_id}/qr" + (f"?t={t}" if t else ""),
         "url_verificar": qr_texto})
@@ -13127,6 +13129,7 @@ def api_fiesta_sind_config_guardar(request: Request, datos: dict = Body(...)):
         ev = _fiesta_evento_o_404(s)
         _fiesta_operador(request, s, ev, admin=True)
         ev.nombre, ev.lugar, ev.fecha_hora = nombre[:200], lugar[:200], fecha_hora
+        ev.direccion = str(datos.get("direccion", "")).strip()[:200]
         ev.leyenda_ticket = str(datos.get("leyenda_ticket", "")).strip()[:500]
         ev.leyenda_cortesia = (str(datos.get("leyenda_cortesia", "")).strip()[:100]
                                or fiesta.LEYENDA_CORTESIA)
@@ -13379,6 +13382,7 @@ def api_fiesta_arranque(request: Request, datos: dict = Body(...)):
             ev = db.FiestaEvento(
                 nombre=str(datos["nombre"]).strip()[:200], fecha_hora=fecha_hora,
                 lugar=str(datos.get("lugar", "")).strip()[:200],
+                direccion=str(datos.get("direccion", "")).strip()[:200],
                 precio=_fiesta_entero(datos, "precio", 1, 100_000_000, "El precio"),
                 tope_por_afiliado=_fiesta_entero(datos, "tope_por_afiliado", 1, 100, "El tope por afiliado"),
                 tope_general=_fiesta_entero(datos, "tope_general", 1, 100_000, "El tope general"))

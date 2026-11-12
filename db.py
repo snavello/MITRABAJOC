@@ -9230,6 +9230,7 @@ class FiestaEvento(SQLModel, table=True):
     nombre: str = ""
     fecha_hora: str = ""                  # ISO "2026-11-14T21:00"
     lugar: str = ""
+    direccion: str = ""                   # dirección del lugar (para el mapa)
     leyenda_ticket: str = ""              # texto libre del ticket
     precio: int = 0                       # pesos por entrada
     tope_por_afiliado: int = 4
@@ -9336,6 +9337,7 @@ def fiesta_tiene_foto(s: Session, evento_id: int) -> bool:
 def fiesta_evento_dict(s: Session, e: FiestaEvento) -> dict:
     return {"id": e.id, "nombre": e.nombre, "fecha_hora": e.fecha_hora,
             "fecha_texto": fiesta.fecha_texto(e.fecha_hora), "lugar": e.lugar,
+            "direccion": e.direccion or "", "url_mapa": fiesta.url_mapa(e.lugar, e.direccion),
             "leyenda_ticket": e.leyenda_ticket, "precio": e.precio,
             "tope_por_afiliado": e.tope_por_afiliado, "tope_general": e.tope_general,
             "horas_antes": e.horas_antes, "minutos_vencimiento": e.minutos_vencimiento,
@@ -9554,6 +9556,7 @@ def fiesta_reserva_dict(r: FiestaReserva, evento: FiestaEvento = None) -> dict:
         hab, desde = fiesta.ventana_entrada(evento.fecha_hora, evento.horas_antes)
         d["entrada_habilitada"] = hab and r.estado == "pagada"
         d["entrada_desde"] = fiesta.fecha_texto(desde)
+        d["horas_antes"] = evento.horas_antes
     return d
 
 
@@ -9608,7 +9611,7 @@ def fiesta_contadores(s: Session, evento: FiestaEvento) -> dict:
                    .group_by(FiestaReserva.estado, FiestaReserva.tipo)).all()
     c = {"tope_general": evento.tope_general, "reservadas": 0, "pagadas": 0, "pendientes": 0,
          "vencidas": 0, "cortesias": 0, "personas_pagadas": 0, "ingresadas": 0,
-         "disponibles": 0, "recaudado": 0, "sobrecupo": 0}
+         "disponibles": 0, "recaudado": 0, "sobrecupo": 0, "padron": 0, "padron_total": 0}
     ocupan = 0
     for estado, tipo, reservas, personas, importe, ingresadas in filas:
         if estado in ("pendiente", "pagada"):
@@ -9627,6 +9630,12 @@ def fiesta_contadores(s: Session, evento: FiestaEvento) -> dict:
             c["vencidas"] += int(reservas)
     c["reservadas"] = ocupan
     c["disponibles"] = max(0, evento.tope_general - ocupan)
+    pad = s.exec(select(FiestaPadron.activo, func.count()).where(
+        FiestaPadron.evento_id == evento.id).group_by(FiestaPadron.activo)).all()
+    for activo, n in pad:
+        c["padron_total"] += int(n)
+        if activo:
+            c["padron"] += int(n)
     c["sobrecupo"] = s.exec(select(func.count()).select_from(FiestaReserva).where(
         FiestaReserva.evento_id == evento.id, FiestaReserva.sobrecupo == True)).one()   # noqa: E712
     return c

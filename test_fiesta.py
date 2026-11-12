@@ -1187,3 +1187,53 @@ def test_restablecer_admin_desde_entornos(fest):
                                 clave_hash=auth.hashear_clave("puerta12"), debe_cambiar_clave=False))
         s.commit()
     assert c.post(R, json={"usuario": "porton", "clave_inicial": "nueva123"}).status_code == 409
+
+
+# =====================================================================
+# Ajustes de SDN tras probar en Pruebas (dirección, mapa, padrón)
+# =====================================================================
+def test_url_mapa_y_horas_son_puros():
+    u = fiesta.url_mapa("Palacio Anchorena", "Av. Alvear 1500, CABA")
+    assert u == "https://www.google.com/maps/search/?api=1&query=Palacio%20Anchorena%2C%20Av.%20Alvear%201500%2C%20CABA"
+    assert fiesta.url_mapa("Salón", "").endswith("query=Sal%C3%B3n")
+    assert fiesta.url_mapa("", "Calle 1").endswith("query=Calle%201")
+    assert fiesta.url_mapa("", "") == "" and fiesta.url_mapa(None, None) == ""
+    assert fiesta.horas_texto(1) == "1 hora" and fiesta.horas_texto(24) == "24 horas"
+
+
+def test_direccion_en_configuracion_arranque_y_dict(fest):
+    op = _operador()
+    ev = op.get(SIND + "/configuracion").json()["evento"]
+    assert ev["direccion"] == "" and ev["url_mapa"].endswith("query=Palacio") or ev["url_mapa"]
+    nuevo = {"nombre": "Fiesta", "fecha_hora": "2026-12-31T22:00", "lugar": "Palacio Anchorena",
+             "direccion": "  Av. Alvear 1500  ", "precio": 1000, "tope_por_afiliado": 2, "tope_general": 50,
+             "horas_antes": 12, "minutos_vencimiento": 45}
+    r = op.post(SIND + "/configuracion", json=nuevo).json()["evento"]
+    assert r["direccion"] == "Av. Alvear 1500" and "Palacio%20Anchorena%2C%20Av.%20Alvear%201500" in r["url_mapa"]
+    largo = op.post(SIND + "/configuracion", json={**nuevo, "direccion": "x" * 500}).json()["evento"]
+    assert len(largo["direccion"]) == 200
+    assert _afiliado().get(API + "/estado").json()["evento"]["direccion"] == "x" * 200
+    # arranque
+    with db.get_session() as s:
+        s.exec(db.text("UPDATE fiestaevento SET activo = false"))
+        s.commit()
+    body = {"nombre": "Fiesta SUPARA", "fecha_hora": "2026-11-14T21:00", "lugar": "Palacio Anchorena",
+            "direccion": "Av. Alvear 1500", "precio": 30000, "tope_por_afiliado": 4, "tope_general": 1000,
+            "usuario": "supara2", "nombre_op": "SUPARA", "clave_inicial": "inicial1"}
+    ok = _con_plataforma().post("/api/entornos/herramientas/fiesta/arranque", json=body)
+    assert ok.status_code == 200 and ok.json()["evento"]["direccion"] == "Av. Alvear 1500"
+
+
+def test_contadores_incluyen_el_padron_activo_y_el_total(fest):
+    op = _operador()
+    antes = op.get(SIND + "/resumen").json()["contadores"]
+    assert antes["padron"] >= 1 and antes["padron_total"] == antes["padron"]
+    with db.get_session() as s:
+        p = s.exec(select(db.FiestaPadron).where(db.FiestaPadron.evento_id == fest.ev)).first()
+        p.activo = False
+        s.add(p)
+        s.commit()
+    c = op.get(SIND + "/resumen").json()["contadores"]
+    assert c["padron"] == antes["padron"] - 1 and c["padron_total"] == antes["padron_total"]
+    est = _con_plataforma().get("/api/entornos/herramientas/fiesta/estado").json()
+    assert est["contadores"]["padron"] == c["padron"]

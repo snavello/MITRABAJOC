@@ -174,7 +174,7 @@ def test_sindicato_la_tarjeta_de_entornos_apunta_a_las_rutas_de_arranque():
     assert "/api/entornos/herramientas/fiesta/arranque" in html
     form = re.search(r'<form id="fiesta-arranque".*?</form>', html, re.S).group(0)
     campos = set(re.findall(r'name="(\w+)"', form))
-    assert campos == {"nombre", "fecha_hora", "lugar", "precio", "tope_por_afiliado",
+    assert campos == {"nombre", "fecha_hora", "lugar", "direccion", "precio", "tope_por_afiliado",
                       "tope_general", "usuario", "nombre_op", "clave_inicial"}
     for prellenado in ("Fiesta de Fin de Año SUPARA 2026", "2026-11-14T21:00", "Palacio Anchorena",
                        'value="30000"', 'value="4"', 'value="1000"'):
@@ -334,6 +334,7 @@ def test_afiliado_las_plantillas_renderizan_con_el_contexto_del_backend():
         request=None, evento=ev, reserva=res, habilitada=True, entrada_desde="el 13/11", qr_svg="<svg></svg>",
         qr_vence_en=600, filigrana="<svg></svg>", url_renovar="/api/fiesta/entrada/1/qr", url_verificar="x")
     assert "INVITADO ESPECIAL" in h and "ADMITE 2 PERSONAS" in h and "21:42" in h
+    assert "30.000" not in h and "30000" not in h, "la entrada no muestra el precio"
     assert "<b>Pérez</b>" not in h, "el nombre de la persona tiene que ir escapado"
     h = t.get_template("fiesta_verificar.html").render(request=None, valido=True, motivo="", evento=ev, reserva=res)
     assert "Entrada válida" in h and "dni" not in h.lower()
@@ -347,3 +348,49 @@ def test_formulario_de_arranque_respeta_hidden():
     from pathlib import Path
     html = (Path(__file__).parent / "templates" / "entornos.html").read_text(encoding="utf-8")
     assert ".fiesta-arranque[hidden]" in html
+
+
+def test_el_precio_solo_se_ve_al_reservar_o_pagar():
+    """Pedido de SDN: ni la tarjeta del evento, ni el ticket, ni la verificación, ni las
+    reservas pagadas/vencidas/anuladas muestran el importe."""
+    for nombre in ("fiesta_entrada.html", "fiesta_verificar.html"):
+        src = Path("templates", nombre).read_text(encoding="utf-8")
+        assert "importe" not in src and "precio" not in src, nombre
+    afi = Path("templates/fiesta_afiliado.html").read_text(encoding="utf-8")
+    assert "POR ENTRADA" not in afi and "ev-precio" not in afi and "evento.precio|miles" not in afi
+    js = Path("static/fiesta/afiliado.js").read_text(encoding="utf-8")
+    assert "ev-precio" not in js
+    assert "if (r.estado === 'pendiente') izq.appendChild(el('div', 'fa-res-imp'" in js
+    assert "Valor de la reserva" in afi
+
+
+def test_texto_de_la_entrada_en_espera_sale_de_las_horas_configuradas():
+    src = Path("templates/fiesta_entrada.html").read_text(encoding="utf-8")
+    assert "El QR para el ingreso va a aparecer al menos {{ horas_texto }} antes del evento" in src
+    assert "Se habilita {{ entrada_desde }}" not in src
+    js = Path("static/fiesta/afiliado.js").read_text(encoding="utf-8")
+    assert "El QR para el ingreso va a aparecer al menos" in js and "Tu entrada se habilita" not in js
+    t = main.templates.env
+    ev = dict(id=1, nombre="F", fecha_texto="x", lugar="Palacio Anchorena", direccion="Av. Alvear 1", 
+              url_mapa="https://www.google.com/maps/search/?api=1&query=x", horas_antes=1)
+    res = dict(id=1, numero="R-1", nombre="Ana", cantidad=1, tipo="afiliado", estado="pagada",
+               leyenda="", ingresados=0, ultimo_ingreso="")
+    for horas, txt in ((1, "al menos 1 hora antes"), (24, "al menos 24 horas antes")):
+        h = t.get_template("fiesta_entrada.html").render(
+            request=None, evento=ev, reserva=res, habilitada=False, entrada_desde="el 13/11 21:00",
+            horas_texto=main.fiesta.horas_texto(horas), qr_svg="", qr_vence_en=0, filigrana="", url_renovar="/x", url_verificar="")
+        assert txt in h
+    assert 'aria-label="Cómo llegar"' in h and 'target="_blank" rel="noopener"' in h and "Av. Alvear 1" in h
+    h = t.get_template("fiesta_entrada.html").render(
+        request=None, evento=dict(ev, direccion="", url_mapa="", lugar=""), reserva=res, habilitada=False,
+        entrada_desde="", horas_texto="1 hora", qr_svg="", qr_vence_en=0, filigrana="", url_renovar="/x", url_verificar="")
+    assert "Cómo llegar" not in h
+
+
+def test_direccion_y_valor_de_la_reserva_en_las_pantallas_del_sindicato():
+    s = Path("templates/fiesta_sindicato.html").read_text(encoding="utf-8")
+    e = Path("templates/entornos.html").read_text(encoding="utf-8")
+    assert 'name="direccion"' in s and "Valor de la reserva por persona" in s and "Precio por persona" not in s
+    assert 'name="direccion"' in e and "Precio por persona" not in e and "personas en el padrón" in e
+    js = Path("static/fiesta/sindicato.js").read_text(encoding="utf-8")
+    assert "'direccion'" in js and "Padrón cargado" in js

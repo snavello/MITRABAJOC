@@ -160,6 +160,7 @@
     try {
       var d = await pedirJson(B + 'resumen'), c = d.contadores || {};
       var fichas = [
+        ['Padrón cargado', c.padron, false, c.padron_total > c.padron ? (c.padron_total - c.padron) + (c.padron_total - c.padron === 1 ? ' desactivado' : ' desactivados') : ''],
         ['Personas pagadas', c.personas_pagadas, true], ['Reservas pagadas', c.pagadas],
         ['Pendientes de pago', c.pendientes], ['Disponibles', c.disponibles, true],
         ['Ya ingresaron', c.ingresadas], ['Recaudado', pesos(c.recaudado)],
@@ -169,6 +170,7 @@
       fichas.forEach(function (f) {
         var v = typeof f[1] === 'string' ? f[1] : miles(f[1] || 0);
         var d1 = el('div', { class: 'fs-cont' + (f[2] ? ' destaca' : '') }, el('b', { text: v }), el('span', { text: f[0] }));
+        if (f[3]) d1.appendChild(el('small', { class: 'fs-sub', text: f[3] }));
         caja.appendChild(d1);
       });
     } catch (e) { vaciar(caja); caja.appendChild(el('p', { class: 'fs-aviso fs-error', text: textoError(e) })); }
@@ -617,7 +619,7 @@
 
   // ---------- CONFIGURACIÓN ----------
   var eventoId = null;
-  var CAMPOS_CFG = ['nombre', 'fecha_hora', 'lugar', 'precio', 'tope_por_afiliado', 'tope_general', 'horas_antes', 'minutos_vencimiento', 'leyenda_cortesia', 'leyenda_ticket'];
+  var CAMPOS_CFG = ['nombre', 'fecha_hora', 'lugar', 'direccion', 'precio', 'tope_por_afiliado', 'tope_general', 'horas_antes', 'minutos_vencimiento', 'leyenda_cortesia', 'leyenda_ticket'];
   async function cargarConfig() {
     pintarMp();
     try {
