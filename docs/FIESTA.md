@@ -51,6 +51,19 @@ con la de comprador y rechaza el pago). Con un usuario comprador de prueba, o si
 Titular según el resultado que se quiera: `APRO` aprueba, `OTHE` rechaza por error
 general, `CONT` queda pendiente. Documento: DNI `12345678`.
 
+**El mail del pagador tiene que ser de prueba: `test@testuser.com`.** Si ponés un mail
+que pertenece a una cuenta real de MercadoPago (el tuyo, por ejemplo), el checkout
+rechaza el pago con «Una de las partes con la que intentás hacer el pago es de
+prueba», aunque la tarjeta sea de prueba: el pagador quedó identificado como real y el
+vendedor es de prueba (así falló la primera prueba en Pruebas el 2026-11-12; con el
+mail de prueba el pago se aprobó y la reserva pasó a pagada en un segundo). Lo otro que
+anda es iniciar sesión en el checkout con un **comprador de prueba** (Cuentas de prueba
+de la aplicación, tipo Comprador, con saldo ficticio): paga con saldo o con tarjeta.
+
+Si el checkout te muestra tus cuentas y tu saldo reales es porque el navegador tenía tu
+sesión de MercadoPago abierta: es solo la pantalla, el vendedor sigue siendo el de
+prueba y MercadoPago no deja mover plata real contra él. Se evita con el incógnito.
+
 Al aprobar, MercadoPago avisa al webhook y la reserva pasa a pagada (la pantalla del
 afiliado lo confirma sola, con un máximo de espera de 2 minutos).
 
