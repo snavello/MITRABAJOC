@@ -88,6 +88,7 @@
 .fs-cont { padding: 14px; border-radius: var(--f-radio); background: rgba(18,24,40,.72); border: 1px solid rgba(214,184,118,.22); }
 .fs-cont b { display: block; font: 700 30px/1.1 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--f-oro-claro); }
 .fs-cont span { font-size: 12.5px; color: var(--f-texto-suave); }
+.fs-cont small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--f-texto-suave); opacity: .8; }
 .fs-cont.destaca b { color: var(--f-ok); }
 @media (min-width: 720px) { .fs-contadores { grid-template-columns: repeat(4, 1fr); } }
 

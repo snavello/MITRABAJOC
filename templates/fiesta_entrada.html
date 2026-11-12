@@ -72,6 +72,9 @@
   .te-lacre svg { width: 54px; height: 54px; color: var(--f-oro-oscuro); margin-bottom: 10px; }
   .te-lacre b { display: block; font: 700 15px/1.3 var(--f-display); letter-spacing: .06em; }
   .te-lacre span { display: block; margin-top: 6px; font-size: 14px; color: #4a4636; }
+  .te-lacre .te-lacre-f { font-size: 12px; opacity: .8; }
+  .te-dir { margin: 2px 0 0; display: flex; align-items: center; gap: 8px; font: italic 400 clamp(13px, 3vw, 15px)/1.35 'Playfair Display', Georgia, serif; color: #4a4636; }
+  .te-dir .f-pin, .fa-dir .f-pin { display: inline-flex; color: var(--f-oro-oscuro, var(--f-oro)); flex: none; }
   .te-espera .te-cuerpo { opacity: .78; }
 
   /* ingresó */
@@ -145,6 +148,7 @@
       </div>
       <h1 class="te-evento">{{ evento.nombre }}</h1>
       <p class="te-cuando">{% if evento.fecha_texto %}<b>{{ evento.fecha_texto }}</b>{% endif %}{% if evento.lugar %}<br>{{ evento.lugar }}{% endif %}</p>
+      {% if evento.direccion or evento.url_mapa %}<p class="te-dir">{% if evento.direccion %}<span>{{ evento.direccion }}</span>{% endif %}{% if evento.url_mapa %}<a class="f-pin" href="{{ evento.url_mapa }}" target="_blank" rel="noopener" aria-label="Cómo llegar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></a>{% endif %}</p>{% endif %}
       <hr class="te-hilo">
       <div class="te-nombre-r">A nombre de</div>
       <p class="te-nombre">{{ reserva.nombre }}</p>
@@ -164,7 +168,8 @@
       <div class="te-lacre">
         <svg viewBox="0 0 54 54" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="12" y="24" width="30" height="22" rx="4"/><path d="M18 24v-6a9 9 0 0 1 18 0v6"/><circle cx="27" cy="35" r="2.4" fill="currentColor"/></svg>
         <b>Todavía no se habilita</b>
-        <span>Se habilita {{ entrada_desde }}</span>
+        <span>El QR para el ingreso va a aparecer al menos {{ horas_texto }} antes del evento.</span>
+        {% if entrada_desde %}<span class="te-lacre-f">Desde el {{ entrada_desde }}</span>{% endif %}
       </div>
     {% endif %}
     </div>

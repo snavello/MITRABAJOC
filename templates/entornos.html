@@ -558,7 +558,8 @@
             <label>Nombre del evento<input name="nombre" value="Fiesta de Fin de Año SUPARA 2026" required></label>
             <label>Fecha y hora<input name="fecha_hora" type="datetime-local" value="2026-11-14T21:00" required></label>
             <label>Lugar<input name="lugar" value="Palacio Anchorena" required></label>
-            <label>Precio por persona ($)<input name="precio" type="number" min="0" value="30000" required></label>
+            <label>Dirección<input name="direccion" maxlength="200" value=""></label>
+            <label>Valor de la reserva por persona ($)<input name="precio" type="number" min="0" value="30000" required></label>
             <label>Tope por afiliado<input name="tope_por_afiliado" type="number" min="1" value="4" required></label>
             <label>Tope general<input name="tope_general" type="number" min="1" value="1000" required></label>
             <label>Usuario administrador<input name="usuario" required autocapitalize="none" autocorrect="off" spellcheck="false"></label>
@@ -933,7 +934,7 @@
         const c = d.contadores || {};
         const mp = { real: 'cobro real', mock: 'cobro simulado', apagado: 'cobro apagado' }[d.mp_modo] || d.mp_modo;
         estadoFiesta.textContent = d.hay_evento
-          ? `${d.evento.nombre}: ${c.pagadas || 0} reservas pagadas, ${c.pendientes || 0} pendientes, ${c.disponibles != null ? c.disponibles : '—'} lugares disponibles; MercadoPago en ${mp}.` + (d.hay_admin ? '' : ' Falta el primer administrador.')
+          ? `${d.evento.nombre}: ${c.pagadas || 0} reservas pagadas, ${c.pendientes || 0} pendientes, ${c.disponibles != null ? c.disponibles : '—'} lugares disponibles, ${c.padron || 0} personas en el padrón; MercadoPago en ${mp}.` + (d.hay_admin ? '' : ' Falta el primer administrador.')
           : 'Todavía no hay evento creado.';
         formFiesta.hidden = !!(d.hay_evento && d.hay_admin);
         formRestablecer.hidden = !d.hay_evento;

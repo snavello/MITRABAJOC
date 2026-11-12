@@ -12,6 +12,8 @@
   .fa-orna { display: block; margin: 0 auto 14px; width: 120px; height: 14px; color: var(--f-oro); opacity: .85; }
   .fa-meta { margin: 18px 0 0; display: grid; gap: 4px; justify-items: center; font-size: 15px; color: var(--f-texto-suave); }
   .fa-meta strong { color: var(--f-texto); font-weight: 600; }
+  .fa-dir { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-style: italic; font-size: 14px; color: var(--f-texto-suave); }
+  .fa-dir[hidden], .fa-dir .f-pin[hidden] { display: none; }
   .fa-precio { margin-top: 14px; font: 700 15px/1 var(--f-display); letter-spacing: .12em; color: var(--f-oro); }
   .fa-form { max-width: 420px; margin: 22px auto 0; }
   .fa-form .f-campo { margin-bottom: 14px; }
@@ -94,7 +96,6 @@
       <h1 class="f-titulo">{{ evento.nombre }}</h1>
       <p class="f-sub" id="hero-fecha" data-fecha="{{ evento.fecha_hora }}">{{ evento.fecha_texto }}</p>
       <div class="fa-meta"><strong>{{ evento.lugar }}</strong></div>
-      <div class="fa-precio">$ <span class="f-cifra">{{ evento.precio|miles }}</span> POR ENTRADA</div>
     </div>
     <form class="f-tarjeta fa-form" id="form-ingreso" autocomplete="off" novalidate>
       <h2>Ingresá con tus datos</h2>
@@ -113,8 +114,8 @@
     <div class="f-tarjeta f-oro fa-evento" style="margin-top:8px">
       <h1 class="f-titulo" id="ev-nombre">{{ evento.nombre }}</h1>
       <p class="f-sub" id="ev-fecha" data-fecha="{{ evento.fecha_hora }}">{{ evento.fecha_texto }}</p>
-      <div class="fa-datos"><span><b id="ev-lugar">{{ evento.lugar }}</b></span>
-        <span>Entrada <b class="f-cifra" id="ev-precio">$ {{ evento.precio|miles }}</b></span></div>
+      <div class="fa-datos"><span><b id="ev-lugar">{{ evento.lugar }}</b></span></div>
+      <div class="fa-dir" id="ev-dir-caja"{% if not (evento.direccion or evento.url_mapa) %} hidden{% endif %}><span id="ev-dir">{{ evento.direccion }}</span><a class="f-pin" id="ev-mapa" href="{{ evento.url_mapa or '#' }}" target="_blank" rel="noopener" aria-label="Cómo llegar"{% if not evento.url_mapa %} hidden{% endif %}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></a></div>
       <div class="fa-quedan f-oculto" id="ev-quedan"><span class="f-pildora aviso"></span></div>
       <p class="f-suave" style="margin:12px 0 0;font-size:14px" id="ev-saludo"></p>
     </div>
@@ -151,7 +152,7 @@
           <button type="button" class="f-btn f-sec fa-mas" id="mas" aria-label="Una persona más">+</button>
         </div>
         <div class="fa-num-rot" id="cant-rot">1 persona</div>
-        <div class="fa-total"><span class="f-suave">Total</span><b id="total">$ 0</b></div>
+        <div class="fa-total"><span class="f-suave">Valor de la reserva</span><b id="total">$ 0</b></div>
         <div class="f-aviso error f-oculto" id="err-reservar" role="alert"><span class="msg"></span><span class="f-cod"></span></div>
         <button type="button" class="f-btn f-ancho" id="btn-reservar">Reservar y pagar</button>
         <p class="fa-nota" id="nota-reservar">Tenés unos minutos para completar el pago; si no, las entradas vuelven a quedar disponibles.</p>
