@@ -1762,7 +1762,14 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     plan de referencia de ~13 semanas, sin más detalles por ahora; **el dominio en
     Cloudflare y el correo de Resend están configurados**, en migración a cuentas
     corporativas (falta Turnstile y el perímetro); **H-0020 cerrado** (bloquean
-    producción 2: H-0019 y H-0008).
+    producción 2: H-0019 y H-0008). **Sin valores, costos ni decisiones
+    empresarias** (SDN, 2026-11-13): sin precios de IA ni de Render, sin la sección
+    de oportunidad de mercado y sin las capturas que muestran precios. **Diagramas
+    con norma propia** (`docs/integrador/DIAGRAMAS.md`, diagrama de referencia
+    `partes/_referencia_diagrama.svg`): zonas grises, cajas blancas, un solo acento
+    miel, flechas ortogonales rotuladas; `node docs/integrador/revisar_diagramas.js
+    <parte>` verifica textos fuera de caja o encimados y colores fuera de paleta, y
+    debe dar 0 problemas. Plataforma 0.68.04, ~113 páginas.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

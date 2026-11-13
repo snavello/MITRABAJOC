@@ -10951,3 +10951,18 @@ configuración.
 **Largo**: ~118 páginas A4 (el pedido era 40-60, aceptando más por las capturas):
 el glosario va a dos columnas y las capturas de teléfono sueltas flotan al lado del
 texto al imprimir. El PDF no se versiona (pesa ~37 MB con las capturas).
+
+**Segunda vuelta (2026-11-13, Plataforma 0.68.03 y 0.68.04).** Respuestas de SDN a las
+dudas: versión larga sin PDF; las notificaciones se presentan como domicilio electrónico
+(llegan y queda registrado si se leyeron y cuándo); La Bancaria en preparación con un plan
+de referencia de ~13 semanas y sin más detalle; Cloudflare y Resend configurados (en
+migración a cuentas corporativas); H-0020 cerrado en XSK. Después SDN pidió **sacar
+valores, costos y decisiones empresarias** (precios de IA y de Render, comparaciones de
+precio entre modelos, la sección «oportunidad» del capítulo 3 y las cuatro capturas con
+precios: `x-planes`, `p-modelos`, `p-uso-ia`, `x-laboratorio`) y **mejorar los gráficos**,
+que «se entienden pero tienen una apariencia poco profesional». Se escribió una norma
+(`docs/integrador/DIAGRAMAS.md`, siguiendo la guía de diagramas técnicos: dibujar el
+mecanismo, flechas con nombre, grilla, un solo acento), un diagrama de referencia y un
+revisor automático (`revisar_diagramas.js`: textos que se salen de su caja, encimados,
+fuera del lienzo, letra chica y colores fuera de paleta). Cinco agentes rehicieron los 31
+diagramas con esa norma (dos pasaron a tabla) y todos dan 0 problemas.
