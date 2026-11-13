@@ -55,6 +55,8 @@ PUBLICAS = {
     ("GET", "/api/version"): "versión de cada app, la lee /entornos de otro entorno",
     ("GET", "/api/push/clave-publica"): "clave VAPID pública",
     ("GET", "/v/{token}"): "verificación pública de la credencial por QR",
+    ("GET", "/documento-integrador"): "puerta del Documento integrador: sin el pase del PIN muestra solo el formulario; sin INTEGRADOR_PIN, 404",
+    ("POST", "/documento-integrador/pin"): "PIN del Documento integrador, con freno por IP propio; sin INTEGRADOR_PIN, 404",
     ("GET", "/ingresar"): "login del trabajador",
     ("GET", "/ingresar-empresa"): "login de la empresa",
     ("GET", "/logo/{sindicato_id}"): "logo del gremio, va en los logins",
