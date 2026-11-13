@@ -50,7 +50,7 @@
 <text x="582.0" y="243" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Sindicato (el área a cargo)</text>
 <text x="582.0" y="261" text-anchor="middle" font-size="12" fill="#5b6778">responde y cambia el estado, en un solo acto</text>
 </svg>
-<figcaption>Los cinco estados. Arriba, lo que hace el afiliado; abajo, lo que hace el sindicato. Presentar el formulario crea el trámite «Iniciado»; <b>solo el sindicato mueve el estado</b>, y una respuesta del afiliado no lo cambia. «Terminado» es final: ni el panel ni la app aceptan más cambios ni mensajes.</figcaption>
+<figcaption>Los cinco estados y quién mueve cada transición. El afiliado presenta (queda «Iniciado») y escribe en el chat; las flechas entre estados son siempre del sindicato. Presentar el formulario crea el trámite «Iniciado»; <b>solo el sindicato mueve el estado</b>, y una respuesta del afiliado no lo cambia. «Terminado» es final: ni el panel ni la app aceptan más cambios ni mensajes.</figcaption>
 </figure>
 
 <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Modelos en <code>db.py</code>: <code>TipoTramite</code>, <code>CampoTramite</code>, <code>Tramite</code>, <code>RespuestaTramite</code> (una fila por campo), <code>NotaTramite</code> (el chat), <code>TramiteLog</code> y <code>PaseTramite</code>. Estados: <code>db.ESTADOS_TRAMITE</code>. En <code>db.agregar_nota_tramite</code> el estado solo cambia si el autor es <code>admin</code>; la nota del afiliado solo marca el trámite como visto.</p></div>
