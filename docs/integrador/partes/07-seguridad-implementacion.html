@@ -45,11 +45,11 @@
   <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Todo vive como Markdown con cabecera <code>clave: valor</code>: método y catálogo (31 pruebas, nueve ejes) en <code>xsk/</code> y el registro de este sistema en <code>xsk/proyectos/mitrabajo/</code> (relevamiento, mapa de rutas, amenazas, un archivo <code>H-NNNN.md</code> por hallazgo, 16 corridas, <code>avance.md</code>). El motor calcula riesgo y ranking al mostrarlos: se guardan hechos, no derivados.</p></div>
 
   <h4>Dónde estamos hoy</h4>
-  <p>Se contaron los 23 archivos de <code>hallazgos/</code> al 12 de noviembre de 2026:</p>
+  <p>Se contaron los 23 archivos de <code>hallazgos/</code> al 13 de noviembre de 2026:</p>
   <div class="cifras">
     <div class="cifra"><b>23</b><span>hallazgos registrados</span></div>
-    <div class="cifra"><b>10</b><span>verificados: corregidos y re-probados</span></div>
-    <div class="cifra"><b>6</b><span>en corrección: falta configuración o despliegue</span></div>
+    <div class="cifra"><b>11</b><span>verificados: corregidos y re-probados</span></div>
+    <div class="cifra"><b>5</b><span>en corrección: falta configuración o despliegue</span></div>
     <div class="cifra"><b>4</b><span>abiertos</span></div>
     <div class="cifra"><b>3</b><span>aceptados con motivo</span></div>
   </div>
@@ -59,15 +59,14 @@
     <tbody>
       <tr><td>H-0019 · Claves semilla de los dos superadmin de plataforma, en el repositorio</td><td>Crítico (20)</td><td><span class="chip rojo">Abierto</span></td><td>Que cada titular cambie la clave en su primer ingreso o se la restablezca en Pruebas y Demo.</td></tr>
       <tr><td>H-0008 · Los logins no tenían límite de intentos</td><td>Alto (12)</td><td><span class="chip ambar">En corrección</span></td><td>Hay freno por IP (10 fallos, 60 s), pero la IP puede falsificarse: el freno robusto es el perímetro, que no está operativo (<a href="#cap-6-infra">6.4</a>).</td></tr>
-      <tr><td>H-0020 · CUIL/CUIT con dígito verificador inválido</td><td>Alto (12)</td><td><span class="chip ambar">En corrección</span></td><td>Las altas ya lo exigen; ver la nota siguiente.</td></tr>
     </tbody></table></div>
-  <div class="nota pendiente"><span class="rot">Una duda sobre H-0020</span><p>El registro XSK lo da en corrección y dice que falta regularizar la Demo; <code>CLAUDE.md</code> afirma que las bases de Pruebas y Demo se regularizaron el 23 de octubre de 2026. No se pudo reconciliar desde el repo: se deja como en el registro hasta que se verifique la Demo.</p></div>
+  <p>El último en cerrarse fue H-0020 (CUIL/CUIT con dígito verificador inválido): las altas exigen el módulo 11 y Pruebas y Demo quedaron regularizadas.</p>
   <p>Los otros cuatro abiertos son de riesgo bajo o medio: firma de cookie truncada a 128 bits (H-0010), sesiones no revocables antes de 15 minutos (H-0012) y endpoint público de versión con CORS abierto (H-0018); además, entre los en corrección, dependencias con vulnerabilidades y cabeceras de seguridad parciales. Faltan pruebas de carga y abuso, backups restaurados y la iteración 2 (entradas y XSS, IA, observabilidad, ley).</p>
   <div class="nota regla"><span class="rot">Aceptados con motivo</span><p>La pestaña transitoria de plataforma que cambia claves (H-0011, durante las pruebas), un CUIL en un registro de errores (H-0013, es dato público) y que el registro revele si un CUIL está afiliado (H-0022, inherente al diseño; lo encarecen captcha y freno).</p></div>
 
 
   <figure class="fig captura" data-captura="x-seguridad">
-    <figcaption>La solapa Seguridad de <code>/entornos</code>: arriba el aviso «3 hallazgos Críticos o Altos bloquean salir a producción» y la tira de las diez etapas; luego el ranking de lo no corregido y, abajo, el estado de resolución (10 solucionados, 6 parciales, 4 pendientes, 3 aceptados) con la aclaración de cada hallazgo. En la pantalla «parcial» equivale a «en corrección» de este capítulo.</figcaption>
+    <figcaption>La solapa Seguridad de <code>/entornos</code>: arriba el aviso de los hallazgos Críticos o Altos que bloquean salir a producción y la tira de las diez etapas; luego el ranking de lo no corregido y, abajo, el estado de resolución con la aclaración de cada hallazgo. La captura es del 12 de noviembre, antes de cerrar H-0020 (todavía dice 3 bloqueantes). En la pantalla «parcial» equivale a «en corrección» de este capítulo.</figcaption>
   </figure>
 
   <h4>Lo corregido más importante</h4>
@@ -87,7 +86,7 @@
   <ul>
     <li><b>Claves</b> con PBKDF2 y sal propia; la transitoria de un alta obliga a elegir una propia en el primer ingreso (<a href="#cap-5">5.13</a>).</li>
     <li><b>Sesión por inactividad</b> de 15 minutos, y <b>una cookie por rol</b>: dos pestañas con roles distintos no se pisan. Son <code>HttpOnly</code>, <code>SameSite</code> y <code>Secure</code> en Demo y Producción.</li>
-    <li><b>Freno por IP</b> en los ingresos y el registro; <b>captcha</b> (Turnstile) apagado hasta configurar sus claves.</li>
+    <li><b>Freno por IP</b> en los ingresos y el registro; <b>captcha</b> (Turnstile) apagado hasta configurar sus claves, lo único que falta de ese circuito: el dominio en Cloudflare y el correo ya están.</li>
     <li><b>Google</b> solo como identidad alternativa para cuentas ya registradas, y donde el entorno tiene sus claves; nunca crea cuentas.</li>
   </ul>
   <h4>Autorización</h4>
@@ -146,36 +145,22 @@
   <p>Ritmo: reunión de seguimiento semanal de 45 minutos y demostración quincenal. Toda decisión que cambie alcance, reglas, plazos o datos personales queda registrada. Los pedidos de cambio son de tres tipos: <b>configuración</b> (en el panel), <b>mejora menor</b> (desarrollo, se prioriza) y <b>cambio de alcance</b> (se estima y se decide qué desplaza).</p>
 
   <h3 id="cap-8-fases"><span class="n">8.2</span>Las fases, de punta a punta</h3>
-  <p>El plan de La Bancaria las agrupa en seis fases sobre unas veinte semanas; acá se abren en pasos concretos.</p>
-  <figure class="fig diagrama">
-<svg viewBox="0 0 860 330" role="img" aria-label="Línea de tiempo de la implementación en seis fases a lo largo de unas veinte semanas"><defs><marker id="f7e-f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4c5d75"/></marker></defs><line x1="190.0" y1="30" x2="190.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="190.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S0</text><line x1="257.0" y1="30" x2="257.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="257.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S2</text><line x1="324.0" y1="30" x2="324.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="324.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S4</text><line x1="391.0" y1="30" x2="391.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="391.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S6</text><line x1="458.0" y1="30" x2="458.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="458.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S8</text><line x1="525.0" y1="30" x2="525.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="525.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S10</text><line x1="592.0" y1="30" x2="592.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="592.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S12</text><line x1="659.0" y1="30" x2="659.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="659.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S14</text><line x1="726.0" y1="30" x2="726.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="726.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S16</text><line x1="793.0" y1="30" x2="793.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="793.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S18</text><line x1="860.0" y1="30" x2="860.0" y2="262" stroke="#dbe2ea" stroke-width="1"/><text x="860.0" y="20" text-anchor="middle" font-size="11.5" fill="#4c5d75">S20</text><text x="10" y="61" font-size="12.5" font-weight="700" fill="#16243a">0 Preparación</text><rect x="190.0" y="40" width="33.5" height="28" rx="8" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/><text x="10" y="99" font-size="12.5" font-weight="700" fill="#16243a">1 Definición del plan</text><rect x="223.5" y="78" width="33.5" height="28" rx="8" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="10" y="137" font-size="12.5" font-weight="700" fill="#16243a">2 Relevamiento</text><rect x="257.0" y="116" width="67.0" height="28" rx="8" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/><text x="10" y="175" font-size="12.5" font-weight="700" fill="#16243a">3 Configuración</text><rect x="290.5" y="154" width="134.0" height="28" rx="8" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/><text x="10" y="213" font-size="12.5" font-weight="700" fill="#16243a">4 Prueba piloto</text><rect x="424.5" y="192" width="201.0" height="28" rx="8" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/><text x="10" y="251" font-size="12.5" font-weight="700" fill="#16243a">5 Implementación total</text><rect x="625.5" y="230" width="268.0" height="28" rx="8" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/><line x1="190" y1="282" x2="893.5" y2="282" stroke="#4c5d75" stroke-width="1.2"/><text x="10" y="286" font-size="12.5" font-weight="700" fill="#16243a">Hitos con el sindicato</text><path d="M190.0,274 l8,8 l-8,8 l-8,-8 z" fill="#f0a01e" stroke="#a86400" stroke-width="1.2"/><text x="190.0" y="306" text-anchor="middle" font-size="11" fill="#16243a">S0 Estrategia</text><path d="M223.5,274 l8,8 l-8,8 l-8,-8 z" fill="#f0a01e" stroke="#a86400" stroke-width="1.2"/><text x="223.5" y="320" text-anchor="middle" font-size="11" fill="#16243a">S1 Lanzamiento</text><path d="M324.0,274 l8,8 l-8,8 l-8,-8 z" fill="#f0a01e" stroke="#a86400" stroke-width="1.2"/><text x="324.0" y="306" text-anchor="middle" font-size="11" fill="#16243a">S4 Entorno de prueba</text><path d="M391.0,274 l8,8 l-8,8 l-8,-8 z" fill="#f0a01e" stroke="#a86400" stroke-width="1.2"/><text x="391.0" y="320" text-anchor="middle" font-size="11" fill="#16243a">S6 Aceptación</text><path d="M592.0,274 l8,8 l-8,8 l-8,-8 z" fill="#f0a01e" stroke="#a86400" stroke-width="1.2"/><text x="592.0" y="306" text-anchor="middle" font-size="11" fill="#16243a">S12 Resultados</text><path d="M625.5,274 l8,8 l-8,8 l-8,-8 z" fill="#f0a01e" stroke="#a86400" stroke-width="1.2"/><text x="625.5" y="320" text-anchor="middle" font-size="11" fill="#16243a">S13 Oleadas</text></svg>
-<figcaption>Las seis fases del plan de La Bancaria en el calendario orientativo de unas veinte semanas. Los hitos son encuentros con el sindicato.</figcaption>
-</figure>
-  <div class="nota pendiente"><span class="rot">Un solo calendario</span><p>Se toma como referencia el plan de La Bancaria (v0.2, octubre de 2026): unas 20 semanas, piloto de 50 a 1.000 afiliados. El plan genérico anterior por sindicato proponía otro (13 semanas); no se usa. Las semanas son orientativas y se fijan con cada gremio; manda el criterio de salida de cada paso.</p></div>
+  <p>El plan de referencia dura <b>unas 13 semanas</b> y se recorre en los pasos de abajo. Las fechas, el tamaño del piloto y las metas se acuerdan con cada sindicato: todavía no se fijan en este documento.</p>
 
   <ol class="pasos">
-    <li><b>Relevamiento (semanas 2 y 3)</b> Talleres de una hora por tema: padrón, trámites y comunicación, estructura, convenio y liquidación, empleadores y tecnología. <em>Listo cuando</em> están respondidos los formularios y recibidos los documentos y el padrón.</li>
+    <li><b>Relevamiento</b> Talleres de una hora por tema: padrón, trámites y comunicación, estructura, convenio y liquidación, empleadores y tecnología. <em>Listo cuando</em> están respondidos los formularios y recibidos los documentos y el padrón.</li>
     <li><b>Acuerdo y cláusula</b> Canal seguro para el padrón, quién accede y cuánto se guarda; acuerdo de tratamiento de datos. Si el sindicato quiere ver los recibos no enviados (anonimizados), se sube el <b>contrato firmado</b> y plataforma marca la cláusula. <em>Listo cuando</em> lo firman ambas partes y lo revisó la asesoría legal del sindicato.</li>
     <li><b>Alta en plataforma y marca</b> Logo, cuatro colores (el de base, oscuro), módulos y primer administrador con clave inicial transitoria entregada por fuera de la app. <em>Listo cuando</em> el administrador eligió su clave y ve el panel con la marca del gremio.</li>
     <li><b>Padrón, seccionales y listas</b> Seccionales ubicadas en el mapa, padrón por planilla (CUIL válido, nombre, provincia y localidad) y las listas que consultan los trámites. <em>Listo cuando</em> el padrón cuadra y las filas con error se informaron una por una.</li>
     <li><b>Conceptos, reglas y escalas</b> Conceptos del convenio, reglas con su fuente y escalas con vigencia; se prueba con recibos reales de cada empleador. <em>Listo cuando</em> al menos 20 recibos reales de 4 empleadores dan el resultado correcto.</li>
     <li><b>Trámites con el Asistente</b> El Asistente arma circuito, formulario y brechas; el importador crea el formulario como <b>borrador</b>. <em>Listo cuando</em> los dos o tres primeros se publicaron y probaron de punta a punta.</li>
     <li><b>Áreas, usuarios y capacitación</b> Áreas por seccional, permisos y usuarios; sesiones breves por rol. <em>Listo cuando</em> cada operador ve solo lo suyo y resuelve sin ayuda un trámite de prueba.</li>
-    <li><b>Piloto con afiliados reales (semanas 7 a 12)</b> Unos 50 afiliados de una o dos seccionales, ampliable a 500 o 1.000, durante al menos dos cierres de mes, con mesa de ayuda y revisión semanal de recibos dudosos. <em>Listo cuando</em> se cumplen los indicadores y las autoridades reciben el informe.</li>
+    <li><b>Piloto con afiliados reales</b> Un grupo acotado de afiliados de una o dos seccionales, durante al menos dos cierres de mes, con mesa de ayuda y revisión semanal de recibos dudosos. <em>Listo cuando</em> se cumplen los indicadores y las autoridades reciben el informe.</li>
     <li><b>Lanzamiento y operación</b> Oleadas de seccionales con capacitación previa; la app se instala desde un enlace, sin tienda. Mesa de ayuda en dos niveles (el sindicato atiende al afiliado, Colm3na al sindicato) y escalas al día en cada paritaria. <em>Listo cuando</em> se firma el acta de cierre.</li>
   </ol>
 
-  <h4>Indicadores del piloto</h4>
-  <div class="tabla-cont"><table class="tabla">
-    <thead><tr><th>Indicador del piloto</th><th>Meta propuesta (no acordada)</th></tr></thead>
-    <tbody>
-      <tr><td>Afiliados del piloto que ingresaron</td><td class="num">70 % o más</td></tr>
-      <tr><td>Que verificaron al menos un recibo</td><td class="num">50 % o más</td></tr>
-      <tr><td>Recibos leídos bien (muestra revisada)</td><td class="num">90 % o más</td></tr>
-      <tr><td>Trámites respondidos en 2 días hábiles</td><td class="num">80 % o más</td></tr>
-      <tr><td>Notificaciones leídas en 7 días</td><td class="num">50 % o más</td></tr>
-      <tr><td>Incidencias críticas abiertas al cierre</td><td class="num">mínimas</td></tr>
-    </tbody></table></div>
+  <h4>Qué se mide en el piloto</h4>
+  <p>Cuántos afiliados del piloto ingresaron, cuántos verificaron al menos un recibo, qué proporción de recibos se leyó bien (sobre una muestra revisada), en cuánto tiempo se respondieron los trámites, cuántas notificaciones se leyeron y cuántas incidencias críticas quedaron abiertas. Las metas de cada indicador se acuerdan con el sindicato.</p>
 
   <h3 id="cap-8-roles"><span class="n">8.3</span>Roles y responsabilidades</h3>
   <p>Del lado de Colm3na intervienen la dirección del proyecto, el análisis funcional y el desarrollo y los datos. Del lado del sindicato, una <b>autoridad responsable</b>, un <b>referente operativo</b>, uno técnico, uno de convenio y liquidación, comunicación y asesoría legal. Nada exige que sean personas distintas.</p>
@@ -198,12 +183,12 @@
   <div class="nota alerta"><span class="rot">Cuidado: la configuración también falla</span><p>En la tanda de pruebas de La Bancaria, la mayoría de los «errores» no eran de la app ni de los recibos, sino de configuración: la <b>tolerancia</b> cargada en $ 5.000 en vez de $ 1 (diferencias reales pasaban como correctas), un <b>tope de seguridad social</b> mal cargado, el <b>Día del Bancario</b> como remunerativo (sumaba $ 185.000 a la base de aportes) y la <b>cuota sindical</b> sin vincular. Con eso corregido, 40 recibos dieron 40 de 40 lo esperado. De ahí salieron un aviso cuando la tolerancia supera $ 100, un chequeo de topes en <code>chequeo.py</code> y la costumbre de clasificar cada fallo por origen (app, recibos de prueba o configuración) antes de tocar código.</p></div>
 
   <h3 id="cap-8-bancaria"><span class="n">8.5</span>El caso La Bancaria</h3>
-  <p>La Asociación Bancaria es el primer sindicato con el que se prepara este recorrido, y está <b>en preparación en Pruebas</b>: no consta en el repositorio que se hayan hecho reuniones con sus autoridades, que haya padrón real cargado ni acuerdos firmados. Lo preparado hasta el 12 de noviembre de 2026:</p>
+  <p>La Asociación Bancaria es el primer sindicato con el que se prepara este recorrido, y está <b>en preparación en Pruebas</b>, con un plan de referencia de unas 13 semanas cuyos detalles todavía no se fijan. Lo preparado hasta el 12 de noviembre de 2026:</p>
   <ul>
     <li><b>Documentos</b>: el plan de implementación (borrador v0.2, octubre) y la guía para una reunión de 90 minutos con las autoridades.</li>
     <li><b>Espacio propio</b> con su marca, los conceptos del convenio 18/75 y un lote sintético de 5.000 recibos validados por el motor real; la grilla salarial de agosto de 2026 y una calculadora que arma el recibo que corresponde.</li>
     <li><b>Catálogo de gestiones</b>: 81 gestiones del afiliado relevadas contra las fuentes del sindicato (58 listas para Colm3na, 18 con ajuste, 5 de desarrollo) y una propuesta de kit inicial de 18 formularios.</li>
     <li><b>Pruebas de exactitud y de carga</b> con 600 recibos de prueba: con la IA real, 399 de 400 lecturas exactas con el modelo elegido, y el arranque dimensionado para el día de cobro aprobó 400 lectores simultáneos sin errores del servidor.</li>
   </ul>
-  <div class="nota pendiente"><span class="rot">Pendiente</span><p>Todo lo que depende del sindicato: reunión con las autoridades, referentes, padrón real, acuerdo de datos y grupo piloto. Mientras no estén, no se habilita ninguna lectura con afiliados reales. El registro por mail y el captcha esperan además que se configuren el correo y Cloudflare.</p></div>
+  <div class="nota pendiente"><span class="rot">Pendiente</span><p>Todo lo que depende del sindicato: reunión con las autoridades, referentes, padrón real, acuerdo de datos y grupo piloto. Mientras no estén, no se habilita ninguna lectura con afiliados reales. El dominio en Cloudflare y el correo de Resend ya están configurados (en migración a las cuentas corporativas); falta el captcha.</p></div>
 </section>

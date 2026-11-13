@@ -1755,7 +1755,14 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     seguridad y auditabilidad; implementación) más glosario, 32 diagramas y 74
     capturas reales de la app con los datos sintéticos de la demo, todo contrastado
     contra el código. HTML autocontenido, claro e imprimible (~118 páginas A4), en
-    Recursos de `/entornos`. Fuentes en `docs/integrador/`.
+    Recursos de `/entornos`. Fuentes en `docs/integrador/`. **Respuestas de SDN
+    (2026-11-13, Plataforma 0.68.03)**: queda una sola versión larga (~116 páginas),
+    sin PDF; las notificaciones se presentan como **domicilio electrónico** (llegan
+    y queda registrado si se leyeron y cuándo); La Bancaria, en preparación con un
+    plan de referencia de ~13 semanas, sin más detalles por ahora; **el dominio en
+    Cloudflare y el correo de Resend están configurados**, en migración a cuentas
+    corporativas (falta Turnstile y el perímetro); **H-0020 cerrado** (bloquean
+    producción 2: H-0019 y H-0008).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1979,11 +1986,9 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    `docs/OPERATIVA.md` §9.
 10. **Registro confirmado por mail y niveles de fiabilidad** (H-0017, R2 y
     R3): plan en [`PLAN_REGISTRO.md`](PLAN_REGISTRO.md), **código HECHO**
-    (ver "Estado actual" 32). Queda de SDN: delegar `colm3na.com.ar` a
-    Cloudflare, dar de alta `avisos.colm3na.com.ar` en Resend, crear el sitio
-    de Turnstile y cargar `RESEND_API_KEY`, `MAIL_REMITENTE`,
-    `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET` en Pruebas; hasta entonces el
-    canal está apagado y el registro nace nivel 1. Después: smoke test del
+    (ver "Estado actual" 32). **Dominio en Cloudflare y Resend configurados**
+    (SDN, 2026-11-13; en migración a cuentas corporativas). Queda crear el sitio
+    de Turnstile y cargar `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET` en Pruebas. Después: smoke test del
     widget en Pruebas y H-0017 → Solucionado. Pendientes menores anotados en
     BACKLOG.md (bitácora de acciones del panel, teléfono como segundo canal).
 11. **Panel Sindical v2 con Preact** (2026-10-12; **D9 decidida el

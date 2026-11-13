@@ -220,9 +220,9 @@
       <tr><td>Georef y Nominatim</td><td>Provincias, localidades, calle y altura</td><td><span class="chip verde">Hecho</span></td><td>Públicas; si no responden el alta sigue sin ubicar</td></tr>
       <tr><td>MET Norway y BCRA</td><td>Clima y dólar oficial de «Tu día»</td><td><span class="chip verde">Hecho</span></td><td>Públicas; un tercero caído no da 500</td></tr>
       <tr><td>Grafana Cloud, Sentry, Telegram</td><td>Observabilidad (6.6)</td><td><span class="chip verde">Hecho, solo en Pruebas</span></td><td>No hacen nada</td></tr>
-      <tr><td>Resend (mail)</td><td>Códigos de registro y recuperación de clave</td><td><span class="chip violeta">Pendiente: código listo, falta configurar</span></td><td><span class="chip">Apagado sin claves</span>: el registro nace nivel 1</td></tr>
+      <tr><td>Resend (mail)</td><td>Códigos de registro y recuperación de clave</td><td><span class="chip verde">Configurado</span> <span class="chip ambar">En migración a cuentas corporativas</span></td><td><span class="chip">Apagado sin claves</span>: el registro nace nivel 1</td></tr>
       <tr><td>Cloudflare Turnstile</td><td>Captcha en registros y recuperación</td><td><span class="chip violeta">Pendiente: código listo, falta configurar</span></td><td><span class="chip">Apagado sin claves</span></td></tr>
-      <tr><td>Cloudflare (dominio y perímetro)</td><td>DNS, certificados y filtro delante de Render</td><td><span class="chip violeta">Pendiente (planeado)</span></td><td>La app responde en su dirección de Render</td></tr>
+      <tr><td>Cloudflare (dominio y perímetro)</td><td>DNS, certificados y filtro delante de Render</td><td><span class="chip verde">Dominio configurado</span> <span class="chip ambar">En migración a cuentas corporativas</span></td><td>La app responde en su dirección de Render</td></tr>
       <tr><td>Web Push (VAPID)</td><td>Avisos de novedades de trámites a la app instalada</td><td><span class="chip">Apagado sin claves</span></td><td>Canal apagado</td></tr>
       <tr><td>Google (OAuth)</td><td>«Continuar con Google» para cuentas ya registradas</td><td><span class="chip">Apagado sin claves</span></td><td>El botón no se dibuja y las rutas dan 404</td></tr>
       <tr><td>MercadoPago</td><td>Cobro de entradas de la Fiesta (no de Colm3na)</td><td><span class="chip ambar">En prueba</span></td><td>Cobro apagado; con <code>MP_MOCK=1</code> se simula</td></tr>
@@ -231,8 +231,8 @@
     </tbody>
   </table></div>
 
-  <div class="nota pendiente"><span class="rot">No confirmado desde el repo</span>
-    <p>No consta si ya se delegó un dominio propio a Cloudflare, si se verificó el subdominio de mail en Resend ni si se creó el sitio de Turnstile: lo último escrito (<code>CLAUDE.md</code>, Pendientes) es que quedaban a cargo del dueño del producto. Mientras no se configuren, el canal de mail y el captcha están apagados. Por eso este documento no nombra ningún dominio propio.</p>
+  <div class="nota"><span class="rot">Cuentas corporativas</span>
+    <p>El dominio propio ya está en Cloudflare y el correo de Resend está configurado; las dos cuentas se están migrando a cuentas corporativas de la empresa. Falta crear el sitio de Turnstile (captcha) y poner el perímetro de Cloudflare delante de Render, que es lo que cierra el hallazgo H-0008 (<a href="#cap-7">capítulo 7</a>).</p>
   </div>
 
   <h3 id="cap-6-ia"><span class="n">6.5</span>La IA</h3>
