@@ -10966,3 +10966,25 @@ mecanismo, flechas con nombre, grilla, un solo acento), un diagrama de referenci
 revisor automático (`revisar_diagramas.js`: textos que se salen de su caja, encimados,
 fuera del lienzo, letra chica y colores fuera de paleta). Cinco agentes rehicieron los 31
 diagramas con esa norma (dos pasaron a tabla) y todos dan 0 problemas.
+
+**Tercera vuelta (2026-11-13, Plataforma 0.69.01).** Pedido de SDN: sacar la Fiesta
+SUPARA del documento; no decir dónde va el logo de Colm3na, porque se va a mover al
+pie de las pantallas y más chico (las capturas quedan como están); un sello «Uso
+interno · Reservado» como marca de agua que no moleste, en todas las hojas; contar en
+las pautas de diseño que se trabaja con XSD y con patrones validados por la
+metodología de Emil Kowalski; y que los receptores, que no tienen usuario, entren por
+un **link directo con PIN propio**. Se hizo `/documento-integrador`: con
+`INTEGRADOR_PIN` cargada muestra una puerta con PIN; el acierto deja un pase firmado
+de 7 días atado al PIN vigente (cambiar el PIN corta todos los pases) que abre solo
+ese documento, con freno por IP propio, CSP propia (el documento es autocontenido:
+fuentes e imágenes en `data:`), `no-store` y `noindex`. Sin la variable, 404. El
+sello es un elemento fijo, sin eventos y al 4,5 % de opacidad, centrado con
+posición absoluta (con grilla se corría al imprimir); Chromium lo repite en cada
+hoja impresa.
+
+**De paso: el ingreso a `/entornos` que fallaba desde el celular** (2026-11-13). Los
+registros de Render mostraban fallos por usuario o clave desde el 12/11 a las 10:19.
+Un Job de Render de solo lectura confirmó el usuario activo, sin vencimiento ni
+reseteos, y un ingreso correcto desde la PC a las 21:09; SDN entró escribiendo la
+mayúscula de la clave a mano e informó que se debió a algo tocado horas antes por un
+error de ingreso a MercadoPago. Queda anotado en BACKLOG.md.

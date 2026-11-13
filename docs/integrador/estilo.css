@@ -205,3 +205,12 @@ dl.glosario dd{margin:2px 0 0;color:var(--texto);line-height:1.45}
   .tabla-cont{overflow:visible}
   .no-imprimir{display:none!important}
 }
+
+/* ---------- Sello «Uso interno · Reservado» (marca de agua) ----------
+   Fijo, sin eventos y muy tenue: se ve en cada pantalla y, al imprimir,
+   en cada hoja (Chromium repite los elementos fijos en todas las páginas). */
+.sello-reservado{position:fixed;inset:0;z-index:40;pointer-events:none;overflow:hidden}
+.sello-reservado span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-28deg);font-family:var(--display);font-weight:700;font-size:clamp(46px,8.5vw,112px);
+  letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(10,20,33,.045);
+  border:5px solid rgba(10,20,33,.04);border-radius:16px;padding:.06em .4em;user-select:none}
+@media print{.sello-reservado span{font-size:44pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
