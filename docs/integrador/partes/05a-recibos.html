@@ -53,54 +53,64 @@
   <h4>La cadena completa, de la foto al resultado</h4>
   <p>Entre que la persona toca «Leer recibo» y ve el resultado pasan seis etapas. La lectura la hace una IA; el <b>juicio</b> lo hace código determinista, sin IA, para que dos recibos iguales den siempre el mismo veredicto.</p>
   <figure class="fig diagrama">
-    <svg viewBox="0 0 860 300" role="img" aria-label="Cadena de lectura y validación de un recibo: foto, preparación, enmascarado, IA, JSON, validador y resultado">
-      <defs><marker id="f5a-fl1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
-      <rect x="10" y="30" width="108" height="76" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-      <text x="64" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">1. Foto o PDF</text>
-      <text x="64" y="78" text-anchor="middle" font-size="12" fill="#16243a">sube el afiliado</text>
-      <text x="64" y="94" text-anchor="middle" font-size="12" fill="#16243a">desde el celular</text>
-      <rect x="140" y="30" width="108" height="76" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-      <text x="194" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">2. Preparación</text>
-      <text x="194" y="78" text-anchor="middle" font-size="12" fill="#16243a">se achica a 2.000 px</text>
-      <text x="194" y="94" text-anchor="middle" font-size="12" fill="#16243a">una sola vez</text>
-      <rect x="270" y="30" width="108" height="76" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
-      <text x="324" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">3. Enmascarado</text>
-      <text x="324" y="78" text-anchor="middle" font-size="12" fill="#16243a">tapa CUIL, nombre,</text>
-      <text x="324" y="94" text-anchor="middle" font-size="12" fill="#16243a">legajo (mejor esfuerzo)</text>
-      <rect x="400" y="30" width="108" height="76" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
-      <text x="454" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">4. IA lectora</text>
-      <text x="454" y="78" text-anchor="middle" font-size="12" fill="#16243a">extractor.py</text>
-      <text x="454" y="94" text-anchor="middle" font-size="12" fill="#16243a">modelo elegible</text>
-      <rect x="530" y="30" width="108" height="76" rx="10" fill="#eef2f7" stroke="#4c5d75" stroke-width="1.5"/>
-      <text x="584" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">5. JSON</text>
-      <text x="584" y="78" text-anchor="middle" font-size="12" fill="#16243a">se rearma la identidad</text>
-      <text x="584" y="94" text-anchor="middle" font-size="12" fill="#16243a">y se chequea el CUIL</text>
-      <rect x="660" y="30" width="108" height="76" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="714" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">6. Validador</text>
-      <text x="714" y="78" text-anchor="middle" font-size="12" fill="#16243a">validador.py</text>
-      <text x="714" y="94" text-anchor="middle" font-size="12" fill="#16243a">sin IA, determinista</text>
-      <path d="M118 68H138" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
-      <path d="M248 68H268" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
-      <path d="M378 68H398" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
-      <path d="M508 68H528" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
-      <path d="M638 68H658" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
-      <path d="M714 106V150" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl1)"/>
-      <rect x="610" y="152" width="208" height="56" rx="10" fill="#ffffff" stroke="#0a1421" stroke-width="1.5"/>
-      <text x="714" y="176" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Resultado</text>
-      <text x="714" y="196" text-anchor="middle" font-size="12" fill="#16243a">«Todo en orden» o «Hay N diferencias»</text>
-      <rect x="10" y="150" width="560" height="120" rx="10" fill="#ffffff" stroke="#dbe2ea" stroke-width="1.5"/>
-      <text x="26" y="174" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Qué corta la cadena antes de llegar al final</text>
-      <text x="26" y="198" font-size="13" fill="#16243a"><tspan fill="#c0392b" font-weight="700">E-RECIBO-04</tspan>: el CUIL leído no es el de la sesión. Se corta apenas se lee.</text>
-      <text x="26" y="220" font-size="13" fill="#16243a"><tspan fill="#c0392b" font-weight="700">E-RECIBO-01/02</tspan>: imagen ilegible o poco clara. Es el único caso de «probá con otra foto».</text>
-      <text x="26" y="242" font-size="13" fill="#16243a"><tspan fill="#b8860b" font-weight="700">Enmascarado que falla</tspan>: no corta. El recibo se analiza igual y queda registrado.</text>
-      <text x="26" y="262" font-size="13" fill="#16243a"><tspan fill="#b8860b" font-weight="700">Línea sin importe legible</tspan>: queda afuera del cálculo, con alerta; nunca vale $ 0.</text>
+    <svg viewBox="0 0 860 276" role="img" aria-label="Seis etapas de un recibo: foto o PDF, preparación, enmascarado, lectura por IA, chequeo de identidad y validador de código; abajo, lo que corta el recorrido y lo que solo se avisa" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="f5a1-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#7a8799"/></marker><marker id="f5a1-fla" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e0951a"/></marker></defs>
+      <rect x="16" y="16" width="828" height="124" rx="12" fill="#eef2f6"/>
+      <text x="32" y="38" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">DE LA FOTO AL VEREDICTO</text>
+      <rect x="20" y="44" width="120" height="80" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <circle cx="80" cy="62" r="11" fill="#0a1421"/>
+      <text x="80" y="66" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+      <text x="80" y="94" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Foto o PDF</text>
+      <text x="80" y="112" text-anchor="middle" font-size="12" fill="#5b6778">sube la persona</text>
+      <path d="M142,84 L158,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a1-fl)"/>
+      <rect x="160" y="44" width="120" height="80" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <circle cx="220" cy="62" r="11" fill="#0a1421"/>
+      <text x="220" y="66" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+      <text x="220" y="94" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Preparación</text>
+      <text x="220" y="112" text-anchor="middle" font-size="12" fill="#5b6778">a 2.000 px</text>
+      <path d="M282,84 L298,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a1-fl)"/>
+      <rect x="300" y="44" width="120" height="80" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <circle cx="360" cy="62" r="11" fill="#0a1421"/>
+      <text x="360" y="66" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+      <text x="360" y="94" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Enmascarado</text>
+      <text x="360" y="112" text-anchor="middle" font-size="12" fill="#5b6778">tapa datos</text>
+      <path d="M422,84 L438,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a1-fl)"/>
+      <rect x="440" y="44" width="120" height="80" rx="8" fill="#fff8ec" stroke="#e0951a" stroke-width="1.75"/>
+      <circle cx="500" cy="62" r="11" fill="#0a1421"/>
+      <text x="500" y="66" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+      <text x="500" y="94" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">La IA lee</text>
+      <text x="500" y="112" text-anchor="middle" font-size="12" fill="#5b6778">extrae líneas</text>
+      <path d="M562,84 L578,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a1-fl)"/>
+      <rect x="580" y="44" width="120" height="80" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <circle cx="640" cy="62" r="11" fill="#0a1421"/>
+      <text x="640" y="66" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+      <text x="640" y="94" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Identidad</text>
+      <text x="640" y="112" text-anchor="middle" font-size="12" fill="#5b6778">chequea el CUIL</text>
+      <path d="M702,84 L718,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a1-fl)"/>
+      <rect x="720" y="44" width="120" height="80" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <circle cx="780" cy="62" r="11" fill="#0a1421"/>
+      <text x="780" y="66" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+      <text x="780" y="94" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Validador</text>
+      <text x="780" y="112" text-anchor="middle" font-size="12" fill="#5b6778">código, sin IA</text>
+      <rect x="16" y="160" width="404" height="100" rx="12" fill="#eef2f6"/>
+      <text x="32" y="182" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">CORTA EL RECORRIDO</text>
+      <rect x="440" y="160" width="404" height="100" rx="12" fill="#eef2f6"/>
+      <text x="456" y="182" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">NO LO CORTA, SE AVISA</text>
+      <circle cx="40" cy="194" r="4" fill="#c0392b"/>
+      <text x="54" y="198" font-size="12" fill="#0a1421">E-RECIBO-04: el CUIL no es el de la sesión</text>
+      <circle cx="40" cy="224" r="4" fill="#c0392b"/>
+      <text x="54" y="228" font-size="12" fill="#0a1421">E-RECIBO-01/02: imagen ilegible o poco clara</text>
+      <circle cx="464" cy="194" r="4" fill="#b8860b"/>
+      <text x="478" y="198" font-size="12" fill="#0a1421">Enmascarado que falla: se analiza igual</text>
+      <circle cx="464" cy="224" r="4" fill="#b8860b"/>
+      <text x="478" y="228" font-size="12" fill="#0a1421">Línea sin importe: queda afuera, con alerta</text>
     </svg>
-    <figcaption>Las seis etapas de un recibo. La IA interviene solo en la cuarta; el veredicto lo da el validador, que es código. Abajo, lo que puede cortar o degradar el recorrido.</figcaption>
+    <figcaption>Las seis etapas de un recibo, de la foto al veredicto. La IA interviene solo en la cuarta; el veredicto lo da el validador, que es código. Abajo, lo que corta el recorrido y lo que solo se avisa.</figcaption>
   </figure>
 
   <h4>La lectura por IA</h4>
   <p>Cada empleador imprime el recibo a su manera, así que lee un modelo de IA de Anthropic y no un OCR de reglas. Devuelve un JSON con esquema fijo: período, empleador, empleado, cada línea (código, descripción, importe y <i>en qué sección está impresa</i>), los totales, un grado de confianza y un indicador de posible adulteración. Entiende los <b>dos formatos</b> que conviven desde la Reforma Laboral (Decreto 407/2026): el clásico y el del Anexo III, que suma contribuciones patronales, costo laboral total y fecha del último depósito.</p>
-  <div class="nota regla"><span class="rot">Regla vigente: el modelo se elige desde plataforma</span><p>Los tres usos de IA (recibos, consultas al convenio, Asistente del Panel) traen un modelo por defecto en el código, pero plataforma elige el de cada uno en <code>/plataforma</code> → Uso de IA → Modelos. El default para recibos es Sonnet 4.6; desde el 5 de noviembre de 2026 el elegido es <b>Sonnet 5.5</b>, por la medición de más abajo. Un modelo fuera del catálogo de precios no se guarda.</p></div>
+  <div class="nota regla"><span class="rot">Regla vigente: el modelo se elige desde plataforma</span><p>Los tres usos de IA (recibos, consultas al convenio, Asistente del Panel) traen un modelo por defecto en el código, pero plataforma elige el de cada uno en <code>/plataforma</code> → Uso de IA → Modelos. El default para recibos es Sonnet 4.6; desde el 5 de noviembre de 2026 el elegido es <b>Sonnet 5.5</b>, por la medición de más abajo. Un modelo fuera del catálogo no se guarda.</p></div>
 
   <h4>Tapar los datos personales antes de mandar a la IA</h4>
   <p>Antes de que el recibo salga hacia la IA, el servidor intenta <b>tapar lo que identifica a la persona</b> (CUIL, nombre, DNI, legajo, cuenta, y CUIT y razón social del empleador) con un tapón rotulado, y lo <b>vuelve a poner del lado de Colm3na</b> con lo que leyó localmente. La IA ve el recibo completo menos quién es la persona.</p>
@@ -119,50 +129,36 @@
     <li><b>Reintegros entre los descuentos.</b> Una línea con signo contrario dentro de los descuentos (una devolución de Ganancias) no suma al bruto ni a la base: entra al neto. Lo decide dónde está <i>impresa</i> la línea, nunca el signo.</li>
   </ul>
   <figure class="fig diagrama">
-    <svg viewBox="0 0 860 330" role="img" aria-label="Cómo se reparte una línea del recibo según la sección donde está impresa">
-      <defs><marker id="f5a-fl2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
-      <rect x="10" y="10" width="250" height="300" rx="10" fill="#ffffff" stroke="#dbe2ea" stroke-width="1.5"/>
-      <text x="135" y="36" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">El recibo impreso</text>
-      <rect x="26" y="50" width="218" height="68" rx="8" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="38" y="72" font-size="13" font-weight="700" fill="#0d7a5f">HABERES</text>
-      <text x="38" y="92" font-size="12" fill="#16243a">Sueldo básico · Antigüedad</text>
-      <text x="38" y="108" font-size="12" fill="#16243a">Presentismo</text>
-      <rect x="26" y="128" width="218" height="52" rx="8" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-      <text x="38" y="150" font-size="13" font-weight="700" fill="#2e5c8a">NO REMUNERATIVOS</text>
-      <text x="38" y="168" font-size="12" fill="#16243a">Sumas fijas del acuerdo</text>
-      <rect x="26" y="190" width="218" height="104" rx="8" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
-      <text x="38" y="212" font-size="13" font-weight="700" fill="#c0392b">DESCUENTOS</text>
-      <text x="38" y="232" font-size="12" fill="#16243a">Jubilación · Obra social</text>
-      <text x="38" y="248" font-size="12" fill="#16243a">Cuota sindical</text>
-      <text x="38" y="270" font-size="12" fill="#16243a">Devolución de Ganancias</text>
-      <text x="38" y="285" font-size="11" fill="#4c5d75">(con signo contrario)</text>
-      <path d="M244 84H330" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
-      <path d="M244 154H330" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
-      <path d="M244 226H330" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
-      <path d="M244 276C290 276 290 276 330 276" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl2)"/>
-      <rect x="332" y="60" width="240" height="46" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="452" y="88" text-anchor="middle" font-size="13" fill="#16243a">Suma a la base remunerativa</text>
-      <rect x="332" y="130" width="240" height="46" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-      <text x="452" y="158" text-anchor="middle" font-size="13" fill="#16243a">Suma al bruto, no a la base</text>
-      <rect x="332" y="202" width="240" height="46" rx="10" fill="#fbeceb" stroke="#c0392b" stroke-width="1.5"/>
-      <text x="452" y="230" text-anchor="middle" font-size="13" fill="#16243a">Se controla contra la regla</text>
-      <rect x="332" y="254" width="240" height="46" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
-      <text x="452" y="282" text-anchor="middle" font-size="13" fill="#16243a">Reintegro: entra al neto</text>
-      <rect x="610" y="60" width="240" height="240" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
-      <text x="730" y="86" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Por qué importa</text>
-      <text x="624" y="112" font-size="12" fill="#16243a">Una devolución de Ganancias</text>
-      <text x="624" y="128" font-size="12" fill="#16243a">no es un haber: si se sumara</text>
-      <text x="624" y="144" font-size="12" fill="#16243a">a la base, todos los aportes</text>
-      <text x="624" y="160" font-size="12" fill="#16243a">esperados saldrían de más.</text>
-      <text x="624" y="190" font-size="12" fill="#16243a">Tampoco manda el catálogo:</text>
-      <text x="624" y="206" font-size="12" fill="#16243a">ser reintegro es cosa del</text>
-      <text x="624" y="222" font-size="12" fill="#16243a">mes, no del concepto.</text>
-      <text x="624" y="252" font-size="12" fill="#16243a">Si con la sección leída cierran</text>
-      <text x="624" y="268" font-size="12" fill="#16243a">los totales impresos y con el</text>
-      <text x="624" y="284" font-size="12" fill="#16243a">catálogo no, manda el recibo.</text>
-      <path d="M572 154H608" stroke="#a86400" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <svg viewBox="0 0 860 348" role="img" aria-label="Cómo se reparte una línea del recibo según la sección donde está impresa: haberes, no remunerativos, descuentos y devoluciones entre los descuentos" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="f5a2-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#7a8799"/></marker><marker id="f5a2-fla" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e0951a"/></marker></defs>
+      <rect x="16" y="16" width="356" height="316" rx="12" fill="#eef2f6"/>
+      <text x="32" y="38" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">SECCIÓN DONDE ESTÁ IMPRESA</text>
+      <rect x="404" y="16" width="440" height="316" rx="12" fill="#eef2f6"/>
+      <text x="420" y="38" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">QUÉ HACE EL VALIDADOR</text>
+      <rect x="32" y="52" width="324" height="52" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="194" y="83" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Haberes</text>
+      <rect x="420" y="52" width="408" height="52" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="624" y="83" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Suma a la base remunerativa</text>
+      <path d="M358,78 L418,78" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a2-fl)"/>
+      <rect x="32" y="120" width="324" height="52" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="194" y="151" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">No remunerativos</text>
+      <rect x="420" y="120" width="408" height="52" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="624" y="151" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Suma al bruto, no a la base</text>
+      <path d="M358,146 L418,146" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a2-fl)"/>
+      <rect x="32" y="188" width="324" height="52" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="194" y="219" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Descuentos</text>
+      <rect x="420" y="188" width="408" height="52" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="624" y="219" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Se controla contra su regla</text>
+      <path d="M358,214 L418,214" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a2-fl)"/>
+      <rect x="32" y="256" width="324" height="52" rx="8" fill="#fff8ec" stroke="#e0951a" stroke-width="1.75"/>
+      <text x="194" y="287" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Devolución de Ganancias</text>
+      <rect x="420" y="256" width="408" height="52" rx="8" fill="#fff8ec" stroke="#e0951a" stroke-width="1.75"/>
+      <text x="624" y="287" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Es un reintegro: entra al neto</text>
+      <path d="M358,282 L418,282" fill="none" stroke="#e0951a" stroke-width="1.5" marker-end="url(#f5a2-fla)"/>
+      <text x="388" y="274" text-anchor="middle" font-size="11.5" fill="#5b6778" paint-order="stroke" stroke="#eef2f6" stroke-width="4" stroke-linejoin="round">
+      </text>
     </svg>
-    <figcaption>Cómo se reparte cada línea según la sección donde está impresa. «Haber o descuento» lo dice el lugar del recibo, no el signo del importe.</figcaption>
+    <figcaption>Cómo se reparte cada línea según la sección donde está impresa. «Haber o descuento» lo dice el lugar del recibo, no el signo del importe. Una devolución de Ganancias no es un haber: si se sumara a la base, todos los aportes esperados saldrían de más; y tampoco manda el catálogo, porque ser reintegro es cosa del mes, no del concepto.</figcaption>
   </figure>
 
   <h4>Alertas que acompañan al resultado</h4>
@@ -185,15 +181,15 @@
     <figure class="fig captura" data-captura="s-aprendizaje"><figcaption>La pestaña Aprendizaje: la zona para arrastrar de 3 a 10 recibos y el botón «Leer recibos».</figcaption></figure>
   </div>
 
-  <h4>Cuánto acierta y cuánto cuesta: la medición real</h4>
-  <p>El 4 y 5 de noviembre de 2026 se midió el sistema con <b>600 recibos de prueba del lote de La Bancaria</b>: documentos armados con el convenio 18/75 real y con el resultado esperado conocido de antemano, sin datos de afiliados reales, con la IA de verdad y no con un simulador. Se compararon dos modelos.</p>
+  <h4>Cuánto acierta y cuánto tarda: la medición real</h4>
+  <p>El 4 y 5 de noviembre de 2026 se midió el sistema con <b>600 recibos de prueba del lote de La Bancaria</b>: documentos armados con el convenio 18/75 real y con el resultado esperado conocido de antemano, sin datos de afiliados reales, con la IA de verdad y no con un simulador. Se compararon dos modelos, por exactitud y por tiempo.</p>
   <div class="cifras">
     <div class="cifra"><b>399 / 400</b><span>lecturas exactas con Sonnet 5.5 (99,8 %)</span></div>
     <div class="cifra"><b>395 / 400</b><span>con el veredicto esperado, Sonnet 5.5</span></div>
-    <div class="cifra"><b>US$ 0,0231</b><span>por recibo con Sonnet 5.5</span></div>
-    <div class="cifra"><b>US$ 0,0178</b><span>por recibo con la caché de prompt encendida (−25 %)</span></div>
+    <div class="cifra"><b>7,4 s</b><span>mediana por recibo con Sonnet 5.5</span></div>
+    <div class="cifra"><b>9,0 s</b><span>mediana por recibo con Haiku 5.5</span></div>
   </div>
-  <p>Haiku 5.5 resultó unas <b>doce veces más barato</b> (US$ 0,00137 por recibo) pero <b>no más rápido</b> (mediana de 9,0 segundos contra 7,4) y algo menos exacto (98,0 % contra 99,8 %). Una lectura inexacta es una diferencia inventada contra un afiliado, así que el modelo de lectura es Sonnet 5.5; se reevalúa si el costo llegara a pesar. Los veredictos no esperados se clasificaron por origen antes de tocar código: casi todos eran <b>configuración de Pruebas</b> (tolerancia de $ 5.000 en vez de $ 1, un tope de seguridad social mal cargado), y de ahí salieron el aviso de tolerancia alta y un chequeo de topes. Un caso sí era de la app (descuentos en positivo fuera de su sección) y ya se corrigió.</p>
+  <p>Haiku 5.5 no resultó más rápido (mediana de 9,0 segundos contra 7,4) y leyó exacto algo menos (98,0 % contra 99,8 %). Una lectura inexacta es una diferencia inventada contra un afiliado, así que el modelo de lectura es Sonnet 5.5, elegido por su exactitud; se reevalúa si cambia el catálogo de modelos. Los veredictos no esperados se clasificaron por origen antes de tocar código: casi todos eran <b>configuración de Pruebas</b> (tolerancia de $ 5.000 en vez de $ 1, un tope de seguridad social mal cargado), y de ahí salieron el aviso de tolerancia alta y un chequeo de topes. Un caso sí era de la app (descuentos en positivo fuera de su sección) y ya se corrigió.</p>
   <div class="nota pendiente"><span class="rot">Pendiente: Motor de recibos v2</span><p>Hay un plan (<code>PLAN_MOTOR_V2.md</code>) para leer en tres pasadas cortas, con confianza por renglón y un cierre aritmético antes de juzgar. <b>No está construido</b>; lo que corre es lo descripto en esta sección.</p></div>
 
   <h3 id="cap-5-aportes"><span class="n">5.3</span>Aportes y semáforo ARCA</h3>
@@ -225,37 +221,31 @@
   <h4>Qué ve el sindicato de cada recibo</h4>
   <p>El sindicato necesita ver el conjunto para actuar, pero no puede identificar a quien no quiso compartir. La regla se aplica en el servidor, no en la pantalla.</p>
   <figure class="fig diagrama">
-    <svg viewBox="0 0 860 310" role="img" aria-label="Qué ve el sindicato de un recibo según si fue enviado o no">
-      <defs><marker id="f5a-fl3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
-      <rect x="10" y="110" width="170" height="80" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-      <text x="95" y="142" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Recibo verificado</text>
-      <text x="95" y="162" text-anchor="middle" font-size="12" fill="#16243a">por el afiliado</text>
-      <path d="M180 135C220 120 230 80 270 70" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5a-fl3)"/>
-      <path d="M180 165C220 180 230 230 270 240" stroke="#4c5d75" stroke-width="1.5" fill="none" marker-end="url(#f5a-fl3)"/>
-      <rect x="272" y="30" width="210" height="80" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="377" y="58" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">ENVIADO por el afiliado</text>
-      <text x="377" y="78" text-anchor="middle" font-size="12" fill="#16243a">nombre, CUIL, empresa</text>
-      <text x="377" y="94" text-anchor="middle" font-size="12" fill="#16243a">e importes a la vista</text>
-      <rect x="272" y="200" width="210" height="80" rx="10" fill="#fbf4e0" stroke="#b8860b" stroke-width="1.5"/>
-      <text x="377" y="228" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">NO enviado</text>
-      <text x="377" y="248" text-anchor="middle" font-size="12" fill="#16243a">se borran nombre, CUIL,</text>
-      <text x="377" y="264" text-anchor="middle" font-size="12" fill="#16243a">legajo y empresa</text>
-      <path d="M482 70H540" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl3)"/>
-      <path d="M482 240H540" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl3)"/>
-      <rect x="542" y="20" width="308" height="100" rx="10" fill="#ffffff" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="556" y="44" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">En Reportes y en el explorador</text>
-      <text x="556" y="66" font-size="12" fill="#16243a">Fila completa, identificada.</text>
-      <text x="556" y="84" font-size="12" fill="#16243a">Entra al padrón de cotizantes.</text>
-      <text x="556" y="102" font-size="12" fill="#16243a">Los números del Panel la cuentan.</text>
-      <rect x="542" y="150" width="308" height="140" rx="10" fill="#ffffff" stroke="#b8860b" stroke-width="1.5"/>
-      <text x="556" y="174" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Sin identidad, y con una condición</text>
-      <text x="556" y="196" font-size="12" fill="#16243a">Los números y gráficos la cuentan siempre.</text>
-      <text x="556" y="216" font-size="12" fill="#16243a">La fila anónima solo se lista si plataforma</text>
-      <text x="556" y="232" font-size="12" fill="#16243a">marcó la «cláusula de confidencialidad»,</text>
-      <text x="556" y="248" font-size="12" fill="#16243a">con el contrato firmado ya cargado.</text>
-      <text x="556" y="272" font-size="12" fill="#16243a">La búsqueda por CUIL o nombre solo mira enviados.</text>
+    <svg viewBox="0 0 860 224" role="img" aria-label="Qué ve el sindicato de un recibo según si fue enviado o no: el enviado llega identificado y el no enviado llega anónimo y solo con la cláusula firmada" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="f5a3-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#7a8799"/></marker><marker id="f5a3-fla" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e0951a"/></marker></defs>
+      <rect x="16" y="80" width="168" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="100" y="107.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Recibo verificado</text>
+      <text x="100" y="125.0" text-anchor="middle" font-size="12" fill="#5b6778">por el afiliado</text>
+      <rect x="208" y="16" width="636" height="192" rx="12" fill="#eef2f6"/>
+      <text x="224" y="38" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">EL SERVIDOR DECIDE EN LA CONSULTA</text>
+      <path d="M186,112 H208 V80 H230" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a3-fl)"/>
+      <path d="M186,112 H208 V160 H230" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a3-fl)"/>
+      <rect x="232" y="48" width="200" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="332" y="75.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Enviado</text>
+      <text x="332" y="93.0" text-anchor="middle" font-size="12" fill="#5b6778">lo decide la persona</text>
+      <rect x="232" y="128" width="200" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="332" y="155.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">No enviado</text>
+      <text x="332" y="173.0" text-anchor="middle" font-size="12" fill="#5b6778">la persona no lo envió</text>
+      <rect x="484" y="48" width="344" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="656" y="75.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Fila identificada</text>
+      <text x="656" y="93.0" text-anchor="middle" font-size="12" fill="#5b6778">nombre, CUIL, empresa e importes</text>
+      <rect x="484" y="128" width="344" height="64" rx="8" fill="#fff8ec" stroke="#e0951a" stroke-width="1.75"/>
+      <text x="656" y="155.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Fila anónima</text>
+      <text x="656" y="173.0" text-anchor="middle" font-size="12" fill="#5b6778">solo se lista con la cláusula firmada</text>
+      <path d="M434,80 H482" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a3-fl)"/>
+      <path d="M434,160 H482" fill="none" stroke="#e0951a" stroke-width="1.5" marker-end="url(#f5a3-fla)"/>
     </svg>
-    <figcaption>La privacidad se decide en el servidor, en la consulta SQL: lo que la pantalla muestra ya viene filtrado.</figcaption>
+    <figcaption>La privacidad se decide en el servidor, en la consulta SQL: lo que la pantalla muestra ya viene filtrado. Los números y gráficos del Panel cuentan siempre todos los recibos, enviados o no; la búsqueda por CUIL o nombre mira solo los enviados.</figcaption>
   </figure>
   <div class="nota regla"><span class="rot">Regla vigente: Reportes y la cláusula</span><p>Reportes (desde el 24 de septiembre de 2026, una sola pestaña que reemplazó a Cotizantes) lista <b>todos</b> los recibos verificados, paginada en el servidor. Los no enviados salen anonimizados y solo si la ficha del sindicato tiene la <b>cláusula de confidencialidad</b>, que plataforma marca con el contrato firmado ya cargado. La búsqueda por CUIL o nombre mira solo entre los enviados: si no, el filtro identificaría la fila anónima. Los números y gráficos del Panel cuentan todo, con o sin cláusula.</p></div>
   <figure class="fig captura" data-captura="s-reportes"><figcaption>La pestaña Reportes sin la cláusula firmada: el aviso naranja dice que hay recibos sin enviar que se verán anonimizados cuando el sindicato firme. Abajo, los filtros (CUIL, nombre, fechas, resultado, envío), el contador de páginas y las filas enviadas, con tilde verde o rojo de diferencias y el botón «Ver».</figcaption></figure>
@@ -276,36 +266,36 @@
   <h4>El Asistente del Panel</h4>
   <p>En vez de combinar filtros a mano, el administrador <b>pregunta como habla</b>: «notificaciones no leídas de la sucursal Rosario» o «recibos con diferencias de agosto». El Asistente traduce la pregunta a los filtros que el panel ya tiene, <b>los aplica</b> y contesta en una o dos frases con los números reales.</p>
   <figure class="fig diagrama">
-    <svg viewBox="0 0 860 190" role="img" aria-label="Cómo trabaja el Asistente del Panel: pregunta, IA, filtros, panel y respuesta">
-      <defs><marker id="f5a-fl4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4c5d75"/></marker></defs>
-      <rect x="10" y="40" width="150" height="90" rx="10" fill="#eaf1f8" stroke="#2e5c8a" stroke-width="1.5"/>
-      <text x="85" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Pregunta</text>
-      <text x="85" y="92" text-anchor="middle" font-size="12" fill="#16243a">escrita o dictada</text>
-      <text x="85" y="108" text-anchor="middle" font-size="12" fill="#16243a">por voz</text>
-      <rect x="205" y="40" width="190" height="90" rx="10" fill="#f1edf8" stroke="#6b4fa0" stroke-width="1.5"/>
-      <text x="300" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">IA (Sonnet 5)</text>
-      <text x="300" y="92" text-anchor="middle" font-size="12" fill="#16243a">resuelve sinónimos,</text>
-      <text x="300" y="108" text-anchor="middle" font-size="12" fill="#16243a">tipeos y fechas relativas</text>
-      <rect x="440" y="40" width="190" height="90" rx="10" fill="#fff6e5" stroke="#a86400" stroke-width="1.5"/>
-      <text x="535" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Filtros del panel</text>
-      <text x="535" y="92" text-anchor="middle" font-size="12" fill="#16243a">solo los que el panel ya</text>
-      <text x="535" y="108" text-anchor="middle" font-size="12" fill="#16243a">tiene, más el alcance</text>
-      <rect x="675" y="40" width="175" height="90" rx="10" fill="#e8f5f0" stroke="#0d7a5f" stroke-width="1.5"/>
-      <text x="762" y="72" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="17" fill="#0a1421">Panel + respuesta</text>
-      <text x="762" y="92" text-anchor="middle" font-size="12" fill="#16243a">el tablero se filtra y</text>
-      <text x="762" y="108" text-anchor="middle" font-size="12" fill="#16243a">se resume con números</text>
-      <path d="M160 85H203" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl4)"/>
-      <path d="M395 85H438" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl4)"/>
-      <path d="M630 85H673" stroke="#4c5d75" stroke-width="1.5" marker-end="url(#f5a-fl4)"/>
-      <text x="430" y="170" text-anchor="middle" font-size="13" fill="#4c5d75">Al modelo nunca le llegan CUIL ni nombres de trabajadores: solo la pregunta, nombres de seccionales y empresas, y totales.</text>
+    <svg viewBox="0 0 860 156" role="img" aria-label="Cómo trabaja el Asistente del Panel: la pregunta llega a la IA, que la traduce a filtros que el panel ya tiene; se aplican y el panel responde con números reales" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="f5a4-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#7a8799"/></marker><marker id="f5a4-fla" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#e0951a"/></marker></defs>
+      <rect x="16" y="16" width="828" height="124" rx="12" fill="#eef2f6"/>
+      <text x="32" y="38" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">ASISTENTE DEL PANEL</text>
+      <rect x="20" y="52" width="168" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="104" y="79.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Pregunta</text>
+      <text x="104" y="97.0" text-anchor="middle" font-size="12" fill="#5b6778">escrita o por voz</text>
+      <path d="M190,84 L234,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a4-fl)"/>
+      <rect x="236" y="52" width="168" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="320" y="79.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">La IA traduce</text>
+      <text x="320" y="97.0" text-anchor="middle" font-size="12" fill="#5b6778">a filtros del panel</text>
+      <path d="M406,84 L450,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a4-fl)"/>
+      <rect x="452" y="52" width="168" height="64" rx="8" fill="#fff8ec" stroke="#e0951a" stroke-width="1.75"/>
+      <text x="536" y="79.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Filtros del panel</text>
+      <text x="536" y="97.0" text-anchor="middle" font-size="12" fill="#5b6778">los que ya existen</text>
+      <path d="M622,84 L666,84" fill="none" stroke="#7a8799" stroke-width="1.5" marker-end="url(#f5a4-fl)"/>
+      <rect x="668" y="52" width="168" height="64" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/>
+      <text x="752" y="79.0" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Panel y respuesta</text>
+      <text x="752" y="97.0" text-anchor="middle" font-size="12" fill="#5b6778">tablero y resumen</text>
+      <text x="212" y="76" text-anchor="middle" font-size="11.5" fill="#5b6778" paint-order="stroke" stroke="#eef2f6" stroke-width="4" stroke-linejoin="round">envía</text>
+      <text x="428" y="76" text-anchor="middle" font-size="11.5" fill="#5b6778" paint-order="stroke" stroke="#eef2f6" stroke-width="4" stroke-linejoin="round">propone</text>
+      <text x="644" y="76" text-anchor="middle" font-size="11.5" fill="#5b6778" paint-order="stroke" stroke="#eef2f6" stroke-width="4" stroke-linejoin="round">aplica</text>
     </svg>
-    <figcaption>El Asistente no genera SQL ni ve filas: traduce lenguaje natural a los filtros que el panel ya sabe aplicar.</figcaption>
+    <figcaption>El Asistente no genera SQL ni ve filas: traduce lenguaje natural a los filtros que el panel ya sabe aplicar. Al modelo nunca le llegan CUIL ni nombres de trabajadores, solo la pregunta, nombres de seccionales y empresas, y totales.</figcaption>
   </figure>
   <figure class="fig captura" data-captura="s-panel-asistente"><figcaption>El Asistente abierto como cajón lateral sobre el tablero: «Preguntá como hablás», un mensaje de bienvenida con ejemplos, el campo de texto y el botón de micrófono para dictar.</figcaption></figure>
   <ul>
     <li><b>No es el bot del convenio</b> ni un RAG: no lee documentos. Lo tiene todo sindicato con el módulo <code>dashboard</code>.</li>
     <li>Si el panel no filtra algo, lo dice; no inventa.</li>
-    <li>El <b>dictado por voz</b> usa el navegador (costo cero) y se envía tras una pausa de cuatro segundos. Tope de 300 preguntas por sindicato por día.</li>
+    <li>El <b>dictado por voz</b> usa el navegador y se envía tras una pausa de cuatro segundos. Tope de 300 preguntas por sindicato por día.</li>
   </ul>
   <div class="nota tecnico"><span class="rot">Para técnicos</span><p><code>asistente.py</code>; <code>POST /admin/dashboard/asistente</code> con el mismo guardián que el explorador (<code>_exigir_dashboard_detalle</code>). Devuelve siempre el <i>estado completo</i> de los filtros, nunca un delta. Modelo por defecto <code>claude-sonnet-5</code>, elegible desde plataforma. El set de aceptación (<code>probar_asistente.py</code>) se corre a mano contra la API real porque gasta créditos. Ficha: <code>docs/ASISTENTE_PANEL.md</code>.</p></div>
 </section>

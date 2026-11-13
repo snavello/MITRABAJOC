@@ -95,3 +95,8 @@ próxima promoción).
 publicar y borrar la lista de Tests de Pruebas aceptaban el PIN por defecto en
 el header aunque el ingreso con PIN estaba apagado. Ahora el header vale solo
 con `PIN_ENTORNOS_HABILITADO`. Queda de SDN: un `PIN_ENTORNOS` propio en Pruebas.
+
+**2026-11-13 — H-0020 cerrado** (decisión de SDN): la Demo quedó con los CUIL/CUIT
+regularizados el 2026-10-23, cuando se la reemplazó por una copia de Pruebas y se
+recargó con `cargar_demo.py` (CLAUDE.md, «Estado actual»). Pasa a `verificado`.
+Bloquean producción 2: **H-0019** y **H-0008**.

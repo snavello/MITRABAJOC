@@ -16,7 +16,7 @@
 {"termino":"Playwright","definicion":"Herramienta que maneja un navegador real para probar la app de punta a punta."},
 {"termino":"k6","definicion":"Herramienta de pruebas de carga que simula muchos usuarios a la vez."},
 {"termino":"Promover","definicion":"Llevar el código de main a la rama demo con respaldo, tag y push, usando promover_demo.py."},
-{"termino":"Caché de prompt","definicion":"Función de la API de Anthropic que reutiliza la parte fija del pedido y abarata cada lectura."},
+{"termino":"Caché de prompt","definicion":"Función de la API de Anthropic que reutiliza la parte fija del pedido y hace más pareja cada lectura."},
 {"termino":"Embeddings","definicion":"Representación numérica de un texto que permite buscar fragmentos parecidos a una pregunta."},
 {"termino":"RAG","definicion":"Técnica de responder con la IA a partir de fragmentos recuperados de un documento, en este caso el convenio."},
 {"termino":"Sentry","definicion":"Servicio externo que recibe los errores no previstos de la app para poder diagnosticarlos."},

@@ -57,7 +57,7 @@
  },
  {
   "termino": "Piloto",
-  "definicion": "Primera etapa con afiliados reales, en un grupo acotado de seccionales, antes de abrir a todo el padrón."
+  "definicion": "Primera etapa con afiliados reales, en un grupo acotado de afiliados, antes de abrir a todo el padrón."
  },
  {
   "termino": "Oleada",
@@ -69,6 +69,6 @@
  },
  {
   "termino": "UsoIA",
-  "definicion": "Tabla que registra cada lectura con la IA: modelo, tokens, duración y el precio vigente ese día."
+  "definicion": "Tabla que registra cada lectura con la IA: modelo, tokens y duración."
  }
 ]
