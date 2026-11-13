@@ -280,8 +280,8 @@ def test_caso_real_julio_2025_recibo_que_no_aplico_el_tope():
     alertas = [a for a in r["alertas"] if a["tipo"] == "tope_no_aplicado"]
     assert len(alertas) == 1, r["alertas"]
     detalle = alertas[0]["detalle"]
-    assert "3,385,490.05" in detalle          # el tope del período, dicho con su valor
-    assert "167,759.69" in detalle            # 102.820,09 + 28.042,30 + 36.897,30
+    assert "$ 3.385.490,05" in detalle          # el tope del período, dicho con su valor
+    assert "$ 167.759,69" in detalle            # 102.820,09 + 28.042,30 + 36.897,30
     for desc in ("Aporte jubilatorio (SIPA)", "Ley 19.032 (PAMI)", "Obra Social"):
         assert desc in detalle
     print("OK  test_caso_real_julio_2025_recibo_que_no_aplico_el_tope")
@@ -313,7 +313,7 @@ def test_un_aporte_de_menos_y_otro_de_mas_emiten_las_dos_alertas():
     assert "Ley 19.032 (PAMI)" not in menos[0]["detalle"]
     assert "Ley 19.032 (PAMI)" in mas[0]["detalle"]
     assert "Aporte jubilatorio (SIPA)" not in mas[0]["detalle"]
-    assert "3,703.93" in mas[0]["detalle"]   # solo el exceso del PAMI
+    assert "$ 3.703,93" in mas[0]["detalle"]   # solo el exceso del PAMI
     print("OK  test_un_aporte_de_menos_y_otro_de_mas_emiten_las_dos_alertas")
 
 

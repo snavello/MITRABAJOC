@@ -108,7 +108,7 @@ def test_recibo_aefip_con_reintegro_cierra_entero():
     assert jub["esperado"] == 4018.46 and jub["ok"], jub
     assert [x["codigo"] for x in r["reintegros"]] == ["433-001"]
     aviso = _alerta(r, "reintegro")
-    assert aviso and "IMP.GCIAS. PERIODOS ANTERIORES ($62,949.21)" in aviso["detalle"]
+    assert aviso and "IMP.GCIAS. PERIODOS ANTERIORES ($ 62.949,21)" in aviso["detalle"]
     assert "ya tiene restado el reintegro" in aviso["detalle"], aviso["detalle"]
 
 
@@ -203,7 +203,7 @@ def test_un_total_de_descuentos_que_no_cierra_se_sigue_diciendo():
     r = _validar(_conceptos({"tipo": "descuento"}), _recibo(descuentos_impresos=50000))
     disc = [d for d in r["discrepancias"] if d["codigo"] == "descuentos"]
     assert disc, r["discrepancias"]
-    assert "$16,489.08; $46,460.13 restando los reintegros" in disc[0]["detalle"]
+    assert "$ 16.489,08; $ 46.460,13 restando los reintegros" in disc[0]["detalle"]
 
 
 # ---------------------------------------------------- debajo del tope ---

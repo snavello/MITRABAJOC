@@ -10,6 +10,7 @@ import unicodedata
 from collections import defaultdict
 
 import cuit
+from formato_ar import pesos as _pesos, porcentaje as _porcentaje
 
 TOLERANCIA_TOTALES = 1.0  # pesos
 
@@ -1014,8 +1015,8 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
                 aplico_techo_en_discrepancia = aplico_techo_en_discrepancia or aplico_techo
             discrepancias.append({
                 "tipo": "formula", "codigo": codigo,
-                "detalle": (f"{f['descripcion']}: esperado ${esperado:,.2f}, "
-                            f"figura ${real:,.2f} (diferencia ${dif:,.2f})."),
+                "detalle": (f"{f['descripcion']}: esperado {_pesos(esperado)}, "
+                            f"figura {_pesos(real)} (diferencia {_pesos(dif)})."),
             })
 
     # Consistencia interna: la suma de líneas debe coincidir con los totales
@@ -1031,19 +1032,19 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         discrepancias.append({
             "tipo": "total_inconsistente", "codigo": nombre,
             "detalle": f"Suma de {nombre} ({calculado_txt}) no coincide con el "
-                       f"impreso (${impreso:,.2f}). Puede ser un error de lectura; "
+                       f"impreso ({_pesos(impreso)}). Puede ser un error de lectura; "
                        "conviene revisar la foto antes de reportar.",
         })
 
     if control["remuneraciones"] is False:
-        _no_cierra("remuneraciones", f"${zonas['total_haberes']:,.2f}",
+        _no_cierra("remuneraciones", _pesos(zonas["total_haberes"]),
                    impresos["remuneraciones"])
     if control["descuentos"] is False:
-        _no_cierra("descuentos", f"${total_descuentos:,.2f}" + (
-            f"; ${abs(total_descuentos - total_reintegros):,.2f} restando los reintegros"
+        _no_cierra("descuentos", _pesos(total_descuentos) + (
+            f"; {_pesos(abs(total_descuentos - total_reintegros))} restando los reintegros"
             if reintegros else ""), abs(impreso_descuentos))
     if control["neto"] is False:
-        _no_cierra("neto", f"${zonas['neto']:,.2f}", impresos["neto"])
+        _no_cierra("neto", _pesos(zonas["neto"]), impresos["neto"])
 
     avisos = [{
         "codigo": ln.get("codigo"), "descripcion": ln.get("descripcion"),
@@ -1123,7 +1124,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     if reintegros:
         cuales = ", ".join(
             f"{m.get('descripcion') or m.get('codigo') or '(sin descripción)'} "
-            f"(${abs(m['importe']):,.2f})" for m in reintegros)
+            f"({_pesos(abs(m['importe']))})" for m in reintegros)
         uno = len(reintegros) == 1
         detalle = (
             f"Tu recibo trae {'un reintegro' if uno else f'{len(reintegros)} reintegros'} entre "
@@ -1134,7 +1135,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "que no cambia el cálculo de jubilación, PAMI ni obra social, y se suma entero a tu neto."
         )
         if impreso_neto_de_reintegros:
-            detalle += (f" El total de descuentos impreso (${abs(impreso_descuentos):,.2f}) ya "
+            detalle += (f" El total de descuentos impreso ({_pesos(abs(impreso_descuentos))}) ya "
                         f"tiene {'restado el reintegro' if uno else 'restados los reintegros'}.")
         alertas.append({"tipo": "reintegro", "detalle": detalle})
 
@@ -1192,9 +1193,9 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "tipo": "tope_no_aplicado",
             "detalle": (
                 f"En {periodo_recibo} la base máxima para aportes de la seguridad "
-                f"social era ${techo_periodo:,.2f}, y tu sueldo la superó. En tu recibo "
+                f"social era {_pesos(techo_periodo)}, y tu sueldo la superó. En tu recibo "
                 f"{lista_exc} {verbo} igual sobre el sueldo completo: te retuvieron "
-                f"${round(exceso_retenido_con_tope, 2):,.2f} de más. Un tope no puede hacer "
+                f"{_pesos(round(exceso_retenido_con_tope, 2))} de más. Un tope no puede hacer "
                 "que te retengan de más, así que conviene consultarlo con tu sindicato."
             ),
         })
@@ -1232,9 +1233,9 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             pct_real = round(cargas_convenio / base_remunerativa * 100, 2)
             alertas.append({
                 "tipo": "tope_sindical",
-                "detalle": f"Las cargas sindicales de convenio (${cargas_convenio:,.2f}, "
-                           f"{pct_real}% de la remuneración) superan el tope legal del "
-                           f"{tope_sindical_pct}% (art. 133 Ley 27.802). Puede ser una "
+                "detalle": f"Las cargas sindicales de convenio ({_pesos(cargas_convenio)}, "
+                           f"{_porcentaje(pct_real, 2)} de la remuneración) superan el tope legal del "
+                           f"{_porcentaje(tope_sindical_pct, 2)} (art. 133 Ley 27.802). Puede ser una "
                            "retención en exceso: conviene revisarlo con el sindicato.",
             })
 

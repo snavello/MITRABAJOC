@@ -53,6 +53,29 @@ def test_afiliacion_no_cuenta_para_el_tope():
     print("OK  test_afiliacion_no_cuenta_para_el_tope")
 
 
+def test_los_textos_van_en_formato_argentino():
+    """El detalle de una regla que no cierra lo lee el afiliado en el paso 3:
+    tiene que decir «$ 25.000,00» como la tabla de abajo, no «$25,000.00», y
+    la diferencia negativa con el menos delante del signo («-$ 5.000,00»,
+    igual que formato_ar.pesos y peso() de trabajador.html)."""
+    conceptos = CONCEPTOS_BASE + [
+        {"codigo": "UOM", "nombre": "Cuota UOM", "tipo": "descuento",
+         "remunerativo": True, "alias": [], "categoria_sindical": ""}]
+    formulas = [{"target": "UOM", "descripcion": "Cuota UOM = 2,5% del remunerativo",
+                 "expr": "base_remunerativa * 0.025"}]
+    recibo = _recibo(importe_solidaria=-2500)
+    recibo["lineas"][0]["importe"] = 1000000
+    recibo["lineas"].append({"codigo": "UOM", "descripcion": "Cuota UOM",
+                             "importe": -20000, "tipo": "aporte_trabajador"})
+    r = validador.validar(conceptos, formulas, recibo, tope_sindical_pct=0.2)
+    det = [d["detalle"] for d in r["discrepancias"] if d["tipo"] == "formula"]
+    assert det == ["Cuota UOM = 2,5% del remunerativo: esperado $ 25.000,00, "
+                   "figura $ 20.000,00 (diferencia -$ 5.000,00)."], det
+    tope = [a["detalle"] for a in r["alertas"] if a["tipo"] == "tope_sindical"]
+    assert tope and "($ 2.500,00, 0,25% de la remuneración)" in tope[0], tope
+    assert "tope legal del 0,2% " in tope[0], tope
+
+
 if __name__ == "__main__":
     test_supera_el_tope()
     test_no_supera_el_tope()
