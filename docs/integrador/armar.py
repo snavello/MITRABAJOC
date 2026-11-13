@@ -198,9 +198,10 @@ def armar() -> dict:
         '<meta name="description" content="Qué es Colm3na, cómo funciona, sus aplicaciones y módulos, '
         'el modelo técnico, la seguridad y la implementación, para quien se suma al equipo.">'
         f"<style>{css}</style></head><body>"
+        + '<div class="sello-reservado" aria-hidden="true"><span>Uso interno · Reservado</span></div>'
         + html_riel(caps)
         + '<main class="doc">' + portada + '<div class="cuerpo">' + cuerpo + "</div>"
-        + '<footer class="pie">Colm3na · Documento integrador · '
+        + '<footer class="pie"><b>Uso interno · Reservado.</b> Colm3na · Documento integrador · '
         + reemplazos["{{FECHA}}"]
         + f" · Trabajador {version.VERSION_TRABAJADOR}, Admin {version.VERSION_ADMIN}, "
         + f"Plataforma {version.VERSION_PLATAFORMA}. Se regenera con <code>python docs/integrador/armar.py</code>.</footer>"

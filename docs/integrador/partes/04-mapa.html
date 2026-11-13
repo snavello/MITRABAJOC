@@ -43,16 +43,16 @@
 
   <p>Después de ingresar, la persona no cae en una tabla sino en una <b>portada</b> con tarjetas grandes y poca información; recién al tocar una entra al <b>panel interno</b>. El afiliado, que muchas veces entra una vez al mes desde el celular, ve primero lo importante; el operador, su cuenta y sus accesos. Un rol nuevo debería seguir el mismo patrón y llevar su propia cookie de sesión.</p>
   <figure class="fig diagrama">
-<svg viewBox="0 0 860 176" role="img" aria-label="Encabezado común: logo del sindicato a la izquierda, mucho más grande, y Colm3na a la derecha; debajo, las pestañas" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 860 176" role="img" aria-label="Encabezado común: una sola línea con el logo del gremio; debajo, las pestañas" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="c4b-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#7a8799"/></marker></defs>
-<text x="32" y="30" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">EL GREMIO MANDA</text><text x="828" y="30" text-anchor="end" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">COLM3NA FIRMA</text>
+<text x="32" y="30" font-size="11" font-weight="700" letter-spacing="1.2" fill="#5b6778">EL GREMIO MANDA</text>
 <rect x="16" y="40" width="828" height="64" rx="8" fill="#0a1421"/>
 <rect x="32" y="52" width="200" height="40" rx="8" fill="#fff8ec" stroke="#e0951a" stroke-width="1.75"/><text x="132" y="77" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Logo del gremio</text>
-<rect x="724" y="58" width="104" height="28" rx="8" fill="#ffffff" stroke="#b8c3d1" stroke-width="1.25"/><text x="776" y="77" text-anchor="middle" font-family="Barlow Condensed" font-weight="700" font-size="16" fill="#0a1421">Colm3na</text>
+
 <text x="430" y="76" text-anchor="middle" font-size="12" fill="#aeb9c8">una sola línea, sin cinta ni título de pantalla</text>
 <rect x="16" y="120" width="828" height="40" rx="8" fill="#eef2f6"/><text x="430" y="145" text-anchor="middle" font-size="12" fill="#5b6778">las pestañas o la barra inferior dicen dónde estás</text>
 </svg>
-    <figcaption>El encabezado común (<code>_encabezado.html</code>): una sola línea con el logo del gremio a la izquierda, unas tres veces más alto, y Colm3na firmando a la derecha. Los colores son los cuatro de marca del sindicato; solo el semáforo usa colores fijos de estado. Fuera de este sistema quedan los logins sueltos y las herramientas internas.</figcaption>
+    <figcaption>El encabezado común (<code>_encabezado.html</code>): una sola línea donde manda el logo del gremio; Colm3na firma con discreción. Los colores son los cuatro de marca del sindicato; solo el semáforo usa colores fijos de estado. Fuera de este sistema quedan los logins sueltos y las herramientas internas.</figcaption>
   </figure>
   <div class="nota tecnico"><span class="rot">Para técnicos</span><p>Cada rol lee y renueva <b>solo su cookie</b> (<code>sesion_trabajador</code>, <code>sesion_sindicato</code>, <code>sesion_plataforma</code>, <code>sesion_empleador</code>; <code>COOKIES_POR_ROL</code> en <code>main.py</code>). La sesión vence a los 15 minutos de inactividad y un middleware la renueva en cada pedido. El modelo visual (<code>laguna</code> por defecto o <code>noticiero</code>) lo elige la persona o su sindicato y cambia el aspecto, no las funciones.</p></div>
   <p>La app del afiliado es una <b>PWA</b>: se instala desde el navegador, sin tienda, con un banner discreto (y guía paso a paso en iPhone). Puede recibir avisos push cuando hay novedades en un trámite, si el canal está configurado.</p>
@@ -165,13 +165,6 @@
     <li><b>Asistente de trámites:</b> del relato del sindicato arma circuito, formulario y veredicto, y lo importa como borrador (<a href="#cap-5-tramites">cap. 5</a>).</li>
     <li><b>Laboratorio de modelos:</b> lee el mismo recibo con modelos de varios proveedores y compara tiempo y exactitud (<a href="#cap-6">cap. 6</a>).</li>
     <li><b>Verificación de identidad:</b> prueba el flujo selfie + DNI con prueba de vida, sin guardar imágenes ni datos personales (<a href="#cap-5-cuentas">5.13</a>).</li>
-    <li><b>Fiesta SUPARA:</b> entradas con QR para un evento masivo, cobradas por MercadoPago.</li>
   </ul>
   <figure class="fig captura" data-captura="x-calculadora"><figcaption>La Calculadora bancaria: a la izquierda, la entrada (rama, categoría, ROE, adicionales, descuentos); a la derecha, el recibo esperado con haberes, descuentos, totales y neto, y los botones para analizar un recibo real con IA o chequearlo a mano.</figcaption></figure>
-  <div class="lado">
-    <div>
-      <div class="nota alerta"><span class="rot">Cuidado</span><p><b>Fiesta SUPARA no es parte de Colm3na.</b> Es un subproducto aparte, con padrón, usuarios y cookies propios (en la pantalla figura como «Fiesta de Fin de Año»). Sus enlaces del afiliado y del sindicato son públicos y no piden el PIN; vive en Herramientas solo porque desde ahí se crea el evento. El sindicato no maneja dinero: el pago va de MercadoPago a su cuenta.</p></div>
-    </div>
-    <figure class="fig captura" data-captura="x-fiesta"><figcaption>La app del afiliado de la Fiesta: datos del evento, entradas reservadas (ninguna todavía) y el selector de personas con el valor de la reserva y el botón «Reservar y pagar».</figcaption></figure>
-  </div>
 </section>

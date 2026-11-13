@@ -97,6 +97,7 @@ FUNCIONALIDADES = [
     ("Entornos", "Acceso y versión", r"^/(entornos/(login|pin|salir)$|api/version)", None),
     ("Entornos", "Página de la landing (carga inicial)", r"^/entornos$", None),
     ("Entornos", "Recursos", r"^/recursos", None),
+    ("Entornos", "Documento integrador (link directo con PIN propio)", r"^/documento-integrador", None),
     ("Entornos", "Sala de mando", r"^/(entornos|api/entornos)/esquema", None),
     ("Entornos", "Observabilidad", r"^/(entornos|api/entornos)/observabilidad", "_observabilidad.html"),
     ("Entornos", "Seguridad (XSK)", r"^/api/entornos/xsanders", None),

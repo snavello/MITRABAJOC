@@ -4,6 +4,15 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **El ingreso a `/entornos` y `/plataforma` falló desde el celular** (SDN,
+  2026-11-13): desde el 12/11 a las 10:19 los intentos daban «usuario o clave
+  incorrectos» en Pruebas. Diagnóstico de solo lectura (Job de Render): el usuario
+  `snavello` activo, sin vencimiento, sin cambios ni reseteos en `LogPlataforma`, y
+  un ingreso correcto desde la PC el 12/11 a las 21:09. SDN entró escribiendo la
+  mayúscula de la clave a mano e informa que se debió a algo tocado horas antes
+  por un error de ingreso a MercadoPago (Fiesta SUPARA). Pendiente: identificar
+  qué se tocó y si hace falta un cambio (por ejemplo, avisar «revisá mayúsculas»).
+
 - [ ] **Promover a la demo la tanda del 2026-11-06** (SDN, 2026-11-06, guardado
   para después): en Pruebas quedó verificado por SDN todo lo de ese día
   (Trabajador 0.59.05, Admin 0.80.02, Plataforma 0.65.13: semáforo con vuelta a

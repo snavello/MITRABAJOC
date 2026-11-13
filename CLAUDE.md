@@ -499,6 +499,12 @@ alta los administradores y cómo ingresa la clave»):
   el pago sin salir (checkout propio en `/fiesta/mp-simulado/{id}`); sin
   token ni mock, el cobro está apagado y reservar da E-FIESTA-05. El webhook
   falla cerrado sin `MP_WEBHOOK_SECRET`. Paso a paso en `docs/FIESTA.md`.
+- INTEGRADOR_PIN — PIN del **link directo al Documento integrador**
+  (`/documento-integrador`, 2026-11-13): para quien recibe el documento y no
+  tiene usuario. El pase (cookie `pase_integrador`, 7 días, firmado y atado al
+  PIN vigente) abre SOLO ese documento; cambiar el PIN corta los pases. Freno
+  por IP propio. Sin la variable, la ruta da 404. Test:
+  `test_documento_integrador.py`.
 - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — cliente OAuth de Google Cloud para
   «Continuar con Google» en `/ingresar`, `/ingresar-empresa` y `/admin` (`google_auth.py`);
   sin las dos, apagado: el botón no se dibuja y las rutas dan 404. Lleva una
@@ -1769,7 +1775,13 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `partes/_referencia_diagrama.svg`): zonas grises, cajas blancas, un solo acento
     miel, flechas ortogonales rotuladas; `node docs/integrador/revisar_diagramas.js
     <parte>` verifica textos fuera de caja o encimados y colores fuera de paleta, y
-    debe dar 0 problemas. Plataforma 0.68.04, ~113 páginas.
+    debe dar 0 problemas. Plataforma 0.68.04, ~113 páginas. **Tercera vuelta
+    (2026-11-13, Plataforma 0.69.01)**: sin la Fiesta SUPARA; sin decir dónde va el
+    logo de Colm3na (se va a mover al pie, más chico; las capturas quedan como
+    están); sello «Uso interno · Reservado» como marca de agua en cada pantalla y
+    cada hoja impresa; las pautas de diseño (XSD + patrones validados con la
+    metodología de Emil Kowalski) en 5.14; y **acceso por link directo con PIN
+    propio** (`/documento-integrador`, variable `INTEGRADOR_PIN`).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

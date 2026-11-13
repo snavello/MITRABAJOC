@@ -195,7 +195,7 @@
 <h4>Colores, logo y encabezado</h4>
 <p>Cuatro colores: la <b>base</b> (oscura obligatoria; fondo de portada y encabezados), el <b>primario</b> (bordes y detalles), el <b>acento</b> (botón principal y pestaña activa) y el <b>apoyo</b> (chips y fondos suaves). Las superficies intermedias se derivan de la base con <code>color-mix</code>.</p>
 <div class="nota regla"><span class="rot">Regla vigente</span><p><b>Los colores de estado no toman la marca nunca</b>: verde pagado, amarillo parcial y rojo impago o error son fijos para todos los sindicatos, igual que la tipografía y los grises. Así un acento rojo no confunde «impago» con «marca».</p></div>
-<p>El logo se sube una vez y se achica en el servidor (512 px, webp, SVG liviano y sin scripts); un PNG transparente se ve transparente. Las cuatro apps comparten <b>un encabezado de una línea</b>: logo del gremio a la izquierda, grande; Colm3na a la derecha, chico. El gremio manda y Colm3na firma.</p>
+<p>El logo se sube una vez y se achica en el servidor (512 px, webp, SVG liviano y sin scripts); un PNG transparente se ve transparente. Las cuatro apps comparten <b>un encabezado de una línea</b> donde manda el logo del gremio; Colm3na firma con discreción.</p>
 
 <h4>Dos modelos de diseño</h4>
 <p><b>Laguna</b> (por defecto: portada en verde agua, turquesa y azul, interior liviano) y <b>Noticiero</b> (papel claro, tinta índigo y un solo color vivo, como un diario). El <b>sindicato</b> elige el modelo por defecto (uno para afiliados, otro para operadores) y la <b>persona</b> puede cambiarlo en su cuenta, por encima del sindicato. La <b>paleta</b> (colores de Colm3na o del sindicato) la decide siempre el sindicato.</p>
@@ -216,5 +216,10 @@
 </div>
 
 <p>Las pantallas interiores claras van sobre una «mesa» de tres capas que no tocan el contenido (gris frío, textura tenue de colmena con halos de los colores del sindicato y una franja de marca que baja del encabezado); en el teléfono se apaga. Logins y portadas tienen su propio ambiente.</p>
+
+<h4>Cómo se diseña: XSD y la metodología de Emil Kowalski</h4>
+<p>Las pautas de diseño de Colm3na no se deciden pantalla por pantalla a ojo. Se trabajan con <b>XSD</b> (XSANDERS Design Kit), el método propio de auditoría de diseño: revisores en paralelo recorren la aplicación, arman un informe donde el responsable del producto decide cada mejora (aceptar, dejar como está u otro cambio), se aplica lo aceptado y se hace una segunda vuelta para verificar. El kit trae además un catálogo de estilos de interfaz para elegir direcciones visuales sobre ejemplos.</p>
+<p>Los <b>patrones de movimiento e interacción</b> (cómo entra un modal, cuánto dura una transición, qué curva usa, cómo se arma lo que está cargando, qué pasa con «reducir movimiento») están <b>validados con la metodología de Emil Kowalski</b>: duraciones y curvas con nombre, animar solo posición, escala y opacidad, el efecto al pasar el mouse solo en equipos con mouse, cerrar más rápido que abrir y esperar armando la pantalla en vez de apagarla. Ante un choque entre esas guías y el sistema de diseño de Colm3na, manda el sistema propio.</p>
+<div class="nota tecnico"><span class="rot">Para técnicos</span><p>Skills del repositorio: <code>xsd</code> (copia fijada del kit, que vive en su propio repositorio), <code>emil-design-eng</code> (copia textual fijada a un commit), <code>diseno-mi-trabajo</code> (las reglas propias, que mandan) e <code>impeccable</code> para revisiones puntuales. Los tokens de movimiento viven en un solo archivo, <code>static/movimiento.css</code>.</p></div>
 
 </section>

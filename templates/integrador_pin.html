@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Documento integrador</title>
+<style>
+  /* Puerta del Documento integrador (2026-11-13): un link directo con su PIN
+     propio, para quien no tiene usuario. Abre SOLO ese documento: el pase no
+     sirve para /entornos ni para Recursos. Clara, como el documento. */
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  :root { --tinta:#0a1421; --texto2:#4c5d75; --linea:#dbe2ea; --miel:#f0a01e; --miel-osc:#a86400; --rojo:#c0392b; }
+  * { box-sizing:border-box; margin:0; }
+  body { min-height:100vh; display:grid; place-items:center; padding:24px 16px; color:var(--tinta);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(700px 420px at 90% -10%, rgba(240,160,30,.18), transparent 62%), linear-gradient(180deg,#fff,#f4f6f9); }
+  .caja { width:100%; max-width:380px; background:#fff; border:1px solid var(--linea); border-top:4px solid var(--miel);
+    border-radius:14px; padding:28px 24px 24px; box-shadow:0 10px 30px rgba(10,20,33,.08); }
+  .kicker { font-family:'Barlow Condensed','Arial Narrow',sans-serif; font-weight:700; letter-spacing:2.4px;
+    text-transform:uppercase; color:var(--miel-osc); font-size:13px; }
+  h1 { font-family:'Barlow Condensed','Arial Narrow',sans-serif; font-size:32px; line-height:1; margin:6px 0 10px; }
+  p { color:var(--texto2); font-size:14px; line-height:1.5; }
+  label { display:block; font-size:13px; font-weight:600; margin:18px 0 6px; }
+  input { width:100%; font-size:22px; letter-spacing:6px; text-align:center; padding:10px 12px;
+    border:1px solid var(--linea); border-radius:9px; font-family:ui-monospace,Consolas,monospace; }
+  input:focus { outline:2px solid var(--miel); outline-offset:1px; }
+  button { width:100%; margin-top:14px; padding:12px; border:0; border-radius:9px; background:var(--tinta); color:#fff;
+    font-family:'Barlow Condensed','Arial Narrow',sans-serif; font-size:18px; letter-spacing:1px; cursor:pointer; }
+  .aviso { margin-top:14px; color:var(--rojo); font-size:13.5px; }
+  .sello { margin-top:20px; padding-top:12px; border-top:1px solid var(--linea); font-size:11.5px; letter-spacing:1.4px;
+    text-transform:uppercase; color:var(--texto2); text-align:center; }
+</style>
+</head>
+<body>
+  <form class="caja" method="post" action="/documento-integrador/pin" autocomplete="off">
+    <span class="kicker">Colm3na · Documento integrador</span>
+    <h1>Ingresá el PIN</h1>
+    <p>Este documento es de uso interno. Ingresá el PIN que te pasaron junto con el enlace.</p>
+    <label for="pin">PIN</label>
+    <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off" required autofocus>
+    <button type="submit">Abrir el documento</button>
+    {% if aviso == "pin" %}<p class="aviso">El PIN no es correcto. Revisalo e intentá de nuevo.</p>{% endif %}
+    {% if aviso == "espera" %}<p class="aviso">Hubo demasiados intentos. Esperá un minuto y volvé a probar.</p>{% endif %}
+    <p class="sello">Uso interno · Reservado</p>
+  </form>
+</body>
+</html>

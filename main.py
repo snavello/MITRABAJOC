@@ -66,6 +66,7 @@ import logos
 import tu_dia
 import tu_dia_fuentes
 import geo
+import hashlib
 import secrets
 import db
 import auth
@@ -12340,6 +12341,72 @@ def recursos_archivo(ref: str, request: Request, descargar: bool = False):
     return FileResponse(item["ruta"], media_type=item["mime"], filename=item["nombre_archivo"],
                         content_disposition_type=disposicion,
                         headers={"Cache-Control": "private, no-cache"})
+
+
+# ================= Documento integrador: link directo con PIN propio =================
+# Pedido de SDN (2026-11-13): quienes reciben el documento integrador no
+# tienen usuario de plataforma, así que entran por un enlace directo con un
+# PIN propio (`INTEGRADOR_PIN`). El pase que deja abre SOLO este documento:
+# no sirve para /entornos ni para Recursos, y deja de valer si cambia el PIN.
+# Sin la variable, las dos rutas responden 404.
+INTEGRADOR_ARCHIVO = Path("recursos") / "colm3na-integrador.html"
+INTEGRADOR_COOKIE = "pase_integrador"
+INTEGRADOR_DIAS = 7
+_intentos_integrador: dict[str, list] = {}
+# El documento es autocontenido: fuentes, imágenes, estilos y un script chico
+# van adentro. Nada de afuera, ni formularios, ni marcos.
+CSP_INTEGRADOR = ("default-src 'none'; img-src data:; font-src data:; "
+                  "style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+                  "frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+
+
+def _integrador_pin() -> str:
+    return (os.getenv("INTEGRADOR_PIN") or "").strip()
+
+
+def _integrador_huella(pin: str) -> str:
+    # Ata el pase al PIN vigente: cambiar el PIN invalida los pases ya dados.
+    return hashlib.sha256(("integrador:" + pin).encode()).hexdigest()[:16]
+
+
+def _integrador_pase_valido(request: Request, pin: str) -> bool:
+    datos = auth.leer_paso(request.cookies.get(INTEGRADOR_COOKIE, ""), "integrador")
+    return bool(datos) and secrets.compare_digest(str(datos.get("h", "")), _integrador_huella(pin))
+
+
+@app.get("/documento-integrador", response_class=HTMLResponse)
+def documento_integrador(request: Request, aviso: str = ""):
+    pin = _integrador_pin()
+    if not pin or not INTEGRADOR_ARCHIVO.exists():
+        raise HTTPException(404)
+    if not _integrador_pase_valido(request, pin):
+        return templates.TemplateResponse("integrador_pin.html", {
+            "request": request, "aviso": aviso if aviso in ("pin", "espera") else ""},
+            headers={"Cache-Control": "no-store"})
+    return FileResponse(INTEGRADOR_ARCHIVO, media_type="text/html; charset=utf-8", headers={
+        "Cache-Control": "private, no-store",
+        "X-Robots-Tag": "noindex, nofollow",
+        "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy": CSP_INTEGRADOR,
+    })
+
+
+@app.post("/documento-integrador/pin")
+def documento_integrador_pin(request: Request, pin: str = Form("")):
+    vigente = _integrador_pin()
+    if not vigente:
+        raise HTTPException(404)
+    if _login_bloqueado(request, _intentos_integrador):
+        return RedirectResponse("/documento-integrador?aviso=espera", status_code=303)
+    if not secrets.compare_digest((pin or "").strip().encode(), vigente.encode()):
+        _login_fallo(request, _intentos_integrador)
+        return RedirectResponse("/documento-integrador?aviso=pin", status_code=303)
+    _login_ok(request, _intentos_integrador)
+    token = auth.firmar_paso({"h": _integrador_huella(vigente)},
+                             minutos=INTEGRADOR_DIAS * 24 * 60, proposito="integrador")
+    resp = RedirectResponse("/documento-integrador", status_code=303)
+    set_cookie_segura(resp, INTEGRADOR_COOKIE, token, max_age=INTEGRADOR_DIAS * 24 * 3600, samesite="strict")
+    return resp
 
 
 @app.get("/recursos/{ref}/miniatura")
