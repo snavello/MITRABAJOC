@@ -13513,7 +13513,7 @@ def api_impl_exportar(request: Request, pid: IdImpl, sin_archivos: bool = False)
 # ----- Equipo: semilla del plan operativo (I7) -----
 @app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/hitos-semilla")
 def api_impl_hitos_semilla(request: Request, proyecto_id: IdImpl):
-    """Carga los 48 hitos de La Bancaria (data/implementacion/hitos_bancaria.json)
+    """Carga los hitos de La Bancaria (data/implementacion/hitos_bancaria.json)
     en un proyecto que todavía no tiene hitos."""
     actor = _impl_equipo_api(request)
     with db.get_session() as s:

@@ -430,3 +430,6 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
   .fila .nom a, .nom small a { display: inline-block; min-height: 44px; padding-top: 12px; }
   .buscar-c input { min-height: 44px; }
 }
+
+/* Nombre corto de la Mesa, debajo del título de la barra lateral. */
+.marca .corto { display: inline-block; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--suave, #5b6578); margin-top: 2px; }

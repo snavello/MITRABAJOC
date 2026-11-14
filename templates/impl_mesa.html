@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#ffffff">
-<title>Mesa de implementación{% if proyecto %} — {{ proyecto.nombre }}{% endif %}</title>
+<title>XS TIK · Mesa de implementación{% if proyecto %} — {{ proyecto.nombre }}{% endif %}</title>
 {#- Mesa de implementación (PLAN_IMPLEMENTACION.md, bloque 3; I10 y I11).
     Dirección B "Sala de mando" con fondo claro. La pantalla NO decide permisos:
     dibuja lo que la API dice (`acciones`). Los datos de las personas los pone
@@ -71,7 +71,7 @@
 <header class="top">
   <img class="top-logo" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else url_static('logo_mitrabajo.svg') }}" alt="Colm3na">
   <div class="top-proy">
-    <b>Mesa de implementación</b>
+    <b>XS TIK · Mesa de implementación</b>
     <span>{% if yo.lado == 'equipo' %}Equipo Colm3na{% else %}{{ proyecto.nombre if proyecto else '' }}{% endif %}</span>
   </div>
   {% if yo.lado == 'equipo' %}
@@ -92,6 +92,7 @@
   <div class="marca">
     <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else url_static('logo_mitrabajo.svg') }}" alt="Colm3na">
     <h1>Mesa de implementación</h1>
+    <span class="corto">XS TIK</span>
     {% if yo.lado == 'equipo' %}
       <span class="quien">Equipo Colm3na</span>
       {% if _ps|length > 1 %}

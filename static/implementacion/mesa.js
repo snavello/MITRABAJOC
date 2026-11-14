@@ -202,7 +202,7 @@
     $globo.hidden = n <= 0;
     $globo.textContent = n > 99 ? '99+' : String(n);
     $globo.setAttribute('aria-label', n + ' pendientes');
-    const base = 'Mesa de implementación' + (PROYECTO ? ' — ' + PROYECTO.nombre : '');
+    const base = 'XS TIK · Mesa de implementación' + (PROYECTO ? ' — ' + PROYECTO.nombre : '');
     document.title = (n > 0 ? '(' + n + ') ' : '') + base;
   }
   async function refrescarGlobo() {

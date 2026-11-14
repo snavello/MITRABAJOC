@@ -1808,7 +1808,8 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (4 de desarrollo, 2 de QA independiente: 18 defectos de servidor y 9 de
     pantalla corregidos antes del merge). **Vive en Pruebas con datos reales**
     (I3): las tablas `impl*` quedan fuera de todo clonado y recarga. **Queda
-    de SDN**: revisar los 48 hitos de La Bancaria antes de cargarlos. Lo
+    de SDN**: nada; los hitos de La Bancaria los revisó SDN el mismo día
+    (45, en `data/implementacion/hitos_bancaria.json`). Lo
     interno se numera aparte (I15) y la Entrega la cierra quien la recibe
     (I16).
     Ver "Herramientas" y HISTORIAL.md, «Mesa de implementación».
@@ -2406,7 +2407,7 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   en el resultado y en cada ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
 
-**Mesa de implementación** (`implementacion.py`, `templates/impl_*.html`,
+**Mesa de implementación, en corto «XS TIK»** (`implementacion.py`, `templates/impl_*.html`,
 `static/implementacion/`; `PLAN_IMPLEMENTACION.md` I1–I14, contrato
 `docs/implementacion/API.md`, informes `docs/implementacion/QA-*.md`;
 2026-11-14):

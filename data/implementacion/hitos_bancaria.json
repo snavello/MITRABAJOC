@@ -1,25 +1,19 @@
 {
   "proyecto": "La Bancaria",
-  "fuente": "docs/implementacion/diferencias.md, «Hitos propuestos» (I7)",
+  "fuente": "Revisados por SDN el 2026-11-14 sobre los propuestos en docs/implementacion/diferencias.md (I7)",
   "fases": [
     {
       "etapa": "Preparar",
       "hitos": [
         {
-          "texto": "Reunión estratégica con las autoridades realizada y acta cargada .",
+          "texto": "Reunión estratégica con las autoridades realizada y acta cargada. Se informa que se van a pedir recibos, contactos, usuarios para la implementación y el primer padrón de afiliados.",
           "tarjeta_inicial": true
         },
         {
-          "texto": "Plan v1 enviado con lo acordado en la reunión."
+          "texto": "Plan de acción acordado según la reunión estratégica y el plan inicial."
         },
         {
-          "texto": "Espacio de La Bancaria en Pruebas con su marca, sus conceptos del CCT 18/75 y recibos de ejemplo (ya preparado: verificar y mostrar)."
-        },
-        {
-          "texto": "Kit de relevamiento enviado (formularios por tema, lista de documentos, modelo de planilla del padrón)."
-        },
-        {
-          "texto": "Borrador del acuerdo de tratamiento de datos enviado a la asesoría legal."
+          "texto": "Nueva demo mostrada en el espacio de La Bancaria en Pruebas (su marca, sus conceptos del CCT 18/75 y recibos de ejemplo), para ver avances y refrescar conceptos."
         },
         {
           "texto": "Proyecto abierto en la Mesa y usuarios del sindicato dados de alta."
@@ -36,9 +30,6 @@
       "etapa": "Acordar",
       "hitos": [
         {
-          "texto": "Lanzamiento con secretarías, sistemas, prensa y seccionales realizado."
-        },
-        {
           "texto": "Todos los referentes nombrados (técnico, convenio y liquidación, comunicación, legal, seccionales)."
         },
         {
@@ -51,13 +42,13 @@
           "texto": "Piloto definido: seccionales, empleadores, cantidad y perfil de afiliados."
         },
         {
-          "texto": "Canal seguro y fechas de entrega del padrón acordados."
+          "texto": "Canal seguro y fechas de entrega del padrón acordados: el canal es la Mesa de implementación (XS TIK); explicarla y capacitar."
         },
         {
           "texto": "Forma de verificación de identidad del afiliado decidida."
         },
         {
-          "texto": "Plan v1 aprobado por el sindicato (tarjeta de Aprobación)."
+          "texto": "Nuevo plan completo acordado y aprobado por el sindicato (tarjeta de Aprobación)."
         }
       ]
     },
@@ -77,16 +68,19 @@
           "texto": "Taller de convenio y liquidación hecho: conceptos, escalas y acuerdos vigentes."
         },
         {
-          "texto": "Lista de empleadores con CUIT recibida."
+          "texto": "Taller de diseño de imagen hecho: páginas, apariencia, colores, noticias, beneficios y notificaciones."
+        },
+        {
+          "texto": "Taller de metodología y uso de la Mesa de implementación (XS TIK) hecho: comunicación de datos, tarjetas y actividades."
+        },
+        {
+          "texto": "Lista de empleadores con CUIT y mail recibida (el mail, para mejor autenticación)."
         },
         {
           "texto": "De 30 a 60 recibos de muestra de distintos bancos recibidos (consentimiento o anonimizados)."
         },
         {
           "texto": "Padrón recibido y revisado, con las filas con error informadas."
-        },
-        {
-          "texto": "Acuerdo de tratamiento de datos firmado."
         }
       ]
     },
@@ -97,7 +91,7 @@
           "texto": "Alta del sindicato con logo, colores y módulos; primer administrador con su clave elegida."
         },
         {
-          "texto": "Seccionales ubicadas en el mapa, áreas y usuarios con permisos cargados."
+          "texto": "Seccionales cargadas desde el archivo ya confeccionado, con la lista confirmada y ubicadas en el mapa; áreas y usuarios con permisos cargados."
         },
         {
           "texto": "Padrón y listas cargados y conciliados contra los totales del sindicato."
@@ -115,7 +109,7 @@
           "texto": "Primeros dos o tres trámites armados con el Asistente, publicados y probados."
         },
         {
-          "texto": "Semana 4: el sindicato recorrió el entorno con sus datos; operadores capacitados y aceptación firmada (tarjeta de Aprobación)."
+          "texto": "El sindicato recorrió el entorno con sus datos; operadores capacitados y aceptación firmada (tarjeta de Aprobación)."
         }
       ]
     },
@@ -129,13 +123,13 @@
           "texto": "Grupo piloto elegido (variedad de bancos) y delegados que acompañan el primer ingreso."
         },
         {
-          "texto": "Presentación del piloto y capacitación a las seccionales piloto."
+          "texto": "Presentación del piloto y capacitación, empezando por Sede Central y siguiendo por las seccionales piloto."
         },
         {
           "texto": "Primer grupo de unos 50 afiliados con acceso."
         },
         {
-          "texto": "Mesa de ayuda del piloto y revisión semanal de recibos dudosos y conceptos nuevos en marcha."
+          "texto": "Revisión semanal de recibos dudosos y conceptos nuevos en marcha."
         },
         {
           "texto": "Ampliación a más afiliados tras el primer grupo (500 o 1.000, a definir)."
@@ -162,9 +156,6 @@
         },
         {
           "texto": "Funcionalidades que quedaron para después sumadas según prioridad."
-        },
-        {
-          "texto": "Mesa de ayuda en dos niveles funcionando."
         },
         {
           "texto": "Primer informe mensual de indicadores presentado."

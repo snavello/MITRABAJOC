@@ -155,6 +155,9 @@ referirlo («ver pedido PE0001», «hay errores en el archivo AR000123»).
   (mensajes `PE0001-1, -2, -3`, archivos `AR…`) queda corrida, sin saltos, y
   el código de cada cosa es el mismo para los dos lados. Reemplaza lo dicho
   en I14 sobre el orden de los mensajes. Cierra QA-12.
+- **I17. Nombre corto: XS TIK.** La herramienta se sigue llamando «Mesa de
+  implementación» y en corto «XS TIK» (SDN, 2026-11-14): va junto al nombre
+  en la pantalla, el ingreso, el plan general y los hitos.
 - **I16. Una Entrega de archivo la cierra quien la recibe, con un botón.**
   «Recibido, está bien» la cierra y deja constancia de quién y cuándo;
   «Hay un problema» la devuelve a quien la mandó, con un texto obligatorio.
