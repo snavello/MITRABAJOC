@@ -298,6 +298,8 @@ EXCLUIDAS = {
     "fiestareserva.dni": "DNI copiado a la reserva o de la cortesía (no es CUIL)",
     "fiestaoperador.usuario": "usuario del operador del evento, un nombre elegido, no un CUIL",
     "fiestaavisopago.cuerpo": "el aviso crudo de MercadoPago: bitácora del webhook, no se reescribe (D5)",
+    # -- Mesa de implementación (PLAN_IMPLEMENTACION.md): sin CUIL en ninguna tabla.
+    "implevento.detalle": "traza inmutable de la Mesa (ids, estados, nombres de archivo): no lleva CUIL y no se reescribe",
     "cambioidentificador.anterior": "la traza de ESTA herramienta: es la historia y no se reescribe (D5)",
     "cambioidentificador.nuevo": "la traza de ESTA herramienta: es la historia y no se reescribe (D5)",
     "cambioidentificador.detalle": "la traza de ESTA herramienta: conteo de filas por tabla.columna",

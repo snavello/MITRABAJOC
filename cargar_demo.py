@@ -25,6 +25,7 @@ except Exception:
 import db
 import geo
 import demo_encuestas
+import implementacion
 from db import (Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador, Empleador,
                 Seccional, Area)
 from sqlmodel import SQLModel, select
@@ -258,7 +259,11 @@ def borrar_sindicato_completo(s, sindicato_id: int) -> None:
     la pasada inversa lo borra de hijo a padre. Una tabla nueva con su FK
     entra sola.
     """
-    tablas = list(SQLModel.metadata.sorted_tables)
+    # La Mesa de implementación (`impl*`) son datos reales de Pruebas y no
+    # cuelgan de ningún sindicato por clave foránea: se las deja afuera de
+    # todos modos (PLAN_IMPLEMENTACION.md I3, test_implementacion_db.py).
+    tablas = [t for t in SQLModel.metadata.sorted_tables
+              if not t.name.startswith(implementacion.PREFIJO_TABLAS)]
     condenados = {"sindicato": {sindicato_id}}
     for tabla in tablas:
         if tabla.name == "sindicato":
