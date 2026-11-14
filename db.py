@@ -38,7 +38,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_, bindparam, UniqueConstraint, Index, delete as sa_delete, event
+from sqlalchemy import or_, and_, bindparam, UniqueConstraint, Index, delete as sa_delete, event
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -9742,9 +9742,11 @@ class ImplEtapa(SQLModel, table=True):
 
 
 class ImplHito(SQLModel, table=True):
-    __table_args__ = (Index("ix_implhito_proyecto_etapa", "proyecto_id", "etapa_id", "orden"),)
+    __table_args__ = (Index("ix_implhito_proyecto_etapa", "proyecto_id", "etapa_id", "orden"),
+                      UniqueConstraint("proyecto_id", "codigo", name="uq_implhito_proyecto_codigo"))
     id: Optional[int] = Field(default=None, primary_key=True)
     proyecto_id: int = Field(index=True)
+    codigo: str = Field(default="", index=True)       # HI0001: nace con el hito y no cambia (I14)
     etapa_id: int = Field(index=True)
     texto: str = ""
     orden: int = 0
@@ -9756,12 +9758,14 @@ class ImplHito(SQLModel, table=True):
 class ImplTarjeta(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("proyecto_id", "numero", name="uq_impltarjeta_proyecto_numero"),
+        UniqueConstraint("proyecto_id", "codigo", name="uq_impltarjeta_proyecto_codigo"),
         Index("ix_impltarjeta_proyecto_estado", "proyecto_id", "estado"),
         Index("ix_impltarjeta_proyecto_espera", "proyecto_id", "lado_que_espera"),
     )
     id: Optional[int] = Field(default=None, primary_key=True)
     proyecto_id: int
     numero: int = 0                           # correlativo por proyecto
+    codigo: str = Field(default="", index=True)   # PE0004: un contador por tipo y proyecto (I12)
     tipo: str = "pedido"
     titulo: str = ""
     estado: str = "abierta"
@@ -9788,6 +9792,7 @@ class ImplMensaje(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     proyecto_id: int
     tarjeta_id: int
+    orden: int = 0                            # 1..n en la tarjeta, contando TODOS los mensajes (PE0004-3)
     autor_lado: str = ""
     autor_id: int = 0
     autor_nombre: str = ""
@@ -9797,9 +9802,11 @@ class ImplMensaje(SQLModel, table=True):
 
 
 class ImplArchivo(SQLModel, table=True):
-    __table_args__ = (Index("ix_implarchivo_proyecto_tarjeta", "proyecto_id", "tarjeta_id"),)
+    __table_args__ = (Index("ix_implarchivo_proyecto_tarjeta", "proyecto_id", "tarjeta_id"),
+                      UniqueConstraint("proyecto_id", "codigo", name="uq_implarchivo_proyecto_codigo"))
     id: Optional[int] = Field(default=None, primary_key=True)
     proyecto_id: int
+    codigo: str = Field(default="", index=True)   # AR000123 (I12)
     tarjeta_id: int
     mensaje_id: Optional[int] = Field(default=None, index=True)
     nombre: str = ""
@@ -9859,11 +9866,46 @@ class ImplLecturaAviso(SQLModel, table=True):
     cuando: str = Field(default_factory=fechas.ahora_con_segundos)
 
 
+class ImplContador(SQLModel, table=True):
+    """El último número entregado por proyecto y prefijo (PE, CO, ..., AR, HI).
+    Se toma con FOR UPDATE: dos pedidos a la vez no repiten ni saltean (I12)."""
+    __table_args__ = (UniqueConstraint("proyecto_id", "prefijo", name="uq_implcontador_proyecto_prefijo"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proyecto_id: int
+    prefijo: str = ""
+    ultimo: int = 0
+
+
+class ImplRelacion(SQLModel, table=True):
+    """Una relación entre dos cosas del MISMO proyecto (I13): «menciona» (un
+    código escrito en un texto) o «responde» (Responder con…). `solo_equipo`:
+    nació de una nota interna o apunta a algo que el sindicato no ve; el
+    sindicato no la recibe nunca."""
+    __table_args__ = (
+        UniqueConstraint("proyecto_id", "origen_tipo", "origen_id", "destino_tipo", "destino_id", "clase",
+                         name="uq_implrelacion_par"),
+        Index("ix_implrelacion_origen", "proyecto_id", "origen_tipo", "origen_id"),
+        Index("ix_implrelacion_destino", "proyecto_id", "destino_tipo", "destino_id"),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proyecto_id: int
+    origen_tipo: str = ""                     # tarjeta | archivo | hito | mensaje
+    origen_id: int = 0
+    destino_tipo: str = ""
+    destino_id: int = 0
+    clase: str = "menciona"                   # menciona | responde
+    solo_equipo: bool = False
+    creada_en: str = Field(default_factory=fechas.ahora_con_segundos)
+    creada_por_lado: str = ""
+    creada_por_id: int = 0
+    creada_por_nombre: str = ""
+
+
 # Las tablas del módulo, a la vista de los resguardos de I3 y de su test.
 IMPL_TABLAS = tuple(sorted(
     m.__tablename__ for m in (ImplProyecto, ImplUsuario, ImplEtapa, ImplHito, ImplTarjeta,
                               ImplMensaje, ImplArchivo, ImplEvento, ImplDescarga,
-                              ImplLecturaAviso)))
+                              ImplLecturaAviso, ImplContador, ImplRelacion)))
 
 
 def _traza_inmutable(mapper, connection, target):
@@ -9898,6 +9940,34 @@ def _impl_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, bloquear: bool 
 
 
 # ---------- Proyecto y etapas ----------
+def _impl_siguiente(s: Session, proyecto_id: int, prefijo: str) -> int:
+    """El próximo número del contador (proyecto, prefijo), tomado con FOR UPDATE:
+    la fila se bloquea hasta el commit del que lo pidió, así dos pedidos
+    concurrentes no se repiten ni se saltean. La primera vez la crea (ON
+    CONFLICT DO NOTHING: si dos llegan juntas, una gana y la otra la bloquea)."""
+    s.exec(postgresql.insert(ImplContador.__table__).values(
+        proyecto_id=proyecto_id, prefijo=prefijo, ultimo=0).on_conflict_do_nothing(
+        index_elements=["proyecto_id", "prefijo"]))
+    c = s.exec(select(ImplContador).where(ImplContador.proyecto_id == proyecto_id,
+                                          ImplContador.prefijo == prefijo).with_for_update()).one()
+    c.ultimo += 1
+    s.add(c)
+    s.flush()
+    return c.ultimo
+
+
+def _impl_codigo_nuevo(s: Session, proyecto_id: int, prefijo: str) -> str:
+    return implementacion.formatear_codigo(prefijo, _impl_siguiente(s, proyecto_id, prefijo))
+
+
+def _impl_orden_mensaje(s: Session, tarjeta_id: int) -> int:
+    """La posición del próximo mensaje en la tarjeta (1..n, TODOS los mensajes,
+    también las notas internas: el número no cambia según quién mira). Se pide
+    con la tarjeta ya bloqueada."""
+    return int(s.exec(select(func.coalesce(func.max(ImplMensaje.orden), 0)).where(
+        ImplMensaje.tarjeta_id == tarjeta_id)).one()) + 1
+
+
 def impl_crear_proyecto(s: Session, nombre: str, actor, sindicato_id: int = None) -> ImplProyecto:
     """Un proyecto con sus seis etapas por defecto (I7). Sin hitos: los carga
     el bloque 4 o el equipo desde la pantalla."""
@@ -9937,7 +10007,8 @@ def impl_agregar_hito(s: Session, proyecto_id: int, etapa_id: int, texto: str, a
     if not texto:
         raise implementacion.ErrorImpl("texto", "El hito necesita un texto.")
     ultimo = s.exec(select(func.max(ImplHito.orden)).where(ImplHito.etapa_id == etapa_id)).one() or 0
-    h = ImplHito(proyecto_id=proyecto_id, etapa_id=etapa_id, texto=texto, orden=ultimo + 1)
+    h = ImplHito(proyecto_id=proyecto_id, etapa_id=etapa_id, texto=texto, orden=ultimo + 1,
+                 codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.PREFIJO_HITO))
     s.add(h)
     s.flush()
     _impl_evento(s, proyecto_id, a, "hito_nuevo", detalle={"hito_id": h.id, "etapa_id": etapa_id, "texto": texto})
@@ -9986,7 +10057,8 @@ def impl_avance(s: Session, proyecto_id: int) -> list:
 # ---------- Tarjetas ----------
 def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: str, texto: str,
                        etapa_id: int = None, hito_id: int = None, responsable: str = "",
-                       responsable_lado: str = "", fecha_limite: str = "") -> ImplTarjeta:
+                       responsable_lado: str = "", fecha_limite: str = "",
+                       responde_a: str = None) -> ImplTarjeta:
     """Crea la tarjeta con su primer mensaje (el texto) y su evento. El número
     correlativo se toma con FOR UPDATE sobre el proyecto. None si el proyecto
     no existe; ErrorImpl si la tarjeta no valida."""
@@ -10008,10 +10080,16 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
         etapa_id = etapa_id or h.etapa_id
     if responsable_lado and responsable_lado not in implementacion.LADOS:
         raise implementacion.ErrorImpl("responsable", "El responsable no es válido.")
+    original = None
+    if responde_a not in (None, ""):
+        original = impl_tarjeta_por_codigo_o_id(s, proyecto_id, responde_a)
+        if not original:
+            raise implementacion.ErrorImpl("responde_a", "La tarjeta que querés responder no existe en este proyecto.")
     proy.ultimo_numero += 1
     s.add(proy)
     estado = implementacion.estado_inicial(d["tipo"])
     t = ImplTarjeta(proyecto_id=proyecto_id, numero=proy.ultimo_numero, tipo=d["tipo"], titulo=d["titulo"],
+                    codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.prefijo_de_tipo(d["tipo"])),
                     estado=estado, lado_que_espera=implementacion.lado_inicial(d["tipo"], a.lado),
                     etapa_id=etapa_id, hito_id=hito_id, responsable_lado=responsable_lado,
                     responsable=(responsable or "").strip(), fecha_limite=d["fecha_limite"],
@@ -10019,11 +10097,15 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
     s.add(t)
     s.flush()
     m = ImplMensaje(proyecto_id=proyecto_id, tarjeta_id=t.id, autor_lado=a.lado, autor_id=a.id,
-                    autor_nombre=a.nombre, texto=d["texto"])
+                    autor_nombre=a.nombre, texto=d["texto"], orden=1)
     s.add(m)
     s.flush()
+    if original:
+        impl_relacionar(s, proyecto_id, "tarjeta", t.id, "tarjeta", original.id, "responde", a)
+    impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [d["titulo"], d["texto"]], a)
     _impl_evento(s, proyecto_id, a, "crear", t.id,
-                 {"numero": t.numero, "tipo": t.tipo, "titulo": t.titulo, "mensaje_id": m.id})
+                 {"numero": t.numero, "tipo": t.tipo, "titulo": t.titulo, "mensaje_id": m.id,
+                  "codigo": t.codigo})
     s.commit()
     s.refresh(t)
     return t
@@ -10076,8 +10158,10 @@ def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: 
     m = ImplMensaje(proyecto_id=proyecto_id, tarjeta_id=t.id, autor_lado=a.lado, autor_id=a.id,
                     autor_nombre=a.nombre, texto=texto, solo_equipo=bool(solo_equipo))
     if texto:
+        m.orden = _impl_orden_mensaje(s, t.id)
         s.add(m)
         s.flush()
+        impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [texto], a, interna=bool(solo_equipo))
     if not solo_equipo:
         t.lado_que_espera = implementacion.a_quien_le_toca(t.estado, a.lado)
         t.actualizada = fechas.ahora_con_segundos()
@@ -10136,9 +10220,10 @@ def impl_resolver_aprobacion(s: Session, proyecto_id: int, tarjeta_id: int, acto
     mid = None
     if texto:
         m = ImplMensaje(proyecto_id=proyecto_id, tarjeta_id=t.id, autor_lado=a.lado, autor_id=a.id,
-                        autor_nombre=a.nombre, texto=texto)
+                        autor_nombre=a.nombre, texto=texto, orden=_impl_orden_mensaje(s, t.id))
         s.add(m)
         s.flush()
+        impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [texto], a)
         mid = m.id
     _impl_evento(s, proyecto_id, a, "resolver", t.id,
                  {"resultado": t.estado, "estado_anterior": estado_ant, "mensaje_id": mid})
@@ -10234,7 +10319,8 @@ def impl_lecturas_aviso(s: Session, proyecto_id: int, tarjeta_id: int) -> list:
 
 # ---------- Archivos ----------
 def impl_subir_archivo(s: Session, proyecto_id: int, tarjeta_id: int, actor, nombre: str, mime: str,
-                       datos: bytes, datos_personales: bool = False, mensaje_id: int = None) -> Optional[ImplArchivo]:
+                       datos: bytes, datos_personales: bool = False, mensaje_id: int = None,
+                       responde_a_id: int = None) -> Optional[ImplArchivo]:
     """Guarda el archivo (hasta 20 MB, sin pasar por `imagenes.achicar`: son
     documentos). None si la tarjeta no es de este proyecto."""
     a = _impl_actor(actor)
@@ -10255,11 +10341,16 @@ def impl_subir_archivo(s: Session, proyecto_id: int, tarjeta_id: int, actor, nom
             raise implementacion.ErrorImpl("mensaje", "El mensaje no es de esta tarjeta.")
         interno = m.solo_equipo
     arch = ImplArchivo(proyecto_id=proyecto_id, tarjeta_id=t.id, mensaje_id=mensaje_id, nombre=nombre,
+                       codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.PREFIJO_ARCHIVO),
                        mime=(mime or "application/octet-stream")[:120], tamano=len(datos), datos=bytes(datos),
                        datos_personales=bool(datos_personales), subido_por_lado=a.lado,
                        subido_por_id=a.id, subido_por_nombre=a.nombre)
     s.add(arch)
     s.flush()
+    if responde_a_id:
+        # «Responder con…»: el archivo de la respuesta queda ligado a la original.
+        impl_relacionar(s, proyecto_id, "archivo", arch.id, "tarjeta", responde_a_id, "responde", a,
+                        solo_equipo=interno)
     _impl_evento(s, proyecto_id, a, "subir", t.id,
                  {"archivo_id": arch.id, "nombre": nombre, "tamano": arch.tamano,
                   "datos_personales": bool(datos_personales)}, solo_equipo=interno)
@@ -10355,7 +10446,8 @@ def impl_carpetas(s: Session, proyecto_id: int, actor, sentido: str) -> list:
         q = q.where(or_(ImplArchivo.mensaje_id.is_(None), ImplArchivo.mensaje_id.not_in(internos)))
     filas = s.exec(q.order_by(func.coalesce(ImplEtapa.orden, 999), ImplArchivo.id)).all()
     return [{
-        "id": ar.id, "subido_lado": ar.subido_por_lado, "mensaje_id": ar.mensaje_id,
+        "id": ar.id, "codigo": ar.codigo, "tarjeta_codigo": tj.codigo,
+        "subido_lado": ar.subido_por_lado, "mensaje_id": ar.mensaje_id,
         "puede_borrar": (not ar.borrado_en) and implementacion.puede_borrar_archivo(
             a.lado, a.id, ar.subido_por_lado, ar.subido_por_id),
         "archivo_id": ar.id, "nombre": ar.nombre, "mime": ar.mime, "tamano": ar.tamano,
@@ -10375,7 +10467,7 @@ def impl_aprobaciones(s: Session, proyecto_id: int) -> list:
     filas = s.exec(select(ImplTarjeta, ImplEtapa).join(ImplEtapa, ImplEtapa.id == ImplTarjeta.etapa_id, isouter=True)
                    .where(ImplTarjeta.proyecto_id == proyecto_id, ImplTarjeta.tipo == implementacion.APROBACION)
                    .order_by(ImplTarjeta.numero)).all()
-    return [{"tarjeta_id": t.id, "numero": t.numero, "titulo": t.titulo, "estado": t.estado,
+    return [{"tarjeta_id": t.id, "numero": t.numero, "codigo": t.codigo, "titulo": t.titulo, "estado": t.estado,
              "autor": t.autor_nombre, "creada": t.creada, "resuelta_por": t.resuelta_por_nombre,
              "resuelta_por_lado": t.resuelta_por_lado, "resuelta_en": t.resuelta_en,
              "etapa": et.nombre if et else ""} for t, et in filas]
@@ -10540,6 +10632,31 @@ def _impl_like(texto: str) -> str:
     return f"%{limpio}%"
 
 
+def _impl_condiciones_por_codigo(s: Session, proyecto_id: int, lado: str, q: str) -> list:
+    """Si `q` es un código entero de un mensaje, un archivo o un hito, las
+    tarjetas a las que pertenece (el sindicato no encuentra lo interno)."""
+    d = implementacion.parsear_codigo(q)
+    if not d or d["tipo"] == "tarjeta":
+        return []
+    if d["tipo"] == "hito":
+        return [ImplTarjeta.hito_id.in_(select(ImplHito.id).where(
+            ImplHito.proyecto_id == proyecto_id, ImplHito.codigo == d["codigo"]))]
+    ve = implementacion.puede_ver_nota_interna(lado)
+    internos = select(ImplMensaje.id).where(ImplMensaje.proyecto_id == proyecto_id,
+                                            ImplMensaje.solo_equipo == True)             # noqa: E712
+    if d["tipo"] == "archivo":
+        sub = select(ImplArchivo.tarjeta_id).where(ImplArchivo.proyecto_id == proyecto_id,
+                                                   ImplArchivo.codigo == d["codigo"])
+        if not ve:
+            sub = sub.where(or_(ImplArchivo.mensaje_id.is_(None), ImplArchivo.mensaje_id.not_in(internos)))
+        return [ImplTarjeta.id.in_(sub)]
+    sub = select(ImplMensaje.tarjeta_id).where(ImplMensaje.proyecto_id == proyecto_id,
+                                               ImplMensaje.orden == d["orden"])
+    if not ve:
+        sub = sub.where(ImplMensaje.solo_equipo == False)                                # noqa: E712
+    return [and_(ImplTarjeta.codigo == d["base"], ImplTarjeta.id.in_(sub))]
+
+
 def impl_buscar_tarjetas(s: Session, proyecto_id: int, lado: str, vista: str = "todas", estado: str = None,
                          tipo: str = None, etapa_id: int = None, q: str = "") -> list:
     """Las tarjetas del proyecto para una vista. `vista="pendientes"` deja las
@@ -10558,9 +10675,11 @@ def impl_buscar_tarjetas(s: Session, proyecto_id: int, lado: str, vista: str = "
     q = (q or "").strip()[:100]
     if q:
         patron = _impl_like(q)
-        condiciones = [ImplTarjeta.titulo.ilike(patron, escape="\\")]
+        condiciones = [ImplTarjeta.titulo.ilike(patron, escape="\\"),
+                       ImplTarjeta.codigo.ilike(patron, escape="\\")]
         if q.lstrip("#").isdigit():
             condiciones.append(ImplTarjeta.numero == int(q.lstrip("#")))
+        condiciones += _impl_condiciones_por_codigo(s, proyecto_id, lado, q)
         en_mensajes = select(ImplMensaje.tarjeta_id).where(
             ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.texto.ilike(patron, escape="\\"))
         if not implementacion.puede_ver_nota_interna(lado):
@@ -10623,11 +10742,13 @@ def impl_plan(s: Session, proyecto_id: int) -> list:
     for t in s.exec(select(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id,
                                               ImplTarjeta.hito_id.is_not(None))
                     .order_by(ImplTarjeta.numero)).all():
-        tarjetas.setdefault(t.hito_id, []).append({"numero": t.numero, "titulo": t.titulo, "estado": t.estado})
+        tarjetas.setdefault(t.hito_id, []).append({"numero": t.numero, "codigo": t.codigo, "titulo": t.titulo,
+                                                   "estado": t.estado})
     por_etapa = {}
     for h in hitos:
         por_etapa.setdefault(h.etapa_id, []).append({
-            "id": h.id, "texto": h.texto, "orden": h.orden, "hecho": h.hecho, "hecho_por": h.hecho_por,
+            "id": h.id, "codigo": h.codigo, "texto": h.texto, "orden": h.orden, "hecho": h.hecho,
+            "hecho_por": h.hecho_por,
             "hecho_en": h.hecho_en, "tarjetas": tarjetas.get(h.id, [])})
     salida = []
     for e in impl_etapas(s, proyecto_id):
@@ -10690,7 +10811,11 @@ def impl_borrar_hito(s: Session, proyecto_id: int, hito_id: int, actor) -> bool:
         return False
     s.exec(sa_update(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id,
                                         ImplTarjeta.hito_id == h.id).values(hito_id=None))
-    _impl_evento(s, proyecto_id, a, "hito_borrar", detalle={"hito_id": h.id, "texto": h.texto})
+    _impl_evento(s, proyecto_id, a, "hito_borrar", detalle={"hito_id": h.id, "texto": h.texto, "codigo": h.codigo})
+    s.exec(sa_delete(ImplRelacion).where(
+        ImplRelacion.proyecto_id == proyecto_id,
+        or_(and_(ImplRelacion.origen_tipo == "hito", ImplRelacion.origen_id == h.id),
+            and_(ImplRelacion.destino_tipo == "hito", ImplRelacion.destino_id == h.id))))
     s.delete(h)
     s.commit()
     return True
@@ -10734,7 +10859,9 @@ def impl_cargar_hitos_semilla(s: Session, proyecto_id: int, actor, fases: list) 
             s.flush()
             etapas[nombre.strip().lower()] = et
         for orden, texto in enumerate(textos, start=1):
-            s.add(ImplHito(proyecto_id=proyecto_id, etapa_id=et.id, texto=texto, orden=orden))
+            s.add(ImplHito(proyecto_id=proyecto_id, etapa_id=et.id, texto=texto, orden=orden,
+                           codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.PREFIJO_HITO)))
+            s.flush()
             cantidad += 1
     _impl_evento(s, proyecto_id, a, "hitos_semilla", detalle={"cantidad": cantidad})
     s.commit()
@@ -10782,6 +10909,7 @@ def impl_exportacion(s: Session, proyecto_id: int, actor) -> Optional[dict]:
         "mensajes": todo(ImplMensaje, ImplMensaje.id), "eventos": todo(ImplEvento, ImplEvento.id),
         "descargas": todo(ImplDescarga, ImplDescarga.id), "archivos": todo(ImplArchivo, ImplArchivo.id),
         "lecturas": todo(ImplLecturaAviso, ImplLecturaAviso.id),
+        "relaciones": todo(ImplRelacion, ImplRelacion.id), "contadores": todo(ImplContador, ImplContador.id),
         "aprobaciones": impl_aprobaciones_registro(s, proyecto_id),
     }
     _impl_evento(s, proyecto_id, a, "exportar", detalle={"tarjetas": len(datos["tarjetas"]),

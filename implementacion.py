@@ -12,6 +12,7 @@ llama a `datetime.now()` ni a `date.today()`.
 import csv
 import io
 import json
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import NamedTuple
@@ -297,7 +298,7 @@ def porcentaje(hechos: int, total: int) -> int:
 
 
 # ---------- Registro de aprobaciones (CSV) ----------
-ENCABEZADO_APROBACIONES = ("Número", "Título", "Estado", "Pidió", "Resolvió", "Cuándo", "Etapa")
+ENCABEZADO_APROBACIONES = ("Número", "Título", "Estado", "Pidió", "Resolvió", "Cuándo", "Etapa", "Código")
 
 
 def aprobaciones_csv(filas: list) -> str:
@@ -311,7 +312,7 @@ def aprobaciones_csv(filas: list) -> str:
         w.writerow([_celda(f.get("numero", "")), _celda(f.get("titulo", "")),
                     NOMBRES_ESTADO.get(f.get("estado"), f.get("estado", "")),
                     _celda(f.get("autor", "")), _celda(f.get("resuelta_por", "")),
-                    f.get("resuelta_en", ""), _celda(f.get("etapa", ""))])
+                    f.get("resuelta_en", ""), _celda(f.get("etapa", "")), _celda(f.get("codigo", ""))])
     return "﻿" + sal.getvalue()
 
 
@@ -391,6 +392,102 @@ def texto_evento(accion: str, detalle: dict) -> str:
     if accion == "exportar":
         return "exportó el proyecto"
     return accion
+
+
+# ---------- Códigos y relaciones (I12, I13, I14) ----------
+# Todo lo que se genera tiene un código para nombrarlo: PE0001 (tarjeta, por
+# tipo), AR000123 (archivo), HI0001 (hito) y PE0004-3 (el mensaje 3 de esa
+# tarjeta). Un contador por proyecto y prefijo; el código nace con la cosa y
+# no cambia nunca. Acá solo el formato y el reconocimiento en un texto.
+PREFIJOS_TARJETA = {PEDIDO: "PE", CONSULTA: "CO", ENTREGA: "EN", APROBACION: "AP", ERROR: "ER", AVISO: "AV"}
+PREFIJO_ARCHIVO, PREFIJO_HITO = "AR", "HI"
+DIGITOS = {**{p: 4 for p in PREFIJOS_TARJETA.values()}, PREFIJO_ARCHIVO: 6, PREFIJO_HITO: 4}
+TIPO_DE_PREFIJO = {**{p: "tarjeta" for p in PREFIJOS_TARJETA.values()},
+                   PREFIJO_ARCHIVO: "archivo", PREFIJO_HITO: "hito"}
+REL_TARJETA, REL_ARCHIVO, REL_HITO, REL_MENSAJE = "tarjeta", "archivo", "hito", "mensaje"
+TIPOS_REL = (REL_TARJETA, REL_ARCHIVO, REL_HITO, REL_MENSAJE)
+MENCIONA, RESPONDE = "menciona", "responde"
+CLASES_REL = (MENCIONA, RESPONDE)
+# «sale» = la cosa de la que hablamos es el origen; «entra» = es el destino.
+TEXTOS_REL = {
+    (RESPONDE, "sale"): "responde a", (RESPONDE, "entra"): "respondida con",
+    (MENCIONA, "sale"): "menciona", (MENCIONA, "entra"): "mencionada en",
+}
+
+_PREFIJOS_RE = "|".join(sorted(DIGITOS, key=len, reverse=True))
+# Palabra completa: ni letra, ni dígito, ni guion bajo pegados antes o después.
+_CODIGO_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(" + _PREFIJOS_RE + r")(\d{4,6})(?:-(\d{1,5}))?(?![A-Za-z0-9_])", re.IGNORECASE)
+
+
+def prefijo_de_tipo(tipo: str) -> str:
+    """El prefijo de una tarjeta según su tipo («PE» si el tipo no se conoce)."""
+    return PREFIJOS_TARJETA.get(tipo, "PE")
+
+
+def formatear_codigo(prefijo: str, numero: int, orden: int = None) -> str:
+    """PE + 4 -> PE0004; AR + 123 -> AR000123; con `orden`, el mensaje:
+    PE0004-3. Un número que no entra en los dígitos crece (no se trunca)."""
+    prefijo = (prefijo or "").upper()
+    if prefijo not in DIGITOS:
+        raise ValueError(f"Prefijo desconocido: {prefijo!r}")
+    if int(numero) < 1:
+        raise ValueError("El número de un código empieza en 1.")
+    codigo = f"{prefijo}{int(numero):0{DIGITOS[prefijo]}d}"
+    if orden is not None:
+        if prefijo not in PREFIJOS_TARJETA.values() or int(orden) < 1:
+            raise ValueError("Solo un mensaje de una tarjeta lleva orden.")
+        codigo += f"-{int(orden)}"
+    return codigo
+
+
+def _desde_match(m):
+    prefijo, digitos, orden = m.group(1).upper(), m.group(2), m.group(3)
+    ancho = DIGITOS[prefijo]
+    if len(digitos) < ancho or (len(digitos) > ancho and digitos[0] == "0"):
+        return None                       # PE00041 no es un código; PE12345 sí (el contador creció)
+    numero = int(digitos)
+    if numero < 1:
+        return None
+    if orden is not None:
+        if TIPO_DE_PREFIJO[prefijo] != "tarjeta" or int(orden) < 1:
+            return None
+        orden = int(orden)
+    tipo = "mensaje" if orden is not None else TIPO_DE_PREFIJO[prefijo]
+    return {"tipo": tipo, "prefijo": prefijo, "numero": numero, "orden": orden,
+            "codigo": formatear_codigo(prefijo, numero, orden),
+            "base": formatear_codigo(prefijo, numero)}
+
+
+def parsear_codigo(texto: str):
+    """Un código SOLO (sin otra cosa alrededor, mayúsculas o minúsculas) a
+    {tipo (tarjeta|archivo|hito|mensaje), prefijo, numero, orden, codigo,
+    base}; None si no es un código."""
+    m = _CODIGO_RE.fullmatch((texto or "").strip())
+    return _desde_match(m) if m else None
+
+
+def extraer_codigos(texto: str) -> list:
+    """Los códigos que aparecen en un texto, como palabra completa, en su forma
+    canónica, en orden de aparición y sin repetir. «pe0004», «PE0004-3»,
+    «AR000123», «HI0001»; no «XPE0004», ni «PE00041», ni «PE0004x»."""
+    vistos, salida = set(), []
+    for m in _CODIGO_RE.finditer(texto or ""):
+        d = _desde_match(m)
+        if d and d["codigo"] not in vistos:
+            vistos.add(d["codigo"])
+            salida.append(d["codigo"])
+    return salida
+
+
+def enlace_codigo(proyecto_id: int, codigo: str) -> str:
+    """El enlace a la mesa que lleva a esa cosa (el viejo #t{numero} sigue
+    valiendo en la pantalla)."""
+    return f"/implementacion?p={int(proyecto_id)}#{codigo}"
+
+
+def texto_relacion(clase: str, sentido: str) -> str:
+    return TEXTOS_REL.get((clase, sentido), clase)
 
 
 # ---------- Semilla del plan operativo (I7) ----------
