@@ -146,7 +146,7 @@ def texto_aviso_mesa(proyecto: str, numero: int, titulo: str, enlace: str, motiv
     cuerpo = (
         f"{que} en la Mesa de implementación ({' '.join(str(proyecto or '').split())[:80]}).\n\n"
         f"    {ref}#{int(numero)} {limpio}\n\n"
-        f"Entrá para verla: {enlace}\n\n"
+        + (f"Entrá para verla: {enlace}\n\n" if enlace else "Entrá a la Mesa de implementación para verla.\n\n") +
         f"Colm3na"
     )
     return asunto, cuerpo

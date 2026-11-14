@@ -831,7 +831,8 @@ def test_acciones_de_y_texto_evento_puros():
     assert im.acciones_de("pedido", "abierta", "equipo", "equipo")["solo_equipo"] is True
     assert im.acciones_de("pedido", "abierta", "equipo", "sindicato")["solo_equipo"] is False
     assert im.acciones_de("pedido", "cerrada", "", "equipo")["reabrir"] is True
-    assert im.acciones_de("aprobacion", "abierta", "sindicato", "sindicato")["aprobar"] is True
+    assert im.acciones_de("aprobacion", "abierta", "sindicato", "sindicato", "equipo")["aprobar"] is True
+    assert im.acciones_de("aprobacion", "abierta", "sindicato", "equipo", "equipo")["aprobar"] is False   # el autor no
     assert {e["id"] for e in im.acciones_de("aprobacion", "abierta", "equipo", "equipo")["estados"]} == {"en_curso", "respondida"}
     assert im.acciones_de("pedido", "inexistente", "", "equipo")["responder"] is False
     assert im.texto_evento("subir", {"nombre": "a.pdf", "datos_personales": True}) == "subió a.pdf (con datos personales)"

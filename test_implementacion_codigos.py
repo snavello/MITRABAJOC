@@ -244,7 +244,8 @@ def test_el_codigo_no_cambia_nunca():
     # todo lo que se le puede hacer a una tarjeta, un archivo y un hito
     _responder(eq, pid, t["id"], texto="ok", estado_nuevo="respondida")
     eq.post(_api(pid, f"tarjetas/{t['id']}/reasignar"), json={"responsable": "Ana", "responsable_lado": "equipo"})
-    r = sin.post(_api(pid, f"tarjetas/{t['id']}/aprobacion"), json={"aprobar": True, "texto": "listo"})
+    # La aprobación la pidió el sindicato: la resuelve el otro lado (el equipo).
+    r = eq.post(_api(pid, f"tarjetas/{t['id']}/aprobacion"), json={"aprobar": True, "texto": "listo"})
     assert r.status_code == 200
     eq.post(_api(pid, f"plan/hitos/{hito['id']}"), json={"texto": "Hito renombrado", "orden": 1})
     eq.post(_api(pid, f"plan/etapas/{plan[0]['id']}"), json={"nombre": "Otra etapa"})

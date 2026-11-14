@@ -27,49 +27,70 @@ PREFIJOS_TARJETA = {"pedido": "PE", "consulta": "CO", "entrega": "EN",
 
 
 def upgrade() -> None:
-    op.create_table(
-        'implcontador',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('proyecto_id', sa.Integer(), nullable=False),
-        sa.Column('prefijo', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('ultimo', sa.Integer(), nullable=False),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('proyecto_id', 'prefijo', name='uq_implcontador_proyecto_prefijo'),
-    )
-    op.create_table(
-        'implrelacion',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('proyecto_id', sa.Integer(), nullable=False),
-        sa.Column('origen_tipo', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('origen_id', sa.Integer(), nullable=False),
-        sa.Column('destino_tipo', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('destino_id', sa.Integer(), nullable=False),
-        sa.Column('clase', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('solo_equipo', sa.Boolean(), nullable=False),
-        sa.Column('creada_en', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('creada_por_lado', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('creada_por_id', sa.Integer(), nullable=False),
-        sa.Column('creada_por_nombre', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('proyecto_id', 'origen_tipo', 'origen_id', 'destino_tipo', 'destino_id', 'clase',
-                            name='uq_implrelacion_par'),
-    )
-    op.create_index('ix_implrelacion_origen', 'implrelacion', ['proyecto_id', 'origen_tipo', 'origen_id'])
-    op.create_index('ix_implrelacion_destino', 'implrelacion', ['proyecto_id', 'destino_tipo', 'destino_id'])
+    # Idempotente: lo que ya existe no se vuelve a crear. Pasa cuando
+    # `clonar_demo_a_pruebas.py` restaura un dump de la demo (sin las tablas
+    # `impl*`, excluidas a propósito) sobre Pruebas: `alembic_version` vuelve a
+    # una revisión vieja con las tablas de la mesa, ya completas, en su lugar.
+    cx = op.get_bind()
+    insp = sa.inspect(cx)
+    tablas = set(insp.get_table_names())
+
+    def columnas(tabla):
+        return {c['name'] for c in insp.get_columns(tabla)} if tabla in tablas else set()
+
+    contador_nuevo = 'implcontador' not in tablas
+    if contador_nuevo:
+        op.create_table(
+            'implcontador',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('proyecto_id', sa.Integer(), nullable=False),
+            sa.Column('prefijo', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('ultimo', sa.Integer(), nullable=False),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('proyecto_id', 'prefijo', name='uq_implcontador_proyecto_prefijo'),
+        )
+    if 'implrelacion' not in tablas:
+        op.create_table(
+            'implrelacion',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('proyecto_id', sa.Integer(), nullable=False),
+            sa.Column('origen_tipo', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('origen_id', sa.Integer(), nullable=False),
+            sa.Column('destino_tipo', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('destino_id', sa.Integer(), nullable=False),
+            sa.Column('clase', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('solo_equipo', sa.Boolean(), nullable=False),
+            sa.Column('creada_en', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('creada_por_lado', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column('creada_por_id', sa.Integer(), nullable=False),
+            sa.Column('creada_por_nombre', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('proyecto_id', 'origen_tipo', 'origen_id', 'destino_tipo', 'destino_id', 'clase',
+                                name='uq_implrelacion_par'),
+        )
+        op.create_index('ix_implrelacion_origen', 'implrelacion', ['proyecto_id', 'origen_tipo', 'origen_id'])
+        op.create_index('ix_implrelacion_destino', 'implrelacion', ['proyecto_id', 'destino_tipo', 'destino_id'])
 
     # Columnas nuevas: con default de servidor para las filas que ya hay.
-    for tabla in ('impltarjeta', 'implarchivo', 'implhito'):
+    con_codigo = [t for t in ('impltarjeta', 'implarchivo', 'implhito') if 'codigo' not in columnas(t)]
+    for tabla in con_codigo:
         op.add_column(tabla, sa.Column('codigo', sqlmodel.sql.sqltypes.AutoString(), nullable=False,
                                        server_default=''))
-    op.add_column('implmensaje', sa.Column('orden', sa.Integer(), nullable=False, server_default='0'))
+    con_orden = 'orden' not in columnas('implmensaje')
+    if con_orden:
+        op.add_column('implmensaje', sa.Column('orden', sa.Integer(), nullable=False, server_default='0'))
 
-    _backfill(op.get_bind())
+    # El backfill solo si las columnas se agregaron ahora (si ya estaban, ya tienen
+    # sus códigos y sus contadores: repetirlo duplicaría filas de `implcontador`).
+    if con_codigo or con_orden:
+        _backfill(cx)
 
-    for tabla in ('impltarjeta', 'implarchivo', 'implhito'):
+    for tabla in con_codigo:
         op.alter_column(tabla, 'codigo', server_default=None)
         op.create_index(op.f(f'ix_{tabla}_codigo'), tabla, ['codigo'], unique=False)
         op.create_unique_constraint(f'uq_{tabla}_proyecto_codigo', tabla, ['proyecto_id', 'codigo'])
-    op.alter_column('implmensaje', 'orden', server_default=None)
+    if con_orden:
+        op.alter_column('implmensaje', 'orden', server_default=None)
 
 
 def _backfill(cx) -> None:

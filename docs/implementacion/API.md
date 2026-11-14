@@ -106,3 +106,22 @@ Todo cambio es **aditivo**: `numero`, `id` y el viejo `#t{numero}` siguen valien
 **Enlaces**: `/implementacion?p={pid}#PE0004`, `#PE0004-3`, `#AR000123`, `#HI0001`. El mail de aviso lleva el código en el asunto (`Mesa de implementación · PE0004 · #4 título`) y este enlace.
 
 **Exportación (`exportar.zip`)**: `relaciones.json`/`relaciones.csv` (origen, clase y destino con sus códigos), `archivos.csv`, `contadores.json`; `tarjetas.csv` suma «Código» al final y los `.json` traen `codigo`/`orden`. La ruta de los archivos dentro del ZIP no cambió.
+
+## Correcciones del QA (2026-11-14): cambios al contrato
+
+Detalle por defecto en `QA-servidor.md` → «Correcciones». Lo que cambia para quien consume la API:
+
+- **Aprobaciones (QA-01/02).** Una aprobación abierta la resuelve **solo el lado que NO la pidió** (`tarjeta.autor_lado`), en cualquier estado abierto y sin importar a quién le toque el turno. `acciones.aprobar` dice lo mismo que acepta el servidor (antes dependía del turno). `implementacion.puede_resolver_aprobacion(tipo, estado, autor_lado, lado_actor)` y `acciones_de(..., autor_lado)` cambiaron de firma.
+- **Texto de entrada (QA-04/10).** Todo texto se sanea (sin NUL ni sustitutos sueltos, NFC, recortado) y nunca da 500. Topes (400 con mensaje): título 140, texto y `aprobacion.texto` 5.000, `responsable` y texto de hito 200, nombre de proyecto/usuario 120, mail 254, clave 128.
+- **Ids (QA-05).** Un id de ruta o de `etapa_id`/`?p=` que no entra en int4 es **404**; en un campo de formulario/JSON (`etapa_id`, `hito_id`, `sindicato_id`) es **400**.
+- **Envíos con archivos (QA-06/15/17).** `POST tarjetas` y `POST tarjetas/{tid}/responder` autorizan **antes** de leer el cuerpo; el cuerpo entero tiene tope de 41 MB (413 por `Content-Length` o por los bytes que llegan). Mensaje + estado + archivos se guardan en **una** transacción (si un adjunto no pasa, no cambia nada). El `mime` se reduce a `tipo/subtipo` (si no, `application/octet-stream`). Un archivo sin nombre entra como «archivo»; un campo de archivo vacío (sin nombre y sin bytes) se ignora.
+- **Reasignar (QA-07).** Sobre una tarjeta cerrada es 409 `cerrada`; sobre un aviso, 400 `aviso`.
+- **Fechas (QA-11).** `fecha_limite` pasa por el parseo de fechas de formulario (`AAAA-MM-DD` o `DD/MM/AAAA`) y se **guarda ISO**; si no se entiende, 400.
+- **Adjuntos de una aprobación resuelta (QA-13).** No se borran: 409 `inmutable`.
+- **Ritmo (QA-20).** Un usuario del **sindicato** puede crear tarjetas y responder hasta 30 veces por 10 minutos (`IMPL_RITMO_MAX`, `IMPL_RITMO_VENTANA_S`); después **429** `demasiados`. El equipo no se frena.
+- **Plan (QA-26).** `plan/hitos/{hid}` valida todo (existencia, texto, orden) antes de escribir y escribe en una sola transacción.
+- **Descarga y exportación (QA-21/22).** `GET archivos/{aid}` y `GET exportar.zip` siguen siendo GET (son la navegación del propio usuario con cookie `SameSite=Lax`) pero responden **403** si el navegador declara `Sec-Fetch-Site: cross-site`. La exportación suma `usuarios.json` (sin `clave_hash`); pasados los 400 MB de archivos vigentes da 413 con un mensaje que explica la salida: `exportar.zip?sin_archivos=1` baja todo menos los bytes.
+- **Login del sindicato (QA-14).** El freno por IP cuenta los fallos en una ventana de 10 minutos (`IMPL_LOGIN_VENTANA_S`) y un ingreso correcto ya **no** reinicia el contador.
+- **API del equipo (QA-09).** `/api/entornos/implementacion/*` exige lo mismo que la mesa: usuario de plataforma **activo**, sin clave ni datos pendientes (401 si la sesión existe y ya no vale; 403 si no es del equipo). El pase del PIN ya no la abre.
+- **Mails (QA-08).** El enlace sale de la URL pública del entorno (`entorno.URLS`), nunca del header `Host`; en local no hay enlace absoluto.
+- **Códigos (QA-03/18).** Se reconocen solo en ASCII, con bordes de palabra que no aceptan letras ni dígitos Unicode pegados.

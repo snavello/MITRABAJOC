@@ -9917,6 +9917,9 @@ for _modelo_traza in (ImplEvento, ImplDescarga):
     event.listen(_modelo_traza, "before_delete", _traza_inmutable)
 
 
+_L = implementacion.limpiar_texto           # saneo único del texto de entrada (QA-04)
+
+
 def _impl_actor(actor) -> "implementacion.Actor":
     return actor if isinstance(actor, implementacion.Actor) else implementacion.Actor(*actor)
 
@@ -9971,9 +9974,10 @@ def _impl_orden_mensaje(s: Session, tarjeta_id: int) -> int:
 def impl_crear_proyecto(s: Session, nombre: str, actor, sindicato_id: int = None) -> ImplProyecto:
     """Un proyecto con sus seis etapas por defecto (I7). Sin hitos: los carga
     el bloque 4 o el equipo desde la pantalla."""
-    nombre = (nombre or "").strip()
+    nombre = _L(nombre)
     if not nombre:
         raise implementacion.ErrorImpl("nombre", "El proyecto necesita un nombre.")
+    implementacion.exigir_largo(nombre, implementacion.TOPE_NOMBRE, "El nombre del proyecto")
     p = ImplProyecto(nombre=nombre, sindicato_id=sindicato_id)
     s.add(p)
     s.flush()
@@ -10000,12 +10004,15 @@ def impl_agregar_hito(s: Session, proyecto_id: int, etapa_id: int, texto: str, a
     a = _impl_actor(actor)
     if a.lado != implementacion.EQUIPO:
         raise implementacion.ErrorImpl("sin_permiso", "El plan lo edita el equipo.")
-    et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)).first()
-    texto = (texto or "").strip()
+    # La etapa se bloquea: dos altas a la vez no calculan el mismo `orden` (QA-16).
+    et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)
+                .with_for_update()).first()
+    texto = _L(texto)
     if not et:
         return None
     if not texto:
         raise implementacion.ErrorImpl("texto", "El hito necesita un texto.")
+    implementacion.exigir_largo(texto, implementacion.TOPE_HITO, "El hito")
     ultimo = s.exec(select(func.max(ImplHito.orden)).where(ImplHito.etapa_id == etapa_id)).one() or 0
     h = ImplHito(proyecto_id=proyecto_id, etapa_id=etapa_id, texto=texto, orden=ultimo + 1,
                  codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.PREFIJO_HITO))
@@ -10017,9 +10024,11 @@ def impl_agregar_hito(s: Session, proyecto_id: int, etapa_id: int, texto: str, a
     return h
 
 
-def impl_tildar_hito(s: Session, proyecto_id: int, hito_id: int, actor, hecho: bool = True) -> Optional[ImplHito]:
+def impl_tildar_hito(s: Session, proyecto_id: int, hito_id: int, actor, hecho: bool = True,
+                     commit: bool = True) -> Optional[ImplHito]:
     """Marca o desmarca un hito. Lo pueden hacer los dos lados (el avance se
-    sigue juntos); queda quién y cuándo."""
+    sigue juntos); queda quién y cuándo. Con `commit=False` queda en la
+    transacción de quien llama."""
     a = _impl_actor(actor)
     h = s.exec(select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
                .with_for_update()).first()
@@ -10031,8 +10040,11 @@ def impl_tildar_hito(s: Session, proyecto_id: int, hito_id: int, actor, hecho: b
         h.hecho_en = fechas.ahora_con_segundos() if hecho else ""
         s.add(h)
         _impl_evento(s, proyecto_id, a, "hito", detalle={"hito_id": h.id, "hecho": bool(hecho), "texto": h.texto})
-    s.commit()
-    s.refresh(h)
+    if commit:
+        s.commit()
+        s.refresh(h)
+    else:
+        s.flush()
     return h
 
 
@@ -10058,10 +10070,13 @@ def impl_avance(s: Session, proyecto_id: int) -> list:
 def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: str, texto: str,
                        etapa_id: int = None, hito_id: int = None, responsable: str = "",
                        responsable_lado: str = "", fecha_limite: str = "",
-                       responde_a: str = None) -> ImplTarjeta:
-    """Crea la tarjeta con su primer mensaje (el texto) y su evento. El número
-    correlativo se toma con FOR UPDATE sobre el proyecto. None si el proyecto
-    no existe; ErrorImpl si la tarjeta no valida."""
+                       responde_a: str = None, adjuntos: list = None,
+                       datos_personales: bool = False) -> ImplTarjeta:
+    """Crea la tarjeta con su primer mensaje (el texto), sus archivos y su
+    evento, TODO en una transacción: si algo no pasa, no se crea nada. El
+    número correlativo se toma con FOR UPDATE sobre el proyecto. None si el
+    proyecto no existe; ErrorImpl si la tarjeta no valida. `adjuntos` es
+    [(nombre, mime, bytes)]."""
     a = _impl_actor(actor)
     v = implementacion.validar_tarjeta_nueva(tipo, titulo, texto, fecha_limite)
     if not v["ok"]:
@@ -10080,6 +10095,7 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
         etapa_id = etapa_id or h.etapa_id
     if responsable_lado and responsable_lado not in implementacion.LADOS:
         raise implementacion.ErrorImpl("responsable", "El responsable no es válido.")
+    responsable = implementacion.exigir_largo(_L(responsable), implementacion.TOPE_RESPONSABLE, "El responsable")
     original = None
     if responde_a not in (None, ""):
         original = impl_tarjeta_por_codigo_o_id(s, proyecto_id, responde_a)
@@ -10092,7 +10108,7 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
                     codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.prefijo_de_tipo(d["tipo"])),
                     estado=estado, lado_que_espera=implementacion.lado_inicial(d["tipo"], a.lado),
                     etapa_id=etapa_id, hito_id=hito_id, responsable_lado=responsable_lado,
-                    responsable=(responsable or "").strip(), fecha_limite=d["fecha_limite"],
+                    responsable=responsable, fecha_limite=d["fecha_limite"],
                     autor_lado=a.lado, autor_id=a.id, autor_nombre=a.nombre)
     s.add(t)
     s.flush()
@@ -10106,6 +10122,9 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
     _impl_evento(s, proyecto_id, a, "crear", t.id,
                  {"numero": t.numero, "tipo": t.tipo, "titulo": t.titulo, "mensaje_id": m.id,
                   "codigo": t.codigo})
+    for nombre, mime, datos in (adjuntos or []):
+        _impl_guardar_archivo(s, proyecto_id, t, a, nombre, mime, datos, datos_personales=datos_personales,
+                              responde_a_id=original.id if original else None)
     s.commit()
     s.refresh(t)
     return t
@@ -10116,9 +10135,12 @@ def impl_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int) -> Optional[Impl
 
 
 def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: str = "",
-                   estado_nuevo: str = None, solo_equipo: bool = False) -> Optional[ImplMensaje]:
+                   estado_nuevo: str = None, solo_equipo: bool = False, adjuntos: list = None,
+                   datos_personales: bool = False) -> Optional[ImplMensaje]:
     """Responder y cambiar de estado, UN solo acto: un mensaje (si hay texto),
-    el estado nuevo y UN solo evento. Devuelve el mensaje; si solo cambió el
+    el estado nuevo, los archivos adjuntos (`adjuntos` = [(nombre, mime,
+    bytes)]) y UN solo evento de la respuesta, todo en una transacción: si un
+    adjunto no se puede guardar no cambia nada. Devuelve el mensaje; si solo cambió el
     estado y no hubo texto, un ImplMensaje sin guardar (id None): las rutas
     releen la tarjeta con `impl_tarjeta`.
 
@@ -10128,7 +10150,8 @@ def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: 
     t = _impl_tarjeta(s, proyecto_id, tarjeta_id, bloquear=True)
     if not t:
         return None
-    texto = (texto or "").strip()
+    texto = _L(texto)
+    estado_nuevo = _L(estado_nuevo) or None
     if len(texto) > implementacion.TOPE_TEXTO:
         raise implementacion.ErrorImpl("texto", f"El texto admite hasta {implementacion.TOPE_TEXTO} caracteres.")
     if t.tipo == implementacion.AVISO:
@@ -10170,6 +10193,9 @@ def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: 
                  {"mensaje_id": m.id, "estado_anterior": estado_ant, "estado_nuevo": t.estado,
                   "lado_que_espera": t.lado_que_espera},
                  solo_equipo=bool(solo_equipo))
+    for nombre, mime, datos in (adjuntos or []):
+        _impl_guardar_archivo(s, proyecto_id, t, a, nombre, mime, datos, datos_personales=datos_personales,
+                              mensaje=m if m.id else None)
     s.commit()
     return m
 
@@ -10180,12 +10206,19 @@ def impl_reasignar(s: Session, proyecto_id: int, tarjeta_id: int, actor, respons
     t = _impl_tarjeta(s, proyecto_id, tarjeta_id, bloquear=True)
     if not t:
         return None
+    responsable_lado = _L(responsable_lado)
     if responsable_lado not in implementacion.LADOS:
         raise implementacion.ErrorImpl("responsable", "El responsable no es válido.")
+    responsable = implementacion.exigir_largo(_L(responsable), implementacion.TOPE_RESPONSABLE, "El responsable")
     if implementacion.es_inmutable(t.tipo, t.estado):
         raise implementacion.ErrorImpl("inmutable", "La aprobación ya está resuelta y no se modifica.")
+    # Coherente con `acciones.reasignar`: solo una tarjeta abierta y que no sea un aviso.
+    if t.tipo == implementacion.AVISO:
+        raise implementacion.ErrorImpl("aviso", "Un aviso no se reasigna.")
+    if t.estado not in implementacion.ESTADOS_ABIERTOS:
+        raise implementacion.ErrorImpl("cerrada", "Está cerrada: reabrila para reasignarla.")
     antes = {"responsable": t.responsable, "responsable_lado": t.responsable_lado}
-    t.responsable, t.responsable_lado = (responsable or "").strip(), responsable_lado
+    t.responsable, t.responsable_lado = responsable, responsable_lado
     t.actualizada = fechas.ahora_con_segundos()
     s.add(t)
     _impl_evento(s, proyecto_id, a, "reasignar", t.id, {"antes": antes, "despues": {
@@ -10197,8 +10230,9 @@ def impl_reasignar(s: Session, proyecto_id: int, tarjeta_id: int, actor, respons
 
 def impl_resolver_aprobacion(s: Session, proyecto_id: int, tarjeta_id: int, actor, aprobar: bool,
                              texto: str = "") -> Optional[ImplTarjeta]:
-    """Aprueba o rechaza, con quién y cuándo. Resuelve el lado al que le toca
-    y queda inmutable: una segunda resolución es ErrorImpl("inmutable")."""
+    """Aprueba o rechaza, con quién y cuándo. La resuelve SOLO el lado que no la
+    pidió (sin importar el estado ni el turno) y queda inmutable: una segunda
+    resolución es ErrorImpl("inmutable")."""
     a = _impl_actor(actor)
     t = _impl_tarjeta(s, proyecto_id, tarjeta_id, bloquear=True)
     if not t:
@@ -10207,9 +10241,9 @@ def impl_resolver_aprobacion(s: Session, proyecto_id: int, tarjeta_id: int, acto
         raise implementacion.ErrorImpl("tipo", "Esta tarjeta no es una aprobación.")
     if implementacion.es_inmutable(t.tipo, t.estado):
         raise implementacion.ErrorImpl("inmutable", "La aprobación ya está resuelta y no se modifica.")
-    if not implementacion.puede_resolver_aprobacion(t.tipo, t.estado, t.lado_que_espera, a.lado):
+    if not implementacion.puede_resolver_aprobacion(t.tipo, t.estado, t.autor_lado, a.lado):
         raise implementacion.ErrorImpl("sin_permiso", "Esta aprobación la resuelve la otra parte.")
-    texto = (texto or "").strip()
+    texto = implementacion.exigir_largo(_L(texto), implementacion.TOPE_TEXTO, "El texto")
     estado_ant = t.estado
     t.estado = implementacion.APROBADA if aprobar else implementacion.RECHAZADA
     t.lado_que_espera = ""
@@ -10318,31 +10352,22 @@ def impl_lecturas_aviso(s: Session, proyecto_id: int, tarjeta_id: int) -> list:
 
 
 # ---------- Archivos ----------
-def impl_subir_archivo(s: Session, proyecto_id: int, tarjeta_id: int, actor, nombre: str, mime: str,
-                       datos: bytes, datos_personales: bool = False, mensaje_id: int = None,
-                       responde_a_id: int = None) -> Optional[ImplArchivo]:
-    """Guarda el archivo (hasta 20 MB, sin pasar por `imagenes.achicar`: son
-    documentos). None si la tarjeta no es de este proyecto."""
-    a = _impl_actor(actor)
-    t = _impl_tarjeta(s, proyecto_id, tarjeta_id)
-    if not t:
-        return None
+def _impl_guardar_archivo(s: Session, proyecto_id: int, t: ImplTarjeta, a, nombre: str, mime: str, datos: bytes,
+                          datos_personales: bool = False, mensaje: ImplMensaje = None,
+                          responde_a_id: int = None) -> ImplArchivo:
+    """Valida y agrega el archivo a la transacción de quien llama (flush, sin
+    commit). `mensaje` es el ImplMensaje (ya con id) al que se adjunta."""
     if implementacion.es_inmutable(t.tipo, t.estado):
         raise implementacion.ErrorImpl("inmutable", "La aprobación ya está resuelta y no se modifica.")
     nombre = implementacion.nombre_seguro(nombre)
     motivo = implementacion.validar_archivo(nombre, len(datos or b""))
     if motivo:
         raise implementacion.ErrorImpl("archivo", motivo)
-    interno = False
-    if mensaje_id is not None:
-        m = s.exec(select(ImplMensaje).where(ImplMensaje.id == mensaje_id, ImplMensaje.proyecto_id == proyecto_id,
-                                             ImplMensaje.tarjeta_id == t.id)).first()
-        if not m:
-            raise implementacion.ErrorImpl("mensaje", "El mensaje no es de esta tarjeta.")
-        interno = m.solo_equipo
-    arch = ImplArchivo(proyecto_id=proyecto_id, tarjeta_id=t.id, mensaje_id=mensaje_id, nombre=nombre,
+    interno = bool(mensaje.solo_equipo) if mensaje is not None else False
+    arch = ImplArchivo(proyecto_id=proyecto_id, tarjeta_id=t.id, mensaje_id=mensaje.id if mensaje is not None else None,
+                       nombre=nombre,
                        codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.PREFIJO_ARCHIVO),
-                       mime=(mime or "application/octet-stream")[:120], tamano=len(datos), datos=bytes(datos),
+                       mime=implementacion.mime_seguro(mime), tamano=len(datos), datos=bytes(datos),
                        datos_personales=bool(datos_personales), subido_por_lado=a.lado,
                        subido_por_id=a.id, subido_por_nombre=a.nombre)
     s.add(arch)
@@ -10354,6 +10379,26 @@ def impl_subir_archivo(s: Session, proyecto_id: int, tarjeta_id: int, actor, nom
     _impl_evento(s, proyecto_id, a, "subir", t.id,
                  {"archivo_id": arch.id, "nombre": nombre, "tamano": arch.tamano,
                   "datos_personales": bool(datos_personales)}, solo_equipo=interno)
+    return arch
+
+
+def impl_subir_archivo(s: Session, proyecto_id: int, tarjeta_id: int, actor, nombre: str, mime: str,
+                       datos: bytes, datos_personales: bool = False, mensaje_id: int = None,
+                       responde_a_id: int = None) -> Optional[ImplArchivo]:
+    """Guarda el archivo (hasta 20 MB, sin pasar por `imagenes.achicar`: son
+    documentos). None si la tarjeta no es de este proyecto."""
+    a = _impl_actor(actor)
+    t = _impl_tarjeta(s, proyecto_id, tarjeta_id)
+    if not t:
+        return None
+    m = None
+    if mensaje_id is not None:
+        m = s.exec(select(ImplMensaje).where(ImplMensaje.id == mensaje_id, ImplMensaje.proyecto_id == proyecto_id,
+                                             ImplMensaje.tarjeta_id == t.id)).first()
+        if not m:
+            raise implementacion.ErrorImpl("mensaje", "El mensaje no es de esta tarjeta.")
+    arch = _impl_guardar_archivo(s, proyecto_id, t, a, nombre, mime, datos, datos_personales=datos_personales,
+                                 mensaje=m, responde_a_id=responde_a_id)
     s.commit()
     s.refresh(arch)
     return arch
@@ -10408,6 +10453,9 @@ def impl_borrar_archivo(s: Session, proyecto_id: int, archivo_id: int, actor) ->
         raise implementacion.ErrorImpl("borrado", "El archivo ya estaba borrado.")
     if not implementacion.puede_borrar_archivo(a.lado, a.id, arch.subido_por_lado, arch.subido_por_id):
         raise implementacion.ErrorImpl("sin_permiso", "Solo lo borra quien lo subió o el equipo.")
+    t = _impl_tarjeta(s, proyecto_id, arch.tarjeta_id)
+    if t is not None and implementacion.es_inmutable(t.tipo, t.estado):
+        raise implementacion.ErrorImpl("inmutable", "La aprobación ya está resuelta y no se modifica.")
     s.exec(sa_update(ImplArchivo).where(ImplArchivo.id == arch.id).values(datos=None))
     arch.borrado_en = fechas.ahora_con_segundos()
     arch.borrado_por_lado, arch.borrado_por_id, arch.borrado_por_nombre = a.lado, a.id, a.nombre
@@ -10509,11 +10557,13 @@ def impl_usuarios(s: Session, proyecto_id: int) -> list:
 def impl_usuario_alta(s: Session, proyecto_id: int, nombre: str, mail: str, clave_inicial: str,
                       actor) -> ImplUsuario:
     """Alta por el equipo: mail único por proyecto, clave transitoria."""
-    nombre, mail = (nombre or "").strip(), (mail or "").strip().lower()
-    clave = (clave_inicial or "").strip()
+    nombre, mail = _L(nombre), _L(mail).lower()
+    clave = _L(clave_inicial)
     if not nombre:
         raise implementacion.ErrorImpl("nombre", "El usuario necesita un nombre.")
-    if not _correo_impl.destino_valido(mail):
+    implementacion.exigir_largo(nombre, implementacion.TOPE_NOMBRE, "El nombre")
+    implementacion.exigir_largo(clave, implementacion.TOPE_CLAVE, "La clave inicial")
+    if len(mail) > implementacion.TOPE_MAIL or not _correo_impl.destino_valido(mail):
         raise implementacion.ErrorImpl("mail", "El mail no es válido.")
     if len(clave) < implementacion.CLAVE_INICIAL_MINIMA:
         raise implementacion.ErrorImpl(
@@ -10555,8 +10605,8 @@ def impl_login(s: Session, mail: str, clave: str) -> Optional[ImplUsuario]:
     varios con el mismo mail, entra el primero cuya clave coincide. Devuelve el
     usuario activo (aunque deba cambiar la clave: quien llama decide), o None.
     Re-hashea si el costo del hash quedó viejo."""
-    mail = (mail or "").strip().lower()
-    clave = (clave or "").strip()
+    mail = _L(mail).lower()[:implementacion.TOPE_MAIL + 1]
+    clave = _L(clave)[:implementacion.TOPE_CLAVE + 1]
     filas = list(s.exec(select(ImplUsuario).where(ImplUsuario.mail == mail)
                         .order_by(ImplUsuario.id)).all()) if mail else []
     if not filas:
@@ -10579,13 +10629,15 @@ def impl_usuario_cambiar_clave(s: Session, usuario_id: int, clave_actual: str, c
     y distinta, y apaga la bandera. None si el usuario no existe / está inactivo
     / la clave actual no es la suya (quien llama distingue con impl_login)."""
     u = s.get(ImplUsuario, usuario_id)
-    if not u or not u.activo or not _auth_impl.verificar_clave((clave_actual or "").strip(), u.clave_hash):
+    clave_actual = _L(clave_actual)[:implementacion.TOPE_CLAVE + 1]
+    if not u or not u.activo or not _auth_impl.verificar_clave(clave_actual, u.clave_hash):
         return None
-    nueva = (clave_nueva or "").strip()
+    nueva = _L(clave_nueva)
     if len(nueva) < implementacion.CLAVE_MINIMA:
         raise implementacion.ErrorImpl(
             "clave", f"La clave nueva tiene que tener al menos {implementacion.CLAVE_MINIMA} caracteres.")
-    if nueva == (clave_actual or "").strip():
+    implementacion.exigir_largo(nueva, implementacion.TOPE_CLAVE, "La clave nueva")
+    if nueva == clave_actual:
         raise implementacion.ErrorImpl("clave_igual", "Elegí una clave distinta de la actual.")
     u.clave_hash, u.debe_cambiar_clave = _auth_impl.hashear_clave(nueva), False
     s.add(u)
@@ -10672,13 +10724,14 @@ def impl_buscar_tarjetas(s: Session, proyecto_id: int, lado: str, vista: str = "
         consulta = consulta.where(ImplTarjeta.tipo == tipo)
     if etapa_id:
         consulta = consulta.where(ImplTarjeta.etapa_id == etapa_id)
-    q = (q or "").strip()[:100]
+    q = _L(q)[:100]
     if q:
         patron = _impl_like(q)
         condiciones = [ImplTarjeta.titulo.ilike(patron, escape="\\"),
                        ImplTarjeta.codigo.ilike(patron, escape="\\")]
-        if q.lstrip("#").isdigit():
-            condiciones.append(ImplTarjeta.numero == int(q.lstrip("#")))
+        solo_digitos = q.lstrip("#")
+        if solo_digitos.isascii() and solo_digitos.isdigit() and int(solo_digitos) <= implementacion.MAX_ID:
+            condiciones.append(ImplTarjeta.numero == int(solo_digitos))
         condiciones += _impl_condiciones_por_codigo(s, proyecto_id, lado, q)
         en_mensajes = select(ImplMensaje.tarjeta_id).where(
             ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.texto.ilike(patron, escape="\\"))
@@ -10772,21 +10825,26 @@ def _impl_hito(s: Session, proyecto_id: int, hito_id: int, bloquear: bool = True
 
 
 def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: str = None,
-                     orden: int = None) -> Optional[ImplHito]:
-    """Cambia el texto y/o la posición (1..n dentro de su etapa). Solo equipo."""
+                     orden: int = None, commit: bool = True) -> Optional[ImplHito]:
+    """Cambia el texto y/o la posición (1..n dentro de su etapa). Solo equipo.
+    Valida todo ANTES de escribir; con `commit=False` queda en la transacción
+    de quien llama."""
     a = _impl_exigir_equipo(actor)
     h = _impl_hito(s, proyecto_id, hito_id)
     if not h:
         return None
     if texto is not None:
-        texto = texto.strip()
+        texto = _L(texto)
         if not texto:
             raise implementacion.ErrorImpl("texto", "El hito necesita un texto.")
+        implementacion.exigir_largo(texto, implementacion.TOPE_HITO, "El hito")
         if texto != h.texto:
             h.texto = texto
             s.add(h)
             _impl_evento(s, proyecto_id, a, "hito_editar", detalle={"hito_id": h.id, "texto": texto})
     if orden is not None:
+        # La etapa se bloquea: reordenar y sumar un hito no se pisan (QA-16).
+        s.exec(select(ImplEtapa.id).where(ImplEtapa.id == h.etapa_id).with_for_update()).first()
         hermanos = list(s.exec(select(ImplHito).where(ImplHito.proyecto_id == proyecto_id,
                                                       ImplHito.etapa_id == h.etapa_id)
                                .order_by(ImplHito.orden, ImplHito.id)).all())
@@ -10797,8 +10855,11 @@ def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: s
             if x.orden != i:
                 x.orden = i
                 s.add(x)
-    s.commit()
-    s.refresh(h)
+    if commit:
+        s.commit()
+        s.refresh(h)
+    else:
+        s.flush()
     return h
 
 
@@ -10827,7 +10888,7 @@ def impl_renombrar_etapa(s: Session, proyecto_id: int, etapa_id: int, actor, nom
                 .with_for_update()).first()
     if not et:
         return None
-    nombre = (nombre or "").strip()
+    nombre = _L(nombre)
     if not nombre or len(nombre) > 80:
         raise implementacion.ErrorImpl("nombre", "La etapa necesita un nombre de hasta 80 caracteres.")
     if nombre != et.nombre:
@@ -10910,6 +10971,7 @@ def impl_exportacion(s: Session, proyecto_id: int, actor) -> Optional[dict]:
         "descargas": todo(ImplDescarga, ImplDescarga.id), "archivos": todo(ImplArchivo, ImplArchivo.id),
         "lecturas": todo(ImplLecturaAviso, ImplLecturaAviso.id),
         "relaciones": todo(ImplRelacion, ImplRelacion.id), "contadores": todo(ImplContador, ImplContador.id),
+        "usuarios": todo(ImplUsuario, ImplUsuario.id),
         "aprobaciones": impl_aprobaciones_registro(s, proyecto_id),
     }
     _impl_evento(s, proyecto_id, a, "exportar", detalle={"tarjetas": len(datos["tarjetas"]),
@@ -10931,9 +10993,10 @@ def impl_bytes_archivo(s: Session, proyecto_id: int, archivo_id: int) -> bytes:
 def impl_tarjeta_por_codigo_o_id(s: Session, proyecto_id: int, valor) -> Optional[ImplTarjeta]:
     """La tarjeta del proyecto por su id (solo dígitos) o por su código (PE0004,
     también el de uno de sus mensajes, PE0004-3). None si no es de este proyecto."""
-    texto = str(valor if valor is not None else "").strip()
-    if texto.isdigit():
-        return _impl_tarjeta(s, proyecto_id, int(texto))
+    texto = _L(valor if valor is not None else "")
+    if texto.isascii() and texto.isdigit():
+        n = int(texto)
+        return _impl_tarjeta(s, proyecto_id, n) if n <= implementacion.MAX_ID else None
     d = implementacion.parsear_codigo(texto)
     if not d or d["tipo"] not in ("tarjeta", "mensaje"):
         return None

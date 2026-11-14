@@ -56,11 +56,17 @@ def test_a_quien_le_toca():
     assert im.texto_espera("") == ""
 
 
-def test_solo_resuelve_la_aprobacion_quien_espera():
-    assert im.puede_resolver_aprobacion("aprobacion", "abierta", "sindicato", "sindicato")
-    assert not im.puede_resolver_aprobacion("aprobacion", "abierta", "sindicato", "equipo")
-    assert not im.puede_resolver_aprobacion("aprobacion", "aprobada", "", "sindicato")
-    assert not im.puede_resolver_aprobacion("pedido", "abierta", "sindicato", "sindicato")
+def test_solo_resuelve_la_aprobacion_el_lado_que_no_la_pidio():
+    """Una sola regla (QA-01/QA-02): el tercer argumento es el AUTOR; resuelve el otro lado,
+    en cualquier estado abierto y sin importar a quién le toque el turno."""
+    for estado in ("abierta", "en_curso", "respondida"):
+        assert im.puede_resolver_aprobacion("aprobacion", estado, "equipo", "sindicato")
+        assert im.puede_resolver_aprobacion("aprobacion", estado, "sindicato", "equipo")
+        assert not im.puede_resolver_aprobacion("aprobacion", estado, "sindicato", "sindicato")
+        assert not im.puede_resolver_aprobacion("aprobacion", estado, "equipo", "equipo")
+    assert not im.puede_resolver_aprobacion("aprobacion", "aprobada", "equipo", "sindicato")
+    assert not im.puede_resolver_aprobacion("aprobacion", "abierta", "", "sindicato")       # sin autor: nadie
+    assert not im.puede_resolver_aprobacion("pedido", "abierta", "equipo", "sindicato")
 
 
 def test_validar_tarjeta_nueva():

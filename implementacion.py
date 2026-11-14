@@ -13,11 +13,13 @@ import csv
 import io
 import json
 import re
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 from typing import NamedTuple
 
 import fechas
+import listas
 
 # ---------- Lados ----------
 EQUIPO, SINDICATO = "equipo", "sindicato"
@@ -84,6 +86,47 @@ TOPE_ARCHIVO = 20 * 1024 * 1024        # 20 MB (I5)
 TOPE_TITULO = 140
 TOPE_TEXTO = 5000
 TOPE_NOMBRE_ARCHIVO = 200
+TOPE_RESPONSABLE = 200
+TOPE_HITO = 200
+TOPE_NOMBRE = 120                      # proyecto, usuario
+TOPE_MAIL = 254
+TOPE_CLAVE = 128
+TOPE_FORMULARIO = 41 * 1024 * 1024     # el cuerpo entero de un envío: 40 MB de archivos + el texto
+MAX_ID = 2 ** 31 - 1                   # un id que no entra en int4 no existe (404), nunca 500
+
+
+# ---------- Saneo ÚNICO del texto de entrada (QA-04) ----------
+def limpiar_texto(valor) -> str:
+    """Todo texto que entra a la mesa (formularios, JSON, query, login) pasa por
+    acá antes de usarse: sin NUL ni sustitutos sueltos (Postgres y el encoder
+    de UTF-8 los rechazan y salía un 500), en NFC y recortado. Nunca falla."""
+    if valor is None:
+        return ""
+    texto = valor if isinstance(valor, str) else str(valor)
+    texto = texto.replace("\x00", "").encode("utf-8", "ignore").decode("utf-8")
+    return unicodedata.normalize("NFC", texto).strip()
+
+
+def exigir_largo(texto: str, tope: int, campo: str) -> str:
+    """El texto, o ErrorImpl 400 con un mensaje claro si pasa del tope."""
+    if len(texto) > tope:
+        raise ErrorImpl("texto", f"{campo} admite hasta {tope} caracteres.")
+    return texto
+
+
+def id_valido(numero) -> bool:
+    """Un id que cabe en int4 (las columnas de la mesa)."""
+    return isinstance(numero, int) and not isinstance(numero, bool) and -MAX_ID <= numero <= MAX_ID
+
+
+_MIME_RE = re.compile(r"^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$")
+
+
+def mime_seguro(mime) -> str:
+    """El tipo del archivo reducido a `tipo/subtipo` con caracteres de token;
+    lo que no lo es (parámetros, NUL, cabeceras raras) queda como binario."""
+    base = limpiar_texto(mime).lower().split(";")[0].strip()
+    return base[:120] if _MIME_RE.match(base) else "application/octet-stream"
 
 # ---------- Fases por defecto (I7: el plan v0.2 de La Bancaria) ----------
 FASES_POR_DEFECTO = (
@@ -196,11 +239,13 @@ def lado_inicial(tipo: str, lado_autor: str) -> str:
     return otro_lado(lado_autor)
 
 
-def puede_resolver_aprobacion(tipo: str, estado: str, lado_que_espera: str, lado_actor: str) -> bool:
-    """Resuelve la aprobación el lado al que le toca (quien la pidió no se la
-    aprueba a sí mismo)."""
+def puede_resolver_aprobacion(tipo: str, estado: str, autor_lado: str, lado_actor: str) -> bool:
+    """UNA sola regla: una aprobación abierta la resuelve SOLO el lado que no la
+    pidió, en cualquier estado y sin importar a quién le toque el turno. Quien
+    la pidió (`autor_lado`) nunca se la aprueba a sí mismo, ni tomándola «en
+    curso» ni porque la otra parte contestó algo. Sin autor conocido, nadie."""
     return (tipo == APROBACION and estado in ESTADOS_ABIERTOS
-            and lado_actor in LADOS and lado_actor == lado_que_espera)
+            and autor_lado in LADOS and lado_actor in LADOS and lado_actor != autor_lado)
 
 
 # ---------- Validación ----------
@@ -216,10 +261,10 @@ def validar_tarjeta_nueva(tipo, titulo, texto, fecha_limite="") -> dict:
     """Devuelve {"ok": bool, "errores": {campo: mensaje}, "datos": {...}} con
     los textos ya recortados. Pide tres cosas: tipo, título y texto."""
     errores = {}
-    tipo = (tipo or "").strip()
-    titulo = (titulo or "").strip()
-    texto = (texto or "").strip()
-    fecha_limite = (fecha_limite or "").strip()
+    tipo = limpiar_texto(tipo)
+    titulo = limpiar_texto(titulo)
+    texto = limpiar_texto(texto)
+    fecha_limite = limpiar_texto(fecha_limite)
     if tipo not in TIPOS:
         errores["tipo"] = "Elegí qué tipo de tarjeta es."
     if not titulo:
@@ -230,8 +275,14 @@ def validar_tarjeta_nueva(tipo, titulo, texto, fecha_limite="") -> dict:
         errores["texto"] = "Contá de qué se trata."
     elif len(texto) > TOPE_TEXTO:
         errores["texto"] = f"El texto admite hasta {TOPE_TEXTO} caracteres."
-    if fecha_limite and not fecha_valida(fecha_limite):
-        errores["fecha_limite"] = "La fecha límite no se entiende."
+    if fecha_limite:
+        # El mismo parseo de fecha de formulario del proyecto: se guarda ISO
+        # (la app compara fechas como texto) o se rechaza.
+        iso = listas.normalizar_fecha(fecha_limite)
+        if iso is None:
+            errores["fecha_limite"] = "La fecha límite no se entiende."
+        else:
+            fecha_limite = iso
     return {"ok": not errores, "errores": errores,
             "datos": {"tipo": tipo, "titulo": titulo, "texto": texto, "fecha_limite": fecha_limite}}
 
@@ -245,7 +296,8 @@ def vencida(fecha_limite: str, estado: str, hoy: str = None) -> bool:
 
 # ---------- Archivos ----------
 def validar_archivo(nombre: str, tamano: int) -> str:
-    """"" si sirve; si no, el motivo."""
+    """"" si sirve; si no, el motivo. Las rutas le pasan `nombre_seguro(...)`:
+    un nombre en blanco entra como «archivo», no se descarta."""
     if not (nombre or "").strip():
         return "El archivo no tiene nombre."
     if tamano <= 0:
@@ -257,7 +309,7 @@ def validar_archivo(nombre: str, tamano: int) -> str:
 
 def nombre_seguro(nombre: str) -> str:
     """Sin ruta ni caracteres de control, con tope de largo."""
-    base = (nombre or "").replace("\\", "/").split("/")[-1]
+    base = limpiar_texto(nombre).replace("\\", "/").split("/")[-1]
     base = "".join(c for c in base if c.isprintable()).strip()
     return base[:TOPE_NOMBRE_ARCHIVO] or "archivo"
 
@@ -323,10 +375,11 @@ def _celda(valor) -> str:
 
 
 # ---------- Qué puede hacer este actor ahora (lo calcula el servidor) ----------
-def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str) -> dict:
+def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str, autor_lado: str = "") -> dict:
     """Las acciones disponibles para `lado_actor` sobre una tarjeta. La pantalla
     no decide nada: dibuja lo que esto dice. `estados` son los destinos que se
-    pueden elegir al responder (id + nombre); reabrir va aparte."""
+    pueden elegir al responder (id + nombre); reabrir va aparte. `autor_lado` es
+    quien creó la tarjeta: una aprobación la resuelve el otro lado."""
     vacio = {"responder": False, "estados": [], "solo_equipo": False, "aprobar": False,
              "reabrir": False, "subir": False, "reasignar": False}
     if tipo not in TIPOS or estado not in TRANSICIONES or lado_actor not in LADOS:
@@ -341,7 +394,7 @@ def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str) -
         "responder": abierta,
         "estados": [{"id": e, "nombre": NOMBRES_ESTADO[e]} for e in destinos] if abierta else [],
         "solo_equipo": abierta and puede_escribir_nota_interna(lado_actor),
-        "aprobar": puede_resolver_aprobacion(tipo, estado, lado_que_espera, lado_actor),
+        "aprobar": puede_resolver_aprobacion(tipo, estado, autor_lado, lado_actor),
         "reabrir": estado == CERRADA and puede_transicionar(tipo, estado, ABIERTA),
         "subir": abierta,
         "reasignar": abierta,
@@ -414,10 +467,14 @@ TEXTOS_REL = {
     (MENCIONA, "sale"): "menciona", (MENCIONA, "entra"): "mencionada en",
 }
 
-_PREFIJOS_RE = "|".join(sorted(DIGITOS, key=len, reverse=True))
-# Palabra completa: ni letra, ni dígito, ni guion bajo pegados antes o después.
+# Solo ASCII (QA-03, QA-18): el prefijo sin distinguir mayúsculas a mano, para que
+# «İ» o «ı» no casen con «i» ni un dígito árabe cuente como cifra; y palabra
+# completa en el sentido Unicode: ni letra, ni dígito, ni guion bajo pegados
+# antes o después, tampoco una «ñ».
+_PREFIJOS_RE = "|".join("".join(f"[{c.upper()}{c.lower()}]" for c in p)
+                        for p in sorted(DIGITOS, key=len, reverse=True))
 _CODIGO_RE = re.compile(
-    r"(?<![A-Za-z0-9_])(" + _PREFIJOS_RE + r")(\d{4,6})(?:-(\d{1,5}))?(?![A-Za-z0-9_])", re.IGNORECASE)
+    r"(?<!\w)(" + _PREFIJOS_RE + r")([0-9]{4,6})(?:-([0-9]{1,5}))?(?!\w)")
 
 
 def prefijo_de_tipo(tipo: str) -> str:
@@ -443,6 +500,8 @@ def formatear_codigo(prefijo: str, numero: int, orden: int = None) -> str:
 
 def _desde_match(m):
     prefijo, digitos, orden = m.group(1).upper(), m.group(2), m.group(3)
+    if prefijo not in DIGITOS:
+        return None
     ancho = DIGITOS[prefijo]
     if len(digitos) < ancho or (len(digitos) > ancho and digitos[0] == "0"):
         return None                       # PE00041 no es un código; PE12345 sí (el contador creció)

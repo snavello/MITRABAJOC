@@ -205,3 +205,38 @@ ve y lo que se enlaza difieran. Lo cierra la misma corrección de QA-03 (`re.ASC
 3. QA-03 + QA-04 + QA-05 (los 500: `re.ASCII`, un saneador de NUL en todas las entradas de texto y tope de ids) y QA-06 (transacción única para responder + archivos).
 4. QA-08 (base URL fija), QA-07, QA-10, QA-11, QA-13.
 5. Decisión de SDN sobre QA-12 (huecos de numeración) y QA-24 (entrega).
+
+---
+
+## Correcciones (segunda vuelta, 2026-11-14)
+
+Todo corregido sale con su test normal en `test_implementacion_qa.py` (84 pasan; quedan 2 `xfail` NO estrictos, los de QA-12). Cambios de contrato en `API.md` → «Correcciones del QA».
+
+| # | Estado | Cómo |
+|---|---|---|
+| QA-01 | corregido | Una sola regla en `implementacion.puede_resolver_aprobacion(tipo, estado, autor_lado, lado_actor)`: resuelve el lado que no la pidió, en cualquier estado abierto. `db.impl_resolver_aprobacion` pasa `t.autor_lado`. |
+| QA-02 | corregido | Misma regla; `acciones_de(..., autor_lado)` (que el servidor arma en `_impl_detalle`) dice lo mismo que se acepta. Se ajustaron `test_implementacion.py`, `test_implementacion_api.py` y `test_implementacion_codigos.py`, que asumían la regla vieja. |
+| QA-03 | corregido | `_CODIGO_RE` sin `IGNORECASE`: prefijos `[Pp][Ee]…`, dígitos `[0-9]`; `_desde_match` devuelve `None` ante un prefijo desconocido (nunca `KeyError`). |
+| QA-04 | corregido | `implementacion.limpiar_texto` (sin `\x00`, sin sustitutos sueltos, NFC, recortado) en todas las puertas de texto: en `db.py` (`_L`) y en `main` (formularios, JSON, `q`, `codigo`, login y cambio de clave). |
+| QA-05 | corregido | Tipos `IdImpl`/`IdImplOpt` (404 si el id no entra en int4) en todas las rutas de la mesa y del equipo; `_impl_int` y `sindicato_id` dan 400; `impl_tarjeta_por_codigo_o_id` y la búsqueda por número tampoco revientan (`² `, números enormes). |
+| QA-06 | corregido | `mime_seguro` (token `tipo/subtipo`) y mensaje + estado + archivos en UNA transacción: `db.impl_responder(..., adjuntos=)` e `impl_crear_tarjeta(..., adjuntos=)` usan `_impl_guardar_archivo` sin commit. |
+| QA-07 | corregido | `impl_reasignar`: 409 `cerrada` y 400 `aviso`, coherente con `acciones.reasignar`. |
+| QA-08 | corregido | El enlace sale de `entorno.URLS[entorno.ENTORNO]`; sin URL pública (local), el mail no lleva enlace absoluto. |
+| QA-09 | corregido | `_impl_equipo_de_sesion` es la única definición de «equipo» y la usan `_actor_impl` y `_impl_equipo_api` (sin pase del PIN). |
+| QA-10 | corregido | Constantes `TOPE_*` en `implementacion.py` y `exigir_largo` (400 con mensaje) en aprobación, responsable, hitos, proyecto, usuario, mail y clave. |
+| QA-11 | corregido | `validar_tarjeta_nueva` usa `listas.normalizar_fecha` (la de las fechas del padrón) y guarda ISO o rechaza. |
+| QA-12 | pendiente de decisión | Sin cambios: el test queda `xfail` no estricto («decisión de SDN pendiente»). Opciones en el defecto. |
+| QA-13 | corregido | `impl_borrar_archivo` → 409 `inmutable` si la tarjeta es una aprobación resuelta. |
+| QA-14 | corregido | Freno propio de la mesa (`_impl_login_bloqueado/_fallo`): fallos por IP en ventana de 10 min, un ingreso correcto no reinicia el contador. Los otros logins no se tocaron. |
+| QA-15 | corregido | Las dos rutas con archivos ya no declaran `File`/`Form`: autorizan primero y leen el cuerpo con `_impl_formulario` (corta por `Content-Length` y por bytes recibidos arriba de 41 MB); un anónimo recibe 401 sin que se parsee nada. |
+| QA-16 | corregido | `impl_agregar_hito` (y el reordenado) bloquean la etapa con `FOR UPDATE`; test sin `xfail`. |
+| QA-17 | corregido | Un archivo con contenido y sin nombre entra como «archivo»; solo se ignora el campo vacío (sin nombre y sin bytes, lo que manda un navegador sin archivo elegido). |
+| QA-18 | corregido | Lo cierra la corrección de QA-03. |
+| QA-19 | corregido | El riesgo era real (`alembic_version` viene del dump de la demo, las tablas `impl*` no). Las migraciones `3be99db601b1` y `c4e7a9b2d6f1` son idempotentes (no crean lo que existe; el backfill no se repite). Test: `test_las_migraciones_de_la_mesa_son_idempotentes` (levanta una base, la deja con `alembic_version` viejo y vuelve a correr `upgrade head`). |
+| QA-20 | corregido | `_impl_frenar_ritmo`: 30 por 10 min por usuario del sindicato (429 `demasiados`), en memoria del proceso; el equipo no se frena. Variables `IMPL_RITMO_MAX`, `IMPL_RITMO_VENTANA_S`. |
+| QA-21 | corregido (parcial a propósito) | Siguen siendo GET (navegación del propio usuario con `SameSite=Lax`); se agrega el rechazo (403) cuando el navegador manda `Sec-Fetch-Site: cross-site`. Un navegador sin esa cabecera sigue como antes: solo ensucia la traza, la respuesta no llega al atacante. |
+| QA-22 | corregido | `usuarios.json` (sin `clave_hash`) en el ZIP, mensaje claro al pasar el tope y `?sin_archivos=1` como camino alternativo. |
+| QA-23 | aceptado | El título libre en el asunto y el cuerpo del mail es el contenido que el plan permite; no hay inyección de cabeceras (una sola línea, 100 caracteres) y el enlace ya no sale del `Host` (QA-08). |
+| QA-24 | pendiente de decisión | Sin cambios (la entrega se cierra a mano); SDN confirma si «cerrada al recibirlo» es obligatorio. |
+| QA-25 | aceptado | Sesiones sin estado de 15 min deslizantes; el pedido siguiente ya corta bajas, claves restablecidas y proyectos desactivados. |
+| QA-26 | corregido | `plan/hitos/{hid}` valida existencia, texto y orden antes de escribir y escribe tildado + edición en una sola transacción (`commit=False` en `impl_tildar_hito`/`impl_editar_hito`). |

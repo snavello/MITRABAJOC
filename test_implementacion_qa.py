@@ -1,8 +1,9 @@
 """QA de seguridad y lógica de la Mesa de implementación (independiente).
 
-Los tests que hoy FALLAN por un defecto real van marcados con
-`xfail(strict=True)`: cuando el defecto se corrija el test pasa y strict lo
-avisa (hay que sacar la marca). Informe: docs/implementacion/QA-servidor.md.
+Cada defecto del informe (docs/implementacion/QA-servidor.md) quedó corregido y su
+test es un test normal. Las únicas excepciones son los dos de QA-12 (huecos de
+numeración que delatan una nota interna), `xfail` NO estricto: es una decisión de
+SDN pendiente, no un defecto a corregir sin su palabra.
 
 Correr con: python -m pytest test_implementacion_qa.py -q
 """
@@ -34,10 +35,14 @@ DEFINITIVA = "definitiva-2026"
 
 
 @pytest.fixture(autouse=True)
-def _sin_freno():
+def _sin_freno(monkeypatch):
     main._intentos_impl.clear()
+    main._impl_ritmo.clear()
+    # El freno de ritmo (QA-20) no es lo que se prueba en el resto: arriba de lo que usa un test.
+    monkeypatch.setattr(main, "IMPL_RITMO_MAX", 10 ** 6)
     yield
     main._intentos_impl.clear()
+    main._impl_ritmo.clear()
 
 
 def _u(prefijo="x"):
@@ -112,13 +117,6 @@ def _pdf(nombre="a.pdf", datos=b"%PDF-1.4 x", mime="application/pdf"):
 
 def _id_inexistente():
     return 2_000_000_000
-
-
-XF = pytest.mark.xfail(strict=True)
-
-
-def _xf(razon):
-    return pytest.mark.xfail(strict=True, reason=razon)
 
 
 def _eq_url(ruta=""):
@@ -265,14 +263,14 @@ def test_la_exportacion_es_solo_del_equipo():
     assert any("NOTA-SECRETA" in z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".json"))
 
 
-@_xf("QA-12: el hueco de `orden`/código de mensaje delata que hay una nota interna (I8: 'el sindicato no debe notar nada')")
+@pytest.mark.xfail(strict=False, reason="QA-12: decisión de SDN pendiente (el hueco de `orden` delata una nota interna)")
 def test_el_sindicato_no_nota_huecos_en_la_numeracion_de_mensajes():
     pid, eq, sin, t, *_ = _mundo_con_nota_interna()
     ordenes = [m["orden"] for m in _det(sin, pid, t["id"])["mensajes"]]
     assert ordenes == list(range(1, len(ordenes) + 1)), ordenes     # hoy: [1, 3]
 
 
-@_xf("QA-12: el hueco del contador AR delata un archivo interno")
+@pytest.mark.xfail(strict=False, reason="QA-12: decisión de SDN pendiente (el hueco del contador AR delata un archivo interno)")
 def test_el_sindicato_no_nota_huecos_en_los_codigos_de_archivo():
     pid, eq, sin = _mundo()
     t = _crear(sin, pid, archivos=_pdf("publico1.pdf"))
@@ -360,7 +358,6 @@ def test_exportar_zip_sin_zip_slip_ni_formulas_en_los_csv():
     assert "'=1+1" in sin.get(_api(pid, "aprobaciones.csv")).content.decode("utf-8")
 
 
-@_xf("QA-05: el multipart se recibe ENTERO antes de autorizar (FastAPI parsea el form antes de la ruta): subida anónima de archivos grandes")
 def test_una_subida_sin_sesion_no_se_recibe_entera(monkeypatch):
     pid, eq, sin = _mundo()
     visto = {}
@@ -378,7 +375,6 @@ def test_una_subida_sin_sesion_no_se_recibe_entera(monkeypatch):
     assert not visto.get("size")          # hoy: 3145728 (ya estaba toda en disco/memoria)
 
 
-@_xf("QA-06: un Content-Type con NUL hace fallar el INSERT del archivo DESPUÉS de haber confirmado el mensaje y el estado (500 + cambio a medias)")
 def test_un_archivo_que_falla_no_deja_el_responder_a_medias():
     pid, eq, sin = _mundo()
     t = _crear(sin, pid)
@@ -393,7 +389,6 @@ def test_un_archivo_que_falla_no_deja_el_responder_a_medias():
     assert (d["tarjeta"]["estado"], len(d["mensajes"]), len(d["archivos"])) in (("abierta", 1, 0), ("respondida", 2, 1))
 
 
-@_xf("QA-17: un archivo con nombre en blanco se descarta en silencio y el pedido sale 200")
 def test_un_archivo_sin_nombre_no_se_pierde_en_silencio():
     pid, eq, sin = _mundo()
     t = _crear(sin, pid)
@@ -436,7 +431,6 @@ def test_una_aprobacion_resuelta_no_se_toca_por_ninguna_ruta_de_hilo():
         assert eq.post(_api(pid, f"tarjetas/{ap['id']}/aprobacion"), json=body).status_code == 400
 
 
-@_xf("QA-01: el equipo toma su propia aprobación con 'en curso' (el turno pasa a él) y se la aprueba")
 def test_quien_pidio_una_aprobacion_no_puede_aprobarla_tomandola_en_curso():
     pid, eq, sin = _mundo()
     tid = _crear(eq, pid, "aprobacion", "Aprobar X", "texto")["id"]
@@ -445,7 +439,6 @@ def test_quien_pidio_una_aprobacion_no_puede_aprobarla_tomandola_en_curso():
     assert r.status_code == 403, (r.status_code, "el solicitante se aprobó a sí mismo")
 
 
-@_xf("QA-02: el solicitante aprueba su propia aprobación en cuanto la otra parte contesta algo ('respondida' le devuelve el turno)")
 def test_el_solicitante_no_aprueba_lo_que_pidio_tras_una_respuesta():
     pid, eq, sin = _mundo()
     tid = _crear(sin, pid, "aprobacion", "Aprobar Y", "texto")["id"]
@@ -455,7 +448,6 @@ def test_el_solicitante_no_aprueba_lo_que_pidio_tras_una_respuesta():
     assert not ac["aprobar"] and r.status_code == 403, (ac["aprobar"], r.status_code)
 
 
-@_xf("QA-13: un adjunto de una aprobación ya resuelta se puede borrar (la aprobación dice ser inmutable)")
 def test_no_se_borra_un_adjunto_de_una_aprobacion_resuelta():
     pid, eq, sin = _mundo()
     t = _crear(sin, pid, "aprobacion", "A", "x", archivos=_pdf("contrato.pdf"))
@@ -497,7 +489,6 @@ def test_acciones_coincide_con_lo_que_el_servidor_acepta():
     assert discrepancias == []
 
 
-@_xf("QA-07: reasignar se acepta (200) en tarjetas cerradas y en avisos aunque `acciones.reasignar` sea false")
 @pytest.mark.parametrize("tipo,estado", [("pedido", "cerrada"), ("aviso", "cerrada")])
 def test_reasignar_respeta_acciones(tipo, estado):
     pid, eq, sin = _mundo()
@@ -585,7 +576,6 @@ def test_login_no_distingue_mail_existente_ni_cuenta_inactiva_y_tiene_freno():
     assert c.post("/implementacion/ingresar", data={"mail": sin.mail, "clave": DEFINITIVA}).headers["location"].endswith("error=espera")
 
 
-@_xf("QA-14: el freno por IP se reinicia con un login exitoso PROPIO: se pueden tantear claves sin límite intercalando el propio")
 def test_el_freno_no_se_reinicia_con_un_login_propio_exitoso():
     pid = _proyecto()
     victima, atacante = _cliente_sindicato(pid), _cliente_sindicato(pid)
@@ -599,7 +589,6 @@ def test_el_freno_no_se_reinicia_con_un_login_propio_exitoso():
     assert any(v.endswith("error=espera") for v in vistos)       # hoy: 24 intentos sin una sola espera
 
 
-@_xf("QA-09: la API del equipo no revisa activo / clave pendiente / datos pendientes del usuario de plataforma (la mesa sí)")
 @pytest.mark.parametrize("kw", [{"activo": False}, {"debe_cambiar_clave": True}, {"debe_completar_datos": True}])
 def test_la_api_del_equipo_rechaza_usuarios_de_plataforma_inactivos_o_pendientes(kw):
     c = _cliente_equipo(**kw)
@@ -632,7 +621,6 @@ def test_cookies_de_la_mesa_son_httponly_y_samesite():
     assert "httponly" in cab and "samesite=lax" in cab
 
 
-@_xf("QA-08: el enlace del mail de aviso se arma con el Host del pedido: un usuario autenticado manda al equipo un mail con un enlace a un dominio ajeno")
 def test_el_enlace_del_aviso_no_depende_del_header_host(monkeypatch):
     enviados = []
     monkeypatch.setattr(main.correo, "habilitado", lambda: True)
@@ -659,7 +647,6 @@ def test_reconocimiento_de_codigos():
     assert ex("PE0004 " * 1000) == ["PE0004"]
 
 
-@_xf("QA-03: 'Hİ0001' (I con punto) casa con IGNORECASE y el .upper() produce un prefijo inexistente: KeyError -> 500 en crear/buscar/q")
 @pytest.mark.parametrize("donde", ["crear_texto", "crear_titulo", "buscar", "q", "responder"])
 def test_un_codigo_con_i_turca_no_rompe(donde):
     pid, eq, sin = _mundo()
@@ -711,7 +698,6 @@ def test_creacion_concurrente_no_repite_numeros_ni_codigos():
     assert sorted(t["numero"] for t in ts) == list(range(1, 9)) and len({t["codigo"] for t in ts}) == 8
 
 
-@pytest.mark.xfail(strict=False, reason="QA-16: dos hitos creados a la vez en la misma etapa reciben el mismo `orden` (max+1 sin bloqueo); carrera, puede no darse")
 def test_hitos_concurrentes_tienen_orden_unico():
     pid, eq, _ = _mundo()
     etapa = eq.get(_api(pid, "plan")).json()["etapas"][0]["id"]
@@ -762,8 +748,7 @@ NUL_RUTAS = ["crear.titulo", "crear.texto", "responder.texto", "lista.q", "aprob
              "plan.hito.texto", "plan.hito.editar", "plan.etapa", "login.mail", "equipo.proyecto", "equipo.usuario"]
 
 
-@pytest.mark.parametrize("ruta", [pytest.param(r, marks=_xf(
-    "QA-04: un NUL (\\x00) en cualquier texto llega a Postgres ('text fields cannot contain NUL') y sale 500")) for r in NUL_RUTAS])
+@pytest.mark.parametrize("ruta", NUL_RUTAS)
 def test_un_nul_en_un_texto_no_da_500(ruta):
     pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
     assert _lanzadores(pid, eq, sin, t, ap, etapa, hito)[ruta]("a\x00b").status_code < 500
@@ -782,8 +767,7 @@ def test_textos_raros_no_dan_500():
 BIG = ["2147483648", "99999999999", str(10 ** 30)]
 
 
-@pytest.mark.parametrize("big", [pytest.param(b, marks=_xf(
-    "QA-05: un id mayor a int4 en la ruta/query/form llega a Postgres y sale 500 (en vez de 404/422)")) for b in BIG])
+@pytest.mark.parametrize("big", BIG)
 def test_ids_gigantes_no_dan_500(big):
     pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
     resp = [
@@ -813,7 +797,6 @@ def test_json_y_multipart_malformados_no_dan_500():
             assert eq.post(_api(pid, ruta), content=body, headers={"content-type": ct}).status_code < 500, (ct, ruta)
 
 
-@_xf("QA-10: aprobacion.texto, reasignar.responsable y hito.texto no tienen tope de largo (3 MB aceptados; el listado de tarjetas devuelve el responsable de cada una)")
 @pytest.mark.parametrize("ruta", ["aprobacion", "reasignar", "hito"])
 def test_los_textos_libres_tienen_tope(ruta):
     pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
@@ -825,7 +808,6 @@ def test_los_textos_libres_tienen_tope(ruta):
     assert r.status_code == 400
 
 
-@_xf("QA-11: `fecha_limite` se guarda tal cual ('2026-1-5', dígitos de ancho completo): la comparación como texto con hoy falla (vencida/vencidas)")
 @pytest.mark.parametrize("fecha,iso", [("2026-1-5", "2026-01-05"), ("２０２６-01-01", "2026-01-01")])
 def test_fecha_limite_se_normaliza_a_iso(fecha, iso):
     pid, eq, sin = _mundo()
@@ -851,3 +833,320 @@ def test_las_guardas_de_i3_cubren_todas_las_tablas_impl():
     assert ajenas == []
     with open("cargar_demo.py", encoding="utf-8") as f:
         assert "PREFIJO_TABLAS" in f.read()
+
+
+# =====================================================================
+# 10. Correcciones de la segunda vuelta (tests que fijan lo corregido)
+# =====================================================================
+def test_la_regla_de_aprobacion_vale_para_los_dos_lados_y_acciones_lo_dice():
+    """QA-01 / QA-02, desde el sindicato y desde el equipo, en todos los estados abiertos."""
+    pid, eq, sin = _mundo()
+    for creador, otro in ((eq, sin), (sin, eq)):
+        for estado in (None, "en_curso", "respondida"):
+            tid = _crear(creador, pid, "aprobacion", "Aprobar", "texto")["id"]
+            if estado:
+                assert _resp(creador, pid, tid, estado_nuevo=estado, texto="la tomo").status_code == 200
+            assert _det(creador, pid, tid)["acciones"]["aprobar"] is False
+            assert creador.post(_api(pid, f"tarjetas/{tid}/aprobacion"), json={"aprobar": True}).status_code == 403
+            assert _det(otro, pid, tid)["acciones"]["aprobar"] is True       # la otra parte sí, aunque no le toque el turno
+            assert otro.post(_api(pid, f"tarjetas/{tid}/aprobacion"), json={"aprobar": True}).status_code == 200
+
+
+def test_codigos_solo_ascii():
+    """QA-03 / QA-18."""
+    assert im.extraer_codigos("Hİ0001 ñPE0004 PE0004ñ PE٠٠٠٤ ıPE0004") == []
+    assert im.parsear_codigo("Hİ0001") is None
+    assert im.extraer_codigos("(pe0004), AR000123.") == ["PE0004", "AR000123"]
+
+
+def test_el_saneo_unico_de_texto():
+    """QA-04: sin NUL ni sustitutos sueltos, en NFC y recortado."""
+    assert im.limpiar_texto("  a\x00b\ud800c  ") == "abc"
+    assert im.limpiar_texto("e\u0301") == "\u00e9"
+    assert im.limpiar_texto(None) == "" and im.limpiar_texto(12) == "12"
+
+
+def test_un_sustituto_suelto_en_un_json_no_da_500():
+    pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
+    for ruta, cuerpo in ((f"tarjetas/{t}/reasignar", {"responsable": "a\ud800b", "responsable_lado": "equipo"}),
+                         ("plan/hitos", {"etapa_id": etapa, "texto": "h\ud800"}),
+                         (f"tarjetas/{ap}/aprobacion", {"aprobar": True, "texto": "x\ud800\x00"})):
+        r = eq.post(_api(pid, ruta), content=json.dumps(cuerpo).encode("ascii"),
+                    headers={"content-type": "application/json"})
+        assert r.status_code < 500, (ruta, r.status_code)
+    assert "\ud800" not in eq.get(_api(pid, f"tarjetas/{t}")).text
+
+
+def test_ids_fuera_de_int4_son_404_y_en_un_campo_400():
+    """QA-05."""
+    pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
+    for c in (eq, sin):
+        assert c.get(_api(pid, "tarjetas/2147483648")).status_code == 404
+        assert c.get("/api/implementacion/p/2147483648/resumen").status_code == 404
+        assert c.get(_api(pid, "archivos/99999999999")).status_code == 404
+    assert eq.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "t", "texto": "t",
+                                                  "etapa_id": "99999999999"}).status_code == 400
+    assert eq.post(_eq_url("proyectos"), json={"nombre": "X", "sindicato_id": 10 ** 20}).status_code == 400
+    assert eq.get(_eq_url(f"proyectos/{10 ** 12}/usuarios")).status_code == 404
+    # un dígito Unicode no-ASCII tampoco rompe la búsqueda por número
+    assert eq.get(_api(pid, "tarjetas"), params={"q": "²"}).status_code == 200
+    assert eq.get(_api(pid, "tarjetas"), params={"q": "#99999999999"}).status_code == 200
+
+
+def test_mime_saneado_y_responder_atomico_con_archivo_fallido():
+    """QA-06: el mime se sanea (un NUL ya no rompe el INSERT) y, si un adjunto igual falla
+    (un archivo ya borrado de la lista, p. ej.), no cambia nada: ni mensaje, ni estado, ni archivos."""
+    pid, eq, sin = _mundo()
+    t = _crear(sin, pid)
+    assert im.mime_seguro("te\x00xt/plain") == "text/plain"
+    assert im.mime_seguro("text/html; charset=\x00") == "text/html"
+    assert im.mime_seguro("???") == "application/octet-stream"
+    antes = _det(eq, pid, t["id"])
+    with db.get_session() as s:
+        with pytest.raises(im.ErrorImpl):
+            db.impl_responder(s, pid, t["id"], EQ, texto="hola", estado_nuevo="respondida",
+                              adjuntos=[("ok.pdf", "application/pdf", b"%PDF"), ("vacio.pdf", "application/pdf", b"")])
+    despues = _det(eq, pid, t["id"])
+    assert despues["tarjeta"]["estado"] == antes["tarjeta"]["estado"] == "abierta"
+    assert len(despues["mensajes"]) == len(antes["mensajes"]) == 1
+    assert despues["archivos"] == antes["archivos"] == []
+    assert len(despues["eventos"]) == len(antes["eventos"])
+    # y en la creación: si un archivo falla no queda la tarjeta
+    n = len(eq.get(_api(pid, "tarjetas"), params={"vista": "todas"}).json()["tarjetas"])
+    with db.get_session() as s:
+        with pytest.raises(im.ErrorImpl):
+            db.impl_crear_tarjeta(s, pid, EQ, "pedido", "t", "t", adjuntos=[("v.pdf", "x/y", b"")])
+    assert len(eq.get(_api(pid, "tarjetas"), params={"vista": "todas"}).json()["tarjetas"]) == n
+
+
+def test_reasignar_sobre_cerrada_aviso_y_aprobacion_resuelta_es_409_o_400():
+    """QA-07, con los códigos."""
+    pid, eq, sin = _mundo()
+    cuerpo = {"responsable": "X", "responsable_lado": "sindicato"}
+    cerrada = _llevar(pid, eq, sin, "pedido", "sindicato", "cerrada")
+    assert sin.post(_api(pid, f"tarjetas/{cerrada}/reasignar"), json=cuerpo).status_code == 409
+    aviso = _crear(eq, pid, "aviso", "av", "x")["id"]
+    assert eq.post(_api(pid, f"tarjetas/{aviso}/reasignar"), json=cuerpo).status_code == 400
+    ap = _llevar(pid, eq, sin, "aprobacion", "sindicato", "aprobada")
+    assert eq.post(_api(pid, f"tarjetas/{ap}/reasignar"), json=cuerpo).status_code == 409
+
+
+def test_el_enlace_del_aviso_usa_la_url_publica_del_entorno(monkeypatch):
+    """QA-08: se arma con entorno.URLS (aquí, pruebas), no con el Host."""
+    enviados = []
+    monkeypatch.setattr(main.correo, "habilitado", lambda: True)
+    monkeypatch.setattr(main.correo, "enviar", lambda d, a, t: enviados.append((d, a, t)) or True)
+    monkeypatch.setattr(main, "IMPL_AVISOS_SINCRONO", True)
+    mail_eq = f"{_u('eq')}@colm3na.test"
+    _cliente_equipo(email=mail_eq)
+    pid = _proyecto()
+    sin = _cliente_sindicato(pid)
+    sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "Hola", "texto": "x"}, headers={"host": "evil.example"})
+    cuerpos = [c for d, a, c in enviados if d == mail_eq]
+    assert cuerpos and all(entorno.URLS["pruebas"] + "/implementacion?p=" in c for c in cuerpos)
+    # sin URL pública (local): sin enlace absoluto
+    enviados.clear()
+    monkeypatch.setattr(entorno, "ENTORNO", "local")
+    sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "Hola 2", "texto": "x"}, headers={"host": "evil.example"})
+    cuerpos = [c for d, a, c in enviados if d == mail_eq]
+    assert cuerpos and all("evil.example" not in c and "http" not in c for c in cuerpos)
+
+
+def test_la_api_del_equipo_pide_lo_mismo_que_la_mesa():
+    """QA-09: activo, sin clave ni datos pendientes; sin sesión 403; baja de una sesión vigente 401."""
+    ok = _cliente_equipo()
+    assert ok.get(_eq_url("proyectos")).status_code == 200
+    anon = TestClient(main.app, follow_redirects=False)
+    assert anon.get(_eq_url("proyectos")).status_code == 403
+    baja = _cliente_equipo()
+    with db.get_session() as s:
+        u = s.get(db.UsuarioPlataforma, baja.uid)
+        u.activo = False
+        s.add(u)
+        s.commit()
+    assert baja.get(_eq_url("proyectos")).status_code == 401
+    assert baja.post(_eq_url("proyectos"), json={"nombre": "no"}).status_code == 401
+
+
+def test_topes_de_largo_de_los_textos_libres():
+    """QA-10: los mensajes son claros y el límite exacto entra."""
+    pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
+    r = eq.post(_api(pid, f"tarjetas/{t}/reasignar"), json={"responsable": "A" * 201, "responsable_lado": "equipo"})
+    assert r.status_code == 400 and "200" in r.json()["detail"]
+    assert eq.post(_api(pid, f"tarjetas/{t}/reasignar"), json={"responsable": "A" * 200, "responsable_lado": "equipo"}).status_code == 200
+    assert eq.post(_api(pid, "plan/hitos"), json={"etapa_id": etapa, "texto": "B" * 200}).status_code == 200
+    assert eq.post(_api(pid, f"plan/hitos/{hito}"), json={"texto": "B" * 201}).status_code == 400
+    assert eq.post(_eq_url("proyectos"), json={"nombre": "N" * 121}).status_code == 400
+    r = eq.post(_api(pid, f"tarjetas/{ap}/aprobacion"), json={"aprobar": True, "texto": "T" * 5001})
+    assert r.status_code == 400 and "5000" in r.json()["detail"]
+
+
+def test_fecha_limite_invalida_se_rechaza_y_la_ar_se_normaliza():
+    """QA-11: mismo parseo que las fechas del padrón."""
+    pid, eq, sin = _mundo()
+    for mala in ("2026-13-45", "mañana", "2026/01/05"):
+        assert sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "t", "texto": "t", "fecha_limite": mala}).status_code == 400
+    r = sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "t", "texto": "t", "fecha_limite": "5/1/2030"})
+    assert r.status_code == 200 and r.json()["tarjeta"]["fecha_limite"] == "2030-01-05"
+
+
+def test_el_freno_del_login_cuenta_fallos_en_ventana_y_se_vence(monkeypatch):
+    """QA-14: sin reinicio por un login propio; los fallos viejos no cuentan."""
+    pid = _proyecto()
+    sin = _cliente_sindicato(pid)
+    c = TestClient(main.app, follow_redirects=False)
+    main._intentos_impl.clear()
+    for i in range(9):
+        c.post("/implementacion/ingresar", data={"mail": sin.mail, "clave": f"mala{i}"})
+    # un ingreso correcto NO borra los 9 fallos: el décimo ya bloquea
+    c.post("/implementacion/ingresar", data={"mail": sin.mail, "clave": DEFINITIVA})
+    r = c.post("/implementacion/ingresar", data={"mail": sin.mail, "clave": "otra"})
+    r2 = c.post("/implementacion/ingresar", data={"mail": sin.mail, "clave": DEFINITIVA})
+    assert r2.headers["location"].endswith("error=espera"), (r.headers, r2.headers)
+    # los fallos fuera de la ventana no cuentan
+    main._intentos_impl.clear()
+    import time
+    est = {"fallos": [time.time() - main.IMPL_LOGIN_VENTANA_S - 5] * 50, "hasta": 0.0}
+    main._intentos_impl["testclient"] = est
+    assert main._impl_login_bloqueado(type("R", (), {"headers": {}, "client": type("C", (), {"host": "testclient"})()})()) is False
+
+
+def test_una_subida_anonima_se_corta_por_content_length(monkeypatch):
+    """QA-15: sin sesión, 401 sin parsear; con sesión, arriba del tope total 413 sin leerla."""
+    pid, eq, sin = _mundo()
+    anon = TestClient(main.app, follow_redirects=False, raise_server_exceptions=False)
+    r = anon.post(_api(pid, "tarjetas"), content=b"x" * 100, headers={
+        "content-type": "multipart/form-data; boundary=abc", "content-length": str(500 * 1024 * 1024)})
+    assert r.status_code == 401
+    for ruta in ("tarjetas", f"tarjetas/{_crear(sin, pid)['id']}/responder"):
+        r = sin.post(_api(pid, ruta), content=b"x" * 100, headers={
+            "content-type": "multipart/form-data; boundary=abc", "content-length": str(500 * 1024 * 1024)})
+        assert r.status_code == 413
+
+
+def test_hitos_concurrentes_con_orden_unico_y_bloqueo_de_etapa():
+    """QA-16 (la carrera ya no se da con el bloqueo de la etapa)."""
+    pid, eq, _ = _mundo()
+    etapa = eq.get(_api(pid, "plan")).json()["etapas"][0]["id"]
+
+    def go(i):
+        _cliente_equipo().post(_api(pid, "plan/hitos"), json={"etapa_id": etapa, "texto": f"h{i}"})
+    ths = [threading.Thread(target=go, args=(i,)) for i in range(10)]
+    [x.start() for x in ths]
+    [x.join() for x in ths]
+    ordenes = [h["orden"] for h in eq.get(_api(pid, "plan")).json()["etapas"][0]["hitos"]]
+    assert sorted(ordenes) == list(range(1, 11)), ordenes
+
+
+def test_un_archivo_sin_nombre_entra_como_archivo_y_uno_vacio_se_ignora():
+    """QA-17."""
+    pid, eq, sin = _mundo()
+    t = _crear(sin, pid)
+    assert _resp(sin, pid, t["id"], texto="a", files=[("archivos", ("   ", b"datos", "text/plain"))]).status_code == 200
+    assert [a["nombre"] for a in _det(eq, pid, t["id"])["archivos"]] == ["archivo"]
+    assert _resp(sin, pid, t["id"], texto="b", files=[("archivos", ("", b"", "application/octet-stream"))]).status_code == 200
+    assert len(_det(eq, pid, t["id"])["archivos"]) == 1
+
+
+def test_las_migraciones_de_la_mesa_son_idempotentes():
+    """QA-19: `clonar_demo_a_pruebas.py` restaura sobre Pruebas un dump SIN las tablas impl* pero CON
+    `alembic_version` de la demo (más vieja): el siguiente `alembic upgrade head` no puede chocar con
+    las tablas y columnas de la mesa que ya están, ni duplicar sus contadores."""
+    import subprocess
+    import sys
+    import psycopg
+    from test_migraciones import _psycopg, _url_con_base
+    nombre = f"mitrabajo_mig_idem_{os.getpid()}_{uuid.uuid4().hex[:6]}"
+    base_url = str(db.engine.url.render_as_string(hide_password=False))
+    admin, url_mig = _psycopg(_url_con_base(base_url, "postgres")), _url_con_base(base_url, nombre)
+    env = {**os.environ, "DATABASE_URL": url_mig}
+
+    def alembic():
+        return subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], env=env,
+                              capture_output=True, text=True, timeout=300)
+    with psycopg.connect(admin, autocommit=True) as c:
+        c.execute(f'CREATE DATABASE "{nombre}"')
+    try:
+        r = alembic()
+        assert r.returncode == 0, r.stderr[-1500:]
+        with psycopg.connect(_psycopg(url_mig), autocommit=True) as c:
+            cabeza = c.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+            c.execute("INSERT INTO implproyecto (nombre, activo, ultimo_numero, creado) VALUES ('P', true, 1, '2026-01-01')")
+            c.execute("INSERT INTO implcontador (proyecto_id, prefijo, ultimo) "
+                      "SELECT id, 'PE', 1 FROM implproyecto LIMIT 1")
+            # lo que deja el restore de la demo: alembic_version anterior a la mesa, tablas impl* intactas
+            c.execute("UPDATE alembic_version SET version_num = 'e8b2d4f6a1c3'")
+        r = alembic()
+        assert r.returncode == 0, ("alembic upgrade head chocó con lo que la mesa ya tenía:\n" + r.stderr[-1500:])
+        with psycopg.connect(_psycopg(url_mig)) as c:
+            assert c.execute("SELECT version_num FROM alembic_version").fetchone()[0] == cabeza
+            assert c.execute("SELECT count(*) FROM implcontador").fetchone()[0] == 1       # no se duplicó nada
+            assert c.execute("SELECT count(*) FROM implproyecto").fetchone()[0] == 1
+    finally:
+        with psycopg.connect(admin, autocommit=True) as c:
+            c.execute(f'DROP DATABASE IF EXISTS "{nombre}" WITH (FORCE)')
+
+
+def test_freno_de_ritmo_por_usuario_del_sindicato(monkeypatch):
+    """QA-20: 429 con mensaje al pasar el tope; no es del equipo ni de otro usuario; se vence."""
+    pid, eq, sin = _mundo()
+    otro = _cliente_sindicato(pid, "Otra persona")
+    monkeypatch.setattr(main, "IMPL_RITMO_MAX", 3)
+    main._impl_ritmo.clear()
+    t = _crear(eq, pid)["id"]
+    codigos = [sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": f"t{i}", "texto": "x"}).status_code
+               for i in range(2)]
+    codigos.append(_resp(sin, pid, t, texto="una más").status_code)
+    assert codigos == [200, 200, 200]
+    r = sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "tope", "texto": "x"})
+    assert r.status_code == 429 and "Esperá" in r.json()["detail"]
+    assert _resp(sin, pid, t, texto="también frenada").status_code == 429
+    assert otro.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "otra", "texto": "x"}).status_code == 200
+    for _ in range(5):                                                     # el equipo no se frena
+        assert _resp(eq, pid, t, texto="equipo").status_code == 200
+    monkeypatch.setattr(main, "IMPL_RITMO_VENTANA_S", 0)                  # ventana vencida: vuelve a andar
+    assert sin.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "ya", "texto": "x"}).status_code == 200
+
+
+def test_descarga_y_exportacion_rechazan_un_pedido_de_otro_sitio():
+    """QA-21: GET con efecto -> 403 si el navegador declara Sec-Fetch-Site: cross-site."""
+    pid, eq, sin = _mundo()
+    t = _crear(sin, pid, archivos=_pdf("a.pdf"))
+    aid = _det(eq, pid, t["id"])["archivos"][0]["id"]
+    cruz = {"sec-fetch-site": "cross-site"}
+    assert sin.get(_api(pid, f"archivos/{aid}"), headers=cruz).status_code == 403
+    assert eq.get(_api(pid, "exportar.zip"), headers=cruz).status_code == 403
+    with db.get_session() as s:
+        assert len(db.impl_descargas(s, pid, aid)) == 0                       # no quedó registrada
+    for sitio in ("same-origin", "same-site", "none"):
+        assert sin.get(_api(pid, f"archivos/{aid}"), headers={"sec-fetch-site": sitio}).status_code == 200
+    assert sin.get(_api(pid, f"archivos/{aid}")).status_code == 200            # sin cabecera (curl, tests)
+
+
+def test_la_exportacion_incluye_usuarios_sin_clave_y_avisa_si_no_entra(monkeypatch):
+    """QA-22."""
+    pid, eq, sin = _mundo()
+    t = _crear(sin, pid, archivos=_pdf("a.pdf", b"%PDF " + b"x" * 3000))
+    z = zipfile.ZipFile(io.BytesIO(eq.get(_api(pid, "exportar.zip")).content))
+    usuarios = json.loads(z.read("usuarios.json"))
+    assert [u["mail"] for u in usuarios] == [sin.mail]
+    assert all("clave_hash" not in u for u in usuarios) and "clave_hash" not in z.read("usuarios.json").decode()
+    monkeypatch.setattr(main, "IMPL_TOPE_EXPORTACION", 1000)
+    r = eq.get(_api(pid, "exportar.zip"))
+    assert r.status_code == 413 and "sin_archivos" in r.json()["detail"] and "MB" in r.json()["detail"]
+    z = zipfile.ZipFile(io.BytesIO(eq.get(_api(pid, "exportar.zip?sin_archivos=1")).content))
+    assert "usuarios.json" in z.namelist() and not [n for n in z.namelist() if n.startswith("archivos/")]
+    assert "a.pdf" in z.read("archivos.csv").decode("utf-8")
+
+
+def test_el_hito_valida_todo_antes_de_escribir():
+    """QA-26: un texto inválido junto a `hecho` no deja el tildado hecho."""
+    pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
+    for malo in ({"hecho": True, "texto": "   "}, {"hecho": True, "texto": "x" * 500}, {"hecho": True, "orden": "abc"}):
+        assert eq.post(_api(pid, f"plan/hitos/{hito}"), json=malo).status_code == 400
+        h = [x for x in eq.get(_api(pid, "plan")).json()["etapas"][0]["hitos"] if x["id"] == hito][0]
+        assert h["hecho"] is False, malo
+    r = eq.post(_api(pid, f"plan/hitos/{hito}"), json={"hecho": True, "texto": "Nuevo texto", "orden": 1})
+    assert r.status_code == 200
+    h = [x for x in r.json()["etapas"][0]["hitos"] if x["id"] == hito][0]
+    assert (h["hecho"], h["texto"]) == (True, "Nuevo texto")
