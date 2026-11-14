@@ -1,7 +1,7 @@
 """Siembra el plan operativo de La Bancaria en la Mesa de implementación (I7).
 
 Crea el proyecto «La Bancaria» (asociado al sindicato La Bancaria si existe en
-la base) con sus seis fases y los 48 hitos de `data/implementacion/hitos_bancaria.json`
+la base) con sus seis fases y los hitos de `data/implementacion/hitos_bancaria.json`
 (8 por fase, salen del bloque «Hitos propuestos» de docs/implementacion/diferencias.md).
 
 Idempotente: si el proyecto ya existe lo reutiliza, y si ya tiene hitos no los

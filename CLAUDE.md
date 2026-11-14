@@ -1808,7 +1808,8 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (4 de desarrollo, 2 de QA independiente: 18 defectos de servidor y 9 de
     pantalla corregidos antes del merge). **Vive en Pruebas con datos reales**
     (I3): las tablas `impl*` quedan fuera de todo clonado y recarga. **Queda
-    de SDN**: revisar los 48 hitos de La Bancaria antes de cargarlos. Lo
+    de SDN**: nada; los hitos de La Bancaria los revisó SDN el mismo día
+    (45, en `data/implementacion/hitos_bancaria.json`). Lo
     interno se numera aparte (I15) y la Entrega la cierra quien la recibe
     (I16).
     Ver "Herramientas" y HISTORIAL.md, «Mesa de implementación».

@@ -665,10 +665,10 @@ def test_exportar_zip_solo_el_equipo_con_todo_adentro():
 
 
 # ---------- Semilla ----------
-def test_la_semilla_son_seis_fases_de_ocho_hitos():
+def test_la_semilla_son_las_seis_fases_con_sus_hitos():
     fases = im.cargar_hitos_semilla()
     assert [n for n, _ in fases] == [n for n, _ in im.FASES_POR_DEFECTO]
-    assert all(len(h) == 8 for _, h in fases)
+    assert all(3 <= len(h) <= 12 for _, h in fases)      # la lista la edita SDN: no es un número fijo
     assert "**" not in json.dumps(fases)
 
 
@@ -677,9 +677,10 @@ def test_hitos_semilla_por_api_solo_en_un_proyecto_sin_hitos():
     ruta = f"/api/entornos/implementacion/proyectos/{pid}/hitos-semilla"
     assert TestClient(main.app).post(ruta).status_code in (401, 403)
     r = eq.post(ruta)
-    assert r.status_code == 200 and r.json() == {"ok": True, "cargados": 48}
+    porfase = [len(h) for _, h in im.cargar_hitos_semilla()]
+    assert r.status_code == 200 and r.json() == {"ok": True, "cargados": sum(porfase)}
     plan = sin.get(_api(pid, "plan")).json()["etapas"]
-    assert [len(e["hitos"]) for e in plan] == [8] * 6 and plan[0]["hitos"][0]["orden"] == 1
+    assert [len(e["hitos"]) for e in plan] == porfase and plan[0]["hitos"][0]["orden"] == 1
     assert eq.post(ruta).status_code == 409                            # no se pisan
     assert eq.post("/api/entornos/implementacion/proyectos/99999999/hitos-semilla").status_code == 404
     otro = _proyecto()
@@ -701,7 +702,8 @@ def test_el_script_de_semilla_ensaya_y_es_idempotente(capsys):
     semilla.main(True)
     with db.get_session() as s:
         ps = [p for p in db.impl_proyectos(s) if p.nombre == semilla.NOMBRE_PROYECTO]
-        assert len(ps) == 1 and sum(e["total"] for e in db.impl_avance(s, ps[0].id)) == 48
+        assert len(ps) == 1 and sum(e["total"] for e in db.impl_avance(s, ps[0].id)) == sum(
+            len(f["hitos"]) for f in __import__("json").load(open("data/implementacion/hitos_bancaria.json", encoding="utf-8"))["fases"])
         ps[0].nombre = "La Bancaria (prueba)"          # que otra corrida del test no lo vea
         s.add(ps[0])
         s.commit()
