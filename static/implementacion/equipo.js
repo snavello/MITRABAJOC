@@ -40,6 +40,13 @@
   const post = function (url, cuerpo) {
     return pedirJson(url, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo || {}) });
   };
+  async function copiar(texto) {
+    try { if (navigator.clipboard) { await navigator.clipboard.writeText(texto); return true; } } catch (e) { /* respaldo */ }
+    const ta = h('textarea', { 'aria-hidden': 'true', tabindex: '-1', readonly: true, style: 'position:fixed;left:-9999px;top:0;opacity:0' });
+    ta.value = texto; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove(); return ok;
+  }
   function error(id, texto) { const e = $(id); e.textContent = texto || ''; e.hidden = !texto; }
 
   async function cargarProyectos() {
@@ -53,7 +60,12 @@
       ps.forEach(function (p) {
         const msg = h('span', { class: 'impl-vacio', role: 'status' });
         lista.appendChild(h('div', { class: 'impl-fila' + (p.activo ? '' : ' inactivo') },
-          h('div', { class: 'impl-nom' }, p.nombre, h('small', null, (p.usuarios || 0) + (p.usuarios === 1 ? ' usuario' : ' usuarios') + (p.activo ? '' : ' · inactivo'))),
+          h('div', { class: 'impl-nom' }, p.nombre, h('small', null, (p.usuarios || 0) + (p.usuarios === 1 ? ' usuario' : ' usuarios') + (p.activo ? '' : ' · inactivo')),
+            h('small', { class: 'impl-ingreso' }, 'Ingreso del sindicato: ', h('code', null, '/implementacion/ingresar'), ' ',
+              h('button', { class: 'boton suave', type: 'button', 'aria-label': 'Copiar el enlace de ingreso del sindicato', onclick: async function (ev) {
+                const b = ev.currentTarget; const ok = await copiar(window.location.origin + '/implementacion/ingresar');
+                b.textContent = ok ? 'Copiado' : 'No se pudo'; setTimeout(function () { b.textContent = 'Copiar enlace'; }, 1600);
+              } }, 'Copiar enlace'))),
           h('div', { class: 'impl-acc' },
             h('a', { class: 'boton', href: '/implementacion?p=' + p.id, target: '_blank', rel: 'noopener' }, 'Abrir la mesa'),
             h('button', { class: 'boton suave', type: 'button', onclick: function () { abrirUsuarios(p); } }, 'Usuarios'),

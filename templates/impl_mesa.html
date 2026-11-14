@@ -60,6 +60,9 @@
     <symbol id="i-enviar" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7z"/></symbol>
     <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19z"/></symbol>
     <symbol id="i-cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-copiar" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></symbol>
+    <symbol id="i-buscar" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-enlace" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></symbol>
   </defs>
 </svg>
 
@@ -77,6 +80,13 @@
   <form method="post" action="/implementacion/salir"><button class="top-salir" type="submit">Salir</button></form>
   {% endif %}
 </header>
+
+<div class="top-buscar">
+<form class="buscar" role="search" data-buscador>
+  <label class="buscar-l"><span class="buscar-t">Buscar</span>
+    <span class="buscar-c"><svg class="ic" aria-hidden="true"><use href="#i-buscar"/></svg><input type="search" name="q" placeholder="Código o palabra" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" maxlength="80"></span><small class="buscar-h">PE0004, AR000123 o una palabra</small></label>
+</form>
+</div>
 
 <nav class="nav" aria-label="Secciones de la mesa">
   <div class="marca">
@@ -97,6 +107,10 @@
       <span class="quien">{{ proyecto.nombre if proyecto else '' }}</span>
     {% endif %}
   </div>
+<form class="buscar" role="search" data-buscador>
+  <label class="buscar-l"><span class="buscar-t">Buscar</span>
+    <span class="buscar-c"><svg class="ic" aria-hidden="true"><use href="#i-buscar"/></svg><input type="search" name="q" placeholder="Código o palabra" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" maxlength="80"></span><small class="buscar-h">PE0004, AR000123 o una palabra</small></label>
+</form>
   <ul class="nav-lista">
     <li><a class="nv" data-vista="pendientes" href="#pendientes"><svg class="ic"><use href="#i-inbox"/></svg><span class="lg">Mis pendientes</span><span class="sh">Pendientes</span><span class="globo" id="globo" hidden>0</span></a></li>
     <li><a class="nv" data-vista="tablero" href="#tablero"><svg class="ic"><use href="#i-tablero"/></svg><span class="lg">Tablero</span><span class="sh">Tablero</span></a></li>
@@ -118,6 +132,7 @@
 
 <main class="cuerpo" id="vista" tabindex="-1" aria-live="polite"></main>
 <div id="aviso" class="aviso" role="status" hidden></div>
+<div id="estado-copia" class="sr" role="status" aria-live="polite"></div>
 
 <dialog id="dlg" class="dlg" aria-labelledby="dlg-t">
   <form method="dialog" id="dlg-f">
@@ -129,6 +144,10 @@
       <button type="submit" class="btn pri" id="dlg-si" value="ok">Confirmar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="ficha-arch" class="dlg dlg-ficha" aria-labelledby="fa-t">
+  <div id="fa-cuerpo"></div>
 </dialog>
 
 <noscript><p class="vacio">La mesa necesita JavaScript para funcionar.</p></noscript>

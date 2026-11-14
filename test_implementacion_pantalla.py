@@ -106,6 +106,25 @@ def test_la_vista_por_defecto_es_mis_pendientes_y_nunca_me_toca():
     assert "Mis pendientes" in _render()
 
 
+def test_ninguna_expresion_toca_a_la_vista():
+    """«Te toca / te tocan / a quién le toca» salió de lo que lee una persona:
+    el indicador y el grupo son «Para responder» y la ficha dice «Quién tiene
+    que responder». (`me_toca` es un campo de la API, no un texto.)"""
+    js = _sin_comentarios(_texto(JS))
+    literales = re.findall(r"'((?:[^'\\\n]|\\.)*)'", js)
+    visibles = [x for x in literales if re.search(r"\btoca\w*\b", x, re.I) and "me_toca" not in x]
+    assert not visibles, visibles
+    assert "'Para responder'" in js and "Quién tiene que responder" in js
+    assert "A quién le toca" not in js and "Te toca" not in js and "Te tocan" not in js
+    assert not re.search(r"\btoca", _render(), re.I)
+
+
+def test_el_menu_marca_la_vista_de_la_que_se_viene_o_ninguna():
+    js = _sin_comentarios(_texto(JS))
+    assert "ultima: null" in js                         # entrada directa a una tarjeta: nada marcado
+    assert "if (vista && a.dataset.vista === vista)" in js
+
+
 def test_el_equipo_y_el_sindicato_ven_su_propio_encabezado():
     sind = _render(lado="sindicato")
     assert "/implementacion/salir" in sind and "La Bancaria" in sind
@@ -170,3 +189,90 @@ def test_la_pestana_se_activa_por_hash_y_oculta_recursos():
     html = _entornos().text
     assert "'implementacion', 'herramientas'" in html
     assert "nombre === 'implementacion'" in html
+
+
+# ---------------------------------------------------------------- códigos y relaciones (I12 a I14)
+def test_el_codigo_se_ve_en_todos_lados_y_reemplaza_al_numeral():
+    js = _sin_comentarios(_texto(JS))
+    for clave in ("t.codigo", "a.codigo", "x.codigo", "m.codigo", "tarjeta_codigo"):
+        assert clave in js, clave
+    # el «#n» queda solo como respaldo cuando el servidor no manda código
+    assert "t.codigo || ('#' + t.numero)" in js
+    assert "'#' + t.numero + ' ' + t.titulo" not in js and "'Tarjeta #' + a.tarjeta_numero" not in js
+    assert "href: '#t' + t.numero" not in js            # los enlaces internos usan el código
+    # tipografía monoespaciada y letra de código en la cabecera
+    css = _texto(CSS)
+    assert re.search(r"\.cod\s*\{[^}]*monospace", css, re.S)
+
+
+def test_boton_copiar_con_respaldo_y_confirmacion():
+    js = _sin_comentarios(_texto(JS))
+    assert "navigator.clipboard.writeText" in js and "execCommand('copy')" in js
+    assert "'Copiado'" in js
+    for que in ("el código de la tarjeta", "el código del archivo", "el código del mensaje", "el código del hito"):
+        assert que in js, que
+    assert 'id="estado-copia"' in _render() and "icono('copiar')" in js
+    assert 'id="i-copiar"' in _render()
+
+
+def test_los_codigos_de_un_texto_se_enlazan_con_dom_y_solo_los_que_existen():
+    js = _sin_comentarios(_texto(JS))
+    assert "function enlazar(" in js
+    assert "r.existe" in js and "r.enlace" in js        # solo existe:true y con enlace
+    assert "enlazar(m.texto, m.refs)" in js and "enlazar(t.titulo, t.refs)" in js
+    assert "createTextNode" in js
+    # los inexistentes quedan como texto común, sin clase ni marca
+    assert "buenos[m[0].toUpperCase()]" in js and "if (!ref) continue;" in js
+
+
+def test_el_hash_acepta_los_cuatro_codigos_y_el_numero_viejo():
+    js = _sin_comentarios(_texto(JS))
+    assert "/^t(\\d+)$/" in js                            # #t4 sigue valiendo
+    assert "esCodigo(r)" in js and "buscar?codigo=" in js
+    for tipo in ("r.tipo === 'hito'", "r.tipo === 'mensaje' || r.tipo === 'archivo'", "r.tarjeta_id"):
+        assert tipo in js, tipo
+    assert "No existe o no lo podés ver." in js          # el mismo mensaje en todos los casos
+    for ej in ("PE0004", "PE0004-3", "AR000123", "HI0001"):
+        assert ej  # documentan el contrato; los hashes se recorren en el navegador
+    assert "abrirFicha(r.id)" in js                      # AR sin elemento visible -> su ficha
+
+
+def test_buscador_unico_con_rotulo_y_ejemplo_en_escritorio_y_telefono():
+    html = _render()
+    assert html.count("data-buscador") == 2              # barra lateral y barra del teléfono
+    assert html.count("PE0004, AR000123 o una palabra") >= 2
+    assert 'class="buscar-t">Buscar<' in html
+    js = _sin_comentarios(_texto(JS))
+    assert "esCodigo(v)" in js and "'#buscar?q='" in js and "tarjetas?vista=todas&q=" in js
+    css = _texto(CSS)
+    assert ".top-buscar { display: block" in css and ".nav .buscar { display: none" in css.replace(", .nav-pie, .nav .buscar", ".nav .buscar") or ".nav .buscar" in css
+
+
+def test_bloque_relacionadas_agrupado_y_ficha_de_archivo():
+    js = _sin_comentarios(_texto(JS))
+    for frase in ("responde a", "respondida con", "menciona", "mencionada en"):
+        assert f"'{frase}'" in js, frase
+    assert "bloqueRelacionadas(d.relacionadas)" in js and "if (!lista.length) return null;" in js
+    assert "'archivos/' + aid + '/ficha'" in js and "$fa.showModal()" in js
+    assert "a.puede_bajar" in js and "a.puede_borrar" in js
+    assert 'id="ficha-arch"' in _render()
+
+
+def test_responder_con_manda_responde_a_y_solo_si_acciones_lo_permite():
+    js = _sin_comentarios(_texto(JS))
+    assert "if (acc.responder) chips.appendChild" in js and "Responder con…" in js
+    assert "fd.append('responde_a', origen.codigo)" in js
+    assert "tipoDeCodigo(origen.codigo) === 'pedido'" in js and "tipo = 'entrega'" in js   # preselecciona, no impide cambiar
+    assert "Responde a " in js
+    assert "Podés nombrar otra tarjeta o archivo por su código (PE0004, AR000123) y queda enlazado." in js
+    assert "'aria-expanded'" in js                      # la ayuda es un «?» que abre, no un hover
+
+
+def test_la_resaltada_respeta_reducir_movimiento():
+    css = _texto(CSS)
+    assert ".resalta { animation: none; }" in css
+
+
+def test_la_pestana_muestra_el_enlace_de_ingreso_del_sindicato_con_boton_copiar():
+    js = _sin_comentarios(_texto(EQUIPO_JS))
+    assert "/implementacion/ingresar" in js and "navigator.clipboard.writeText" in js and "Copiar enlace" in js

@@ -34,7 +34,7 @@
   const nombreEstado = function (k) { return NOMBRES_ESTADO[k] || (k ? k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, ' ') : ''); };
   const ABIERTOS = ['abierta', 'en_curso', 'respondida'];
 
-  const S = { token: 0, ultima: 'pendientes', todas: null, plan: null, etapaSel: null, editarPlan: false, sentido: 'entrada' };
+  const S = { token: 0, ultima: null, actual: null, todas: null, plan: null, etapaSel: null, editarPlan: false, sentido: 'entrada' };
 
   // ---------------------------------------------------------------- DOM
   const $vista = document.getElementById('vista');
@@ -201,9 +201,10 @@
     if (!t.fecha_limite) return h('span', { class: 'venc' }, 'Sin fecha límite');
     return h('span', { class: 'venc' + (t.vencida ? ' vencida' : '') }, (t.vencida ? 'Vencida el ' : 'Vence el ') + fechaCorta(t.fecha_limite));
   }
+  function hashDeTarjeta(t) { return t.codigo ? hashDe(t.codigo) : '#t' + t.numero; }
   function tile(t, i) {
-    const a = h('a', { class: 'tile entra', href: '#t' + t.numero, estilo: { '--i': i || 0 } },
-      h('div', { class: 'hd' }, icono((TIPOS[t.tipo] || {}).icono || t.icono || 'inbox'), h('span', null, t.tipo_nombre || (TIPOS[t.tipo] || {}).nombre || t.tipo), h('span', { class: 'n' }, '#' + t.numero)),
+    const a = h('a', { class: 'tile entra', href: hashDeTarjeta(t), estilo: { '--i': i || 0 } },
+      h('div', { class: 'hd' }, icono((TIPOS[t.tipo] || {}).icono || t.icono || 'inbox'), h('span', null, t.tipo_nombre || (TIPOS[t.tipo] || {}).nombre || t.tipo), h('span', { class: 'n cod' }, t.codigo || ('#' + t.numero))),
       h('div', { class: 'cu' },
         h('h3', null, t.titulo),
         h('div', { class: 'meta' }, chipEspera(t), t.etapa_nombre ? h('span', null, t.etapa_nombre) : null),
@@ -211,8 +212,9 @@
     return colorTipo(a, t.tipo);
   }
   function miniTarjeta(t) {
-    const a = h('a', { class: 'mini', href: '#t' + t.numero },
-      h('b', null, '#' + t.numero + ' ' + t.titulo),
+    const a = h('a', { class: 'mini', href: hashDeTarjeta(t) },
+      h('span', { class: 'cod' }, t.codigo || ('#' + t.numero)),
+      h('b', null, t.titulo),
       h('small', null, (t.tipo_nombre || '') + (t.espera ? ' · ' + cap(t.espera_texto || '') : ' · ' + nombreEstado(t.estado))),
       t.fecha_limite ? h('small', { style: t.vencida ? 'color:var(--mal)' : null }, (t.vencida ? 'Vencida el ' : 'Vence el ') + fechaCorta(t.fecha_limite)) : null);
     return colorTipo(a, t.tipo);
@@ -233,10 +235,102 @@
       reintentar ? h('button', { class: 'btn lisa', type: 'button', onclick: reintentar }, 'Probar de nuevo') : null);
   }
 
+  // ---------------------------------------------------------------- códigos (I12 a I14)
+  // El prefijo de cada tipo de tarjeta es parte del contrato (PE, CO, EN, AP, ER, AV).
+  const TIPO_DE_PREFIJO = { PE: 'pedido', CO: 'consulta', EN: 'entrega', AP: 'aprobacion', ER: 'error', AV: 'aviso' };
+  const CODIGO_RE = /(PE|CO|EN|AP|ER|AV)(\d{4,6})(?:-(\d{1,5}))?|(AR)(\d{6})|(HI)(\d{4})/gi;
+  const CODIGO_SOLO = /^(?:(?:PE|CO|EN|AP|ER|AV)\d{4,6}(?:-\d{1,5})?|AR\d{6}|HI\d{4})$/i;
+  const esCodigo = function (s) { return CODIGO_SOLO.test((s || '').trim()); };
+  const tipoDeCodigo = function (codigo) { return TIPO_DE_PREFIJO[(codigo || '').slice(0, 2).toUpperCase()] || null; };
+  const hashDe = function (codigo) { return '#' + codigo; };
+  const sinHash = function (s) { const i = (s || '').indexOf('#'); return i === -1 ? '' : s.slice(i + 1); };
+
+  const REDUCIDO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let tCopiado = null;
+  async function copiarTexto(texto) {
+    try {
+      if (navigator.clipboard && window.isSecureContext !== false) { await navigator.clipboard.writeText(texto); return true; }
+    } catch (e) { /* cae al respaldo */ }
+    const ta = h('textarea', { 'aria-hidden': 'true', tabindex: '-1', readonly: true, style: 'position:fixed;left:-9999px;top:0;opacity:0' });
+    ta.value = texto; document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  // Botón «copiar» junto a un código: confirma con un «Copiado» breve.
+  function botonCopiar(texto, que) {
+    const rot = h('span', { class: 'cp-t' }, 'Copiar');
+    const b = h('button', { class: 'cp', type: 'button', 'aria-label': 'Copiar ' + (que || 'el código') + ' ' + texto, title: 'Copiar ' + texto,
+      onclick: async function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        const ok = await copiarTexto(texto);
+        b.classList.toggle('listo', ok);
+        rot.textContent = ok ? 'Copiado' : 'No se pudo';
+        avisarCopia(ok ? 'Copiado: ' + texto : 'No se pudo copiar. Seleccionalo y copialo a mano.', !ok);
+        clearTimeout(b._t);
+        b._t = setTimeout(function () { b.classList.remove('listo'); rot.textContent = 'Copiar'; }, 1600);
+      } }, icono('copiar'), rot);
+    return b;
+  }
+  function avisarCopia(texto, mal) {
+    const e = document.getElementById('estado-copia');
+    if (!e) return;
+    e.textContent = texto; clearTimeout(tCopiado);
+    tCopiado = setTimeout(function () { e.textContent = ''; }, 2500);
+  }
+  // El código a la vista: mono, con o sin botón. `plano` = solo texto.
+  function codigo(c, opc) {
+    opc = opc || {};
+    if (!c) return null;
+    const s = h('span', { class: 'cod' + (opc.clase ? ' ' + opc.clase : '') }, c);
+    if (opc.copiar === false) return s;
+    return h('span', { class: 'cod-g' }, s, botonCopiar(c, opc.que));
+  }
+  // Convierte los códigos de un texto en enlaces con DOM. Solo los de `refs`
+  // con existe:true; los demás quedan como texto común, sin marca.
+  function enlazar(texto, refs) {
+    texto = texto == null ? '' : String(texto);
+    const buenos = {};
+    (refs || []).forEach(function (r) { if (r && r.existe && r.enlace && r.codigo) buenos[String(r.codigo).toUpperCase()] = r; });
+    if (!Object.keys(buenos).length) return [document.createTextNode(texto)];
+    const partes = []; let desde = 0; let m;
+    CODIGO_RE.lastIndex = 0;
+    while ((m = CODIGO_RE.exec(texto)) !== null) {
+      const ini = m.index; const fin = ini + m[0].length;
+      const antes = ini > 0 ? texto.charAt(ini - 1) : ''; const despues = fin < texto.length ? texto.charAt(fin) : '';
+      if (/[A-Za-z0-9_]/.test(antes) || /[A-Za-z0-9_]/.test(despues)) continue;
+      const ref = buenos[m[0].toUpperCase()];
+      if (!ref) continue;
+      if (ini > desde) partes.push(document.createTextNode(texto.slice(desde, ini)));
+      partes.push(h('a', { class: 'cod-lnk', href: hashDe(sinHash(ref.enlace) || ref.codigo) }, m[0]));
+      desde = fin;
+    }
+    if (desde < texto.length) partes.push(document.createTextNode(texto.slice(desde)));
+    return partes;
+  }
+  function resaltar(el) {
+    if (!el) return false;
+    el.classList.remove('resalta'); void el.offsetWidth; el.classList.add('resalta');
+    el.scrollIntoView({ behavior: REDUCIDO ? 'auto' : 'smooth', block: 'center' });
+    setTimeout(function () { el.classList.remove('resalta'); }, 3200);
+    return true;
+  }
+  const COLOR_SIN_TIPO = 'neutro';
+  // Ícono y color de una cosa relacionada, según su clase y su código.
+  function marcaDeRelacion(r) {
+    const tipoTarjeta = r.tipo === 'tarjeta' || r.tipo === 'mensaje' ? tipoDeCodigo(r.codigo) : null;
+    if (tipoTarjeta) return { icono: r.tipo === 'mensaje' ? 'pregunta' : ((TIPOS[tipoTarjeta] || {}).icono || 'inbox'), tipo: tipoTarjeta };
+    if (r.tipo === 'archivo') return { icono: 'clip', tipo: null };
+    if (r.tipo === 'hito') return { icono: 'plan', tipo: null };
+    return { icono: 'inbox', tipo: null };
+  }
+  const ESTADOS_OTROS = { vigente: 'Vigente', borrado: 'Borrado', pendiente: 'Pendiente', hecho: 'Hecho' };
+
   // ---------------------------------------------------------------- montaje de vistas
   function marcarNav(vista) {
     document.querySelectorAll('.nv').forEach(function (a) {
-      if (a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      if (vista && a.dataset.vista === vista) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
   }
   async function montar(vista, constructor) {
@@ -250,6 +344,8 @@
     window.scrollTo(0, 0);
     const t = $vista.querySelector('.titulo, .tj-tit h1');
     if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
+    const luego = S.alTerminar; S.alTerminar = null;
+    if (luego) luego();
   }
   function titulo(texto, bajada) {
     return [h('h1', { class: 'titulo' }, texto), bajada ? h('p', { class: 'bajada' }, bajada) : h('p', { class: 'bajada' })];
@@ -270,11 +366,11 @@
       const otro = todas.filter(function (t) { return !ids[t.id] && ABIERTOS.indexOf(t.estado) !== -1 && t.espera; });
       const raiz = h('div', null, titulo('Mis pendientes', 'Lo que espera tu respuesta, primero.'));
       raiz.appendChild(h('div', { class: 'kpis' },
-        h('div', { class: 'kpi entra' }, h('b', null, res.pendientes), h('span', null, 'Te tocan')),
+        h('div', { class: 'kpi entra' }, h('b', null, res.pendientes), h('span', null, 'Para responder')),
         h('div', { class: 'kpi entra', estilo: { '--i': 1 } }, h('b', null, res.esperan_otro), h('span', null, 'Esperan al otro lado')),
         h('div', { class: 'kpi entra', estilo: { '--i': 2 } }, h('b', null, res.con_fecha), h('span', null, 'Con fecha límite'), res.vencidas ? h('small', null, res.vencidas + (res.vencidas === 1 ? ' vencida' : ' vencidas')) : null),
         h('a', { class: 'kpi entra', href: '#plan', estilo: { '--i': 3 } }, h('b', null, (res.plan_pct || 0) + '%'), h('span', null, 'Plan completo'))));
-      raiz.appendChild(h('h2', { class: 'grupo' }, 'Te toca a vos'));
+      raiz.appendChild(h('h2', { class: 'grupo' }, 'Para responder'));
       raiz.appendChild(mias.length
         ? h('div', { class: 'tiles' }, mias.map(tile))
         : vacio('No tenés nada pendiente. Todo lo que esperaba tu respuesta ya está resuelto.', botonNueva()));
@@ -379,7 +475,7 @@
     return card;
   }
   function dibujarHito(e, x) {
-    const raiz = h('div', { class: 'hito' + (x.hecho ? ' on' : '') });
+    const raiz = h('div', { class: 'hito' + (x.hecho ? ' on' : ''), 'data-codigo': x.codigo || null, id: x.codigo ? 'h-' + x.codigo : null });
     const quien = x.hecho && (x.hecho_por || x.hecho_en) ? h('small', null, 'Hecho' + (x.hecho_por ? ' por ' + x.hecho_por : '') + (x.hecho_en ? ', ' + fechaHora(x.hecho_en) : '')) : null;
     if (ES_EQUIPO && S.editarPlan) {
       const inp = h('input', { type: 'text', value: x.texto, maxlength: 200, 'aria-label': 'Texto del hito' });
@@ -403,27 +499,105 @@
         catch (er) { x.hecho = antes; refrescarPlan(); avisar(er.message, true); }
       } }, h('span', { class: 'caja' }, icono('check')), h('span', { class: 'hito-t' }, h('span', { class: 'txt' }, x.texto), quien)));
     }
+    if (x.codigo) raiz.appendChild(h('div', { class: 'hito-cod' }, codigo(x.codigo, { que: 'el código del hito' })));
     if ((x.tarjetas || []).length) {
       raiz.appendChild(h('div', { class: 'colgadas' }, x.tarjetas.map(function (t) {
-        return colorTipo(h('a', { class: 'colgada', href: '#t' + t.numero }, h('span', null, '#' + t.numero + ' ' + t.titulo), h('small', null, nombreEstado(t.estado))), t.tipo || 'pedido');
+        return colorTipo(h('a', { class: 'colgada', href: t.codigo ? hashDe(t.codigo) : '#t' + t.numero }, h('span', { class: 'cod' }, t.codigo || ('#' + t.numero)), h('span', { class: 'col-t' }, t.titulo), h('small', null, nombreEstado(t.estado))), t.tipo || 'pedido');
       })));
     }
     if (!S.editarPlan) raiz.appendChild(h('div', { class: 'hito-acc' }, h('a', { class: 'btn lisa chico', href: '#nueva?etapa=' + e.id + '&hito=' + x.id }, icono('mas'), 'Tarjeta para este hito')));
     return raiz;
   }
 
+  // ---------------------------------------------------------------- Relacionadas y ficha de archivo
+  const ORDEN_REL = ['responde a', 'respondida con', 'menciona', 'mencionada en'];
+  function itemRelacion(r, alIr) {
+    const m = marcaDeRelacion(r);
+    const a = h('a', { class: 'rel-item', href: r.enlace ? hashDe(sinHash(r.enlace) || r.codigo) : hashDe(r.codigo), 'data-tipo': r.tipo || null,
+      onclick: function () { if (alIr) alIr(); } },
+      icono(m.icono), h('span', { class: 'cod' }, r.codigo), h('span', { class: 'rel-t' }, r.titulo || ''),
+      r.estado ? h('small', { class: 'rel-e' }, ESTADOS_OTROS[r.estado] || nombreEstado(r.estado)) : null,
+      r.via ? h('small', { class: 'rel-via' }, 'a través de ' + r.via) : null);
+    return m.tipo ? colorTipo(a, m.tipo) : a;
+  }
+  // Agrupa por la frase que manda el servidor; vacío = no se dibuja nada.
+  function bloqueRelacionadas(lista, alIr) {
+    // Una misma cosa nombrada dos veces por el mismo motivo (la tarjeta y uno de sus
+    // mensajes) se muestra una sola vez; queda el «a través de» si lo hay.
+    const vistos = {};
+    lista = (lista || []).filter(function (r) { return r && r.codigo; }).filter(function (r) {
+      const k = (r.texto || '') + '|' + r.codigo;
+      if (vistos[k]) { if (r.via && !vistos[k].via) vistos[k].via = r.via; return false; }
+      vistos[k] = Object.assign({}, r); return true;
+    }).map(function (r) { return vistos[(r.texto || '') + '|' + r.codigo]; });
+    if (!lista.length) return null;
+    const grupos = {};
+    lista.forEach(function (r) { const k = (r.texto || 'relacionada').toLowerCase(); (grupos[k] = grupos[k] || []).push(r); });
+    const claves = ORDEN_REL.filter(function (k) { return grupos[k]; }).concat(Object.keys(grupos).filter(function (k) { return ORDEN_REL.indexOf(k) === -1; }));
+    return h('section', { class: 'rels', 'aria-label': 'Relacionadas' },
+      h('h3', null, 'Relacionadas'),
+      claves.map(function (k) {
+        return h('div', { class: 'rel-grupo' }, h('h4', null, cap(k)), h('ul', null, grupos[k].map(function (r) { return h('li', null, itemRelacion(r, alIr)); })));
+      }));
+  }
+
+  const $fa = document.getElementById('ficha-arch');
+  const $faCuerpo = document.getElementById('fa-cuerpo');
+  function cerrarFicha() { if ($fa.open) $fa.close(); }
+  async function abrirFicha(aid, alBorrar) {
+    let d;
+    try { d = await pedir('archivos/' + aid + '/ficha'); }
+    catch (e) { avisar(e.status === 404 ? 'No existe o no lo podés ver.' : e.message, true); return; }
+    const a = d.archivo || {}; const tj = d.tarjeta || null;
+    function par(dt, dd) { return [h('dt', null, dt), h('dd', null, dd)]; }
+    vaciar($faCuerpo);
+    $faCuerpo.appendChild(h('div', { class: 'fa-cab' },
+      h('h2', { id: 'fa-t' }, 'Ficha del archivo'),
+      h('button', { class: 'btn lisa chico', type: 'button', 'aria-label': 'Cerrar la ficha', onclick: cerrarFicha }, icono('cerrar'))));
+    if (a.codigo) $faCuerpo.appendChild(h('div', { class: 'fa-cod' }, codigo(a.codigo, { que: 'el código del archivo' })));
+    $faCuerpo.appendChild(h('dl', { class: 'fa-dl' },
+      par('Nombre', a.nombre || ''),
+      par('Tamaño', tamano(a.tamano)),
+      par('Lo subió', (a.subido_por || '') + (a.subido_lado ? ' (' + ladoNombre(a.subido_lado) + ')' : '') + (a.subido_en ? ' · ' + fechaHora(a.subido_en) : '')),
+      par('Datos personales', a.datos_personales ? h('span', { class: 'chip mal' }, icono('candado'), 'Contiene datos personales') : 'No marcado'),
+      a.borrado ? par('Estado', 'Borrado: queda la constancia de que existió') : null,
+      tj ? par('Tarjeta que lo contiene', h('a', { class: 'cod-lnk', href: tj.codigo ? hashDe(tj.codigo) : '#t' + tj.numero, onclick: cerrarFicha }, (tj.codigo || ('#' + tj.numero)) + ' · ' + (tj.titulo || ''))) : null));
+    const rel = bloqueRelacionadas(d.relacionadas, cerrarFicha);
+    if (rel) $faCuerpo.appendChild(rel);
+    const acc = h('div', { class: 'fa-acc' });
+    if (a.puede_bajar && !a.borrado) acc.appendChild(h('a', { class: 'btn pri chico', href: BASE + 'archivos/' + a.id, download: a.nombre }, icono('bajar'), 'Bajar'));
+    else if (a.datos_personales && !a.borrado) acc.appendChild(h('small', { class: 'fa-nota' }, 'Contiene datos personales: solo lo baja quien lo subió o el equipo.'));
+    if (a.puede_borrar && !a.borrado) acc.appendChild(h('button', { class: 'btn no chico', type: 'button', onclick: async function () {
+      const ok = await confirmar({ titulo: '¿Borrar este archivo?', texto: 'Se borra el archivo y queda la constancia de que existió: nombre, tamaño, quién lo subió y quién lo borró.', ok: 'Borrar archivo', clase: 'no' });
+      if (!ok) return;
+      try { await enviarJson('archivos/' + a.id + '/borrar', {}); avisar('Archivo borrado.'); cerrarFicha(); invalidar(); (alBorrar || ruta)(); }
+      catch (er) { avisar(er.message, true); }
+    } }, icono('basura'), 'Borrar'));
+    acc.appendChild(h('button', { class: 'btn lisa chico', type: 'button', onclick: cerrarFicha }, 'Cerrar'));
+    $faCuerpo.appendChild(acc);
+    if (!$fa.open) $fa.showModal();
+    const x = $faCuerpo.querySelector('.fa-cab button'); if (x) x.focus();
+  }
+  function botonFicha(a, alBorrar) {
+    return h('button', { class: 'btn lisa chico', type: 'button', onclick: function () { abrirFicha(a.id, alBorrar); } }, icono('enlace'), 'Ficha');
+  }
+
   // ---------------------------------------------------------------- Archivos (fila común)
   function filaArchivo(a, opc) {
     opc = opc || {};
     if (a.borrado) {
-      return h('div', { class: 'fila borrado' }, h('div', { class: 'nom' }, a.nombre, h('small', null, 'Archivo borrado · ' + tamano(a.tamano) + (a.subido_por ? ' · lo subió ' + a.subido_por : ''))));
+      return h('div', { class: 'fila borrado', 'data-codigo': a.codigo || null }, h('div', { class: 'nom' }, a.nombre, h('small', null, 'Archivo borrado · ' + tamano(a.tamano) + (a.subido_por ? ' · lo subió ' + a.subido_por : ''))),
+        a.codigo ? codigo(a.codigo, { que: 'el código del archivo' }) : null);
     }
-    const fila = h('div', { class: 'fila' },
+    const tarj = a.tarjeta_codigo || (a.tarjeta_numero ? '#' + a.tarjeta_numero : '');
+    const fila = h('div', { class: 'fila', 'data-codigo': a.codigo || null },
+      a.codigo ? h('div', { class: 'fila-cod' }, codigo(a.codigo, { que: 'el código del archivo' })) : null,
       h('div', { class: 'nom' }, a.nombre,
         h('small', null, tamano(a.tamano) + ' · ' + (a.subido_por || '') + (a.subido_en ? ' · ' + fechaHora(a.subido_en) : '')),
-        opc.tarjeta && a.tarjeta_numero ? h('small', null, h('a', { href: '#t' + a.tarjeta_numero, style: 'text-decoration:underline' }, 'Tarjeta #' + a.tarjeta_numero + ' ' + (a.tarjeta_titulo || ''))) : null),
+        opc.tarjeta && tarj ? h('small', null, h('a', { href: a.tarjeta_codigo ? hashDe(a.tarjeta_codigo) : '#t' + a.tarjeta_numero, style: 'text-decoration:underline' }, 'Tarjeta ' + tarj + ' ' + (a.tarjeta_titulo || ''))) : null),
       a.datos_personales ? h('span', { class: 'chip mal' }, icono('candado'), 'Datos personales') : null);
     const acc = h('div', { class: 'acc' });
+    acc.appendChild(botonFicha(a, opc.alBorrar));
     if (a.puede_bajar) acc.appendChild(h('a', { class: 'btn lisa chico', href: BASE + 'archivos/' + a.id, download: a.nombre }, icono('bajar'), 'Bajar'));
     else if (a.datos_personales) acc.appendChild(h('small', null, 'Contiene datos personales: solo lo baja quien lo subió o el equipo.'));
     if (a.puede_borrar) acc.appendChild(h('button', { class: 'btn no chico', type: 'button', onclick: async function () {
@@ -475,8 +649,8 @@
         lista.length ? h('a', { class: 'btn lisa', href: BASE + 'aprobaciones.csv', download: 'aprobaciones.csv' }, icono('bajar'), 'Descargar CSV') : null));
       if (!lista.length) { raiz.appendChild(vacio('Todavía no hay aprobaciones. Se piden creando una tarjeta de tipo Aprobación.', botonNueva('aprobacion', 'Pedir una aprobación'))); return raiz; }
       lista.forEach(function (a, i) {
-        raiz.appendChild(h('a', { class: 'ap-fila entra', href: '#t' + a.numero, estilo: { '--i': i } },
-          h('div', null, h('b', null, '#' + a.numero + ' ' + a.titulo), chipAprobacion(a.estado)),
+        raiz.appendChild(h('a', { class: 'ap-fila entra', href: a.codigo ? hashDe(a.codigo) : '#t' + a.numero, estilo: { '--i': i } },
+          h('div', null, h('span', { class: 'cod' }, a.codigo || ('#' + a.numero)), h('b', null, a.titulo), chipAprobacion(a.estado)),
           h('div', null, h('small', null, 'Pedida por'), a.pedida_por || '—', h('small', null, fechaHora(a.pedida_en))),
           h('div', null, h('small', null, 'Resuelta por'), a.resuelta_por || '—', h('small', null, a.resuelta_en ? fechaHora(a.resuelta_en) : '')),
           h('div', null),
@@ -500,8 +674,20 @@
       const res = await pedir('resumen');
       setGlobo(res.pendientes);
       const etapas = res.etapas || [];
+      // «Responder con…»: la tarjeta o el archivo al que responde esta (por código).
+      let origen = null; let origenMal = false;
+      if (q.responde_a && esCodigo(q.responde_a)) {
+        try {
+          const b = await pedir('buscar?codigo=' + encodeURIComponent(q.responde_a.toUpperCase()));
+          origen = { codigo: b.codigo || q.responde_a.toUpperCase(), titulo: b.titulo || '' };
+        } catch (e) { origenMal = true; }
+      } else if (q.responde_a) origenMal = true;
       let tipo = TIPOS[q.tipo] ? q.tipo : null;
-      const raiz = h('div', null, titulo('Nueva tarjeta', 'Elegí qué querés hacer. Tocá una.'));
+      // Un Pedido se contesta, sobre todo, con una Entrega; se puede cambiar.
+      if (!tipo && origen && tipoDeCodigo(origen.codigo) === 'pedido' && TIPOS.entrega) tipo = 'entrega';
+      const raiz = h('div', null, titulo('Nueva tarjeta', origen ? 'Elegí con qué la respondés. Tocá una.' : 'Elegí qué querés hacer. Tocá una.'));
+      if (origen) raiz.appendChild(h('p', { class: 'responde', role: 'status' }, icono('enlace'), h('span', null, 'Responde a ', h('span', { class: 'cod' }, origen.codigo), origen.titulo ? ' · ' + origen.titulo : '')));
+      if (origenMal) raiz.appendChild(h('p', { class: 'err', role: 'alert' }, 'No existe o no lo podés ver: ' + q.responde_a + '. La tarjeta se crea sin vincular.'));
       const zonaForm = h('div', null);
       const botones = {};
       raiz.appendChild(h('div', { class: 'tipos', role: 'group', 'aria-label': 'Tipo de tarjeta' }, ORDEN_TIPOS.map(function (k, i) {
@@ -540,7 +726,7 @@
         const f = h('form', { class: 'form entra', novalidate: true },
           h('p', { class: 'chip neutro', style: 'justify-self:start' }, k === 'aviso' ? 'Un aviso nace cerrada: informa, no espera respuesta.' : (t.cierra || '')),
           h('label', { class: 'l', for: 'nt-titulo' }, 'Título', titulo_),
-          h('label', { class: 'l', for: 'nt-texto' }, 'Qué necesitás contar', texto, h('small', { id: 'nt-ayuda' }, 'Con tus palabras, sin apuro.')),
+          h('label', { class: 'l', for: 'nt-texto' }, 'Qué necesitás contar', texto, h('small', { id: 'nt-ayuda' }, 'Con tus palabras, sin apuro. Podés nombrar otra tarjeta o archivo por su código (PE0004, AR000123).')),
           h('div', { class: 'dos' },
             h('label', { class: 'l', for: 'nt-etapa' }, h('span', null, 'Fase ', h('small', null, '(opcional)')), selEtapa),
             h('label', { class: 'l', for: 'nt-fecha' }, h('span', null, 'Fecha límite ', h('small', null, '(opcional)')), fecha)),
@@ -555,6 +741,7 @@
           fd.append('tipo', k); fd.append('titulo', titulo_.value.trim()); fd.append('texto', texto.value.trim());
           if (selEtapa.value) fd.append('etapa_id', selEtapa.value);
           if (q.hito) fd.append('hito_id', q.hito);
+          if (origen) fd.append('responde_a', origen.codigo);
           if (fecha.value) fd.append('fecha_limite', fecha.value);
           Array.prototype.forEach.call(archivos.files, function (a) { fd.append('archivos', a); });
           if (archivos.files.length) fd.append('datos_personales', dp.checked ? 'true' : 'false');
@@ -562,7 +749,7 @@
           try {
             const d = await enviarForm('tarjetas', fd);
             invalidar(); avisar('Tarjeta creada.');
-            window.location.hash = '#t' + d.tarjeta.numero;
+            window.location.hash = hashDeTarjeta(d.tarjeta);
           } catch (er) { errorEn(envio, er.message); crear.disabled = false; crear.lastChild.textContent = 'Crear tarjeta'; }
         });
         return f;
@@ -579,16 +766,51 @@
     if (!t) throw new ErrorMesa('No existe la tarjeta #' + n + ' en este proyecto.', 404);
     return t.id;
   }
+  async function traerTarjeta(id) {
+    const d = await pedir('tarjetas/' + id);
+    if (d.tarjeta.tipo === 'aviso' && d.tarjeta.autor_lado !== LADO) {
+      pedirJson(BASE + 'tarjetas/' + id + '/leido', { method: 'POST' }).then(refrescarGlobo, function () {});
+    }
+    return d;
+  }
   function vistaTarjeta(numero) {
+    return montar('tarjeta', async function () { return dibujarTarjeta(await traerTarjeta(await idDeNumero(numero))); });
+  }
+  function noExiste() {
+    return h('div', { class: 'vacio' }, h('p', { role: 'alert' }, 'No existe o no lo podés ver.'),
+      h('a', { class: 'btn lisa', href: '#' + (S.ultima || 'pendientes') }, icono('volver'), 'Volver'));
+  }
+  // Un código en el hash (#PE0004, #PE0004-3, #AR000123, #HI0001): se resuelve
+  // con buscar?codigo= y se lleva a la cosa. El 404 es el mismo en todos los casos.
+  function vistaCodigo(c) {
+    c = c.toUpperCase();
     return montar('tarjeta', async function () {
-      const id = await idDeNumero(numero);
-      const d = await pedir('tarjetas/' + id);
-      if (d.tarjeta.tipo === 'aviso' && d.tarjeta.autor_lado !== LADO) {
-        pedirJson(BASE + 'tarjetas/' + id + '/leido', { method: 'POST' }).then(refrescarGlobo, function () {});
+      let r;
+      try { r = await pedir('buscar?codigo=' + encodeURIComponent(c)); }
+      catch (e) { if (e.status === 404) { S.actual = null; return noExiste(); } throw e; }
+      if (r.tipo === 'hito') {
+        S.ultima = 'plan'; marcarNav('plan');
+        const pr = await Promise.all([pedir('plan'), pedir('resumen')]);
+        S.plan = pr[0].etapas || [];
+        setGlobo(pr[1].pendientes);
+        const et = S.plan.find(function (e) { return hitosDe(e).some(function (x) { return x.id === r.id || x.codigo === r.codigo; }); });
+        if (!et) { S.actual = null; return noExiste(); }
+        S.etapaSel = et.id;
+        S.alTerminar = function () { resaltar($vista.querySelector('[data-codigo="' + r.codigo + '"]')); };
+        return dibujarPlan(pr[1].plan_pct);
+      }
+      if (!r.tarjeta_id) { S.actual = null; return noExiste(); }
+      const d = await traerTarjeta(r.tarjeta_id);
+      if (r.tipo === 'mensaje' || r.tipo === 'archivo') {
+        S.alTerminar = function () {
+          const el = $vista.querySelector('[data-codigo="' + r.codigo + '"]');
+          if (!resaltar(el) && r.tipo === 'archivo') abrirFicha(r.id);
+        };
       }
       return dibujarTarjeta(d);
     });
   }
+  function recargarTarjeta() { if (S.actual) montar('tarjeta', async function () { return dibujarTarjeta(await traerTarjeta(S.actual)); }); }
   function reemplazarTarjeta(d) {
     invalidar();
     vaciar($vista).appendChild(dibujarTarjeta(d));
@@ -600,24 +822,29 @@
   function dibujarTarjeta(d) {
     const t = d.tarjeta; const acc = d.acciones || {};
     const info = TIPOS[t.tipo] || {};
+    S.actual = t.id; S.actualCodigo = t.codigo || '';
     const raiz = colorTipo(h('div', { class: 'entra' }), t.tipo);
-    raiz.appendChild(h('a', { class: 'volver', href: '#' + S.ultima }, icono('volver'), 'Volver'));
-    raiz.appendChild(h('div', { class: 'tj-cab' }, icono(info.icono || t.icono || 'inbox'), h('span', null, t.tipo_nombre || info.nombre || t.tipo), h('span', { class: 'n' }, '#' + t.numero)));
+    raiz.appendChild(h('a', { class: 'volver', href: '#' + (S.ultima || 'pendientes') }, icono('volver'), 'Volver'));
+    raiz.appendChild(h('div', { class: 'tj-cab', 'data-codigo': t.codigo || null }, icono(info.icono || t.icono || 'inbox'), h('span', null, t.tipo_nombre || info.nombre || t.tipo),
+      h('span', { class: 'n' }, t.codigo ? codigo(t.codigo, { clase: 'en-cab', que: 'el código de la tarjeta' }) : h('span', { class: 'cod en-cab' }, '#' + t.numero))));
     const chips = h('div', { class: 'chips' }, h('span', { class: 'chip neutro' }, nombreEstado(t.estado)), chipEspera(t));
     if (t.estado === 'aprobada') chips.appendChild(h('span', { class: 'sello' }, 'Aprobada'));
     if (t.estado === 'rechazada') chips.appendChild(h('span', { class: 'sello rech' }, 'Rechazada'));
-    raiz.appendChild(h('div', { class: 'tj-tit' }, h('h1', null, t.titulo), chips));
+    if (acc.responder) chips.appendChild(h('a', { class: 'btn lisa chico responder-con', href: '#nueva?responde_a=' + encodeURIComponent(t.codigo || '') + (t.tipo === 'pedido' ? '&tipo=entrega' : '') }, icono('enviar'), 'Responder con…'));
+    raiz.appendChild(h('div', { class: 'tj-tit' }, h('h1', null, enlazar(t.titulo, t.refs)), chips));
 
     // ---- ficha
     const ficha = h('aside', { class: 'ficha', 'aria-label': 'Ficha de la tarjeta' });
     function par(dt, dd, clase) { return [h('dt', null, dt), h('dd', { class: clase || '' }, dd)]; }
     ficha.appendChild(h('dl', null,
-      par('A quién le toca', t.espera ? cap(t.espera_texto || '') : 'A nadie: está cerrada'),
+      par('Quién tiene que responder', t.espera ? cap(t.espera_texto || '') : 'A nadie: está cerrada'),
       par('Fase', t.etapa_nombre || 'Sin fase'),
       par('Responsable', t.responsable || 'Sin responsable'),
       par('Fecha límite', t.fecha_limite ? fechaCorta(t.fecha_limite) + (t.vencida ? ' (vencida)' : '') : 'Sin fecha límite', t.vencida ? 'vencida' : ''),
       par('La creó', (t.autor_nombre || '') + (t.autor_lado ? ' (' + ladoNombre(t.autor_lado) + ')' : '') + (t.creada_en ? ' · ' + fechaHora(t.creada_en) : '')),
       par('Última actividad', fechaHora(t.actualizada_en))));
+    const rel = bloqueRelacionadas(d.relacionadas);
+    if (rel) ficha.appendChild(rel);
     const sueltos = (d.archivos || []).filter(function (a) { return !a.mensaje_id; });
     if (sueltos.length) {
       ficha.appendChild(h('h3', null, 'Adjuntos de la tarjeta'));
@@ -633,10 +860,11 @@
     const porMensaje = {};
     (d.archivos || []).forEach(function (a) { if (a.mensaje_id) (porMensaje[a.mensaje_id] = porMensaje[a.mensaje_id] || []).push(a); });
     (d.mensajes || []).forEach(function (m) {
-      hilo.appendChild(h('article', { class: 'msg' + (m.mio ? ' mio' : '') + (m.solo_equipo ? ' nota' : '') },
+      hilo.appendChild(h('article', { class: 'msg' + (m.mio ? ' mio' : '') + (m.solo_equipo ? ' nota' : ''), 'data-codigo': m.codigo || null },
         h('div', { class: 'quien' }, m.autor_nombre, m.autor_lado ? h('span', { class: 'chip ' + (m.autor_lado === 'equipo' ? 'equipo' : 'sind') }, ladoNombre(m.autor_lado)) : null,
-          m.solo_equipo ? h('span', { class: 'chip neutro' }, icono('candado'), 'Solo equipo') : null, h('span', { class: 'hora' }, fechaHora(m.creado_en))),
-        m.texto ? h('p', null, m.texto) : null,
+          m.solo_equipo ? h('span', { class: 'chip neutro' }, icono('candado'), 'Solo equipo') : null, h('span', { class: 'hora' }, fechaHora(m.creado_en)),
+          m.codigo ? h('span', { class: 'msg-cod' }, codigo(m.codigo, { que: 'el código del mensaje' })) : null),
+        m.texto ? h('p', null, enlazar(m.texto, m.refs)) : null,
         porMensaje[m.id] ? h('div', { class: 'adjs' }, porMensaje[m.id].map(adjunto)) : null));
     });
     if (!(d.mensajes || []).length) hilo.appendChild(h('p', { class: 'vacio-col' }, 'Todavía no hay mensajes.'));
@@ -655,9 +883,11 @@
     return raiz;
   }
   function adjunto(a) {
-    if (a.borrado) return h('div', { class: 'adj borrado' }, h('span', { class: 'nom' }, a.nombre), h('small', null, 'Borrado · ' + tamano(a.tamano)));
-    const fila = h('div', { class: 'adj' }, icono('clip'), h('span', { class: 'nom' }, a.nombre), h('small', null, tamano(a.tamano)),
-      a.datos_personales ? h('span', { class: 'chip mal' }, icono('candado'), 'Datos personales') : null);
+    if (a.borrado) return h('div', { class: 'adj borrado', 'data-codigo': a.codigo || null }, h('span', { class: 'nom' }, a.nombre), h('small', null, 'Borrado · ' + tamano(a.tamano)), a.codigo ? codigo(a.codigo, { que: 'el código del archivo' }) : null);
+    const fila = h('div', { class: 'adj', 'data-codigo': a.codigo || null }, icono('clip'), h('span', { class: 'nom' }, a.nombre), h('small', null, tamano(a.tamano)),
+      a.codigo ? codigo(a.codigo, { que: 'el código del archivo' }) : null,
+      a.datos_personales ? h('span', { class: 'chip mal' }, icono('candado'), 'Datos personales') : null,
+      botonFicha(a, function () { invalidar(); recargarTarjeta(); }));
     if (a.puede_bajar) fila.appendChild(h('a', { class: 'btn lisa chico', href: BASE + 'archivos/' + a.id, download: a.nombre }, icono('bajar'), 'Bajar'));
     if (a.puede_borrar) fila.appendChild(h('button', { class: 'btn no chico', type: 'button', onclick: async function () {
       const ok = await confirmar({ titulo: '¿Borrar este archivo?', texto: 'Se borra el archivo y queda la constancia de que existió: nombre, tamaño, quién lo subió y quién lo borró.', ok: 'Borrar archivo', clase: 'no' });
@@ -667,7 +897,6 @@
     } }, icono('basura'), 'Borrar'));
     return fila;
   }
-  function recargarTarjeta() { const m = /^t(\d+)$/.exec(parseHash().ruta); if (m) vistaTarjeta(+m[1]); }
   function botonReabrir(t) {
     return h('button', { class: 'btn lisa', type: 'button', onclick: async function (ev) {
       const b = ev.currentTarget; b.disabled = true;
@@ -732,8 +961,11 @@
     selEstado.addEventListener('change', rotular);
     if (interno) interno.addEventListener('change', function () { if (interno.checked) selEstado.value = ''; rotular(); });
     rotular();
+    const ayudaTxt = h('p', { class: 'ayuda-cod', id: 'rd-ayuda', hidden: true }, 'Podés nombrar otra tarjeta o archivo por su código (PE0004, AR000123) y queda enlazado.');
+    const ayudaBtn = h('button', { class: 'ayuda-q', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'rd-ayuda', 'aria-label': 'Ayuda: nombrar otra tarjeta o archivo',
+      onclick: function () { const ab = ayudaTxt.hidden; ayudaTxt.hidden = !ab; ayudaBtn.setAttribute('aria-expanded', String(ab)); } }, '?');
     const f = h('form', { class: 'redactor', novalidate: true },
-      h('label', { class: 'l', for: 'rd-texto' }, 'Tu respuesta'), texto,
+      h('div', { class: 'rd-rot' }, h('label', { class: 'l', for: 'rd-texto' }, 'Tu respuesta'), ayudaBtn), ayudaTxt, texto,
       interno ? h('label', { class: 'chk interno', for: 'rd-int' }, interno, icono('candado'), 'Solo equipo (el sindicato no lo ve)') : null,
       archivos ? h('div', { class: 'arch' }, h('label', { class: 'l', for: 'rd-arch' }, h('span', null, 'Adjuntar archivos')), archivos, dpFila) : null,
       h('div', { class: 'fila-envio' }, h('label', { class: 'l', for: 'rd-estado' }, 'Al enviar, pasa a', selEstado), boton), zonaError);
@@ -754,13 +986,46 @@
     return f;
   }
 
+  // ---------------------------------------------------------------- búsqueda
+  function vistaBuscar(q) {
+    return montar('buscar', async function () {
+      const d = await pedir('tarjetas?vista=todas&q=' + encodeURIComponent(q));
+      const lista = d.tarjetas || [];
+      const raiz = h('div', null, titulo('Resultados', lista.length ? lista.length + (lista.length === 1 ? ' tarjeta' : ' tarjetas') + ' con «' + q + '».' : null));
+      raiz.appendChild(lista.length ? h('div', { class: 'tiles' }, lista.map(tile)) : vacio('No encontramos tarjetas con «' + q + '». Probá con otra palabra o con un código, por ejemplo PE0004.'));
+      return raiz;
+    });
+  }
+  function buscar(valor) {
+    const v = (valor || '').trim();
+    if (!v) return;
+    const destino = esCodigo(v) ? '#' + v.toUpperCase() : '#buscar?q=' + encodeURIComponent(v);
+    if (window.location.hash === destino) ruta(); else window.location.hash = destino;
+  }
+  document.querySelectorAll('[data-buscador]').forEach(function (f) {
+    f.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      const inp = f.querySelector('input'); buscar(inp.value);
+      if (document.activeElement && document.activeElement.blur && window.matchMedia('(max-width: 860px)').matches) document.activeElement.blur();
+    });
+  });
+
   // ---------------------------------------------------------------- rutas
   function ruta() {
     const p = parseHash();
     let r = p.ruta;
     const m = /^t(\d+)$/.exec(r);
     if (m) { marcarNav(S.ultima); vistaTarjeta(+m[1]); return; }
+    if (esCodigo(r)) {
+      const c = r.toUpperCase();
+      // Ya estoy en esa tarjeta: no la rearmo (perdería lo que se está escribiendo).
+      const aqui = $vista.querySelector('.tj-cab') && S.actual && (c === S.actualCodigo || $vista.querySelector('[data-codigo="' + c + '"]'));
+      if (aqui) { marcarNav(S.ultima); resaltar($vista.querySelector('[data-codigo="' + c + '"]')); return; }
+      marcarNav(S.ultima); vistaCodigo(c); return;
+    }
+    if (r === 'buscar') { S.actual = null; marcarNav(null); vistaBuscar(p.q.q || ''); return; }
     if (['pendientes', 'tablero', 'plan', 'carpetas', 'aprobaciones', 'nueva'].indexOf(r) === -1) r = 'pendientes';
+    S.actual = null;
     if (r !== 'nueva') S.ultima = r;
     marcarNav(r === 'nueva' ? S.ultima : r);
     if (r === 'tablero') vistaTablero();
