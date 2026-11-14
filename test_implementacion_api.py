@@ -163,7 +163,7 @@ def test_etapa_y_hito_y_fecha_limite_en_la_tarjeta():
     assert resumen["pendientes"] == 1
     plan = sin.get(_api(pid, "plan")).json()["etapas"]
     hito = [x for e in plan for x in e["hitos"] if x["id"] == h_id][0]
-    assert hito["tarjetas"] == [{"numero": t["numero"], "titulo": t["titulo"], "estado": "abierta"}]
+    assert hito["tarjetas"] == [{"numero": t["numero"], "codigo": t["codigo"], "titulo": t["titulo"], "estado": "abierta"}]
 
 
 def test_responder_y_cambiar_el_estado_es_un_solo_acto():
@@ -734,7 +734,7 @@ def test_los_avisos_salen_a_quien_le_toca_y_sin_el_contenido(correo_simulado):
     assert mail_eq in destinos and mail_a not in destinos and mail_b not in destinos
     d, asunto, cuerpo = next(x for x in correo_simulado if x[0] == mail_eq)
     assert f"#{t['numero']}" in asunto and "Necesitamos el logo" in asunto
-    assert f"/implementacion?p={pid}#t{t['numero']}" in cuerpo
+    assert f"/implementacion?p={pid}#{t['codigo']}" in cuerpo and t["codigo"] in asunto
     assert secreto not in asunto + cuerpo and "reservado-5521" not in asunto + cuerpo
     correo_simulado.clear()
     # el equipo responde: avisan a los usuarios activos del sindicato (no al de baja)

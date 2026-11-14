@@ -449,7 +449,7 @@ def test_toda_tabla_impl_esta_declarada():
     """Una tabla `impl*` nueva que no esté en db.IMPL_TABLAS rompe este test:
     obliga a decidir (y a que clonar/recargar la excluyan)."""
     assert tuple(_tablas_impl_del_esquema()) == db.IMPL_TABLAS
-    assert len(db.IMPL_TABLAS) == 10
+    assert len(db.IMPL_TABLAS) == 12
 
 
 def test_clonar_demo_a_pruebas_excluye_las_tablas_impl():

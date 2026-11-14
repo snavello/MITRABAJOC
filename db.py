@@ -10923,3 +10923,249 @@ def impl_bytes_archivo(s: Session, proyecto_id: int, archivo_id: int) -> bytes:
     una descarga: la exportación entera deja su propio evento)."""
     return bytes(s.exec(select(ImplArchivo.datos).where(
         ImplArchivo.id == archivo_id, ImplArchivo.proyecto_id == proyecto_id)).first() or b"")
+
+
+# =====================================================================
+# Mesa de implementación: códigos y relaciones (I12, I13, I14)
+# =====================================================================
+def impl_tarjeta_por_codigo_o_id(s: Session, proyecto_id: int, valor) -> Optional[ImplTarjeta]:
+    """La tarjeta del proyecto por su id (solo dígitos) o por su código (PE0004,
+    también el de uno de sus mensajes, PE0004-3). None si no es de este proyecto."""
+    texto = str(valor if valor is not None else "").strip()
+    if texto.isdigit():
+        return _impl_tarjeta(s, proyecto_id, int(texto))
+    d = implementacion.parsear_codigo(texto)
+    if not d or d["tipo"] not in ("tarjeta", "mensaje"):
+        return None
+    return s.exec(select(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id,
+                                            ImplTarjeta.codigo == d["base"])).first()
+
+
+def _impl_claves_de_codigos(s: Session, proyecto_id: int, codigos: list) -> dict:
+    """{código canónico: (tipo, id)} de lo que EXISTE en este proyecto. Lo de
+    otro proyecto o inexistente simplemente no está en el resultado."""
+    analizados = [d for d in (implementacion.parsear_codigo(c) for c in codigos) if d]
+    salida = {}
+    bases = {d["base"] for d in analizados if d["tipo"] in ("tarjeta", "mensaje")}
+    tarjetas = {}
+    if bases:
+        tarjetas = {c: i for c, i in s.exec(select(ImplTarjeta.codigo, ImplTarjeta.id).where(
+            ImplTarjeta.proyecto_id == proyecto_id, ImplTarjeta.codigo.in_(bases))).all()}
+    for d in analizados:
+        if d["tipo"] == "tarjeta" and d["codigo"] in tarjetas:
+            salida[d["codigo"]] = ("tarjeta", tarjetas[d["codigo"]])
+        elif d["tipo"] == "mensaje" and d["base"] in tarjetas:
+            mid = s.exec(select(ImplMensaje.id).where(
+                ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == tarjetas[d["base"]],
+                ImplMensaje.orden == d["orden"])).first()
+            if mid:
+                salida[d["codigo"]] = ("mensaje", mid)
+    for tipo, modelo in (("archivo", ImplArchivo), ("hito", ImplHito)):
+        cods = {d["codigo"] for d in analizados if d["tipo"] == tipo}
+        if cods:
+            for c, i in s.exec(select(modelo.codigo, modelo.id).where(
+                    modelo.proyecto_id == proyecto_id, modelo.codigo.in_(cods))).all():
+                salida[c] = (tipo, i)
+    return salida
+
+
+def _impl_codigo_mensaje(codigo_tarjeta: str, orden: int) -> str:
+    return implementacion.formatear_codigo(codigo_tarjeta[:2], int(codigo_tarjeta[2:]), orden)
+
+
+def _impl_cargar_cosas(s: Session, proyecto_id: int, claves) -> dict:
+    """{(tipo, id): info} de lo pedido, solo del proyecto. `info` = tipo, id,
+    codigo, titulo, estado, tarjeta_id, enlace e `interno` (existe solo para
+    el equipo: un mensaje que es nota interna, o un archivo adjunto a una)."""
+    por_tipo = {}
+    for tipo, i in claves:
+        por_tipo.setdefault(tipo, set()).add(i)
+    enlace = lambda c: implementacion.enlace_codigo(proyecto_id, c)       # noqa: E731
+    salida, tarjetas = {}, {}
+
+    def tarjetas_de(ids):
+        faltan = [i for i in ids if i not in tarjetas]
+        if faltan:
+            for t in s.exec(select(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id,
+                                                      ImplTarjeta.id.in_(faltan))).all():
+                tarjetas[t.id] = t
+    if por_tipo.get("tarjeta"):
+        tarjetas_de(por_tipo["tarjeta"])
+        for i in por_tipo["tarjeta"]:
+            t = tarjetas.get(i)
+            if t:
+                salida[("tarjeta", i)] = {"tipo": "tarjeta", "id": t.id, "codigo": t.codigo, "titulo": t.titulo,
+                                          "estado": t.estado, "tarjeta_id": t.id, "interno": False,
+                                          "enlace": enlace(t.codigo)}
+    if por_tipo.get("mensaje"):
+        mensajes = list(s.exec(select(ImplMensaje).where(ImplMensaje.proyecto_id == proyecto_id,
+                                                         ImplMensaje.id.in_(por_tipo["mensaje"]))).all())
+        tarjetas_de({m.tarjeta_id for m in mensajes})
+        for m in mensajes:
+            t = tarjetas.get(m.tarjeta_id)
+            if t:
+                c = _impl_codigo_mensaje(t.codigo, m.orden)
+                salida[("mensaje", m.id)] = {"tipo": "mensaje", "id": m.id, "codigo": c, "titulo": t.titulo,
+                                             "estado": t.estado, "tarjeta_id": t.id, "interno": bool(m.solo_equipo),
+                                             "enlace": enlace(c)}
+    if por_tipo.get("archivo"):
+        archivos = list(s.exec(select(ImplArchivo).options(*_sin_bytes(ImplArchivo)).where(
+            ImplArchivo.proyecto_id == proyecto_id, ImplArchivo.id.in_(por_tipo["archivo"]))).all())
+        ids_m = {a.mensaje_id for a in archivos if a.mensaje_id}
+        internos = set(s.exec(select(ImplMensaje.id).where(
+            ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.id.in_(ids_m),
+            ImplMensaje.solo_equipo == True)).all()) if ids_m else set()         # noqa: E712
+        for a in archivos:
+            salida[("archivo", a.id)] = {"tipo": "archivo", "id": a.id, "codigo": a.codigo, "titulo": a.nombre,
+                                         "estado": "borrado" if a.borrado_en else "vigente",
+                                         "tarjeta_id": a.tarjeta_id, "interno": a.mensaje_id in internos,
+                                         "enlace": enlace(a.codigo)}
+    if por_tipo.get("hito"):
+        for h in s.exec(select(ImplHito).where(ImplHito.proyecto_id == proyecto_id,
+                                               ImplHito.id.in_(por_tipo["hito"]))).all():
+            salida[("hito", h.id)] = {"tipo": "hito", "id": h.id, "codigo": h.codigo, "titulo": h.texto,
+                                      "estado": "hecho" if h.hecho else "pendiente", "tarjeta_id": None,
+                                      "interno": False, "enlace": enlace(h.codigo)}
+    return salida
+
+
+def impl_relacionar(s: Session, proyecto_id: int, origen_tipo: str, origen_id: int, destino_tipo: str,
+                    destino_id: int, clase: str, actor, solo_equipo: bool = False) -> None:
+    """Anota una relación (sin commit: va en la transacción de quien la pide).
+    Única por (origen, destino, clase): repetirla no hace nada, salvo que la
+    nueva sea visible para el sindicato y la vieja no: entonces pasa a serlo."""
+    a = _impl_actor(actor)
+    if origen_tipo not in implementacion.TIPOS_REL or destino_tipo not in implementacion.TIPOS_REL \
+            or clase not in implementacion.CLASES_REL:
+        raise ValueError("Relación inválida.")
+    if (origen_tipo, origen_id) == (destino_tipo, destino_id):
+        return
+    s.exec(postgresql.insert(ImplRelacion.__table__).values(
+        proyecto_id=proyecto_id, origen_tipo=origen_tipo, origen_id=origen_id, destino_tipo=destino_tipo,
+        destino_id=destino_id, clase=clase, solo_equipo=bool(solo_equipo), creada_en=fechas.ahora_con_segundos(),
+        creada_por_lado=a.lado, creada_por_id=a.id, creada_por_nombre=a.nombre).on_conflict_do_nothing(
+        constraint="uq_implrelacion_par"))
+    if not solo_equipo:
+        s.exec(sa_update(ImplRelacion).where(
+            ImplRelacion.proyecto_id == proyecto_id, ImplRelacion.origen_tipo == origen_tipo,
+            ImplRelacion.origen_id == origen_id, ImplRelacion.destino_tipo == destino_tipo,
+            ImplRelacion.destino_id == destino_id, ImplRelacion.clase == clase,
+            ImplRelacion.solo_equipo == True).values(solo_equipo=False))      # noqa: E712
+
+
+def impl_registrar_menciones(s: Session, proyecto_id: int, origen_tipo: str, origen_id: int, textos: list,
+                             actor, interna: bool = False) -> int:
+    """Los códigos escritos en `textos` que EXISTEN en este proyecto quedan
+    como «menciona» desde el origen. Uno inexistente o de otro proyecto se
+    ignora en silencio. Una mención desde una nota interna, o hacia algo que
+    el sindicato no ve, nace `solo_equipo`. No se menciona a sí misma. Sin commit."""
+    codigos = []
+    for texto in textos:
+        for c in implementacion.extraer_codigos(texto):
+            if c not in codigos:
+                codigos.append(c)
+    if not codigos:
+        return 0
+    claves = _impl_claves_de_codigos(s, proyecto_id, codigos)
+    cosas = _impl_cargar_cosas(s, proyecto_id, set(claves.values()))
+    hechas = 0
+    for c in codigos:
+        info = cosas.get(claves.get(c))
+        if not info:
+            continue
+        if origen_tipo == "tarjeta" and info["tarjeta_id"] == origen_id and info["tipo"] in ("tarjeta", "mensaje"):
+            continue
+        impl_relacionar(s, proyecto_id, origen_tipo, origen_id, info["tipo"], info["id"], "menciona", actor,
+                        solo_equipo=bool(interna or info["interno"]))
+        hechas += 1
+    return hechas
+
+
+def impl_relacionadas(s: Session, proyecto_id: int, tipo: str, cosa_id: int, lado: str) -> list:
+    """El bloque «Relacionadas» de una tarjeta, un archivo o un hito, para
+    quien mira: [{id, clase, sentido (sale|entra), texto, tipo, codigo, titulo,
+    estado, enlace, via}]. `via` = el código del mensaje propio que participa
+    (vacío si es la cosa misma). Para el sindicato no viaja lo `solo_equipo`
+    ni lo que apunta a algo interno."""
+    propias = {(tipo, cosa_id): ""}
+    if tipo == "tarjeta":
+        t = _impl_tarjeta(s, proyecto_id, cosa_id)
+        if not t:
+            return []
+        for mid, orden in s.exec(select(ImplMensaje.id, ImplMensaje.orden).where(
+                ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == cosa_id)).all():
+            propias[("mensaje", mid)] = _impl_codigo_mensaje(t.codigo, orden)
+    grupos = {}
+    for (tp, i) in propias:
+        grupos.setdefault(tp, []).append(i)
+    en_origen = or_(*[and_(ImplRelacion.origen_tipo == tp, ImplRelacion.origen_id.in_(ids))
+                      for tp, ids in grupos.items()])
+    en_destino = or_(*[and_(ImplRelacion.destino_tipo == tp, ImplRelacion.destino_id.in_(ids))
+                       for tp, ids in grupos.items()])
+    q = select(ImplRelacion).where(ImplRelacion.proyecto_id == proyecto_id, or_(en_origen, en_destino))
+    ve = implementacion.puede_ver_nota_interna(lado)
+    if not ve:
+        q = q.where(ImplRelacion.solo_equipo == False)                          # noqa: E712
+    filas = []
+    for r in s.exec(q.order_by(ImplRelacion.id)).all():
+        o, d = (r.origen_tipo, r.origen_id), (r.destino_tipo, r.destino_id)
+        if o in propias and d in propias:
+            continue
+        sale = o in propias
+        filas.append((r, "sale" if sale else "entra", d if sale else o, propias[o if sale else d]))
+    cosas = _impl_cargar_cosas(s, proyecto_id, {f[2] for f in filas})
+    salida = []
+    for r, sentido, otro, via in filas:
+        info = cosas.get(otro)
+        if not info or (info["interno"] and not ve):
+            continue
+        salida.append({"id": r.id, "clase": r.clase, "sentido": sentido,
+                       "texto": implementacion.texto_relacion(r.clase, sentido), "tipo": info["tipo"],
+                       "codigo": info["codigo"], "titulo": info["titulo"], "estado": info["estado"],
+                       "enlace": info["enlace"], "via": via})
+    return salida
+
+
+def impl_refs(s: Session, proyecto_id: int, textos: list, lado: str) -> list:
+    """Por cada texto, los códigos que nombra: [{codigo, tipo, enlace, existe}].
+    `existe` es lo que ESTE lector puede ver: un código inexistente, de otro
+    proyecto o interno (para el sindicato) sale igual, con existe=false y sin
+    enlace, así no se revela nada."""
+    por_texto = [implementacion.extraer_codigos(t) for t in textos]
+    todos = sorted({c for lista in por_texto for c in lista})
+    claves = _impl_claves_de_codigos(s, proyecto_id, todos) if todos else {}
+    cosas = _impl_cargar_cosas(s, proyecto_id, set(claves.values())) if claves else {}
+    ve = implementacion.puede_ver_nota_interna(lado)
+    salida = []
+    for lista in por_texto:
+        refs = []
+        for c in lista:
+            info = cosas.get(claves.get(c))
+            visible = bool(info) and (ve or not info["interno"])
+            refs.append({"codigo": c, "tipo": info["tipo"] if visible else implementacion.parsear_codigo(c)["tipo"],
+                         "enlace": info["enlace"] if visible else "", "existe": visible})
+        salida.append(refs)
+    return salida
+
+
+def impl_buscar_codigo(s: Session, proyecto_id: int, codigo: str, lado: str) -> Optional[dict]:
+    """El buscador único: un código a {tipo, codigo, enlace, id, tarjeta_id,
+    titulo}. None si no existe en este proyecto o el lector no lo puede ver."""
+    d = implementacion.parsear_codigo(codigo)
+    if not d:
+        return None
+    clave = _impl_claves_de_codigos(s, proyecto_id, [d["codigo"]]).get(d["codigo"])
+    info = _impl_cargar_cosas(s, proyecto_id, {clave}).get(clave) if clave else None
+    if not info or (info["interno"] and not implementacion.puede_ver_nota_interna(lado)):
+        return None
+    return {k: info[k] for k in ("tipo", "codigo", "enlace", "id", "tarjeta_id", "titulo")}
+
+
+def impl_ficha_archivo(s: Session, proyecto_id: int, archivo_id: int, lado: str) -> Optional[dict]:
+    """El archivo (sin bytes) con su tarjeta y lo que lo relaciona; None si no
+    es de este proyecto o es de una nota interna y pide el sindicato."""
+    arch = impl_archivo(s, proyecto_id, archivo_id)
+    if not arch or not _impl_archivo_visible(s, arch, lado):
+        return None
+    return {"archivo": arch, "tarjeta": _impl_tarjeta(s, proyecto_id, arch.tarjeta_id),
+            "relacionadas": impl_relacionadas(s, proyecto_id, "archivo", arch.id, lado)}

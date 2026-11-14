@@ -12775,7 +12775,7 @@ async def _impl_leer_adjuntos(subidos: list) -> list:
 def _impl_tarjeta_dict(t, actor, etapas: dict, n_mensajes: int = 0, n_archivos: int = 0) -> dict:
     tipo = implementacion.TIPOS.get(t.tipo, {})
     return {
-        "id": t.id, "numero": t.numero, "tipo": t.tipo, "tipo_nombre": tipo.get("nombre", t.tipo),
+        "id": t.id, "numero": t.numero, "codigo": t.codigo, "tipo": t.tipo, "tipo_nombre": tipo.get("nombre", t.tipo),
         "color": tipo.get("color", ""), "icono": tipo.get("icono", ""), "titulo": t.titulo,
         "estado": t.estado, "estado_nombre": implementacion.NOMBRES_ESTADO.get(t.estado, t.estado),
         "espera": t.lado_que_espera, "espera_texto": implementacion.texto_espera(t.lado_que_espera),
@@ -12792,7 +12792,7 @@ def _impl_tarjeta_dict(t, actor, etapas: dict, n_mensajes: int = 0, n_archivos: 
 def _impl_archivo_dict(a, actor) -> dict:
     borrado = bool(a.borrado_en)
     return {
-        "id": a.id, "nombre": a.nombre, "mime": a.mime, "tamano": a.tamano,
+        "id": a.id, "codigo": a.codigo, "nombre": a.nombre, "mime": a.mime, "tamano": a.tamano,
         "datos_personales": a.datos_personales, "subido_por": a.subido_por_nombre,
         "subido_lado": a.subido_por_lado, "subido_en": a.subido_en, "mensaje_id": a.mensaje_id,
         "borrado": borrado, "borrado_por": a.borrado_por_nombre, "borrado_en": a.borrado_en,
@@ -12812,15 +12812,22 @@ def _impl_detalle(s, pid: int, tid: int, actor) -> dict:
     t = h["tarjeta"]
     etapas = {e.id: e.nombre for e in db.impl_etapas(s, pid)}
     vigentes = sum(1 for a in h["archivos"] if not a.borrado_en)
+    refs = db.impl_refs(s, pid, [t.titulo] + [m.texto for m in h["mensajes"]], actor.lado)
+    tarjeta = _impl_tarjeta_dict(t, actor, etapas, len(h["mensajes"]), vigentes)
+    tarjeta["refs"] = refs[0]
     salida = {
-        "tarjeta": _impl_tarjeta_dict(t, actor, etapas, len(h["mensajes"]), vigentes),
-        "mensajes": [{"id": m.id, "autor_nombre": m.autor_nombre, "autor_lado": m.autor_lado,
+        "tarjeta": tarjeta,
+        "mensajes": [{"id": m.id, "codigo": implementacion.formatear_codigo(t.codigo[:2], int(t.codigo[2:]), m.orden)
+                      if m.orden else "", "orden": m.orden,
+                      "autor_nombre": m.autor_nombre, "autor_lado": m.autor_lado,
                       "texto": m.texto, "solo_equipo": m.solo_equipo, "creado_en": m.creado,
-                      "mio": m.autor_lado == actor.lado and m.autor_id == actor.id} for m in h["mensajes"]],
+                      "mio": m.autor_lado == actor.lado and m.autor_id == actor.id, "refs": refs[i + 1]}
+                     for i, m in enumerate(h["mensajes"])],
         "archivos": [_impl_archivo_dict(a, actor) for a in h["archivos"]],
         "eventos": [{"quien": e.actor_nombre, "lado": e.actor_lado, "cuando": e.cuando, "que": e.accion,
                      "texto": implementacion.texto_evento(e.accion, e.detalle)} for e in h["eventos"]],
         "acciones": implementacion.acciones_de(t.tipo, t.estado, t.lado_que_espera, actor.lado),
+        "relacionadas": db.impl_relacionadas(s, pid, "tarjeta", t.id, actor.lado),
     }
     if t.tipo == implementacion.AVISO:
         salida["lecturas"] = [{"nombre": l.nombre, "lado": l.lado, "cuando": l.cuando}
@@ -12849,9 +12856,9 @@ def _impl_preparar_aviso(s, request: Request, pid: int, tarjeta, lado_destino: s
     if not mails:
         return None
     proyecto = db.impl_proyecto(s, pid)
-    enlace = f"{_base_url(request)}/implementacion?p={pid}#t{tarjeta.numero}"
+    enlace = _base_url(request) + implementacion.enlace_codigo(pid, tarjeta.codigo)
     asunto, cuerpo = correo.texto_aviso_mesa(proyecto.nombre if proyecto else "", tarjeta.numero,
-                                             tarjeta.titulo, enlace, motivo)
+                                             tarjeta.titulo, enlace, motivo, codigo=tarjeta.codigo)
     return mails, asunto, cuerpo
 
 
@@ -12937,7 +12944,8 @@ def api_impl_tarjetas(request: Request, pid: int, vista: str = "pendientes", est
 async def api_impl_tarjeta_crear(
         request: Request, pid: int, tipo: str = Form(""), titulo: str = Form(""), texto: str = Form(""),
         etapa_id: str = Form(""), hito_id: str = Form(""), fecha_limite: str = Form(""),
-        datos_personales: str = Form(""), archivos: list[UploadFile] = File(default=[]),
+        datos_personales: str = Form(""), responde_a: str = Form(""),
+        archivos: list[UploadFile] = File(default=[]),
         archivos_c: list[UploadFile] = File(default=[], alias="archivos[]")):
     await run_in_threadpool(_impl_autorizar, request, pid)
     adjuntos = await _impl_leer_adjuntos(list(archivos) + list(archivos_c))
@@ -12946,13 +12954,20 @@ async def api_impl_tarjeta_crear(
     def _trabajo():
         with db.get_session() as s:
             actor = _impl_actor_de(request, pid, s)
+            original = None
+            if responde_a.strip():
+                original = db.impl_tarjeta_por_codigo_o_id(s, pid, responde_a)
+                if not original:
+                    raise implementacion.ErrorImpl(
+                        "responde_a", "La tarjeta que querés responder no existe en este proyecto.")
             t = db.impl_crear_tarjeta(s, pid, actor, tipo, titulo, texto, etapa_id=et, hito_id=hi,
-                                      fecha_limite=fecha_limite)
+                                      fecha_limite=fecha_limite, responde_a=original.id if original else None)
             if t is None:
                 raise HTTPException(404, "No existe.")
             for nombre, mime, datos in adjuntos:
                 db.impl_subir_archivo(s, pid, t.id, actor, nombre, mime, datos,
-                                      datos_personales=_impl_bool(datos_personales))
+                                      datos_personales=_impl_bool(datos_personales),
+                                      responde_a_id=original.id if original else None)
             destino = (implementacion.otro_lado(actor.lado) if t.tipo == implementacion.AVISO
                        else t.lado_que_espera)
             aviso = _impl_preparar_aviso(s, request, pid, t, destino, "nueva")
@@ -13038,6 +13053,34 @@ def _impl_cabecera_descarga(nombre: str) -> str:
     return f"attachment; filename=\"{ascii_}\"; filename*=UTF-8''{quote(nombre)}"
 
 
+@app.get(API_IMPL + "/archivos/{aid}/ficha")
+def api_impl_archivo_ficha(request: Request, pid: int, aid: int):
+    """Los metadatos del archivo y lo que lo relaciona; sin bytes y sin
+    registrar una descarga."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        f = db.impl_ficha_archivo(s, pid, aid, actor.lado)
+        if f is None:
+            raise HTTPException(404, "No existe.")
+        t = f["tarjeta"]
+        return {"archivo": _impl_archivo_dict(f["archivo"], actor),
+                "tarjeta": {"id": t.id, "numero": t.numero, "codigo": t.codigo, "titulo": t.titulo,
+                            "estado": t.estado} if t else None,
+                "relacionadas": f["relacionadas"]}
+
+
+@app.get(API_IMPL + "/buscar")
+def api_impl_buscar(request: Request, pid: int, codigo: str = ""):
+    """El buscador único: un código lleva a la cosa. 404 si no existe en este
+    proyecto o este lector no la puede ver (no se revela que existe)."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        r = db.impl_buscar_codigo(s, pid, codigo, actor.lado)
+        if r is None:
+            raise HTTPException(404, "No existe.")
+        return r
+
+
 @app.get(API_IMPL + "/archivos/{aid}")
 def api_impl_archivo(request: Request, pid: int, aid: int):
     """Siempre como descarga (attachment), nunca HTML ni SVG en línea."""
@@ -13077,12 +13120,13 @@ def api_impl_carpetas(request: Request, pid: int, sentido: str = "entrada"):
             vistos[clave] = {"etapa": f["etapa"] or "Sin etapa", "etapa_id": clave, "archivos": []}
             etapas.append(vistos[clave])
         vistos[clave]["archivos"].append({
-            "id": f["id"], "nombre": f["nombre"], "mime": f["mime"], "tamano": f["tamano"],
+            "id": f["id"], "codigo": f["codigo"], "nombre": f["nombre"], "mime": f["mime"], "tamano": f["tamano"],
             "datos_personales": f["datos_personales"], "subido_por": f["subido_por"],
             "subido_lado": f["subido_lado"], "subido_en": f["subido_en"], "mensaje_id": f["mensaje_id"],
             "borrado": f["borrado"], "borrado_por": f["borrado_por"], "borrado_en": f["borrado_en"],
             "puede_bajar": f["puede_bajar"], "puede_borrar": f["puede_borrar"],
             "tarjeta_id": f["tarjeta_id"], "tarjeta_numero": f["tarjeta_numero"],
+            "tarjeta_codigo": f["tarjeta_codigo"],
             "tarjeta_titulo": f["tarjeta_titulo"]})
     return {"etapas": etapas}
 
@@ -13094,7 +13138,8 @@ def api_impl_aprobaciones(request: Request, pid: int):
         _impl_actor_de(request, pid, s)
         filas = db.impl_aprobaciones_registro(s, pid)
     return {"aprobaciones": [{
-        "numero": f["numero"], "titulo": f["titulo"], "estado": f["estado"], "pedida_por": f["autor"],
+        "numero": f["numero"], "codigo": f["codigo"], "titulo": f["titulo"], "estado": f["estado"],
+        "pedida_por": f["autor"],
         "pedida_en": f["creada"], "resuelta_por": f["resuelta_por"], "resuelta_en": f["resuelta_en"],
         "texto": f["texto"], "etapa": f["etapa"]} for f in filas]}
 
@@ -13197,17 +13242,43 @@ def _impl_armar_zip(s, pid: int, datos: dict):
         json_("eventos.json", [_impl_fila(x) for x in datos["eventos"]])
         json_("descargas.json", [_impl_fila(x) for x in datos["descargas"]])
         json_("lecturas_aviso.json", [_impl_fila(x) for x in datos["lecturas"]])
+        json_("relaciones.json", [_impl_fila(x) for x in datos["relaciones"]])
+        json_("contadores.json", [_impl_fila(x) for x in datos["contadores"]])
         json_("aprobaciones.json", datos["aprobaciones"])
         z.writestr("aprobaciones.csv", implementacion.aprobaciones_csv(datos["aprobaciones"]))
         tabla = _io.StringIO()
         w = _csv.writer(tabla, delimiter=";", lineterminator="\r\n")
-        w.writerow(["Número", "Tipo", "Título", "Estado", "Espera", "Autor", "Responsable", "Fecha límite", "Creada"])
+        w.writerow(["Número", "Tipo", "Título", "Estado", "Espera", "Autor", "Responsable", "Fecha límite", "Creada",
+                    "Código"])
         for t in datos["tarjetas"]:
             w.writerow([t.numero, t.tipo, implementacion._celda(t.titulo),
                         implementacion.NOMBRES_ESTADO.get(t.estado, t.estado), t.lado_que_espera,
                         implementacion._celda(t.autor_nombre), implementacion._celda(t.responsable),
-                        t.fecha_limite, t.creada])
+                        t.fecha_limite, t.creada, t.codigo])
         z.writestr("tarjetas.csv", "﻿" + tabla.getvalue())
+        # Los códigos de todo: tarjetas, archivos, hitos y las relaciones entre ellos, legibles.
+        codigo_de = {("tarjeta", t.id): t.codigo for t in datos["tarjetas"]}
+        codigo_de.update({("archivo", a.id): a.codigo for a in datos["archivos"]})
+        codigo_de.update({("hito", h.id): h.codigo for h in datos["hitos"]})
+        tarj = {t.id: t.codigo for t in datos["tarjetas"]}
+        for m in datos["mensajes"]:
+            if m.orden and m.tarjeta_id in tarj:
+                codigo_de[("mensaje", m.id)] = f"{tarj[m.tarjeta_id]}-{m.orden}"
+        rel = _io.StringIO()
+        w = _csv.writer(rel, delimiter=";", lineterminator="\r\n")
+        w.writerow(["Origen", "Clase", "Destino", "Solo equipo", "Creada", "Por"])
+        for r in datos["relaciones"]:
+            w.writerow([codigo_de.get((r.origen_tipo, r.origen_id), f"{r.origen_tipo}:{r.origen_id}"), r.clase,
+                        codigo_de.get((r.destino_tipo, r.destino_id), f"{r.destino_tipo}:{r.destino_id}"),
+                        "sí" if r.solo_equipo else "no", r.creada_en, implementacion._celda(r.creada_por_nombre)])
+        z.writestr("relaciones.csv", "﻿" + rel.getvalue())
+        arch = _io.StringIO()
+        w = _csv.writer(arch, delimiter=";", lineterminator="\r\n")
+        w.writerow(["Código", "Tarjeta", "Nombre", "Tamaño", "Subido por", "Subido", "Borrado"])
+        for a in datos["archivos"]:
+            w.writerow([a.codigo, tarj.get(a.tarjeta_id, ""), implementacion._celda(a.nombre), a.tamano,
+                        implementacion._celda(a.subido_por_nombre), a.subido_en, a.borrado_en])
+        z.writestr("archivos.csv", "﻿" + arch.getvalue())
         for a in bajados:
             z.writestr(f"archivos/{numero_de.get(a.tarjeta_id, 0):04d}/{a.id}-{implementacion.nombre_seguro(a.nombre)}",
                        db.impl_bytes_archivo(s, pid, a.id))

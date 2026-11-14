@@ -70,3 +70,39 @@ Con el canal apagado no falla nada. El equipo recibe en el mail de su
 - **Avisos por mail**: también un **aviso** (tipo) al nacer le llega al otro lado, aunque no espere respuesta. Cerrar no avisa a nadie.
 - **Equipo**: `POST /api/entornos/implementacion/proyectos/{id}/hitos-semilla` carga los 48 hitos de La Bancaria (`data/implementacion/hitos_bancaria.json`) en un proyecto sin hitos (409 si ya los tiene).
 - **Página**: `GET /implementacion` suma al contexto `es_equipo` y `api` (`/api/implementacion/p/{pid}`); `proyecto` es `null` si el equipo no tiene proyectos todavía.
+
+## Códigos y relaciones (I12, I13, I14)
+
+Todo cambio es **aditivo**: `numero`, `id` y el viejo `#t{numero}` siguen valiendo.
+
+**Códigos.** Tarjetas `PE` pedido, `CO` consulta, `EN` entrega, `AP` aprobación, `ER` error, `AV` aviso (4 dígitos: `PE0004`); archivos `AR` + 6 dígitos (`AR000123`); hitos `HI` + 4 (`HI0001`); mensajes `código de la tarjeta-orden` (`PE0004-3`). Un contador por proyecto y prefijo; nace con la cosa y no cambia nunca (un hito borrado no libera el suyo). Las etapas se nombran por su nombre. En un texto un código vale como palabra completa, en mayúsculas o minúsculas (`pe0004`, `PE0004-3`); `PE00041` o `XPE0004` no.
+
+**Campos nuevos en las formas existentes**
+- Tarjeta: `codigo`. En `GET tarjetas/{tid}` suma además `tarjeta.refs` (los códigos que nombra el título).
+- Archivo: `codigo` (en el detalle, y en `carpetas`).
+- Mensaje: `codigo` (`PE0004-3`, "" si es un mensaje anterior sin orden), `orden` (1..n en la tarjeta; cuenta TODOS los mensajes, también las notas internas, así el número es el mismo para quien mira: el sindicato ve a veces un hueco) y `refs`.
+- `carpetas`: cada archivo suma `codigo` y `tarjeta_codigo`. `aprobaciones`: suma `codigo`. `plan`: cada hito suma `codigo` y cada tarjeta colgada de un hito suma `codigo`.
+- `aprobaciones.csv`: una columna más al final, «Código».
+
+**`refs` (por mensaje y en `tarjeta`)**: `[{codigo, tipo (tarjeta|archivo|hito|mensaje), enlace, existe}]`, un elemento por cada código distinto que nombra el texto, en orden. NO viaja HTML: la pantalla arma el enlace con DOM. `existe` es lo que ESTE lector puede ver. Un código inexistente, de otro proyecto o interno (para el sindicato) sale con `existe: false` y `enlace: ""`; para el sindicato las tres cosas son indistinguibles.
+
+**`relacionadas` en `GET tarjetas/{tid}`** (también en el cuerpo de `responder`, `aprobacion` y `reasignar`, que devuelven lo mismo): `[{id, clase (menciona|responde), sentido (sale|entra), texto, tipo (tarjeta|archivo|hito|mensaje), codigo, titulo, estado, enlace, via}]`.
+- `texto`: «responde a» / «respondida con» / «menciona» / «mencionada en» (`sale` = esta tarjeta es el origen, `entra` = es el destino).
+- `titulo`/`estado` son los de la otra punta (archivo: nombre y `vigente|borrado`; hito: texto y `pendiente|hecho`; mensaje: título y estado de su tarjeta).
+- `via`: si la relación pasa por un mensaje de ESTA tarjeta (p. ej. otra tarjeta mencionó `PE0004-2`), el código de ese mensaje; si no, "".
+- El sindicato NO recibe relaciones nacidas de una nota interna ni las que apuntan a un archivo o mensaje interno.
+
+**Rutas nuevas** (todas bajo `/api/implementacion/p/{pid}/`)
+- `GET archivos/{aid}/ficha` → `{archivo: Archivo, tarjeta: {id, numero, codigo, titulo, estado}, relacionadas: [...]}`. Sin bytes y sin registrar descarga. 404 si es de otro proyecto o de una nota interna y pide el sindicato.
+- `GET buscar?codigo=PE0004` → `{tipo, codigo, enlace, id, tarjeta_id, titulo}` (`tarjeta_id` es null para un hito; para un mensaje o archivo es la tarjeta que lo contiene) o **404**. El 404 es el mismo si no existe, es de otro proyecto, no es un código, o es interno y pide el sindicato.
+- No se aceptan códigos donde va `{tid}`/`{aid}`: el buscador resuelve el código y la pantalla usa el id.
+
+**Cambios en rutas existentes**
+- `POST tarjetas` acepta `responde_a` (campo multipart opcional: código —`PE0004`, también `PE0004-3`— o id de una tarjeta DEL MISMO proyecto). Crea la relación `responde` (nueva → original) y los archivos subidos en esa tarjeta quedan ligados a la original (`responde`, archivo → tarjeta). Un `responde_a` inexistente o de otro proyecto es 400 `responde_a` y no se crea nada.
+- `GET tarjetas?q=`: además del título, número y texto, encuentra por código (entero o parcial, mayúsculas/minúsculas): `PE0004`, `PE00`, el de un mensaje (`PE0004-3`), un archivo (`AR000123`) o un hito (`HI0001`, trae las tarjetas que cuelgan de él). El sindicato no encuentra una tarjeta por el código de algo interno.
+
+**Menciones.** Al crear una tarjeta (título y texto) y al responder o resolver una aprobación (texto), los códigos que EXISTEN en el proyecto quedan como relación `menciona` desde la tarjeta (los de otro proyecto o inexistentes se ignoran en silencio; una tarjeta no se menciona a sí misma). Una mención escrita en una nota interna, o hacia algo que el sindicato no ve, es `solo_equipo`. Si la misma pareja se menciona después en público, deja de ser interna.
+
+**Enlaces**: `/implementacion?p={pid}#PE0004`, `#PE0004-3`, `#AR000123`, `#HI0001`. El mail de aviso lleva el código en el asunto (`Mesa de implementación · PE0004 · #4 título`) y este enlace.
+
+**Exportación (`exportar.zip`)**: `relaciones.json`/`relaciones.csv` (origen, clase y destino con sus códigos), `archivos.csv`, `contadores.json`; `tarjetas.csv` suma «Código» al final y los `.json` traen `codigo`/`orden`. La ruta de los archivos dentro del ZIP no cambió.
