@@ -3110,6 +3110,12 @@ se agrega ahí.
   reportes son cortos, con ejemplos, y **cada error se clasifica por origen: la
   app, los recibos de prueba o la configuración** antes de tocar código (en la
   tanda de La Bancaria casi todos los «fallos» eran de configuración).
+- **Las preguntas, de a UNA, con opciones y la recomendación** (regla de SDN,
+  2026-11-14, vale para todos los proyectos): al refinar una idea o un plan no
+  se manda una lista de preguntas. Se hace una sola por vez, con sus opciones
+  cerradas (más «otra»), marcando cuál se recomienda y por qué en una línea;
+  recién con la respuesta se pasa a la siguiente. Cada respuesta queda como
+  decisión numerada en el plan del bloque.
 - **Reportes, no narración** (regla de SDN, 2026-10-11): no contar paso por
   paso lo que se va haciendo. Mientras dura el trabajo, un reporte cada ~10
   minutos o al terminar, con tres partes: qué se hizo, qué quedó listo y qué
