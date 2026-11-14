@@ -2407,7 +2407,7 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   en el resultado y en cada ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
 
-**Mesa de implementación** (`implementacion.py`, `templates/impl_*.html`,
+**Mesa de implementación, en corto «XS TIK»** (`implementacion.py`, `templates/impl_*.html`,
 `static/implementacion/`; `PLAN_IMPLEMENTACION.md` I1–I14, contrato
 `docs/implementacion/API.md`, informes `docs/implementacion/QA-*.md`;
 2026-11-14):
