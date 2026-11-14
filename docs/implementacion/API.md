@@ -81,7 +81,7 @@ Todo cambio es **aditivo**: `numero`, `id` y el viejo `#t{numero}` siguen valien
 **Campos nuevos en las formas existentes**
 - Tarjeta: `codigo`. En `GET tarjetas/{tid}` suma además `tarjeta.refs` (los códigos que nombra el título).
 - Archivo: `codigo` (en el detalle, y en `carpetas`).
-- Mensaje: `codigo` (`PE0004-3`, "" si es un mensaje anterior sin orden), `orden` (1..n en la tarjeta; cuenta TODOS los mensajes, también las notas internas, así el número es el mismo para quien mira: el sindicato ve a veces un hueco) y `refs`.
+- Mensaje: `codigo` (`PE0004-3`; una nota interna `PE0004-N1`, ver «I15 e I16»; "" si es un mensaje anterior sin orden), `orden` (1..n **en su serie**, no en la tarjeta entera) y `refs`.
 - `carpetas`: cada archivo suma `codigo` y `tarjeta_codigo`. `aprobaciones`: suma `codigo`. `plan`: cada hito suma `codigo` y cada tarjeta colgada de un hito suma `codigo`.
 - `aprobaciones.csv`: una columna más al final, «Código».
 
@@ -126,3 +126,30 @@ Detalle por defecto en `QA-servidor.md` → «Correcciones». Lo que cambia para
 - **API del equipo (QA-09).** `/api/entornos/implementacion/*` exige lo mismo que la mesa: usuario de plataforma **activo**, sin clave ni datos pendientes (401 si la sesión existe y ya no vale; 403 si no es del equipo). El pase del PIN ya no la abre.
 - **Mails (QA-08).** El enlace sale de la URL pública del entorno (`entorno.URLS`), nunca del header `Host`; en local no hay enlace absoluto.
 - **Códigos (QA-03/18).** Se reconocen solo en ASCII, con bordes de palabra que no aceptan letras ni dígitos Unicode pegados.
+
+## I15 e I16 (2026-11-14): lo «solo equipo» se numera aparte, y la entrega la cierra quien la recibe
+
+Aditivo salvo lo que se marca. Los dos puntos reemplazan lo dicho antes sobre `orden` y sobre cerrar una entrega.
+
+### I15 · Dos series, sin saltos para el sindicato
+
+- **Mensajes.** Dentro de cada tarjeta hay dos series independientes: los públicos `orden` 1, 2, 3… con código `PE0001-3`; las notas internas (`solo_equipo`) su propia serie con código `PE0001-N1`, `PE0001-N2`. La serie pública no tiene saltos nunca. Un mensaje no pasa de público a interno (no hay ruta que lo haga), así que su código es inmutable. **Cambio de contrato:** `orden` ya no cuenta las notas internas; para el equipo hay dos mensajes con `orden: 1` (uno público y uno interno), y lo que los distingue es `solo_equipo` y el `codigo`. Se guarda sin columna nueva: `(tarjeta_id, solo_equipo, orden)`; el `orden` de cada serie se calcula con la tarjeta bloqueada.
+- **Archivos.** Los subidos en una nota interna toman el contador `AI` (`AI000001`, seis dígitos); los demás, `AR`. El sindicato ve los `AR` corridos. Un archivo no cambia de serie.
+- **Códigos.** `implementacion.parsear_codigo` / `extraer_codigos` / `formatear_codigo` reconocen `PE0001-N2` y `AI000001` (ASCII, mayúsculas o minúsculas; `PE0001-N0`, `PE0001-N` y `AI000001-2` no son códigos). `parsear_codigo` suma `interno: true` para esos dos casos. `implementacion.codigo_mensaje(codigo_tarjeta, orden, interno)` arma el de un mensaje.
+- **El sindicato no distingue un código interno de uno inexistente**, en todas las rutas: `refs` con `existe:false` y `enlace:""`; `GET buscar?codigo=PE0001-N1` o `AI000001` da el mismo 404 que uno inventado; `GET tarjetas?q=` no los encuentra; `GET archivos/{aid}` y `.../ficha` de un `AI` dan 404; ninguna relación visible. Una mención de un código interno desde un mensaje público queda anotada como `solo_equipo` (solo el equipo la ve) y no enlaza para nadie más. El equipo los encuentra y los enlaza igual que a los demás (`#PE0001-N1`, `#AI000001`).
+- **Migración** `c4e7a9b2d6f1` (ajustada en lugar de crear otra, nada estaba desplegado; sigue siendo idempotente): el backfill numera los mensajes por `(tarjeta, solo_equipo)` y da `AI` a los archivos adjuntos a una nota interna. No cambia el esquema (sin columnas ni tablas nuevas respecto de la versión anterior de esta migración).
+- `exportar.zip`: `relaciones.csv` usa los códigos nuevos (`PE0001-N2`); los `.json` traen `codigo` y `orden` tal cual están guardados.
+
+### I16 · Una entrega de archivo la cierra quien la recibe
+
+- **Quién recibe**: el lado que NO creó la tarjeta (`tarjeta.autor_lado`). Quien la mandó puede seguir respondiendo y adjuntando otra versión, pero no darla por recibida.
+- **`acciones`** suma `recibido` y `problema` (bool, iguales entre sí): true solo para el lado receptor en una entrega abierta (abierta, en curso o respondida); false para todo lo demás. El servidor acepta exactamente eso.
+- **El selector de estado ya no cierra una entrega** (cambio de contrato, para los dos lados): `acciones.estados` de una entrega nunca incluye `cerrada` y `responder` con `estado_nuevo=cerrada` es 409 `transicion`. La entrega se cierra solo con `recibido`. Reabrir una cerrada sigue yendo por `responder` con `estado_nuevo=abierta` y borra el sello de recibida (la traza conserva el evento).
+- **`POST tarjetas/{tid}/entrega`** (JSON `{recibido: bool, texto?}`) → mismo cuerpo que `GET tarjetas/{tid}`.
+  - `recibido: true`: cierra (`estado: cerrada`, a nadie le toca), deja quién y cuándo y un evento `recibido` («dio la entrega por recibida»). `texto` opcional: si viene, queda como mensaje público.
+  - `recibido: false` («hay un problema»): `texto` obligatorio (400 si falta); queda como mensaje público y un evento `problema`; la tarjeta pasa a `abierta` (desde abierta, en curso o respondida) y le toca a quien la mandó (`espera` = su lado). Pasa a abierta y no a «en curso» a propósito: en el flujo existente el turno de «en curso» se queda con quien responde, y la próxima respuesta de quien la mandó no le devolvería el turno al receptor.
+  - Errores: 400 si `recibido` no es booleano, si `texto` no es texto o pasa de 5.000, si la tarjeta no es una entrega; 403 `sin_permiso` para quien la mandó; 409 `cerrada` si ya estaba cerrada; 404 de otro proyecto o inexistente (igual); 401 sin sesión; 404 en demo.
+- **Mail**: solo en «problema», a quien la mandó (asunto con el código, sin el texto del problema); «recibido» no avisa a nadie, como todo cierre.
+- **Registro**: `GET tarjetas/{tid}` de una entrega suma en `tarjeta` `recibida_por` y `recibida_en` ("" mientras no esté recibida o si se reabrió). Se guardan en las columnas `resuelta_por_*` / `resuelta_en` que ya usa una aprobación (sin migración).
+- **Carpetas**: cada archivo de `GET carpetas` suma `tarjeta_tipo`, `recibida_por` y `recibida_en` (de la tarjeta que lo contiene; "" si no es de una entrega o no fue recibida).
+- **Pantalla**: el panel «Recibido, está bien» / «Hay un problema» se dibuja solo si `acciones.recibido` / `acciones.problema`; cerrada por recepción muestra el sello «Recibida · por quién · cuándo».

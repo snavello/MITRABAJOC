@@ -257,8 +257,10 @@
   // ---------------------------------------------------------------- códigos (I12 a I14)
   // El prefijo de cada tipo de tarjeta es parte del contrato (PE, CO, EN, AP, ER, AV).
   const TIPO_DE_PREFIJO = { PE: 'pedido', CO: 'consulta', EN: 'entrega', AP: 'aprobacion', ER: 'error', AV: 'aviso' };
-  const CODIGO_RE = /(PE|CO|EN|AP|ER|AV)(\d{4,6})(?:-(\d{1,5}))?|(AR)(\d{6})|(HI)(\d{4})/gi;
-  const CODIGO_SOLO = /^(?:(?:PE|CO|EN|AP|ER|AV)\d{4,6}(?:-\d{1,5})?|AR\d{6}|HI\d{4})$/i;
+  // I15: -N2 es una nota interna (PE0001-N2) y AI000001 un archivo subido en una; solo el equipo los
+  // encuentra, para el sindicato el servidor contesta «no existe» como con cualquier código inventado.
+  const CODIGO_RE = /(PE|CO|EN|AP|ER|AV)(\d{4,6})(?:-N?(\d{1,5}))?|(A[RI])(\d{6})|(HI)(\d{4})/gi;
+  const CODIGO_SOLO = /^(?:(?:PE|CO|EN|AP|ER|AV)\d{4,6}(?:-N?\d{1,5})?|A[RI]\d{6}|HI\d{4})$/i;
   const esCodigo = function (s) { return CODIGO_SOLO.test((s || '').trim()); };
   const tipoDeCodigo = function (codigo) { return TIPO_DE_PREFIJO[(codigo || '').slice(0, 2).toUpperCase()] || null; };
   const hashDe = function (codigo) { return '#' + codigo; };
@@ -614,7 +616,11 @@
       h('div', { class: 'nom' }, a.nombre,
         h('small', null, tamano(a.tamano) + ' · ' + (a.subido_por || '') + (a.subido_en ? ' · ' + fechaHora(a.subido_en) : '')),
         opc.tarjeta && tarj ? h('small', null, h('a', { href: a.tarjeta_codigo ? hashDe(a.tarjeta_codigo) : '#t' + a.tarjeta_numero, style: 'text-decoration:underline' }, 'Tarjeta ' + tarj + ' ' + (a.tarjeta_titulo || ''))) : null),
-      a.datos_personales ? h('span', { class: 'chip mal' }, icono('candado'), 'Datos personales') : null);
+      a.datos_personales ? h('span', { class: 'chip mal' }, icono('candado'), 'Datos personales') : null,
+      // I16: de un archivo de una entrega, si quien la recibía la dio por recibida.
+      a.tarjeta_tipo === 'entrega' ? (a.recibida_por
+        ? h('span', { class: 'chip ok recibida', title: 'Recibida por ' + a.recibida_por + ' · ' + fechaHora(a.recibida_en) }, icono('check'), 'Recibida · ' + a.recibida_por + ' · ' + fechaCorta(a.recibida_en))
+        : h('span', { class: 'chip neutro sin-recibir' }, 'Sin dar por recibida')) : null);
     const acc = h('div', { class: 'acc' });
     acc.appendChild(botonFicha(a, opc.alBorrar));
     if (a.puede_bajar) acc.appendChild(h('a', { class: 'btn lisa chico', href: BASE + 'archivos/' + a.id, download: a.nombre }, icono('bajar'), 'Bajar'));
@@ -853,8 +859,13 @@
       h('span', { class: 'n' }, t.codigo ? codigo(t.codigo, { clase: 'en-cab', que: 'el código de la tarjeta' }) : h('span', { class: 'cod en-cab' }, '#' + t.numero))));
     // P-10: una aprobación resuelta se dice UNA vez: el sello, y debajo quién y cuándo.
     const resuelta = t.estado === 'aprobada' || t.estado === 'rechazada';
+    // I16: una entrega recibida se dice UNA vez, con el mismo patrón: el sello y debajo quién y cuándo.
+    const recibida = t.tipo === 'entrega' && t.estado === 'cerrada' && !!t.recibida_por;
     const chips = h('div', { class: 'chips' });
-    if (resuelta) {
+    if (recibida) {
+      chips.appendChild(h('span', { class: 'sello' }, 'Recibida'));
+      chips.appendChild(h('small', { class: 'resuelta-por' }, 'por ' + t.recibida_por + ' · ' + fechaHora(t.recibida_en)));
+    } else if (resuelta) {
       const rs = (d.eventos || []).filter(function (e) { return e.que === 'resolver'; }).pop();
       chips.appendChild(h('span', { class: t.estado === 'aprobada' ? 'sello' : 'sello rech' }, nombreEstado(t.estado)));
       if (rs) chips.appendChild(h('small', { class: 'resuelta-por' }, 'por ' + (rs.quien || '') + (rs.lado ? ' (' + ladoNombre(rs.lado) + ')' : '') + ' · ' + fechaHora(rs.cuando)));
@@ -902,6 +913,7 @@
     if (!(d.mensajes || []).length) hilo.appendChild(h('p', { class: 'vacio-col' }, 'Todavía no hay mensajes.'));
 
     if (acc.aprobar) hilo.appendChild(panelDecision(t));
+    if (acc.recibido || acc.problema) hilo.appendChild(panelEntrega(t, acc));
     if (acc.responder) hilo.appendChild(redactor(t, acc));
     else if (acc.reabrir) hilo.appendChild(h('div', { class: 'redactor' }, h('p', null, 'Esta tarjeta está cerrada.'), botonReabrir(t)));
     else if (!acc.aprobar && t.tipo === 'aviso') hilo.appendChild(h('p', { class: 'bajada', style: 'margin:0' }, 'Es un aviso: informa y no espera respuesta.'));
@@ -969,6 +981,47 @@
     sol.appendChild(h('button', { class: 'btn si', type: 'button', onclick: decidir(true) }, icono('check'), 'Aprobar'));
     sol.appendChild(h('button', { class: 'btn no', type: 'button', onclick: decidir(false) }, icono('cerrar'), 'Rechazar'));
     caja.appendChild(sol);
+    return caja;
+  }
+  // I16: quien recibe una entrega la cierra con un botón, o avisa el problema (texto obligatorio).
+  // La pantalla dibuja lo que `acciones` dice (recibido / problema), nada más.
+  function panelEntrega(t, acc) {
+    const caja = colorTipo(h('div', { class: 'decision entrega-panel', role: 'group', 'aria-label': 'Recibir la entrega' }), t.tipo);
+    const botones = h('div', { class: 'botones entrega-botones' });
+    const zona = h('div', null);
+    const form = h('form', { class: 'entrega-problema', hidden: true, novalidate: true });
+    const texto = h('textarea', { id: 'en-prob-t', maxlength: 5000, 'aria-label': 'Contá cuál es el problema', placeholder: 'Contá qué pasa con el archivo (obligatorio)' });
+    const enviar = h('button', { class: 'btn no', type: 'submit' }, icono('enviar'), 'Avisar el problema');
+    const bRecibido = acc.recibido ? h('button', { class: 'btn si', type: 'button', onclick: async function (ev) {
+      const b = ev.currentTarget;
+      const ok = await confirmar({ titulo: '¿Dar por recibida?', texto: 'La entrega se cierra y queda anotado que la recibiste vos, con la fecha. «' + t.titulo + '».',
+        ok: 'Sí, recibido', clase: 'si', motivo: 'Comentario (opcional)' });
+      if (!ok) return; b.disabled = true; errorEn(zona, '');
+      try { reemplazarTarjeta(await enviarJson('tarjetas/' + t.id + '/entrega', { recibido: true, texto: ok.texto || '' })); avisar('Entrega recibida.'); }
+      catch (er) { errorEn(zona, er.message); b.disabled = false; }
+    } }, icono('check'), 'Recibido, está bien') : null;
+    const bProblema = acc.problema ? h('button', { class: 'btn no', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'en-prob-f', onclick: function (ev) {
+      const abrir = form.hidden; form.hidden = !abrir; ev.currentTarget.setAttribute('aria-expanded', String(abrir));
+      if (abrir) texto.focus();
+    } }, icono('alerta'), 'Hay un problema') : null;
+    form.id = 'en-prob-f';
+    form.appendChild(h('label', { class: 'l', for: 'en-prob-t' }, 'Qué pasa con el archivo'));
+    form.appendChild(texto);
+    form.appendChild(enviar);
+    form.addEventListener('submit', async function (ev) {
+      ev.preventDefault(); errorEn(zona, '');
+      if (!texto.value.trim()) { errorEn(zona, 'Contá cuál es el problema para poder avisarlo.'); texto.focus(); return; }
+      enviar.disabled = true;
+      try { reemplazarTarjeta(await enviarJson('tarjetas/' + t.id + '/entrega', { recibido: false, texto: texto.value.trim() })); avisar('Le avisamos a quien la mandó.'); }
+      catch (er) { errorEn(zona, er.message); enviar.disabled = false; }
+    });
+    caja.appendChild(h('b', null, 'Esta entrega espera que digas si la recibiste'));
+    caja.appendChild(h('p', null, 'Si el archivo está bien, cerrala con «Recibido». Si no, contá el problema y vuelve a quien la mandó.'));
+    if (bRecibido) botones.appendChild(bRecibido);
+    if (bProblema) botones.appendChild(bProblema);
+    caja.appendChild(botones);
+    caja.appendChild(form);
+    caja.appendChild(zona);
     return caja;
   }
   function redactor(t, acc) {

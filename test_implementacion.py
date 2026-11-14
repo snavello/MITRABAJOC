@@ -156,3 +156,21 @@ def test_no_llama_a_datetime_now():
 def test_error_impl_lleva_codigo_y_mensaje():
     e = im.ErrorImpl("x", "algo")
     assert e.codigo == "x" and e.mensaje == "algo" and str(e) == "algo"
+
+
+def test_i16_acciones_de_una_entrega_recibido_y_problema_son_del_lado_que_no_la_creo():
+    for estado in ("abierta", "en_curso", "respondida"):
+        recibe = im.acciones_de("entrega", estado, "equipo", "sindicato", autor_lado="equipo")
+        manda = im.acciones_de("entrega", estado, "equipo", "equipo", autor_lado="equipo")
+        assert recibe["recibido"] is recibe["problema"] is True
+        assert manda["recibido"] is manda["problema"] is False
+        assert manda["responder"] and manda["subir"]               # quien la mandó sigue respondiendo y adjuntando
+        assert "cerrada" not in [e["id"] for e in recibe["estados"] + manda["estados"]]
+    cerrada = im.acciones_de("entrega", "cerrada", "", "sindicato", autor_lado="equipo")
+    assert cerrada["recibido"] is cerrada["problema"] is False and cerrada["reabrir"] is True
+    assert im.acciones_de("entrega", "abierta", "equipo", "sindicato", autor_lado="")["recibido"] is False   # sin autor, nadie
+    for tipo in ("pedido", "consulta", "aprobacion", "error", "aviso"):
+        ac = im.acciones_de(tipo, "abierta", "equipo", "sindicato", autor_lado="equipo")
+        assert ac["recibido"] is False and ac["problema"] is False
+    assert im.puede_transicionar("entrega", "respondida", "cerrada") is False
+    assert im.puede_transicionar("pedido", "respondida", "cerrada") is True

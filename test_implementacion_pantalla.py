@@ -293,3 +293,43 @@ def test_qa_pantallas_correcciones_de_cliente():
     assert "exportar.zip" in _texto(EQUIPO_JS)
     # la tarjeta de usuarios no se ve hasta elegir un proyecto (flex pisaba [hidden])
     assert ".impl-caja[hidden]" in _texto(EQUIPO_CSS)
+
+
+# ---------- I15 e I16 ----------
+
+def test_i15_los_codigos_internos_se_reconocen_en_el_cliente_y_los_hashes_pasan_por_buscar():
+    js = _sin_comentarios(_texto(JS))
+    # PE0001-N2 y AI000001 son códigos (hash y texto); el servidor decide si el lector los ve
+    assert "(?:-N?(\\d{1,5}))?" in js and "(A[RI])(\\d{6})" in js
+    assert "A[RI]\\d{6}" in js and "(?:-N?\\d{1,5})?" in js
+    assert "buscar?codigo=" in js and "No existe o no lo podés ver." in js
+    # el código de cada mensaje (-N1 en las notas internas) lo trae el servidor y la pantalla lo muestra tal cual
+    assert "m.codigo ? h('span', { class: 'msg-cod' }" in js and "m.solo_equipo ? h('span', { class: 'chip neutro' }" in js
+    # nada de contar mensajes en el cliente para armar un código
+    assert "'-N'" not in js and '"-N"' not in js
+
+
+def test_i16_la_entrega_se_cierra_con_dos_botones_que_dicen_las_acciones():
+    js = _sin_comentarios(_texto(JS))
+    assert "if (acc.recibido || acc.problema) hilo.appendChild(panelEntrega(t, acc));" in js
+    assert "acc.recibido ? h('button'" in js and "acc.problema ? h('button'" in js
+    assert "'Recibido, está bien'" in js and "'Hay un problema'" in js
+    assert "'tarjetas/' + t.id + '/entrega'" in js and "{ recibido: true" in js and "{ recibido: false" in js
+    # el problema pide texto antes de mandar, y recibido confirma
+    assert "Contá cuál es el problema para poder avisarlo." in js and "'¿Dar por recibida?'" in js
+    # el panel va ARRIBA del redactor
+    assert js.index("panelEntrega(t, acc));") < js.index("hilo.appendChild(redactor(t, acc));")
+    # mismo patrón que el sello de Aprobada: uno solo, con quién y cuándo
+    assert "h('span', { class: 'sello' }, 'Recibida')" in js and "'por ' + t.recibida_por" in js
+    assert "t.tipo === 'entrega' && t.estado === 'cerrada' && !!t.recibida_por" in js
+    # Carpetas: cada archivo de una entrega dice si fue dado por recibido
+    assert "a.tarjeta_tipo === 'entrega'" in js and "a.recibida_por" in js and "'Sin dar por recibida'" in js
+    css = _texto(CSS)
+    assert ".entrega-botones .btn { min-height: 52px" in css and ".entrega-problema[hidden] { display: none; }" in css
+
+
+def test_i16_el_cliente_no_cierra_una_entrega_por_el_selector():
+    js = _sin_comentarios(_texto(JS))
+    # el selector de estado del redactor se arma solo con los destinos de `acciones.estados`
+    assert "estadosPermitidos(acc)" in js
+    assert "textContent" in js and "innerHTML" not in js

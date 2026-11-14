@@ -247,6 +247,12 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 .sello { display: inline-block; border: 3px solid var(--ok); color: var(--ok); font-weight: 800; padding: .15em .7em; border-radius: 6px; transform: rotate(-3deg);
   text-transform: uppercase; letter-spacing: .06em; font-size: .95rem; }
 .sello.rech { border-color: var(--mal); color: var(--mal); }
+/* I16: quien recibe una entrega la cierra con un botón grande o avisa el problema */
+.entrega-botones .btn { min-height: 52px; font-size: 1.05rem; flex: 1 1 220px; }
+.entrega-problema { display: grid; gap: 10px; }
+.entrega-problema[hidden] { display: none; }
+.entrega-problema textarea { min-height: 96px; resize: vertical; }
+.entrega-problema label.l { font-weight: 800; font-size: .9rem; }
 .resuelta-por { color: var(--gris); font-weight: 700; align-self: center; }
 .traza summary { cursor: pointer; font-weight: 800; color: var(--gris); min-height: 44px; display: flex; align-items: center; }
 .traza ol { list-style: none; padding: 0; display: grid; gap: 8px; font-size: .9rem; }
