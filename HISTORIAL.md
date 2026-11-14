@@ -11024,9 +11024,13 @@ código de cada cosa naciera con ella y no hubiera que renumerar).
 - De pantalla: faltaba el botón de exportar, la sesión vencida al enviar
   perdía lo escrito, botones de 38 px en teléfono.
 
-**Decisiones abiertas** (de SDN): los huecos de numeración que delatan que
-hubo una nota o un archivo interno (QA-12) y si una Entrega se cierra sola al
-llegar el archivo (QA-24). **Aceptado**: el título viaja en el asunto del
+**Decisiones que cerró SDN el mismo día.** Los huecos de numeración delataban
+que hubo una nota o un archivo interno (QA-12): lo «solo equipo» pasó a
+numerarse aparte (`PE0001-N1`, `AI000001`, I15) y la serie que ve el
+sindicato queda corrida. Y la Entrega de archivo (QA-24) la cierra quien la
+recibe, con «Recibido, está bien» o «Hay un problema» (I16): el selector de
+estado ya no la cierra para ningún lado, y quien la «manda» es quien creó la
+tarjeta. **Aceptado**: el título viaja en el asunto del
 mail; «Salir» no invalida la sesión del lado del servidor, como en el resto
 de la app; el token de cambiar-clave va en la URL, como en `/admin`.
 
