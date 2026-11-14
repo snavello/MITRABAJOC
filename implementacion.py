@@ -141,6 +141,8 @@ FASES_POR_DEFECTO = (
 ACCIONES = (
     "crear_proyecto", "crear", "responder", "reasignar", "resolver", "subir",
     "bajar", "borrar_archivo", "hito", "hito_nuevo", "leer_aviso",
+    # Entrega de archivo (I16): quien la recibe la da por recibida o avisa un problema.
+    "recibido", "problema",
     # Usuarios del sindicato en la herramienta (bloque 2): solo las ve el equipo.
     "usuario_alta", "usuario_clave", "usuario_estado",
     # Plan operativo y exportación (bloque 3/4).
@@ -206,6 +208,8 @@ def puede_transicionar(tipo: str, desde: str, hasta: str) -> bool:
         return False               # una aprobación se resuelve, no se "cierra"
     if tipo == APROBACION and desde == CERRADA:
         return False
+    if tipo == ENTREGA and hasta == CERRADA:
+        return False               # una entrega la cierra quien la recibe con «recibido» (I16)
     return hasta in TRANSICIONES[desde]
 
 
@@ -375,13 +379,21 @@ def _celda(valor) -> str:
 
 
 # ---------- Qué puede hacer este actor ahora (lo calcula el servidor) ----------
+def puede_dar_entrega(tipo: str, estado: str, autor_lado: str, lado_actor: str) -> bool:
+    """UNA sola regla (I16): una entrega abierta la da por recibida, o avisa un
+    problema, SOLO el lado que NO la creó; quien la mandó nunca la recibe."""
+    return (tipo == ENTREGA and estado in ESTADOS_ABIERTOS
+            and autor_lado in LADOS and lado_actor in LADOS and lado_actor != autor_lado)
+
+
 def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str, autor_lado: str = "") -> dict:
     """Las acciones disponibles para `lado_actor` sobre una tarjeta. La pantalla
     no decide nada: dibuja lo que esto dice. `estados` son los destinos que se
     pueden elegir al responder (id + nombre); reabrir va aparte. `autor_lado` es
-    quien creó la tarjeta: una aprobación la resuelve el otro lado."""
+    quien creó la tarjeta: una aprobación la resuelve el otro lado, y una
+    entrega la cierra el otro lado con `recibido` (nunca por el selector)."""
     vacio = {"responder": False, "estados": [], "solo_equipo": False, "aprobar": False,
-             "reabrir": False, "subir": False, "reasignar": False}
+             "reabrir": False, "subir": False, "reasignar": False, "recibido": False, "problema": False}
     if tipo not in TIPOS or estado not in TRANSICIONES or lado_actor not in LADOS:
         return vacio
     if es_inmutable(tipo, estado):
@@ -390,6 +402,7 @@ def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str, a
     if tipo == AVISO:
         return vacio
     destinos = [e for e in (EN_CURSO, RESPONDIDA, CERRADA) if puede_transicionar(tipo, estado, e)]
+    entrega = puede_dar_entrega(tipo, estado, autor_lado, lado_actor)
     return {
         "responder": abierta,
         "estados": [{"id": e, "nombre": NOMBRES_ESTADO[e]} for e in destinos] if abierta else [],
@@ -398,6 +411,8 @@ def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str, a
         "reabrir": estado == CERRADA and puede_transicionar(tipo, estado, ABIERTA),
         "subir": abierta,
         "reasignar": abierta,
+        "recibido": entrega,
+        "problema": entrega,
     }
 
 
@@ -419,6 +434,10 @@ def texto_evento(accion: str, detalle: dict) -> str:
         return "respondió"
     if accion == "resolver":
         return "aprobó" if d.get("resultado") == APROBADA else "rechazó"
+    if accion == "recibido":
+        return "dio la entrega por recibida"
+    if accion == "problema":
+        return "avisó un problema con la entrega"
     if accion == "reasignar":
         quien = (d.get("despues") or {}).get("responsable") or "nadie"
         return f"reasignó la tarjeta a {quien}"
@@ -447,16 +466,23 @@ def texto_evento(accion: str, detalle: dict) -> str:
     return accion
 
 
-# ---------- Códigos y relaciones (I12, I13, I14) ----------
+# ---------- Códigos y relaciones (I12, I13, I14, I15) ----------
 # Todo lo que se genera tiene un código para nombrarlo: PE0001 (tarjeta, por
 # tipo), AR000123 (archivo), HI0001 (hito) y PE0004-3 (el mensaje 3 de esa
 # tarjeta). Un contador por proyecto y prefijo; el código nace con la cosa y
-# no cambia nunca. Acá solo el formato y el reconocimiento en un texto.
+# no cambia nunca. Lo «solo equipo» (I15) lleva su propia serie, aparte de la
+# que ve el sindicato, para que esa serie quede corrida sin saltos: las notas
+# internas son PE0004-N1, PE0004-N2 y los archivos subidos en una nota interna
+# AI000001 (contador AI). Un mensaje no pasa nunca de público a interno, así
+# que su código es inmutable. Acá solo el formato y el reconocimiento en un texto.
 PREFIJOS_TARJETA = {PEDIDO: "PE", CONSULTA: "CO", ENTREGA: "EN", APROBACION: "AP", ERROR: "ER", AVISO: "AV"}
 PREFIJO_ARCHIVO, PREFIJO_HITO = "AR", "HI"
-DIGITOS = {**{p: 4 for p in PREFIJOS_TARJETA.values()}, PREFIJO_ARCHIVO: 6, PREFIJO_HITO: 4}
+PREFIJO_ARCHIVO_INTERNO = "AI"
+PREFIJOS_INTERNOS = (PREFIJO_ARCHIVO_INTERNO,)
+DIGITOS = {**{p: 4 for p in PREFIJOS_TARJETA.values()}, PREFIJO_ARCHIVO: 6, PREFIJO_ARCHIVO_INTERNO: 6,
+           PREFIJO_HITO: 4}
 TIPO_DE_PREFIJO = {**{p: "tarjeta" for p in PREFIJOS_TARJETA.values()},
-                   PREFIJO_ARCHIVO: "archivo", PREFIJO_HITO: "hito"}
+                   PREFIJO_ARCHIVO: "archivo", PREFIJO_ARCHIVO_INTERNO: "archivo", PREFIJO_HITO: "hito"}
 REL_TARJETA, REL_ARCHIVO, REL_HITO, REL_MENSAJE = "tarjeta", "archivo", "hito", "mensaje"
 TIPOS_REL = (REL_TARJETA, REL_ARCHIVO, REL_HITO, REL_MENSAJE)
 MENCIONA, RESPONDE = "menciona", "responde"
@@ -470,11 +496,11 @@ TEXTOS_REL = {
 # Solo ASCII (QA-03, QA-18): el prefijo sin distinguir mayúsculas a mano, para que
 # «İ» o «ı» no casen con «i» ni un dígito árabe cuente como cifra; y palabra
 # completa en el sentido Unicode: ni letra, ni dígito, ni guion bajo pegados
-# antes o después, tampoco una «ñ».
+# antes o después, tampoco una «ñ». El sufijo `-N2` es una nota interna (I15).
 _PREFIJOS_RE = "|".join("".join(f"[{c.upper()}{c.lower()}]" for c in p)
                         for p in sorted(DIGITOS, key=len, reverse=True))
 _CODIGO_RE = re.compile(
-    r"(?<!\w)(" + _PREFIJOS_RE + r")([0-9]{4,6})(?:-([0-9]{1,5}))?(?!\w)")
+    r"(?<!\w)(" + _PREFIJOS_RE + r")([0-9]{4,6})(?:-([Nn]?)([0-9]{1,5}))?(?!\w)")
 
 
 def prefijo_de_tipo(tipo: str) -> str:
@@ -482,9 +508,15 @@ def prefijo_de_tipo(tipo: str) -> str:
     return PREFIJOS_TARJETA.get(tipo, "PE")
 
 
-def formatear_codigo(prefijo: str, numero: int, orden: int = None) -> str:
+def prefijo_de_archivo(interno: bool = False) -> str:
+    """AR para lo que ve el sindicato, AI para lo subido en una nota interna."""
+    return PREFIJO_ARCHIVO_INTERNO if interno else PREFIJO_ARCHIVO
+
+
+def formatear_codigo(prefijo: str, numero: int, orden: int = None, interno: bool = False) -> str:
     """PE + 4 -> PE0004; AR + 123 -> AR000123; con `orden`, el mensaje:
-    PE0004-3. Un número que no entra en los dígitos crece (no se trunca)."""
+    PE0004-3, y con `interno` el de una nota interna: PE0004-N3. Un número que
+    no entra en los dígitos crece (no se trunca)."""
     prefijo = (prefijo or "").upper()
     if prefijo not in DIGITOS:
         raise ValueError(f"Prefijo desconocido: {prefijo!r}")
@@ -494,12 +526,20 @@ def formatear_codigo(prefijo: str, numero: int, orden: int = None) -> str:
     if orden is not None:
         if prefijo not in PREFIJOS_TARJETA.values() or int(orden) < 1:
             raise ValueError("Solo un mensaje de una tarjeta lleva orden.")
-        codigo += f"-{int(orden)}"
+        codigo += f"-{'N' if interno else ''}{int(orden)}"
+    elif interno:
+        raise ValueError("Lo interno sin orden no lleva sufijo.")
     return codigo
 
 
+def codigo_mensaje(codigo_tarjeta: str, orden: int, interno: bool = False) -> str:
+    """El código de un mensaje a partir del de su tarjeta: PE0004 + 3 -> PE0004-3
+    (PE0004-N3 si es una nota interna)."""
+    return formatear_codigo(codigo_tarjeta[:2], int(codigo_tarjeta[2:]), orden, interno)
+
+
 def _desde_match(m):
-    prefijo, digitos, orden = m.group(1).upper(), m.group(2), m.group(3)
+    prefijo, digitos, marca, orden = m.group(1).upper(), m.group(2), m.group(3), m.group(4)
     if prefijo not in DIGITOS:
         return None
     ancho = DIGITOS[prefijo]
@@ -508,20 +548,23 @@ def _desde_match(m):
     numero = int(digitos)
     if numero < 1:
         return None
+    interno_msg = bool(marca)
     if orden is not None:
         if TIPO_DE_PREFIJO[prefijo] != "tarjeta" or int(orden) < 1:
             return None
         orden = int(orden)
     tipo = "mensaje" if orden is not None else TIPO_DE_PREFIJO[prefijo]
-    return {"tipo": tipo, "prefijo": prefijo, "numero": numero, "orden": orden,
-            "codigo": formatear_codigo(prefijo, numero, orden),
+    interno = interno_msg or prefijo in PREFIJOS_INTERNOS
+    return {"tipo": tipo, "prefijo": prefijo, "numero": numero, "orden": orden, "interno": interno,
+            "codigo": formatear_codigo(prefijo, numero, orden, interno_msg),
             "base": formatear_codigo(prefijo, numero)}
 
 
 def parsear_codigo(texto: str):
     """Un código SOLO (sin otra cosa alrededor, mayúsculas o minúsculas) a
-    {tipo (tarjeta|archivo|hito|mensaje), prefijo, numero, orden, codigo,
-    base}; None si no es un código."""
+    {tipo (tarjeta|archivo|hito|mensaje), prefijo, numero, orden, interno,
+    codigo, base}; None si no es un código. `interno` es un archivo AI o un
+    mensaje -N: el sindicato lo trata como si no existiera."""
     m = _CODIGO_RE.fullmatch((texto or "").strip())
     return _desde_match(m) if m else None
 
@@ -529,7 +572,8 @@ def parsear_codigo(texto: str):
 def extraer_codigos(texto: str) -> list:
     """Los códigos que aparecen en un texto, como palabra completa, en su forma
     canónica, en orden de aparición y sin repetir. «pe0004», «PE0004-3»,
-    «AR000123», «HI0001»; no «XPE0004», ni «PE00041», ni «PE0004x»."""
+    «PE0004-N2», «AR000123», «AI000001», «HI0001»; no «XPE0004», ni «PE00041»,
+    ni «PE0004x»."""
     vistos, salida = set(), []
     for m in _CODIGO_RE.finditer(texto or ""):
         d = _desde_match(m)
