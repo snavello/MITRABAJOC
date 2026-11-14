@@ -114,3 +114,13 @@ edita ni se borra.
    diseño.
 
 Antes del bloque 3: mockup de las pantallas para que SDN elija.
+
+## Diseño (elegido por SDN sobre el mockup, 2026-11-14)
+
+- **I10. Dirección B, «Sala de mando», con fondo claro.** Barra lateral
+  (barra inferior en teléfono), indicadores arriba y tarjetas en cuadrícula
+  con la cabecera del color de su tipo; tarjeta abierta con ficha lateral y
+  el hilo al lado; el plan como tira de seis segmentos con avance. Todo
+  sobre fondo claro, no oscuro. Mockup: `disenos/mesa-implementacion-propuestas.html`
+  (fuera de git).
+- **I11. La vista por defecto se llama «Mis pendientes»**, no «Me toca».

@@ -1,0 +1,40 @@
+{% extends "_clave_base.html" %}
+{#- Primer ingreso a la Mesa de implementación: la clave que dio el equipo es
+    transitoria y hasta que la persona elija la suya no se abre la sesión. Llega
+    con el token firmado de /implementacion/ingresar (10 minutos). -#}
+{% block titulo %}Elegí tu clave{% endblock %}
+{% block chip %}Mesa de implementación{% endblock %}
+{% block mrz %}CLAVE{% endblock %}
+
+{% block cuerpo %}
+    {% if vencido %}
+    <h1>El pedido venció</h1>
+    <p class="bajada">Por seguridad, esta pantalla dura pocos minutos. Volvé a ingresar con la clave transitoria que te dieron.</p>
+    <a class="enviar" href="/implementacion/ingresar" style="display:block;text-align:center;text-decoration:none;padding:14px;margin-top:20px;border-radius:10px;font-family:var(--fuente-display);font-size:18px;letter-spacing:1.6px;text-transform:uppercase;background:linear-gradient(90deg,var(--miel),color-mix(in srgb,var(--miel) 82%,#8a5f14));color:#231a08;">Volver a ingresar</a>
+    {% else %}
+    <h1>Elegí tu clave</h1>
+    <p class="bajada">La clave que te dieron es transitoria. Para entrar, elegí una propia: al menos {{ clave_minima }} caracteres, y que no se la pases a nadie.</p>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" action="/implementacion/cambiar-clave" autocomplete="off" onsubmit="return controlar(this)">
+      <input type="hidden" name="token" value="{{ token }}">
+      <label for="cc-actual">Clave transitoria</label>
+      <input id="cc-actual" type="password" name="clave_actual" autocomplete="current-password" required autofocus>
+      <label for="cc-nueva">Clave nueva</label>
+      <input id="cc-nueva" type="password" name="clave" minlength="{{ clave_minima }}" autocomplete="new-password" required>
+      <label for="cc-repetir">Repetí la clave nueva</label>
+      <input id="cc-repetir" type="password" name="clave2" minlength="{{ clave_minima }}" autocomplete="new-password" required>
+      <div class="error" id="no-coinciden" hidden style="margin:10px 0 0;">Las dos claves no coinciden.</div>
+      <button class="enviar" type="submit">Guardar y entrar</button>
+    </form>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function controlar(f) {
+  var ok = f.clave.value === f.clave2.value;
+  document.getElementById('no-coinciden').hidden = ok;
+  return ok;
+}
+</script>
+{% endblock %}

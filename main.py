@@ -235,6 +235,8 @@ def _panel_de(path: str) -> str | None:
     /api) caería en la rama de trabajador y redirigiría al login equivocado."""
     if path.startswith("/plataforma"):
         return "/plataforma"
+    if path.startswith("/implementacion"):
+        return "/implementacion/ingresar"
     if path.startswith("/admin"):
         return "/admin"
     if path.startswith("/empresa") or path.startswith("/api/empresa"):
@@ -249,6 +251,8 @@ def _rol_de(path: str) -> str | None:
     _panel_de, para saber qué cookie de sesión mirar."""
     if path.startswith("/plataforma"):
         return "plataforma"
+    if path.startswith("/implementacion"):
+        return "implementacion"
     if path.startswith("/admin"):
         return "sindicato"
     if path.startswith("/empresa") or path.startswith("/api/empresa"):
@@ -6554,6 +6558,9 @@ COOKIE_EMPLEADOR = "sesion_empleador"
 # del sindicato que cobra la puerta. Dos cookies propias; ninguna abre /admin.
 COOKIE_FIESTA = "sesion_fiesta"
 COOKIE_FIESTA_OP = "sesion_fiesta_op"
+# Mesa de implementación (PLAN_IMPLEMENTACION.md, I2): el usuario del SINDICATO
+# en la herramienta. El equipo de Colm3na entra con su sesión de plataforma.
+COOKIE_IMPLEMENTACION = "sesion_implementacion"
 COOKIES_POR_ROL = {
     "sindicato": COOKIE_SINDICATO,
     "plataforma": COOKIE_PLATAFORMA,
@@ -6561,6 +6568,7 @@ COOKIES_POR_ROL = {
     "empleador": COOKIE_EMPLEADOR,
     "fiesta": COOKIE_FIESTA,
     "fiesta_op": COOKIE_FIESTA_OP,
+    "implementacion": COOKIE_IMPLEMENTACION,
 }
 
 
@@ -12427,6 +12435,286 @@ def recursos_miniatura(ref: str, request: Request):
     # La URL lleva ?v= (recursos._sello), así que se puede cachear una hora
     # como /static/ (CLAUDE.md, "Todo lo que sale de /static/ va con sello").
     return FileResponse(item["miniatura"], headers={"Cache-Control": "public, max-age=3600"})
+
+
+# =====================================================================
+# Mesa de implementación: acceso (PLAN_IMPLEMENTACION.md, bloque 2; I1, I2, I4)
+# =====================================================================
+# Dos lados con dos puertas, un solo helper que dice quién es (`_actor_impl`):
+#   - el EQUIPO de Colm3na entra con su usuario nominal de plataforma (la
+#     misma sesión de /plataforma y /entornos) y puede cualquier proyecto;
+#   - el SINDICATO entra por /implementacion/ingresar con un usuario propio de
+#     la herramienta (mail + clave, ImplUsuario) y ve SOLO su proyecto.
+# Existe donde existe /entornos (local y Pruebas): en Demo y producción todas
+# las rutas contestan 404, igual que /fiesta (I3: la mesa vive en Pruebas).
+# Las pantallas de tarjetas son del bloque 3; la del equipo, del bloque 5.
+import implementacion
+_intentos_impl: dict[str, list] = {}          # freno por IP del login del sindicato
+_PROPOSITO_CAMBIO_CLAVE_IMPL = "cambio_clave_impl"
+API_IMPL_EQUIPO = "/api/entornos/implementacion"
+
+
+def _actor_impl(request: Request, proyecto_id: int | None = None, s=None):
+    """Quién hace el pedido en la mesa y sobre qué proyecto: `(Actor, proyecto_id)`.
+
+    - Usuario de plataforma nominal con sesión vigente (activo y sin la cuenta
+      pendiente de completar) -> `Actor(EQUIPO, id, nombre)`. Puede cualquier
+      proyecto: con `proyecto_id` devuelve ese (404 si no existe); sin él
+      devuelve `None` y la ruta decide.
+    - Usuario del sindicato (cookie `sesion_implementacion`, activo, sin clave
+      transitoria, proyecto activo) -> `Actor(SINDICATO, id, nombre)` y SOLO su
+      proyecto: si piden otro id, 404 (nunca 403, no se confirma que exista).
+      Sin `proyecto_id` devuelve el suyo.
+    - Sin sesión válida: 401. En una navegación de página el handler global
+      lo lleva a /implementacion/ingresar; en una llamada fetch queda el JSON.
+    El equipo gana si el navegador trae las dos sesiones.
+
+    Pasá `s` si ya tenés una sesión de base abierta (una sesión por request);
+    sin ella abre la suya, así que llamalo ANTES de abrir `db.get_session()`."""
+    def resolver(s):
+        ses = sesion_actual(request, "plataforma")
+        if ses and ses.get("uid"):
+            u = s.get(db.UsuarioPlataforma, ses["uid"])
+            if u and u.activo and not (u.debe_cambiar_clave or u.debe_completar_datos):
+                if proyecto_id is not None and not db.impl_proyecto(s, proyecto_id):
+                    raise HTTPException(404, "No existe.")
+                return implementacion.Actor(implementacion.EQUIPO, u.id, u.nombre or u.usuario), proyecto_id
+        ses = sesion_actual(request, "implementacion")
+        if ses and ses.get("uid"):
+            iu = s.get(db.ImplUsuario, ses["uid"])
+            if iu and iu.activo and not iu.debe_cambiar_clave and iu.proyecto_id == ses.get("sid"):
+                p = db.impl_proyecto(s, iu.proyecto_id)
+                if p and p.activo:
+                    if proyecto_id is not None and proyecto_id != iu.proyecto_id:
+                        raise HTTPException(404, "No existe.")
+                    return implementacion.Actor(implementacion.SINDICATO, iu.id, iu.nombre), iu.proyecto_id
+        raise HTTPException(401, "Tu sesión venció. Volvé a entrar.")
+
+    if s is not None:
+        return resolver(s)
+    with db.get_session() as s2:
+        return resolver(s2)
+
+
+def _abrir_sesion_impl(resp, usuario) -> None:
+    set_cookie_segura(resp, COOKIE_IMPLEMENTACION,
+                      auth.crear_sesion("implementacion", usuario.id, usuario.proyecto_id,
+                                        ident=f"{usuario.id}:{usuario.proyecto_id}"))
+
+
+def _pagina_clave_impl(request: Request, token: str, error: str = "", status: int = 200):
+    d = auth.leer_paso(token, _PROPOSITO_CAMBIO_CLAVE_IMPL)
+    vigente = bool(d and d.get("uid"))
+    return templates.TemplateResponse("impl_cambiar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "token": token if vigente else "", "vencido": not vigente, "error": error,
+        "clave_minima": implementacion.CLAVE_MINIMA}, status_code=status)
+
+
+@app.get("/implementacion/ingresar", response_class=HTMLResponse)
+def impl_ingresar_pagina(request: Request):
+    _exigir_landing()
+    return templates.TemplateResponse("impl_login.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "error": request.query_params.get("error", "")})
+
+
+@app.post("/implementacion/ingresar")
+def impl_ingresar(request: Request, mail: str = Form(""), clave: str = Form("")):
+    """Mail + clave. El mismo aviso exista o no el mail, esté activo o no."""
+    _exigir_landing()
+    if _login_bloqueado(request, _intentos_impl):
+        return RedirectResponse("/implementacion/ingresar?error=espera", status_code=303)
+    with db.get_session() as s:
+        u = db.impl_login(s, mail, clave)
+        if not u:
+            _login_fallo(request, _intentos_impl)
+            return RedirectResponse("/implementacion/ingresar?error=login", status_code=303)
+        _login_ok(request, _intentos_impl)
+        if u.debe_cambiar_clave:
+            # Clave transitoria: no se abre la sesión hasta que elija la suya.
+            token = auth.firmar_paso({"uid": u.id}, minutos=10, proposito=_PROPOSITO_CAMBIO_CLAVE_IMPL)
+            return RedirectResponse(f"/implementacion/cambiar-clave?token={token}", status_code=303)
+        resp = RedirectResponse("/implementacion", status_code=303)
+        _abrir_sesion_impl(resp, u)
+    return resp
+
+
+@app.get("/implementacion/cambiar-clave", response_class=HTMLResponse)
+def impl_cambiar_clave_pagina(request: Request, token: str = ""):
+    _exigir_landing()
+    return _pagina_clave_impl(request, token)
+
+
+@app.post("/implementacion/cambiar-clave")
+def impl_cambiar_clave(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                       clave: str = Form(""), clave2: str = Form("")):
+    """Primer ingreso: reemplaza la transitoria y RECIÉN ahí abre la sesión. El
+    usuario sale del token firmado, nunca de un campo; la transitoria se vuelve
+    a verificar acá (el token solo no alcanza) y un intento errado cuenta para
+    el freno."""
+    _exigir_landing()
+    if _login_bloqueado(request, _intentos_impl):
+        return _pagina_clave_impl(request, token,
+                                  "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.", 429)
+    d = auth.leer_paso(token, _PROPOSITO_CAMBIO_CLAVE_IMPL)
+    if not d or not d.get("uid"):
+        return _pagina_clave_impl(request, "")
+    if clave != clave2:
+        return _pagina_clave_impl(request, token, "Las dos claves no coinciden.", 400)
+    if len(clave) < implementacion.CLAVE_MINIMA:
+        return _pagina_clave_impl(
+            request, token, f"La clave nueva tiene que tener al menos {implementacion.CLAVE_MINIMA} caracteres.", 400)
+    if clave == clave_actual:
+        return _pagina_clave_impl(request, token, "Elegí una clave distinta de la transitoria.", 400)
+    with db.get_session() as s:
+        u = s.get(db.ImplUsuario, d["uid"])
+        proyecto = db.impl_proyecto(s, u.proyecto_id) if u else None
+        if not u or not u.activo or not u.debe_cambiar_clave or not proyecto or not proyecto.activo:
+            return _pagina_clave_impl(request, "")          # ya la cambió, o se dio de baja
+        try:
+            u = db.impl_usuario_cambiar_clave(s, u.id, clave_actual, clave)
+        except implementacion.ErrorImpl as e:
+            return _pagina_clave_impl(request, token, e.mensaje, 400)
+        if u is None:
+            _login_fallo(request, _intentos_impl)
+            return _pagina_clave_impl(request, token, "La clave transitoria no es correcta.", 400)
+        _login_ok(request, _intentos_impl)
+        resp = RedirectResponse("/implementacion", status_code=303)
+        _abrir_sesion_impl(resp, u)
+    return resp
+
+
+@app.post("/implementacion/salir")
+def impl_salir():
+    _exigir_landing()
+    resp = RedirectResponse("/implementacion/ingresar", status_code=303)
+    resp.delete_cookie(COOKIE_IMPLEMENTACION)
+    return resp
+
+
+@app.get("/implementacion", response_class=HTMLResponse)
+def impl_inicio(request: Request):
+    """Provisoria (bloque 2): confirma el ingreso. La reemplaza el bloque 3."""
+    _exigir_landing()
+    actor, proyecto_id = _actor_impl(request)
+    with db.get_session() as s:
+        proyecto = db.impl_proyecto(s, proyecto_id) if proyecto_id else None
+        proyectos = ([{"id": p.id, "nombre": p.nombre} for p in db.impl_proyectos(s)]
+                     if actor.lado == implementacion.EQUIPO else [])
+        nombre_proyecto = proyecto.nombre if proyecto else ""
+    return templates.TemplateResponse("impl_inicio.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "nombre": actor.nombre, "lado": actor.lado, "proyecto": nombre_proyecto,
+        "proyectos": proyectos, "es_equipo": actor.lado == implementacion.EQUIPO})
+
+
+# ---------- Equipo: proyectos y usuarios del sindicato (API; la pantalla es el bloque 5) ----------
+def _impl_equipo_api(request: Request):
+    """Puerta de la API del equipo: la de las demás Herramientas (404 en demo,
+    pase o sesión de plataforma). Devuelve el Actor para la traza."""
+    quien = _exigir_herramientas(request)
+    ses = sesion_actual(request, "plataforma")
+    uid = (ses or {}).get("uid") or 0
+    nombre = quien
+    if uid:
+        with db.get_session() as s:
+            u = s.get(db.UsuarioPlataforma, uid)
+            nombre = (u.nombre or u.usuario) if u else quien
+    return implementacion.Actor(implementacion.EQUIPO, uid, nombre)
+
+
+def _impl_error(e: "implementacion.ErrorImpl"):
+    estado = 409 if e.codigo == "mail_repetido" else 400
+    return HTTPException(estado, e.mensaje)
+
+
+def _impl_usuario_dict(u) -> dict:
+    return {"id": u.id, "proyecto_id": u.proyecto_id, "nombre": u.nombre, "mail": u.mail,
+            "activo": u.activo, "debe_cambiar_clave": u.debe_cambiar_clave, "creado": u.creado}
+
+
+def _impl_proyecto_dict(p, usuarios: int = 0) -> dict:
+    return {"id": p.id, "nombre": p.nombre, "sindicato_id": p.sindicato_id, "activo": p.activo,
+            "creado": p.creado, "usuarios": usuarios}
+
+
+@app.get(API_IMPL_EQUIPO + "/proyectos")
+def api_impl_proyectos(request: Request):
+    _impl_equipo_api(request)
+    with db.get_session() as s:
+        cuentan = dict(s.exec(select(db.ImplUsuario.proyecto_id, db.func.count())
+                              .group_by(db.ImplUsuario.proyecto_id)).all())
+        return {"proyectos": [_impl_proyecto_dict(p, int(cuentan.get(p.id, 0))) for p in db.impl_proyectos(s)]}
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos")
+def api_impl_proyecto_crear(request: Request, datos: dict = Body(...)):
+    actor = _impl_equipo_api(request)
+    sindicato_id = datos.get("sindicato_id")
+    with db.get_session() as s:
+        if sindicato_id not in (None, ""):
+            try:
+                sindicato_id = int(sindicato_id)
+            except (TypeError, ValueError):
+                raise HTTPException(400, "El sindicato no es válido.")
+            if not s.get(db.Sindicato, sindicato_id):
+                raise HTTPException(400, "El sindicato no existe.")
+        else:
+            sindicato_id = None
+        try:
+            p = db.impl_crear_proyecto(s, str(datos.get("nombre", "")), actor, sindicato_id=sindicato_id)
+        except implementacion.ErrorImpl as e:
+            raise _impl_error(e)
+        return {"ok": True, "proyecto": _impl_proyecto_dict(p)}
+
+
+@app.get(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios")
+def api_impl_usuarios(request: Request, proyecto_id: int):
+    _impl_equipo_api(request)
+    with db.get_session() as s:
+        if not db.impl_proyecto(s, proyecto_id):
+            raise HTTPException(404, "No existe.")
+        return {"usuarios": [_impl_usuario_dict(u) for u in db.impl_usuarios(s, proyecto_id)]}
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios")
+def api_impl_usuario_alta(request: Request, proyecto_id: int, datos: dict = Body(...)):
+    """Alta de un usuario del sindicato: nombre, mail y una clave inicial
+    transitoria que el equipo le pasa por fuera de la app."""
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        if not db.impl_proyecto(s, proyecto_id):
+            raise HTTPException(404, "No existe.")
+        try:
+            u = db.impl_usuario_alta(s, proyecto_id, str(datos.get("nombre", "")), str(datos.get("mail", "")),
+                                     str(datos.get("clave_inicial", "")), actor)
+        except implementacion.ErrorImpl as e:
+            raise _impl_error(e)
+        return {"ok": True, "usuario": _impl_usuario_dict(u)}
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios/{usuario_id}/restablecer-clave")
+def api_impl_usuario_restablecer(request: Request, proyecto_id: int, usuario_id: int):
+    """Clave transitoria al azar: se muestra UNA vez y obliga a elegir otra."""
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        res = db.impl_usuario_restablecer(s, proyecto_id, usuario_id, actor)
+        if res is None:
+            raise HTTPException(404, "No existe.")
+        u, clave = res
+        return JSONResponse({"ok": True, "clave": clave, "usuario": _impl_usuario_dict(u)},
+                            headers={"Cache-Control": "no-store"})
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios/{usuario_id}/estado")
+def api_impl_usuario_estado(request: Request, proyecto_id: int, usuario_id: int, datos: dict = Body(...)):
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        u = db.impl_usuario_activar(s, proyecto_id, usuario_id, bool(datos.get("activo")), actor)
+        if u is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True, "usuario": _impl_usuario_dict(u)}
 
 
 # =====================================================================

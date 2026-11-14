@@ -48,6 +48,13 @@ PUBLICAS = {
     ("POST", "/api/fiesta/salir"): "cierra la sesión",
     ("POST", "/api/fiesta/sindicato/entrar"): "login del personal del sindicato, con freno por IP",
     ("POST", "/api/fiesta/sindicato/salir"): "cierra la sesión",
+    # Mesa de implementación (bloque 2): el ingreso del sindicato es anterior a
+    # toda sesión; el cambio de clave exige el token firmado y todo da 404 en demo.
+    ("GET", "/implementacion/ingresar"): "login del sindicato en la mesa de implementación",
+    ("POST", "/implementacion/ingresar"): "login del sindicato (mail + clave), con freno por IP; mismo aviso exista o no el mail",
+    ("GET", "/implementacion/cambiar-clave"): "primer ingreso a la mesa: pantalla del token firmado",
+    ("POST", "/implementacion/cambiar-clave"): "primer ingreso a la mesa: elegir la clave (token firmado + transitoria)",
+    ("POST", "/implementacion/salir"): "cierra la sesión",
     ("GET", "/"): "landing con las tres entradas",
     ("GET", "/sw.js"): "service worker de la PWA",
     ("GET", "/healthz"): "health check de Render, no toca la base",
@@ -142,6 +149,7 @@ COOKIES_FALSAS = {
     "pase_entornos": "falso.falso",
     "sesion_trabajador": "x.y", "sesion_sindicato": "abc",
     "sesion_plataforma": "1", "sesion_empleador": "e30.firma",
+    "sesion_implementacion": "x.y",
 }
 
 

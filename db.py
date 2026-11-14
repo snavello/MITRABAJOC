@@ -10376,3 +10376,153 @@ def impl_aprobaciones(s: Session, proyecto_id: int) -> list:
              "autor": t.autor_nombre, "creada": t.creada, "resuelta_por": t.resuelta_por_nombre,
              "resuelta_por_lado": t.resuelta_por_lado, "resuelta_en": t.resuelta_en,
              "etapa": et.nombre if et else ""} for t, et in filas]
+
+
+# ---------- Usuarios del sindicato en la mesa (bloque 2: acceso, I2) ----------
+# El sindicato entra con usuarios PROPIOS de la herramienta (mail + clave), que
+# da de alta el equipo. La clave inicial es transitoria: no abre sesión hasta
+# que la persona elige la suya. Mismas reglas que el panel del sindicato.
+import correo as _correo_impl
+
+
+class _AuthPerezoso:
+    """`auth` exige SESSION_SECRET al importarse; db.py se importa también desde
+    scripts y migraciones que no la tienen. Se carga recién al usarlo."""
+    def __getattr__(self, nombre):
+        import auth
+        return getattr(auth, nombre)
+
+
+_auth_impl = _AuthPerezoso()
+
+
+def impl_proyectos(s: Session) -> list:
+    return list(s.exec(select(ImplProyecto).order_by(ImplProyecto.id)).all())
+
+
+def impl_usuario(s: Session, proyecto_id: int, usuario_id: int) -> Optional[ImplUsuario]:
+    """El usuario SOLO si es de ese proyecto."""
+    return s.exec(select(ImplUsuario).where(ImplUsuario.id == usuario_id,
+                                            ImplUsuario.proyecto_id == proyecto_id)).first()
+
+
+def impl_usuarios(s: Session, proyecto_id: int) -> list:
+    return list(s.exec(select(ImplUsuario).where(ImplUsuario.proyecto_id == proyecto_id)
+                       .order_by(ImplUsuario.id)).all())
+
+
+def impl_usuario_alta(s: Session, proyecto_id: int, nombre: str, mail: str, clave_inicial: str,
+                      actor) -> ImplUsuario:
+    """Alta por el equipo: mail único por proyecto, clave transitoria."""
+    nombre, mail = (nombre or "").strip(), (mail or "").strip().lower()
+    clave = (clave_inicial or "").strip()
+    if not nombre:
+        raise implementacion.ErrorImpl("nombre", "El usuario necesita un nombre.")
+    if not _correo_impl.destino_valido(mail):
+        raise implementacion.ErrorImpl("mail", "El mail no es válido.")
+    if len(clave) < implementacion.CLAVE_INICIAL_MINIMA:
+        raise implementacion.ErrorImpl(
+            "clave", f"La clave inicial tiene que tener al menos {implementacion.CLAVE_INICIAL_MINIMA} caracteres.")
+    if not s.get(ImplProyecto, proyecto_id):
+        raise implementacion.ErrorImpl("proyecto", "El proyecto no existe.")
+    if s.exec(select(ImplUsuario.id).where(ImplUsuario.proyecto_id == proyecto_id,
+                                           ImplUsuario.mail == mail)).first() is not None:
+        raise implementacion.ErrorImpl("mail_repetido", "Ya hay un usuario con ese mail en el proyecto.")
+    u = ImplUsuario(proyecto_id=proyecto_id, nombre=nombre, mail=mail,
+                    clave_hash=_auth_impl.hashear_clave(clave), debe_cambiar_clave=True, activo=True)
+    s.add(u)
+    try:
+        s.flush()
+    except IntegrityError:
+        s.rollback()
+        raise implementacion.ErrorImpl("mail_repetido", "Ya hay un usuario con ese mail en el proyecto.")
+    _impl_evento(s, proyecto_id, actor, "usuario_alta", detalle={"usuario_id": u.id, "mail": mail},
+                 solo_equipo=True)
+    s.commit()
+    s.refresh(u)
+    return u
+
+
+# Hash de relleno: con un mail que no existe se verifica igual contra algo, así
+# el tiempo de respuesta no dice si la cuenta existe.
+_IMPL_HASH_RELLENO = ""
+
+
+def _impl_relleno() -> str:
+    global _IMPL_HASH_RELLENO
+    if not _IMPL_HASH_RELLENO:
+        _IMPL_HASH_RELLENO = _auth_impl.hashear_clave(secrets.token_hex(8))
+    return _IMPL_HASH_RELLENO
+
+
+def impl_login(s: Session, mail: str, clave: str) -> Optional[ImplUsuario]:
+    """Mail + clave. El mail es único por proyecto, no entre proyectos: si hay
+    varios con el mismo mail, entra el primero cuya clave coincide. Devuelve el
+    usuario activo (aunque deba cambiar la clave: quien llama decide), o None.
+    Re-hashea si el costo del hash quedó viejo."""
+    mail = (mail or "").strip().lower()
+    clave = (clave or "").strip()
+    filas = list(s.exec(select(ImplUsuario).where(ImplUsuario.mail == mail)
+                        .order_by(ImplUsuario.id)).all()) if mail else []
+    if not filas:
+        _auth_impl.verificar_clave(clave, _impl_relleno())
+        return None
+    for u in filas:
+        proyecto = s.get(ImplProyecto, u.proyecto_id)
+        if _auth_impl.verificar_clave(clave, u.clave_hash) and u.activo and proyecto and proyecto.activo:
+            if _auth_impl.necesita_rehash(u.clave_hash):
+                u.clave_hash = _auth_impl.hashear_clave(clave)
+                s.add(u)
+                s.commit()
+                s.refresh(u)
+            return u
+    return None
+
+
+def impl_usuario_cambiar_clave(s: Session, usuario_id: int, clave_actual: str, clave_nueva: str) -> Optional[ImplUsuario]:
+    """Primer ingreso o cambio propio: verifica la actual, exige la nueva de 8+
+    y distinta, y apaga la bandera. None si el usuario no existe / está inactivo
+    / la clave actual no es la suya (quien llama distingue con impl_login)."""
+    u = s.get(ImplUsuario, usuario_id)
+    if not u or not u.activo or not _auth_impl.verificar_clave((clave_actual or "").strip(), u.clave_hash):
+        return None
+    nueva = (clave_nueva or "").strip()
+    if len(nueva) < implementacion.CLAVE_MINIMA:
+        raise implementacion.ErrorImpl(
+            "clave", f"La clave nueva tiene que tener al menos {implementacion.CLAVE_MINIMA} caracteres.")
+    if nueva == (clave_actual or "").strip():
+        raise implementacion.ErrorImpl("clave_igual", "Elegí una clave distinta de la actual.")
+    u.clave_hash, u.debe_cambiar_clave = _auth_impl.hashear_clave(nueva), False
+    s.add(u)
+    s.commit()
+    s.refresh(u)
+    return u
+
+
+def impl_usuario_restablecer(s: Session, proyecto_id: int, usuario_id: int, actor):
+    """Clave transitoria al azar: se devuelve UNA vez junto al usuario y el
+    próximo ingreso obliga a elegir una propia. None si no es de ese proyecto."""
+    u = impl_usuario(s, proyecto_id, usuario_id)
+    if not u:
+        return None
+    clave = secrets.token_urlsafe(8)
+    u.clave_hash, u.debe_cambiar_clave = _auth_impl.hashear_clave(clave), True
+    s.add(u)
+    _impl_evento(s, proyecto_id, actor, "usuario_clave", detalle={"usuario_id": u.id}, solo_equipo=True)
+    s.commit()
+    s.refresh(u)
+    return u, clave
+
+
+def impl_usuario_activar(s: Session, proyecto_id: int, usuario_id: int, activo: bool, actor) -> Optional[ImplUsuario]:
+    u = impl_usuario(s, proyecto_id, usuario_id)
+    if not u:
+        return None
+    if u.activo != bool(activo):
+        u.activo = bool(activo)
+        s.add(u)
+        _impl_evento(s, proyecto_id, actor, "usuario_estado",
+                     detalle={"usuario_id": u.id, "activo": bool(activo)}, solo_equipo=True)
+    s.commit()
+    s.refresh(u)
+    return u

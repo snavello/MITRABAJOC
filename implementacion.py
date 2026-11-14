@@ -95,7 +95,15 @@ FASES_POR_DEFECTO = (
 ACCIONES = (
     "crear_proyecto", "crear", "responder", "reasignar", "resolver", "subir",
     "bajar", "borrar_archivo", "hito", "hito_nuevo", "leer_aviso",
+    # Usuarios del sindicato en la herramienta (bloque 2): solo las ve el equipo.
+    "usuario_alta", "usuario_clave", "usuario_estado",
 )
+
+# Claves de los usuarios del sindicato (I2). La que escribe el equipo es
+# transitoria y se cambia en el primer ingreso; la que elige la persona es
+# más larga (mismo piso que el panel del sindicato).
+CLAVE_INICIAL_MINIMA = 6
+CLAVE_MINIMA = 8
 
 
 class ErrorImpl(Exception):

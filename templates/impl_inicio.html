@@ -1,0 +1,19 @@
+{% extends "_clave_base.html" %}
+{#- Provisoria (bloque 2): solo confirma el ingreso. La reemplaza la mesa de
+    tarjetas del bloque 3. -#}
+{% block titulo %}Mesa de implementación{% endblock %}
+{% block chip %}{{ 'Equipo Colm3na' if es_equipo else 'Sindicato' }}{% endblock %}
+{% block mrz %}IMPLEMENTACION{% endblock %}
+
+{% block cuerpo %}
+    <h1>Hola, {{ nombre }}</h1>
+    {% if es_equipo %}
+    <p class="bajada">Ingresaste como equipo de Colm3na.</p>
+    {% if proyectos %}<p class="bajada">Proyectos: {% for p in proyectos %}{{ p.nombre }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+    {% else %}
+    <p class="bajada">Ingresaste al proyecto <strong>{{ proyecto }}</strong>.</p>
+    {% endif %}
+    <form method="post" action="/implementacion/salir">
+      <button class="enviar" type="submit">Salir</button>
+    </form>
+{% endblock %}
