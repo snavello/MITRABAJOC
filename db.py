@@ -10355,6 +10355,9 @@ def impl_carpetas(s: Session, proyecto_id: int, actor, sentido: str) -> list:
         q = q.where(or_(ImplArchivo.mensaje_id.is_(None), ImplArchivo.mensaje_id.not_in(internos)))
     filas = s.exec(q.order_by(func.coalesce(ImplEtapa.orden, 999), ImplArchivo.id)).all()
     return [{
+        "id": ar.id, "subido_lado": ar.subido_por_lado, "mensaje_id": ar.mensaje_id,
+        "puede_borrar": (not ar.borrado_en) and implementacion.puede_borrar_archivo(
+            a.lado, a.id, ar.subido_por_lado, ar.subido_por_id),
         "archivo_id": ar.id, "nombre": ar.nombre, "mime": ar.mime, "tamano": ar.tamano,
         "datos_personales": ar.datos_personales, "subido_por": ar.subido_por_nombre,
         "subido_en": ar.subido_en, "borrado": bool(ar.borrado_en), "borrado_por": ar.borrado_por_nombre,
@@ -10526,3 +10529,269 @@ def impl_usuario_activar(s: Session, proyecto_id: int, usuario_id: int, activo: 
     s.commit()
     s.refresh(u)
     return u
+
+
+# =====================================================================
+# Mesa de implementación: bloques 3 y 4 (vistas, plan editable, exportación)
+# =====================================================================
+def _impl_like(texto: str) -> str:
+    """El patrón de un LIKE con los comodines del usuario neutralizados."""
+    limpio = texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{limpio}%"
+
+
+def impl_buscar_tarjetas(s: Session, proyecto_id: int, lado: str, vista: str = "todas", estado: str = None,
+                         tipo: str = None, etapa_id: int = None, q: str = "") -> list:
+    """Las tarjetas del proyecto para una vista. `vista="pendientes"` deja las
+    que esperan a `lado`. `q` busca en el título, en el número (#12) y en el
+    texto de los mensajes: el sindicato SOLO busca en los mensajes que ve (una
+    palabra de una nota interna no puede delatar que existe)."""
+    consulta = select(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id)
+    if vista == "pendientes":
+        consulta = consulta.where(ImplTarjeta.lado_que_espera == lado)
+    if estado:
+        consulta = consulta.where(ImplTarjeta.estado == estado)
+    if tipo:
+        consulta = consulta.where(ImplTarjeta.tipo == tipo)
+    if etapa_id:
+        consulta = consulta.where(ImplTarjeta.etapa_id == etapa_id)
+    q = (q or "").strip()[:100]
+    if q:
+        patron = _impl_like(q)
+        condiciones = [ImplTarjeta.titulo.ilike(patron, escape="\\")]
+        if q.lstrip("#").isdigit():
+            condiciones.append(ImplTarjeta.numero == int(q.lstrip("#")))
+        en_mensajes = select(ImplMensaje.tarjeta_id).where(
+            ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.texto.ilike(patron, escape="\\"))
+        if not implementacion.puede_ver_nota_interna(lado):
+            en_mensajes = en_mensajes.where(ImplMensaje.solo_equipo == False)         # noqa: E712
+        condiciones.append(ImplTarjeta.id.in_(en_mensajes))
+        consulta = consulta.where(or_(*condiciones))
+    return list(s.exec(consulta.order_by(ImplTarjeta.actualizada.desc(), ImplTarjeta.id.desc())).all())
+
+
+def impl_conteos(s: Session, proyecto_id: int, lado: str, tarjeta_ids: list) -> tuple:
+    """({tarjeta_id: mensajes}, {tarjeta_id: archivos vigentes}) según quién
+    mira: el sindicato no cuenta lo interno."""
+    if not tarjeta_ids:
+        return {}, {}
+    ve = implementacion.puede_ver_nota_interna(lado)
+    qm = select(ImplMensaje.tarjeta_id, func.count()).where(
+        ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id.in_(tarjeta_ids))
+    qa = select(ImplArchivo.tarjeta_id, func.count()).where(
+        ImplArchivo.proyecto_id == proyecto_id, ImplArchivo.tarjeta_id.in_(tarjeta_ids),
+        ImplArchivo.borrado_en == "")
+    if not ve:
+        internos = select(ImplMensaje.id).where(ImplMensaje.proyecto_id == proyecto_id,
+                                                ImplMensaje.solo_equipo == True)      # noqa: E712
+        qm = qm.where(ImplMensaje.solo_equipo == False)                              # noqa: E712
+        qa = qa.where(or_(ImplArchivo.mensaje_id.is_(None), ImplArchivo.mensaje_id.not_in(internos)))
+    return (dict(s.exec(qm.group_by(ImplMensaje.tarjeta_id)).all()),
+            dict(s.exec(qa.group_by(ImplArchivo.tarjeta_id)).all()))
+
+
+def impl_resumen(s: Session, proyecto_id: int, lado: str) -> dict:
+    """Los indicadores de arriba: pendientes (me tocan), esperan al otro lado,
+    con fecha límite y vencidas (solo tarjetas abiertas) y el avance del plan."""
+    abiertas = implementacion.ESTADOS_ABIERTOS
+    hoy = fechas.hoy_texto()
+
+    def contar(*condiciones) -> int:
+        return int(s.exec(select(func.count()).select_from(ImplTarjeta).where(
+            ImplTarjeta.proyecto_id == proyecto_id, ImplTarjeta.estado.in_(abiertas), *condiciones)).one())
+
+    etapas = impl_avance(s, proyecto_id)
+    total = sum(e["total"] for e in etapas)
+    hechos = sum(e["hechos"] for e in etapas)
+    return {
+        "pendientes": contar(ImplTarjeta.lado_que_espera == lado),
+        "esperan_otro": contar(ImplTarjeta.lado_que_espera == implementacion.otro_lado(lado)),
+        "con_fecha": contar(ImplTarjeta.fecha_limite != ""),
+        "vencidas": contar(ImplTarjeta.fecha_limite != "", ImplTarjeta.fecha_limite < hoy),
+        "plan_pct": implementacion.porcentaje(hechos, total),
+        "etapas": [{"id": e["etapa_id"], "nombre": e["nombre"], "orden": e["orden"], "total": e["total"],
+                    "hechos": e["hechos"], "pct": e["porcentaje"], "tarjetas_abiertas": e["tarjetas_abiertas"]}
+                   for e in etapas],
+    }
+
+
+def impl_plan(s: Session, proyecto_id: int) -> list:
+    """Etapas con sus hitos y las tarjetas que cuelgan de cada hito."""
+    hitos = list(s.exec(select(ImplHito).where(ImplHito.proyecto_id == proyecto_id)
+                        .order_by(ImplHito.etapa_id, ImplHito.orden, ImplHito.id)).all())
+    tarjetas = {}
+    for t in s.exec(select(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id,
+                                              ImplTarjeta.hito_id.is_not(None))
+                    .order_by(ImplTarjeta.numero)).all():
+        tarjetas.setdefault(t.hito_id, []).append({"numero": t.numero, "titulo": t.titulo, "estado": t.estado})
+    por_etapa = {}
+    for h in hitos:
+        por_etapa.setdefault(h.etapa_id, []).append({
+            "id": h.id, "texto": h.texto, "orden": h.orden, "hecho": h.hecho, "hecho_por": h.hecho_por,
+            "hecho_en": h.hecho_en, "tarjetas": tarjetas.get(h.id, [])})
+    salida = []
+    for e in impl_etapas(s, proyecto_id):
+        lista = por_etapa.get(e.id, [])
+        salida.append({"id": e.id, "nombre": e.nombre, "orden": e.orden,
+                       "pct": implementacion.porcentaje(sum(1 for h in lista if h["hecho"]), len(lista)),
+                       "hitos": lista})
+    return salida
+
+
+def _impl_exigir_equipo(actor) -> "implementacion.Actor":
+    a = _impl_actor(actor)
+    if a.lado != implementacion.EQUIPO:
+        raise implementacion.ErrorImpl("sin_permiso", "El plan lo edita el equipo.")
+    return a
+
+
+def _impl_hito(s: Session, proyecto_id: int, hito_id: int, bloquear: bool = True) -> Optional[ImplHito]:
+    q = select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
+    return s.exec(q.with_for_update() if bloquear else q).first()
+
+
+def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: str = None,
+                     orden: int = None) -> Optional[ImplHito]:
+    """Cambia el texto y/o la posición (1..n dentro de su etapa). Solo equipo."""
+    a = _impl_exigir_equipo(actor)
+    h = _impl_hito(s, proyecto_id, hito_id)
+    if not h:
+        return None
+    if texto is not None:
+        texto = texto.strip()
+        if not texto:
+            raise implementacion.ErrorImpl("texto", "El hito necesita un texto.")
+        if texto != h.texto:
+            h.texto = texto
+            s.add(h)
+            _impl_evento(s, proyecto_id, a, "hito_editar", detalle={"hito_id": h.id, "texto": texto})
+    if orden is not None:
+        hermanos = list(s.exec(select(ImplHito).where(ImplHito.proyecto_id == proyecto_id,
+                                                      ImplHito.etapa_id == h.etapa_id)
+                               .order_by(ImplHito.orden, ImplHito.id)).all())
+        hermanos = [x for x in hermanos if x.id != h.id]
+        pos = max(1, min(int(orden), len(hermanos) + 1))
+        hermanos.insert(pos - 1, h)
+        for i, x in enumerate(hermanos, start=1):
+            if x.orden != i:
+                x.orden = i
+                s.add(x)
+    s.commit()
+    s.refresh(h)
+    return h
+
+
+def impl_borrar_hito(s: Session, proyecto_id: int, hito_id: int, actor) -> bool:
+    """Quita el hito (las tarjetas que lo nombraban quedan sin hito) y deja el
+    evento con su texto. False si no es de este proyecto."""
+    a = _impl_exigir_equipo(actor)
+    h = _impl_hito(s, proyecto_id, hito_id)
+    if not h:
+        return False
+    s.exec(sa_update(ImplTarjeta).where(ImplTarjeta.proyecto_id == proyecto_id,
+                                        ImplTarjeta.hito_id == h.id).values(hito_id=None))
+    _impl_evento(s, proyecto_id, a, "hito_borrar", detalle={"hito_id": h.id, "texto": h.texto})
+    s.delete(h)
+    s.commit()
+    return True
+
+
+def impl_renombrar_etapa(s: Session, proyecto_id: int, etapa_id: int, actor, nombre: str) -> Optional[ImplEtapa]:
+    a = _impl_exigir_equipo(actor)
+    et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)
+                .with_for_update()).first()
+    if not et:
+        return None
+    nombre = (nombre or "").strip()
+    if not nombre or len(nombre) > 80:
+        raise implementacion.ErrorImpl("nombre", "La etapa necesita un nombre de hasta 80 caracteres.")
+    if nombre != et.nombre:
+        _impl_evento(s, proyecto_id, a, "etapa_renombrar", detalle={"etapa_id": et.id, "antes": et.nombre,
+                                                                    "despues": nombre})
+        et.nombre = nombre
+        s.add(et)
+    s.commit()
+    s.refresh(et)
+    return et
+
+
+def impl_cargar_hitos_semilla(s: Session, proyecto_id: int, actor, fases: list) -> Optional[int]:
+    """Carga los hitos de `fases` [(etapa, [textos])] en un proyecto SIN hitos
+    (las etapas se emparejan por nombre; una que no existe se crea al final).
+    Devuelve cuántos cargó; None si el proyecto no existe."""
+    a = _impl_exigir_equipo(actor)
+    if not s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first():
+        return None
+    if s.exec(select(func.count()).select_from(ImplHito).where(ImplHito.proyecto_id == proyecto_id)).one():
+        raise implementacion.ErrorImpl("con_hitos", "El proyecto ya tiene hitos: no se pisan.")
+    etapas = {e.nombre.strip().lower(): e for e in impl_etapas(s, proyecto_id)}
+    cantidad = 0
+    for nombre, textos in fases:
+        et = etapas.get(nombre.strip().lower())
+        if et is None:
+            et = ImplEtapa(proyecto_id=proyecto_id, nombre=nombre, orden=len(etapas) + 1)
+            s.add(et)
+            s.flush()
+            etapas[nombre.strip().lower()] = et
+        for orden, texto in enumerate(textos, start=1):
+            s.add(ImplHito(proyecto_id=proyecto_id, etapa_id=et.id, texto=texto, orden=orden))
+            cantidad += 1
+    _impl_evento(s, proyecto_id, a, "hitos_semilla", detalle={"cantidad": cantidad})
+    s.commit()
+    return cantidad
+
+
+def impl_aprobaciones_registro(s: Session, proyecto_id: int) -> list:
+    """`impl_aprobaciones` más el texto con que se resolvió (el mensaje que
+    acompañó la aprobación o el rechazo; nunca una nota interna)."""
+    filas = impl_aprobaciones(s, proyecto_id)
+    ids = [f["tarjeta_id"] for f in filas if f["resuelta_en"]]
+    textos = {}
+    if ids:
+        for ev in s.exec(select(ImplEvento).where(ImplEvento.proyecto_id == proyecto_id,
+                                                  ImplEvento.tarjeta_id.in_(ids),
+                                                  ImplEvento.accion == "resolver")
+                         .order_by(ImplEvento.id)).all():
+            mid = (ev.detalle or {}).get("mensaje_id")
+            if mid:
+                m = s.exec(select(ImplMensaje).where(ImplMensaje.id == mid, ImplMensaje.proyecto_id == proyecto_id,
+                                                     ImplMensaje.solo_equipo == False)).first()   # noqa: E712
+                if m:
+                    textos[ev.tarjeta_id] = m.texto
+    for f in filas:
+        f["texto"] = textos.get(f["tarjeta_id"], "")
+    return filas
+
+
+def impl_exportacion(s: Session, proyecto_id: int, actor) -> Optional[dict]:
+    """Todo lo del proyecto para la exportación (solo equipo): proyecto, etapas,
+    hitos, tarjetas, mensajes (internos incluidos), eventos, descargas y la
+    lista de archivos SIN bytes. Deja el evento «exportar». None si no existe."""
+    a = _impl_exigir_equipo(actor)
+    proy = impl_proyecto(s, proyecto_id)
+    if not proy:
+        return None
+    def todo(modelo, orden):
+        q = select(modelo).where(modelo.proyecto_id == proyecto_id)
+        if modelo is ImplArchivo:
+            q = q.options(*_sin_bytes(ImplArchivo))
+        return list(s.exec(q.order_by(orden)).all())
+    datos = {
+        "proyecto": proy, "etapas": impl_etapas(s, proyecto_id),
+        "hitos": todo(ImplHito, ImplHito.id), "tarjetas": todo(ImplTarjeta, ImplTarjeta.numero),
+        "mensajes": todo(ImplMensaje, ImplMensaje.id), "eventos": todo(ImplEvento, ImplEvento.id),
+        "descargas": todo(ImplDescarga, ImplDescarga.id), "archivos": todo(ImplArchivo, ImplArchivo.id),
+        "lecturas": todo(ImplLecturaAviso, ImplLecturaAviso.id),
+        "aprobaciones": impl_aprobaciones_registro(s, proyecto_id),
+    }
+    _impl_evento(s, proyecto_id, a, "exportar", detalle={"tarjetas": len(datos["tarjetas"]),
+                                                         "archivos": len(datos["archivos"])}, solo_equipo=True)
+    s.commit()
+    return datos
+
+
+def impl_bytes_archivo(s: Session, proyecto_id: int, archivo_id: int) -> bytes:
+    """Los bytes de un archivo del proyecto (para la exportación; no registra
+    una descarga: la exportación entera deja su propio evento)."""
+    return bytes(s.exec(select(ImplArchivo.datos).where(
+        ImplArchivo.id == archivo_id, ImplArchivo.proyecto_id == proyecto_id)).first() or b"")

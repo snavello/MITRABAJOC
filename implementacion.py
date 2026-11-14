@@ -11,6 +11,8 @@ llama a `datetime.now()` ni a `date.today()`.
 """
 import csv
 import io
+import json
+from pathlib import Path
 from datetime import datetime
 from typing import NamedTuple
 
@@ -97,6 +99,8 @@ ACCIONES = (
     "bajar", "borrar_archivo", "hito", "hito_nuevo", "leer_aviso",
     # Usuarios del sindicato en la herramienta (bloque 2): solo las ve el equipo.
     "usuario_alta", "usuario_clave", "usuario_estado",
+    # Plan operativo y exportación (bloque 3/4).
+    "hito_editar", "hito_borrar", "etapa_renombrar", "hitos_semilla", "exportar",
 )
 
 # Claves de los usuarios del sindicato (I2). La que escribe el equipo es
@@ -315,3 +319,92 @@ def _celda(valor) -> str:
     """Neutraliza una fórmula de planilla (=, +, -, @) al abrir el CSV."""
     texto = str(valor if valor is not None else "")
     return "'" + texto if texto[:1] in ("=", "+", "-", "@") else texto
+
+
+# ---------- Qué puede hacer este actor ahora (lo calcula el servidor) ----------
+def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str) -> dict:
+    """Las acciones disponibles para `lado_actor` sobre una tarjeta. La pantalla
+    no decide nada: dibuja lo que esto dice. `estados` son los destinos que se
+    pueden elegir al responder (id + nombre); reabrir va aparte."""
+    vacio = {"responder": False, "estados": [], "solo_equipo": False, "aprobar": False,
+             "reabrir": False, "subir": False, "reasignar": False}
+    if tipo not in TIPOS or estado not in TRANSICIONES or lado_actor not in LADOS:
+        return vacio
+    if es_inmutable(tipo, estado):
+        return vacio
+    abierta = estado in ESTADOS_ABIERTOS
+    if tipo == AVISO:
+        return vacio
+    destinos = [e for e in (EN_CURSO, RESPONDIDA, CERRADA) if puede_transicionar(tipo, estado, e)]
+    return {
+        "responder": abierta,
+        "estados": [{"id": e, "nombre": NOMBRES_ESTADO[e]} for e in destinos] if abierta else [],
+        "solo_equipo": abierta and puede_escribir_nota_interna(lado_actor),
+        "aprobar": puede_resolver_aprobacion(tipo, estado, lado_que_espera, lado_actor),
+        "reabrir": estado == CERRADA and puede_transicionar(tipo, estado, ABIERTA),
+        "subir": abierta,
+        "reasignar": abierta,
+    }
+
+
+# ---------- La traza, en castellano ----------
+def texto_evento(accion: str, detalle: dict) -> str:
+    """La frase del evento (sin el nombre de quien lo hizo). Nunca incluye el
+    texto de un mensaje: solo nombres de archivo, estados y títulos de hitos."""
+    d = detalle or {}
+    nombre = d.get("nombre") or ""
+    if accion == "crear":
+        return f"creó la tarjeta #{d.get('numero', '')}".strip()
+    if accion == "responder":
+        nuevo, ant = d.get("estado_nuevo"), d.get("estado_anterior")
+        if nuevo and nuevo != ant:
+            if ant == CERRADA and nuevo == ABIERTA:
+                return "reabrió la tarjeta"
+            return f"respondió y la pasó a {NOMBRES_ESTADO.get(nuevo, nuevo)}" if d.get("mensaje_id") \
+                else f"cambió el estado a {NOMBRES_ESTADO.get(nuevo, nuevo)}"
+        return "respondió"
+    if accion == "resolver":
+        return "aprobó" if d.get("resultado") == APROBADA else "rechazó"
+    if accion == "reasignar":
+        quien = (d.get("despues") or {}).get("responsable") or "nadie"
+        return f"reasignó la tarjeta a {quien}"
+    if accion == "subir":
+        return f"subió {nombre}" + (" (con datos personales)" if d.get("datos_personales") else "")
+    if accion == "bajar":
+        return f"bajó {nombre}"
+    if accion == "borrar_archivo":
+        return f"borró {nombre}"
+    if accion == "leer_aviso":
+        return "leyó el aviso"
+    if accion == "hito":
+        return ("tildó " if d.get("hecho") else "destildó ") + f"el hito «{d.get('texto', '')}»"
+    if accion == "hito_nuevo":
+        return f"sumó el hito «{d.get('texto', '')}»"
+    if accion == "hito_editar":
+        return f"editó el hito «{d.get('texto', '')}»"
+    if accion == "hito_borrar":
+        return f"quitó el hito «{d.get('texto', '')}»"
+    if accion == "etapa_renombrar":
+        return f"renombró la etapa «{d.get('antes', '')}» a «{d.get('despues', '')}»"
+    if accion == "hitos_semilla":
+        return f"cargó {d.get('cantidad', 0)} hitos iniciales"
+    if accion == "exportar":
+        return "exportó el proyecto"
+    return accion
+
+
+# ---------- Semilla del plan operativo (I7) ----------
+RUTA_HITOS_BANCARIA = Path(__file__).resolve().parent / "data" / "implementacion" / "hitos_bancaria.json"
+
+
+def cargar_hitos_semilla(ruta=None) -> list:
+    """[(nombre de etapa, [texto de hito, ...]), ...] desde el JSON de la
+    semilla, validado: textos no vacíos y sin repetir dentro de la etapa."""
+    datos = json.loads(Path(ruta or RUTA_HITOS_BANCARIA).read_text(encoding="utf-8"))
+    salida = []
+    for fase in datos.get("fases", []):
+        textos = [str(h.get("texto", "")).strip() for h in fase.get("hitos", [])]
+        if not str(fase.get("etapa", "")).strip() or not textos or not all(textos):
+            raise ValueError("La semilla de hitos está mal formada.")
+        salida.append((str(fase["etapa"]).strip(), textos))
+    return salida

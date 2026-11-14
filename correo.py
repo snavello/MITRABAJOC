@@ -132,3 +132,19 @@ def texto_codigo_recuperacion(codigo: str, minutos: int) -> tuple[str, str]:
         f"Colm3na"
     )
     return asunto, cuerpo
+
+
+def texto_aviso_mesa(proyecto: str, numero: int, titulo: str, enlace: str, motivo: str) -> tuple[str, str]:
+    """(asunto, cuerpo) del aviso de la Mesa de implementación (I6). Lleva el
+    número, el título y el enlace; NUNCA el texto de la tarjeta ni archivos.
+    `motivo` es «nueva» o «respuesta»."""
+    limpio = " ".join(str(titulo or "").split())[:100]
+    asunto = f"Mesa de implementación · #{int(numero)} {limpio}"
+    que = "Hay una tarjeta nueva" if motivo == "nueva" else "Hay una respuesta en una tarjeta"
+    cuerpo = (
+        f"{que} en la Mesa de implementación ({' '.join(str(proyecto or '').split())[:80]}).\n\n"
+        f"    #{int(numero)} {limpio}\n\n"
+        f"Entrá para verla: {enlace}\n\n"
+        f"Colm3na"
+    )
+    return asunto, cuerpo

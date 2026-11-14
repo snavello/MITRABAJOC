@@ -56,3 +56,17 @@ lado al que le toca: asunto con el número y el título, cuerpo con una línea y
 el enlace a `/implementacion?p={pid}#t{numero}`. Nunca el texto ni archivos.
 Con el canal apagado no falla nada. El equipo recibe en el mail de su
 `UsuarioPlataforma` si lo tiene.
+
+## Precisiones de la implementación (backend)
+
+- **Archivos subidos**: el campo multipart se llama `archivos` (también vale `archivos[]`). Hasta 5 por envío, 20 MB cada uno, 40 MB en total; si algo no pasa, NO se crea la tarjeta (413 `archivo_grande`, 400 `archivo`/`archivos`).
+- **Errores**: `{"detail", "codigo"}`. 403 `sin_permiso`; 409 `inmutable`, `cerrada`, `transicion`, `con_hitos`; 410 `borrado`; 413 `archivo_grande`; 400 el resto. 401 sin sesión; 404 id ajeno o inexistente. La landing entera es 404 en demo.
+- `POST tarjetas` devuelve solo `{tarjeta}`; `responder`, `aprobacion` y `reasignar` devuelven el mismo cuerpo que `GET tarjetas/{tid}`.
+- **`acciones.estados`** es `[{id, nombre}]` con los destinos elegibles al responder (sin «abierta»). **Reabrir** (tarjeta cerrada) va por `responder` con `estado_nuevo=abierta` (texto opcional) y se habilita con `acciones.reabrir`; en una cerrada `responder` es false.
+- Un **aviso** no se responde ni admite archivos después de nacer: todas sus acciones son false. Su `GET tarjetas/{tid}` suma `lecturas: [{nombre, lado, cuando}]`; se marca leído con `POST .../leido`.
+- **Plan**: `POST plan/hitos`, `plan/hitos/{hid}` y `plan/etapas/{eid}` devuelven `{ok, etapas}` (el mismo cuerpo que `GET plan`). `orden` es la posición 1..n dentro de la etapa. Tildar acepta `hecho` solo; texto/orden/borrar son solo del equipo (403 aunque vengan mezclados con `hecho`).
+- **Carpetas**: cada grupo es `{etapa, etapa_id, archivos}` (`etapa` = «Sin etapa» si la tarjeta no tiene), los borrados siguen listados como constancia (`borrado: true`).
+- **Aprobaciones**: suma `etapa`; `texto` es el mensaje con que se resolvió.
+- **Avisos por mail**: también un **aviso** (tipo) al nacer le llega al otro lado, aunque no espere respuesta. Cerrar no avisa a nadie.
+- **Equipo**: `POST /api/entornos/implementacion/proyectos/{id}/hitos-semilla` carga los 48 hitos de La Bancaria (`data/implementacion/hitos_bancaria.json`) en un proyecto sin hitos (409 si ya los tiene).
+- **Página**: `GET /implementacion` suma al contexto `es_equipo` y `api` (`/api/implementacion/p/{pid}`); `proyecto` es `null` si el equipo no tiene proyectos todavía.
