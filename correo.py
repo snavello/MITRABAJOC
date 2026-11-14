@@ -138,11 +138,12 @@ def texto_aviso_mesa(proyecto: str, numero: int, titulo: str, enlace: str, motiv
                      codigo: str = "") -> tuple[str, str]:
     """(asunto, cuerpo) del aviso de la Mesa de implementación (I6). Lleva el
     número, el título y el enlace; NUNCA el texto de la tarjeta ni archivos.
-    `motivo` es «nueva» o «respuesta»."""
+    `motivo` es «nueva», «respuesta» o «problema»."""
     limpio = " ".join(str(titulo or "").split())[:100]
     ref = f"{codigo} · " if codigo else ""
     asunto = f"Mesa de implementación · {ref}#{int(numero)} {limpio}"
-    que = "Hay una tarjeta nueva" if motivo == "nueva" else "Hay una respuesta en una tarjeta"
+    que = {"nueva": "Hay una tarjeta nueva",
+           "problema": "Hay un problema con una entrega de archivo"}.get(motivo, "Hay una respuesta en una tarjeta")
     cuerpo = (
         f"{que} en la Mesa de implementación ({' '.join(str(proyecto or '').split())[:80]}).\n\n"
         f"    {ref}#{int(numero)} {limpio}\n\n"

@@ -12949,9 +12949,13 @@ def _impl_detalle(s, pid: int, tid: int, actor) -> dict:
     refs = db.impl_refs(s, pid, [t.titulo] + [m.texto for m in h["mensajes"]], actor.lado)
     tarjeta = _impl_tarjeta_dict(t, actor, etapas, len(h["mensajes"]), vigentes)
     tarjeta["refs"] = refs[0]
+    if t.tipo == implementacion.ENTREGA:
+        recibida = t.estado == implementacion.CERRADA and bool(t.resuelta_en)
+        tarjeta["recibida_por"] = t.resuelta_por_nombre if recibida else ""
+        tarjeta["recibida_en"] = t.resuelta_en if recibida else ""
     salida = {
         "tarjeta": tarjeta,
-        "mensajes": [{"id": m.id, "codigo": implementacion.formatear_codigo(t.codigo[:2], int(t.codigo[2:]), m.orden)
+        "mensajes": [{"id": m.id, "codigo": implementacion.codigo_mensaje(t.codigo, m.orden, bool(m.solo_equipo))
                       if m.orden else "", "orden": m.orden,
                       "autor_nombre": m.autor_nombre, "autor_lado": m.autor_lado,
                       "texto": m.texto, "solo_equipo": m.solo_equipo, "creado_en": m.creado,
@@ -13167,6 +13171,29 @@ def api_impl_aprobacion(request: Request, pid: IdImpl, tid: IdImpl, datos: dict 
         return _impl_detalle(s, pid, tid, actor)
 
 
+@app.post(API_IMPL + "/tarjetas/{tid}/entrega")
+def api_impl_entrega(request: Request, pid: IdImpl, tid: IdImpl, datos: dict = Body(...)):
+    """I16: quien recibe una entrega de archivo la da por recibida
+    (`recibido: true`, texto opcional) o avisa un problema (`recibido: false`,
+    texto obligatorio). Mail a quien la mandó solo en «problema»."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if not isinstance(datos.get("recibido"), bool):
+            raise HTTPException(400, "Falta decir si se recibió o hay un problema.")
+        if datos.get("texto") is not None and not isinstance(datos.get("texto"), str):
+            raise HTTPException(400, "El texto no es válido.")
+        _impl_frenar_ritmo(actor)
+        t = db.impl_entrega(s, pid, tid, actor, datos["recibido"], datos.get("texto") or "")
+        if t is None:
+            raise HTTPException(404, "No existe.")
+        aviso = None
+        if not datos["recibido"] and t.lado_que_espera and t.lado_que_espera != actor.lado:
+            aviso = _impl_preparar_aviso(s, request, pid, t, t.lado_que_espera, "problema")
+        salida = _impl_detalle(s, pid, tid, actor)
+    _impl_enviar_aviso(aviso)
+    return salida
+
+
 @app.post(API_IMPL + "/tarjetas/{tid}/leido")
 def api_impl_leido(request: Request, pid: IdImpl, tid: IdImpl):
     with db.get_session() as s:
@@ -13277,7 +13304,8 @@ def api_impl_carpetas(request: Request, pid: IdImpl, sentido: str = "entrada"):
             "borrado": f["borrado"], "borrado_por": f["borrado_por"], "borrado_en": f["borrado_en"],
             "puede_bajar": f["puede_bajar"], "puede_borrar": f["puede_borrar"],
             "tarjeta_id": f["tarjeta_id"], "tarjeta_numero": f["tarjeta_numero"],
-            "tarjeta_codigo": f["tarjeta_codigo"],
+            "tarjeta_codigo": f["tarjeta_codigo"], "tarjeta_tipo": f["tarjeta_tipo"],
+            "recibida_por": f["recibida_por"], "recibida_en": f["recibida_en"],
             "tarjeta_titulo": f["tarjeta_titulo"]})
     return {"etapas": etapas}
 
@@ -13432,7 +13460,8 @@ def _impl_armar_zip(s, pid: int, datos: dict, con_archivos: bool = True):
         tarj = {t.id: t.codigo for t in datos["tarjetas"]}
         for m in datos["mensajes"]:
             if m.orden and m.tarjeta_id in tarj:
-                codigo_de[("mensaje", m.id)] = f"{tarj[m.tarjeta_id]}-{m.orden}"
+                codigo_de[("mensaje", m.id)] = implementacion.codigo_mensaje(tarj[m.tarjeta_id], m.orden,
+                                                                             bool(m.solo_equipo))
         rel = _io.StringIO()
         w = _csv.writer(rel, delimiter=";", lineterminator="\r\n")
         w.writerow(["Origen", "Clase", "Destino", "Solo equipo", "Creada", "Por"])

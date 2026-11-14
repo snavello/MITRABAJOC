@@ -9792,7 +9792,9 @@ class ImplMensaje(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     proyecto_id: int
     tarjeta_id: int
-    orden: int = 0                            # 1..n en la tarjeta, contando TODOS los mensajes (PE0004-3)
+    # La posición en SU serie (I15): los públicos 1..n sin saltos (PE0004-3), las notas internas
+    # (`solo_equipo`) su propia serie 1..n (PE0004-N2). Un mensaje no cambia de serie: su código no cambia.
+    orden: int = 0
     autor_lado: str = ""
     autor_id: int = 0
     autor_nombre: str = ""
@@ -9963,12 +9965,13 @@ def _impl_codigo_nuevo(s: Session, proyecto_id: int, prefijo: str) -> str:
     return implementacion.formatear_codigo(prefijo, _impl_siguiente(s, proyecto_id, prefijo))
 
 
-def _impl_orden_mensaje(s: Session, tarjeta_id: int) -> int:
-    """La posición del próximo mensaje en la tarjeta (1..n, TODOS los mensajes,
-    también las notas internas: el número no cambia según quién mira). Se pide
-    con la tarjeta ya bloqueada."""
+def _impl_orden_mensaje(s: Session, tarjeta_id: int, interno: bool = False) -> int:
+    """La posición del próximo mensaje en SU serie dentro de la tarjeta (I15):
+    la pública (1..n, la que ve el sindicato, sin saltos nunca) o la de las
+    notas internas (1..n, aparte). Se pide con la tarjeta ya bloqueada, así
+    dos mensajes a la vez no repiten número."""
     return int(s.exec(select(func.coalesce(func.max(ImplMensaje.orden), 0)).where(
-        ImplMensaje.tarjeta_id == tarjeta_id)).one()) + 1
+        ImplMensaje.tarjeta_id == tarjeta_id, ImplMensaje.solo_equipo == bool(interno))).one()) + 1
 
 
 def impl_crear_proyecto(s: Session, nombre: str, actor, sindicato_id: int = None) -> ImplProyecto:
@@ -10176,12 +10179,15 @@ def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: 
                 "transicion", f"No se puede pasar de {implementacion.NOMBRES_ESTADO.get(t.estado)} a "
                               f"{implementacion.NOMBRES_ESTADO.get(estado_nuevo, estado_nuevo)}.")
         t.estado = estado_nuevo
+        if t.tipo == implementacion.ENTREGA and estado_ant == implementacion.CERRADA:
+            # Reabrir una entrega recibida: el sello «Recibida» ya no vale (queda en la traza).
+            t.resuelta_por_lado, t.resuelta_por_id, t.resuelta_por_nombre, t.resuelta_en = "", 0, "", ""
     elif estado_nuevo and estado_nuevo == t.estado and not texto:
         raise implementacion.ErrorImpl("vacio", "Ya está en ese estado.")
     m = ImplMensaje(proyecto_id=proyecto_id, tarjeta_id=t.id, autor_lado=a.lado, autor_id=a.id,
                     autor_nombre=a.nombre, texto=texto, solo_equipo=bool(solo_equipo))
     if texto:
-        m.orden = _impl_orden_mensaje(s, t.id)
+        m.orden = _impl_orden_mensaje(s, t.id, interno=bool(solo_equipo))
         s.add(m)
         s.flush()
         impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [texto], a, interna=bool(solo_equipo))
@@ -10254,13 +10260,67 @@ def impl_resolver_aprobacion(s: Session, proyecto_id: int, tarjeta_id: int, acto
     mid = None
     if texto:
         m = ImplMensaje(proyecto_id=proyecto_id, tarjeta_id=t.id, autor_lado=a.lado, autor_id=a.id,
-                        autor_nombre=a.nombre, texto=texto, orden=_impl_orden_mensaje(s, t.id))
+                        autor_nombre=a.nombre, texto=texto, orden=_impl_orden_mensaje(s, t.id, interno=False))
         s.add(m)
         s.flush()
         impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [texto], a)
         mid = m.id
     _impl_evento(s, proyecto_id, a, "resolver", t.id,
                  {"resultado": t.estado, "estado_anterior": estado_ant, "mensaje_id": mid})
+    s.commit()
+    s.refresh(t)
+    return t
+
+
+def impl_entrega(s: Session, proyecto_id: int, tarjeta_id: int, actor, recibido: bool,
+                 texto: str = "") -> Optional[ImplTarjeta]:
+    """I16. Una entrega de archivo la cierra quien la recibe (el lado que NO la
+    creó): `recibido=True` la da por recibida (la cierra y deja quién y cuándo,
+    en las mismas columnas `resuelta_*` que usa una aprobación; texto opcional)
+    y `recibido=False` es «hay un problema» (texto obligatorio): la devuelve a
+    quien la mandó, que pasa a ser a quien le toca. Tras un problema queda
+    ABIERTA (en curso o respondida vuelven a abierta: es un pedido nuevo para
+    quien la mandó, y así su próxima respuesta le devuelve el turno a quien la
+    recibe, cosa que «en curso» no haría: ahí el turno se queda con quien
+    responde); nunca se cierra. Quien la mandó no la recibe ni la cierra por el
+    selector de estado. None si la tarjeta no es de este proyecto."""
+    a = _impl_actor(actor)
+    t = _impl_tarjeta(s, proyecto_id, tarjeta_id, bloquear=True)
+    if not t:
+        return None
+    if t.tipo != implementacion.ENTREGA:
+        raise implementacion.ErrorImpl("tipo", "Esta tarjeta no es una entrega de archivo.")
+    texto = implementacion.exigir_largo(_L(texto), implementacion.TOPE_TEXTO, "El texto")
+    if t.estado not in implementacion.ESTADOS_ABIERTOS:
+        raise implementacion.ErrorImpl("cerrada", "La entrega ya está cerrada.")
+    if not implementacion.puede_dar_entrega(t.tipo, t.estado, t.autor_lado, a.lado):
+        raise implementacion.ErrorImpl(
+            "sin_permiso", "La entrega la da por recibida la otra parte: quien la mandó no puede cerrarla.")
+    if not recibido and not texto:
+        raise implementacion.ErrorImpl("texto", "Contá cuál es el problema.")
+    estado_ant = t.estado
+    if recibido:
+        t.estado = implementacion.CERRADA
+        t.lado_que_espera = ""
+        t.resuelta_por_lado, t.resuelta_por_id, t.resuelta_por_nombre = a.lado, a.id, a.nombre
+        t.resuelta_en = fechas.ahora_con_segundos()
+        t.actualizada = t.resuelta_en
+    else:
+        t.estado = implementacion.ABIERTA
+        t.lado_que_espera = t.autor_lado
+        t.actualizada = fechas.ahora_con_segundos()
+    s.add(t)
+    mid = None
+    if texto:
+        m = ImplMensaje(proyecto_id=proyecto_id, tarjeta_id=t.id, autor_lado=a.lado, autor_id=a.id,
+                        autor_nombre=a.nombre, texto=texto, orden=_impl_orden_mensaje(s, t.id, interno=False))
+        s.add(m)
+        s.flush()
+        impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [texto], a)
+        mid = m.id
+    _impl_evento(s, proyecto_id, a, "recibido" if recibido else "problema", t.id,
+                 {"mensaje_id": mid, "estado_anterior": estado_ant, "estado_nuevo": t.estado,
+                  "lado_que_espera": t.lado_que_espera})
     s.commit()
     s.refresh(t)
     return t
@@ -10364,9 +10424,10 @@ def _impl_guardar_archivo(s: Session, proyecto_id: int, t: ImplTarjeta, a, nombr
     if motivo:
         raise implementacion.ErrorImpl("archivo", motivo)
     interno = bool(mensaje.solo_equipo) if mensaje is not None else False
+    # I15: lo subido en una nota interna toma el contador AI; el resto, AR (el sindicato ve AR sin saltos).
     arch = ImplArchivo(proyecto_id=proyecto_id, tarjeta_id=t.id, mensaje_id=mensaje.id if mensaje is not None else None,
                        nombre=nombre,
-                       codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.PREFIJO_ARCHIVO),
+                       codigo=_impl_codigo_nuevo(s, proyecto_id, implementacion.prefijo_de_archivo(interno)),
                        mime=implementacion.mime_seguro(mime), tamano=len(datos), datos=bytes(datos),
                        datos_personales=bool(datos_personales), subido_por_lado=a.lado,
                        subido_por_id=a.id, subido_por_nombre=a.nombre)
@@ -10503,6 +10564,10 @@ def impl_carpetas(s: Session, proyecto_id: int, actor, sentido: str) -> list:
         "subido_en": ar.subido_en, "borrado": bool(ar.borrado_en), "borrado_por": ar.borrado_por_nombre,
         "borrado_en": ar.borrado_en, "tarjeta_id": tj.id, "tarjeta_numero": tj.numero,
         "tarjeta_titulo": tj.titulo, "etapa_id": et.id if et else None, "etapa": et.nombre if et else "",
+        "tarjeta_tipo": tj.tipo,
+        # I16: si el archivo es de una entrega, si quien la recibía la dio por recibida.
+        "recibida_por": tj.resuelta_por_nombre if tj.tipo == implementacion.ENTREGA and tj.estado == implementacion.CERRADA else "",
+        "recibida_en": tj.resuelta_en if tj.tipo == implementacion.ENTREGA and tj.estado == implementacion.CERRADA else "",
         "puede_bajar": implementacion.puede_bajar_archivo(
             a.lado, a.id, ar.datos_personales, ar.subido_por_lado, ar.subido_por_id,
             borrado=bool(ar.borrado_en)),
@@ -10690,6 +10755,8 @@ def _impl_condiciones_por_codigo(s: Session, proyecto_id: int, lado: str, q: str
     d = implementacion.parsear_codigo(q)
     if not d or d["tipo"] == "tarjeta":
         return []
+    if d["interno"] and not implementacion.puede_ver_nota_interna(lado):
+        return []                         # un código interno, para el sindicato, es uno que no existe
     if d["tipo"] == "hito":
         return [ImplTarjeta.hito_id.in_(select(ImplHito.id).where(
             ImplHito.proyecto_id == proyecto_id, ImplHito.codigo == d["codigo"]))]
@@ -10703,9 +10770,8 @@ def _impl_condiciones_por_codigo(s: Session, proyecto_id: int, lado: str, q: str
             sub = sub.where(or_(ImplArchivo.mensaje_id.is_(None), ImplArchivo.mensaje_id.not_in(internos)))
         return [ImplTarjeta.id.in_(sub)]
     sub = select(ImplMensaje.tarjeta_id).where(ImplMensaje.proyecto_id == proyecto_id,
-                                               ImplMensaje.orden == d["orden"])
-    if not ve:
-        sub = sub.where(ImplMensaje.solo_equipo == False)                                # noqa: E712
+                                               ImplMensaje.orden == d["orden"],
+                                               ImplMensaje.solo_equipo == d["interno"])
     return [and_(ImplTarjeta.codigo == d["base"], ImplTarjeta.id.in_(sub))]
 
 
@@ -11020,7 +11086,7 @@ def _impl_claves_de_codigos(s: Session, proyecto_id: int, codigos: list) -> dict
         elif d["tipo"] == "mensaje" and d["base"] in tarjetas:
             mid = s.exec(select(ImplMensaje.id).where(
                 ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == tarjetas[d["base"]],
-                ImplMensaje.orden == d["orden"])).first()
+                ImplMensaje.orden == d["orden"], ImplMensaje.solo_equipo == d["interno"])).first()
             if mid:
                 salida[d["codigo"]] = ("mensaje", mid)
     for tipo, modelo in (("archivo", ImplArchivo), ("hito", ImplHito)):
@@ -11032,8 +11098,8 @@ def _impl_claves_de_codigos(s: Session, proyecto_id: int, codigos: list) -> dict
     return salida
 
 
-def _impl_codigo_mensaje(codigo_tarjeta: str, orden: int) -> str:
-    return implementacion.formatear_codigo(codigo_tarjeta[:2], int(codigo_tarjeta[2:]), orden)
+def _impl_codigo_mensaje(codigo_tarjeta: str, orden: int, interno: bool = False) -> str:
+    return implementacion.codigo_mensaje(codigo_tarjeta, orden, interno)
 
 
 def _impl_cargar_cosas(s: Session, proyecto_id: int, claves) -> dict:
@@ -11067,7 +11133,7 @@ def _impl_cargar_cosas(s: Session, proyecto_id: int, claves) -> dict:
         for m in mensajes:
             t = tarjetas.get(m.tarjeta_id)
             if t:
-                c = _impl_codigo_mensaje(t.codigo, m.orden)
+                c = _impl_codigo_mensaje(t.codigo, m.orden, bool(m.solo_equipo))
                 salida[("mensaje", m.id)] = {"tipo": "mensaje", "id": m.id, "codigo": c, "titulo": t.titulo,
                                              "estado": t.estado, "tarjeta_id": t.id, "interno": bool(m.solo_equipo),
                                              "enlace": enlace(c)}
@@ -11155,9 +11221,9 @@ def impl_relacionadas(s: Session, proyecto_id: int, tipo: str, cosa_id: int, lad
         t = _impl_tarjeta(s, proyecto_id, cosa_id)
         if not t:
             return []
-        for mid, orden in s.exec(select(ImplMensaje.id, ImplMensaje.orden).where(
+        for mid, orden, interno in s.exec(select(ImplMensaje.id, ImplMensaje.orden, ImplMensaje.solo_equipo).where(
                 ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == cosa_id)).all():
-            propias[("mensaje", mid)] = _impl_codigo_mensaje(t.codigo, orden)
+            propias[("mensaje", mid)] = _impl_codigo_mensaje(t.codigo, orden, bool(interno))
     grupos = {}
     for (tp, i) in propias:
         grupos.setdefault(tp, []).append(i)

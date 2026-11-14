@@ -1,9 +1,8 @@
 """QA de seguridad y lógica de la Mesa de implementación (independiente).
 
 Cada defecto del informe (docs/implementacion/QA-servidor.md) quedó corregido y su
-test es un test normal. Las únicas excepciones son los dos de QA-12 (huecos de
-numeración que delatan una nota interna), `xfail` NO estricto: es una decisión de
-SDN pendiente, no un defecto a corregir sin su palabra.
+test es un test normal. QA-12 (huecos de numeración que delataban una nota interna)
+se cerró con I15: la serie pública no salta nunca y lo interno tiene su propia serie.
 
 Correr con: python -m pytest test_implementacion_qa.py -q
 """
@@ -263,21 +262,19 @@ def test_la_exportacion_es_solo_del_equipo():
     assert any("NOTA-SECRETA" in z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.endswith(".json"))
 
 
-@pytest.mark.xfail(strict=False, reason="QA-12: decisión de SDN pendiente (el hueco de `orden` delata una nota interna)")
 def test_el_sindicato_no_nota_huecos_en_la_numeracion_de_mensajes():
     pid, eq, sin, t, *_ = _mundo_con_nota_interna()
     ordenes = [m["orden"] for m in _det(sin, pid, t["id"])["mensajes"]]
-    assert ordenes == list(range(1, len(ordenes) + 1)), ordenes     # hoy: [1, 3]
+    assert ordenes == list(range(1, len(ordenes) + 1)), ordenes
 
 
-@pytest.mark.xfail(strict=False, reason="QA-12: decisión de SDN pendiente (el hueco del contador AR delata un archivo interno)")
 def test_el_sindicato_no_nota_huecos_en_los_codigos_de_archivo():
     pid, eq, sin = _mundo()
     t = _crear(sin, pid, archivos=_pdf("publico1.pdf"))
     _resp(eq, pid, t["id"], texto="nota", solo_equipo="1", files=_pdf("interno.pdf"))
     _resp(eq, pid, t["id"], texto="publico", files=_pdf("publico2.pdf"))
     nums = sorted(int(a["codigo"][2:]) for a in _det(sin, pid, t["id"])["archivos"])
-    assert nums == list(range(nums[0], nums[0] + len(nums))), nums    # hoy: [1, 3]
+    assert nums == list(range(nums[0], nums[0] + len(nums))), nums
 
 
 # =====================================================================
@@ -1150,3 +1147,198 @@ def test_el_hito_valida_todo_antes_de_escribir():
     assert r.status_code == 200
     h = [x for x in r.json()["etapas"][0]["hitos"] if x["id"] == hito][0]
     assert (h["hecho"], h["texto"]) == (True, "Nuevo texto")
+
+
+# =====================================================================
+# I16. Una Entrega de archivo la cierra quien la recibe, con un botón
+# =====================================================================
+def _ent(c, pid, tid, recibido, texto=None):
+    cuerpo = {"recibido": recibido}
+    if texto is not None:
+        cuerpo["texto"] = texto
+    return c.post(_api(pid, f"tarjetas/{tid}/entrega"), json=cuerpo)
+
+
+def _entrega_en(pid, eq, sin, creador, estado, archivos=None):
+    """Una entrega creada por `creador` y llevada a `estado` (cerrada = recibida)."""
+    c, otro = (eq, sin) if creador == "equipo" else (sin, eq)
+    tid = _crear(c, pid, "entrega", f"entrega {estado}", "va el archivo", archivos=archivos or _pdf())["id"]
+    if estado in ("en_curso", "respondida"):
+        assert _resp(otro, pid, tid, estado_nuevo=estado, texto="paso").status_code == 200
+    if estado == "cerrada":
+        assert _ent(otro, pid, tid, True).status_code == 200
+    return tid
+
+
+def test_acciones_recibido_y_problema_coinciden_con_lo_que_el_servidor_acepta():
+    """Matriz entrega x estado x creador x lado: `recibido`/`problema` de `acciones` contra lo que el
+    servidor acepta, más el selector de estado (cerrada nunca por ahí) y que `acciones` siga siendo la verdad."""
+    pid, eq, sin = _mundo()
+    discrepancias = []
+    for est in ("abierta", "en_curso", "respondida", "cerrada"):
+        for creador in ("equipo", "sindicato"):
+            for lado in ("equipo", "sindicato"):
+                actor = eq if lado == "equipo" else sin
+                es_receptor = lado != creador
+
+                def probar(nombre, esperado, hacer):
+                    tid = _entrega_en(pid, eq, sin, creador, est)
+                    r = hacer(actor, tid)
+                    if (r.status_code == 200) != esperado:
+                        discrepancias.append((est, creador, lado, nombre, esperado, r.status_code))
+                ac = _det(actor, pid, _entrega_en(pid, eq, sin, creador, est))["acciones"]
+                abierta = est != "cerrada"
+                assert ac["recibido"] is ac["problema"] is (abierta and es_receptor), (est, creador, lado, ac)
+                assert "cerrada" not in [x["id"] for x in ac["estados"]]
+                probar("recibido", ac["recibido"], lambda c, t: _ent(c, pid, t, True))
+                probar("problema", ac["problema"], lambda c, t: _ent(c, pid, t, False, "no abre"))
+                probar("estado:cerrada", False, lambda c, t: _resp(c, pid, t, estado_nuevo="cerrada"))
+                probar("responder", ac["responder"], lambda c, t: _resp(c, pid, t, texto="hola"))
+                probar("subir", ac["subir"], lambda c, t: _resp(c, pid, t, texto="v2", files=_pdf("v2.pdf")))
+                probar("reabrir", ac["reabrir"], lambda c, t: _resp(c, pid, t, estado_nuevo="abierta"))
+    assert discrepancias == []
+
+
+def test_quien_manda_la_entrega_no_la_recibe_ni_la_cierra_pero_si_sigue_adjuntando():
+    pid, eq, sin = _mundo()
+    for creador, otro, lado_otro in ((eq, sin, "sindicato"), (sin, eq, "equipo")):
+        tid = _crear(creador, pid, "entrega", "Padrón", "v1", archivos=_pdf("padron.pdf"))["id"]
+        for recibido, texto in ((True, None), (False, "problema")):
+            r = _ent(creador, pid, tid, recibido, texto)
+            assert r.status_code == 403, r.text
+        assert _resp(creador, pid, tid, estado_nuevo="cerrada").status_code == 409
+        assert _resp(otro, pid, tid, estado_nuevo="cerrada").status_code == 409        # el selector no cierra una entrega
+        assert _resp(creador, pid, tid, texto="otra versión", files=_pdf("padron-v2.pdf", b"%PDF v2")).status_code == 200
+        d = _det(otro, pid, tid)
+        assert d["tarjeta"]["estado"] == "abierta" and len(d["archivos"]) == 2
+        assert d["acciones"]["recibido"] and d["acciones"]["problema"]
+
+
+def test_recibido_cierra_con_quien_y_cuando_y_no_avisa():
+    pid, eq, sin = _mundo()
+    tid = _crear(eq, pid, "entrega", "Modelo", "va el modelo", archivos=_pdf("modelo.pdf"))["id"]
+    r = _ent(sin, pid, tid, True, "Está bien, gracias")
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["tarjeta"]["estado"] == "cerrada" and d["tarjeta"]["espera"] == "" and d["tarjeta"]["me_toca"] is False
+    assert d["tarjeta"]["recibida_por"] == "Carla Sindicato" and d["tarjeta"]["recibida_en"]
+    assert d["mensajes"][-1]["texto"] == "Está bien, gracias" and d["mensajes"][-1]["autor_lado"] == "sindicato"
+    ev = d["eventos"][-1]
+    assert (ev["que"], ev["quien"], ev["texto"]) == ("recibido", "Carla Sindicato", "dio la entrega por recibida")
+    assert d["acciones"]["recibido"] is False and d["acciones"]["reabrir"] is True
+    assert _det(eq, pid, tid)["tarjeta"]["recibida_por"] == "Carla Sindicato"
+    assert _ent(sin, pid, tid, True).status_code == 409                       # ya cerrada
+    assert _ent(sin, pid, tid, False, "tarde").status_code == 409
+    # sin texto también vale; reabrirla borra el sello (la traza lo conserva)
+    t2 = _crear(eq, pid, "entrega", "Otro", "x", archivos=_pdf("otro.pdf"))["id"]
+    assert _ent(sin, pid, t2, True).status_code == 200
+    assert _det(sin, pid, t2)["tarjeta"]["recibida_por"] == "Carla Sindicato"
+    assert _resp(eq, pid, t2, estado_nuevo="abierta", texto="falta una hoja").status_code == 200
+    d2 = _det(eq, pid, t2)
+    assert d2["tarjeta"]["estado"] == "abierta" and d2["tarjeta"]["recibida_por"] == "" and d2["tarjeta"]["recibida_en"] == ""
+    assert [e["que"] for e in d2["eventos"] if e["que"] == "recibido"] == ["recibido"]
+
+
+@pytest.mark.parametrize("antes,despues", [("abierta", "abierta"), ("en_curso", "abierta"), ("respondida", "abierta")])
+def test_problema_devuelve_a_quien_la_mando_con_texto_obligatorio(antes, despues):
+    pid, eq, sin = _mundo()
+    tid = _entrega_en(pid, eq, sin, "equipo", antes)
+    for vacio in (None, "", "   "):
+        r = _ent(sin, pid, tid, False, vacio)
+        assert r.status_code == 400, r.text
+    assert _det(sin, pid, tid)["tarjeta"]["estado"] == antes                    # nada cambió
+    r = _ent(sin, pid, tid, False, "El archivo no abre")
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["tarjeta"]["estado"] == despues and d["tarjeta"]["espera"] == "equipo"
+    assert d["mensajes"][-1]["texto"] == "El archivo no abre" and d["tarjeta"]["recibida_por"] == ""
+    assert d["eventos"][-1]["que"] == "problema" and d["eventos"][-1]["quien"] == "Carla Sindicato"
+    assert _det(eq, pid, tid)["tarjeta"]["me_toca"] is True and _det(sin, pid, tid)["tarjeta"]["me_toca"] is False
+    # quien la mandó sube la nueva versión y vuelve a quien la recibe; ahora sí la da por recibida
+    assert _resp(eq, pid, tid, texto="Va corregido", files=_pdf("v2.pdf", b"%PDF v2")).status_code == 200
+    assert _det(sin, pid, tid)["tarjeta"]["espera"] == "sindicato"
+    assert _ent(sin, pid, tid, True).status_code == 200
+    assert _det(eq, pid, tid)["tarjeta"]["estado"] == "cerrada"
+
+
+def test_entrega_valida_el_cuerpo_el_tipo_y_los_topes():
+    pid, eq, sin = _mundo()
+    tid = _crear(eq, pid, "entrega", "E", "x", archivos=_pdf())["id"]
+    for cuerpo in ({}, {"recibido": "true"}, {"recibido": 1}, {"recibido": None}, {"recibido": True, "texto": 5},
+                   {"recibido": True, "texto": ["x"]}):
+        assert sin.post(_api(pid, f"tarjetas/{tid}/entrega"), json=cuerpo).status_code == 400, cuerpo
+    assert _ent(sin, pid, tid, False, "x" * 5001).status_code == 400
+    pedido = _crear(eq, pid, "pedido", "P", "x")["id"]
+    assert _ent(sin, pid, pedido, True).status_code == 400
+    aviso = _crear(eq, pid, "aviso", "A", "x")["id"]
+    assert _ent(sin, pid, aviso, True).status_code == 400
+    assert _det(sin, pid, tid)["tarjeta"]["estado"] == "abierta"
+    assert TestClient(main.app).post(_api(pid, f"tarjetas/{tid}/entrega"), json={"recibido": True}).status_code == 401
+
+
+def test_entrega_aislada_entre_proyectos_y_lados():
+    p1, e1, s1 = _mundo()
+    p2, e2, s2 = _mundo()
+    t2 = _crear(e2, p2, "entrega", "SECRETO", "x", archivos=_pdf())["id"]
+    for c in (s1, e1):
+        a, b = _ent(c, p1, t2, True), _ent(c, p1, _id_inexistente(), True)
+        assert (a.status_code, a.text) == (b.status_code, b.text) == (404, a.text)
+        assert _ent(c, p2, t2, True).status_code in (403, 404)               # ni el id de otro proyecto de la ruta
+    assert _det(e2, p2, t2)["tarjeta"]["estado"] == "abierta"
+    # una nota interna del equipo no cambia nada de esto: el que recibe es el lado opuesto al creador
+    assert _ent(s2, p2, t2, True).status_code == 200
+
+
+def test_problema_avisa_por_mail_a_quien_la_mando_y_recibido_no(monkeypatch):
+    enviados = []
+    monkeypatch.setattr(main.correo, "habilitado", lambda: True)
+    monkeypatch.setattr(main.correo, "enviar", lambda d, a, c, *x, **k: enviados.append((d, a, c)))
+    monkeypatch.setattr(main, "IMPL_AVISOS_SINCRONO", True)
+    pid = _proyecto()
+    mail_eq = f"{_u()}@colm3na.test"
+    eq = _cliente_equipo(email=mail_eq)
+    sin = _cliente_sindicato(pid)
+    tid = _crear(eq, pid, "entrega", "Modelo", "x", archivos=_pdf())["id"]
+    enviados.clear()
+    assert _ent(sin, pid, tid, False, "No abre").status_code == 200
+    mios = [(a, c) for d, a, c in enviados if d == mail_eq]
+    assert len(mios) == 1 and "Modelo" in mios[0][0] and "No abre" not in mios[0][1]       # nunca el texto
+    assert not [1 for d, a, c in enviados if d == sin.mail]
+    enviados.clear()
+    assert _resp(eq, pid, tid, texto="corregido", files=_pdf("v2.pdf")).status_code == 200
+    enviados.clear()
+    assert _ent(sin, pid, tid, True, "Perfecto").status_code == 200
+    assert enviados == []                                                                   # cerrar no avisa
+
+
+def test_carpetas_dice_si_la_entrega_fue_recibida():
+    pid, eq, sin = _mundo()
+    ok = _crear(eq, pid, "entrega", "Recibida", "x", archivos=_pdf("ok.pdf"))["id"]
+    pend = _crear(eq, pid, "entrega", "Pendiente", "x", archivos=_pdf("pend.pdf", b"%PDF 2"))["id"]
+    ped = _crear(eq, pid, "pedido", "Pedido", "x", archivos=_pdf("ped.pdf", b"%PDF 3"))["id"]
+    assert _ent(sin, pid, ok, True).status_code == 200
+    for c in (eq, sin):
+        arch = {a["nombre"]: a for e in c.get(_api(pid, "carpetas?sentido=salida")).json()["etapas"] for a in e["archivos"]}
+        assert arch["ok.pdf"]["recibida_por"] == "Carla Sindicato" and arch["ok.pdf"]["recibida_en"]
+        assert arch["ok.pdf"]["tarjeta_tipo"] == "entrega"
+        assert arch["pend.pdf"]["recibida_por"] == "" and arch["pend.pdf"]["recibida_en"] == ""
+        assert arch["ped.pdf"]["tarjeta_tipo"] == "pedido" and arch["ped.pdf"]["recibida_por"] == ""
+
+
+def test_doble_recepcion_concurrente_deja_una_sola():
+    pid, eq, sin = _mundo()
+    tid = _crear(eq, pid, "entrega", "E", "x", archivos=_pdf())["id"]
+    res = []
+
+    def go():
+        c = _cliente_sindicato_de(pid)
+        res.append(_ent(c, pid, tid, True).status_code)
+    ths = [threading.Thread(target=go) for _ in range(5)]
+    [x.start() for x in ths]
+    [x.join() for x in ths]
+    assert sorted(res) == [200, 409, 409, 409, 409]
+    assert len([e for e in _det(eq, pid, tid)["eventos"] if e["que"] == "recibido"]) == 1
+
+
+def _cliente_sindicato_de(pid):
+    return _cliente_sindicato(pid, "Otra Carla")

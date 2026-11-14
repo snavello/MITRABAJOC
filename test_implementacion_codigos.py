@@ -125,6 +125,11 @@ def test_formato_de_los_codigos():
             im.formatear_codigo(*malo)
     with pytest.raises(ValueError):
         im.formatear_codigo("AR", 1, 2)                              # solo un mensaje de tarjeta lleva orden
+    assert im.formatear_codigo("pe", 1, 2, interno=True) == "PE0001-N2"
+    assert im.codigo_mensaje("PE0001", 2, True) == "PE0001-N2" and im.codigo_mensaje("PE0001", 2) == "PE0001-2"
+    assert im.formatear_codigo("AI", 1) == "AI000001" and im.prefijo_de_archivo(True) == "AI"
+    with pytest.raises(ValueError):
+        im.formatear_codigo("PE", 1, interno=True)                   # lo interno sin orden no lleva sufijo
 
 
 def test_parseo_de_un_codigo_solo():
@@ -183,7 +188,7 @@ def test_los_contadores_son_por_tipo_y_por_proyecto():
         assert [h1.codigo, h2.codigo, h3.codigo] == ["HI0001", "HI0002", "HI0001"]
 
 
-def test_el_orden_de_un_mensaje_cuenta_tambien_las_notas_internas():
+def test_las_notas_internas_tienen_su_propia_serie_y_la_publica_no_salta():
     pid, eq, sin = _mundo()
     t = _crear(sin, pid, titulo="Pedido")
     _responder(eq, pid, t["id"], texto="nota entre nosotros", solo_equipo="1")
@@ -191,11 +196,11 @@ def test_el_orden_de_un_mensaje_cuenta_tambien_las_notas_internas():
     _responder(sin, pid, t["id"], texto="gracias")
     eq_ven = _detalle(eq, pid, t["id"])["mensajes"]
     sin_ven = _detalle(sin, pid, t["id"])["mensajes"]
-    assert [(m["orden"], m["codigo"]) for m in eq_ven] == [(1, f"{t['codigo']}-1"), (2, f"{t['codigo']}-2"),
-                                                           (3, f"{t['codigo']}-3"), (4, f"{t['codigo']}-4")]
-    # el sindicato ve la misma numeración (con un hueco donde estaba la nota interna)
-    assert [m["orden"] for m in sin_ven] == [1, 3, 4]
-    assert [m["codigo"] for m in sin_ven] == [f"{t['codigo']}-1", f"{t['codigo']}-3", f"{t['codigo']}-4"]
+    assert [(m["orden"], m["codigo"]) for m in eq_ven] == [(1, f"{t['codigo']}-1"), (1, f"{t['codigo']}-N1"),
+                                                           (2, f"{t['codigo']}-2"), (3, f"{t['codigo']}-3")]
+    # el sindicato ve la serie pública corrida, sin hueco donde estaba la nota interna (I15)
+    assert [m["orden"] for m in sin_ven] == [1, 2, 3]
+    assert [m["codigo"] for m in sin_ven] == [f"{t['codigo']}-1", f"{t['codigo']}-2", f"{t['codigo']}-3"]
 
 
 def test_concurrencia_no_repite_ni_salta_codigos():
@@ -582,6 +587,177 @@ def test_el_aviso_por_mail_lleva_el_codigo(monkeypatch):
     assert "Una duda" in asunto
 
 
+# ---------- I15: lo «solo equipo» se numera aparte ----------
+def test_codigos_internos_formato_y_parseo():
+    d = im.parsear_codigo("pe0001-n2")
+    assert d["tipo"] == "mensaje" and d["interno"] is True and d["codigo"] == "PE0001-N2" and d["orden"] == 2
+    assert d["base"] == "PE0001"
+    assert im.parsear_codigo("PE0001-2")["interno"] is False
+    d = im.parsear_codigo("ai000001")
+    assert d["tipo"] == "archivo" and d["interno"] is True and d["codigo"] == "AI000001"
+    assert im.parsear_codigo("AR000001")["interno"] is False and im.parsear_codigo("PE0001")["interno"] is False
+    for malo in ("PE0001-N0", "PE0001-N", "AI0001", "AI000001-1", "AR000001-N1", "HI0001-N1", "PE0001-NN1", "AI0000001"):
+        assert im.parsear_codigo(malo) is None, malo
+    assert im.extraer_codigos("ver pe0001-n1, AI000002, PE0001-2 y PE0001-N1 otra vez; no XAI000001 ni AI0000013") == [
+        "PE0001-N1", "AI000002", "PE0001-2"]
+
+
+def test_series_independientes_de_mensajes_y_archivos():
+    pid, eq, sin = _mundo()
+    t = _crear(sin, pid, titulo="Pedido", archivos=[_archivo("p1.pdf", b"%PDF-1")])
+    _responder(eq, pid, t["id"], texto="n1", solo_equipo="1", files=[_archivo("i1.pdf", b"%PDF-2")])
+    _responder(eq, pid, t["id"], texto="p2", files=[_archivo("p2.pdf", b"%PDF-3")])
+    _responder(eq, pid, t["id"], texto="n2", solo_equipo="1", files=[_archivo("i2.pdf", b"%PDF-4")])
+    _responder(sin, pid, t["id"], texto="p3")
+    _responder(eq, pid, t["id"], texto="n3", solo_equipo="1")
+    d = _detalle(eq, pid, t["id"])
+    c = t["codigo"]
+    por_texto = {m["texto"]: (m["codigo"], m["orden"], m["solo_equipo"]) for m in d["mensajes"]}
+    assert por_texto == {"Un texto": (f"{c}-1", 1, False), "n1": (f"{c}-N1", 1, True), "p2": (f"{c}-2", 2, False),
+                         "n2": (f"{c}-N2", 2, True), "p3": (f"{c}-3", 3, False), "n3": (f"{c}-N3", 3, True)}
+    assert {a["nombre"]: a["codigo"] for a in d["archivos"]} == {
+        "p1.pdf": "AR000001", "i1.pdf": "AI000001", "p2.pdf": "AR000002", "i2.pdf": "AI000002"}
+    # el código nace con la cosa y no cambia: seguir escribiendo no renumera nada
+    _responder(sin, pid, t["id"], texto="p4")
+    d2 = _detalle(eq, pid, t["id"])
+    assert [m["codigo"] for m in d2["mensajes"]][:6] == [m["codigo"] for m in d["mensajes"]]
+    # el sindicato: corrido, sin saltos
+    s = _detalle(sin, pid, t["id"])
+    assert [m["orden"] for m in s["mensajes"]] == [1, 2, 3, 4]
+    assert [a["codigo"] for a in s["archivos"]] == ["AR000001", "AR000002"]
+    # un código nuevo de cada serie sigue donde corresponde (el contador AI es aparte del AR)
+    _responder(eq, pid, t["id"], texto="p5", files=[_archivo("p5.pdf", b"%PDF-5")])
+    assert any(a["codigo"] == "AR000003" for a in _detalle(sin, pid, t["id"])["archivos"])
+
+
+def test_concurrencia_en_las_dos_series_no_repite_ni_salta():
+    pid = _proyecto()
+    with db.get_session() as s:
+        t0 = db.impl_crear_tarjeta(s, pid, EQ, "pedido", "base", "x")
+        tid = t0.id
+    n = 16
+    barrera = threading.Barrier(n)
+    resultados, errores = [], []
+
+    def hacer(i):
+        try:
+            barrera.wait(timeout=20)
+            interno = i % 2 == 0
+            with db.get_session() as s:
+                m = db.impl_responder(s, pid, tid, EQ, texto=f"m{i}", solo_equipo=interno,
+                                      adjuntos=[(f"f{i}.pdf", "application/pdf", b"%PDF-" + bytes([65 + i]))])
+                resultados.append((interno, m.orden))
+        except Exception as e:                                       # pragma: no cover
+            errores.append(repr(e))
+    hilos = [threading.Thread(target=hacer, args=(i,)) for i in range(n)]
+    [h.start() for h in hilos]
+    [h.join(60) for h in hilos]
+    assert not errores, errores
+    assert sorted(o for i, o in resultados if i) == list(range(1, n // 2 + 1))               # notas: 1..8
+    assert sorted(o for i, o in resultados if not i) == list(range(2, n // 2 + 2))           # públicos: 2..9 (1 = el texto inicial)
+    with db.get_session() as s:
+        codigos = [a.codigo for a in s.exec(db.select(db.ImplArchivo).where(db.ImplArchivo.tarjeta_id == tid)).all()]
+    assert sorted(c for c in codigos if c.startswith("AR")) == [f"AR{k:06d}" for k in range(1, n // 2 + 1)]
+    assert sorted(c for c in codigos if c.startswith("AI")) == [f"AI{k:06d}" for k in range(1, n // 2 + 1)]
+
+
+def _mundo_i15():
+    """Una tarjeta con notas y archivos internos entremezclados con lo público."""
+    pid, eq, sin = _mundo()
+    t = _crear(sin, pid, titulo="Padrón", texto="Va el padrón", archivos=[_archivo("padron1.pdf", b"%PDF-1")])
+    _responder(eq, pid, t["id"], texto="NOTA-SECRETA uno", solo_equipo="1", files=[_archivo("secreto1.pdf", b"%PDF-2")])
+    _responder(eq, pid, t["id"], texto="Recibido", files=[_archivo("acuse.pdf", b"%PDF-3")])
+    _responder(eq, pid, t["id"], texto="NOTA-SECRETA dos", solo_equipo="1", files=[_archivo("secreto2.pdf", b"%PDF-4")])
+    _responder(sin, pid, t["id"], texto="Gracias", files=[_archivo("padron2.pdf", b"%PDF-5")])
+    d = _detalle(eq, pid, t["id"])
+    internos = {"msgs": [m["codigo"] for m in d["mensajes"] if m["solo_equipo"]],
+                "archs": [a["codigo"] for a in d["archivos"] if a["codigo"].startswith("AI")]}
+    assert internos == {"msgs": [f"{t['codigo']}-N1", f"{t['codigo']}-N2"], "archs": ["AI000001", "AI000002"]}
+    return pid, eq, sin, t, internos
+
+
+def test_el_sindicato_no_ve_nunca_un_salto_en_ninguna_ruta_get():
+    pid, eq, sin, t, internos = _mundo_i15()
+    d = _detalle(sin, pid, t["id"])
+    assert [m["orden"] for m in d["mensajes"]] == [1, 2, 3]
+    assert [m["codigo"] for m in d["mensajes"]] == [f"{t['codigo']}-{k}" for k in (1, 2, 3)]
+    assert [a["codigo"] for a in d["archivos"]] == ["AR000001", "AR000002", "AR000003"]
+    # barrido de TODA ruta GET con el sindicato: ni un código interno, ni una palabra de lo interno
+    rutas = [f"tarjetas/{t['id']}", "tarjetas?vista=todas", "carpetas?sentido=entrada", "carpetas?sentido=salida",
+             "aprobaciones", "plan", "resumen"]
+    rutas += [f"archivos/{a['id']}/ficha" for a in d["archivos"]]
+    prohibido = ["-N1", "-N2", "AI000001", "AI000002", "NOTA-SECRETA", "secreto1", "secreto2"]
+    for ruta in rutas:
+        r = sin.get(_api(pid, ruta))
+        assert r.status_code == 200, (ruta, r.status_code)
+        for p in prohibido:
+            assert p not in r.text, (ruta, p)
+    car = sin.get(_api(pid, "carpetas?sentido=entrada")).json()["etapas"]
+    cods = sorted(a["codigo"] for e in car for a in e["archivos"])
+    assert cods == ["AR000001", "AR000003"]                       # los suyos: padron1 y padron2 (acuse es de salida)
+    sal = sorted(a["codigo"] for e in sin.get(_api(pid, "carpetas?sentido=salida")).json()["etapas"] for a in e["archivos"])
+    assert sal == ["AR000002"]
+    # y los tres juntos forman la serie corrida
+    assert sorted(cods + sal) == ["AR000001", "AR000002", "AR000003"]
+    # el equipo ve todo
+    eq_cods = sorted(a["codigo"] for a in _detalle(eq, pid, t["id"])["archivos"])
+    assert eq_cods == ["AI000001", "AI000002", "AR000001", "AR000002", "AR000003"]
+
+
+def test_un_codigo_interno_se_comporta_como_uno_inexistente_para_el_sindicato():
+    pid, eq, sin, t, internos = _mundo_i15()
+    inexistentes = [f"{t['codigo']}-N9", "AI000099"]
+    reales = internos["msgs"] + internos["archs"]
+    for real, falso in zip(reales, [f"{t['codigo']}-N8", f"{t['codigo']}-N9", "AI000098", "AI000099"]):
+        a, b = sin.get(_api(pid, "buscar"), params={"codigo": real}), sin.get(_api(pid, "buscar"), params={"codigo": falso})
+        assert (a.status_code, a.text) == (b.status_code, b.text) == (404, a.text)
+        assert eq.get(_api(pid, "buscar"), params={"codigo": real}).status_code == 200   # el equipo sí los encuentra
+        assert eq.get(_api(pid, "buscar"), params={"codigo": falso}).status_code == 404
+        q = sin.get(_api(pid, "tarjetas"), params={"vista": "todas", "q": real}).json()["tarjetas"]
+        assert q == []
+        assert eq.get(_api(pid, "tarjetas"), params={"vista": "todas", "q": real}).json()["tarjetas"][0]["id"] == t["id"]
+    ficha_interna = [a for a in _detalle(eq, pid, t["id"])["archivos"] if a["codigo"].startswith("AI")]
+    for a in ficha_interna:
+        assert sin.get(_api(pid, f"archivos/{a['id']}/ficha")).status_code == 404
+        assert sin.get(_api(pid, f"archivos/{a['id']}")).status_code == 404
+    # mencionarlos en un mensaje público: ni enlace ni relación, igual que un código que no existe
+    texto = f"Ver {reales[0]} y {reales[2]} y {inexistentes[0]} y {inexistentes[1]}"
+    _responder(sin, pid, t["id"], texto=texto)
+    ds = _detalle(sin, pid, t["id"])
+    refs = [m["refs"] for m in ds["mensajes"] if m["texto"] == texto][0]
+    assert [r["existe"] for r in refs] == [False] * 4 and all(r["enlace"] == "" for r in refs)
+    assert ds["relacionadas"] == []
+    assert all(r.solo_equipo for r in db_relaciones(pid))        # si quedó anotada, es solo del equipo
+
+
+def db_relaciones(pid):
+    with db.get_session() as s:
+        return list(s.exec(db.select(db.ImplRelacion).where(db.ImplRelacion.proyecto_id == pid)).all())
+
+
+def test_mencionar_una_nota_interna_desde_un_mensaje_publico_no_enlaza_ni_delata():
+    pid, eq, sin, t, internos = _mundo_i15()
+    n1 = internos["msgs"][0]
+    otra = _crear(sin, pid, titulo="Otra")
+    # desde el sindicato: nada
+    _responder(sin, pid, otra["id"], texto=f"Mirá {n1}")
+    ds = _detalle(sin, pid, otra["id"])
+    assert [r["existe"] for m in ds["mensajes"] for r in m["refs"]] == [False]
+    assert ds["relacionadas"] == [] and _detalle(sin, pid, t["id"])["relacionadas"] == []
+    # desde el equipo, en un mensaje PÚBLICO: el sindicato tampoco lo ve ni se delata
+    _responder(eq, pid, otra["id"], texto=f"Ojo con {n1} y con {internos['archs'][0]}")
+    ds = _detalle(sin, pid, otra["id"])
+    refs = [m["refs"] for m in ds["mensajes"] if m["texto"].startswith("Ojo")][0]
+    assert [(r["existe"], r["enlace"]) for r in refs] == [(False, ""), (False, "")]
+    assert ds["relacionadas"] == [] and _detalle(sin, pid, t["id"])["relacionadas"] == []
+    # el equipo sí ve la relación y el enlace
+    de = _detalle(eq, pid, otra["id"])
+    refs_eq = [m["refs"] for m in de["mensajes"] if m["texto"].startswith("Ojo")][0]
+    assert all(r["existe"] and r["enlace"].endswith("#" + r["codigo"]) for r in refs_eq)
+    assert {r["codigo"] for r in de["relacionadas"]} == {n1, internos["archs"][0]}
+    assert all(r["texto"] == "menciona" for r in de["relacionadas"])
+
+
 # ---------- Migración con backfill ----------
 def _insertar(cx, tabla, **vals):
     """INSERT rellenando lo NOT NULL sin default que no se haya dado."""
@@ -626,6 +802,10 @@ def test_la_migracion_completa_codigos_y_ordenes_de_lo_que_ya_existe():
                 t[n] = _insertar(cx, "impltarjeta", proyecto_id=proy, numero=n, tipo=tipo, titulo=f"T{n}")
             m = [_insertar(cx, "implmensaje", proyecto_id=p1, tarjeta_id=t[1], texto=f"m{i}") for i in range(3)]
             m2 = _insertar(cx, "implmensaje", proyecto_id=p1, tarjeta_id=t[2], texto="otra")
+            # I15: una nota interna en medio de la tarjeta 1 y un archivo subido en ella
+            mi = _insertar(cx, "implmensaje", proyecto_id=p1, tarjeta_id=t[1], texto="interna", solo_equipo=True)
+            m4 = _insertar(cx, "implmensaje", proyecto_id=p1, tarjeta_id=t[1], texto="m3")
+            ai = _insertar(cx, "implarchivo", proyecto_id=p1, tarjeta_id=t[1], nombre="interno", mensaje_id=mi)
             a1 = _insertar(cx, "implarchivo", proyecto_id=p1, tarjeta_id=t[1], nombre="a")
             a2 = _insertar(cx, "implarchivo", proyecto_id=p1, tarjeta_id=t[1], nombre="b")
             a3 = _insertar(cx, "implarchivo", proyecto_id=p2, tarjeta_id=t[5], nombre="c")
@@ -636,11 +816,12 @@ def test_la_migracion_completa_codigos_y_ordenes_de_lo_que_ya_existe():
             assert q("SELECT id, codigo FROM impltarjeta ORDER BY id") == [
                 (t[1], "PE0001"), (t[2], "CO0001"), (t[3], "PE0002"), (t[4], "AV0001"), (t[5], "PE0001")]
             assert q("SELECT id, codigo FROM implarchivo ORDER BY id") == [
-                (a1, "AR000001"), (a2, "AR000002"), (a3, "AR000001")]
+                (ai, "AI000001"), (a1, "AR000001"), (a2, "AR000002"), (a3, "AR000001")]
             assert q("SELECT id, codigo FROM implhito ORDER BY id") == [(h[0], "HI0001"), (h[1], "HI0002")]
-            assert q("SELECT id, orden FROM implmensaje ORDER BY id") == [(m[0], 1), (m[1], 2), (m[2], 3), (m2, 1)]
+            assert q("SELECT id, orden FROM implmensaje ORDER BY id") == [
+                (m[0], 1), (m[1], 2), (m[2], 3), (m2, 1), (mi, 1), (m4, 4)]
             assert q("SELECT proyecto_id, prefijo, ultimo FROM implcontador ORDER BY proyecto_id, prefijo") == sorted([
-                (p1, "AR", 2), (p1, "AV", 1), (p1, "CO", 1), (p1, "HI", 2), (p1, "PE", 2),
+                (p1, "AI", 1), (p1, "AR", 2), (p1, "AV", 1), (p1, "CO", 1), (p1, "HI", 2), (p1, "PE", 2),
                 (p2, "AR", 1), (p2, "PE", 1)])
             assert q("SELECT count(*) FROM implrelacion") == [(0,)]
             # la unicidad por proyecto quedó puesta

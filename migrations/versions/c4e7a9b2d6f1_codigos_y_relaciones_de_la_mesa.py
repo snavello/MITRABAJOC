@@ -4,10 +4,12 @@ Revision ID: c4e7a9b2d6f1
 Revises: 3be99db601b1
 Create Date: 2026-11-14 16:00:00.000000
 
-Códigos de tarjetas (PE0001...), archivos (AR000001) e hitos (HI0001), el
-orden de cada mensaje en su tarjeta, los contadores por proyecto y prefijo y
-la tabla de relaciones. Lo que ya exista se completa con un backfill
-determinista: por id, dentro de cada proyecto.
+Códigos de tarjetas (PE0001...), archivos (AR000001, y AI000001 los subidos
+en una nota interna) e hitos (HI0001), el orden de cada mensaje en su serie
+dentro de la tarjeta (los públicos 1..n, las notas internas su propia serie
+-N1, -N2; I15), los contadores por proyecto y prefijo y la tabla de
+relaciones. Lo que ya exista se completa con un backfill determinista: por id,
+dentro de cada proyecto.
 """
 from typing import Sequence, Union
 
@@ -106,15 +108,20 @@ def _backfill(cx) -> None:
         prefijo = PREFIJOS_TARJETA.get(tipo, "PE")
         cx.execute(sa.text("UPDATE impltarjeta SET codigo = :c WHERE id = :i"),
                    {"c": f"{prefijo}{siguiente(proyecto, prefijo):04d}", "i": id_})
-    for id_, proyecto in cx.execute(sa.text("SELECT id, proyecto_id FROM implarchivo ORDER BY proyecto_id, id")).all():
+    # I15: lo subido en una nota interna lleva su propio contador (AI), así AR queda sin saltos.
+    for id_, proyecto, interno in cx.execute(sa.text(
+            "SELECT a.id, a.proyecto_id, COALESCE(m.solo_equipo, false) FROM implarchivo a "
+            "LEFT JOIN implmensaje m ON m.id = a.mensaje_id ORDER BY a.proyecto_id, a.id")).all():
+        prefijo = "AI" if interno else "AR"
         cx.execute(sa.text("UPDATE implarchivo SET codigo = :c WHERE id = :i"),
-                   {"c": f"AR{siguiente(proyecto, 'AR'):06d}", "i": id_})
+                   {"c": f"{prefijo}{siguiente(proyecto, prefijo):06d}", "i": id_})
     for id_, proyecto in cx.execute(sa.text("SELECT id, proyecto_id FROM implhito ORDER BY proyecto_id, id")).all():
         cx.execute(sa.text("UPDATE implhito SET codigo = :c WHERE id = :i"),
                    {"c": f"HI{siguiente(proyecto, 'HI'):04d}", "i": id_})
     cx.execute(sa.text(
         "UPDATE implmensaje m SET orden = x.rn FROM ("
-        "SELECT id, row_number() OVER (PARTITION BY tarjeta_id ORDER BY id) AS rn FROM implmensaje) x "
+        "SELECT id, row_number() OVER (PARTITION BY tarjeta_id, solo_equipo ORDER BY id) AS rn "
+        "FROM implmensaje) x "
         "WHERE m.id = x.id"))
     for (proyecto, prefijo), ultimo in sorted(contadores.items()):
         cx.execute(sa.text("INSERT INTO implcontador (proyecto_id, prefijo, ultimo) VALUES (:p, :f, :u)"),
