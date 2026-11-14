@@ -67,6 +67,7 @@ cuenta), no en cada commit.
 | `PLAN_REGISTRO.md` | Registro confirmado por mail con niveles de fiabilidad (R2), recuperación de clave (R3), captcha y freno en el registro (segunda medida de la serie XSK, cierra H-0017). Acordado con SDN decisión por decisión. | 2026-10-11 |
 | `PLAN_DASHBOARD_V2.md` | Panel Sindical v2 con Preact sin build, en paralelo a la v1 (`/admin/dashboard-v2`, solo local y Pruebas): primer piloto de una capa de componentes, sin tocar el backend. Acordado con SDN decisión por decisión. | 2026-10-12 |
 | `PLAN_ASISTENTE_TRAMITES.md` | El Asistente de trámites como Herramienta de `/entornos` (IA que propone, motor que arma con el catálogo real, casos guardados y vista de brechas; el importador queda para después). Acordado con SDN decisión por decisión (D1–D10). | 2026-10-16 |
+| `PLAN_IMPLEMENTACION.md` | Mesa de implementación: decisiones I1–I14 (acceso, usuarios propios, entorno, proyectos, archivos, avisos, etapas, notas internas, plan general, diseño, códigos y relaciones), la mesa, los bloques. Contrato en `docs/implementacion/API.md`; informes del QA en `docs/implementacion/QA-servidor.md` y `QA-pantallas.md`. | 2026-11-14 |
 | `PLAN_FIESTA.md` | Entradas de un evento masivo con MercadoPago, aparte de Colm3na: decisiones D1–D10, modelo de datos, rutas, contrato con MercadoPago, el ticket, las dos apps y los tests. | 2026-11-12 |
 | `PLAN_ASISTENTE_TRAMITES_V2.md` | La segunda vuelta del Asistente de trámites: varios trámites a la vez, sin cuestionario (dudas con opciones o texto), el veredicto de seis puntos con la complejidad, y el importador que crea el tipo de trámite como borrador en el sindicato (V1–V10). | 2026-10-28 |
 | `PLAN_LISTAS_VALIDACIONES.md` | Listas que sube el admin del sindicato (plantillas tipadas sobre una tabla genérica) y validaciones por función en Trámites: requisito para iniciar, validación de campo y campo calculado con fórmula; dos fechas nuevas en el padrón. Cierra las fases 2 y 3 de validaciones. Acordado con SDN decisión por decisión (D1–D7). | 2026-10-16 |
@@ -78,6 +79,7 @@ cuenta), no en cada commit.
 | `docs/chat/` | Documentos que salen de Chat y Cowork, con prefijo de fecha (`AAAA-MM-DD-tema.md`). Ver `OPERATIVA.md`. |
 | `docs/prompts/` | Prompts reutilizables para aplicar en OTROS proyectos con Claude Code, con lo aprendido acá. Primero: `MAPA_FUNCIONAL.md` (mapa app → funcionalidad → código, datos y servicios), publicado también como Recurso de `/entornos`. |
 | `docs/generador/` | Genera `recursos/documentacion-tecnica.html` desde el código. |
+| `docs/implementacion/` | Plan general de implementación (fuente HTML, genérico para cualquier sindicato) y `diferencias.md` (qué quedó afuera de los planes viejos y por qué; hitos propuestos para La Bancaria). Se publica en `recursos/colm3na-plan-general-implementacion.html`. |
 | `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4), hoja guía de la reunión con autoridades y catálogo de trámites (`tramites-bancaria.json` con las 86 gestiones verificadas → `tramites-bancaria.html` con `generar_tramites.py`, y → `tramites-bancaria.docx` (completo) y `tramites-bancaria-resumen.docx` (6 páginas) con `generar_tramites_docx.js`). Fuente de los artifacts y de los PDF. Versiones Word para corregir (con control de cambios) generadas por `generar_docx.js`. |
 | `docs/capturas-georef/` | Capturas de las pantallas de georreferenciación. |
 | `recursos/` | Documentos publicados en `/entornos` (HTML + miniatura), registrados en `recursos.SEMILLA`. |
@@ -103,8 +105,9 @@ a SDN. **No se escribe en ningún documento.**
 | Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
 | Anexo Servicios Mensuales | `recursos/anexo-servicios-mensuales.html` |
 | Documentación técnica (generada del código) | `recursos/documentacion-tecnica.html` |
-| Plan Maestro Colm3na | `recursos/colm3na-plan-maestro.html` |
-| Plan de implementación en el sindicato | `recursos/colm3na-plan-implementacion-sindicato.html` |
+| **Plan general de implementación** (12 hojas A4, genérico para cualquier sindicato; fusiona y reemplaza a los dos de abajo) | `recursos/colm3na-plan-general-implementacion.html` ← `docs/implementacion/plan-general.html`; qué quedó afuera y los hitos propuestos para La Bancaria en `docs/implementacion/diferencias.md` |
+| Plan Maestro Colm3na (reemplazado por el Plan general) | `recursos/colm3na-plan-maestro.html` |
+| Plan de implementación en el sindicato (reemplazado por el Plan general) | `recursos/colm3na-plan-implementacion-sindicato.html` |
 | Video "Recibos y Trámites" | `recursos/mi-trabajo-recibos-tramites.mp4` |
 
 ## 3. Proyecto Claude "Mitrabajo"

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Colm3na — Entornos</title>
+<link rel="stylesheet" href="/static/implementacion/equipo.css?v={{ sello_static('implementacion/equipo.css') }}">
 <style>
   @font-face {
     font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
@@ -391,6 +392,7 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad">Observabilidad</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="mapa">Mapa funcional</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="implementacion">Implementación</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="herramientas">Herramientas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="xsanders">Seguridad</button>
     </nav>
@@ -496,6 +498,60 @@
         <div class="mapa-estado" id="mapa-estado">Se lee al abrir esta pestaña…</div>
       </div>
     </div>
+
+    <div class="panel-etab" data-panel="implementacion" hidden>
+      {# Implementación (2026-11-14, PLAN_IMPLEMENTACION.md, bloque 5): reúne lo que
+         se usa para poner en marcha un sindicato. La Mesa es una ticketera entre
+         el equipo y el sindicato (/implementacion); el plan general es un Recurso;
+         las herramientas de implementación se MUESTRAN acá y siguen viviendo en
+         Herramientas, sin duplicar su lógica. Los proyectos y los usuarios del
+         sindicato se manejan desde esta pestaña (equipo.js). #}
+      <div class="sala-tarjeta">
+        <p><b>Mesa de implementación.</b> Una ticketera mínima entre el equipo y el sindicato: pedidos, consultas, entregas de archivos, aprobaciones, errores y avisos, con un plan de seis fases y el registro de todo lo aprobado. Un proyecto por sindicato; el sindicato entra por <code>/implementacion</code> con un usuario que da de alta el equipo desde acá. El equipo entra con su usuario de plataforma.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/implementacion" target="_blank" rel="noopener">Abrir la mesa</a>
+        </div>
+        <div class="mapa-estado" id="impl-estado">Se lee al abrir esta pestaña…</div>
+      </div>
+      <div class="sala-tarjeta impl-caja">
+        <p><b>Proyectos.</b> Uno por sindicato. Desde cada uno se abre su mesa, se dan de alta sus usuarios y se cargan los hitos de La Bancaria al plan.</p>
+        <div id="impl-lista" class="impl-lista" aria-live="polite"></div>
+        <form id="impl-proyecto-nuevo" class="fiesta-arranque" autocomplete="off">
+          <div class="fiesta-grid">
+            <label>Nombre del proyecto nuevo<input name="nombre" maxlength="120" required placeholder="Ej.: La Bancaria"></label>
+          </div>
+          <button class="boton" type="submit">Crear proyecto</button>
+          <div class="impl-error" id="impl-proyecto-error" role="alert" hidden></div>
+        </form>
+      </div>
+      <div class="sala-tarjeta impl-caja" id="impl-usuarios" hidden>
+        <p><b>Usuarios del sindicato</b> en <span id="impl-usuarios-proyecto"></span>. La clave inicial es transitoria: se la pasás a la persona por fuera de la app y la cambia en su primer ingreso.</p>
+        <div id="impl-usuarios-lista" class="impl-lista" aria-live="polite"></div>
+        <div class="impl-clave" id="impl-clave" role="status" hidden></div>
+        <form id="impl-usuario-nuevo" class="fiesta-arranque" autocomplete="off">
+          <div class="fiesta-grid">
+            <label>Nombre<input name="nombre" maxlength="120" required></label>
+            <label>Mail<input name="mail" type="email" maxlength="200" required></label>
+            <label>Clave inicial (mínimo 6)<input name="clave_inicial" type="text" minlength="6" maxlength="100" required autocomplete="off"></label>
+          </div>
+          <button class="boton" type="submit">Dar de alta</button>
+          <div class="impl-error" id="impl-usuario-error" role="alert" hidden></div>
+        </form>
+      </div>
+      <div class="sala-tarjeta">
+        <p><b>Plan general de implementación.</b> El plan de referencia para poner en marcha Colm3na en cualquier sindicato: las seis fases, qué hace el equipo y qué el sindicato, qué se entrega y cuándo se pasa a la siguiente. Es un documento de lectura; el plan que se sigue de a hitos está en cada proyecto de la mesa.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/recursos/plan-general-implementacion/archivo" target="_blank" rel="noopener">Leer el plan general</a>
+        </div>
+      </div>
+      <div class="sala-tarjeta">
+        <p><b>Herramientas de implementación.</b> Las que ayudan a poner en marcha un sindicato. Se abren desde acá y también desde la pestaña Herramientas: es la misma herramienta, no una copia.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/herramientas/calculadora-bancaria-v2">Calculadora bancaria</a>
+          <a class="boton" href="/entornos/herramientas/asistente-tramites">Asistente de trámites</a>
+        </div>
+      </div>
+    </div>{# /panel-etab implementacion #}
 
     <div class="panel-etab" data-panel="herramientas" hidden>
       {# Herramientas (2026-10-13): asistentes de la implementación, desarrollos
@@ -853,12 +909,12 @@
     paneles.forEach(p => { p.hidden = p.dataset.panel !== nombre; });
     // Herramientas ocupa la pantalla sola: sin Recursos debajo (pedido de SDN).
     const recursos = document.getElementById('recursos');
-    if (recursos) recursos.hidden = nombre === 'herramientas';
+    if (recursos) recursos.hidden = nombre === 'herramientas' || nombre === 'implementacion';
     if (nombre !== 'accesos') location.hash = nombre; else history.replaceState(null, '', location.pathname + location.search);
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'mapa', 'herramientas', 'xsanders'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'mapa', 'implementacion', 'herramientas', 'xsanders'].includes(inicial)) activar(inicial);
 })();
 
 // Mapa funcional (2026-09-30): el estado se pide recién al abrir la pestaña,
@@ -1698,5 +1754,6 @@
   actualizar();
 })();
 </script>
+<script src="/static/implementacion/equipo.js?v={{ sello_static('implementacion/equipo.js') }}" defer></script>
 </body>
 </html>

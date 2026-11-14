@@ -1,0 +1,181 @@
+{
+  "proyecto": "La Bancaria",
+  "fuente": "docs/implementacion/diferencias.md, «Hitos propuestos» (I7)",
+  "fases": [
+    {
+      "etapa": "Preparar",
+      "hitos": [
+        {
+          "texto": "Reunión estratégica con las autoridades realizada y acta cargada .",
+          "tarjeta_inicial": true
+        },
+        {
+          "texto": "Plan v1 enviado con lo acordado en la reunión."
+        },
+        {
+          "texto": "Espacio de La Bancaria en Pruebas con su marca, sus conceptos del CCT 18/75 y recibos de ejemplo (ya preparado: verificar y mostrar)."
+        },
+        {
+          "texto": "Kit de relevamiento enviado (formularios por tema, lista de documentos, modelo de planilla del padrón)."
+        },
+        {
+          "texto": "Borrador del acuerdo de tratamiento de datos enviado a la asesoría legal."
+        },
+        {
+          "texto": "Proyecto abierto en la Mesa y usuarios del sindicato dados de alta."
+        },
+        {
+          "texto": "Autoridad responsable y referente operativo nombrados."
+        },
+        {
+          "texto": "Fecha del lanzamiento y convocados fijados."
+        }
+      ]
+    },
+    {
+      "etapa": "Acordar",
+      "hitos": [
+        {
+          "texto": "Lanzamiento con secretarías, sistemas, prensa y seccionales realizado."
+        },
+        {
+          "texto": "Todos los referentes nombrados (técnico, convenio y liquidación, comunicación, legal, seccionales)."
+        },
+        {
+          "texto": "Día fijo de la reunión semanal y de la demostración quincenal."
+        },
+        {
+          "texto": "Funcionalidades del piloto y de «después» acordadas."
+        },
+        {
+          "texto": "Piloto definido: seccionales, empleadores, cantidad y perfil de afiliados."
+        },
+        {
+          "texto": "Canal seguro y fechas de entrega del padrón acordados."
+        },
+        {
+          "texto": "Forma de verificación de identidad del afiliado decidida."
+        },
+        {
+          "texto": "Plan v1 aprobado por el sindicato (tarjeta de Aprobación)."
+        }
+      ]
+    },
+    {
+      "etapa": "Relevar",
+      "hitos": [
+        {
+          "texto": "Taller de padrón y alta de afiliados hecho."
+        },
+        {
+          "texto": "Taller de trámites y comunicación hecho, con los formularios actuales recibidos."
+        },
+        {
+          "texto": "Taller de estructura hecho: seccionales con domicilio, áreas y operadores."
+        },
+        {
+          "texto": "Taller de convenio y liquidación hecho: conceptos, escalas y acuerdos vigentes."
+        },
+        {
+          "texto": "Lista de empleadores con CUIT recibida."
+        },
+        {
+          "texto": "De 30 a 60 recibos de muestra de distintos bancos recibidos (consentimiento o anonimizados)."
+        },
+        {
+          "texto": "Padrón recibido y revisado, con las filas con error informadas."
+        },
+        {
+          "texto": "Acuerdo de tratamiento de datos firmado."
+        }
+      ]
+    },
+    {
+      "etapa": "Configurar",
+      "hitos": [
+        {
+          "texto": "Alta del sindicato con logo, colores y módulos; primer administrador con su clave elegida."
+        },
+        {
+          "texto": "Seccionales ubicadas en el mapa, áreas y usuarios con permisos cargados."
+        },
+        {
+          "texto": "Padrón y listas cargados y conciliados contra los totales del sindicato."
+        },
+        {
+          "texto": "Catálogo de conceptos y reglas de control con su fuente aprobado por el sindicato."
+        },
+        {
+          "texto": "Escalas con vigencia cargadas, y responsable de actualizarlas en cada paritaria."
+        },
+        {
+          "texto": "Al menos 20 recibos reales de 4 bancos con resultado correcto revisado a mano."
+        },
+        {
+          "texto": "Primeros dos o tres trámites armados con el Asistente, publicados y probados."
+        },
+        {
+          "texto": "Semana 4: el sindicato recorrió el entorno con sus datos; operadores capacitados y aceptación firmada (tarjeta de Aprobación)."
+        }
+      ]
+    },
+    {
+      "etapa": "Piloto",
+      "hitos": [
+        {
+          "texto": "Configuración aceptada pasada al entorno definitivo."
+        },
+        {
+          "texto": "Grupo piloto elegido (variedad de bancos) y delegados que acompañan el primer ingreso."
+        },
+        {
+          "texto": "Presentación del piloto y capacitación a las seccionales piloto."
+        },
+        {
+          "texto": "Primer grupo de unos 50 afiliados con acceso."
+        },
+        {
+          "texto": "Mesa de ayuda del piloto y revisión semanal de recibos dudosos y conceptos nuevos en marcha."
+        },
+        {
+          "texto": "Ampliación a más afiliados tras el primer grupo (500 o 1.000, a definir)."
+        },
+        {
+          "texto": "Dos cierres de mes cubiertos."
+        },
+        {
+          "texto": "Informe de resultados presentado a las autoridades y decisión de seguir (tarjeta de Aprobación)."
+        }
+      ]
+    },
+    {
+      "etapa": "Implementación total",
+      "hitos": [
+        {
+          "texto": "Orden de las oleadas de seccionales y comunicación institucional acordados."
+        },
+        {
+          "texto": "Primera oleada invitada, con capacitación previa."
+        },
+        {
+          "texto": "Segunda y tercera oleadas invitadas."
+        },
+        {
+          "texto": "Funcionalidades que quedaron para después sumadas según prioridad."
+        },
+        {
+          "texto": "Mesa de ayuda en dos niveles funcionando."
+        },
+        {
+          "texto": "Primer informe mensual de indicadores presentado."
+        },
+        {
+          "texto": "Guías finales y respaldo de la configuración entregados."
+        },
+        {
+          "texto": "Acta de cierre y acuerdo de soporte y evolución firmados (tarjetas de Aprobación)."
+        }
+      ]
+    }
+  ]
+}

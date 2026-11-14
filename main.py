@@ -235,6 +235,8 @@ def _panel_de(path: str) -> str | None:
     /api) caería en la rama de trabajador y redirigiría al login equivocado."""
     if path.startswith("/plataforma"):
         return "/plataforma"
+    if path.startswith("/implementacion"):
+        return "/implementacion/ingresar"
     if path.startswith("/admin"):
         return "/admin"
     if path.startswith("/empresa") or path.startswith("/api/empresa"):
@@ -249,6 +251,8 @@ def _rol_de(path: str) -> str | None:
     _panel_de, para saber qué cookie de sesión mirar."""
     if path.startswith("/plataforma"):
         return "plataforma"
+    if path.startswith("/implementacion"):
+        return "implementacion"
     if path.startswith("/admin"):
         return "sindicato"
     if path.startswith("/empresa") or path.startswith("/api/empresa"):
@@ -6554,6 +6558,9 @@ COOKIE_EMPLEADOR = "sesion_empleador"
 # del sindicato que cobra la puerta. Dos cookies propias; ninguna abre /admin.
 COOKIE_FIESTA = "sesion_fiesta"
 COOKIE_FIESTA_OP = "sesion_fiesta_op"
+# Mesa de implementación (PLAN_IMPLEMENTACION.md, I2): el usuario del SINDICATO
+# en la herramienta. El equipo de Colm3na entra con su sesión de plataforma.
+COOKIE_IMPLEMENTACION = "sesion_implementacion"
 COOKIES_POR_ROL = {
     "sindicato": COOKIE_SINDICATO,
     "plataforma": COOKIE_PLATAFORMA,
@@ -6561,6 +6568,7 @@ COOKIES_POR_ROL = {
     "empleador": COOKIE_EMPLEADOR,
     "fiesta": COOKIE_FIESTA,
     "fiesta_op": COOKIE_FIESTA_OP,
+    "implementacion": COOKIE_IMPLEMENTACION,
 }
 
 
@@ -12427,6 +12435,1092 @@ def recursos_miniatura(ref: str, request: Request):
     # La URL lleva ?v= (recursos._sello), así que se puede cachear una hora
     # como /static/ (CLAUDE.md, "Todo lo que sale de /static/ va con sello").
     return FileResponse(item["miniatura"], headers={"Cache-Control": "public, max-age=3600"})
+
+
+# =====================================================================
+# Mesa de implementación: acceso (PLAN_IMPLEMENTACION.md, bloque 2; I1, I2, I4)
+# =====================================================================
+# Dos lados con dos puertas, un solo helper que dice quién es (`_actor_impl`):
+#   - el EQUIPO de Colm3na entra con su usuario nominal de plataforma (la
+#     misma sesión de /plataforma y /entornos) y puede cualquier proyecto;
+#   - el SINDICATO entra por /implementacion/ingresar con un usuario propio de
+#     la herramienta (mail + clave, ImplUsuario) y ve SOLO su proyecto.
+# Existe donde existe /entornos (local y Pruebas): en Demo y producción todas
+# las rutas contestan 404, igual que /fiesta (I3: la mesa vive en Pruebas).
+# Las pantallas de tarjetas son del bloque 3; la del equipo, del bloque 5.
+import implementacion
+from typing import Annotated
+from pydantic import AfterValidator
+_intentos_impl: dict[str, dict] = {}          # freno por IP del login del sindicato (ver abajo)
+_PROPOSITO_CAMBIO_CLAVE_IMPL = "cambio_clave_impl"
+API_IMPL_EQUIPO = "/api/entornos/implementacion"
+IMPL_LOGIN_VENTANA_S = int(os.getenv("IMPL_LOGIN_VENTANA_S", "600"))   # cuánto cuenta un fallo
+
+
+def _impl_login_bloqueado(request: Request) -> bool:
+    """Freno del login de la mesa: N fallos EN UNA VENTANA desde una IP y esa IP
+    espera. A diferencia de `_login_ok` de los otros logins, un ingreso
+    correcto NO borra el contador (QA-14): quien tiene una cuenta propia no
+    puede intercalarla para tantear la clave de otra sin límite."""
+    import time
+    est = _intentos_impl.get(_ip_de(request))
+    return bool(est) and est.get("hasta", 0.0) > time.time()
+
+
+def _impl_login_fallo(request: Request) -> None:
+    import time
+    ahora = time.time()
+    est = _intentos_impl.setdefault(_ip_de(request), {"fallos": [], "hasta": 0.0})
+    est["fallos"] = [t for t in est["fallos"] if t > ahora - IMPL_LOGIN_VENTANA_S] + [ahora]
+    if len(est["fallos"]) >= LOGIN_MAX_FALLOS:
+        est["fallos"] = []
+        est["hasta"] = ahora + LOGIN_ESPERA_SEGUNDOS
+    if len(_intentos_impl) > 5000:      # que la tabla no crezca sin límite
+        _intentos_impl.clear()
+
+
+def _impl_id(n: int) -> int:
+    """Un id de la ruta o de la query que no entra en int4 no existe: 404, nunca
+    el 500 de Postgres (QA-05). Un solo lugar para todas las rutas de la mesa."""
+    if not implementacion.id_valido(n):
+        raise HTTPException(404, "No existe.")
+    return n
+
+
+IdImpl = Annotated[int, AfterValidator(_impl_id)]
+IdImplOpt = Annotated[int | None, AfterValidator(lambda n: n if n is None else _impl_id(n))]
+
+
+def _impl_equipo_de_sesion(request: Request, s):
+    """El usuario de plataforma con sesión vigente, activo y sin la cuenta
+    pendiente de clave o de datos -> Actor(EQUIPO); si no, None. UNA sola
+    definición de «es del equipo»: la usan `_actor_impl` y la API del equipo."""
+    ses = sesion_actual(request, "plataforma")
+    if ses and ses.get("uid"):
+        u = s.get(db.UsuarioPlataforma, ses["uid"])
+        if u and u.activo and not (u.debe_cambiar_clave or u.debe_completar_datos):
+            return implementacion.Actor(implementacion.EQUIPO, u.id, u.nombre or u.usuario)
+    return None
+
+
+def _actor_impl(request: Request, proyecto_id: int | None = None, s=None):
+    """Quién hace el pedido en la mesa y sobre qué proyecto: `(Actor, proyecto_id)`.
+
+    - Usuario de plataforma nominal con sesión vigente (activo y sin la cuenta
+      pendiente de completar) -> `Actor(EQUIPO, id, nombre)`. Puede cualquier
+      proyecto: con `proyecto_id` devuelve ese (404 si no existe); sin él
+      devuelve `None` y la ruta decide.
+    - Usuario del sindicato (cookie `sesion_implementacion`, activo, sin clave
+      transitoria, proyecto activo) -> `Actor(SINDICATO, id, nombre)` y SOLO su
+      proyecto: si piden otro id, 404 (nunca 403, no se confirma que exista).
+      Sin `proyecto_id` devuelve el suyo.
+    - Sin sesión válida: 401. En una navegación de página el handler global
+      lo lleva a /implementacion/ingresar; en una llamada fetch queda el JSON.
+    El equipo gana si el navegador trae las dos sesiones.
+
+    Pasá `s` si ya tenés una sesión de base abierta (una sesión por request);
+    sin ella abre la suya, así que llamalo ANTES de abrir `db.get_session()`."""
+    def resolver(s):
+        equipo = _impl_equipo_de_sesion(request, s)
+        if equipo is not None:
+            if proyecto_id is not None and not db.impl_proyecto(s, proyecto_id):
+                raise HTTPException(404, "No existe.")
+            return equipo, proyecto_id
+        ses = sesion_actual(request, "implementacion")
+        if ses and ses.get("uid"):
+            iu = s.get(db.ImplUsuario, ses["uid"])
+            if iu and iu.activo and not iu.debe_cambiar_clave and iu.proyecto_id == ses.get("sid"):
+                p = db.impl_proyecto(s, iu.proyecto_id)
+                if p and p.activo:
+                    if proyecto_id is not None and proyecto_id != iu.proyecto_id:
+                        raise HTTPException(404, "No existe.")
+                    return implementacion.Actor(implementacion.SINDICATO, iu.id, iu.nombre), iu.proyecto_id
+        raise HTTPException(401, "Tu sesión venció. Volvé a entrar.")
+
+    if s is not None:
+        return resolver(s)
+    with db.get_session() as s2:
+        return resolver(s2)
+
+
+def _abrir_sesion_impl(resp, usuario) -> None:
+    set_cookie_segura(resp, COOKIE_IMPLEMENTACION,
+                      auth.crear_sesion("implementacion", usuario.id, usuario.proyecto_id,
+                                        ident=f"{usuario.id}:{usuario.proyecto_id}"))
+
+
+def _pagina_clave_impl(request: Request, token: str, error: str = "", status: int = 200):
+    d = auth.leer_paso(token, _PROPOSITO_CAMBIO_CLAVE_IMPL)
+    vigente = bool(d and d.get("uid"))
+    return templates.TemplateResponse("impl_cambiar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "token": token if vigente else "", "vencido": not vigente, "error": error,
+        "clave_minima": implementacion.CLAVE_MINIMA}, status_code=status)
+
+
+@app.get("/implementacion/ingresar", response_class=HTMLResponse)
+def impl_ingresar_pagina(request: Request):
+    _exigir_landing()
+    return templates.TemplateResponse("impl_login.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "error": request.query_params.get("error", "")})
+
+
+@app.post("/implementacion/ingresar")
+def impl_ingresar(request: Request, mail: str = Form(""), clave: str = Form("")):
+    """Mail + clave. El mismo aviso exista o no el mail, esté activo o no."""
+    _exigir_landing()
+    if _impl_login_bloqueado(request):
+        return RedirectResponse("/implementacion/ingresar?error=espera", status_code=303)
+    mail, clave = implementacion.limpiar_texto(mail), implementacion.limpiar_texto(clave)
+    with db.get_session() as s:
+        u = db.impl_login(s, mail, clave)
+        if not u:
+            _impl_login_fallo(request)
+            return RedirectResponse("/implementacion/ingresar?error=login", status_code=303)
+        if u.debe_cambiar_clave:
+            # Clave transitoria: no se abre la sesión hasta que elija la suya.
+            token = auth.firmar_paso({"uid": u.id}, minutos=10, proposito=_PROPOSITO_CAMBIO_CLAVE_IMPL)
+            return RedirectResponse(f"/implementacion/cambiar-clave?token={token}", status_code=303)
+        resp = RedirectResponse("/implementacion", status_code=303)
+        _abrir_sesion_impl(resp, u)
+    return resp
+
+
+@app.get("/implementacion/cambiar-clave", response_class=HTMLResponse)
+def impl_cambiar_clave_pagina(request: Request, token: str = ""):
+    _exigir_landing()
+    return _pagina_clave_impl(request, implementacion.limpiar_texto(token))
+
+
+@app.post("/implementacion/cambiar-clave")
+def impl_cambiar_clave(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                       clave: str = Form(""), clave2: str = Form("")):
+    """Primer ingreso: reemplaza la transitoria y RECIÉN ahí abre la sesión. El
+    usuario sale del token firmado, nunca de un campo; la transitoria se vuelve
+    a verificar acá (el token solo no alcanza) y un intento errado cuenta para
+    el freno."""
+    _exigir_landing()
+    token = implementacion.limpiar_texto(token)
+    clave_actual, clave, clave2 = (implementacion.limpiar_texto(x) for x in (clave_actual, clave, clave2))
+    if _impl_login_bloqueado(request):
+        return _pagina_clave_impl(request, token,
+                                  "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.", 429)
+    d = auth.leer_paso(token, _PROPOSITO_CAMBIO_CLAVE_IMPL)
+    if not d or not d.get("uid"):
+        return _pagina_clave_impl(request, "")
+    if clave != clave2:
+        return _pagina_clave_impl(request, token, "Las dos claves no coinciden.", 400)
+    if len(clave) < implementacion.CLAVE_MINIMA:
+        return _pagina_clave_impl(
+            request, token, f"La clave nueva tiene que tener al menos {implementacion.CLAVE_MINIMA} caracteres.", 400)
+    if clave == clave_actual:
+        return _pagina_clave_impl(request, token, "Elegí una clave distinta de la transitoria.", 400)
+    with db.get_session() as s:
+        u = s.get(db.ImplUsuario, d["uid"])
+        proyecto = db.impl_proyecto(s, u.proyecto_id) if u else None
+        if not u or not u.activo or not u.debe_cambiar_clave or not proyecto or not proyecto.activo:
+            return _pagina_clave_impl(request, "")          # ya la cambió, o se dio de baja
+        try:
+            u = db.impl_usuario_cambiar_clave(s, u.id, clave_actual, clave)
+        except implementacion.ErrorImpl as e:
+            return _pagina_clave_impl(request, token, e.mensaje, 400)
+        if u is None:
+            _impl_login_fallo(request)
+            return _pagina_clave_impl(request, token, "La clave transitoria no es correcta.", 400)
+        resp = RedirectResponse("/implementacion", status_code=303)
+        _abrir_sesion_impl(resp, u)
+    return resp
+
+
+@app.post("/implementacion/salir")
+def impl_salir():
+    _exigir_landing()
+    resp = RedirectResponse("/implementacion/ingresar", status_code=303)
+    resp.delete_cookie(COOKIE_IMPLEMENTACION)
+    return resp
+
+
+# ---------- Equipo: proyectos y usuarios del sindicato (API; la pantalla es el bloque 5) ----------
+def _impl_equipo_api(request: Request):
+    """Puerta de la API del equipo: la MISMA definición de «equipo» que la mesa
+    (`_impl_equipo_de_sesion`: usuario de plataforma activo, sin clave ni datos
+    pendientes). Ni el pase del PIN ni un usuario dado de baja la abren. 404
+    en demo; 401 si hay sesión de plataforma pero ya no vale; 403 si no es del
+    equipo (anónimo o usuario del sindicato). Devuelve el Actor para la traza."""
+    _exigir_landing()
+    with db.get_session() as s:
+        actor = _impl_equipo_de_sesion(request, s)
+    if actor is None:
+        if sesion_actual(request, "plataforma"):
+            raise HTTPException(401, "Tu sesión venció. Volvé a entrar.")
+        raise HTTPException(403, "Es una herramienta del equipo de Colm3na.")
+    return actor
+
+
+def _impl_error(e: "implementacion.ErrorImpl"):
+    estado = 409 if e.codigo == "mail_repetido" else 400
+    return HTTPException(estado, e.mensaje)
+
+
+def _impl_usuario_dict(u) -> dict:
+    return {"id": u.id, "proyecto_id": u.proyecto_id, "nombre": u.nombre, "mail": u.mail,
+            "activo": u.activo, "debe_cambiar_clave": u.debe_cambiar_clave, "creado": u.creado}
+
+
+def _impl_proyecto_dict(p, usuarios: int = 0, n_hitos: int = 0) -> dict:
+    return {"id": p.id, "nombre": p.nombre, "sindicato_id": p.sindicato_id, "activo": p.activo,
+            "creado": p.creado, "usuarios": usuarios, "n_hitos": n_hitos, "tiene_hitos": n_hitos > 0}
+
+
+@app.get(API_IMPL_EQUIPO + "/proyectos")
+def api_impl_proyectos(request: Request):
+    _impl_equipo_api(request)
+    with db.get_session() as s:
+        cuentan = dict(s.exec(select(db.ImplUsuario.proyecto_id, db.func.count())
+                              .group_by(db.ImplUsuario.proyecto_id)).all())
+        hitos = dict(s.exec(select(db.ImplHito.proyecto_id, db.func.count())
+                            .group_by(db.ImplHito.proyecto_id)).all())
+        return {"proyectos": [_impl_proyecto_dict(p, int(cuentan.get(p.id, 0)), int(hitos.get(p.id, 0)))
+                              for p in db.impl_proyectos(s)]}
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos")
+def api_impl_proyecto_crear(request: Request, datos: dict = Body(...)):
+    actor = _impl_equipo_api(request)
+    sindicato_id = datos.get("sindicato_id")
+    with db.get_session() as s:
+        if sindicato_id not in (None, ""):
+            try:
+                sindicato_id = int(sindicato_id)
+            except (TypeError, ValueError):
+                raise HTTPException(400, "El sindicato no es válido.")
+            if not implementacion.id_valido(sindicato_id):
+                raise HTTPException(400, "El sindicato no existe.")
+            if not s.get(db.Sindicato, sindicato_id):
+                raise HTTPException(400, "El sindicato no existe.")
+        else:
+            sindicato_id = None
+        try:
+            p = db.impl_crear_proyecto(s, str(datos.get("nombre", "")), actor, sindicato_id=sindicato_id)
+        except implementacion.ErrorImpl as e:
+            raise _impl_error(e)
+        return {"ok": True, "proyecto": _impl_proyecto_dict(p)}
+
+
+@app.get(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios")
+def api_impl_usuarios(request: Request, proyecto_id: IdImpl):
+    _impl_equipo_api(request)
+    with db.get_session() as s:
+        if not db.impl_proyecto(s, proyecto_id):
+            raise HTTPException(404, "No existe.")
+        return {"usuarios": [_impl_usuario_dict(u) for u in db.impl_usuarios(s, proyecto_id)]}
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios")
+def api_impl_usuario_alta(request: Request, proyecto_id: IdImpl, datos: dict = Body(...)):
+    """Alta de un usuario del sindicato: nombre, mail y una clave inicial
+    transitoria que el equipo le pasa por fuera de la app."""
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        if not db.impl_proyecto(s, proyecto_id):
+            raise HTTPException(404, "No existe.")
+        try:
+            u = db.impl_usuario_alta(s, proyecto_id, str(datos.get("nombre", "")), str(datos.get("mail", "")),
+                                     str(datos.get("clave_inicial", "")), actor)
+        except implementacion.ErrorImpl as e:
+            raise _impl_error(e)
+        return {"ok": True, "usuario": _impl_usuario_dict(u)}
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios/{usuario_id}/restablecer-clave")
+def api_impl_usuario_restablecer(request: Request, proyecto_id: IdImpl, usuario_id: IdImpl):
+    """Clave transitoria al azar: se muestra UNA vez y obliga a elegir otra."""
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        res = db.impl_usuario_restablecer(s, proyecto_id, usuario_id, actor)
+        if res is None:
+            raise HTTPException(404, "No existe.")
+        u, clave = res
+        return JSONResponse({"ok": True, "clave": clave, "usuario": _impl_usuario_dict(u)},
+                            headers={"Cache-Control": "no-store"})
+
+
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/usuarios/{usuario_id}/estado")
+def api_impl_usuario_estado(request: Request, proyecto_id: IdImpl, usuario_id: IdImpl, datos: dict = Body(...)):
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        u = db.impl_usuario_activar(s, proyecto_id, usuario_id, bool(datos.get("activo")), actor)
+        if u is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True, "usuario": _impl_usuario_dict(u)}
+
+
+# ---------- Mesa de implementación: bloques 3 y 4 (docs/implementacion/API.md) ----------
+# Una sola puerta por request (`_impl_actor_de`): `_actor_impl` con la sesión de
+# base ya abierta (una sesión por request) y el 404 de la landing en demo. El
+# `proyecto_id` de la ruta se verifica ahí contra el del actor; después toda
+# consulta de db.py filtra por proyecto EN LA CONSULTA.
+import io as _io
+import tempfile as _tempfile
+import zipfile as _zipfile
+
+API_IMPL = "/api/implementacion/p/{pid}"
+IMPL_STATUS = {"sin_permiso": 403, "inmutable": 409, "cerrada": 409, "transicion": 409,
+               "mail_repetido": 409, "con_hitos": 409, "borrado": 410, "archivo_grande": 413,
+               "demasiados": 429}
+# Ritmo (QA-20): cada tarjeta nueva o respuesta del sindicato manda un mail a todo
+# el equipo; un usuario no puede generar más de IMPL_RITMO_MAX por ventana.
+IMPL_RITMO_MAX = int(os.getenv("IMPL_RITMO_MAX", "30"))
+IMPL_RITMO_VENTANA_S = int(os.getenv("IMPL_RITMO_VENTANA_S", "600"))
+_impl_ritmo: dict[tuple, list] = {}
+_impl_ritmo_candado = threading.Lock()
+IMPL_MAX_ARCHIVOS = 5                      # por pedido
+IMPL_TOPE_PEDIDO = 40 * 1024 * 1024        # suma de los archivos de un pedido
+IMPL_TOPE_EXPORTACION = 400 * 1024 * 1024  # bytes de archivos en el ZIP
+IMPL_AVISOS_SINCRONO = False               # los tests lo prenden: el mail sale en el hilo del pedido
+_MIME_SOSPECHOSOS = ("html", "xml", "svg", "javascript")
+
+
+@app.exception_handler(implementacion.ErrorImpl)
+async def _error_impl_json(request: Request, exc: "implementacion.ErrorImpl"):
+    return JSONResponse({"detail": exc.mensaje, "codigo": exc.codigo},
+                        status_code=IMPL_STATUS.get(exc.codigo, 400))
+
+
+def _impl_actor_de(request: Request, pid: int, s):
+    _exigir_landing()
+    return _actor_impl(request, pid, s=s)[0]
+
+
+def _impl_autorizar(request: Request, pid: int):
+    """Para las rutas async que leen archivos: se autoriza ANTES de leerlos."""
+    with db.get_session() as s:
+        return _impl_actor_de(request, pid, s)
+
+
+def _impl_int(valor, campo: str):
+    texto = implementacion.limpiar_texto(valor)
+    if not texto:
+        return None
+    try:
+        numero = int(texto)
+    except ValueError:
+        raise implementacion.ErrorImpl("invalida", f"El campo {campo} no es válido.")
+    if not implementacion.id_valido(numero):
+        raise implementacion.ErrorImpl("invalida", f"El campo {campo} no es válido.")
+    return numero
+
+
+def _impl_frenar_ritmo(actor) -> None:
+    """Un usuario del sindicato no manda más de IMPL_RITMO_MAX tarjetas o
+    respuestas por ventana (429 con mensaje). En memoria del proceso, como los
+    demás frenos del proyecto; el equipo no se frena (es quien recibe)."""
+    if actor.lado != implementacion.SINDICATO:
+        return
+    import time
+    ahora = time.time()
+    with _impl_ritmo_candado:
+        clave = (actor.lado, actor.id)
+        hechos = [t for t in _impl_ritmo.get(clave, []) if t > ahora - IMPL_RITMO_VENTANA_S]
+        if len(hechos) >= IMPL_RITMO_MAX:
+            _impl_ritmo[clave] = hechos
+            raise implementacion.ErrorImpl(
+                "demasiados", "Mandaste muchas tarjetas y respuestas seguidas. Esperá unos minutos y seguí.")
+        hechos.append(ahora)
+        _impl_ritmo[clave] = hechos
+        if len(_impl_ritmo) > 5000:
+            _impl_ritmo.clear()
+
+
+async def _impl_formulario(request: Request):
+    """El formulario multipart de un envío, leído DESPUÉS de autorizar (QA-15):
+    se corta por Content-Length y, si el cliente no lo declara o miente, por los
+    bytes que van llegando, así un anónimo no sube cientos de MB. FastAPI
+    parsea el cuerpo antes de correr la ruta si los campos se declaran como
+    `File`/`Form`, por eso estas rutas lo leen a mano."""
+    tope = implementacion.TOPE_FORMULARIO
+    declarado = request.headers.get("content-length")
+    if declarado is not None:
+        try:
+            if int(declarado) > tope:
+                raise implementacion.ErrorImpl("archivo_grande", "El envío pesa más de 40 MB en total.")
+        except ValueError:
+            raise HTTPException(400, "El pedido no es válido.")
+    recibido = 0
+    original = request.receive
+
+    async def receive():
+        nonlocal recibido
+        msg = await original()
+        if msg.get("type") == "http.request":
+            recibido += len(msg.get("body", b""))
+            if recibido > tope:
+                raise implementacion.ErrorImpl("archivo_grande", "El envío pesa más de 40 MB en total.")
+        return msg
+    try:
+        return await Request(request.scope, receive).form()
+    except (HTTPException, implementacion.ErrorImpl):
+        raise
+    except Exception:           # cuerpo mal formado (límites, boundary, codificación): 400, nunca 500
+        raise HTTPException(400, "El envío no se pudo leer.")
+
+
+def _impl_campo(form, nombre: str) -> str:
+    """Un campo de texto del formulario, saneado ("" si falta o vino como archivo)."""
+    valor = form.get(nombre)
+    return implementacion.limpiar_texto(valor) if isinstance(valor, str) else ""
+
+
+def _impl_subidos(form) -> list:
+    """Los archivos del formulario (`archivos` y `archivos[]`)."""
+    return [u for clave in ("archivos", "archivos[]") for u in form.getlist(clave)
+            if hasattr(u, "filename") and hasattr(u, "read")]
+
+
+def _impl_bool(valor) -> bool:
+    return str(valor or "").strip().lower() in ("1", "true", "on", "si", "sí", "yes")
+
+
+async def _impl_leer_adjuntos(subidos: list) -> list:
+    """[(nombre, mime, bytes)] con el tope mirado ANTES de leer de más: cada
+    archivo se lee hasta TOPE+1 y se corta ahí."""
+    # Un campo de archivo vacío (nada elegido: sin nombre y sin bytes) se ignora;
+    # uno con contenido y sin nombre entra como «archivo», no se pierde (QA-17).
+    subidos = [u for u in subidos if u is not None and ((u.filename or "").strip() or (u.size or 0) > 0)]
+    if len(subidos) > IMPL_MAX_ARCHIVOS:
+        raise implementacion.ErrorImpl("archivos", f"Hasta {IMPL_MAX_ARCHIVOS} archivos por vez.")
+    salida, total = [], 0
+    for u in subidos:
+        datos = await u.read(implementacion.TOPE_ARCHIVO + 1)
+        nombre = implementacion.nombre_seguro(u.filename)
+        motivo = implementacion.validar_archivo(nombre, len(datos))
+        if motivo:
+            raise implementacion.ErrorImpl("archivo_grande" if len(datos) > implementacion.TOPE_ARCHIVO
+                                           else "archivo", motivo)
+        total += len(datos)
+        if total > IMPL_TOPE_PEDIDO:
+            raise implementacion.ErrorImpl("archivo_grande", "Los archivos de un envío pesan más de 40 MB en total.")
+        salida.append((nombre, implementacion.mime_seguro(u.content_type), datos))
+    return salida
+
+
+# ----- Formas del contrato -----
+def _impl_tarjeta_dict(t, actor, etapas: dict, n_mensajes: int = 0, n_archivos: int = 0) -> dict:
+    tipo = implementacion.TIPOS.get(t.tipo, {})
+    return {
+        "id": t.id, "numero": t.numero, "codigo": t.codigo, "tipo": t.tipo, "tipo_nombre": tipo.get("nombre", t.tipo),
+        "color": tipo.get("color", ""), "icono": tipo.get("icono", ""), "titulo": t.titulo,
+        "estado": t.estado, "estado_nombre": implementacion.NOMBRES_ESTADO.get(t.estado, t.estado),
+        "espera": t.lado_que_espera, "espera_texto": implementacion.texto_espera(t.lado_que_espera),
+        "me_toca": bool(t.lado_que_espera) and t.lado_que_espera == actor.lado,
+        "etapa_id": t.etapa_id, "etapa_nombre": etapas.get(t.etapa_id, ""), "hito_id": t.hito_id,
+        "responsable": t.responsable, "fecha_limite": t.fecha_limite,
+        "vencida": implementacion.vencida(t.fecha_limite, t.estado),
+        "autor_nombre": t.autor_nombre, "autor_lado": t.autor_lado,
+        "creada_en": t.creada, "actualizada_en": t.actualizada,
+        "n_mensajes": n_mensajes, "n_archivos": n_archivos,
+    }
+
+
+def _impl_archivo_dict(a, actor) -> dict:
+    borrado = bool(a.borrado_en)
+    return {
+        "id": a.id, "codigo": a.codigo, "nombre": a.nombre, "mime": a.mime, "tamano": a.tamano,
+        "datos_personales": a.datos_personales, "subido_por": a.subido_por_nombre,
+        "subido_lado": a.subido_por_lado, "subido_en": a.subido_en, "mensaje_id": a.mensaje_id,
+        "borrado": borrado, "borrado_por": a.borrado_por_nombre, "borrado_en": a.borrado_en,
+        "puede_bajar": implementacion.puede_bajar_archivo(actor.lado, actor.id, a.datos_personales,
+                                                          a.subido_por_lado, a.subido_por_id, borrado=borrado),
+        "puede_borrar": (not borrado) and implementacion.puede_borrar_archivo(
+            actor.lado, actor.id, a.subido_por_lado, a.subido_por_id),
+    }
+
+
+def _impl_detalle(s, pid: int, tid: int, actor) -> dict:
+    """La tarjeta con su hilo, archivos, traza y lo que ESTE actor puede hacer.
+    Lo «solo equipo» se filtra en la consulta de `db.impl_hilo`."""
+    h = db.impl_hilo(s, pid, tid, actor.lado)
+    if not h:
+        raise HTTPException(404, "No existe.")
+    t = h["tarjeta"]
+    etapas = {e.id: e.nombre for e in db.impl_etapas(s, pid)}
+    vigentes = sum(1 for a in h["archivos"] if not a.borrado_en)
+    refs = db.impl_refs(s, pid, [t.titulo] + [m.texto for m in h["mensajes"]], actor.lado)
+    tarjeta = _impl_tarjeta_dict(t, actor, etapas, len(h["mensajes"]), vigentes)
+    tarjeta["refs"] = refs[0]
+    if t.tipo == implementacion.ENTREGA:
+        recibida = t.estado == implementacion.CERRADA and bool(t.resuelta_en)
+        tarjeta["recibida_por"] = t.resuelta_por_nombre if recibida else ""
+        tarjeta["recibida_en"] = t.resuelta_en if recibida else ""
+    salida = {
+        "tarjeta": tarjeta,
+        "mensajes": [{"id": m.id, "codigo": implementacion.codigo_mensaje(t.codigo, m.orden, bool(m.solo_equipo))
+                      if m.orden else "", "orden": m.orden,
+                      "autor_nombre": m.autor_nombre, "autor_lado": m.autor_lado,
+                      "texto": m.texto, "solo_equipo": m.solo_equipo, "creado_en": m.creado,
+                      "mio": m.autor_lado == actor.lado and m.autor_id == actor.id, "refs": refs[i + 1]}
+                     for i, m in enumerate(h["mensajes"])],
+        "archivos": [_impl_archivo_dict(a, actor) for a in h["archivos"]],
+        "eventos": [{"quien": e.actor_nombre, "lado": e.actor_lado, "cuando": e.cuando, "que": e.accion,
+                     "texto": implementacion.texto_evento(e.accion, e.detalle)} for e in h["eventos"]],
+        "acciones": implementacion.acciones_de(t.tipo, t.estado, t.lado_que_espera, actor.lado, t.autor_lado),
+        "relacionadas": db.impl_relacionadas(s, pid, "tarjeta", t.id, actor.lado),
+    }
+    if t.tipo == implementacion.AVISO:
+        salida["lecturas"] = [{"nombre": l.nombre, "lado": l.lado, "cuando": l.cuando}
+                              for l in db.impl_lecturas_aviso(s, pid, t.id)]
+    return salida
+
+
+# ----- Avisos por mail (I6) -----
+def _impl_destinatarios(s, pid: int, lado: str) -> list:
+    """Mails de las personas activas de ese lado. Equipo: el mail de su
+    UsuarioPlataforma, si lo tiene. Sindicato: los usuarios del proyecto."""
+    if lado == implementacion.SINDICATO:
+        mails = [u.mail for u in db.impl_usuarios(s, pid) if u.activo]
+    else:
+        mails = [u.email for u in s.exec(select(db.UsuarioPlataforma).where(
+            db.UsuarioPlataforma.activo == True)).all() if u.email]                   # noqa: E712
+    return sorted({m.strip().lower() for m in mails if correo.destino_valido(m)})
+
+
+def _impl_preparar_aviso(s, request: Request, pid: int, tarjeta, lado_destino: str, motivo: str):
+    """(mails, asunto, cuerpo) o None. Se arma adentro de la sesión del pedido;
+    se envía después, fuera de ella."""
+    if not lado_destino or not correo.habilitado():
+        return None
+    mails = _impl_destinatarios(s, pid, lado_destino)
+    if not mails:
+        return None
+    proyecto = db.impl_proyecto(s, pid)
+    # El origen sale de la URL pública del entorno, NUNCA del header Host del
+    # pedido (QA-08: un usuario del sindicato podía mandarle al equipo un mail
+    # con un enlace a otro dominio). Sin URL pública (local), sin enlace absoluto.
+    base = (entorno.URLS.get(entorno.ENTORNO) or "").rstrip("/")
+    enlace = base + implementacion.enlace_codigo(pid, tarjeta.codigo) if base else ""
+    asunto, cuerpo = correo.texto_aviso_mesa(proyecto.nombre if proyecto else "", tarjeta.numero,
+                                             tarjeta.titulo, enlace, motivo, codigo=tarjeta.codigo)
+    return mails, asunto, cuerpo
+
+
+def _impl_enviar_aviso(aviso) -> None:
+    """Sale en un hilo aparte: ni demora ni tumba el pedido. Con el canal
+    apagado no hace nada."""
+    if not aviso:
+        return
+    mails, asunto, cuerpo = aviso
+
+    def _enviar_todos():
+        for m in mails:
+            try:
+                correo.enviar(m, asunto, cuerpo)
+            except Exception:
+                logging.getLogger(__name__).warning("impl: aviso por mail fallido")
+    if IMPL_AVISOS_SINCRONO:
+        _enviar_todos()
+    else:
+        threading.Thread(target=_enviar_todos, daemon=True).start()
+
+
+# ----- Página -----
+@app.get("/implementacion", response_class=HTMLResponse)
+def impl_inicio(request: Request, p: IdImplOpt = None):
+    """La mesa. El equipo elige el proyecto con `?p=` (sin él, el primero
+    activo); el sindicato entra siempre al suyo."""
+    _exigir_landing()
+    with db.get_session() as s:
+        actor, pid = _actor_impl(request, p, s=s)
+        es_equipo = actor.lado == implementacion.EQUIPO
+        proyectos = [{"id": x.id, "nombre": x.nombre} for x in db.impl_proyectos(s) if x.activo] if es_equipo else []
+        if pid is None and proyectos:
+            pid = proyectos[0]["id"]
+        proy = db.impl_proyecto(s, pid) if pid else None
+        proyecto = {"id": proy.id, "nombre": proy.nombre} if proy else None
+    contexto = {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "yo": {"lado": actor.lado, "nombre": actor.nombre}, "es_equipo": es_equipo,
+        "proyecto": proyecto, "proyectos": proyectos,
+        "api": API_IMPL.format(pid=pid) if pid else "",
+        "tipos": [{"id": k, **implementacion.TIPOS[k]} for k in implementacion.ORDEN_TIPOS],
+        "estados": [{"id": e, "nombre": implementacion.NOMBRES_ESTADO[e]} for e in implementacion.ESTADOS],
+    }
+    try:
+        templates.get_template("impl_mesa.html")
+    except Exception:
+        # Mientras la pantalla de la mesa no está en el árbol, la provisoria.
+        return templates.TemplateResponse("impl_inicio.html", {
+            "request": request, "marca_plataforma": contexto["marca_plataforma"], "nombre": actor.nombre,
+            "lado": actor.lado, "proyecto": proyecto["nombre"] if proyecto else "",
+            "proyectos": proyectos, "es_equipo": es_equipo})
+    return templates.TemplateResponse("impl_mesa.html", contexto)
+
+
+# ----- Resumen y tarjetas -----
+@app.get(API_IMPL + "/resumen")
+def api_impl_resumen(request: Request, pid: IdImpl):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        return db.impl_resumen(s, pid, actor.lado)
+
+
+@app.get(API_IMPL + "/tarjetas")
+def api_impl_tarjetas(request: Request, pid: IdImpl, vista: str = "pendientes", estado: str = "", tipo: str = "",
+                      etapa_id: IdImplOpt = None, q: str = ""):
+    if vista not in ("pendientes", "todas"):
+        raise HTTPException(400, "La vista es pendientes o todas.")
+    if estado and estado not in implementacion.ESTADOS:
+        raise HTTPException(400, "El estado no es válido.")
+    if tipo and tipo not in implementacion.TIPOS:
+        raise HTTPException(400, "El tipo no es válido.")
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        tarjetas = db.impl_buscar_tarjetas(s, pid, actor.lado, vista, estado or None, tipo or None, etapa_id, q)
+        nm, na = db.impl_conteos(s, pid, actor.lado, [t.id for t in tarjetas])
+        etapas = {e.id: e.nombre for e in db.impl_etapas(s, pid)}
+        return {"tarjetas": [_impl_tarjeta_dict(t, actor, etapas, int(nm.get(t.id, 0)), int(na.get(t.id, 0)))
+                             for t in tarjetas]}
+
+
+@app.post(API_IMPL + "/tarjetas")
+async def api_impl_tarjeta_crear(request: Request, pid: IdImpl):
+    await run_in_threadpool(_impl_autorizar, request, pid)        # ANTES de leer el cuerpo (QA-15)
+    form = await _impl_formulario(request)
+    try:
+        adjuntos = await _impl_leer_adjuntos(_impl_subidos(form))
+        tipo, titulo, texto = (_impl_campo(form, k) for k in ("tipo", "titulo", "texto"))
+        fecha_limite, responde_a = _impl_campo(form, "fecha_limite"), _impl_campo(form, "responde_a")
+        et, hi = _impl_int(_impl_campo(form, "etapa_id"), "etapa"), _impl_int(_impl_campo(form, "hito_id"), "hito")
+        con_datos_personales = _impl_bool(_impl_campo(form, "datos_personales"))
+    finally:
+        await form.close()
+
+    def _trabajo():
+        with db.get_session() as s:
+            actor = _impl_actor_de(request, pid, s)
+            _impl_frenar_ritmo(actor)
+            original = None
+            if responde_a:
+                original = db.impl_tarjeta_por_codigo_o_id(s, pid, responde_a)
+                if not original:
+                    raise implementacion.ErrorImpl(
+                        "responde_a", "La tarjeta que querés responder no existe en este proyecto.")
+            # La tarjeta, su primer mensaje y sus archivos, en UNA transacción.
+            t = db.impl_crear_tarjeta(s, pid, actor, tipo, titulo, texto, etapa_id=et, hito_id=hi,
+                                      fecha_limite=fecha_limite, responde_a=original.id if original else None,
+                                      adjuntos=adjuntos, datos_personales=con_datos_personales)
+            if t is None:
+                raise HTTPException(404, "No existe.")
+            destino = (implementacion.otro_lado(actor.lado) if t.tipo == implementacion.AVISO
+                       else t.lado_que_espera)
+            aviso = _impl_preparar_aviso(s, request, pid, t, destino, "nueva")
+            salida = {"tarjeta": _impl_detalle(s, pid, t.id, actor)["tarjeta"]}
+            return salida, aviso
+    salida, aviso = await run_in_threadpool(_trabajo)
+    _impl_enviar_aviso(aviso)
+    return salida
+
+
+@app.get(API_IMPL + "/tarjetas/{tid}")
+def api_impl_tarjeta(request: Request, pid: IdImpl, tid: IdImpl):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        return _impl_detalle(s, pid, tid, actor)
+
+
+@app.post(API_IMPL + "/tarjetas/{tid}/responder")
+async def api_impl_responder(request: Request, pid: IdImpl, tid: IdImpl):
+    await run_in_threadpool(_impl_autorizar, request, pid)        # ANTES de leer el cuerpo (QA-15)
+    form = await _impl_formulario(request)
+    try:
+        adjuntos = await _impl_leer_adjuntos(_impl_subidos(form))
+        texto, estado_nuevo = _impl_campo(form, "texto"), _impl_campo(form, "estado_nuevo")
+        nota = _impl_bool(_impl_campo(form, "solo_equipo"))
+        con_datos_personales = _impl_bool(_impl_campo(form, "datos_personales"))
+    finally:
+        await form.close()
+
+    def _trabajo():
+        with db.get_session() as s:
+            actor = _impl_actor_de(request, pid, s)
+            _impl_frenar_ritmo(actor)
+            # Mensaje + estado + archivos: UNA transacción (si un adjunto falla no cambia nada).
+            m = db.impl_responder(s, pid, tid, actor, texto=texto, estado_nuevo=estado_nuevo or None,
+                                  solo_equipo=nota, adjuntos=adjuntos, datos_personales=con_datos_personales)
+            if m is None:
+                raise HTTPException(404, "No existe.")
+            t = db.impl_tarjeta(s, pid, tid)
+            aviso = None
+            if not nota and t.lado_que_espera and t.lado_que_espera != actor.lado:
+                aviso = _impl_preparar_aviso(s, request, pid, t, t.lado_que_espera, "respuesta")
+            return _impl_detalle(s, pid, tid, actor), aviso
+    salida, aviso = await run_in_threadpool(_trabajo)
+    _impl_enviar_aviso(aviso)
+    return salida
+
+
+@app.post(API_IMPL + "/tarjetas/{tid}/aprobacion")
+def api_impl_aprobacion(request: Request, pid: IdImpl, tid: IdImpl, datos: dict = Body(...)):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if not isinstance(datos.get("aprobar"), bool):
+            raise HTTPException(400, "Falta decir si se aprueba o se rechaza.")
+        t = db.impl_resolver_aprobacion(s, pid, tid, actor, datos["aprobar"], str(datos.get("texto") or ""))
+        if t is None:
+            raise HTTPException(404, "No existe.")
+        return _impl_detalle(s, pid, tid, actor)
+
+
+@app.post(API_IMPL + "/tarjetas/{tid}/entrega")
+def api_impl_entrega(request: Request, pid: IdImpl, tid: IdImpl, datos: dict = Body(...)):
+    """I16: quien recibe una entrega de archivo la da por recibida
+    (`recibido: true`, texto opcional) o avisa un problema (`recibido: false`,
+    texto obligatorio). Mail a quien la mandó solo en «problema»."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if not isinstance(datos.get("recibido"), bool):
+            raise HTTPException(400, "Falta decir si se recibió o hay un problema.")
+        if datos.get("texto") is not None and not isinstance(datos.get("texto"), str):
+            raise HTTPException(400, "El texto no es válido.")
+        _impl_frenar_ritmo(actor)
+        t = db.impl_entrega(s, pid, tid, actor, datos["recibido"], datos.get("texto") or "")
+        if t is None:
+            raise HTTPException(404, "No existe.")
+        aviso = None
+        if not datos["recibido"] and t.lado_que_espera and t.lado_que_espera != actor.lado:
+            aviso = _impl_preparar_aviso(s, request, pid, t, t.lado_que_espera, "problema")
+        salida = _impl_detalle(s, pid, tid, actor)
+    _impl_enviar_aviso(aviso)
+    return salida
+
+
+@app.post(API_IMPL + "/tarjetas/{tid}/leido")
+def api_impl_leido(request: Request, pid: IdImpl, tid: IdImpl):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if db.impl_marcar_leido_aviso(s, pid, tid, actor) is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True}
+
+
+@app.post(API_IMPL + "/tarjetas/{tid}/reasignar")
+def api_impl_reasignar(request: Request, pid: IdImpl, tid: IdImpl, datos: dict = Body(...)):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        t = db.impl_reasignar(s, pid, tid, actor, str(datos.get("responsable") or ""),
+                              str(datos.get("responsable_lado") or ""))
+        if t is None:
+            raise HTTPException(404, "No existe.")
+        return _impl_detalle(s, pid, tid, actor)
+
+
+# ----- Archivos y carpetas -----
+def _impl_rechazar_otro_sitio(request: Request) -> None:
+    """Un GET con efecto (bajar un archivo, exportar) no se acepta si el navegador
+    dice que lo disparó otro sitio (`Sec-Fetch-Site: cross-site`)."""
+    if request.headers.get("sec-fetch-site", "").lower() == "cross-site":
+        raise HTTPException(403, "Este pedido viene de otro sitio.")
+
+
+def _impl_cabecera_descarga(nombre: str) -> str:
+    ascii_ = "".join(c if (c.isascii() and c.isprintable() and c not in '"\\;') else "_" for c in nombre) or "archivo"
+    return f"attachment; filename=\"{ascii_}\"; filename*=UTF-8''{quote(nombre)}"
+
+
+@app.get(API_IMPL + "/archivos/{aid}/ficha")
+def api_impl_archivo_ficha(request: Request, pid: IdImpl, aid: IdImpl):
+    """Los metadatos del archivo y lo que lo relaciona; sin bytes y sin
+    registrar una descarga."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        f = db.impl_ficha_archivo(s, pid, aid, actor.lado)
+        if f is None:
+            raise HTTPException(404, "No existe.")
+        t = f["tarjeta"]
+        return {"archivo": _impl_archivo_dict(f["archivo"], actor),
+                "tarjeta": {"id": t.id, "numero": t.numero, "codigo": t.codigo, "titulo": t.titulo,
+                            "estado": t.estado} if t else None,
+                "relacionadas": f["relacionadas"]}
+
+
+@app.get(API_IMPL + "/buscar")
+def api_impl_buscar(request: Request, pid: IdImpl, codigo: str = ""):
+    """El buscador único: un código lleva a la cosa. 404 si no existe en este
+    proyecto o este lector no la puede ver (no se revela que existe)."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        r = db.impl_buscar_codigo(s, pid, implementacion.limpiar_texto(codigo), actor.lado)
+        if r is None:
+            raise HTTPException(404, "No existe.")
+        return r
+
+
+@app.get(API_IMPL + "/archivos/{aid}")
+def api_impl_archivo(request: Request, pid: IdImpl, aid: IdImpl):
+    """Siempre como descarga (attachment), nunca HTML ni SVG en línea. Es un GET
+    que registra la descarga (QA-21): se queda GET porque es la navegación del
+    propio usuario (cookie SameSite=Lax), pero un pedido que el navegador marca
+    como de OTRO sitio se rechaza."""
+    _impl_rechazar_otro_sitio(request)
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        res = db.impl_bajar_archivo(s, pid, aid, actor)
+        if res is None:
+            raise HTTPException(404, "No existe.")
+        arch, datos = res
+        mime = (arch.mime or "").lower()
+        if not mime or any(x in mime for x in _MIME_SOSPECHOSOS):
+            mime = "application/octet-stream"
+        return BinResponse(content=datos, media_type=mime, headers={
+            "Content-Disposition": _impl_cabecera_descarga(implementacion.nombre_seguro(arch.nombre)),
+            "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store",
+            "Content-Security-Policy": "sandbox; default-src 'none'"})
+
+
+@app.post(API_IMPL + "/archivos/{aid}/borrar")
+def api_impl_archivo_borrar(request: Request, pid: IdImpl, aid: IdImpl):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if db.impl_borrar_archivo(s, pid, aid, actor) is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True}
+
+
+@app.get(API_IMPL + "/carpetas")
+def api_impl_carpetas(request: Request, pid: IdImpl, sentido: str = "entrada"):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        filas = db.impl_carpetas(s, pid, actor, sentido)
+    etapas, vistos = [], {}
+    for f in filas:
+        clave = f["etapa_id"]
+        if clave not in vistos:
+            vistos[clave] = {"etapa": f["etapa"] or "Sin etapa", "etapa_id": clave, "archivos": []}
+            etapas.append(vistos[clave])
+        vistos[clave]["archivos"].append({
+            "id": f["id"], "codigo": f["codigo"], "nombre": f["nombre"], "mime": f["mime"], "tamano": f["tamano"],
+            "datos_personales": f["datos_personales"], "subido_por": f["subido_por"],
+            "subido_lado": f["subido_lado"], "subido_en": f["subido_en"], "mensaje_id": f["mensaje_id"],
+            "borrado": f["borrado"], "borrado_por": f["borrado_por"], "borrado_en": f["borrado_en"],
+            "puede_bajar": f["puede_bajar"], "puede_borrar": f["puede_borrar"],
+            "tarjeta_id": f["tarjeta_id"], "tarjeta_numero": f["tarjeta_numero"],
+            "tarjeta_codigo": f["tarjeta_codigo"], "tarjeta_tipo": f["tarjeta_tipo"],
+            "recibida_por": f["recibida_por"], "recibida_en": f["recibida_en"],
+            "tarjeta_titulo": f["tarjeta_titulo"]})
+    return {"etapas": etapas}
+
+
+# ----- Aprobaciones -----
+@app.get(API_IMPL + "/aprobaciones")
+def api_impl_aprobaciones(request: Request, pid: IdImpl):
+    with db.get_session() as s:
+        _impl_actor_de(request, pid, s)
+        filas = db.impl_aprobaciones_registro(s, pid)
+    return {"aprobaciones": [{
+        "numero": f["numero"], "codigo": f["codigo"], "titulo": f["titulo"], "estado": f["estado"],
+        "pedida_por": f["autor"],
+        "pedida_en": f["creada"], "resuelta_por": f["resuelta_por"], "resuelta_en": f["resuelta_en"],
+        "texto": f["texto"], "etapa": f["etapa"]} for f in filas]}
+
+
+@app.get(API_IMPL + "/aprobaciones.csv")
+def api_impl_aprobaciones_csv(request: Request, pid: IdImpl):
+    with db.get_session() as s:
+        _impl_actor_de(request, pid, s)
+        filas = db.impl_aprobaciones(s, pid)
+    return BinResponse(content=implementacion.aprobaciones_csv(filas).encode("utf-8"),
+                       media_type="text/csv; charset=utf-8", headers={
+        "Content-Disposition": 'attachment; filename="aprobaciones.csv"',
+        "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
+
+
+# ----- Plan operativo -----
+@app.get(API_IMPL + "/plan")
+def api_impl_plan(request: Request, pid: IdImpl):
+    with db.get_session() as s:
+        _impl_actor_de(request, pid, s)
+        return {"etapas": db.impl_plan(s, pid)}
+
+
+def _impl_exigir_equipo_api(actor) -> None:
+    if actor.lado != implementacion.EQUIPO:
+        raise implementacion.ErrorImpl("sin_permiso", "El plan lo edita el equipo.")
+
+
+@app.post(API_IMPL + "/plan/hitos")
+def api_impl_hito_nuevo(request: Request, pid: IdImpl, datos: dict = Body(...)):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        _impl_exigir_equipo_api(actor)
+        h = db.impl_agregar_hito(s, pid, _impl_int(datos.get("etapa_id"), "etapa") or 0,
+                                 str(datos.get("texto") or ""), actor)
+        if h is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True, "etapas": db.impl_plan(s, pid)}
+
+
+@app.post(API_IMPL + "/plan/hitos/{hid}")
+def api_impl_hito(request: Request, pid: IdImpl, hid: IdImpl, datos: dict = Body(...)):
+    """Tildar lo pueden los dos lados; texto, orden y borrar, solo el equipo.
+    Se valida TODO antes de escribir y se escribe en una sola transacción
+    (QA-26): un texto inválido no deja el tildado a medias."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if any(k in datos for k in ("texto", "orden", "borrar")):
+            _impl_exigir_equipo_api(actor)
+        if db._impl_hito(s, pid, hid, bloquear=False) is None:
+            raise HTTPException(404, "No existe.")
+        orden = _impl_int(datos.get("orden"), "orden") if "orden" in datos else None
+        texto = None
+        if "texto" in datos and datos.get("borrar") is not True:
+            texto = implementacion.limpiar_texto(datos["texto"])
+            if not texto:
+                raise implementacion.ErrorImpl("texto", "El hito necesita un texto.")
+            implementacion.exigir_largo(texto, implementacion.TOPE_HITO, "El hito")
+        borrar = datos.get("borrar") is True
+        editar = not borrar and ("texto" in datos or "orden" in datos)
+        if "hecho" in datos:
+            db.impl_tildar_hito(s, pid, hid, actor, _impl_bool(datos["hecho"]), commit=False)
+        if editar:
+            db.impl_editar_hito(s, pid, hid, actor, texto=texto, orden=orden, commit=False)
+        if borrar:
+            if not db.impl_borrar_hito(s, pid, hid, actor):      # commitea todo lo anterior
+                raise HTTPException(404, "No existe.")
+        else:
+            s.commit()
+        return {"ok": True, "etapas": db.impl_plan(s, pid)}
+
+
+@app.post(API_IMPL + "/plan/etapas/{eid}")
+def api_impl_etapa(request: Request, pid: IdImpl, eid: IdImpl, datos: dict = Body(...)):
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        _impl_exigir_equipo_api(actor)
+        if db.impl_renombrar_etapa(s, pid, eid, actor, str(datos.get("nombre") or "")) is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True, "etapas": db.impl_plan(s, pid)}
+
+
+# ----- Exportación (I3): solo el equipo -----
+def _impl_fila(obj, excluir=("datos",)) -> dict:
+    return {c.name: getattr(obj, c.name) for c in obj.__table__.columns if c.name not in excluir}
+
+
+def _impl_armar_zip(s, pid: int, datos: dict, con_archivos: bool = True):
+    """El ZIP en un archivo temporal (se desborda a disco pasados 16 MB). Sin
+    `con_archivos` lleva todo menos los bytes de los archivos (la lista sigue)."""
+    import csv as _csv
+    import json as _json
+    bajados = [a for a in datos["archivos"] if not a.borrado_en] if con_archivos else []
+    peso = sum(a.tamano for a in bajados)
+    if peso > IMPL_TOPE_EXPORTACION:
+        raise implementacion.ErrorImpl(
+            "archivo_grande",
+            f"Los archivos vigentes del proyecto pesan {peso // (1024 * 1024)} MB y un ZIP admite hasta "
+            f"{IMPL_TOPE_EXPORTACION // (1024 * 1024)} MB. Bajá la exportación sin archivos "
+            f"(agregá ?sin_archivos=1) y los archivos de a uno desde la mesa.")
+    numero_de = {t.id: t.numero for t in datos["tarjetas"]}
+    sal = _tempfile.SpooledTemporaryFile(max_size=16 * 1024 * 1024)
+    with _zipfile.ZipFile(sal, "w", _zipfile.ZIP_DEFLATED) as z:
+        def json_(nombre, contenido):
+            z.writestr(nombre, _json.dumps(contenido, ensure_ascii=False, indent=2, default=str))
+        json_("proyecto.json", _impl_fila(datos["proyecto"]))
+        json_("etapas.json", [_impl_fila(x) for x in datos["etapas"]])
+        json_("hitos.json", [_impl_fila(x) for x in datos["hitos"]])
+        mensajes = {}
+        for m in datos["mensajes"]:
+            mensajes.setdefault(m.tarjeta_id, []).append(_impl_fila(m))
+        archivos_de = {}
+        for a in datos["archivos"]:
+            archivos_de.setdefault(a.tarjeta_id, []).append(_impl_fila(a))
+        json_("tarjetas.json", [{**_impl_fila(t), "mensajes": mensajes.get(t.id, []),
+                                 "archivos": archivos_de.get(t.id, [])} for t in datos["tarjetas"]])
+        json_("eventos.json", [_impl_fila(x) for x in datos["eventos"]])
+        json_("descargas.json", [_impl_fila(x) for x in datos["descargas"]])
+        json_("lecturas_aviso.json", [_impl_fila(x) for x in datos["lecturas"]])
+        json_("relaciones.json", [_impl_fila(x) for x in datos["relaciones"]])
+        json_("contadores.json", [_impl_fila(x) for x in datos["contadores"]])
+        json_("usuarios.json", [_impl_fila(x, excluir=("clave_hash",)) for x in datos["usuarios"]])
+        json_("aprobaciones.json", datos["aprobaciones"])
+        z.writestr("aprobaciones.csv", implementacion.aprobaciones_csv(datos["aprobaciones"]))
+        tabla = _io.StringIO()
+        w = _csv.writer(tabla, delimiter=";", lineterminator="\r\n")
+        w.writerow(["Número", "Tipo", "Título", "Estado", "Espera", "Autor", "Responsable", "Fecha límite", "Creada",
+                    "Código"])
+        for t in datos["tarjetas"]:
+            w.writerow([t.numero, t.tipo, implementacion._celda(t.titulo),
+                        implementacion.NOMBRES_ESTADO.get(t.estado, t.estado), t.lado_que_espera,
+                        implementacion._celda(t.autor_nombre), implementacion._celda(t.responsable),
+                        t.fecha_limite, t.creada, t.codigo])
+        z.writestr("tarjetas.csv", "﻿" + tabla.getvalue())
+        # Los códigos de todo: tarjetas, archivos, hitos y las relaciones entre ellos, legibles.
+        codigo_de = {("tarjeta", t.id): t.codigo for t in datos["tarjetas"]}
+        codigo_de.update({("archivo", a.id): a.codigo for a in datos["archivos"]})
+        codigo_de.update({("hito", h.id): h.codigo for h in datos["hitos"]})
+        tarj = {t.id: t.codigo for t in datos["tarjetas"]}
+        for m in datos["mensajes"]:
+            if m.orden and m.tarjeta_id in tarj:
+                codigo_de[("mensaje", m.id)] = implementacion.codigo_mensaje(tarj[m.tarjeta_id], m.orden,
+                                                                             bool(m.solo_equipo))
+        rel = _io.StringIO()
+        w = _csv.writer(rel, delimiter=";", lineterminator="\r\n")
+        w.writerow(["Origen", "Clase", "Destino", "Solo equipo", "Creada", "Por"])
+        for r in datos["relaciones"]:
+            w.writerow([codigo_de.get((r.origen_tipo, r.origen_id), f"{r.origen_tipo}:{r.origen_id}"), r.clase,
+                        codigo_de.get((r.destino_tipo, r.destino_id), f"{r.destino_tipo}:{r.destino_id}"),
+                        "sí" if r.solo_equipo else "no", r.creada_en, implementacion._celda(r.creada_por_nombre)])
+        z.writestr("relaciones.csv", "﻿" + rel.getvalue())
+        arch = _io.StringIO()
+        w = _csv.writer(arch, delimiter=";", lineterminator="\r\n")
+        w.writerow(["Código", "Tarjeta", "Nombre", "Tamaño", "Subido por", "Subido", "Borrado"])
+        for a in datos["archivos"]:
+            w.writerow([a.codigo, tarj.get(a.tarjeta_id, ""), implementacion._celda(a.nombre), a.tamano,
+                        implementacion._celda(a.subido_por_nombre), a.subido_en, a.borrado_en])
+        z.writestr("archivos.csv", "﻿" + arch.getvalue())
+        for a in bajados:
+            z.writestr(f"archivos/{numero_de.get(a.tarjeta_id, 0):04d}/{a.id}-{implementacion.nombre_seguro(a.nombre)}",
+                       db.impl_bytes_archivo(s, pid, a.id))
+    sal.seek(0)
+    return sal
+
+
+@app.get(API_IMPL + "/exportar.zip")
+def api_impl_exportar(request: Request, pid: IdImpl, sin_archivos: bool = False):
+    """GET que deja un evento (QA-21): ver `api_impl_archivo`."""
+    _impl_rechazar_otro_sitio(request)
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        _impl_exigir_equipo_api(actor)
+        datos = db.impl_exportacion(s, pid, actor)
+        if datos is None:
+            raise HTTPException(404, "No existe.")
+        sal = _impl_armar_zip(s, pid, datos, con_archivos=not sin_archivos)
+
+    def _trozos():
+        try:
+            while True:
+                bloque = sal.read(256 * 1024)
+                if not bloque:
+                    break
+                yield bloque
+        finally:
+            sal.close()
+    return StreamingResponse(_trozos(), media_type="application/zip", headers={
+        "Content-Disposition": f'attachment; filename="implementacion-{pid}-{fechas.hoy_texto()}.zip"',
+        "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
+
+
+# ----- Equipo: semilla del plan operativo (I7) -----
+@app.post(API_IMPL_EQUIPO + "/proyectos/{proyecto_id}/hitos-semilla")
+def api_impl_hitos_semilla(request: Request, proyecto_id: IdImpl):
+    """Carga los 48 hitos de La Bancaria (data/implementacion/hitos_bancaria.json)
+    en un proyecto que todavía no tiene hitos."""
+    actor = _impl_equipo_api(request)
+    with db.get_session() as s:
+        n = db.impl_cargar_hitos_semilla(s, proyecto_id, actor, implementacion.cargar_hitos_semilla())
+        if n is None:
+            raise HTTPException(404, "No existe.")
+        return {"ok": True, "cargados": n}
 
 
 # =====================================================================

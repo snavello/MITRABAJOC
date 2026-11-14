@@ -48,11 +48,22 @@ from dotenv import load_dotenv
 
 import pg_cliente
 import fechas
+import implementacion
 
 load_dotenv()
 
 RAIZ = Path(__file__).resolve().parent
 BACKUPS = RAIZ / "backups"
+
+
+def tablas_excluidas():
+    """Lo que NUNCA viaja en el dump: `recurso` (documentación subida desde
+    /entornos) y la Mesa de implementación (`impl*`, PLAN_IMPLEMENTACION.md I3).
+    La Mesa son datos REALES de Pruebas (tarjetas, hilos, aprobaciones,
+    archivos del sindicato): la demo no los tiene, y un `pg_restore --clean`
+    que los tocara los borraría. El patrón `impl*` cubre tablas y secuencias;
+    `test_implementacion_db.py` verifica que cubra todas las `Impl*` y nada más."""
+    return ["recurso", "recurso_id_seq", implementacion.PREFIJO_TABLAS + "*"]
 
 
 def abortar(msg):
@@ -152,7 +163,7 @@ def main():
     # sobrevive a la clonación. La demo no tiene nada ahí de todos modos.
     with open(dump, "wb") as salida:
         r = subprocess.run([*cmd_dump, origen, "-Fc", "--no-owner", "--no-privileges",
-                            "--exclude-table=recurso", "--exclude-table=recurso_id_seq"],
+                            *[f"--exclude-table={n}" for n in tablas_excluidas()]],
                            cwd=RAIZ, stdout=salida)
     if r.returncode != 0 or not dump.exists() or dump.stat().st_size == 0:
         abortar("el pg_dump de la demo falló. No se tocó Pruebas.")

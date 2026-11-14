@@ -156,6 +156,8 @@ EXCEPCIONES.update({
     "admin_apariencia_fotos_reemplazar": "fotos de portada propias del sindicato: fotos_tema",
     "recursos_subir": "Recursos de /entornos",
     "api_fiesta_sind_padron_csv": "CSV del padrón de la Fiesta (texto, no imagen)",
+    "api_impl_tarjeta_crear": "Mesa de implementación: documentos hasta 20 MB (I5), no imágenes de la app",
+    "api_impl_responder": "Mesa de implementación: documentos hasta 20 MB (I5), no imágenes de la app",
 })
 
 

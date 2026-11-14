@@ -10988,3 +10988,54 @@ Un Job de Render de solo lectura confirmó el usuario activo, sin vencimiento ni
 reseteos, y un ingreso correcto desde la PC a las 21:09; SDN entró escribiendo la
 mayúscula de la clave a mano e informó que se debió a algo tocado horas antes por un
 error de ingreso a MercadoPago. Queda anotado en BACKLOG.md.
+
+
+## Mesa de implementación (2026-11-14, Plataforma 0.70.01)
+
+Pedido de SDN: un menú Implementación en `/entornos` con las herramientas de
+la puesta en marcha, un plan general y uno operativo que se pueda seguir
+desde ahí, y una ticketera simple para el equipo y el sindicato, con
+trazabilidad, sin opciones que haya que explicar. Plan y decisiones en
+`PLAN_IMPLEMENTACION.md` (I1–I14, acordadas pregunta por pregunta).
+
+**Cómo se hizo.** Code planificó y coordinó; el trabajo lo hicieron agentes
+en paralelo: mockup de tres direcciones (SDN eligió la B en fondo claro),
+modelo y motor, acceso, API contra un contrato escrito
+(`docs/implementacion/API.md`) mientras otro armaba las pantallas contra ese
+mismo contrato, plan general fusionado, y a mitad de camino los códigos y
+relaciones que SDN sumó (se decidió hacerlos antes de desplegar, para que el
+código de cada cosa naciera con ella y no hubiera que renumerar).
+
+**Lo que encontró el QA independiente** (`docs/implementacion/QA-servidor.md`,
+`QA-pantallas.md`), todo de la app y corregido antes del merge:
+- Una aprobación se podía aprobar a sí misma por dos caminos (tomándola «en
+  curso», o después de cualquier respuesta del otro lado): el permiso miraba
+  «a quién le toca» y no «quién la pidió». Regla nueva: la resuelve el lado
+  que no la pidió.
+- La subida de archivos se recibía entera antes de autorizar (FastAPI parsea
+  el multipart antes de correr la ruta): un anónimo podía hacer gastar disco.
+- La API del equipo no revisaba que el usuario de plataforma siguiera activo.
+- El enlace del mail salía del header `Host`.
+- Errores 500 con un NUL en un texto, un id fuera de int4 o una «İ» en un
+  código; responder con archivo no era atómico.
+- Clonar la Demo a Pruebas excluye `impl*` pero trae `alembic_version`: el
+  deploy siguiente intentaría crear las tablas otra vez. Las dos migraciones
+  quedaron idempotentes.
+- De pantalla: faltaba el botón de exportar, la sesión vencida al enviar
+  perdía lo escrito, botones de 38 px en teléfono.
+
+**Decisiones que cerró SDN el mismo día.** Los huecos de numeración delataban
+que hubo una nota o un archivo interno (QA-12): lo «solo equipo» pasó a
+numerarse aparte (`PE0001-N1`, `AI000001`, I15) y la serie que ve el
+sindicato queda corrida. Y la Entrega de archivo (QA-24) la cierra quien la
+recibe, con «Recibido, está bien» o «Hay un problema» (I16): el selector de
+estado ya no la cierra para ningún lado, y quien la «manda» es quien creó la
+tarjeta. **Aceptado**: el título viaja en el asunto del
+mail; «Salir» no invalida la sesión del lado del servidor, como en el resto
+de la app; el token de cambiar-clave va en la URL, como en `/admin`.
+
+**El plan general.** `recursos/colm3na-plan-general-implementacion.html`
+(12 páginas A4) fusiona «Implementación en el sindicato» (2026-09-04) y el
+Plan Maestro v1.2 con la regla «ante la duda vale el más nuevo»; qué quedó
+afuera de cada uno y los 48 hitos propuestos para La Bancaria, en
+`docs/implementacion/diferencias.md`.

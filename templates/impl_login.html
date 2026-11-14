@@ -1,0 +1,24 @@
+{% extends "_clave_base.html" %}
+{#- Ingreso del SINDICATO a la Mesa de implementación (PLAN_IMPLEMENTACION.md,
+    I2): mail + clave de la herramienta, que da de alta el equipo de Colm3na.
+    Sin marca de sindicato: el proyecto puede no tener sindicato asociado. El
+    equipo no entra por acá: usa su usuario de plataforma. Mismo aviso exista o
+    no el mail (no confirma cuentas). -#}
+{% block titulo %}Mesa de implementación{% endblock %}
+{% block chip %}Mesa de implementación{% endblock %}
+{% block mrz %}IMPLEMENTACION{% endblock %}
+
+{% block cuerpo %}
+    <h1>Ingresá</h1>
+    <p class="bajada">Entrá con el mail y la clave que te dio el equipo de Colm3na.</p>
+    {% if error == 'login' %}<div class="error" role="alert">Mail o clave incorrectos.</div>
+    {% elif error == 'espera' %}<div class="error" role="alert">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>{% endif %}
+    <form method="post" action="/implementacion/ingresar" autocomplete="on">
+      <label for="im-mail">Mail</label>
+      <input id="im-mail" type="email" name="mail" autocomplete="username" required autofocus>
+      <label for="im-clave">Clave</label>
+      <input id="im-clave" type="password" name="clave" autocomplete="current-password" required>
+      <button class="enviar" type="submit">Ingresar</button>
+    </form>
+    <p class="bajada" style="margin-top:18px;">¿Sos del equipo de Colm3na? Entrá con tu usuario desde <a href="/entornos#implementacion">Entornos</a>.</p>
+{% endblock %}

@@ -241,6 +241,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Moonshot, Qwen de Alibaba; Anthropic sale de `precios_ia`). Mismo prompt del extractor;
   ensayos en `CasoHerramienta` sin identidad. Ninguna ruta de la app lo
   importa. Ver "Herramientas".
+- implementacion.py — **Mesa de implementación** (`PLAN_IMPLEMENTACION.md`
+  I1–I14, contrato `docs/implementacion/API.md`): el motor PURO de la
+  ticketera equipo ↔ sindicato (seis tipos de tarjeta, estados y turnos,
+  quién resuelve una aprobación, códigos PE0001 / AR000123 / HI0001, saneo
+  de textos y topes). Modelos `Impl*` y funciones `impl_*` en db.py; rutas
+  `/implementacion*` y `/api/implementacion/*` en main.py. Ver
+  "Herramientas" y "Estado actual" 50.
 - fiesta.py + mercadopago.py — **Fiesta SUPARA**, el subproducto de entradas
   de un evento masivo (`PLAN_FIESTA.md`, `docs/FIESTA.md`): `fiesta.py` es el
   motor puro (cupo, topes acumulados, vencimiento, ventana de la entrada,
@@ -1783,6 +1790,29 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     metodología de Emil Kowalski) en 5.14; y **acceso por link directo con PIN
     propio** (`/documento-integrador`, variable `INTEGRADOR_PIN`).
 
+50. **Mesa de implementación** (2026-11-14, Plataforma 0.70.01,
+    `PLAN_IMPLEMENTACION.md` I1–I14; pedido de SDN: una herramienta de guía y
+    registro de la implementación que no haya que explicar). Pestaña
+    **Implementación** en `/entornos` (proyectos, usuarios del sindicato,
+    plan general, herramientas) y la **Mesa** en `/implementacion`, donde el
+    sindicato entra con usuarios propios: tarjetas grandes por color (Pedido,
+    Consulta, Entrega de archivo, Aprobación, Error, Aviso), un solo flujo
+    que dice siempre quién tiene que responder, notas «solo equipo»,
+    archivos con marca de datos personales y descargas registradas, carpetas
+    Entrada / Salida, registro de aprobaciones, plan operativo de seis fases
+    con hitos, códigos para nombrar todo (PE0001, AR000123, HI0001,
+    PE0004-3) con relaciones y «Responder con…», avisos por mail y
+    exportación en ZIP. El **Plan general de implementación**
+    (`recursos/colm3na-plan-general-implementacion.html`, 12 páginas)
+    reemplaza al Plan Maestro y al plan de septiembre. Hecho por agentes
+    (4 de desarrollo, 2 de QA independiente: 18 defectos de servidor y 9 de
+    pantalla corregidos antes del merge). **Vive en Pruebas con datos reales**
+    (I3): las tablas `impl*` quedan fuera de todo clonado y recarga. **Queda
+    de SDN**: revisar los 48 hitos de La Bancaria antes de cargarlos. Lo
+    interno se numera aparte (I15) y la Entrega la cierra quien la recibe
+    (I16).
+    Ver "Herramientas" y HISTORIAL.md, «Mesa de implementación».
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -2375,6 +2405,51 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   nadie, todos en empate). Confianza y Formato no impactan. Determinista,
   en el resultado y en cada ensayo guardado.
 - Tests: `test_laboratorio_modelos.py` (la llamada se simula en `_post`).
+
+**Mesa de implementación** (`implementacion.py`, `templates/impl_*.html`,
+`static/implementacion/`; `PLAN_IMPLEMENTACION.md` I1–I14, contrato
+`docs/implementacion/API.md`, informes `docs/implementacion/QA-*.md`;
+2026-11-14):
+- **Dos puertas** (I1, I2): el equipo, con su usuario nominal de plataforma,
+  por `/entornos` → Implementación; el sindicato por `/implementacion`, con
+  **usuarios propios** (`ImplUsuario`, mail + clave transitoria que se cambia
+  en el primer ingreso; cookie `sesion_implementacion` en `COOKIES_POR_ROL`).
+  `main._actor_impl` es la única puerta: el sindicato alcanza SOLO su
+  proyecto y un id ajeno es **404**, nunca 403. Todo es 404 en demo.
+- **Vive en Pruebas con datos reales** (I3, decisión de SDN): las tablas
+  `impl*` (`db.IMPL_TABLAS`) no las toca `clonar_demo_a_pruebas.py` ni el
+  borrado de un sindicato, y sus migraciones son idempotentes (la marca de
+  Alembic sí se clona). Un test falla si aparece una tabla `impl` nueva sin
+  excluir. `exportar.zip` (solo equipo) es el resguardo.
+- **Un proyecto por sindicato** (I4), que puede no tener sindicato de
+  Colm3na asociado: la implementación empieza antes del alta.
+- **Seis tipos, un flujo** (Abierta → En curso → Respondida → Cerrada,
+  Reabrir). Responder y cambiar de estado es un solo acto. **Una aprobación
+  la resuelve solo el lado que NO la pidió** y resuelta es inmutable. Un
+  aviso nace cerrado y solo registra quién lo leyó. `acciones` lo calcula el
+  servidor (`implementacion.acciones_de`): la pantalla no decide permisos.
+- **Notas «solo equipo»** (I8): el filtro va EN LA CONSULTA; para el
+  sindicato no viajan la nota, sus archivos, sus eventos ni sus relaciones.
+  Lo interno se numera aparte (`PE0001-N1`, `AI000001`, I15): la serie que
+  ve el sindicato no tiene saltos.
+- **Archivos** (I5): hasta 5 por envío, 20 MB cada uno, bytes en la base;
+  son documentos y no pasan por `imagenes.achicar` (excepción declarada).
+  Con «datos personales» los bajan solo el equipo y quien los subió; toda
+  descarga queda registrada; borrar deja la constancia. Siempre salen como
+  descarga. Una ruta con archivos **autoriza antes de leer el cuerpo**
+  (`_impl_formulario`).
+- **Todo tiene código** (I12–I14): un contador por tipo y proyecto
+  (`ImplContador`, `FOR UPDATE`); nombrar un código en un texto deja la
+  relación (`ImplRelacion`) y «Responder con…» vincula la tarjeta nueva y sus
+  archivos. La API manda `refs`, nunca HTML. `buscar?codigo=` contesta el
+  mismo 404 para inexistente, ajeno e interno.
+- **Avisos solo por mail** (I6), a quien tiene que responder: código, título
+  y enlace armado con la URL del entorno (nunca el `Host`), sin el texto ni
+  archivos. Freno de 30 envíos por 10 minutos por usuario del sindicato.
+- **Diseño** (I10, I11): dirección B, «sala de mando» en fondo claro; la
+  vista por defecto es «Mis pendientes» y **no se usa «me toca / te toca»**.
+- Tests: `test_implementacion.py` (motor), `_db`, `_acceso`, `_api`,
+  `_codigos`, `_pantalla` y `_qa` (los del QA independiente).
 
 **Fiesta SUPARA** (`fiesta.py`, `mercadopago.py`, `templates/fiesta_*.html`,
 `static/fiesta/`, `static/vendor/jsqr/`; `PLAN_FIESTA.md` D1–D10, guía
@@ -3070,7 +3145,10 @@ actual" de este archivo. La bitácora **apunta** a ambos, no los repite.
    HTML en `recursos/` y registrarlo en `recursos.SEMILLA`.
 
 **Commits.** El autor del commit es la persona (su `git config user.name`
-y `user.email`), nunca "Claude". Todo commit cuyo código escribió Claude
+y `user.email`), nunca "Claude". **Excepción: en las sesiones de Code en la nube
+el autor sale como «Claude»** (así viene configurado git ahí; decisión de SDN,
+2026-11-14: se deja como está y no se reescribe), siempre con la línea
+`Co-authored-by` de abajo. Todo commit cuyo código escribió Claude
 Code lleva al pie del mensaje:
 
 ```
@@ -3110,6 +3188,12 @@ se agrega ahí.
   reportes son cortos, con ejemplos, y **cada error se clasifica por origen: la
   app, los recibos de prueba o la configuración** antes de tocar código (en la
   tanda de La Bancaria casi todos los «fallos» eran de configuración).
+- **Las preguntas, de a UNA, con opciones y la recomendación** (regla de SDN,
+  2026-11-14, vale para todos los proyectos): al refinar una idea o un plan no
+  se manda una lista de preguntas. Se hace una sola por vez, con sus opciones
+  cerradas (más «otra»), marcando cuál se recomienda y por qué en una línea;
+  recién con la respuesta se pasa a la siguiente. Cada respuesta queda como
+  decisión numerada en el plan del bloque.
 - **Reportes, no narración** (regla de SDN, 2026-10-11): no contar paso por
   paso lo que se va haciendo. Mientras dura el trabajo, un reporte cada ~10
   minutos o al terminar, con tres partes: qué se hizo, qué quedó listo y qué
