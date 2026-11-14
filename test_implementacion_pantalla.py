@@ -276,3 +276,20 @@ def test_la_resaltada_respeta_reducir_movimiento():
 def test_la_pestana_muestra_el_enlace_de_ingreso_del_sindicato_con_boton_copiar():
     js = _sin_comentarios(_texto(EQUIPO_JS))
     assert "/implementacion/ingresar" in js and "navigator.clipboard.writeText" in js and "Copiar enlace" in js
+
+
+# ---------- QA de pantallas (2026-11-14) ----------
+
+def test_qa_pantallas_correcciones_de_cliente():
+    js = _texto(JS)
+    # un hash con % mal formado no rompe el ruteo
+    assert "try { return decodeURIComponent(x); }" in js
+    # el tope de cantidad y de peso se avisa antes de subir
+    assert "TOPE_CANTIDAD = 5" in js and "TOPE_TOTAL = 40 * 1024 * 1024" in js and js.count("pesoArchivos(") >= 3
+    # una sesión vencida al ENVIAR no saca a la persona de la pantalla ni el equipo va al ingreso del sindicato
+    assert "opciones.method === 'POST'" in js and "'/entornos'" in js
+    # el equipo puede exportar todo
+    assert "exportar.zip" in js or "exportar.zip" in _texto(PLANTILLA)
+    assert "exportar.zip" in _texto(EQUIPO_JS)
+    # la tarjeta de usuarios no se ve hasta elegir un proyecto (flex pisaba [hidden])
+    assert ".impl-caja[hidden]" in _texto(EQUIPO_CSS)

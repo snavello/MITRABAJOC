@@ -121,6 +121,7 @@
   <div class="nav-pie">
     <a class="btn pri nueva-desk" href="#nueva"><svg class="ic"><use href="#i-mas"/></svg>Nueva tarjeta</a>
     {% if yo.lado == 'equipo' %}
+    {% if proyecto %}<a class="btn lisa exportar-desk" href="{{ api }}/exportar.zip" download><svg class="ic" aria-hidden="true"><use href="#i-bajar"/></svg>Exportar todo (ZIP)</a>{% endif %}
     <a class="btn lisa salir-desk" href="/entornos"><svg class="ic"><use href="#i-salir"/></svg>Salir</a>
     {% else %}
     <form class="salir-desk" method="post" action="/implementacion/salir"><button class="btn lisa" type="submit"><svg class="ic"><use href="#i-salir"/></svg>Salir</button></form>

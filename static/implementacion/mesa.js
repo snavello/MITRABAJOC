@@ -16,6 +16,16 @@
   const PID = PROYECTO ? PROYECTO.id : null;
   const BASE = '/api/implementacion/p/' + PID + '/';
   const TOPE_ARCHIVO = 20 * 1024 * 1024;
+  const TOPE_TOTAL = 40 * 1024 * 1024;
+  const TOPE_CANTIDAD = 5;
+  // Mismo chequeo que hace el servidor, antes de subir nada.
+  function pesoArchivos(files) {
+    if (files.length > TOPE_CANTIDAD) return 'Podés subir hasta ' + TOPE_CANTIDAD + ' archivos por vez. Elegiste ' + files.length + '.';
+    let total = 0;
+    for (const a of files) { if (a.size > TOPE_ARCHIVO) return '«' + a.name + '» pesa más de 20 MB.'; total += a.size; }
+    if (total > TOPE_TOTAL) return 'Los archivos juntos pesan más de 40 MB. Mandalos en dos veces.';
+    return '';
+  }
 
   const TIPOS = {};
   const ORDEN_TIPOS = [];
@@ -111,7 +121,12 @@
       throw new ErrorMesa('No hay conexión con el servidor. Revisá tu internet y probá de nuevo.', 0);
     }
     if (r.status === 401) {
-      window.location.href = '/implementacion/ingresar';
+      // Al ENVIAR no se saca a la persona de la pantalla: perdería lo que escribió.
+      const entrada = ES_EQUIPO ? '/entornos' : '/implementacion/ingresar';
+      if (opciones && opciones.method === 'POST') {
+        throw new ErrorMesa('Tu sesión venció. Abrí ' + entrada + ' en otra pestaña, entrá de nuevo y volvé a enviar: lo que escribiste sigue acá.', 401);
+      }
+      window.location.href = entrada;
       throw new ErrorMesa('Tu sesión venció. Volvé a entrar.', 401);
     }
     let cuerpo = null;
@@ -666,7 +681,8 @@
     const i = raw.indexOf('?');
     const ruta = i === -1 ? raw : raw.slice(0, i);
     const q = {};
-    if (i !== -1) raw.slice(i + 1).split('&').forEach(function (p) { const kv = p.split('='); if (kv[0]) q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || ''); });
+    const dec = function (x) { try { return decodeURIComponent(x); } catch (e) { return x; } };
+    if (i !== -1) raw.slice(i + 1).split('&').forEach(function (p) { const kv = p.split('='); if (kv[0]) q[dec(kv[0])] = dec(kv.slice(1).join('=')); });
     return { ruta: ruta, q: q };
   }
   function vistaNueva(q) {
@@ -685,7 +701,7 @@
       let tipo = TIPOS[q.tipo] ? q.tipo : null;
       // Un Pedido se contesta, sobre todo, con una Entrega; se puede cambiar.
       if (!tipo && origen && tipoDeCodigo(origen.codigo) === 'pedido' && TIPOS.entrega) tipo = 'entrega';
-      const raiz = h('div', null, titulo('Nueva tarjeta', origen ? 'Elegí con qué la respondés. Tocá una.' : 'Elegí qué querés hacer. Tocá una.'));
+      const raiz = h('div', null, titulo('Nueva tarjeta', origen ? 'Elegí con qué la respondés.' : 'Elegí qué querés hacer.'));
       if (origen) raiz.appendChild(h('p', { class: 'responde', role: 'status' }, icono('enlace'), h('span', null, 'Responde a ', h('span', { class: 'cod' }, origen.codigo), origen.titulo ? ' · ' + origen.titulo : '')));
       if (origenMal) raiz.appendChild(h('p', { class: 'err', role: 'alert' }, 'No existe o no lo podés ver: ' + q.responde_a + '. La tarjeta se crea sin vincular.'));
       const zonaForm = h('div', null);
@@ -736,7 +752,7 @@
           ev.preventDefault(); errorEn(envio, '');
           if (!titulo_.value.trim()) { errorEn(envio, 'Poné un título.'); titulo_.focus(); return; }
           if (!texto.value.trim()) { errorEn(envio, 'Contanos de qué se trata.'); texto.focus(); return; }
-          for (const a of archivos.files) { if (a.size > TOPE_ARCHIVO) { errorEn(envio, '«' + a.name + '» pesa más de 20 MB.'); return; } }
+          const pb = pesoArchivos(archivos.files); if (pb) { errorEn(envio, pb); return; }
           const fd = new FormData();
           fd.append('tipo', k); fd.append('titulo', titulo_.value.trim()); fd.append('texto', texto.value.trim());
           if (selEtapa.value) fd.append('etapa_id', selEtapa.value);
@@ -774,7 +790,11 @@
     return d;
   }
   function vistaTarjeta(numero) {
-    return montar('tarjeta', async function () { return dibujarTarjeta(await traerTarjeta(await idDeNumero(numero))); });
+    return montar('tarjeta', async function () {
+      let id;
+      try { id = await idDeNumero(numero); } catch (e) { if (e.status === 404) { S.actual = null; return noExiste(); } throw e; }
+      return dibujarTarjeta(await traerTarjeta(id));
+    });
   }
   function noExiste() {
     return h('div', { class: 'vacio' }, h('p', { role: 'alert' }, 'No existe o no lo podés ver.'),
@@ -973,7 +993,7 @@
       ev.preventDefault(); errorEn(zonaError, '');
       const hayArchivos = archivos && archivos.files.length;
       if (!texto.value.trim() && !selEstado.value && !hayArchivos) { errorEn(zonaError, 'Escribí algo, adjuntá un archivo o elegí a qué estado pasa.'); texto.focus(); return; }
-      if (hayArchivos) for (const a of archivos.files) { if (a.size > TOPE_ARCHIVO) { errorEn(zonaError, '«' + a.name + '» pesa más de 20 MB.'); return; } }
+      if (hayArchivos) { const pb = pesoArchivos(archivos.files); if (pb) { errorEn(zonaError, pb); return; } }
       const fd = new FormData();
       if (texto.value.trim()) fd.append('texto', texto.value.trim());
       if (selEstado.value) fd.append('estado_nuevo', selEstado.value);
@@ -1023,6 +1043,7 @@
       if (aqui) { marcarNav(S.ultima); resaltar($vista.querySelector('[data-codigo="' + c + '"]')); return; }
       marcarNav(S.ultima); vistaCodigo(c); return;
     }
+    if (r === 'buscar' && !(p.q.q || '').trim()) { window.location.hash = '#pendientes'; return; }
     if (r === 'buscar') { S.actual = null; marcarNav(null); vistaBuscar(p.q.q || ''); return; }
     if (['pendientes', 'tablero', 'plan', 'carpetas', 'aprobaciones', 'nueva'].indexOf(r) === -1) r = 'pendientes';
     S.actual = null;

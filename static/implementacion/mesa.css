@@ -415,3 +415,11 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
   .barra i, .tile, .mini, a.kpi, .btn, .seg, .cp { transition: none; }
   .resalta { animation: none; }
 }
+
+/* QA pantallas: zonas táctiles de 44 px en teléfono */
+@media (pointer: coarse), (max-width: 860px) {
+  .btn.chico, .volver, .ayuda-q, summary, .top-salir, .saltar { min-height: 44px; }
+  .volver, summary, .top-salir { display: inline-flex; align-items: center; }
+  .fila .nom a, .nom small a { display: inline-block; min-height: 44px; padding-top: 12px; }
+  .buscar-c input { min-height: 44px; }
+}
