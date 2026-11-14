@@ -124,3 +124,25 @@ Antes del bloque 3: mockup de las pantallas para que SDN elija.
   sobre fondo claro, no oscuro. Mockup: `disenos/mesa-implementacion-propuestas.html`
   (fuera de git).
 - **I11. La vista por defecto se llama «Mis pendientes»**, no «Me toca».
+
+## Códigos y relaciones (pedido de SDN, 2026-11-14)
+
+Todo lo que se genera tiene un código para poder nombrarlo, adjuntarlo o
+referirlo («ver pedido PE0001», «hay errores en el archivo AR000123»).
+
+- **I12. Un contador por tipo, por proyecto.** Tarjetas: `PE` pedido, `CO`
+  consulta, `EN` entrega, `AP` aprobación, `ER` error, `AV` aviso, con
+  cuatro dígitos (PE0001). Archivos: `AR` con seis (AR000123). El código
+  nace con la cosa y no cambia nunca.
+- **I13. Relaciones de dos maneras.** (1) Escribir un código en cualquier
+  texto lo vuelve enlace y deja anotada la relación en las dos puntas
+  («menciona» / «mencionada en»). (2) El botón «Responder con…» de una
+  tarjeta abierta crea una tarjeta nueva ya vinculada («responde a» /
+  «respondida con»); un archivo subido en esa respuesta queda ligado a la
+  original. Cada tarjeta y cada archivo muestra su bloque «Relacionadas».
+  Un código de otro proyecto, o de algo que el sindicato no puede ver (nota
+  interna), no enlaza ni revela que existe.
+- **I14. También hitos y mensajes.** Hitos: `HI0001`. Mensajes: el código de
+  su tarjeta más su orden en el hilo (`PE0004-3`), que enlaza directo a ese
+  mensaje. Las etapas se nombran por su nombre. Un buscador único: se
+  escribe un código y lleva a la cosa.
