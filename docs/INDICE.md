@@ -78,6 +78,7 @@ cuenta), no en cada commit.
 | `docs/chat/` | Documentos que salen de Chat y Cowork, con prefijo de fecha (`AAAA-MM-DD-tema.md`). Ver `OPERATIVA.md`. |
 | `docs/prompts/` | Prompts reutilizables para aplicar en OTROS proyectos con Claude Code, con lo aprendido acá. Primero: `MAPA_FUNCIONAL.md` (mapa app → funcionalidad → código, datos y servicios), publicado también como Recurso de `/entornos`. |
 | `docs/generador/` | Genera `recursos/documentacion-tecnica.html` desde el código. |
+| `docs/implementacion/` | Plan general de implementación (fuente HTML, genérico para cualquier sindicato) y `diferencias.md` (qué quedó afuera de los planes viejos y por qué; hitos propuestos para La Bancaria). Se publica en `recursos/colm3na-plan-general-implementacion.html`. |
 | `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4), hoja guía de la reunión con autoridades y catálogo de trámites (`tramites-bancaria.json` con las 86 gestiones verificadas → `tramites-bancaria.html` con `generar_tramites.py`, y → `tramites-bancaria.docx` (completo) y `tramites-bancaria-resumen.docx` (6 páginas) con `generar_tramites_docx.js`). Fuente de los artifacts y de los PDF. Versiones Word para corregir (con control de cambios) generadas por `generar_docx.js`. |
 | `docs/capturas-georef/` | Capturas de las pantallas de georreferenciación. |
 | `recursos/` | Documentos publicados en `/entornos` (HTML + miniatura), registrados en `recursos.SEMILLA`. |
@@ -103,8 +104,9 @@ a SDN. **No se escribe en ningún documento.**
 | Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
 | Anexo Servicios Mensuales | `recursos/anexo-servicios-mensuales.html` |
 | Documentación técnica (generada del código) | `recursos/documentacion-tecnica.html` |
-| Plan Maestro Colm3na | `recursos/colm3na-plan-maestro.html` |
-| Plan de implementación en el sindicato | `recursos/colm3na-plan-implementacion-sindicato.html` |
+| **Plan general de implementación** (12 hojas A4, genérico para cualquier sindicato; fusiona y reemplaza a los dos de abajo) | `recursos/colm3na-plan-general-implementacion.html` ← `docs/implementacion/plan-general.html`; qué quedó afuera y los hitos propuestos para La Bancaria en `docs/implementacion/diferencias.md` |
+| Plan Maestro Colm3na (reemplazado por el Plan general) | `recursos/colm3na-plan-maestro.html` |
+| Plan de implementación en el sindicato (reemplazado por el Plan general) | `recursos/colm3na-plan-implementacion-sindicato.html` |
 | Video "Recibos y Trámites" | `recursos/mi-trabajo-recibos-tramites.mp4` |
 
 ## 3. Proyecto Claude "Mitrabajo"

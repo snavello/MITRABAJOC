@@ -65,6 +65,20 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "plan-general-implementacion",
+        "titulo": "Plan general de implementación",
+        "descripcion": "El plan de referencia para poner en marcha Colm3na en cualquier sindicato: seis fases "
+                       "(preparar, acordar, relevar, configurar, piloto e implementación total), con qué hace "
+                       "el equipo y qué el sindicato, qué se entrega y cuándo se pasa a la siguiente; roles, "
+                       "ritmo, la Mesa de implementación, datos para el alta, riesgos, indicadores y soporte. "
+                       "12 hojas A4. Reemplaza a «Implementación en el sindicato» y al «Plan Maestro». "
+                       "Fuente: docs/implementacion/plan-general.html.",
+        "fecha": date(2026, 11, 14),
+        "archivo": "colm3na-plan-general-implementacion.html",
+        "miniatura": "colm3na-plan-general-implementacion.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "documento-integrador",
         "titulo": "Colm3na, de punta a punta: documento integrador",
         "descripcion": "Para quien se suma al equipo o necesita ponerse al día: el ecosistema, actores y "
@@ -310,9 +324,9 @@ SEMILLA = [
     },
     {
         "clave": "plan-maestro",
-        "titulo": "Plan Maestro Colm3na",
-        "descripcion": "Quién es quién, hitos con fecha y tareas semana a semana "
-                       "de la primera implementación (La Bancaria).",
+        "titulo": "Plan Maestro Colm3na (reemplazado)",
+        "descripcion": "Reemplazado por el Plan general de implementación. Quién es quién, hitos con "
+                       "fecha y tareas semana a semana de la primera implementación (La Bancaria).",
         "fecha": date(2026, 9, 7),
         "archivo": "colm3na-plan-maestro.html",
         "miniatura": "colm3na-plan-maestro.jpg",
@@ -320,9 +334,9 @@ SEMILLA = [
     },
     {
         "clave": "plan-implementacion-sindicato",
-        "titulo": "Plan de implementación en el sindicato",
-        "descripcion": "Estrategia, plan por etapas con checklist, formularios de "
-                       "relevamiento y registro de decisiones.",
+        "titulo": "Plan de implementación en el sindicato (reemplazado)",
+        "descripcion": "Reemplazado por el Plan general de implementación. Estrategia, plan por "
+                       "etapas con checklist, formularios de relevamiento y registro de decisiones.",
         "fecha": date(2026, 9, 4),
         "archivo": "colm3na-plan-implementacion-sindicato.html",
         "miniatura": "colm3na-plan-implementacion-sindicato.jpg",
