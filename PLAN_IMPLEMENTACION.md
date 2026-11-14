@@ -146,3 +146,16 @@ referirlo («ver pedido PE0001», «hay errores en el archivo AR000123»).
   su tarjeta más su orden en el hilo (`PE0004-3`), que enlaza directo a ese
   mensaje. Las etapas se nombran por su nombre. Un buscador único: se
   escribe un código y lleva a la cosa.
+
+## Cierre de las decisiones abiertas del QA (SDN, 2026-11-14)
+
+- **I15. Lo «solo equipo» se numera aparte.** Las notas internas llevan su
+  propia serie dentro de la tarjeta (`PE0001-N1`, `PE0001-N2`) y los archivos
+  internos su propio contador (`AI000001`). La serie que ve el sindicato
+  (mensajes `PE0001-1, -2, -3`, archivos `AR…`) queda corrida, sin saltos, y
+  el código de cada cosa es el mismo para los dos lados. Reemplaza lo dicho
+  en I14 sobre el orden de los mensajes. Cierra QA-12.
+- **I16. Una Entrega de archivo la cierra quien la recibe, con un botón.**
+  «Recibido, está bien» la cierra y deja constancia de quién y cuándo;
+  «Hay un problema» la devuelve a quien la mandó, con un texto obligatorio.
+  No se cierra sola al llegar el archivo. Cierra QA-24.

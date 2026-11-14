@@ -1808,9 +1808,9 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (4 de desarrollo, 2 de QA independiente: 18 defectos de servidor y 9 de
     pantalla corregidos antes del merge). **Vive en Pruebas con datos reales**
     (I3): las tablas `impl*` quedan fuera de todo clonado y recarga. **Queda
-    de SDN**: decidir si los huecos de numeración que delatan una nota
-    interna se aceptan (QA-12) y si una Entrega se cierra sola al llegar el
-    archivo (QA-24); revisar los 48 hitos de La Bancaria antes de cargarlos.
+    de SDN**: revisar los 48 hitos de La Bancaria antes de cargarlos. Lo
+    interno se numera aparte (I15) y la Entrega la cierra quien la recibe
+    (I16).
     Ver "Herramientas" y HISTORIAL.md, «Mesa de implementación».
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
@@ -2430,8 +2430,8 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   servidor (`implementacion.acciones_de`): la pantalla no decide permisos.
 - **Notas «solo equipo»** (I8): el filtro va EN LA CONSULTA; para el
   sindicato no viajan la nota, sus archivos, sus eventos ni sus relaciones.
-  El número de mensaje y de archivo cuenta también lo interno (huecos
-  visibles: QA-12, decisión abierta).
+  Lo interno se numera aparte (`PE0001-N1`, `AI000001`, I15): la serie que
+  ve el sindicato no tiene saltos.
 - **Archivos** (I5): hasta 5 por envío, 20 MB cada uno, bytes en la base;
   son documentos y no pasan por `imagenes.achicar` (excepción declarada).
   Con «datos personales» los bajan solo el equipo y quien los subió; toda
@@ -3145,7 +3145,10 @@ actual" de este archivo. La bitácora **apunta** a ambos, no los repite.
    HTML en `recursos/` y registrarlo en `recursos.SEMILLA`.
 
 **Commits.** El autor del commit es la persona (su `git config user.name`
-y `user.email`), nunca "Claude". Todo commit cuyo código escribió Claude
+y `user.email`), nunca "Claude". **Excepción: en las sesiones de Code en la nube
+el autor sale como «Claude»** (así viene configurado git ahí; decisión de SDN,
+2026-11-14: se deja como está y no se reescribe), siempre con la línea
+`Co-authored-by` de abajo. Todo commit cuyo código escribió Claude
 Code lleva al pie del mensaje:
 
 ```
