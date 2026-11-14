@@ -27,7 +27,7 @@
   async function pedirJson(url, opciones) {
     let r;
     try { r = await fetch(url, Object.assign({ credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }, opciones || {})); }
-    catch (e) { throw new Error('No hay conexión con el servidor.'); }
+    catch (e) { throw new Error(navigator.onLine === false ? 'Sin conexión: tu dispositivo no tiene internet. Revisalo y probá de nuevo.' : 'El servidor no respondió. Probá de nuevo en un momento.'); }
     let cuerpo = null;
     if ((r.headers.get('content-type') || '').indexOf('json') !== -1) { try { cuerpo = await r.json(); } catch (e) { cuerpo = null; } }
     if (!r.ok) {
@@ -70,12 +70,12 @@
             h('a', { class: 'boton', href: '/implementacion?p=' + p.id, target: '_blank', rel: 'noopener' }, 'Abrir la mesa'),
             h('a', { class: 'boton suave', href: '/api/implementacion/p/' + p.id + '/exportar.zip', download: '' }, 'Exportar todo (ZIP)'),
             h('button', { class: 'boton suave', type: 'button', onclick: function () { abrirUsuarios(p); } }, 'Usuarios'),
-            h('button', { class: 'boton suave', type: 'button', onclick: async function (ev) {
+            p.tiene_hitos ? null : h('button', { class: 'boton suave', type: 'button', onclick: async function (ev) {
               const b = ev.currentTarget; b.disabled = true; msg.textContent = '';
-              try { const r = await post(API + '/proyectos/' + p.id + '/hitos-semilla'); msg.textContent = 'Se cargaron ' + (r.cargados || 0) + ' hitos.'; }
-              catch (e) { msg.textContent = e.message; } finally { b.disabled = false; }
+              try { const r = await post(API + '/proyectos/' + p.id + '/hitos-semilla'); msg.textContent = 'Se cargaron ' + (r.cargados || 0) + ' hitos.'; b.hidden = true; }
+              catch (e) { msg.textContent = e.message; b.disabled = false; }
             } }, 'Cargar hitos de La Bancaria')),
-          msg));
+          p.tiene_hitos ? h('span', { class: 'impl-vacio', role: 'status' }, 'Plan cargado: ' + (p.n_hitos || 0) + (p.n_hitos === 1 ? ' hito' : ' hitos')) : msg));
       });
     } catch (e) {
       estado.textContent = e.message;

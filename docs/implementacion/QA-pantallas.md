@@ -15,11 +15,11 @@ Navegador real (Playwright/Chromium), dos contextos (equipo y sindicato), 1280x8
 | P-07 | Baja | `#buscar?q=` | «9 tarjetas con «»». | Corregido: vuelve a Pendientes |
 | P-08 | Media | Teléfono | Botones chicos (Ficha, Bajar, Borrar, Volver, Responder con…, Tarjeta para este hito, resumen) de 38 px o menos; en /entornos 30 px. | Corregido (44 px con puntero táctil o ≤860 px) |
 | P-09 | Baja | Textos | «Tocá una» (en escritorio no se toca). | Corregido |
-| P-10 | Baja | Tarjeta aprobada | Triple redundancia «Aprobada · Aprobada · APROBADA». | Queda (estético) |
-| P-11 | Baja | Equipo → «Cargar hitos de La Bancaria» | Se ofrece siempre y, si ya tiene hitos, termina en 409 (con mensaje visible). El servidor no informa si hay hitos. | Queda (pedir `tiene_hitos` en la lista de proyectos) |
-| P-12 | Baja | Avisos | El toast «Tarjeta creada.» tapa unos segundos el selector de estado en escritorio. | Queda |
-| P-13 | Baja | cambiar-clave | El token firmado viaja en la URL (GET). | Queda (servidor) |
-| P-14 | Info | Mensaje sin red | Dice «Revisá tu internet» también si el que cayó es el servidor. | Queda |
+| P-10 | Baja | Tarjeta aprobada | Triple redundancia «Aprobada · Aprobada · APROBADA». | Corregido: la tarjeta resuelta muestra un solo sello y «por quién · cuándo» |
+| P-11 | Baja | Equipo → «Cargar hitos de La Bancaria» | Se ofrece siempre y, si ya tiene hitos, termina en 409 (con mensaje visible). El servidor no informa si hay hitos. | Corregido: la lista suma `tiene_hitos` y `n_hitos`; el botón solo si no hay plan («Plan cargado: N hitos») |
+| P-12 | Baja | Avisos | El toast «Tarjeta creada.» tapa unos segundos el selector de estado en escritorio. | Corregido: el aviso va arriba, sin capturar el puntero |
+| P-13 | Baja | cambiar-clave | El token firmado viaja en la URL (GET). | Aceptado: mismo patrón que `/admin/cambiar-clave` |
+| P-14 | Info | Mensaje sin red | Dice «Revisá tu internet» también si el que cayó es el servidor. | Corregido: «Sin conexión» (`navigator.onLine`) distinto de «El servidor no respondió» |
 
 ## Resistió
 

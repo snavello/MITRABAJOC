@@ -118,7 +118,11 @@
     try {
       r = await fetch(url, Object.assign({ credentials: 'same-origin', headers: { Accept: 'application/json' } }, opciones || {}));
     } catch (e) {
-      throw new ErrorMesa('No hay conexión con el servidor. Revisá tu internet y probá de nuevo.', 0);
+      // P-14: sin red del dispositivo no es lo mismo que un servidor que no contesta.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        throw new ErrorMesa('Sin conexión: tu dispositivo no tiene internet. Revisalo y probá de nuevo.', 0);
+      }
+      throw new ErrorMesa('El servidor no respondió. Probá de nuevo en un momento.', 0);
     }
     if (r.status === 401) {
       // Al ENVIAR no se saca a la persona de la pantalla: perdería lo que escribió.
@@ -847,9 +851,17 @@
     raiz.appendChild(h('a', { class: 'volver', href: '#' + (S.ultima || 'pendientes') }, icono('volver'), 'Volver'));
     raiz.appendChild(h('div', { class: 'tj-cab', 'data-codigo': t.codigo || null }, icono(info.icono || t.icono || 'inbox'), h('span', null, t.tipo_nombre || info.nombre || t.tipo),
       h('span', { class: 'n' }, t.codigo ? codigo(t.codigo, { clase: 'en-cab', que: 'el código de la tarjeta' }) : h('span', { class: 'cod en-cab' }, '#' + t.numero))));
-    const chips = h('div', { class: 'chips' }, h('span', { class: 'chip neutro' }, nombreEstado(t.estado)), chipEspera(t));
-    if (t.estado === 'aprobada') chips.appendChild(h('span', { class: 'sello' }, 'Aprobada'));
-    if (t.estado === 'rechazada') chips.appendChild(h('span', { class: 'sello rech' }, 'Rechazada'));
+    // P-10: una aprobación resuelta se dice UNA vez: el sello, y debajo quién y cuándo.
+    const resuelta = t.estado === 'aprobada' || t.estado === 'rechazada';
+    const chips = h('div', { class: 'chips' });
+    if (resuelta) {
+      const rs = (d.eventos || []).filter(function (e) { return e.que === 'resolver'; }).pop();
+      chips.appendChild(h('span', { class: t.estado === 'aprobada' ? 'sello' : 'sello rech' }, nombreEstado(t.estado)));
+      if (rs) chips.appendChild(h('small', { class: 'resuelta-por' }, 'por ' + (rs.quien || '') + (rs.lado ? ' (' + ladoNombre(rs.lado) + ')' : '') + ' · ' + fechaHora(rs.cuando)));
+    } else {
+      chips.appendChild(h('span', { class: 'chip neutro' }, nombreEstado(t.estado)));
+      chips.appendChild(chipEspera(t));
+    }
     if (acc.responder) chips.appendChild(h('a', { class: 'btn lisa chico responder-con', href: '#nueva?responde_a=' + encodeURIComponent(t.codigo || '') + (t.tipo === 'pedido' ? '&tipo=entrega' : '') }, icono('enviar'), 'Responder con…'));
     raiz.appendChild(h('div', { class: 'tj-tit' }, h('h1', null, enlazar(t.titulo, t.refs)), chips));
 

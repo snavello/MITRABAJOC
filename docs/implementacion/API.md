@@ -69,6 +69,7 @@ Con el canal apagado no falla nada. El equipo recibe en el mail de su
 - **Aprobaciones**: suma `etapa`; `texto` es el mensaje con que se resolvió.
 - **Avisos por mail**: también un **aviso** (tipo) al nacer le llega al otro lado, aunque no espere respuesta. Cerrar no avisa a nadie.
 - **Equipo**: `POST /api/entornos/implementacion/proyectos/{id}/hitos-semilla` carga los 48 hitos de La Bancaria (`data/implementacion/hitos_bancaria.json`) en un proyecto sin hitos (409 si ya los tiene).
+- **Lista de proyectos**: `GET /api/entornos/implementacion/proyectos` suma por proyecto `n_hitos` (int) y `tiene_hitos` (bool), contados en una sola consulta agrupada; la pestaña ofrece «Cargar hitos de La Bancaria» solo si `tiene_hitos` es false.
 - **Página**: `GET /implementacion` suma al contexto `es_equipo` y `api` (`/api/implementacion/p/{pid}`); `proyecto` es `null` si el equipo no tiene proyectos todavía.
 
 ## Códigos y relaciones (I12, I13, I14)

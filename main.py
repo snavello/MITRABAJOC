@@ -12668,9 +12668,9 @@ def _impl_usuario_dict(u) -> dict:
             "activo": u.activo, "debe_cambiar_clave": u.debe_cambiar_clave, "creado": u.creado}
 
 
-def _impl_proyecto_dict(p, usuarios: int = 0) -> dict:
+def _impl_proyecto_dict(p, usuarios: int = 0, n_hitos: int = 0) -> dict:
     return {"id": p.id, "nombre": p.nombre, "sindicato_id": p.sindicato_id, "activo": p.activo,
-            "creado": p.creado, "usuarios": usuarios}
+            "creado": p.creado, "usuarios": usuarios, "n_hitos": n_hitos, "tiene_hitos": n_hitos > 0}
 
 
 @app.get(API_IMPL_EQUIPO + "/proyectos")
@@ -12679,7 +12679,10 @@ def api_impl_proyectos(request: Request):
     with db.get_session() as s:
         cuentan = dict(s.exec(select(db.ImplUsuario.proyecto_id, db.func.count())
                               .group_by(db.ImplUsuario.proyecto_id)).all())
-        return {"proyectos": [_impl_proyecto_dict(p, int(cuentan.get(p.id, 0))) for p in db.impl_proyectos(s)]}
+        hitos = dict(s.exec(select(db.ImplHito.proyecto_id, db.func.count())
+                            .group_by(db.ImplHito.proyecto_id)).all())
+        return {"proyectos": [_impl_proyecto_dict(p, int(cuentan.get(p.id, 0)), int(hitos.get(p.id, 0)))
+                              for p in db.impl_proyectos(s)]}
 
 
 @app.post(API_IMPL_EQUIPO + "/proyectos")

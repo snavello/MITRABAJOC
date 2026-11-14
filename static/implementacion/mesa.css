@@ -247,6 +247,7 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 .sello { display: inline-block; border: 3px solid var(--ok); color: var(--ok); font-weight: 800; padding: .15em .7em; border-radius: 6px; transform: rotate(-3deg);
   text-transform: uppercase; letter-spacing: .06em; font-size: .95rem; }
 .sello.rech { border-color: var(--mal); color: var(--mal); }
+.resuelta-por { color: var(--gris); font-weight: 700; align-self: center; }
 .traza summary { cursor: pointer; font-weight: 800; color: var(--gris); min-height: 44px; display: flex; align-items: center; }
 .traza ol { list-style: none; padding: 0; display: grid; gap: 8px; font-size: .9rem; }
 .traza li { border-left: 3px solid var(--linea); padding-left: 12px; }
@@ -340,11 +341,11 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 .vacio { background: #fff; border: 2px dashed #c5ccda; border-radius: 18px; padding: 28px 20px; text-align: center; color: var(--gris); display: grid; gap: 14px; justify-items: center; }
 .vacio p { max-width: 46ch; }
 .err { color: var(--mal); background: var(--mal-f); border-radius: 12px; padding: .7em 1em; font-weight: 700; margin-top: 8px; }
-.aviso { position: fixed; left: 50%; bottom: 96px; translate: -50% 0; background: var(--tinta); color: #fff; padding: .75em 1.2em; border-radius: 12px; font-weight: 700;
+.aviso { position: fixed; left: 50%; top: 16px; translate: -50% 0; pointer-events: none; background: var(--tinta); color: #fff; padding: .75em 1.2em; border-radius: 12px; font-weight: 700;
   z-index: 90; max-width: min(92vw, 520px); text-align: center; box-shadow: 0 10px 30px #15223840; }
 .aviso.mal { background: var(--mal); }
 .aviso.on { animation: aviso-entra var(--mov-medio) var(--ease-entrada) both; }
-@keyframes aviso-entra { from { opacity: 0; translate: -50% 10px; } to { opacity: 1; translate: -50% 0; } }
+@keyframes aviso-entra { from { opacity: 0; translate: -50% -10px; } to { opacity: 1; translate: -50% 0; } }
 
 .dlg { margin: auto; border: 0; border-radius: 18px; padding: 22px; width: min(92vw, 460px); color: var(--tinta); box-shadow: 0 24px 60px #15223860; }
 .dlg::backdrop { background: #0e162680; }
@@ -392,7 +393,7 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
   .fab:active { transform: scale(.96); }
   .cuerpo { margin-left: 0; padding: 20px 16px calc(150px + env(safe-area-inset-bottom)); }
   .titulo { font-size: 2.1rem; }
-  .aviso { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  .aviso { top: calc(12px + env(safe-area-inset-top)); }
   .kpis { gap: 8px; }
   .kpi b { font-size: 2rem; }
   .cols, .tipos { grid-template-columns: 1fr; }
