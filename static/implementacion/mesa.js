@@ -213,7 +213,7 @@
   function miniTarjeta(t) {
     const a = h('a', { class: 'mini', href: '#t' + t.numero },
       h('b', null, '#' + t.numero + ' ' + t.titulo),
-      h('small', null, (t.tipo_nombre || '') + (t.espera ? ' · ' + cap(t.espera_texto || '') : '')),
+      h('small', null, (t.tipo_nombre || '') + (t.espera ? ' · ' + cap(t.espera_texto || '') : ' · ' + nombreEstado(t.estado))),
       t.fecha_limite ? h('small', { style: t.vencida ? 'color:var(--mal)' : null }, (t.vencida ? 'Vencida el ' : 'Vence el ') + fechaCorta(t.fecha_limite)) : null);
     return colorTipo(a, t.tipo);
   }
