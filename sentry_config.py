@@ -141,6 +141,10 @@ def iniciar(dsn: str, entorno: str, release: str = "", transport=None) -> bool:
         include_local_variables=False,          # sin el valor de las variables de cada línea
         traces_sample_rate=0.0, profiles_sample_rate=0.0,      # solo errores: rendimiento ya lo mide Grafana
         max_breadcrumbs=10, attach_stacktrace=False, shutdown_timeout=2,
+        # Los cuerpos de los pedidos no viajan NI SE LEEN: con el valor por defecto el
+        # SDK lee el formulario antes que la ruta, y una ruta que lo lee a mano
+        # (la Mesa de implementación) quedaba esperando un cuerpo ya consumido.
+        max_request_body_size="never",
         # Un HTTPException (403, 422, 503 de "ocupado") no es un error de la app: no viaja.
         integrations=[FastApiIntegration(failed_request_status_codes=set()),
                       StarletteIntegration(failed_request_status_codes=set())],

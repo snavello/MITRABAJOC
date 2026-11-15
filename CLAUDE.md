@@ -2449,8 +2449,14 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   archivos. Freno de 30 envíos por 10 minutos por usuario del sindicato.
 - **Diseño** (I10, I11): dirección B, «sala de mando» en fondo claro; la
   vista por defecto es «Mis pendientes» y **no se usa «me toca / te toca»**.
+- **Una ruta que lee el cuerpo a mano usa SIEMPRE el mismo `request`**
+  (2026-11-15): con Sentry prendido (Pruebas y Demo, no local ni el CI) su
+  integración puede leer el cuerpo antes que la ruta; un `Request` nuevo
+  espera para siempre. Sentry va con `max_request_body_size="never"`.
+  `test_implementacion_sentry.py` corre la API con Sentry prendido desde el
+  arranque, en otro proceso y con tope de tiempo.
 - Tests: `test_implementacion.py` (motor), `_db`, `_acceso`, `_api`,
-  `_codigos`, `_pantalla` y `_qa` (los del QA independiente).
+  `_codigos`, `_pantalla`, `_sentry` y `_qa` (los del QA independiente).
 
 **Fiesta SUPARA** (`fiesta.py`, `mercadopago.py`, `templates/fiesta_*.html`,
 `static/fiesta/`, `static/vendor/jsqr/`; `PLAN_FIESTA.md` D1–D10, guía

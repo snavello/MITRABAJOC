@@ -11039,3 +11039,26 @@ de la app; el token de cambiar-clave va en la URL, como en `/admin`.
 Plan Maestro v1.2 con la regla «ante la duda vale el más nuevo»; qué quedó
 afuera de cada uno y los 48 hitos propuestos para La Bancaria, en
 `docs/implementacion/diferencias.md`.
+
+
+## «Creando…» para siempre: Sentry leía el cuerpo antes que la ruta (2026-11-15, Plataforma 0.70.03)
+
+SDN creó la primera tarjeta en Pruebas y el botón quedó en «Creando…». En el
+registro de Render el POST no aparecía: uvicorn anota un pedido al terminar,
+y este no terminaba. **Origen: la app** (no datos ni configuración), pero solo
+visible con Sentry prendido.
+
+main.py prende Sentry antes de crear la app, así que con `SENTRY_DSN` sus
+rutas quedan envueltas por la integración de Starlette, que para un pedido
+chico lee el cuerpo (JSON o formulario) antes de llamar a la ruta. Las dos
+rutas con archivos de la Mesa leen el cuerpo a mano desde la corrección QA-15
+(autorizar antes de leer) y armaban un `Request` nuevo sobre el mismo canal:
+ese pedido esperaba un cuerpo ya consumido. En local, en el CI y en los
+recorridos con navegador no hay DSN, y en los tests que prenden Sentry se
+prende DESPUÉS de importar main (rutas sin envolver): por eso pasó todo el QA.
+
+Corrección doble, cada una alcanza sola: `_impl_formulario` usa el mismo
+`request` (y toma el formulario ya leído si lo hay), y Sentry va con
+`max_request_body_size="never"`, que además es lo que el proyecto ya decía
+(los cuerpos no viajan). `test_implementacion_sentry.py` corre los tests de la
+API en otro proceso con el DSN puesto antes del arranque y un tope de tiempo.
