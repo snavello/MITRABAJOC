@@ -12847,6 +12847,12 @@ async def _impl_formulario(request: Request):
                 raise implementacion.ErrorImpl("archivo_grande", "El envío pesa más de 40 MB en total.")
         except ValueError:
             raise HTTPException(400, "El pedido no es válido.")
+    # Con Sentry prendido (Pruebas, Demo), su integración lee el cuerpo de un
+    # pedido chico ANTES de la ruta y lo deja en `request._form`. Se usa SIEMPRE
+    # el mismo `request`: armar otro esperaría para siempre un cuerpo que ya se
+    # leyó (así se colgó «Creando…» en Pruebas el 2026-11-15).
+    if getattr(request, "_form", None) is not None:
+        return request._form
     recibido = 0
     original = request.receive
 
@@ -12858,8 +12864,9 @@ async def _impl_formulario(request: Request):
             if recibido > tope:
                 raise implementacion.ErrorImpl("archivo_grande", "El envío pesa más de 40 MB en total.")
         return msg
+    request._receive = receive
     try:
-        return await Request(request.scope, receive).form()
+        return await request.form()
     except (HTTPException, implementacion.ErrorImpl):
         raise
     except Exception:           # cuerpo mal formado (límites, boundary, codificación): 400, nunca 500
