@@ -440,4 +440,4 @@ def test_d28_un_null_en_una_celda_escalable_sola_ahora_se_completa_pero_nada_mas
 
 def test_d28_la_vista_marca_las_celdas_calculadas_sin_innerhtml():
     js = open("static/escalas_estado.js", encoding="utf-8").read()
-    assert "calculada" in js and "celdas_calculadas" in js and "Comentarios de la lectura" in js and "innerHTML" not in js
+    assert "calculada" in js and "celdas_calculadas" in js and "Comentarios de la IA al leer el PDF" in js and "innerHTML" not in js

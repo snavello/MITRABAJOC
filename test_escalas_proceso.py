@@ -577,10 +577,10 @@ def test_la_pantalla_no_usa_innerhtml_y_carga_sus_archivos_con_sello():
     js = (Path(__file__).parent / "static" / "escalas_estado.js").read_text(encoding="utf-8")
     html = (Path(__file__).parent / "templates" / "escalas_estado.html").read_text(encoding="utf-8")
     assert "innerHTML" not in js and "insertAdjacentHTML" not in js and "document.write" not in js
-    assert "sello_static('escalas_estado.js')" in html and "sello_static('fonts/" in html
+    assert "sello_static('escalas_estado.js')" in html and "sello_static('escalas_estado.css')" in html and "sello_static('fonts/" in html
     c = _con_pase()
     cuerpo = c.get("/entornos/herramientas/convenio-escalas/estado").text
-    assert "/static/escalas_estado.js?v=" in cuerpo and "Estado de las grillas" in cuerpo
+    assert "/static/escalas_estado.js?v=" in cuerpo and "/static/escalas_estado.css?v=" in cuerpo and "Estado de las grillas" in cuerpo
 
 
 # ------------------------------------------------- D26 y D27: la primera grilla real (septiembre 2026)
