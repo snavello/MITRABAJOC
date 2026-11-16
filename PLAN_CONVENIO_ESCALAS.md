@@ -207,6 +207,10 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   ficha del art. 25 muestra los importes de la grilla con el rótulo «Zona
   patagónica, según la grilla vigente» y la aclaración de que la grilla no
   publica los grupos A a D.
+- **D25 · Sin salida hacia Tu recibo** (SDN, 2026-11-16, al ver la primera
+  captura; corrige D4): el bloque «¿Querés controlar lo que te pagaron?» con
+  «Ir a Tu recibo» **no va**. La pantalla cierra con la evolución y su texto
+  fijo.
 
 Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
 archivos al importarse (necesita una puerta para recibir las publicadas y
