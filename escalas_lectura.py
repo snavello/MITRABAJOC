@@ -206,13 +206,19 @@ def prompt_resto(plantilla: dict) -> str:
 # ---------------------------------------------------------------- llamada
 def _llamar(cli, modelo: str, imagenes: list, instruccion: str, herramienta: dict):
     contenido = [{"type": "image", "source": {"type": "base64", "media_type": m, "data": d}} for d, m in imagenes]
-    contenido.append({"type": "text", "text": instruccion})
+    # La herramienta NO se fuerza con tool_choice "any"/"tool": Sonnet 5.5 (el
+    # default), Opus 5.5 y Fable 5.x lo rechazan con un 400. Va "auto" + esquema
+    # estricto + la instrucción de llamarla; si el modelo contesta en texto, la
+    # lectura falla ("no devolvió la tabla") y no se toma nada.
+    contenido.append({"type": "text", "text": instruccion + (
+        f"\n\nDevolvé el resultado llamando a la herramienta `{herramienta['name']}`, una sola vez. "
+        "No respondas en texto.")})
     opciones = extractor._opciones(modelo)
     inicio = time.perf_counter()
     try:
         msg = cli.messages.create(
             model=modelo, max_tokens=MAX_TOKENS, system=SISTEMA, timeout=TIMEOUT_LLAMADA_S,
-            tools=[herramienta], tool_choice={"type": "any"}, **opciones,
+            tools=[herramienta], tool_choice={"type": "auto"}, **opciones,
             messages=[{"role": "user", "content": contenido}])
     except Exception as e:                      # red, cuota, 4xx/5xx: se informa, no se esconde
         raise ErrorLectura(f"la API de Anthropic falló ({type(e).__name__}: {e})") from e
