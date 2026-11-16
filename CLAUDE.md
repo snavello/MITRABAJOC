@@ -2538,8 +2538,8 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
 
 **Convenio y escalas** (`templates/convenio_escalas.html`,
 `static/convenio_escalas.js`, rutas `/api/entornos/herramientas/escalas/*`;
-`PLAN_CONVENIO_ESCALAS.md` D1–D27, donde D13 a D27 mandan sobre D1 a D12;
-2026-11-16, Plataforma 0.71.04):
+`PLAN_CONVENIO_ESCALAS.md` D1–D29, donde D13 a D29 mandan sobre D1 a D12;
+2026-11-16, Plataforma 0.72.01):
 - **Dónde vive**: `/entornos/herramientas/convenio-escalas`, misma puerta que
   las otras herramientas (`_exigir_pase` en la página, `_exigir_herramientas` en
   la API, 404 en demo). No toca `/app`, Tu recibo, `/app/convenio` ni la
@@ -2577,7 +2577,7 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   labancaria.org (`escalas_fuente`: la nota de grillas y el comunicado del mismo
   mes, el período es el MES del comunicado), lee el PDF **dos veces** en
   llamadas independientes (`escalas_lectura`, una por rama y una de adicionales,
-  ROE y Día del Bancario; nunca completa un importe que no leyó), corre los seis
+  ROE y Día del Bancario; un importe que no leyó va vacío, nunca adivinado), corre los seis
   controles (`escalas_controles`, puro: C1 estructura, C2 doble lectura, C3 anclas
   del comunicado, C4 factor único, C5 coherencia interna, C6 período) y **publica
   sola si pasan todos o queda `retenida` con el detalle**, avisando por Telegram
@@ -2589,6 +2589,12 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   **La lectura nunca fuerza la herramienta** (`tool_choice` va en `auto` con
   esquema estricto: Sonnet 5.5 rechaza `any`/`tool`) y **el esquema estricto no
   pasa de 16 campos anulables** (`escalas_lectura.LIMITE_UNIONES`, con test).
+  **Una celda de importe tapada se completa por cálculo** (D28: como mucho 2
+  por grilla, vigente × factor del mes, todo lo demás en verde, compatible con
+  la lectura parcial `*_parcial` si la hay; un conformado solo con lectura
+  parcial; queda marcada «calculada» en la nota, el aviso y la vista) y **los
+  comentarios de la IA no retienen** (D29: se guardan y se muestran; los
+  defectos de la respuesta sí retienen).
   **Un trimestre nuevo de conectividad retiene siempre**
   (`RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD`): no escala con el factor del mes y
   no hay contra qué compararla.

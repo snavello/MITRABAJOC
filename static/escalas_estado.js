@@ -193,6 +193,23 @@
     var editables = g.estado === 'retenida';
     var medidas = g.controles && g.controles.medidas_c4;
     if (medidas) cuerpo.appendChild(h('p', { class: 'muted', style: 'margin-top:8px', text: 'Medidas del factor (C4): factor ' + medidas.factor + ' · desvío máximo $' + medidas.desvio_max + ' · exceso máximo sobre lo permitido $' + medidas.exceso_max + ' · ' + medidas.celdas_comparadas + ' celdas · topes de ROE: ' + (medidas.topes_hasta || []).join(', ') }));
+    var calculadas = (g.controles && g.controles.celdas_calculadas) || [];
+    if (calculadas.length) {
+      cuerpo.appendChild(h('h3', { text: 'Celdas completadas por cálculo (D28)' }));
+      cuerpo.appendChild(h('p', { class: 'muted', text: 'El PDF no dejaba leer estas celdas (firma o mancha). Se calcularon como valor vigente × factor del mes, con ±1 centavo de incertidumbre por el redondeo.' }));
+      var lista = h('ul');
+      calculadas.forEach(function (c) {
+        lista.appendChild(h('li', null, h('span', { class: 'pill calculada', text: 'calculada' }), ' ' + (c.texto || c.etiqueta || c.ruta)));
+      });
+      cuerpo.appendChild(lista);
+    }
+    var comentarios = (g.controles && g.controles.notas_lectura) || [];
+    if (comentarios.length) {
+      cuerpo.appendChild(h('h3', { text: 'Comentarios de la lectura' }));
+      var cl = h('ul');
+      comentarios.forEach(function (n) { cl.appendChild(h('li', { text: String(n) })); });
+      cuerpo.appendChild(cl);
+    }
     cuerpo.appendChild(h('h3', { text: 'Controles' }));
     ((g.controles && g.controles.resultados) || []).forEach(function (r) {
       var caja = h('div', { class: 'control' + (r.pasa === false ? ' mal' : '') },
@@ -203,7 +220,10 @@
         (r.detalle || []).forEach(function (d) {
           var fila = h('tr');
           var que = h('td');
-          que.appendChild(h('div', { text: d.etiqueta || (d.ruta ? (etiquetas[d.ruta] || d.ruta) : (d.ancla || d.problema || '')) }));
+          var titulo = h('div', { text: d.etiqueta || (d.ruta ? (etiquetas[d.ruta] || d.ruta) : (d.ancla || d.problema || '')) });
+          // D28: una celda que el PDF no dejaba leer y se completó por cálculo lleva su marca.
+          if (d.valor_calculado !== undefined) titulo.appendChild(h('span', { class: 'pill calculada', style: 'margin-left:8px', text: 'calculada' }));
+          que.appendChild(titulo);
           var resto = Object.keys(d).filter(function (k) { return ['etiqueta', 'ruta', 'ancla'].indexOf(k) < 0; })
             .map(function (k) { return k + ': ' + fmt(d[k]); }).join(' · ');
           if (resto) que.appendChild(h('div', { class: 'muted mono', text: resto }));

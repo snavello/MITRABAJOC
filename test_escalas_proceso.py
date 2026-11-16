@@ -634,3 +634,176 @@ def test_el_ensayo_no_cuenta_como_distinta_la_conectividad_conservada(entorno_li
     e.monkeypatch.setattr(lectura, "leer", lambda pdf, pl, m, veces=2: lecturas_de(septiembre_real()))
     r = proc.ensayo("2026-09", "SDN")
     assert r["distintas_a"] == 0 and r["distintas_b"] == 0, r["lectura_a"]["detalle"][:3]
+
+
+# ------------------------------------------------- D28: una celda tapada por una firma se completa por cálculo
+RUTA_TAPADA = "ramas.maestranza.categorias.37.basico"           # Maestranza · Capataz Gral. · básico
+
+
+def _lecturas_d28(datos, parciales=None, notas=None, extra_b=None):
+    """Dos lecturas de septiembre con la celda tapada sin leer en las dos (o con `extra_b` en la segunda)."""
+    ls = lecturas_de(datos, extra_b)
+    for l in ls:
+        l["parciales"] = dict(parciales or {})
+        l["notas"] = list(notas or [])
+    return ls
+
+
+def _con_d28(e, datos, **kw):
+    e.monkeypatch.setattr(lectura, "leer", lambda pdf, pl, m, veces=2: (e.llamadas.append(1), _lecturas_d28(datos, **kw))[1])
+
+
+def _enmascarada(v):
+    t = list(ctl.pesos_ar(v))
+    t[[i for i, ch in enumerate(t) if ch.isdigit()][1]] = "?"
+    return "".join(t)
+
+
+def test_d28_una_celda_tapada_en_las_dos_lecturas_se_completa_publica_sola_y_queda_dicho(entorno_limpio):
+    e = entorno_limpio
+    real = ctl.plano(septiembre_real())[RUTA_TAPADA]
+    tapada = ctl.asignar(septiembre_real(), RUTA_TAPADA, None)
+    parcial = _enmascarada(real)
+    _con_d28(e, tapada, parciales={RUTA_TAPADA: parcial}, notas=["Coef de Subcapataz Gral. y Capataz Gral. parcialmente cubiertos por firma en las tablas del Día del Bancario, "
+                                                                              "pero legibles en la tabla de básicos (2,17 y 2,36).",
+                                                                              f"Capataz Gral.: el básico está tachado por una firma/sello (se lee '{parcial}'); se deja null."])
+    r = proc.pasada()
+    assert [x["estado"] for x in r["leidas"]] == ["publicada"], r
+    g = db.grilla_completa(next(x for x in db.listar_grillas() if x["periodo"] == "2026-09")["id"])
+    calc = ctl.plano(g["contenido"])[RUTA_TAPADA]
+    assert abs(calc - real) <= 0.01 and g["estado"] == "publicada"
+    assert ctl.forma_valida(g["contenido"]) == []
+    [cel] = g["controles"]["celdas_calculadas"]
+    assert cel["ruta"] == RUTA_TAPADA and cel["valor_calculado"] == calc and cel["lectura_parcial"] == [parcial]
+    c1 = g["controles"]["resultados"][0]
+    assert c1["pasa"] is True and c1["detalle"][0]["valor_calculado"] == calc
+    assert [x["pasa"] for x in g["controles"]["resultados"]] == [True] * 6
+    assert f"Maestranza · Capataz Gral. · básico: $ {ctl.pesos_ar(calc)} calculado (vigente × 1,0189" in g["nota"]
+    assert f"se leía «{parcial}»" in g["nota"] and "±1 centavo" in g["nota"]
+    aviso = next(a for a in e.avisos if "publicada" in a)
+    assert "calcularon" in aviso and "Capataz Gral." in aviso
+    # D29: los comentarios de la IA no retuvieron; quedan guardados y van en el aviso.
+    assert len(g["controles"]["notas_lectura"]) == 2 and "Comentarios de la lectura: Coef de Subcapataz" in aviso
+    assert db.periodo_vigente() == "2026-09" and grilla_bancaria.PERIODO_VIGENTE == "2026-09"
+    # La vista de estado recibe la lista de celdas calculadas para marcarlas.
+    det = _con_pase().get(f"{API}/grillas/{g['id']}").json()
+    assert det["controles"]["celdas_calculadas"][0]["ruta"] == RUTA_TAPADA
+
+
+def test_d28_sin_lectura_parcial_tambien_se_publica(entorno_limpio):
+    e = entorno_limpio
+    _con_d28(e, ctl.asignar(septiembre_real(), RUTA_TAPADA, None))
+    r = proc.pasada()
+    assert [x["estado"] for x in r["leidas"]] == ["publicada"], r
+
+
+def test_d28_con_una_lectura_parcial_incompatible_la_grilla_queda_retenida(entorno_limpio):
+    e = entorno_limpio
+    _con_d28(e, ctl.asignar(septiembre_real(), RUTA_TAPADA, None), parciales={RUTA_TAPADA: "9.?22.194,42"})
+    r = proc.pasada()
+    assert r["leidas"][0]["estado"] == "retenida" and "C1" in r["leidas"][0]["fallan"]
+    g = db.grilla_completa(next(x["id"] for x in db.listar_grillas() if x["estado"] == "retenida"))
+    assert ctl.plano(g["contenido"])[RUTA_TAPADA] is None and g["controles"]["celdas_calculadas"] == []
+    assert "no es compatible con lo que se alcanzaba a ver" in str(g["controles"]["resultados"][0]["detalle"])
+    assert g["controles"]["parciales"][0] == {RUTA_TAPADA: "9.?22.194,42"}              # lo que se veía queda guardado para revisar
+
+
+def test_d28_tres_celdas_sin_leer_retienen(entorno_limpio):
+    e = entorno_limpio
+    datos = septiembre_real()
+    for ruta in (RUTA_TAPADA, "ramas.administrativa.categorias.10.basico", "ramas.ordenanza.categorias.20.basico"):
+        datos = ctl.asignar(datos, ruta, None)
+    _con_d28(e, datos)
+    r = proc.pasada()
+    assert r["leidas"][0]["estado"] == "retenida" and ("2026-09", "publicada") not in estados()
+
+
+def test_d28_corregir_una_retenida_aplica_la_misma_regla_y_completa_el_contenido(entorno_limpio):
+    e = entorno_limpio
+    datos = septiembre_real()
+    for ruta in (RUTA_TAPADA, "ramas.administrativa.categorias.10.basico", "ramas.ordenanza.categorias.20.basico"):
+        datos = ctl.asignar(datos, ruta, None)
+    _con_d28(e, datos)
+    proc.pasada()
+    gid = next(x["id"] for x in db.listar_grillas() if x["estado"] == "retenida")
+    # La persona carga a mano una de las tres celdas: quedan dos sin valor, y D28 completa las dos.
+    resultado = proc.corregir(gid, [{"ruta": "ramas.ordenanza.categorias.20.basico",
+                                     "valor": ctl.plano(septiembre_real())["ramas.ordenanza.categorias.20.basico"]}], "SDN", "una a mano")
+    g = db.grilla_completa(gid)
+    assert [x["pasa"] for x in resultado["controles"]] == [True, None, True, True, True, True]
+    assert len(g["controles"]["celdas_calculadas"]) == 2
+    assert ctl.plano(g["contenido"])[RUTA_TAPADA] is not None and ctl.forma_valida(g["contenido"]) == []
+    assert proc.publicar_a_mano(gid, "SDN")["forzada"] is False
+
+
+def test_d28_el_ensayo_aplica_la_misma_regla(entorno_limpio):
+    e = entorno_limpio
+    _con_lecturas(e, septiembre_real())
+    proc.pasada()                                                      # septiembre ya publicada
+    e.monkeypatch.setattr(lectura, "leer", lambda pdf, pl, m, veces=2: _lecturas_d28(ctl.asignar(septiembre_real(), RUTA_TAPADA, None)))
+    r = proc.ensayo("2026-09", "SDN")
+    assert [x["pasa"] for x in r["controles"]] == [True] * 6
+    assert r["distintas_a"] <= 1                                       # a lo sumo la celda calculada, por un centavo de redondeo
+
+
+def test_d28_retenida_descartada_y_pasada_forzada_vuelve_a_leer_y_publica(entorno_limpio):
+    """El camino de la octubre real: retenida -> db.descartar_grilla -> pasada(forzar_periodo) relee la nota,
+    ahora con la regla D28, y publica sola."""
+    e = entorno_limpio
+    datos = septiembre_real()
+    for ruta in (RUTA_TAPADA, "ramas.administrativa.categorias.10.basico", "ramas.ordenanza.categorias.20.basico"):
+        datos = ctl.asignar(datos, ruta, None)
+    _con_d28(e, datos)
+    r = proc.pasada()
+    assert r["leidas"][0]["estado"] == "retenida"
+    gid = next(x["id"] for x in db.listar_grillas() if x["estado"] == "retenida")
+    proc.pasada()
+    assert len(e.llamadas) == 1                                        # sin forzar no se relee
+    assert db.descartar_grilla(gid, "SDN", "se relee con D28") is True
+    _con_d28(e, ctl.asignar(septiembre_real(), RUTA_TAPADA, None))
+    r = proc.pasada(forzar_periodo="2026-09")
+    assert [x["estado"] for x in r["leidas"]] == ["publicada"], r
+    assert len(e.llamadas) == 2 and ("2026-09", "descartada") in estados() and ("2026-09", "publicada") in estados()
+
+
+# ------------------------------------------------- D29: los comentarios de la IA no retienen
+def _con_notas(e, datos, notas, defectos=()):
+    def leer(pdf, pl, m, veces=2):
+        e.llamadas.append(1)
+        ls = lecturas_de(datos)
+        for l in ls:
+            l["notas"], l["defectos"] = list(notas), list(defectos)
+        return ls
+    e.monkeypatch.setattr(lectura, "leer", leer)
+
+
+def test_d29_una_grilla_buena_con_un_comentario_del_modelo_se_publica_y_lo_dice(entorno_limpio):
+    e = entorno_limpio
+    _con_notas(e, septiembre_real(), ["La firma tapa parte del encabezado, pero las cifras se leen bien."])
+    r = proc.pasada()
+    assert [x["estado"] for x in r["leidas"]] == ["publicada"], r
+    g = db.grilla_completa(next(x for x in db.listar_grillas() if x["periodo"] == "2026-09")["id"])
+    assert g["controles"]["notas_lectura"] == ["La firma tapa parte del encabezado, pero las cifras se leen bien."]
+    assert any("Comentarios de la lectura: La firma tapa" in a for a in e.avisos)
+
+
+def test_d29_el_aviso_recorta_los_comentarios_largos():
+    txt = proc.texto_publicada("2026-09", [], None, ["x" * 5000])
+    assert len(txt) < 1200 and "…" in txt
+
+
+def test_d29_una_nota_con_una_categoria_faltante_retiene(entorno_limpio):
+    e = entorno_limpio
+    datos = septiembre_real()
+    datos["ramas"]["maestranza"]["categorias"].pop(5)
+    _con_notas(e, datos, ["falta una categoría"])
+    assert proc.pasada()["leidas"][0]["estado"] == "retenida"
+
+
+def test_d29_un_defecto_de_la_respuesta_retiene_aunque_la_celda_quede_nula(entorno_limpio):
+    e = entorno_limpio
+    _con_notas(e, ctl.asignar(septiembre_real(), RUTA_TAPADA, None), [], ["valor no numérico en maestranza/Capataz Gral.: 'mil'"])
+    r = proc.pasada()
+    assert r["leidas"][0]["estado"] == "retenida" and "C1" in r["leidas"][0]["fallan"]
+    g = db.grilla_completa(next(x["id"] for x in db.listar_grillas() if x["estado"] == "retenida"))
+    assert g["controles"]["defectos_respuesta"]

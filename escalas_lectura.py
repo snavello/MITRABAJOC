@@ -21,7 +21,15 @@ Cómo se arma (decisiones de este módulo, ver el reporte del bloque 5):
   coeficientes y los importes los lee del documento: nunca se le dan.
 - **Nunca completa un importe que no leyó**: el esquema acepta `null` en cada
   celda y el prompt lo pide ante la duda; un valor que no es número se
-  convierte en `null` y queda anotado.
+  convierte en `null` y queda anotado. (El único que completa es el sistema, no
+  la IA, y solo en el caso acotado de D28: `escalas_controles.completar_celdas`.)
+- **Lectura parcial (D28)**: junto a cada importe de las ramas (`basico_parcial`,
+  `conformado_parcial`) y de los adicionales (`importe_parcial`) hay un texto
+  NO anulable con lo que el modelo alcanzó a ver cuando el número está tapado o
+  dudoso («3.?22.194,42», un «?» por dígito ilegible), vacío si leyó bien. Son
+  strings: no suman a las 16 uniones del esquema estricto. Se devuelven aparte
+  del contenido, en `parciales` ({ruta de la celda: texto}), y solo sirven para
+  verificar que un importe calculado sea compatible con lo que se veía.
 - Salida estructurada por una herramienta de esquema cerrado (mismo patrón
   que `asistente_tramites_ia`), el modelo de `db.modelo_ia("grilla_salarial")`
   (default `MODELO`, elegible en /plataforma), `effort: low` si razona
@@ -109,6 +117,11 @@ def _objeto(props: dict) -> dict:
     return {"type": "object", "additionalProperties": False, "required": list(props), "properties": props}
 
 
+PARCIAL_DESC = ("Solo si el número de esa columna está tapado o dudoso (el número va null): lo que SÍ se ve, con un «?» "
+                "por cada dígito que no se lee, en formato argentino (por ejemplo «3.?22.194,42»). Vacío si lo leíste bien "
+                "o si no se ve nada. No adivines.")
+
+
 def herramienta_rama(nombre_rama: str) -> dict:
     cat = _objeto({
         "nombre": {"type": "string", "description": "Nombre de la categoría, escrito como en la lista esperada."},
@@ -116,6 +129,8 @@ def herramienta_rama(nombre_rama: str) -> dict:
         "coef": {**_numero(), "description": "Columna Coef (por ejemplo 1,04 -> 1.04)."},
         "basico": {**_numero(), "description": "Columna Básico del mes (1.673.913,51 -> 1673913.51)."},
         "conformado": {**_numero(), "description": "Columna Conformado del mes; null si la categoría no tiene."},
+        "basico_parcial": {"type": "string", "description": PARCIAL_DESC},
+        "conformado_parcial": {"type": "string", "description": PARCIAL_DESC},
     })
     return {
         "name": "registrar_rama",
@@ -164,7 +179,8 @@ def herramienta_resto(plantilla: dict) -> dict:
             # una propiedad por adicional eran 18 (la API contestó 400 en el bloque 6).
             "adicionales": {"type": "array", "description": "Una fila por cada adicional de la lista, con su clave exacta.",
                             "items": _objeto({"clave": {"type": "string", "enum": claves},
-                                              "importe": {**_numero(), "description": "Importe mensual; null si no se lee."}})},
+                                              "importe": {**_numero(), "description": "Importe mensual; null si no se lee."},
+                                              "importe_parcial": {"type": "string", "description": PARCIAL_DESC}})},
             "conectividad": {"type": "array", "items": _objeto({
                 "meses": {"type": "array", "items": {"type": "string"}, "description": "Los meses que cubre, como AAAA-MM."},
                 "diario": _numero(), "mas_de_4_dias": _numero(), "mensual": _numero()})},
@@ -191,7 +207,9 @@ SISTEMA = (
     "Transcribí EXACTAMENTE lo impreso, dígito por dígito: los importes están en formato argentino "
     "('$ 1.673.913,51' es 1673913.51; '1,04' es 1.04). No calcules, no promedies, no corrijas, no estimes. "
     "Hay firmas, sellos y manchas encima de algunas filas: si un número no se lee con certeza, devolvé null en esa "
-    "celda; NUNCA lo completes por deducción ni por parecido con otra fila. "
+    "celda; NUNCA lo completes por deducción ni por parecido con otra fila. Si un número está tapado o dudoso, el "
+    "importe va null y en el campo «parcial» de esa celda escribí lo que se ve, con «?» en cada dígito que no se lee "
+    "(formato argentino, por ejemplo «3.?22.194,42»); no adivines. Si lo leíste bien, el campo parcial va vacío. "
     "Las tablas del «Día del Bancario» repiten las mismas categorías y coeficientes con otros importes (suma fija, "
     "monto por coeficiente, total): NO son básicos ni conformados."
 )
@@ -206,7 +224,8 @@ def prompt_rama(clave: str, plantilla: dict) -> str:
             f"(en el documento pueden estar abreviados o con otra ortografía; usá el nombre de la lista):\n{filas}\n\n"
             "Si el documento trae una categoría que no está en la lista, o falta una de la lista, no la inventes ni la "
             "completes: agregala u omitila y describilo en notas. El Conformado solo existe en algunas categorías: "
-            "donde la celda está vacía, null.")
+            "donde la celda está vacía, null. Si un Básico o un Conformado está tapado (firma, sello) o dudoso, el importe va "
+            "null y en basico_parcial / conformado_parcial escribí lo que se ve con «?» por cada dígito ilegible; no adivines.")
 
 
 def prompt_resto(plantilla: dict) -> str:
@@ -218,7 +237,8 @@ def prompt_resto(plantilla: dict) -> str:
             f"(4) el ROE: una fila por tramo de sueldo bruto (con su tope «hasta»; null en la última) y, por cada tramo de "
             f"ROE del banco ({tramos}), el monto ANUAL; el primer tramo es 0; "
             "(5) el DÍA DEL BANCARIO: la suma fija, el monto por coeficiente y el total de la fila Inicial (coef 1,00). "
-            "Si algo de esta lista no aparece en el documento, null (o lista vacía), y anotalo en notas.")
+            "Si algo de esta lista no aparece en el documento, null (o lista vacía), y anotalo en notas. Si el importe de un "
+            "adicional está tapado o dudoso, importe null y en importe_parcial lo que se ve, con «?» por cada dígito ilegible.")
 
 
 # ---------------------------------------------------------------- llamada
@@ -278,54 +298,70 @@ def _entero_o_none(x, notas, donde):
     return int(x)
 
 
-def sanear_rama(crudo: dict, clave: str, plantilla: dict, notas: list) -> dict:
+MAX_PARCIAL = 40          # una cifra con sus puntos y comas no pasa de 20; el resto es ruido
+
+
+def _parcial(x) -> str:
+    """El texto de una lectura parcial, o «» si no es un texto con algo escrito."""
+    return x.strip()[:MAX_PARCIAL] if isinstance(x, str) else ""
+
+
+def sanear_rama(crudo: dict, clave: str, plantilla: dict, defectos: list, parciales: dict | None = None,
+                notas: list | None = None) -> dict:
     r = plantilla["ramas"][clave]
     cats = []
     for i, c in enumerate(crudo.get("categorias") or []):
         if not isinstance(c, dict):
-            notas.append(f"{clave}: fila {i + 1} ilegible")
+            defectos.append(f"{clave}: fila {i + 1} ilegible")
             continue
         et = f"{clave}/{c.get('nombre')}"
-        cats.append({"nombre": str(c.get("nombre") or "").strip(), "anios": _entero_o_none(c.get("anios"), notas, et),
-                     "coef": _n(c.get("coef"), notas, et), "basico": _n(c.get("basico"), notas, et),
-                     "conformado": _n(c.get("conformado"), notas, et)})
-    notas.extend(str(n) for n in (crudo.get("notas") or []))
+        if parciales is not None:
+            for campo in ("basico", "conformado"):
+                t = _parcial(c.get(f"{campo}_parcial"))
+                if t:
+                    parciales[f"ramas.{clave}.categorias.{len(cats)}.{campo}"] = t
+        cats.append({"nombre": str(c.get("nombre") or "").strip(), "anios": _entero_o_none(c.get("anios"), defectos, et),
+                     "coef": _n(c.get("coef"), defectos, et), "basico": _n(c.get("basico"), defectos, et),
+                     "conformado": _n(c.get("conformado"), defectos, et)})
+    (notas if notas is not None else []).extend(str(n) for n in (crudo.get("notas") or []))
     return {"nombre": r["nombre"], "categorias": cats}
 
 
-def sanear_resto(crudo: dict, notas: list) -> dict:
+def sanear_resto(crudo: dict, defectos: list, parciales: dict | None = None, notas: list | None = None) -> dict:
     adic_crudo = crudo.get("adicionales") or {}
     if isinstance(adic_crudo, list):          # la forma del esquema: filas clave + importe
         anidado = {}
         for fila in adic_crudo:
             if not isinstance(fila, dict) or not isinstance(fila.get("clave"), str):
-                notas.append(f"fila de adicionales ilegible: {fila!r}")
+                defectos.append(f"fila de adicionales ilegible: {fila!r}")
                 continue
             grupo, _, hoja = fila["clave"].partition(".")
             destino = anidado.setdefault(grupo, {}) if hoja else anidado
             if not isinstance(destino, dict) or (hoja or grupo) in destino:
-                notas.append(f"adicional repetido o mal formado: {fila['clave']}")
+                defectos.append(f"adicional repetido o mal formado: {fila['clave']}")
                 continue
             destino[hoja or grupo] = fila.get("importe")
+            if parciales is not None and _parcial(fila.get("importe_parcial")):
+                parciales[f"adicionales.{fila['clave']}"] = _parcial(fila.get("importe_parcial"))
         adic_crudo = anidado
     adic = {}
     for k, v in adic_crudo.items():
-        adic[k] = ({k2: _n(v2, notas, f"adicionales/{k}/{k2}") for k2, v2 in v.items()}
-                   if isinstance(v, dict) else _n(v, notas, f"adicionales/{k}"))
+        adic[k] = ({k2: _n(v2, defectos, f"adicionales/{k}/{k2}") for k2, v2 in v.items()}
+                   if isinstance(v, dict) else _n(v, defectos, f"adicionales/{k}"))
     conect = []
     for c in crudo.get("conectividad") or []:
         conect.append({"meses": [str(m) for m in (c.get("meses") or [])],
-                       "diario": _n(c.get("diario"), notas, "conectividad"),
-                       "mas_de_4_dias": _n(c.get("mas_de_4_dias"), notas, "conectividad"),
-                       "mensual": _n(c.get("mensual"), notas, "conectividad")})
+                       "diario": _n(c.get("diario"), defectos, "conectividad"),
+                       "mas_de_4_dias": _n(c.get("mas_de_4_dias"), defectos, "conectividad"),
+                       "mensual": _n(c.get("mensual"), defectos, "conectividad")})
     roe_c = crudo.get("roe") or {}
     roe = {"tramos": [str(t) for t in (roe_c.get("tramos") or [])],
-           "filas": [{"hasta": (None if f.get("hasta") is None else int(_n(f.get("hasta"), notas, "roe/hasta") or 0) or None),
-                      "anual": [_n(x, notas, "roe/anual") for x in (f.get("anual") or [])]}
+           "filas": [{"hasta": (None if f.get("hasta") is None else int(_n(f.get("hasta"), defectos, "roe/hasta") or 0) or None),
+                      "anual": [_n(x, defectos, "roe/anual") for x in (f.get("anual") or [])]}
                      for f in (roe_c.get("filas") or []) if isinstance(f, dict)]}
     db_c = crudo.get("dia_bancario") or {}
-    dia = {k: _n(db_c.get(k), notas, f"dia_bancario/{k}") for k in ("suma_fija", "por_coeficiente", "minimo")}
-    notas.extend(str(n) for n in (crudo.get("notas") or []))
+    dia = {k: _n(db_c.get(k), defectos, f"dia_bancario/{k}") for k in ("suma_fija", "por_coeficiente", "minimo")}
+    (notas if notas is not None else []).extend(str(n) for n in (crudo.get("notas") or []))
     periodo = crudo.get("periodo_impreso")
     return {"adicionales": adic, "conectividad": conect, "roe": roe, "dia_bancario": dia,
             "periodo_impreso": periodo if isinstance(periodo, str) and len(periodo) == 7 else None}
@@ -335,25 +371,26 @@ def sanear_resto(crudo: dict, notas: list) -> dict:
 def leer_una_vez(imagenes: list, plantilla: dict, modelo: str, secciones: tuple = SECCIONES) -> dict:
     """UNA lectura completa del documento (una llamada por sección). Devuelve
     {"contenido": {ramas, adicionales, conectividad, roe, dia_bancario},
-    "notas": [...], "periodo_impreso": ..., "usos": [...]} o levanta
+    "notas": [comentarios del modelo, D29: no retienen], "defectos": [defectos de la respuesta: un valor que no es
+    número, una fila ilegible o repetida; esos SÍ hacen fallar C1], "periodo_impreso": ..., "parciales": {ruta: texto}, "usos": [...]} o levanta
     ErrorLectura con lo gastado hasta el momento."""
     cli = cliente()
     if cli is None:
         raise ErrorLectura("no hay cliente de Anthropic configurado")
     plantilla = copy.deepcopy(plantilla)
-    usos, notas = [], []
+    usos, notas, defectos, parciales = [], [], [], {}
     ramas, resto = {}, None
     for sec in secciones:
         try:
             if sec == "resto":
                 crudo, uso = _llamar(cli, modelo, imagenes, prompt_resto(plantilla), herramienta_resto(plantilla))
                 usos.append(uso)
-                resto = sanear_resto(crudo, notas)
+                resto = sanear_resto(crudo, defectos, parciales, notas)
             else:
                 crudo, uso = _llamar(cli, modelo, imagenes, prompt_rama(sec, plantilla),
                                      herramienta_rama(plantilla["ramas"][sec]["nombre"]))
                 usos.append(uso)
-                ramas[sec] = sanear_rama(crudo, sec, plantilla, notas)
+                ramas[sec] = sanear_rama(crudo, sec, plantilla, defectos, parciales, notas)
         except ErrorLectura as e:
             raise ErrorLectura(f"{sec}: {e}", usos + e.usos) from e
         except Exception as e:                   # tipos raros en lo que contestó la API: ya se pagó, el gasto no se pierde
@@ -362,7 +399,7 @@ def leer_una_vez(imagenes: list, plantilla: dict, modelo: str, secciones: tuple 
         raise ErrorLectura("faltó la sección «resto»", usos)
     periodo_impreso = resto.pop("periodo_impreso")
     contenido = {"ramas": {k: ramas[k] for k in plantilla["ramas"] if k in ramas}, **resto}
-    return {"contenido": contenido, "notas": notas, "periodo_impreso": periodo_impreso, "usos": usos}
+    return {"contenido": contenido, "notas": notas, "defectos": defectos, "periodo_impreso": periodo_impreso, "parciales": parciales, "usos": usos}
 
 
 def leer(pdf: bytes, plantilla: dict, modelo: str, veces: int = 2) -> list:

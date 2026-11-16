@@ -109,10 +109,20 @@ def _t(x) -> str:
     return html.escape(str(x))
 
 
-def texto_publicada(periodo: str, resultados: list) -> str:
-    return (f"📈 <b>Grilla salarial de {_t(fuente.nombre_del_periodo(periodo))} publicada</b>\n"
+MAX_NOTAS_AVISO = 600        # D29: largo del recorte de los comentarios de la lectura en el aviso
+
+
+def texto_publicada(periodo: str, resultados: list, celdas_calculadas: list = None, notas: list = None) -> str:
+    base = (f"📈 <b>Grilla salarial de {_t(fuente.nombre_del_periodo(periodo))} publicada</b>\n"
             f"Pasaron los seis controles (doble lectura, estructura, anclas, factor, coherencia y período). "
             f"La Calculadora bancaria ya la usa.")
+    if celdas_calculadas:      # D28: lo que se completó por cálculo se dice, no se esconde
+        base += (f"\n⚠️ {len(celdas_calculadas)} celda(s) no se pudieron leer en el PDF y se calcularon (D28): "
+                 + _t(ctl.texto_calculadas(celdas_calculadas)))
+    if notas:                  # D29: los comentarios de la IA no retienen, pero se dicen
+        txt = " | ".join(dict.fromkeys(str(n) for n in notas))
+        base += "\nComentarios de la lectura: " + _t(txt if len(txt) <= MAX_NOTAS_AVISO else txt[:MAX_NOTAS_AVISO].rstrip() + "…")
+    return base
 
 
 def texto_retenida(periodo: str, resultados: list, grilla_id: int) -> str:
@@ -170,14 +180,19 @@ def guardar_resultado(par: dict, lecturas: list, usos: list, modelo: str, previa
     retenida si no. Devuelve {"grilla_id", "estado", "controles"}."""
     periodo, g, c = par["periodo"], par["grilla"], par["comunicado"]
     com = _datos_comunicado(c)
-    resultados = ctl.controlar(lecturas, previa, com, periodo, vigente_periodo, tolerancias)
-    conservadas = ctl.conectividad_conservada(previa, lecturas[0]["contenido"], periodo)      # D27
-    datos = ctl.con_conectividad_conservada(lecturas[0]["contenido"], conservadas)
+    # D28: si una celda tapada se completa por cálculo (y todo lo demás pasa), `usadas` trae la grilla completada.
+    cc = ctl.controlar_completando(lecturas, previa, com, periodo, vigente_periodo, tolerancias)
+    resultados, usadas, calculadas = cc["resultados"], cc["lecturas"], cc["celdas_calculadas"]
+    conservadas = ctl.conectividad_conservada(previa, usadas[0]["contenido"], periodo)      # D27
+    datos = ctl.con_conectividad_conservada(usadas[0]["contenido"], conservadas)
     contenido = armar_contenido(datos, periodo, g["fecha"], [g["url"], c["url"] if c else ""], modelo, hoy or fechas.hoy_texto())
     controles = {"resultados": resultados, "periodo_impreso": lecturas[0].get("periodo_impreso"),
-                 "notas_lectura": [n for l in lecturas for n in l.get("notas", [])], "modelo": modelo,
+                 "notas_lectura": list(dict.fromkeys(n for l in lecturas for n in l.get("notas", []))),
+                 "defectos_respuesta": list(dict.fromkeys(n for l in lecturas for n in l.get("defectos", []))), "modelo": modelo,
                  "ia": _resumen_usos(usos), "comunicado": com,
                  "conectividad_conservada": [c.get("meses") for c in conservadas],
+                 "celdas_calculadas": calculadas,
+                 "parciales": [l.get("parciales") or {} for l in lecturas],
                  "medidas_c4": next((r.get("medidas") for r in resultados if r["control"] == "C4"), None)}
     if not ctl.todos_pasan(resultados):
         # Para decidir a mano hace falta lo que leyó la segunda lectura.
@@ -191,10 +206,11 @@ def guardar_resultado(par: dict, lecturas: list, usos: list, modelo: str, previa
         fuente_nota=g["url"], fuente_pdf=g["pdf_url"], publicada_sindicato=g["fecha"],
         quien="automático" if puede else "",
         nota=" ".join(x for x in ("" if puede else "Retenida: " + ", ".join(ctl.fallan(resultados)) + ".",
-                                  ctl.texto_conservada(conservadas)) if x))
+                                  ctl.texto_conservada(conservadas), ctl.texto_calculadas(calculadas)) if x))
     if puede:
         _refrescar_calculadora()
-    return {"grilla_id": grilla_id, "estado": estado, "controles": resultados}
+    return {"grilla_id": grilla_id, "estado": estado, "controles": resultados, "celdas_calculadas": calculadas,
+            "notas": controles["notas_lectura"]}
 
 
 # ---------------------------------------------------------------- la pasada
@@ -225,7 +241,7 @@ def procesar_par(par: dict, vigente: dict, vigente_periodo: str, forzar: bool = 
         return _fallo(g, periodo, f"error inesperado ({type(e).__name__}: {e})", hoy)
     db.marcar_novedad("grillas", g["post_id"], CONVENIO, resultado=r["estado"], grilla_id=r["grilla_id"], ultimo_error="")
     if r["estado"] == "publicada":
-        _avisar(texto_publicada(periodo, r["controles"]))
+        _avisar(texto_publicada(periodo, r["controles"], r.get("celdas_calculadas"), r.get("notas")))
     else:
         _avisar(texto_retenida(periodo, r["controles"], r["grilla_id"]))
     return {"estado": r["estado"], "grilla_id": r["grilla_id"], "periodo": periodo,
@@ -418,11 +434,13 @@ def _cambios_validos(contenido: dict, cambios: list) -> dict:
 _NO_EXISTE = object()
 
 
-def recontrolar(contenido: dict, controles_previos: dict, periodo: str, quien: str, tolerancias: dict = None) -> list:
+def recontrolar_completando(contenido: dict, controles_previos: dict, periodo: str, quien: str, tolerancias: dict = None) -> dict:
     """Vuelve a pasar los controles que NO dependen de la doble lectura sobre una
     grilla corregida a mano (C1, C3, C4, C5, C6); C2 queda como «resuelta a mano»
     (`pasa: None`) con quién la resolvió. Los datos que hacen falta (el
-    comunicado, la grilla anterior) salen de lo guardado."""
+    comunicado, la grilla anterior) salen de lo guardado. Aplica D28 con la misma
+    función que la pasada: una celda que escala y sigue sin valor se completa por
+    cálculo. Devuelve {"resultados", "contenido" (con lo completado), "celdas_calculadas"}."""
     vigente_periodo = db.periodo_vigente(CONVENIO)
     previa = db.grilla_publicada(vigente_periodo, CONVENIO) if vigente_periodo else None
     # Si ya está publicada la del mismo período (se está reemplazando), la anterior es la del mes previo.
@@ -432,11 +450,20 @@ def recontrolar(contenido: dict, controles_previos: dict, periodo: str, quien: s
         previa = db.grilla_publicada(vigente_periodo, CONVENIO) if vigente_periodo else None
     com = (controles_previos or {}).get("comunicado")
     datos = {k: contenido.get(k) for k in ctl.CLAVES_DATOS}
-    lect = {"contenido": datos, "notas": [], "periodo_impreso": (controles_previos or {}).get("periodo_impreso")}
-    resultados = ctl.controlar([lect, lect], previa, com, periodo, vigente_periodo, tolerancias)
+    parciales = ((controles_previos or {}).get("parciales") or [{}])[0] or {}
+    lect = {"contenido": datos, "notas": [], "periodo_impreso": (controles_previos or {}).get("periodo_impreso"),
+            "parciales": parciales}
+    cc = ctl.controlar_completando([lect, lect], previa, com, periodo, vigente_periodo, tolerancias)
+    resultados = cc["resultados"]
     resultados[1] = {"control": "C2", "nombre": "Doble lectura", "pasa": None,
                      "resumen": f"Resuelta a mano por {quien}: la corrección reemplaza a la doble lectura.", "detalle": [], "mas": 0}
-    return resultados
+    nuevo = {**contenido, **cc["lecturas"][0]["contenido"]} if cc["celdas_calculadas"] else contenido
+    return {"resultados": resultados, "contenido": nuevo, "celdas_calculadas": cc["celdas_calculadas"]}
+
+
+def recontrolar(contenido: dict, controles_previos: dict, periodo: str, quien: str, tolerancias: dict = None) -> list:
+    """Solo los resultados de `recontrolar_completando`."""
+    return recontrolar_completando(contenido, controles_previos, periodo, quien, tolerancias)["resultados"]
 
 
 def corregir(grilla_id: int, cambios: list, quien: str, nota: str = "") -> dict:
@@ -447,8 +474,10 @@ def corregir(grilla_id: int, cambios: list, quien: str, nota: str = "") -> dict:
         raise ValueError("la grilla no existe o ya no está retenida")
     contenido = _cambios_validos(g["contenido"], cambios)
     controles = dict(g["controles"] or {})
-    resultados = recontrolar(contenido, controles, g["periodo"], quien)
+    rc = recontrolar_completando(contenido, controles, g["periodo"], quien)
+    resultados, contenido = rc["resultados"], rc["contenido"]
     controles["resultados"] = resultados
+    controles["celdas_calculadas"] = rc["celdas_calculadas"]
     controles.setdefault("correcciones", []).append(
         {"quien": quien, "cuando": fechas.ahora_con_segundos(), "celdas": [c["ruta"] for c in cambios], "nota": nota})
     if not db.corregir_grilla_retenida(grilla_id, contenido, controles, quien, nota):
@@ -521,10 +550,11 @@ def ensayo(periodo: str, quien: str, ahora=None) -> dict:
     vig = anterior[-1] if anterior else None
     previa = db.grilla_publicada(vig, CONVENIO) if vig else None
     com = _datos_comunicado(par["comunicado"])
-    resultados = ctl.controlar(lecturas, previa, com, periodo, vig)
+    cc = ctl.controlar_completando(lecturas, previa, com, periodo, vig)         # D28, igual que al publicar
+    resultados, usadas = cc["resultados"], cc["lecturas"]
     # D27: lo que el PDF ya no trae (trimestres vencidos) se conserva de la anterior, igual que al publicar.
-    conserv = ctl.conectividad_conservada(previa, lecturas[0]["contenido"], periodo)
-    comp = [ctl.comparar_con_publicada(ctl.con_conectividad_conservada(l["contenido"], conserv), publicada) for l in lecturas]
+    conserv = ctl.conectividad_conservada(previa, usadas[0]["contenido"], periodo)
+    comp = [ctl.comparar_con_publicada(ctl.con_conectividad_conservada(l["contenido"], conserv), publicada) for l in usadas]
     distintas = max(c["distintas"] for c in comp)
     caso_id = db.guardar_caso_herramienta(
         herramienta=HERRAMIENTA, quien=quien, grilla=periodo, banco="", nota="",
@@ -534,7 +564,8 @@ def ensayo(periodo: str, quien: str, ahora=None) -> dict:
         real={"lectura_a": {"distintas": comp[0]["distintas"]}, "lectura_b": {"distintas": comp[1]["distintas"]},
               "ia": _resumen_usos(usos), "segundos": round(time.perf_counter() - inicio, 1),
               "notas": [n for l in lecturas for n in l["notas"]], "periodo_impreso": [l["periodo_impreso"] for l in lecturas]},
-        diferencias={"lectura_a": comp[0], "lectura_b": comp[1], "controles": resultados},
+        diferencias={"lectura_a": comp[0], "lectura_b": comp[1], "controles": resultados,
+                     "celdas_calculadas": cc["celdas_calculadas"]},
         distintos=distintas)
     return {"caso_id": caso_id, "periodo": periodo, "celdas": comp[0]["celdas"], "distintas_a": comp[0]["distintas"],
             "distintas_b": comp[1]["distintas"], "controles": resultados, "ia": _resumen_usos(usos),

@@ -185,15 +185,37 @@ def test_una_sola_lectura_no_alcanza():
 
 # ---------------------------------------------------------------- C1 en detalle
 def test_una_celda_sin_leer_no_pasa():
-    ruta = _ruta_basico("administrativa", "5 años")
+    """D28 completa por cálculo un importe que ESCALA y no se leyó (ver más abajo); un coeficiente sin leer
+    sigue siendo estructura y retiene."""
+    ruta = _ruta_basico("administrativa", "5 años").replace(".basico", ".coef")
     r = por_control(controlar(c.asignar(SEPT, ruta, None)))
     assert r["C1"]["pasa"] is False and any(d["problema"] == "celda sin leer" and d["ruta"] == ruta for d in r["C1"]["detalle"])
 
 
-def test_la_ia_que_anota_una_diferencia_hace_retener():
+def test_d29_un_comentario_de_la_ia_no_retiene_por_si_solo():
+    """D29: antes cualquier nota de la lectura hacía fallar C1. Ahora una nota NUNCA retiene sola: lo que importa
+    lo frenan los controles (la categoría que falta, por ejemplo, ver el test siguiente)."""
     l = lectura(SEPT, notas=["falta la categoría Jefe de Equipo de 3º"])
+    r = c.controlar([l, l], DATOS_AGOSTO, COMUNICADO, "2026-09", "2026-08")
+    assert c.todos_pasan(r)
+
+
+def test_d29_una_nota_mas_una_categoria_faltante_retiene_por_la_categoria():
+    g = copy.deepcopy(SEPT)
+    g["ramas"]["administrativa"]["categorias"].pop(7)
+    l = lectura(g, notas=["falta una categoría"])
     r = por_control(c.controlar([l, l], DATOS_AGOSTO, COMUNICADO, "2026-09", "2026-08"))
-    assert r["C1"]["pasa"] is False
+    assert r["C1"]["pasa"] is False and any(d.get("problema") == "categoría que falta" for d in r["C1"]["detalle"])
+
+
+def test_d29_un_defecto_de_la_respuesta_si_retiene():
+    """Un valor que no era número, una fila ilegible o repetida (`defectos`) no es un comentario del modelo."""
+    l = {**lectura(SEPT), "defectos": ["valor no numérico en administrativa/5 años: 'mil'"]}
+    r = por_control(c.controlar([l, l], DATOS_AGOSTO, COMUNICADO, "2026-09", "2026-08"))
+    assert r["C1"]["pasa"] is False and any(d["problema"] == "defecto en la respuesta de la lectura" for d in r["C1"]["detalle"])
+    # Si el defecto es de la segunda lectura, también.
+    r = c.controlar([lectura(SEPT), l], DATOS_AGOSTO, COMUNICADO, "2026-09", "2026-08")
+    assert not c.todos_pasan(r)
 
 
 def test_un_coeficiente_distinto_es_un_cambio_de_estructura():
@@ -525,3 +547,191 @@ def test_d27_un_trimestre_que_no_vencio_no_se_conserva():
     assert c.conectividad_vencida(["2026-09", "2026-10", "2026-11"], "2026-09") is False
     assert c.conectividad_vencida(["2026-06", "2026-07", "2026-08"], None) is False
     assert c.conectividad_conservada(None, {}, "2026-09") == []
+
+
+# ---------------------------------------------------------------- D28: una celda tapada se completa por cálculo
+# La octubre real: una firma tapa UNA celda del PDF (Maestranza · Capataz Gral. · básico) y las dos lecturas
+# devolvieron null. Vigente = la septiembre real (el básico de esa celda era 3.544.760,33) y octubre = × 1,02184466.
+F_OCT = 1.02184466
+PREV_OCT = septiembre_real()
+OCT = escalar(PREV_OCT, F_OCT)
+COM_OCT = {"inicial": OCT["ramas"]["administrativa"]["categorias"][0]["conformado"],
+           "roe": round(OCT["roe"]["filas"][0]["anual"][1] / 12, 2), "porcentaje": 2.2,
+           "dia_bancario_minimo": OCT["dia_bancario"]["minimo"], "periodo": "2026-10"}
+
+
+def _ruta(g, rama, nombre, campo="basico"):
+    cats = g["ramas"][rama]["categorias"]
+    return next(f"ramas.{rama}.categorias.{i}.{campo}" for i, x in enumerate(cats) if x["nombre"] == nombre)
+
+
+RUTA_CAPATAZ = _ruta(OCT, "maestranza", "Capataz Gral.")
+
+
+def _valor(g, ruta):
+    return next(x["valor"] for x in c.celdas(g) if x["ruta"] == ruta)
+
+
+def oct_cc(a, b=None, previa=None, notas=None, parciales=None, parciales_b=None, com=None):
+    """controlar_completando sobre dos lecturas de octubre (b = a si no se da)."""
+    la = {**lectura(a, "2026-10", notas), "parciales": parciales or {}}
+    lb = {**lectura(a if b is None else b, "2026-10", notas), "parciales": parciales if parciales_b is None else parciales_b}
+    return c.controlar_completando([la, lb], previa or PREV_OCT, com or COM_OCT, "2026-10", "2026-09")
+
+
+def sin_leer(*rutas, base=None):
+    g = base or OCT
+    for r in rutas:
+        g = c.asignar(g, r, None)
+    return g
+
+
+def enmascarar(valor, pos=2):
+    """3622194.41 -> «3.?22.194,42»: el valor en formato argentino con un dígito ilegible."""
+    t = list(c.pesos_ar(valor))
+    dig = [i for i, ch in enumerate(t) if ch.isdigit()]
+    t[dig[pos - 1]] = "?"
+    return "".join(t)
+
+
+def test_d28_la_octubre_sana_pasa_los_seis_sin_completar_nada():
+    cc = oct_cc(OCT)
+    assert c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == []
+
+
+def test_d28_el_caso_real_de_octubre_se_completa_por_calculo_y_pasa_los_seis():
+    real = _valor(OCT, RUTA_CAPATAZ)
+    assert _valor(PREV_OCT, RUTA_CAPATAZ) == 3544760.33 and real == 3622194.41
+    cc = oct_cc(sin_leer(RUTA_CAPATAZ), parciales={RUTA_CAPATAZ: "3.?22.194,42"},
+                notas=["Coef de Subcapataz Gral. y Capataz Gral. parcialmente cubiertos por firma en las tablas del Día del Bancario, "
+                       "pero legibles en la tabla de básicos (2,17 y 2,36).",
+                       "Capataz Gral.: el básico está tachado por una firma/sello (se lee '$ 3,622.194,42' con dígitos dudosos); "
+                       "se deja null por no leerse con certeza."])
+    assert c.todos_pasan(cc["resultados"]), [(x["control"], x["resumen"]) for x in cc["resultados"] if x["pasa"] is not True]
+    [e] = cc["celdas_calculadas"]
+    assert e["ruta"] == RUTA_CAPATAZ and e["etiqueta"] == "Maestranza · Capataz Gral. · básico"
+    assert e["valor_vigente"] == 3544760.33 and abs(e["valor_calculado"] - real) <= 0.01
+    assert abs(e["factor"] - F_OCT) < 1e-6 and e["lectura_parcial"] == ["3.?22.194,42"]
+    assert "calculado (vigente × 1,0218" in e["texto"] and "se leía «3.?22.194,42»" in e["texto"]
+    # Las lecturas devueltas traen la celda puesta, en las dos; D29: los comentarios no retienen y se conservan.
+    for l in cc["lecturas"]:
+        assert _valor(l["contenido"], RUTA_CAPATAZ) == e["valor_calculado"] and len(l["notas"]) == 2
+    # Todo queda dicho en C1 (pasa, con una entrada por celda).
+    c1 = cc["resultados"][0]
+    assert c1["pasa"] is True and c1["detalle"][0]["valor_calculado"] == e["valor_calculado"] and "D28" in c1["resumen"]
+    assert "±1 centavo" in c.texto_calculadas(cc["celdas_calculadas"])
+
+
+def test_d28_sin_lectura_parcial_la_celda_totalmente_tapada_tambien_se_completa():
+    cc = oct_cc(sin_leer(RUTA_CAPATAZ))
+    assert c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"][0]["lectura_parcial"] == []
+
+
+def test_d28_un_conformado_vacio_sin_lectura_parcial_no_se_completa():
+    """QA de D28: un conformado es opcional. Si viene vacío en las dos lecturas y nadie vio una cifra,
+    puede ser que el convenio lo haya sacado: no se inventa, retiene."""
+    ruta = _ruta(OCT, "administrativa", "Inicial", "conformado")
+    cc = oct_cc(sin_leer(ruta))
+    assert cc["celdas_calculadas"] == [] and not c.todos_pasan(cc["resultados"])
+    assert cc["resultados"][0]["pasa"] is False
+    # Con una lectura parcial que prueba que hay una cifra tapada, sí se completa.
+    cc = oct_cc(sin_leer(ruta), parciales={ruta: enmascarar(_valor(OCT, ruta))})
+    assert c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"][0]["ruta"] == ruta
+
+
+def test_d28_el_valor_calculado_admite_un_centavo_de_mas_o_de_menos_contra_la_lectura_parcial():
+    calc = oct_cc(sin_leer(RUTA_CAPATAZ))["celdas_calculadas"][0]["valor_calculado"]
+    for leido in (calc, round(calc + 0.01, 2), round(calc - 0.01, 2)):
+        assert c.parcial_compatible(enmascarar(leido), calc), leido
+    assert not c.parcial_compatible(enmascarar(calc + 100), calc)
+    assert not c.parcial_compatible("", calc) and not c.parcial_compatible("3.?22.194", calc)    # otro largo
+
+
+def test_d28_una_lectura_parcial_incompatible_retiene_con_el_detalle():
+    for malo in ("3.?22.194,99", "4.?22.194,42", "3.?22.19?,4?9"):
+        cc = oct_cc(sin_leer(RUTA_CAPATAZ), parciales={RUTA_CAPATAZ: malo})
+        assert not c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == [], malo
+        assert any("no es compatible con lo que se alcanzaba a ver" in str(d.get("problema")) for d in cc["resultados"][0]["detalle"])
+
+
+def test_d28_basta_que_una_de_las_dos_lecturas_parciales_sea_incompatible():
+    cc = oct_cc(sin_leer(RUTA_CAPATAZ), parciales={RUTA_CAPATAZ: "3.?22.194,42"}, parciales_b={RUTA_CAPATAZ: "9.?22.194,42"})
+    assert not c.todos_pasan(cc["resultados"])
+
+
+def test_d28_dos_celdas_sin_leer_es_el_maximo_y_con_tres_se_retiene():
+    assert c.MAX_CELDAS_CALCULADAS == 2
+    otra = _ruta(OCT, "administrativa", "10 años")
+    dos = oct_cc(sin_leer(RUTA_CAPATAZ, otra))
+    assert c.todos_pasan(dos["resultados"]) and len(dos["celdas_calculadas"]) == 2
+    tres = oct_cc(sin_leer(RUTA_CAPATAZ, otra, _ruta(OCT, "ordenanza", "20 años")))
+    assert not c.todos_pasan(tres["resultados"]) and tres["celdas_calculadas"] == []
+    assert any("solo se completan hasta 2" in str(d.get("problema")) for d in tres["resultados"][0]["detalle"])
+    # Un adicional también escala (adicionales, ROE y Día del Bancario entran a C4 igual que los básicos).
+    mixta = oct_cc(sin_leer(RUTA_CAPATAZ, "adicionales.guarderia"))
+    assert c.todos_pasan(mixta["resultados"]) and len(mixta["celdas_calculadas"]) == 2
+
+
+@pytest.mark.parametrize("nombre, ruta", [
+    ("un coeficiente", _ruta(OCT, "maestranza", "Capataz Gral.", "coef")),
+    ("los años", _ruta(OCT, "administrativa", "5 años", "anios")),
+    ("un tope hasta del ROE", "roe.filas.0.hasta"),
+    ("la conectividad", "conectividad.0.mensual"),
+])
+def test_d28_una_celda_que_no_escala_sin_leer_retiene(nombre, ruta):
+    cc = oct_cc(sin_leer(ruta))
+    assert not c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == [], nombre
+
+
+def test_d28_una_celda_que_no_escala_junto_a_una_escalable_retiene_y_no_completa_nada():
+    cc = oct_cc(sin_leer(RUTA_CAPATAZ, "conectividad.0.mensual"))
+    assert not c.todos_pasan(cc["resultados"]) and cc["resultados"][0]["pasa"] is False
+    assert cc["lecturas"][0]["contenido"]["ramas"]["maestranza"]["categorias"][37]["basico"] is None
+
+
+def test_d28_null_en_una_lectura_y_el_valor_calculado_en_la_otra_se_completa():
+    real = _valor(OCT, RUTA_CAPATAZ)
+    for leido in (real, round(real + 0.01, 2)):
+        cc = oct_cc(sin_leer(RUTA_CAPATAZ), b=c.asignar(OCT, RUTA_CAPATAZ, leido))
+        assert c.todos_pasan(cc["resultados"]), leido
+        assert cc["celdas_calculadas"][0]["leido_en_una_lectura"] == leido
+
+
+def test_d28_null_en_una_lectura_y_otro_valor_en_la_otra_retiene():
+    real = _valor(OCT, RUTA_CAPATAZ)
+    for leido in (real + 0.5, real + 1000, real - 0.02):
+        cc = oct_cc(sin_leer(RUTA_CAPATAZ), b=c.asignar(OCT, RUTA_CAPATAZ, leido))
+        assert not c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == [], leido
+        assert "C2" in c.fallan(cc["resultados"])
+
+
+def test_d28_una_celda_calculada_mas_otra_con_valor_malo_retiene():
+    mala_ruta = _ruta(OCT, "administrativa", "10 años")
+    mala = c.asignar(sin_leer(RUTA_CAPATAZ), mala_ruta, _valor(OCT, mala_ruta) + 500)
+    cc = oct_cc(mala)
+    assert not c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == []
+    assert "C4" in c.fallan(cc["resultados"])
+    # El detalle de C1 dice que la celda NO se completó y por qué.
+    assert any("no pasan todos los controles" in str(d.get("problema")) for d in cc["resultados"][0]["detalle"])
+
+
+def test_d28_un_basico_cuyo_calculado_contradice_la_coherencia_interna_retiene():
+    """Si el vigente de esa celda ya no es coeficiente × unidad, completarla por cálculo la deja incoherente (C5)."""
+    previa = c.asignar(PREV_OCT, RUTA_CAPATAZ, _valor(PREV_OCT, RUTA_CAPATAZ) + 500)
+    cc = oct_cc(sin_leer(RUTA_CAPATAZ), previa=previa)
+    assert not c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == []
+    assert c.fallan(cc["resultados"]) == ["C1"]                  # se muestra el resultado de siempre, C1 con el motivo
+    det = str(cc["resultados"][0]["detalle"])
+    assert "C5" in det and "no pasan todos los controles" in det
+
+
+def test_d28_sin_grilla_anterior_no_se_completa_nada():
+    cc = c.controlar_completando([{**lectura(sin_leer(RUTA_CAPATAZ)), "parciales": {}}] * 2, None, COM_OCT, "2026-10", None)
+    assert cc["celdas_calculadas"] == [] and cc["resultados"][0]["pasa"] is False
+
+
+def test_d28_no_modifica_las_lecturas_que_recibe():
+    la = lectura(sin_leer(RUTA_CAPATAZ), "2026-10")
+    antes = copy.deepcopy(la)
+    c.controlar_completando([la, la], PREV_OCT, COM_OCT, "2026-10", "2026-09")
+    assert la == antes

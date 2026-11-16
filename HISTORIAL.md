@@ -11223,3 +11223,15 @@ dos lecturas («se lee 3.?22.194,42») en vez de completar. Todo lo demás pasó
 (192 importes con factor 1,02184466, que redondea al 2,2 % del comunicado). El
 valor que da el factor para esa celda es 3.622.194,41 o 42: lo resuelve una
 persona mirando el PDF desde la vista de estado.
+
+**D28 y D29 (misma tarde, Plataforma 0.72.01).** SDN: esa retención «no debería
+trabar nada». La regla dura «nunca se completa un importe» se abrió en un caso
+acotado: una celda de importe sin leer en las dos lecturas se completa con
+vigente × factor del mes (como mucho 2 por grilla, con todo lo demás en verde y
+compatible con la lectura parcial que la IA deja en un campo propio, «3.?22.194,42»).
+Y un comentario de la IA dejó de retener por sí solo: octubre traía además una
+nota sobre coeficientes tapados en otra tabla que la habría vuelto a frenar. El
+QA independiente midió el centavo (193 celdas, una por vez: 181 exactas y 12 a
+±0,01, ninguna peor) y encontró que un conformado vacío se completaba aunque el
+convenio pudiera haberlo sacado: ahora un conformado solo se completa si hay
+lectura parcial que pruebe que hay una cifra.

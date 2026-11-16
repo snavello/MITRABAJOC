@@ -232,6 +232,53 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   en el PDF, también. Un trimestre nuevo sigue reteniendo siempre. Las
   entradas conservadas van en orden cronológico junto con las leídas; C2
   compara solo lo leído (lo conservado es igual en las dos por construcción).
+- **D28 · Una celda que no se pudo leer se completa por cálculo** (SDN,
+  2026-11-16, la octubre real: una firma tapa UNA celda del PDF, Maestranza ·
+  Capataz Gral. · básico, y la grilla quedó retenida solo por eso, con los
+  otros cinco controles en verde). Cambia la regla «nunca se completa un
+  importe», **solo en este caso acotado**. (1) Aplica a celdas que escalan con
+  el factor del mes (básico, conformado, adicionales, ROE anual, Día del
+  Bancario); nunca a coeficientes, años, nombres, topes `hasta` ni
+  conectividad. (2) A lo sumo **2 celdas** por grilla
+  (`escalas_controles.MAX_CELDAS_CALCULADAS`); con más, retiene como hoy.
+  (3) La celda tiene que estar sin leer en las dos lecturas, o en una y, en la
+  otra, un valor que coincida con el calculado a ±0,01. (4) Con esas celdas
+  apartadas, todo lo demás pasa: C1 (sin otras diferencias de estructura), C2,
+  C3, C4 (el factor único se mide sobre el resto), C5 y C6; se verifica
+  poniendo el valor y corriendo los seis. (5) Valor = vigente × factor de C4,
+  redondeado al centavo; la incertidumbre de ±1 centavo se acepta y se dice en
+  la nota; si el calculado contradice a C5 (en un básico), retiene. (6) **Lectura
+  parcial**: los esquemas de la IA suman un texto no anulable por importe
+  (`basico_parcial`, `conformado_parcial`, `importe_parcial`) con lo que se
+  alcanza a ver («3.?22.194,42», un «?» por dígito ilegible); no suman a las 16
+  uniones. Si hay lectura parcial, el calculado tiene que ser compatible dígito
+  por dígito (±1 centavo); si no, retiene con el detalle. Sin lectura parcial,
+  se completa igual, **salvo un conformado**: como es opcional en la grilla, un
+  conformado vacío en las dos lecturas y sin lectura parcial no se completa
+  (puede ser que el convenio lo haya sacado, no que esté tapado) y retiene.
+  (7) Todo queda dicho: entrada por celda en el detalle de
+  C1, `controles["celdas_calculadas"]`, la nota de la grilla, el aviso de
+  Telegram de la publicación y una marca «calculada» en la vista de estado.
+  (8) El ensayo y la corrección a mano usan la misma función
+  (`controlar_completando`). (9) Nada más se afloja: una celda leída con un valor
+  malo sigue reteniendo (C4/C5) y dos lecturas con valores distintos, también
+  (C2).
+- **D29 · Los comentarios de la IA no retienen** (SDN, 2026-11-16, la octubre
+  real: además de la celda tapada, la IA dejó dos notas sobre coeficientes
+  parcialmente cubiertos y el básico tachado, y C1 fallaba por cada nota).
+  Una nota de la lectura **nunca es por sí sola un motivo de retención**: si la
+  estructura es idéntica a la vigente, las celdas están leídas (o completadas
+  por D28), las dos lecturas coinciden y los controles pasan, la grilla se
+  publica. Las notas quedan en `controles["notas_lectura"]`, se muestran en el
+  detalle de la grilla («Comentarios de la lectura») y van, recortadas, en el
+  aviso de Telegram de la publicación. Lo que importa lo siguen frenando los
+  controles (categoría que falta o sobra, rama renombrada, celda distinta,
+  celda que no escala sin leer, más de 2 sin leer). Lo que `sanear_*` detecta
+  en la respuesta (un valor que no es número, una fila ilegible o repetida) NO
+  es un comentario del modelo sino un defecto: va aparte (`defectos` en la
+  lectura, `controles["defectos_respuesta"]`) y sí hace fallar C1. Como la
+  lectura parcial sale solo de los campos `*_parcial`, D28 dejó de mirar las
+  notas.
 
 Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
 archivos al importarse (necesita una puerta para recibir las publicadas y
