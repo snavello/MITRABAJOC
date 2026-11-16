@@ -129,12 +129,28 @@ def herramienta_rama(nombre_rama: str) -> dict:
     }
 
 
+LIMITE_UNIONES = 16       # tope de la API para un esquema estricto (parámetros con anyOf o null)
+
+
+def uniones(esquema) -> int:
+    """Cuántos parámetros del esquema pueden ser de más de un tipo (anyOf)."""
+    if isinstance(esquema, dict):
+        return (1 if "anyOf" in esquema else 0) + sum(uniones(v) for v in esquema.values())
+    if isinstance(esquema, list):
+        return sum(uniones(v) for v in esquema)
+    return 0
+
+
+def claves_de_adicionales(plantilla: dict) -> list:
+    """Las claves de los adicionales, aplanadas: `funcion_cajero`, `titulos.secundario`…"""
+    claves = []
+    for k, v in plantilla["adicionales"].items():
+        claves.extend([f"{k}.{k2}" for k2 in v] if isinstance(v, dict) else [k])
+    return claves
+
+
 def herramienta_resto(plantilla: dict) -> dict:
-    adic = plantilla["adicionales"]
-    adic_props = {k: _numero() for k, v in adic.items() if not isinstance(v, dict)}
-    for k, v in adic.items():
-        if isinstance(v, dict):
-            adic_props[k] = _objeto({k2: _numero() for k2 in v})
+    claves = claves_de_adicionales(plantilla)
     n_tramos = len(plantilla["roe"]["tramos"])
     return {
         "name": "registrar_resto",
@@ -143,7 +159,12 @@ def herramienta_resto(plantilla: dict) -> dict:
         "input_schema": _objeto({
             "periodo_impreso": {"anyOf": [{"type": "string"}, {"type": "null"}],
                                 "description": "Mes y año que dicen los encabezados de las tablas, como AAAA-MM (Septiembre 2026 -> 2026-09); null si no se lee."},
-            "adicionales": _objeto(adic_props),
+            # Una fila por adicional (clave + importe) y no una propiedad por cada uno:
+            # el esquema estricto admite hasta 16 parámetros que pueden ser null, y con
+            # una propiedad por adicional eran 18 (la API contestó 400 en el bloque 6).
+            "adicionales": {"type": "array", "description": "Una fila por cada adicional de la lista, con su clave exacta.",
+                            "items": _objeto({"clave": {"type": "string", "enum": claves},
+                                              "importe": {**_numero(), "description": "Importe mensual; null si no se lee."}})},
             "conectividad": {"type": "array", "items": _objeto({
                 "meses": {"type": "array", "items": {"type": "string"}, "description": "Los meses que cubre, como AAAA-MM."},
                 "diario": _numero(), "mas_de_4_dias": _numero(), "mensual": _numero()})},
@@ -189,13 +210,10 @@ def prompt_rama(clave: str, plantilla: dict) -> str:
 
 
 def prompt_resto(plantilla: dict) -> str:
-    adic = plantilla["adicionales"]
-    lista = []
-    for k, v in adic.items():
-        lista.append(f"- {k}" + (f": " + ", ".join(v) if isinstance(v, dict) else ""))
+    lista = [f"- {c}" for c in claves_de_adicionales(plantilla)]
     tramos = "; ".join(plantilla["roe"]["tramos"])
     return ("Transcribí, de las mismas páginas: (1) el mes y año que dicen los encabezados de las tablas; "
-            "(2) los ADICIONALES, importes mensuales fijos:\n" + "\n".join(lista) + "\n"
+            "(2) los ADICIONALES, importes mensuales fijos, una fila por cada clave de esta lista (clave exacta):\n" + "\n".join(lista) + "\n"
             "(3) la CONECTIVIDAD: una entrada por trimestre con sus meses (AAAA-MM), importe diario, más de 4 días y mensual; "
             f"(4) el ROE: una fila por tramo de sueldo bruto (con su tope «hasta»; null en la última) y, por cada tramo de "
             f"ROE del banco ({tramos}), el monto ANUAL; el primer tramo es 0; "
@@ -277,6 +295,19 @@ def sanear_rama(crudo: dict, clave: str, plantilla: dict, notas: list) -> dict:
 
 def sanear_resto(crudo: dict, notas: list) -> dict:
     adic_crudo = crudo.get("adicionales") or {}
+    if isinstance(adic_crudo, list):          # la forma del esquema: filas clave + importe
+        anidado = {}
+        for fila in adic_crudo:
+            if not isinstance(fila, dict) or not isinstance(fila.get("clave"), str):
+                notas.append(f"fila de adicionales ilegible: {fila!r}")
+                continue
+            grupo, _, hoja = fila["clave"].partition(".")
+            destino = anidado.setdefault(grupo, {}) if hoja else anidado
+            if not isinstance(destino, dict) or (hoja or grupo) in destino:
+                notas.append(f"adicional repetido o mal formado: {fila['clave']}")
+                continue
+            destino[hoja or grupo] = fila.get("importe")
+        adic_crudo = anidado
     adic = {}
     for k, v in adic_crudo.items():
         adic[k] = ({k2: _n(v2, notas, f"adicionales/{k}/{k2}") for k2, v2 in v.items()}

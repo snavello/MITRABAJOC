@@ -404,7 +404,7 @@ def test_respuesta_de_la_ia_con_tipos_raros_registra_igual_lo_gastado(entorno_li
     e.monkeypatch.setattr(fuente, "descargar_pdf", lambda u: b"%PDF-1.7 x")
     e.monkeypatch.setattr(lectura, "paginas_a_imagenes", lambda pdf: [("AAAA", "image/png")])
     buena_rama = {"categorias": [], "notas": []}
-    cli = _Cli([_Msg(buena_rama), _Msg(buena_rama), _Msg(buena_rama), _Msg({"adicionales": [1]})])
+    cli = _Cli([_Msg(buena_rama), _Msg(buena_rama), _Msg(buena_rama), _Msg({"conectividad": ["x"]})])   # una lista de adicionales ya es una forma válida
     lectura.usar_cliente(cli)
     try:
         with Session(db.engine) as s:
