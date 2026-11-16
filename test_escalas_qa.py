@@ -416,3 +416,22 @@ def test_respuesta_de_la_ia_con_tipos_raros_registra_igual_lo_gastado(entorno_li
         lectura.usar_cliente(None)
     assert r["leidas"][0]["estado"] == "error"
     assert despues - antes == 4, f"se pagaron 4 llamadas y se registraron {despues - antes}"
+
+
+# ------------------------------------------------------------- D28 (una celda tapada se completa por cálculo)
+def test_d28_un_null_en_una_celda_escalable_sola_ahora_se_completa_pero_nada_mas_se_afloja():
+    """Antes de D28 cualquier null retenía. Ahora una celda que escala se completa, y siguen reteniendo:
+    tres nulls, un null que no escala, dos lecturas con valores distintos y un valor malo."""
+    from test_escalas_controles import F_OCT, OCT, PREV_OCT, RUTA_CAPATAZ, oct_cc, sin_leer
+    assert ctl.todos_pasan(oct_cc(sin_leer(RUTA_CAPATAZ))["resultados"])
+    otras = ("ramas.administrativa.categorias.10.basico", "ramas.ordenanza.categorias.20.basico")
+    assert not ctl.todos_pasan(oct_cc(sin_leer(RUTA_CAPATAZ, *otras))["resultados"])
+    assert not ctl.todos_pasan(oct_cc(sin_leer("roe.filas.0.hasta"))["resultados"])
+    assert not ctl.todos_pasan(oct_cc(sin_leer(RUTA_CAPATAZ), b=ctl.asignar(OCT, RUTA_CAPATAZ, 1.0))["resultados"])
+    assert not ctl.todos_pasan(oct_cc(ctl.asignar(OCT, RUTA_CAPATAZ, 1.0))["resultados"])
+    assert F_OCT > 1 and PREV_OCT
+
+
+def test_d28_la_vista_marca_las_celdas_calculadas_sin_innerhtml():
+    js = open("static/escalas_estado.js", encoding="utf-8").read()
+    assert "calculada" in js and "celdas_calculadas" in js and "Comentarios de la lectura" in js and "innerHTML" not in js

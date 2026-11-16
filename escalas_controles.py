@@ -27,6 +27,11 @@ sobre la grilla de agosto de 2026 y los comunicados de julio a octubre):
   trimestre YA VENCIDO puede faltar en el PDF y se conserva de la grilla
   anterior (D27).
 
+D28: UNA celda que escala con el factor y no se pudo leer en ninguna de las dos lecturas
+(la tapa una firma) se completa por cálculo (`completar_celdas`): hasta
+`MAX_CELDAS_CALCULADAS` celdas por grilla y solo si todo lo demás pasa. Ver el docstring de esa
+función y PLAN_CONVENIO_ESCALAS.md.
+
 Tolerancias (parámetros, con default ESTRICTO; se calibran con grillas
 reales en el bloque 6 y SDN ve el número antes de fijarlo):
   c3_centavos   0,00  anclas del comunicado (inicial y mínimo del Día del Bancario), al centavo exacto
@@ -39,6 +44,7 @@ reales en el bloque 6 y SDN ve el número antes de fijarlo):
                        agosto trae hasta ~1,7 en ordenanza: es la fuente)
 """
 import copy
+import re
 import statistics
 
 TOLERANCIAS = {"c3_centavos": 0.0, "c3_roe_centavos": 0.01, "c4_extra": 0.0, "c4_hasta": 1.0, "c5_pesos": 2.0}
@@ -347,8 +353,10 @@ def c1_estructura(lectura: dict, previa: dict | None, periodo: str | None = None
     entradas de trimestres ya publicados no hayan cambiado."""
     g = lectura["contenido"]
     problemas = []
-    for n in lectura.get("notas") or []:
-        problemas.append({"problema": "nota de la lectura", "detalle": str(n)})
+    # D29: los comentarios de la IA (`notas`) NUNCA retienen por sí solos; se guardan y se muestran. Lo que sí
+    # frena son los defectos de la respuesta (un valor que no era número, una fila ilegible o repetida).
+    for n in lectura.get("defectos") or []:
+        problemas.append({"problema": "defecto en la respuesta de la lectura", "detalle": str(n)})
     for k in CLAVES_DATOS:
         if k not in g:
             problemas.append({"problema": "falta una sección", "detalle": k})
@@ -511,6 +519,34 @@ def _factor_de_mayor_cobertura(intervalos: list) -> tuple:
     return f, fuera
 
 
+def _pares_que_escalan(contenido: dict, previa: dict) -> list:
+    """Los pares (celda anterior, celda nueva) de importes que escalan con el factor y que están
+    en las dos grillas. Una celda sin leer (nula) no forma par."""
+    nuevas = {c["ruta"]: c for c in celdas(contenido)}
+    pares = []
+    for c in celdas(previa):
+        n = nuevas.get(c["ruta"])
+        if c["tipo"] in ESCALAN and n and _num(c["valor"]) and c["valor"] >= 1000 and _num(n["valor"]):
+            pares.append((c, n))
+    return pares
+
+
+def _factor_de_celdas(contenido: dict, previa: dict, tol: dict) -> dict | None:
+    """El factor del mes: el punto que cae en más intervalos de redondeo (ver `c4_factor_unico`).
+    None si hay menos de TOPE_HASTA_FACTOR_MIN_CELDAS importes comparables."""
+    pares = _pares_que_escalan(contenido, previa)
+    if len(pares) < TOPE_HASTA_FACTOR_MIN_CELDAS:
+        return None
+    f_mediano = statistics.median(n["valor"] / c["valor"] for c, n in pares)
+    margenes = []
+    for c, n in pares:
+        coef = n["coef"] if _num(n.get("coef")) else 1.0
+        margenes.append(0.005 * (1 + f_mediano) + 0.005 * coef + tol["c4_extra"])
+    intervalos = [((n["valor"] - h) / c["valor"], (n["valor"] + h) / c["valor"]) for (c, n), h in zip(pares, margenes)]
+    f, fuera = _factor_de_mayor_cobertura(intervalos)
+    return {"pares": pares, "margenes": margenes, "f": f, "fuera": fuera}
+
+
 def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
                     tolerancias: dict | None = None) -> dict:
     """C4 (D19): cada importe nuevo es el anterior por el MISMO factor, al centavo
@@ -532,20 +568,11 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
         return _res("C4", "Factor único", None, "No hay grilla anterior: el control no aplica.")
     tol = _tol(tolerancias)
     nuevas = {c["ruta"]: c for c in celdas(lectura["contenido"])}
-    pares = []
-    for c in celdas(previa):
-        n = nuevas.get(c["ruta"])
-        if c["tipo"] in ESCALAN and n and _num(c["valor"]) and c["valor"] >= 1000 and _num(n["valor"]):
-            pares.append((c, n))
-    if len(pares) < TOPE_HASTA_FACTOR_MIN_CELDAS:
-        return _res("C4", "Factor único", False, f"Solo {len(pares)} importes comparables: no alcanza para medir el factor.")
-    f_mediano = statistics.median(n["valor"] / c["valor"] for c, n in pares)
-    margenes = []
-    for c, n in pares:
-        coef = n["coef"] if _num(n.get("coef")) else 1.0
-        margenes.append(0.005 * (1 + f_mediano) + 0.005 * coef + tol["c4_extra"])
-    intervalos = [((n["valor"] - h) / c["valor"], (n["valor"] + h) / c["valor"]) for (c, n), h in zip(pares, margenes)]
-    f, fuera = _factor_de_mayor_cobertura(intervalos)
+    cf = _factor_de_celdas(lectura["contenido"], previa, tol)
+    if cf is None:
+        n = len(_pares_que_escalan(lectura["contenido"], previa))
+        return _res("C4", "Factor único", False, f"Solo {n} importes comparables: no alcanza para medir el factor.")
+    pares, margenes, f, fuera = cf["pares"], cf["margenes"], cf["f"], cf["fuera"]
     det, desvio_max, exceso_max = [], 0.0, 0.0
     for k, ((c, n), h) in enumerate(zip(pares, margenes)):
         desvio = abs(n["valor"] - c["valor"] * f)
@@ -719,15 +746,127 @@ def _mes_siguiente(periodo: str) -> str:
     return f"{a + 1:04d}-01" if m == 12 else f"{a:04d}-{m + 1:02d}"
 
 
+# ---------------------------------------------------------------- D28
+# D28 (SDN, 2026-11-16, la octubre real: una firma tapa UNA celda del PDF y la grilla quedó retenida
+# por eso). Una celda que escala con el factor del mes y que ninguna de las dos lecturas pudo leer se
+# completa por cálculo, valor vigente × factor, y la grilla se publica sola si todo lo demás pasa.
+# Es la ÚNICA excepción a «nunca se completa un importe» y está acotada: a lo sumo esta cantidad de
+# celdas por grilla. Con más, la grilla se retiene como siempre: dos o tres firmas sobre importes de
+# una tabla ya son un PDF que una persona tiene que mirar, y cada celda completada es un dato que
+# nadie leyó.
+MAX_CELDAS_CALCULADAS = 2
+
+
+def pesos_ar(v: float) -> str:
+    """3622194.41 -> «3.622.194,41» (formato argentino)."""
+    return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _formatos_ar(v: float) -> tuple:
+    return (pesos_ar(v), pesos_ar(v).replace(".", ""))
+
+
+def parcial_compatible(parcial: str, valor: float) -> bool:
+    """¿El valor es compatible, dígito por dígito, con lo que se alcanzaba a ver («3.?22.194,42», un «?»
+    por dígito ilegible)? Se admite ±1 centavo en el valor por el redondeo (la unidad se redondea al
+    centavo antes de multiplicar). Con o sin puntos de miles."""
+    txt = re.sub(r"[\s$]", "", parcial or "")
+    if not txt:
+        return False
+    for delta in (0.0, 0.01, -0.01):
+        for f in _formatos_ar(round(valor + delta, 2)):
+            if len(f) == len(txt) and all(t == "?" or t == ch for t, ch in zip(txt, f)):
+                return True
+    return False
+
+
+def completar_celdas(lecturas: list, previa: dict | None, tolerancias: dict | None = None) -> dict:
+    """D28. Devuelve {"lecturas": copias con las celdas completadas (o las mismas, si no hubo),
+    "celdas": [una entrada por celda completada], "motivos": [por qué no se completó algo]}.
+
+    Reglas: solo celdas que ESCALAN (básico, conformado, adicionales, ROE anual, Día del Bancario) y
+    que existen con importe en la grilla anterior; nunca coeficientes, años, topes `hasta` ni
+    conectividad. A lo sumo MAX_CELDAS_CALCULADAS. La celda tiene que estar sin leer (null) en las DOS
+    lecturas, o en una y, en la otra, un valor que coincida con el calculado a ±0,01. El factor es el de
+    C4 con las demás celdas; el valor, vigente × factor al centavo. Si alguna lectura dejó una lectura
+    parcial («3.?22.194,42»), el valor calculado tiene que ser compatible con ella dígito por dígito.
+    Todo o nada: si una celda candidata no cumple, no se completa ninguna. Que lo demás pase (C1 a C6 con
+    las celdas puestas) lo verifica `controlar_completando`, no esta función."""
+    sin = {"lecturas": lecturas, "celdas": [], "motivos": []}
+    if previa is None or len(lecturas) < 2:
+        return sin
+    tol = _tol(tolerancias)
+    ca = {c["ruta"]: c for c in celdas(lecturas[0]["contenido"])}
+    cb = {c["ruta"]: c for c in celdas(lecturas[1]["contenido"])}
+    cp = {c["ruta"]: c for c in celdas(previa)}
+    candidatas = []
+    for ruta, a in ca.items():
+        b = cb.get(ruta)
+        p = cp.get(ruta)
+        if b is None or p is None or (a["valor"] is not None and b["valor"] is not None):
+            continue
+        if a["tipo"] not in ESCALAN or not _num(p["valor"]) or p["valor"] < 1000:
+            continue
+        if any(v is not None and not _num(v) for v in (a["valor"], b["valor"])):
+            continue
+        candidatas.append((ruta, a, b, p))
+    if not candidatas:
+        return sin
+    etiquetas = [a["etiqueta"] for _, a, _, _ in candidatas]
+    if len(candidatas) > MAX_CELDAS_CALCULADAS:
+        return {**sin, "motivos": [{"problema": f"D28: hay {len(candidatas)} celdas que escalan sin leer y solo se completan hasta "
+                                                f"{MAX_CELDAS_CALCULADAS} por grilla", "celdas": etiquetas}]}
+    apartada = copy.deepcopy(lecturas[0]["contenido"])
+    for ruta, *_ in candidatas:
+        apartada = asignar(apartada, ruta, None)
+    cf = _factor_de_celdas(apartada, previa, tol)
+    if cf is None:
+        return {**sin, "motivos": [{"problema": "D28: no hay suficientes importes leídos para medir el factor", "celdas": etiquetas}]}
+    f = cf["f"]
+    entradas, motivos = [], []
+    for ruta, a, b, p in candidatas:
+        calc = round(p["valor"] * f, 2)
+        parciales = list(dict.fromkeys(t for t in (((l.get("parciales") or {}).get(ruta)) for l in lecturas[:2]) if t))
+        leido = [v for v in (a["valor"], b["valor"]) if v is not None]
+        problema = None
+        if leido and abs(leido[0] - calc) > 0.01 + 1e-9:
+            problema = f"D28: una lectura no pudo leer la celda y la otra leyó {leido[0]}, que no coincide con el valor calculado {calc}"
+        elif any(not parcial_compatible(t, calc) for t in parciales):
+            problema = f"D28: el valor calculado {calc} no es compatible con lo que se alcanzaba a ver ({' / '.join(parciales)})"
+        if problema:
+            motivos.append({"problema": problema, "ruta": ruta, "etiqueta": a["etiqueta"], "vigente": p["valor"],
+                            "factor": round(f, 8), "calculado": calc, "lectura_parcial": parciales})
+            continue
+        f6 = f"{f:.6f}".replace(".", ",")
+        texto = (f"{a['etiqueta']}: $ {pesos_ar(calc)} calculado (vigente × {f6}); tapado en el PDF"
+                 + (f", se leía «{' / '.join(parciales)}»" if parciales else ""))
+        entradas.append({"ruta": ruta, "etiqueta": a["etiqueta"], "valor_vigente": p["valor"], "factor": round(f, 8),
+                         "valor_calculado": calc, "lectura_parcial": parciales,
+                         "leido_en_una_lectura": leido[0] if leido else None, "texto": texto})
+    if motivos:
+        return {**sin, "motivos": motivos}
+    nuevas = []
+    for l in lecturas:
+        cont = l["contenido"]
+        for e in entradas:
+            cont = asignar(cont, e["ruta"], e["valor_calculado"])
+        nuevas.append({**l, "contenido": cont})
+    return {"lecturas": nuevas, "celdas": entradas, "motivos": []}
+
+
+def texto_calculadas(entradas: list) -> str:
+    """La frase para la nota de la grilla y el aviso de la publicación."""
+    if not entradas:
+        return ""
+    return " ".join(e["texto"] + "." for e in entradas) + " Incertidumbre de ±1 centavo por el redondeo (D28)."
+
+
 # ---------------------------------------------------------------- todos
-def controlar(lecturas: list, previa: dict | None, comunicado: dict | None, periodo: str | None,
-              vigente_periodo: str | None = None, tolerancias: dict | None = None) -> list:
-    """Los seis controles sobre la primera lectura (la segunda entra en C2).
-    `previa` es el contenido de la grilla vigente (None en el ensayo de una
-    grilla sin anterior). Nunca levanta: un control que falla por un dato
-    raro devuelve `pasa: False` con el error."""
+def _controlar_crudo(lecturas: list, previa: dict | None, comunicado: dict | None, periodo: str | None,
+                     vigente_periodo: str | None = None, tolerancias: dict | None = None) -> list:
+    defectos = [d for l in lecturas[:2] for d in (l.get("defectos") or [])]
     ctl = [
-        ("C1", lambda: c1_estructura(lecturas[0], previa, periodo)),
+        ("C1", lambda: c1_estructura({**lecturas[0], "defectos": defectos}, previa, periodo)),
         ("C2", lambda: c2_doble_lectura(lecturas)),
         ("C3", lambda: c3_anclas(lecturas[0], comunicado, tolerancias)),
         ("C4", lambda: c4_factor_unico(lecturas[0], previa, comunicado, tolerancias)),
@@ -741,6 +880,41 @@ def controlar(lecturas: list, previa: dict | None, comunicado: dict | None, peri
         except Exception as e:                               # un dato raro nunca se cuenta como «pasó»
             salida.append(_res(clave, clave, False, f"No se pudo evaluar el control ({type(e).__name__}: {e})."))
     return salida
+
+
+def controlar_completando(lecturas: list, previa: dict | None, comunicado: dict | None, periodo: str | None,
+                          vigente_periodo: str | None = None, tolerancias: dict | None = None) -> dict:
+    """Los seis controles con la regla D28 aplicada. Devuelve {"resultados", "lecturas", "celdas_calculadas"}:
+    las lecturas a usar (con las celdas completadas si D28 se aplicó y TODO lo demás pasa; si no, las mismas
+    de entrada, y la grilla se retiene como siempre) y una entrada por celda completada. Los motivos por los
+    que no se completó algo se suman al detalle de C1. Nunca levanta."""
+    try:
+        d = completar_celdas(lecturas, previa, tolerancias)
+    except Exception as e:                                   # D28 es una ayuda: si falla, rige la regla de siempre
+        d = {"lecturas": lecturas, "celdas": [], "motivos": [{"problema": f"D28: no se pudo evaluar ({type(e).__name__}: {e})"}]}
+    if d["celdas"]:
+        res = _controlar_crudo(d["lecturas"], previa, comunicado, periodo, vigente_periodo, tolerancias)
+        if todos_pasan(res):
+            c1 = res[0]
+            c1["detalle"] = list(d["celdas"]) + c1["detalle"]
+            c1["resumen"] += f" Se completó por cálculo {len(d['celdas'])} celda(s) que el PDF no dejaba leer (D28)."
+            return {"resultados": res, "lecturas": d["lecturas"], "celdas_calculadas": d["celdas"]}
+        d["motivos"] = [{"problema": "D28: la celda no se completó porque, con el valor calculado puesto, no pasan todos los controles ("
+                                     + ", ".join(fallan(res)) + ")", "celdas": [e["etiqueta"] for e in d["celdas"]],
+                         "controles": {r["control"]: r["resumen"] for r in res if r.get("pasa") is not True}}]
+    res = _controlar_crudo(lecturas, previa, comunicado, periodo, vigente_periodo, tolerancias)
+    if d["motivos"]:
+        res[0]["detalle"] = (res[0]["detalle"] + d["motivos"])[:TOPE_DETALLE]
+    return {"resultados": res, "lecturas": lecturas, "celdas_calculadas": []}
+
+
+def controlar(lecturas: list, previa: dict | None, comunicado: dict | None, periodo: str | None,
+              vigente_periodo: str | None = None, tolerancias: dict | None = None) -> list:
+    """Los seis controles sobre la primera lectura (la segunda entra en C2), con la regla D28.
+    `previa` es el contenido de la grilla vigente (None en el ensayo de una
+    grilla sin anterior). Nunca levanta: un control que falla por un dato
+    raro devuelve `pasa: False` con el error."""
+    return controlar_completando(lecturas, previa, comunicado, periodo, vigente_periodo, tolerancias)["resultados"]
 
 
 def todos_pasan(resultados: list) -> bool:

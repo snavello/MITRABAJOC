@@ -90,7 +90,9 @@ def test_los_esquemas_son_cerrados_y_aceptan_nulos():
     esq = h["input_schema"]
     assert h["strict"] and esq["additionalProperties"] is False and set(esq["required"]) == {"categorias", "notas"}
     cat = esq["properties"]["categorias"]["items"]
-    assert set(cat["required"]) == {"nombre", "anios", "coef", "basico", "conformado"}
+    assert set(cat["required"]) == {"nombre", "anios", "coef", "basico", "conformado", "basico_parcial", "conformado_parcial"}
+    # D28: la lectura parcial es un texto NO anulable (no suma uniones al esquema estricto).
+    assert cat["properties"]["basico_parcial"]["type"] == "string" and cat["properties"]["conformado_parcial"]["type"] == "string"
     assert {"type": "null"} in cat["properties"]["basico"]["anyOf"]
     r = lec.herramienta_resto(PLANTILLA)["input_schema"]
     adic = r["properties"]["adicionales"]
@@ -149,7 +151,8 @@ def test_un_importe_que_no_se_leyo_queda_nulo_y_un_texto_no_es_un_importe():
     l = lec.leer_una_vez(IMAGENES, PLANTILLA, lec.MODELO)
     cats = l["contenido"]["ramas"]["administrativa"]["categorias"]
     assert cats[5]["basico"] is None and cats[6]["basico"] is None and cats[7]["coef"] is None
-    assert any("no numérico" in n for n in l["notas"])
+    # D29: esto es un defecto de la respuesta (retiene C1), no un comentario del modelo.
+    assert any("no numérico" in n for n in l["defectos"]) and l["notas"] == []
 
 
 def test_las_notas_de_la_ia_pasan_a_quien_controla():
@@ -258,3 +261,40 @@ def test_los_adicionales_en_filas_se_arman_igual_que_la_grilla():
     notas = []
     r = lec.sanear_resto({"adicionales": filas + [filas[0], "x", {"clave": "titulos.terciario", "importe": None}]}, notas)
     assert r["adicionales"] == AGOSTO["adicionales"] and len(notas) == 3      # repetidos e ilegibles no pisan nada
+
+
+# ---------------------------------------------------------------- D28: lectura parcial
+def test_d28_los_esquemas_piden_la_lectura_parcial_como_texto_y_siguen_bajo_el_tope():
+    rama = lec.herramienta_rama("Administrativa")["input_schema"]
+    resto = lec.herramienta_resto(PLANTILLA)["input_schema"]
+    fila = resto["properties"]["adicionales"]["items"]
+    assert fila["properties"]["importe_parcial"]["type"] == "string" and "importe_parcial" in fila["required"]
+    # Las uniones (parámetros con anyOf) no cambiaron: 4 en la rama y 10 en «resto», tope 16.
+    assert (lec.uniones(rama), lec.uniones(resto)) == (4, 10)
+    assert lec.uniones(rama) <= lec.LIMITE_UNIONES and lec.uniones(resto) <= lec.LIMITE_UNIONES
+    for texto in (lec.SISTEMA, lec.prompt_rama("maestranza", PLANTILLA), lec.prompt_resto(PLANTILLA)):
+        assert "?" in texto and "parcial" in texto
+
+
+def test_d28_la_lectura_parcial_se_devuelve_aparte_y_no_ensucia_la_grilla():
+    def alterar(nombre, d):
+        if nombre == "registrar_rama:maestranza":
+            d["categorias"][37]["basico"] = None
+            d["categorias"][37]["basico_parcial"] = " 3.?22.194,42 "
+            d["categorias"][36]["conformado_parcial"] = ""            # leyó bien: vacío, no se guarda
+        if nombre.startswith("registrar_resto"):
+            d["adicionales"] = [{"clave": "funcion_cajero", "importe": None, "importe_parcial": "1.?00,00"},
+                                {"clave": "guarderia", "importe": 5.0, "importe_parcial": 7}]    # un número no es un texto
+        return d
+    lec.usar_cliente(Cliente(alterar))
+    l = lec.leer_una_vez(IMAGENES, PLANTILLA, lec.MODELO)
+    assert l["parciales"] == {"ramas.maestranza.categorias.37.basico": "3.?22.194,42",
+                              "adicionales.funcion_cajero": "1.?00,00"}
+    cat = l["contenido"]["ramas"]["maestranza"]["categorias"][37]
+    assert cat["basico"] is None and "basico_parcial" not in cat            # el contenido conserva la forma de la grilla
+    assert l["contenido"]["adicionales"]["funcion_cajero"] is None
+
+
+def test_d28_sin_lectura_parcial_el_resultado_trae_un_dict_vacio():
+    lec.usar_cliente(Cliente())
+    assert lec.leer_una_vez(IMAGENES, PLANTILLA, lec.MODELO)["parciales"] == {}
