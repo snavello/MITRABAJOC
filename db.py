@@ -7869,6 +7869,194 @@ class CasoHerramienta(SQLModel, table=True):
 ESTADOS_CASO = ("nuevo", "revisado", "aplicado", "descartado")
 
 
+# ---------------------------------------------------------------- grillas salariales
+# PLAN_CONVENIO_ESCALAS.md D8/D17: las grillas de un convenio viven en la base
+# (antes eran solo archivos de data/grillas_bancarias/, y cada mes exigía un
+# despliegue). Tabla genérica por convenio, SIN sindicato_id: una grilla es
+# del convenio, no de un gremio. `grilla_bancaria.py` sigue puro: la app le
+# pasa las publicadas con `grilla_bancaria.registrar`.
+CONVENIO_BANCARIO = "cct-18-75"
+ESTADOS_GRILLA = ("publicada", "retenida", "reemplazada", "descartada")
+ORIGENES_GRILLA = ("semilla", "automatica", "manual")
+
+
+class GrillaSalarial(SQLModel, table=True):
+    """Una grilla de un mes para un convenio. Estados: `publicada` (la que
+    usan las herramientas; una sola por convenio y período, lo fuerza el
+    índice único parcial), `retenida` (leída pero que falló algún control o
+    espera una persona), `reemplazada` (fue publicada y salió una nueva del
+    mismo período) y `descartada`. `contenido` es el mismo JSON de
+    `data/grillas_bancarias/AAAA-MM.json`; `controles` el resultado de cada
+    control. Hechos, no derivados: nada de esto se recalcula."""
+    __table_args__ = (
+        Index("uq_grillasalarial_publicada", "convenio", "periodo", unique=True,
+              postgresql_where=text("estado = 'publicada'")),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    convenio: str = Field(default=CONVENIO_BANCARIO, index=True)
+    periodo: str                                  # "AAAA-MM"
+    estado: str = "retenida"
+    contenido: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    fuente_nota: str = ""                         # URL de la nota del sindicato
+    fuente_pdf: str = ""                          # URL del PDF de la grilla
+    publicada_sindicato: str = ""                 # fecha ISO en que la publicó el sindicato
+    origen: str = "manual"                        # semilla | automatica | manual
+    controles: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    creada: str = Field(default_factory=fechas.ahora_texto)
+    resuelta_por: str = ""
+    resuelta_en: str = ""
+    nota: str = ""
+
+
+def grillas_publicadas(convenio: str = CONVENIO_BANCARIO) -> dict:
+    """{periodo: contenido} de las grillas publicadas del convenio."""
+    with Session(engine) as s:
+        filas = s.exec(select(GrillaSalarial.periodo, GrillaSalarial.contenido).where(
+            GrillaSalarial.convenio == convenio,
+            GrillaSalarial.estado == "publicada")).all()
+        return {p: c for p, c in filas}
+
+
+def sembrar_grillas(convenio: str = CONVENIO_BANCARIO) -> int:
+    """Inserta como `publicada` / origen `semilla` cada archivo de
+    data/grillas_bancarias/ cuyo período todavía no tenga una publicada.
+    Idempotente y segura con dos procesos a la vez: el INSERT ... ON CONFLICT
+    DO NOTHING se apoya en el índice único parcial, así que el segundo que
+    llega no duplica ni falla. Devuelve cuántas insertó. Solo para el
+    convenio bancario (los archivos son suyos)."""
+    if convenio != CONVENIO_BANCARIO:
+        return 0
+    import grilla_bancaria
+    insertadas = 0
+    ahora = fechas.ahora_texto()
+    with Session(engine) as s:
+        for periodo, contenido in sorted(grilla_bancaria.grillas_semilla().items()):
+            stmt = postgresql.insert(GrillaSalarial.__table__).values(
+                convenio=convenio, periodo=periodo, estado="publicada",
+                contenido=contenido, fuente_nota="", fuente_pdf="",
+                publicada_sindicato=str(contenido.get("firmada") or ""),
+                origen="semilla", controles={}, creada=ahora,
+                resuelta_por="", resuelta_en="", nota="Semilla de data/grillas_bancarias/.",
+            ).on_conflict_do_nothing(
+                index_elements=["convenio", "periodo"],
+                index_where=text("estado = 'publicada'")
+            ).returning(GrillaSalarial.__table__.c.id)
+            # rowcount no es confiable con ON CONFLICT: se cuentan las filas devueltas.
+            insertadas += len(s.exec(stmt).all())
+        s.commit()
+    return insertadas
+
+
+def sello_grillas(convenio: str = CONVENIO_BANCARIO) -> str:
+    """Una cadena barata que cambia cuando cambian las grillas publicadas del
+    convenio (cuántas, el id más alto, la suma de ids y la última resolución).
+    Sirve para que cada proceso sepa si tiene que volver a leerlas."""
+    from sqlalchemy import func as _fn
+    with Session(engine) as s:
+        n, mayor, suma, resuelta = s.exec(select(
+            _fn.count(GrillaSalarial.id), _fn.max(GrillaSalarial.id),
+            _fn.sum(GrillaSalarial.id), _fn.max(GrillaSalarial.resuelta_en)).where(
+            GrillaSalarial.convenio == convenio, GrillaSalarial.estado == "publicada")).one()
+        return f"{n or 0}:{mayor or 0}:{suma or 0}:{resuelta or ''}"
+
+
+def _fila_grilla(s, grilla_id: int):
+    """La fila bloqueada para escribir, o None."""
+    return s.exec(select(GrillaSalarial).where(GrillaSalarial.id == grilla_id).with_for_update()).first()
+
+
+def _reemplazar_publicada(s, convenio: str, periodo: str, quien: str, excepto_id: int = None) -> None:
+    """Marca `reemplazada` la publicada vigente de ese período (si la hay)."""
+    previas = s.exec(select(GrillaSalarial).where(
+        GrillaSalarial.convenio == convenio, GrillaSalarial.periodo == periodo,
+        GrillaSalarial.estado == "publicada").with_for_update()).all()
+    for p in previas:
+        if p.id != excepto_id:
+            p.estado = "reemplazada"
+            p.resuelta_por = quien
+            p.resuelta_en = fechas.ahora_con_segundos()
+            s.add(p)
+    s.flush()                                     # el índice único se mira ya, antes de publicar la nueva
+
+
+def guardar_grilla(periodo: str, contenido: dict, *, estado: str = "retenida",
+                   convenio: str = CONVENIO_BANCARIO, origen: str = "automatica",
+                   controles: dict = None, fuente_nota: str = "", fuente_pdf: str = "",
+                   publicada_sindicato: str = "", quien: str = "", nota: str = "") -> int:
+    """Guarda una grilla nueva y devuelve su id. `estado` es `retenida`
+    (espera una persona) o `publicada`: en ese caso la publicada anterior del
+    mismo período pasa a `reemplazada`, en la misma transacción."""
+    if estado not in ("retenida", "publicada"):
+        raise ValueError("Una grilla nueva nace retenida o publicada.")
+    if origen not in ORIGENES_GRILLA:
+        raise ValueError("Origen desconocido.")
+    with Session(engine) as s:
+        if estado == "publicada":
+            _reemplazar_publicada(s, convenio, periodo, quien)
+        g = GrillaSalarial(
+            convenio=convenio, periodo=periodo, estado=estado, contenido=contenido,
+            fuente_nota=fuente_nota, fuente_pdf=fuente_pdf,
+            publicada_sindicato=publicada_sindicato, origen=origen,
+            controles=controles or {}, nota=nota,
+            resuelta_por=quien if estado == "publicada" else "",
+            resuelta_en=fechas.ahora_con_segundos() if estado == "publicada" else "")
+        s.add(g)
+        s.commit()
+        s.refresh(g)
+        return g.id
+
+
+def publicar_grilla(grilla_id: int, quien: str, nota: str = "") -> bool:
+    """Publica una grilla `retenida` (después de corregirla o aprobarla). La
+    publicada anterior del mismo período pasa a `reemplazada`. False si no
+    existe o no está retenida. Registra quién y cuándo."""
+    with Session(engine) as s:
+        g = _fila_grilla(s, grilla_id)
+        if not g or g.estado != "retenida":
+            return False
+        _reemplazar_publicada(s, g.convenio, g.periodo, quien, excepto_id=g.id)
+        g.estado = "publicada"
+        g.resuelta_por = quien
+        g.resuelta_en = fechas.ahora_con_segundos()
+        if nota:
+            g.nota = nota
+        s.add(g)
+        s.commit()
+        return True
+
+
+def descartar_grilla(grilla_id: int, quien: str, nota: str = "") -> bool:
+    """Descarta una grilla `retenida`. False si no existe o no está retenida
+    (una publicada no se descarta: se la reemplaza con otra)."""
+    with Session(engine) as s:
+        g = _fila_grilla(s, grilla_id)
+        if not g or g.estado != "retenida":
+            return False
+        g.estado = "descartada"
+        g.resuelta_por = quien
+        g.resuelta_en = fechas.ahora_con_segundos()
+        if nota:
+            g.nota = nota
+        s.add(g)
+        s.commit()
+        return True
+
+
+def listar_grillas(convenio: str = CONVENIO_BANCARIO, estados: tuple = None) -> list:
+    """Las grillas del convenio (sin el contenido, que es grande), de la más
+    nueva a la más vieja, con lo necesario para una vista de estado."""
+    with Session(engine) as s:
+        q = select(GrillaSalarial).where(GrillaSalarial.convenio == convenio)
+        if estados:
+            q = q.where(GrillaSalarial.estado.in_(estados))
+        filas = s.exec(q.order_by(GrillaSalarial.periodo.desc(), GrillaSalarial.id.desc())).all()
+        return [{"id": g.id, "convenio": g.convenio, "periodo": g.periodo, "estado": g.estado,
+                 "origen": g.origen, "controles": g.controles, "fuente_nota": g.fuente_nota,
+                 "fuente_pdf": g.fuente_pdf, "publicada_sindicato": g.publicada_sindicato,
+                 "creada": g.creada, "resuelta_por": g.resuelta_por,
+                 "resuelta_en": g.resuelta_en, "nota": g.nota} for g in filas]
+
+
 def guardar_caso_herramienta(**campos) -> int:
     with Session(engine) as s:
         caso = CasoHerramienta(**campos)

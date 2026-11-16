@@ -849,6 +849,14 @@ templates.env.globals["vigencia_texto"] = formato_ar.vigencia
 @app.on_event("startup")
 def _startup():
     db.init_db()
+    # Las grillas salariales viven en la base (PLAN_CONVENIO_ESCALAS.md D8):
+    # se siembran desde data/ si faltan y se le pasan a grilla_bancaria. Si la
+    # tabla todavía no existe (el código llegó antes que la migración), la
+    # calculadora sigue con los archivos: nunca tumba el arranque.
+    try:
+        _refrescar_grillas(forzar=True)
+    except Exception as e:
+        print(f"[grillas] no se cargaron de la base ({type(e).__name__}: {e})")
     # El lector de fotos del enmascarado se carga al arrancar y no con la
     # primera foto del día. Nunca puede tumbar el arranque (mejor esfuerzo).
     if preparacion.modo() != "apagado":
@@ -10907,9 +10915,48 @@ def entornos_calculadora_bancaria_v2(request: Request):
     })
 
 
+# ---------------------------------------------------------------- grillas en la base
+_GRILLAS_SELLO = {"sello": None, "revisado": 0.0}
+_GRILLAS_LOCK = threading.Lock()
+GRILLAS_REVISION_S = 60          # cada cuánto un proceso mira si cambió algo
+
+
+def _refrescar_grillas(forzar: bool = False) -> None:
+    """Deja `grilla_bancaria` con las grillas publicadas en la base. Con
+    `forzar` siembra desde data/ lo que falte (arranque). Si no, solo mira el
+    sello como mucho cada GRILLAS_REVISION_S segundos por proceso (Render
+    corre varios workers: cada uno se entera solo). Si la base no responde
+    deja lo que ya había: la calculadora no depende de este refresco."""
+    import time
+    ahora = time.monotonic()
+    if not forzar and ahora - _GRILLAS_SELLO["revisado"] < GRILLAS_REVISION_S:
+        return
+    with _GRILLAS_LOCK:
+        if not forzar and time.monotonic() - _GRILLAS_SELLO["revisado"] < GRILLAS_REVISION_S:
+            return
+        _GRILLAS_SELLO["revisado"] = time.monotonic()    # también si falla: no se insiste en cada pedido
+        if forzar:
+            db.sembrar_grillas()
+        sello = db.sello_grillas()
+        if forzar or sello != _GRILLAS_SELLO["sello"]:
+            publicadas = db.grillas_publicadas()
+            if publicadas:
+                grilla_bancaria.registrar(publicadas)
+            _GRILLAS_SELLO["sello"] = sello
+
+
+def _grillas_al_dia() -> None:
+    try:
+        _refrescar_grillas()
+    except Exception as e:
+        print(f"[grillas] no se pudo refrescar ({type(e).__name__}: {e})")
+
+
+
 @app.get("/api/entornos/herramientas/bancaria/opciones")
 def api_bancaria_opciones(request: Request, periodo: str = ""):
     _exigir_herramientas(request)
+    _grillas_al_dia()
     try:
         return grilla_bancaria.opciones(periodo)
     except ValueError as e:
@@ -10920,6 +10967,7 @@ def api_bancaria_opciones(request: Request, periodo: str = ""):
 def api_bancaria_calcular(request: Request, payload: dict = Body(...)):
     """El recibo esperado y, si vino el recibo real, la comparación."""
     _exigir_herramientas(request)
+    _grillas_al_dia()
     try:
         esperado = grilla_bancaria.calcular_recibo(payload.get("entrada") or {})
         real = payload.get("real")
@@ -10940,6 +10988,7 @@ async def api_bancaria_leer(request: Request, archivo: UploadFile = File(...)):
     o CUIL leídos: solo vuelven importes. La llamada se paga y queda en Uso de
     IA de /plataforma con tipo "herramienta"."""
     _exigir_herramientas(request)
+    await run_in_threadpool(_grillas_al_dia)
     contenido = await archivo.read()
     if not contenido:
         raise HTTPException(422, "El archivo está vacío.")
@@ -10970,6 +11019,7 @@ def api_bancaria_guardar_caso(request: Request, payload: dict = Body(...)):
     """Guarda un caso. El esperado y las diferencias se recalculan acá con la
     entrada: no se guarda lo que diga el navegador."""
     quien = _exigir_herramientas(request)
+    _grillas_al_dia()
     entrada = payload.get("entrada") or {}
     real = payload.get("real") or {}
     try:
