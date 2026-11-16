@@ -208,13 +208,30 @@ def test_conectividad_de_un_trimestre_ya_publicado_no_cambia_sola():
     assert por_control(controlar(g))["C1"]["pasa"] is False
 
 
-def test_un_trimestre_nuevo_de_conectividad_es_valido_si_cubre_el_periodo():
+def test_un_trimestre_nuevo_de_conectividad_retiene_siempre_con_el_detalle_para_revisarlo():
+    """Decisión conservadora a propósito (RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD): el trimestre
+    consecutivo siguiente no tiene control propio, así que la grilla queda retenida y se revisa a mano."""
     g = copy.deepcopy(SEPT)
     g["conectividad"].append({"meses": ["2026-12", "2027-01", "2027-02"], "diario": 3300.0, "mas_de_4_dias": 29000.0, "mensual": 71000.0})
-    assert por_control(controlar(g))["C1"]["pasa"] is True
+    r = por_control(controlar(g))["C1"]
+    assert r["pasa"] is False
+    d = next(x for x in r["detalle"] if x["problema"].startswith("Trimestre nuevo de conectividad 2026-12 a 2027-02"))
+    assert "revisarlo a mano contra el PDF" in d["problema"]
+    assert d["leido"]["mensual"] == 71000.0 and d["cociente_contra_el_anterior"]["mensual"] == round(71000.0 / 67193, 4)
     sin = copy.deepcopy(SEPT)
     sin["conectividad"] = [x for x in sin["conectividad"] if "2026-09" not in x["meses"]]
     assert por_control(controlar(sin))["C1"]["pasa"] is False
+
+
+def test_la_conectividad_de_otro_trimestre_o_de_mas_no_pasa_ni_se_revisa_como_nueva():
+    salteado = copy.deepcopy(SEPT)
+    salteado["conectividad"].append({"meses": ["2027-03", "2027-04", "2027-05"], "diario": 1.0, "mas_de_4_dias": 2.0, "mensual": 3.0})
+    r = por_control(controlar(salteado))["C1"]
+    assert r["pasa"] is False and any("no es el trimestre siguiente" in d["problema"] for d in r["detalle"])
+    dos = copy.deepcopy(SEPT)
+    dos["conectividad"] += [{"meses": ["2026-12", "2027-01", "2027-02"], "diario": 3.0, "mas_de_4_dias": 4.0, "mensual": 5.0},
+                            {"meses": ["2027-03", "2027-04", "2027-05"], "diario": 3.0, "mas_de_4_dias": 4.0, "mensual": 5.0}]
+    assert any("más de una" in d["problema"] for d in por_control(controlar(dos))["C1"]["detalle"])
 
 
 def test_la_conectividad_no_entra_en_el_factor_unico():
@@ -363,3 +380,39 @@ def test_comparar_con_publicada_celda_por_celda():
     cmp = c.comparar_con_publicada(leida, AGOSTO)
     assert cmp["distintas"] >= 5 and any(d["etiqueta"] == "Adicional · guarderia" for d in cmp["detalle"])
     assert cmp["iguales"] + cmp["distintas"] == cmp["celdas"]
+
+
+# ---------------------------------------------------------------- C4 al centavo (bloque 5, corrección del QA)
+def test_los_comunicados_reales_admiten_un_factor_comun_al_centavo():
+    """Los únicos importes reales de septiembre y octubre (inicial, ROE mensual y mínimo del Día del
+    Bancario) son agosto × un mismo factor, redondeado al centavo, en cada paso."""
+    reales = {"ago-sep": [(2505061.24, 2552560.34), (72413.50, 73786.55), (2233175.44, 2275519.25)],
+              "sep-oct": [(2552560.34, 2608320.16), (73786.55, 75398.39)]}
+    for paso, pares in reales.items():
+        intervalos = [((n - 0.005) / a, (n + 0.005) / a) for a, n in pares]
+        f, fuera = c._factor_de_mayor_cobertura(intervalos)
+        assert not fuera, paso
+        assert all(round(a * f, 2) == n for a, n in pares), paso
+
+
+def test_tres_centavos_de_error_en_un_basico_se_atrapan_aunque_las_dos_lecturas_coincidan():
+    """El piso de C4 es lo que explica el redondeo (0,0102 + 0,005 × coeficiente, ~1,7 centavos en este
+    básico): un error menor se confunde con el redondeo y lo cubre C2/C5."""
+    ruta = _ruta_basico("administrativa", "8 años")
+    valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
+    for delta in (0.03, -0.03, 0.05):
+        r = por_control(controlar(c.asignar(SEPT, ruta, round(valor + delta, 2))))["C4"]
+        assert r["pasa"] is False and any(d["ruta"] == ruta for d in r["detalle"]), delta
+
+
+def test_si_las_celdas_no_admiten_un_factor_unico_c4_lista_las_que_rompen():
+    ruta = "adicionales.guarderia"
+    valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
+    r = por_control(controlar(c.asignar(SEPT, ruta, round(valor * 1.001, 2))))["C4"]
+    assert r["pasa"] is False and [d["ruta"] for d in r["detalle"] if "ruta" in d] == [ruta]
+
+
+def test_un_tope_hasta_no_entero_o_corrido_en_un_peso_no_pasa():
+    escalado = next(x for x in c.celdas(SEPT) if x["ruta"] == "roe.filas.0.hasta")["valor"]
+    for malo in (escalado + 1, escalado - 1, escalado + 0.5):
+        assert por_control(controlar(c.asignar(SEPT, "roe.filas.0.hasta", malo)))["C4"]["pasa"] is False, malo

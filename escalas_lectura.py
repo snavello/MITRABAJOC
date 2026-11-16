@@ -319,6 +319,8 @@ def leer_una_vez(imagenes: list, plantilla: dict, modelo: str, secciones: tuple 
                 ramas[sec] = sanear_rama(crudo, sec, plantilla, notas)
         except ErrorLectura as e:
             raise ErrorLectura(f"{sec}: {e}", usos + e.usos) from e
+        except Exception as e:                   # tipos raros en lo que contestó la API: ya se pagó, el gasto no se pierde
+            raise ErrorLectura(f"{sec}: la respuesta del modelo no tiene la forma esperada ({type(e).__name__}: {e})", usos) from e
     if resto is None:
         raise ErrorLectura("faltó la sección «resto»", usos)
     periodo_impreso = resto.pop("periodo_impreso")

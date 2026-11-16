@@ -29,15 +29,16 @@ Tolerancias (parámetros, con default ESTRICTO; se calibran con grillas
 reales en el bloque 6 y SDN ve el número antes de fijarlo):
   c3_centavos   0,00  anclas del comunicado (inicial y mínimo del Día del Bancario), al centavo exacto
   c3_roe_centavos 0,01 el ROE sale de dividir un monto anual por 12: un centavo de redondeo
-  c4_extra      0,01  pesos por encima de lo que explica el redondeo
-  c4_hasta      1,5   pesos, en los topes `hasta` escalados
+  c4_extra      0,00  pesos por encima de lo que explica el redondeo (D19: se calibra con
+                       septiembre real en el bloque 6; subirlo aflojaría el control)
+  c4_hasta      0,5   pesos, en los topes `hasta` escalados (que son enteros: se redondea al peso)
   c5_pesos      2,00  básico contra coeficiente × unidad (la grilla firmada de
                        agosto trae hasta ~1,7 en ordenanza: es la fuente)
 """
 import copy
 import statistics
 
-TOLERANCIAS = {"c3_centavos": 0.0, "c3_roe_centavos": 0.01, "c4_extra": 0.01, "c4_hasta": 1.5, "c5_pesos": 2.0}
+TOLERANCIAS = {"c3_centavos": 0.0, "c3_roe_centavos": 0.01, "c4_extra": 0.0, "c4_hasta": 0.5, "c5_pesos": 2.0}
 
 CLAVES_DATOS = ("ramas", "adicionales", "conectividad", "roe", "dia_bancario")
 TOPE_DETALLE = 200
@@ -106,35 +107,50 @@ def celdas(g: dict) -> list:
     def agregar(ruta, etiqueta, valor, tipo, coef=None):
         out.append({"ruta": ruta, "etiqueta": etiqueta, "valor": valor, "tipo": tipo, "coef": coef})
 
-    for rk, r in (g.get("ramas") or {}).items():
+    # Defensivo: una grilla retenida dañada (un nodo que dejó de ser objeto) tiene que
+    # poder mostrarse; lo que no tiene la forma esperada simplemente no aporta celdas.
+    ramas = g.get("ramas")
+    for rk, r in (ramas.items() if isinstance(ramas, dict) else []):
+        if not isinstance(r, dict):
+            continue
         nombre_rama = r.get("nombre", rk)
-        for i, c in enumerate(r.get("categorias") or []):
+        cats = r.get("categorias")
+        for i, c in enumerate(cats if isinstance(cats, list) else []):
+            if not isinstance(c, dict):
+                continue
             base = f"ramas.{rk}.categorias.{i}"
             et = f"{nombre_rama} · {c.get('nombre')}"
             agregar(f"{base}.anios", f"{et} · años", c.get("anios"), "anios")
             agregar(f"{base}.coef", f"{et} · coeficiente", c.get("coef"), "coef")
             agregar(f"{base}.basico", f"{et} · básico", c.get("basico"), "basico", c.get("coef"))
             agregar(f"{base}.conformado", f"{et} · conformado", c.get("conformado"), "conformado", c.get("coef"))
-    adic = g.get("adicionales") or {}
-    for k, v in adic.items():
+    adic = g.get("adicionales")
+    for k, v in (adic.items() if isinstance(adic, dict) else []):
         if isinstance(v, dict):
             for k2, v2 in v.items():
                 agregar(f"adicionales.{k}.{k2}", f"Adicional · {k.replace('_', ' ')} · {k2}", v2, "adicional")
         else:
             agregar(f"adicionales.{k}", f"Adicional · {k.replace('_', ' ')}", v, "adicional")
-    for i, c in enumerate(g.get("conectividad") or []):
-        meses = "+".join(c.get("meses") or [])
+    conect = g.get("conectividad")
+    for i, c in enumerate(conect if isinstance(conect, list) else []):
+        if not isinstance(c, dict):
+            continue
+        meses = "+".join(str(m) for m in (c.get("meses") or []))
         for k in ("diario", "mas_de_4_dias", "mensual"):
             agregar(f"conectividad.{i}.{k}", f"Conectividad {meses} · {k.replace('_', ' ')}", c.get(k), "conectividad")
-    roe = g.get("roe") or {}
-    tramos = roe.get("tramos") or []
-    for i, f in enumerate(roe.get("filas") or []):
+    roe = g.get("roe") if isinstance(g.get("roe"), dict) else {}
+    tramos = roe.get("tramos") if isinstance(roe.get("tramos"), list) else []
+    filas = roe.get("filas")
+    for i, f in enumerate(filas if isinstance(filas, list) else []):
+        if not isinstance(f, dict):
+            continue
         agregar(f"roe.filas.{i}.hasta", f"ROE fila {i + 1} · tope del tramo de sueldo", f.get("hasta"), "hasta")
-        for j, v in enumerate(f.get("anual") or []):
+        anual = f.get("anual")
+        for j, v in enumerate(anual if isinstance(anual, list) else []):
             tr = tramos[j] if j < len(tramos) else str(j)
             agregar(f"roe.filas.{i}.anual.{j}", f"ROE fila {i + 1} · {tr} · anual", v, "roe")
-    db = g.get("dia_bancario") or {}
-    for k, v in db.items():
+    db = g.get("dia_bancario")
+    for k, v in (db.items() if isinstance(db, dict) else []):
         agregar(f"dia_bancario.{k}", f"Día del Bancario · {k.replace('_', ' ')}", v, "dia_bancario")
     return out
 
@@ -143,6 +159,13 @@ ESCALAN = ("basico", "conformado", "adicional", "roe", "dia_bancario")
 
 
 def forma_valida(g: dict) -> list:
+    try:
+        return _forma_valida(g)
+    except Exception as e:           # una grilla dañada (un nodo que no es del tipo esperado) es forma inválida, no un 500
+        return [f"la grilla tiene una estructura dañada ({type(e).__name__})"]
+
+
+def _forma_valida(g: dict) -> list:
     """Los problemas que impedirían que `grilla_bancaria.registrar` use esta
     grilla (vacío = se puede usar). Se exige también a una grilla corregida a
     mano: una grilla con forma rota rompería la calculadora."""
@@ -204,8 +227,77 @@ def forma_valida(g: dict) -> list:
 
 
 # ---------------------------------------------------------------- C1
-def _meses_de(g: dict) -> dict:
-    return {tuple(c.get("meses") or []): c for c in (g.get("conectividad") or [])}
+# Un trimestre NUEVO de conectividad no tiene contra qué compararse (no escala con el factor
+# del mes y no está en la grilla anterior): mientras no haya un control propio, la grilla que
+# lo trae queda RETENIDA siempre y una persona lo revisa contra el PDF. Pasa a lo sumo cuatro
+# veces por año. Para aflojarlo más adelante (aceptar el trimestre si el cociente contra el
+# anterior es razonable, por ejemplo) se pone en False y se agrega el control en su lugar.
+RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD = True
+_VALORES_CONECTIVIDAD = ("diario", "mas_de_4_dias", "mensual")
+
+
+def _trimestre_siguiente(meses: tuple) -> tuple:
+    """Los tres meses que siguen a `meses` (AAAA-MM, el último manda)."""
+    m1 = _mes_siguiente(max(meses))
+    m2 = _mes_siguiente(m1)
+    return (m1, m2, _mes_siguiente(m2))
+
+
+def _problemas_conectividad(previa: dict, g: dict) -> list:
+    """Las entradas de conectividad de la grilla leída tienen que ser EXACTAMENTE las ya
+    publicadas (idénticas, celda por celda) más, como mucho, UNA entrada nueva que sea el
+    trimestre consecutivo siguiente al último publicado; y esa entrada nueva retiene la
+    grilla siempre (RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD)."""
+    problemas = []
+    leidas = g.get("conectividad") if isinstance(g.get("conectividad"), list) else []
+    if any(not isinstance(c, dict) for c in leidas):
+        return [{"problema": "conectividad con una entrada que no es un objeto"}]
+    previas = [c for c in (previa.get("conectividad") or []) if isinstance(c, dict)]
+    pm = {tuple(c.get("meses") or []): c for c in previas}
+    claves_leidas = [tuple(c.get("meses") or []) for c in leidas]
+    for meses, c in pm.items():
+        if claves_leidas.count(meses) == 0:
+            problemas.append({"problema": "falta la conectividad de un trimestre ya publicado", "etiqueta": "+".join(meses)})
+            continue
+        if claves_leidas.count(meses) > 1:
+            problemas.append({"problema": "conectividad repetida de un trimestre ya publicado", "etiqueta": "+".join(meses)})
+        propia = next(c2 for c2 in leidas if tuple(c2.get("meses") or []) == meses)
+        for k in _VALORES_CONECTIVIDAD:
+            if propia.get(k) != c.get(k):
+                problemas.append({"problema": "cambió la conectividad de un trimestre ya publicado",
+                                  "etiqueta": f"{'+'.join(meses)} · {k}", "antes": c.get(k), "ahora": propia.get(k)})
+    nuevas = [c for c in leidas if tuple(c.get("meses") or []) not in pm]
+    if not nuevas:
+        return problemas
+    if len(nuevas) > 1:
+        problemas.append({"problema": "hay más de una entrada nueva de conectividad",
+                          "detalle": ["+".join(str(m) for m in (c.get("meses") or [])) for c in nuevas]})
+        return problemas
+    nueva = nuevas[0]
+    meses = tuple(nueva.get("meses") or [])
+    validos = [m for m in pm if m and all(isinstance(x, str) and len(x) == 7 for x in m)]
+    if not validos or not meses or not all(isinstance(x, str) and len(x) == 7 for x in meses):
+        problemas.append({"problema": "entrada nueva de conectividad con meses ilegibles o sin trimestre publicado del cual seguir",
+                          "leido": list(meses)})
+        return problemas
+    ultimo = max(validos, key=max)
+    esperado = _trimestre_siguiente(ultimo)
+    if meses != esperado:
+        problemas.append({"problema": "la conectividad nueva no es el trimestre siguiente al último publicado",
+                          "leido": list(meses), "esperado": list(esperado)})
+        return problemas
+    if RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD:
+        anterior = pm[ultimo]
+        cocientes = {}
+        for k in _VALORES_CONECTIVIDAD:
+            a, b = nueva.get(k), anterior.get(k)
+            cocientes[k] = round(a / b, 4) if _num(a) and _num(b) and b else None
+        problemas.append({
+            "problema": f"Trimestre nuevo de conectividad {meses[0]} a {meses[-1]}: hay que revisarlo a mano contra el PDF",
+            "leido": {k: nueva.get(k) for k in _VALORES_CONECTIVIDAD},
+            "trimestre_anterior": {"meses": list(ultimo), **{k: anterior.get(k) for k in _VALORES_CONECTIVIDAD}},
+            "cociente_contra_el_anterior": cocientes})
+    return problemas
 
 
 def c1_estructura(lectura: dict, previa: dict | None, periodo: str | None = None) -> dict:
@@ -282,14 +374,7 @@ def c1_estructura(lectura: dict, previa: dict | None, periodo: str | None = None
             problemas.append({"problema": "cambió la cantidad de filas de ROE"})
         if sorted(previa["dia_bancario"]) != sorted(g["dia_bancario"]):
             problemas.append({"problema": "cambiaron los datos del Día del Bancario"})
-        # Conectividad: por trimestre. Lo ya publicado no cambia solo.
-        pm, gm = _meses_de(previa), _meses_de(g)
-        for meses, c in pm.items():
-            if meses in gm:
-                for k in ("diario", "mas_de_4_dias", "mensual"):
-                    if gm[meses].get(k) != c.get(k):
-                        problemas.append({"problema": "cambió la conectividad de un trimestre ya publicado",
-                                          "etiqueta": f"{'+'.join(meses)} · {k}", "antes": c.get(k), "ahora": gm[meses].get(k)})
+        problemas.extend(_problemas_conectividad(previa, g))
     if periodo and not any(periodo in (c.get("meses") or []) for c in (g.get("conectividad") or [])):
         problemas.append({"problema": "no hay conectividad para el período", "detalle": periodo})
     if problemas:
@@ -364,15 +449,41 @@ def _redondea_a_un_decimal(x: float) -> float:
     return round(x * 10 + 1e-9) / 10
 
 
+def _factor_de_mayor_cobertura(intervalos: list) -> tuple:
+    """El factor f que cae dentro de la mayor cantidad de intervalos [lo, hi] (barrido de
+    extremos), y los índices de los intervalos que NO lo contienen. Si todos se cruzan, es
+    el centro de la intersección. Con un empate, el de menor índice (determinista)."""
+    eventos = sorted([(lo, 0, i) for i, (lo, hi) in enumerate(intervalos)] + [(hi, 1, i) for i, (lo, hi) in enumerate(intervalos)])
+    activos, mejor, mejor_lo = 0, -1, None
+    for x, tipo, _ in eventos:
+        if tipo == 0:
+            activos += 1
+            if activos > mejor:
+                mejor, mejor_lo = activos, x
+        else:
+            activos -= 1
+    cubren = [i for i, (lo, hi) in enumerate(intervalos) if lo <= mejor_lo <= hi]
+    f = (max(intervalos[i][0] for i in cubren) + min(intervalos[i][1] for i in cubren)) / 2
+    fuera = [i for i, (lo, hi) in enumerate(intervalos) if not lo <= f <= hi]
+    return f, fuera
+
+
 def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
                     tolerancias: dict | None = None) -> dict:
-    """C4 (D19): cada importe nuevo es el anterior por el MISMO factor, dentro de
-    lo que explica el redondeo al centavo, y ese factor redondea al porcentaje
-    del comunicado. El factor es la mediana de los cocientes; cada celda se
-    compara contra `anterior × factor` con un margen de 0,005 × (1 + factor)
-    (los dos importes redondeados) + 0,005 × coeficiente (la unidad redondeada
-    se multiplica por el coeficiente) + `c4_extra`. La conectividad queda afuera
-    (trimestral) y los topes `hasta` del ROE se aceptan iguales o escalados."""
+    """C4 (D19): cada importe nuevo es el anterior por el MISMO factor, al centavo
+    (dentro de lo que explica el redondeo), y ese factor redondea al porcentaje del
+    comunicado.
+
+    Para cada celda que escala, el factor tiene que caer en el intervalo que deja
+    el redondeo: nuevo = redondeo(anterior × f) con el anterior ya redondeado, y en un
+    básico o conformado la unidad (que se redondea al centavo antes de multiplicar por
+    el coeficiente) suma otro medio centavo × coeficiente. Eso da un margen por celda
+    h = 0,005 × (1 + f) + 0,005 × coef + `c4_extra` (default 0: ningún margen de más) y
+    el intervalo f ∈ [(nuevo − h) / anterior, (nuevo + h) / anterior]. El factor es el
+    punto que cae en más intervalos (no la mediana: el mismo cálculo no depende de qué
+    celdas están mal) y la grilla pasa SOLO si ese factor está en el intervalo de TODAS;
+    las celdas que lo dejan fuera se listan. La conectividad queda afuera
+    (trimestral) y los topes `hasta` del ROE se aceptan iguales o escalados (enteros)."""
     if previa is None:
         return _res("C4", "Factor único", None, "No hay grilla anterior: el control no aplica.")
     tol = _tol(tolerancias)
@@ -384,17 +495,22 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
             pares.append((c, n))
     if len(pares) < TOPE_HASTA_FACTOR_MIN_CELDAS:
         return _res("C4", "Factor único", False, f"Solo {len(pares)} importes comparables: no alcanza para medir el factor.")
-    f = statistics.median(n["valor"] / c["valor"] for c, n in pares)
-    det, desvio_max, exceso_max = [], 0.0, 0.0
+    f_mediano = statistics.median(n["valor"] / c["valor"] for c, n in pares)
+    margenes = []
     for c, n in pares:
         coef = n["coef"] if _num(n.get("coef")) else 1.0
-        permitido = 0.005 * (1 + f) + 0.005 * coef + tol["c4_extra"]
+        margenes.append(0.005 * (1 + f_mediano) + 0.005 * coef + tol["c4_extra"])
+    intervalos = [((n["valor"] - h) / c["valor"], (n["valor"] + h) / c["valor"]) for (c, n), h in zip(pares, margenes)]
+    f, fuera = _factor_de_mayor_cobertura(intervalos)
+    det, desvio_max, exceso_max = [], 0.0, 0.0
+    for k, ((c, n), h) in enumerate(zip(pares, margenes)):
         desvio = abs(n["valor"] - c["valor"] * f)
         desvio_max = max(desvio_max, desvio)
-        exceso_max = max(exceso_max, desvio - permitido)
-        if desvio > permitido:
+        exceso_max = max(exceso_max, desvio - h)
+        if k in fuera:
             det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],
-                        "esperado": round(c["valor"] * f, 2), "desvio": round(desvio, 4), "permitido": round(permitido, 4)})
+                        "esperado": round(c["valor"] * f, 2), "desvio": round(desvio, 4), "permitido": round(h, 4),
+                        "problema": "no admite el mismo factor que las demás celdas al centavo"})
     # Topes `hasta` de los tramos de ROE (duda abierta): iguales o escalados.
     hasta_info = []
     for c in celdas(previa):
@@ -403,9 +519,12 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
             if not n or not _num(n["valor"]):
                 det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": None,
                             "problema": "tope sin leer"})
+            elif float(n["valor"]) != int(n["valor"]):
+                det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],
+                            "problema": "el tope del tramo tiene que ser un número entero de pesos"})
             elif n["valor"] == c["valor"]:
                 hasta_info.append("igual")
-            elif abs(n["valor"] - c["valor"] * f) <= tol["c4_hasta"]:
+            elif abs(n["valor"] - c["valor"] * f) <= min(tol["c4_hasta"], 1.0):
                 hasta_info.append("escalado")
             else:
                 det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],

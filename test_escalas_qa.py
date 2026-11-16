@@ -32,7 +32,6 @@ def _com(g, pct=2.0, per="2026-12"):
             "dia_bancario_minimo": g["dia_bancario"]["minimo"], "periodo": per}
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D1 conectividad nueva sin control")
 def test_conectividad_de_un_trimestre_nuevo_se_controla_contra_algo():
     """En diciembre entra un trimestre nuevo de conectividad: hoy no la mira ningún control
     salvo que sea monótona. Un importe 30 veces mayor NO debería pasar."""
@@ -45,7 +44,6 @@ def test_conectividad_de_un_trimestre_nuevo_se_controla_contra_algo():
     assert not ctl.todos_pasan(r), "conectividad nueva 30 veces mayor pasó los seis controles"
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D1 conectividad inventada")
 def test_una_entrada_de_conectividad_inventada_no_pasa():
     sept = escalar(DATOS_AGOSTO, 1.019)
     sept["conectividad"].append({"meses": ["2026-12"], "diario": 1.0, "mas_de_4_dias": 2.0, "mensual": 3.0})
@@ -54,7 +52,6 @@ def test_una_entrada_de_conectividad_inventada_no_pasa():
     assert not ctl.todos_pasan(r), "una entrada de conectividad de otro trimestre, con 1/2/3 pesos, pasó"
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D2 tolerancia C4 deja pasar 1-2 centavos")
 def test_error_de_un_centavo_en_ambas_lecturas_no_pasa():
     sept = escalar(DATOS_AGOSTO, 1.019)
     mala = ctl.asignar(sept, "ramas.administrativa.categorias.10.basico", round(sept["ramas"]["administrativa"]["categorias"][10]["basico"] + 0.02, 2))
@@ -63,7 +60,6 @@ def test_error_de_un_centavo_en_ambas_lecturas_no_pasa():
     assert not ctl.todos_pasan(r), "+2 centavos sistemático en un básico pasó"
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D3 tolerancia hasta 1,5")
 def test_tope_hasta_alterado_en_un_peso_no_pasa():
     sept = escalar(DATOS_AGOSTO, 1.019)
     h = sept["roe"]["filas"][0]["hasta"]
@@ -75,7 +71,6 @@ def test_tope_hasta_alterado_en_un_peso_no_pasa():
 
 # ------------------------------------------------------------- correcciones a mano
 @pytest.mark.parametrize("cambios", [["x"], [1], [None], [[]], [{"ruta": ["a"], "valor": 1}]])
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D4 500")
 def test_corregir_con_elementos_que_no_son_objeto_da_4xx_no_500(entorno_limpio, cambios):
     gid = _retenida(entorno_limpio)
     c = _con_pase()
@@ -87,7 +82,6 @@ def test_corregir_con_elementos_que_no_son_objeto_da_4xx_no_500(entorno_limpio, 
 @pytest.mark.parametrize("crudo", ['{"cambios":[{"ruta":"adicionales.guarderia","valor":NaN}]}',
                                    '{"cambios":[{"ruta":"adicionales.guarderia","valor":Infinity}]}',
                                    '{"cambios":[{"ruta":"adicionales.guarderia","valor":1e999}]}'])
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D4 500 NaN")
 def test_corregir_con_nan_o_infinito_no_corrompe_ni_da_500(entorno_limpio, crudo):
     gid = _retenida(entorno_limpio)
     c = _con_pase()
@@ -97,7 +91,6 @@ def test_corregir_con_nan_o_infinito_no_corrompe_ni_da_500(entorno_limpio, crudo
     assert c.get(f"{API}/grillas/{gid}").status_code == 200
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D5 nodo no hoja")
 def test_corregir_un_nodo_no_hoja_no_deja_la_retenida_inservible(entorno_limpio):
     gid = _retenida(entorno_limpio)
     c = _con_pase()
@@ -108,7 +101,6 @@ def test_corregir_un_nodo_no_hoja_no_deja_la_retenida_inservible(entorno_limpio)
     assert c.get(API + "/grillas").status_code == 200
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D5 nombre numerico")
 def test_corregir_el_nombre_de_una_categoria_con_un_numero_no_se_acepta(entorno_limpio):
     gid = _retenida(entorno_limpio)
     c = _con_pase()
@@ -118,7 +110,6 @@ def test_corregir_el_nombre_de_una_categoria_con_un_numero_no_se_acepta(entorno_
 
 
 @pytest.mark.parametrize("gid", ["99999999999", "-1", "0", "abc"])
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D6 id fuera de int4")
 def test_ids_raros_dan_404_o_422_nunca_500(entorno_limpio, gid):
     c = _con_pase()
     c.raise_server_exceptions = False
@@ -250,7 +241,6 @@ def test_dos_buscar_ahora_forzados_simultaneos_una_sola_lectura(entorno_limpio):
     assert sum("publicada" in a and "RETENIDA" not in a for a in e.avisos) == 1
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D7 reclamar_lectura sobre publicada")
 def test_una_pasada_lenta_que_llega_tarde_no_relee_una_nota_ya_publicada(entorno_limpio):
     """B calculó `existentes` antes de que A publicara; cuando B llega a reclamar_lectura la nota
     ya está publicada (resultado 'publicada', intentos 1): no debe darle otro intento."""
@@ -314,9 +304,8 @@ def test_descargar_pdf_solo_del_dominio(monkeypatch, url):
     assert not ok, url
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D8 redireccion")
-def test_pedir_sigue_redirecciones_a_otro_dominio():
-    """urllib sigue 302 a cualquier host: la validación de dominio de descargar_pdf no cubre la redirección."""
+def test_pedir_no_sigue_redirecciones_a_otro_dominio():
+    """Una redirección a otro host o esquema se rechaza: la validación de dominio de descargar_pdf no la cubre."""
     import http.server
     import socketserver
 
@@ -338,8 +327,8 @@ def test_pedir_sigue_redirecciones_a_otro_dominio():
     p = srv.server_address[1]
     try:
         # misma máquina pero distinto path; demuestra que _pedir no ata el destino final
-        datos = fuente._pedir(f"http://127.0.0.1:{p}/a.pdf", 1000)
-        assert datos != b"%PDF-otro-host", "la redirección se siguió sin validar el destino"
+        with pytest.raises(fuente.ErrorFuente):
+            fuente._pedir(f"http://127.0.0.1:{p}/a.pdf", 1000)
     finally:
         srv.shutdown()
 
@@ -351,16 +340,39 @@ def test_la_pantalla_dibuja_con_textcontent_y_sin_html_inyectable():
         assert malo not in js, malo
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D5 vista rota")
-def test_tras_corregir_un_nodo_no_hoja_la_vista_sigue_andando(entorno_limpio):
+def test_una_retenida_ya_danada_no_tumba_la_vista_ni_se_publica(entorno_limpio):
+    """Una retenida con un nodo que dejó de ser objeto (dañada antes de que la corrección lo
+    rechazara): el detalle y la lista siguen andando y publicarla da 422, no 500."""
     gid = _retenida(entorno_limpio)
+    g = db.grilla_completa(gid)
+    roto = copy.deepcopy(g["contenido"])
+    roto["ramas"]["administrativa"] = 5
+    roto["conectividad"] = [7]
+    roto["adicionales"] = None
+    with Session(db.engine) as s:
+        s.exec(text("UPDATE grillasalarial SET contenido = CAST(:c AS jsonb) WHERE id = :i").bindparams(c=json.dumps(roto), i=gid))
+        s.commit()
     c = _con_pase()
     c.raise_server_exceptions = False
-    c.post(f"{API}/grillas/{gid}/corregir", json={"cambios": [{"ruta": "ramas.administrativa", "valor": 5}]})
     assert c.get(f"{API}/grillas/{gid}").status_code == 200
     assert c.get(API + "/grillas").status_code == 200
     r = c.post(f"{API}/grillas/{gid}/publicar", json={"nota": "x"})
     assert r.status_code == 422 and ("2026-09", "publicada") not in estados()
+
+
+def test_corregir_rechaza_rutas_que_no_son_hojas_numericas_y_no_toca_la_grilla(entorno_limpio):
+    gid = _retenida(entorno_limpio)
+    antes = db.grilla_completa(gid)["contenido"]
+    c = _con_pase()
+    c.raise_server_exceptions = False
+    for ruta in ("ramas.administrativa", "ramas.administrativa.categorias", "conectividad.0.meses", "roe.tramos.0",
+                 "ramas.administrativa.categorias.0.nombre", "ramas.nueva.categorias.0.basico", "nombre", ""):
+        r = c.post(f"{API}/grillas/{gid}/corregir", json={"cambios": [{"ruta": ruta, "valor": 5}]})
+        assert r.status_code in (400, 422), (ruta, r.status_code)
+    for valor in (0, -3, 1e10, 3e12):
+        r = c.post(f"{API}/grillas/{gid}/corregir", json={"cambios": [{"ruta": "adicionales.guarderia", "valor": valor}]})
+        assert r.status_code == 422, valor
+    assert db.grilla_completa(gid)["contenido"] == antes
 
 
 class _Msg:
@@ -382,7 +394,6 @@ class _Cli:
         return r
 
 
-@pytest.mark.xfail(strict=False, reason="QA bloque 5: D9 uso no registrado")
 def test_respuesta_de_la_ia_con_tipos_raros_registra_igual_lo_gastado(entorno_limpio):
     """La API contestó (y se pagó) pero la estructura es rara: el gasto tiene que quedar en UsoIA."""
     e = entorno_limpio

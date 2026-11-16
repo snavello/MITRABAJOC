@@ -8151,7 +8151,8 @@ def reclamar_lectura(post_id: int, convenio: str = CONVENIO_BANCARIO, forzar: bo
     """Gana (o no) el derecho a LEER una nota de grillas, que gasta IA: devuelve
     el número de intento (1, 2, ...) o 0 si otra instancia ya la está leyendo, si
     se pasó de `MAX_INTENTOS_LECTURA` (salvo `forzar`, la lectura que pide una
-    persona) o si no existe. Dos defensas juntas: el número de intento va en la
+    persona), si ya terminó «publicada» o «retenida» (salvo `forzar`) o si
+    no existe. Dos defensas juntas: el número de intento va en la
     clave de un INSERT ... ON CONFLICT DO NOTHING (`reclamar_aviso_diario`), así
     que dos procesos que ven el mismo contador no pueden ganar los dos; y el
     ganador deja la nota en «leyendo» hasta que termina, así que uno que llega
@@ -8164,6 +8165,8 @@ def reclamar_lectura(post_id: int, convenio: str = CONVENIO_BANCARIO, forzar: bo
             return 0
         if n.resultado == "leyendo" and _lectura_vigente(n.ultimo_error):
             return 0
+        if n.resultado in ("publicada", "retenida") and not forzar:
+            return 0                     # ya terminó con una grilla: una pasada lenta que llega tarde no la relee
         siguiente = n.intentos + 1
         if siguiente > MAX_INTENTOS_LECTURA and not forzar:
             return 0

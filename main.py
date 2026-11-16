@@ -39,6 +39,7 @@ from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query
+from fastapi import Path as RutaFastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -11119,6 +11120,9 @@ def entornos_bancaria_casos_csv(request: Request):
 # una sola página para que, cuando la herramienta pase al panel del sindicato
 # (D23), mudarla sea mover la página y sus rutas.
 HERRAMIENTA_ESCALAS = escalas_proceso.HERRAMIENTA
+# Un id de la ruta tiene que caber en int4 (la columna): uno mayor daba 500 en la base.
+from typing import Annotated as _Annotated  # noqa: E402
+IdEscalas = _Annotated[int, RutaFastAPI(ge=1, le=2147483647)]
 
 
 @app.on_event("startup")
@@ -11172,7 +11176,7 @@ def api_escalas_grillas(request: Request):
 
 
 @app.get("/api/entornos/herramientas/escalas/grillas/{grilla_id}")
-def api_escalas_grilla(request: Request, grilla_id: int):
+def api_escalas_grilla(request: Request, grilla_id: IdEscalas):
     _exigir_herramientas(request)
     g = db.grilla_completa(grilla_id)
     if not g or g["convenio"] != db.CONVENIO_BANCARIO:
@@ -11182,7 +11186,7 @@ def api_escalas_grilla(request: Request, grilla_id: int):
 
 
 @app.post("/api/entornos/herramientas/escalas/grillas/{grilla_id}/corregir")
-def api_escalas_corregir(request: Request, grilla_id: int, payload: dict = Body(...)):
+def api_escalas_corregir(request: Request, grilla_id: IdEscalas, payload: dict = Body(...)):
     """Corrige celdas de una retenida y vuelve a pasar los controles que no dependen de la
     doble lectura. Queda registrado quién y cuándo."""
     quien = _exigir_herramientas(request)
@@ -11196,7 +11200,7 @@ def api_escalas_corregir(request: Request, grilla_id: int, payload: dict = Body(
 
 
 @app.post("/api/entornos/herramientas/escalas/grillas/{grilla_id}/publicar")
-def api_escalas_publicar(request: Request, grilla_id: int, payload: dict = Body(default={})):
+def api_escalas_publicar(request: Request, grilla_id: IdEscalas, payload: dict = Body(default={})):
     quien = _exigir_herramientas(request)
     try:
         return escalas_proceso.publicar_a_mano(grilla_id, quien, str(payload.get("nota") or "")[:500])
@@ -11205,7 +11209,7 @@ def api_escalas_publicar(request: Request, grilla_id: int, payload: dict = Body(
 
 
 @app.post("/api/entornos/herramientas/escalas/grillas/{grilla_id}/descartar")
-def api_escalas_descartar(request: Request, grilla_id: int, payload: dict = Body(default={})):
+def api_escalas_descartar(request: Request, grilla_id: IdEscalas, payload: dict = Body(default={})):
     quien = _exigir_herramientas(request)
     if not db.descartar_grilla(grilla_id, quien, str(payload.get("nota") or "")[:500]):
         raise HTTPException(404, "No existe esa grilla o ya no está retenida.")
@@ -11251,7 +11255,7 @@ def api_escalas_ensayo(request: Request, payload: dict = Body(...)):
 
 
 @app.get("/api/entornos/herramientas/escalas/ensayos/{caso_id}")
-def api_escalas_ensayo_detalle(request: Request, caso_id: int):
+def api_escalas_ensayo_detalle(request: Request, caso_id: IdEscalas):
     _exigir_herramientas(request)
     c = db.caso_herramienta(HERRAMIENTA_ESCALAS, caso_id)
     if not c:

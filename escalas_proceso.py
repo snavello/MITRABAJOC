@@ -30,6 +30,7 @@ Reglas que importan:
 - Los avisos de problema salen UNA vez por día y causa (mismo candado).
 """
 import html
+import math
 import os
 import threading
 import time
@@ -378,21 +379,39 @@ def arrancar(entorno_actual: str, intervalo: int = INTERVALO_SEGUNDOS) -> bool:
 
 
 # ---------------------------------------------------------------- corregir una retenida
+VALOR_MAXIMO_CORRECCION = 1e10          # ningún importe de la grilla se le acerca (el mayor ronda los 6e6)
+
+
 def _cambios_validos(contenido: dict, cambios: list) -> dict:
+    """Aplica las correcciones sobre una copia. Solo se corrige una celda que YA existe y es
+    una hoja numérica (o vacía) del contenido: no se crea estructura, no se pisa un nodo con
+    hijos ni un texto (nombres de categorías, meses de la conectividad, tramos de ROE)."""
     nuevo = contenido
     for c in cambios:
+        if not isinstance(c, dict):
+            raise ValueError("cada corrección tiene que ser un objeto con la ruta y el valor de la celda")
         ruta, valor = c.get("ruta"), c.get("valor")
         if not isinstance(ruta, str) or not ruta:
             raise ValueError("una corrección no trae la ruta de la celda")
-        if valor is not None and (isinstance(valor, bool) or not isinstance(valor, (int, float))):
-            raise ValueError(f"{ruta}: el valor tiene que ser un número (o vacío)")
+        if valor is not None:
+            if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+                raise ValueError(f"{ruta}: el valor tiene que ser un número (o vacío)")
+            if not math.isfinite(valor) or not 0 < valor < VALOR_MAXIMO_CORRECCION:
+                raise ValueError(f"{ruta}: el valor tiene que ser un importe mayor que cero y razonable")
         if ruta.split(".")[0] not in ctl.CLAVES_DATOS:
             raise ValueError(f"{ruta}: solo se corrigen celdas de la grilla, no los metadatos")
+        hojas = ctl.plano(nuevo)
+        actual = hojas.get(ruta, _NO_EXISTE)
+        if actual is _NO_EXISTE or not (actual is None or (isinstance(actual, (int, float)) and not isinstance(actual, bool))):
+            raise ValueError(f"{ruta}: la celda no existe o no es un importe")
         try:
             nuevo = ctl.asignar(nuevo, ruta, None if valor is None else round(float(valor), 2))
         except (KeyError, IndexError, ValueError) as e:
             raise ValueError(f"{ruta}: la celda no existe") from e
     return nuevo
+
+
+_NO_EXISTE = object()
 
 
 def recontrolar(contenido: dict, controles_previos: dict, periodo: str, quien: str, tolerancias: dict = None) -> list:

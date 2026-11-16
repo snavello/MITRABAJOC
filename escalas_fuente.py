@@ -27,6 +27,7 @@ Reglas de este módulo:
 import html as _html
 import json
 import re
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date
@@ -261,10 +262,28 @@ class ErrorFuente(Exception):
     """El sitio no respondió o respondió algo que no se puede usar."""
 
 
+HOSTS_DEL_SITIO = ("labancaria.org", "www.labancaria.org")
+
+
+class _SoloElSitio(urllib.request.HTTPRedirectHandler):
+    """Una redirección solo se sigue si va a https en el propio sitio del sindicato: la
+    validación de dominio de `descargar_pdf` mira la URL de la nota, no adónde termina
+    el pedido, y un 302 a otro host sacaba el pedido (con su User-Agent) de labancaria.org."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        u = urllib.parse.urlparse(newurl)
+        if u.scheme != "https" or (u.hostname or "").lower() not in HOSTS_DEL_SITIO:
+            raise urllib.error.HTTPError(req.full_url, code, "redirección fuera de labancaria.org", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_abrir = urllib.request.build_opener(_SoloElSitio())
+
+
 def _pedir(url: str, tope: int, timeout: int = TIMEOUT_SEGUNDOS) -> bytes:
     pedido = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
     try:
-        with urllib.request.urlopen(pedido, timeout=timeout) as r:
+        with _abrir.open(pedido, timeout=timeout) as r:
             datos = r.read(tope + 1)
     except Exception as e:                       # red, 4xx/5xx, SSL: para el hilo es lo mismo
         raise ErrorFuente(f"{type(e).__name__}: {e}") from e
