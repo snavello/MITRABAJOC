@@ -120,7 +120,8 @@ def test_una_lectura_reproduce_la_grilla_y_hace_una_llamada_por_seccion():
     for kw in cli.llamadas:
         assert kw["model"] == lec.MODELO and kw["max_tokens"] == lec.MAX_TOKENS
         assert kw["output_config"] == {"effort": "low"}
-        assert kw["tool_choice"] == {"type": "any"} and len(kw["tools"]) == 1
+        # Nunca forzada: Sonnet 5.5 rechaza tool_choice "any"/"tool" con un 400 (bloque 6, 2026-11-16).
+        assert kw["tool_choice"] == {"type": "auto"} and len(kw["tools"]) == 1
         contenido = kw["messages"][0]["content"]
         assert sum(1 for b in contenido if b["type"] == "image") == 3          # todas las páginas, en cada llamada
         assert len(kw["messages"]) == 1                                        # ninguna ve la lectura anterior
