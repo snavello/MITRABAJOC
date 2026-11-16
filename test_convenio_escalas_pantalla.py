@@ -211,7 +211,7 @@ def test_la_pagina_no_arma_totales_ni_usa_innerhtml():
     assert "Recordar mi selección" in html and "Solo para validar" in html
     assert "Resumen sin revisar por el sindicato" in js
     assert "Si conocés el ROE de tu banco, cargalo acá" in js
-    assert "¿Querés controlar lo que te pagaron?" in html and "Ir a Tu recibo" in html
+    assert "controlar lo que te pagaron" not in html + js and "Ir a Tu recibo" not in html + js   # D25
     assert "Hay una actualización publicada el" in js and "La estamos cargando." in js
     assert "Hacer una consulta gremial" in js and "Agregarlo a mi selección" in js
 

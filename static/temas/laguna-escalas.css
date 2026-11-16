@@ -137,7 +137,11 @@ html[data-tema="laguna"] .es-btn.sec:hover { background: var(--lg-agua-f2); }
 html[data-tema="laguna"] .es-enlace { color: var(--lg-turq-osc); font-family: var(--lg-fuente); }
 html[data-tema="laguna"] :is(select, input[type="search"]) { border: 1px solid transparent; border-radius: 4px; background: var(--lg-claro);
   font-family: var(--lg-fuente); color: var(--lg-tinta); }
-html[data-tema="laguna"] select:focus { background: #fff; border-color: var(--lg-negro); outline: none; }
+html[data-tema="laguna"] select:focus { background: #fff; border-color: var(--lg-negro); }
+/* Foco visible con teclado: el mismo anillo de 2 px de los botones. */
+html[data-tema="laguna"] :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--lg-negro); outline-offset: 2px; }
+html[data-tema="laguna"] .es-buscar:focus-within { outline: 2px solid var(--lg-negro); outline-offset: 2px; }
+html[data-tema="laguna"] .es-hero a:focus-visible { outline-color: #fff; }
 html[data-tema="laguna"] .es-buscar { border: 1px solid transparent; border-radius: 4px; background: var(--lg-claro); color: var(--lg-gris2); }
 html[data-tema="laguna"] .es-buscar:focus-within { background: #fff; border-color: var(--lg-negro); }
 html[data-tema="laguna"] .es-buscar input { color: var(--lg-tinta); }
@@ -158,7 +162,6 @@ html[data-tema="laguna"] .es-hero h2 { font-family: var(--lg-fuente); font-weigh
 html[data-tema="laguna"] .es-conc, html[data-tema="laguna"] :is(.es-alcance, .es-ficha .bloque, .es-res button, .es-pdf, .es-indice details) { border-top-color: var(--lg-linea); }
 html[data-tema="laguna"] .es-chip { font-family: var(--lg-fuente); }
 html[data-tema="laguna"] .es-cartel { background: #fbf2e3; color: #6a3f06; }
-html[data-tema="laguna"] .es-salida { border: 0; background: var(--lg-claro); box-shadow: 0 0 0 1px var(--lg-linea2); }
 html[data-tema="laguna"] .es-textofijo { border-radius: 6px; background: var(--lg-claro); }
 html[data-tema="laguna"] .es-seccion h3 { font-weight: 700; }
 

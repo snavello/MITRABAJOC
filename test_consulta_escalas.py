@@ -275,3 +275,25 @@ def test_toda_cifra_tiene_etiqueta():
     for resp in _respuestas():
         assert list(_sin_etiqueta(resp)) == []
         assert any(True for _ in _importes(resp))
+
+
+# ------------------------------------------------ enteros estrictos (anios, tramo_roe)
+@pytest.mark.parametrize("campo,valor", [
+    ("anios", 6.5), ("anios", 6.0), ("anios", True), ("anios", [6]), ("anios", {"a": 6}), ("anios", "6.5"),
+    ("anios", "1_0"), ("anios", "+6"), ("anios", "-1"), ("anios", "٦"),
+    ("tramo_roe", 1.5), ("tramo_roe", True), ("tramo_roe", [1]), ("tramo_roe", {"a": 1}), ("tramo_roe", "1.0"),
+])
+def test_anios_y_tramo_son_enteros_estrictos(campo, valor):
+    with pytest.raises(ce.ConsultaInvalida):
+        ce.validar_seleccion({**SEL, campo: valor}, AGOSTO)
+
+
+def test_un_entero_escrito_como_texto_vale():
+    s = ce.validar_seleccion({**SEL, "anios": "6", "tramo_roe": "2"}, AGOSTO)
+    assert s["anios"] == 6 and s["tramo_roe"] == 2
+
+
+def test_el_roe_dice_que_es_por_mes():
+    r = ce.consultar({**SEL, "tramo_roe": 2}, GRILLAS)
+    assert "por mes" in _por_clave(r)["roe"]["rotulo"]
+    assert "por mes" in _por_clave(ce.consultar(SEL, GRILLAS))["roe"]["rotulo"]

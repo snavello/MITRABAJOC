@@ -12,8 +12,12 @@ no trae un dato, el concepto no sale.
 """
 from __future__ import annotations
 
+import re
+
 RAMAS = ("administrativa", "maestranza", "ordenanza")
 
+# El orden de esta lista ES el orden en que se ofrecen los títulos: la grilla
+# viene de una columna JSONB que no conserva el de las claves.
 TITULOS = (("sin", "Sin título"), ("secundario", "Secundario"),
            ("terciario", "Terciario"), ("universitario", "Universitario"))
 
@@ -43,6 +47,19 @@ class ConsultaInvalida(ValueError):
 
 def _plata(valor) -> float:
     return round(float(valor), 2)
+
+
+def _entero(valor, mensaje: str) -> int:
+    """Un entero estricto: un int de verdad o un entero escrito como texto (lo
+    que manda un formulario). Rechaza decimales, booleanos, listas, objetos y
+    cualquier texto que no sean dígitos (sin signo, espacios ni guiones bajos)."""
+    if isinstance(valor, bool):
+        raise ConsultaInvalida(mensaje)
+    if isinstance(valor, int):
+        return valor
+    if isinstance(valor, str) and re.fullmatch(r"[0-9]{1,6}", valor.strip().encode("ascii", "replace").decode()):
+        return int(valor.strip())
+    raise ConsultaInvalida(mensaje)
 
 
 def _es_numero(valor) -> bool:
@@ -103,6 +120,9 @@ def _categoria(rama: dict, anios, jerarquia):
 def validar_seleccion(sel: dict, grilla: dict) -> dict:
     """Devuelve la selección normalizada o levanta ConsultaInvalida.
 
+    `anios` y `tramo_roe` son enteros estrictos: un entero o un entero escrito
+    como texto ("6"); decimales, booleanos, listas y objetos se rechazan.
+
     Normalizada: rama, anios (int o None), jerarquia (str o None), titulo
     ('' si no tiene), caja (bool), tramo_roe (int o None)."""
     if not isinstance(sel, dict):
@@ -120,12 +140,7 @@ def validar_seleccion(sel: dict, grilla: dict) -> dict:
     else:
         if anios_in in (None, ""):
             raise ConsultaInvalida("Indicá los años de antigüedad o un cargo jerárquico.")
-        if isinstance(anios_in, bool) or not isinstance(anios_in, (int, str)):
-            raise ConsultaInvalida("Los años de antigüedad tienen que ser un número entero.")
-        try:
-            anios = int(anios_in)
-        except ValueError:
-            raise ConsultaInvalida("Los años de antigüedad tienen que ser un número entero.")
+        anios = _entero(anios_in, "Los años de antigüedad tienen que ser un número entero.")
         if anios < 0 or anios > TOPE_ANIOS:
             raise ConsultaInvalida(f"Los años de antigüedad van de 0 a {TOPE_ANIOS}.")
     _categoria(rama, anios, jer)
@@ -147,12 +162,7 @@ def validar_seleccion(sel: dict, grilla: dict) -> dict:
         tramo = None
     else:
         tramos = (grilla.get("roe") or {}).get("tramos") or []
-        if isinstance(tramo, bool) or not isinstance(tramo, (int, str)):
-            raise ConsultaInvalida("El tramo de ROE no es válido.")
-        try:
-            tramo = int(tramo)
-        except ValueError:
-            raise ConsultaInvalida("El tramo de ROE no es válido.")
+        tramo = _entero(tramo, "El tramo de ROE no es válido.")
         if tramo < 0 or tramo >= len(tramos):
             raise ConsultaInvalida("Ese tramo de ROE no existe.")
     return {"rama": rama_clave, "anios": anios, "jerarquia": jer,
@@ -236,13 +246,13 @@ def consultar(sel: dict, grillas: dict, periodo: str | None = None) -> dict:
             base = inicial.get("conformado") if _es_numero(inicial.get("conformado")) else inicial.get("basico")
         anual = _anual(_fila_roe(g, base), 1) if _es_numero(base) and len(tramos) > 1 else None
         if anual is not None:
-            cs.append(_concepto("roe", "Participación en las ganancias (ROE)", anual / 12,
+            cs.append(_concepto("roe", "Participación en las ganancias (ROE), por mes", anual / 12,
                                 REFERENCIA, NOTA_ROE_DEFECTO, fuentes))
     else:
         base = conf if conf is not None else cat.get("basico")
         anual = _anual(_fila_roe(g, base), s["tramo_roe"]) if _es_numero(base) else None
         if anual is not None:
-            cs.append(_concepto("roe", f"Participación en las ganancias (ROE), banco con ROE de {tramos[s['tramo_roe']]}",
+            cs.append(_concepto("roe", f"Participación en las ganancias (ROE), por mes, banco con ROE de {tramos[s['tramo_roe']]}",
                                 anual / 12, REFERENCIA, NOTA_ROE_TRAMO, fuentes))
 
     return {"periodo": g.get("periodo", periodo), "nombre": g.get("nombre"),

@@ -36,7 +36,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse, StreamingResponse
@@ -11658,9 +11658,39 @@ def _escalas_vigente(grillas: dict):
     return grillas[max(grillas)] if grillas else None
 
 
+def _escalas_url_segura(url) -> str:
+    """Solo se enlaza a https de labancaria.org (o un subdominio); otra cosa, vacío."""
+    try:
+        u = urlparse(url) if isinstance(url, str) else None
+    except ValueError:
+        return ""
+    host = (u.hostname or "").lower() if u else ""
+    ok = u and u.scheme == "https" and (host == "labancaria.org" or host.endswith(".labancaria.org"))
+    return url if ok else ""
+
+
+def _escalas_publicacion(periodo) -> dict:
+    """Cuándo y dónde publicó el sindicato la grilla vigente del período (D5):
+    fecha, nota y PDF de la fila publicada. Una lectura sola, ya cerrada (no
+    se anida con ninguna otra sesión)."""
+    vacio = {"publicada_sindicato": "", "fuente_nota": "", "fuente_pdf": ""}
+    try:
+        for f in db.listar_grillas(estados=("publicada",)):
+            if f["periodo"] == periodo:
+                fecha = f.get("publicada_sindicato") or ""
+                return {"publicada_sindicato": fecha if re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha) else "",
+                        "fuente_nota": _escalas_url_segura(f.get("fuente_nota")),
+                        "fuente_pdf": _escalas_url_segura(f.get("fuente_pdf"))}
+    except Exception as e:
+        print(f"[escalas] sin datos de publicación: {type(e).__name__}: {e}")
+    return vacio
+
+
 def _escalas_grilla_resumen(g: dict) -> dict:
     return {"periodo": g.get("periodo"), "nombre": g.get("nombre"),
-            "firmada": g.get("firmada"), "fuentes": list(g.get("fuentes") or [])}
+            "firmada": g.get("firmada"),
+            "fuentes": [u for u in (g.get("fuentes") or []) if _escalas_url_segura(u)],
+            **_escalas_publicacion(g.get("periodo"))}
 
 
 def _escalas_ficha(a: dict, grilla) -> dict:
@@ -11729,7 +11759,8 @@ async def api_escalas_consulta(request: Request):
         evo = consulta_escalas.evolucion(datos["seleccion"], grillas)
     except consulta_escalas.ConsultaInvalida as e:
         raise HTTPException(400, str(e))
-    return {**res, "evolucion": evo, "hoy": fechas.hoy_texto(),
+    pub = await run_in_threadpool(_escalas_publicacion, res.get("periodo"))
+    return {**res, "evolucion": evo, "publicacion": pub, "hoy": fechas.hoy_texto(),
             "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
 
 

@@ -19,6 +19,7 @@ Los resúmenes nacen `sin_revisar`; la pantalla lo dice.
 """
 import json
 import math
+import re
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
@@ -95,26 +96,63 @@ def normalizar(texto: str) -> str:
     return "".join(c for c in sin if unicodedata.category(c) != "Mn").lower()
 
 
+_PREFIJO_NUMERO = re.compile(
+    r"^(?:(?:articulos?|art|disposiciones|disposicion|disp|transitorias?)\.?\s*)*"
+    r"(\d+|[ivxlc]+)\.?$")
+
+
+def _numero_buscado(texto: str) -> tuple[str | None, bool]:
+    """Si lo escrito es un número de artículo o de disposición («10», «art 10»,
+    «art. 10», «artículo 10», «VIII», «transitoria VIII»): (número en minúscula,
+    si traía un prefijo de «artículo»/«disposición»). Si no, (None, False)."""
+    q = normalizar(texto).strip()
+    m = _PREFIJO_NUMERO.match(q)
+    if not m:
+        return None, False
+    return m.group(1), q != m.group(1)
+
+
 def buscar(texto: str, convenio: str = CONVENIO_POR_DEFECTO) -> list[dict]:
     """Artículos (y transitorias) cuyo título o texto literal contienen todas
-    las palabras de `texto`, sin acentos ni mayúsculas. Los que coinciden en
-    el título van primero."""
+    las palabras de `texto`, sin acentos ni mayúsculas. El artículo cuyo número
+    se escribió («art 10», «artículo 10», «10», «VIII») va primero; con prefijo
+    («art 10») es el único resultado. Después, los que coinciden en el título."""
     palabras = normalizar(texto).split()
     if not palabras:
         return []
-    en_titulo, en_texto = [], []
+    numero, con_prefijo = _numero_buscado(texto)
+    exactos, en_titulo, en_texto = [], [], []
     for a in _todas(cargar(convenio)):
+        if numero is not None and str(a["numero"]).lower() == numero:
+            exactos.append(a)
+            continue
         titulo = normalizar(a["titulo"])
         cuerpo = normalizar(a["texto"])
         if all(p in titulo or p in cuerpo for p in palabras):
             (en_titulo if all(p in titulo for p in palabras) else en_texto).append(a)
-    return en_titulo + en_texto
+    if con_prefijo and exactos:
+        return exactos
+    return exactos + en_titulo + en_texto
 
 
 def _numero(x) -> bool:
     """Un importe publicable: número finito y mayor que cero."""
     return isinstance(x, (int, float)) and not isinstance(x, bool) \
         and math.isfinite(x) and x > 0
+
+
+# Orden de los títulos del art. 10: lo que la base entrega (JSONB) no conserva
+# el orden de las claves, así que se ordena acá, siempre igual.
+ORDEN_TITULOS = ("secundario", "terciario", "universitario")
+
+
+def ordenar_importes(filas: list[dict]) -> list[dict]:
+    """Ordena renglones {rotulo, importe} que salieron de un diccionario:
+    los títulos por su lista explícita; el resto por importe creciente y, a
+    igual importe, alfabético (sin acentos ni mayúsculas)."""
+    if filas and all(str(f["rotulo"]).lower() in ORDEN_TITULOS for f in filas):
+        return sorted(filas, key=lambda f: ORDEN_TITULOS.index(str(f["rotulo"]).lower()))
+    return sorted(filas, key=lambda f: (f["importe"], normalizar(str(f["rotulo"]))))
 
 
 def _rotulo(clave: str) -> str:
@@ -163,7 +201,9 @@ def _resolver(clave: str, grilla: dict) -> list[dict] | None:
             nodo = nodo["categorias"]
         else:
             filas = [{"rotulo": str(k), "importe": v} for k, v in nodo.items()]
-            return filas if filas and all(_numero(f["importe"]) for f in filas) else None
+            if filas and all(_numero(f["importe"]) for f in filas):
+                return ordenar_importes(filas)
+            return None
     if isinstance(nodo, list):
         filas = [{"rotulo": c["nombre"], "importe": c["basico"]} for c in nodo
                  if isinstance(c, dict) and "nombre" in c and _numero(c.get("basico"))]

@@ -62,6 +62,10 @@
   .es-pills { display:flex; flex-wrap:wrap; gap:8px; }
   .es-pills.dos { display:grid; grid-template-columns:1fr 1fr; }
   .es-pills .es-pill { flex:1 1 auto; }
+  /* Tramos de ROE: grilla de columnas iguales, todas las pastillas del mismo ancho y alto. */
+  .es-pills.roe { display:grid; grid-template-columns:repeat(3, 1fr); }
+  .es-pills.roe .es-pill { min-height:44px; padding:0 8px; line-height:1.2; }
+  @media (max-width:520px) { .es-pills.roe { grid-template-columns:repeat(2, 1fr); } }
   .es-enlace { display:inline-flex; align-items:center; min-height:44px; padding:0; border:0; background:none; cursor:pointer;
     font:inherit; font-size:13.5px; font-weight:700; color:var(--tinta); text-decoration:underline; text-underline-offset:3px; text-align:left; }
 
@@ -118,8 +122,6 @@
   .es-evo .es-chip { grid-area:chip; justify-self:end; }
   .es-evo .pct { grid-area:pct; justify-self:end; color:var(--gris); font-variant-numeric:tabular-nums; }
   .es-textofijo { margin-top:10px; padding:10px 12px; border-radius:6px; font-size:12.5px; line-height:1.5; background:var(--es-nota-bg); }
-  .es-salida { padding:14px 16px; border-radius:10px; background:var(--es-nota-bg); border:1px solid var(--linea); display:flex; flex-direction:column; gap:4px; }
-  .es-salida b.t { font-size:14px; }
 
   /* ---- convenio ---- */
   .es-buscar { display:flex; align-items:center; gap:10px; padding:0 14px; min-height:46px; border-radius:9px; border:1px solid var(--linea); background:#fff; }
@@ -244,12 +246,6 @@
       <div class="es-evo" id="evo-filas"></div>
       <p class="es-nota" id="evo-solo" hidden>Todavía hay una sola grilla publicada: los cambios mes a mes aparecen cuando haya más.</p>
       <p class="es-textofijo" id="evo-texto"></p>
-    </section>
-    <section class="es-salida">
-      <b class="t">¿Querés controlar lo que te pagaron?</b>
-      <span class="es-nota">Eso se hace con tu recibo real, en otra parte de la app.</span>
-      <button type="button" class="es-enlace" id="esc-ir-recibo">Ir a Tu recibo</button>
-      <p class="es-nota" id="esc-ir-info" hidden>En esta etapa el enlace no abre nada: en la app del afiliado te lleva a Tu recibo.</p>
     </section>
   </section>
 

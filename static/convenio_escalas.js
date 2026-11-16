@@ -11,7 +11,7 @@
 
   var estado = {
     opciones: null, convenio: null, sel: { rama: 'administrativa', anios: null, jerarquia: null, titulo: '', caja: false, tramo_roe: null },
-    fecha: '', resultado: null, situacion: null, fichas: []
+    fecha: '', resultado: null, situacion: null, fichas: [], memJer: '', roeAbierto: undefined
   };
 
   /* ---------- utilidades ---------- */
@@ -39,6 +39,19 @@
   function fechaAr(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
     return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || '');
+  }
+  /* Solo se enlaza a https de labancaria.org; otra cosa no se dibuja como enlace. */
+  function urlSegura(u) {
+    try {
+      var x = new URL(u);
+      return x.protocol === 'https:' && (x.hostname === 'labancaria.org' || /\.labancaria\.org$/.test(x.hostname));
+    } catch (e) { return false; }
+  }
+  function fechaIsoValida(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof iso === 'string' ? iso : '');
+    if (!m) return false;
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
   }
   function diaMes(iso) { var f = fechaAr(iso); return f.slice(0, 5); }
   function norm(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
@@ -92,6 +105,13 @@
     if (sig - a > 1) return a + ' a ' + (sig - 1) + ' años';
     return base;
   }
+  /* Años que no figuran en el selector (17): el tramo que los contiene (15 a 19). */
+  function aniosEnLista(lista, n) {
+    if (typeof n !== 'number' || !isFinite(n) || n % 1 !== 0 || n < 0 || !lista.length) return null;
+    var elegido = lista[0];
+    lista.forEach(function (a) { if (n >= a) elegido = a; });
+    return elegido;
+  }
   function grupo(contenedor, items, valorActual, alElegir) {
     vaciar(contenedor);
     items.forEach(function (it) {
@@ -105,7 +125,12 @@
     var o = estado.opciones, s = estado.sel, rama = ramaActual();
     s.rama = rama.clave;
     grupo($('sel-rama'), o.ramas.map(function (r) { return { valor: r.clave, rotulo: r.nombre }; }), s.rama, function (v) {
-      s.rama = v; s.anios = null; s.jerarquia = null; dibujarSeleccion();
+      var modoJer = s.jerarquia !== null, previo = s.anios;
+      s.rama = v; estado.memJer = '';
+      s.jerarquia = modoJer ? '' : null;
+      var nueva = ramaActual();
+      s.anios = previo === null ? null : aniosEnLista(nueva.anios, previo);
+      dibujarSeleccion();
     });
     var porJer = s.jerarquia !== null;
     $('campo-anios').hidden = porJer; $('campo-jer').hidden = !porJer;
@@ -174,9 +199,16 @@
     var fp = pend && typeof pend === 'object' ? pend.fecha : pend;
     if (fp) { pe.textContent = 'Hay una actualización publicada el ' + diaMes(fp) + '. La estamos cargando.'; pe.hidden = false; } else { pe.hidden = true; }
     $('esc-periodo').textContent = r.nombre || r.periodo;
-    $('esc-cct').textContent = 'CCT 18/75' + (r.firmada ? ' · grilla firmada el ' + fechaAr(r.firmada) : '');
-    var fu = $('esc-fuente'), f0 = (r.fuentes || [])[0];
-    if (f0 && /^https:\/\//.test(f0)) { fu.setAttribute('href', f0); fu.hidden = false; } else { fu.hidden = true; }
+    var pub = r.publicacion || {};
+    var cuando = fechaIsoValida(pub.publicada_sindicato)
+      ? ' · grilla publicada el ' + fechaAr(pub.publicada_sindicato)
+      : (r.firmada ? ' · grilla firmada el ' + fechaAr(r.firmada) : '');
+    $('esc-cct').textContent = 'CCT 18/75' + cuando;
+    var fu = $('esc-fuente'), f0 = (r.fuentes || [])[0], enlace = null, txt = 'Ver la fuente';
+    if (pub.fuente_pdf && urlSegura(pub.fuente_pdf)) { enlace = pub.fuente_pdf; txt = 'Ver el PDF'; }
+    else if (pub.fuente_nota && urlSegura(pub.fuente_nota)) enlace = pub.fuente_nota;
+    else if (f0 && urlSegura(f0)) enlace = f0;
+    if (enlace) { fu.setAttribute('href', enlace); fu.textContent = txt; fu.hidden = false; } else { fu.removeAttribute('href'); fu.hidden = true; }
     var cont = vaciar($('esc-conceptos'));
     r.conceptos.forEach(function (c) {
       cont.append(h('div', { class: 'es-conc' },
@@ -191,24 +223,30 @@
     var caja = vaciar($('esc-roe')), hayRoe = r.conceptos.some(function (c) { return c.clave === 'roe'; });
     caja.hidden = !hayRoe;
     if (!hayRoe) return;
-    var abierto = estado.roeAbierto || r.seleccion.tramo_roe !== null;
+    var tramo = r.seleccion.tramo_roe;
+    var abierto = estado.roeAbierto === undefined ? tramo !== null : estado.roeAbierto;
     caja.append(h('button', {
       type: 'button', class: 'es-enlace', 'aria-expanded': String(!!abierto),
       text: 'Si conocés el ROE de tu banco, cargalo acá',
-      onclick: function () { estado.roeAbierto = !estado.roeAbierto; dibujarRoe(estado.resultado); }
+      onclick: function () { estado.roeAbierto = !abierto; dibujarRoe(estado.resultado); }
     }));
     if (!abierto) return;
-    var items = [{ valor: null, rotulo: 'Valor del comunicado' }].concat(estado.opciones.tramos_roe.map(function (t) { return { valor: t.indice, rotulo: t.rotulo }; }));
-    var g = h('div', { class: 'es-pills', role: 'group', 'aria-label': 'Tramo de ROE de tu banco' });
-    grupo(g, items, r.seleccion.tramo_roe, async function (v) {
+    async function elegir(v) {
       estado.sel.tramo_roe = v;
       try {
         await consultar(); dibujarResultado();
         var g2 = ls('leer');
         if (g2) { var o = JSON.parse(g2); o.sel.tramo_roe = v; ls('guardar', JSON.stringify(o)); }
       } catch (e) { error(e.message); }
-    });
+    }
+    var items = estado.opciones.tramos_roe.map(function (t) { return { valor: t.indice, rotulo: t.rotulo }; });
+    caja.append(h('p', { class: 'es-nota', text: 'El valor es mensual. Elegí el tramo de ROE de tu banco.' }));
+    var g = h('div', { class: 'es-pills roe', role: 'group', 'aria-label': 'Tramo de ROE de tu banco' });
+    grupo(g, items, tramo, elegir);
     caja.append(g);
+    if (tramo !== null) {
+      caja.append(h('button', { type: 'button', class: 'es-enlace', text: 'Quitar', onclick: function () { elegir(null); } }));
+    }
   }
   function dibujarEvolucion(evo) {
     var concepto = evo.meses.length && evo.meses[0].concepto === 'conformado' ? 'conformado' : 'básico';
@@ -340,7 +378,7 @@
             h('span', { class: 'n', text: isNaN(Number(r.numero)) ? 'Disp. ' + r.numero : 'Art. ' + r.numero }), h('span', { text: r.titulo }));
         })));
     });
-    if (c.convenio.fuente && /^https:\/\//.test(c.convenio.fuente)) {
+    if (c.convenio.fuente && urlSegura(c.convenio.fuente)) {
       cont.append(h('a', { class: 'es-pdf', href: c.convenio.fuente, target: '_blank', rel: 'noopener noreferrer' },
         h('span', { text: 'Índice completo, ' + c.cantidad_articulos + ' artículos' }), h('span', { text: 'PDF oficial' })));
     }
@@ -353,20 +391,25 @@
     $('conv-situaciones').hidden = hay; $('conv-indice').hidden = hay; $('conv-fichas').hidden = hay && false;
     if (!hay) { res.hidden = true; cant.textContent = ''; return; }
     if (!estado.convenio) { return; }
-    var palabras = q.split(/\s+/), tit = [], tex = [];
+    var palabras = q.split(/\s+/), tit = [], tex = [], exa = [];
+    /* «art 10», «art. 10», «artículo 10», «10», «VIII», «transitoria VIII» */
+    var mn = /^(?:(?:articulos?|art|disposiciones|disposicion|disp|transitorias?)\.?\s*)*(\d+|[ivxlc]+)\.?$/.exec(q);
+    var numQ = mn ? mn[1] : null, conPrefijo = !!mn && q !== mn[1];
     estado.convenio.articulos.forEach(function (a) {
-      var porNum = String(a.numero).toLowerCase() === q;
+      if (numQ !== null && String(a.numero).toLowerCase() === numQ) { a._exacto = true; exa.push(a); return; }
+      a._exacto = false;
       var todasT = palabras.every(function (p) { return a._t.indexOf(p) >= 0; });
       var todas = palabras.every(function (p) { return a._t.indexOf(p) >= 0 || a._x.indexOf(p) >= 0; });
-      if (porNum || todasT) tit.push(a); else if (todas) tex.push(a);
+      if (todasT) tit.push(a); else if (todas) tex.push(a);
     });
-    var lista = tit.concat(tex);
+    if (conPrefijo && exa.length) { tit = []; tex = []; }
+    var lista = exa.concat(tit, tex);
     cant.textContent = lista.length + (lista.length === 1 ? ' artículo' : ' artículos');
     vaciar(res); res.hidden = false;
     if (!lista.length) { res.append(h('p', { class: 'es-nota', style: 'padding:14px 16px', text: 'No encontramos artículos con esas palabras.' })); return; }
     lista.forEach(function (a) {
       var i = a._x.indexOf(palabras[0]), snip = '';
-      if (i >= 0 && a._t.indexOf(palabras[0]) < 0) {
+      if (!a._exacto && i >= 0 && a._t.indexOf(palabras[0]) < 0) {
         var ini = Math.max(0, i - 50);
         snip = (ini > 0 ? '…' : '') + a.texto.slice(ini, i + 110).replace(/\s+/g, ' ') + '…';
       }
@@ -376,38 +419,75 @@
   }
 
   /* ---------- arranque ---------- */
+  var AVISO_GUARDADA = 'Tu selección guardada ya no coincide con la grilla vigente: elegila de nuevo.';
+  /* La selección guardada se vuelve a mirar contra las opciones de hoy; null si ya no vale. */
+  function validarGuardada(g) {
+    var o = estado.opciones;
+    if (!g || typeof g !== 'object') return null;
+    var rama = null;
+    o.ramas.forEach(function (r) { if (r.clave === g.rama) rama = r; });
+    if (!rama) return null;
+    var anios = null, jer = null;
+    if (typeof g.jerarquia === 'string' && g.jerarquia) {
+      if (rama.jerarquias.indexOf(g.jerarquia) < 0) return null;
+      jer = g.jerarquia;
+    } else {
+      if (g.jerarquia !== null && g.jerarquia !== undefined && g.jerarquia !== '') return null;
+      anios = aniosEnLista(rama.anios, g.anios);
+      if (anios === null) return null;
+    }
+    var titulo = g.titulo || '';
+    if (typeof titulo !== 'string') return null;
+    if (titulo && !o.titulos.some(function (t) { return t.clave === titulo; })) return null;
+    if (g.caja !== undefined && typeof g.caja !== 'boolean') return null;
+    var tramo = g.tramo_roe === undefined ? null : g.tramo_roe;
+    if (tramo !== null && !(typeof tramo === 'number' && o.tramos_roe.some(function (t) { return t.indice === tramo; }))) return null;
+    return { rama: rama.clave, anios: anios, jerarquia: jer, titulo: titulo, caja: !!g.caja, tramo_roe: tramo };
+  }
   async function iniciar() {
     $('tab-escala').addEventListener('click', function () { mostrar(estado.resultado ? 'escala' : 'seleccion'); });
     $('tab-convenio').addEventListener('click', function () { mostrar('convenio'); });
     $('esc-cambiar').addEventListener('click', function () {
       var s = estado.resultado.seleccion;
       estado.sel = { rama: s.rama, anios: s.anios, jerarquia: s.jerarquia, titulo: s.titulo || '', caja: !!s.caja, tramo_roe: s.tramo_roe };
+      estado.memJer = s.jerarquia || '';
+      if (s.anios !== null) estado.sel.anios = aniosEnLista(ramaActual().anios, s.anios);
       $('sel-recordar').checked = !!ls('leer');
       dibujarSeleccion(); mostrar('seleccion');
     });
     $('sel-ver').addEventListener('click', verEscala);
     $('sel-anios').addEventListener('change', function (e) { estado.sel.anios = Number(e.target.value); });
-    $('sel-jer').addEventListener('change', function (e) { estado.sel.jerarquia = e.target.value; });
-    $('ir-jerarquia').addEventListener('click', function () { estado.sel.jerarquia = ''; estado.sel.anios = null; dibujarSeleccion(); });
-    $('ir-anios').addEventListener('click', function () { estado.sel.jerarquia = null; dibujarSeleccion(); });
-    $('esc-ir-recibo').addEventListener('click', function () { $('esc-ir-info').hidden = !$('esc-ir-info').hidden; });
+    $('sel-jer').addEventListener('change', function (e) { estado.sel.jerarquia = e.target.value; estado.memJer = e.target.value; });
+    /* Al alternar se conserva lo elegido en cada modo. */
+    $('ir-jerarquia').addEventListener('click', function () { estado.sel.jerarquia = estado.memJer || ''; dibujarSeleccion(); });
+    $('ir-anios').addEventListener('click', function () { estado.memJer = estado.sel.jerarquia || ''; estado.sel.jerarquia = null; dibujarSeleccion(); });
     $('buscar').addEventListener('input', buscar);
 
     try {
       var o = await pedir(API + '/opciones');
       if (!o.disponible) { error(o.mensaje); $('tab-escala').disabled = true; mostrar('convenio'); return; }
       estado.opciones = o;
-      var guardado = null, g = ls('leer');
+      var guardado = null, g = ls('leer'), aviso = '';
       if (g) { try { guardado = JSON.parse(g); } catch (e) { guardado = null; } }
-      if (guardado && guardado.sel) {
-        estado.sel = Object.assign({ tramo_roe: null }, guardado.sel);
-        try {
-          await consultar(); estado.fecha = guardado.fecha;
-          $('sel-recordar').checked = true;
-          dibujarSeleccion(); dibujarResultado(); mostrar('escala'); return;
-        } catch (e) { ls('borrar'); estado.sel = { rama: 'administrativa', anios: null, jerarquia: null, titulo: '', caja: false, tramo_roe: null }; }
+      if (g) {
+        var sel = guardado && guardado.sel ? validarGuardada(guardado.sel) : null;
+        if (!sel) { ls('borrar'); guardado = null; aviso = AVISO_GUARDADA; }
+        else {
+          estado.sel = sel;
+          try {
+            await consultar();
+            estado.fecha = fechaIsoValida(guardado.fecha) ? guardado.fecha : o.hoy;
+            $('sel-recordar').checked = true;
+            estado.memJer = sel.jerarquia || '';
+            dibujarSeleccion(); dibujarResultado(); mostrar('escala'); return;
+          } catch (e) {
+            ls('borrar'); aviso = AVISO_GUARDADA;
+            estado.sel = { rama: 'administrativa', anios: null, jerarquia: null, titulo: '', caja: false, tramo_roe: null };
+          }
+        }
       }
       dibujarSeleccion(); mostrar('seleccion');
+      if (aviso) error(aviso);
     } catch (e) { mostrar('seleccion'); error(e.message); }
   }
   iniciar();

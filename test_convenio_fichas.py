@@ -148,3 +148,12 @@ def test_titulo_del_convenio_solo_en_los_articulos_1_a_3():
 def test_zona_alejada_incluye_la_transitoria_viii():
     zona = next(s for s in cf.situaciones() if s["id"] == "zona")
     assert [f["numero"] for f in zona["fichas"]] == [25, "VIII"]
+
+
+def test_buscar_por_numero_de_articulo_o_disposicion():
+    """«art 10», «art. 10», «artículo 10» y «10» encuentran el art. 10; «VIII» y «transitoria VIII», la disposición."""
+    for q in ("art 10", "art. 10", "artículo 10", "ARTICULO 10", "art10"):
+        assert [a["numero"] for a in cf.buscar(q)] == [10], q
+    assert cf.buscar("10")[0]["numero"] == 10
+    for q in ("VIII", "transitoria VIII", "disposición transitoria VIII"):
+        assert cf.buscar(q)[0]["numero"] == "VIII", q

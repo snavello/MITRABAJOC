@@ -161,7 +161,11 @@ html[data-tema="noticiero"] .es-btn.sec { background: var(--nt-carta); color: va
 html[data-tema="noticiero"] .es-enlace { color: var(--nt-tinta); font-family: var(--nt-f-txt); }
 html[data-tema="noticiero"] :is(select, input[type="search"]) { border: 0; border-radius: 2px; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
   font-family: var(--nt-f-txt); color: var(--nt-tinta); }
-html[data-tema="noticiero"] select:focus { box-shadow: inset 0 0 0 1.5px var(--nt-indigo); outline: none; }
+html[data-tema="noticiero"] select:focus { box-shadow: inset 0 0 0 1.5px var(--nt-indigo); }
+/* Foco visible con teclado: el mismo anillo de 2 px de los botones. */
+html[data-tema="noticiero"] :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--nt-indigo); outline-offset: 3px; }
+html[data-tema="noticiero"] .es-buscar:focus-within { outline: 2px solid var(--nt-indigo); outline-offset: 3px; }
+html[data-tema="noticiero"] .es-hero a:focus-visible { outline-color: var(--nt-marfil); }
 html[data-tema="noticiero"] .es-buscar { border: 0; border-radius: 2px; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); color: var(--nt-tinta-2); }
 html[data-tema="noticiero"] .es-buscar:focus-within { box-shadow: inset 0 0 0 1.5px var(--nt-indigo); }
 html[data-tema="noticiero"] .es-buscar input { box-shadow: none; background: transparent; color: var(--nt-tinta); }
@@ -180,7 +184,6 @@ html[data-tema="noticiero"] .es-conc, html[data-tema="noticiero"] :is(.es-alcanc
 html[data-tema="noticiero"] .es-chip { border-radius: 2px; font-family: var(--nt-f-txt); }
 html[data-tema="noticiero"] .es-chip.aviso { background: var(--nt-hoja); color: var(--nt-tinta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
 html[data-tema="noticiero"] .es-cartel { border-radius: 2px; background: var(--nt-coral-suave); color: var(--nt-tinta); }
-html[data-tema="noticiero"] .es-salida { border: 0; border-radius: 2px; background: var(--nt-hoja); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
 html[data-tema="noticiero"] .es-textofijo { border-radius: 2px; background: var(--nt-hoja); }
 html[data-tema="noticiero"] .es-seccion h3 { font-family: var(--nt-f-tit); font-weight: 400; font-size: 19px; letter-spacing: .2px; text-transform: uppercase; }
 
