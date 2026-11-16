@@ -102,6 +102,8 @@ import empaquetar
 import render_admin
 import grilla_bancaria
 import consulta_escalas
+import convenio_faq
+import consulta_convenio_ia
 import convenio_fichas
 import escalas_controles
 import escalas_lectura
@@ -11791,6 +11793,91 @@ def api_escalas_articulo(numero: str, request: Request):
     if not a:
         raise HTTPException(404, "Ese artículo no existe en el convenio.")
     return _escalas_ficha(a, _escalas_vigente(db.grillas_publicadas()))
+
+
+# ---- Convenio, segunda versión (D31 a D37): preguntas frecuentes y consulta con IA ----
+# Tope de preguntas a la IA por IP y por hora. En memoria del proceso (como los
+# demás frenos): con varios workers es por proceso. La IP solo sirve para contar,
+# nunca se guarda ni va a PreguntaConvenio.
+CONVENIO_IA_TOPE_DEFECTO = 30
+CONVENIO_IA_VENTANA_S = 3600
+_preguntas_ia_por_ip: dict[str, list] = {}
+
+
+def _convenio_ia_tope() -> int:
+    try:
+        return max(1, int(os.getenv("CONVENIO_IA_TOPE", CONVENIO_IA_TOPE_DEFECTO)))
+    except ValueError:
+        return CONVENIO_IA_TOPE_DEFECTO
+
+
+def _convenio_ia_pasa_el_tope(ip: str) -> bool:
+    """Cuenta esta pregunta; True si la IP ya se pasó del tope en la última hora."""
+    import time
+    ahora = time.time()
+    marcas = [t for t in _preguntas_ia_por_ip.get(ip, []) if ahora - t < CONVENIO_IA_VENTANA_S]
+    if len(marcas) >= _convenio_ia_tope():
+        _preguntas_ia_por_ip[ip] = marcas
+        return True
+    marcas.append(ahora)
+    _preguntas_ia_por_ip[ip] = marcas
+    if len(_preguntas_ia_por_ip) > 5000:        # que la tabla no crezca sin límite
+        _preguntas_ia_por_ip.clear()
+        _preguntas_ia_por_ip[ip] = marcas
+    return False
+
+
+@app.get(API_ESCALAS + "/frecuentes")
+def api_escalas_frecuentes(request: Request):
+    _exigir_herramientas(request)
+    return convenio_faq.publico()
+
+
+@app.get(API_ESCALAS + "/frecuentes/curado")
+def api_escalas_frecuentes_curado(request: Request):
+    _exigir_herramientas(request)
+    return convenio_faq.curado()
+
+
+@app.post(API_ESCALAS + "/preguntar")
+def api_escalas_preguntar(request: Request, payload: dict = Body(default={})):
+    """Una pregunta a la IA, sin historial. La IA corre SIN sesión de base abierta;
+    el registro (UsoIA y PreguntaConvenio) se hace después, cada uno con la suya."""
+    _exigir_herramientas(request)
+    try:
+        pregunta = consulta_convenio_ia.normalizar_pregunta(payload.get("pregunta") if isinstance(payload, dict) else None)
+    except consulta_convenio_ia.PreguntaInvalida as e:
+        raise HTTPException(400, str(e))
+    if _convenio_ia_pasa_el_tope(_ip_de(request)):
+        raise HTTPException(429, "Hiciste muchas preguntas seguidas. Probá de nuevo en un rato.")
+    r = consulta_convenio_ia.consultar(pregunta)
+    uso = r.get("uso")
+    if uso:
+        try:
+            db.registrar_uso_ia(None, "", "herramienta", uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
+                                uso.get("duracion_ms", 0), uso.get("tokens_cache_lectura", 0),
+                                uso.get("tokens_cache_escritura", 0))
+        except Exception as e:
+            print(f"[convenio-ia] no se registró el uso de IA: {type(e).__name__}: {e}")
+    consulta_id = db.guardar_pregunta_convenio(pregunta, r["resultado"], r["motivo"], r["articulos"], r["frecuentes"],
+                                               r["respuesta"], r["modelo"])
+    arts, frec = consulta_convenio_ia.referencias(r["articulos"], r["frecuentes"])
+    return {"responde": r["resultado"] == "respondida", "respuesta": r["respuesta"], "articulos": arts,
+            "frecuentes": frec, "consulta_id": consulta_id, "puede_enviar": r["resultado"] != "respondida"}
+
+
+@app.post(API_ESCALAS + "/consultas/{consulta_id}/enviar")
+def api_escalas_consulta_enviar(request: Request, consulta_id: IdEscalas):
+    _exigir_herramientas(request)
+    if not db.enviar_pregunta_convenio(consulta_id):
+        raise HTTPException(404, "Esa consulta no existe.")
+    return {"ok": True, "consulta_id": consulta_id, "enviada": True}
+
+
+@app.get(API_ESCALAS + "/consultas")
+def api_escalas_consultas(request: Request):
+    _exigir_herramientas(request)
+    return db.preguntas_convenio()
 
 
 # ==================== Herramientas: Laboratorio de modelos ====================

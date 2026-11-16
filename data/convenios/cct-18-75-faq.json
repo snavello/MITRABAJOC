@@ -1,0 +1,53 @@
+{
+  "convenio": "cct-18-75",
+  "leido": "2026-11-16",
+  "temas": [
+    {"clave": "licencias", "nombre": "Licencias y descansos", "orden": 1},
+    {"clave": "feriados", "nombre": "Feriados y fechas especiales", "orden": 2}
+  ],
+  "preguntas": [
+    {
+      "id": "licencia-matrimonio",
+      "tema": "licencias",
+      "orden": 1,
+      "pregunta": "¿Cuántos días de licencia me corresponden por casamiento?",
+      "respuesta": "El convenio da doce días corridos de licencia con goce íntegro de haberes por el matrimonio del empleado o la empleada, siempre que se realice conforme a las leyes argentinas o a leyes extranjeras reconocidas por las argentinas. Rige desde el día del ingreso.\n\nSi se casa un hijo o una hija, la licencia es de un día laborable.",
+      "articulos": [48],
+      "segun_ley": "La Ley de Contrato de Trabajo fija diez días corridos por matrimonio del trabajador. El convenio da más días, por eso corresponde lo que dice el convenio.",
+      "normas": [
+        {"norma": "Ley de Contrato de Trabajo 20.744 (t.o. 1976)", "articulo": "art. 158, inc. c", "url": "https://servicios.infoleg.gob.ar/infolegInternet/anexos/25000-29999/25552/texact.htm"}
+      ],
+      "estado": "sin_revisar",
+      "nota_curador": "Confirmar si la cantidad de días de la ley cambió con la reforma laboral (Dto. 407/2026).",
+      "inspirada_en": ["Preguntas frecuentes de licencias de sindicatos nacionales (a completar por la investigación)"]
+    },
+    {
+      "id": "licencia-examen",
+      "tema": "licencias",
+      "orden": 2,
+      "pregunta": "Estudio: ¿tengo licencia para rendir exámenes?",
+      "respuesta": "Sí, si cursás estudios en un establecimiento educativo oficial, incorporado o privado que dé títulos reconocidos por el Estado. La licencia es con goce de haberes, de hasta siete días hábiles (continuos o discontinuos) en cada turno de examen y un máximo de veintiún días al año.\n\nSe concede por los días anteriores al examen y el del examen. Tenés que avisar por escrito al banco con tiempo suficiente y acreditar con un certificado del establecimiento que rendiste y en qué fecha.",
+      "articulos": [49],
+      "segun_ley": "La Ley de Contrato de Trabajo prevé dos días corridos por examen, con un máximo de diez días por año calendario. El convenio da más, por eso corresponde lo del convenio.",
+      "normas": [
+        {"norma": "Ley de Contrato de Trabajo 20.744 (t.o. 1976)", "articulo": "art. 158, inc. e", "url": "https://servicios.infoleg.gob.ar/infolegInternet/anexos/25000-29999/25552/texact.htm"}
+      ],
+      "estado": "sin_revisar",
+      "nota_curador": "",
+      "inspirada_en": []
+    },
+    {
+      "id": "dia-del-bancario",
+      "tema": "feriados",
+      "orden": 1,
+      "pregunta": "¿Cuándo es el Día del Bancario y se trabaja?",
+      "respuesta": "El Día del Bancario es el 6 de noviembre de cada año. Para esa fecha rigen las normas de los feriados nacionales.",
+      "articulos": [50],
+      "segun_ley": "",
+      "normas": [],
+      "estado": "sin_revisar",
+      "nota_curador": "El convenio no detalla cómo se paga si se trabaja ese día: ver las normas de feriados nacionales.",
+      "inspirada_en": []
+    }
+  ]
+}
