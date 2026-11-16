@@ -30,7 +30,7 @@ import escalas_proceso as proc
 import grilla_bancaria
 import main
 import telegram
-from test_escalas_controles import AGOSTO, DATOS_AGOSTO, SEPT   # datos compartidos
+from test_escalas_controles import AGOSTO, DATOS_AGOSTO, SEPT, septiembre_real   # datos compartidos
 
 db.crear_tablas()
 FIX = Path(__file__).parent / "fixtures" / "escalas"
@@ -581,3 +581,56 @@ def test_la_pantalla_no_usa_innerhtml_y_carga_sus_archivos_con_sello():
     c = _con_pase()
     cuerpo = c.get("/entornos/herramientas/convenio-escalas/estado").text
     assert "/static/escalas_estado.js?v=" in cuerpo and "Estado de las grillas" in cuerpo
+
+
+# ------------------------------------------------- D26 y D27: la primera grilla real (septiembre 2026)
+def test_la_septiembre_real_se_publica_sola_y_conserva_el_trimestre_de_conectividad_vencido(entorno_limpio):
+    e = entorno_limpio
+    _con_lecturas(e, septiembre_real())
+    r = proc.pasada()
+    assert [x["estado"] for x in r["leidas"]] == ["publicada"], r
+    g = db.grilla_completa(next(x for x in db.listar_grillas() if x["periodo"] == "2026-09")["id"])
+    meses = [x["meses"][0] for x in g["contenido"]["conectividad"]]
+    assert meses == ["2026-06", "2026-09"]                                       # D27: conservada, en orden cronológico
+    assert g["contenido"]["conectividad"][0] == DATOS_AGOSTO["conectividad"][0]
+    assert "Conectividad 2026-06 a 2026-08: conservada de la grilla anterior, el PDF ya no la trae" in g["nota"]
+    assert g["controles"]["conectividad_conservada"] == [["2026-06", "2026-07", "2026-08"]]
+    assert [x["pasa"] for x in g["controles"]["resultados"]] == [True] * 6
+    assert ctl.forma_valida(g["contenido"]) == []
+    assert grilla_bancaria.PERIODO_VIGENTE == "2026-09"
+
+
+def test_retenida_descartada_y_pasada_forzada_publica_sola_avisa_y_refresca_la_calculadora(entorno_limpio):
+    """El camino de SDN: la primera lectura quedó retenida; se descarta y «Buscar ahora» vuelve a leer la nota."""
+    e = entorno_limpio
+    mala = ctl.asignar(septiembre_real(), "roe.filas.0.hasta", 3337738)           # un tope a 2 pesos (D26)
+    _con_lecturas(e, mala)
+    r = proc.pasada()
+    assert r["leidas"][0]["estado"] == "retenida" and r["leidas"][0]["fallan"] == ["C4"]
+    gid = next(x["id"] for x in db.listar_grillas() if x["estado"] == "retenida")
+    assert grilla_bancaria.PERIODO_VIGENTE == "2026-08"
+    # Sin forzar, una retenida no se relee sola.
+    proc.pasada()
+    assert len(e.llamadas) == 1
+    assert db.descartar_grilla(gid, "SDN", "lectura con un tope mal leído") is True
+    # Aunque agotara los intentos, «Buscar ahora» (forzar) relee la nota.
+    with Session(db.engine) as s:
+        s.exec(text("UPDATE escalanovedad SET intentos = 3 WHERE tipo = 'grillas'"))
+        s.commit()
+    avisos_antes = len(e.avisos)
+    _con_lecturas(e, septiembre_real())
+    r = proc.pasada(forzar_periodo="2026-09")
+    assert [x["estado"] for x in r["leidas"]] == ["publicada"], r
+    assert len(e.llamadas) == 2
+    assert ("2026-09", "publicada") in estados() and ("2026-09", "descartada") in estados()
+    assert db.periodo_vigente() == "2026-09" and grilla_bancaria.PERIODO_VIGENTE == "2026-09"      # calculadora refrescada
+    assert any("publicada" in a and "Septiembre 2026" in a for a in e.avisos[avisos_antes:])
+
+
+def test_el_ensayo_no_cuenta_como_distinta_la_conectividad_conservada(entorno_limpio):
+    e = entorno_limpio
+    _con_lecturas(e, septiembre_real())
+    proc.pasada()
+    e.monkeypatch.setattr(lectura, "leer", lambda pdf, pl, m, veces=2: lecturas_de(septiembre_real()))
+    r = proc.ensayo("2026-09", "SDN")
+    assert r["distintas_a"] == 0 and r["distintas_b"] == 0, r["lectura_a"]["detalle"][:3]
