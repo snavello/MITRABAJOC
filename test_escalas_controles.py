@@ -109,11 +109,52 @@ def test_un_digito_mal_leido_con_las_dos_lecturas_iguales_igual_se_atrapa():
     assert not c.todos_pasan(r) and "C4" in c.fallan(r)
 
 
-def test_un_cambio_de_un_peso_en_una_celda_grande_se_atrapa():
+def test_d30_la_diferencia_de_9_pesos_en_una_celda_pasa_y_la_de_11_retiene_en_c4_y_c5():
+    """D30: tolerancia de $ 10 en los importes. $ 9 pasa C4 y C5; $ 11 retiene (C4 y C5 la ven)."""
     ruta = _ruta_basico("administrativa", "Jefe Dep. de 1a.")
     valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
-    r = por_control(controlar(c.asignar(SEPT, ruta, valor + 1)))
-    assert r["C4"]["pasa"] is False or r["C5"]["pasa"] is False
+    r = por_control(controlar(c.asignar(SEPT, ruta, round(valor + 9, 2))))
+    assert r["C4"]["pasa"] is True and r["C5"]["pasa"] is True
+    r = por_control(controlar(c.asignar(SEPT, ruta, round(valor + 11, 2))))
+    assert r["C4"]["pasa"] is False and r["C5"]["pasa"] is False
+    assert "tolerancia: $ 10" in r["C4"]["resumen"] and "tolerancia: $ 10" in r["C5"]["resumen"]
+
+
+def test_d30_un_digito_mal_leido_en_las_centenas_retiene():
+    ruta = _ruta_basico("administrativa", "Jefe Dep. de 1a.")
+    valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
+    for delta in (100, -100, 300, 1000):
+        r = controlar(c.asignar(SEPT, ruta, round(valor + delta, 2)))
+        assert "C4" in c.fallan(r) and "C5" in c.fallan(r), delta
+
+
+def _escalables_de_agosto():
+    return [x for x in c.celdas(DATOS_AGOSTO)
+            if x["tipo"] in c.ESCALAN and isinstance(x["valor"], (int, float)) and x["valor"] >= 1000]
+
+
+def test_d30_un_adicional_con_otro_porcentaje_retiene_cuando_la_diferencia_supera_10_pesos():
+    """Un adicional escalado con 2,2 % en vez de 1,9 % (0,3 % de diferencia) retiene si el importe es de
+    decenas de miles; para los chicos la diferencia es menor que $ 10 y D30 no la ve (límite aceptado,
+    documentado en el test siguiente)."""
+    ruta = "adicionales.funcion_cajero"
+    previo = next(x for x in c.celdas(DATOS_AGOSTO) if x["ruta"] == ruta)["valor"]
+    assert previo * 0.003 > 10
+    r = por_control(controlar(c.asignar(SEPT, ruta, round(previo * 1.022, 2))))
+    assert r["C4"]["pasa"] is False and any(d.get("ruta") == ruta for d in r["C4"]["detalle"])
+
+
+def test_d30_celdas_chicas_donde_un_porcentaje_distinto_ya_no_se_detecta():
+    """LÍMITE ACEPTADO por D30: la celda escalable cuya diferencia entre 1,9 % y 2,2 % es de $ 10 o menos
+    (importe vigente de hasta $ 3.333) se acepta con el otro porcentaje. Se recorre la grilla real para
+    que un cambio en ella o en la tolerancia se vea; la lista de rutas se imprime con -s."""
+    previas = _escalables_de_agosto()
+    chicas = sorted(x["ruta"] for x in previas if x["valor"] * 0.003 <= 10)
+    assert len([x for x in previas if x["valor"] * 0.003 > 10]) > 150
+    for x in previas:
+        r = por_control(controlar(c.asignar(SEPT, x["ruta"], round(x["valor"] * 1.022, 2))))["C4"]
+        assert (x["ruta"] in chicas) == (r["pasa"] is True), x["ruta"]
+    print("celdas no detectables con otro porcentaje:", chicas)
 
 
 def test_una_categoria_faltante_rompe_la_estructura():
@@ -263,13 +304,17 @@ def test_la_conectividad_no_entra_en_el_factor_unico():
 
 
 # ---------------------------------------------------------------- C3
-def test_las_anclas_se_controlan_al_centavo():
-    r = por_control(controlar(SEPT, com={**COMUNICADO, "inicial": 2552560.35}))
-    assert r["C3"]["pasa"] is False
-    r = por_control(controlar(SEPT, com={**COMUNICADO, "roe": 73786.60}))
-    assert r["C3"]["pasa"] is False and any("ROE" in d["ancla"] for d in r["C3"]["detalle"])
-    r = por_control(controlar(SEPT, com={**COMUNICADO, "dia_bancario_minimo": 2275519.99}))
-    assert r["C3"]["pasa"] is False
+def test_las_anclas_se_controlan_con_la_tolerancia_de_10_pesos_d30():
+    """D30: antes al centavo; ahora $ 9 de diferencia contra el comunicado pasa y $ 11 retiene."""
+    for campo, base in (("inicial", 2552560.34), ("roe", 73786.55), ("dia_bancario_minimo", 2275519.25)):
+        assert por_control(controlar(SEPT, com={**COMUNICADO, campo: round(base + 9, 2)}))["C3"]["pasa"] is True, campo
+        assert por_control(controlar(SEPT, com={**COMUNICADO, campo: round(base - 9, 2)}))["C3"]["pasa"] is True, campo
+        r = por_control(controlar(SEPT, com={**COMUNICADO, campo: round(base + 11, 2)}))["C3"]
+        assert r["pasa"] is False, campo
+    r = por_control(controlar(SEPT, com={**COMUNICADO, "roe": 73786.55 + 11}))
+    assert any("ROE" in d["ancla"] for d in r["C3"]["detalle"]) and "tolerancia: $ 10" in r["C3"]["resumen"]
+    ok = por_control(controlar(SEPT))["C3"]
+    assert "tolerancia: $ 10" in ok["resumen"]
     r = por_control(controlar(SEPT, com={**COMUNICADO, "dia_bancario_minimo": None}))
     assert r["C3"]["pasa"] is True              # el comunicado de octubre no trae el mínimo
 
@@ -281,8 +326,11 @@ def test_sin_comunicado_las_anclas_no_pasan():
 
 def test_el_inicial_leido_mal_en_una_rama_se_atrapa():
     ini = next(i for i, x in enumerate(SEPT["ramas"]["maestranza"]["categorias"]) if x["anios"] == 0)
-    g = c.asignar(SEPT, f"ramas.maestranza.categorias.{ini}.conformado", 2_552_560.43)
+    g = c.asignar(SEPT, f"ramas.maestranza.categorias.{ini}.conformado", 2_552_560.34 + 100)
     assert por_control(controlar(g))["C3"]["pasa"] is False
+    # D30: 9 pesos de más ya no retienen (la tolerancia es de $ 10).
+    g = c.asignar(SEPT, f"ramas.maestranza.categorias.{ini}.conformado", 2_552_560.34 + 9)
+    assert por_control(controlar(g))["C3"]["pasa"] is True
 
 
 # ---------------------------------------------------------------- C4 en detalle
@@ -304,11 +352,14 @@ def test_los_topes_del_roe_se_aceptan_iguales_o_escalados_pero_no_otra_cosa():
 
 
 def test_la_tolerancia_es_un_parametro():
+    """D30: el default es la constante única TOLERANCIA_PESOS; se puede achicar por parámetro."""
+    assert c.TOLERANCIA_PESOS == 10.0
+    assert all(v == 10.0 for k, v in c.TOLERANCIAS.items() if k != "c4_extra")
     ruta = _ruta_basico("administrativa", "8 años")
     valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
-    g = c.asignar(SEPT, ruta, round(valor + 0.04, 2))
-    assert por_control(controlar(g))["C4"]["pasa"] is False
-    assert por_control(controlar(g, tolerancias={"c4_extra": 0.1, "c5_pesos": 2.0}))["C4"]["pasa"] is True
+    g = c.asignar(SEPT, ruta, round(valor + 5, 2))
+    assert por_control(controlar(g))["C4"]["pasa"] is True
+    assert por_control(controlar(g, tolerancias={"c4_pesos": 1.0}))["C4"]["pasa"] is False
 
 
 def test_pocas_celdas_no_alcanzan_para_medir_el_factor():
@@ -338,7 +389,7 @@ def test_el_basico_por_debajo_del_piso_o_inconsistente_con_el_coeficiente_no_pas
 def test_el_roe_y_el_dia_del_bancario_se_controlan_por_dentro():
     g = c.asignar(SEPT, "roe.filas.1.anual.3", 1.0)
     assert por_control(controlar(g))["C5"]["pasa"] is False
-    g = c.asignar(SEPT, "dia_bancario.minimo", SEPT["dia_bancario"]["minimo"] + 10)
+    g = c.asignar(SEPT, "dia_bancario.minimo", SEPT["dia_bancario"]["minimo"] + 11)
     r = por_control(controlar(g))
     assert r["C5"]["pasa"] is False
 
@@ -417,28 +468,34 @@ def test_los_comunicados_reales_admiten_un_factor_comun_al_centavo():
         assert all(round(a * f, 2) == n for a, n in pares), paso
 
 
-def test_tres_centavos_de_error_en_un_basico_se_atrapan_aunque_las_dos_lecturas_coincidan():
-    """El piso de C4 es lo que explica el redondeo (0,0102 + 0,005 × coeficiente, ~1,7 centavos en este
-    básico): un error menor se confunde con el redondeo y lo cubre C2/C5."""
+def test_d30_centavos_y_pesos_chicos_de_error_en_un_basico_ahora_pasan_y_11_pesos_no():
+    """Antes de D30 tres centavos de error ya retenían (C4 al centavo). Por decisión de SDN (D30) ahora
+    pasan hasta $ 10; con las dos lecturas iguales, de $ 11 en adelante C4 los atrapa."""
     ruta = _ruta_basico("administrativa", "8 años")
     valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
-    for delta in (0.03, -0.03, 0.05):
+    for delta in (0.03, -0.03, 0.05, 9, -9):
+        r = controlar(c.asignar(SEPT, ruta, round(valor + delta, 2)))
+        assert por_control(r)["C4"]["pasa"] is True, delta
+    for delta in (11, -11, 100):
         r = por_control(controlar(c.asignar(SEPT, ruta, round(valor + delta, 2))))["C4"]
         assert r["pasa"] is False and any(d["ruta"] == ruta for d in r["detalle"]), delta
 
 
 def test_si_las_celdas_no_admiten_un_factor_unico_c4_lista_las_que_rompen():
-    ruta = "adicionales.guarderia"
+    ruta = "adicionales.funcion_cajero"      # D30: un importe grande, donde 0,1 % son más de $ 10
     valor = next(x for x in c.celdas(SEPT) if x["ruta"] == ruta)["valor"]
+    assert valor * 0.001 > 10
     r = por_control(controlar(c.asignar(SEPT, ruta, round(valor * 1.001, 2))))["C4"]
     assert r["pasa"] is False and [d["ruta"] for d in r["detalle"] if "ruta" in d] == [ruta]
 
 
-def test_un_tope_hasta_no_entero_o_corrido_en_dos_pesos_no_pasa():
-    # D26 (2026-11-16): hasta 1 peso de diferencia contra el valor escalado SÍ pasa (el sindicato
-    # a veces trunca en vez de redondear); a 2 pesos o más, o con decimales, sigue reteniendo.
+def test_un_tope_hasta_corrido_en_mas_de_diez_pesos_no_pasa():
+    # D26 + D30: hasta $ 10 de diferencia contra el valor escalado SÍ pasa (el sindicato a veces trunca
+    # en vez de redondear; ya no se exige que sea entero); a más de $ 10 sigue reteniendo.
     escalado = next(x for x in c.celdas(SEPT) if x["ruta"] == "roe.filas.0.hasta")["valor"]
-    for malo in (escalado + 2, escalado - 2, escalado + 0.5, escalado + 100):
+    for bueno in (escalado + 2, escalado - 2, escalado + 0.5, escalado + 9):
+        assert por_control(controlar(c.asignar(SEPT, "roe.filas.0.hasta", bueno)))["C4"]["pasa"] is True, bueno
+    for malo in (escalado + 11, escalado - 11, escalado + 100):
         assert por_control(controlar(c.asignar(SEPT, "roe.filas.0.hasta", malo)))["C4"]["pasa"] is False, malo
 
 
@@ -476,7 +533,9 @@ def test_la_septiembre_real_con_topes_truncados_y_trimestre_vencido_ausente_pasa
     assert [x["valor"] for x in c.celdas(g) if x["tipo"] == "hasta"][:3] == list(TOPES_REALES)
     r = _real(g)
     assert all(x["pasa"] is True for x in r.values()), {k: (v["pasa"], v["resumen"], v["detalle"][:2]) for k, v in r.items()}
-    assert r["C4"]["medidas"]["exceso_max"] == 0 and r["C4"]["medidas"]["topes_hasta"] == ["escalado"]
+    assert r["C4"]["medidas"]["topes_hasta"] == ["escalado"]
+    m = r["C4"]["medidas"]
+    assert m["celdas_comparadas"] > 150 and m["desvio_max"] < 1 and m["tolerancia_pesos"] == 10.0   # D30
     # D27: C1 lo dice en su detalle y el contenido que se guarda conserva el trimestre.
     assert "conservada de la grilla anterior" in r["C1"]["resumen"]
     assert r["C1"]["detalle"][0]["meses"] == ["2026-06", "2026-07", "2026-08"]
@@ -490,20 +549,23 @@ def test_la_septiembre_real_con_topes_truncados_y_trimestre_vencido_ausente_pasa
     assert c.c1_estructura({"contenido": guardado, "notas": []}, DATOS_AGOSTO, "2026-09")["pasa"] is True
 
 
-def test_d26_un_tope_a_un_peso_pasa_y_a_dos_no():
+def test_d26_d30_un_tope_a_9_pesos_pasa_y_a_11_no():
     g = septiembre_real()
     assert _real(c.asignar(g, "roe.filas.1.hasta", 4323406))["C4"]["pasa"] is True       # redondeado
-    assert _real(c.asignar(g, "roe.filas.1.hasta", 4323404))["C4"]["pasa"] is False      # 1,72 del escalado
-    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337738))["C4"]["pasa"] is False      # a 2 pesos
-    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337736.5))["C4"]["pasa"] is False    # no entero
-    assert _real(c.asignar(g, "roe.filas.2.hasta", 5188120))["C4"]["pasa"] is False      # un dígito mal leído
+    assert _real(c.asignar(g, "roe.filas.1.hasta", 4323404))["C4"]["pasa"] is True       # 1,72 del escalado
+    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337738))["C4"]["pasa"] is True       # a 2 pesos (D26 lo retenía)
+    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337736.5))["C4"]["pasa"] is True     # no entero (D30 no lo exige)
+    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337736 + 9))["C4"]["pasa"] is True
+    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337736 + 11))["C4"]["pasa"] is False
+    assert _real(c.asignar(g, "roe.filas.2.hasta", 5188120 - 100))["C4"]["pasa"] is False   # un dígito mal leído
 
 
-def test_d26_no_afloja_los_importes_que_siguen_al_centavo():
+def test_d30_en_la_septiembre_real_9_pesos_pasan_y_11_no_en_un_importe():
     g = septiembre_real()
     ruta = _ruta_basico("administrativa", "8 años")
     valor = next(x for x in c.celdas(g) if x["ruta"] == ruta)["valor"]
-    assert _real(c.asignar(g, ruta, round(valor + 0.04, 2)))["C4"]["pasa"] is False
+    assert _real(c.asignar(g, ruta, round(valor + 9, 2)))["C4"]["pasa"] is True
+    assert _real(c.asignar(g, ruta, round(valor + 11, 2)))["C4"]["pasa"] is False
 
 
 def test_d27_falta_el_trimestre_que_cubre_el_periodo():
@@ -691,7 +753,7 @@ def test_d28_una_celda_que_no_escala_junto_a_una_escalable_retiene_y_no_completa
 
 def test_d28_null_en_una_lectura_y_el_valor_calculado_en_la_otra_se_completa():
     real = _valor(OCT, RUTA_CAPATAZ)
-    for leido in (real, round(real + 0.01, 2)):
+    for leido in (real, round(real + 0.01, 2), round(real + 9, 2)):       # D30: hasta $ 10 del calculado
         cc = oct_cc(sin_leer(RUTA_CAPATAZ), b=c.asignar(OCT, RUTA_CAPATAZ, leido))
         assert c.todos_pasan(cc["resultados"]), leido
         assert cc["celdas_calculadas"][0]["leido_en_una_lectura"] == leido
@@ -699,7 +761,7 @@ def test_d28_null_en_una_lectura_y_el_valor_calculado_en_la_otra_se_completa():
 
 def test_d28_null_en_una_lectura_y_otro_valor_en_la_otra_retiene():
     real = _valor(OCT, RUTA_CAPATAZ)
-    for leido in (real + 0.5, real + 1000, real - 0.02):
+    for leido in (real + 11, real + 1000, real - 11):
         cc = oct_cc(sin_leer(RUTA_CAPATAZ), b=c.asignar(OCT, RUTA_CAPATAZ, leido))
         assert not c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"] == [], leido
         assert "C2" in c.fallan(cc["resultados"])

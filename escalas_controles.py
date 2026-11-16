@@ -23,7 +23,7 @@ sobre la grilla de agosto de 2026 y los comunicados de julio a octubre):
   estructura: si cambian, C1 retiene), la conectividad (se actualiza por
   trimestre, trae sus `meses`) y los topes `hasta` de los tramos de ROE
   (se aceptan iguales a los de antes o escalados por el mismo factor, con hasta
-  1 peso de diferencia: D26; el detalle dice cuál pasó). La conectividad de un
+  $ 10 de diferencia: D26 y D30; el detalle dice cuál pasó). La conectividad de un
   trimestre YA VENCIDO puede faltar en el PDF y se conserva de la grilla
   anterior (D27).
 
@@ -32,22 +32,40 @@ D28: UNA celda que escala con el factor y no se pudo leer en ninguna de las dos 
 `MAX_CELDAS_CALCULADAS` celdas por grilla y solo si todo lo demás pasa. Ver el docstring de esa
 función y PLAN_CONVENIO_ESCALAS.md.
 
-Tolerancias (parámetros, con default ESTRICTO; se calibran con grillas
-reales en el bloque 6 y SDN ve el número antes de fijarlo):
-  c3_centavos   0,00  anclas del comunicado (inicial y mínimo del Día del Bancario), al centavo exacto
-  c3_roe_centavos 0,01 el ROE sale de dividir un monto anual por 12: un centavo de redondeo
-  c4_extra      0,00  pesos por encima de lo que explica el redondeo (D19: se calibra con
-                       septiembre real en el bloque 6; subirlo aflojaría el control)
-  c4_hasta      1,0   pesos, en los topes `hasta` escalados (D26: el sindicato a veces trunca y a
-                       veces redondea, así que un tope entero a 1 peso del valor escalado pasa; a 2 o más, no)
-  c5_pesos      2,00  básico contra coeficiente × unidad (la grilla firmada de
-                       agosto trae hasta ~1,7 en ordenanza: es la fuente)
+D30 (SDN, 2026-11-16: «en esos valores es irrelevante total»; los importes de la grilla son de
+millones): TODAS las tolerancias de importe son `TOLERANCIA_PESOS` = $ 10, una sola constante de la
+que salen todas (el resumen y el detalle de cada control dicen «tolerancia: $ 10»):
+  C3  inicial, ROE mensual y mínimo del Día del Bancario coinciden con el comunicado si difieren
+      en hasta $ 10
+  C4  cada importe que escala está a no más de $ 10 de vigente × factor; los topes `hasta` del ROE,
+      a no más de $ 10 del valor escalado (o iguales al vigente); no se exige que sean enteros
+  C5  básico contra max(coef × unidad, piso) hasta $ 10; escalafón no decreciente tolerando $ 10
+C2 (doble lectura) NO cambia: las dos lecturas coinciden exactas, celda por celda. La lectura parcial
+de D28 sigue siendo dígito por dígito, y la conectividad idéntica a lo publicado (D27).
+
+El factor de C4 sigue estimándose con intervalos ESTRICTOS de redondeo (±½ centavo por celda,
+`_factor_de_celdas`) y no con la tolerancia: así sigue siendo uno solo, preciso al centavo (se
+informa con 8 decimales) y una celda mala no lo arrastra. Lo que se afloja es el VEREDICTO:
+|nuevo − vigente × f| ≤ $ 10. Mediana de cocientes o intersección con ±$ 10 se descartaron: la
+mediana mezcla el redondeo de los importes chicos y corre el factor hasta unos pesos; la
+intersección con ±$ 10 en cada celda ancha dejaría un factor indeterminado de varios centavos.
+Límite aceptado: un adicional escalado con OTRO porcentaje solo se atrapa si
+vigente × |Δ%| > $ 10; con un 0,3 % de diferencia (2,5 % en vez de 2,2 %) quedan sin detectar los
+importes vigentes de menos de $ 3.334 (ver `test_escalas_controles.py`, que lista cuáles son en la
+grilla real). Un dígito mal leído en las centenas o más (± $ 100) siempre retiene.
 """
 import copy
 import re
 import statistics
 
-TOLERANCIAS = {"c3_centavos": 0.0, "c3_roe_centavos": 0.01, "c4_extra": 0.0, "c4_hasta": 1.0, "c5_pesos": 2.0}
+TOLERANCIA_PESOS = 10.0
+TOLERANCIAS = {"c3_pesos": TOLERANCIA_PESOS, "c4_pesos": TOLERANCIA_PESOS, "c4_hasta": TOLERANCIA_PESOS,
+               "c5_pesos": TOLERANCIA_PESOS, "c4_extra": 0.0}
+# c4_extra: pesos de más en los intervalos de redondeo con que se estima el factor (0 = ninguno); no es una tolerancia de importe.
+
+
+def texto_tolerancia(t: float = TOLERANCIA_PESOS) -> str:
+    return f"tolerancia: $ {t:g}".replace(".", ",")
 
 CLAVES_DATOS = ("ramas", "adicionales", "conectividad", "roe", "dia_bancario")
 TOPE_DETALLE = 200
@@ -465,10 +483,10 @@ def _celda(g: dict, ruta: str):
 def c3_anclas(lectura: dict, comunicado: dict | None, tolerancias: dict | None = None) -> dict:
     """C3: el salario inicial (conformado de la categoría Inicial, en las tres
     ramas) y el ROE (monto anual del tramo 3,5 % a 8,75 % de la primera fila,
-    dividido 12) de la grilla leída son los del texto del comunicado, al
-    centavo; y, si el comunicado lo trae, el mínimo del Día del Bancario."""
-    tol_general = _tol(tolerancias)["c3_centavos"]
-    tol_roe = _tol(tolerancias)["c3_roe_centavos"]
+    dividido 12) de la grilla leída son los del texto del comunicado, con la
+    tolerancia de D30 ($ 10); y, si el comunicado lo trae, el mínimo del Día del Bancario."""
+    tol_general = _tol(tolerancias)["c3_pesos"]
+    tol_roe = tol_general
     if not comunicado or not _num(comunicado.get("inicial")) or not _num(comunicado.get("roe")):
         return _res("C3", "Anclas del comunicado", False, "No hay comunicado con el inicial y el ROE para controlar.")
     g = lectura["contenido"]
@@ -490,9 +508,9 @@ def c3_anclas(lectura: dict, comunicado: dict | None, tolerancias: dict | None =
         cmp("Día del Bancario · mínimo", (g.get("dia_bancario") or {}).get("minimo"), minimo)
     malas = [d for d in det if not d["coincide"]]
     if malas:
-        return _res("C3", "Anclas del comunicado", False, f"{len(malas)} ancla(s) no coinciden con el comunicado.", malas)
+        return _res("C3", "Anclas del comunicado", False, f"{len(malas)} ancla(s) no coinciden con el comunicado ({texto_tolerancia(tol_general)}).", malas)
     nota = "" if _num(minimo) else " (el comunicado no trae el mínimo del Día del Bancario)"
-    return _res("C3", "Anclas del comunicado", True, f"Inicial y ROE coinciden con el comunicado al centavo{nota}.", det)
+    return _res("C3", "Anclas del comunicado", True, f"Inicial y ROE coinciden con el comunicado ({texto_tolerancia(tol_general)}){nota}.", det)
 
 
 # ---------------------------------------------------------------- C4
@@ -549,40 +567,34 @@ def _factor_de_celdas(contenido: dict, previa: dict, tol: dict) -> dict | None:
 
 def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
                     tolerancias: dict | None = None) -> dict:
-    """C4 (D19): cada importe nuevo es el anterior por el MISMO factor, al centavo
-    (dentro de lo que explica el redondeo), y ese factor redondea al porcentaje del
-    comunicado.
+    """C4 (D19, D30): cada importe nuevo es el anterior por el MISMO factor, con una tolerancia de
+    $ 10 (`TOLERANCIA_PESOS`), y ese factor redondea al porcentaje del comunicado.
 
-    Para cada celda que escala, el factor tiene que caer en el intervalo que deja
-    el redondeo: nuevo = redondeo(anterior × f) con el anterior ya redondeado, y en un
-    básico o conformado la unidad (que se redondea al centavo antes de multiplicar por
-    el coeficiente) suma otro medio centavo × coeficiente. Eso da un margen por celda
-    h = 0,005 × (1 + f) + 0,005 × coef + `c4_extra` (default 0: ningún margen de más) y
-    el intervalo f ∈ [(nuevo − h) / anterior, (nuevo + h) / anterior]. El factor es el
-    punto que cae en más intervalos (no la mediana: el mismo cálculo no depende de qué
-    celdas están mal) y la grilla pasa SOLO si ese factor está en el intervalo de TODAS;
-    las celdas que lo dejan fuera se listan. La conectividad queda afuera
-    (trimestral) y los topes `hasta` del ROE se aceptan iguales o escalados (enteros) con hasta
-    1 peso de diferencia (D26: el sindicato a veces trunca); los importes siguen al centavo."""
+    El factor se estima como siempre (`_factor_de_celdas`: el punto que cae en más intervalos
+    estrictos de redondeo, ver su docstring); el veredicto es |nuevo − vigente × f| ≤ $ 10 en cada
+    celda. Las que lo superan se listan. La conectividad queda afuera (trimestral) y los topes
+    `hasta` del ROE se aceptan iguales al vigente o a no más de $ 10 del valor escalado (D26 los
+    admitía a 1 peso y enteros; con D30 ya no se exige que sean enteros)."""
     if previa is None:
         return _res("C4", "Factor único", None, "No hay grilla anterior: el control no aplica.")
     tol = _tol(tolerancias)
+    tl = texto_tolerancia(tol["c4_pesos"])
     nuevas = {c["ruta"]: c for c in celdas(lectura["contenido"])}
     cf = _factor_de_celdas(lectura["contenido"], previa, tol)
     if cf is None:
         n = len(_pares_que_escalan(lectura["contenido"], previa))
         return _res("C4", "Factor único", False, f"Solo {n} importes comparables: no alcanza para medir el factor.")
-    pares, margenes, f, fuera = cf["pares"], cf["margenes"], cf["f"], cf["fuera"]
-    det, desvio_max, exceso_max = [], 0.0, 0.0
-    for k, ((c, n), h) in enumerate(zip(pares, margenes)):
-        desvio = abs(n["valor"] - c["valor"] * f)
+    pares, f = cf["pares"], cf["f"]
+    det, desvio_max = [], 0.0
+    for c, n in pares:
+        esperado = round(c["valor"] * f, 2)
+        desvio = abs(n["valor"] - esperado)
         desvio_max = max(desvio_max, desvio)
-        exceso_max = max(exceso_max, desvio - h)
-        if k in fuera:
+        if desvio > tol["c4_pesos"] + 1e-6:
             det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],
-                        "esperado": round(c["valor"] * f, 2), "desvio": round(desvio, 4), "permitido": round(h, 4),
-                        "problema": "no admite el mismo factor que las demás celdas al centavo"})
-    # Topes `hasta` de los tramos de ROE (duda abierta): iguales o escalados.
+                        "esperado": esperado, "desvio": round(desvio, 2), "permitido": tol["c4_pesos"],
+                        "problema": f"no admite el mismo factor que las demás celdas ({tl})"})
+    # Topes `hasta` de los tramos de ROE: iguales o escalados.
     hasta_info = []
     for c in celdas(previa):
         if c["tipo"] == "hasta" and _num(c["valor"]):
@@ -590,16 +602,13 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
             if not n or not _num(n["valor"]):
                 det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": None,
                             "problema": "tope sin leer"})
-            elif float(n["valor"]) != int(n["valor"]):
-                det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],
-                            "problema": "el tope del tramo tiene que ser un número entero de pesos"})
             elif n["valor"] == c["valor"]:
                 hasta_info.append("igual")
-            elif abs(n["valor"] - c["valor"] * f) <= min(tol["c4_hasta"], 1.0) + 1e-6:
+            elif abs(n["valor"] - c["valor"] * f) <= tol["c4_hasta"] + 1e-6:
                 hasta_info.append("escalado")
             else:
                 det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],
-                            "esperado": f"{c['valor']} (igual) o {round(c['valor'] * f)} (escalado)",
+                            "esperado": f"{c['valor']} (igual) o {round(c['valor'] * f, 2)} (escalado, {tl})",
                             "problema": "el tope del tramo ni se mantuvo ni escaló con el factor"})
     pct_factor = (f - 1) * 100
     pct_com = comunicado.get("porcentaje") if comunicado else None
@@ -611,14 +620,14 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
                        "factor": round(f, 6), "porcentaje_del_factor": round(pct_factor, 4), "comunicado": pct_com})
     else:
         resumen_pct = f" El factor {round(f, 6)} redondea a {_redondea_a_un_decimal(pct_factor)} % (comunicado: {pct_com} %)."
-    info = {"factor": round(f, 8), "desvio_max": round(desvio_max, 4), "exceso_max": round(exceso_max, 4),
-            "celdas_comparadas": len(pares), "topes_hasta": sorted(set(hasta_info))}
+    info = {"factor": round(f, 8), "desvio_max": round(desvio_max, 4), "celdas_comparadas": len(pares),
+            "tolerancia_pesos": tol["c4_pesos"], "topes_hasta": sorted(set(hasta_info))}
     if det:
         r = _res("C4", "Factor único", False,
-                 f"{len(det)} celda(s) fuera del factor {round(f, 6)} (desvío máximo ${round(desvio_max, 2)}).", det)
+                 f"{len(det)} celda(s) fuera del factor {round(f, 6)} ({tl}; desvío máximo ${round(desvio_max, 2)}).", det)
     else:
         r = _res("C4", "Factor único", True,
-                 f"{len(pares)} importes con un mismo factor {round(f, 6)}, desvío máximo ${round(desvio_max, 2)}.{resumen_pct}")
+                 f"{len(pares)} importes con un mismo factor {round(f, 6)}, {tl}, desvío máximo ${round(desvio_max, 2)}.{resumen_pct}")
     r["medidas"] = info
     return r
 
@@ -629,7 +638,7 @@ def c5_coherencia(lectura: dict, previa: dict | None = None, tolerancias: dict |
     unidad, básico mínimo de la rama); escalafón (coeficientes y básicos) no
     decreciente con la antigüedad y entre jerarquías; conformado no decreciente
     y mayor que el básico; adicionales y ROE ordenados; mínimo del Día del
-    Bancario = suma fija + monto por coeficiente."""
+    Bancario = suma fija + monto por coeficiente. Tolerancia de importes: $ 10 (D30)."""
     tol = _tol(tolerancias)["c5_pesos"]
     g = lectura["contenido"]
     det = []
@@ -659,7 +668,7 @@ def c5_coherencia(lectura: dict, previa: dict | None = None, tolerancias: dict |
             grupo = sorted(grupo, key=lambda x: (x[1].get("anios") if nombre_grupo == "antigüedad" else x[0]))
             for (_, a), (j, b) in zip(grupo, grupo[1:]):
                 for campo in ("coef", "basico"):
-                    if b[campo] < a[campo] - 1e-9:
+                    if b[campo] < a[campo] - (tol if campo == "basico" else 1e-9):
                         det.append({"ruta": f"ramas.{rk}.categorias.{j}.{campo}", "etiqueta": f"{nombre} · {b['nombre']} · {campo}",
                                     "problema": f"decrece respecto de «{a['nombre']}» ({nombre_grupo})",
                                     "anterior": a[campo], "leido": b[campo]})
@@ -668,7 +677,7 @@ def c5_coherencia(lectura: dict, previa: dict | None = None, tolerancias: dict |
             if _num(c.get("basico")) and c["conformado"] <= c["basico"]:
                 det.append({"ruta": f"ramas.{rk}.categorias.{i}.conformado", "etiqueta": f"{nombre} · {c['nombre']} · conformado",
                             "problema": "el conformado no supera al básico", "leido": c["conformado"], "basico": c["basico"]})
-            if k and c["conformado"] < conf[k - 1][1]["conformado"] - 1e-9:
+            if k and c["conformado"] < conf[k - 1][1]["conformado"] - tol:
                 det.append({"ruta": f"ramas.{rk}.categorias.{i}.conformado", "etiqueta": f"{nombre} · {c['nombre']} · conformado",
                             "problema": "el conformado decrece con la antigüedad", "leido": c["conformado"],
                             "anterior": conf[k - 1][1]["conformado"]})
@@ -703,7 +712,7 @@ def c5_coherencia(lectura: dict, previa: dict | None = None, tolerancias: dict |
         det.append({"problema": "los topes de los tramos de ROE no crecen", "leido": topes})
     db = g.get("dia_bancario") or {}
     if all(_num(db.get(k)) for k in ("suma_fija", "por_coeficiente", "minimo")):
-        if abs(round(db["suma_fija"] + db["por_coeficiente"], 2) - db["minimo"]) > 0.011:
+        if abs(round(db["suma_fija"] + db["por_coeficiente"], 2) - db["minimo"]) > tol + 1e-6:
             det.append({"ruta": "dia_bancario.minimo", "problema": "el mínimo no es suma fija + monto por coeficiente",
                         "leido": db["minimo"], "esperado": round(db["suma_fija"] + db["por_coeficiente"], 2)})
     for i, c in enumerate(g.get("conectividad") or []):
@@ -711,8 +720,8 @@ def c5_coherencia(lectura: dict, previa: dict | None = None, tolerancias: dict |
         if all(_num(x) for x in v) and not (0 < v[0] <= v[1] <= v[2]):
             det.append({"ruta": f"conectividad.{i}", "problema": "la conectividad no crece diario ≤ más de 4 días ≤ mensual", "leido": v})
     if det:
-        return _res("C5", "Coherencia interna", False, f"{len(det)} incoherencia(s) dentro de la grilla.", det)
-    return _res("C5", "Coherencia interna", True, "Básicos = coeficiente × unidad (o el piso), escalafón y ROE ordenados.")
+        return _res("C5", "Coherencia interna", False, f"{len(det)} incoherencia(s) dentro de la grilla ({texto_tolerancia(tol)}).", det)
+    return _res("C5", "Coherencia interna", True, f"Básicos = coeficiente × unidad (o el piso), escalafón y ROE ordenados ({texto_tolerancia(tol)}).")
 
 
 # ---------------------------------------------------------------- C6
@@ -787,7 +796,7 @@ def completar_celdas(lecturas: list, previa: dict | None, tolerancias: dict | No
     Reglas: solo celdas que ESCALAN (básico, conformado, adicionales, ROE anual, Día del Bancario) y
     que existen con importe en la grilla anterior; nunca coeficientes, años, topes `hasta` ni
     conectividad. A lo sumo MAX_CELDAS_CALCULADAS. La celda tiene que estar sin leer (null) en las DOS
-    lecturas, o en una y, en la otra, un valor que coincida con el calculado a ±0,01. El factor es el de
+    lecturas, o en una y, en la otra, un valor que coincida con el calculado a $ 10 (D30). El factor es el de
     C4 con las demás celdas; el valor, vigente × factor al centavo. Si alguna lectura dejó una lectura
     parcial («3.?22.194,42»), el valor calculado tiene que ser compatible con ella dígito por dígito.
     Todo o nada: si una celda candidata no cumple, no se completa ninguna. Que lo demás pase (C1 a C6 con
@@ -836,7 +845,7 @@ def completar_celdas(lecturas: list, previa: dict | None, tolerancias: dict | No
         parciales = list(dict.fromkeys(t for t in (((l.get("parciales") or {}).get(ruta)) for l in lecturas[:2]) if t))
         leido = [v for v in (a["valor"], b["valor"]) if v is not None]
         problema = None
-        if leido and abs(leido[0] - calc) > 0.01 + 1e-9:
+        if leido and abs(leido[0] - calc) > tol["c4_pesos"] + 1e-6:
             problema = f"D28: una lectura no pudo leer la celda y la otra leyó {leido[0]}, que no coincide con el valor calculado {calc}"
         elif any(not parcial_compatible(t, calc) for t in parciales):
             problema = f"D28: el valor calculado {calc} no es compatible con lo que se alcanzaba a ver ({' / '.join(parciales)})"

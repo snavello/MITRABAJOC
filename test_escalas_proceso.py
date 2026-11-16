@@ -603,7 +603,7 @@ def test_la_septiembre_real_se_publica_sola_y_conserva_el_trimestre_de_conectivi
 def test_retenida_descartada_y_pasada_forzada_publica_sola_avisa_y_refresca_la_calculadora(entorno_limpio):
     """El camino de SDN: la primera lectura quedó retenida; se descarta y «Buscar ahora» vuelve a leer la nota."""
     e = entorno_limpio
-    mala = ctl.asignar(septiembre_real(), "roe.filas.0.hasta", 3337738)           # un tope a 2 pesos (D26)
+    mala = ctl.asignar(septiembre_real(), "roe.filas.0.hasta", 3337836)           # un tope a 100 pesos (D26 admitía 1 peso; con D30 un tope a 2 pesos ya pasa)
     _con_lecturas(e, mala)
     r = proc.pasada()
     assert r["leidas"][0]["estado"] == "retenida" and r["leidas"][0]["fallan"] == ["C4"]
