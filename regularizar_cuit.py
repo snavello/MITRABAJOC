@@ -272,6 +272,9 @@ INVENTARIO = (
 # Tiene dos funciones: documentar (D5: la historia no se toca) y que el test
 # fail-closed pueda distinguir "lo decidimos" de "nadie lo miró".
 EXCLUIDAS = {
+    # -- Grillas salariales del convenio: importes y controles, sin identidades.
+    "grillasalarial.contenido": "grilla salarial del convenio (importes por categoría), sin identidades",
+    "grillasalarial.controles": "resultado de los controles de una grilla salarial, sin identidades",
     # -- Bitácoras: la historia no se reescribe (D5). La traza de lo que sí
     #    se cambió es `cambioidentificador`.
     "logplataforma.usuario": "bitácora: el usuario NOMINAL de plataforma que hizo la acción (D5)",

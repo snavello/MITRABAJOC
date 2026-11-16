@@ -7966,7 +7966,11 @@ def _fila_grilla(s, grilla_id: int):
 
 
 def _reemplazar_publicada(s, convenio: str, periodo: str, quien: str, excepto_id: int = None) -> None:
-    """Marca `reemplazada` la publicada vigente de ese período (si la hay)."""
+    """Marca `reemplazada` la publicada vigente de ese período (si la hay).
+    El candado de transacción por (convenio, período) pone en fila a dos
+    publicaciones simultáneas: sin él, cuando todavía no hay publicada no hay
+    fila que bloquear y la que pierde choca contra el índice único."""
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(clave=f"grilla:{convenio}:{periodo}"))
     previas = s.exec(select(GrillaSalarial).where(
         GrillaSalarial.convenio == convenio, GrillaSalarial.periodo == periodo,
         GrillaSalarial.estado == "publicada").with_for_update()).all()

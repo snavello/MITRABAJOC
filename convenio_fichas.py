@@ -18,6 +18,7 @@ resuelve cosas sobre datos que recibe por parámetro (la grilla, por ejemplo).
 Los resúmenes nacen `sin_revisar`; la pantalla lo dice.
 """
 import json
+import math
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
@@ -111,14 +112,45 @@ def buscar(texto: str, convenio: str = CONVENIO_POR_DEFECTO) -> list[dict]:
 
 
 def _numero(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    """Un importe publicable: número finito y mayor que cero."""
+    return isinstance(x, (int, float)) and not isinstance(x, bool) \
+        and math.isfinite(x) and x > 0
 
 
 def _rotulo(clave: str) -> str:
     return _ROTULOS.get(clave) or clave.replace("_", " ").capitalize()
 
 
+def _filas_de_ramas(clave: str, grilla: dict) -> list[dict] | None:
+    """`ramas.<rama>` = las categorías por antigüedad (`anios` no None);
+    `ramas.<rama>.jerarquias[.division]` = las jerárquicas de esa rama (la
+    variante `division` toma solo las de división)."""
+    partes = clave.split(".")
+    rama = grilla.get("ramas")
+    rama = rama.get(partes[1]) if isinstance(rama, dict) else None
+    cats = rama.get("categorias") if isinstance(rama, dict) else None
+    if not isinstance(cats, list) or not cats:
+        return None
+    if len(partes) == 2:
+        sel = [c for c in cats if isinstance(c, dict) and c.get("anios") is not None]
+    elif partes[2] == "jerarquias" and len(partes) in (3, 4):
+        sel = [c for c in cats if isinstance(c, dict) and c.get("anios") is None]
+        if len(partes) == 4:
+            if partes[3] != "division":
+                return None
+            sel = [c for c in sel if "Div." in str(c.get("nombre", ""))]
+    else:
+        return None
+    filas = [{"rotulo": c["nombre"], "importe": c["basico"]} for c in sel
+             if "nombre" in c and _numero(c.get("basico"))]
+    return filas if filas and len(filas) == len(sel) else None
+
+
 def _resolver(clave: str, grilla: dict) -> list[dict] | None:
+    if not isinstance(clave, str):
+        return None
+    if clave.startswith("ramas."):
+        return _filas_de_ramas(clave, grilla)
     nodo = grilla
     for parte in clave.split("."):
         if not isinstance(nodo, dict) or parte not in nodo:
@@ -155,6 +187,8 @@ def importe_vigente(articulo_ficha: dict | None, grilla: dict | None) -> list[di
         return None
     if isinstance(claves, str):
         claves = [claves]
+    if not isinstance(claves, list) or not all(isinstance(c, str) for c in claves):
+        return None
     renglones: list[dict] = []
     for c in claves:
         filas = _resolver(c, grilla)

@@ -167,9 +167,10 @@
    "id": "zona",
    "titulo": "Trabajo en zona alejada",
    "articulos": [
-    25
+    25,
+    "VIII"
    ],
-   "nota": "El 25 es el adicional por zona desfavorable o alejada, con la lista de localidades."
+   "nota": "El 25 es el adicional por zona desfavorable o alejada, con la lista de localidades. La transitoria VIII agrega que alcanza también a las casas centrales de esas localidades."
   },
   {
    "id": "fallecimiento",
@@ -191,7 +192,8 @@
    "texto": "La presente convención colectiva de trabajo regirá desde el 1 de junio de 1975 hasta el 31 de mayo de 1976.",
    "resumen": "Dice desde cuándo y hasta cuándo rige este texto del convenio: del 1 de junio de 1975 al 31 de mayo de 1976. Es la vigencia que figura en el texto de 1975 que acá se reproduce.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": true
   },
   {
    "numero": 2,
@@ -201,7 +203,8 @@
    "texto": "La presente Convención Colectiva de Trabajo rige para todo el país.",
    "resumen": "Establece que el convenio rige para todo el país.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": true
   },
   {
    "numero": 3,
@@ -211,7 +214,8 @@
    "texto": "Empleados, personal de maestranza, obreros y de servicio de Bancos oficiales, nacionales, provinciales, municipales mixtos y privados de todo el país.",
    "resumen": "Dice a quiénes alcanza: empleados, personal de maestranza, obreros y personal de servicio de bancos oficiales y privados de todo el país.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": true
   },
   {
    "numero": 4,
@@ -221,7 +225,8 @@
    "texto": "La presente convención colectiva será de aplicación en todo el país y para todos los empleados bancarios regidos por la Ley 12.637, Dto. 20.268/46, resolución del 6 de agosto de 1948 del ex Ministerio de Trabajo y Previsión (Dirección Nacional de Trabajo y Acción Social Directa), Dto. 3.133/58 y sus respectivas reglamentaciones, en relación de dependencia con las siguientes instituciones: Banco Central de la República Argentina, Banco de la Nación Argentina, Banco Hipotecario Nacional, Banco Nacional de Desarrollo, Caja Nacional de Ahorro y Seguro, Banco de la Ciudad de Buenos Aires y Banco de la Provincia de Buenos Aires. Además, al personal de los Bancos que se enuncian a continuación: Banco Agrario Comercial e Industrial de San Juan, Banco Alemán Transatlántico, Banco Argentino de Comercio, Caja Rural de Villa Clara, Banco Comercial de La Plata , Banco Comercial de Tres Arroyos, Banco Comercial del Norte, Banco Comercial del Tandil, Banco Comercial Israelita, Banco Continental S.A.,Banco Cooperativo de Caseros Ltdo., Banco Cooperativo de la Plata , Banco Cooperativo Ltdo. de Paraná, Banco Crédito de Cuyo, Banco Crédito Provincial, Banco de Avellaneda, Banco de Boulogne, Banco de Catamarca, Banco de Coronel Dorrego, Banco de Coronel Pringles, Banco de Crédito Comercial, Banco de Crédito Rural Argentino, Banco de Chivilcoy, Banco de Entre Ríos, Banco de Galicia y Buenos Aires, Banco de Hurlingham S.A., Banco de Intercambio Regional, Banco de Italia y Río de la Plata , Banco de Junín, Banco de la Edificadora de Olavarría, Banco de La Pampa , Banco de la Provincia de Córdoba, Banco de la Provincia de Corrientes, Banco de la Provincia de Formosa, Banco de la Provincia de Jujuy, Banco de la Provincia de La Rioja, Banco de la Provincia de Misiones, Banco de la Provincia de Río Negro, Banco de la Provincia de San Luis, Banco de la Provincia de Santa Cruz, Banco de la Provincia de Santiago del Estero, Banco de la Provincia de Tucumán, Banco de la Provincia del Chaco, Banco de la Provincia del Chubut, Banco de la Provincia del Neuquén, Banco de Londres y América del Sud, Banco de los Andes, Banco de Mendoza, Banco de Olavarria, Banco de Paraná, Banco de Previsión Social, Banco de Río Negro y Neuquén, Banco de San Juan, Banco de Santander, Banco de Comercio, Banco del Iguazú S.A., Banco del Interior y Buenos Aires, Banco del Noroeste Cooperativo Ltdo, Banco del Norte y Delta Argentino, Banco del Oeste, Banco Di Nápoli, Banco Do Brasil S.A., Banco Edificador de Trenque Lauquen, Banco Empresario de Tucumán Cooperativo Ltdo., Banco Español del Río de la Plata Ltdo., Banco Federal Argentino, Banco Francés del Río de la Plata , Banco Francés e Italiano para la América del Sud, Banco Ganadero Argentino, Banco Hispano Italo Libanés, Banco Holandés Unido, Banco Internacional, Banco Israelita de Córdoba, Banco Italo Belga, Banco Mercantil Argentino, Banco Monserrat Ltdo., Banco Mutual del Sud, Banco Popular Argentino, Banco Popular de Quilmes, Banco Popular de Rosario, Banco Popular Financiero, Banco Provincial de Salta, Banco Regional de Córdoba, Banco Regional de Cuyo, Banco Regional del Norte Argentino, Banco Regional del Salado, Banco Regional Patagónico, Banco Regional Sureño, Banco Río de la Plata , Banco Rural Sunchales, Banco Santafecino de Inversión y Desarrollo, Banco Shaw S.A., Banco Supervielle de Buenos Aires Societé Genérale, Banco Tornquist S.A., Banco Unido del Litoral, Banco Unión Comercial e Industrial Cooperativo Ltdo., Bank of América, National City Bank, Nuevo Banco de Azul, Nuevo Banco de Santiago del Estero, Banco de Crédito Argentino, The Bank of Tokio Ltdo., The First National Bank of Boston, The Royal Bank of Canadá; todos ellos –con excepción del Banco de Italia y Río de la Plata– representados por la Asociación de Bancos de la República Argentina , Asociación de Bancos Argentinos, Asociación de Bancos de Provincia de la República Argentina y Asociación de Bancos del Interior de la República Argentina.",
    "resumen": "Detalla el alcance: empleados bancarios regidos por la Ley 12.637 y las normas que cita, en los bancos oficiales que nombra y en una larga lista de bancos privados y cooperativos. También dice qué asociaciones de bancos representan a esos bancos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 5,
@@ -231,7 +236,8 @@
    "texto": "Los sueldos básicos mensuales del personal administrativo, técnico y especializado se ajustarán a las siguientes escalas por antigüedad:\nPersonal administrativo técnico y especializado\nMenores de 18 años (cadetes)\nInicial 3.300 0,72\n1 año 3.900 0,85\nAuxiliares\nInicial 4.600 1,00\n1 año 4.800 1,04\n2 años 4.950 1,08\n3 años 5.100 1,11\n4 años 5.200 1,13\n5 años 5.400 1,17\n6 años 5.500 1,20\n7 años 5.700 1,24\n8 años 5.800 1,26\n9 años 6.000 1,30\n10 años 6.200 1,35\n11 años 6.400 1,39\n12 años 6.600 1,43\n13 años 6.800 1,48\n14 años 7.000 1,52\n15 años (Ayudante de firma) 7.500 1,63\n20 años (Jefe de Sección) 8.000 1,74\n25 años (2º Jefe, Div. 3º) 9.000 1,96\n30 años (2º Jefe, Div. 2º) 9.500 2,07\n35 años (2º jefe, Div. 1º) 10.000 2,17\nEl personal administrativo, técnico y especializado será promovido automáticamente por antigüedad en los siguientes términos:\nA los 15 años de antigüedad Ayudante de firma\nA los 20 años de antigüedad Jefe de Sección\nA los 25 años de antigüedad 2º Jefe de División de 3º.\nA los 30 años de antigüedad 2º Jefe de División de 2º.\nA los 35 años de antigüedad 2º Jefe de División de 1º.",
    "resumen": "Fija los sueldos básicos mensuales de esta rama según la antigüedad, desde cadetes hasta los 35 años, junto con un coeficiente para cada escalón. También dice que a los 15, 20, 25, 30 y 35 años el ascenso a un cargo superior es automático.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": "ramas.administrativa"
+   "importe_grilla": "ramas.administrativa",
+   "titulo_del_convenio": false
   },
   {
    "numero": 6,
@@ -241,7 +247,8 @@
    "texto": "Fíjanse para el personal jerárquico que a continuación se detalla los siguientes sueldos mensuales:\n2º Jefe de división de 3º Categoría 9.000 1,96\n2º Jefe de división de 2º Categoría 9.500 2,07\n2º Jefe de división de 1º Categoría 10.000 2,17\nJefe de división u oficina de 3º Categ. 10.500 2,28\nJefe de división u oficina de 2º Categ. 11.500 2,50\nJefe de división u oficina de 1º Categ. 12.000 2,61",
    "resumen": "Lista los cargos jerárquicos de la rama administrativa, de segundo jefe de división a jefe de división u oficina, con su sueldo mensual y su coeficiente.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": "ramas.administrativa.jerarquias.division",
+   "titulo_del_convenio": false
   },
   {
    "numero": 7,
@@ -251,7 +258,8 @@
    "texto": "El personal jerárquico de filiales revistará en las jerarquías que se establecen a continuación:\nPersonal jerárquico de filiales\nFunción Categoría\nGerente\nMínima: Jefe de departamento de 1º\nMáxima: Subgerente departamental de 3º\nSubgerente o Gerente Adscripto\nMínima: Jefe de departamento de 2º\nContador Mínima: 2º Jefe de departamento de 2º\nMáxima: Jefe de departamento de 3º Subcontador Mínima: 2º Jefe de departamento de 3º\nTesorero\nMínima: Jefe de división de 2º\nMáxima: 2º Jefe de departamento de 3º\nSubtesorero Mínima: Jefe de división de 3º\nJefe de Area\nMínima: 2 Jefe de división de 3º\nMáxima: Jefe de división de 3º\nAscensos mínimos (por ejercicio de la función)\na)Para tesoreros:\nA los 5 años de antigüedad en el cargo: Jefe de división de 1º.\nA los 10 años de antigüedad en el cargo: 2º Jefe de departamento de 3º.\nb)Para los Jefes de Area:\nA los 5 años de antigüedad en el cargo: 2º Jefe de división de 2º.\nA los 10 años de antigüedad en el cargo: 2º Jefe de División de 1º.\nA los 15 años de antigüedad en el cargo: Jefe de División de 3º.",
    "resumen": "Define en qué categorías revistan los cargos de las filiales (gerente, contador, tesorero, jefe de área y otros), con una categoría mínima y una máxima. Fija además ascensos mínimos por antigüedad en el cargo para tesoreros y jefes de área.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 8,
@@ -261,7 +269,8 @@
    "texto": "Para el personal directivo y/o jerárquico de las instituciones bancarias, excluído el de las filiales, se fijan los siguientes sueldos básicos mensuales: Gerente general 28.750 6,25\nSubgerente general 26.500 5,76\nSubgerente general adscripto 25.000 5,43\nGerente departamental 23.500 5,11\nSubgerente departamental de 1º 22.500 4,89\nSubgerente departamental de 2º 21.400 4,65\nSubgerente departamental de 3º 20.000 4,35\nJefe principal de departamento 18.500 4,02\nJefe de departamento de 1º 17.000 3,70\nJefe de departamento de 2º 16.000 3,48\nJefe de departamento de 3º 15.000 3,26\n2º Jefe de departamento de 1º 14.000 3,04\n2º Jefe de departamento de 2º 13.500 2,93\n2º Jefe de departamento de 3º 13.000 2,83",
    "resumen": "Establece los sueldos básicos mensuales del personal directivo y jerárquico de las instituciones, sin contar las filiales, desde segundo jefe de departamento hasta gerente general.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 9,
@@ -271,7 +280,8 @@
    "texto": "El personal comprendido en los arts. 5, 33 y 35, que no realice funciones técnicas o especializadas percibirá los siguientes adicionales mensuales por función:\na) Personal Administrativo: Los cargos de ayudante de firma y jefe de sección que desempeñe el personal con una antigüedad menor de 15 años serán remunerados con el sueldo correspondiente a su antigüedad más un adicional de pesos cuatrocientos ($ 400) y pesos setecientos ($ 700) por cada caso.\nb) Personal de Maestranza:\nOficial 460 0,10\nOficial Ayudante 276 0,06\nc) Personal de Mayordomía:\nOrdenanza encargado 460 0,10\nOrdenanza subencargado 276 0,06\nEl retiro de las funciones estipuladas en este artículo no podrá disminuir el monto de las remuneraciones que por todo concepto perciba el agente, hasta tanto se opere su absorción como consecuencia de futuros aumentos incluídos los correspondientes por antigüedad.",
    "resumen": "Fija adicionales mensuales por función para quienes no cumplen tareas técnicas: ayudantes de firma y jefes de sección con poca antigüedad, maestranza y mayordomía. Si se retira la función, la remuneración total no baja hasta que se absorba con futuros aumentos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 10,
@@ -279,9 +289,10 @@
    "capitulo": null,
    "antecedentes": "(Art. 8, Dto. 3.133/58; art. 5, Dto. 10.549/58; art. 2, Res. 505/58; art. 8, CC. 89/63; art. 8, CC. 106/64; art. 8, CC. 115/65; y CC. 77/66; art. 12, CC. 190/70; art. 12, CC. 56/71; Ley 19.598; Acta del 3/2/73 y art. 12, CC. 11/73).",
    "texto": "Fíjanse los siguientes adicionales por “título habilitante reconocido” para los agentes que no realicen funciones inherentes al mismo, aún cuando reciban otro adicional por cualquier otro concepto:\nTítulo secundario de enseñanza media o especial y Escuela Sindical Bancaria............$ 150\nEscribanos, procuradores, agrimensores, traductores, profesores de enseñanza media, licenciados en organización y técnica bancaria, en administración de empresas y en economía, con títulos expedidos por universidades nacionales, provinciales y privadas reconocidas por el Estado (Ley 17.604).............$ 300\nAbogados, arquitectos, contadores públicos, doctores en todas las ramas y especialidades, ingenieros en todas las ramas y especialidades, geólogos, médicos, odontólogos y licenciados en química..........................$ 450\nEstos adicionales serán de aplicación para todo el personal escalafonado. Se deja establecido que sólo se percibirá un adicional por título, el que deberá ser el de mayor monto. En los casos que realicen tareas para las cuales se exige título habilitante, no percibirán el adicional por otro título que posean, pero en los casos que realicen funciones específicas para las cuales no se requiere título habilitante, sí corresponde el pago del adicional por título.",
-   "resumen": "Fija adicionales por título habilitante reconocido (secundario y distintos títulos universitarios, con montos distintos según el título) para quien no hace tareas propias de ese título. Se cobra un solo adicional por título, el de mayor monto. Si tu tarea exige el título, no cobrás además el adicional por otro título que tengas.",
+   "resumen": "Fija adicionales por título habilitante reconocido (secundario y distintos títulos universitarios, con montos distintos según el título) para el personal escalafonado que no realiza funciones inherentes a ese título. Se paga un solo adicional por título, el de mayor monto. Quien realiza tareas para las que se exige título habilitante no percibe además el adicional por otro título que posea; sí lo percibe si realiza funciones para las que no se exige título.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": "adicionales.titulos"
+   "importe_grilla": "adicionales.titulos",
+   "titulo_del_convenio": false
   },
   {
    "numero": 11,
@@ -291,7 +302,8 @@
    "texto": "El personal que cumpla funciones técnicas en las entidades bancarias gozará de una asignación adicional mensual, porcentual, sobre el sueldo inicial fijado en el art. 5 (rama administrativa, técnica y especializada), en base a los siguientes agrupamientos profesionales y escalas:\nI. Actuarios, abogados, arquitectos, contadores públicos nacionales, doctores en todas las ramas y especialidades, ingenieros en todas las ramas y especialidades y geólogos:\nAdicional A.................... 104,8%\nAdicional B.................... 97,1%\nAdicional C.................... 88,6%\nAdicional D.................... 79,0%\nAdicional E.................... 70,5%\nAdicional F.................... 61,9%\nII. Agrimensores, escibanos y procuradores:\nAdicional A.................... 97,1%\nAdicional B.................... 88,6%\nAdicional C.................... 79,0%\nAdicional D.................... 70,5%\nAdicional E.................... 61,9%\nAdicional F.................... 53,3%\nIII. Electrotécnicos, maestro mayor de obras, químicos industriales, peritos mineros, peritos mercantiles, técnico constructor, técnico gráfico, técnico constructor naval, técnico mecánico, perito agrónomo, topógrafo, bibliotecario, profesor de enseñanza media y demás especialidades que, igual que las mencionadas, posean títulos o certificados de estudios expedidos por Escuelas Industriales, Comerciales o Profesionales del Estado o título profesional reconocido por el Estado y estudiantes universitarios que hayan aprobado más de la mitad de las materias de la carrera que cursan:\nAdicional A.................... 70,5%\nAdicional B.................... 63,8%\nAdicional C.................... 56,2%\nAdicional D.................... 49,5%\nAdicional E.................... 41,9%\nAdicional F.................... 35,2%\nLa retribución resultante de la aplicación de los adicionales fijados en este artículo y los básicos fijados en el art. 5 no podrá exceder en ningún caso los sueldos mínimos de las jerarquías que se indican a continuación:\n1er. Agrupamiento:\nJefe de departamento de 2º categoría.\n2do. Agrupamiento:\n2º Jefe de departamento de 1º categoría.\n3er. Agrupamiento:\n2º Jefe de departamento de 2º categoría.\nSon funciones técnicas las inherentes a los títulos técnicos profesionales detallados en los ptos. I, II y III. En el caso específico de doctor en ciencias económicas, contador público nacional y perito mercantil, son tareas técnicas las desarrolladas bajo la forma de auditoría, estudio, revisores, análisis, codificación y/o comparación de balances de terceros sometidos a la consideración del Banco; pericias contables, revisores y/o inspectores de libros de contabilidad de terceros y cualquier función de auditoría, estudios económicos y/o estadísticos.\nA los efectos de la aplicación de los adicionales establecidos en este artículo se procederá en la forma que se indica en el art. 13 (t.o.).",
    "resumen": "Fija adicionales porcentuales sobre el sueldo inicial para quienes cumplen funciones técnicas, en tres agrupamientos profesionales y seis niveles (A a F). Pone topes a lo que se puede llegar a cobrar y define qué se considera función técnica.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 12,
@@ -301,7 +313,8 @@
    "texto": "El personal afectado a tareas específicas de profesiones técnicas sin título habilitante, tendrá sobre las remuneraciones básicas fijadas en el art. 5, los siguientes adicionales mensuales, calculados porcentualmente sobre el sueldo inicial:\nI. Dibujante de arquitectura de 1º, dibujante de 1º proyectista, dibujantes cartógrafos, maquetistas, laboratoristas, calculistas de 1º, computistas de 1º , procuradores sin título, gestores extrajudiciales sin título, dibujantes publicistas, traductores sin título, decoradores, planografistas, administradores de colonias agrícolas sin título, peritos agrónomos sin título, tasadores de 1º, asistentes dentales y asistentes sociales, operador y preparador de tablero de máquina de contabilidad y estadística por el sistema de fichas perforadas IBM y similares, y redactores publicistas y/o periodísticos:\nAdicional A........................ 53,3%\nAdicional B........................ 47,6%\nAdicional C........................ 41,9%\nAdicional D........................ 37,1%\nAdicional E........................ 31,4%\nAdicional F........................ 26,7%\nII. Dibujantes de arquitectura de 2º, dibujantes de 2º, proyectistas, calculistas de 2º, computistas de 2º, sobrestantes, ilustradores, referencistas de ingeniería, taquígrafos de 1º, calígrafos de 1º, calígrafos sin título, enfermeras, agentes de seguro y ahorro, despachantes de aduana, tasadores de 2º, subadministradores de colonias agrícolas sin título:\nAdicional A........................ 35,2%\nAdicional B........................ 31,4%\nAdicional C........................ 28,6%\nAdicional D........................ 24,8%\nAdicional E........................ 21,0%\nAdicional F........................ 17,1%\nIII. Dibujantes copistas, taquígrafos de 2º, bibliotecarios sin título, referencistas comerciales y/o bancarios, auxiliar de la administración de ficheros y codificadores del equipo IBM y similares, tasadores de 3º, controladores de firmas e impresiones digitales de la Caja Nacional de Ahorro y Seguro:\nAdicional A........................ 29,5%\nAdicional B........................ 26,7%\nAdicional C........................ 22,9%\nAdicional D........................ 19,0%\nAdicional E........................ 16,2%\nAdicional F........................ 12,4%\nLa retribución resultante de la aplicación de los adicionales fijados en este artículo y los básicos establecidos en el art. 5 no podrán exceder en ningún caso del sueldo mínimo de la jerarquía de Jefe de División de 3º.\nSon tareas específicas de profesiones técnicas las inherentes a las especificaciones citadas en los ptos. I, II y III que necesariamente deberá realizar el agente para hacerse acreedor a los adicionales correspondientes. En el caso específico del referencista comercial y/o bancario dicha denominación comprende también el llamado informante de ramos Bancos comerciales.\nA los efectos de la aplicación de los adicionales establecidos en este artículo se procederá en la forma que se indica en el art. 13 (t.o.).",
    "resumen": "Fija adicionales porcentuales para quienes hacen tareas específicas de profesiones técnicas sin título habilitante, en tres grupos de tareas y seis niveles (A a F). Lo que resulte no puede superar el sueldo mínimo de jefe de división de 3º.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 13,
@@ -311,7 +324,8 @@
    "texto": "A los efectos de la aplicación de los adicionales establecidos en los arts. 9 y 10 del Dto. 3.133/58 (arts. 11 12 t.o.) se procederá en la siguiente forma:\na) En las casas bancarias donde ya existiera un régimen de adicionales por funciones técnicas y tareas específicas, de acuerdo con una gradación de seis órdenes, el agente mantendrá la misma ubicación . Ello sin perjuicio de los que pudiera corresponderle por promociones o aplicación de otros artículos del referido decreto.\nb) Donde el régimen ya existiera sólo para el personal técnico (art. 11, t.o.) se ubicará al personal afectado a tareas específicas (art. 12, texto ordenado), con el mismo procedimiento utilizado en esa oportunidad.\nc) En las casas bancarias donde por primera vez se apliquen las retribuciones por los conceptos establecidos en los arts. 11 y 12 (t.o.), el encasillamiento correspondiente se ajustará a la siguiente escala por antigüedad en la función continua o discontinua:\nAdicional F......... hasta 3 años.\nAdicional E......... entre 3 y 5 años.\nAdicional D......... entre 5 y 7 años.\nAdicional C......... entre 7 y 10 años.\nAdicional B......... entre 10 y 12 años.\nAdicional A......... más de 12 años.\nd) En los casos en que la aplicación de los referidos adicionales represente la absorción de adicionales jerárquicos deberá incrementarse la ubicación que le corresponda por antigüedad en la función en la siguiente forma:\nFirma autorizada (ayudante de firma): adicional inmediato superior.\nJefe de Sección: dos adicionales superiores, y 2º jefe de división tres adicionales superiores.\ne) En los casos de agentes que acrediten antigüedad en dos agrupamientos, se computará la mitad de la antigüedad real en el agrupamiento inferior, e íntegro el agrupamiento superior, en el cual reviste.\nf) En los casos en que a la fecha de vigencia del Dto. 3.133/58 el agente revistara en un agrupamiento y acreditara antigüedad en otro superior, se computará la antigüedad total de ambos y se le asignará el adicional correspondiente al agrupamiento en que actualmente revista.",
    "resumen": "Explica cómo se ubica cada persona en los niveles A a F de los artículos 11 y 12: según el régimen que ya hubiera en la casa bancaria o, si se aplica por primera vez, según la antigüedad en la función. Trae reglas para quienes tienen antigüedad en dos agrupamientos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 14,
@@ -321,7 +335,8 @@
    "texto": "Fíjanse los siguientes adicionales, que se abonarán mensualmente al personal no jerárquico sobre las retribuciones fijadas en el art. 5 de acuerdo con los porcentuales que se indican, calculados sobre el sueldo inicial:\n1. Analistas de programas de computación:\nAdicional A.................... 95,2%\nAdicional B.................... 88,6%\nAdicional C.................... 82,9%\nAdicional D.................... 76,2%\nAdicional E.................... 66,7%\nAdicional F.................... 61,9%\n2. Programadores de computación:\nAdicional A.................... 92,4%\nAdicional B.................... 85,7%\nAdicional C.................... 81,0%\nAdicional D.................... 71,4%\nAdicional E.................... 64,8%\nAdicional F.................... 60,0%\n3. Operadores de computador:\nAdicional A.................... 66,7%\nAdicional B.................... 61,9%\nAdicional C.................... 57,1%\nAdicional D.................... 52,4%\nAdicional E.................... 47,6%\nAdicional F.................... 42,9%\n4. Verificadores de perforación (perfoverificadores) y grabadores de cintas magnéticas NC736 o similares de otras marcas:\nAdicional A.................... 36,2%\nAdicional B.................... 32,4%\nAdicional C.................... 29,5%\nAdicional D.................... 25,7%\nAdicional E.................... 21,9%\nAdicional F.................... 19,0%\n5. Perforadores y ayudantes de perforadores:\nAdicional A.................... 30,5%\nAdicional B.................... 27,6%\nAdicional C.................... 23,8%\nAdicional D.................... 20,0%\nAdicional E.................... 17,1%\nAdicional F.................... 13,3%\nLa retribución resultante de la aplicación de los adicionales fijados para cada uno de los agrupamientos que se indican más abajo y los básicos, establecidos en el art. 5 de la presente convención colectiva de trabajo, incluído el suplemento por horario nocturno, no podrá exceder, en ningún caso, los sueldos mínimos de las siguientes jerarquías:\nAnalistas de Programas de Computación:\n2º Jefe de departamento de 2º categoría.\nProgramadores de Computación:\n2º Jefe de Departamento de 2º categoría.\nOperadores de Computador:\nJefe de división de 1º categoría.\nVerificadores de perforación (perfoverificadores) y grabadores de cintas magnéticas NCR/736 o similares de otras marcas:\nJefe de división de 3º categoría.\nPerforadores y Ayudantes de Perforadores:\nJefe de División de 3º categoría.",
    "resumen": "Fija adicionales porcentuales para el personal no jerárquico de computación (analistas, programadores, operadores, verificadores y perforadores), con niveles A a F. También fija los topes de remuneración de cada agrupamiento.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 15,
@@ -331,7 +346,8 @@
    "texto": "A. Los adicionales establecidos en este convenio para el personal de computación, conforme a la antigüedad del agente, se aplicarán en la siguiente forma:\nF: Hasta una antigüedad de 3 años.\nE: Con una antigüedad de 3 a 5 años.\nD: Con una antigüedad de 5 a 7 años.\nC: Con una antigüedad de 7 a 10 años.\nB: Con una antigüedad de 10 a 12 años.\nA: Más de 12 años.\nLas categorías previstas en el presente convenio, no importan para los empleadores la obligación de crear los cargos que a ellas pudieran corresponder si no responden a las necesidades y características de sus estructuras funcionales.\nB. El personal que se desempeñe en horarios nocturnos de 21 a 6 horas, tendrá sobre las remuneraciones fijadas un suplemento mensual de pesos doscientos ($ 200) que se abonará a prorrata del horario nocturno que efectivamente cumpla y siempre que el personal se desempeñe exclusivamente en el área de computación y en las categorías enunciadas precedentemente.\nC. La denominación jerárquica técnica y las remuneraciones de los agentes que cumplen funciones directivas en los departamentos y sectores técnicos de computación, serán determinadas por las instituciones con arreglo a las necesidades específicas de sus estructuras funcionales, dejándose establecido que ningún caso, el sueldo que se les asigne podrá ser inferior a las limitaciones señaladas para cada agrupamiento.\nD. El retiro de las funciones técnicas al personal escalafonado o jerárquico que presta servicios en el área de computación, no podrá efectuarse sin sumario previo en concordancia con lo dispuesto en el art. 16 del Dto. 3.133/58 y en el art. 20 de la presente convención colectiva de trabajo.\nAsimismo, el retiro de las funciones técnicas no podrá disminuir el monto de las remuneraciones que por todo concepto perciba el agente, hasta tanto se opere su absorción como consecuencia de futuros aumentos, incluídos los correspondientes por antigüedad, ello en concordancia con lo dispuesto en el art. 1 de la Res. 505/58.\nE. Se considera computador a aquél o aquellos equipos que tengan una unidad de control de proceso (C.P.U.), que trabaja en base a una memoria de núcleos magnéticos y sea capaz de ejecutar un programa residente en la memoria y/o que, además, tenga en su configuración periférica unidades de memoria secundarias de cintas magnéticas y/o discos magnéticos e impresoras de entrada y salida de alta velocidad.",
    "resumen": "Dice cómo se asignan los niveles A a F de computación según la antigüedad y prevé un suplemento por trabajo nocturno, de 21 a 6 horas, para quien trabaja solo en esa área. Pide sumario previo para retirar funciones técnicas y define qué se considera un computador.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 16,
@@ -341,7 +357,8 @@
    "texto": "El personal de auxiliares que realice tareas en las máquinas impresoras de caracteres magnéticas CMC 7, o similares, percibirá un adicional mensual equivalente al diez con cuarenta y siete por ciento (10,47%) del sueldo inicial, que se liquidará en forma proporcional al horario que cumpla en esa tarea, no siendo de aplicación al personal comprendido en este artículo lo prescripto en el art. 20 ni tampoco lo dispuesto en el punto D del artículo anterior.",
    "resumen": "Fija un adicional mensual del 10,47% del sueldo inicial para auxiliares que trabajen en máquinas impresoras de caracteres magnéticos CMC 7 o similares, proporcional al horario que cumplan en esa tarea.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 17,
@@ -351,7 +368,8 @@
    "texto": "La denominación jerárquica técnica y la remuneración de los agentes que cumplen funciones directivas en los departamentos y sectores técnicos, y en sectores especializados del régimen a que hace referencia el art. 12 (t.o.) serán determinados por las instituciones, con arreglo a las necesidades específicas de sus estructuras funcionales, dejándose establecido, que , en ningún caso, el sueldo que se les asigne podrá ser inferior a las limitaciones topes prescriptas por cada agrupamiento.",
    "resumen": "Dice que cada institución determina la denominación y la remuneración de quienes dirigen departamentos y sectores técnicos. Aclara que el sueldo no puede ser menor a los topes de cada agrupamiento.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 18,
@@ -359,9 +377,10 @@
    "capitulo": null,
    "antecedentes": "(Art. 14, Dto. 3.133/58; art. 11, CC. 57/62; art. 13, CC. 89/63; art. 13, CC. 106/64; pto. F Acta del 7/6/65; art. 13, CC. 115/65; CC. 77/66; art. 17, CC. 190/70; art. 17, CC. 56/71; y 17, CC. 11/73).",
    "texto": "El agente que sin poseer título habilitante desempeñara funciones técnicas comprendidas en el art. 11 (t.o.) durante un período superior a los diez años, percibirá los adicionales correspondientes a estas funciones.",
-   "resumen": "Si cumplís funciones técnicas del artículo 11 durante más de diez años sin tener título habilitante, cobrás los adicionales que corresponden a esas funciones.",
+   "resumen": "El agente que, sin título habilitante, desempeña funciones técnicas del art. 11 durante más de diez años percibe los adicionales de esas funciones.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 19,
@@ -371,7 +390,8 @@
    "texto": "En aquellas instituciones en que por primera vez se apliquen los adicionales técnicos, serán comprendidos en los mismos los agentes que a la fecha de vigencia del Dto. 3.133/58 estuvieran cumpliendo las funciones técnicas, aún cuando no tuvieran título habilitante.",
    "resumen": "Cuando una institución aplica por primera vez los adicionales técnicos, incluye a quienes ya cumplían funciones técnicas a la fecha del Dto. 3.133/58, aunque no tuvieran título habilitante.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 20,
@@ -381,7 +401,8 @@
    "texto": "El retiro de las funciones técnicas al personal escalafonado directivo, no podrá efectuarse sin sumario previo.\nEste artículo es de aplicación para todo el personal comprendido en los arts. 6, 7, 8, 9, 11, 12 y 17 (t.o.).",
    "resumen": "Establece que las funciones técnicas del personal escalafonado directivo no se pueden retirar sin sumario previo. Se aplica al personal comprendido en los artículos 6, 7, 8, 9, 11, 12 y 17.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 21,
@@ -391,7 +412,8 @@
    "texto": "A los efectos de una adecuada aplicación del escalafón profesional y técnico, los Bancos: Central de la República Argentina , Nacional de Desarrollo, de la Nación Argentina , Hipotecario Nacional, de la Provincia de Buenos Aires, de la Ciudad de Buenos Aires y Caja Nacional de Ahorro y Seguro, encuadrarán al personal comprendido en dicha estructura escalafonaria asimilándolo a las plazas de presupuesto que corresponda, teniendo en cuenta la función que realizan y demás antecedentes. Todo ello sin perjuicio de las promociones automáticas a que sean acreedores. Atendiendo a la naturaleza del régimen que se instaura, el encuadramiento a efectuar será pactado con la Asociación Bancaria y aprobado por el Banco Central de la República Argentina.",
    "resumen": "Dice cómo los bancos oficiales que nombra encuadran al personal en la estructura escalafonaria, asimilándolo a las plazas de presupuesto según su función. El encuadramiento se pacta con la Asociación Bancaria y lo aprueba el Banco Central.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 22,
@@ -404,7 +426,8 @@
    "importe_grilla": [
     "adicionales.funcion_cajero",
     "adicionales.falla_caja"
-   ]
+   ],
+   "titulo_del_convenio": false
   },
   {
    "numero": 23,
@@ -414,7 +437,8 @@
    "texto": "El personal administrativo de las casas centrales y/o matrices de los Bancos de la Capital Federal que cumpla funciones en la Cámara Compensadora del Banco Central de la República Argentina , designado y acreditado como “representante de Banco” deberá tener como mínimo el cargo de jefe de sección.",
    "resumen": "Dice que el personal administrativo de casas centrales de la Capital Federal que actúa como representante de banco en la Cámara Compensadora del Banco Central debe tener como mínimo el cargo de jefe de sección.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 24,
@@ -424,7 +448,8 @@
    "texto": "Se fija un adicional del 5,7% calculado sobre el sueldo inicial, por mes, para los operadores de máquinas de contabilidad, electrónicas, electromecánicas, teletipo clearing, excluidas las del sistema de fichas perforadas que se utilizan en cuentas corrientes, fichas de mayor, clearing, subsidiarias especiales, etcétera.",
    "resumen": "Fija un adicional del 5,7% sobre el sueldo inicial, por mes, para operadores de máquinas de contabilidad, electrónicas, electromecánicas y teletipo clearing, con las excepciones que detalla.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 25,
@@ -432,9 +457,12 @@
    "capitulo": null,
    "antecedentes": "(Art. 23, Dto. 3.133/58; arts. 7 y 8 Dto. 10.549/58; art. 22, CC. 89/63; art. 22, CC. 106/64; art. 22, CC. 115/65 y CC. 77/66;art. 25, CC. 190/70; art. 26, CC. 56/71; Acta del 3/2/73 y art. 26, CC. 11/73).",
    "texto": "Se establece un adicional por zona desfavorable o alejada, que será abonado a todo agente bancario que reviste en filiales bancarias de las localidades del interior del país, que se encuentren en regiones inhóspitas y/o afectadas por un nivel de costo de vida excesivamente elevado, de acuerdo con la siguiente distribución y mínimos:\nI. Grupo A: Islas Malvinas, Antártida e Islas del Atlántico Sur, Planicie, Banderita, Villa El Chocón, Copahue, Chós Malal, Loncopue, Las Lajas, Aluminé, Junín de los Andes, San Martín de los Andes, Villa la Angostura , Colonia 25 de Mayo, Telén, La Adela , Santa Isabel, Sierra Grande, Valcheta, Catriel, Comallo, Dos Menucos, El Bolsón, Jacobacci, Maquinchao, Río Mayo, Gobernador Costa, Futalcufú, José de San Martín, Esquel, El Maitén, Trevelín, Las Plumas, Lago Puelo, Río Sengue, Sarmiento, Río Turbio, Río Gallegos, Puerto Deseado, San Julían, Puerto Santa Cruz, Gobernador Gregores, Perito Moreno, Las Heras, Calafate, Comandante Luis Piedrabuena, Pico Truncado, Ushuaia, Río Grande (Tierra del Fuego), Caleta Olivia, Vinchina, Pocitos, General Mosconi, Joaquín V. González, Embarcación, Orán, Tartagal, Las Cuevas, Uspallata, Malargue, Laguna Blanca, Pirané, Comandante Fontana, Ibarreta, Las Lomitas, Misión Laishi, Ingeniero Juárez, General Belgrano, Aristóbulo del Valle, Wanda, San Pedro, Iguazú, Bernardo de Irigoyen, Alba Posse, San Javier, La Quiaca , Abrapampa, Humahuaca, Pampa del Infierno, Villa Berther, J. J. Castelli, Santa Sylvina, Pampa del Indio, Concepción, General Paz, San Roque, San Miguel, Mburucuyá, Colonia Nienig, Colonia Moderata, Gobernador Virasoro, Gobernador Martinez, Amaicha del Valle, Tafí del Valle.\nGrupo B: Tres Isletas, Presidencia de la Plaza , Campo Largo, General Pinedo, Belén, Recreo, Pomán, Andalgalá, Tinogasta, Santa Maria, Empedrado, La Cruz , Alvear, Sauce, Ituzaingó, Itá Ibaté, Titina, Monte Quemado, Villa Unión, Los Sauces, El Milagro, Villa Atuél, Monte Gomán, Real del Padre, Jaime Prats, Bowen, Colonia Alvear Oeste, San Pedro del Atuél, Cafayate, General Güemes, Barreal, Clorinda, El Colorado, Monte Carlo, Jardín América, Leandro N. Alem, Puerto Rico, Campo Grande, El Dorado, Oberá, General San Martín, La Leonesa , Machagai, Ledesma, San Pedro, Perico, Yuto, El Carmen, Victorica, Huatraché, Jacinto Aráoz, General San Martín, Bernasconi, Alpachiri, Miguel Riglos, Colonia Barón, Rancul, Realicó, Ingeniero Luiggi, Plaza Huincul, Cutral-Có, Zapala, San Antonio Oeste, General Conesa, Río Colorado, Camarones, Bariloche, Choele Choel, Luis Beltrán, Lamarque, Arizona, Unión, Nueva Galia, Buena Esperanza, Villa del Carmen, Naschel, Villa Minetti, La Cocha , Graneros.\nGrupo C: Chilecito, Aimogasta, Gobernador Gordillo, Olta, Chepes, Metán, Rosario de la Frontera , Rosario de Lerma, El Carril, Sarmiento, Guanacache, Formosa, Concepción de la Sierra , Campo Viera, Cerro Azul, Villa Maza, Charata, Las Breñas, Quitilipi, Machagai, Las Toscas, Villa Ocampo, Tostado, San Salvador de Jujuy, Palpalá, La Paz , Clodomira, Los Juries, Nueva Esperanza, Ojo de Agua, Pinto, Añatuya, Loreto, Termas de Río Hondo, Suncho Corral, Bandera, Selva, Frías, Quines, Tilisarao, San Francisco, Merlo, Bovril, Villa Hernandarias, Villa Federal, Feliciano, Macía, General Acha, Macachín, Catriló, Eduardo Castex, Quemú Quemú, Intendente Alvear, Trenel, Centenario, Plottier, Neuquén, Villa Regina, Allen, Cipolletti, Cinco Saltos, General Roca, Villa El Manzano, Chinchinales, Viedma, Ingeniero Huergo, Cervantes, Comodoro Rivadavia, Puerto Madryn, Rawson, Trelew, Gaimán, General Mosconi, Dolavón, Villa Dolores, San Fernando del Valle de Catamarca, Santo Tome, Paso de los Libres, Saladas, Santa Lucía, Curuzú Cuatiá, Monte Caseros, Juan\nB. Alberdi, Trancas, Aguilares, Concepción, Monteros, Simoca, Los Ralos, Famaillá, Leales, La Ramada , Altos de Chipión, La Para , Obispo Trejo, La Leonesa , Colonia Elisa, Colonias Unidas.\nGrupo D: La Rioja , San Rafael, General Alvear, Posadas, Apóstoles, Jáchal, Pedro Luro, Villa Iris, Villalonga, Mayor Buratovich, Patagones, Stroeder, Darregueira, Casbas, Médanos, Algarrobo, Guaminí, Buchardo, Viamonte, Jovita, Villa Valeria, Del Campillo, las Acequias, San Basilio, Huanchilla, Adela Maria, Huinca Renancó, Villa Huidobro, General Levalle, Achira, Elisa, San Javier, Helvecia, Malabrigo, Calchaquí, Vera, Gobernador Crespo, Reconquista, La Banda , Santiago del Estero, Sumampa, Quimili, Fernández, Santa Rosa, La Toma , Concarán, General Pico, Winifreda, Toay, Santa Rosa, Villa Angela, Presidencia Roque Sáenz Peña, Resistencia, Barranqueras, Goya, Corrientes, Bella Vista, Mercedes, Esquina, Salta, Ibicuy, Suardi, Arrufo, Ceres, Tafí Viejo, Lules, Bella Vista, Banda del Río Salí, San Miguel de Tucumán, Indio Rico, Copetonas, San Nicolás.\nII. Se abonará por este concepto un porcentaje sobre las remuneraciones mensuales totales percibidas por el agente (básico más adicional específicos, incluso salario familiar), que se ajustará a los siguientes porcentajes por grupo:\nGrupo A: 60% del sueldo inicial.\nGrupo B: 50% del sueldo inicial.\nGrupo C: 40% del sueldo inicial.\nGrupo D: 20% del sueldo inicial.",
-   "resumen": "Crea un adicional para quienes trabajan en filiales del interior, en regiones inhóspitas o de costo de vida muy elevado. Lista las localidades en cuatro grupos (A a D) y fija para cada grupo un porcentaje del sueldo inicial.",
+   "resumen": "Crea un adicional para quienes trabajan en filiales del interior en regiones inhóspitas o de costo de vida muy elevado. Lista las localidades en cuatro grupos (A a D) y fija un porcentaje distinto para cada grupo; el texto lo expresa sobre el sueldo inicial y también habla de las remuneraciones totales. La disposición transitoria VIII agrega que alcanza también a quienes revistan en casas centrales de esas localidades.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": "adicionales.zona_patagonica"
+   "importe_grilla": "adicionales.zona_patagonica",
+   "titulo_del_convenio": false,
+   "importe_titulo": "Zona patagónica, según la grilla vigente",
+   "importe_nota": "La grilla no publica importes para los grupos A a D del artículo. Si trabajás en otra localidad de la lista, consultá al sindicato."
   },
   {
    "numero": 26,
@@ -444,7 +472,8 @@
    "texto": "A partir de la sanción del Dto. 3.133/58 todo agente bancario que acreditara haber desempeñado durante seis meses una función superior a la categoría o agrupamiento técnico en que revista, quedará automáticamente comprendido en la categoría o agrupamiento que corresponde a las funciones ejercidas.",
    "resumen": "Quien acredita haber hecho durante seis meses una función superior a la categoría o agrupamiento técnico en que revista queda automáticamente en la categoría que corresponde a esas funciones.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 27,
@@ -454,7 +483,8 @@
    "texto": "El personal administrativo que pase a técnico, así como el de maestranza u ordenanza que pase a administrativo o técnico, será incluido en la escala correspondiente con el sueldo equivalente a su antigüedad real aunque el pase de categoría se hubiese producido con anterioridad al 1 de mayo de 1958, es decir, a partir de su ingreso a la institución. Igual criterio se aplicará al personal de ordenanzas que pase a la escala de maestranzas y a los menores de 18 años que pasen a ser beneficiarios de las retribuciones por antigüedad al cumplir dicha edad.",
    "resumen": "Cuando alguien pasa de una rama a otra (por ejemplo de administrativo a técnico, o de maestranza u ordenanza a administrativo), se lo ubica en la escala con el sueldo que corresponde a su antigüedad real.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 28,
@@ -464,7 +494,8 @@
    "texto": "El personal técnico percibirá el sueldo y adicional respectivo sobre la base del horario bancario o tarea equivalente, de acuerdo esto último con la reglamentación vigente en cada institución. Para los agentes que realicen horarios menores que el general, la liquidación de la retribución se hará estrictamente en forma proporcional al horario que aquellos cumplan.",
    "resumen": "El personal técnico cobra sueldo y adicional sobre la base del horario bancario. Quien tiene un horario menor que el general cobra en forma proporcional a ese horario.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 29,
@@ -474,7 +505,8 @@
    "texto": "El título habilitante o la especialidad que posea o adquiera el agente no serán por sí solos condición para hacerse acreedor de los adicionales de que tratan los arts. 11 y 12 (texto ordenado) debiendo pertenecer al personal especializado y realizar las tareas que indispensablemente requiera la aplicación de los conocimientos que acredita.",
    "resumen": "Tener un título o una especialidad no alcanza por sí solo para cobrar los adicionales de los artículos 11 y 12. Además hay que pertenecer al personal especializado y hacer las tareas que requieren esos conocimientos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 30,
@@ -484,7 +516,8 @@
    "texto": "Las escalas de sueldo determinadas en los arts. 5, 33 y 35 t.o.) se aplicarán sobre la base de la antigüedad real que acredite el agente en la carrera bancaria o en organismos oficiales y/o particulares, absorbidos o incorporados a las instituciones bancarias, aunque el pase de categoría se hubiere producido con anterioridad al primero de mayo de 1958.",
    "resumen": "Las escalas de sueldo de los artículos 5, 33 y 35 se aplican según la antigüedad real en la carrera bancaria, incluida la de organismos oficiales o particulares absorbidos o incorporados por los bancos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 31,
@@ -494,7 +527,8 @@
    "texto": "Las partes designarán ante el organismo competente, dentro de los treinta días de la fecha, sus representantes por ante la Comisión Paritaria que se constituirá en un todo de acuerdo con lo establecido en el art. 14 de la Ley 14.250 y su decreto reglamentario.",
    "resumen": "Dice que las partes designan sus representantes ante la Comisión Paritaria dentro de los treinta días de la fecha.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 32,
@@ -504,7 +538,8 @@
    "texto": "En toda casa bancaria, cualquiera fuere su denominación, cuyo personal - incluído el jerárquico- exceda de doce agentes, deberán cubrirse como mínimo los siguientes cargos: Gerente, Contador, Tesorero, Jefe de Area y Firma Autorizada. Tratándose de casas que cuenten con no más de doce agentes y no menos de seis, deberán cubrirse sólo los cargos de Tesorero y de Encargado, éste con jerarquía superior a la de Tesorero. Las casas con hasta cinco agentes, quedan excluídas de todo lo dispuesto precedentemente en esta cláusula. Los actuales Jefes de Sección de las filiales serán automáticamente considerados como Jefes de Area, contándose su antigüedad como tales, desde su designación como Jefes de Sección. No habrá en las filiales designaciones como Jefe de Sección por otro motivo que la promoción automática o eventuales traslados, por lo que toda necesidad funcional deberá cubrirse con la categoría de Jefe de Area.",
    "resumen": "Dice qué cargos hay que cubrir como mínimo en cada casa bancaria según la cantidad de agentes que tenga. También dice que los jefes de sección de las filiales pasan a considerarse jefes de área.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 33,
@@ -514,7 +549,8 @@
    "texto": "Los sueldos básicos mensuales del personal de maestranza, no jerarquizado se ajustarán a las siguientes escalas por antigüedad:\nAprendices:\nInicial 3.300 0,72\n1 año 3.700 0,80\nOperarios:\nInicial 4.600 1,00\n1 año 4.750 1,03\n2 años 4.800 1,04\n3 años 4.900 1,06\n4 años 4.950 1,08\n5 años 5.100 1,11\n6 años 5.200 1,13\n7 años 5.250 1,14\n8 años 5.350 1,16\n9 años 5.400 1,17\n10 años 5.600 1,22\n11 años 5.700 1,24\n12 años 5.800 1,26\n13 años 5.950 1,29\n14 años 6.000 1,30\n15 años 6.100 1,33\n16 años 6.200 1,35\n17 años 6.400 1,39\n18 años 6.500 1,41\n19 años 6.600 1,44\nEl personal de maestranza será promovido automáticamente por antigüedad en los siguientes términos:\na los 20 años de antigüedad Jefe de equipo de 3º\na los 25 años de antigüedad Jefe de equipo de 2º\na los 30 años de antigüedad Jefe de equipo de 1º\na los 35 años de antigüedad Subjefe de taller de 3º",
    "resumen": "Fija los sueldos básicos mensuales del personal de maestranza no jerarquizado según la antigüedad, con un coeficiente para cada escalón. A partir de los 20 años el ascenso a un cargo superior es automático.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": "ramas.maestranza"
+   "importe_grilla": "ramas.maestranza",
+   "titulo_del_convenio": false
   },
   {
    "numero": 34,
@@ -524,7 +560,8 @@
    "texto": "Fíjanse para el personal jerárquico de maestranza que a continuación se detalla los siguientes sueldos mensuales: Capataz general 10.850 2,36\nSubcapataz general 10.000 2,17\nSupervisor de Talleres de 1º 9.200 2,00\nSupervisor de Talleres de 2º 8.750 1,90\nSupervisor de Talleres de 3º 8.450 1,84\nJefe de Taller de 1º 8.350 1,81\nJefe de Taller de 2º 8.150 1,77\nJefe de Taller de 3º 7.950 1,73\nSubjefe de Taller de 1º 7.900 1,72\nSubjefe de Taller de 2º 7.700 1,67\nSubjefe de Taller de 3º 7.650 1,66\nJefe de Equipo de 1º 7.450 1,62\nJefe de Equipo de 2º 7.050 1,53\nJefe de Equipo de 3º 6.800 1,48",
    "resumen": "Lista los cargos jerárquicos de maestranza, de capataz general a jefe de equipo, con su sueldo mensual y su coeficiente.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": "ramas.maestranza.jerarquias",
+   "titulo_del_convenio": false
   },
   {
    "numero": 35,
@@ -534,7 +571,8 @@
    "texto": "Los sueldos básicos mensuales del personal de ordenanzas y/o servicio, no jerarquizado, se ajustarán a las siguientes escalas por antigüedad:\nCadetes:\nInicial 3.300 0,72\n1 año 3.700 0,80\nOrdenanzas\nInicial 4.600 1,00\n1 año 4.700 1,02\n2 años 4.750 1,03\n3 años 4.800 1,04\n4 años 4.900 1,06\n5 años 5.000 1,09\n6 años 5.050 1,10\n7 años 5.100 1,11\n8 años 5.200 1,13\n9 años 5.250 1,14\n10 años 5.450 1,19\n11 años 5.500 1,20\n12 años 5.600 1,22\n13 años 5.700 1,24\n14 años 5.850 1,27\n15 años 6.000 1,30\n16 años 6.050 1,32\n17 años 6.200 1,35\n18 años 6.350 1,38\n19 años 6.450 1,40\nEl personal de ordenanza o servicio será promovido automáticamente por antigüedad en los siguientes términos:\na los 20 años de antigüedad Subjefe de Servicio de 3º\na los 25 años de antigüedad Subjefe de Servicio de 2º\na los 30 años de antigüedad Subjefe de Servicio de 1º\na los 35 años de antigüedad Jefe de Servicio de 3º",
    "resumen": "Fija los sueldos básicos mensuales del personal de ordenanzas y servicio no jerarquizado según la antigüedad, con un coeficiente para cada escalón. A partir de los 20 años el ascenso a un cargo superior es automático.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": "ramas.ordenanza"
+   "importe_grilla": "ramas.ordenanza",
+   "titulo_del_convenio": false
   },
   {
    "numero": 36,
@@ -544,7 +582,8 @@
    "texto": "Fíjanse para el personal jerárquico de Mayordomía que a continuación se detalla los siguientes sueldos mensuales: Mayordomo general 11.700 2,54\nSubmayordomo general 10.000 2,17\nSubmayordomo especial de 1º 8.350 1,81\nSubmayordomo especial de 2º 7.900 1,72\nSubmayordomo especial de 3º 7.700 1,67\nSupervisor de servicios de 1º 7.450 1,62\nSupervisor de servicios de 2º 7.300 1,59\nSupervisor de servicios de 3º 7.150 1,55\nJefe de servicio de 1º 7.050 1,53\nJefe de servicio de 2º 6.900 1,50\nJefe de servicio de 3º 6.800 1,48\nSubjefe de servicio de 1º 6.700 1,46\nSubjefe de servicio de 2º 6.600 1,44\nSubjefe de servicio de 3º 6.550 1,42",
    "resumen": "Lista los cargos jerárquicos de mayordomía, de mayordomo general a subjefe de servicio, con su sueldo mensual y su coeficiente.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": "ramas.ordenanza.jerarquias",
+   "titulo_del_convenio": false
   },
   {
    "numero": 37,
@@ -554,7 +593,8 @@
    "texto": "El personal que preste servicios en las ramas de maestranza y/o servicios será provisto por la empresa de dos uniformes (camisa y pantalón o mameluco) por año (uno de invierno y otro de verano) y un par de zapatos.",
    "resumen": "El personal de maestranza y de servicios recibe de la empresa dos uniformes por año, uno de invierno y otro de verano, y un par de zapatos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 38,
@@ -564,7 +604,8 @@
    "texto": "El personal que presta servicios en la rama de ordenanzas será provisto por la empresa de dos trajes por año (uno de invierno y otro de verano), un par de zapatos y cuatro camisas (dos de invierno y dos de verano).",
    "resumen": "El personal de ordenanzas recibe de la empresa dos trajes por año, un par de zapatos y cuatro camisas.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 39,
@@ -574,7 +615,8 @@
    "texto": "Establécese un adicional de pesos trescientos ($ 300) por mes para el personal de cualquier rama que ejerza función de Portavalores. Se entiende que realiza esta función quien como tarea permanente lleva fuera del Banco o trae al mismo dinero en efectivo y/o valores al portador.",
    "resumen": "Crea un adicional mensual para quien ejerce como tarea permanente la función de portavalores, es decir, lleva fuera del banco o trae al banco dinero en efectivo o valores al portador.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 40,
@@ -584,7 +626,8 @@
    "texto": "Los gastos de representación u otras asignaciones similares que la banca oficial reconozca a sus funcionarios estarán comprendidos dentro de los salarios pactados.",
    "resumen": "Los gastos de representación u otras asignaciones similares que la banca oficial reconoce a sus funcionarios se consideran incluidos dentro de los salarios pactados.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 41,
@@ -594,7 +637,8 @@
    "texto": "Las categorías previstas en este convenio, no importan para los empleadores la obligación de crear los cargos que a ellas pudieran corresponder si no responden a las necesidades y características de sus estructuras funcionales.",
    "resumen": "Las categorías del convenio no obligan al empleador a crear cargos que no respondan a las necesidades y características de su estructura funcional.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 42,
@@ -604,7 +648,8 @@
    "texto": "a) Se conviene expresamente que los Bancos absorberán los aumentos otorgados unilateralmente, aunque fueran por calificación, sobre las escalas salariales convencionales y legales vigentes al 31 de mayo de 1975.\nb) No serán objeto de absorción y consecuentemente deberán mantenerse las asignaciones que con carácter habitual y reiterado abonaban los bancos a sus empleados en forma fraccionada o íntegra, en concepto de gratificación, participación en las utilidades, aguinaldo incentivado, bono o cualquier otra denominación. El Banco Central de la República Argentina fijará su propio derecho habitual y reiterado;\nc) Lo normado en el apartado anterior no será de aplicación al régimen de bonificación trimestral incentivada actualmente vigente en los Bancos Central de la República Argentina , de la Nación Argentina , Nacional de Desarrollo, Hipotecario Nacional, Caja Nacional de Ahorro y Seguro e Instituto de Servicios Sociales Bancarios, cuya aplicación se extenderá hasta el 31 de mayo de 1975 de conformidad con lo pactado con la entidad gremial en oportunidad de su implantación.",
    "resumen": "Los bancos absorben los aumentos otorgados unilateralmente sobre las escalas vigentes al 31 de mayo de 1975. Las asignaciones habituales y reiteradas, como gratificaciones o bonos, no se absorben y se mantienen. Hay una excepción para la bonificación trimestral incentivada de algunos bancos.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 43,
@@ -612,9 +657,10 @@
    "capitulo": null,
    "antecedentes": "(Art. 7, 8, y 9, C.C. 11/73).",
    "texto": "En ningún caso, el sueldo del personal jerárquico desde la máxima hasta la mínima categoría, podrá ser inferior al sueldo que perciba el subordinado con mayores remuneraciones, incluídos todos los adicionales, concepto la remuneración por hora extraordinaria y la parte correspondiente al subsidio familiar, debiendo existir una diferencia entre una y otra remuneración igual a la suma de pesos doscientos ($ 200). Esta diferencia, cuando proceda deberá establecerse en las filiales, y en las casas matrices, dentro de cada oficina.",
-   "resumen": "Establece que el sueldo de un cargo jerárquico no puede ser inferior al del subordinado mejor pagado, y que tiene que haber una diferencia mínima entre ambos.",
+   "resumen": "Establece que el sueldo de un cargo jerárquico no puede ser inferior al del subordinado mejor pagado, incluidos todos los adicionales, y que tiene que haber una diferencia mínima entre ambos. La disposición transitoria VIII rectifica este artículo y aclara que se exceptúa el adicional por falla de caja.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 44,
@@ -624,7 +670,8 @@
    "texto": "Los ascensos automáticos previstos para la rama administrativa, de maestranza y mayordomía, tanto en la casa central como en las filiales, son aplicables directamente por antigüedad. Es privativo de las instituciones asignar la función inherente a la respectiva categoría, pero en todos los casos deberán abonar las remuneraciones que a ellas se les fija, independientemente del ejercicio del cargo.",
    "resumen": "Los ascensos automáticos por antigüedad de las ramas administrativa, de maestranza y de mayordomía se aplican directamente. La institución asigna la función, pero siempre debe pagar la remuneración de la categoría.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 45,
@@ -634,7 +681,8 @@
    "texto": "El retiro de las funciones estipuladas en los arts. 9, 15, D, 22, 24, 34, y 39, no podrá disminuir el monto de las remuneraciones que por todo concepto perciba el agente, hasta tanto se opere su absorción como consecuencia de futuros aumentos, incluídos los correspondientes por antigüedad.",
    "resumen": "Si se retiran las funciones de los artículos que lista, la remuneración total no puede disminuir hasta que se absorba con futuros aumentos, incluidos los de antigüedad.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 46,
@@ -644,7 +692,8 @@
    "texto": "Déjase establecido que la estructura salarial indexada queda permanentemente referida a un valor básico representado por el sueldo inicial y en consecuencia cualquier modificación de ese básico inicial –ya sea por acto del poder público o acuerdo convencional– mantendrá la relación establecida en los restantes niveles.",
    "resumen": "Dice que la estructura salarial queda referida al sueldo inicial: si el sueldo inicial cambia, se mantiene la relación con los demás niveles.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 47,
@@ -654,7 +703,8 @@
    "texto": "A partir de la vigencia del presente convenio, los incrementos salariales de carácter general –cualquiera sea la modalidad de aplicación, que otorguen las empresas– deberán ser acordados con la Asociación Bancaria, Secretariado General Nacional y aprobados por el Banco Central de la República Argentina. Se interpretará que los incrementos salariales revisten carácter general cuando lleguen a beneficiar, por una sola decisión o por sucesivas decisiones, en el término de un año, a un número de agentes que excedan del diez por ciento (10%) de la dotación total de la entidad y por montos globales superiores a los que el Banco Central de la República Argentina autorice por reglamentación que dictará. Para el caso de violación de lo normado precedentemente y sin perjuicio de las sanciones previstas por la legislación laboral en vigencia, el Banco Central de la República Argentina podrá ejercer facultades correctivas propias de su competencia con respecto a la entidad bancaria en infracción. En consecuencia y a los efectos de implementar el régimen respectivo, el Banco Central de la República Argentina dictará la reglamentación pertinente.",
    "resumen": "Los aumentos salariales de carácter general que den las empresas deben acordarse con la Asociación Bancaria y ser aprobados por el Banco Central. Define cuándo un aumento se considera general y qué puede hacer el Banco Central si hay una infracción.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 48,
@@ -662,9 +712,10 @@
    "capitulo": null,
    "antecedentes": "(Art. 29, C.C. 89/63; C.C. 106/64; Pto. F. Acta del 7/6/65; art. 29, C.C. 115/65; C.C. 77/66 art. 33, 190/70, 56/71 y 33, C.C. 11/73).",
    "texto": "Se conviene ampliar el régimen de licencias vigente hasta la fecha en la siguiente forma: desde el día de su ingreso, todo empleado bancario tendrá derecho a usar de licencia con goce íntegro de haberes en los siguientes casos y por los términos que se indican:\na) Matrimonio: 1,) Del empleado/a (cuando éste se realice conforme a las leyes argentinas o extranjeras reconocidas por leyes argentinas), doce días corridos; 2,) De sus hijos, un día laborable.\nb) Nacimiento: De hijo del empleado, dos días laborables.\nc) Fallecimiento (ocurridos en el país o en el extranjero, mediante comprobante respectivo): 1,) De cónyuge o pariente consanguíneo de primer grado y hermanos, cinco días corridos; 2,) de parientes afines de primer grado y consanguíneos y afines de 2, grado, excepto hermanos, dos días corridos.\nd) Vacaciones:\n(Art. 51, Ap. I, Dto. 20.268/46; art. 156, Código de Comercio, art. 30, C.C. 106/64; Pto. F. Acta del 7/6/65; art. 29, C.C. 115/65 y C.C.77/66 art. 33, C.C. 190/76, 56/71 y 11/73).\nModifícase el régimen en materia de licencia anual ordinaria, en el sentido de que el personal con antigüedad mayor de quince y menor de veinte años, gozará de una licencia de veinticinco días hábiles:\nc) Razones de salud:\n(Art. 51, Ap. II, Dto. 20.268/46; art. 155 Código de Comercio. Pto. B. Acta del 7/6/65; art 29, C.C. 115/65 y C.C. 77/66; art. 33, C.C. 190/70, 56/71 y 11/73).\nSe amplía el término de licencia por razones de salud legislada en el art. 51, inc. b), pto. II del Dto. 20.268/46 hasta seis meses de interrupción con goce de sueldo si el empleado tiene una antigüedad en el servicio que no exceda de diez años, y hasta doce meses si tiene una antigüedad en el servicio mayor de diez años.\nLas licencias por razones de salud se acordarán previo informe del médico que designe el empleador. En caso de que el empleador o el empleado manifestara disconformidad respecto del informe se formará a requerimiento de cualquiera de las partes una Junta Médica integrada por tres facultativos, uno designado por el empleador, otro por el empleado y un tercero por el Instituto de Servicios Sociales Bancarios atendiendo a la especialidad de que se trate. Las partes estarán a lo que resuelva por mayoría dicha Junta Médica.\nf) Día femenino:\n(Pto. C. Acta del 7/6/65; art. 1, Laudo Ministerial 29/6/65 C.C. 115/65 y C.C. 77/66; art. 33, C.C. 190/70, 56/71 y 11/73).\nEl personal femenino podrá faltar un día en cada mes calendario sin necesidad de justificar dicha inasistencia y con goce de sueldo.\ng) Donación de sangre:\n(Pto. D. Acta del 7/6/65; art. 29, C.C. 115/65; C.C. 77/66; art. 33, C.C. 190/70; C.C. 56/71 y 11/73).\nLos bancos otorgarán licencia con goce de sueldos a sus empleados durante el día en que los mismos efectúen donaciones de sangre hasta cuatro veces en el año y con intervalo de tres meses de una a otra. Estas deberán ser certificadas por la institución donde se realice la donación.",
-   "resumen": "Amplía las licencias con goce de haberes desde el día de ingreso: matrimonio, nacimiento de un hijo, fallecimiento de familiares, vacaciones, razones de salud, día femenino y donación de sangre. Los días y las condiciones de cada una están en el texto.",
+   "resumen": "Amplía las licencias con goce de haberes desde el día de ingreso: matrimonio, nacimiento de un hijo (el texto prevé 2 días laborables), fallecimiento de familiares, vacaciones, razones de salud, día femenino y donación de sangre. Los días y las condiciones de cada una están en el texto.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 49,
@@ -674,7 +725,8 @@
    "texto": "Los empleados que cursen estudios en establecimientos educacionales oficiales, incorporados o privados que expidan títulos reconocidos por el Estado, gozarán de licencia con goce de haberes para rendir examen por siete días hábiles continuos o discontinuos en cada turno de examen y hasta un máximo de veintiún días al año. Las licencias se concederán por los días anteriores y el del examen debiendo el beneficiario acreditar que lo ha rendido y la fecha de la prueba mediante certificado expedido por las autoridades de los respectivos establecimientos. El empleado deberá comunicar por escrito al banco con antelación suficiente que hará uso de dicha licencia.",
    "resumen": "Quienes cursan estudios en establecimientos que dan títulos reconocidos por el Estado tienen licencia con goce de haberes para rendir examen, con un máximo por turno y por año. Hay que acreditar el examen y avisar por escrito.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 50,
@@ -684,7 +736,8 @@
    "texto": "Instituyese como “Día del Bancario” el 6 de noviembre de cada año, rigiendo para esa fecha las normas establecidas para los feriados nacionales.",
    "resumen": "Instituye el 6 de noviembre de cada año como Día del Bancario, con las normas de los feriados nacionales.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 51,
@@ -694,7 +747,8 @@
    "texto": "El personal que realice tareas de sereno y que prestare servicios en días no laborales gozará de franco compensatorio dentro de los quince días siguientes a la fecha en que prestó servicios. Dicho personal tiene el derecho de ser rotado periódicamente y en un plazo no mayor de quince días, de modo tal que no debe prestar servicios en forma continuada en días no laborables.",
    "resumen": "El personal de sereno que presta servicios en días no laborables tiene franco compensatorio dentro de los quince días siguientes. También tiene derecho a ser rotado periódicamente.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 52,
@@ -702,9 +756,10 @@
    "capitulo": null,
    "antecedentes": "(Art. 33, C.C. 106/64; Pto. F. Acta del 7/6/65; art. 32, C.C. 115/65; C.C. 77/66; art. 36, C.C. 190/70; C.C. 56/71 y C.C. 11/73).",
    "texto": "Los agentes que deban incorporarse al servicio militar obligatorio en cumplimiento de las leyes argentinas, con más de seis meses de antigüedad en el empleo tendrán derecho a las siguientes licencias con el cincuenta por ciento (50%) de su remuneración, desde la fecha de su incorporación hasta cinco días después del día de la baja asentada en la libreta de enrolamiento, en los casos en que el agente hubiere sido declarado inapto o fuera exceptuado; y hasta quince días después de haber sido dado de baja si hubiera cumplido el período para el cual fue convocado y éste fuera mayor de seis meses; igualmente se concederá licencia de cinco días con la remuneración expresada cuando el período fuera inferior a seis meses.\nLas licencias de cinco y quince días a que hace referencia en el párrafo anterior serán sobre días corridos.\nLos días de viaje por traslado desde el punto del país donde cumplió con el servicio militar obligatorio y el asiento habitual de sus tareas no serán incluídos en los términos de licencias fijados precedentemente y se justificarán independientemente con el cincuenta por ciento (50%) de haberes. Las ausencias en que incurra el personal por tener que someterse a exámen médico previo a su incorporación a las filas de las Fuerzas Armadas, o por otras razones relacionadas con el mismo fin, serán justificadas con goce de sueldo previa presentación de las citaciones respectiva emanadas del organismo militar.\nEl personal que en carácter de reservista sea incorporado transitoriamente a las Fuerzas Armadas de la Nación , como oficial o suboficial, tendrá derecho a usar de licencia sin goce de sueldo, mientras dure su incorporación, salvo cuando el sueldo del cargo civil sea mayor que el que le corresponda por el grado militar, en cuyo caso el empleador le liquidará la diferencia de remuneración que resulte referida al momento de su incorporación.\nAl personal que cumpla el servicio militar incorporado a la Policía Federal o a la Prefectura Nacional Marítima, se le concederá licencia sin goce de sueldo de conformidad con lo establecido en el Dto. 4.216/54.",
-   "resumen": "Regula las licencias por servicio militar obligatorio, con el 50% de la remuneración y plazos según cada caso. También trata a los reservistas y a quienes cumplen en la Policía Federal o la Prefectura.",
+   "resumen": "Regula las licencias por servicio militar obligatorio: el 50 % de la remuneración, con plazos según cada caso. Para los reservistas incorporados transitoriamente y para quienes cumplen en la Policía Federal o la Prefectura, la licencia es sin goce de sueldo.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 53,
@@ -714,7 +769,8 @@
    "texto": "La Asociación Bancaria (Sociedad de Empleados de Banco), la Asociación de Bancos del Interior de la República Argentina y la Asociación de Bancos de Provincia de la República Argentina , acuerdan lo siguiente:\na) Las instituciones representadas por la Asociación de Bancos del interior de la República Argentina y la Asociación de Bancos de Provincia de la República Argentina que solicitarán la postergación o la aplicación parcial y/o progresiva de las remuneraciones establecidas en esta convención colectiva de trabajo, deberán comunicarlo al señor Director Nacional de Relaciones del Trabajo y al Banco Central de la República Argentina , manifestando los motivos y acompañando todos los elementos probatorios de los mismos y dentro de qué límites abonarán las nuevas remuneraciones.\nb) La comunicación deberá cursarse dentro de los quince días hábiles de notificada la convención colectiva de trabajo a la representación empresaria. Transcurrido dicho plazo, cesará indefectiblemente el derecho a solicitar la postergación o aplicación parcial y/o progresiva a que se refiere el párrafo anterior; dentro de ese mismo plazo, deberán los bancos comunicarlo a la Asociación Bancaria (Sociedad de Empleados de Banco).\nc) El señor director Nacional de Relaciones del Trabajo deberá dictar resolución fundada en las conclusiones a que, para cada banco, arriba en su informe el Banco Central de la República Argentina ; la presentación de los bancos en uso del derecho que les acuerda esta cláusula servirá de suficiente autorización para que el Banco Central de la República Argentina informe al señor Director Nacional de Relaciones del Trabajo sobre la situación económica actual de la institución recurrente. En caso de que el Banco Central de la República Argentina no se expidiera en el término de treinta días hábiles, el señor director Nacional de Relaciones del Trabajo dictará resolución fundada para cada banco, en base a los elementos de juicio agregados al expediente respectivo;\nd) En ningún caso podrá permitirse a los bancos solicitantes abonar un incremento salarial inferior al cincuenta por ciento (50%) de las diferencias salariales que existan entre las escalas de la Convención Colectiva 11/73 y aumentos legales al 31 de mayo de 1975 y las que fija la presente convención colectiva, las que se considerán vigentes a partir del 1, de junio de 1975. Se deja aclarado que a partir de esa fecha las entidades a que se hace referencia abonarán las remuneraciones y adicionales fijados en la Convención Colectiva 11/73 cien por ciento (100%) y sus aumentos legales devengados a partir de la fecha mencionada y no menos del cincuenta por ciento (50%) de los aumentos que por esta convención colectiva se establecen.\nC) Las resoluciones que dicte el señor Director Nacional de Relaciones del Trabajo en uso de las facultades otorgadas por esta cláusula, una vez que adquieran el carácter de cosa juzgada administrativa, se considerarán parte integrante de esta convención colectiva de trabajo para el personal bancario y serán notificadas a las respectivas asociaciones, las cuales deberán hacerlas conocer a la institución correspondiente dentro de los cinco días hábiles, a los efectos de su inmediato cumplimiento.\nLa Asociación de Bancos de Provincia de la República Argentina deja aclarado que el Banco Provincial de Santa Fé no está adherido al régimen de la Ley 12.637.",
    "resumen": "Regula cómo algunos bancos del interior y de provincia pueden pedir postergar o aplicar de forma parcial o progresiva las remuneraciones del convenio. Fija plazos, el trámite ante las autoridades y un mínimo que no pueden bajar.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 54,
@@ -724,7 +780,8 @@
    "texto": "La nueva convención colectiva de trabajo para la actividad bancaria de todo el país regirá hasta el 31 de mayo de 1976.\nLas entidades empresarias y la entidad sindical, signatarias de la presente convención colectiva de trabajo, dejan establecido que con noventa días de anticipación a la finalización del plazo de vigencia, procederán a reunirse en comisión paritaria a fin de considerar con la antelación necesaria la revisión de la convención colectiva de trabajo y los posibles requerimientos que puedan formularse en un nuevo petitorio.",
    "resumen": "Dice que este convenio rige hasta el 31 de mayo de 1976 y que las partes se reúnen en comisión paritaria con noventa días de anticipación para revisarlo.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 55,
@@ -734,7 +791,8 @@
    "texto": "Se conviene el siguiente régimen de subsidio por fallecimiento:\na) 1. Si el agente fallecido es soltero y cuenta con una antigüedad en su empleo de diez años, el subsidio será de pesos tres mil ($ 3.000).\n2. Si el agente fallecido es soltero y cuenta con una antigüedad en su empleo de diez años, el subsidio será de pesos tres mil ($ 3.000).\n3. Si el agente fallecido es casado, sin descendencia a su cargo, cualquiera sea su antigüedad en el empleo el subsidio será de pesos cuatro mil quinientos ($ 4.500).\n4. Si el agente fallecido es casado, con descendencia a su cargo, cualquiera sea su antigüedad en el empleo, el subsidio será de pesos seis mil ($ 6.000).\nb) Son beneficiarios del subsidio los derechohabientes del trabajador, entendiéndose por tales a las personas emuneradas en el art. 17, de la Ley 14.370 en orden excluyente, a quienes bastará para obtener su cobro la simple acreditación del vínculo. Se deducirá del monto de esta indemnización lo que los derechohabientes perciban por seguros constituídos y tomados exclusivamente a su cargo por el empleador.\nc) El derecho de percibir el subsidio cesará en caso de que a la fecha del fallecimiento del agente, éste hubiere dejado de pertenecer a la empresa por jubilación, renuncia o cualquier otra causa.\nd) Este subsidio por fallecimiento no será acumulativo a cualquier otro subsidio o indemnización que por la misma causa (muerte del empleado) debieran pagar las empresas por imperio de la ley, decreto o disposición legalmente válida que se dictase en el futuro, en cuyo caso la suma abonada en razón del subsidio que aquí se pacta se computará a cuenta de la que en definitiva correspondiera pagar. Asimismo, el pago del subsidio se efectuará aún cuando expresamente no se estableciera en el acto de abonarlo con las reservas legales inherentes a la condición expresa de aplicar la suma respectiva a cuenta o hasta la concurrencia del monto del pago que correspondiere en concepto de indemnización por muerte (Ley 20.744) o por accidente (Ley 9688), en el caso de que la jurisprudencia futura así lo resolviera.\nc) las modificaciones propuestas regirán con relación a los fallecimientos que se produjeran a partir del 1, de enero de 1973 y las empresas se reservan el derecho de tomar el subsidio directamente a su cargo o bien, de asegurar el riesgo que comporta dicho subsidio en todo o en parte, contemplando los respectivos seguros individual o colectivamente con la Caja Nacional de Ahorro y Seguro o cualquiera de las entidades aseguradoras en plaza, de conformidad con los planes autorizados por la Superintendencia de Seguros de la Nación. Las empresas podrán deducir del monto del subsidio lo que los beneficiarios reciban de Cajas o Sociedades de Seguros por actos o contratos de previsión realizados por el principal a su cargo.",
    "resumen": "Regula el subsidio por fallecimiento del agente según su estado civil y si tenía descendencia a cargo. Dice quiénes lo cobran, cuándo cesa el derecho y cómo se computa frente a otras indemnizaciones.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 56,
@@ -744,7 +802,8 @@
    "texto": "Todo traslado dispuesto de una casa a otra del banco, deberá ser notificado por escrito al empleado.",
    "resumen": "Todo traslado de una casa a otra del banco tiene que notificarse por escrito al empleado.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 57,
@@ -754,7 +813,8 @@
    "texto": "A los menores de hasta dieciocho años de edad que ingresen a las instituciones bancarias, una vez rendido el exámen de ingreso, deberá comunicárseles de inmediato en qué rama se desempeñarán (administrativo, maestranza y ordenanza). No podrá el empleador destinar a quien ingrese como aspirante a auxiliar administrativo, técnico o especializado a cualquiera de las otras dos ramas. Tampoco podrá destinarse a la rama de ordenanza y/o servicios a quien hubiese aprobado su ingreso para la rama de maestranza.",
    "resumen": "A los menores de hasta dieciocho años que ingresan se les debe comunicar de inmediato en qué rama van a trabajar. El artículo dice además a qué ramas no se los puede destinar.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 58,
@@ -764,7 +824,8 @@
    "texto": "El personal dispondrá de veinticinco minutos ininterrumpidos para tomar un refrigerio, siendo privativo de la empresa fijar el momento oportuno durante la jornada laboral según los usos y prácticas de aquella.",
    "resumen": "El personal dispone de veinticinco minutos ininterrumpidos para tomar un refrigerio. La empresa fija el momento durante la jornada.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 59,
@@ -774,7 +835,8 @@
    "texto": "En caso de muerte del empleado en actividad, padre de familia, uno de los hijos que hubiere estado a su cargo podrá optar por ingresar a la empresa, siempre que reúna las condiciones de ingreso establecidas, a satisfacción del banco y existiendo vacante en la escala inicial.",
    "resumen": "Si muere un empleado en actividad, padre de familia, uno de los hijos que estaba a su cargo puede optar por ingresar a la empresa, si reúne las condiciones de ingreso y hay vacante en la escala inicial.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 60,
@@ -784,7 +846,8 @@
    "texto": "En atención a lo prescripto por el artículo 4, del Dto. 6.582/54, en función del art. 3, de la Ley 14.250, las partes consienten la automática homologación de esta convención colectiva de trabajo y piden su registro inmediato y posterior comunicación autenticada a la Caja Nacional de Previsión de la Industria , Comercio y Actividades Civiles (ex Caja Bancaria) a los efectos del reajuste de los beneficios para jubilados y pensionados de conformidad con lo dispuesto en la Ley 18.037.",
    "resumen": "Dice que las partes aceptan la homologación automática del convenio y piden su registro y su comunicación a la caja de previsión, a los efectos del reajuste de jubilaciones y pensiones.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 61,
@@ -794,7 +857,8 @@
    "texto": "El Ministerio de Trabajo será el organismo de aplicación y vigilará el cumplimiento de la presente Convención, quedando las partes obligadas a la estricta observancia de las condiciones fijadas precedentemente.",
    "resumen": "El Ministerio de Trabajo es el organismo de aplicación y vigila el cumplimiento del convenio.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": 62,
@@ -804,7 +868,8 @@
    "texto": "El Ministerio de Trabajo, por intermedio de la Dirección Nacional de Relaciones del Trabajo, a solicitud de partes interesadas, expedirá copia debidamente autenticada de la presente Convención.",
    "resumen": "El Ministerio de Trabajo, a pedido de las partes interesadas, da copia autenticada del convenio.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   }
  ],
  "transitorias": [
@@ -814,7 +879,8 @@
    "texto": "I. Atendiendo la particular circunstancia que implica la incorporación de la banca oficial al régimen de la Ley 14.250, las partes de común acuerdo declaran:\n1. Que las cláusulas pactadas comportan la instauración de una nueva estructura escalafonaria cuya implementación se torna perentoria en razón de que los valores resultantes deben ser efectivizados a la brevedad, en razón de la notoria necesidad de salvaguardar el salario real tal cual fuera señalado por el Gobierno Nacional al convocar a las comisiones paritarias;\n2. Que el carácter parcial con que modifica el texto convencional vigente responde a esas motivaciones y obviamente requiere un lapso mayor para adecuar las normas vigentes con los bancos oficiales a las disposiciones legales y convencionales que por efecto de la Ley 14.250 deben ser aplicadas;\n3. Fundado en lo expuesto en los ptos. 1 y 2, las partes solicitan de la autoridad de aplicación la homologación del texto acordado, sin perjuicio de continuar la negociación en el seno de la comisión paritaria al solo efecto de la debida adecuación de lo establecido, en relación al Conv. Colect. de Trab. 11/73 las Leyes 12.637, 20.744 y Dto. 20.268/46. El nuevo cuerpo convencional ordenado será puesto a consideración del Ministerio de Trabajo para su compaginación, homologación y posterior registro, de conformidad con lo dispuesto por la Ley 14.250.",
    "resumen": "Las partes explican que el convenio instaura una nueva estructura escalafonaria y piden su homologación, mientras siguen negociando para adecuar el texto a otras normas.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "II",
@@ -822,7 +888,8 @@
    "texto": "II. En función de lo preceptuado por los arts. 3, y 8, de la Ley 14.250; art. 41, de la Ley 20.615 y art. 7, del Dto. 1.045/74, se establece una contribución a cargo de todos los trabajadores bancarios de la actividad, afiliados y no afiliados, en favor de la Asociación Bancaria (Sociedad de Empleados de Banco), entidad sindical signataria del presente convenio. Será equivalente al cincuenta por ciento (50%) del monto que cada trabajador perciba como aumento en el primer mes de vigencia de esta Convención. A los efectos de determinar sobre qué aumento se aplicará el porcentaje de descuento a que se refiere el presente artículo, se establece que el mismo resultará de la diferencia que existe entre los sueldos básicos estipulados a partir del 1, de enero de 1973 en la Conv. Colect. de Trab. 11/73, sumándole a los mismos los aumentos establecidos por la Ley 20.517 y los Dtos. 1.012/74, 1.448/74 y 572/75 y los sueldos básicos establecidos en la presente convención colectiva de trabajo, según planilla que se adjunta como anexo. Dicho importe se remitirá directamente al sindicato o se depositará en alguna de las siguientes cuentas bancarias: Banco de la Nación Argentina (Casa Central) 31.650.97 y Banco Sindical S.A. (Casa Central) 102/7. El giro o depósito deberá efectivarse dentro de los diez días de la fecha en que se produzca el pago del primer mes con los aumentos que se establecen en esta Convención.",
    "resumen": "Establece una contribución a cargo de todos los trabajadores bancarios, afiliados o no, a favor de la Asociación Bancaria, equivalente al 50% del aumento del primer mes de vigencia. Dice cómo se calcula y adónde se deposita.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "III",
@@ -830,7 +897,8 @@
    "texto": "III. Se conviene que los aspectos relacionados con el régimen de licencias por vacaciones e indemnización por fallecimiento serán acordados por las partes signatarias del presente Convenio Colectivo dentro del plazo máximo de treinta días de la homologación del presente convenio, en el Expte. 573.227/74 agregado al 573.979/74, abierto en este Ministerio.",
    "resumen": "Dice que las licencias por vacaciones y la indemnización por fallecimiento se van a acordar dentro de los treinta días de la homologación.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "IV",
@@ -838,7 +906,8 @@
    "texto": "IV. En todo lo que el presente convenio colectivo no ha modificado al Conv. Colect. de Trab. 11/73, sigue rigiendo este último y lo preceptuado por las Leyes 12.637 y 20.744 y sus decretos reglamentarios.",
    "resumen": "Aclara que, en lo que este convenio no modifica, sigue rigiendo el Convenio 11/73 y las leyes que cita.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "V",
@@ -846,7 +915,8 @@
    "texto": "V. Los representantes de la Asociación de Bancos de la República Argentina ; Asociación de Bancos Argentinos; Asociación de Bancos del Interior de la República Argentina y del Banco de Italia y Río de la Plata , expresan: que sin perjuicio de lo convenido en este acto declaran que han aceptado expresamente la claúsula que establece la prohibición de otorgar incrementos salariales generales con carácter voluntario sin previo acuerdo de la entidad gremial y aprobación del Banco Central de la República Argentina , a fin de contribuir con la cuota de sacrificio que las circunstancias actuales imponen, al mantenimiento de la paz social y la tranquilidad y unidad que la Nación requiere para superar los problemas que la aquejan. Por esas razones de carácter excepcional la aceptación de dicha claúsula no debe interpretarse como una resignación de los principios oportunamente sustentados en este expediente para su rechazo, en cuanto contraria la esencia de la conducción empresaria privada y por lo tanto no constituye en ninguna de sus partes, precedente para lo futuro.",
    "resumen": "Las cámaras empresarias declaran que aceptan la cláusula que prohíbe dar aumentos generales voluntarios sin acuerdo previo del sindicato y aprobación del Banco Central, y aclaran que eso no sienta precedente.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "VI",
@@ -854,7 +924,8 @@
    "texto": "VI. La representación de la Asociación de Bancos del Interior de la República Argentina solicita se constituya una comisión especial integrada por las partes interesadas a los efectos de practicar el reexamen de la cláusula de adicionales por zonas desfavorables o afectadas por costo de vida excesivamente elevado a fin de determinar correctamente las localidades que deben ser incluídas en este beneficio y en función que el mismo deberá limitarse a los casos de traslados del personal.\nLa Asociación Bancaria toma conocimiento de lo expresado por las Cámaras A.B.R.A., A.D.E.B.A., A.B.I.R.A. y Banco de Italia y Río de la Plata y dado que lo expuesto es sólo una expresión de deseos que no afecta a la parte resolutiva del presente acuerdo no emite opinión sobre la citada expresión de deseos. Con respecto a lo solicitado por A.B.I.R.A., consultados los cuerpos orgánicos de la Asociación Bancaria , sobre petición formulada de creación de una comisión de estudio, obtenida una resolución dará la contestación a la respectiva Cámara, todo esto sin perjuicio de la aplicación de todas las cláusulas convenidas, siendo su ámbito de aplicación todo el territorio del país y abarcando a la totalidad de las empresas que operan con el régimen laboral bancario, siendo su vencimiento el treinta y uno de mayo de 1976. Los bancos: Central de la República Argentina , Hipotecario Nacional, Nacional de Desarrollo, de la Nación Argentina , de la Ciudad de Buenos Aires, Caja Nacional de Ahorro y Seguro, de la Provincia de Buenos Aires y Asociación de Bancos de Provincia de la República Argentina , aprueban los términos de lo acordado precedentemente, solicitando que en caso de surgir por la aplicación de las cláusulas del convenio suscripto situaciones sujetas a distintas interpretaciones, las mismas sean resueltas entre la entidad respectiva y la Asociación Bancaria , Secretariado General Nacional.\nLa Asociación Bancaria acepta lo expuesto por las distintas entidades.\nLas entidades: A.B.R.A., A.B.I.R.A., A.D.E.B.A., y Banco de Italia y Río de la Plata expresan: que lo manifestado en los dos párrafos precedentes por las entidades bancarias oficiales y la Asociación Bancaria no forman parte de la convención colectiva de trabajo aceptada por dichas entidades empresarias. En consecuencia, la única interpretación de la ley en sentido genérico que acatarán dichas entidades, incluyendo la presente convención colectiva de trabajo, será la que emane del Poder Judicial de la Nación o de las Provincias según corresponde conforme al régimen Republicano y Federal consagrado por el Artículo 1, de la Constitución Nacional.",
    "resumen": "Recoge un pedido de revisar los adicionales por zonas desfavorables y las respuestas de las partes. Aclara cuáles de esas manifestaciones no forman parte del convenio.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "VII",
@@ -862,7 +933,8 @@
    "texto": "VII. Se deja establecido que dado la especial situación jurídica institucional del Banco de la Provincia de Buenos Aires las decisiones que el Directorio adopte en materia de remuneraciones no requerirán aprobación del Banco Central de la República Argentina y serán convenidas directamente con la Asociación Bancaria (Sociedad de Empleados de Bancos).",
    "resumen": "Aclara que las decisiones de remuneraciones del Banco de la Provincia de Buenos Aires se convienen directamente con la Asociación Bancaria, sin aprobación del Banco Central.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   },
   {
    "numero": "VIII",
@@ -870,7 +942,8 @@
    "texto": "VIII. Las rectificaciones son las siguientes:\n“Artículo 25 – Deberá incluirse el siguiente párrafo final, contenido en el Art. 26, de la C.C. 11/73: ‘Los beneficios otorgados de acuerdo con este artículo deben incluir también los agentes que revisten en Casas Centrales de las localidades comprendidas en el referido artículo’.\nArtículo 43 – Deberá llevar la siguiente redacción, conforme a sus antecedentes los arts. 7,, 8, y 9, de la C.C. 11/73. ‘En ningún caso el sueldo del personal jerárquico desde la máxima hasta la mínima categoría podrá ser inferior al sueldo que perciba el subordinado con mayores remuneraciones, incluídos todos los adicionales, excepto el de falla de caja, remuneración por hora extraordinaria y la parte correspondiente al subsidio familiar, debiendo existir una diferencia entre una y otra remuneración igual a la suma de pesos doscientos ($ 200). Esta diferencia, cuando proceda, deberá establecerse en las filiales y en las Casas Matrices, dentro de cada oficina’.\nDisposiciones Transitorias: Deberá agregarse como apartado VIII lo siguiente, expresado por los representantes de A.D.E.B.A., A.B.R.A. y A.B.I.R.A., en la reunión de comisión paritaria del 23 de junio de 1975: ‘Las entidades empresarias que representan han mantenido en la tarde de hoy reuniones con las autoridades en el más alto nivel del Banco Central de la República Argentina , que les permiten expedirse ahora sobre el acuerdo agregado a este expediente en lo que hace a sus aspectos salariales. Ello en base a las seguridades obtenidas en el sentido de que se arbitrarán los medios necesarios para que la rentabilidad del sector Bancario privado permita atender las mayores erogaciones derivadas de dicho acuerdo. En consecuencia se adhieren expresamente a los salarios convenidos con la Banca Oficial ya que las entidades que agrupan estas Asociaciones entienden que dichas remuneraciones resultan acordes con las funciones y merecimientos del personal Bancario’.”",
    "resumen": "Rectifica los artículos 25 y 43, agrega un apartado a las disposiciones transitorias y recoge la adhesión de las asociaciones empresarias a los salarios acordados con la banca oficial.",
    "resumen_estado": "sin_revisar",
-   "importe_grilla": null
+   "importe_grilla": null,
+   "titulo_del_convenio": false
   }
  ],
  "cierre": "En prueba de ello, previa lectura y ratificación, se firma el presente, quedando archivado en su expediente de origen\nACUERDO 169/05 - ADEBA, ABE, ABAPRA, Bco. Provincia de Buenos Aires. Suma remuneratoria a partir del 1/5/05\nRESOLUCION Ss.R.L. 46/05 - Homologa el Acuerdo 169/05 del 26/5/05\nACUERDO 515/07 (I) - ADEBA, ABE. Escala salarial a partir del 1/3/07\nACUERDO 515/07 (II) - Banco Provincia de Buenos Aires. Escala salarial a partir del 1/3/07\nACUERDO 515/07 (III) - ABA. Escala salarial a partir del 1/3/07\nACUERDO 515/07 (IV) - Banco de la Ciudad de Buenos Aires. Escala salarial a partir del 1/3/07\nACUERDO 515/07 (V) - Banco Central. Escala salarial a partir del 1/3/07\nACUERDO 515/07 (VI) - ABAPRA. Escala salarial a partir del 1/3/07\nRESOLUCION S.T. 422/07 - Homologa el Acuerdo 515/07 del 28/3/07, 29/3/07 y 30/3/07\nACUERDO 728/07 - Banco Nación. Rubro adicional por antigüedad. Incremento de tique canasta a partir del 1/7/07\nRESOLUCION S.T. 609/07 - Homologa el Acuerdo 728/07 del 20/6/07\nACUERDO 877/07 - Banco Nación. Readecuación jerárquica. Tique canasta.\nAdicionales\nRESOLUCION S.T. 780/07 - Homologación del Acuerdo 877/07"

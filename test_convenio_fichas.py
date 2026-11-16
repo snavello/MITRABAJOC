@@ -105,3 +105,46 @@ def test_el_convenio_no_sale_de_su_carpeta():
     except FileNotFoundError:
         return
     raise AssertionError("debía rechazar un nombre que sale de la carpeta")
+
+
+def test_importe_vigente_exige_importes_finitos_y_positivos():
+    for malo in (float("nan"), float("inf"), float("-inf"), 0, -5):
+        g = {"adicionales": {"funcion_cajero": malo, "falla_caja": 10.0}}
+        assert cf.importe_vigente(cf.articulo(22), g) is None, malo
+    ok = {"adicionales": {"funcion_cajero": 5.0, "falla_caja": 10.0}}
+    assert len(cf.importe_vigente(cf.articulo(22), ok)) == 2
+
+
+def test_importe_grilla_que_no_es_texto_devuelve_none():
+    for raro in (5, 1.5, {"a": 1}, [1, 2], ["adicionales.titulos", 3]):
+        assert cf.importe_vigente({"importe_grilla": raro}, GRILLA) is None, raro
+
+
+def test_las_escalas_por_antiguedad_no_traen_las_jerarquicas():
+    for n, rama in ((5, "administrativa"), (33, "maestranza"), (35, "ordenanza")):
+        filas = cf.importe_vigente(cf.articulo(n), GRILLA)
+        con_anios = [c for c in GRILLA["ramas"][rama]["categorias"] if c["anios"] is not None]
+        assert [f["rotulo"] for f in filas] == [c["nombre"] for c in con_anios], n
+        assert [f["importe"] for f in filas] == [c["basico"] for c in con_anios], n
+
+
+def test_las_escalas_jerarquicas_resuelven_a_las_jerarquicas_de_su_rama():
+    esperado = {6: ("administrativa", 6), 34: ("maestranza", 14), 36: ("ordenanza", 14)}
+    for n, (rama, cuantas) in esperado.items():
+        filas = cf.importe_vigente(cf.articulo(n), GRILLA)
+        jer = [c for c in GRILLA["ramas"][rama]["categorias"] if c["anios"] is None]
+        assert len(filas) == cuantas, n
+        assert {f["rotulo"] for f in filas} <= {c["nombre"] for c in jer}, n
+    assert all("Div." in f["rotulo"] for f in cf.importe_vigente(cf.articulo(6), GRILLA))
+    assert cf.importe_vigente({"importe_grilla": "ramas.administrativa.jerarquias.otra"}, GRILLA) is None
+
+
+def test_titulo_del_convenio_solo_en_los_articulos_1_a_3():
+    for a in list(CONV["articulos"]) + list(CONV["transitorias"]):
+        assert isinstance(a["titulo_del_convenio"], bool), a["numero"]
+        assert a["titulo_del_convenio"] == (a["numero"] in (1, 2, 3)), a["numero"]
+
+
+def test_zona_alejada_incluye_la_transitoria_viii():
+    zona = next(s for s in cf.situaciones() if s["id"] == "zona")
+    assert [f["numero"] for f in zona["fichas"]] == [25, "VIII"]
