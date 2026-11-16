@@ -274,6 +274,7 @@ INVENTARIO = (
 EXCLUIDAS = {
     # -- Grillas salariales del convenio: importes y controles, sin identidades.
     "grillasalarial.contenido": "grilla salarial del convenio (importes por categoría), sin identidades",
+    "escalanovedad.datos": "nota pública del sitio del sindicato (porcentaje, inicial, ROE, PDF), sin identidades",
     "grillasalarial.controles": "resultado de los controles de una grilla salarial, sin identidades",
     # -- Bitácoras: la historia no se reescribe (D5). La traza de lo que sí
     #    se cambió es `cambioidentificador`.

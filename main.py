@@ -11644,9 +11644,14 @@ def _escalas_sindicato_id():
 
 
 def _escalas_actualizacion_pendiente():
-    """None hasta que el bloque 5 la conecte: una fecha ISO si hay un
-    comunicado nuevo sin grilla publicada."""
-    return None
+    """La fecha ISO del comunicado más nuevo que la grilla vigente, o None
+    (D9.6). Solo lee la base: al sitio lo consulta el proceso diario."""
+    try:
+        nuevo = db.estado_de_actualizacion().get("comunicado_nuevo")
+        return (nuevo or {}).get("publicada") or None
+    except Exception as e:
+        print(f"[escalas] sin estado de actualización: {type(e).__name__}: {e}")
+        return None
 
 
 def _escalas_vigente(grillas: dict):
