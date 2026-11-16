@@ -94,8 +94,10 @@ def test_los_esquemas_son_cerrados_y_aceptan_nulos():
     assert {"type": "null"} in cat["properties"]["basico"]["anyOf"]
     r = lec.herramienta_resto(PLANTILLA)["input_schema"]
     adic = r["properties"]["adicionales"]
-    assert set(adic["properties"]) == set(AGOSTO["adicionales"]) and adic["additionalProperties"] is False
-    assert set(adic["properties"]["zona_patagonica"]["properties"]) == set(AGOSTO["adicionales"]["zona_patagonica"])
+    claves = adic["items"]["properties"]["clave"]["enum"]
+    assert "funcion_cajero" in claves and "titulos.universitario" in claves
+    assert {c.split(".", 1)[1] for c in claves if c.startswith("zona_patagonica.")} == set(AGOSTO["adicionales"]["zona_patagonica"])
+    assert adic["items"]["additionalProperties"] is False
     assert json.dumps(r)                      # serializable
 
 
@@ -236,3 +238,23 @@ def test_las_paginas_se_preparan_una_vez_con_el_tope_de_lado():
 def test_un_pdf_roto_levanta():
     with pytest.raises(Exception):
         lec.paginas_a_imagenes(b"%PDF-1.7 roto")
+
+
+def test_los_esquemas_estrictos_no_pasan_el_tope_de_parametros_que_pueden_ser_null():
+    """La API rechaza con 400 un esquema estricto con más de 16 parámetros con anyOf
+    (bloque 6, 2026-11-16: el de «resto» tenía 18)."""
+    assert lec.uniones(lec.herramienta_resto(PLANTILLA)["input_schema"]) <= lec.LIMITE_UNIONES
+    assert lec.uniones(lec.herramienta_rama("Administrativa")["input_schema"]) <= lec.LIMITE_UNIONES
+
+
+def test_los_adicionales_en_filas_se_arman_igual_que_la_grilla():
+    filas = []
+    for k, v in AGOSTO["adicionales"].items():
+        filas += ([{"clave": f"{k}.{k2}", "importe": v2} for k2, v2 in v.items()] if isinstance(v, dict)
+                  else [{"clave": k, "importe": v}])
+    notas = []
+    r = lec.sanear_resto({"adicionales": filas}, notas)
+    assert r["adicionales"] == AGOSTO["adicionales"] and notas == []
+    notas = []
+    r = lec.sanear_resto({"adicionales": filas + [filas[0], "x", {"clave": "titulos.terciario", "importe": None}]}, notas)
+    assert r["adicionales"] == AGOSTO["adicionales"] and len(notas) == 3      # repetidos e ilegibles no pisan nada
