@@ -627,6 +627,18 @@ def test_d28_sin_lectura_parcial_la_celda_totalmente_tapada_tambien_se_completa(
     assert c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"][0]["lectura_parcial"] == []
 
 
+def test_d28_un_conformado_vacio_sin_lectura_parcial_no_se_completa():
+    """QA de D28: un conformado es opcional. Si viene vacío en las dos lecturas y nadie vio una cifra,
+    puede ser que el convenio lo haya sacado: no se inventa, retiene."""
+    ruta = _ruta(OCT, "administrativa", "Inicial", "conformado")
+    cc = oct_cc(sin_leer(ruta))
+    assert cc["celdas_calculadas"] == [] and not c.todos_pasan(cc["resultados"])
+    assert cc["resultados"][0]["pasa"] is False
+    # Con una lectura parcial que prueba que hay una cifra tapada, sí se completa.
+    cc = oct_cc(sin_leer(ruta), parciales={ruta: enmascarar(_valor(OCT, ruta))})
+    assert c.todos_pasan(cc["resultados"]) and cc["celdas_calculadas"][0]["ruta"] == ruta
+
+
 def test_d28_el_valor_calculado_admite_un_centavo_de_mas_o_de_menos_contra_la_lectura_parcial():
     calc = oct_cc(sin_leer(RUTA_CAPATAZ))["celdas_calculadas"][0]["valor_calculado"]
     for leido in (calc, round(calc + 0.01, 2), round(calc - 0.01, 2)):

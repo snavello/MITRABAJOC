@@ -253,7 +253,10 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   alcanza a ver («3.?22.194,42», un «?» por dígito ilegible); no suman a las 16
   uniones. Si hay lectura parcial, el calculado tiene que ser compatible dígito
   por dígito (±1 centavo); si no, retiene con el detalle. Sin lectura parcial,
-  se completa igual. (7) Todo queda dicho: entrada por celda en el detalle de
+  se completa igual, **salvo un conformado**: como es opcional en la grilla, un
+  conformado vacío en las dos lecturas y sin lectura parcial no se completa
+  (puede ser que el convenio lo haya sacado, no que esté tapado) y retiene.
+  (7) Todo queda dicho: entrada por celda en el detalle de
   C1, `controles["celdas_calculadas"]`, la nota de la grilla, el aviso de
   Telegram de la publicación y una marca «calculada» en la vista de estado.
   (8) El ensayo y la corrección a mano usan la misma función

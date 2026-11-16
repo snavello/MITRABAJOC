@@ -298,3 +298,9 @@ def test_d28_la_lectura_parcial_se_devuelve_aparte_y_no_ensucia_la_grilla():
 def test_d28_sin_lectura_parcial_el_resultado_trae_un_dict_vacio():
     lec.usar_cliente(Cliente())
     assert lec.leer_una_vez(IMAGENES, PLANTILLA, lec.MODELO)["parciales"] == {}
+
+
+def test_la_lectura_parcial_se_recorta():
+    """QA de D28: un texto parcial enorme no viaja a la base ni al detalle del control."""
+    assert lec._parcial("3.?22.194,42") == "3.?22.194,42"
+    assert len(lec._parcial("9" * 40000)) == lec.MAX_PARCIAL and lec._parcial(5) == "" and lec._parcial("   ") == ""

@@ -298,9 +298,12 @@ def _entero_o_none(x, notas, donde):
     return int(x)
 
 
+MAX_PARCIAL = 40          # una cifra con sus puntos y comas no pasa de 20; el resto es ruido
+
+
 def _parcial(x) -> str:
     """El texto de una lectura parcial, o «» si no es un texto con algo escrito."""
-    return x.strip() if isinstance(x, str) else ""
+    return x.strip()[:MAX_PARCIAL] if isinstance(x, str) else ""
 
 
 def sanear_rama(crudo: dict, clave: str, plantilla: dict, defectos: list, parciales: dict | None = None,

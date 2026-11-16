@@ -809,6 +809,13 @@ def completar_celdas(lecturas: list, previa: dict | None, tolerancias: dict | No
             continue
         if any(v is not None and not _num(v) for v in (a["valor"], b["valor"])):
             continue
+        # Un conformado es opcional en la grilla: si viene vacío en las dos lecturas y nadie
+        # alcanzó a ver un número ahí, puede ser que el convenio lo haya sacado, no que esté
+        # tapado. Sin una lectura parcial que pruebe que hay una cifra, no se completa (y C1
+        # retiene por «cambió dónde hay conformado»).
+        if ruta.endswith(".conformado") and a["valor"] is None and b["valor"] is None \
+                and not any((l.get("parciales") or {}).get(ruta) for l in lecturas[:2]):
+            continue
         candidatas.append((ruta, a, b, p))
     if not candidatas:
         return sin
