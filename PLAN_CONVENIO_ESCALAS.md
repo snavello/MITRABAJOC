@@ -315,6 +315,67 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   lo recorre celda por celda y lista las que no, hoy ninguna). Los tests que
   afirmaban centavos, 1 o 2 pesos pasaron a afirmar $ 10, por esta decisión.
 
+## Convenio, segunda versión (2026-11-16, SDN con Code, de a una pregunta)
+
+SDN revisó la vista Convenio: «no me parece útil», el buscador sin IA solo
+encuentra búsquedas muy orientadas. D31 a D37 reemplazan a D3, D11, D21 y D24
+en lo que toca a esa vista. Escala vigente y la actualización de grillas no
+cambian.
+
+- **D31 · Dos caminos a la vez**: (1) una consulta con IA sobre el convenio,
+  muy restringida; (2) una base de preguntas frecuentes con respuesta, que es
+  la primera puerta de búsqueda.
+- **D32 · La consulta con IA es nueva y separada del piloto RAG**: vive en la
+  herramienta de `/entornos`; no toca `rag.py` ni `/app/convenio`. El modelo
+  recibe el convenio ENTERO (las fichas de `data/convenios/cct-18-75.json`) y
+  las preguntas frecuentes, con caché de prompt; no hay búsqueda por
+  fragmentos. Modelo barato (`claude-haiku-5-5`), constante del módulo: **no**
+  va a la página de modelos de `/plataforma` hasta que se decida seguir.
+- **D33 · Fuentes de la IA: convenio + preguntas frecuentes**. Cita siempre el
+  artículo (y la pregunta frecuente si la usó). No da importes (manda a Escala
+  vigente), no opina, no interpreta casos personales, no habla de nada fuera
+  de esas dos fuentes. Todo lo demás recibe una respuesta FIJA que escribe el
+  servidor, no el modelo: «Eso no lo puedo responder con el convenio. Envianos
+  tu consulta particular o consultá a tu delegado.»
+- **D34 · «Envianos tu consulta» guarda la pregunta para el equipo**: un botón
+  deja registrada la pregunta sin responder, sin nombre ni CUIL, en una lista
+  que el equipo ve en la herramienta. El envío real al sindicato se define en
+  el pase a la app.
+- **D35 · Las preguntas frecuentes responden con convenio + ley, bien
+  separados**: primero qué dice el convenio (con artículo); si no lo trata o
+  la ley da más, aparte y rotulado «Según la ley», con la norma citada. Nacen
+  todas `sin_revisar`: las cura el sindicato; Colm3na entrega una propuesta
+  muy trabajada (investigación de preguntas frecuentes de otros sindicatos,
+  nacionales e internacionales, más el análisis propio del convenio).
+- **D36 · Frecuentes adelante, artículos atrás**: la vista queda con la
+  consulta con IA arriba y las preguntas frecuentes por tema debajo. Se sacan
+  el buscador por palabra y las tarjetas por situación. El texto literal de
+  cada artículo queda como destino de las citas y en un índice plegado al
+  final.
+- **D37 · Defensas de la consulta con IA** (definición de Code sobre el pedido
+  «que nadie pueda preguntar nada incorrecto ni hacer prompt injection»):
+  (1) una pregunta por vez, sin historial, de hasta 300 caracteres;
+  (2) el modelo solo puede contestar por una herramienta de esquema cerrado
+  (`responde`, `articulos`, `frecuentes`, `respuesta`); (3) el servidor valida:
+  sin al menos una cita que exista, o con `responde` falso, o con respuesta
+  fuera de forma (larga, con enlaces, con importes), sale la respuesta fija;
+  (4) el texto del modelo se dibuja con `textContent`, nunca como HTML, y los
+  enlaces a artículos los arma el servidor con los números validados;
+  (5) tope de preguntas por pase y por hora; (6) cada llamada queda en `UsoIA`
+  (tipo `herramienta`) y cada pregunta, con su resultado, en un registro sin
+  identidad que el equipo ve; (7) un set de ataques (inyección, fuera de tema,
+  pedido de opinión, de importes, de datos del sistema) corre en los tests con
+  la IA simulada y, a mano, contra la API real en Pruebas.
+
+**Contrato de la base de preguntas frecuentes** (`data/convenios/cct-18-75-faq.json`):
+`{"convenio": "cct-18-75", "leido": "AAAA-MM-DD", "temas": [{"clave", "nombre",
+"orden"}], "preguntas": [{"id" (slug único), "tema" (clave), "orden",
+"pregunta", "respuesta" (qué dice el convenio; texto llano, 1 a 4 párrafos
+separados por "\n\n"; vacío si el convenio no lo trata), "articulos" ([números
+del CCT que la sostienen]), "segun_ley" (texto o ""), "normas" ([{"norma",
+"articulo", "url"}]), "estado": "sin_revisar", "nota_curador" (dudas para quien
+cure), "inspirada_en" ([de dónde salió la pregunta])}]}`.
+
 Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
 archivos al importarse (necesita una puerta para recibir las publicadas y
 refrescarse por proceso); publicar un mes nuevo cambia las constantes que usan
