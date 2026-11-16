@@ -719,6 +719,35 @@
     if (esNum(t.c4_pesos)) par('Diferencia aceptada', 'Se acepta hasta ' + pesos(t.c4_pesos) + ' de diferencia por importe al comparar con el comunicado y con el mes anterior.');
   }
 
+  // ---------------------------------------------------------------- preguntas al convenio
+  var RESULTADO_CONSULTA = { respondida: ['verde', 'Respondida'], fija: ['reemplazada', 'Respuesta fija'], error: ['descartada', 'Falló la IA'] };
+  function pintarConsultas(d) {
+    var ul = vaciar($('consultas-lista'));
+    var c = (d && d.conteos) || {};
+    $('consultas-conteos').textContent = (c.total || 0) + (c.total === 1 ? ' pregunta' : ' preguntas') + ' en total · '
+      + (c.respondidas || 0) + ' respondidas · ' + (c.fijas || 0) + ' con la respuesta fija · ' + (c.errores || 0) + ' con error de la IA · '
+      + 'enviadas para el sindicato: ' + (c.enviadas || 0) + '.';
+    var lista = (d && d.consultas) || [];
+    if (!lista.length) { ul.appendChild(h('li', { class: 'vacio', text: 'Todavía nadie envió una pregunta ni quedó sin respuesta.' })); return; }
+    lista.forEach(function (q) {
+      var r = RESULTADO_CONSULTA[q.resultado] || ['reemplazada', q.resultado || '—'];
+      var cab = h('div', { class: 'periodo' });
+      if (q.enviada) cab.appendChild(pill('retenida', 'Enviada para el sindicato'));
+      cab.appendChild(pill(r[0] === 'verde' ? 'publicada' : r[0], r[1]));
+      var meta = (q.enviada && q.enviada_en ? 'Enviada el ' + cuando(q.enviada_en) + ' · ' : '') + 'Hecha el ' + cuando(q.creada);
+      var li = h('li', { class: 'tarjeta', style: 'margin:0' }, cab,
+        h('p', { style: 'margin-top:8px;font-weight:600;overflow-wrap:anywhere', text: q.pregunta }),
+        h('p', { class: 'suave chico', style: 'margin-top:4px', text: meta }));
+      if (q.motivo && q.resultado !== 'respondida') li.appendChild(h('p', { class: 'suave chico', text: 'Motivo: ' + q.motivo }));
+      ul.appendChild(li);
+    });
+  }
+  function cargarConsultas() {
+    return pedir(API + '/consultas').then(pintarConsultas).catch(function (e) {
+      vaciar($('consultas-lista')).appendChild(h('li', { class: 'vacio', text: 'No se pudieron leer las preguntas: ' + e.message }));
+    });
+  }
+
   // ---------------------------------------------------------------- carga
   function cargar(forzar) {
     return pedir(API + '/grillas').then(function (d) {
@@ -752,4 +781,5 @@
     }, false);
   });
   cargar(true);
+  cargarConsultas();
 })();

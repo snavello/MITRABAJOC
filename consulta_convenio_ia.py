@@ -171,6 +171,12 @@ _URL = re.compile(
 _DINERO = re.compile(
     r"(\$|\bARS\b|\bUSD\b|U\$S|\bd[oó]lares?\b|\beuros?\b|\d\s*pesos\b|\bpesos\s*\d"
     r"|\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+,\d{2}\b|\b\d{5,}\b)", re.I)
+# Un número que sigue a ley/decreto/artículo/inciso/n° es una referencia a una norma,
+# no un importe: «Ley 20.744», «Decreto 2.289/76», «art. 48». Se saca antes de buscar dinero.
+_REFERENCIA = re.compile(
+    r"\b(?:leyes|ley|decretos?|dtos?|decreto[- ]ley|resoluci(?:o|ó)n(?:es)?|res|art(?:[ií]culos?|s)?|incisos?|inc"
+    r"|n[°º]|nro|n(?:u|ú)mero)\.?\s*(?:n[°º]\s*)?"
+    r"(?:\d{1,3}(?:\.\d{3})+|\d+)(?:\s*/\s*\d{2,4})?", re.I)
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -198,7 +204,7 @@ def validar(crudo, convenio: str = CONVENIO) -> dict:
         return _fija("caracteres de control en la respuesta")
     if _URL.search(respuesta):
         return _fija("la respuesta trae un enlace o dirección")
-    if _DINERO.search(respuesta):
+    if _DINERO.search(_REFERENCIA.sub(" ", respuesta)):
         return _fija("la respuesta trae importes")
     arts, frec = [], []
     crudo_arts, crudo_frec = crudo.get("articulos"), crudo.get("frecuentes")

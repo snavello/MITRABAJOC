@@ -111,6 +111,25 @@ def test_porcentajes_y_fechas_no_son_importes():
     assert r["resultado"] == "respondida"
 
 
+@pytest.mark.parametrize("texto", [
+    "La Ley 20.744 de Contrato de Trabajo fija diez días.",
+    "Rige el Decreto 2.289/76 y el art. 1.200 del convenio.",
+    "Según la Resolución N° 14.250 y la ley 24.013, art. 48 inc. 10.000.",
+])
+def test_una_norma_con_punto_de_miles_no_es_un_importe(texto):
+    assert ia.validar(_ok(respuesta=texto))["resultado"] == "respondida"
+
+
+@pytest.mark.parametrize("texto", [
+    "Por la ley 20.744 se paga 1.250.000 al mes.",
+    "Según el art. 48 cobrás $ 5 extra.",
+    "Decreto 2.289/76: son 5000 pesos.",
+    "Ley 20.744: equivale a 300 USD.",
+])
+def test_los_importes_siguen_cayendo_aunque_haya_una_norma(texto):
+    _fija(ia.validar(_ok(respuesta=texto)))
+
+
 def test_el_texto_fijo_es_el_del_plan():
     assert FIJO == ("Eso no lo puedo responder con el convenio. Envianos tu consulta particular "
                     "o consultá a tu delegado.")
