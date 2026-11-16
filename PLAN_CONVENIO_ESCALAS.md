@@ -150,6 +150,64 @@ afiliado: ese pase **no** entra en este plan (D12).
   impedirlos, pero solo se construye bancarios); notificar a afiliados cuando
   hay grilla nueva.
 
+## Decisiones del Bloque 0 (2026-11-16, SDN con Code, de a una pregunta)
+
+Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
+
+- **D13 · De quién es la estética.** La herramienta se pinta con **La Bancaria
+  de la base de Pruebas**, vista como su afiliado de prueba (CUIL 27999999994,
+  clave 27999): logo, cuatro colores, modelo y paleta salen de
+  `db.marca_sindicato` / `db.apariencia_de`, como en `/app`. El selector de
+  modelo y paleta de D2 queda para validar las cuatro combinaciones. Si La
+  Bancaria no está en la base, cae a la paleta de Colm3na.
+- **D14 · No hay palabras prohibidas (corrige D4).** La lista de D4 estaba mal
+  escrita. La regla es de tono y de alcance: la herramienta ayuda y no es
+  contundente porque le faltan datos (conceptos del banco, retroactivos);
+  «control» se usa en ese contexto; nunca se pisa ni contradice lo que hace el
+  módulo de recibos. Siguen firmes: ningún total, ninguna suma, ningún
+  veredicto ni semáforo, y el texto fijo de alcance. El test del bloque 7
+  exige eso, no una lista de palabras. **Ante una diferencia entre el plan y
+  el repo, Code pregunta y sugiere.**
+- **D15 · Solo muestra la grilla.** La primera versión no compara nada: ni
+  importes tipeados ni recibos leídos. Comparar sigue siendo de Tu recibo.
+- **D16 · ROE (precisa D10).** Por defecto, el valor del comunicado mensual
+  (sueldo inicial, banco con ROE de 3,5 % a 8,75 %, anual / 12), etiqueta
+  Referencia. Con el aviso «Si conocés el ROE de tu banco, cargalo acá»: al
+  elegir el tramo se muestra el valor de la tabla para ese tramo (fila según
+  el conformado o básico de la categoría elegida), también Referencia.
+- **D17 · Tabla genérica por convenio** (Abierto 1): `GrillaSalarial` con
+  columna `convenio` (hoy siempre `cct-18-75`), sin `sindicato_id`.
+- **D18 · Modelo de lectura** (Abierto 2): uso de IA `grilla_salarial`,
+  default Sonnet 5.5.
+- **D19 · C4** (Abierto 3): arranca estricta (cada celda contra el factor
+  mediano, dentro de lo que explica el redondeo al centavo; el factor redondea
+  al porcentaje del comunicado) y se calibra con agosto → septiembre en el
+  bloque 6, mostrando el número a SDN antes de fijarlo. Un cambio de
+  estructura queda retenido y se resuelve a mano.
+- **D20 · Horario** (Abierto 4): dos pasadas por día, 10:00 y 16:00 de Buenos
+  Aires, configurable por variable de entorno; si el día 21 no hay grilla del
+  mes, avisa una vez.
+- **D21 · Resúmenes** (Abierto 5): los redactan agentes desde el texto
+  literal, nacen `sin_revisar`; los marca revisados un usuario de plataforma
+  desde la herramienta, anotando qué secretaría lo aprobó y cuándo.
+- **D22 · Cargo jerárquico** (Abierto 6): entra, con la lista de jerarquías
+  de la grilla de esa rama; muestra el básico y la evolución va sobre el
+  básico.
+- **D23 · Quién resuelve una retenida** (Abierto 7): hoy el equipo de
+  Colm3na, desde una página de la herramienta en `/entornos` (estética de
+  `/entornos`, no la del afiliado). Cuando el sindicato apruebe y la
+  herramienta pase a la app, esa página se muda al menú del sindicato
+  (`/admin`) con permiso propio: se construye para que mudarla sea mover la
+  página.
+
+Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
+archivos al importarse (necesita una puerta para recibir las publicadas y
+refrescarse por proceso); publicar un mes nuevo cambia las constantes que usan
+el lote y los PDF de prueba; los números de artículo de la maqueta son de
+ejemplo (mandan los del PDF del CCT); la conectividad se actualiza por
+trimestre y no entra en el factor único de C4; la prueba real del bloque 6
+corre dentro de Pruebas (la sesión de Code no tiene clave de la API).
+
 ## Bloques
 
 Code planifica y coordina; desarrollo y QA van a agentes (Sonnet 5.5), en
