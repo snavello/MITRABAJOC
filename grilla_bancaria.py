@@ -32,6 +32,13 @@ def _cargar_grillas() -> dict:
     return grillas
 
 
+def grillas_semilla() -> dict:
+    """Las grillas de `data/grillas_bancarias/` tal cual están en disco: la
+    semilla de la tabla `GrillaSalarial` (db.sembrar_grillas). No depende de
+    lo que se haya registrado después con `registrar()`."""
+    return _cargar_grillas()
+
+
 GRILLAS = _cargar_grillas()
 PERIODO_VIGENTE = max(GRILLAS)
 _VIGENTE = GRILLAS[PERIODO_VIGENTE]
@@ -46,18 +53,6 @@ def grilla(periodo: str = "") -> dict:
     return GRILLAS[periodo]
 
 
-# ---------------------------------------------------------------- vigente
-# Constantes de la grilla más nueva, con la forma que ya usan el lote y el
-# generador de PDF (rama administrativa, la que simula el lote).
-GRILLA = f"{_VIGENTE['nombre'].lower()} (firmada {'/'.join(reversed(_VIGENTE['firmada'].split('-')))})"
-
-_ADMIN = _VIGENTE["ramas"]["administrativa"]["categorias"]
-# (años de antigüedad desde, coeficiente, básico, conformado). El conformado
-# existe solo hasta los 15 años: desde los 20 el básico ya lo supera.
-ESCALA_ADMINISTRATIVA = [(c["anios"], c["coef"], c["basico"], c["conformado"])
-                         for c in _ADMIN if c["anios"] is not None]
-# Jerarquías que no salen de la antigüedad: nombre -> (coeficiente, básico).
-JERARQUIAS = {c["nombre"]: (c["coef"], c["basico"]) for c in _ADMIN if c["anios"] is None}
 # Art. 44: la categoría también la da la antigüedad (promociones automáticas).
 CATEGORIA_POR_ANTIGUEDAD = [
     (35, "2º Jefe de División de 1º"), (30, "2º Jefe de División de 2º"),
@@ -65,25 +60,101 @@ CATEGORIA_POR_ANTIGUEDAD = [
     (15, "Ayudante de firma"), (0, "Auxiliar"),
 ]
 
-# Adicionales: montos fijos por mes, iguales para toda categoría (el texto de
-# 1975 los daba como % del inicial; la grilla vigente, no).
-_ADIC = _VIGENTE["adicionales"]
-FUNCION_CAJERO = _ADIC["funcion_cajero"]
-FALLA_DE_CAJA = _ADIC["falla_caja"]
-FALLA_DE_CAJA_MONEDA_EXTRANJERA = _ADIC["falla_caja_moneda_extranjera"]
-TITULOS = dict(_ADIC["titulos"])
-ZONA_PATAGONICA = dict(_ADIC["zona_patagonica"])
-GUARDERIA = _ADIC["guarderia"]
+# ---------------------------------------------------------------- vigente
+# Constantes de la grilla más nueva, con la forma que ya usan el lote y el
+# generador de PDF (rama administrativa, la que simula el lote). Las fija
+# `_fijar_vigente`, que corre al importar y cada vez que `registrar()` cambia
+# las grillas. Se declaran acá para que se vean.
+GRILLA = ESCALA_ADMINISTRATIVA = JERARQUIAS = None
+FUNCION_CAJERO = FALLA_DE_CAJA = FALLA_DE_CAJA_MONEDA_EXTRANJERA = None
+TITULOS = ZONA_PATAGONICA = GUARDERIA = None
+TRAMOS_ROE = ROE_TABLA = None
+DIA_BANCARIO_SUMA_FIJA = DIA_BANCARIO_POR_COEFICIENTE = DIA_BANCARIO_MINIMO = None
 
-# ROE: (tope del tramo de sueldo bruto, [montos ANUALES por tramo de ROE del
-# banco]). Se cobra 1/12 por mes. Columnas en TRAMOS_ROE.
-TRAMOS_ROE = list(_VIGENTE["roe"]["tramos"])
-ROE_TABLA = [(f["hasta"], f["anual"]) for f in _VIGENTE["roe"]["filas"]]
 
-# Día del Bancario (6 de noviembre): suma fija + coeficiente × monto, con mínimo.
-DIA_BANCARIO_SUMA_FIJA = _VIGENTE["dia_bancario"]["suma_fija"]
-DIA_BANCARIO_POR_COEFICIENTE = _VIGENTE["dia_bancario"]["por_coeficiente"]
-DIA_BANCARIO_MINIMO = _VIGENTE["dia_bancario"]["minimo"]
+def _fijar_vigente(grillas: dict) -> None:
+    """Arma todo lo derivado de la grilla más nueva de `grillas`. Cada nombre
+    se REASIGNA (no se muta en el lugar), así que un lector que ya tenía la
+    referencia vieja sigue viendo una grilla entera y no una mezcla."""
+    global GRILLAS, PERIODO_VIGENTE, _VIGENTE, GRILLA, ESCALA_ADMINISTRATIVA, JERARQUIAS
+    global FUNCION_CAJERO, FALLA_DE_CAJA, FALLA_DE_CAJA_MONEDA_EXTRANJERA
+    global TITULOS, ZONA_PATAGONICA, GUARDERIA, TRAMOS_ROE, ROE_TABLA
+    global DIA_BANCARIO_SUMA_FIJA, DIA_BANCARIO_POR_COEFICIENTE, DIA_BANCARIO_MINIMO
+    periodo = max(grillas)
+    v = grillas[periodo]
+    admin = v["ramas"]["administrativa"]["categorias"]
+    adic = v["adicionales"]
+    # Primero se arma todo, después se publica: si algo falla, no queda a medias.
+    nuevo = {
+        "GRILLA": f"{v['nombre'].lower()} (firmada {'/'.join(reversed(v['firmada'].split('-')))})",
+        # (años de antigüedad desde, coeficiente, básico, conformado). El
+        # conformado existe solo hasta los 15 años: desde los 20 el básico ya lo supera.
+        "ESCALA_ADMINISTRATIVA": [(c["anios"], c["coef"], c["basico"], c["conformado"])
+                                  for c in admin if c["anios"] is not None],
+        # Jerarquías que no salen de la antigüedad: nombre -> (coeficiente, básico).
+        "JERARQUIAS": {c["nombre"]: (c["coef"], c["basico"]) for c in admin if c["anios"] is None},
+        # Adicionales: montos fijos por mes, iguales para toda categoría (el
+        # texto de 1975 los daba como % del inicial; la grilla vigente, no).
+        "FUNCION_CAJERO": adic["funcion_cajero"],
+        "FALLA_DE_CAJA": adic["falla_caja"],
+        "FALLA_DE_CAJA_MONEDA_EXTRANJERA": adic["falla_caja_moneda_extranjera"],
+        "TITULOS": dict(adic["titulos"]),
+        "ZONA_PATAGONICA": dict(adic["zona_patagonica"]),
+        "GUARDERIA": adic["guarderia"],
+        # ROE: (tope del tramo de sueldo bruto, [montos ANUALES por tramo de ROE
+        # del banco]). Se cobra 1/12 por mes. Columnas en TRAMOS_ROE.
+        "TRAMOS_ROE": list(v["roe"]["tramos"]),
+        "ROE_TABLA": [(f["hasta"], f["anual"]) for f in v["roe"]["filas"]],
+        # Día del Bancario (6 de noviembre): suma fija + coeficiente × monto, con mínimo.
+        "DIA_BANCARIO_SUMA_FIJA": v["dia_bancario"]["suma_fija"],
+        "DIA_BANCARIO_POR_COEFICIENTE": v["dia_bancario"]["por_coeficiente"],
+        "DIA_BANCARIO_MINIMO": v["dia_bancario"]["minimo"],
+    }
+    g = globals()
+    for nombre, valor in nuevo.items():
+        g[nombre] = valor
+    GRILLAS = grillas
+    _VIGENTE = v
+    PERIODO_VIGENTE = periodo
+
+
+RAMAS_ORDEN = ("administrativa", "maestranza", "ordenanza")
+
+
+def _con_orden(g: dict) -> dict:
+    """La grilla con el orden de las listas desplegables que tenía en el
+    archivo. La base guarda JSONB, que NO conserva el orden de las claves de
+    un objeto (las ordena por largo y después alfabéticamente): sin esto la
+    calculadora mostraría las ramas, los títulos y las zonas en otro orden.
+    Ramas: `RAMAS_ORDEN` y después el resto; títulos y zonas: por monto
+    creciente (así están en la grilla firmada). Devuelve una copia."""
+    ramas = g.get("ramas") or {}
+    orden = [k for k in RAMAS_ORDEN if k in ramas] + [k for k in ramas if k not in RAMAS_ORDEN]
+    adic = dict(g["adicionales"])
+    for clave in ("titulos", "zona_patagonica"):
+        adic[clave] = dict(sorted(adic[clave].items(), key=lambda kv: (kv[1], kv[0])))
+    return {**g, "ramas": {k: ramas[k] for k in orden}, "adicionales": adic}
+
+
+def registrar(grillas: dict) -> None:
+    """Reemplaza las grillas que conoce el módulo por `grillas` ({periodo:
+    contenido}) y recalcula la vigente (el período más nuevo) y todas las
+    constantes derivadas. Es la puerta por la que la app le pasa las
+    publicadas de la base sin que este módulo importe `db`. Si `grillas` está
+    vacío o una grilla no tiene la forma esperada, levanta y NO cambia nada.
+
+    Ojo: quien hizo `from grilla_bancaria import X` en su import se queda con
+    el valor de ese momento (hoy solo `cargar_bancaria.py`, un script que no
+    corre dentro de la app); quien usa `grilla_bancaria.X` ve siempre el vigente."""
+    if not grillas:
+        raise ValueError("No hay grillas para registrar.")
+    for periodo, g in grillas.items():
+        if g.get("periodo") != periodo:
+            raise ValueError(f"La grilla de {periodo} dice ser del período {g.get('periodo')}.")
+    _fijar_vigente({p: _con_orden(g) for p, g in grillas.items()})
+
+
+_fijar_vigente(GRILLAS)
 
 
 def fila_de_escala(anios: int) -> tuple:

@@ -36,9 +36,10 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query
+from fastapi import Path as RutaFastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -100,6 +101,11 @@ import recursos
 import empaquetar
 import render_admin
 import grilla_bancaria
+import consulta_escalas
+import convenio_fichas
+import escalas_controles
+import escalas_lectura
+import escalas_proceso
 import asistente_tramites
 import asistente_tramites_ia
 import laboratorio_modelos
@@ -849,6 +855,14 @@ templates.env.globals["vigencia_texto"] = formato_ar.vigencia
 @app.on_event("startup")
 def _startup():
     db.init_db()
+    # Las grillas salariales viven en la base (PLAN_CONVENIO_ESCALAS.md D8):
+    # se siembran desde data/ si faltan y se le pasan a grilla_bancaria. Si la
+    # tabla todavía no existe (el código llegó antes que la migración), la
+    # calculadora sigue con los archivos: nunca tumba el arranque.
+    try:
+        _refrescar_grillas(forzar=True)
+    except Exception as e:
+        print(f"[grillas] no se cargaron de la base ({type(e).__name__}: {e})")
     # El lector de fotos del enmascarado se carga al arrancar y no con la
     # primera foto del día. Nunca puede tumbar el arranque (mejor esfuerzo).
     if preparacion.modo() != "apagado":
@@ -7149,7 +7163,8 @@ def plataforma_modelos_ia(request: Request,
                           modelo_recibos: str = Form(""),
                           modelo_convenio: str = Form(""),
                           modelo_asistente: str = Form(""),
-                          modelo_asistente_tramites: str = Form("")):
+                          modelo_asistente_tramites: str = Form(""),
+                          modelo_grilla_salarial: str = Form("")):
     """Qué modelo de Anthropic usa cada parte de la app. Solo plataforma: la
     API la paga la plataforma, no el sindicato, y un cambio acá vale para
     todos los sindicatos a la vez.
@@ -7160,7 +7175,8 @@ def plataforma_modelos_ia(request: Request,
     exigir_plataforma(request)
     db.set_modelos_ia({"recibos": modelo_recibos, "convenio": modelo_convenio,
                        "asistente": modelo_asistente,
-                       "asistente_tramites": modelo_asistente_tramites})
+                       "asistente_tramites": modelo_asistente_tramites,
+                       "grilla_salarial": modelo_grilla_salarial})
     return RedirectResponse("/plataforma?config=ok#usoia-modelos", status_code=303)
 
 
@@ -10907,9 +10923,48 @@ def entornos_calculadora_bancaria_v2(request: Request):
     })
 
 
+# ---------------------------------------------------------------- grillas en la base
+_GRILLAS_SELLO = {"sello": None, "revisado": 0.0}
+_GRILLAS_LOCK = threading.Lock()
+GRILLAS_REVISION_S = 60          # cada cuánto un proceso mira si cambió algo
+
+
+def _refrescar_grillas(forzar: bool = False) -> None:
+    """Deja `grilla_bancaria` con las grillas publicadas en la base. Con
+    `forzar` siembra desde data/ lo que falte (arranque). Si no, solo mira el
+    sello como mucho cada GRILLAS_REVISION_S segundos por proceso (Render
+    corre varios workers: cada uno se entera solo). Si la base no responde
+    deja lo que ya había: la calculadora no depende de este refresco."""
+    import time
+    ahora = time.monotonic()
+    if not forzar and ahora - _GRILLAS_SELLO["revisado"] < GRILLAS_REVISION_S:
+        return
+    with _GRILLAS_LOCK:
+        if not forzar and time.monotonic() - _GRILLAS_SELLO["revisado"] < GRILLAS_REVISION_S:
+            return
+        _GRILLAS_SELLO["revisado"] = time.monotonic()    # también si falla: no se insiste en cada pedido
+        if forzar:
+            db.sembrar_grillas()
+        sello = db.sello_grillas()
+        if forzar or sello != _GRILLAS_SELLO["sello"]:
+            publicadas = db.grillas_publicadas()
+            if publicadas:
+                grilla_bancaria.registrar(publicadas)
+            _GRILLAS_SELLO["sello"] = sello
+
+
+def _grillas_al_dia() -> None:
+    try:
+        _refrescar_grillas()
+    except Exception as e:
+        print(f"[grillas] no se pudo refrescar ({type(e).__name__}: {e})")
+
+
+
 @app.get("/api/entornos/herramientas/bancaria/opciones")
 def api_bancaria_opciones(request: Request, periodo: str = ""):
     _exigir_herramientas(request)
+    _grillas_al_dia()
     try:
         return grilla_bancaria.opciones(periodo)
     except ValueError as e:
@@ -10920,6 +10975,7 @@ def api_bancaria_opciones(request: Request, periodo: str = ""):
 def api_bancaria_calcular(request: Request, payload: dict = Body(...)):
     """El recibo esperado y, si vino el recibo real, la comparación."""
     _exigir_herramientas(request)
+    _grillas_al_dia()
     try:
         esperado = grilla_bancaria.calcular_recibo(payload.get("entrada") or {})
         real = payload.get("real")
@@ -10940,6 +10996,7 @@ async def api_bancaria_leer(request: Request, archivo: UploadFile = File(...)):
     o CUIL leídos: solo vuelven importes. La llamada se paga y queda en Uso de
     IA de /plataforma con tipo "herramienta"."""
     _exigir_herramientas(request)
+    await run_in_threadpool(_grillas_al_dia)
     contenido = await archivo.read()
     if not contenido:
         raise HTTPException(422, "El archivo está vacío.")
@@ -10970,6 +11027,7 @@ def api_bancaria_guardar_caso(request: Request, payload: dict = Body(...)):
     """Guarda un caso. El esperado y las diferencias se recalculan acá con la
     entrada: no se guarda lo que diga el navegador."""
     quien = _exigir_herramientas(request)
+    _grillas_al_dia()
     entrada = payload.get("entrada") or {}
     real = payload.get("real") or {}
     try:
@@ -11052,6 +11110,166 @@ def entornos_bancaria_casos_csv(request: Request):
     contenido = "﻿" + salida.getvalue()      # BOM: Excel lo abre con tildes
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="casos-calculadora-bancaria-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramientas: Convenio y escalas — actualización de la grilla ====================
+# PLAN_CONVENIO_ESCALAS.md, bloque 5 (D9, D19, D23). El proceso diario que busca
+# la grilla nueva en labancaria.org, la lee dos veces con la IA, la controla y la
+# publica sola (escalas_proceso.py) y la vista de estado donde el equipo de
+# Colm3na resuelve una retenida. La página tiene la estética de /entornos y es
+# una sola página para que, cuando la herramienta pase al panel del sindicato
+# (D23), mudarla sea mover la página y sus rutas.
+HERRAMIENTA_ESCALAS = escalas_proceso.HERRAMIENTA
+# Un id de la ruta tiene que caber en int4 (la columna): uno mayor daba 500 en la base.
+from typing import Annotated as _Annotated  # noqa: E402
+IdEscalas = _Annotated[int, RutaFastAPI(ge=1, le=2147483647)]
+
+
+@app.on_event("startup")
+def _startup_escalas():
+    """El hilo de la actualización de grillas: solo con ESCALAS_AUTO=1 y en
+    Pruebas. Nunca tumba el arranque."""
+    try:
+        escalas_proceso.arrancar(entorno.ENTORNO)
+    except Exception as e:
+        print(f"[escalas] no arrancó ({type(e).__name__}: {e})")
+
+
+@app.get("/entornos/herramientas/convenio-escalas/estado", response_class=HTMLResponse)
+def entornos_escalas_estado(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("escalas_estado.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+    })
+
+
+def _grilla_sin_pesos(g: dict) -> dict:
+    """Una fila de listar_grillas para la vista: sin la segunda lectura entera (pesa
+    ~17 KB y solo se usa en el detalle)."""
+    c = dict(g.get("controles") or {})
+    c.pop("lectura_b", None)
+    return {**g, "controles": c}
+
+
+@app.get("/api/entornos/herramientas/escalas/grillas")
+def api_escalas_grillas(request: Request):
+    _exigir_herramientas(request)
+    ok_ia, motivo_ia = escalas_lectura.disponible()
+    ensayos = [{"id": c.id, "creado": c.creado, "quien": c.quien, "periodo": c.grilla, "distintos": c.distintos,
+                "estado": c.estado, "celdas": (c.esperado or {}).get("celdas"),
+                "distintas_a": ((c.real or {}).get("lectura_a") or {}).get("distintas"),
+                "distintas_b": ((c.real or {}).get("lectura_b") or {}).get("distintas"),
+                "ia": (c.real or {}).get("ia"), "segundos": (c.real or {}).get("segundos")}
+               for c in db.casos_herramienta(HERRAMIENTA_ESCALAS)]
+    return {
+        "grillas": [_grilla_sin_pesos(g) for g in db.listar_grillas()],
+        "novedades": db.listar_novedades(),
+        "actualizacion": db.estado_de_actualizacion(),
+        "ensayos": ensayos,
+        "tarea": escalas_proceso.tarea_actual(),
+        "config": {"auto": escalas_proceso.debe_correr(entorno.ENTORNO)[0], "motivo_auto": escalas_proceso.debe_correr(entorno.ENTORNO)[1],
+                   "horas": escalas_proceso.horas(), "modelo": db.modelo_ia("grilla_salarial"),
+                   "ia_disponible": ok_ia, "motivo_ia": motivo_ia, "tolerancias": escalas_controles.TOLERANCIAS},
+    }
+
+
+@app.get("/api/entornos/herramientas/escalas/grillas/{grilla_id}")
+def api_escalas_grilla(request: Request, grilla_id: IdEscalas):
+    _exigir_herramientas(request)
+    g = db.grilla_completa(grilla_id)
+    if not g or g["convenio"] != db.CONVENIO_BANCARIO:
+        raise HTTPException(404, "No existe esa grilla.")
+    valores = {c["ruta"]: c for c in escalas_controles.celdas(g["contenido"])}
+    return {**g, "celdas_con_etiqueta": {r: c["etiqueta"] for r, c in valores.items()}}
+
+
+@app.post("/api/entornos/herramientas/escalas/grillas/{grilla_id}/corregir")
+def api_escalas_corregir(request: Request, grilla_id: IdEscalas, payload: dict = Body(...)):
+    """Corrige celdas de una retenida y vuelve a pasar los controles que no dependen de la
+    doble lectura. Queda registrado quién y cuándo."""
+    quien = _exigir_herramientas(request)
+    cambios = payload.get("cambios")
+    if not isinstance(cambios, list) or not cambios:
+        raise HTTPException(422, "No hay correcciones.")
+    try:
+        return escalas_proceso.corregir(grilla_id, cambios, quien, str(payload.get("nota") or "")[:500])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/entornos/herramientas/escalas/grillas/{grilla_id}/publicar")
+def api_escalas_publicar(request: Request, grilla_id: IdEscalas, payload: dict = Body(default={})):
+    quien = _exigir_herramientas(request)
+    try:
+        return escalas_proceso.publicar_a_mano(grilla_id, quien, str(payload.get("nota") or "")[:500])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/entornos/herramientas/escalas/grillas/{grilla_id}/descartar")
+def api_escalas_descartar(request: Request, grilla_id: IdEscalas, payload: dict = Body(default={})):
+    quien = _exigir_herramientas(request)
+    if not db.descartar_grilla(grilla_id, quien, str(payload.get("nota") or "")[:500]):
+        raise HTTPException(404, "No existe esa grilla o ya no está retenida.")
+    return {"ok": True}
+
+
+def _lanzar_escalas(nombre: str, funcion, *args) -> dict:
+    """Una lectura tarda minutos: se lanza en segundo plano. Una sola por proceso, y
+    como mucho una por minuto entre todas las instancias (cada una gasta IA)."""
+    if not db.reclamar_aviso_diario("escalas-manual", fechas.ahora().strftime("%Y-%m-%d %H:%M")):
+        raise HTTPException(429, "Ya se lanzó una lectura hace menos de un minuto.")
+    if not escalas_proceso.lanzar(nombre, funcion, *args):
+        raise HTTPException(409, "Ya hay una lectura en curso.")
+    return {"ok": True, "lanzada": nombre}
+
+
+@app.post("/api/entornos/herramientas/escalas/buscar")
+def api_escalas_buscar(request: Request, payload: dict = Body(default={})):
+    """«Buscar ahora»: una pasada completa del proceso, en segundo plano. Con `periodo`
+    vuelve a leer la nota de ese mes aunque ya tenga una grilla o haya agotado los
+    intentos."""
+    _exigir_herramientas(request)
+    periodo = str(payload.get("periodo") or "") or None
+    if periodo and not re.fullmatch(r"\d{4}-\d{2}", periodo):
+        raise HTTPException(422, "Período inválido.")
+    return _lanzar_escalas("buscar", escalas_proceso.pasada, None, periodo)
+
+
+@app.post("/api/entornos/herramientas/escalas/ensayo")
+def api_escalas_ensayo(request: Request, payload: dict = Body(...)):
+    """El ensayo de lectura: lee la nota de un período que ya tiene grilla publicada y la
+    compara celda por celda, sin publicar nada."""
+    quien = _exigir_herramientas(request)
+    periodo = str(payload.get("periodo") or "")
+    if not re.fullmatch(r"\d{4}-\d{2}", periodo):
+        raise HTTPException(422, "Período inválido.")
+    if not db.grilla_publicada(periodo):
+        raise HTTPException(422, f"No hay una grilla publicada de {periodo} con qué comparar.")
+    ok, motivo = escalas_lectura.disponible()
+    if not ok:
+        raise HTTPException(503, f"No se puede leer: {motivo}")
+    return _lanzar_escalas("ensayo", escalas_proceso.ensayo, periodo, quien)
+
+
+@app.get("/api/entornos/herramientas/escalas/ensayos/{caso_id}")
+def api_escalas_ensayo_detalle(request: Request, caso_id: IdEscalas):
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_ESCALAS, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese ensayo.")
+    return {"id": c.id, "creado": c.creado, "quien": c.quien, "periodo": c.grilla, "entrada": c.entrada,
+            "esperado": c.esperado, "real": c.real, "diferencias": c.diferencias, "distintos": c.distintos}
+
+
+@app.get("/api/entornos/herramientas/escalas/estado")
+def api_escalas_estado_consulta(request: Request):
+    """Lo que la consulta (bloques 2 y 3) necesita para decir «hay una actualización
+    publicada el dd/mm, la estamos cargando»: solo de la base, nunca llama al sitio."""
+    _exigir_herramientas(request)
+    return db.estado_de_actualizacion()
 
 
 # ==================== Herramientas: Asistente de trámites ====================
@@ -11406,6 +11624,173 @@ def entornos_asistente_casos_csv(request: Request):
     contenido = "﻿" + salida.getvalue()
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="casos-asistente-tramites-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramientas: Convenio y escalas ====================
+# (2026-11-16, PLAN_CONVENIO_ESCALAS.md, bloques 3 y 4) La consulta de la
+# grilla vigente del CCT 18/75 y el convenio en fichas, pintada como la app
+# del afiliado (dos modelos de diseño) para validarla en /entornos antes de
+# pasarla a /app. Es una CONSULTA, no un control: valores sueltos con su
+# etiqueta, nunca un total. Los cálculos son de consulta_escalas.py y
+# convenio_fichas.py (puros); acá solo van las puertas y el armado.
+API_ESCALAS = "/api/entornos/herramientas/escalas"
+ESCALAS_AFILIADO_PRUEBA = "27999999994"      # el afiliado de prueba de La Bancaria
+ESCALAS_AGREGABLES = {"10": "titulo", "22": "caja"}   # artículos que alimentan la selección
+ESCALAS_FICHA_CAMPOS = ("numero", "titulo", "capitulo", "antecedentes", "texto", "resumen",
+                        "resumen_estado", "revisado_por", "revisado_en", "titulo_del_convenio",
+                        "importe_titulo", "importe_nota")
+
+
+def _escalas_sindicato_id():
+    with db.get_session() as s:
+        return s.exec(select(Sindicato.id).where(Sindicato.nombre.ilike("%Bancaria%"))
+                      .order_by(Sindicato.id)).first()
+
+
+def _escalas_actualizacion_pendiente():
+    """La fecha ISO del comunicado más nuevo que la grilla vigente, o None
+    (D9.6). Solo lee la base: al sitio lo consulta el proceso diario."""
+    try:
+        nuevo = db.estado_de_actualizacion().get("comunicado_nuevo")
+        return (nuevo or {}).get("publicada") or None
+    except Exception as e:
+        print(f"[escalas] sin estado de actualización: {type(e).__name__}: {e}")
+        return None
+
+
+def _escalas_vigente(grillas: dict):
+    return grillas[max(grillas)] if grillas else None
+
+
+def _escalas_url_segura(url) -> str:
+    """Solo se enlaza a https de labancaria.org (o un subdominio); otra cosa, vacío."""
+    try:
+        u = urlparse(url) if isinstance(url, str) else None
+    except ValueError:
+        return ""
+    host = (u.hostname or "").lower() if u else ""
+    ok = u and u.scheme == "https" and (host == "labancaria.org" or host.endswith(".labancaria.org"))
+    return url if ok else ""
+
+
+def _escalas_publicacion(periodo) -> dict:
+    """Cuándo y dónde publicó el sindicato la grilla vigente del período (D5):
+    fecha, nota y PDF de la fila publicada. Una lectura sola, ya cerrada (no
+    se anida con ninguna otra sesión)."""
+    vacio = {"publicada_sindicato": "", "fuente_nota": "", "fuente_pdf": ""}
+    try:
+        for f in db.listar_grillas(estados=("publicada",)):
+            if f["periodo"] == periodo:
+                fecha = f.get("publicada_sindicato") or ""
+                return {"publicada_sindicato": fecha if re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha) else "",
+                        "fuente_nota": _escalas_url_segura(f.get("fuente_nota")),
+                        "fuente_pdf": _escalas_url_segura(f.get("fuente_pdf"))}
+    except Exception as e:
+        print(f"[escalas] sin datos de publicación: {type(e).__name__}: {e}")
+    return vacio
+
+
+def _escalas_grilla_resumen(g: dict) -> dict:
+    return {"periodo": g.get("periodo"), "nombre": g.get("nombre"),
+            "firmada": g.get("firmada"),
+            "fuentes": [u for u in (g.get("fuentes") or []) if _escalas_url_segura(u)],
+            **_escalas_publicacion(g.get("periodo"))}
+
+
+def _escalas_ficha(a: dict, grilla) -> dict:
+    ficha = {k: a.get(k) for k in ESCALAS_FICHA_CAMPOS if k in a}
+    ficha.setdefault("titulo_del_convenio", False)
+    renglones = convenio_fichas.importe_vigente(a, grilla) if grilla else None
+    ficha["valores_vigentes"] = ({
+        "periodo": grilla.get("periodo"), "nombre": grilla.get("nombre"), "etiqueta": "publicado",
+        "renglones": [{"rotulo": r["rotulo"], "importe": round(float(r["importe"]), 2),
+                       "etiqueta": "publicado"} for r in renglones]} if renglones else None)
+    ficha["agregable"] = ESCALAS_AGREGABLES.get(str(a["numero"]))
+    return ficha
+
+
+@app.get("/entornos/herramientas/convenio-escalas", response_class=HTMLResponse)
+def entornos_convenio_escalas(request: Request, tema: str = "", paleta: str = ""):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    sid = _escalas_sindicato_id()
+    marca = db.marca_sindicato(sid) if sid else {}
+    apariencia = (db.apariencia_de(sid, ESCALAS_AFILIADO_PRUEBA) if sid
+                  else {"tema": temas.TEMA_DEFECTO, "paleta": temas.PALETA_DEFECTO})
+    # El selector de validación: cambia por la URL, no guarda nada en ninguna cuenta.
+    apariencia = {**apariencia,
+                  "tema": temas.tema_valido(tema) or apariencia["tema"],
+                  "paleta": (temas.paleta_valida(paleta) or apariencia["paleta"]) if marca else "colm3na"}
+    return templates.TemplateResponse("convenio_escalas.html", {
+        "request": request,
+        "sindicato": marca.get("nombre", "") if marca else "",
+        "marca": marca or None,
+        "marca_plataforma": db.marca_plataforma(),
+        "apariencia": apariencia,
+        "hay_marca": bool(marca),
+        "modelos": [(k, v["nombre"]) for k, v in temas.TEMAS.items()],
+        "api": API_ESCALAS,
+    })
+
+
+@app.get(f"{API_ESCALAS}/opciones")
+def api_escalas_opciones(request: Request):
+    _exigir_herramientas(request)
+    g = _escalas_vigente(db.grillas_publicadas())
+    if not g:
+        return {"disponible": False, "mensaje": "Todavía no hay una grilla publicada."}
+    return {"disponible": True, "grilla": _escalas_grilla_resumen(g),
+            **consulta_escalas.opciones(g), "hoy": fechas.hoy_texto(),
+            "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
+
+
+@app.post(f"{API_ESCALAS}/consulta")
+async def api_escalas_consulta(request: Request):
+    _exigir_herramientas(request)
+    try:
+        datos = await request.json()
+    except Exception:
+        raise HTTPException(400, "El pedido no es válido.")
+    if not isinstance(datos, dict) or not isinstance(datos.get("seleccion"), dict):
+        raise HTTPException(400, "Falta la selección.")
+    periodo = datos.get("periodo")
+    if periodo is not None and not isinstance(periodo, str):
+        raise HTTPException(400, "El período no es válido.")
+    grillas = await run_in_threadpool(db.grillas_publicadas)
+    try:
+        res = consulta_escalas.consultar(datos["seleccion"], grillas, periodo)
+        evo = consulta_escalas.evolucion(datos["seleccion"], grillas)
+    except consulta_escalas.ConsultaInvalida as e:
+        raise HTTPException(400, str(e))
+    pub = await run_in_threadpool(_escalas_publicacion, res.get("periodo"))
+    return {**res, "evolucion": evo, "publicacion": pub, "hoy": fechas.hoy_texto(),
+            "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
+
+
+@app.get(f"{API_ESCALAS}/convenio")
+def api_escalas_convenio(request: Request):
+    _exigir_herramientas(request)
+    conv = convenio_fichas.cargar()
+    g = _escalas_vigente(db.grillas_publicadas())
+    return {
+        "convenio": {k: conv.get(k) for k in ("id", "nombre", "descripcion", "sindicato", "fuente", "nota", "leido")},
+        "grilla": {"periodo": g.get("periodo"), "nombre": g.get("nombre")} if g else None,
+        "grupos": convenio_fichas.indice(),
+        "situaciones": [{"id": s["id"], "titulo": s["titulo"], "nota": s.get("nota", ""),
+                         "articulos": list(s["articulos"])} for s in conv["situaciones"]],
+        "articulos": [_escalas_ficha(a, g) for a in list(conv["articulos"]) + list(conv.get("transitorias", []))],
+        "cantidad_articulos": len(conv["articulos"]),
+    }
+
+
+@app.get(API_ESCALAS + "/convenio/articulo/{numero}")
+def api_escalas_articulo(numero: str, request: Request):
+    _exigir_herramientas(request)
+    a = convenio_fichas.articulo(numero)
+    if not a:
+        raise HTTPException(404, "Ese artículo no existe en el convenio.")
+    return _escalas_ficha(a, _escalas_vigente(db.grillas_publicadas()))
 
 
 # ==================== Herramientas: Laboratorio de modelos ====================

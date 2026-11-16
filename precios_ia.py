@@ -64,6 +64,15 @@ USOS = {
                    "pocas llamadas, una o dos por trámite relevado.",
         "default": "claude-sonnet-5",
     },
+    "grilla_salarial": {
+        "nombre": "Lectura de la grilla salarial (Convenio y escalas, Herramientas de Entornos)",
+        "detalle": "Lee las páginas escaneadas del PDF de grillas que publica el sindicato (CCT 18/75) "
+                   "y devuelve cada importe. Cada grilla se lee dos veces, en una llamada por rama más "
+                   "una de adicionales, ROE y Día del Bancario: ocho llamadas por mes. Una grilla "
+                   "solo se publica sola si la doble lectura coincide y pasan los demás controles: antes "
+                   "de bajar de modelo, repetí el ensayo de lectura contra una grilla ya publicada.",
+        "default": "claude-sonnet-5-5",
+    },
 }
 
 

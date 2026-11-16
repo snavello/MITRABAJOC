@@ -11062,3 +11062,131 @@ Corrección doble, cada una alcanza sola: `_impl_formulario` usa el mismo
 `max_request_body_size="never"`, que además es lo que el proyecto ya decía
 (los cuerpos no viajan). `test_implementacion_sentry.py` corre los tests de la
 API en otro proceso con el DSN puesto antes del arranque y un tope de tiempo.
+
+
+## Convenio y escalas: la grilla en la base, la consulta, el convenio en fichas y la actualización automática (2026-11-16, Plataforma 0.71.01)
+
+Plan: `PLAN_CONVENIO_ESCALAS.md` (D1 a D25; donde chocan, mandan D13 a D25).
+Herramienta de `/entornos` con tres partes: la **escala vigente** del CCT 18/75
+(el afiliado elige rama, antigüedad o cargo, título y caja), el **convenio en
+fichas** y la **actualización automática de la grilla**. Hecha por agentes
+Sonnet coordinados por Code, con desarrollo y QA independiente por bloque (quien
+hizo QA no desarrolló). El estado vigente y las reglas están en CLAUDE.md
+(«Herramientas → Convenio y escalas», «Estado actual» 51); acá, la narrativa.
+
+**Las brechas del bloque 0 y cómo se resolvieron.** SDN y Code resolvieron los
+siete «Abiertos» de a una pregunta (D13 a D23) y después dos correcciones al ver
+el producto (D24, D25). Lo que cambió respecto del plan escrito:
+- *Estética* (D13): no es un selector abstracto sino La Bancaria de la base de
+  Pruebas vista como su afiliado de prueba; el selector queda para validar las
+  cuatro combinaciones de modelo y paleta.
+- *Palabras prohibidas* (D14): la lista de D4 estaba mal escrita. La regla es de
+  tono y de alcance; el test exige que no haya total, suma, veredicto ni
+  semáforo, no una lista de palabras. Ante una diferencia entre plan y repo,
+  Code pregunta y sugiere.
+- *Solo muestra* (D15): no compara importes tipeados ni recibos.
+- *ROE* (D16): comunicado por defecto, tabla por tramo si la persona lo carga,
+  siempre Referencia.
+- *Tabla genérica por convenio* (D17), *modelo de lectura* Sonnet 5.5 (D18),
+  *C4 estricta y calibrada con la prueba real* (D19), *dos pasadas por día* (D20),
+  *resúmenes redactados por agentes y sin revisar hasta que alguien los apruebe*
+  (D21), *cargo jerárquico entra* (D22), *quien resuelve una retenida es el equipo,
+  en una página que se muda a `/admin`* (D23).
+- *Situaciones provisorias* (D24): tras el QA del convenio se sacó lo dudoso
+  («Falleció un familiar» llevaba al 55 y al 59, que tratan la muerte del propio
+  agente; ahora solo el 48) y el art. 25 rotula los importes «Zona patagónica,
+  según la grilla vigente» aclarando que la grilla no publica los grupos A a D.
+- *Sin salida hacia Tu recibo* (D25): al ver la primera captura SDN sacó el
+  bloque «¿Querés controlar lo que te pagaron?»; la pantalla cierra con la
+  evolución y su texto fijo.
+- Brechas técnicas: `grilla_bancaria.py` cargaba los archivos al importarse. Se
+  le dio una puerta, `registrar()`, que recalcula la vigente y todas las
+  constantes derivadas y no cambia nada si algo viene mal formado; el módulo sigue
+  sin importar `db`. Quien hizo `from grilla_bancaria import X` se queda con el
+  valor de ese momento (hoy solo el script `cargar_bancaria.py`). La prueba real
+  del bloque 6 corre dentro de Pruebas porque la sesión de Code no tiene clave de
+  la API.
+
+**Bloque 1: las grillas pasan a la base.** `GrillaSalarial` (migración
+`a5c8e1f3b7d2`), semilla desde `data/grillas_bancarias/`, estados `publicada`,
+`retenida`, `reemplazada`, `descartada`, y un índice único parcial: una sola
+publicada por convenio y período. Hallazgo que condicionó todo lo demás: **JSONB
+no conserva el orden de las claves** (las ordena por largo y después alfabéticamente),
+así que la calculadora mostraba las ramas, los títulos y las zonas en otro
+orden. `_con_orden` las ordena explícito (ramas fijas; títulos y zonas por monto
+creciente, como en la grilla firmada). El QA comparó la calculadora antes y
+después sobre el producto cartesiano de entradas (rama, categoría, caja,
+guardería, Día del Bancario, afiliado, tramo de ROE, títulos y zonas) y dio lo
+mismo; encontró la **carrera al publicar** (dos publicaciones del mismo período
+a la vez) y que la tabla nueva faltaba en el inventario de `regularizar_cuit.py`
+(un test falla si aparece una columna con CUIL sin decidir). Corregido en
+`34df5a6`.
+
+**Bloques 2 y 3: el motor de la consulta y las pantallas.** `consulta_escalas.py`
+es puro: dada una selección y un período devuelve los conceptos con importe,
+etiqueta, nota y fuente, y la evolución. El QA de pantallas
+(`test_convenio_escalas_qa.py`) probó entradas hostiles (rama o años de otro tipo,
+booleanos, `NaN`, cuerpos que no son JSON, años como texto con signo o guiones
+bajos): todo da 400, nunca 500; tipos estrictos en la API. Encontró además el
+orden fijo de los títulos, la tarjeta de la grilla sin fecha de publicación ni
+PDF, el foco invisible en los dos modelos, el ROE por mes sin forma de quitarlo, la
+selección guardada que la grilla nueva ya no admite y el buscador que no
+encontraba por número de artículo. Corregido en `3845f55`.
+
+**Bloque 4: el convenio en fichas.** `data/convenios/cct-18-75.json` (62
+artículos más las disposiciones transitorias, texto literal) y
+`convenio_fichas.py`, puro. El QA encontró resúmenes y mapeos dudosos (el 55 y el
+59 bajo «Falleció un familiar») y el art. 25 mostrando importes sin decir de qué
+grupo; de ahí D24. Los números de artículo de la maqueta eran de ejemplo: mandan
+los del PDF.
+
+**Bloque 5: la actualización automática.** `escalas_fuente` (busca por la
+interfaz de WordPress, solo `urllib`, parseo puro probado con las respuestas
+reales guardadas en `fixtures/escalas/`), `escalas_lectura` (PDF a imágenes,
+una llamada por rama y una más de adicionales, ROE y Día del Bancario, ocho por
+mes; la IA recibe la grilla vigente solo como plantilla de estructura, sin
+importes), `escalas_controles` (C1 a C6) y `escalas_proceso` (la pasada, el
+hilo, los avisos y la vista de estado). Migración `b6d9e2a4c8f1`: la columna del
+quinto uso de IA y la tabla `escalanovedad`.
+
+*Hallazgos del sitio real* (los puso la fuente, no el plan):
+- el PDF de la grilla no está enlazado como `<a>`: va dentro de un `<iframe
+  src="https://labancaria.org/?url=<PDF>&title=...">`, el visor embebido;
+- una nota puede traer **dos PDF** (el de las grillas y el texto del acuerdo): se
+  elige el que dice «grilla» en el nombre;
+- el comunicado de septiembre viene **partido en un `<span>` por dígito**, así que
+  hay que juntar el texto antes de buscar el inicial, el ROE y el porcentaje;
+- **el apareo es por fecha, no por título**: la nota de grillas del 20-10-26 es la
+  de septiembre y la del 11-09-26 es la de agosto, y el período es el MES del
+  comunicado. Un salto (llegó octubre y falta septiembre) no se lee: C6 lo
+  retendría, y se avisa una vez.
+
+*Verificación del factor con los comunicados reales* (lo que la nota de C4 pedía
+medir). El porcentaje del comunicado está redondeado, así que no se controla
+contra `anterior × 1,019` exacto sino contra el intervalo de factores que
+explica el redondeo al centavo de todas las celdas a la vez:
+- agosto → septiembre de 2026 («1,9 %»): el factor cae en
+  **[1,01896125322; 1,01896125502]**;
+- septiembre → octubre: **[1,0218446609; 1,0218446648]**.
+Un solo factor consistente en las ~495 celdas de la grilla, con una rendija de ~2e-9, es
+lo que hace de C4 un control fuerte. Se midió que escalan con ese factor los
+básicos, conformados, adicionales, montos anuales del ROE y los tres valores del
+Día del Bancario; no escalan los coeficientes y años (estructura), la conectividad
+(por trimestre) ni, con una duda abierta, los topes `hasta` de los tramos de ROE
+(se aceptan iguales o escalados, y el detalle dice cuál pasó).
+
+*Hallazgos del QA de la actualización* (`test_escalas_qa.py`, los defectos abiertos
+entraron primero como `xfail`; corregidos en `fa1c7e0`): una conectividad de un
+trimestre nuevo 30 veces mayor pasaba los seis controles porque nada la miraba
+(ahora un trimestre nuevo retiene siempre); C4 aceptaba un factor flojo
+(ahora exige uno único compatible con el redondeo de todas las celdas); el gasto
+de IA no se registraba si la respuesta venía mal formada (una lectura que la API
+contestó ya se pagó); y corregir una retenida no validaba rutas, valores ni ids.
+Aparte: el cartel «actualización pendiente» leía el sitio en vez de lo que vio el
+proceso diario (`4f40caa`).
+
+**Qué falta** (también en CLAUDE.md, «Estado actual» 51): la prueba real del
+bloque 6 en Pruebas (ensayo de agosto contra la transcripta a mano y carga de
+septiembre, con lo que se calibra C4); la acción para marcar un resumen como
+revisado (D21), que **no existe todavía**; y el pase a la app del afiliado (D12),
+con la vista de estado en `/admin` (D23).

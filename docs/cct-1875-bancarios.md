@@ -267,20 +267,30 @@ cubre 120 días hacia atrás y no llega a un noviembre.
 
 ## Cuando sale una grilla nueva
 
-La simulación y la Calculadora bancaria de `/entornos` → Herramientas leen
-las grillas de `data/grillas_bancarias/AAAA-MM.json`, una por mes. Para
-sumar una:
+Desde Convenio y escalas (2026-11-16) las grillas **viven en la base**
+(`GrillaSalarial`); la Calculadora bancaria de `/entornos` → Herramientas y la
+consulta de escala vigente leen las publicadas. Ya no hace falta un despliegue
+para sumar un mes:
 
-1. Bajar el PDF firmado de labancaria.org (sección "Grillas") y leer las
-   páginas: son escaneadas, sin texto.
-2. Copiar el JSON del mes anterior como `AAAA-MM.json` y cambiar `periodo`,
-   `nombre`, `firmada`, `fuentes` y todos los montos (las tres ramas, los
-   adicionales, la conectividad del trimestre, el ROE y el Día del Bancario).
-3. `python -m pytest test_calculadora_bancaria.py`: el test de coherencia
-   falla si un básico no es coeficiente × la misma unidad que los demás (un
-   dígito mal copiado) o si falta algo de la estructura.
-4. Con la grilla nueva, el lote (`cargar_bancaria.py`) pasa a usar sus
-   montos; `--rehacer-recibos` regenera los recibos de la demo.
+1. **Entra sola.** El proceso diario (`escalas_proceso.py`, en Pruebas con
+   `ESCALAS_AUTO=1`) encuentra la nota «GRILLAS ACTUALIZACIÓN SALARIAL» en
+   labancaria.org, lee el PDF escaneado dos veces con IA, corre los seis
+   controles y, si pasan todos, la publica y avisa por Telegram.
+2. **Si queda retenida**, o el proceso está apagado, se resuelve en la vista de
+   estado (`/entornos/herramientas/convenio-escalas/estado`): «Buscar ahora»,
+   corregir las celdas que no pasaron contra el PDF y volver a controlar, y
+   publicar o descartar. Queda registrado quién y cuándo.
+3. Un trimestre nuevo de conectividad retiene siempre: se revisa contra el PDF.
+4. Con la grilla nueva publicada, el lote (`cargar_bancaria.py`, un script)
+   toma los montos de la **semilla** de `data/grillas_bancarias/`; para que la
+   demo use el mes nuevo hay que sumarle a la semilla el `AAAA-MM.json`
+   (copiar el del mes anterior y cambiar `periodo`, `nombre`, `firmada`,
+   `fuentes` y todos los montos) y correr `--rehacer-recibos`.
+   `python -m pytest test_calculadora_bancaria.py` falla si un básico no es
+   coeficiente × la misma unidad (un dígito mal copiado).
+
+El archivo de `data/grillas_bancarias/` es solo la semilla de una base nueva
+(`db.sembrar_grillas`).
 
 Este documento conserva la transcripción de agosto 2026 como referencia.
 
