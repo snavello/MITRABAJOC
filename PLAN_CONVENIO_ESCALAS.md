@@ -199,6 +199,14 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   herramienta pase a la app, esa página se muda al menú del sindicato
   (`/admin`) con permiso propio: se construye para que mudarla sea mover la
   página.
+- **D24 · Las situaciones son provisorias** (SDN, 2026-11-16, tras el QA del
+  convenio): las seis tarjetas de la maqueta eran un ejemplo. Se reordenan o
+  se cambian cuando existan las preguntas frecuentes y según lo que la gente
+  consulte. Mientras tanto, lo dudoso se saca: «Falleció un familiar» lleva
+  solo al art. 48 (el 55 y el 59 tratan la muerte del propio agente). La
+  ficha del art. 25 muestra los importes de la grilla con el rótulo «Zona
+  patagónica, según la grilla vigente» y la aclaración de que la grilla no
+  publica los grupos A a D.
 
 Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
 archivos al importarse (necesita una puerta para recibir las publicadas y

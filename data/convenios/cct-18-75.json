@@ -133,7 +133,7 @@
    "articulos": [
     48
    ],
-   "nota": "El artículo 48 trae la licencia por nacimiento de hijo."
+   "nota": "El artículo 48 prevé 2 días laborables por nacimiento de hijo. Las licencias por maternidad, paternidad y adopción no están en este convenio: las fijan las leyes laborales."
   },
   {
    "id": "me-caso",
@@ -176,11 +176,9 @@
    "id": "fallecimiento",
    "titulo": "Falleció un familiar",
    "articulos": [
-    48,
-    55,
-    59
+    48
    ],
-   "nota": "El 48 trae la licencia por fallecimiento de familiares; el 55, el subsidio por fallecimiento del agente; el 59, el ingreso de un hijo."
+   "nota": "El artículo 48 trae la licencia por fallecimiento de familiares."
   }
  ],
  "articulos": [
