@@ -11190,3 +11190,36 @@ bloque 6 en Pruebas (ensayo de agosto contra la transcripta a mano y carga de
 septiembre, con lo que se calibra C4); la acción para marcar un resumen como
 revisado (D21), que **no existe todavía**; y el pase a la app del afiliado (D12),
 con la vista de estado en `/admin` (D23).
+
+### La prueba real (bloque 6, 2026-11-16, Plataforma 0.71.02 a 0.71.04)
+
+Corrió como Job de Render dentro de Pruebas (la sesión de Code no tiene la clave
+de la API), leyendo el log del Job por la API de Render. Cuatro vueltas:
+
+1. **Primer intento del ensayo de agosto: 400 antes de leer.** `tool_choice:
+   {"type": "any"}`: Sonnet 5.5 no admite la herramienta forzada. Origen: la
+   app. Pasó a `auto` + esquema estricto + la instrucción de llamarla (PR #232).
+2. **Segundo intento: las tres ramas se leyeron y la cuarta llamada dio 400.**
+   El esquema estricto de «resto» tenía 18 parámetros que pueden ser null y la
+   API admite 16. Los adicionales pasaron a viajar como filas clave + importe
+   (10 anulables) y un test cuenta el tope (PR #233). Ninguna de las dos cosas
+   se podía ver con la IA simulada.
+3. **Ensayo de agosto: 622 de 622 celdas iguales a la transcripta a mano, en
+   las dos lecturas.** 8 llamadas, 199.128 tokens de entrada y 12.540 de salida
+   (unos US$ 0,52 a precio de lista).
+4. **Septiembre: retenida con la lectura correcta.** C2, C3, C5 y C6 pasaron;
+   C4 falló por dos topes de tramo del ROE a 1 peso del redondeo (el sindicato
+   publicó 4.323.405 y 5.188.128; vigente × factor daba 4.323.405,72 y
+   5.188.128,85: a veces trunca) y C1 porque el PDF ya no trae la conectividad
+   del trimestre junio–agosto. SDN decidió D26 y D27 (PR #234, con QA
+   independiente aprobado), se descartó la retenida y la pasada forzada la
+   **publicó sola**: 193 importes con un único factor 1,01896125, desvío máximo
+   $ 0,0103, exceso 0.
+
+**Octubre entró sola en esa misma pasada** (el sindicato publicó la nota de
+grillas ese día) y quedó **retenida por C1**, bien retenida: en el PDF una
+firma tapa el básico de Maestranza · Capataz Gral. y la IA devolvió null en las
+dos lecturas («se lee 3.?22.194,42») en vez de completar. Todo lo demás pasó
+(192 importes con factor 1,02184466, que redondea al 2,2 % del comunicado). El
+valor que da el factor para esa celda es 3.622.194,41 o 42: lo resuelve una
+persona mirando el PDF desde la vista de estado.
