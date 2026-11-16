@@ -11235,3 +11235,15 @@ QA independiente midió el centavo (193 celdas, una por vez: 181 exactas y 12 a
 ±0,01, ninguna peor) y encontró que un conformado vacío se completaba aunque el
 convenio pudiera haberlo sacado: ahora un conformado solo se completa si hay
 lectura parcial que pruebe que hay una cifra.
+
+Con D28 y D29 desplegadas se descartó la retenida y la pasada forzada **publicó
+octubre sola**: la IA dejó «3.?22.194,42» en el campo de lectura parcial y el
+cálculo dio $ 3.622.194,42. **D30 (Plataforma 0.73.01)**: SDN pidió subir todas
+las tolerancias de importe a $ 10. El factor del mes se sigue midiendo al
+centavo (si no, una celda tapada se calcularía mal) y lo que se afloja es el
+veredicto por celda. El QA midió el costo: un corrimiento de +$ 9 por mes en lo
+que el comunicado no ancla se acumula (9 → 57 a los 6 meses → 121 a los 12),
+porque cada grilla se compara contra la anterior; quedó dicho como límite. En la
+misma tanda, la vista de estado se rehízo en claro: resumen arriba, la retenida
+explicada con el campo para cargar el valor, y los seis controles con nombre en
+castellano.
