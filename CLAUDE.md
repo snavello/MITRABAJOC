@@ -1846,14 +1846,26 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     convenio dudosos, una conectividad nueva que ningún control miraba, un C4
     flojo, y gasto de IA sin registrar cuando la respuesta venía mal formada:
     todo corregido. Ver «Herramientas → Convenio y escalas» y HISTORIAL.md.
-    **Queda**: (a) la prueba real del bloque 6 en Pruebas (la sesión de Code no
-    tiene la clave de la API): el ensayo de agosto contra la transcripta a mano
-    y la carga de septiembre, con lo que se calibra C4 (SDN ve el número antes
-    de fijarlo); (b) marcar los resúmenes como revisados desde la herramienta
-    (D21): **todavía no está construido**, no hay ninguna ruta que escriba
-    `revisado`, hoy la pantalla solo muestra «sin revisar»; (c) el pase a la
-    app del afiliado (D12), la vista de estado en `/admin` (D23) y la brecha de
-    la conectividad nueva (hoy retiene siempre).
+    **Bloque 6 HECHO, la prueba real** (mismo día, Plataforma 0.71.04, corrida
+    como Job de Render en Pruebas): **agosto**, la lectura automática coincide
+    con la transcripta a mano en las 622 celdas, en las dos lecturas;
+    **septiembre** la publicó el propio proceso con los seis controles en verde
+    (193 importes con un único factor 1,01896125, desvío máximo un centavo), y
+    es la vigente en Pruebas; **octubre** (el sindicato la publicó ese día)
+    entró sola y quedó **retenida** por C1: una firma tapa una celda del PDF
+    (Maestranza · Capataz Gral. · básico) y la IA devolvió vacío en vez de
+    adivinar. La prueba destapó dos límites de la API que la IA simulada no
+    mostraba (Sonnet 5.5 no admite la herramienta forzada; un esquema estricto
+    admite hasta 16 campos anulables) y calibró dos reglas con SDN: **D26**
+    (los topes de tramo del ROE aceptan 1 peso) y **D27** (un trimestre de
+    conectividad vencido puede faltar y se conserva). Costo: unos US$ 0,50 por
+    grilla (8 llamadas). **Queda**: (a) que alguien resuelva la retenida de
+    octubre mirando el PDF (vista de estado); (b) marcar los resúmenes como
+    revisados desde la herramienta (D21): **todavía no está construido**, hoy
+    la pantalla solo muestra «sin revisar»; (c) el pase a la app del afiliado
+    (D12), la vista de estado en `/admin` (D23) y la conectividad de un
+    trimestre nuevo (retiene siempre); (d) prender `ESCALAS_AUTO=1` en Pruebas
+    cuando SDN lo decida (el hilo sigue apagado).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -2526,8 +2538,8 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
 
 **Convenio y escalas** (`templates/convenio_escalas.html`,
 `static/convenio_escalas.js`, rutas `/api/entornos/herramientas/escalas/*`;
-`PLAN_CONVENIO_ESCALAS.md` D1–D25, donde D13 a D25 mandan sobre D1 a D12;
-2026-11-16, Plataforma 0.71.01):
+`PLAN_CONVENIO_ESCALAS.md` D1–D27, donde D13 a D27 mandan sobre D1 a D12;
+2026-11-16, Plataforma 0.71.04):
 - **Dónde vive**: `/entornos/herramientas/convenio-escalas`, misma puerta que
   las otras herramientas (`_exigir_pase` en la página, `_exigir_herramientas` en
   la API, 404 en demo). No toca `/app`, Tu recibo, `/app/convenio` ni la
@@ -2570,7 +2582,13 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   del comunicado, C4 factor único, C5 coherencia interna, C6 período) y **publica
   sola si pasan todos o queda `retenida` con el detalle**, avisando por Telegram
   en los dos casos. La vigente sigue siendo la anterior hasta que se resuelve.
-  `TOLERANCIAS` arrancan estrictas y se calibran con la prueba real (D19).
+  `TOLERANCIAS` se calibraron con la septiembre real (D19): importes al centavo
+  con un factor único; los topes de tramo del ROE aceptan 1 peso (D26).
+  **Un trimestre de conectividad vencido puede faltar en el PDF** y la grilla
+  nueva lo conserva de la anterior, dicho en la nota (D27).
+  **La lectura nunca fuerza la herramienta** (`tool_choice` va en `auto` con
+  esquema estricto: Sonnet 5.5 rechaza `any`/`tool`) y **el esquema estricto no
+  pasa de 16 campos anulables** (`escalas_lectura.LIMITE_UNIONES`, con test).
   **Un trimestre nuevo de conectividad retiene siempre**
   (`RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD`): no escala con el factor del mes y
   no hay contra qué compararla.
