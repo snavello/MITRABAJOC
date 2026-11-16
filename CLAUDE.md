@@ -119,7 +119,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
 - precios_ia.py — catálogo de precios de la API (`data/precios_ia.json`), el
-  costo de cada llamada y los tres usos configurables. Puro, no importa db.
+  costo de cada llamada y los usos configurables (los tres de arriba, el
+  Asistente de trámites y, desde 2026-11-16, `grilla_salarial`). Puro, no importa db.
 - tu_dia.py — «Tu día», la franja de la portada del afiliado: rubros,
   configuración por sindicato (`Sindicato.tu_dia`), ítem del día
   determinista, **la trivia diaria** (`trivia_del_dia`: diez preguntas por
@@ -272,11 +273,22 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - cargar_bancaria.py — alta de "La Bancaria" con los conceptos del CCT 18/75
   (ver `docs/cct-1875-bancarios.md`) + su lote. `--rehacer-recibos` regenera
   solo los recibos del lote; `--borrar-recibos-de CUIL [--si]` borra los de
-  una persona. Los montos salen de `grilla_bancaria.py` (puro), que lee las
-  grillas de `data/grillas_bancarias/AAAA-MM.json` (una por mes, transcriptas
-  del PDF firmado; hoy agosto 2026) y arma el recibo que corresponde para la
-  Calculadora bancaria (ver "Herramientas"); `docs/recibos-bancaria-prueba/`
+  una persona. Los montos salen de `grilla_bancaria.py` (puro, no importa `db`),
+  que arma el recibo que corresponde para la Calculadora bancaria (ver
+  "Herramientas"). **Las grillas viven en la base** (`GrillaSalarial`, una por
+  convenio y mes; ver "Convenio y escalas"): los `data/grillas_bancarias/AAAA-MM.json`
+  (hoy agosto 2026, transcripta del PDF firmado) son solo la SEMILLA, y la app
+  le pasa las publicadas con `grilla_bancaria.registrar()`. `cargar_bancaria.py`,
+  un script, sigue leyendo la semilla. `docs/recibos-bancaria-prueba/`
   tiene diez recibos PDF simulados del CUIL de prueba 27999999994.
+- consulta_escalas.py — motor PURO de la consulta «Escala vigente» (opciones,
+  selección, conceptos con etiqueta y evolución); `convenio_fichas.py` +
+  `data/convenios/cct-18-75.json` — el CCT 18/75 en fichas (texto literal,
+  situaciones, resúmenes `sin_revisar`); `escalas_fuente.py` (busca en
+  labancaria.org), `escalas_lectura.py` (PDF escaneado → IA, dos veces),
+  `escalas_controles.py` (los seis controles C1 a C6, puro) y `escalas_proceso.py`
+  (la pasada, el hilo diario y la publicación). Los cuatro últimos son la
+  actualización automática de la grilla; ver "Herramientas → Convenio y escalas".
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
@@ -517,6 +529,13 @@ alta los administradores y cómo ingresa la clave»):
   sin las dos, apagado: el botón no se dibuja y las rutas dan 404. Lleva una
   sola URL de retorno por entorno (`/ingresar/google/callback`). Pasos en
   `DESPLIEGUE_RENDER.md`.
+- ESCALAS_AUTO / ESCALAS_HORAS — el proceso diario que actualiza la grilla
+  salarial (`escalas_proceso.py`, ver «Convenio y escalas»). `ESCALAS_AUTO=1`
+  prende el hilo y SOLO corre en el entorno `pruebas`; sin la variable, apagado
+  (el botón «Buscar ahora» de la vista de estado anda igual). `ESCALAS_HORAS`
+  son las pasadas, hora de Buenos Aires (default `10:00,16:00`). Para leer
+  necesita `ANTHROPIC_API_KEY` y `MOCK_EXTRACTOR` distinto de 1; los avisos
+  salen por Telegram si está configurado.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
@@ -1814,6 +1833,28 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (I16).
     Ver "Herramientas" y HISTORIAL.md, «Mesa de implementación».
 
+51. **Convenio y escalas** (2026-11-16, Plataforma 0.71.01,
+    `PLAN_CONVENIO_ESCALAS.md` D1–D25; pedido de SDN): Herramienta de
+    `/entornos` con la escala vigente del CCT 18/75 (rama, antigüedad o cargo,
+    título y caja; cada valor con su etiqueta Publicado o Referencia), el
+    convenio en fichas con buscador y la actualización automática de la grilla
+    (buscar en labancaria.org, leer el PDF dos veces con IA, seis controles,
+    publicar o retener). Las grillas pasaron de archivos a la base. Hecho por
+    agentes Sonnet coordinados por Code, con desarrollo y QA independiente por
+    bloque. El QA encontró una carrera al publicar, el inventario de CUIL sin
+    la tabla nueva, entradas hostiles que daban 500, resúmenes y mapeos del
+    convenio dudosos, una conectividad nueva que ningún control miraba, un C4
+    flojo, y gasto de IA sin registrar cuando la respuesta venía mal formada:
+    todo corregido. Ver «Herramientas → Convenio y escalas» y HISTORIAL.md.
+    **Queda**: (a) la prueba real del bloque 6 en Pruebas (la sesión de Code no
+    tiene la clave de la API): el ensayo de agosto contra la transcripta a mano
+    y la carga de septiembre, con lo que se calibra C4 (SDN ve el número antes
+    de fijarlo); (b) marcar los resúmenes como revisados desde la herramienta
+    (D21): **todavía no está construido**, no hay ninguna ruta que escriba
+    `revisado`, hoy la pantalla solo muestra «sin revisar»; (c) el pase a la
+    app del afiliado (D12), la vista de estado en `/admin` (D23) y la brecha de
+    la conectividad nueva (hoy retiene siempre).
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -2482,6 +2523,90 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
 - Lo que sale del tope: pendientes vigentes + pagadas; vencidas y anuladas
   no. Anular desde el panel solo una pendiente o una cortesía; un pago hecho
   se devuelve desde MercadoPago.
+
+**Convenio y escalas** (`templates/convenio_escalas.html`,
+`static/convenio_escalas.js`, rutas `/api/entornos/herramientas/escalas/*`;
+`PLAN_CONVENIO_ESCALAS.md` D1–D25, donde D13 a D25 mandan sobre D1 a D12;
+2026-11-16, Plataforma 0.71.01):
+- **Dónde vive**: `/entornos/herramientas/convenio-escalas`, misma puerta que
+  las otras herramientas (`_exigir_pase` en la página, `_exigir_herramientas` en
+  la API, 404 en demo). No toca `/app`, Tu recibo, `/app/convenio` ni la
+  Calculadora. Tres vistas: Escala vigente, Convenio y la vista de estado.
+- **Se ve como la app del afiliado** (D13): con la marca de La Bancaria de la
+  base de Pruebas y el afiliado de prueba (27999999994), vía `db.marca_sindicato`
+  / `db.apariencia_de`; sin La Bancaria cae a Colm3na. Un selector (`?tema=` y
+  `?paleta=`, no guarda nada) prueba las cuatro combinaciones de modelo y
+  paleta. Hojas `static/temas/{laguna,noticiero}-escalas.css`.
+- **Es una consulta, no un control** (D4, D14, D15, D25): ningún total, ninguna
+  suma, ningún veredicto ni semáforo, no compara con ningún recibo ni importe
+  tipeado, y el texto fijo de alcance siempre visible. **No hay lista de palabras
+  prohibidas** (D14: «control» se usa donde corresponde); lo que se exige es el
+  tono y el alcance. **No hay salida hacia Tu recibo** (D25).
+- **Toda cifra lleva su etiqueta** (D5): **Publicado** (período, fecha de
+  publicación y enlace al PDF) o **Referencia**. Evolución (D7): un solo valor de
+  la categoría elegida (el conformado; el básico en un cargo jerárquico, D22),
+  solo meses con grilla publicada.
+- **ROE** (D16): por defecto el valor mensual del comunicado, **Referencia**;
+  si la persona carga el tramo de su banco, el valor de la tabla para ese tramo,
+  también Referencia. El sistema no sabe la banda del banco.
+- **La selección vive en el navegador** (D6, tilde «Recordar mi selección»); una
+  guardada que la grilla nueva ya no admite se descarta. Dónde se guarda en la
+  app es del pase (D12).
+- **Grillas en la base, por convenio** (D8, D17): `GrillaSalarial` (genérica,
+  columna `convenio`, hoy `cct-18-75`; estados `publicada`, `retenida`,
+  `reemplazada`, `descartada`; una sola publicada por convenio y período, lo
+  fuerza un índice único parcial), migración `a5c8e1f3b7d2`. El archivo de
+  `data/` es la semilla (`db.sembrar_grillas`). `grilla_bancaria.py` sigue puro
+  y recibe las publicadas por `registrar()`; la Calculadora da lo mismo que antes
+  (`test_grillas_base*.py`). **JSONB no conserva el orden de las claves**: todo
+  lo que se muestra (ramas, títulos, zonas, jerarquías) se ordena explícito
+  (`grilla_bancaria._con_orden`); nunca se confía en el orden que vuelve de la base.
+- **Actualización automática** (D9, D18–D20): `escalas_proceso.pasada` busca en
+  labancaria.org (`escalas_fuente`: la nota de grillas y el comunicado del mismo
+  mes, el período es el MES del comunicado), lee el PDF **dos veces** en
+  llamadas independientes (`escalas_lectura`, una por rama y una de adicionales,
+  ROE y Día del Bancario; nunca completa un importe que no leyó), corre los seis
+  controles (`escalas_controles`, puro: C1 estructura, C2 doble lectura, C3 anclas
+  del comunicado, C4 factor único, C5 coherencia interna, C6 período) y **publica
+  sola si pasan todos o queda `retenida` con el detalle**, avisando por Telegram
+  en los dos casos. La vigente sigue siendo la anterior hasta que se resuelve.
+  `TOLERANCIAS` arrancan estrictas y se calibran con la prueba real (D19).
+  **Un trimestre nuevo de conectividad retiene siempre**
+  (`RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD`): no escala con el factor del mes y
+  no hay contra qué compararla.
+- **No gasta IA de más**: una nota con grilla de cualquier estado o que agotó
+  sus intentos no se vuelve a leer (reclamo con INSERT condicional), un salto de
+  período no se lee, y dos instancias no publican dos veces.
+- **El hilo es solo de Pruebas con `ESCALAS_AUTO=1`** (pasadas a `ESCALAS_HORAS`,
+  default 10:00 y 16:00 de Buenos Aires; si el día 21 no hay grilla del mes, avisa
+  una vez). Nunca tumba el arranque. Mientras hay un comunicado nuevo sin grilla
+  publicada, la consulta lo dice («Hay una actualización publicada el dd/mm. La
+  estamos cargando.»).
+- **Vista de estado para el equipo** (D23): `/entornos/herramientas/convenio-escalas/estado`
+  (estética de `/entornos`, no enlazada desde ningún menú): grillas y su detalle
+  por control, «Buscar ahora», ensayo de lectura contra una grilla ya publicada
+  (sin publicar nada), corregir celdas de una retenida y volver a controlar,
+  publicar o descartar con registro de quién y cuándo. Cuando el sindicato
+  apruebe y la herramienta pase a la app, esa página se muda al menú de `/admin`
+  con permiso propio: se construyó para que sea mover la página.
+- **Convenio en fichas, sin IA** (D3, D11, D24): `data/convenios/cct-18-75.json`
+  con el texto **literal** de cada artículo, buscador en el navegador y entradas
+  por situación. **Los resúmenes «en simple» nacen `sin_revisar`** y la pantalla
+  lo dice; las situaciones son provisorias (D24) y lo dudoso se saca («Falleció un
+  familiar» va solo al art. 48). Marcarlos revisados (D21) todavía no está
+  construido.
+- **Quinto uso de IA** `grilla_salarial` (`precios_ia.USOS`, default
+  `claude-sonnet-5-5`, `db.modelo_ia("grilla_salarial")`, columna
+  `ConfiguracionPlataforma.modelo_grilla_salarial`, migración `b6d9e2a4c8f1`),
+  elegible en `/plataforma` → Uso de IA y registrado en `UsoIA`, también cuando la
+  respuesta viene mal formada. Antes de bajar de modelo hay que repetir el ensayo
+  de lectura contra una grilla publicada. La tabla `EscalaNovedad` (notas vistas)
+  está en el inventario de `regularizar_cuit.py`.
+- Tests: `test_grillas_base.py` y `_qa`, `test_consulta_escalas.py`,
+  `test_convenio_fichas.py`, `test_convenio_escalas_pantalla.py` y `_qa`,
+  `test_escalas_fuente.py` (con las respuestas reales de `fixtures/escalas/`),
+  `_controles` (grillas adulteradas a propósito), `_lectura`, `_proceso` y `_qa`.
+  Guía para quien valide: `docs/GUIA_CONVENIO_ESCALAS.md`.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
