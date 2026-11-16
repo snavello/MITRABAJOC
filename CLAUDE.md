@@ -1859,13 +1859,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     admite hasta 16 campos anulables) y calibró dos reglas con SDN: **D26**
     (los topes de tramo del ROE aceptan 1 peso) y **D27** (un trimestre de
     conectividad vencido puede faltar y se conserva). Costo: unos US$ 0,50 por
-    grilla (8 llamadas). **Queda**: (a) que alguien resuelva la retenida de
-    octubre mirando el PDF (vista de estado); (b) marcar los resúmenes como
+    grilla (8 llamadas). **Mismo día, Plataforma 0.72.01 y 0.73.01**: D28
+    (una celda tapada se completa por cálculo) y D29 (los comentarios de la IA
+    no retienen), con lo que **octubre se publicó sola y es la vigente**; D30
+    (tolerancias a $ 10); la vista de estado rediseñada en claro; y el proceso
+    diario **prendido** en Pruebas (`ESCALAS_AUTO=1`). **Queda**: (b) marcar los resúmenes como
     revisados desde la herramienta (D21): **todavía no está construido**, hoy
     la pantalla solo muestra «sin revisar»; (c) el pase a la app del afiliado
     (D12), la vista de estado en `/admin` (D23) y la conectividad de un
-    trimestre nuevo (retiene siempre); (d) prender `ESCALAS_AUTO=1` en Pruebas
-    cuando SDN lo decida (el hilo sigue apagado).
+    trimestre nuevo (retiene siempre).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -2538,8 +2540,8 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
 
 **Convenio y escalas** (`templates/convenio_escalas.html`,
 `static/convenio_escalas.js`, rutas `/api/entornos/herramientas/escalas/*`;
-`PLAN_CONVENIO_ESCALAS.md` D1–D29, donde D13 a D29 mandan sobre D1 a D12;
-2026-11-16, Plataforma 0.72.01):
+`PLAN_CONVENIO_ESCALAS.md` D1–D30, donde D13 a D30 mandan sobre D1 a D12;
+2026-11-16, Plataforma 0.73.01):
 - **Dónde vive**: `/entornos/herramientas/convenio-escalas`, misma puerta que
   las otras herramientas (`_exigir_pase` en la página, `_exigir_herramientas` en
   la API, 404 en demo). No toca `/app`, Tu recibo, `/app/convenio` ni la
@@ -2582,8 +2584,11 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   del comunicado, C4 factor único, C5 coherencia interna, C6 período) y **publica
   sola si pasan todos o queda `retenida` con el detalle**, avisando por Telegram
   en los dos casos. La vigente sigue siendo la anterior hasta que se resuelve.
-  `TOLERANCIAS` se calibraron con la septiembre real (D19): importes al centavo
-  con un factor único; los topes de tramo del ROE aceptan 1 peso (D26).
+  **Todas las tolerancias de importe son de $ 10** (D30, `TOLERANCIA_PESOS`:
+  anclas, factor único, topes del ROE y coherencia interna); el factor del mes
+  se sigue midiendo al centavo y la doble lectura sigue exacta. Límite sabido:
+  un corrimiento de hasta $ 10 por celda puede acumularse mes a mes en lo que
+  el comunicado no ancla (medido: $ 121 en 12 meses).
   **Un trimestre de conectividad vencido puede faltar en el PDF** y la grilla
   nueva lo conserva de la anterior, dicho en la nota (D27).
   **La lectura nunca fuerza la herramienta** (`tool_choice` va en `auto` con
@@ -2607,7 +2612,11 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   publicada, la consulta lo dice («Hay una actualización publicada el dd/mm. La
   estamos cargando.»).
 - **Vista de estado para el equipo** (D23): `/entornos/herramientas/convenio-escalas/estado`
-  (estética de `/entornos`, no enlazada desde ningún menú): grillas y su detalle
+  (fondo claro, `static/escalas_estado.css`; se abre desde la tarjeta de
+  Herramientas): resumen en lenguaje llano (escala vigente, si hay algo para
+  hacer, proceso diario), las retenidas primero con el porqué y el campo para
+  cargar el valor, los seis controles con nombre y explicación en castellano
+  (nunca «C1…C6» a secas ni rutas técnicas a la vista), historial y su detalle
   por control, «Buscar ahora», ensayo de lectura contra una grilla ya publicada
   (sin publicar nada), corregir celdas de una retenida y volver a controlar,
   publicar o descartar con registro de quién y cuándo. Cuando el sindicato

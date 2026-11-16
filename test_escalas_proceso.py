@@ -577,10 +577,10 @@ def test_la_pantalla_no_usa_innerhtml_y_carga_sus_archivos_con_sello():
     js = (Path(__file__).parent / "static" / "escalas_estado.js").read_text(encoding="utf-8")
     html = (Path(__file__).parent / "templates" / "escalas_estado.html").read_text(encoding="utf-8")
     assert "innerHTML" not in js and "insertAdjacentHTML" not in js and "document.write" not in js
-    assert "sello_static('escalas_estado.js')" in html and "sello_static('fonts/" in html
+    assert "sello_static('escalas_estado.js')" in html and "sello_static('escalas_estado.css')" in html and "sello_static('fonts/" in html
     c = _con_pase()
     cuerpo = c.get("/entornos/herramientas/convenio-escalas/estado").text
-    assert "/static/escalas_estado.js?v=" in cuerpo and "Estado de las grillas" in cuerpo
+    assert "/static/escalas_estado.js?v=" in cuerpo and "/static/escalas_estado.css?v=" in cuerpo and "Estado de las grillas" in cuerpo
 
 
 # ------------------------------------------------- D26 y D27: la primera grilla real (septiembre 2026)
@@ -603,7 +603,7 @@ def test_la_septiembre_real_se_publica_sola_y_conserva_el_trimestre_de_conectivi
 def test_retenida_descartada_y_pasada_forzada_publica_sola_avisa_y_refresca_la_calculadora(entorno_limpio):
     """El camino de SDN: la primera lectura quedó retenida; se descarta y «Buscar ahora» vuelve a leer la nota."""
     e = entorno_limpio
-    mala = ctl.asignar(septiembre_real(), "roe.filas.0.hasta", 3337738)           # un tope a 2 pesos (D26)
+    mala = ctl.asignar(septiembre_real(), "roe.filas.0.hasta", 3337836)           # un tope a 100 pesos (D26 admitía 1 peso; con D30 un tope a 2 pesos ya pasa)
     _con_lecturas(e, mala)
     r = proc.pasada()
     assert r["leidas"][0]["estado"] == "retenida" and r["leidas"][0]["fallan"] == ["C4"]

@@ -52,21 +52,27 @@ def test_una_entrada_de_conectividad_inventada_no_pasa():
     assert not ctl.todos_pasan(r), "una entrada de conectividad de otro trimestre, con 1/2/3 pesos, pasó"
 
 
-def test_error_de_un_centavo_en_ambas_lecturas_no_pasa():
+def test_error_de_centavos_en_ambas_lecturas_pasa_por_d30_y_el_de_cien_pesos_no():
+    """D30 (SDN, 2026-11-16): antes +2 centavos sistemáticos retenían; ahora la tolerancia es de $ 10."""
     sept = escalar(DATOS_AGOSTO, 1.019)
-    mala = ctl.asignar(sept, "ramas.administrativa.categorias.10.basico", round(sept["ramas"]["administrativa"]["categorias"][10]["basico"] + 0.02, 2))
+    base = sept["ramas"]["administrativa"]["categorias"][10]["basico"]
     com = _com(sept, 1.9, "2026-09")
-    r = ctl.controlar([lect(mala)] * 2, DATOS_AGOSTO, com, "2026-09", "2026-08")
-    assert not ctl.todos_pasan(r), "+2 centavos sistemático en un básico pasó"
+    chico = ctl.asignar(sept, "ramas.administrativa.categorias.10.basico", round(base + 0.02, 2))
+    assert ctl.todos_pasan(ctl.controlar([lect(chico)] * 2, DATOS_AGOSTO, com, "2026-09", "2026-08")), "D30: +2 centavos ya pasa"
+    grande = ctl.asignar(sept, "ramas.administrativa.categorias.10.basico", round(base + 100, 2))
+    r = ctl.controlar([lect(grande)] * 2, DATOS_AGOSTO, com, "2026-09", "2026-08")
+    assert not ctl.todos_pasan(r), "+100 pesos sistemático en un básico pasó"
 
 
-def test_tope_hasta_alterado_en_un_peso_no_pasa():
+def test_tope_hasta_alterado_en_un_peso_pasa_por_d30_y_en_cien_no():
     sept = escalar(DATOS_AGOSTO, 1.019)
     h = sept["roe"]["filas"][0]["hasta"]
-    mala = ctl.asignar(sept, "roe.filas.0.hasta", h + 1)
     com = _com(sept, 1.9, "2026-09")
+    uno = ctl.asignar(sept, "roe.filas.0.hasta", h + 1)
+    assert ctl.todos_pasan(ctl.controlar([lect(uno)] * 2, DATOS_AGOSTO, com, "2026-09", "2026-08")), "D30: +1 peso ya pasa"
+    mala = ctl.asignar(sept, "roe.filas.0.hasta", h + 100)
     r = ctl.controlar([lect(mala)] * 2, DATOS_AGOSTO, com, "2026-09", "2026-08")
-    assert not ctl.todos_pasan(r), "tope hasta +1 peso pasó"
+    assert not ctl.todos_pasan(r), "tope hasta +100 pesos pasó"
 
 
 # ------------------------------------------------------------- correcciones a mano
@@ -434,4 +440,4 @@ def test_d28_un_null_en_una_celda_escalable_sola_ahora_se_completa_pero_nada_mas
 
 def test_d28_la_vista_marca_las_celdas_calculadas_sin_innerhtml():
     js = open("static/escalas_estado.js", encoding="utf-8").read()
-    assert "calculada" in js and "celdas_calculadas" in js and "Comentarios de la lectura" in js and "innerHTML" not in js
+    assert "calculada" in js and "celdas_calculadas" in js and "Comentarios de la IA al leer el PDF" in js and "innerHTML" not in js

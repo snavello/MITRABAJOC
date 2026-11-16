@@ -279,6 +279,41 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   lectura, `controles["defectos_respuesta"]`) y sí hace fallar C1. Como la
   lectura parcial sale solo de los campos `*_parcial`, D28 dejó de mirar las
   notas.
+- **D30 · Todas las tolerancias de importe suben a 10 pesos** (SDN,
+  2026-11-16: «en esos valores es irrelevante total»; los importes de la
+  grilla son de millones). Una sola constante, `TOLERANCIA_PESOS = 10.0` en
+  `escalas_controles.py`, de la que salen todas, y cada control dice
+  «tolerancia: $ 10» en su resumen. (1) **C3**: el inicial, el ROE mensual y el
+  mínimo del Día del Bancario coinciden con el comunicado si difieren hasta
+  $ 10. (2) **C4**: cada importe que escala pasa si está a no más de $ 10 de
+  vigente × factor; los topes `hasta` del ROE, a no más de $ 10 del valor
+  escalado o iguales al vigente, y ya no se exige que sean enteros (D26 lo
+  pedía a 1 peso; D30 lo reemplaza). (3) **C5**: el básico contra
+  max(coeficiente × unidad, piso), el escalafón no decreciente (coeficientes
+  y básicos) y el mínimo del Día del Bancario contra suma fija + monto por
+  coeficiente, todo hasta $ 10. (4) **El factor sigue siendo uno solo**, con
+  8 decimales: se estima como antes, con los intervalos ESTRICTOS de redondeo
+  (±½ centavo por celda; el punto que cae en más intervalos) y NO con la
+  tolerancia. Se descartó la mediana de cocientes (mezcla el redondeo de los
+  importes chicos y corre el factor unos pesos) y la intersección con ±$ 10
+  por celda (dejaría el factor indeterminado en varios centavos, y D28
+  calcularía mal la celda tapada). Lo que se afloja es el veredicto por celda:
+  |nuevo − vigente × f| ≤ $ 10; el factor sigue teniendo que redondear al
+  porcentaje del comunicado. `medidas` de C4 informa factor, desvío máximo,
+  celdas comparadas y la tolerancia usada. (5) **No cambian**: C2 (las dos
+  lecturas, exactas, celda por celda), la lectura parcial de D28 (dígito por
+  dígito), la conectividad (D27: idéntica a lo publicado; un trimestre nuevo
+  retiene) ni C1. D28 acepta que la otra lectura traiga hasta $ 10 de
+  diferencia con el valor calculado. (6) **Qué se sigue atrapando**: un dígito
+  mal leído en las centenas o más (± $ 100), una diferencia de $ 11 o más en
+  cualquier celda, y un adicional escalado con otro porcentaje (2,2 % en vez de
+  1,9 %) cuando la diferencia supera $ 10. **Límite aceptado**: un porcentaje
+  distinto no se ve en un importe vigente de menos de unos $ 3.333 (0,3 % de
+  diferencia = $ 10). En la grilla real de agosto no hay ninguno: el importe
+  escalable más chico es $ 27.979,69 (título secundario), así que 2,2 % contra
+  1,9 % se detecta en todas las celdas con importe (`test_escalas_controles.py`
+  lo recorre celda por celda y lista las que no, hoy ninguna). Los tests que
+  afirmaban centavos, 1 o 2 pesos pasaron a afirmar $ 10, por esta decisión.
 
 Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
 archivos al importarse (necesita una puerta para recibir las publicadas y
