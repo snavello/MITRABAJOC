@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="{{ apariencia.tema }}" data-paleta="{{ apariencia.paleta }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="{{ marca.color_base if marca else '#152238' }}">
+<title>{% if sindicato %}Convenio y escalas — {{ sindicato }}{% else %}Colm3na — Convenio y escalas{% endif %}</title>
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+{% from "_paleta_legible.html" import variables_legibles %}
+<style>
+  /* Convenio y escalas: una pantalla más de la app del afiliado, pintada con
+     el modelo de diseño por static/temas/<modelo>-escalas.css. Acá va la
+     estructura; los colores, las letras y las formas los pone el modelo. */
+  :root {
+    --marca-base: {{ marca.color_base if marca else '#152238' }};
+    --marca-primario: {{ marca.color_primario if marca else '#1a3d6b' }};
+    --marca-acento: {{ marca.color_acento if marca else '#2fa88f' }};
+    --marca-apoyo: {{ marca.color_secundario if marca else '#e8b84b' }};
+    --gremio-base: {{ marca.color_base if marca else '#152238' }};
+    --gremio-primario: {{ marca.color_primario if marca else '#1a3d6b' }};
+    --gremio-acento: {{ marca.color_acento if marca else '#2fa88f' }};
+    --gremio-apoyo: {{ marca.color_secundario if marca else '#e8b84b' }};
+    {{ variables_legibles('gremio', marca.color_base if marca else '#152238', marca.color_primario if marca else '#1a3d6b', (marca.color_acento if marca else '#2fa88f') or '#2fa88f', marca.color_secundario if marca else '#e8b84b') }}
+    {%- if marca_plataforma and marca_plataforma.logo %}
+    --logo-colmena-claro: url("/logo-plataforma");
+    {%- endif %}
+    --tinta:#152238; --gris:#5b6478; --linea:#e4e7ec; --papel:#f6f7f9;
+    /* Lo que define el modelo (hojas temas/*-escalas.css). */
+    --cv-sup:#fff; --cv-sel:var(--marca-base); --cv-sel-txt:#fff;
+    --es-hero:var(--marca-base); --es-hero-txt:#fff; --es-hero-mute:#dbe3ee; --es-hero-acento:var(--marca-apoyo);
+    --es-pub-bg:#e2f1ef; --es-pub-txt:#173e6e; --es-ref-bg:#fbf2e3; --es-ref-txt:#6a3f06;
+    --es-nota-bg:#f4f4f4; --es-suave:#f1f8f7;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  body { background:var(--papel); color:var(--tinta); min-height:100vh; }
+  [hidden] { display:none !important; }
+
+  .cuerpo { max-width:720px; margin:0 auto; padding:20px 16px 72px; }
+  .cuerpo .titulo-pagina { margin:14px 0 14px; }
+  .es-pila { display:flex; flex-direction:column; gap:16px; }
+  .es-kicker { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gris); }
+  .es-nota { font-size:13px; line-height:1.55; color:var(--gris); }
+  .es-mute { font-size:12.5px; color:var(--gris); }
+
+  /* ---- la barra de validación (solo para validar, discreta) ---- */
+  .es-validar { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; padding:8px 10px; border-radius:8px;
+    border:1px dashed var(--linea); font-size:12px; color:var(--gris); }
+  .es-validar b { font-size:11px; letter-spacing:.12em; text-transform:uppercase; }
+  .es-validar .grupo { display:flex; align-items:center; gap:4px; }
+  .es-validar a { display:inline-flex; align-items:center; min-height:44px; padding:0 12px; border-radius:999px;
+    text-decoration:none; color:inherit; font-size:12.5px; font-weight:600; box-shadow:inset 0 0 0 1px var(--linea); }
+  .es-validar a[aria-current="true"] { background:var(--cv-sel); color:var(--cv-sel-txt); box-shadow:none; }
+
+  /* ---- pastillas ---- */
+  .es-tabs { display:flex; gap:8px; }
+  .es-pill, .es-tab { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 14px;
+    border:0; border-radius:999px; background:var(--cv-sup); color:var(--tinta); cursor:pointer; font:inherit;
+    font-size:13.5px; font-weight:600; box-shadow:inset 0 0 0 1px var(--linea); text-align:center; }
+  .es-tab { flex:1; }
+  .es-pill[aria-pressed="true"], .es-tab[aria-current="page"] { background:var(--cv-sel); color:var(--cv-sel-txt); box-shadow:none; }
+  .es-pills { display:flex; flex-wrap:wrap; gap:8px; }
+  .es-pills.dos { display:grid; grid-template-columns:1fr 1fr; }
+  .es-pills .es-pill { flex:1 1 auto; }
+  .es-enlace { display:inline-flex; align-items:center; min-height:44px; padding:0; border:0; background:none; cursor:pointer;
+    font:inherit; font-size:13.5px; font-weight:700; color:var(--tinta); text-decoration:underline; text-underline-offset:3px; text-align:left; }
+
+  .es-btn { display:flex; align-items:center; justify-content:center; width:100%; min-height:44px; padding:0 24px; border:0;
+    border-radius:999px; background:var(--cv-sel); color:var(--cv-sel-txt); cursor:pointer; font:inherit; font-size:14.5px; font-weight:600; }
+  .es-btn.sec { background:var(--cv-sup); color:var(--tinta); box-shadow:inset 0 0 0 1px var(--linea); }
+  .es-btn:disabled { opacity:.55; cursor:default; }
+
+  /* ---- campos ---- */
+  .es-campo { display:flex; flex-direction:column; gap:8px; }
+  .es-campo > label, .es-campo > .es-etq { font-size:12.5px; font-weight:600; color:var(--gris); }
+  select, input[type="search"] { width:100%; min-height:46px; padding:0 12px; border:1px solid var(--linea); border-radius:9px;
+    font:inherit; font-size:15px; background:#fff; color:var(--tinta); }
+  select:focus, input[type="search"]:focus { outline:2px solid var(--marca-acento); outline-offset:-1px; }
+  .es-recordar { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:10px; background:var(--es-suave);
+    border:1px solid var(--linea); }
+  .es-recordar input { width:22px; height:22px; margin:2px 0 0; flex:none; }
+  .es-recordar label { font-size:13.5px; line-height:1.5; }
+  .es-recordar label span { display:block; color:var(--gris); }
+  .es-error { padding:10px 12px; border-radius:8px; font-size:13.5px; color:#8f2418; background:#fbe9e6; }
+
+  /* ---- tarjetas ---- */
+  .es-tarjeta { background:var(--cv-sup); border:1px solid var(--linea); border-radius:10px; overflow:hidden; }
+  .es-eleccion { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-radius:10px;
+    background:var(--es-suave); border:1px solid var(--linea); }
+  .es-eleccion .q { font-size:14px; font-weight:600; margin-top:4px; line-height:1.4; }
+  .es-cartel { padding:12px 14px; border-radius:8px; font-size:13.5px; font-weight:600; background:var(--es-ref-bg); color:var(--es-ref-txt); }
+  .es-hero { position:relative; overflow:hidden; margin:12px; padding:16px; border-radius:8px; background:var(--es-hero); color:var(--es-hero-txt); }
+  .es-hero .es-kicker { color:var(--es-hero-acento); }
+  .es-hero h2 { margin:4px 0 0; font-size:22px; font-weight:600; line-height:1.15; }
+  .es-hero p { margin:6px 0 0; font-size:13.5px; line-height:1.5; color:var(--es-hero-mute); }
+  .es-hero .pie { margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,.2); display:flex; justify-content:space-between;
+    align-items:center; gap:10px; font-size:13px; color:var(--es-hero-mute); }
+  .es-hero a { color:var(--es-hero-txt); font-weight:700; font-size:13px; min-height:44px; display:inline-flex; align-items:center; }
+  .es-conc { padding:12px 16px; display:flex; flex-direction:column; gap:6px; border-top:1px solid var(--linea); }
+  .es-fila { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .es-fila .rot { font-size:13.5px; }
+  .es-imp { font-size:15px; font-weight:650; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .es-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .es-chip { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+  .es-chip.publicado { background:var(--es-pub-bg); color:var(--es-pub-txt); }
+  .es-chip.referencia { background:var(--es-ref-bg); color:var(--es-ref-txt); }
+  .es-chip.aviso { background:var(--es-nota-bg); color:var(--tinta); }
+  .es-conc .nota { font-size:12px; color:var(--gris); line-height:1.4; }
+  .es-alcance { padding:12px 16px; border-top:1px solid var(--linea); font-size:12.5px; line-height:1.5; }
+  .es-roe { padding:4px 16px 14px; display:flex; flex-direction:column; gap:8px; }
+  .es-seccion { padding:16px; }
+  .es-seccion h3 { font-size:14.5px; font-weight:700; }
+  .es-evo { margin-top:8px; }
+  .es-evo .fila { display:grid; grid-template-columns:1fr auto; grid-template-areas:"mes pct" "val chip"; gap:2px 10px; align-items:center; padding:10px 0; font-size:13.5px; border-top:1px solid var(--linea); }
+  .es-evo .fila:first-child { border-top:0; }
+  .es-evo .mes { grid-area:mes; color:var(--gris); font-size:12.5px; }
+  .es-evo .val { grid-area:val; font-weight:650; font-size:15px; font-variant-numeric:tabular-nums; }
+  .es-evo .es-chip { grid-area:chip; justify-self:end; }
+  .es-evo .pct { grid-area:pct; justify-self:end; color:var(--gris); font-variant-numeric:tabular-nums; }
+  .es-textofijo { margin-top:10px; padding:10px 12px; border-radius:6px; font-size:12.5px; line-height:1.5; background:var(--es-nota-bg); }
+  .es-salida { padding:14px 16px; border-radius:10px; background:var(--es-nota-bg); border:1px solid var(--linea); display:flex; flex-direction:column; gap:4px; }
+  .es-salida b.t { font-size:14px; }
+
+  /* ---- convenio ---- */
+  .es-buscar { display:flex; align-items:center; gap:10px; padding:0 14px; min-height:46px; border-radius:9px; border:1px solid var(--linea); background:#fff; }
+  .es-buscar input { flex:1; min-height:44px; border:0 !important; outline:none !important; background:transparent; padding:0; }
+  .es-buscar svg { width:18px; height:18px; flex:none; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; }
+  .es-sits { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .es-sit { min-height:68px; padding:12px; text-align:left; border:0; border-radius:8px; background:var(--cv-sup); color:var(--tinta);
+    box-shadow:inset 0 0 0 1px var(--linea); font:inherit; display:flex; flex-direction:column; gap:4px; cursor:pointer; }
+  .es-sit .a { font-size:14px; font-weight:700; line-height:1.25; }
+  .es-sit .b { font-size:12px; color:var(--gris); }
+  .es-sit[aria-pressed="true"] { background:var(--cv-sel); color:var(--cv-sel-txt); box-shadow:none; }
+  .es-sit[aria-pressed="true"] .b { color:inherit; opacity:.85; }
+  .es-res { display:flex; flex-direction:column; }
+  .es-res button { text-align:left; min-height:56px; padding:10px 16px; border:0; border-top:1px solid var(--linea); background:none; font:inherit; cursor:pointer; color:var(--tinta); }
+  .es-res button:first-child { border-top:0; }
+  .es-res .t { font-size:14px; font-weight:650; }
+  .es-res .s { display:block; font-size:12.5px; color:var(--gris); margin-top:2px; line-height:1.4; }
+  .es-ficha .es-hero h2 { font-size:21px; }
+  .es-ficha .bloque { padding:12px 16px; border-top:1px solid var(--linea); display:flex; flex-direction:column; gap:8px; }
+  .es-literal { white-space:pre-line; font-size:13.5px; line-height:1.55; background:var(--es-nota-bg); border-radius:6px; padding:12px; overflow-wrap:anywhere; }
+  .es-ficha details > summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:650; font-size:13.5px; list-style:none; }
+  .es-ficha details > summary::-webkit-details-marker { display:none; }
+  .es-ficha details > summary::after { content:"+"; margin-left:auto; font-size:18px; }
+  .es-ficha details[open] > summary::after { content:"−"; }
+  .es-acciones { padding:6px 12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .es-indice details { border-top:1px solid var(--linea); }
+  .es-indice details:first-child { border-top:0; }
+  .es-indice summary { cursor:pointer; min-height:46px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px; list-style:none; }
+  .es-indice summary::-webkit-details-marker { display:none; }
+  .es-indice summary span.c { color:var(--gris); font-size:12px; }
+  .es-indice .art { width:100%; display:flex; gap:10px; min-height:44px; padding:8px 16px; border:0; background:none; text-align:left; font:inherit; font-size:13.5px; cursor:pointer; color:var(--tinta); align-items:center; }
+  .es-indice .art .n { min-width:58px; color:var(--gris); font-size:12.5px; }
+  .es-pdf { display:flex; align-items:center; justify-content:space-between; min-height:46px; padding:0 16px; border-top:1px solid var(--linea); font-size:13.5px; font-weight:700; color:var(--tinta); text-decoration:none; }
+
+  @media (max-width:420px) {
+    .marca-volver { font-size:0 !important; min-width:44px; justify-content:center; }
+    .marca-volver svg { width:22px; height:22px; }
+  }
+</style>
+{% include "_fondo_interior.html" %}
+{# El modelo de diseño: su hoja va DESPUÉS de todo lo de arriba. #}
+{% set _hoja_tema = 'temas/' ~ apariencia.tema ~ '-escalas.css' %}{% set _sello_tema = sello_static(_hoja_tema) %}
+{% if _sello_tema %}<link rel="stylesheet" href="/static/{{ _hoja_tema }}?v={{ _sello_tema }}">{% endif %}
+</head>
+<body class="mesa franja">
+{% include "_entorno.html" %}
+
+{% set enc_volver = '/entornos#herramientas' %}
+{% set enc_fija = True %}
+{% set enc_fondo_claro = True %}
+{% include "_encabezado.html" %}
+
+<main class="cuerpo mesa-cont es-pila" id="es-raiz" data-api="{{ api }}">
+
+  {# Solo para validar: no es parte de lo que verá el afiliado. #}
+  <nav class="es-validar" aria-label="Solo para validar">
+    <b>Solo para validar</b>
+    <span class="grupo">Modelo
+      {% for clave, nombre in modelos %}
+      <a href="?tema={{ clave }}&paleta={{ apariencia.paleta }}" {% if apariencia.tema == clave %}aria-current="true"{% endif %}>{{ nombre }}</a>
+      {% endfor %}
+    </span>
+    <span class="grupo">Paleta
+      <a href="?tema={{ apariencia.tema }}&paleta=colm3na" {% if apariencia.paleta == 'colm3na' %}aria-current="true"{% endif %}>Colm3na</a>
+      {% if hay_marca %}<a href="?tema={{ apariencia.tema }}&paleta=sindicato" {% if apariencia.paleta == 'sindicato' %}aria-current="true"{% endif %}>La Bancaria</a>{% endif %}
+    </span>
+  </nav>
+
+  <h1 class="titulo-pagina" id="es-titulo">Convenio y escalas</h1>
+
+  <nav class="es-tabs" aria-label="Secciones">
+    <button type="button" class="es-tab" id="tab-escala" aria-current="page">Escala vigente</button>
+    <button type="button" class="es-tab" id="tab-convenio">Convenio</button>
+  </nav>
+
+  <p class="es-error" id="es-error" role="alert" hidden></p>
+
+  {# ---------- Selección ---------- #}
+  <section id="vista-seleccion" class="es-pila" data-mov-vista hidden>
+    <p class="es-nota">El sistema no tiene tu categoría: elegila vos. Con eso te mostramos los valores de la grilla.</p>
+    <div class="es-campo"><span class="es-etq" id="etq-rama">Rama</span><div class="es-pills" id="sel-rama" role="group" aria-labelledby="etq-rama"></div></div>
+    <div class="es-campo" id="campo-anios">
+      <label for="sel-anios">Años de antigüedad en el banco</label>
+      <select id="sel-anios"></select>
+      <button type="button" class="es-enlace" id="ir-jerarquia">Tengo un cargo jerárquico</button>
+    </div>
+    <div class="es-campo" id="campo-jer" hidden>
+      <label for="sel-jer">Cargo jerárquico</label>
+      <select id="sel-jer"></select>
+      <button type="button" class="es-enlace" id="ir-anios">Elegir por años de antigüedad</button>
+    </div>
+    <div class="es-campo" id="campo-titulo"><span class="es-etq" id="etq-titulo">Título</span><div class="es-pills dos" id="sel-titulo" role="group" aria-labelledby="etq-titulo"></div></div>
+    <div class="es-campo"><span class="es-etq" id="etq-caja">¿Trabajás en caja?</span><div class="es-pills dos" id="sel-caja" role="group" aria-labelledby="etq-caja"></div></div>
+    <div class="es-recordar">
+      <input id="sel-recordar" type="checkbox">
+      <label for="sel-recordar"><b>Recordar mi selección</b><span>Queda guardada en este navegador y la cambiás cuando quieras. Solo sirve para mostrarte la escala.</span></label>
+    </div>
+    <button type="button" class="es-btn" id="sel-ver">Ver la escala</button>
+    <p class="es-mute" style="text-align:center">Si no sabés tu categoría, figura en tu recibo de sueldo.</p>
+  </section>
+
+  {# ---------- Escala vigente ---------- #}
+  <section id="vista-escala" class="es-pila" data-mov-vista hidden>
+    <div class="es-eleccion">
+      <div><div class="es-kicker" id="esc-cuando"></div><div class="q" id="esc-resumen"></div></div>
+      <button type="button" class="es-pill" id="esc-cambiar">Cambiar</button>
+    </div>
+    <p class="es-cartel" id="esc-pendiente" role="status" hidden></p>
+    <article class="es-tarjeta">
+      <div class="es-hero">
+        <div class="es-kicker">Escala vigente</div>
+        <h2 id="esc-periodo"></h2>
+        <p id="esc-cct"></p>
+        <div class="pie"><span id="esc-fuente-txt">Valores tomados de la grilla</span><a id="esc-fuente" target="_blank" rel="noopener noreferrer">Ver la fuente</a></div>
+      </div>
+      <div id="esc-conceptos"></div>
+      <div class="es-roe" id="esc-roe" hidden></div>
+      <p class="es-alcance" id="esc-alcance"></p>
+    </article>
+    <section class="es-tarjeta es-seccion">
+      <h3 id="evo-titulo"></h3>
+      <div class="es-evo" id="evo-filas"></div>
+      <p class="es-nota" id="evo-solo" hidden>Todavía hay una sola grilla publicada: los cambios mes a mes aparecen cuando haya más.</p>
+      <p class="es-textofijo" id="evo-texto"></p>
+    </section>
+    <section class="es-salida">
+      <b class="t">¿Querés controlar lo que te pagaron?</b>
+      <span class="es-nota">Eso se hace con tu recibo real, en otra parte de la app.</span>
+      <button type="button" class="es-enlace" id="esc-ir-recibo">Ir a Tu recibo</button>
+      <p class="es-nota" id="esc-ir-info" hidden>En esta etapa el enlace no abre nada: en la app del afiliado te lleva a Tu recibo.</p>
+    </section>
+  </section>
+
+  {# ---------- Convenio ---------- #}
+  <section id="vista-convenio" class="es-pila" data-mov-vista hidden>
+    <div class="es-campo">
+      <label for="buscar">Buscar en el convenio <span id="conv-nombre">18/75</span></label>
+      <div class="es-buscar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="buscar" type="search" autocomplete="off" placeholder="Ej: licencia, título, caja">
+        <span class="es-mute" id="buscar-cant" aria-live="polite"></span>
+      </div>
+    </div>
+    <div id="conv-resultados" class="es-tarjeta es-res" hidden></div>
+    <div id="conv-situaciones" class="es-pila">
+      <div class="es-kicker">¿Qué te está pasando?</div>
+      <div class="es-sits" id="sits"></div>
+    </div>
+    <div id="conv-fichas" class="es-pila"></div>
+    <section class="es-tarjeta es-indice" id="conv-indice"></section>
+  </section>
+
+</main>
+
+<script src="/static/numeros_ar.js?v={{ sello_static('numeros_ar.js') }}"></script>
+<script src="/static/convenio_escalas.js?v={{ sello_static('convenio_escalas.js') }}"></script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+</body>
+</html>

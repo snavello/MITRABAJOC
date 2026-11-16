@@ -100,6 +100,8 @@ import recursos
 import empaquetar
 import render_admin
 import grilla_bancaria
+import consulta_escalas
+import convenio_fichas
 import asistente_tramites
 import asistente_tramites_ia
 import laboratorio_modelos
@@ -11456,6 +11458,137 @@ def entornos_asistente_casos_csv(request: Request):
     contenido = "﻿" + salida.getvalue()
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="casos-asistente-tramites-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramientas: Convenio y escalas ====================
+# (2026-11-16, PLAN_CONVENIO_ESCALAS.md, bloques 3 y 4) La consulta de la
+# grilla vigente del CCT 18/75 y el convenio en fichas, pintada como la app
+# del afiliado (dos modelos de diseño) para validarla en /entornos antes de
+# pasarla a /app. Es una CONSULTA, no un control: valores sueltos con su
+# etiqueta, nunca un total. Los cálculos son de consulta_escalas.py y
+# convenio_fichas.py (puros); acá solo van las puertas y el armado.
+API_ESCALAS = "/api/entornos/herramientas/escalas"
+ESCALAS_AFILIADO_PRUEBA = "27999999994"      # el afiliado de prueba de La Bancaria
+ESCALAS_AGREGABLES = {"10": "titulo", "22": "caja"}   # artículos que alimentan la selección
+ESCALAS_FICHA_CAMPOS = ("numero", "titulo", "capitulo", "antecedentes", "texto", "resumen",
+                        "resumen_estado", "revisado_por", "revisado_en", "titulo_del_convenio",
+                        "importe_titulo", "importe_nota")
+
+
+def _escalas_sindicato_id():
+    with db.get_session() as s:
+        return s.exec(select(Sindicato.id).where(Sindicato.nombre.ilike("%Bancaria%"))
+                      .order_by(Sindicato.id)).first()
+
+
+def _escalas_actualizacion_pendiente():
+    """None hasta que el bloque 5 la conecte: una fecha ISO si hay un
+    comunicado nuevo sin grilla publicada."""
+    return None
+
+
+def _escalas_vigente(grillas: dict):
+    return grillas[max(grillas)] if grillas else None
+
+
+def _escalas_grilla_resumen(g: dict) -> dict:
+    return {"periodo": g.get("periodo"), "nombre": g.get("nombre"),
+            "firmada": g.get("firmada"), "fuentes": list(g.get("fuentes") or [])}
+
+
+def _escalas_ficha(a: dict, grilla) -> dict:
+    ficha = {k: a.get(k) for k in ESCALAS_FICHA_CAMPOS if k in a}
+    ficha.setdefault("titulo_del_convenio", False)
+    renglones = convenio_fichas.importe_vigente(a, grilla) if grilla else None
+    ficha["valores_vigentes"] = ({
+        "periodo": grilla.get("periodo"), "nombre": grilla.get("nombre"), "etiqueta": "publicado",
+        "renglones": [{"rotulo": r["rotulo"], "importe": round(float(r["importe"]), 2),
+                       "etiqueta": "publicado"} for r in renglones]} if renglones else None)
+    ficha["agregable"] = ESCALAS_AGREGABLES.get(str(a["numero"]))
+    return ficha
+
+
+@app.get("/entornos/herramientas/convenio-escalas", response_class=HTMLResponse)
+def entornos_convenio_escalas(request: Request, tema: str = "", paleta: str = ""):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    sid = _escalas_sindicato_id()
+    marca = db.marca_sindicato(sid) if sid else {}
+    apariencia = (db.apariencia_de(sid, ESCALAS_AFILIADO_PRUEBA) if sid
+                  else {"tema": temas.TEMA_DEFECTO, "paleta": temas.PALETA_DEFECTO})
+    # El selector de validación: cambia por la URL, no guarda nada en ninguna cuenta.
+    apariencia = {**apariencia,
+                  "tema": temas.tema_valido(tema) or apariencia["tema"],
+                  "paleta": (temas.paleta_valida(paleta) or apariencia["paleta"]) if marca else "colm3na"}
+    return templates.TemplateResponse("convenio_escalas.html", {
+        "request": request,
+        "sindicato": marca.get("nombre", "") if marca else "",
+        "marca": marca or None,
+        "marca_plataforma": db.marca_plataforma(),
+        "apariencia": apariencia,
+        "hay_marca": bool(marca),
+        "modelos": [(k, v["nombre"]) for k, v in temas.TEMAS.items()],
+        "api": API_ESCALAS,
+    })
+
+
+@app.get(f"{API_ESCALAS}/opciones")
+def api_escalas_opciones(request: Request):
+    _exigir_herramientas(request)
+    g = _escalas_vigente(db.grillas_publicadas())
+    if not g:
+        return {"disponible": False, "mensaje": "Todavía no hay una grilla publicada."}
+    return {"disponible": True, "grilla": _escalas_grilla_resumen(g),
+            **consulta_escalas.opciones(g), "hoy": fechas.hoy_texto(),
+            "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
+
+
+@app.post(f"{API_ESCALAS}/consulta")
+async def api_escalas_consulta(request: Request):
+    _exigir_herramientas(request)
+    try:
+        datos = await request.json()
+    except Exception:
+        raise HTTPException(400, "El pedido no es válido.")
+    if not isinstance(datos, dict) or not isinstance(datos.get("seleccion"), dict):
+        raise HTTPException(400, "Falta la selección.")
+    periodo = datos.get("periodo")
+    if periodo is not None and not isinstance(periodo, str):
+        raise HTTPException(400, "El período no es válido.")
+    grillas = await run_in_threadpool(db.grillas_publicadas)
+    try:
+        res = consulta_escalas.consultar(datos["seleccion"], grillas, periodo)
+        evo = consulta_escalas.evolucion(datos["seleccion"], grillas)
+    except consulta_escalas.ConsultaInvalida as e:
+        raise HTTPException(400, str(e))
+    return {**res, "evolucion": evo, "hoy": fechas.hoy_texto(),
+            "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
+
+
+@app.get(f"{API_ESCALAS}/convenio")
+def api_escalas_convenio(request: Request):
+    _exigir_herramientas(request)
+    conv = convenio_fichas.cargar()
+    g = _escalas_vigente(db.grillas_publicadas())
+    return {
+        "convenio": {k: conv.get(k) for k in ("id", "nombre", "descripcion", "sindicato", "fuente", "nota", "leido")},
+        "grilla": {"periodo": g.get("periodo"), "nombre": g.get("nombre")} if g else None,
+        "grupos": convenio_fichas.indice(),
+        "situaciones": [{"id": s["id"], "titulo": s["titulo"], "nota": s.get("nota", ""),
+                         "articulos": list(s["articulos"])} for s in conv["situaciones"]],
+        "articulos": [_escalas_ficha(a, g) for a in list(conv["articulos"]) + list(conv.get("transitorias", []))],
+        "cantidad_articulos": len(conv["articulos"]),
+    }
+
+
+@app.get(API_ESCALAS + "/convenio/articulo/{numero}")
+def api_escalas_articulo(numero: str, request: Request):
+    _exigir_herramientas(request)
+    a = convenio_fichas.articulo(numero)
+    if not a:
+        raise HTTPException(404, "Ese artículo no existe en el convenio.")
+    return _escalas_ficha(a, _escalas_vigente(db.grillas_publicadas()))
 
 
 # ==================== Herramientas: Laboratorio de modelos ====================
