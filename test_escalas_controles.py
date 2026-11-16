@@ -412,7 +412,116 @@ def test_si_las_celdas_no_admiten_un_factor_unico_c4_lista_las_que_rompen():
     assert r["pasa"] is False and [d["ruta"] for d in r["detalle"] if "ruta" in d] == [ruta]
 
 
-def test_un_tope_hasta_no_entero_o_corrido_en_un_peso_no_pasa():
+def test_un_tope_hasta_no_entero_o_corrido_en_dos_pesos_no_pasa():
+    # D26 (2026-11-16): hasta 1 peso de diferencia contra el valor escalado SÍ pasa (el sindicato
+    # a veces trunca en vez de redondear); a 2 pesos o más, o con decimales, sigue reteniendo.
     escalado = next(x for x in c.celdas(SEPT) if x["ruta"] == "roe.filas.0.hasta")["valor"]
-    for malo in (escalado + 1, escalado - 1, escalado + 0.5):
+    for malo in (escalado + 2, escalado - 2, escalado + 0.5, escalado + 100):
         assert por_control(controlar(c.asignar(SEPT, "roe.filas.0.hasta", malo)))["C4"]["pasa"] is False, malo
+
+
+# ---------------------------------------------------------------- la primera grilla real (septiembre 2026)
+COMUNICADO_REAL = {"inicial": 2552560.34, "roe": 73786.55, "porcentaje": 1.9, "dia_bancario_minimo": 2275519.25,
+                   "periodo": "2026-09"}
+TOPES_REALES = (3337736, 4323405, 5188128)          # el sindicato TRUNCÓ el segundo y el tercero
+
+
+def septiembre_real():
+    """Agosto × 1,01896125 al centavo, con los dos hechos de la grilla real: los topes `hasta` del
+    ROE truncados y sin el trimestre 2026-06/08 de conectividad (terminó; el PDF solo trae 2026-09/11,
+    idéntico al publicado). Los anclas del comunicado se fijan al centavo (el factor redondeado a
+    8 decimales no cae exacto en todas las celdas)."""
+    g = escalar(DATOS_AGOSTO, 1.01896125)
+    for fila, hasta in zip(g["roe"]["filas"], TOPES_REALES + (None,)):
+        fila["hasta"] = hasta
+    g["conectividad"] = [copy.deepcopy(DATOS_AGOSTO["conectividad"][1])]
+    for rk, r in DATOS_AGOSTO["ramas"].items():
+        inicial = r["categorias"][0]["conformado"]
+        for i, cat in enumerate(r["categorias"]):
+            if cat["conformado"] == inicial:
+                g["ramas"][rk]["categorias"][i]["conformado"] = 2552560.34
+    g["dia_bancario"]["minimo"] = 2275519.25
+    g["dia_bancario"]["por_coeficiente"] = round(g["dia_bancario"]["por_coeficiente"] + 0.01, 2)
+    return g
+
+
+def _real(g, **kw):
+    return por_control(controlar(g, com=COMUNICADO_REAL, **kw))
+
+
+def test_la_septiembre_real_con_topes_truncados_y_trimestre_vencido_ausente_pasa_los_seis():
+    g = septiembre_real()
+    assert [x["valor"] for x in c.celdas(g) if x["tipo"] == "hasta"][:3] == list(TOPES_REALES)
+    r = _real(g)
+    assert all(x["pasa"] is True for x in r.values()), {k: (v["pasa"], v["resumen"], v["detalle"][:2]) for k, v in r.items()}
+    assert r["C4"]["medidas"]["exceso_max"] == 0 and r["C4"]["medidas"]["topes_hasta"] == ["escalado"]
+    # D27: C1 lo dice en su detalle y el contenido que se guarda conserva el trimestre.
+    assert "conservada de la grilla anterior" in r["C1"]["resumen"]
+    assert r["C1"]["detalle"][0]["meses"] == ["2026-06", "2026-07", "2026-08"]
+    cons = c.conectividad_conservada(DATOS_AGOSTO, g, "2026-09")
+    assert [x["meses"][0] for x in cons] == ["2026-06"]
+    guardado = c.con_conectividad_conservada(g, cons)
+    assert [x["meses"][0] for x in guardado["conectividad"]] == ["2026-06", "2026-09"]       # cronológico
+    assert guardado["conectividad"][0] == DATOS_AGOSTO["conectividad"][0]
+    assert c.forma_valida({**guardado, "periodo": "2026-09", "nombre": "x", "firmada": "x"}) == []
+    # Y la grilla guardada, con la entrada conservada, vuelve a pasar C1 (corregir a mano la re-controla).
+    assert c.c1_estructura({"contenido": guardado, "notas": []}, DATOS_AGOSTO, "2026-09")["pasa"] is True
+
+
+def test_d26_un_tope_a_un_peso_pasa_y_a_dos_no():
+    g = septiembre_real()
+    assert _real(c.asignar(g, "roe.filas.1.hasta", 4323406))["C4"]["pasa"] is True       # redondeado
+    assert _real(c.asignar(g, "roe.filas.1.hasta", 4323404))["C4"]["pasa"] is False      # 1,72 del escalado
+    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337738))["C4"]["pasa"] is False      # a 2 pesos
+    assert _real(c.asignar(g, "roe.filas.0.hasta", 3337736.5))["C4"]["pasa"] is False    # no entero
+    assert _real(c.asignar(g, "roe.filas.2.hasta", 5188120))["C4"]["pasa"] is False      # un dígito mal leído
+
+
+def test_d26_no_afloja_los_importes_que_siguen_al_centavo():
+    g = septiembre_real()
+    ruta = _ruta_basico("administrativa", "8 años")
+    valor = next(x for x in c.celdas(g) if x["ruta"] == ruta)["valor"]
+    assert _real(c.asignar(g, ruta, round(valor + 0.04, 2)))["C4"]["pasa"] is False
+
+
+def test_d27_falta_el_trimestre_que_cubre_el_periodo():
+    g = septiembre_real()
+    g["conectividad"] = []
+    r = _real(g)["C1"]
+    assert r["pasa"] is False
+    assert any(d["problema"] == "falta la conectividad de un trimestre ya publicado" and d["etiqueta"] == "2026-09+2026-10+2026-11"
+               for d in r["detalle"])
+
+
+def test_d27_el_trimestre_vigente_con_un_importe_cambiado_no_pasa():
+    g = septiembre_real()
+    g["conectividad"][0]["mensual"] = 67194
+    r = _real(g)["C1"]
+    assert r["pasa"] is False and any(d["problema"] == "cambió la conectividad de un trimestre ya publicado" for d in r["detalle"])
+
+
+def test_d27_un_trimestre_vencido_que_si_viene_tiene_que_ser_identico():
+    g = septiembre_real()
+    g["conectividad"].insert(0, copy.deepcopy(DATOS_AGOSTO["conectividad"][0]))
+    r = _real(g)
+    assert r["C1"]["pasa"] is True and r["C1"]["detalle"] == []              # idéntico: nada que conservar
+    assert c.conectividad_conservada(DATOS_AGOSTO, g, "2026-09") == []
+    g["conectividad"][0]["diario"] = 2891
+    r = _real(g)["C1"]
+    assert r["pasa"] is False and any(d.get("antes") == 2890 and d.get("ahora") == 2891 for d in r["detalle"])
+
+
+def test_d27_un_trimestre_nuevo_sigue_reteniendo_siempre():
+    g = septiembre_real()
+    g["conectividad"].append({"meses": ["2026-12", "2027-01", "2027-02"], "diario": 3300.0, "mas_de_4_dias": 29000.0, "mensual": 71000.0})
+    r = _real(g)["C1"]
+    assert r["pasa"] is False and any(d["problema"].startswith("Trimestre nuevo de conectividad") for d in r["detalle"])
+
+
+def test_d27_un_trimestre_que_no_vencio_no_se_conserva():
+    # El que cubre el período o es posterior nunca se conserva: tiene que venir.
+    assert c.conectividad_vencida(["2026-06", "2026-07", "2026-08"], "2026-09") is True
+    assert c.conectividad_vencida(["2026-07", "2026-08", "2026-09"], "2026-09") is False
+    assert c.conectividad_vencida(["2026-09", "2026-10", "2026-11"], "2026-09") is False
+    assert c.conectividad_vencida(["2026-06", "2026-07", "2026-08"], None) is False
+    assert c.conectividad_conservada(None, {}, "2026-09") == []

@@ -211,6 +211,27 @@ Donde chocan con D1–D12 o con los «Abiertos», **mandan estas**.
   captura; corrige D4): el bloque «¿Querés controlar lo que te pagaron?» con
   «Ir a Tu recibo» **no va**. La pantalla cierra con la evolución y su texto
   fijo.
+- **D26 · Topes del ROE** (SDN, 2026-11-16, tras la primera grilla real,
+  septiembre): los topes de tramo de sueldo (`roe.filas[].hasta`) aceptan hasta
+  1 peso de diferencia contra el valor escalado con el factor (o iguales al
+  vigente, como antes) y siguen siendo enteros. Se midió: el sindicato no
+  redondea parejo, a veces trunca (4.242.954 pasó a 4.323.405 donde el factor
+  da 4.323.405,72). Los importes siguen exigidos al centavo con el factor
+  único: eso no cambia. Un tope a 2 pesos o más, o con un dígito mal leído,
+  sigue reteniendo.
+- **D27 · Conectividad de un trimestre vencido** (SDN, 2026-11-16, misma
+  grilla): el PDF de septiembre ya no trae el trimestre 2026-06/07/08, que
+  terminó. Un trimestre cuyos meses son todos anteriores al período de la
+  grilla puede faltar en el PDF: C1 no falla por eso y la grilla nueva
+  **conserva** esa entrada tal cual estaba publicada (se copia de la vigente al
+  contenido que se guarda; no es un dato leído ni inventado, y queda dicho en
+  el detalle de C1 y en una nota de la grilla: «Conectividad 2026-06 a
+  2026-08: conservada de la grilla anterior, el PDF ya no la trae»). Los
+  trimestres que cubren el período o son posteriores, si estaban publicados,
+  tienen que venir idénticos celda por celda; si un trimestre vencido sí viene
+  en el PDF, también. Un trimestre nuevo sigue reteniendo siempre. Las
+  entradas conservadas van en orden cronológico junto con las leídas; C2
+  compara solo lo leído (lo conservado es igual en las dos por construcción).
 
 Brechas técnicas anotadas en el Bloque 0: `grilla_bancaria.py` carga los
 archivos al importarse (necesita una puerta para recibir las publicadas y

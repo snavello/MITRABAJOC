@@ -171,11 +171,14 @@ def guardar_resultado(par: dict, lecturas: list, usos: list, modelo: str, previa
     periodo, g, c = par["periodo"], par["grilla"], par["comunicado"]
     com = _datos_comunicado(c)
     resultados = ctl.controlar(lecturas, previa, com, periodo, vigente_periodo, tolerancias)
-    datos = lecturas[0]["contenido"]
+    conservadas = ctl.conectividad_conservada(previa, lecturas[0]["contenido"], periodo)      # D27
+    datos = ctl.con_conectividad_conservada(lecturas[0]["contenido"], conservadas)
     contenido = armar_contenido(datos, periodo, g["fecha"], [g["url"], c["url"] if c else ""], modelo, hoy or fechas.hoy_texto())
     controles = {"resultados": resultados, "periodo_impreso": lecturas[0].get("periodo_impreso"),
                  "notas_lectura": [n for l in lecturas for n in l.get("notas", [])], "modelo": modelo,
-                 "ia": _resumen_usos(usos), "comunicado": com, "medidas_c4": next((r.get("medidas") for r in resultados if r["control"] == "C4"), None)}
+                 "ia": _resumen_usos(usos), "comunicado": com,
+                 "conectividad_conservada": [c.get("meses") for c in conservadas],
+                 "medidas_c4": next((r.get("medidas") for r in resultados if r["control"] == "C4"), None)}
     if not ctl.todos_pasan(resultados):
         # Para decidir a mano hace falta lo que leyó la segunda lectura.
         controles["lectura_b"] = lecturas[1]["contenido"] if len(lecturas) > 1 else None
@@ -187,7 +190,8 @@ def guardar_resultado(par: dict, lecturas: list, usos: list, modelo: str, previa
         periodo, contenido, estado=estado, origen="automatica", controles=controles,
         fuente_nota=g["url"], fuente_pdf=g["pdf_url"], publicada_sindicato=g["fecha"],
         quien="automático" if puede else "",
-        nota="" if puede else "Retenida: " + ", ".join(ctl.fallan(resultados)))
+        nota=" ".join(x for x in ("" if puede else "Retenida: " + ", ".join(ctl.fallan(resultados)) + ".",
+                                  ctl.texto_conservada(conservadas)) if x))
     if puede:
         _refrescar_calculadora()
     return {"grilla_id": grilla_id, "estado": estado, "controles": resultados}
@@ -518,7 +522,9 @@ def ensayo(periodo: str, quien: str, ahora=None) -> dict:
     previa = db.grilla_publicada(vig, CONVENIO) if vig else None
     com = _datos_comunicado(par["comunicado"])
     resultados = ctl.controlar(lecturas, previa, com, periodo, vig)
-    comp = [ctl.comparar_con_publicada(l["contenido"], publicada) for l in lecturas]
+    # D27: lo que el PDF ya no trae (trimestres vencidos) se conserva de la anterior, igual que al publicar.
+    conserv = ctl.conectividad_conservada(previa, lecturas[0]["contenido"], periodo)
+    comp = [ctl.comparar_con_publicada(ctl.con_conectividad_conservada(l["contenido"], conserv), publicada) for l in lecturas]
     distintas = max(c["distintas"] for c in comp)
     caso_id = db.guardar_caso_herramienta(
         herramienta=HERRAMIENTA, quien=quien, grilla=periodo, banco="", nota="",

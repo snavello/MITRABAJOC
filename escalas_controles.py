@@ -22,8 +22,10 @@ sobre la grilla de agosto de 2026 y los comunicados de julio a octubre):
 - NO escalan y se controlan aparte: los coeficientes y los años (son
   estructura: si cambian, C1 retiene), la conectividad (se actualiza por
   trimestre, trae sus `meses`) y los topes `hasta` de los tramos de ROE
-  (hay una duda abierta: se aceptan iguales a los de antes o escalados por
-  el mismo factor; el detalle dice cuál pasó).
+  (se aceptan iguales a los de antes o escalados por el mismo factor, con hasta
+  1 peso de diferencia: D26; el detalle dice cuál pasó). La conectividad de un
+  trimestre YA VENCIDO puede faltar en el PDF y se conserva de la grilla
+  anterior (D27).
 
 Tolerancias (parámetros, con default ESTRICTO; se calibran con grillas
 reales en el bloque 6 y SDN ve el número antes de fijarlo):
@@ -31,14 +33,15 @@ reales en el bloque 6 y SDN ve el número antes de fijarlo):
   c3_roe_centavos 0,01 el ROE sale de dividir un monto anual por 12: un centavo de redondeo
   c4_extra      0,00  pesos por encima de lo que explica el redondeo (D19: se calibra con
                        septiembre real en el bloque 6; subirlo aflojaría el control)
-  c4_hasta      0,5   pesos, en los topes `hasta` escalados (que son enteros: se redondea al peso)
+  c4_hasta      1,0   pesos, en los topes `hasta` escalados (D26: el sindicato a veces trunca y a
+                       veces redondea, así que un tope entero a 1 peso del valor escalado pasa; a 2 o más, no)
   c5_pesos      2,00  básico contra coeficiente × unidad (la grilla firmada de
                        agosto trae hasta ~1,7 en ordenanza: es la fuente)
 """
 import copy
 import statistics
 
-TOLERANCIAS = {"c3_centavos": 0.0, "c3_roe_centavos": 0.01, "c4_extra": 0.0, "c4_hasta": 0.5, "c5_pesos": 2.0}
+TOLERANCIAS = {"c3_centavos": 0.0, "c3_roe_centavos": 0.01, "c4_extra": 0.0, "c4_hasta": 1.0, "c5_pesos": 2.0}
 
 CLAVES_DATOS = ("ramas", "adicionales", "conectividad", "roe", "dia_bancario")
 TOPE_DETALLE = 200
@@ -243,11 +246,45 @@ def _trimestre_siguiente(meses: tuple) -> tuple:
     return (m1, m2, _mes_siguiente(m2))
 
 
-def _problemas_conectividad(previa: dict, g: dict) -> list:
+def conectividad_vencida(meses, periodo: str | None) -> bool:
+    """D27: un trimestre terminó antes del mes de la grilla si todos sus meses son anteriores al período."""
+    return bool(periodo) and bool(meses) and all(isinstance(m, str) and len(m) == 7 for m in meses) \
+        and all(m < periodo for m in meses)
+
+
+def conectividad_conservada(previa: dict | None, g: dict, periodo: str | None) -> list:
+    """D27: las entradas de conectividad de la grilla anterior que ya vencieron antes de `periodo` y
+    que el PDF ya no trae. No son un dato leído ni inventado: se copian tal cual estaban publicadas."""
+    if not previa or not periodo:
+        return []
+    leidas = {tuple(c.get("meses") or []) for c in (g.get("conectividad") or []) if isinstance(c, dict)}
+    return [copy.deepcopy(c) for c in (previa.get("conectividad") or [])
+            if isinstance(c, dict) and tuple(c.get("meses") or []) not in leidas
+            and conectividad_vencida(c.get("meses"), periodo)]
+
+
+def con_conectividad_conservada(g: dict, conservadas: list) -> dict:
+    """La grilla `g` con las entradas conservadas sumadas a las leídas, en orden cronológico."""
+    if not conservadas:
+        return g
+    todas = list(g.get("conectividad") or []) + copy.deepcopy(conservadas)
+    return {**g, "conectividad": sorted(todas, key=lambda c: tuple(c.get("meses") or []))}
+
+
+def texto_conservada(conservadas: list) -> str:
+    partes = []
+    for c in conservadas:
+        m = sorted(c.get("meses") or [])
+        partes.append(f"{m[0]} a {m[-1]}" if m else "?")
+    return ("Conectividad " + ", ".join(partes) + ": conservada de la grilla anterior, el PDF ya no la trae") if partes else ""
+
+
+def _problemas_conectividad(previa: dict, g: dict, periodo: str | None = None) -> list:
     """Las entradas de conectividad de la grilla leída tienen que ser EXACTAMENTE las ya
     publicadas (idénticas, celda por celda) más, como mucho, UNA entrada nueva que sea el
     trimestre consecutivo siguiente al último publicado; y esa entrada nueva retiene la
-    grilla siempre (RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD)."""
+    grilla siempre (RETENER_TRIMESTRE_NUEVO_DE_CONECTIVIDAD). Excepción (D27): un trimestre ya
+    vencido (todos sus meses anteriores al `periodo`) puede faltar; si viene, tiene que ser idéntico."""
     problemas = []
     leidas = g.get("conectividad") if isinstance(g.get("conectividad"), list) else []
     if any(not isinstance(c, dict) for c in leidas):
@@ -257,6 +294,8 @@ def _problemas_conectividad(previa: dict, g: dict) -> list:
     claves_leidas = [tuple(c.get("meses") or []) for c in leidas]
     for meses, c in pm.items():
         if claves_leidas.count(meses) == 0:
+            if conectividad_vencida(meses, periodo):
+                continue                  # D27: ya venció, el PDF no lo trae y se conserva
             problemas.append({"problema": "falta la conectividad de un trimestre ya publicado", "etiqueta": "+".join(meses)})
             continue
         if claves_leidas.count(meses) > 1:
@@ -374,14 +413,18 @@ def c1_estructura(lectura: dict, previa: dict | None, periodo: str | None = None
             problemas.append({"problema": "cambió la cantidad de filas de ROE"})
         if sorted(previa["dia_bancario"]) != sorted(g["dia_bancario"]):
             problemas.append({"problema": "cambiaron los datos del Día del Bancario"})
-        problemas.extend(_problemas_conectividad(previa, g))
+        problemas.extend(_problemas_conectividad(previa, g, periodo))
     if periodo and not any(periodo in (c.get("meses") or []) for c in (g.get("conectividad") or [])):
         problemas.append({"problema": "no hay conectividad para el período", "detalle": periodo})
     if problemas:
         return _res("C1", "Estructura", False, f"{len(problemas)} diferencia(s) de estructura o celdas sin leer.", problemas)
-    return _res("C1", "Estructura", True,
-                "Mismas ramas, categorías, jerarquías y adicionales que la grilla anterior."
-                if previa is not None else "Estructura completa (no hay grilla anterior con qué compararla).")
+    conservadas = conectividad_conservada(previa, g, periodo)
+    resumen = ("Mismas ramas, categorías, jerarquías y adicionales que la grilla anterior."
+               if previa is not None else "Estructura completa (no hay grilla anterior con qué compararla).")
+    if conservadas:
+        resumen += " " + texto_conservada(conservadas) + "."
+    return _res("C1", "Estructura", True, resumen,
+                [{"conservada": texto_conservada([c]), "meses": c.get("meses")} for c in conservadas])
 
 
 # ---------------------------------------------------------------- C2
@@ -483,7 +526,8 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
     punto que cae en más intervalos (no la mediana: el mismo cálculo no depende de qué
     celdas están mal) y la grilla pasa SOLO si ese factor está en el intervalo de TODAS;
     las celdas que lo dejan fuera se listan. La conectividad queda afuera
-    (trimestral) y los topes `hasta` del ROE se aceptan iguales o escalados (enteros)."""
+    (trimestral) y los topes `hasta` del ROE se aceptan iguales o escalados (enteros) con hasta
+    1 peso de diferencia (D26: el sindicato a veces trunca); los importes siguen al centavo."""
     if previa is None:
         return _res("C4", "Factor único", None, "No hay grilla anterior: el control no aplica.")
     tol = _tol(tolerancias)
@@ -524,7 +568,7 @@ def c4_factor_unico(lectura: dict, previa: dict | None, comunicado: dict | None,
                             "problema": "el tope del tramo tiene que ser un número entero de pesos"})
             elif n["valor"] == c["valor"]:
                 hasta_info.append("igual")
-            elif abs(n["valor"] - c["valor"] * f) <= min(tol["c4_hasta"], 1.0):
+            elif abs(n["valor"] - c["valor"] * f) <= min(tol["c4_hasta"], 1.0) + 1e-6:
                 hasta_info.append("escalado")
             else:
                 det.append({"ruta": c["ruta"], "etiqueta": c["etiqueta"], "anterior": c["valor"], "nuevo": n["valor"],
