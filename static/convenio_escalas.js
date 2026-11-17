@@ -499,7 +499,6 @@
       ban.append(h('p', { class: 'es-aclara', text: 'Depende de cada banco: confirmalo con tu delegado.' }));
       c.append(ban);
     }
-    if (!ps.length) c.append(h('p', { class: 'es-sin-conv', text: 'El convenio 18/75 no regula este punto.' }));
     return c;
   }
   function cerrarPregunta(item) {

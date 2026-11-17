@@ -216,7 +216,7 @@ def test_la_pagina_no_arma_totales_ni_usa_innerhtml():
     for frase in ("Preguntale al convenio", "Preguntas frecuentes", "Texto del convenio", "Responde solo con el convenio"):
         assert frase in html, frase
     for frase in ("Respuesta generada por IA sobre el texto del convenio", "Enviar mi consulta", "Consulta enviada",
-                  "Según la ley", "El convenio 18/75 no regula este punto", "Qué dice el convenio", "En tu banco",
+                  "Según la ley", "Qué dice el convenio", "En tu banco",
                       "Depende de cada banco: confirmalo con tu delegado", "sin revisar", "Artículos que lo sostienen"):
         assert frase in js, frase
     # lo viejo se sacó: buscador de artículos y tarjetas por situación
