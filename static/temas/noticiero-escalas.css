@@ -217,3 +217,9 @@ html[data-tema="noticiero"] .es-ficha-conv { border-top-color: var(--nt-linea); 
 @media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .es-btn { transition: none; } }
 
 html[data-tema="noticiero"] .es-hero .es-kicker { color: var(--es-hero-acento); }
+
+/* convenio: la respuesta directa y «En tu banco» */
+html[data-tema="noticiero"] .es-encorto { border-radius: 2px; background: var(--nt-hoja); border-left-color: var(--nt-coral); font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-banco { border-radius: 2px; background: var(--nt-carta); border-left-color: var(--nt-linea-2); font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-banco a { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .es-sin-conv, html[data-tema="noticiero"] .es-aclara { color: var(--nt-tinta-2); }

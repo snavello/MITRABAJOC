@@ -90,7 +90,7 @@ def test_se_descarta_y_se_reporta_lo_mal_formado():
     assert "tema inexistente" in m["t"]
     assert "no existe en el convenio" in m["art"]
     assert "ningún artículo" in m["sincita"]
-    assert "ni «Según la ley»" in m["vacia"]
+    assert "«Según la ley» ni" in m["vacia"] and "«En tu banco»" in m["vacia"]
     assert "sin norma" in m["leysola"]
     assert "no es una lista" in m["lista"]
     assert "no existe" in m["boo"]
@@ -142,9 +142,59 @@ def test_rutas_con_su_puerta():
     j = pub.json()
     assert set(j) == {"leido", "temas"}
     q = j["temas"][0]["preguntas"][0]
-    assert set(q) == {"id", "pregunta", "respuesta", "articulos", "segun_ley", "normas", "estado"}
+    assert set(q) == {"id", "pregunta", "en_corto", "respuesta", "articulos", "segun_ley", "normas", "por_banco",
+                      "fuentes_banco", "estado"}
     assert set(q["articulos"][0]) == {"numero", "titulo"}
     assert "nota_curador" not in pub.text and "inspirada_en" not in pub.text
     cur = c.get(API + "/frecuentes/curado").json()
     assert "nota_curador" in cur["temas"][0]["preguntas"][0]
     assert db is not None
+
+
+# ---- en_corto, por_banco y fuentes_banco (tercera vuelta de la vista Convenio) ----
+def _una(**kw):
+    q = {"id": "n", "tema": "a", "pregunta": "¿Nueva?", "articulos": []}
+    q.update(kw)
+    d = copy.deepcopy(BASE)
+    d["preguntas"] = [q]
+    return convenio_faq.validar_datos(d)
+
+
+def test_los_campos_nuevos_son_opcionales_y_quedan_vacios():
+    r = convenio_faq.validar_datos(BASE)
+    q = r["preguntas"]["p1"]
+    assert q["en_corto"] == "" and q["por_banco"] == "" and q["fuentes_banco"] == []
+
+
+def test_los_campos_nuevos_se_sanean_y_viajan():
+    r = _una(en_corto="  Hasta 5 años: 14 días\nMás de 5 años: 21 días ", por_banco=" Supervielle: 30 días desde 2019. ",
+             fuentes_banco=[{"texto": "Acuerdo Supervielle", "url": "http://inseguro"},
+                            {"texto": "Otra", "url": "https://ok.gob.ar/x"},
+                            {"texto": "  "}, {"url": "https://sin-texto"}, "no soy objeto", {"texto": "Sin url"}])
+    assert r["descartadas"] == []
+    q = r["preguntas"]["n"]
+    assert q["en_corto"] == "Hasta 5 años: 14 días\nMás de 5 años: 21 días"
+    assert q["por_banco"] == "Supervielle: 30 días desde 2019."
+    assert q["fuentes_banco"] == [{"texto": "Acuerdo Supervielle", "url": ""},
+                                  {"texto": "Otra", "url": "https://ok.gob.ar/x"},
+                                  {"texto": "Sin url", "url": ""}]
+    v = r["temas"][0]["preguntas"][0]
+    assert v["en_corto"] == q["en_corto"] and v["por_banco"] == q["por_banco"]
+    assert v["fuentes_banco"] == q["fuentes_banco"]
+    assert "nota_curador" not in convenio_faq._vista(q, False)
+
+
+def test_por_banco_solo_es_una_pregunta_valida_sin_articulos():
+    r = _una(por_banco="Galicia: 25 días desde 2020.")
+    assert r["descartadas"] == [] and "n" in r["preguntas"]
+    r = _una(por_banco="")
+    assert "no tiene respuesta" in _motivos(r)["n"]
+    r = _una(por_banco=5, fuentes_banco="no es lista")
+    assert "n" not in r["preguntas"]
+    r = _una(en_corto="Solo el en corto")           # el en_corto solo no alcanza
+    assert "n" not in r["preguntas"]
+
+
+def test_sigue_exigiendo_articulos_si_responde_con_el_convenio():
+    r = _una(respuesta="x", por_banco="Algo.")
+    assert "ningún artículo" in _motivos(r)["n"]

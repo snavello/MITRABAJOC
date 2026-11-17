@@ -441,7 +441,7 @@
         if (q.estado === 'sin_revisar') hayDraft = true;
         var boton = h('button', { type: 'button', 'aria-expanded': 'false', text: q.pregunta });
         var fila = h('div', { class: 'es-q' }, boton);
-        var item = { q: q, el: fila, boton: boton, tema: tema, cuerpo: null, _n: norm(q.pregunta) };
+        var item = { q: q, el: fila, boton: boton, tema: tema, cuerpo: null, _n: norm(q.pregunta + ' ' + (q.en_corto || '')) };
         boton.addEventListener('click', function () { alternarPregunta(item); });
         qs.append(fila); tema.items.push(item); faq.items.push(item); faq.porId[q.id] = item;
       });
@@ -452,27 +452,54 @@
     $('fq-aviso').hidden = !hayDraft;
     filtrarFrecuentes();
   }
+  /* Renglones: cada "\n" de en_corto es un renglón propio (una escala corta, p. ej.). */
+  function renglones(txt) {
+    return String(txt || '').split('\n').map(function (r) { return r.trim(); }).filter(Boolean);
+  }
   function cuerpoPregunta(q) {
     var c = h('div', { class: 'es-qcuerpo' });
     if (q.estado === 'sin_revisar') c.append(h('span', { class: 'es-sinrev', text: 'sin revisar' }));
-    c.append(h('div', { class: 'es-kicker', text: 'Qué dice el convenio' }));
+    var corto = renglones(q.en_corto);
+    if (corto.length) {
+      var dir = h('div', { class: 'es-encorto' });
+      corto.forEach(function (r) { dir.append(h('p', { text: r })); });
+      c.append(dir);
+    }
     var ps = parrafos(q.respuesta);
-    if (ps.length) ps.forEach(function (p) { c.append(h('p', { text: p })); });
-    else c.append(h('p', { class: 'es-sin-conv', text: 'El convenio no lo trata.' }));
-    if (q.articulos && q.articulos.length) c.append(citas(q.articulos, []));
+    if (ps.length) {
+      var conv = h('div', { class: 'es-bq' }, h('div', { class: 'es-kicker', text: 'Qué dice el convenio' }));
+      ps.forEach(function (p) { conv.append(h('p', { text: p })); });
+      if (q.articulos && q.articulos.length) conv.append(citas(q.articulos, []));
+      c.append(conv);
+    }
     if (q.segun_ley || (q.normas && q.normas.length)) {
-      var ley = h('div', { class: 'es-ley' }, h('div', { class: 'es-kicker', text: 'Según la ley' }));
+      var ley = h('div', { class: 'es-ley es-bq' }, h('div', { class: 'es-kicker', text: 'Según la ley' }));
       parrafos(q.segun_ley).forEach(function (p) { ley.append(h('p', { text: p })); });
       if (q.normas && q.normas.length) {
         ley.append(h('ul', {}, q.normas.map(function (n) {
           var txt = [n.norma, n.articulo].filter(Boolean).join(', ');
           var li = h('li', {}, txt);
-          if (n.url && urlHttps(n.url)) li.append(' · ', h('a', { href: n.url, target: '_blank', rel: 'noopener noreferrer', text: 'Ver la norma' }));
+          if (n.url && urlHttps(n.url)) li.append(' \u00b7 ', h('a', { href: n.url, target: '_blank', rel: 'noopener noreferrer', text: 'Ver la norma' }));
           return li;
         })));
       }
       c.append(ley);
     }
+    var fuentes = (q.fuentes_banco || []).filter(function (f) { return f && f.texto; });
+    if (q.por_banco || fuentes.length) {
+      var ban = h('div', { class: 'es-banco es-bq' }, h('div', { class: 'es-kicker', text: 'En tu banco' }));
+      parrafos(q.por_banco).forEach(function (p) { ban.append(h('p', { text: p })); });
+      if (fuentes.length) {
+        ban.append(h('ul', {}, fuentes.map(function (f) {
+          var li = h('li', {}, f.texto);
+          if (f.url && urlHttps(f.url)) li.append(' \u00b7 ', h('a', { href: f.url, target: '_blank', rel: 'noopener noreferrer', text: 'Ver la fuente' }));
+          return li;
+        })));
+      }
+      ban.append(h('p', { class: 'es-aclara', text: 'Depende de cada banco: confirmalo con tu delegado.' }));
+      c.append(ban);
+    }
+    if (!ps.length) c.append(h('p', { class: 'es-sin-conv', text: 'El convenio 18/75 no regula este punto.' }));
     return c;
   }
   function cerrarPregunta(item) {

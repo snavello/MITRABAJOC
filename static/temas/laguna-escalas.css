@@ -198,3 +198,9 @@ html[data-tema="laguna"] .es-ficha-conv { border-top-color: var(--lg-linea); }
 }
 
 html[data-tema="laguna"] .es-hero .es-kicker { color: var(--es-hero-acento); }
+
+/* convenio: la respuesta directa y «En tu banco» */
+html[data-tema="laguna"] .es-encorto { border-radius: 6px; background: var(--lg-agua-f2); border-left-color: var(--lg-turq); font-family: var(--lg-fuente); }
+html[data-tema="laguna"] .es-banco { border-radius: 6px; background: var(--lg-claro); border-left-color: var(--lg-linea2); font-family: var(--lg-fuente); }
+html[data-tema="laguna"] .es-banco a { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] .es-sin-conv, html[data-tema="laguna"] .es-aclara { color: var(--lg-gris2); }
