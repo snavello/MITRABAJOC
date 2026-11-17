@@ -11247,3 +11247,46 @@ porque cada grilla se compara contra la anterior; quedó dicho como límite. En 
 misma tanda, la vista de estado se rehízo en claro: resumen arriba, la retenida
 explicada con el campo para cargar el valor, y los seis controles con nombre en
 castellano.
+
+## Convenio, segunda versión: consulta con IA y preguntas frecuentes (2026-11-17)
+
+SDN revisó la vista Convenio de la herramienta «Convenio y escalas» y la
+descartó: un buscador sin IA solo encuentra búsquedas muy orientadas. Pidió dos
+caminos (`PLAN_CONVENIO_ESCALAS.md`, D31 a D37): una consulta con IA muy
+restringida, con un modelo barato, y una base de preguntas frecuentes muy
+trabajada que después cura el sindicato.
+
+**Las preguntas frecuentes.** Cinco redactores escribieron 138 preguntas desde
+el convenio, por bloque de temas. Dos investigadores relevaron la web: ningún
+sindicato argentino publica preguntas frecuentes de su convenio (el formato lo
+dan el Ministerio de Trabajo y los estudios jurídicos) y afuera los sindicatos
+bancarios publican guías cortas por problema. De ahí salieron las prácticas de
+forma (pregunta en primera persona, respuesta que abre con sí o no, convenio y
+ley separados, un paso concreto al final) y 50 preguntas que un convenio de
+1975 no trata (retiro voluntario, metas de venta, teletrabajo, desconexión,
+acoso, cierre de sucursales). Un editor consolidó las 138 en 111 y corrigió 13
+respuestas contra el texto del convenio.
+
+**La ley estaba desactualizada.** Las citas se habían escrito de memoria y la
+LCT fue reformada por la Ley 27.802 (B.O. 6/3/2026). Tres verificadores
+contrastaron cada `segun_ley` contra el texto actualizado de argentina.gob.ar y
+corrigieron la gran mayoría: aviso de vacaciones (30 días), fraccionamiento,
+topes de horas extra (3/30/200), art. 66, recibo, descuentos, preaviso,
+indemnización, certificado de trabajo, intimación a jubilarse, asambleas,
+huelga en bancos, tercerizados. La base final tiene 149 preguntas en 12 temas,
+todas `sin_revisar`. Las dudas de fondo para el sindicato: la tabla de
+vacaciones (el art. 48 d está truncado), qué actas integran el texto vigente,
+la norma de la jornada bancaria, el Día del Bancario, los aportes vigentes y el
+acuerdo de teletrabajo.
+
+**La consulta con IA.** Convenio entero y frecuentes en el prompt, con caché;
+no hay búsqueda por fragmentos. El modelo contesta por una herramienta de
+esquema cerrado y el servidor decide: sin una cita que exista, o con una forma
+que no corresponde, sale una respuesta fija. El QA independiente encontró que
+la primera versión dejaba pasar teléfonos, usuarios de red, importes escritos
+con palabras, otro alfabeto y leyes ajenas con una cita válida pegada, y que el
+tope por IP se salteaba con `X-Forwarded-For`: se endureció la forma y se sumó
+un tope global. Después hubo que aflojar donde frenaba frases legítimas de la
+ley («tenés derecho», «podés reclamar», «Ley de Sangre (22.990»): medido sobre
+los 204 textos de la base, quedan 3 que el filtro frenaría.
+

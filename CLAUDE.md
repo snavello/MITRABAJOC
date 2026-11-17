@@ -1863,7 +1863,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (una celda tapada se completa por cálculo) y D29 (los comentarios de la IA
     no retienen), con lo que **octubre se publicó sola y es la vigente**; D30
     (tolerancias a $ 10); la vista de estado rediseñada en claro; y el proceso
-    diario **prendido** en Pruebas (`ESCALAS_AUTO=1`). **Queda**: (b) marcar los resúmenes como
+    diario **prendido** en Pruebas (`ESCALAS_AUTO=1`). **2026-11-17, Plataforma
+    0.74.01**: la vista Convenio se rehízo (D31 a D37): consulta con IA
+    restringida (Haiku) y 149 preguntas frecuentes con convenio y ley separados,
+    para que las cure el sindicato; ver «Herramientas». **Queda**: (b) marcar los resúmenes como
     revisados desde la herramienta (D21): **todavía no está construido**, hoy
     la pantalla solo muestra «sin revisar»; (c) el pase a la app del afiliado
     (D12), la vista de estado en `/admin` (D23) y la conectividad de un
@@ -2622,12 +2625,36 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   publicar o descartar con registro de quién y cuándo. Cuando el sindicato
   apruebe y la herramienta pase a la app, esa página se muda al menú de `/admin`
   con permiso propio: se construyó para que sea mover la página.
-- **Convenio en fichas, sin IA** (D3, D11, D24): `data/convenios/cct-18-75.json`
-  con el texto **literal** de cada artículo, buscador en el navegador y entradas
-  por situación. **Los resúmenes «en simple» nacen `sin_revisar`** y la pantalla
-  lo dice; las situaciones son provisorias (D24) y lo dudoso se saca («Falleció un
-  familiar» va solo al art. 48). Marcarlos revisados (D21) todavía no está
-  construido.
+- **Vista Convenio, segunda versión** (D31 a D37, 2026-11-17, Plataforma 0.74.01;
+  SDN: el buscador sin IA «no es muy útil»). Arriba **«Preguntale al convenio»**
+  y debajo las **preguntas frecuentes** por tema; el texto literal de cada
+  artículo (`data/convenios/cct-18-75.json`) queda como destino de las citas y en
+  un índice plegado. Se sacaron el buscador por palabra y las tarjetas por
+  situación.
+  - **Preguntas frecuentes** (`convenio_faq.py`, puro; `data/convenios/cct-18-75-faq.json`,
+    149 preguntas en 12 temas): cada una con `respuesta` (SOLO lo que dice el
+    convenio, con sus artículos) y aparte `segun_ley` (con sus `normas`); nunca
+    mezclados ni con importes. **Nacen todas `sin_revisar`: las cura el
+    sindicato**; `nota_curador` (no viaja al afiliado; sí a `frecuentes/curado`)
+    lleva la duda concreta. La ley se verificó contra el texto vigente al
+    2026-11-16 (LCT con la reforma de la Ley 27.802): si la ley cambia, hay que
+    volver a verificar. El cargador descarta y reporta lo mal formado.
+  - **Consulta con IA** (`consulta_convenio_ia.py`, separada del piloto RAG:
+    no toca `rag.py` ni `/app/convenio`): `claude-haiku-5-5` como constante del
+    módulo, **fuera de `precios_ia.USOS` y de `/plataforma` hasta que SDN decida
+    seguir**. El modelo recibe el convenio entero y las frecuentes (con caché),
+    una pregunta por vez, sin historial, de 3 a 300 caracteres, y contesta por
+    una herramienta de esquema cerrado. **Lo que no pasa `validar` recibe la
+    respuesta FIJA que escribe el servidor** («Eso no lo puedo responder con el
+    convenio. Envianos tu consulta particular o consultá a tu delegado.»): sin
+    cita que exista, con enlaces, contactos, importes, marcas de formato, otro
+    alfabeto, texto de las reglas o una norma que no está en las fuentes. Tope
+    por IP y por hora (`CONVENIO_IA_TOPE`, 30) más uno global por proceso. Cada
+    llamada queda en `UsoIA` (tipo `herramienta`) y cada pregunta en
+    `PreguntaConvenio`, **sin identidad**; «Enviar mi consulta» la marca para el
+    equipo, que la ve en la vista de estado. Límite sabido: la forma no frena
+    una afirmación falsa bien citada ni un veredicto personal sin marcas; ahí
+    la defensa es el prompt y la cita a la vista.
 - **Quinto uso de IA** `grilla_salarial` (`precios_ia.USOS`, default
   `claude-sonnet-5-5`, `db.modelo_ia("grilla_salarial")`, columna
   `ConfiguracionPlataforma.modelo_grilla_salarial`, migración `b6d9e2a4c8f1`),
@@ -2635,7 +2662,8 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   respuesta viene mal formada. Antes de bajar de modelo hay que repetir el ensayo
   de lectura contra una grilla publicada. La tabla `EscalaNovedad` (notas vistas)
   está en el inventario de `regularizar_cuit.py`.
-- Tests: `test_grillas_base.py` y `_qa`, `test_consulta_escalas.py`,
+- Tests: `test_convenio_faq.py`, `test_consulta_convenio_ia.py`,
+  `test_convenio_v2_qa.py` (ataques), `test_grillas_base.py` y `_qa`, `test_consulta_escalas.py`,
   `test_convenio_fichas.py`, `test_convenio_escalas_pantalla.py` y `_qa`,
   `test_escalas_fuente.py` (con las respuestas reales de `fixtures/escalas/`),
   `_controles` (grillas adulteradas a propósito), `_lectura`, `_proceso` y `_qa`.

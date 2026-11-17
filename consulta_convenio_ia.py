@@ -190,6 +190,10 @@ _REFERENCIA = re.compile(
 _REFERENCIA_LISTA = re.compile(
     r"\b(?:leyes|decretos|resoluciones)\s*(?:n[°º]\s*)?\d{1,3}(?:\.\d{3})*(?:\s*/\s*\d{2,4})?"
     r"(?:\s*(?:,|y|e)\s*\d{1,3}(?:\.\d{3})*(?:\s*/\s*\d{2,4})?)+", re.I)
+# Así escriben la ley las preguntas frecuentes: «la Ley de Sangre (22.990, art. 47)» y
+# cantidades que no son plata («más de 1.000 trabajadores»). Tampoco son importes.
+_REFERENCIA_NOMBRADA = re.compile(r"\bley\b[^.\d\n]{0,30}\(\s*\d{1,3}(?:\.\d{3})+", re.I)
+_CANTIDAD = re.compile(r"\d{1,3}(?:\.\d{3})+\s*(?:trabajador(?:es|as)?|emplead[oa]s|personas|habitantes|d[ií]as|horas)\b", re.I)
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 # --- Endurecimiento de forma (QA independiente). `validar` no puede juzgar el
@@ -197,13 +201,13 @@ _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _MARCAS = re.compile(r"[<>`*\[\]{}\\|~^]|^\s*#", re.M)               # HTML/markdown
 _TELEFONO = re.compile(r"(?:\d[\s().\-]?){7,}")                       # 011 4444-5555, 1155667788
 _USUARIO = re.compile(r"\s\.\s*(?:com|net|org|gob|gov|ar)\b|(?<!\w)@\w|\barroba\b|\b(?:punto|dot)\s*(?:com|net|org|gob|ar|app|io)\b"
-                      r"|\(\s*dot\s*\)|\bwhats\s?app\b|\btelegram\b|\binstagram\b|\bfacebook\b", re.I)
+                      r"|\(\s*dot\s*\)|\btelegram\b|\binstagram\b|\bfacebook\b", re.I)
 _DINERO_PALABRAS = re.compile(
     r"\bmill[oó]n(?:es)?\b|\bmil\s+(?:\w+\s+)?(?:pesos|quinientos|doscientos|trescientos|cuatrocientos"
     r"|seiscientos|setecientos|ochocientos|novecientos)\b|\d\s*[MK]\b|\b\d+[.,]\d+\s*[MK]\b", re.I | re.S)
 _OPINION = re.compile(
     r"\b(?:te\s+recomiendo|te\s+aconsejo|te\s+sugiero|recomiendo|aconsejo|deber[ií]as|te\s+conviene"
-    r"|ten[eé]s\s+derecho|pod[eé]s\s+reclamar|tu\s+caso|en\s+mi\s+opini[oó]n"
+    r"|en\s+mi\s+opini[oó]n"
     r"|yo\s+(?:creo|pienso)|creo\s+que|pienso\s+que|me\s+parece)\b", re.I)
 _INGLES = re.compile(r"\b(?:the|and|you|your|must|ignore|instructions?|previous|system|prompt|rules?|please"
                      r"|answer|follow|article)\b", re.I)
@@ -227,6 +231,10 @@ def _corpus(convenio: str) -> str:
     return "\n".join(partes)
 
 
+def _sin_cantidades(t: str) -> str:
+    return _CANTIDAD.sub(" ", _REFERENCIA_NOMBRADA.sub(" ", t))
+
+
 def _forma_hostil(respuesta: str, convenio: str) -> str:
     """Motivo si la respuesta tiene una forma que no corresponde ('' si está bien).
     Determinista; no juzga el sentido."""
@@ -245,7 +253,7 @@ def _forma_hostil(respuesta: str, convenio: str) -> str:
         return "marcas de código o formato en la respuesta"
     if _USUARIO.search(respuesta) or _URL.search(unicodedata.normalize("NFKC", respuesta)):
         return "la respuesta trae un contacto o usuario"
-    sin_ref = _REFERENCIA.sub(" ", _REFERENCIA_LISTA.sub(" ", respuesta))
+    sin_ref = _REFERENCIA.sub(" ", _REFERENCIA_LISTA.sub(" ", _sin_cantidades(respuesta)))
     sin_ref = _AÑO.sub(" ", sin_ref)
     if _TELEFONO.search(sin_ref):
         return "la respuesta trae un número de teléfono o de documento"
@@ -294,7 +302,7 @@ def validar(crudo, convenio: str = CONVENIO) -> dict:
         return _fija("caracteres de control en la respuesta")
     if _URL.search(respuesta):
         return _fija("la respuesta trae un enlace o dirección")
-    if _DINERO.search(_REFERENCIA.sub(" ", _REFERENCIA_LISTA.sub(" ", respuesta))):
+    if _DINERO.search(_REFERENCIA.sub(" ", _REFERENCIA_LISTA.sub(" ", _sin_cantidades(respuesta)))):
         return _fija("la respuesta trae importes")
     motivo = _forma_hostil(respuesta, convenio)
     if motivo:
