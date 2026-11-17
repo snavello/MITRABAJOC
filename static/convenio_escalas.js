@@ -11,7 +11,7 @@
 
   var estado = {
     opciones: null, convenio: null, sel: { rama: 'administrativa', anios: null, jerarquia: null, titulo: '', caja: false, tramo_roe: null },
-    fecha: '', resultado: null, situacion: null, fichas: [], memJer: '', roeAbierto: undefined
+    fecha: '', resultado: null, memJer: '', roeAbierto: undefined
   };
 
   /* ---------- utilidades ---------- */
@@ -265,60 +265,33 @@
     $('evo-texto').textContent = evo.alcance;
   }
 
-  /* ---------- convenio ---------- */
-  async function cargarConvenio() {
-    if (estado.convenio) return;
-    try {
-      estado.convenio = await pedir(API + '/convenio');
-      estado.convenio.porNumero = {};
-      estado.convenio.articulos.forEach(function (a) {
-        a._t = norm(a.titulo); a._x = norm(a.texto);
-        estado.convenio.porNumero[String(a.numero).toUpperCase()] = a;
-      });
-      $('conv-nombre').textContent = '18/75';
-      dibujarSituaciones(); dibujarIndice();
-    } catch (e) { error(e.message); }
-  }
-  function etiquetaArts(nums) {
-    var t = nums.map(String).slice().sort(function (a, b) {
-      var na = Number(a), nb = Number(b);
-      if (isNaN(na) && isNaN(nb)) return a.localeCompare(b);
-      if (isNaN(na)) return 1; if (isNaN(nb)) return -1; return na - nb;
-    });
-    var cual = function (n) { return isNaN(Number(n)) ? 'disposición transitoria ' + n : n; };
-    if (t.length === 1) return (isNaN(Number(t[0])) ? 'Disp. transitoria ' : 'Art. ') + t[0];
-    var partes = t.map(cual);
-    return 'Arts. ' + partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1];
-  }
-  function dibujarSituaciones() {
-    var cont = vaciar($('sits'));
-    estado.convenio.situaciones.forEach(function (s) {
-      cont.append(h('button', {
-        type: 'button', class: 'es-sit', 'aria-pressed': String(estado.situacion === s.id),
-        onclick: function () { elegirSituacion(s); }
-      }, h('span', { class: 'a', text: s.titulo }), h('span', { class: 'b', text: etiquetaArts(s.articulos) })));
-    });
-  }
-  function elegirSituacion(s) {
-    var igual = estado.situacion === s.id;
-    estado.situacion = igual ? null : s.id;
-    dibujarSituaciones();
-    var cont = vaciar($('conv-fichas'));
-    if (igual) return;
-    if (s.nota) cont.append(h('p', { class: 'es-nota', text: s.nota }));
-    s.articulos.forEach(function (n) { var a = estado.convenio.porNumero[String(n).toUpperCase()]; if (a) cont.append(ficha(a)); });
-    cont.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
-  function abrirArticulo(a) {
-    estado.situacion = null; dibujarSituaciones();
-    var cont = vaciar($('conv-fichas'));
-    cont.append(ficha(a));
-    cont.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  }
+  /* ---------- convenio (segunda versión: D31 a D37) ----------
+     Arriba la consulta a la IA, una pregunta por vez y sin historial; debajo las
+     preguntas frecuentes por tema; al final, plegado, el texto literal. Todo lo
+     que viene del modelo, de las preguntas o del convenio se dibuja con
+     textContent; los enlaces a artículos los arma esta pantalla con los números
+     que el servidor ya validó. */
+  var PREGUNTA_MAX = 300;
+  var faq = { cargado: false, cargando: false, items: [], porId: {}, abierta: null };
+  var arts = {};            /* artículos ya pedidos, por número */
+
   function rotuloNumero(a) {
     return isNaN(Number(a.numero)) ? 'Disposición transitoria ' + a.numero : 'Artículo ' + a.numero;
   }
-  function renglones(vv, titulo) {
+  function rotuloCorto(n) {
+    return isNaN(Number(n)) ? 'Disp. transitoria ' + n : 'Art. ' + n;
+  }
+  function urlHttps(u) {
+    try { return new URL(u).protocol === 'https:'; } catch (e) { return false; }
+  }
+  function parrafos(texto) {
+    return String(texto || '').split(/\n\s*\n/).map(function (p) { return p.trim(); }).filter(Boolean);
+  }
+  function cargandoLinea(texto) {
+    return h('p', { class: 'es-vacio mov-cargando', text: texto });
+  }
+
+  function renglones(vv) {
     var largo = vv.renglones.length > 6;
     var lista = h('div', {}, vv.renglones.map(function (r) {
       return h('div', { class: 'es-conc', style: 'padding:9px 0' },
@@ -328,54 +301,258 @@
     if (!largo) return lista;
     return h('details', {}, h('summary', { text: 'Ver todos los valores (' + vv.renglones.length + ')' }), lista);
   }
-  function ficha(a) {
-    var vv = a.valores_vigentes, sin = a.resumen_estado !== 'revisado';
-    var hero = h('div', { class: 'es-hero' },
+  /* El texto literal de un artículo (lo que abren las citas y el índice). */
+  function panelArticulo(a) {
+    var vv = a.valores_vigentes;
+    var bloques = [h('div', { class: 'es-hero' },
       h('div', { class: 'es-kicker', text: rotuloNumero(a) }),
-      /* Solo los arts. 1 a 3 titulan por sí mismos; en los demás el título es un
-         rótulo descriptivo y no se presenta como texto del convenio. */
-      h('h2', { text: a.titulo }),
-      a.resumen ? h('p', { text: a.resumen }) : null);
-    var bloques = [hero];
-    var resumenEstado = h('div', { class: 'bloque' },
-      h('span', { class: 'es-chip aviso', text: sin ? 'Resumen sin revisar por el sindicato' : 'Revisado por ' + (a.revisado_por || 'el sindicato') + (a.revisado_en ? ' el ' + fechaAr(a.revisado_en) : '') }));
-    bloques.push(resumenEstado);
-    if (vv) {
-      bloques.push(h('div', { class: 'bloque' },
-        h('div', { class: 'es-kicker', text: (a.importe_titulo || 'Importe vigente') + ' · ' + (vv.nombre || vv.periodo) }),
-        renglones(vv),
-        a.importe_nota ? h('p', { class: 'es-nota', text: a.importe_nota }) : null));
+      h('h2', { text: a.titulo }))];
+    var cuerpo = [h('div', { class: 'es-literal', text: a.texto })];
+    if (a.antecedentes) cuerpo.push(h('p', { class: 'es-mute', text: 'Antecedentes: ' + a.antecedentes }));
+    if (vv && vv.renglones && vv.renglones.length) {
+      cuerpo.push(h('div', { class: 'es-kicker', text: (a.importe_titulo || 'Importe vigente') + ' · ' + (vv.nombre || vv.periodo) }), renglones(vv));
+      if (a.importe_nota) cuerpo.push(h('p', { class: 'es-nota', text: a.importe_nota }));
     }
-    bloques.push(h('div', { class: 'bloque' },
-      h('details', {}, h('summary', { text: 'Texto del convenio' }),
-        h('div', { class: 'es-literal', text: a.texto }),
-        a.antecedentes ? h('p', { class: 'es-mute', style: 'margin-top:8px', text: 'Antecedentes: ' + a.antecedentes }) : null)));
-    var nota = h('p', { class: 'es-nota', hidden: true, text: 'Esto abriría un trámite de consulta gremial dirigido a tu sindicato. En esta etapa no crea nada.' });
-    var acciones = [];
-    if (a.agregable) {
-      acciones.push(h('button', { type: 'button', class: 'es-btn', text: 'Agregarlo a mi selección', onclick: function () { agregarASeleccion(a.agregable); } }));
+    bloques.push(h('div', { class: 'bloque' }, cuerpo));
+    return h('article', { class: 'es-art es-tarjeta', 'data-armado': '' }, bloques);
+  }
+  async function pedirArticulo(numero) {
+    var k = String(numero);
+    if (!arts[k]) arts[k] = await pedir(API + '/convenio/articulo/' + encodeURIComponent(k));
+    return arts[k];
+  }
+
+  /* Citas: botones «Art. 48 · título» que abren el texto del artículo en el lugar,
+     y las preguntas frecuentes relacionadas, que llevan a esa pregunta de la lista. */
+  function citas(articulos, frecuentes) {
+    var cont = h('div', { class: 'es-citas' });
+    var panel = h('div', { 'aria-live': 'polite' });
+    var abierto = null;
+    if (articulos && articulos.length) {
+      var lista = h('div', { class: 'es-citas-lista', role: 'group', 'aria-label': 'Artículos del convenio' });
+      articulos.forEach(function (ref) {
+        var b = h('button', { type: 'button', class: 'es-cita', 'aria-expanded': 'false', text: rotuloCorto(ref.numero) + ' · ' + ref.titulo });
+        b.addEventListener('click', async function () {
+          var misma = abierto === b;
+          if (abierto) abierto.setAttribute('aria-expanded', 'false');
+          vaciar(panel); abierto = null;
+          if (misma) return;
+          abierto = b; b.setAttribute('aria-expanded', 'true');
+          panel.append(cargandoLinea('Abriendo el artículo…'));
+          try {
+            var a = await pedirArticulo(ref.numero);
+            if (abierto !== b) return;
+            vaciar(panel); panel.append(panelArticulo(a));
+          } catch (e) {
+            if (abierto !== b) return;
+            vaciar(panel); panel.append(h('p', { class: 'es-error', role: 'alert', text: e.message }));
+          }
+        });
+        lista.append(b);
+      });
+      cont.append(h('div', { class: 'es-citas-etq', text: 'Artículos que lo sostienen' }), lista);
     }
-    acciones.push(h('button', { type: 'button', class: 'es-btn sec', text: 'Hacer una consulta gremial', onclick: function () { nota.hidden = !nota.hidden; } }), nota);
-    bloques.push(h('div', { class: 'es-acciones' }, acciones));
-    return h('article', { class: 'es-tarjeta es-ficha' }, bloques);
+    var rel = (frecuentes || []).filter(function (f) { return faq.porId[f.id]; });
+    if (rel.length) {
+      cont.append(h('div', { class: 'es-citas-etq', text: 'Preguntas frecuentes relacionadas' }),
+        h('div', { class: 'es-citas-lista' }, rel.map(function (f) {
+          return h('button', { type: 'button', class: 'es-cita rel', text: f.pregunta, onclick: function () { irAPregunta(f.id); } });
+        })));
+    }
+    cont.append(panel);
+    return cont;
   }
-  function agregarASeleccion(que) {
-    if (que === 'caja') estado.sel.caja = true;
-    if (!estado.sel.titulo && que === 'titulo') estado.sel.titulo = '';
-    dibujarSeleccion(); mostrar('seleccion');
-    var destino = que === 'titulo' ? $('campo-titulo') : $('sel-caja').parentNode;
-    if (que === 'titulo') error('Elegí tu título para agregarlo a la selección.');
-    destino.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+  /* ---------- Preguntale al convenio ---------- */
+  var enviando = false;
+  async function preguntar(ev) {
+    ev.preventDefault();
+    if (enviando) return;
+    var campo = $('pq-texto'), res = vaciar($('pq-resultado'));
+    var pregunta = campo.value.replace(/\s+/g, ' ').trim();
+    if (pregunta.length < 3) { res.append(h('p', { class: 'es-error', role: 'alert', text: 'Escribí tu pregunta.' })); campo.focus(); return; }
+    if (pregunta.length > PREGUNTA_MAX) { res.append(h('p', { class: 'es-error', role: 'alert', text: 'La pregunta pasa de ' + PREGUNTA_MAX + ' caracteres.' })); return; }
+    enviando = true; $('pq-enviar').disabled = true;
+    res.setAttribute('aria-busy', 'true');
+    res.append(cargandoLinea('Buscando la respuesta en el convenio…'));
+    try {
+      var d = await pedir(API + '/preguntar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: pregunta })
+      });
+      await cargarFrecuentes();     /* para saber a qué preguntas frecuentes se puede llevar */
+      vaciar(res); res.append(dibujarRespuesta(d));
+    } catch (e) {
+      vaciar(res); res.append(h('p', { class: 'es-error', role: 'alert', text: e.message }));
+    } finally {
+      enviando = false; $('pq-enviar').disabled = false; res.removeAttribute('aria-busy');
+    }
   }
-  function dibujarIndice() {
-    var c = estado.convenio, cont = vaciar($('conv-indice'));
+  function dibujarRespuesta(d) {
+    var responde = d.responde === true;
+    var caja = h('div', { class: 'es-resp' + (responde ? '' : ' fija'), 'data-armado': '' });
+    if (responde) caja.append(h('span', { class: 'es-chip aviso es-etiqueta-ia', text: 'Respuesta generada por IA sobre el texto del convenio' }));
+    caja.append(h('p', { class: 'es-resp-texto', text: d.respuesta || '' }));
+    if (responde) {
+      caja.append(citas(d.articulos, d.frecuentes));
+    } else if (d.puede_enviar && d.consulta_id) {
+      var estadoEnvio = h('p', { class: 'es-error', role: 'alert', hidden: true });
+      var b = h('button', { type: 'button', class: 'es-btn sec', text: 'Enviar mi consulta' });
+      b.addEventListener('click', async function () {
+        b.disabled = true; estadoEnvio.hidden = true;
+        try {
+          await pedir(API + '/consultas/' + encodeURIComponent(d.consulta_id) + '/enviar', { method: 'POST' });
+          b.textContent = 'Consulta enviada';
+        } catch (e) {
+          b.disabled = false; estadoEnvio.textContent = e.message; estadoEnvio.hidden = false;
+        }
+      });
+      caja.append(b, estadoEnvio);
+    }
+    return caja;
+  }
+
+  /* ---------- Preguntas frecuentes ---------- */
+  function cargarFrecuentes() {
+    if (!faq.promesa) faq.promesa = leerFrecuentes();
+    return faq.promesa;
+  }
+  async function leerFrecuentes() {
+    faq.cargando = true;
+    var lista = $('fq-lista');
+    try {
+      var d = await pedir(API + '/frecuentes');
+      faq.cargado = true;
+      construirFrecuentes(d);
+    } catch (e) {
+      vaciar(lista).append(h('p', { class: 'es-error', role: 'alert', text: e.message }));
+    } finally { faq.cargando = false; if (!faq.cargado) faq.promesa = null; }
+  }
+  function construirFrecuentes(d) {
+    var lista = vaciar($('fq-lista')), hayDraft = false;
+    faq.items = []; faq.porId = {};
+    (d.temas || []).forEach(function (t) {
+      if (!t.preguntas || !t.preguntas.length) return;
+      var qs = h('div', { class: 'es-qs' });
+      var det = h('details', { class: 'es-tema' },
+        h('summary', {}, h('span', { class: 'n', text: t.nombre }), h('span', { class: 'c', text: t.preguntas.length + (t.preguntas.length === 1 ? ' pregunta' : ' preguntas') })), qs);
+      var tema = { el: det, qs: qs, nombre: t.nombre, items: [], usuario: false };
+      det.firstChild.addEventListener('click', function () { tema.usuario = !det.open; });
+      t.preguntas.forEach(function (q) {
+        if (q.estado === 'sin_revisar') hayDraft = true;
+        var boton = h('button', { type: 'button', 'aria-expanded': 'false', text: q.pregunta });
+        var fila = h('div', { class: 'es-q' }, boton);
+        var item = { q: q, el: fila, boton: boton, tema: tema, cuerpo: null, _n: norm(q.pregunta) };
+        boton.addEventListener('click', function () { alternarPregunta(item); });
+        qs.append(fila); tema.items.push(item); faq.items.push(item); faq.porId[q.id] = item;
+      });
+      lista.append(det);
+      tema._n = norm(t.nombre);
+    });
+    if (!faq.items.length) lista.append(h('p', { class: 'es-vacio', text: 'Todavía no hay preguntas frecuentes cargadas.' }));
+    $('fq-aviso').hidden = !hayDraft;
+    filtrarFrecuentes();
+  }
+  function cuerpoPregunta(q) {
+    var c = h('div', { class: 'es-qcuerpo' });
+    if (q.estado === 'sin_revisar') c.append(h('span', { class: 'es-sinrev', text: 'sin revisar' }));
+    c.append(h('div', { class: 'es-kicker', text: 'Qué dice el convenio' }));
+    var ps = parrafos(q.respuesta);
+    if (ps.length) ps.forEach(function (p) { c.append(h('p', { text: p })); });
+    else c.append(h('p', { class: 'es-sin-conv', text: 'El convenio no lo trata.' }));
+    if (q.articulos && q.articulos.length) c.append(citas(q.articulos, []));
+    if (q.segun_ley || (q.normas && q.normas.length)) {
+      var ley = h('div', { class: 'es-ley' }, h('div', { class: 'es-kicker', text: 'Según la ley' }));
+      parrafos(q.segun_ley).forEach(function (p) { ley.append(h('p', { text: p })); });
+      if (q.normas && q.normas.length) {
+        ley.append(h('ul', {}, q.normas.map(function (n) {
+          var txt = [n.norma, n.articulo].filter(Boolean).join(', ');
+          var li = h('li', {}, txt);
+          if (n.url && urlHttps(n.url)) li.append(' · ', h('a', { href: n.url, target: '_blank', rel: 'noopener noreferrer', text: 'Ver la norma' }));
+          return li;
+        })));
+      }
+      c.append(ley);
+    }
+    return c;
+  }
+  function cerrarPregunta(item) {
+    if (!item) return;
+    item.boton.setAttribute('aria-expanded', 'false');
+    if (item.cuerpo) { item.cuerpo.remove(); item.cuerpo = null; }
+    if (faq.abierta === item) faq.abierta = null;
+  }
+  function alternarPregunta(item) {
+    var abierta = item.boton.getAttribute('aria-expanded') === 'true';
+    if (faq.abierta && faq.abierta !== item) cerrarPregunta(faq.abierta);
+    if (abierta) { cerrarPregunta(item); return; }
+    item.boton.setAttribute('aria-expanded', 'true');
+    item.cuerpo = cuerpoPregunta(item.q);
+    item.el.append(item.cuerpo);
+    faq.abierta = item;
+  }
+  function irAPregunta(id) {
+    var item = faq.porId[id];
+    if (!item) return;
+    $('fq-filtro').value = ''; filtrarFrecuentes();
+    item.tema.el.open = true; item.tema.usuario = true;
+    if (item.boton.getAttribute('aria-expanded') !== 'true') alternarPregunta(item);
+    item.el.classList.remove('marcada'); void item.el.offsetWidth; item.el.classList.add('marcada');
+    item.boton.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    item.boton.focus({ preventScroll: true });
+  }
+  /* Filtro en el navegador, sin acentos ni mayúsculas: todas las palabras tienen que estar. */
+  function filtrarFrecuentes() {
+    var q = norm($('fq-filtro').value).trim(), palabras = q ? q.split(/\s+/) : [], vistas = 0;
+    var temas = [];
+    faq.items.forEach(function (it) {
+      if (temas.indexOf(it.tema) < 0) temas.push(it.tema);
+      var ok = !palabras.length || palabras.every(function (p) { return it._n.indexOf(p) >= 0 || it.tema._n.indexOf(p) >= 0; });
+      it.el.hidden = !ok;
+      if (ok) vistas++;
+      if (!ok && faq.abierta === it) cerrarPregunta(it);
+    });
+    temas.forEach(function (t) {
+      var hay = t.items.some(function (it) { return !it.el.hidden; });
+      t.el.hidden = !hay;
+      t.el.open = palabras.length ? hay : t.usuario;
+    });
+    $('fq-cant').textContent = palabras.length ? vistas + (vistas === 1 ? ' pregunta' : ' preguntas') : '';
+    var lista = $('fq-lista'), vacio = lista.querySelector('.es-vacio.sin-coincidencias');
+    if (vacio) vacio.remove();
+    if (palabras.length && !vistas && faq.items.length) {
+      lista.append(h('p', { class: 'es-vacio sin-coincidencias', text: 'No encontramos preguntas con esas palabras. Probá preguntándole al convenio, arriba.' }));
+    }
+  }
+
+  /* ---------- Texto del convenio (plegado) ---------- */
+  var textoConv = { cargado: false, cargando: false, porNumero: {} };
+  async function cargarTextoConvenio() {
+    if (textoConv.cargado || textoConv.cargando) return;
+    textoConv.cargando = true;
+    try {
+      var c = await pedir(API + '/convenio');
+      c.articulos.forEach(function (a) { textoConv.porNumero[String(a.numero).toUpperCase()] = a; });
+      textoConv.cargado = true;
+      dibujarIndice(c);
+    } catch (e) {
+      vaciar($('conv-indice')).append(h('p', { class: 'es-error', role: 'alert', style: 'margin:0 16px 14px', text: e.message }));
+    } finally { textoConv.cargando = false; }
+  }
+  function abrirArticulo(a) {
+    var f = $('conv-ficha');
+    vaciar(f); f.hidden = false;
+    f.append(panelArticulo(a));
+    f.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  function dibujarIndice(c) {
+    var cont = vaciar($('conv-indice'));
     c.grupos.forEach(function (g) {
       cont.append(h('details', {},
         h('summary', {}, h('span', { text: g.titulo }), h('span', { class: 'c', text: g.articulos.length + (g.articulos.length === 1 ? ' artículo' : ' artículos') })),
         g.articulos.map(function (r) {
-          var a = c.porNumero[String(r.numero).toUpperCase()];
+          var a = textoConv.porNumero[String(r.numero).toUpperCase()];
           return h('button', { type: 'button', class: 'art', onclick: function () { if (a) abrirArticulo(a); } },
-            h('span', { class: 'n', text: isNaN(Number(r.numero)) ? 'Disp. ' + r.numero : 'Art. ' + r.numero }), h('span', { text: r.titulo }));
+            h('span', { class: 'n', text: rotuloCorto(r.numero) }), h('span', { text: r.titulo }));
         })));
     });
     if (c.convenio.fuente && urlSegura(c.convenio.fuente)) {
@@ -384,38 +561,14 @@
     }
   }
 
-  /* buscador: en el navegador, sin acentos ni mayúsculas */
-  function buscar() {
-    var q = norm($('buscar').value).trim(), res = $('conv-resultados'), cant = $('buscar-cant');
-    var hay = q.length > 0;
-    $('conv-situaciones').hidden = hay; $('conv-indice').hidden = hay; $('conv-fichas').hidden = hay && false;
-    if (!hay) { res.hidden = true; cant.textContent = ''; return; }
-    if (!estado.convenio) { return; }
-    var palabras = q.split(/\s+/), tit = [], tex = [], exa = [];
-    /* «art 10», «art. 10», «artículo 10», «10», «VIII», «transitoria VIII» */
-    var mn = /^(?:(?:articulos?|art|disposiciones|disposicion|disp|transitorias?)\.?\s*)*(\d+|[ivxlc]+)\.?$/.exec(q);
-    var numQ = mn ? mn[1] : null, conPrefijo = !!mn && q !== mn[1];
-    estado.convenio.articulos.forEach(function (a) {
-      if (numQ !== null && String(a.numero).toLowerCase() === numQ) { a._exacto = true; exa.push(a); return; }
-      a._exacto = false;
-      var todasT = palabras.every(function (p) { return a._t.indexOf(p) >= 0; });
-      var todas = palabras.every(function (p) { return a._t.indexOf(p) >= 0 || a._x.indexOf(p) >= 0; });
-      if (todasT) tit.push(a); else if (todas) tex.push(a);
+  function cargarConvenio() { cargarFrecuentes(); }
+  function iniciarConvenio() {
+    $('pq-form').addEventListener('submit', preguntar);
+    $('pq-texto').addEventListener('input', function (e) {
+      $('pq-cont').textContent = e.target.value.length + ' / ' + PREGUNTA_MAX;
     });
-    if (conPrefijo && exa.length) { tit = []; tex = []; }
-    var lista = exa.concat(tit, tex);
-    cant.textContent = lista.length + (lista.length === 1 ? ' artículo' : ' artículos');
-    vaciar(res); res.hidden = false;
-    if (!lista.length) { res.append(h('p', { class: 'es-nota', style: 'padding:14px 16px', text: 'No encontramos artículos con esas palabras.' })); return; }
-    lista.forEach(function (a) {
-      var i = a._x.indexOf(palabras[0]), snip = '';
-      if (!a._exacto && i >= 0 && a._t.indexOf(palabras[0]) < 0) {
-        var ini = Math.max(0, i - 50);
-        snip = (ini > 0 ? '…' : '') + a.texto.slice(ini, i + 110).replace(/\s+/g, ' ') + '…';
-      }
-      res.append(h('button', { type: 'button', onclick: function () { abrirArticulo(a); } },
-        h('span', { class: 't', text: rotuloNumero(a) + ' · ' + a.titulo }), snip ? h('span', { class: 's', text: snip }) : null));
-    });
+    $('fq-filtro').addEventListener('input', filtrarFrecuentes);
+    $('conv-texto').addEventListener('toggle', function (e) { if (e.target.open) cargarTextoConvenio(); });
   }
 
   /* ---------- arranque ---------- */
@@ -461,7 +614,7 @@
     /* Al alternar se conserva lo elegido en cada modo. */
     $('ir-jerarquia').addEventListener('click', function () { estado.sel.jerarquia = estado.memJer || ''; dibujarSeleccion(); });
     $('ir-anios').addEventListener('click', function () { estado.memJer = estado.sel.jerarquia || ''; estado.sel.jerarquia = null; dibujarSeleccion(); });
-    $('buscar').addEventListener('input', buscar);
+    iniciarConvenio();
 
     try {
       var o = await pedir(API + '/opciones');

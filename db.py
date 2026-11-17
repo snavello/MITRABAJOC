@@ -8131,6 +8131,80 @@ def listar_novedades(convenio: str = CONVENIO_BANCARIO, tipo: str = None) -> lis
         return [_novedad_dict(n) for n in s.exec(q.order_by(EscalaNovedad.publicada.desc(), EscalaNovedad.post_id.desc())).all()]
 
 
+class PreguntaConvenio(SQLModel, table=True):
+    """Cada pregunta hecha a la consulta con IA del convenio (D34, D37.6), con su
+    resultado. SIN ninguna identidad: ni CUIL, ni IP, ni usuario. `resultado` es
+    respondida | fija | error; `enviada` marca el botón «Envianos tu consulta»
+    (la lista que ve el equipo). Distinta de `ConsultaConvenio` (piloto RAG)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    convenio: str = Field(default=CONVENIO_BANCARIO, index=True)
+    pregunta: str = ""
+    resultado: str = "fija"
+    motivo: str = ""
+    articulos: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    frecuentes: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    respuesta: str = ""
+    enviada: bool = Field(default=False, index=True)
+    enviada_en: str = ""
+    creada: str = Field(default_factory=fechas.ahora_con_segundos)
+    modelo: str = ""
+
+
+def guardar_pregunta_convenio(pregunta: str, resultado: str, motivo: str, articulos: list, frecuentes: list,
+                              respuesta: str, modelo: str, convenio: str = CONVENIO_BANCARIO) -> int:
+    with Session(engine) as s:
+        p = PreguntaConvenio(convenio=convenio, pregunta=pregunta, resultado=resultado, motivo=motivo or "",
+                             articulos=list(articulos or []), frecuentes=list(frecuentes or []),
+                             respuesta=respuesta or "", modelo=modelo or "")
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        return p.id
+
+
+def enviar_pregunta_convenio(pregunta_id: int) -> bool:
+    """Marca la pregunta como enviada al equipo. Idempotente: la fecha es la del
+    primer envío. False si no existe."""
+    with Session(engine) as s:
+        p = s.get(PreguntaConvenio, pregunta_id)
+        if not p:
+            return False
+        if not p.enviada:
+            p.enviada, p.enviada_en = True, fechas.ahora_con_segundos()
+            s.add(p)
+            s.commit()
+        return True
+
+
+def _pregunta_convenio_dict(p: "PreguntaConvenio") -> dict:
+    return {"id": p.id, "pregunta": p.pregunta, "resultado": p.resultado, "motivo": p.motivo,
+            "articulos": list(p.articulos or []), "frecuentes": list(p.frecuentes or []),
+            "respuesta": p.respuesta, "enviada": p.enviada, "enviada_en": p.enviada_en,
+            "creada": p.creada, "modelo": p.modelo}
+
+
+def preguntas_convenio(convenio: str = CONVENIO_BANCARIO, limite: int = 200) -> dict:
+    """Para el equipo: las enviadas primero (la más nueva arriba), después las que
+    salieron con la respuesta fija o con error (las que el convenio no contesta);
+    las respondidas solo cuentan en los totales. `conteos` mira toda la tabla."""
+    with Session(engine) as s:
+        base = select(PreguntaConvenio).where(PreguntaConvenio.convenio == convenio)
+        enviadas = s.exec(base.where(PreguntaConvenio.enviada == True)  # noqa: E712
+                          .order_by(PreguntaConvenio.id.desc()).limit(limite)).all()
+        resto = s.exec(base.where(PreguntaConvenio.enviada == False,  # noqa: E712
+                                  PreguntaConvenio.resultado != "respondida")
+                       .order_by(PreguntaConvenio.id.desc()).limit(max(0, limite - len(enviadas)))).all()
+        filas = s.exec(text("SELECT resultado, enviada, COUNT(*) FROM preguntaconvenio "
+                            "WHERE convenio = :c GROUP BY resultado, enviada").bindparams(c=convenio)).all()
+    conteos = {"total": 0, "respondidas": 0, "fijas": 0, "errores": 0, "enviadas": 0}
+    for resultado, enviada, n in filas:
+        conteos["total"] += n
+        conteos[{"respondida": "respondidas", "fija": "fijas", "error": "errores"}.get(resultado, "fijas")] += n
+        if enviada:
+            conteos["enviadas"] += n
+    return {"conteos": conteos, "consultas": [_pregunta_convenio_dict(p) for p in list(enviadas) + list(resto)]}
+
+
 def marcar_novedad(tipo: str, post_id: int, convenio: str = CONVENIO_BANCARIO, **campos) -> bool:
     """Actualiza `resultado`, `ultimo_error`, `grilla_id` o `periodo` de una nota vista."""
     permitidos = {"resultado", "ultimo_error", "grilla_id", "periodo"}

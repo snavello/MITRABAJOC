@@ -209,11 +209,18 @@ def test_la_pagina_no_arma_totales_ni_usa_innerhtml():
         assert not re.search(r"\b(reduce|total|subtotal)\b", texto, flags=re.I), "la pantalla no suma ni totaliza"
     # los textos fijos del plan
     assert "Recordar mi selección" in html and "Solo para validar" in html
-    assert "Resumen sin revisar por el sindicato" in js
     assert "Si conocés el ROE de tu banco, cargalo acá" in js
     assert "controlar lo que te pagaron" not in html + js and "Ir a Tu recibo" not in html + js   # D25
     assert "Hay una actualización publicada el" in js and "La estamos cargando." in js
-    assert "Hacer una consulta gremial" in js and "Agregarlo a mi selección" in js
+    # la vista Convenio, segunda versión (D36): consulta con IA, frecuentes, texto plegado
+    for frase in ("Preguntale al convenio", "Preguntas frecuentes", "Texto del convenio", "Responde solo con el convenio"):
+        assert frase in html, frase
+    for frase in ("Respuesta generada por IA sobre el texto del convenio", "Enviar mi consulta", "Consulta enviada",
+                  "Según la ley", "El convenio no lo trata", "sin revisar", "Artículos que lo sostienen"):
+        assert frase in js, frase
+    # lo viejo se sacó: buscador de artículos y tarjetas por situación
+    assert 'id="buscar"' not in html and 'id="sits"' not in html and "conv-situaciones" not in html
+    assert "elegirSituacion" not in js and "Agregarlo a mi selección" not in js
 
 
 def test_todo_lo_de_static_va_con_sello():
@@ -238,3 +245,31 @@ def test_la_tarjeta_esta_en_herramientas():
     with open("templates/entornos.html", encoding="utf-8") as f:
         t = f.read()
     assert "/entornos/herramientas/convenio-escalas" in t and "Convenio y escalas" in t
+
+
+def test_la_vista_convenio_habla_con_las_rutas_de_la_segunda_version():
+    with open("static/convenio_escalas.js", encoding="utf-8") as f:
+        js = f.read()
+    for ruta in ("/preguntar", "/frecuentes", "/consultas/", "/enviar", "/convenio/articulo/"):
+        assert ruta in js, ruta
+    assert "maxlength=\"300\"" in _con_plataforma().get(PAGINA).text
+    # lo que viene del modelo o de los datos nunca se arma como HTML
+    assert "innerHTML" not in js and "outerHTML" not in js and "document.write" not in js
+
+
+def test_la_vista_de_estado_tiene_las_preguntas_al_convenio():
+    html = _con_plataforma().get(PAGINA + "/estado").text
+    assert 'id="t-consultas"' in html and 'id="consultas-lista"' in html and "Preguntas al convenio" in html
+    with open("static/escalas_estado.js", encoding="utf-8") as f:
+        js = f.read()
+    assert "/consultas" in js and "pintarConsultas" in js
+    assert "innerHTML" not in js and "insertAdjacentHTML" not in js
+
+
+def test_la_api_de_la_consulta_sigue_respondiendo_a_la_pantalla():
+    c = _con_plataforma()
+    f = c.get(API + "/frecuentes").json()
+    assert f["temas"] and all("preguntas" in t for t in f["temas"])
+    r = c.post(API + "/preguntar", json={"pregunta": "¿Cuántos días de licencia tengo por casamiento?"}).json()
+    assert set(r) >= {"responde", "respuesta", "articulos", "frecuentes", "consulta_id", "puede_enviar"}
+    assert c.get(API + "/consultas").json()["conteos"]["total"] >= 1

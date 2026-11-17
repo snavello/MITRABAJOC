@@ -30,7 +30,7 @@
     --cv-sup:#fff; --cv-sel:var(--marca-base); --cv-sel-txt:#fff;
     --es-hero:var(--marca-base); --es-hero-txt:#fff; --es-hero-mute:#dbe3ee; --es-hero-acento:var(--marca-apoyo);
     --es-pub-bg:#e2f1ef; --es-pub-txt:#173e6e; --es-ref-bg:#fbf2e3; --es-ref-txt:#6a3f06;
-    --es-nota-bg:#f4f4f4; --es-suave:#f1f8f7;
+    --es-nota-bg:#f4f4f4; --es-suave:#f1f8f7; --es-ley-bg:#f6f1e6; --es-ley-filete:#c79a3a;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   body { background:var(--papel); color:var(--tinta); min-height:100vh; }
@@ -77,9 +77,9 @@
   /* ---- campos ---- */
   .es-campo { display:flex; flex-direction:column; gap:8px; }
   .es-campo > label, .es-campo > .es-etq { font-size:12.5px; font-weight:600; color:var(--gris); }
-  select, input[type="search"] { width:100%; min-height:46px; padding:0 12px; border:1px solid var(--linea); border-radius:9px;
+  select, input[type="search"], input[type="text"] { width:100%; min-height:46px; padding:0 12px; border:1px solid var(--linea); border-radius:9px;
     font:inherit; font-size:15px; background:#fff; color:var(--tinta); }
-  select:focus, input[type="search"]:focus { outline:2px solid var(--marca-acento); outline-offset:-1px; }
+  select:focus, input[type="search"]:focus, input[type="text"]:focus { outline:2px solid var(--marca-acento); outline-offset:-1px; }
   .es-recordar { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:10px; background:var(--es-suave);
     border:1px solid var(--linea); }
   .es-recordar input { width:22px; height:22px; margin:2px 0 0; flex:none; }
@@ -123,38 +123,84 @@
   .es-evo .pct { grid-area:pct; justify-self:end; color:var(--gris); font-variant-numeric:tabular-nums; }
   .es-textofijo { margin-top:10px; padding:10px 12px; border-radius:6px; font-size:12.5px; line-height:1.5; background:var(--es-nota-bg); }
 
-  /* ---- convenio ---- */
+  /* ---- convenio: preguntale al convenio, preguntas frecuentes, texto ---- */
+  .solo-lectores { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   .es-buscar { display:flex; align-items:center; gap:10px; padding:0 14px; min-height:46px; border-radius:9px; border:1px solid var(--linea); background:#fff; }
   .es-buscar input { flex:1; min-height:44px; border:0 !important; outline:none !important; background:transparent; padding:0; }
   .es-buscar svg { width:18px; height:18px; flex:none; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; }
-  .es-sits { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .es-sit { min-height:68px; padding:12px; text-align:left; border:0; border-radius:8px; background:var(--cv-sup); color:var(--tinta);
-    box-shadow:inset 0 0 0 1px var(--linea); font:inherit; display:flex; flex-direction:column; gap:4px; cursor:pointer; }
-  .es-sit .a { font-size:14px; font-weight:700; line-height:1.25; }
-  .es-sit .b { font-size:12px; color:var(--gris); }
-  .es-sit[aria-pressed="true"] { background:var(--cv-sel); color:var(--cv-sel-txt); box-shadow:none; }
-  .es-sit[aria-pressed="true"] .b { color:inherit; opacity:.85; }
-  .es-res { display:flex; flex-direction:column; }
-  .es-res button { text-align:left; min-height:56px; padding:10px 16px; border:0; border-top:1px solid var(--linea); background:none; font:inherit; cursor:pointer; color:var(--tinta); }
-  .es-res button:first-child { border-top:0; }
-  .es-res .t { font-size:14px; font-weight:650; }
-  .es-res .s { display:block; font-size:12.5px; color:var(--gris); margin-top:2px; line-height:1.4; }
-  .es-ficha .es-hero h2 { font-size:21px; }
-  .es-ficha .bloque { padding:12px 16px; border-top:1px solid var(--linea); display:flex; flex-direction:column; gap:8px; }
+  .es-bloque-h { display:flex; flex-direction:column; gap:4px; padding:16px 16px 0; }
+  .es-bloque-h h2 { font-size:17px; font-weight:700; line-height:1.25; }
+  .es-cuerpo { padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+  .es-preguntar { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:stretch; }
+  .es-preguntar .es-btn { width:auto; min-width:132px; }
+  @media (max-width:520px) { .es-preguntar { grid-template-columns:1fr; } .es-preguntar .es-btn { width:100%; } }
+  .es-contador { text-align:right; font-variant-numeric:tabular-nums; }
+  .es-resp { display:flex; flex-direction:column; gap:12px; padding-top:4px; }
+  .es-resp-texto { font-size:15px; line-height:1.6; white-space:pre-line; overflow-wrap:anywhere; }
+  .es-resp.fija .es-resp-texto { font-weight:600; }
+  .es-etiqueta-ia { align-self:flex-start; }
+  .es-citas { display:flex; flex-direction:column; gap:8px; }
+  .es-citas-lista { display:flex; flex-wrap:wrap; gap:8px; }
+  .es-cita { display:inline-flex; align-items:center; min-height:44px; max-width:100%; padding:6px 14px; border:0; border-radius:999px; text-align:left;
+    background:var(--cv-sup); color:var(--tinta); cursor:pointer; font:inherit; font-size:13px; font-weight:650; line-height:1.3;
+    box-shadow:inset 0 0 0 1px var(--linea); }
+  .es-cita[aria-expanded="true"] { background:var(--cv-sel); color:var(--cv-sel-txt); box-shadow:none; }
+  .es-cita.rel { font-weight:500; }
+  .es-citas-etq { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--gris); }
+  .es-art { border-radius:8px; overflow:hidden; }
+  .es-art .es-hero { margin:0; }
+  .es-art .bloque { padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
   .es-literal { white-space:pre-line; font-size:13.5px; line-height:1.55; background:var(--es-nota-bg); border-radius:6px; padding:12px; overflow-wrap:anywhere; }
-  .es-ficha details > summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:650; font-size:13.5px; list-style:none; }
-  .es-ficha details > summary::-webkit-details-marker { display:none; }
-  .es-ficha details > summary::after { content:"+"; margin-left:auto; font-size:18px; }
-  .es-ficha details[open] > summary::after { content:"−"; }
-  .es-acciones { padding:6px 12px 14px; display:flex; flex-direction:column; gap:10px; }
+
+  .es-frecuentes { display:flex; flex-direction:column; }
+  .es-temas { display:flex; flex-direction:column; border-top:1px solid var(--linea); }
+  .es-tema { border-top:1px solid var(--linea); }
+  .es-tema:first-child { border-top:0; }
+  .es-tema > summary { cursor:pointer; min-height:48px; padding:0 4px; display:flex; align-items:center; gap:10px;
+    font-size:14px; font-weight:700; list-style:none; }
+  .es-tema > summary::-webkit-details-marker { display:none; }
+  .es-tema > summary .n { flex:1; }
+  .es-tema > summary .c { color:var(--gris); font-size:12px; font-weight:500; white-space:nowrap; }
+  .es-tema > summary::after { content:"+"; font-size:18px; font-weight:500; width:16px; text-align:center; }
+  .es-tema[open] > summary::after { content:"−"; }
+  .es-qs { display:flex; flex-direction:column; padding:0 0 8px; }
+  .es-q { border-top:1px solid var(--linea); }
+  .es-q:first-child { border-top:0; }
+  .es-q > button { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:8px 4px; border:0; background:none;
+    text-align:left; font:inherit; font-size:14px; font-weight:600; line-height:1.4; color:var(--tinta); cursor:pointer; }
+  .es-q > button::after { content:""; flex:none; width:8px; height:8px; margin-right:4px; border-right:2px solid currentColor; border-bottom:2px solid currentColor;
+    rotate:45deg; translate:0 -2px; opacity:.7; }
+  .es-q > button[aria-expanded="true"]::after { rotate:225deg; translate:0 2px; }
+  .es-qcuerpo { padding:4px 4px 16px; display:flex; flex-direction:column; gap:14px; }
+  .es-qcuerpo p { font-size:14.5px; line-height:1.6; }
+  .es-sin-conv { font-weight:600; }
+  .es-ley { border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; background:var(--es-ley-bg); border-left:4px solid var(--es-ley-filete); }
+  .es-ley p { font-size:14px; line-height:1.55; }
+  .es-ley ul { list-style:none; padding:0; display:flex; flex-direction:column; gap:4px; font-size:12.5px; color:var(--gris); }
+  .es-ley a { color:var(--tinta); font-weight:650; }
+  .es-sinrev { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:var(--es-nota-bg); color:var(--gris); white-space:nowrap; align-self:flex-start; }
+  .es-vacio { padding:14px 4px; font-size:13.5px; color:var(--gris); }
+  .es-texto-conv > summary { cursor:pointer; min-height:48px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-size:15px; font-weight:700; list-style:none; }
+  .es-texto-conv > summary::-webkit-details-marker { display:none; }
+  .es-texto-conv > summary::after { content:"+"; font-size:20px; font-weight:500; }
+  .es-texto-conv[open] > summary::after { content:"−"; }
   .es-indice details { border-top:1px solid var(--linea); }
-  .es-indice details:first-child { border-top:0; }
   .es-indice summary { cursor:pointer; min-height:46px; padding:0 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px; list-style:none; }
   .es-indice summary::-webkit-details-marker { display:none; }
   .es-indice summary span.c { color:var(--gris); font-size:12px; }
   .es-indice .art { width:100%; display:flex; gap:10px; min-height:44px; padding:8px 16px; border:0; background:none; text-align:left; font:inherit; font-size:13.5px; cursor:pointer; color:var(--tinta); align-items:center; }
   .es-indice .art .n { min-width:58px; color:var(--gris); font-size:12.5px; }
   .es-pdf { display:flex; align-items:center; justify-content:space-between; min-height:46px; padding:0 16px; border-top:1px solid var(--linea); font-size:13.5px; font-weight:700; color:var(--tinta); text-decoration:none; }
+  .es-ficha-conv { padding:12px 16px 16px; border-top:1px solid var(--linea); }
+  /* El movimiento, con los tokens de movimiento.css; con «reducir movimiento» no se anima nada. */
+  @media (prefers-reduced-motion: no-preference) {
+    .es-qcuerpo { animation:es-abre var(--mov-medio) var(--ease-entrada) backwards; }
+    .es-q > button::after { transition:rotate var(--mov-rapido) var(--ease-salida); }
+    .es-q.marcada > button { animation:es-marca 1.6s var(--ease-salida); }
+  }
+  @keyframes es-abre { from { opacity:0; translate:0 -6px; } }
+  @keyframes es-marca { from { background:var(--es-suave); } }
 
   @media (max-width:420px) {
     .marca-volver { font-size:0 !important; min-width:44px; justify-content:center; }
@@ -249,23 +295,49 @@
     </section>
   </section>
 
-  {# ---------- Convenio ---------- #}
+  {# ---------- Convenio (segunda versión, D31 a D37) ---------- #}
   <section id="vista-convenio" class="es-pila" data-mov-vista hidden>
-    <div class="es-campo">
-      <label for="buscar">Buscar en el convenio <span id="conv-nombre">18/75</span></label>
-      <div class="es-buscar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <input id="buscar" type="search" autocomplete="off" placeholder="Ej: licencia, título, caja">
-        <span class="es-mute" id="buscar-cant" aria-live="polite"></span>
+
+    <section class="es-tarjeta" aria-labelledby="pq-titulo">
+      <div class="es-bloque-h">
+        <h2 id="pq-titulo">Preguntale al convenio</h2>
+        <p class="es-nota">Escribí tu pregunta en una línea. Respondemos solo con el texto del convenio 18/75 y sus preguntas frecuentes.</p>
       </div>
-    </div>
-    <div id="conv-resultados" class="es-tarjeta es-res" hidden></div>
-    <div id="conv-situaciones" class="es-pila">
-      <div class="es-kicker">¿Qué te está pasando?</div>
-      <div class="es-sits" id="sits"></div>
-    </div>
-    <div id="conv-fichas" class="es-pila"></div>
-    <section class="es-tarjeta es-indice" id="conv-indice"></section>
+      <div class="es-cuerpo">
+        <form id="pq-form" class="es-pila" style="gap:6px" novalidate>
+          <label for="pq-texto" class="solo-lectores">Tu pregunta sobre el convenio</label>
+          <div class="es-preguntar">
+            <input id="pq-texto" type="text" maxlength="300" autocomplete="off" enterkeyhint="send" placeholder="Ej: ¿Cuántos días de licencia por casamiento?" aria-describedby="pq-alcance pq-cont">
+            <button type="submit" class="es-btn" id="pq-enviar">Preguntar</button>
+          </div>
+          <div class="es-mute es-contador" id="pq-cont">0 / 300</div>
+        </form>
+        <p class="es-textofijo" id="pq-alcance" style="margin-top:0">Responde solo con el convenio y las preguntas frecuentes. No da importes ni opina sobre casos personales: para eso consultá a tu delegado.</p>
+        <div id="pq-resultado" aria-live="polite" aria-atomic="true"></div>
+      </div>
+    </section>
+
+    <section class="es-tarjeta es-frecuentes" aria-labelledby="fq-titulo">
+      <div class="es-bloque-h">
+        <h2 id="fq-titulo">Preguntas frecuentes</h2>
+        <p class="es-nota" id="fq-aviso" hidden>Es una propuesta de respuestas que el sindicato todavía va a revisar. Ante la duda, mandá tu consulta o hablá con tu delegado.</p>
+      </div>
+      <div class="es-cuerpo">
+        <div class="es-buscar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <label for="fq-filtro" class="solo-lectores">Filtrar las preguntas frecuentes</label>
+          <input id="fq-filtro" type="search" autocomplete="off" placeholder="Filtrar las preguntas, ej: licencia">
+          <span class="es-mute" id="fq-cant" aria-live="polite"></span>
+        </div>
+        <div id="fq-lista" class="es-temas"><p class="es-vacio mov-cargando">Cargando…</p></div>
+      </div>
+    </section>
+
+    <details class="es-tarjeta es-texto-conv" id="conv-texto">
+      <summary>Texto del convenio</summary>
+      <div class="es-indice" id="conv-indice"><p class="es-vacio mov-cargando" style="padding:0 16px 14px">Cargando…</p></div>
+      <div class="es-ficha-conv" id="conv-ficha" hidden></div>
+    </details>
   </section>
 
 </main>

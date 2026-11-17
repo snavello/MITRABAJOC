@@ -139,6 +139,7 @@ html[data-tema="noticiero"] {
   --es-pub-bg: var(--nt-indigo); --es-pub-txt: var(--nt-marfil);
   --es-ref-bg: var(--nt-coral-suave); --es-ref-txt: var(--nt-tinta);
   --es-nota-bg: var(--nt-hoja); --es-suave: var(--nt-hoja);
+  --es-ley-bg: var(--nt-hoja); --es-ley-filete: var(--nt-indigo);
 }
 
 /* ---------- la barra de validación: bien discreta ---------- */
@@ -159,7 +160,7 @@ html[data-tema="noticiero"] .es-btn:hover { filter: brightness(1.05) saturate(1.
 html[data-tema="noticiero"] .es-btn:active { transform: scale(.97); }
 html[data-tema="noticiero"] .es-btn.sec { background: var(--nt-carta); color: var(--nt-tinta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); }
 html[data-tema="noticiero"] .es-enlace { color: var(--nt-tinta); font-family: var(--nt-f-txt); }
-html[data-tema="noticiero"] :is(select, input[type="search"]) { border: 0; border-radius: 2px; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
+html[data-tema="noticiero"] :is(select, input[type="search"], input[type="text"]) { border: 0; border-radius: 2px; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
   font-family: var(--nt-f-txt); color: var(--nt-tinta); }
 html[data-tema="noticiero"] select:focus { box-shadow: inset 0 0 0 1.5px var(--nt-indigo); }
 /* Foco visible con teclado: el mismo anillo de 2 px de los botones. */
@@ -180,20 +181,37 @@ html[data-tema="noticiero"] .es-eleccion { border: 0; border-radius: 2px; backgr
 html[data-tema="noticiero"] .es-hero { border-radius: 2px; background: var(--nt-indigo); }
 html[data-tema="noticiero"] .es-hero h2 { font-family: var(--nt-f-tit); font-weight: 400; font-size: 26px; letter-spacing: .3px; text-transform: uppercase; }
 html[data-tema="noticiero"] .es-hero .es-kicker { color: var(--nt-coral); }
-html[data-tema="noticiero"] .es-conc, html[data-tema="noticiero"] :is(.es-alcance, .es-ficha .bloque, .es-res button, .es-pdf, .es-indice details) { border-top-color: var(--nt-linea); }
+html[data-tema="noticiero"] .es-conc, html[data-tema="noticiero"] :is(.es-alcance, .es-pdf, .es-indice details) { border-top-color: var(--nt-linea); }
 html[data-tema="noticiero"] .es-chip { border-radius: 2px; font-family: var(--nt-f-txt); }
 html[data-tema="noticiero"] .es-chip.aviso { background: var(--nt-hoja); color: var(--nt-tinta); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
 html[data-tema="noticiero"] .es-cartel { border-radius: 2px; background: var(--nt-coral-suave); color: var(--nt-tinta); }
 html[data-tema="noticiero"] .es-textofijo { border-radius: 2px; background: var(--nt-hoja); }
 html[data-tema="noticiero"] .es-seccion h3 { font-family: var(--nt-f-tit); font-weight: 400; font-size: 19px; letter-spacing: .2px; text-transform: uppercase; }
 
-/* ---------- convenio ---------- */
-html[data-tema="noticiero"] .es-sit { border-radius: 2px; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); font-family: var(--nt-f-txt); }
-html[data-tema="noticiero"] .es-sit[aria-pressed="true"] { background: var(--nt-coral); color: var(--nt-sobre-coral); box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 30%, transparent); }
-html[data-tema="noticiero"] .es-res button { font-family: var(--nt-f-txt); }
-html[data-tema="noticiero"] .es-res button:hover, html[data-tema="noticiero"] .es-indice .art:hover { background: var(--nt-hoja); }
+/* ---------- convenio: preguntale al convenio, preguntas frecuentes, texto ---------- */
+html[data-tema="noticiero"] .es-bloque-h h2 { font-family: var(--nt-f-tit); font-weight: 400; font-size: 21px; letter-spacing: .2px; text-transform: uppercase; }
+html[data-tema="noticiero"] .es-cita { border-radius: 2px; background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-cita:hover { background: var(--nt-hoja); }
+html[data-tema="noticiero"] .es-cita[aria-expanded="true"] { background: var(--nt-coral); color: var(--nt-sobre-coral);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 30%, transparent); }
+html[data-tema="noticiero"] .es-citas-etq { font-family: var(--nt-f-cond); font-size: 13px; letter-spacing: 1.2px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] .es-resp-texto, html[data-tema="noticiero"] .es-qcuerpo p { font-family: var(--nt-f-txt); color: var(--nt-tinta); }
+html[data-tema="noticiero"] .es-art { border-radius: 2px; }
+html[data-tema="noticiero"] .es-tema > summary { font-family: var(--nt-f-cond); font-size: 16px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+html[data-tema="noticiero"] .es-q > button { font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-q > button:hover, html[data-tema="noticiero"] .es-tema > summary:hover { background: var(--nt-hoja); }
+html[data-tema="noticiero"] .es-q > button[aria-expanded="true"] { color: var(--nt-indigo); box-shadow: inset 3px 0 0 var(--nt-coral); padding-left: 12px; }
+html[data-tema="noticiero"] .es-ley { border-radius: 2px; font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-ley a { color: var(--nt-tinta); }
+html[data-tema="noticiero"] .es-sinrev { border-radius: 2px; font-family: var(--nt-f-txt); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] .es-vacio { font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-texto-conv > summary { font-family: var(--nt-f-cond); font-size: 17px; letter-spacing: .8px; text-transform: uppercase; }
+html[data-tema="noticiero"] .es-texto-conv > summary:hover { background: var(--nt-hoja); }
 html[data-tema="noticiero"] .es-literal { border-radius: 2px; background: var(--nt-hoja); color: var(--nt-tinta-1); }
+html[data-tema="noticiero"] .es-indice .art:hover { background: var(--nt-hoja); }
 html[data-tema="noticiero"] .es-indice .art { font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] .es-ficha-conv { border-top-color: var(--nt-linea); }
+
 
 @media (min-width: 761px) { html[data-tema="noticiero"] .cuerpo { padding-top: 34px; } }
 @media (prefers-reduced-motion: reduce) { html[data-tema="noticiero"] .es-btn { transition: none; } }
