@@ -437,7 +437,7 @@ def test_el_modelo_ve_el_en_corto_y_lo_de_los_bancos(con_banco):
     assert "En corto: Hasta 5 años: 14 días\nDe 5 a 10 años" in t
     assert "En algunos bancos (acuerdos puntuales): Supervielle: 30 días desde 2019" in t
     assert "Según la ley: La Ley de Contrato" in t
-    assert "dato directo" in ia.REGLAS and "En algunos bancos" in ia.REGLAS and "Según la ley…" in ia.REGLAS
+    assert "EMPIEZA con su «En corto»" in ia.REGLAS and "En algunos bancos" in ia.REGLAS and "Según la ley…" in ia.REGLAS
 
 
 @pytest.mark.parametrize("texto", [
