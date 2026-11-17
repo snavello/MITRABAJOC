@@ -384,6 +384,16 @@ cambian.
   años). No «falta una tabla» en el convenio. Abierto para el sindicato: bancos
   oficiales, sábado hábil, los 20 años justos.
 
+- **D40 · Una pregunta sin respuesta concreta no se publica** (SDN, 2026-11-17:
+  «si nuestra única respuesta es "el convenio no lo trata", o no tenemos nada
+  que decir, saquemos las preguntas… o las respuestas son dudosas. Prefiero que
+  las agregue luego» el sindicato). Queda solo lo que tiene un dato firme por
+  convenio o por ley verificada; ante la duda, se va. Las retiradas (sin
+  respuesta, o con el dato central sin verificar, contradictorio o solo de un
+  banco) pasan a `data/convenios/cct-18-75-faq-retiradas.json`, que la app no
+  carga ni ve la IA. Ni la pantalla ni la IA dicen lo que el convenio «no
+  trata»: si no hay respuesta concreta, la IA devuelve la respuesta fija.
+
 **Contrato de la base de preguntas frecuentes** (`data/convenios/cct-18-75-faq.json`):
 `{"convenio": "cct-18-75", "leido": "AAAA-MM-DD", "temas": [{"clave", "nombre",
 "orden"}], "preguntas": [{"id" (slug único), "tema" (clave), "orden",

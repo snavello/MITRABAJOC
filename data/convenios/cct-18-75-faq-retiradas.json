@@ -1,0 +1,1087 @@
+{
+ "convenio": "cct-18-75",
+ "nota": "Preguntas retiradas de la base el 2026-11-17 por decisión de SDN: no tienen respuesta concreta o la respuesta es dudosa. No se muestran ni las ve la IA. Quedan para que el sindicato las complete y las sume.",
+ "preguntas": [
+  {
+   "id": "lic-tramites",
+   "tema": "licencias",
+   "orden": 7,
+   "pregunta": "¿Puedo pedir permiso por unas horas o faltar para hacer un trámite personal?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La LCT solo enumera licencias especiales para casamiento, nacimiento, fallecimiento y exámenes (art. 158); no prevé permisos por horas ni para trámites personales. Depende de lo que acuerdes con el banco o de su reglamento interno. Paso concreto: pedilo por escrito y consultá a tu delegado si hay práctica en tu banco.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "158",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "El convenio no lo regula; el sindicato puede cargar los acuerdos por banco.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)",
+    "conocimiento general de FAQ sindicales (Comercio/FAECYS, UPCN, CCOO/UGT); no se pudieron abrir FAQ específicas"
+   ],
+   "en_corto": "No hay un derecho general a permisos por horas ni a faltar para trámites personales: depende de lo que acuerdes con tu banco. Algunos bancos lo pactaron (Banco Nación da 2 días por año para trámites personales). Pedilo por escrito y consultá a tu delegado.",
+   "por_banco": "Banco Nación informó (junio de 2026) 2 días por año para trámites personales. Depende de tu banco: confirmalo con tu delegado.",
+   "fuentes_banco": [
+    {
+     "texto": "La Bancaria, anexos del despacho de Banca Oficial, LIII Congreso Bancario (junio de 2026)",
+     "url": "https://labancaria.org/wp-content/uploads/2026/07/Anexos-Despacho-de-Banca-Oficial.pdf"
+    }
+   ],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Solo dice que no hay derecho general y que depende del banco."
+  },
+  {
+   "id": "lic-junta-medica",
+   "tema": "licencias",
+   "orden": 9,
+   "pregunta": "No estoy de acuerdo con el médico del banco: ¿qué puedo hacer?",
+   "respuesta": "Si vos o el banco no están conformes con el informe del médico del empleador, cualquiera de las dos partes puede pedir una Junta Médica de tres médicos: uno que designa el empleador, otro que designás vos y un tercero que designa el Instituto de Servicios Sociales Bancarios, según la especialidad de que se trate.\n\nLas partes tienen que estar a lo que resuelva la mayoría de la Junta.",
+   "articulos": [
+    48
+   ],
+   "segun_ley": "La LCT (art. 210, texto reformado por la Ley 27.802) prevé que el empleador controle la enfermedad con su médico y que, si hay una discrepancia insalvable entre tu diagnóstico y el del control, se pueda recurrir a una junta médica en institución oficial (en las jurisdicciones en las que la autoridad administrativa habilitó esa opción) o pedir un dictamen a institutos públicos o privados de reconocida trayectoria, con costo a cargo del empleador. La Junta Médica de tres médicos que describe el convenio es un mecanismo propio, distinto de esa vía legal.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "210",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "El Instituto de Servicios Sociales Bancarios fue reemplazado por otras entidades: indicar a quién corresponde hoy designar al tercer médico.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)"
+   ],
+   "en_corto": "Podés pedir una Junta Médica de tres médicos: uno designado por el banco, uno por vos y un tercero por el Instituto de Servicios Sociales Bancarios. Las partes tienen que estar a lo que resuelva la mayoría.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "El tercer médico lo designa el ISSB, que según la nota ya fue reemplazado; no se sabe a quién corresponde hoy."
+  },
+  {
+   "id": "n-licencia-votar",
+   "tema": "licencias",
+   "orden": 11,
+   "pregunta": "El día de las elecciones me toca trabajar: ¿tengo licencia para ir a votar?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "Sí. El Código Electoral Nacional reconoce a quienes, por razones de trabajo, deben estar ocupados durante el horario del acto electoral el derecho a obtener una licencia especial del empleador para poder votar. Avisá al banco con anticipación y pedí por escrito el permiso.",
+   "normas": [
+    {
+     "norma": "Ley 19.945 (Código Electoral Nacional)",
+     "articulo": "",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Falta confirmar el artículo del Código Electoral (¿art. 8?), la cantidad de horas, si es paga y si rige para elecciones provinciales.",
+   "inspirada_en": [
+    "Relevamiento web (web_argentina.md) ★ ¿licencia para votar?"
+   ],
+   "en_corto": "Sí: si por trabajo estás ocupado durante el horario de votación, el Código Electoral te reconoce una licencia especial para ir a votar. Avisá al banco con anticipación y pedila por escrito.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Sin artículo del Código Electoral confirmado, ni horas ni si es paga."
+  },
+  {
+   "id": "lic-mudanza",
+   "tema": "licencias",
+   "orden": 12,
+   "pregunta": "Me mudo: ¿tengo licencia por mudanza?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La LCT no incluye la mudanza entre las licencias especiales (art. 158). Se resuelve por acuerdo con el banco o según su política interna.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "158",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Consultar si hay acuerdos con otros bancos.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)"
+   ],
+   "en_corto": "Ni el convenio ni la ley la prevén: depende de tu banco. Por ejemplo, el Banco Nación da 2 días por mudanza. Confirmalo con tu delegado.",
+   "por_banco": "Banco Nación informó (junio de 2026) 2 días de licencia por mudanza. Depende de tu banco: confirmalo con tu delegado.",
+   "fuentes_banco": [
+    {
+     "texto": "La Bancaria, anexos del despacho de Banca Oficial, LIII Congreso Bancario (junio de 2026)",
+     "url": "https://labancaria.org/wp-content/uploads/2026/07/Anexos-Despacho-de-Banca-Oficial.pdf"
+    }
+   ],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Ni convenio ni ley la prevén; solo un dato de Banco Nación."
+  },
+  {
+   "id": "lic-sin-goce",
+   "tema": "licencias",
+   "orden": 13,
+   "pregunta": "¿Puedo pedir licencia sin goce de sueldo?",
+   "respuesta": "El convenio no prevé una licencia sin goce general a pedido del empleado. Solo la menciona en dos casos del art. 52: los reservistas incorporados transitoriamente a las Fuerzas Armadas como oficial o suboficial (licencia sin goce mientras dure la incorporación, salvo que el sueldo civil sea mayor: entonces el empleador paga la diferencia) y quienes cumplen el servicio militar en la Policía Federal o la Prefectura (Dto. 4.216/54).",
+   "articulos": [
+    52
+   ],
+   "segun_ley": "La LCT no regula una licencia sin goce voluntaria: se acuerda con el empleador. Sí prevé la reserva del puesto en cargos electivos o representativos (art. 215) y la excedencia por maternidad (art. 183).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "183",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "215",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Consultar si otros bancos practican acuerdos de licencia sin goce.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)"
+   ],
+   "en_corto": "No hay una licencia sin goce general que puedas pedir por convenio: se acuerda con el banco. El convenio la prevé para reservistas incorporados a las Fuerzas Armadas y para el servicio en la Policía Federal o la Prefectura. Banco Nación otorga sin goce de 1 a 6 meses por crianza.",
+   "por_banco": "El Banco Nación informó (junio de 2026) licencia sin goce de 1 a 6 meses para crianza (en 2022 había acordado 90 días sin goce). Depende de tu banco: confirmalo con tu delegado.",
+   "fuentes_banco": [
+    {
+     "texto": "El Economista, 31/5/2022: el Banco Nación amplió licencias",
+     "url": "https://eleconomista.com.ar/economia/el-banco-nacion-amplio-licencias-otorgo-mas-derechos-n53566"
+    },
+    {
+     "texto": "La Bancaria, anexos del despacho de Banca Oficial, LIII Congreso Bancario (junio de 2026)",
+     "url": "https://labancaria.org/wp-content/uploads/2026/07/Anexos-Despacho-de-Banca-Oficial.pdf"
+    }
+   ],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Respuesta de fondo: no hay licencia general, se acuerda con el banco."
+  },
+  {
+   "id": "lic-servicio-militar",
+   "tema": "licencias",
+   "orden": 17,
+   "pregunta": "Me convocan al servicio militar: ¿qué pasa con mi trabajo?",
+   "respuesta": "Si tenés más de seis meses de antigüedad y te toca incorporarte, el art. 52 da licencia con el 50% de tu remuneración desde la incorporación hasta cinco días corridos después de la baja si quedaste inapto o exceptuado, y hasta quince días corridos después de la baja si cumpliste un período mayor de seis meses; si el período fue menor, cinco días corridos.\n\nLos días de viaje de regreso se justifican aparte con el 50% de haberes. Las ausencias por el examen médico previo, con la citación del organismo militar, se justifican con goce de sueldo.",
+   "articulos": [
+    52
+   ],
+   "segun_ley": "La LCT obliga al empleador a conservar el empleo del trabajador que presta servicio militar, por llamado ordinario, movilización o convocatorias especiales, desde la convocatoria y hasta 30 días después de concluido el servicio; ese tiempo cuenta para la antigüedad (art. 214). El servicio militar obligatorio fue reemplazado por el voluntario (Ley 24.429, publicada en 1995).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "214",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 24.429 (Servicio Militar Voluntario)",
+     "articulo": "",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-24429-802/texto"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Artículo prácticamente superado (el servicio militar obligatorio fue reemplazado por el voluntario): confirmar si se mantiene como histórico o se saca de la base.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)"
+   ],
+   "en_corto": "Si tenés más de 6 meses de antigüedad, el convenio da licencia con el 50% de tu remuneración desde la incorporación hasta 5 o 15 días corridos después de la baja, según el caso. La ley te garantiza conservar el empleo hasta 30 días después de terminado el servicio.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Nota: artículo prácticamente superado (servicio voluntario desde 1995); sin decidir si se mantiene."
+  },
+  {
+   "id": "fam-cuidado-familiar",
+   "tema": "familia",
+   "orden": 7,
+   "pregunta": "Mi hijo tiene una enfermedad grave o un familiar se enfermó: ¿tengo licencia o puedo tomarme un tiempo para cuidarlo?",
+   "respuesta": "El convenio no prevé una licencia para cuidar a un familiar enfermo: la licencia por razones de salud del art. 48 es para cuando el enfermo sos vos.",
+   "articulos": [
+    48
+   ],
+   "segun_ley": "La LCT no prevé una licencia paga general para cuidar a un familiar enfermo (el art. 158 enumera solo nacimiento, matrimonio, fallecimiento y exámenes). Para la madre, el art. 183 permite pedir la rescisión del contrato o la excedencia (de 3 a 6 meses, sin goce de sueldo y con derecho a volver a tu puesto) para cuidar a un hijo menor enfermo a su cargo, con los alcances que fije la reglamentación y con un año de antigüedad (art. 185). Algunos convenios o empleadores otorgan licencias pagas: preguntá en tu seccional qué aplica en tu banco.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "158",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "183",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "185",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Resolver cuál rige en Banco Nación (10 o 20 días hábiles). El art. 183 LCT habla de «la madre»: aclarar cómo se aplica a otros progenitores.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)",
+    "Relevamiento web (web_exterior.md) ★33",
+    "Relevamiento web (web_argentina.md) ★ licencia por enfermedad de un familiar"
+   ],
+   "en_corto": "Ni el convenio ni la ley dan una licencia paga general para cuidar a un familiar enfermo. Para la madre, la ley permite una excedencia de 3 a 6 meses sin sueldo para cuidar a un hijo menor enfermo. Algunos bancos dan más: Banco Nación, hasta 10 días hábiles al año (más 5 si hay discapacidad).",
+   "por_banco": "El Banco Nación informó en 2026 hasta 10 días hábiles anuales para cuidado de familiares (más 5 si hay discapacidad); en 2022 había acordado llevar la licencia por familiar directo de 10 a 20 días hábiles. Los dos datos no coinciden: depende de tu banco, confirmalo con tu delegado.",
+   "fuentes_banco": [
+    {
+     "texto": "El Economista, 31/5/2022: el Banco Nación amplió licencias",
+     "url": "https://eleconomista.com.ar/economia/el-banco-nacion-amplio-licencias-otorgo-mas-derechos-n53566"
+    },
+    {
+     "texto": "La Bancaria, anexos del despacho de Banca Oficial, LIII Congreso Bancario (junio de 2026)",
+     "url": "https://labancaria.org/wp-content/uploads/2026/07/Anexos-Despacho-de-Banca-Oficial.pdf"
+    }
+   ],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Ni convenio ni ley dan licencia; solo dato de Banco Nación contradictorio."
+  },
+  {
+   "id": "fam-adopcion",
+   "tema": "familia",
+   "orden": 8,
+   "pregunta": "Voy a adoptar: ¿tengo licencia?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La LCT no prevé expresamente una licencia por adopción en el sector privado (el art. 158 enumera solo casamiento, nacimiento, fallecimiento y exámenes). Se resuelve por acuerdo con el banco.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "158",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Confirmar con el acta de Banco Nación y consultar acuerdos con otros bancos.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)"
+   ],
+   "en_corto": "Ni el convenio ni la ley del sector privado prevén una licencia por adopción: depende de tu banco. Banco Nación, por ejemplo, da hasta 90 días con goce de haberes. Confirmalo con tu delegado.",
+   "por_banco": "Banco Nación amplió en 2022 la licencia por adopción de 60 a 90 días con goce y sumó 15 días para trámites; su informe de 2026 habla de 60 días posteriores y 30 previos con goce de haberes. Depende de tu banco: confirmalo con tu delegado.",
+   "fuentes_banco": [
+    {
+     "texto": "El Economista, 31/5/2022: el Banco Nación amplió licencias",
+     "url": "https://eleconomista.com.ar/economia/el-banco-nacion-amplio-licencias-otorgo-mas-derechos-n53566"
+    },
+    {
+     "texto": "UNI Global Union: La Bancaria y el Banco Nación firman acuerdo que amplía el régimen de licencias",
+     "url": "https://uniglobalunion.org/news/la-bancaria-y-el-banco-nacion-firman-acuerdo-que-amplia-regimen-de-licencias/"
+    },
+    {
+     "texto": "La Bancaria, anexos del despacho de Banca Oficial, LIII Congreso Bancario (junio de 2026)",
+     "url": "https://labancaria.org/wp-content/uploads/2026/07/Anexos-Despacho-de-Banca-Oficial.pdf"
+    }
+   ],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Ni convenio ni ley la prevén; solo Banco Nación."
+  },
+  {
+   "id": "fam-guarderia",
+   "tema": "familia",
+   "orden": 9,
+   "pregunta": "¿Tengo derecho a guardería o a un reintegro por guardería?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La LCT prevé guardería o sala maternal en establecimientos que superen cierta cantidad de trabajadoras, según lo fije la reglamentación (art. 179). Las condiciones y las alternativas de reintegro dependen de esa reglamentación.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "179",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Si el beneficio vigente surge de un acta posterior, citarla y decir a quién alcanza; si no, no afirmarlo.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "Depende de la reglamentación: la ley prevé guarderías o salas maternales cuando hay un número mínimo de trabajadoras, y las alternativas de reintegro dependen de esa reglamentación. Consultá a tu delegado qué aplica en tu banco.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Depende de una reglamentación y de consultar al delegado; sin dato concreto."
+  },
+  {
+   "id": "v3-fam-padre-banco",
+   "tema": "familia",
+   "orden": 11,
+   "pregunta": "Soy padre: ¿mi banco da más días por nacimiento que los 2 del convenio?",
+   "en_corto": "Depende de tu banco. El mínimo es de 2 días, pero hay acuerdos con La Bancaria que dan más: Supervielle 30 días de paternidad (desde 2019) y Banco Nación 20 por nacimiento (desde 2022). Pedile a tu delegado el acta de tu banco.",
+   "respuesta": "El convenio da dos días laborables con goce íntegro de haberes por nacimiento de hijo del empleado (art. 48).",
+   "articulos": [
+    48
+   ],
+   "segun_ley": "La LCT otorga 2 días corridos por nacimiento de hijo, pagos (arts. 158 y 159); si caen en domingo, feriado o no laborable se computa al menos un día hábil (art. 160).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "158",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "159",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "160",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "por_banco": "No hay un acta de todo el sector: las ampliaciones se pactan banco por banco. Con fuente: Banco Supervielle extendió la licencia por paternidad a 30 días (acuerdo de julio de 2019, y en 2020 se homologaron acuerdos sobre licencias por nacimiento); Banco Nación llevó la licencia por nacimiento de 10 a 20 días (acuerdo de mayo de 2022) y su informe de 2026 habla de 30 días más 14 adicionales durante el primer año. Depende de tu banco: confirmá el acta con tu delegado.",
+   "fuentes_banco": [
+    {
+     "texto": "Banco Supervielle: extensión de la licencia por paternidad a 30 días (La Bancaria SBA, 24/7/2019)",
+     "url": "https://www.bancariasba.com.ar/2019/07/24/banco-supervielle-extension-de-la-licencia-por-paternidad-a-30-dias/"
+    },
+    {
+     "texto": "iProfesional, 26/7/2019: licencia por paternidad de 30 días para empleados del Banco Supervielle",
+     "url": "https://www.iprofesional.com/legales/296671-trabajadores-salarios-Extienden-la-licencia-por-paternidad-a-30-dias-para-empleados-bancarios"
+    },
+    {
+     "texto": "La Bancaria, «Por los bancos 2019»",
+     "url": "https://labancaria.org/por-los-bancos-2019/"
+    },
+    {
+     "texto": "Boletín Oficial, Res. ST 644/2020: homologa acuerdos La Bancaria–Supervielle sobre licencias por nacimiento",
+     "url": "https://www.boletinoficial.gob.ar/detalleAviso/primera/234425/20200901"
+    },
+    {
+     "texto": "El Economista, 31/5/2022: el Banco Nación amplió licencias",
+     "url": "https://eleconomista.com.ar/economia/el-banco-nacion-amplio-licencias-otorgo-mas-derechos-n53566"
+    },
+    {
+     "texto": "UNI Global Union: La Bancaria y el Banco Nación firman acuerdo que amplía el régimen de licencias",
+     "url": "https://uniglobalunion.org/news/la-bancaria-y-el-banco-nacion-firman-acuerdo-que-amplia-regimen-de-licencias/"
+    },
+    {
+     "texto": "La Bancaria, anexos del despacho de Banca Oficial, LIII Congreso Bancario (junio de 2026)",
+     "url": "https://labancaria.org/wp-content/uploads/2026/07/Anexos-Despacho-de-Banca-Oficial.pdf"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Pedir las actas de los bancos y el anexo de la Res. ST 644/2020. No usar la cifra de 30 días como si valiera para todo el gremio.",
+   "inspirada_en": [
+    "informe de licencias por banco (2026-11-17)"
+   ],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Depende del banco; solo actas parciales de Supervielle y Banco Nación."
+  },
+  {
+   "id": "jor-horas",
+   "tema": "jornada",
+   "orden": 1,
+   "pregunta": "¿Cuántas horas tengo que trabajar por día en el banco?",
+   "respuesta": "El art. 28 habla de «horario bancario»: el personal técnico percibe sueldo y adicional sobre la base del horario bancario o tarea equivalente, de acuerdo con la reglamentación vigente en cada institución.",
+   "articulos": [
+    28
+   ],
+   "segun_ley": "La LCT remite a la Ley 11.544 (art. 196), que fija un máximo general de 8 horas diarias o 48 semanales (art. 1). La jornada puede ser menor si lo disponen las normas, el contrato individual o un convenio colectivo (art. 198). Para los bancos, el horario efectivo depende de las normas propias de la actividad y de cada institución; consultalo con tu seccional. Desde la Ley 22.425 (1981), el personal de bancos privados se rige por la LCT.",
+   "normas": [
+    {
+     "norma": "Ley 11.544",
+     "articulo": "1",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/63368/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "196",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "198",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 22.425 (personal de bancos privados)",
+     "articulo": "1",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-22425-75926/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "El sindicato debe indicar la norma exacta de la jornada bancaria hoy (el Dto. 20.268/46 y la Ley 12.637 fueron derogados por la Ley 22.425). Una fuente secundaria menciona 7 h 30 min de lunes a viernes: no verificada, no se afirma.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "estudiovilaplana.com.ar/trabajadores-bancarios-jornada (abierta, fuente secundaria)"
+   ],
+   "en_corto": "El máximo legal es de 8 horas por día o 48 por semana, y la jornada puede ser menor si lo fija una norma, tu contrato o un convenio. El horario concreto depende de las reglas de tu banco: consultalo con tu seccional.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "No dice cuántas horas tiene la jornada bancaria; remite al seccional."
+  },
+  {
+   "id": "jor-dia-bancario",
+   "tema": "jornada",
+   "orden": 5,
+   "pregunta": "El 6 de noviembre es el Día del Bancario: ¿cómo se paga si me toca trabajar y el bono es parte del convenio?",
+   "respuesta": "El art. 50 instituye como «Día del Bancario» el 6 de noviembre de cada año y dice que para esa fecha rigen las normas establecidas para los feriados nacionales.",
+   "articulos": [
+    50
+   ],
+   "segun_ley": "Según la LCT, si trabajás un feriado nacional cobrás la remuneración normal del día más una cantidad igual, es decir el día doble (art. 166). El convenio dice que para el Día del Bancario rigen las normas de los feriados nacionales. Si el pago que se hace ese día es o no remuneración y cómo tributa Ganancias lo define la normativa vigente: no se puede asegurar para cada año.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "166",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Se reporta una compensación del Día del Bancario pactada en actas de 2020 (no figura en el convenio): completar acta, forma de pago, carácter remunerativo, Ganancias y qué pasa si cae en fin de semana. El valor está en Escala vigente.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento general de FAQ sindicales (Comercio/FAECYS, UPCN, CCOO/UGT); no se pudieron abrir FAQ específicas",
+    "conocimiento propio de la LCT (no se pudo abrir la web)",
+    "Relevamiento web (web_argentina.md) ★ bono del Día del Bancario y Ganancias",
+    "https://labancaria.org/wp-content/uploads/2023/11/Dia-del-bancario-2023.pdf"
+   ],
+   "en_corto": "El 6 de noviembre rigen las normas de los feriados nacionales (art. 50): si trabajás, cobrás el día doble. El convenio no menciona ningún bono; cómo se paga la compensación de ese día en tu banco, consultalo en tu seccional.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "La compensación/bono del Día del Bancario (actas 2020) no está verificada y la pregunta la menciona."
+  },
+  {
+   "id": "n-callcenter-jornada",
+   "tema": "jornada",
+   "orden": 7,
+   "pregunta": "Trabajo en el call center del banco: ¿qué jornada me corresponde?",
+   "respuesta": "Para los agentes que realicen horarios menores que el general, la retribución se liquida estrictamente en forma proporcional al horario que cumplen (art. 28).",
+   "articulos": [
+    28
+   ],
+   "segun_ley": "La duración de la jornada se rige por la Ley 11.544 y por la LCT. Una jornada más corta que la máxima legal solo procede si lo establecen las disposiciones vigentes, tu contrato individual o un convenio o acuerdo colectivo. Las horas extra y la pausa entre jornadas están en las preguntas de jornada.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "196",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "198",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Un estudio jurídico dice que el call center bancario tiene 6 horas, de lunes a viernes, sin verificar contra norma: que el sindicato diga qué norma o acta la fija.",
+   "inspirada_en": [
+    "Relevamiento web (web_argentina.md) ★ call center / ★ atender público",
+    "https://estudiovilaplana.com.ar/trabajadores-bancarios-jornada/"
+   ],
+   "en_corto": "Rige el máximo legal de 8 horas por día o 48 por semana, salvo que tu contrato, un convenio o acuerdo colectivo o una norma fijen una jornada menor. Consultá en tu seccional cuál es la de tu call center.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Solo repite el máximo legal; la jornada del call center no está verificada."
+  },
+  {
+   "id": "jor-extra-limite",
+   "tema": "jornada",
+   "orden": 13,
+   "pregunta": "¿Hay un máximo de horas extra que me pueden hacer?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "Las horas suplementarias autorizadas no pueden ser más de 3 por día, 30 por mes y 200 por año (Dto. 16.115/33, art. 13, según Dto. 484/2000), sin perjuicio de lo que dispongan las normas sobre jornada y descanso.",
+   "normas": [
+    {
+     "norma": "Decreto 16.115/33 (texto Dto. 484/2000)",
+     "articulo": "13",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/norma-63369/actualizacion"
+    },
+    {
+     "norma": "Decreto 484/2000",
+     "articulo": "1",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/decreto-484-2000-63347/texto"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "No se confirmó que la reforma de la Ley 27.802 haya modificado estos topes.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento general de FAQ sindicales (Comercio/FAECYS, UPCN, CCOO/UGT); no se pudieron abrir FAQ específicas"
+   ],
+   "en_corto": "Las horas suplementarias autorizadas no pueden ser más de 3 por día, 30 por mes y 200 por año.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "No se confirmó si la Ley 27.802 modificó los topes de horas extra."
+  },
+  {
+   "id": "jor-sereno",
+   "tema": "jornada",
+   "orden": 17,
+   "pregunta": "Trabajo de sereno y me tocó trabajar en un día no laborable: ¿me dan franco?",
+   "respuesta": "Sí. El personal que hace tareas de sereno y trabaja en días no laborales tiene un franco compensatorio dentro de los quince días siguientes a la fecha en que trabajó. También tiene derecho a ser rotado periódicamente, en un plazo no mayor de quince días, para no prestar servicios de forma continuada en días no laborables (art. 51).",
+   "articulos": [
+    51
+   ],
+   "segun_ley": "",
+   "normas": [],
+   "estado": "sin_revisar",
+   "nota_curador": "Aplicable solo a serenos. Revisar si la figura sigue existiendo.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento general de FAQ sindicales (Comercio/FAECYS, UPCN, CCOO/UGT); no se pudieron abrir FAQ específicas"
+   ],
+   "en_corto": "Sí: franco compensatorio dentro de los 15 días siguientes, y rotación periódica (en no más de 15 días) para no trabajar de corrido en días no laborables.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Nota: no se sabe si la figura del sereno sigue existiendo."
+  },
+  {
+   "id": "sue-aumentos",
+   "tema": "sueldo",
+   "orden": 7,
+   "pregunta": "¿Cómo se acuerdan los aumentos de mi sueldo?",
+   "respuesta": "El convenio establece que los incrementos salariales de carácter general que otorguen los bancos deben ser acordados con la Asociación Bancaria y aprobados por el Banco Central. Se consideran generales los que alcanzan a más del diez por ciento de la dotación en un año (art. 47).\n\nAdemás, los bancos absorben los aumentos que hayan dado por su cuenta, aunque fueran por calificación, sobre las escalas vigentes al 31 de mayo de 1975 (art. 42, inciso a).",
+   "articulos": [
+    47,
+    42
+   ],
+   "segun_ley": "",
+   "normas": [],
+   "estado": "sin_revisar",
+   "nota_curador": "La intervención del Banco Central de 1975 probablemente está superada. Confirmar vigencia y las actas paritarias actuales.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "Los aumentos generales los acuerdan los bancos con la Asociación Bancaria (así lo dice el convenio de 1975, que también exige aprobación del Banco Central). Los aumentos que el banco dé por su cuenta se absorben sobre las escalas de 1975.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Intervención del Banco Central de 1975 probablemente superada; vigencia y actas paritarias sin confirmar."
+  },
+  {
+   "id": "sue-roe",
+   "tema": "sueldo",
+   "orden": 8,
+   "pregunta": "Veo «ROE» en mi recibo: ¿qué es esa participación en las ganancias?",
+   "respuesta": "El art. 42, inciso b), dice que no se absorben las asignaciones que los bancos pagaban con carácter habitual y reiterado, íntegras o fraccionadas, como gratificación, participación en las utilidades, aguinaldo incentivado, bono o cualquier otra denominación.",
+   "articulos": [
+    42
+   ],
+   "segun_ley": "La LCT dice que, si se pactó una participación en las utilidades, habilitación o formas similares, se liquida sobre las utilidades netas (art. 110). Desde la reforma de la Ley 27.802, los sistemas de distribución de utilidades o ganancias que el empleador pacta o decide voluntariamente, en la oportunidad y con las modalidades que él defina dentro de los límites de la autoridad de aplicación, no integran la remuneración (art. 105, inc. b).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "110",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "105",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "La mecánica del ROE (tabla por tramo de bruto y rentabilidad) viene de actas no incluidas en la base. Pedir el texto al sindicato.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "El ROE es una participación en las ganancias del banco. Si es voluntaria, la ley dice que desde la reforma no integra la remuneración. El convenio solo protege las participaciones en utilidades que ya se pagaban con habitualidad en 1975. La mecánica de tu ROE depende del acuerdo con tu banco.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "La mecánica del ROE viene de actas que no tenemos; el en_corto remite al acuerdo con cada banco."
+  },
+  {
+   "id": "sue-tecnico",
+   "tema": "sueldo",
+   "orden": 16,
+   "pregunta": "Tengo funciones técnicas: ¿cómo se ubica mi nivel (A a F) y qué adicional me corresponde?",
+   "respuesta": "Quien cumple funciones técnicas (abogados, contadores, ingenieros, escribanos, técnicos con título) cobra un adicional porcentual sobre el sueldo inicial, en seis niveles de la A a la F según el agrupamiento (art. 11). El personal con tareas específicas sin título tiene adicionales equivalentes (art. 12), y computación los suyos para analistas, programadores, operadores, perforadores y verificadores (art. 14). Hay además adicionales para quienes operan máquinas de contabilidad (art. 24) y máquinas CMC 7 (art. 16).\n\nEl nivel depende de la antigüedad en la función: cuando un banco aplica estos adicionales por primera vez, F es hasta 3 años, E de 3 a 5, D de 5 a 7, C de 7 a 10, B de 10 a 12 y A más de 12 (art. 13); si ya tenía un régimen de seis órdenes, mantenés tu ubicación. En computación esa escala por antigüedad se aplica en el art. 15, punto A. El título por sí solo no alcanza: hay que realizar las tareas que lo requieren (art. 29), y quien las haga más de diez años sin título también cobra el adicional (art. 18).",
+   "articulos": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    18,
+    24,
+    29
+   ],
+   "segun_ley": "",
+   "normas": [],
+   "estado": "sin_revisar",
+   "nota_curador": "Muchas funciones del texto (fichas perforadas, cintas) están obsoletas; confirmar si hoy se aplican estos adicionales y con qué valores.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "Si cumplís funciones técnicas cobrás un adicional porcentual según tu nivel (A a F), que depende de tu antigüedad en la función. Para eso hay que realizar las tareas que requieren el título: tenerlo no alcanza.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Muchas funciones del texto están obsoletas y no se confirmó si hoy se aplican estos adicionales ni con qué valores."
+  },
+  {
+   "id": "sue-jefe-mayor-que-subordinado",
+   "tema": "sueldo",
+   "orden": 18,
+   "pregunta": "¿Mi jefe tiene que cobrar más que yo? ¿Cuenta la falla de caja para esa comparación?",
+   "respuesta": "Sí. El art. 43 dice que el sueldo del personal jerárquico, de la máxima a la mínima categoría, no puede ser inferior al del subordinado que más cobra, contando todos los adicionales, y que tiene que haber una diferencia fija entre una y otra remuneración (el texto la fija en valores de 1975; el valor actual no está en este texto).\n\nLa rectificación de la disposición transitoria VIII aclara que en esa comparación no se cuentan el adicional de falla de caja, la remuneración por hora extraordinaria ni la parte del subsidio familiar. La diferencia se establece dentro de cada oficina, y en las filiales.",
+   "articulos": [
+    43
+   ],
+   "segun_ley": "",
+   "normas": [],
+   "estado": "sin_revisar",
+   "nota_curador": "El art. 43 dice «concepto» donde debería decir «excepto»; confirmar el texto vigente y el valor actual de la diferencia.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "Sí: un jefe no puede cobrar menos que el subordinado que más cobra, contando todos los adicionales, y tiene que haber una diferencia fija entre ambos. No cuentan la falla de caja, las horas extra ni parte del subsidio familiar.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "El art. 43 tiene un error de texto («concepto» por «excepto») y la diferencia vigente no está confirmada."
+  },
+  {
+   "id": "sue-portavalores",
+   "tema": "sueldo",
+   "orden": 19,
+   "pregunta": "¿Existe un adicional por llevar dinero o valores fuera del banco?",
+   "respuesta": "Sí. El art. 39 establece un adicional mensual para el personal de cualquier rama que ejerza la función de portavalores, es decir, quien como tarea permanente lleva fuera del banco o trae al mismo dinero en efectivo o valores al portador. El valor vigente está en Escala vigente.",
+   "articulos": [
+    39
+   ],
+   "segun_ley": "",
+   "normas": [],
+   "estado": "sin_revisar",
+   "nota_curador": "El adicional no figura en la grilla actual; confirmar si hoy se paga.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "Sí: si llevás o traés dinero o valores fuera del banco como tarea permanente, te corresponde un adicional mensual de portavalores. El valor está en Escala vigente.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "El adicional no figura en la grilla actual y no se confirmó si hoy se paga."
+  },
+  {
+   "id": "n-app-celular-personal",
+   "tema": "teletrabajo",
+   "orden": 6,
+   "pregunta": "El banco me pidió instalar una app de trabajo en mi celular personal: ¿qué pueden ver y puedo negarme?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "Para teletrabajo, la ley dice que el banco debe proveer el equipamiento y las herramientas de trabajo, o compensarte si usás las tuyas. Los controles sobre lo que hacés deben ser conocidos por vos, respetar tu dignidad y, en el teletrabajo, contar con participación sindical para proteger tu intimidad. No hay una norma que diga qué datos del celular personal puede ver el banco: por eso conviene pedir por escrito qué permisos pide la app, qué datos registra y si es obligatoria, antes de instalarla.",
+   "normas": [
+    {
+     "norma": "Ley 27.555 (teletrabajo)",
+     "articulo": "9",
+     "url": ""
+    },
+    {
+     "norma": "Ley 27.555 (teletrabajo)",
+     "articulo": "15",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "71",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Definir si el sindicato tiene posición sobre apps de trabajo en celulares personales.",
+   "inspirada_en": [
+    "Relevamiento web (web_exterior.md) ★16"
+   ],
+   "en_corto": "No hay una norma que diga qué puede ver el banco en tu celular personal. Si teletrabajás, el banco debe darte las herramientas o compensarte por usar las tuyas. Antes de instalar, pedí por escrito qué permisos pide la app y si es obligatoria.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Lo sustancial es que no hay norma que diga qué puede ver el banco en el celular personal."
+  },
+  {
+   "id": "n-tele-ascenso",
+   "tema": "teletrabajo",
+   "orden": 8,
+   "pregunta": "Si trabajo desde casa, ¿tengo las mismas chances de ascenso?",
+   "respuesta": "Los ascensos automáticos por antigüedad se aplican directamente por antigüedad, y el banco es libre de asignar la función de cada categoría pero debe pagar la remuneración correspondiente aunque no ejerzas el cargo (art. 44).",
+   "articulos": [
+    44
+   ],
+   "segun_ley": "Las personas que teletrabajan tienen los mismos derechos y obligaciones que el personal presencial y su remuneración no puede ser inferior (art. 3 de la Ley 27.555). La ley también prohíbe todo trato discriminatorio.",
+   "normas": [
+    {
+     "norma": "Ley 27.555 (teletrabajo)",
+     "articulo": "3",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "17",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Para ascensos no automáticos no hay regla en el convenio; ver si los acuerdos de teletrabajo dicen algo sobre carrera.",
+   "inspirada_en": [
+    "Relevamiento web (web_exterior.md) ★14"
+   ],
+   "en_corto": "Sí: quien teletrabaja tiene los mismos derechos que el personal presencial y no puede ser discriminado. Los ascensos automáticos por antigüedad se aplican igual.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "El en_corto extiende a teletrabajo los ascensos automáticos, cosa que ni el convenio ni la ley sostienen; para los no automáticos no hay regla."
+  },
+  {
+   "id": "car-reemplazo",
+   "tema": "carrera",
+   "orden": 5,
+   "pregunta": "¿Qué pasa si me ponen a reemplazar a un jefe por unos días o semanas?",
+   "respuesta": "Si desempeñás durante seis meses una función superior a tu categoría, quedás automáticamente comprendido en la categoría o agrupamiento que corresponde a las funciones ejercidas (art. 26).",
+   "articulos": [
+    26
+   ],
+   "segun_ley": "La LCT no fija una regla sobre reemplazos transitorios ni obliga expresamente a pagar la categoría superior por un reemplazo breve. Solo permite cambios en la forma y modalidades del trabajo que no alteren modalidades esenciales ni causen perjuicio material (art. 66). Si un reemplazo se prolonga y te perjudica, se mira caso por caso; el convenio sí fija un plazo de seis meses (ver respuesta de arriba).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "66",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Verificar si hay acta o práctica del sindicato sobre reemplazos y subrogancias.",
+   "inspirada_en": [
+    "análisis del convenio"
+   ],
+   "en_corto": "El convenio no fija una regla para reemplazos cortos; sí dice que seis meses en una función superior te encuadran en esa categoría. Si el reemplazo se prolonga y te perjudica, se mira caso por caso con tu delegado.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Lo sustancial es que ni el convenio ni la ley fijan una regla para reemplazos cortos."
+  },
+  {
+   "id": "car-ingreso-hijo",
+   "tema": "carrera",
+   "orden": 9,
+   "pregunta": "Si fallece un empleado, ¿un hijo puede entrar a trabajar al banco?",
+   "respuesta": "El art. 59 dice que, en caso de muerte del empleado en actividad, padre de familia, uno de los hijos que hubiere estado a su cargo puede optar por ingresar a la empresa, siempre que reúna las condiciones de ingreso establecidas, a satisfacción del banco y existiendo vacante en la escala inicial.",
+   "articulos": [
+    59
+   ],
+   "segun_ley": "",
+   "normas": [],
+   "estado": "sin_revisar",
+   "nota_curador": "Redacción de 1975 («padre de familia»): confirmar si se aplica a madres y a cualquier progenitor y si se respeta en la práctica.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento propio de la LCT (no se pudo abrir la web)",
+    "conocimiento general de FAQ sindicales (sin abrir la web en esta corrida)"
+   ],
+   "en_corto": "Sí, puede optar por ingresar uno de tus hijos que estuviera a tu cargo si fallecés en actividad, siempre que reúna las condiciones de ingreso, el banco lo acepte y haya vacante en la escala inicial.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Redacción de 1975 («padre de familia») sin confirmar su aplicación a madres ni en la práctica."
+  },
+  {
+   "id": "n-metas-bono",
+   "tema": "presion",
+   "orden": 6,
+   "pregunta": "¿Pierdo el bono o el premio por objetivos si no llego a la meta?",
+   "respuesta": "Los bancos no pueden absorber con aumentos las asignaciones que ya pagaban con carácter habitual y reiterado en el momento de firmarse el convenio (gratificación, participación en las utilidades, aguinaldo incentivado, bono o cualquier otra denominación): esas deben mantenerse (art. 42, apartado b).",
+   "articulos": [
+    42
+   ],
+   "segun_ley": "Un premio que se paga solo si se cumple una condición se cobra cuando la condición se cumple; lo que el banco no puede hacer es cambiarte las reglas de manera unilateral cuando ya te las aplicó, si eso te perjudica materialmente (art. 66). Para calcular la indemnización por despido, la ley toma como base los conceptos que se pagaron de manera «habitual» (seis meses o más dentro del último año) y para los variables, el promedio de los últimos seis meses o del último año si te conviene más (art. 245).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "66",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "245",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "No está claro si el art. 42 b) alcanza a los premios por objetivos actuales. Pedir criterio.",
+   "inspirada_en": [
+    "Relevamiento web (web_argentina.md) ★ ¿Pierdo el bonus?",
+    "La Bancaria: nota de prensa sobre presiones y retiros (https://www.noticiasnqn.com.ar/amp/noticias/2026/05/14/335043-la-bancaria-denuncio-presiones-laborales-y-retiros-forzados-en-bancos-privados-de-neuquen)"
+   ],
+   "en_corto": "Un premio sujeto a una condición se cobra cuando la condición se cumple; el banco no puede cambiarte las reglas unilateralmente si eso te perjudica. El convenio solo protege las asignaciones que ya se pagaban habitualmente en 1975.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "No está claro si el art. 42 b) alcanza a premios por objetivos actuales; la nota pide criterio."
+  },
+  {
+   "id": "n-ranking-publico",
+   "tema": "presion",
+   "orden": 9,
+   "pregunta": "¿Pueden publicar rankings de ventas con mi nombre entre compañeros o sucursales?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La ley no tiene una regla específica sobre rankings. Sí obliga al banco a respetar tu dignidad y a tutelar tu integridad psicofísica (art. 75), y a darles igual trato a todos en identidades de situaciones (art. 81). Si un ranking se usa para humillar, exponer o señalar a alguien, puede configurar un trato abusivo. Además, tus datos personales están protegidos: tenés derecho a pedir qué información tiene el banco sobre vos.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "75",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "81",
+     "url": ""
+    },
+    {
+     "norma": "Ley 25.326 (datos personales)",
+     "articulo": "14",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Preguntar si el sindicato tiene posición o acuerdo sobre rankings públicos.",
+   "inspirada_en": [
+    "Relevamiento web (web_exterior.md) ★4 (convenio extranjero, solo la pregunta)"
+   ],
+   "en_corto": "La ley no regula los rankings, pero el banco debe respetar tu dignidad y dar igual trato. Un ranking usado para humillar o señalar puede ser trato abusivo. Podés pedir qué datos tuyos tiene el banco.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "La respuesta es que la ley no regula los rankings."
+  },
+  {
+   "id": "sal-obra-social-descuento",
+   "tema": "salud",
+   "orden": 8,
+   "pregunta": "¿Cuánto me descuentan para la obra social y qué cubre?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La ley fija un aporte del 3% de tu remuneración a cargo del trabajador, más el 1,5% adicional por cada beneficiario a cargo del grupo familiar que se incorpore en las condiciones del art. 9 (último apartado), y una contribución a cargo del empleador del 6% (art. 16). La obra social da prestaciones de salud a vos y a tu grupo familiar; el programa de prestaciones obligatorias lo establece la autoridad (Ley 23.661, art. 28). El detalle de prestaciones, cartilla y reintegros lo da cada obra social.",
+   "normas": [
+    {
+     "norma": "Ley 23.660 (Obras Sociales)",
+     "articulo": "16",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/62/actualizacion"
+    },
+    {
+     "norma": "Ley 23.661 (Sistema Nacional del Seguro de Salud)",
+     "articulo": "28",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/63/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Confirmar qué obra social corresponde hoy a los bancarios y verificar porcentajes vigentes.",
+   "inspirada_en": [
+    "sitio de La Bancaria (https://www.labancaria.org), sin sección de preguntas frecuentes",
+    "FAQ de CUPE 973 (https://973.cupe.ca/?p=2486)"
+   ],
+   "en_corto": "Por ley te descuentan el 3% de tu remuneración, más 1,5% por cada beneficiario adicional del grupo familiar, y el banco aporta el 6%. La obra social da prestaciones a vos y a tu familia; el detalle lo da cada obra social.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Porcentajes vigentes y obra social de los bancarios sin confirmar (dato central)."
+  },
+  {
+   "id": "des-sumario",
+   "tema": "desvinculacion",
+   "orden": 11,
+   "pregunta": "¿Qué es un sumario y cuándo me lo pueden hacer?",
+   "respuesta": "El convenio nombra el sumario en un solo caso: para quitar las funciones técnicas al personal escalafonado, jerárquico o directivo, también en computación, hace falta un sumario previo (arts. 15 D y 20). El texto remite al art. 16 del Dto. 3.133/58.",
+   "articulos": [
+    20,
+    15
+   ],
+   "segun_ley": "En general, las medidas disciplinarias deben ser proporcionadas a faltas demostradas (art. 67) y ejercerse dentro de los límites de la ley, los estatutos y los convenios (art. 68). La LCT no define el «sumario» como trámite obligatorio general; solo el convenio lo exige en el caso que cita su respuesta.\n\nEl «estatuto bancario» (Ley 12.637 y Dto. 20.268/46) ya no rige: la Ley 22.425 (1981) lo derogó y dispuso que las relaciones de trabajo del personal de bancos privados se rijan exclusivamente por la LCT (arts. 1 y 5).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "67",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "68",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 22.425 (personal de bancos privados)",
+     "articulo": "1, 5",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/norma-75926/texto"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Pedir el texto del art. 16 del Dto. 3.133/58 y confirmar si sigue vigente (la Ley 22.425 no lo lista entre lo derogado, pero deroga lo que se le oponga). Abierto: bancos oficiales. La Ley 22.425 solo invita a las provincias y a la Ciudad a adecuar sus regímenes (art. 11); el sindicato debe decir qué rige hoy en cada banco oficial.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento general de FAQ sindicales (sin abrir la web en esta corrida)"
+   ],
+   "en_corto": "El convenio exige sumario previo solo para quitar las funciones técnicas al personal escalafonado, jerárquico o directivo (arts. 15 D y 20). Para el resto, la LCT no obliga a un sumario: pide sanciones proporcionadas a faltas demostradas.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "Solo describe el único caso del convenio (funciones técnicas) y que la LCT no obliga a un sumario; la vigencia del art. 16 del Dto. 3.133/58 está sin confirmar."
+  },
+  {
+   "id": "des-jubilacion",
+   "tema": "desvinculacion",
+   "orden": 19,
+   "pregunta": "¿Me puedo jubilar antes por ser bancario?",
+   "respuesta": "El convenio menciona la jubilación al decir que quien dejó la empresa por ese motivo no cobra el subsidio por fallecimiento (art. 55), y pide comunicar el convenio a la caja de previsión para reajustar los beneficios de jubilados y pensionados (art. 60).",
+   "articulos": [
+    55,
+    60
+   ],
+   "segun_ley": "El régimen general de jubilaciones (Ley 24.241) da derecho a la prestación básica universal a los varones de 65 años, a las mujeres de 60 (que pueden optar por seguir hasta los 65) y, en ambos casos, con treinta años de servicios con aportes (art. 19). Si existe un régimen especial para el personal bancario, la ley general no lo trata.",
+   "normas": [
+    {
+     "norma": "Ley 24.241 (Jubilaciones y pensiones)",
+     "articulo": "19",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-24241-639/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Abierto: si queda algún régimen jubilatorio especial para bancarios; la Ley 12.637 fue derogada por la Ley 22.425, pero el sindicato debe confirmar qué se aplica hoy, incluso en bancos oficiales.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento general de FAQ sindicales (sin abrir la web en esta corrida)"
+   ],
+   "en_corto": "El convenio no adelanta la edad. La ley general (Ley 24.241) pide 65 años a los varones y 60 a las mujeres (que pueden optar por seguir hasta los 65), con treinta años de servicios con aportes.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Responde lo que el convenio no adelanta; si hay un régimen especial bancario vigente está sin confirmar (nota_curador)."
+  },
+  {
+   "id": "gre-huelga",
+   "tema": "gremial",
+   "orden": 7,
+   "pregunta": "¿Tengo derecho a hacer huelga? ¿Me pueden descontar el día?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "El derecho de huelga está garantizado por la Constitución (art. 14 bis) y la ley reconoce a los sindicatos el derecho a ejercerlo (Ley 23.551, art. 5, inc. d). Para los servicios esenciales y las actividades de importancia trascendental la ley fija cobertura mínima: 75% en los esenciales y 50% en las actividades de importancia trascendental. Entre estas últimas figuran expresamente los servicios bancarios y financieros (Ley 25.877, art. 24). Antes de una medida de acción directa hay que preavisar a la otra parte y a la autoridad con cinco días, acordar los servicios mínimos ante la autoridad y avisar a los usuarios con 48 horas de anticipación. La participación activa en bloqueos o tomas de establecimiento puede configurar grave injuria (LCT, art. 242).",
+   "normas": [
+    {
+     "norma": "Ley 25.877 (Régimen laboral)",
+     "articulo": "24",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-25877-93595/actualizacion"
+    },
+    {
+     "norma": "Ley 23.551 (Asociaciones Sindicales)",
+     "articulo": "5",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-23551-20993/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "242",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Los textos consultados no dicen si se descuenta el día (es criterio jurisprudencial): el sindicato debe fijar qué decir. Sin verificar: DNU 340/2025. Validar con el asesor legal.",
+   "inspirada_en": [
+    "Factsheet sobre acoso laboral de Australian Unions (https://www.australianunions.org.au/factsheet/workplace-bullying-and-harassment/)",
+    "Derechos de representantes sindicales, Acas Reino Unido (https://www.acas.org.uk/rights-of-trade-union-representatives)"
+   ],
+   "en_corto": "Sí: la Constitución garantiza el derecho de huelga. Los servicios bancarios y financieros son actividad de importancia trascendental: hay que asegurar una cobertura mínima del 50%, preavisar con cinco días y avisar a los usuarios con 48 horas. Sobre el descuento del día, consultá al sindicato.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "Los porcentajes (75%/50%) y plazos dependen del DNU 340/2025, sin verificar; el descuento del día queda sin respuesta."
+  },
+  {
+   "id": "n-fondo-cese",
+   "tema": "convenio",
+   "orden": 3,
+   "pregunta": "¿Pueden reemplazar mi indemnización por un fondo de cese? ¿Eso ya está acordado en mi convenio?",
+   "respuesta": "",
+   "articulos": [],
+   "segun_ley": "La ley, tal como quedó con la reforma, dice que mediante un convenio colectivo las partes pueden sustituir el régimen indemnizatorio del art. 245 por un fondo o sistema de cese laboral cuyo costo está a cargo del empleador. Eso exige una decisión de las partes del convenio colectivo; no se puede imponer de forma individual.",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "245",
+     "url": ""
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "12",
+     "url": ""
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "Informar si La Bancaria negoció algún fondo de cese. «No se puede imponer de forma individual» es interpretación a confirmar.",
+   "inspirada_en": [
+    "Relevamiento web (web_argentina.md) ★ reforma laboral"
+   ],
+   "en_corto": "Solo si lo acuerda un convenio colectivo: la ley permite que las partes reemplacen la indemnización del art. 245 por un fondo o sistema de cese a cargo del empleador. El CCT 18/75 no prevé ninguno.",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "dudosa",
+   "detalle_retiro": "La respuesta central (\"solo por convenio colectivo\", \"no prevé ninguno\") es interpretación a confirmar; no sabemos si La Bancaria negoció algo."
+  },
+  {
+   "id": "con-tercerizados",
+   "tema": "convenio",
+   "orden": 4,
+   "pregunta": "Trabajo en una empresa tercerizada que presta servicios a un banco: ¿me rige este convenio?",
+   "respuesta": "El convenio habla de los trabajadores en relación de dependencia con los bancos e instituciones que menciona (arts. 3 y 4).",
+   "articulos": [
+    3,
+    4
+   ],
+   "segun_ley": "La LCT distingue dos casos. Si una empresa te proporciona a otra (intermediación), sos empleado directo de quien registra la relación y la empresa usuaria responde solidariamente solo por lo devengado mientras le prestaste servicios (art. 29). Si el banco contrata o subcontrata trabajos de su actividad normal y específica, tiene que exigir al contratista el CUIL de cada trabajador, la constancia de pago de la seguridad social y de las remuneraciones, una cuenta a nombre del trabajador y una cobertura de riesgos del trabajo con endoso a su favor; si cumple esos controles queda eximido, y si no los pide responde solidariamente (art. 30). Si te contrata una empresa de servicios eventuales, te rige el convenio de la actividad donde trabajás (art. 29 bis). Todo contrato hecho con simulación o fraude es nulo y la relación queda regida por la LCT (art. 14).",
+   "normas": [
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "29",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "29 bis",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "30",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    },
+    {
+     "norma": "Ley 20.744 (LCT)",
+     "articulo": "14",
+     "url": "https://www.argentina.gob.ar/normativa/nacional/ley-20744-25552/actualizacion"
+    }
+   ],
+   "estado": "sin_revisar",
+   "nota_curador": "El sindicato debe decidir qué se dice (litigios vigentes, criterio de encuadramiento) y si el CCT 18/75 alcanza a empleados de contratistas del banco.",
+   "inspirada_en": [
+    "análisis del convenio",
+    "conocimiento general de FAQ sindicales (sin abrir la web en esta corrida)"
+   ],
+   "en_corto": "Tu encuadre depende de quién es tu empleador: el convenio alcanza a quienes están en relación de dependencia con los bancos (arts. 3 y 4). Si el banco subcontrata su actividad normal y no controla a la contratista, responde solidariamente (LCT, art. 30).",
+   "por_banco": "",
+   "fuentes_banco": [],
+   "motivo_retiro": "sin_respuesta",
+   "detalle_retiro": "La respuesta es \"depende de quién es tu empleador\"; si el CCT alcanza a contratistas lo debe decidir el sindicato."
+  }
+ ]
+}

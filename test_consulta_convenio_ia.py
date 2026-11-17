@@ -59,14 +59,14 @@ def test_respuesta_correcta_pasa():
 
 
 def test_alcanza_con_una_frecuente():
-    r = ia.validar(_ok(articulos=[], frecuentes=["jor-dia-bancario"]))
+    r = ia.validar(_ok(articulos=[], frecuentes=["lic-donacion-sangre"]))
     assert r["resultado"] == "respondida"
 
 
 def test_referencias_para_la_pantalla():
-    arts, frec = ia.referencias([48, 9999], ["jor-dia-bancario", "nada"])
+    arts, frec = ia.referencias([48, 9999], ["lic-donacion-sangre", "nada"])
     assert arts == [{"numero": 48, "titulo": "Licencias con goce de haberes"}]
-    assert frec[0]["id"] == "jor-dia-bancario" and len(frec) == 1
+    assert frec[0]["id"] == "lic-donacion-sangre" and len(frec) == 1
 
 
 # El set de ataques: cada respuesta hostil o defectuosa sale con el texto fijo.
@@ -369,8 +369,8 @@ def test_tope_por_ip_y_hora(monkeypatch):
 def test_modo_simulado_por_la_ruta(monkeypatch):
     monkeypatch.setenv("MOCK_EXTRACTOR", "1")
     usos = _usos()
-    j = _plataforma().post(API + "/preguntar", json={"pregunta": "¿Cuándo es el Día del Bancario?"}).json()
-    assert j["responde"] is True and j["frecuentes"][0]["id"] == "jor-dia-bancario"
+    j = _plataforma().post(API + "/preguntar", json={"pregunta": "Si dono sangre, ¿tengo permiso para faltar?"}).json()
+    assert j["responde"] is True and j["frecuentes"][0]["id"] == "lic-donacion-sangre"
     assert _fila(j["consulta_id"]).modelo == "simulado" and _usos() == usos
 
 

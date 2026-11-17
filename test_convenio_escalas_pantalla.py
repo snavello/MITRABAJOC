@@ -221,6 +221,7 @@ def test_la_pagina_no_arma_totales_ni_usa_innerhtml():
         assert frase in js, frase
     # lo viejo se sacó: buscador de artículos y tarjetas por situación
     assert 'id="buscar"' not in html and 'id="sits"' not in html and "conv-situaciones" not in html
+    assert "no regula este punto" not in js   # SDN 2026-11-17: no se dice lo que el convenio no trata
     assert "elegirSituacion" not in js and "Agregarlo a mi selección" not in js
 
 

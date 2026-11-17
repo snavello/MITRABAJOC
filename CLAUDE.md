@@ -2632,7 +2632,11 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   un índice plegado. Se sacaron el buscador por palabra y las tarjetas por
   situación.
   - **Preguntas frecuentes** (`convenio_faq.py`, puro; `data/convenios/cct-18-75-faq.json`,
-    151 preguntas en 12 temas): cada una **abre con `en_corto`, la respuesta
+    119 preguntas en 12 temas; **solo las que tienen respuesta concreta por
+    convenio o por ley** (D40, SDN 2026-11-17: las 32 sin respuesta o dudosas
+    están en `cct-18-75-faq-retiradas.json`, que la app no carga, para que las
+    complete el sindicato; ni la pantalla ni la IA dicen lo que el convenio «no
+    trata»): cada una **abre con `en_corto`, la respuesta
     directa** (D38, Plataforma 0.74.02: SDN rechazó las que abrían con «el
     convenio no lo trata»), y debajo, solo si tienen contenido, `respuesta`
     (SOLO lo que dice el convenio, con sus artículos), `segun_ley` (con sus
