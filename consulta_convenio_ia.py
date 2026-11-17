@@ -75,7 +75,9 @@ def normalizar_pregunta(texto) -> str:
     es un texto de 3 a 300 caracteres. El largo se mide DESPUÉS de limpiar."""
     if not isinstance(texto, str):
         raise PreguntaInvalida("Escribí tu pregunta.")
-    t = unicodedata.normalize("NFC", texto)
+    if len(texto) > PREGUNTA_MAX * 20:           # antes de recorrerlo: un cuerpo de MB no cuesta CPU
+        raise PreguntaInvalida(f"La pregunta pasa de {PREGUNTA_MAX} caracteres.")
+    t = unicodedata.normalize("NFKC", texto)      # el < de ancho completo pasa a ser un < común
     t = "".join(" " if c.isspace() else ("" if unicodedata.category(c) in ("Cc", "Cf", "Cs", "Co", "Cn") else c)
                 for c in t)
     t = " ".join(t.split())
@@ -160,9 +162,13 @@ def armar_sistema(convenio: str = CONVENIO) -> list:
                   + "\n\n=== PREGUNTAS FRECUENTES ===\n" + texto_frecuentes(convenio))}]
 
 
+_ANGULOS = str.maketrans({"<": "‹", ">": "›", "〈": "‹", "〉": "›", "⟨": "‹", "⟩": "›", "＜": "‹", "＞": "›",
+                          "﹤": "‹", "﹥": "›", "《": "‹", "》": "›"})
+
+
 def armar_mensaje(pregunta: str) -> str:
     # Los ángulos del usuario no pueden cerrar el bloque delimitado.
-    segura = pregunta.replace("<", "‹").replace(">", "›")
+    segura = unicodedata.normalize("NFKC", pregunta).translate(_ANGULOS)
     return ("<pregunta_del_usuario>\n" + segura + "\n</pregunta_del_usuario>\n\n"
             "Llamá a la herramienta `responder` una sola vez, siguiendo las reglas. No respondas en texto.")
 
@@ -180,7 +186,88 @@ _REFERENCIA = re.compile(
     r"\b(?:leyes|ley|decretos?|dtos?|decreto[- ]ley|resoluci(?:o|ó)n(?:es)?|res|art(?:[ií]culos?|s)?|incisos?|inc"
     r"|n[°º]|nro|n(?:u|ú)mero)\.?\s*(?:n[°º]\s*)?"
     r"(?:\d{1,3}(?:\.\d{3})+|\d+)(?:\s*/\s*\d{2,4})?", re.I)
+# «las leyes 12.637 y 20.744»: la lista de normas solo se perdona tras ley/decreto/resolución.
+_REFERENCIA_LISTA = re.compile(
+    r"\b(?:leyes|decretos|resoluciones)\s*(?:n[°º]\s*)?\d{1,3}(?:\.\d{3})*(?:\s*/\s*\d{2,4})?"
+    r"(?:\s*(?:,|y|e)\s*\d{1,3}(?:\.\d{3})*(?:\s*/\s*\d{2,4})?)+", re.I)
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+# --- Endurecimiento de forma (QA independiente). `validar` no puede juzgar el
+# sentido, pero sí rechazar lo que una respuesta del convenio no tiene por qué traer.
+_MARCAS = re.compile(r"[<>`*\[\]{}\\|~^]|^\s*#", re.M)               # HTML/markdown
+_TELEFONO = re.compile(r"(?:\d[\s().\-]?){7,}")                       # 011 4444-5555, 1155667788
+_USUARIO = re.compile(r"\s\.\s*(?:com|net|org|gob|gov|ar)\b|(?<!\w)@\w|\barroba\b|\b(?:punto|dot)\s*(?:com|net|org|gob|ar|app|io)\b"
+                      r"|\(\s*dot\s*\)|\bwhats\s?app\b|\btelegram\b|\binstagram\b|\bfacebook\b", re.I)
+_DINERO_PALABRAS = re.compile(
+    r"\bmill[oó]n(?:es)?\b|\bmil\s+(?:\w+\s+)?(?:pesos|quinientos|doscientos|trescientos|cuatrocientos"
+    r"|seiscientos|setecientos|ochocientos|novecientos)\b|\d\s*[MK]\b|\b\d+[.,]\d+\s*[MK]\b", re.I | re.S)
+_OPINION = re.compile(
+    r"\b(?:te\s+recomiendo|te\s+aconsejo|te\s+sugiero|recomiendo|aconsejo|deber[ií]as|te\s+conviene"
+    r"|ten[eé]s\s+derecho|pod[eé]s\s+reclamar|tu\s+caso|en\s+mi\s+opini[oó]n"
+    r"|yo\s+(?:creo|pienso)|creo\s+que|pienso\s+que|me\s+parece)\b", re.I)
+_INGLES = re.compile(r"\b(?:the|and|you|your|must|ignore|instructions?|previous|system|prompt|rules?|please"
+                     r"|answer|follow|article)\b", re.I)
+_NORMA = re.compile(r"\b(?:ley|leyes|decreto|dto|resoluci[oó]n)\b[^\d]{0,14}(\d[\d.]*(?:\s*/\s*\d+)?)", re.I)
+_ORDINALES = str.maketrans("", "", "ªº°")
+_AÑO = re.compile(r"\b(?:19|20)\d{2}\b")
+
+
+def _sin_acentos_min(t: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", t.lower()) if unicodedata.category(c) != "Mn")
+
+
+def _corpus(convenio: str) -> str:
+    """Todo lo que el modelo tiene a la vista (convenio + frecuentes), para saber
+    si un número de norma que cita está en las fuentes."""
+    partes = [texto_convenio(convenio), texto_frecuentes(convenio)]
+    for t in convenio_faq.publico(convenio)["temas"]:
+        for q in t["preguntas"]:
+            partes.append(q["segun_ley"])
+            partes.extend(n["norma"] + " " + n["articulo"] for n in q["normas"])
+    return "\n".join(partes)
+
+
+def _forma_hostil(respuesta: str, convenio: str) -> str:
+    """Motivo si la respuesta tiene una forma que no corresponde ('' si está bien).
+    Determinista; no juzga el sentido."""
+    if any(unicodedata.category(c) in ("Cf", "Co", "Cs", "Cn") for c in respuesta):
+        return "caracteres invisibles en la respuesta"
+    if unicodedata.normalize("NFKC", respuesta.translate(_ORDINALES)) != respuesta.translate(_ORDINALES):
+        return "caracteres de compatibilidad (ancho completo, ligaduras) en la respuesta"
+    for c in respuesta:
+        if c in "ªº°":
+            continue
+        if c.isalpha() and "LATIN" not in unicodedata.name(c, ""):
+            return "letras de otro alfabeto en la respuesta"
+        if unicodedata.category(c) == "So":
+            return "símbolos o emojis en la respuesta"
+    if _MARCAS.search(respuesta):
+        return "marcas de código o formato en la respuesta"
+    if _USUARIO.search(respuesta) or _URL.search(unicodedata.normalize("NFKC", respuesta)):
+        return "la respuesta trae un contacto o usuario"
+    sin_ref = _REFERENCIA.sub(" ", _REFERENCIA_LISTA.sub(" ", respuesta))
+    sin_ref = _AÑO.sub(" ", sin_ref)
+    if _TELEFONO.search(sin_ref):
+        return "la respuesta trae un número de teléfono o de documento"
+    if _DINERO_PALABRAS.search(sin_ref) or re.search(r"\b\d{4,}\b", sin_ref):
+        return "la respuesta trae importes"
+    if _OPINION.search(respuesta):
+        return "la respuesta opina o aconseja"
+    if len(_INGLES.findall(respuesta)) >= 2:
+        return "la respuesta no está en castellano"
+    # Filtración del prompt: seis palabras seguidas de las reglas.
+    pal = re.findall(r"\w+", _sin_acentos_min(respuesta))
+    reglas = re.findall(r"\w+", _sin_acentos_min(REGLAS))
+    tramos = {tuple(reglas[i:i + 6]) for i in range(len(reglas) - 5)}
+    if any(tuple(pal[i:i + 6]) in tramos for i in range(len(pal) - 5)) \
+            or re.search(r"pregunta_del_usuario|\[articulo \d|\[frecuente ", _sin_acentos_min(respuesta)):
+        return "la respuesta repite las instrucciones del sistema"
+    corpus = _sin_acentos_min(_corpus(convenio))
+    for m in _NORMA.finditer(respuesta):
+        numero = m.group(1).rstrip(".")
+        if numero and numero not in corpus:
+            return f"la respuesta cita una norma que no está en las fuentes ({numero})"
+    return ""
 
 
 def _fija(motivo: str, resultado: str = "fija") -> dict:
@@ -207,8 +294,11 @@ def validar(crudo, convenio: str = CONVENIO) -> dict:
         return _fija("caracteres de control en la respuesta")
     if _URL.search(respuesta):
         return _fija("la respuesta trae un enlace o dirección")
-    if _DINERO.search(_REFERENCIA.sub(" ", respuesta)):
+    if _DINERO.search(_REFERENCIA.sub(" ", _REFERENCIA_LISTA.sub(" ", respuesta))):
         return _fija("la respuesta trae importes")
+    motivo = _forma_hostil(respuesta, convenio)
+    if motivo:
+        return _fija(motivo)
     arts, frec = [], []
     crudo_arts, crudo_frec = crudo.get("articulos"), crudo.get("frecuentes")
     for n in crudo_arts if isinstance(crudo_arts, list) else []:

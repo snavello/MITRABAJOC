@@ -11802,6 +11802,8 @@ def api_escalas_articulo(numero: str, request: Request):
 CONVENIO_IA_TOPE_DEFECTO = 30
 CONVENIO_IA_VENTANA_S = 3600
 _preguntas_ia_por_ip: dict[str, list] = {}
+_preguntas_ia_global: list = []
+CONVENIO_IA_FACTOR_GLOBAL = 10      # el proceso entero acepta, por hora, 10 veces el tope de una IP
 
 
 def _convenio_ia_tope() -> int:
@@ -11815,6 +11817,13 @@ def _convenio_ia_pasa_el_tope(ip: str) -> bool:
     """Cuenta esta pregunta; True si la IP ya se pasó del tope en la última hora."""
     import time
     ahora = time.time()
+    # Tope GLOBAL del proceso: X-Forwarded-For lo escribe quien llama, así que
+    # inventar una IP por pedido saltea el tope por IP (y llenar la tabla la vacía).
+    # Esto no se puede esquivar cambiando de IP.
+    _preguntas_ia_global[:] = [t for t in _preguntas_ia_global if ahora - t < CONVENIO_IA_VENTANA_S]
+    if len(_preguntas_ia_global) >= _convenio_ia_tope() * CONVENIO_IA_FACTOR_GLOBAL:
+        return True
+    _preguntas_ia_global.append(ahora)
     marcas = [t for t in _preguntas_ia_por_ip.get(ip, []) if ahora - t < CONVENIO_IA_VENTANA_S]
     if len(marcas) >= _convenio_ia_tope():
         _preguntas_ia_por_ip[ip] = marcas

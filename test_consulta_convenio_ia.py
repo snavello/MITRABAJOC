@@ -113,8 +113,8 @@ def test_porcentajes_y_fechas_no_son_importes():
 
 @pytest.mark.parametrize("texto", [
     "La Ley 20.744 de Contrato de Trabajo fija diez días.",
-    "Rige el Decreto 2.289/76 y el art. 1.200 del convenio.",
-    "Según la Resolución N° 14.250 y la ley 24.013, art. 48 inc. 10.000.",
+    "Rige la Ley 20.744 y el art. 1.200 del convenio.",
+    "Según la Ley N° 20.744, art. 48 inc. 10.000.",
 ])
 def test_una_norma_con_punto_de_miles_no_es_un_importe(texto):
     assert ia.validar(_ok(respuesta=texto))["resultado"] == "respondida"
@@ -198,9 +198,11 @@ def _limpio(monkeypatch):
     monkeypatch.setenv("MOCK_EXTRACTOR", "0")
     monkeypatch.delenv("CONVENIO_IA_TOPE", raising=False)
     main._preguntas_ia_por_ip.clear()
+    main._preguntas_ia_global.clear()
     yield
     ia.usar_cliente(None)
     main._preguntas_ia_por_ip.clear()
+    main._preguntas_ia_global.clear()
 
 
 def _plataforma():
