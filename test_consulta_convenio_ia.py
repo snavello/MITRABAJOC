@@ -36,11 +36,11 @@ def _fija(r):
 
 # ---------------------------------------------------------------- pregunta
 def test_pregunta_se_normaliza():
-    assert ia.normalizar_pregunta("  ¿Cuántos \n\t días   de licencia?​ ") == "¿Cuántos días de licencia?"
+    assert ia.normalizar_pregunta("  ¿Cuántos \n\t días   de licencia?\u200b ") == "¿Cuántos días de licencia?"
     assert ia.normalizar_pregunta("hola\x00 mundo\x07") == "hola mundo"
 
 
-@pytest.mark.parametrize("malo", [None, 5, [], "", "  ", "ab", "\x00\x01​  ", "x" * 301, "a b " * 200])
+@pytest.mark.parametrize("malo", [None, 5, [], "", "  ", "ab", "\x00\x01\u200b  ", "x" * 301, "a b " * 200])
 def test_pregunta_invalida(malo):
     with pytest.raises(ia.PreguntaInvalida):
         ia.normalizar_pregunta(malo)
@@ -347,9 +347,9 @@ def test_cuerpo_que_no_es_json_no_es_500():
 
 def test_caracteres_de_control_se_sacan_antes_de_la_ia():
     cli = _cliente(_msg(_ok()))
-    _plataforma().post(API + "/preguntar", json={"pregunta": "días\x00 de\x1b licencia‮ por casamiento"})
+    _plataforma().post(API + "/preguntar", json={"pregunta": "días\x00 de\x1b licencia\u202e por casamiento"})
     enviado = cli.messages.llamadas[0]["messages"][0]["content"]
-    assert "\x00" not in enviado and "\x1b" not in enviado and "‮" not in enviado
+    assert "\x00" not in enviado and "\x1b" not in enviado and "\u202e" not in enviado
 
 
 def test_tope_por_ip_y_hora(monkeypatch):
