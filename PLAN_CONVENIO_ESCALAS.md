@@ -367,6 +367,23 @@ cambian.
   pedido de opinión, de importes, de datos del sistema) corre en los tests con
   la IA simulada y, a mano, contra la API real en Pruebas.
 
+- **D38 · Cada pregunta abre con la respuesta directa** (SDN, 2026-11-17, tras
+  probarlas: «muy vagas e inadmisibles, en la mayoría dice que el convenio no lo
+  trata»; reemplaza a D35 y D36 en el orden de lo que se muestra). Tres campos
+  nuevos: `en_corto` (el dato, 1 a 3 oraciones o una escala en renglones; tiene
+  que sostenerse en las otras partes), `por_banco` (acuerdos de La Bancaria con
+  bancos puntuales, nombrando banco, cantidad y año) y `fuentes_banco`. Debajo
+  de `en_corto`, y solo si tienen contenido: «Qué dice el convenio», «Según la
+  ley» y «En tu banco». «El convenio no lo trata» deja de ser una respuesta: si
+  el convenio no aporta, `respuesta` va vacía y queda una línea chica al pie. La
+  IA responde igual: primero el dato, después de dónde sale.
+- **D39 · El estatuto bancario está derogado** (hallazgo del 2026-11-17, texto
+  oficial): la Ley 22.425 (1981) derogó la Ley 12.637 y el Dto. 20.268/46 y
+  sujetó al personal de bancos PRIVADOS a la LCT. Las vacaciones son la tabla
+  del art. 150 LCT con la mejora del art. 48 d) (25 días hábiles entre 15 y 20
+  años). No «falta una tabla» en el convenio. Abierto para el sindicato: bancos
+  oficiales, sábado hábil, los 20 años justos.
+
 **Contrato de la base de preguntas frecuentes** (`data/convenios/cct-18-75-faq.json`):
 `{"convenio": "cct-18-75", "leido": "AAAA-MM-DD", "temas": [{"clave", "nombre",
 "orden"}], "preguntas": [{"id" (slug único), "tema" (clave), "orden",

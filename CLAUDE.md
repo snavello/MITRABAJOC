@@ -2632,9 +2632,15 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   un índice plegado. Se sacaron el buscador por palabra y las tarjetas por
   situación.
   - **Preguntas frecuentes** (`convenio_faq.py`, puro; `data/convenios/cct-18-75-faq.json`,
-    149 preguntas en 12 temas): cada una con `respuesta` (SOLO lo que dice el
-    convenio, con sus artículos) y aparte `segun_ley` (con sus `normas`); nunca
-    mezclados ni con importes. **Nacen todas `sin_revisar`: las cura el
+    151 preguntas en 12 temas): cada una **abre con `en_corto`, la respuesta
+    directa** (D38, Plataforma 0.74.02: SDN rechazó las que abrían con «el
+    convenio no lo trata»), y debajo, solo si tienen contenido, `respuesta`
+    (SOLO lo que dice el convenio, con sus artículos), `segun_ley` (con sus
+    `normas`) y `por_banco` (acuerdos de La Bancaria con bancos puntuales, con
+    `fuentes_banco`; salen de notas del sindicato y prensa, no de las actas);
+    nunca mezclados ni con importes. **El estatuto bancario (Ley 12.637, Dto.
+    20.268/46) está derogado por la Ley 22.425** (D39): en bancos privados rige
+    la LCT y las vacaciones son la tabla del art. 150 con la mejora del art. 48 d). **Nacen todas `sin_revisar`: las cura el
     sindicato**; `nota_curador` (no viaja al afiliado; sí a `frecuentes/curado`)
     lleva la duda concreta. La ley se verificó contra el texto vigente al
     2026-11-16 (LCT con la reforma de la Ley 27.802): si la ley cambia, hay que

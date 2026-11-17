@@ -11290,3 +11290,18 @@ un tope global. Después hubo que aflojar donde frenaba frases legítimas de la
 ley («tenés derecho», «podés reclamar», «Ley de Sangre (22.990»): medido sobre
 los 204 textos de la base, quedan 3 que el filtro frenaría.
 
+**La primera prueba de SDN (mismo día, Plataforma 0.74.02).** Las rechazó: «muy
+vagas e inadmisibles», la mayoría abría con «el convenio no lo trata», y la
+licencia por nacimiento del padre «está mal». Dos causas. Una de forma: cada
+pregunta abría con lo que dice un convenio de 1975, que sobre casi todo lo
+actual no dice nada. Otra de fondo: el art. 48 d) de vacaciones remite al
+estatuto bancario y se dio por faltante «la tabla»; buscándola apareció que la
+Ley 22.425 (1981) derogó ese estatuto y mandó aplicar la LCT, así que la tabla
+es la del art. 150 con la mejora del convenio. Para nacimiento no hay acta de
+todo el sector: hay acuerdos banco por banco (Supervielle 30 días desde 2019,
+Banco Nación 20 desde 2022), que se cargaron aparte como «En tu banco», con
+fuente de sindicato y prensa, no de las actas. Se agregó `en_corto` a las 151
+preguntas y se sacó de `respuesta` todo lo que solo enumeraba ausencias (76
+quedaron sin parte de convenio). Lección: una respuesta fiel a la fuente puede
+ser inútil; primero el dato, después la fuente.
+
