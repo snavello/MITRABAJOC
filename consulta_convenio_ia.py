@@ -98,8 +98,11 @@ REGLAS = (
     "solo podés decir lo que una pregunta frecuente trae en su parte «Según la ley»: en ese caso empezá esa parte "
     "con «Según la ley», no agregues nada que no esté ahí y citá el id de esa pregunta frecuente. Dejá siempre "
     "claro qué dice el convenio y qué dice la ley.\n"
-    "   La respuesta abre con el dato directo (usá el «En corto» de la pregunta frecuente cuando lo trae). Si el "
-    "convenio no trata el tema no hace falta abrir diciéndolo: respondé con lo que la pregunta frecuente trae de "
+    "   Si una pregunta frecuente contesta lo que se pregunta, tu respuesta EMPIEZA con su «En corto», copiado tal "
+    "cual, con sus renglones si los trae (una escala va completa, un renglón por línea). Si la persona da un dato "
+    "suyo (por ejemplo su antigüedad), empezá por el renglón que le toca. Después, en una o dos frases, de dónde "
+    "sale. No empieces por lo que el convenio no dice ni cierres con «consultá a tu delegado» si el «En corto» no "
+    "lo dice. Si el convenio no trata el tema, respondé con lo que la pregunta frecuente trae de "
     "la ley o de los acuerdos por banco («En algunos bancos (acuerdos puntuales)»), citando su id y aclarando en "
     "una frase corta de dónde sale («Según la ley…», «En algunos bancos…»). Lo de un banco es de ese banco: no lo "
     "presentes como regla de todo el sector.\n"
@@ -275,11 +278,13 @@ def _forma_hostil(respuesta: str, convenio: str) -> str:
         return "la respuesta opina o aconseja"
     if len(_INGLES.findall(respuesta)) >= 2:
         return "la respuesta no está en castellano"
-    # Filtración del prompt: seis palabras seguidas de las reglas.
+    # Filtración del prompt: diez palabras seguidas de las reglas.
     pal = re.findall(r"\w+", _sin_acentos_min(respuesta))
     reglas = re.findall(r"\w+", _sin_acentos_min(REGLAS))
-    tramos = {tuple(reglas[i:i + 6]) for i in range(len(reglas) - 5)}
-    if any(tuple(pal[i:i + 6]) in tramos for i in range(len(pal) - 5)) \
+    # Diez y no seis: las reglas usan giros que una respuesta legítima también usa
+    # («el convenio no trata el tema», «según la ley»); con seis frenó una real.
+    tramos = {tuple(reglas[i:i + 10]) for i in range(len(reglas) - 9)}
+    if any(tuple(pal[i:i + 10]) in tramos for i in range(len(pal) - 9)) \
             or re.search(r"pregunta_del_usuario|\[articulo \d|\[frecuente ", _sin_acentos_min(respuesta)):
         return "la respuesta repite las instrucciones del sistema"
     corpus = _sin_acentos_min(_corpus(convenio))
