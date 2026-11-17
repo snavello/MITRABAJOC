@@ -216,7 +216,8 @@ def test_la_pagina_no_arma_totales_ni_usa_innerhtml():
     for frase in ("Preguntale al convenio", "Preguntas frecuentes", "Texto del convenio", "Responde solo con el convenio"):
         assert frase in html, frase
     for frase in ("Respuesta generada por IA sobre el texto del convenio", "Enviar mi consulta", "Consulta enviada",
-                  "Según la ley", "El convenio no lo trata", "sin revisar", "Artículos que lo sostienen"):
+                  "Según la ley", "El convenio 18/75 no regula este punto", "Qué dice el convenio", "En tu banco",
+                      "Depende de cada banco: confirmalo con tu delegado", "sin revisar", "Artículos que lo sostienen"):
         assert frase in js, frase
     # lo viejo se sacó: buscador de artículos y tarjetas por situación
     assert 'id="buscar"' not in html and 'id="sits"' not in html and "conv-situaciones" not in html
@@ -273,3 +274,16 @@ def test_la_api_de_la_consulta_sigue_respondiendo_a_la_pantalla():
     r = c.post(API + "/preguntar", json={"pregunta": "¿Cuántos días de licencia tengo por casamiento?"}).json()
     assert set(r) >= {"responde", "respuesta", "articulos", "frecuentes", "consulta_id", "puede_enviar"}
     assert c.get(API + "/consultas").json()["conteos"]["total"] >= 1
+
+
+def test_el_cuerpo_de_la_pregunta_abre_con_la_respuesta_directa():
+    with open("static/convenio_escalas.js", encoding="utf-8") as f:
+        js = f.read()
+    cuerpo = js[js.index("function cuerpoPregunta"):js.index("function cerrarPregunta")]
+    assert cuerpo.index("en_corto") < cuerpo.index("Qué dice el convenio") < cuerpo.index("Según la ley") < cuerpo.index("En tu banco")
+    assert "El convenio no lo trata" not in js and "innerHTML" not in cuerpo
+    assert "q.en_corto" in js[js.index("_n: norm("):js.index("_n: norm(") + 80]     # el filtro también busca ahí
+    for css in ("static/temas/laguna-escalas.css", "static/temas/noticiero-escalas.css"):
+        with open(css, encoding="utf-8") as f:
+            hoja = f.read()
+        assert ".es-encorto" in hoja and ".es-banco" in hoja, css

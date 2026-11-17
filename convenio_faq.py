@@ -7,7 +7,13 @@ Módulo PURO: no importa `db` ni toca la red. Carga y valida
   {"convenio", "leido", "temas": [{"clave","nombre","orden"}],
    "preguntas": [{"id","tema","orden","pregunta","respuesta","articulos",
                   "segun_ley","normas":[{"norma","articulo","url"}],"estado",
+                  "en_corto","por_banco","fuentes_banco":[{"texto","url"}],
                   "nota_curador","inspirada_en"}]}
+
+`en_corto` (la respuesta directa, renglones separados por salto de línea),
+`por_banco` (acuerdos de La Bancaria con bancos puntuales) y `fuentes_banco`
+son opcionales: si faltan quedan "" / []. Una pregunta es válida si tiene al
+menos uno de `respuesta`, `segun_ley` o `por_banco`.
 
 Lo mal formado NO se muestra: se descarta la pregunta y se reporta el motivo
 en `descartadas` (id repetido, tema inexistente, artículo que no existe en el
@@ -97,8 +103,9 @@ def validar_datos(datos, convenio: str = CONVENIO_POR_DEFECTO) -> dict:
         if respuesta and not arts:
             descartadas.append({"id": pid, "motivo": "responde con el convenio pero no cita ningún artículo"})
             continue
-        if not respuesta and not segun_ley:
-            descartadas.append({"id": pid, "motivo": "no tiene respuesta ni «Según la ley»"})
+        por_banco = _texto(p.get("por_banco"))
+        if not respuesta and not segun_ley and not por_banco:
+            descartadas.append({"id": pid, "motivo": "no tiene respuesta, «Según la ley» ni «En tu banco»"})
             continue
         normas = []
         for n in p.get("normas") or []:
@@ -110,12 +117,21 @@ def validar_datos(datos, convenio: str = CONVENIO_POR_DEFECTO) -> dict:
         if segun_ley and not normas:
             descartadas.append({"id": pid, "motivo": "«Según la ley» sin norma citada"})
             continue
+        fuentes_banco = []
+        crudas = p.get("fuentes_banco")
+        for f in crudas if isinstance(crudas, list) else []:
+            if not isinstance(f, dict) or not _texto(f.get("texto")):
+                continue
+            url = _texto(f.get("url"))
+            fuentes_banco.append({"texto": _texto(f["texto"]),
+                                  "url": url if url.lower().startswith("https://") else ""})
         estado = _texto(p.get("estado"))
         inspirada = p.get("inspirada_en")
         preguntas[pid] = {
             "id": pid, "tema": _texto(p["tema"]), "orden": _orden(p.get("orden")),
             "pregunta": _texto(p["pregunta"]), "respuesta": respuesta, "articulos": arts,
             "segun_ley": segun_ley, "normas": normas,
+            "en_corto": _texto(p.get("en_corto")), "por_banco": por_banco, "fuentes_banco": fuentes_banco,
             "estado": estado if estado in ESTADOS else "sin_revisar",
             "nota_curador": _texto(p.get("nota_curador")),
             "inspirada_en": [x for x in inspirada if isinstance(x, str)] if isinstance(inspirada, list) else []}
@@ -156,7 +172,8 @@ def pregunta(pid, convenio: str = CONVENIO_POR_DEFECTO) -> dict | None:
 
 
 def _vista(q: dict, con_curador: bool) -> dict:
-    v = {k: q[k] for k in ("id", "pregunta", "respuesta", "segun_ley", "estado")}
+    v = {k: q[k] for k in ("id", "pregunta", "en_corto", "respuesta", "segun_ley", "por_banco", "estado")}
+    v["fuentes_banco"] = [dict(f) for f in q["fuentes_banco"]]
     v["articulos"] = [dict(a) for a in q["articulos"]]
     v["normas"] = [dict(n) for n in q["normas"]]
     if con_curador:
