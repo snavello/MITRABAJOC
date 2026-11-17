@@ -99,7 +99,7 @@ REGLAS = (
     "con «Según la ley», no agregues nada que no esté ahí y citá el id de esa pregunta frecuente. Dejá siempre "
     "claro qué dice el convenio y qué dice la ley.\n"
     "   Si una pregunta frecuente contesta lo que se pregunta, tu respuesta EMPIEZA con su «En corto», copiado tal "
-    "cual, con sus renglones si los trae (una escala va completa, un renglón por línea). Si la persona da un dato "
+    "cual pero sin escribir el rótulo «En corto», con sus renglones si los trae (una escala va completa, un renglón por línea). Si la persona da un dato "
     "suyo (por ejemplo su antigüedad), empezá por el renglón que le toca. Después, en una o dos frases, de dónde "
     "sale. No empieces por lo que el convenio no dice ni cierres con «consultá a tu delegado» si el «En corto» no "
     "lo dice. Si el convenio no trata el tema, respondé con lo que la pregunta frecuente trae de "
@@ -312,7 +312,10 @@ def validar(crudo, convenio: str = CONVENIO) -> dict:
     respuesta = crudo.get("respuesta")
     if not isinstance(respuesta, str) or not respuesta.strip():
         return _fija("respuesta vacía")
-    respuesta = respuesta.strip()
+    # El modelo a veces copia el rótulo de la fuente («En corto: …»): no es parte de la respuesta.
+    respuesta = re.sub(r"^\s*en corto\s*:\s*", "", respuesta.strip(), flags=re.I)
+    if not respuesta:
+        return _fija("respuesta vacía")
     if len(respuesta) > RESPUESTA_MAX:
         return _fija("respuesta demasiado larga")
     if _CONTROL.search(respuesta):

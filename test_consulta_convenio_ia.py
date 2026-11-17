@@ -463,3 +463,10 @@ def test_respuestas_validas_con_bancos_leyes_y_escalas_pasan(con_banco, texto):
 ])
 def test_las_respuestas_hostiles_siguen_sin_pasar(con_banco, texto):
     _fija(ia.validar(_ok(articulos=[], frecuentes=["vac-dias"], respuesta=texto)))
+
+
+def test_el_rotulo_en_corto_no_llega_a_la_persona():
+    r = ia.validar({"responde": True, "articulos": [48], "frecuentes": [],
+                    "respuesta": "En corto: Por matrimonio corresponden doce días corridos."})
+    assert r["resultado"] == "respondida" and r["respuesta"].startswith("Por matrimonio")
+    assert ia.validar({"responde": True, "articulos": [48], "frecuentes": [], "respuesta": "En corto:  "})["resultado"] == "fija"
