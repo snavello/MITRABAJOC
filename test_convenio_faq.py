@@ -121,7 +121,7 @@ def test_publico_no_trae_notas_y_curado_si():
 
 
 def test_existe_y_pregunta():
-    assert convenio_faq.existe("licencia-examen")
+    assert convenio_faq.existe("lic-examen")
     assert not convenio_faq.existe("nada") and not convenio_faq.existe(None) and not convenio_faq.existe(3)
     assert convenio_faq.pregunta("nada") is None
 

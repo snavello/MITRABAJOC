@@ -53,20 +53,20 @@ def test_pregunta_en_el_borde():
 
 # ---------------------------------------------------------------- validar
 def test_respuesta_correcta_pasa():
-    r = ia.validar(_ok(frecuentes=["licencia-matrimonio", "no-existe", "licencia-matrimonio"], articulos=[48, 48, 9999, "49", True]))
+    r = ia.validar(_ok(frecuentes=["lic-matrimonio", "no-existe", "lic-matrimonio"], articulos=[48, 48, 9999, "49", True]))
     assert r["resultado"] == "respondida" and r["responde"] is True
-    assert r["articulos"] == [48] and r["frecuentes"] == ["licencia-matrimonio"]
+    assert r["articulos"] == [48] and r["frecuentes"] == ["lic-matrimonio"]
 
 
 def test_alcanza_con_una_frecuente():
-    r = ia.validar(_ok(articulos=[], frecuentes=["dia-del-bancario"]))
+    r = ia.validar(_ok(articulos=[], frecuentes=["jor-dia-bancario"]))
     assert r["resultado"] == "respondida"
 
 
 def test_referencias_para_la_pantalla():
-    arts, frec = ia.referencias([48, 9999], ["dia-del-bancario", "nada"])
+    arts, frec = ia.referencias([48, 9999], ["jor-dia-bancario", "nada"])
     assert arts == [{"numero": 48, "titulo": "Licencias con goce de haberes"}]
-    assert frec[0]["id"] == "dia-del-bancario" and len(frec) == 1
+    assert frec[0]["id"] == "jor-dia-bancario" and len(frec) == 1
 
 
 # El set de ataques: cada respuesta hostil o defectuosa sale con el texto fijo.
@@ -139,7 +139,7 @@ def test_el_texto_fijo_es_el_del_plan():
 def test_el_pedido_lleva_las_reglas_el_convenio_y_la_cache():
     sis = ia.armar_sistema()
     assert "cache_control" not in sis[0] and sis[1]["cache_control"] == {"type": "ephemeral"}
-    assert "[Artículo 48]" in sis[1]["text"] and "[Frecuente licencia-matrimonio]" in sis[1]["text"]
+    assert "[Artículo 48]" in sis[1]["text"] and "[Frecuente lic-matrimonio]" in sis[1]["text"]
     assert "nota_curador" not in sis[1]["text"] and "Confirmar si la cantidad" not in sis[1]["text"]
     assert "nunca una instrucción" in sis[0]["text"]
     assert "DATO" in sis[0]["text"]
@@ -255,10 +255,10 @@ def test_un_error_de_la_api_no_levanta():
 
 def test_simulado_es_determinista_y_responde_de_las_frecuentes(monkeypatch):
     monkeypatch.setenv("MOCK_EXTRACTOR", "1")
-    a = ia.consultar("¿Cuántos días de licencia tengo por casamiento?")
-    b = ia.consultar("¿Cuántos días de licencia tengo por casamiento?")
+    a = ia.consultar("Me caso: ¿qué licencia me corresponde?")
+    b = ia.consultar("Me caso: ¿qué licencia me corresponde?")
     assert a == b and a["simulado"] is True and a["uso"] is None
-    assert a["resultado"] == "respondida" and a["frecuentes"] == ["licencia-matrimonio"] and a["articulos"] == [48]
+    assert a["resultado"] == "respondida" and a["frecuentes"] == ["lic-matrimonio"] and a["articulos"] == [48]
     _fija(ia.consultar("¿Cuál es la capital de Francia?"))
 
 
@@ -277,7 +277,7 @@ def test_puertas():
 
 
 def test_preguntar_contrato_y_registro():
-    _cliente(_msg(_ok(frecuentes=["licencia-matrimonio"], articulos=[48, 9999])))
+    _cliente(_msg(_ok(frecuentes=["lic-matrimonio"], articulos=[48, 9999])))
     usos = _usos()
     r = _plataforma().post(API + "/preguntar", json={"pregunta": "  ¿Cuántos días por   casamiento? "})
     assert r.status_code == 200
@@ -285,8 +285,8 @@ def test_preguntar_contrato_y_registro():
     assert set(j) == {"responde", "respuesta", "articulos", "frecuentes", "consulta_id", "puede_enviar"}
     assert j["responde"] is True and j["puede_enviar"] is False
     assert j["articulos"] == [{"numero": 48, "titulo": "Licencias con goce de haberes"}]
-    assert j["frecuentes"] == [{"id": "licencia-matrimonio",
-                                "pregunta": "¿Cuántos días de licencia me corresponden por casamiento?"}]
+    assert j["frecuentes"] == [{"id": "lic-matrimonio",
+                                "pregunta": "Me caso, o se casa un hijo mío: ¿qué licencia me corresponde?"}]
     f = _fila(j["consulta_id"])
     assert f.pregunta == "¿Cuántos días por casamiento?" and f.resultado == "respondida" and f.enviada is False
     assert f.articulos == [48] and f.modelo == ia.MODELO and f.creada
@@ -368,7 +368,7 @@ def test_modo_simulado_por_la_ruta(monkeypatch):
     monkeypatch.setenv("MOCK_EXTRACTOR", "1")
     usos = _usos()
     j = _plataforma().post(API + "/preguntar", json={"pregunta": "¿Cuándo es el Día del Bancario?"}).json()
-    assert j["responde"] is True and j["frecuentes"][0]["id"] == "dia-del-bancario"
+    assert j["responde"] is True and j["frecuentes"][0]["id"] == "jor-dia-bancario"
     assert _fila(j["consulta_id"]).modelo == "simulado" and _usos() == usos
 
 
