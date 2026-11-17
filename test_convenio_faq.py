@@ -198,3 +198,18 @@ def test_por_banco_solo_es_una_pregunta_valida_sin_articulos():
 def test_sigue_exigiendo_articulos_si_responde_con_el_convenio():
     r = _una(respuesta="x", por_banco="Algo.")
     assert "ningún artículo" in _motivos(r)["n"]
+
+
+def test_la_base_no_trae_preguntas_sin_respuesta():
+    """SDN 2026-11-17: una pregunta sin respuesta concreta no se publica; las
+    retiradas viven en otro archivo que la app no carga."""
+    import json
+    import os
+    base = json.load(open(os.path.join("data", "convenios", "cct-18-75-faq.json"), encoding="utf-8"))
+    retiradas = json.load(open(os.path.join("data", "convenios", "cct-18-75-faq-retiradas.json"), encoding="utf-8"))
+    ids = {p["id"] for p in base["preguntas"]}
+    assert not ids & {p["id"] for p in retiradas["preguntas"]}
+    for p in base["preguntas"]:
+        assert p["en_corto"].strip() and (p["respuesta"].strip() or p["segun_ley"].strip()), p["id"]
+    vistos = {q["id"] for t in convenio_faq.publico()["temas"] for q in t["preguntas"]}
+    assert vistos == ids
