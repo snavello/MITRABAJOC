@@ -92,8 +92,10 @@ REGLAS = (
     "usando EXCLUSIVAMENTE dos fuentes que van más abajo: (1) el texto del convenio, artículo por artículo, y "
     "(2) una lista de preguntas frecuentes ya redactadas.\n\n"
     "REGLAS, sin excepción:\n"
-    "1. Respondé solo lo que esas dos fuentes dicen. Nada de conocimiento propio, de otras normas, de la ley ni de "
-    "otros convenios.\n"
+    "1. Respondé solo lo que esas dos fuentes dicen. Nada de conocimiento propio ni de otros convenios. De la ley "
+    "solo podés decir lo que una pregunta frecuente trae en su parte «Según la ley»: en ese caso empezá esa parte "
+    "con «Según la ley», no agregues nada que no esté ahí y citá el id de esa pregunta frecuente. Dejá siempre "
+    "claro qué dice el convenio y qué dice la ley; si el convenio no lo trata, decilo.\n"
     "2. Citá siempre: los números de artículo del convenio en que te apoyás (campo `articulos`) y, si usaste una "
     "pregunta frecuente, su id (campo `frecuentes`). Sin al menos una cita, no respondas (`responde` falso).\n"
     "3. No des importes de dinero, sueldos, escalas ni adicionales en pesos: para eso existe la vista «Escala "
@@ -143,7 +145,8 @@ def texto_frecuentes(convenio: str = CONVENIO) -> str:
         for q in t["preguntas"]:
             arts = ", ".join(str(a["numero"]) for a in q["articulos"])
             bloques.append(f"[Frecuente {q['id']}] {q['pregunta']}\nSegún el convenio (art. {arts or '-'}): "
-                           f"{q['respuesta'] or '(el convenio no lo trata)'}")
+                           f"{q['respuesta'] or '(el convenio no lo trata)'}"
+                           + (f"\nSegún la ley: {q['segun_ley']}" if q.get("segun_ley") else ""))
     return "\n\n".join(bloques) or "(No hay preguntas frecuentes cargadas.)"
 
 
