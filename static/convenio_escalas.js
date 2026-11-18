@@ -11,7 +11,7 @@
 
   var estado = {
     opciones: null, convenio: null, sel: { rama: 'administrativa', anios: null, jerarquia: null, titulo: '', caja: false, tramo_roe: null },
-    fecha: '', resultado: null, memJer: '', roeAbierto: undefined
+    fecha: '', resultado: null, roeAbierto: undefined
   };
 
   /* ---------- utilidades ---------- */
@@ -125,23 +125,24 @@
     var o = estado.opciones, s = estado.sel, rama = ramaActual();
     s.rama = rama.clave;
     grupo($('sel-rama'), o.ramas.map(function (r) { return { valor: r.clave, rotulo: r.nombre }; }), s.rama, function (v) {
-      var modoJer = s.jerarquia !== null, previo = s.anios;
-      s.rama = v; estado.memJer = '';
-      s.jerarquia = modoJer ? '' : null;
+      var previo = s.anios, cargo = s.jerarquia;
+      s.rama = v;
       var nueva = ramaActual();
       s.anios = previo === null ? null : aniosEnLista(nueva.anios, previo);
+      if (cargo && nueva.jerarquias.indexOf(cargo) < 0) s.jerarquia = null;
       dibujarSeleccion();
     });
-    var porJer = s.jerarquia !== null;
-    $('campo-anios').hidden = porJer; $('campo-jer').hidden = !porJer;
-    $('ir-jerarquia').hidden = !rama.jerarquias.length;
+    var hayCargos = rama.jerarquias.length > 0;
+    if (!hayCargos) s.jerarquia = null;
+    $('campo-jer').hidden = !hayCargos;
+    $('nota-jer').hidden = !s.jerarquia;
     var sa = vaciar($('sel-anios'));
-    sa.append(h('option', { value: '', text: 'Elegí tus años', disabled: true, selected: s.anios === null }));
+    sa.append(h('option', { value: '', text: s.jerarquia ? 'Opcional: tus años' : 'Elegí tus años', disabled: !s.jerarquia, selected: s.anios === null }));
     rama.anios.forEach(function (a, i) {
       sa.append(h('option', { value: String(a), text: rotuloAnios(rama.anios, i), selected: s.anios === a }));
     });
     var sj = vaciar($('sel-jer'));
-    sj.append(h('option', { value: '', text: 'Elegí tu cargo', disabled: true, selected: !s.jerarquia }));
+    sj.append(h('option', { value: '', text: 'No tengo cargo jerárquico', selected: !s.jerarquia }));
     rama.jerarquias.forEach(function (j) { sj.append(h('option', { value: j, text: j, selected: s.jerarquia === j })); });
     grupo($('sel-titulo'), o.titulos.map(function (t) { return { valor: t.clave === 'sin' ? '' : t.clave, rotulo: t.rotulo }; }),
       s.titulo || '', function (v) { s.titulo = v; dibujarSeleccion(); });
@@ -154,15 +155,18 @@
       titulo: s.titulo || '', caja: !!s.caja, tramo_roe: s.tramo_roe
     };
   }
+  /* Lo guardado conserva las dos cosas (antigüedad y cargo); al servidor va una u otra. */
+  function selGuardable() {
+    var c = cuerpoSeleccion(); c.anios = estado.sel.anios; return c;
+  }
   async function verEscala() {
     var s = estado.sel;
-    if (s.jerarquia === null && s.anios === null) { error('Indicá los años de antigüedad o un cargo jerárquico.'); return; }
-    if (s.jerarquia !== null && !s.jerarquia) { error('Elegí tu cargo jerárquico.'); return; }
+    if (!s.jerarquia && s.anios === null) { error('Indicá tus años de antigüedad o elegí un cargo jerárquico.'); return; }
     var btn = $('sel-ver'); btn.disabled = true;
     try {
       await consultar();
       estado.fecha = estado.opciones.hoy;
-      if ($('sel-recordar').checked) ls('guardar', JSON.stringify({ sel: cuerpoSeleccion(), fecha: estado.fecha }));
+      if ($('sel-recordar').checked) ls('guardar', JSON.stringify({ sel: selGuardable(), fecha: estado.fecha }));
       else ls('borrar');
       dibujarResultado();
       mostrar('escala');
@@ -181,7 +185,10 @@
     var s = r.seleccion, rama = null;
     estado.opciones.ramas.forEach(function (x) { if (x.clave === s.rama) rama = x; });
     var tit = { '': 'Sin título', secundario: 'Título secundario', terciario: 'Título terciario', universitario: 'Título universitario' };
-    var partes = [rama ? rama.nombre : s.rama, r.categoria, tit[s.titulo || '']];
+    var partes = [rama ? rama.nombre : s.rama, r.categoria];
+    var sa = estado.sel.anios;
+    if (s.jerarquia && rama && typeof sa === 'number') partes.push('Antigüedad: ' + rotuloAnios(rama.anios, rama.anios.indexOf(sa)));
+    partes.push(tit[s.titulo || '']);
     if (s.caja) partes.push('Trabajo en caja');
     return partes.join(' · ');
   }
@@ -236,7 +243,7 @@
       try {
         await consultar(); dibujarResultado();
         var g2 = ls('leer');
-        if (g2) { var o = JSON.parse(g2); o.sel.tramo_roe = v; ls('guardar', JSON.stringify(o)); }
+        if (g2) { var o = JSON.parse(g2); o.sel.tramo_roe = v; o.sel.anios = estado.sel.anios; ls('guardar', JSON.stringify(o)); }
       } catch (e) { error(e.message); }
     }
     var items = estado.opciones.tramos_roe.map(function (t) { return { valor: t.indice, rotulo: t.rotulo }; });
@@ -610,6 +617,7 @@
     if (typeof g.jerarquia === 'string' && g.jerarquia) {
       if (rama.jerarquias.indexOf(g.jerarquia) < 0) return null;
       jer = g.jerarquia;
+      if (g.anios !== null && g.anios !== undefined) anios = aniosEnLista(rama.anios, g.anios);
     } else {
       if (g.jerarquia !== null && g.jerarquia !== undefined && g.jerarquia !== '') return null;
       anios = aniosEnLista(rama.anios, g.anios);
@@ -627,19 +635,12 @@
     $('tab-escala').addEventListener('click', function () { mostrar(estado.resultado ? 'escala' : 'seleccion'); });
     $('tab-convenio').addEventListener('click', function () { mostrar('convenio'); });
     $('esc-cambiar').addEventListener('click', function () {
-      var s = estado.resultado.seleccion;
-      estado.sel = { rama: s.rama, anios: s.anios, jerarquia: s.jerarquia, titulo: s.titulo || '', caja: !!s.caja, tramo_roe: s.tramo_roe };
-      estado.memJer = s.jerarquia || '';
-      if (s.anios !== null) estado.sel.anios = aniosEnLista(ramaActual().anios, s.anios);
       $('sel-recordar').checked = !!ls('leer');
       dibujarSeleccion(); mostrar('seleccion');
     });
     $('sel-ver').addEventListener('click', verEscala);
     $('sel-anios').addEventListener('change', function (e) { estado.sel.anios = Number(e.target.value); });
-    $('sel-jer').addEventListener('change', function (e) { estado.sel.jerarquia = e.target.value; estado.memJer = e.target.value; });
-    /* Al alternar se conserva lo elegido en cada modo. */
-    $('ir-jerarquia').addEventListener('click', function () { estado.sel.jerarquia = estado.memJer || ''; dibujarSeleccion(); });
-    $('ir-anios').addEventListener('click', function () { estado.memJer = estado.sel.jerarquia || ''; estado.sel.jerarquia = null; dibujarSeleccion(); });
+    $('sel-jer').addEventListener('change', function (e) { estado.sel.jerarquia = e.target.value || null; dibujarSeleccion(); });
     iniciarConvenio();
 
     try {
@@ -657,7 +658,6 @@
             await consultar();
             estado.fecha = fechaIsoValida(guardado.fecha) ? guardado.fecha : o.hoy;
             $('sel-recordar').checked = true;
-            estado.memJer = sel.jerarquia || '';
             dibujarSeleccion(); dibujarResultado(); mostrar('escala'); return;
           } catch (e) {
             ls('borrar'); aviso = AVISO_GUARDADA;
