@@ -288,3 +288,15 @@ def test_el_cuerpo_de_la_pregunta_abre_con_la_respuesta_directa():
         with open(css, encoding="utf-8") as f:
             hoja = f.read()
         assert ".es-encorto" in hoja and ".es-banco" in hoja, css
+
+
+def test_antiguedad_y_cargo_conviven_en_la_seleccion():
+    html = _con_plataforma().get(PAGINA).text
+    js = open("static/convenio_escalas.js", encoding="utf-8").read()
+    for ident in ('id="campo-anios"', 'id="campo-jer"'):
+        i = html.index(ident)
+        assert "hidden" not in html[i:html.index(">", i)], ident     # ya no se alternan
+    assert "ir-jerarquia" not in html + js and "ir-anios" not in html + js
+    assert "Tengo un cargo jerárquico" not in html + js and "Elegir por años de antigüedad" not in html + js
+    assert "Con cargo jerárquico, el básico publicado es el del cargo: en la grilla no cambia con la antigüedad." in html
+    assert "No tengo cargo jerárquico" in js
