@@ -394,6 +394,19 @@ cambian.
   carga ni ve la IA. Ni la pantalla ni la IA dicen lo que el convenio «no
   trata»: si no hay respuesta concreta, la IA devuelve la respuesta fija.
 
+- **D41 · Las preguntas frecuentes se curan desde una pantalla** (SDN,
+  2026-11-18). Pasan del archivo a la base (`PreguntaFrecuente`; los dos
+  archivos de `data/convenios/` quedan como semilla, igual que las grillas).
+  Estados `sin_revisar`, `revisada` y `retirada`; el afiliado y la IA ven las
+  dos primeras, nunca una retirada, y una retirada se puede completar y
+  publicar. Cada cambio guarda quién, cuándo y el contenido anterior
+  (`PreguntaFrecuenteCambio`). Toda edición pasa por las mismas reglas del
+  cargador, más lo que la IA no podría repetir (enlaces, marcas de formato,
+  caracteres invisibles) y un tope del conjunto para que el prompt no pase de
+  100.000 tokens. Dos personas sobre la misma pregunta: la segunda recibe un
+  aviso de conflicto, no pisa. La usa hoy el equipo en Herramientas; cuando el
+  sindicato apruebe se muda a `/admin`.
+
 **Contrato de la base de preguntas frecuentes** (`data/convenios/cct-18-75-faq.json`):
 `{"convenio": "cct-18-75", "leido": "AAAA-MM-DD", "temas": [{"clave", "nombre",
 "orden"}], "preguntas": [{"id" (slug único), "tema" (clave), "orden",

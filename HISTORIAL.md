@@ -11305,3 +11305,24 @@ preguntas y se sacó de `respuesta` todo lo que solo enumeraba ausencias (76
 quedaron sin parte de convenio). Lección: una respuesta fiel a la fuente puede
 ser inútil; primero el dato, después la fuente.
 
+## Curado de las preguntas frecuentes (2026-11-18)
+
+Las 119 preguntas del convenio nacieron «sin revisar» y solo se cambiaban
+editando un archivo, así que nada podía dejar de ser propuesta. SDN pidió la
+pantalla para curarlas (D41). En Render no hay disco persistente: para editar
+desde una pantalla las preguntas tenían que pasar a la base, con el mismo
+patrón de las grillas (el archivo queda de semilla, el módulo puro recibe lo
+vigente por `registrar()`). El sello se consulta en cada pedido y no cada 60
+segundos como en las grillas, porque quien cura espera ver el cambio enseguida
+en la vista del afiliado.
+
+Lo que encontró el QA independiente y se cerró antes del merge: dos personas
+sobre la misma pregunta se pisaban en silencio (había un contador `version` que
+nadie usaba; ahora da 409 y la pantalla ofrece traer la última versión); no
+había tope del conjunto, y con 200 preguntas al máximo por campo el prompt de la
+IA llegaba a unos 800.000 tokens (tope de 200.000 caracteres para lo vigente);
+en teléfono el editor tapaba los avisos, así que no se veía ni el «se guardó»;
+pasaban caracteres invisibles típicos de pegar desde Word; y se guardaban
+enlaces `https://` con host engañoso. Quedó abierto, con test `xfail`: el curado
+acepta cifras que el filtro de la IA trata como importe.
+
