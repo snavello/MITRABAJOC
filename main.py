@@ -11152,6 +11152,17 @@ def entornos_escalas_estado(request: Request):
     })
 
 
+@app.get("/entornos/herramientas/convenio-escalas/preguntas", response_class=HTMLResponse)
+def entornos_escalas_preguntas(request: Request):
+    """Curar las preguntas frecuentes del convenio (D41): misma puerta que la vista de estado."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("escalas_preguntas.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+    })
+
+
 def _grilla_sin_pesos(g: dict) -> dict:
     """Una fila de listar_grillas para la vista: sin la segunda lectura entera (pesa
     ~17 KB y solo se usa en el detalle)."""

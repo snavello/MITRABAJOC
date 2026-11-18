@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Convenio y escalas: curar las preguntas</title>
+{# Herramientas de /entornos: la pantalla para curar las preguntas frecuentes del
+   convenio (PLAN_CONVENIO_ESCALAS.md, D41). Hoja CLARA, igual que la vista de
+   estado de las grillas, y pensada para quien no es técnico: hoy el equipo de
+   Colm3na, después el sindicato desde su panel. Todo el aspecto vive en
+   static/escalas_preguntas.css (sobre escalas_estado.css) y el dibujo en
+   static/escalas_preguntas.js (solo textContent, nunca HTML armado a mano). #}
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+  }
+</style>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/escalas_estado.css?v={{ sello_static('escalas_estado.css') }}">
+<link rel="stylesheet" href="/static/escalas_preguntas.css?v={{ sello_static('escalas_preguntas.css') }}">
+</head>
+<body>
+<div class="pagina ancha">
+  <header class="cab">
+    <a class="volver" href="/entornos#herramientas">← Entornos · Herramientas</a>
+    <h1>Curar las preguntas</h1>
+    <p class="lede">Convenio y escalas. Estas son las preguntas frecuentes que ve el afiliado en la vista Convenio y que usa la consulta con IA para contestar. Acá se leen, se corrigen y se dan por revisadas. Lo que guardes se ve al instante.</p>
+    <nav class="hermanas" aria-label="Páginas de esta herramienta">
+      <a href="/entornos/herramientas/convenio-escalas">Escala vigente y convenio</a>
+      <a href="/entornos/herramientas/convenio-escalas/estado">Estado de las grillas</a>
+      <a href="/entornos/herramientas/convenio-escalas/preguntas" aria-current="page">Curar las preguntas</a>
+    </nav>
+  </header>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+
+  <section class="seccion" aria-labelledby="t-resumen" style="margin-top:0">
+    <h2 id="t-resumen" class="solo-lectores">Resumen</h2>
+    <div id="resumen" class="resumen-preg"><p class="vacio">Cargando las preguntas…</p></div>
+  </section>
+
+  <section class="seccion" aria-labelledby="t-lista">
+    <div class="encab-lista">
+      <h2 id="t-lista">Las preguntas</h2>
+      <button id="nueva" class="boton" type="button">+ Nueva pregunta</button>
+    </div>
+    <div class="filtros" role="group" aria-label="Filtros">
+      <div class="pastillas" id="pastillas" role="group" aria-label="Ver por estado"></div>
+      <div class="campos-filtro">
+        <div>
+          <label class="campo" for="f-tema">Tema</label>
+          <select id="f-tema"><option value="">Todos los temas</option></select>
+        </div>
+        <div class="crece">
+          <label class="campo" for="f-buscar">Buscar</label>
+          <input id="f-buscar" type="search" placeholder="Una palabra de la pregunta o la respuesta" autocomplete="off">
+        </div>
+      </div>
+      <p id="f-cuenta" class="suave chico" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="cols">
+      <div id="lista" class="lista-preg"><p class="vacio">Cargando…</p></div>
+
+      <aside id="editor" class="editor" aria-label="Editor de la pregunta" hidden>
+        <div class="editor-cab">
+          <button id="cerrar" class="boton claro" type="button">← Volver a la lista</button>
+          <span id="sin-guardar" class="pill sin_revisar" hidden>Cambios sin guardar</span>
+          <span id="editor-estado" class="pill"></span>
+        </div>
+        <h3 id="editor-titulo" tabindex="-1">Pregunta</h3>
+        <div id="editor-resumen-errores" class="aviso rojo" role="alert" hidden></div>
+        <div id="editor-duda" class="duda" hidden></div>
+        <div id="editor-retiro" class="duda retiro" hidden></div>
+        <form id="form" novalidate autocomplete="off"></form>
+        <div id="acciones" class="acciones-ed"></div>
+        <div id="confirmar-lugar"></div>
+        <div id="editor-vista" class="vista" aria-live="polite"></div>
+        <div id="editor-historial" class="historial"></div>
+      </aside>
+    </div>
+  </section>
+</div>
+<script src="/static/escalas_preguntas.js?v={{ sello_static('escalas_preguntas.js') }}"></script>
+</body>
+</html>

@@ -43,6 +43,11 @@ a { color: var(--agua); text-underline-offset: 2px; }
 .cab h1 { font-family: var(--fuente-display); font-size: 36px; line-height: 1; letter-spacing: 1.5px; text-transform: uppercase; }
 .cab .lede { font-size: 14.5px; color: var(--gris); margin-top: 8px; max-width: 720px; }
 
+/* ---------- enlaces entre las páginas de la herramienta ---------- */
+.cab .hermanas { display: flex; flex-wrap: wrap; gap: 0 18px; margin-top: 10px; }
+.cab .hermanas a { min-height: 44px; display: inline-flex; align-items: center; font-size: 14px; color: var(--agua); }
+.cab .hermanas a[aria-current=page] { color: var(--tinta); font-weight: 700; text-decoration: none; border-bottom: 3px solid var(--agua); }
+
 /* ---------- avisos ---------- */
 .aviso { border: 1px solid var(--aviso-borde); background: var(--aviso-fondo); color: #4a3200; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
 .aviso.rojo { border-color: #e0a39b; background: var(--mal-fondo); color: #6d1a12; }
