@@ -11912,6 +11912,55 @@ def _curado_clave(clave: str) -> str:
     return clave
 
 
+def _curado_conflicto(clave: str) -> JSONResponse:
+    return JSONResponse({"detail": "Otra persona cambió esta pregunta mientras la editabas. No se guardó nada.",
+                         "errores": [{"campo": "", "codigo": "conflicto",
+                                      "mensaje": "Otra persona cambió esta pregunta mientras la editabas. "
+                                                 "No se guardó nada para no pisar su trabajo: traé la última versión y volvé a hacer tu cambio."}]},
+                        status_code=409)
+
+
+def _curado_version(cuerpo: dict):
+    """(version | None, errores): la versión que la persona tenía abierta (opcional)."""
+    v = cuerpo.get("version")
+    if v is None:
+        return None, []
+    if isinstance(v, bool) or not isinstance(v, int) or not 0 <= v <= 10**9:
+        return None, [{"campo": "version", "mensaje": "tiene que ser el número de versión que trajo la pregunta"}]
+    return v, []
+
+
+_CAMPOS_VISIBLES = ("pregunta", "en_corto", "respuesta", "segun_ley", "por_banco")
+
+
+def _curado_validar(dato: dict, parcial: bool = False):
+    """`convenio_faq.validar_pregunta` más lo que la IA exige de cualquier texto que repita
+    (sin enlaces, correos ni marcas de formato). Una retirada (parcial) solo pasa la primera."""
+    limpio, errores = convenio_faq.validar_pregunta(dato, parcial=parcial)
+    if not parcial and not errores:
+        for k in _CAMPOS_VISIBLES:
+            motivo = consulta_convenio_ia.forma_no_repetible(limpio.get(k) or "")
+            if motivo:
+                errores.append({"campo": k, "mensaje": motivo})
+    return limpio, errores
+
+
+def _curado_cupo(filas: list, clave: str, resultante: dict, vigente: bool, nueva: bool = False) -> list:
+    """Errores si el cambio hace que las preguntas vigentes ya no entren en el prompt de la IA
+    (o que haya demasiadas filas). Un cambio que no agranda el total nunca se rechaza."""
+    if nueva and len(filas) >= convenio_faq.TOPE_PREGUNTAS:
+        return [{"campo": "", "mensaje": f"Ya hay {len(filas)} preguntas, el máximo. Retirá o juntá algunas antes de crear otra."}]
+    antes = sum(convenio_faq.peso_prompt(f) for f in filas if f["estado"] != "retirada")
+    propia = next((f for f in filas if f["id"] == clave), None)
+    despues = antes - (convenio_faq.peso_prompt(propia) if propia and propia["estado"] != "retirada" else 0)
+    despues += convenio_faq.peso_prompt(resultante) if vigente else 0
+    if despues > convenio_faq.TOPE_PROMPT_CARACTERES and despues > antes:
+        return [{"campo": "", "mensaje": "Entre todas las preguntas publicadas ya hay demasiado texto para que la consulta con IA las lea "
+                                          f"({despues:,} caracteres; el máximo es {convenio_faq.TOPE_PROMPT_CARACTERES:,}). "
+                                          "Acortá esta pregunta o retirá otras.".replace(",", ".")}]
+    return []
+
+
 def _curado_listado(**filtros) -> list:
     orden_tema = {t["clave"]: i for i, t in enumerate(convenio_faq.temas_catalogo())}
     filas = db.listar_preguntas(db.CONVENIO_BANCARIO, **filtros)
@@ -11961,7 +12010,9 @@ def api_curado_reordenar(request: Request, payload: Any = Body(default=None)):
 @app.post(CURADO)
 def api_curado_crear(request: Request, payload: Any = Body(default=None)):
     quien = _exigir_herramientas(request)
-    limpio, errores = convenio_faq.validar_pregunta(payload)
+    limpio, errores = _curado_validar(payload)
+    if not errores:
+        errores = _curado_cupo(db.listar_preguntas(db.CONVENIO_BANCARIO), limpio["id"], limpio, True, nueva=True)
     if errores:
         return _curado_rechazo(errores)
     try:
@@ -12008,18 +12059,23 @@ def api_curado_estado(request: Request, clave: str, payload: Any = Body(default=
         return _curado_rechazo([{"campo": "", "mensaje": "el cuerpo tiene que ser un objeto JSON"}])
     estado, errores = _curado_estado_pedido(payload)
     motivo, detalle, e2 = _curado_motivo(payload)
-    if errores or e2:
-        return _curado_rechazo(errores + e2)
+    version, e3 = _curado_version(payload)
+    if errores or e2 or e3:
+        return _curado_rechazo(errores + e2 + e3)
     actual = db.obtener_pregunta(clave)
     if actual is None:
         raise HTTPException(404, "No existe esa pregunta.")
     if estado != "retirada" and actual["estado"] == "retirada" or estado == "revisada":
         # Para mostrarla (o darla por revisada) tiene que cumplir todas las reglas.
-        _, errores = convenio_faq.validar_pregunta(actual)
+        _, errores = _curado_validar(actual)
+        if not errores and actual["estado"] == "retirada":
+            errores = _curado_cupo(db.listar_preguntas(db.CONVENIO_BANCARIO), clave, actual, True)
         if errores:
             return _curado_rechazo(errores)
     try:
-        f = db.cambiar_estado_pregunta(db.CONVENIO_BANCARIO, clave, estado, quien, motivo, detalle)
+        f = db.cambiar_estado_pregunta(db.CONVENIO_BANCARIO, clave, estado, quien, motivo, detalle, version)
+    except db.ConflictoPregunta:
+        return _curado_conflicto(clave)
     except ValueError as e:
         return _curado_rechazo([{"campo": "motivo" if estado == "retirada" else "estado", "mensaje": str(e)}])
     _preguntas_al_dia()
@@ -12042,15 +12098,22 @@ def api_curado_editar(request: Request, clave: str, payload: Any = Body(default=
         estado, errores = _curado_estado_pedido(payload)
         motivo, detalle, e2 = _curado_motivo(payload)
         errores += e2
+    version, e3 = _curado_version(payload)
+    errores += e3
     if errores:
         return _curado_rechazo(errores)
     unido = {k: actual[k] for k in (*db.CONTENIDO_FAQ, "id")}
     unido.update({k: payload[k] for k in db.CONTENIDO_FAQ if k in payload})
-    limpio, errores = convenio_faq.validar_pregunta(unido, parcial=(estado or actual["estado"]) == "retirada")
+    resultante = estado or actual["estado"]
+    limpio, errores = _curado_validar(unido, parcial=resultante == "retirada")
+    if not errores:
+        errores = _curado_cupo(db.listar_preguntas(db.CONVENIO_BANCARIO), clave, limpio, resultante != "retirada")
     if errores:
         return _curado_rechazo(errores)
     try:
-        f = db.editar_pregunta(db.CONVENIO_BANCARIO, clave, limpio, quien, estado, motivo, detalle)
+        f = db.editar_pregunta(db.CONVENIO_BANCARIO, clave, limpio, quien, estado, motivo, detalle, version)
+    except db.ConflictoPregunta:
+        return _curado_conflicto(clave)
     except ValueError as e:
         return _curado_rechazo([{"campo": "motivo" if estado == "retirada" else "estado", "mensaje": str(e)}])
     if f is None:

@@ -25,6 +25,8 @@ guardan sin enlace.
 """
 import json
 import re
+import unicodedata
+from urllib.parse import urlsplit
 from functools import lru_cache
 from pathlib import Path
 
@@ -224,13 +226,42 @@ RESERVADAS = ("articulos", "reordenar", "estado", "nueva")
 MAX = {"id": 60, "pregunta": 300, "en_corto": 1500, "respuesta": 4000, "segun_ley": 4000, "por_banco": 4000,
        "nota_curador": 2000, "motivo_retiro": 300, "detalle_retiro": 2000}
 MAX_ARTICULOS, MAX_NORMAS, MAX_FUENTES, MAX_INSPIRADA = 30, 12, 12, 12
-CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff\ud800-\udfff]")
+_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff\ud800-\udfff]")
+
+
+class _Raros:
+    """Caracteres de control o invisibles: los de la lista de siempre y, además, cualquier
+    carácter de formato (Cf: guion blando, aislantes bidireccionales…), de uso privado
+    (Co), suelto (Cs) o sin asignar (Cn). Un guion blando pegado desde Word no se ve y
+    después la IA rechaza toda respuesta que lo repita (QA independiente, D41)."""
+
+    def search(self, texto):
+        m = _CONTROL_RE.search(texto)
+        if m:
+            return m
+        for i, c in enumerate(texto):
+            if unicodedata.category(c) in ("Cf", "Co", "Cs", "Cn", "Zl", "Zp"):
+                return (i, c)
+        return None
+
+
+CONTROL = _Raros()
 # Importes en pesos o dólares: la vista de escalas es la que los muestra, con su etiqueta.
 _IMPORTE = re.compile(r"(\$|\bARS\b|\bUSD\b|U\$S|\d\s*pesos\b|\bpesos\s*\d|\d{1,3}(?:\.\d{3})+,\d{2}\b)", re.I)
 
 
 def hay_importe(texto: str) -> bool:
     return bool(_IMPORTE.search(texto or ""))
+
+
+def _raro_dicho(texto: str) -> str:
+    """«un carácter invisible (U+00AD) después de «…»»: para que quien cura lo encuentre."""
+    m = CONTROL.search(texto)
+    i = m.start() if hasattr(m, "start") else m[0]
+    c = texto[i]
+    antes = texto[max(0, i - 25):i].strip()
+    return (f"un carácter invisible o de control (U+{ord(c):04X})"
+            + (f" después de «{antes}»" if antes else " al principio") + ": borralo y volvé a escribir esa parte")
 
 
 def _t(dato, campo, errores, obligatorio=False, visible=False):
@@ -243,7 +274,7 @@ def _t(dato, campo, errores, obligatorio=False, visible=False):
         return ""
     v = v.strip()
     if CONTROL.search(v):
-        errores.append({"campo": campo, "mensaje": "tiene caracteres de control o invisibles"})
+        errores.append({"campo": campo, "mensaje": "tiene " + _raro_dicho(v)})
         return ""
     if len(v) > MAX.get(campo, 4000):
         errores.append({"campo": campo, "mensaje": f"es demasiado largo (máximo {MAX.get(campo, 4000)} caracteres)"})
@@ -253,6 +284,29 @@ def _t(dato, campo, errores, obligatorio=False, visible=False):
     if visible and v and hay_importe(v):
         errores.append({"campo": campo, "mensaje": "no puede traer importes en pesos: eso lo muestra la escala"})
     return v
+
+
+_HOST = re.compile(r"^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$")
+
+
+def host_publico(url: str) -> bool:
+    """True si la URL https apunta a un sitio con nombre público: sin usuario ni clave
+    (`https://bien.gob.ar@malo.com` se lee como el primero y abre el segundo), sin
+    barra invertida, sin IP ni `localhost`, sin ángulos ni comillas. Solo ASCII
+    (un dominio con tildes va en su forma `xn--`). No toca la red."""
+    if not isinstance(url, str) or "\\" in url or any(c in url for c in "<>\"'`") \
+            or not url.lower().startswith("https://"):
+        return False
+    try:
+        p = urlsplit(url)
+        host, _ = p.hostname, p.port                    # .port levanta si el puerto es basura
+    except ValueError:
+        return False
+    if not host or p.username is not None or p.password is not None or "@" in p.netloc:
+        return False
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+        return False
+    return bool(_HOST.match(host))
 
 
 def _url(valor, campo, errores):
@@ -266,6 +320,10 @@ def _url(valor, campo, errores):
         return ""
     if not u.lower().startswith("https://") or len(u) > 500 or CONTROL.search(u) or re.search(r"\s", u):
         errores.append({"campo": campo, "mensaje": "el enlace tiene que ser https:// y sin espacios (máximo 500 caracteres)"})
+        return ""
+    if not host_publico(u):
+        errores.append({"campo": campo, "mensaje": "el enlace tiene que apuntar a un sitio público (https://sitio.gob.ar/…): "
+                                                   "sin usuario ni clave antes del sitio, sin direcciones numéricas ni «localhost»"})
         return ""
     return u
 
@@ -363,6 +421,23 @@ def validar_pregunta(dato, convenio: str = CONVENIO_POR_DEFECTO, parcial: bool =
               "respuesta": respuesta, "articulos": arts, "segun_ley": segun_ley, "normas": normas,
               "por_banco": por_banco, "fuentes_banco": fuentes, "nota_curador": nota, "inspirada_en": insp}
     return limpio, errores
+
+
+# ---------------------------------------------------------------- cuánto cabe en el prompt de la IA
+# Las preguntas vigentes viajan enteras en el prompt de `consulta_convenio_ia` (junto al texto del
+# convenio, ~60.000 caracteres). Con los topes de cada campo una sola pregunta puede pesar 14.000
+# caracteres y 200 de ellas pasan el contexto del modelo: TODA consulta fallaría (QA D41). El tope
+# es el conjunto: hoy las 119 vigentes pesan ~120.000 caracteres (~35.000 tokens).
+TOPE_PROMPT_CARACTERES = 200_000
+TOPE_PREGUNTAS = 400
+_CAMPOS_PROMPT = ("pregunta", "en_corto", "respuesta", "segun_ley", "por_banco")
+
+
+def peso_prompt(q) -> int:
+    """Caracteres que una pregunta suma al prompt de la IA (con lo que le pone alrededor)."""
+    if not isinstance(q, dict):
+        return 0
+    return 120 + sum(len(q.get(k) or "") for k in _CAMPOS_PROMPT if isinstance(q.get(k), str))
 
 
 def existe(pid, convenio: str = CONVENIO_POR_DEFECTO) -> bool:

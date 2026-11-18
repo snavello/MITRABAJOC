@@ -70,13 +70,18 @@
       throw err;
     });
   }
+  // El aviso va ADENTRO del editor mientras hay una pregunta abierta: en el teléfono el editor
+  // tapa toda la pantalla y en la compu el aviso de arriba queda fuera de vista al apretar
+  // «Guardar» al pie del formulario (la persona veía que no pasaba nada).
   function aviso(texto, clase, extra) {
-    var a = $('aviso');
-    vaciar(a);
+    var arriba = $('aviso'), adentro = $('editor-aviso');
+    [arriba, adentro].forEach(function (a) { vaciar(a); a.hidden = true; a.className = 'aviso'; });
+    if (!texto) return;
+    var a = est.ed ? adentro : arriba;
     a.className = 'aviso' + (clase ? ' ' + clase : '');
-    if (texto) a.appendChild(document.createTextNode(texto));
+    a.appendChild(document.createTextNode(texto));
     if (extra) { a.appendChild(document.createTextNode(' ')); a.appendChild(extra); }
-    a.hidden = !texto;
+    a.hidden = false;
   }
 
   // ---------------------------------------------------------------- datos
@@ -219,7 +224,11 @@
     todas[a] = vecina.id; todas[b] = p.id;
     est.ocupado = true;
     pedir(CURADO + '/reordenar', { tema: p.tema, claves: todas }).then(function (r) {
-      (r.preguntas || []).forEach(function (x) { guardarLocal(x); });
+      (r.preguntas || []).forEach(function (x) {
+        guardarLocal(x);
+        // La pregunta abierta sigue siendo la misma: solo cambió su orden y su número de versión.
+        if (est.ed && est.ed.clave === x.id && est.ed.orig) est.ed.orig = x;
+      });
       est.ocupado = false;
       pintarLista();
       var b2 = document.querySelector('[data-mover="' + p.id + ':' + dir + '"]');
@@ -329,6 +338,7 @@
   }
   function mostrarEditor(sinFoco) {
     var ed = est.ed;
+    if (!sinFoco) aviso('');                 // un aviso de otra pregunta no se queda
     $('editor').hidden = false;
     $('lista').parentNode.classList.add('con-editor');
     if (window.matchMedia('(max-width: 979px)').matches) document.body.style.overflow = 'hidden';
@@ -692,6 +702,7 @@
       url = CURADO;
     } else {
       url = CURADO + '/' + encodeURIComponent(ed.clave);
+      if (ed.orig && ed.orig.version != null) cuerpo.version = ed.orig.version;   // para no pisar lo que otra persona cambió
       if (accion === 'revisar') estadoNuevo = 'revisada';
       else if (accion === 'sin_revisar' || accion === 'publicar') estadoNuevo = 'sin_revisar';
       else if (accion === 'retirar') { estadoNuevo = 'retirada'; cuerpo.motivo = extra.motivo; cuerpo.detalle = extra.detalle; }
@@ -722,7 +733,9 @@
       est.ocupado = false;
       $('editor').classList.remove('cargando');
       dibujarAcciones();
-      if (e.errores && e.errores.length) {
+      if (e.status === 409 && e.errores && e.errores[0] && e.errores[0].codigo === 'conflicto') {
+        conflicto(ed);
+      } else if (e.errores && e.errores.length) {
         var errs = e.errores.map(function (x) {
           if (e.status === 409 && x.campo === 'id') return { campo: 'id', mensaje: 'Ya hay una pregunta con ese nombre corto. Cambialo por otro.' };
           return x;
@@ -732,6 +745,23 @@
         mostrarErrores([{ campo: '', mensaje: e.message }], e.red ? 'No se pudo conectar.' : 'No se pudo guardar.');
       }
     });
+  }
+  // Otra persona guardó esta pregunta antes: no se pisa. Lo que escribió esta persona queda en pantalla.
+  function conflicto(ed) {
+    var traer = h('button', { type: 'button', class: 'boton claro chico', text: 'Traer la última versión',
+      onclick: function () {
+        if (est.ed !== ed || est.ocupado) return;
+        if (hayCambios() && !window.confirm('Lo que escribiste se reemplaza por la última versión guardada. ¿Seguís?')) return;
+        pedir(CURADO + '/' + encodeURIComponent(ed.clave)).then(function (r) {
+          if (est.ed !== ed || !r.pregunta) return;
+          guardarLocal(r.pregunta);
+          ed.orig = r.pregunta; ed.form = formDesde(r.pregunta); ed.base = firma(ed.form); ed.historial = r.historial || [];
+          pintarTodo(); mostrarEditor(true);
+          aviso('Se cargó la última versión guardada.', 'verde');
+        }).catch(function (e) { aviso('No se pudo traer la última versión. ' + e.message, 'rojo'); });
+      } });
+    aviso('Otra persona cambió esta pregunta mientras la editabas. No se guardó nada, para no pisar su trabajo. ' +
+          'Lo que escribiste sigue acá: copialo si lo necesitás y traé la última versión.', 'rojo', traer);
   }
   function proximaSinRevisar(despuesDe) {
     var vis = est.preguntas.filter(function (p) { return p.estado === 'sin_revisar'; });

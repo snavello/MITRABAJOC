@@ -8238,7 +8238,13 @@ def _faq_dict(f: "PreguntaFrecuente") -> dict:
             "fuentes_banco": [dict(x) for x in (f.fuentes_banco or [])], "nota_curador": f.nota_curador,
             "inspirada_en": list(f.inspirada_en or []), "motivo_retiro": f.motivo_retiro,
             "detalle_retiro": f.detalle_retiro, "creada": f.creada, "modificada": f.modificada,
-            "modificada_por": f.modificada_por, "revisada_por": f.revisada_por, "revisada_en": f.revisada_en}
+            "modificada_por": f.modificada_por, "revisada_por": f.revisada_por, "revisada_en": f.revisada_en,
+            "version": f.version}
+
+
+class ConflictoPregunta(Exception):
+    """Otra persona cambió la pregunta mientras esta la editaba (la `version` que trae
+    el pedido ya no es la de la base). No se guarda nada."""
 
 
 def _faq_snap(f: "PreguntaFrecuente") -> dict:
@@ -8398,14 +8404,18 @@ def crear_pregunta(convenio: str, limpio: dict, quien: str) -> dict:
 
 
 def editar_pregunta(convenio: str, clave: str, limpio: dict, quien: str, estado: str = "",
-                    motivo: str = "", detalle: str = "") -> Optional[dict]:
+                    motivo: str = "", detalle: str = "", version: Optional[int] = None) -> Optional[dict]:
     """Reemplaza el contenido de la pregunta por `limpio` (ya validado) y, si viene
     `estado` y es otro, también lo cambia, todo en una transacción. None si no
-    existe; ValueError si el estado pedido no corresponde."""
+    existe; ValueError si el estado pedido no corresponde. Con `version`, solo guarda si
+    la pregunta sigue en esa versión (si no, ConflictoPregunta): dos personas editando
+    la misma pregunta no se pisan en silencio."""
     with Session(engine) as s:
         f = _faq_bloqueada(s, convenio, clave)
         if f is None:
             return None
+        if version is not None and f.version != version:
+            raise ConflictoPregunta(clave)
         antes = _faq_snap(f)
         for k, v in _faq_valores(limpio).items():
             setattr(f, k, v)
@@ -8417,12 +8427,15 @@ def editar_pregunta(convenio: str, clave: str, limpio: dict, quien: str, estado:
 
 
 def cambiar_estado_pregunta(convenio: str, clave: str, estado: str, quien: str, motivo: str = "",
-                            detalle: str = "") -> Optional[dict]:
-    """Revisar, volver a sin revisar, retirar (con motivo) o reponer. None si no existe."""
+                            detalle: str = "", version: Optional[int] = None) -> Optional[dict]:
+    """Revisar, volver a sin revisar, retirar (con motivo) o reponer. None si no existe.
+    Con `version`, ConflictoPregunta si otra persona la cambió antes."""
     with Session(engine) as s:
         f = _faq_bloqueada(s, convenio, clave)
         if f is None:
             return None
+        if version is not None and f.version != version:
+            raise ConflictoPregunta(clave)
         antes = _faq_snap(f)
         accion = _faq_estado(f, estado, quien, motivo, detalle)
         if accion:

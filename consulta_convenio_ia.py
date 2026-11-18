@@ -297,6 +297,21 @@ def _forma_hostil(respuesta: str, convenio: str) -> str:
     return ""
 
 
+def forma_no_repetible(texto: str) -> str:
+    """Motivo si un texto de las preguntas frecuentes trae algo que `validar` rechaza en
+    CUALQUIER respuesta que lo repita (enlace, correo o usuario; marcas de formato): lo que
+    se cura acá tiene que poder decirlo la IA. '' si está bien. Es el mismo criterio que
+    `validar`, no otro: las mismas expresiones."""
+    if _USUARIO.search(texto) or _URL.search(unicodedata.normalize("NFKC", texto)):
+        return "trae un enlace, un correo o un usuario: eso no va en el texto (la respuesta no puede repetirlo)"
+    m = _MARCAS.search(texto)
+    if m:
+        c = m.group(0).strip() or "#"
+        return (f"trae una marca de formato («{c}»): escribilo como texto llano, "
+                "sin asteriscos, corchetes, llaves, barras ni signos de menor o mayor")
+    return ""
+
+
 def _fija(motivo: str, resultado: str = "fija") -> dict:
     return {"resultado": resultado, "motivo": motivo, "responde": False, "respuesta": TEXTO_FIJO,
             "articulos": [], "frecuentes": []}
