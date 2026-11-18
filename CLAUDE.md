@@ -1866,7 +1866,9 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     diario **prendido** en Pruebas (`ESCALAS_AUTO=1`). **2026-11-17, Plataforma
     0.74.01**: la vista Convenio se rehízo (D31 a D37): consulta con IA
     restringida (Haiku) y 149 preguntas frecuentes con convenio y ley separados,
-    para que las cure el sindicato; ver «Herramientas». **Queda**: (b) marcar los resúmenes como
+    para que las cure el sindicato; ver «Herramientas». **2026-11-18, Plataforma
+    0.75.01**: quedan 119 preguntas con respuesta concreta (D38 a D40) y hay
+    pantalla para curarlas, con las preguntas en la base (D41). **Queda**: (b) marcar los resúmenes como
     revisados desde la herramienta (D21): **todavía no está construido**, hoy
     la pantalla solo muestra «sin revisar»; (c) el pase a la app del afiliado
     (D12), la vista de estado en `/admin` (D23) y la conectividad de un
@@ -2649,6 +2651,23 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
     lleva la duda concreta. La ley se verificó contra el texto vigente al
     2026-11-16 (LCT con la reforma de la Ley 27.802): si la ley cambia, hay que
     volver a verificar. El cargador descarta y reporta lo mal formado.
+  - **Curado desde una pantalla** (D41, 2026-11-18, Plataforma 0.75.01):
+    `/entornos/herramientas/convenio-escalas/preguntas` (`templates/escalas_preguntas.html`,
+    `static/escalas_preguntas.js`; rutas `.../escalas/curado*`). **Las preguntas
+    viven en la base** (`PreguntaFrecuente`, migración `d8f2b4a6c0e1`); los dos
+    archivos de `data/convenios/` son solo la SEMILLA y `convenio_faq.py` sigue
+    puro: recibe las vigentes por `registrar()` y la app refresca por un sello
+    en cada pedido. Estados `sin_revisar` / `revisada` / `retirada`; el afiliado
+    y la IA nunca ven una retirada. Cada cambio queda en
+    `PreguntaFrecuenteCambio` (quién, cuándo, antes y después) y se puede volver
+    a una versión. Guardar con una `version` vieja da 409 (no se pisa a otro).
+    Topes del conjunto: `convenio_faq.TOPE_PROMPT_CARACTERES` (200.000) y
+    `TOPE_PREGUNTAS` (400), para que el prompt de la IA no pase de 100.000
+    tokens. El curado rechaza lo que la IA no podría repetir (enlaces, marcas de
+    formato, caracteres invisibles) y enlaces de norma con host engañoso. Límite
+    sabido: acepta cifras que la IA trata como importe (12,50 %, 10.000
+    afiliados); esa respuesta cae en la fija. Los temas no se editan desde la
+    pantalla. Tests: `test_convenio_curado.py`, `_pantalla` y `_qa`.
   - **Consulta con IA** (`consulta_convenio_ia.py`, separada del piloto RAG:
     no toca `rag.py` ni `/app/convenio`): `claude-haiku-5-5` como constante del
     módulo, **fuera de `precios_ia.USOS` y de `/plataforma` hasta que SDN decida

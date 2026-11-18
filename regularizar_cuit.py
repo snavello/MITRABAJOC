@@ -277,7 +277,13 @@ EXCLUIDAS = {
     "escalanovedad.datos": "nota pública del sitio del sindicato (porcentaje, inicial, ROE, PDF), sin identidades",
     "preguntaconvenio.articulos": "números de artículo del convenio citados en una respuesta de la IA, sin identidades",
     "preguntaconvenio.frecuentes": "ids de preguntas frecuentes del convenio citadas, sin identidades",
-    "grillasalarial.controles": "resultado de los controles de una grilla salarial, sin identidades",
+    "preguntafrecuente.articulos": "artículos del convenio citados por una pregunta frecuente, sin identidades",
+    "preguntafrecuente.normas": "normas citadas por una pregunta frecuente, sin identidades",
+    "preguntafrecuente.fuentes_banco": "fuentes públicas de acuerdos por banco, sin identidades",
+    "preguntafrecuente.inspirada_en": "fuentes de inspiración del texto de una pregunta frecuente, sin identidades",
+    "preguntafrecuentecambio.antes": "instantánea del texto de una pregunta frecuente antes de un cambio, sin identidades de afiliados",
+    "preguntafrecuentecambio.despues": "instantánea del texto de una pregunta frecuente después de un cambio, sin identidades de afiliados",
+    "grillasalarial.controles":"resultado de los controles de una grilla salarial, sin identidades",
     # -- Bitácoras: la historia no se reescribe (D5). La traza de lo que sí
     #    se cambió es `cambioidentificador`.
     "logplataforma.usuario": "bitácora: el usuario NOMINAL de plataforma que hizo la acción (D5)",

@@ -8176,6 +8176,307 @@ def enviar_pregunta_convenio(pregunta_id: int) -> bool:
         return True
 
 
+# ---- Preguntas frecuentes del convenio en la base (PLAN_CONVENIO_ESCALAS.md D41) ----
+# Los archivos data/convenios/<convenio>-faq*.json son la SEMILLA (como las grillas):
+# al arrancar, si el convenio no tiene ninguna fila, se siembran. Después manda la
+# base, que es lo que edita la pantalla de curado. Sin identidad de afiliados: solo
+# quién del equipo cambió qué y cuándo.
+ESTADOS_FAQ = ("sin_revisar", "revisada", "retirada")
+ACCIONES_FAQ = ("crear", "editar", "revisar", "retirar", "reponer", "reordenar")
+CONTENIDO_FAQ = ("tema", "orden", "pregunta", "en_corto", "respuesta", "articulos", "segun_ley", "normas",
+                 "por_banco", "fuentes_banco", "nota_curador", "inspirada_en")
+
+
+class PreguntaFrecuente(SQLModel, table=True):
+    """Una pregunta frecuente de un convenio. `clave` es el id slug que citan la IA
+    y la pantalla; `estado` es sin_revisar | revisada | retirada (la retirada no la
+    ve el afiliado ni la IA y puede estar incompleta). `version` sube con cada
+    cambio: sirve de sello para que cada proceso sepa si tiene que releer."""
+    __table_args__ = (UniqueConstraint("convenio", "clave", name="uq_preguntafrecuente_clave"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    convenio: str = Field(default=CONVENIO_BANCARIO, index=True)
+    clave: str
+    tema: str = Field(default="", index=True)
+    orden: float = 999.0
+    estado: str = Field(default="sin_revisar", index=True)
+    pregunta: str = ""
+    en_corto: str = ""
+    respuesta: str = ""
+    articulos: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    segun_ley: str = ""
+    normas: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    por_banco: str = ""
+    fuentes_banco: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    nota_curador: str = ""
+    inspirada_en: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    motivo_retiro: str = ""
+    detalle_retiro: str = ""
+    version: int = 1
+    creada: str = Field(default_factory=fechas.ahora_con_segundos)
+    modificada: str = ""
+    modificada_por: str = ""
+    revisada_por: str = ""
+    revisada_en: str = ""
+
+
+class PreguntaFrecuenteCambio(SQLModel, table=True):
+    """Cada cambio a una pregunta: quién, cuándo, qué hizo y cómo estaba antes y
+    después (instantánea del contenido y el estado), para verlo y deshacerlo."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    pregunta_id: int = Field(index=True)
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)
+    quien: str = ""
+    accion: str = ""
+    antes: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    despues: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+
+
+def _faq_dict(f: "PreguntaFrecuente") -> dict:
+    return {"id": f.clave, "tema": f.tema, "orden": f.orden, "estado": f.estado, "pregunta": f.pregunta,
+            "en_corto": f.en_corto, "respuesta": f.respuesta, "articulos": list(f.articulos or []),
+            "segun_ley": f.segun_ley, "normas": [dict(n) for n in (f.normas or [])], "por_banco": f.por_banco,
+            "fuentes_banco": [dict(x) for x in (f.fuentes_banco or [])], "nota_curador": f.nota_curador,
+            "inspirada_en": list(f.inspirada_en or []), "motivo_retiro": f.motivo_retiro,
+            "detalle_retiro": f.detalle_retiro, "creada": f.creada, "modificada": f.modificada,
+            "modificada_por": f.modificada_por, "revisada_por": f.revisada_por, "revisada_en": f.revisada_en,
+            "version": f.version}
+
+
+class ConflictoPregunta(Exception):
+    """Otra persona cambió la pregunta mientras esta la editaba (la `version` que trae
+    el pedido ya no es la de la base). No se guarda nada."""
+
+
+def _faq_snap(f: "PreguntaFrecuente") -> dict:
+    d = _faq_dict(f)
+    return {k: d[k] for k in (*CONTENIDO_FAQ, "estado", "motivo_retiro", "detalle_retiro")}
+
+
+def _faq_valores(p: dict) -> dict:
+    """Las columnas de contenido de una pregunta con la forma del JSON, con tipos seguros."""
+    def txt(k):
+        v = p.get(k)
+        return v.strip() if isinstance(v, str) else ""
+
+    def lista(k):
+        v = p.get(k)
+        return list(v) if isinstance(v, list) else []
+    o = p.get("orden")
+    return {"tema": txt("tema"), "orden": float(o) if isinstance(o, (int, float)) and not isinstance(o, bool) else 999.0,
+            "pregunta": txt("pregunta"), "en_corto": txt("en_corto"), "respuesta": txt("respuesta"),
+            "articulos": lista("articulos"), "segun_ley": txt("segun_ley"), "normas": lista("normas"),
+            "por_banco": txt("por_banco"), "fuentes_banco": lista("fuentes_banco"),
+            "nota_curador": txt("nota_curador"), "inspirada_en": lista("inspirada_en")}
+
+
+def sembrar_preguntas(convenio: str = CONVENIO_BANCARIO) -> int:
+    """Siembra las preguntas de los archivos SOLO si el convenio no tiene ninguna
+    fila: las del archivo principal como `sin_revisar` (o como diga) y las
+    retiradas como `retirada`. Después manda la base. Idempotente y segura con
+    dos procesos a la vez (ON CONFLICT DO NOTHING). Devuelve cuántas insertó."""
+    import convenio_faq
+    from sqlalchemy import func as _fn
+    activas, retiradas = convenio_faq.semilla(convenio)
+    ahora = fechas.ahora_con_segundos()
+    insertadas = 0
+    with Session(engine) as s:
+        if s.exec(select(_fn.count(PreguntaFrecuente.id)).where(PreguntaFrecuente.convenio == convenio)).one():
+            return 0
+        for lista, retirada in ((activas, False), (retiradas, True)):
+            for p in lista:
+                clave = str(p.get("id") or "").strip()
+                if not clave:
+                    continue
+                estado = "retirada" if retirada else (p.get("estado") if p.get("estado") in ("sin_revisar", "revisada")
+                                                      else "sin_revisar")
+                valores = _faq_valores(p)
+                valores.update(convenio=convenio, clave=clave, estado=estado, version=1, creada=ahora,
+                               modificada=ahora, modificada_por="semilla", revisada_por="", revisada_en="",
+                               motivo_retiro=str(p.get("motivo_retiro") or "")[:300] if retirada else "",
+                               detalle_retiro=str(p.get("detalle_retiro") or "")[:2000] if retirada else "")
+                stmt = postgresql.insert(PreguntaFrecuente.__table__).values(**valores).on_conflict_do_nothing(
+                    index_elements=["convenio", "clave"]).returning(PreguntaFrecuente.__table__.c.id)
+                insertadas += len(s.exec(stmt).all())
+        s.commit()
+    return insertadas
+
+
+def sello_preguntas(convenio: str = CONVENIO_BANCARIO) -> str:
+    """Una cadena barata que cambia con cualquier cambio a las preguntas del convenio."""
+    from sqlalchemy import func as _fn
+    with Session(engine) as s:
+        n, mayor, suma, mod = s.exec(select(
+            _fn.count(PreguntaFrecuente.id), _fn.max(PreguntaFrecuente.id), _fn.sum(PreguntaFrecuente.version),
+            _fn.max(PreguntaFrecuente.modificada)).where(PreguntaFrecuente.convenio == convenio)).one()
+        return f"{n or 0}:{mayor or 0}:{suma or 0}:{mod or ''}"
+
+
+def listar_preguntas(convenio: str = CONVENIO_BANCARIO, estado: str = "", tema: str = "", q: str = "") -> list:
+    """Las preguntas del convenio (todas las del filtro, con todo el contenido)."""
+    import convenio_fichas
+    with Session(engine) as s:
+        cons = select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio)
+        if estado:
+            cons = cons.where(PreguntaFrecuente.estado == estado)
+        if tema:
+            cons = cons.where(PreguntaFrecuente.tema == tema)
+        filas = [_faq_dict(f) for f in s.exec(cons.order_by(PreguntaFrecuente.orden, PreguntaFrecuente.clave)).all()]
+    if q:
+        buscado = convenio_fichas.normalizar(q)
+        filas = [f for f in filas if buscado in convenio_fichas.normalizar(
+            " ".join((f["id"], f["pregunta"], f["en_corto"], f["respuesta"], f["segun_ley"], f["por_banco"])))]
+    return filas
+
+
+def obtener_pregunta(clave: str, convenio: str = CONVENIO_BANCARIO) -> Optional[dict]:
+    with Session(engine) as s:
+        f = s.exec(select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
+                                                    PreguntaFrecuente.clave == clave)).first()
+        return _faq_dict(f) if f else None
+
+
+def historial_pregunta(clave: str, convenio: str = CONVENIO_BANCARIO, limite: int = 20) -> list:
+    with Session(engine) as s:
+        f = s.exec(select(PreguntaFrecuente.id).where(PreguntaFrecuente.convenio == convenio,
+                                                       PreguntaFrecuente.clave == clave)).first()
+        if f is None:
+            return []
+        filas = s.exec(select(PreguntaFrecuenteCambio).where(PreguntaFrecuenteCambio.pregunta_id == f)
+                       .order_by(PreguntaFrecuenteCambio.id.desc()).limit(max(1, min(int(limite), 200)))).all()
+        return [{"cuando": c.cuando, "quien": c.quien, "accion": c.accion,
+                 "antes": c.antes or {}, "despues": c.despues or {}} for c in filas]
+
+
+def _faq_bloqueada(s, convenio: str, clave: str):
+    return s.exec(select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
+                                                   PreguntaFrecuente.clave == clave).with_for_update()).first()
+
+
+def _faq_registrar(s, f: "PreguntaFrecuente", accion: str, quien: str, antes: dict) -> None:
+    f.version = (f.version or 0) + 1
+    f.modificada, f.modificada_por = fechas.ahora_con_segundos(), quien
+    s.add(f)
+    s.flush()
+    s.add(PreguntaFrecuenteCambio(pregunta_id=f.id, cuando=f.modificada, quien=quien, accion=accion,
+                                  antes=antes, despues=_faq_snap(f)))
+
+
+def _faq_estado(f: "PreguntaFrecuente", estado: str, quien: str, motivo: str, detalle: str) -> str:
+    """Pasa `f` a `estado` y devuelve la acción del historial ('' si no cambia nada)."""
+    if estado not in ESTADOS_FAQ:
+        raise ValueError(f"El estado «{str(estado)[:30]}» no existe.")
+    if estado == f.estado:
+        return ""
+    anterior = f.estado
+    if estado == "retirada":
+        if not (motivo or "").strip():
+            raise ValueError("Para retirar una pregunta hace falta el motivo.")
+        f.motivo_retiro, f.detalle_retiro = motivo.strip()[:300], (detalle or "").strip()[:2000]
+        f.revisada_por, f.revisada_en = "", ""
+        accion = "retirar"
+    else:
+        f.motivo_retiro = f.detalle_retiro = ""
+        if estado == "revisada":
+            f.revisada_por, f.revisada_en = quien, fechas.ahora_con_segundos()
+            accion = "revisar" if anterior != "retirada" else "reponer"
+        else:
+            f.revisada_por, f.revisada_en = "", ""
+            accion = "reponer" if anterior == "retirada" else "editar"
+    f.estado = estado
+    return accion
+
+
+def crear_pregunta(convenio: str, limpio: dict, quien: str) -> dict:
+    """Crea una pregunta ya validada, como `sin_revisar`. ValueError si la clave ya existe."""
+    with Session(engine) as s:
+        if s.exec(select(PreguntaFrecuente.id).where(PreguntaFrecuente.convenio == convenio,
+                                                      PreguntaFrecuente.clave == limpio["id"])).first() is not None:
+            raise ValueError(f"Ya existe una pregunta con el id «{limpio['id']}».")
+        f = PreguntaFrecuente(convenio=convenio, clave=limpio["id"], estado="sin_revisar", version=0,
+                              **_faq_valores(limpio))
+        try:
+            _faq_registrar(s, f, "crear", quien, {})
+            s.commit()
+        except IntegrityError:
+            s.rollback()
+            raise ValueError(f"Ya existe una pregunta con el id «{limpio['id']}».")
+        return _faq_dict(f)
+
+
+def editar_pregunta(convenio: str, clave: str, limpio: dict, quien: str, estado: str = "",
+                    motivo: str = "", detalle: str = "", version: Optional[int] = None) -> Optional[dict]:
+    """Reemplaza el contenido de la pregunta por `limpio` (ya validado) y, si viene
+    `estado` y es otro, también lo cambia, todo en una transacción. None si no
+    existe; ValueError si el estado pedido no corresponde. Con `version`, solo guarda si
+    la pregunta sigue en esa versión (si no, ConflictoPregunta): dos personas editando
+    la misma pregunta no se pisan en silencio."""
+    with Session(engine) as s:
+        f = _faq_bloqueada(s, convenio, clave)
+        if f is None:
+            return None
+        if version is not None and f.version != version:
+            raise ConflictoPregunta(clave)
+        antes = _faq_snap(f)
+        for k, v in _faq_valores(limpio).items():
+            setattr(f, k, v)
+        cambio_estado = _faq_estado(f, estado, quien, motivo, detalle) if estado else ""
+        if _faq_snap(f) != antes:
+            _faq_registrar(s, f, cambio_estado or "editar", quien, antes)
+        s.commit()
+        return _faq_dict(f)
+
+
+def cambiar_estado_pregunta(convenio: str, clave: str, estado: str, quien: str, motivo: str = "",
+                            detalle: str = "", version: Optional[int] = None) -> Optional[dict]:
+    """Revisar, volver a sin revisar, retirar (con motivo) o reponer. None si no existe.
+    Con `version`, ConflictoPregunta si otra persona la cambió antes."""
+    with Session(engine) as s:
+        f = _faq_bloqueada(s, convenio, clave)
+        if f is None:
+            return None
+        if version is not None and f.version != version:
+            raise ConflictoPregunta(clave)
+        antes = _faq_snap(f)
+        accion = _faq_estado(f, estado, quien, motivo, detalle)
+        if accion:
+            _faq_registrar(s, f, accion, quien, antes)
+        s.commit()
+        return _faq_dict(f)
+
+
+def reordenar_preguntas(convenio: str, tema: str, claves: list, quien: str) -> list:
+    """Deja las preguntas del tema en el orden dado (1, 2, 3…). `claves` tiene que
+    ser exactamente el conjunto de las del tema, sin repetir. ValueError si no."""
+    with Session(engine) as s:
+        filas = s.exec(select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
+                                                        PreguntaFrecuente.tema == tema)
+                       .order_by(PreguntaFrecuente.clave).with_for_update()).all()
+        por_clave = {f.clave: f for f in filas}
+        if len(set(claves)) != len(claves) or set(claves) != set(por_clave):
+            faltan, sobran = sorted(set(por_clave) - set(claves)), sorted(set(claves) - set(por_clave))
+            raise ValueError("La lista tiene que traer todas las preguntas del tema, una sola vez cada una"
+                             + (f" (faltan: {', '.join(faltan[:5])})" if faltan else "")
+                             + (f" (sobran: {', '.join(str(x)[:40] for x in sobran[:5])})" if sobran else "") + ".")
+        for i, clave in enumerate(claves, 1):
+            f = por_clave[clave]
+            if f.orden != float(i):
+                antes = {"orden": f.orden}
+                f.orden = float(i)
+                _faq_registrar(s, f, "reordenar", quien, antes)
+        s.commit()
+        return [_faq_dict(por_clave[c]) for c in claves]
+
+
+def datos_preguntas_vigentes(convenio: str = CONVENIO_BANCARIO) -> dict:
+    """Lo que ven el afiliado y la IA, en la forma del JSON de semilla (para
+    `convenio_faq.registrar`): todas menos las retiradas."""
+    import convenio_faq
+    filas = [f for f in listar_preguntas(convenio) if f["estado"] != "retirada"]
+    ultima = max((f["modificada"] for f in filas), default="")
+    return {"convenio": convenio, "leido": ultima[:10], "temas": convenio_faq.temas_catalogo(convenio),
+            "preguntas": filas}
+
+
 def _pregunta_convenio_dict(p: "PreguntaConvenio") -> dict:
     return {"id": p.id, "pregunta": p.pregunta, "resultado": p.resultado, "motivo": p.motivo,
             "articulos": list(p.articulos or []), "frecuentes": list(p.frecuentes or []),
