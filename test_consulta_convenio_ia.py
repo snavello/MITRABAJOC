@@ -428,6 +428,7 @@ _DATOS_BANCO = {
 def con_banco(monkeypatch):
     r = convenio_faq.validar_datos(copy.deepcopy(_DATOS_BANCO))
     assert r["descartadas"] == []
+    monkeypatch.setattr(convenio_faq, "_REGISTRADO", {})     # lo que registró la app desde la base no manda acá
     monkeypatch.setattr(convenio_faq, "_leer", lambda convenio: r)
     return r
 

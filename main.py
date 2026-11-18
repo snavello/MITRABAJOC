@@ -865,6 +865,11 @@ def _startup():
         _refrescar_grillas(forzar=True)
     except Exception as e:
         print(f"[grillas] no se cargaron de la base ({type(e).__name__}: {e})")
+    # Las preguntas frecuentes del convenio, lo mismo (D41): archivo = semilla.
+    try:
+        _refrescar_preguntas(forzar=True)
+    except Exception as e:
+        print(f"[frecuentes] no se cargaron de la base ({type(e).__name__}: {e})")
     # El lector de fotos del enmascarado se carga al arrancar y no con la
     # primera foto del día. Nunca puede tumbar el arranque (mejor esfuerzo).
     if preparacion.modo() != "apagado":
@@ -11123,7 +11128,7 @@ def entornos_bancaria_casos_csv(request: Request):
 # (D23), mudarla sea mover la página y sus rutas.
 HERRAMIENTA_ESCALAS = escalas_proceso.HERRAMIENTA
 # Un id de la ruta tiene que caber en int4 (la columna): uno mayor daba 500 en la base.
-from typing import Annotated as _Annotated  # noqa: E402
+from typing import Annotated as _Annotated, Any  # noqa: E402
 IdEscalas = _Annotated[int, RutaFastAPI(ge=1, le=2147483647)]
 
 
@@ -11836,16 +11841,211 @@ def _convenio_ia_pasa_el_tope(ip: str) -> bool:
     return False
 
 
+# ---- Preguntas frecuentes en la base (D41): sembrado, refresco por sello y curado ----
+_FAQ_SELLO = {"sello": None}
+_FAQ_LOCK = threading.Lock()
+
+
+def _refrescar_preguntas(forzar: bool = False) -> None:
+    """Deja `convenio_faq` con las preguntas vigentes de la base (todas menos las
+    retiradas). Con `forzar` siembra desde data/ si el convenio no tiene ninguna.
+    Si no, mira el sello (una consulta barata) en CADA llamada: con varios workers
+    un cambio hecho en uno se ve en los otros en el pedido siguiente. Si la base
+    no responde deja lo que ya había (el archivo o lo último registrado)."""
+    with _FAQ_LOCK:
+        if forzar:
+            db.sembrar_preguntas()
+        sello = db.sello_preguntas()
+        if sello.startswith("0:"):            # tabla vacía (base nueva o recién migrada): se siembra
+            db.sembrar_preguntas()
+            sello = db.sello_preguntas()
+        if forzar or sello != _FAQ_SELLO["sello"]:
+            convenio_faq.registrar(db.CONVENIO_BANCARIO, db.datos_preguntas_vigentes())
+            _FAQ_SELLO["sello"] = sello
+
+
+def _preguntas_al_dia() -> None:
+    try:
+        _refrescar_preguntas()
+    except Exception as e:
+        print(f"[frecuentes] no se pudo refrescar ({type(e).__name__}: {e})")
+
+
 @app.get(API_ESCALAS + "/frecuentes")
 def api_escalas_frecuentes(request: Request):
     _exigir_herramientas(request)
+    _preguntas_al_dia()
     return convenio_faq.publico()
 
 
 @app.get(API_ESCALAS + "/frecuentes/curado")
 def api_escalas_frecuentes_curado(request: Request):
+    """Alias de la vista vieja del equipo (solo lo vigente); la pantalla de curado usa /curado."""
     _exigir_herramientas(request)
+    _preguntas_al_dia()
     return convenio_faq.curado()
+
+
+# ---- Curado de las preguntas frecuentes (D41) ----
+CURADO = API_ESCALAS + "/curado"
+
+
+def _curado_rechazo(errores: list, estado: int = 400) -> JSONResponse:
+    resumen = "; ".join((f"{e['campo']}: {e['mensaje']}" if e.get("campo") else e["mensaje"]) for e in errores[:6])
+    return JSONResponse({"detail": resumen or "Pedido inválido.", "errores": errores}, status_code=estado)
+
+
+def _curado_clave(clave: str) -> str:
+    if not isinstance(clave, str) or len(clave) > convenio_faq.MAX["id"] or not convenio_faq.SLUG.match(clave):
+        raise HTTPException(404, "No existe esa pregunta.")
+    return clave
+
+
+def _curado_listado(**filtros) -> list:
+    orden_tema = {t["clave"]: i for i, t in enumerate(convenio_faq.temas_catalogo())}
+    filas = db.listar_preguntas(db.CONVENIO_BANCARIO, **filtros)
+    return sorted(filas, key=lambda f: (orden_tema.get(f["tema"], 999), f["orden"], f["id"]))
+
+
+@app.get(CURADO)
+def api_curado(request: Request, estado: str = Query("", max_length=20), tema: str = Query("", max_length=60),
+               q: str = Query("", max_length=200)):
+    _exigir_herramientas(request)
+    if estado and estado not in db.ESTADOS_FAQ:
+        return _curado_rechazo([{"campo": "estado", "mensaje": "tiene que ser sin_revisar, revisada o retirada"}])
+    todas = db.listar_preguntas(db.CONVENIO_BANCARIO)
+    conteos = {e: sum(1 for f in todas if f["estado"] == e) for e in db.ESTADOS_FAQ}
+    conteos["total"] = len(todas)
+    preguntas = _curado_listado(estado=estado, tema=tema, q=q.strip()) if (estado or tema or q.strip()) \
+        else _curado_listado()
+    return {"temas": convenio_faq.temas_catalogo(), "conteos": conteos, "preguntas": preguntas}
+
+
+@app.get(CURADO + "/articulos")
+def api_curado_articulos(request: Request):
+    _exigir_herramientas(request)
+    conv = convenio_fichas.cargar()
+    return [{"numero": a["numero"], "titulo": a["titulo"]}
+            for a in list(conv["articulos"]) + list(conv.get("transitorias", []))]
+
+
+@app.post(CURADO + "/reordenar")
+def api_curado_reordenar(request: Request, payload: Any = Body(default=None)):
+    quien = _exigir_herramientas(request)
+    if not isinstance(payload, dict):
+        return _curado_rechazo([{"campo": "", "mensaje": "el cuerpo tiene que ser un objeto JSON"}])
+    tema, claves = payload.get("tema"), payload.get("claves")
+    if not isinstance(tema, str) or tema not in {t["clave"] for t in convenio_faq.temas_catalogo()}:
+        return _curado_rechazo([{"campo": "tema", "mensaje": "el tema no existe"}])
+    if not isinstance(claves, list) or len(claves) > 500 or any(not isinstance(c, str) for c in claves):
+        return _curado_rechazo([{"campo": "claves", "mensaje": "tiene que ser la lista de ids del tema"}])
+    try:
+        filas = db.reordenar_preguntas(db.CONVENIO_BANCARIO, tema, claves, quien)
+    except ValueError as e:
+        return _curado_rechazo([{"campo": "claves", "mensaje": str(e)}])
+    _preguntas_al_dia()
+    return {"ok": True, "preguntas": filas}
+
+
+@app.post(CURADO)
+def api_curado_crear(request: Request, payload: Any = Body(default=None)):
+    quien = _exigir_herramientas(request)
+    limpio, errores = convenio_faq.validar_pregunta(payload)
+    if errores:
+        return _curado_rechazo(errores)
+    try:
+        f = db.crear_pregunta(db.CONVENIO_BANCARIO, limpio, quien)
+    except ValueError as e:
+        return _curado_rechazo([{"campo": "id", "mensaje": str(e)}], 409)
+    _preguntas_al_dia()
+    return {"ok": True, "pregunta": f}
+
+
+@app.get(CURADO + "/{clave}")
+def api_curado_una(request: Request, clave: str):
+    _exigir_herramientas(request)
+    _curado_clave(clave)
+    f = db.obtener_pregunta(clave)
+    if f is None:
+        raise HTTPException(404, "No existe esa pregunta.")
+    return {"pregunta": f, "historial": db.historial_pregunta(clave, limite=20)}
+
+
+def _curado_motivo(cuerpo: dict) -> tuple:
+    """(motivo, detalle, errores) del cuerpo de un cambio de estado."""
+    errores: list = []
+    motivo = convenio_faq._t({"motivo_retiro": cuerpo.get("motivo")}, "motivo_retiro", errores)
+    detalle = convenio_faq._t({"detalle_retiro": cuerpo.get("detalle")}, "detalle_retiro", errores)
+    for e in errores:
+        e["campo"] = "motivo" if e["campo"] == "motivo_retiro" else "detalle"
+    return motivo, detalle, errores
+
+
+def _curado_estado_pedido(cuerpo: dict):
+    """El estado pedido: (estado, errores)."""
+    e = cuerpo.get("estado")
+    if not isinstance(e, str) or e not in db.ESTADOS_FAQ:
+        return "", [{"campo": "estado", "mensaje": "tiene que ser sin_revisar, revisada o retirada"}]
+    return e, []
+
+
+@app.post(CURADO + "/{clave}/estado")
+def api_curado_estado(request: Request, clave: str, payload: Any = Body(default=None)):
+    quien = _exigir_herramientas(request)
+    _curado_clave(clave)
+    if not isinstance(payload, dict):
+        return _curado_rechazo([{"campo": "", "mensaje": "el cuerpo tiene que ser un objeto JSON"}])
+    estado, errores = _curado_estado_pedido(payload)
+    motivo, detalle, e2 = _curado_motivo(payload)
+    if errores or e2:
+        return _curado_rechazo(errores + e2)
+    actual = db.obtener_pregunta(clave)
+    if actual is None:
+        raise HTTPException(404, "No existe esa pregunta.")
+    if estado != "retirada" and actual["estado"] == "retirada" or estado == "revisada":
+        # Para mostrarla (o darla por revisada) tiene que cumplir todas las reglas.
+        _, errores = convenio_faq.validar_pregunta(actual)
+        if errores:
+            return _curado_rechazo(errores)
+    try:
+        f = db.cambiar_estado_pregunta(db.CONVENIO_BANCARIO, clave, estado, quien, motivo, detalle)
+    except ValueError as e:
+        return _curado_rechazo([{"campo": "motivo" if estado == "retirada" else "estado", "mensaje": str(e)}])
+    _preguntas_al_dia()
+    return {"ok": True, "pregunta": f}
+
+
+@app.post(CURADO + "/{clave}")
+def api_curado_editar(request: Request, clave: str, payload: Any = Body(default=None)):
+    quien = _exigir_herramientas(request)
+    _curado_clave(clave)
+    if not isinstance(payload, dict):
+        return _curado_rechazo([{"campo": "", "mensaje": "el cuerpo tiene que ser un objeto JSON"}])
+    actual = db.obtener_pregunta(clave)
+    if actual is None:
+        raise HTTPException(404, "No existe esa pregunta.")
+    if "id" in payload and payload["id"] != clave:
+        return _curado_rechazo([{"campo": "id", "mensaje": "el id no se puede cambiar"}])
+    estado, motivo, detalle, errores = "", "", "", []
+    if payload.get("estado") is not None:
+        estado, errores = _curado_estado_pedido(payload)
+        motivo, detalle, e2 = _curado_motivo(payload)
+        errores += e2
+    if errores:
+        return _curado_rechazo(errores)
+    unido = {k: actual[k] for k in (*db.CONTENIDO_FAQ, "id")}
+    unido.update({k: payload[k] for k in db.CONTENIDO_FAQ if k in payload})
+    limpio, errores = convenio_faq.validar_pregunta(unido, parcial=(estado or actual["estado"]) == "retirada")
+    if errores:
+        return _curado_rechazo(errores)
+    try:
+        f = db.editar_pregunta(db.CONVENIO_BANCARIO, clave, limpio, quien, estado, motivo, detalle)
+    except ValueError as e:
+        return _curado_rechazo([{"campo": "motivo" if estado == "retirada" else "estado", "mensaje": str(e)}])
+    if f is None:
+        raise HTTPException(404, "No existe esa pregunta.")
+    _preguntas_al_dia()
+    return {"ok": True, "pregunta": f}
 
 
 @app.post(API_ESCALAS + "/preguntar")
@@ -11859,6 +12059,7 @@ def api_escalas_preguntar(request: Request, payload: dict = Body(default={})):
         raise HTTPException(400, str(e))
     if _convenio_ia_pasa_el_tope(_ip_de(request)):
         raise HTTPException(429, "Hiciste muchas preguntas seguidas. Probá de nuevo en un rato.")
+    _preguntas_al_dia()
     r = consulta_convenio_ia.consultar(pregunta)
     uso = r.get("uso")
     if uso:
