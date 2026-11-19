@@ -146,6 +146,8 @@ def validar_seleccion(sel: dict, grilla: dict) -> dict:
     _categoria(rama, anios, jer)
 
     titulo = sel.get("titulo") or ""
+    if not isinstance(titulo, str):      # una lista o un objeto no es hasheable: 500 en vez de 400
+        raise ConsultaInvalida("El título tiene que ser: sin título, secundario, terciario o universitario.")
     if titulo == "sin":
         titulo = ""
     if titulo and titulo not in dict(TITULOS):

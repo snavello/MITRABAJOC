@@ -292,6 +292,11 @@ class Sindicato(SQLModel, table=True):
     # tu_dia.py. Lo escribe solo `db.set_tu_dia`, que descarta lo que no está
     # en el catálogo.
     tu_dia: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO, nullable=True))
+    # Convenio de la «Grilla salarial y convenio» de la app del afiliado
+    # (módulo `grilla_convenio`, PLAN_CONVENIO_ESCALAS.md D43): id de un
+    # convenio de `convenio_fichas` ("cct-18-75"); vacío = ninguno. Lo elige
+    # plataforma; nunca se deduce del nombre del sindicato.
+    convenio_grilla: str = Field(default="")
 
 
 class Seccional(SQLModel, table=True):
@@ -3999,6 +4004,14 @@ def modulos_habilitados(sindicato_id: int) -> list:
     with Session(engine) as s:
         sind = s.get(Sindicato, sindicato_id)
         return list(sind.modulos_habilitados or []) if sind else []
+
+
+def convenio_grilla_de(sindicato_id: int) -> str:
+    """El convenio que plataforma asignó al sindicato para la «Grilla salarial
+    y convenio» del afiliado ("" = ninguno). No valida contra el catálogo."""
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        return (sind.convenio_grilla or "") if sind else ""
 
 
 def modulo_habilitado(sindicato_id: int, modulo: str) -> bool:
@@ -8182,7 +8195,10 @@ def enviar_pregunta_convenio(pregunta_id: int) -> bool:
 # base, que es lo que edita la pantalla de curado. Sin identidad de afiliados: solo
 # quién del equipo cambió qué y cuándo.
 ESTADOS_FAQ = ("sin_revisar", "revisada", "retirada")
-ACCIONES_FAQ = ("crear", "editar", "revisar", "retirar", "reponer", "reordenar")
+# `eliminada` (D48) no es un estado que se pida por /estado: se llega solo con eliminar_pregunta y
+# la fila queda (con su historial) pero ninguna lectura ni escritura la ve.
+ESTADO_ELIMINADA = "eliminada"
+ACCIONES_FAQ = ("crear", "editar", "revisar", "retirar", "reponer", "reordenar", "eliminar")
 CONTENIDO_FAQ = ("tema", "orden", "pregunta", "en_corto", "respuesta", "articulos", "segun_ley", "normas",
                  "por_banco", "fuentes_banco", "nota_curador", "inspirada_en")
 
@@ -8307,7 +8323,8 @@ def sello_preguntas(convenio: str = CONVENIO_BANCARIO) -> str:
     with Session(engine) as s:
         n, mayor, suma, mod = s.exec(select(
             _fn.count(PreguntaFrecuente.id), _fn.max(PreguntaFrecuente.id), _fn.sum(PreguntaFrecuente.version),
-            _fn.max(PreguntaFrecuente.modificada)).where(PreguntaFrecuente.convenio == convenio)).one()
+            _fn.max(PreguntaFrecuente.modificada)).where(PreguntaFrecuente.convenio == convenio,
+                                                          PreguntaFrecuente.estado != ESTADO_ELIMINADA)).one()
         return f"{n or 0}:{mayor or 0}:{suma or 0}:{mod or ''}"
 
 
@@ -8315,7 +8332,8 @@ def listar_preguntas(convenio: str = CONVENIO_BANCARIO, estado: str = "", tema: 
     """Las preguntas del convenio (todas las del filtro, con todo el contenido)."""
     import convenio_fichas
     with Session(engine) as s:
-        cons = select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio)
+        cons = select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
+                                               PreguntaFrecuente.estado != ESTADO_ELIMINADA)
         if estado:
             cons = cons.where(PreguntaFrecuente.estado == estado)
         if tema:
@@ -8331,14 +8349,16 @@ def listar_preguntas(convenio: str = CONVENIO_BANCARIO, estado: str = "", tema: 
 def obtener_pregunta(clave: str, convenio: str = CONVENIO_BANCARIO) -> Optional[dict]:
     with Session(engine) as s:
         f = s.exec(select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
-                                                    PreguntaFrecuente.clave == clave)).first()
+                                                    PreguntaFrecuente.clave == clave,
+                                                    PreguntaFrecuente.estado != ESTADO_ELIMINADA)).first()
         return _faq_dict(f) if f else None
 
 
 def historial_pregunta(clave: str, convenio: str = CONVENIO_BANCARIO, limite: int = 20) -> list:
     with Session(engine) as s:
         f = s.exec(select(PreguntaFrecuente.id).where(PreguntaFrecuente.convenio == convenio,
-                                                       PreguntaFrecuente.clave == clave)).first()
+                                                       PreguntaFrecuente.clave == clave,
+                                                       PreguntaFrecuente.estado != ESTADO_ELIMINADA)).first()
         if f is None:
             return []
         filas = s.exec(select(PreguntaFrecuenteCambio).where(PreguntaFrecuenteCambio.pregunta_id == f)
@@ -8348,8 +8368,10 @@ def historial_pregunta(clave: str, convenio: str = CONVENIO_BANCARIO, limite: in
 
 
 def _faq_bloqueada(s, convenio: str, clave: str):
+    # Una eliminada no existe para nadie: el llamador la recibe como «no existe» (None).
     return s.exec(select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
-                                                   PreguntaFrecuente.clave == clave).with_for_update()).first()
+                                                   PreguntaFrecuente.clave == clave,
+                                                   PreguntaFrecuente.estado != ESTADO_ELIMINADA).with_for_update()).first()
 
 
 def _faq_registrar(s, f: "PreguntaFrecuente", accion: str, quien: str, antes: dict) -> None:
@@ -8389,8 +8411,11 @@ def _faq_estado(f: "PreguntaFrecuente", estado: str, quien: str, motivo: str, de
 def crear_pregunta(convenio: str, limpio: dict, quien: str) -> dict:
     """Crea una pregunta ya validada, como `sin_revisar`. ValueError si la clave ya existe."""
     with Session(engine) as s:
-        if s.exec(select(PreguntaFrecuente.id).where(PreguntaFrecuente.convenio == convenio,
-                                                      PreguntaFrecuente.clave == limpio["id"])).first() is not None:
+        previa = s.exec(select(PreguntaFrecuente.estado).where(PreguntaFrecuente.convenio == convenio,
+                                                                PreguntaFrecuente.clave == limpio["id"])).first()
+        if previa is not None:
+            if previa == ESTADO_ELIMINADA:     # D48: la clave de una eliminada queda ocupada
+                raise ValueError(f"El id «{limpio['id']}» perteneció a una pregunta eliminada y no se puede reutilizar: usá otro.")
             raise ValueError(f"Ya existe una pregunta con el id «{limpio['id']}».")
         f = PreguntaFrecuente(convenio=convenio, clave=limpio["id"], estado="sin_revisar", version=0,
                               **_faq_valores(limpio))
@@ -8444,12 +8469,31 @@ def cambiar_estado_pregunta(convenio: str, clave: str, estado: str, quien: str, 
         return _faq_dict(f)
 
 
+def eliminar_pregunta(convenio: str, clave: str, quien: str, version: Optional[int] = None) -> Optional[dict]:
+    """Elimina la pregunta (D48): pasa a `eliminada`, que ninguna lectura ni escritura ve, y
+    queda en el historial quién, cuándo y el estado que tenía. No se borra la fila: la clave
+    sigue ocupada (no se puede crear otra igual) y la siembra no la vuelve a crear.
+    None si no existe (o ya estaba eliminada). Con `version`, ConflictoPregunta si cambió."""
+    with Session(engine) as s:
+        f = _faq_bloqueada(s, convenio, clave)
+        if f is None:
+            return None
+        if version is not None and f.version != version:
+            raise ConflictoPregunta(clave)
+        antes = _faq_snap(f)
+        f.estado = ESTADO_ELIMINADA
+        _faq_registrar(s, f, "eliminar", quien, antes)
+        s.commit()
+        return {"id": f.clave, "estado": f.estado}
+
+
 def reordenar_preguntas(convenio: str, tema: str, claves: list, quien: str) -> list:
     """Deja las preguntas del tema en el orden dado (1, 2, 3…). `claves` tiene que
     ser exactamente el conjunto de las del tema, sin repetir. ValueError si no."""
     with Session(engine) as s:
         filas = s.exec(select(PreguntaFrecuente).where(PreguntaFrecuente.convenio == convenio,
-                                                        PreguntaFrecuente.tema == tema)
+                                                        PreguntaFrecuente.tema == tema,
+                                                        PreguntaFrecuente.estado != ESTADO_ELIMINADA)
                        .order_by(PreguntaFrecuente.clave).with_for_update()).all()
         por_clave = {f.clave: f for f in filas}
         if len(set(claves)) != len(claves) or set(claves) != set(por_clave):

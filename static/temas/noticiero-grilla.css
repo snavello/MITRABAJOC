@@ -1,0 +1,73 @@
+/* ============================================================
+   Modelo NOTICIERO — Grilla salarial y convenio (pestaña de /app)
+   ------------------------------------------------------------
+   La estructura está en static/grilla_app.css; acá van la paleta, las
+   letras y las formas del modelo: un diario. Papel marfil, tinta índigo y un
+   coral que es relleno o filete, nunca texto. Los colores salen de las
+   variables --nt-* de noticiero-app.css (con la paleta del sindicato ya
+   derivada de --gremio-*): no se define ningún color nuevo. Esta hoja se
+   carga DESPUÉS de noticiero-app.css. Todo selector empieza con
+   html[data-tema="noticiero"].
+   ============================================================ */
+
+html[data-tema="noticiero"] #tp-grilla {
+  --gr-fuente: var(--nt-f-txt); --gr-titulo: var(--nt-f-tit); --gr-num: var(--nt-f-txt);
+  --gr-radio: 2px; --gr-radio-ctl: 2px;
+  --gr-sup: var(--nt-carta); --gr-tinta: var(--nt-tinta); --gr-mute: var(--nt-tinta-2);
+  --gr-linea: var(--nt-linea); --gr-linea2: var(--nt-linea-2);
+  --gr-suave: var(--nt-hoja); --gr-nota: var(--nt-hoja);
+  --gr-sel: var(--nt-coral); --gr-sel-txt: var(--nt-sobre-coral);
+  --gr-hero: var(--nt-indigo); --gr-hero-txt: var(--nt-marfil);
+  --gr-hero-mute: color-mix(in oklab, var(--nt-marfil) 82%, var(--nt-indigo)); --gr-hero-acento: var(--nt-coral-txt-ind);
+  --gr-pub-bg: var(--nt-indigo); --gr-pub-txt: var(--nt-marfil);
+  --gr-ref-bg: var(--nt-coral-suave); --gr-ref-txt: var(--nt-tinta);
+  --gr-foco: var(--nt-indigo);
+  --gr-tit-trans: uppercase; --gr-tit-peso: 400;
+}
+
+/* las dos secciones: solapas de diario, la activa rellena en coral */
+html[data-tema="noticiero"] #tp-grilla .gr-tabs { padding: 0; gap: 8px; background: transparent; box-shadow: none; border-radius: 0; }
+html[data-tema="noticiero"] #tp-grilla .gr-tab { background: var(--nt-carta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2);
+  font: 700 12.5px/1.2 var(--nt-f-txt); font-stretch: 108%; letter-spacing: 1.1px; text-transform: uppercase; }
+html[data-tema="noticiero"] #tp-grilla .gr-tab[aria-current="page"] { background: var(--nt-coral); color: var(--nt-sobre-coral);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 30%, transparent); }
+
+html[data-tema="noticiero"] #tp-grilla :is(.gr-pill, .gr-btn) { border-radius: 2px; font-family: var(--nt-f-txt); font-stretch: 108%;
+  text-transform: uppercase; letter-spacing: 1px; font-weight: 700; font-size: 12.5px; box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); }
+html[data-tema="noticiero"] #tp-grilla .gr-pill[aria-pressed="true"],
+html[data-tema="noticiero"] #tp-grilla .gr-btn:not(.sec) { background: var(--nt-coral); color: var(--nt-sobre-coral);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nt-indigo) 28%, transparent); }
+html[data-tema="noticiero"] #tp-grilla .gr-btn { min-height: 48px; font-size: 13px; letter-spacing: 1.1px; }
+html[data-tema="noticiero"] #tp-grilla .gr-btn.sec { background: var(--nt-carta); color: var(--nt-tinta); box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); }
+html[data-tema="noticiero"] #tp-grilla .gr-enlace { font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] #tp-grilla select { border: 0; box-shadow: inset 0 0 0 1.5px var(--nt-linea-2); font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] #tp-grilla select:focus { box-shadow: inset 0 0 0 1.5px var(--nt-indigo); outline: none; }
+html[data-tema="noticiero"] #tp-grilla .gr-campo > :is(label, .gr-etq) { font-family: var(--nt-f-cond); font-size: 14px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] #tp-grilla .gr-recordar { background: var(--nt-hoja); box-shadow: inset 0 0 0 1px var(--nt-linea-2); }
+html[data-tema="noticiero"] #tp-grilla .gr-recordar input { accent-color: var(--nt-indigo); }
+html[data-tema="noticiero"] #tp-grilla .gr-kicker { font-family: var(--nt-f-cond); font-size: 13px; font-weight: 700; letter-spacing: 1.2px; color: var(--nt-tinta-2); }
+html[data-tema="noticiero"] #tp-grilla .gr-hero .gr-kicker { color: var(--nt-coral-txt-ind); }
+
+/* tarjetas: papel con filete de tinta arriba, como las de /app */
+html[data-tema="noticiero"] #tp-grilla .gr-tarjeta { border-top: 3px solid var(--nt-indigo); box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] #tp-grilla .gr-eleccion { background: var(--nt-hoja); border-left: 4px solid var(--nt-coral); box-shadow: inset 0 0 0 1px var(--nt-linea); }
+html[data-tema="noticiero"] #tp-grilla .gr-hero h2 { font-size: 28px; letter-spacing: .3px; line-height: 1.02; }
+html[data-tema="noticiero"] #tp-grilla .gr-chip { border-radius: 2px; }
+html[data-tema="noticiero"] #tp-grilla .gr-chip.referencia { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nt-coral) 55%, var(--nt-coral-suave)); }
+html[data-tema="noticiero"] #tp-grilla .gr-imp { font-weight: 700; font-stretch: 105%; font-feature-settings: "tnum" 1; }
+html[data-tema="noticiero"] #tp-grilla .gr-evo .val { font-feature-settings: "tnum" 1; font-weight: 700; }
+html[data-tema="noticiero"] #tp-grilla .gr-seccion h3 { font-size: 20px; font-weight: 400; letter-spacing: .2px; text-transform: uppercase; line-height: 1.05; }
+html[data-tema="noticiero"] #tp-grilla .gr-aviso-vacio h2 { font-size: 22px; }
+
+/* convenio: la sección es un titular; el artículo, una nota con filete coral al abrirse */
+html[data-tema="noticiero"] #tp-grilla .gr-conv-cab h2 { font-size: 26px; line-height: 1.02; letter-spacing: .2px; }
+html[data-tema="noticiero"] #tp-grilla .gr-sec > summary { font-family: var(--nt-f-cond); font-size: 17px; letter-spacing: .8px; text-transform: uppercase; }
+html[data-tema="noticiero"] #tp-grilla .gr-sec[open] > summary { border-bottom: 2px solid var(--nt-tinta); }
+html[data-tema="noticiero"] #tp-grilla .gr-art > summary { font-family: var(--nt-f-txt); }
+html[data-tema="noticiero"] #tp-grilla .gr-art[open] > summary { box-shadow: inset 3px 0 0 var(--nt-coral); padding-left: 13px; }
+html[data-tema="noticiero"] #tp-grilla .gr-literal { color: var(--nt-tinta-1); background: var(--nt-hoja); }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="noticiero"] #tp-grilla :is(.gr-tab, .gr-pill, .gr-btn) { transition: none; }
+}

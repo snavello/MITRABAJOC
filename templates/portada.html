@@ -535,6 +535,14 @@
       {# Orden fijo de los accesos (pauta de SDN): Credencial · Trámites ·
          Notificaciones · Encuestas · Mis aportes · Capacitación. #}
       <div class="pt-filas">
+        {% if grilla_convenio_disponible %}
+        <a class="pt-fila pt-vid" href="/app?tab=grilla">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-grilla"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Grilla salarial y convenio</span>
+            <span class="pt-fila-e">Escala vigente y texto del convenio</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-chevron"/></svg></span>
+        </a>
+        {% endif %}
         {% if 'credencial' in modulos %}
         <a class="pt-fila pt-vid" href="/app?tab=credencial">
           <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>
@@ -968,6 +976,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
+    <g id="ic-grilla"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="14.5" x2="21" y2="14.5"/><line x1="9.5" y1="10" x2="9.5" y2="19"/></g>
     <g id="ic-flecha"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></g>
     <g id="ic-chevron"><path d="m9 6 6 6-6 6"/></g>
     <g id="ic-externo"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></g>

@@ -455,3 +455,118 @@ def test_validar_pregunta_no_levanta_con_basura():
     for x in (None, 3, "s", [], {"id": object()}, {"articulos": [object()]}, {"normas": [None, 3]}):
         limpio, errores = convenio_faq.validar_pregunta(x)
         assert errores
+
+
+
+# ---------------------------------------------------------------- eliminar (D48)
+def _eliminar(c, clave, **cuerpo):
+    return c.post(f"{CURADO}/{clave}/eliminar", json=cuerpo)
+
+
+def test_eliminar_en_cualquier_estado_la_saca_de_todos_lados():
+    c = _c()
+    retirada = db.listar_preguntas(CONV, estado="retirada")[0]["id"]
+    revisada = "vac-dias"
+    assert c.post(f"{CURADO}/{revisada}/estado", json={"estado": "revisada"}).status_code == 200
+    sin_rev = next(f["id"] for f in db.listar_preguntas(CONV, estado="sin_revisar") if f["id"] != revisada)
+    antes = c.get(CURADO).json()["conteos"]
+    for clave in (retirada, revisada, sin_rev):
+        pregunta = db.obtener_pregunta(clave)
+        r = _eliminar(c, clave, version=pregunta["version"])
+        assert r.status_code == 200 and r.json()["ok"] is True
+    j = c.get(CURADO).json()
+    ids = {f["id"] for f in j["preguntas"]}
+    assert not ids & {retirada, revisada, sin_rev}
+    assert j["conteos"]["total"] == antes["total"] - 3
+    assert j["conteos"]["retirada"] == antes["retirada"] - 1
+    assert j["conteos"]["revisada"] == antes["revisada"] - 1
+    assert j["conteos"]["sin_revisar"] == antes["sin_revisar"] - 1
+    for estado in ("sin_revisar", "revisada", "retirada"):
+        vistas = {f["id"] for f in c.get(CURADO, params={"estado": estado}).json()["preguntas"]}
+        assert not vistas & {retirada, revisada, sin_rev}
+    assert revisada not in {f["id"] for f in c.get(CURADO, params={"q": "vacaciones"}).json()["preguntas"]}
+    assert db.obtener_pregunta(revisada) is None
+    assert revisada not in _ids_publicos() and not convenio_faq.existe(revisada)
+    assert revisada not in str(c.get(API + "/frecuentes").json())
+    assert revisada not in str(c.get(API + "/frecuentes/curado").json())
+    assert revisada not in {f["id"] for f in db.datos_preguntas_vigentes(CONV)["preguntas"]}
+
+
+def test_eliminada_da_404_en_detalle_editar_estado_reordenar_y_eliminar():
+    c = _c()
+    p = db.obtener_pregunta("vac-dias")
+    assert _eliminar(c, "vac-dias").status_code == 200
+    assert c.get(f"{CURADO}/vac-dias").status_code == 404
+    assert c.post(f"{CURADO}/vac-dias", json={"en_corto": "Nada."}).status_code == 404
+    assert c.post(f"{CURADO}/vac-dias/estado", json={"estado": "revisada"}).status_code == 404
+    assert c.post(f"{CURADO}/vac-dias/estado", json={"estado": "retirada", "motivo": "dudosa"}).status_code == 404
+    assert _eliminar(c, "vac-dias").status_code == 404
+    assert db.historial_pregunta("vac-dias") == []
+    resto = [f["id"] for f in db.listar_preguntas(CONV, tema=p["tema"])]
+    assert "vac-dias" not in resto
+    assert c.post(CURADO + "/reordenar", json={"tema": p["tema"], "claves": resto[::-1]}).status_code == 200
+    r = c.post(CURADO + "/reordenar", json={"tema": p["tema"], "claves": resto + ["vac-dias"]})
+    assert r.status_code == 400
+    assert _eliminar(c, "no-existe-esta").status_code == 404
+
+
+def test_eliminar_pide_version_vigente_y_registra_quien_y_estado_anterior():
+    c = _c("sdn")
+    p = db.obtener_pregunta("vac-dias")
+    r = _eliminar(c, "vac-dias", version=p["version"] + 5)
+    assert r.status_code == 409 and r.json()["errores"][0]["codigo"] == "conflicto"
+    assert db.obtener_pregunta("vac-dias") is not None
+    assert _eliminar(c, "vac-dias", version="x").status_code == 400
+    assert c.post(f"{CURADO}/vac-dias/eliminar", json=[1]).status_code == 400
+    assert _eliminar(c, "vac-dias", version=p["version"]).status_code == 200
+    with Session(db.engine) as s:
+        fila = s.exec(select(db.PreguntaFrecuente).where(db.PreguntaFrecuente.clave == "vac-dias")).one()
+        assert fila.estado == "eliminada"
+        cambios = s.exec(select(db.PreguntaFrecuenteCambio).where(db.PreguntaFrecuenteCambio.pregunta_id == fila.id)
+                         .order_by(db.PreguntaFrecuenteCambio.id)).all()
+    ultimo = cambios[-1]
+    assert ultimo.accion == "eliminar" and ultimo.quien == "sdn" and ultimo.cuando
+    assert ultimo.antes["estado"] == "sin_revisar" and ultimo.despues["estado"] == "eliminada"
+
+
+def test_eliminar_pide_la_misma_puerta_que_el_resto():
+    c = TestClient(main.app)
+    assert c.post(f"{CURADO}/vac-dias/eliminar", json={}).status_code in (401, 403, 404)
+    assert db.obtener_pregunta("vac-dias") is not None
+
+
+def test_la_siembra_no_revive_una_eliminada_ni_aun_con_todas_eliminadas():
+    c = _c()
+    assert _eliminar(c, "vac-dias").status_code == 200
+    assert db.sembrar_preguntas() == 0
+    main._refrescar_preguntas(forzar=True)
+    assert db.obtener_pregunta("vac-dias") is None and not convenio_faq.existe("vac-dias")
+    for f in db.listar_preguntas(CONV):
+        db.eliminar_pregunta(CONV, f["id"], "t")
+    assert db.listar_preguntas(CONV) == [] and db.sembrar_preguntas() == 0
+    main._refrescar_preguntas(forzar=True)
+    assert db.listar_preguntas(CONV) == [] and _ids_publicos() == set()
+    j = c.get(CURADO).json()
+    assert j["preguntas"] == [] and j["conteos"]["total"] == 0
+
+
+def test_crear_con_la_clave_de_una_eliminada_se_rechaza_con_mensaje_claro():
+    c = _c()
+    assert c.post(CURADO, json=NUEVA).status_code == 200
+    assert _eliminar(c, NUEVA["id"]).status_code == 200
+    r = c.post(CURADO, json=NUEVA)
+    assert r.status_code == 409
+    assert "eliminada" in r.json()["detail"] and NUEVA["id"] in r.json()["detail"]
+    assert db.obtener_pregunta(NUEVA["id"]) is None
+
+
+def test_eliminada_no_cuenta_para_los_topes(monkeypatch):
+    c = _c()
+    antes = db.listar_preguntas(CONV)
+    assert _eliminar(c, "vac-dias").status_code == 200
+    despues = db.listar_preguntas(CONV)
+    assert len(despues) == len(antes) - 1
+    monkeypatch.setattr(convenio_faq, "TOPE_PREGUNTAS", len(despues))
+    assert c.post(CURADO, json=NUEVA).status_code == 400          # lleno: solo cuentan las que existen
+    monkeypatch.setattr(convenio_faq, "TOPE_PREGUNTAS", len(despues) + 1)
+    assert c.post(CURADO, json=NUEVA).status_code == 200          # la eliminada dejó lugar

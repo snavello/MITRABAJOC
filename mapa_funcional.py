@@ -51,6 +51,7 @@ FUNCIONALIDADES = [
     ("Afiliado", "Notificaciones y push", r"^/(api/(notificacion|mis-notificaciones|push)|app/notificaciones|notificacion-adjunto|sw\.js)", "trabajador.html"),
     ("Afiliado", "Trámites", r"^/(api/tramite|tramite-nota-adjunto|tramite-respuesta-archivo)", "trabajador.html"),
     ("Afiliado", "Encuestas", r"^/api/encuesta", "trabajador.html"),
+    ("Afiliado", "Grilla salarial y convenio", r"^/api/app/grilla", "trabajador.html"),
     ("Afiliado", "Consultas al convenio", r"^/(app/convenio|api/convenio)", None),
     ("Afiliado", "Perfil y domicilio", r"^/(api/(perfil|geocodificar|localidades|seccionales)|perfil-foto)", None),
 

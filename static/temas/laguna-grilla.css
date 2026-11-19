@@ -1,0 +1,60 @@
+/* ============================================================
+   Modelo LAGUNA — Grilla salarial y convenio (pestaña de /app)
+   ------------------------------------------------------------
+   La estructura está en static/grilla_app.css; acá van la paleta, las
+   letras y las formas del modelo. Los colores salen de las variables --lg-*
+   de laguna-app.css (con la paleta del sindicato ya derivada de --gremio-*):
+   no se define ningún color nuevo. Esta hoja se carga DESPUÉS de laguna-app.css.
+   Todo selector empieza con html[data-tema="laguna"].
+   ============================================================ */
+
+html[data-tema="laguna"] #tp-grilla {
+  --gr-fuente: var(--lg-fuente); --gr-titulo: var(--lg-fuente); --gr-num: var(--lg-fuente);
+  --gr-radio: 10px; --gr-radio-ctl: 6px;
+  --gr-sup: #fff; --gr-tinta: var(--lg-tinta); --gr-mute: var(--lg-gris2);
+  --gr-linea: var(--lg-linea); --gr-linea2: var(--lg-linea2);
+  --gr-suave: var(--lg-agua-f2); --gr-nota: var(--lg-claro);
+  --gr-sel: var(--lg-turq); --gr-sel-txt: #fff;
+  --gr-hero: var(--lg-azul); --gr-hero-txt: #fff; --gr-hero-mute: #dcebf2; --gr-hero-acento: var(--lg-fluor);
+  --gr-pub-bg: var(--lg-agua-f); --gr-pub-txt: var(--lg-turq-osc);
+  --gr-ref-bg: #fbf2e3; --gr-ref-txt: #6a3f06;
+  --gr-foco: var(--lg-negro);
+  --gr-tit-trans: none; --gr-tit-peso: 600;
+}
+
+/* las dos secciones: una pista clara con el activo en turquesa */
+html[data-tema="laguna"] #tp-grilla .gr-tabs { border-radius: 999px; padding: 4px; box-shadow: none; }
+html[data-tema="laguna"] #tp-grilla .gr-tab { border-radius: 999px; letter-spacing: .01em; }
+html[data-tema="laguna"] #tp-grilla .gr-tab[aria-current="page"] { box-shadow: 0 8px 16px -10px var(--lg-turq-osc); }
+
+/* tarjetas: filo de 1px y una sombra larga y suave, como las de Mis aportes */
+html[data-tema="laguna"] #tp-grilla .gr-tarjeta {
+  box-shadow: 0 0 0 1px var(--lg-linea), 0 14px 30px -24px color-mix(in oklab, var(--lg-azul) 50%, transparent);
+}
+html[data-tema="laguna"] #tp-grilla .gr-eleccion { box-shadow: inset 0 3px 0 var(--lg-turq), 0 0 0 1px var(--lg-linea); background: var(--lg-agua-f2); }
+html[data-tema="laguna"] #tp-grilla .gr-hero::before { content: ""; position: absolute; right: -44px; top: -44px; width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--lg-fluor) 30%, transparent), transparent); pointer-events: none; }
+html[data-tema="laguna"] #tp-grilla .gr-hero > * { position: relative; }
+html[data-tema="laguna"] #tp-grilla .gr-hero h2 { font-weight: 500; letter-spacing: -.005em; font-size: 25px; }
+html[data-tema="laguna"] #tp-grilla .gr-hero .gr-kicker { color: var(--lg-fluor-txt); }
+html[data-tema="laguna"] #tp-grilla .gr-kicker { letter-spacing: .18em; }
+html[data-tema="laguna"] #tp-grilla .gr-imp { font-weight: 700; letter-spacing: -.01em; font-feature-settings: "tnum" 1; }
+html[data-tema="laguna"] #tp-grilla .gr-evo .val { font-feature-settings: "tnum" 1; }
+
+/* campos como los del resto de /app: relleno gris claro, sin borde, foco negro */
+html[data-tema="laguna"] #tp-grilla select { border: 1px solid transparent; background: var(--lg-claro); font-family: var(--lg-fuente); }
+html[data-tema="laguna"] #tp-grilla select:focus { background: #fff; border-color: var(--lg-negro); }
+html[data-tema="laguna"] #tp-grilla .gr-recordar { background: var(--lg-agua-f2); box-shadow: 0 0 0 1px var(--lg-linea); }
+html[data-tema="laguna"] #tp-grilla .gr-enlace { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] #tp-grilla .gr-btn { background: var(--lg-turq); }
+html[data-tema="laguna"] #tp-grilla .gr-btn.sec { background: #fff; box-shadow: inset 0 0 0 1px var(--lg-linea2); }
+
+/* convenio */
+html[data-tema="laguna"] #tp-grilla .gr-conv-cab { box-shadow: inset 0 3px 0 var(--lg-turq), 0 0 0 1px var(--lg-linea), 0 14px 30px -24px color-mix(in oklab, var(--lg-azul) 50%, transparent); }
+html[data-tema="laguna"] #tp-grilla :is(.gr-sec, .gr-art)[open] > summary { color: var(--lg-turq-osc); }
+html[data-tema="laguna"] #tp-grilla .gr-literal { color: var(--lg-gris); }
+
+@media (min-width: 761px) { html[data-tema="laguna"] #tp-grilla .gr-hero h2 { font-size: 27px; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-tema="laguna"] #tp-grilla :is(.gr-tab, .gr-pill, .gr-btn) { transition: none; }
+}

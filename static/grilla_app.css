@@ -1,0 +1,164 @@
+/* ============================================================
+   Grilla salarial y convenio — pestaña de /app (estructura común)
+   ------------------------------------------------------------
+   Acá va la forma; los colores, las letras y los radios los pone el modelo
+   de diseño (static/temas/<modelo>-grilla.css) redefiniendo las variables
+   --gr-* de #tp-grilla. Los valores de abajo son el piso, para que la
+   pestaña se lea aunque el modelo no cargue.
+   Es una CONSULTA: ningún total, ningún veredicto, ningún semáforo.
+   ============================================================ */
+
+#tp-grilla {
+  --gr-fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --gr-titulo: var(--gr-fuente);
+  --gr-num: ui-monospace, Consolas, "SF Mono", monospace;
+  --gr-radio: 10px; --gr-radio-ctl: 9px;
+  --gr-sup: #fff; --gr-tinta: var(--tinta); --gr-mute: var(--gris); --gr-linea: var(--linea); --gr-linea2: #b4b2a9;
+  --gr-suave: #f1f8f7; --gr-nota: #f4f4f4;
+  --gr-sel: var(--marca-acento); --gr-sel-txt: #fff;
+  --gr-hero: var(--marca-base); --gr-hero-txt: #fff; --gr-hero-mute: #dbe3ee; --gr-hero-acento: var(--marca-apoyo);
+  --gr-pub-bg: #e2f1ef; --gr-pub-txt: #173e6e; --gr-ref-bg: #fbf2e3; --gr-ref-txt: #6a3f06;
+  --gr-foco: var(--tinta);
+  --gr-tit-trans: none; --gr-tit-peso: 600;
+  font-family: var(--gr-fuente);
+}
+#tp-grilla *, #tp-grilla *::before, #tp-grilla *::after { box-sizing: border-box; }
+#tp-grilla [hidden] { display: none !important; }
+
+#tp-grilla .gr-pila { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+#tp-grilla .gr-pila .gr-pila { margin-top: 0; }
+#tp-grilla :is(.gr-nota, .gr-mute) { font-size: 13px; line-height: 1.55; color: var(--gr-mute); }
+#tp-grilla .gr-mute { font-size: 12.5px; }
+#tp-grilla .gr-kicker { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gr-mute); }
+
+/* ---------- las dos secciones ---------- */
+#tp-grilla .gr-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: calc(var(--gr-radio-ctl) + 4px);
+  background: var(--gr-nota); box-shadow: inset 0 0 0 1px var(--gr-linea); }
+#tp-grilla .gr-tab { min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--gr-radio-ctl); background: transparent; color: var(--gr-tinta);
+  cursor: pointer; font: inherit; font-size: 14px; font-weight: 650; text-align: center;
+  transition: background-color var(--mov-medio, .3s) var(--ease-salida, ease), color var(--mov-medio, .3s) var(--ease-salida, ease), box-shadow var(--mov-medio, .3s) var(--ease-salida, ease); }
+#tp-grilla .gr-tab[aria-current="page"] { background: var(--gr-sel); color: var(--gr-sel-txt); box-shadow: 0 6px 14px -8px var(--gr-sel); }
+#tp-grilla .gr-tab:not([aria-current="page"]):active { scale: .98; }
+
+/* ---------- pastillas, botones y campos ---------- */
+#tp-grilla .gr-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+#tp-grilla .gr-pills.dos { display: grid; grid-template-columns: 1fr 1fr; }
+#tp-grilla .gr-pills.roe { display: grid; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 520px) { #tp-grilla .gr-pills.roe { grid-template-columns: repeat(2, 1fr); } }
+#tp-grilla .gr-pill { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 auto; min-height: 44px; padding: 0 14px;
+  border: 0; border-radius: 999px; background: var(--gr-sup); color: var(--gr-tinta); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 600;
+  line-height: 1.2; text-align: center; box-shadow: inset 0 0 0 1px var(--gr-linea2);
+  transition: background-color var(--mov-medio, .3s) var(--ease-salida, ease), color var(--mov-medio, .3s) var(--ease-salida, ease); }
+#tp-grilla .gr-pill[aria-pressed="true"] { background: var(--gr-sel); color: var(--gr-sel-txt); box-shadow: none; }
+#tp-grilla .gr-pill:active { scale: .97; }
+#tp-grilla .gr-eleccion .gr-pill { flex: none; }
+#tp-grilla .gr-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 0 24px; border: 0;
+  border-radius: 999px; background: var(--gr-sel); color: var(--gr-sel-txt); cursor: pointer; font: inherit; font-size: 14.5px; font-weight: 650;
+  text-decoration: none; text-align: center; transition: scale var(--mov-presion, .12s) var(--ease-salida, ease), filter var(--mov-rapido, .18s) var(--ease-salida, ease); }
+#tp-grilla .gr-btn:active { scale: .98; }
+#tp-grilla .gr-btn.sec { background: var(--gr-sup); color: var(--gr-tinta); box-shadow: inset 0 0 0 1px var(--gr-linea2); }
+#tp-grilla .gr-btn:disabled { opacity: .55; cursor: default; }
+#tp-grilla .gr-enlace { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13.5px; font-weight: 700; color: var(--gr-tinta); text-decoration: underline; text-underline-offset: 3px; text-align: left; }
+#tp-grilla :is(.gr-pill, .gr-btn, .gr-enlace, .gr-tab, select, summary, a):focus-visible { outline: 2px solid var(--gr-foco); outline-offset: 2px; }
+
+#tp-grilla .gr-campo { display: flex; flex-direction: column; gap: 8px; }
+#tp-grilla .gr-campo > :is(label, .gr-etq) { font-size: 12.5px; font-weight: 650; color: var(--gr-mute); }
+#tp-grilla select { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--gr-linea); border-radius: var(--gr-radio-ctl);
+  font: inherit; font-size: 15px; background: var(--gr-sup); color: var(--gr-tinta); }
+#tp-grilla .gr-recordar { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--gr-radio); background: var(--gr-suave);
+  box-shadow: inset 0 0 0 1px var(--gr-linea); }
+#tp-grilla .gr-recordar input { width: 22px; height: 22px; margin: 2px 0 0; flex: none; accent-color: var(--gr-sel); }
+#tp-grilla .gr-recordar label { font-size: 13.5px; line-height: 1.5; color: var(--gr-tinta); }
+#tp-grilla .gr-recordar label span { display: block; margin-top: 2px; color: var(--gr-mute); }
+#tp-grilla .gr-error { padding: 11px 14px; border-radius: var(--gr-radio-ctl); font-size: 13.5px; line-height: 1.45; color: #8f2418; background: #fbe9e6; }
+#tp-grilla .gr-cartel { padding: 12px 14px; border-radius: var(--gr-radio-ctl); font-size: 13.5px; font-weight: 600; background: var(--gr-ref-bg); color: var(--gr-ref-txt); }
+
+/* ---------- tarjetas ---------- */
+#tp-grilla .gr-tarjeta { background: var(--gr-sup); border-radius: var(--gr-radio); overflow: hidden; box-shadow: 0 0 0 1px var(--gr-linea); }
+#tp-grilla .gr-eleccion { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: var(--gr-radio);
+  background: var(--gr-suave); box-shadow: inset 0 0 0 1px var(--gr-linea); }
+#tp-grilla .gr-eleccion .q { margin-top: 4px; font-size: 14px; font-weight: 650; line-height: 1.4; color: var(--gr-tinta); }
+#tp-grilla .gr-hero { position: relative; overflow: hidden; margin: 12px; padding: 18px 18px 14px; border-radius: calc(var(--gr-radio) - 2px);
+  background: var(--gr-hero); color: var(--gr-hero-txt); }
+#tp-grilla .gr-hero .gr-kicker { color: var(--gr-hero-acento); }
+#tp-grilla .gr-hero h2 { margin: 6px 0 0; font-family: var(--gr-titulo); font-size: 24px; font-weight: var(--gr-tit-peso); line-height: 1.12;
+  text-transform: var(--gr-tit-trans); text-wrap: balance; }
+#tp-grilla .gr-hero p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--gr-hero-mute); }
+#tp-grilla .gr-hero .pie { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, .2); font-size: 13px; color: var(--gr-hero-mute); }
+#tp-grilla .gr-hero .pie a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gr-hero-txt); font-weight: 700; font-size: 13px;
+  text-underline-offset: 3px; white-space: nowrap; }
+
+#tp-grilla .gr-conc { display: flex; flex-direction: column; gap: 6px; padding: 13px 18px; border-top: 1px solid var(--gr-linea); }
+#tp-grilla .gr-conc:first-child { border-top: 0; }
+#tp-grilla .gr-fila { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
+#tp-grilla .gr-fila .rot { font-size: 14px; line-height: 1.35; color: var(--gr-tinta); }
+#tp-grilla .gr-imp { font-family: var(--gr-num); font-size: 16.5px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--gr-tinta); }
+#tp-grilla .gr-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#tp-grilla .gr-meta .gr-cnota { font-size: 12px; line-height: 1.4; color: var(--gr-mute); }
+#tp-grilla .gr-chip { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+#tp-grilla .gr-chip.publicado { background: var(--gr-pub-bg); color: var(--gr-pub-txt); }
+#tp-grilla .gr-chip.referencia { background: var(--gr-ref-bg); color: var(--gr-ref-txt); }
+#tp-grilla .gr-roe { display: flex; flex-direction: column; gap: 8px; padding: 2px 18px 14px; }
+#tp-grilla .gr-alcance { padding: 13px 18px 15px; border-top: 1px solid var(--gr-linea); font-size: 12.5px; line-height: 1.55; color: var(--gr-tinta); }
+#tp-grilla .gr-seccion { padding: 18px; }
+#tp-grilla .gr-seccion h3 { font-family: var(--gr-titulo); font-size: 15px; font-weight: 700; line-height: 1.3; color: var(--gr-tinta); }
+#tp-grilla .gr-evo { margin-top: 8px; }
+#tp-grilla .gr-evo .fila { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "mes pct" "val chip"; gap: 2px 10px; align-items: center;
+  padding: 11px 0; border-top: 1px solid var(--gr-linea); font-size: 13.5px; }
+#tp-grilla .gr-evo .fila:first-child { border-top: 0; }
+#tp-grilla .gr-evo .mes { grid-area: mes; color: var(--gr-mute); font-size: 12.5px; }
+#tp-grilla .gr-evo .val { grid-area: val; font-family: var(--gr-num); font-weight: 650; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--gr-tinta); }
+#tp-grilla .gr-evo .gr-chip { grid-area: chip; justify-self: end; }
+#tp-grilla .gr-evo .pct { grid-area: pct; justify-self: end; color: var(--gr-mute); font-family: var(--gr-num); font-variant-numeric: tabular-nums; }
+#tp-grilla .gr-textofijo { margin-top: 10px; padding: 11px 13px; border-radius: calc(var(--gr-radio-ctl) - 2px); font-size: 12.5px; line-height: 1.55; background: var(--gr-nota); color: var(--gr-tinta); }
+
+/* ---------- vacío ---------- */
+#tp-grilla .gr-aviso-vacio { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 30px 22px; text-align: center; }
+#tp-grilla .gr-aviso-vacio svg { width: 34px; height: 34px; fill: none; stroke: var(--gr-mute); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+#tp-grilla .gr-aviso-vacio h2 { font-family: var(--gr-titulo); font-size: 18px; font-weight: var(--gr-tit-peso); line-height: 1.25; text-transform: var(--gr-tit-trans); color: var(--gr-tinta); }
+#tp-grilla .gr-aviso-vacio p { font-size: 13.5px; line-height: 1.55; color: var(--gr-mute); max-width: 36ch; }
+#tp-grilla .gr-aviso-vacio .gr-btn { width: auto; min-width: 200px; margin-top: 6px; }
+#tp-grilla .gr-vacio { padding: 14px 4px; font-size: 13.5px; color: var(--gr-mute); }
+
+/* ---------- convenio ---------- */
+#tp-grilla .gr-conv-cab { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+#tp-grilla .gr-conv-cab h2 { margin-top: 5px; font-family: var(--gr-titulo); font-size: 20px; font-weight: var(--gr-tit-peso); line-height: 1.2;
+  text-transform: var(--gr-tit-trans); color: var(--gr-tinta); text-wrap: balance; }
+#tp-grilla .gr-conv-cab .gr-nota { margin-top: 6px; }
+#tp-grilla .gr-sec > summary, #tp-grilla .gr-art > summary { cursor: pointer; list-style: none; }
+#tp-grilla .gr-sec > summary::-webkit-details-marker, #tp-grilla .gr-art > summary::-webkit-details-marker { display: none; }
+#tp-grilla .gr-sec > summary { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 16px; font-family: var(--gr-titulo);
+  font-size: 15px; font-weight: 700; color: var(--gr-tinta); }
+#tp-grilla .gr-sec > summary .n { flex: 1; line-height: 1.3; padding: 8px 0; }
+#tp-grilla .gr-sec > summary .c { font-family: var(--gr-fuente); color: var(--gr-mute); font-size: 12px; font-weight: 500; white-space: nowrap; }
+#tp-grilla .gr-sec > summary::after, #tp-grilla .gr-art > summary::after { content: ""; flex: none; width: 8px; height: 8px; margin: 0 4px 3px 2px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; rotate: 45deg; opacity: .7;
+  transition: rotate var(--mov-rapido, .18s) var(--ease-salida, ease); }
+#tp-grilla .gr-sec[open] > summary::after, #tp-grilla .gr-art[open] > summary::after { rotate: 225deg; margin-bottom: -3px; }
+#tp-grilla .gr-sec[open] > summary { border-bottom: 1px solid var(--gr-linea); }
+#tp-grilla .gr-art { border-top: 1px solid var(--gr-linea); }
+#tp-grilla .gr-art:first-child { border-top: 0; }
+#tp-grilla .gr-art > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 8px 16px;
+  font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--gr-tinta); }
+#tp-grilla .gr-literal { margin: 0 16px 16px; padding: 13px 14px; border-radius: calc(var(--gr-radio-ctl) - 2px); background: var(--gr-nota); color: var(--gr-tinta);
+  font-size: 14px; line-height: 1.62; white-space: pre-line; overflow-wrap: anywhere; }
+#tp-grilla .gr-cierre { padding: 4px 4px 0; font-size: 12.5px; line-height: 1.55; color: var(--gr-mute); white-space: pre-line; }
+
+/* ---------- carga: esqueleto con la forma de lo que viene ---------- */
+#tp-grilla .gr-esq { border-radius: var(--gr-radio); background: var(--gr-nota); box-shadow: inset 0 0 0 1px var(--gr-linea); position: relative; overflow: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  #tp-grilla .gr-esq::after { content: ""; position: absolute; inset: 0; translate: -100% 0;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gr-sup) 70%, transparent), transparent);
+    animation: gr-brillo var(--mov-correr, 1.6s) var(--ease-mueve, ease-in-out) infinite; }
+  #tp-grilla :is(.gr-sec, .gr-art)[open] > :not(summary) { animation: gr-abre var(--mov-medio, .32s) var(--ease-entrada, ease) backwards; }
+}
+@keyframes gr-brillo { to { translate: 100% 0; } }
+@keyframes gr-abre { from { opacity: 0; translate: 0 -6px; } }
+@media (hover: hover) and (pointer: fine) {
+  #tp-grilla .gr-pill:not([aria-pressed="true"]):hover { background: var(--gr-suave); }
+  #tp-grilla .gr-btn:hover { filter: brightness(1.06); }
+  #tp-grilla .gr-art > summary:hover, #tp-grilla .gr-sec > summary:hover { background: var(--gr-suave); }
+}
