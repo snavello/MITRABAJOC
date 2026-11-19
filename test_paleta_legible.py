@@ -127,6 +127,14 @@ def test_las_hojas_usan_los_corregidos_con_la_paleta_del_sindicato():
             # (db.apariencia_plataforma), así que sus hojas no traen ese bloque.
             continue
         css = hoja.read_text(encoding="utf-8")
+        if hoja.name.endswith("-grilla.css"):
+            # La pestaña «Grilla salarial y convenio» vive DENTRO de /app y no
+            # trae paleta propia: toma las variables del modelo que ya define
+            # (y corrige) <modelo>-app.css. Lo que se le exige es justamente
+            # eso: ningún color de marca directo (iría sin corregir).
+            sin_comentarios = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+            assert not re.search(r"var\(--(marca|gremio)-", sin_comentarios), hoja.name
+            continue
         bloques = re.findall(r'\[data-paleta="sindicato"\] \{(.*?)\n\}', css, re.S)
         assert bloques, hoja.name
         cuerpo = "".join(bloques)
