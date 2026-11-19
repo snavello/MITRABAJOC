@@ -392,7 +392,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
    la app se pinta con la marca del elegido. Login/elección → `/app/inicio`
    (portada) → `/app` ("Tu Recibo", 6 pestañas: Tu Recibo, Credencial,
-   Novedades, Mis Aportes/semáforo, Capacitación, Trámites).
+   Novedades, Mis Aportes/semáforo, Capacitación, Trámites; con el módulo
+   `grilla_convenio`, además «Grilla salarial y convenio»).
 4. Empresa (empleador) — /ingresar-empresa con CUIT + clave (autorregistro).
    Identidad única por CUIT, puede estar dado de alta en varios sindicatos
    (mismo criterio que pluriempleo). Login/elección → `/empresa/inicio`
@@ -1873,6 +1874,30 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     la pantalla solo muestra «sin revisar»; (c) el pase a la app del afiliado
     (D12), la vista de estado en `/admin` (D23) y la conectividad de un
     trimestre nuevo (retiene siempre).
+
+52. **Grilla salarial y convenio en la app del afiliado** (2026-11-19,
+    Trabajador 0.63.01, Plataforma 0.76.01, `PLAN_CONVENIO_ESCALAS.md` D42 a
+    D48; pedido de SDN mientras se curan las preguntas). Módulo opt-in
+    `grilla_convenio`; plataforma lo prende y elige el convenio del sindicato
+    en su ficha (`Sindicato.convenio_grilla`, migración `e3a5c7d9b1f2`; vacío
+    = ninguno, nunca se deduce por el nombre). Con las dos cosas, `/app` suma
+    la pestaña «Grilla salarial y convenio» (después de Mis Recibos; acceso en
+    la portada, `/app?tab=grilla`) con dos sub-vistas: **Grilla salarial** (la
+    consulta de la herramienta, sin selector de modelo, sin IA, sin frecuentes
+    y sin alusiones internas; sigue siendo consulta y no control) y
+    **Convenio** (solo los artículos en texto literal por sección, las
+    transitorias y «Descargar el convenio (PDF)», copia propia en
+    `data/convenios/cct-18-75.pdf`; sin resúmenes ni situaciones). API
+    `/api/app/grilla/{opciones,consulta,convenio,convenio.pdf}`: sesión de
+    trabajador, módulo (403) y convenio asignado (404); mismo motor que la
+    herramienta. Pantalla en `static/grilla_app.js` + `grilla_app.css` + una
+    hoja por modelo (`static/temas/<modelo>-grilla.css`). **La herramienta de
+    `/entornos` queda entera, transitoriamente.** El curado de preguntas sumó
+    **Eliminar** (D48: estado `eliminada`, no aparece en ningún listado ni
+    llega al afiliado ni a la IA, la semilla no la revive, su clave no se
+    reutiliza). Tests `test_grilla_app.py`, `_pantalla` y `_qa`. **Queda**:
+    decidir qué preguntas curadas suben a la app, y la vista de estado de las
+    grillas en `/admin` (D23).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

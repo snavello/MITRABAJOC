@@ -11326,3 +11326,33 @@ pasaban caracteres invisibles típicos de pegar desde Word; y se guardaban
 enlaces `https://` con host engañoso. Quedó abierto, con test `xfail`: el curado
 acepta cifras que el filtro de la IA trata como importe.
 
+
+## Grilla salarial y convenio pasan a la app del afiliado (2026-11-19, Trabajador 0.63.01, Plataforma 0.76.01)
+
+SDN, con las preguntas todavía por curar: pasar a la app del trabajador lo que
+ya está firme, la grilla y el texto del convenio, como módulo habilitable, y
+dejar la herramienta de `/entornos` entera mientras tanto. Decisiones D42 a
+D48 de `PLAN_CONVENIO_ESCALAS.md`.
+
+- **Módulo y convenio por sindicato.** `grilla_convenio` es opt-in. Qué
+  convenio ve un sindicato es un dato de su ficha (`Sindicato.convenio_grilla`),
+  elegido por plataforma entre los que existen en `data/convenios/`: la
+  herramienta buscaba a La Bancaria por nombre, y eso en la app no se admite.
+- **La API del afiliado reusa el motor.** Las rutas de `/entornos` y las de
+  `/api/app/grilla/*` llaman a los mismos `_escalas_responder_opciones` /
+  `_escalas_responder_consulta`; un test compara las dos respuestas. El
+  convenio viaja recortado: artículos por sección, transitorias, cierre y la
+  url del PDF, sin resúmenes (están sin revisar), notas ni situaciones.
+- **El PDF es copia propia** (D47, elegido por SDN): el oficial de
+  labancaria.org guardado en el repo, para no depender de que el sitio
+  mantenga el enlace.
+- **La pantalla** es un archivo aparte (`static/grilla_app.js`) que se carga
+  al abrir la pestaña; `trabajador.html` solo suma el botón y el panel. Una
+  hoja por modelo define las variables `--gr-*` desde las del modelo, sin
+  colores nuevos. En la tira el rótulo es «Grilla y convenio» (el largo no
+  entra en un séptimo del teléfono); el título del panel es el completo.
+- **Eliminar en el curado** (D48): un estado, no un borrado. La siembra solo
+  inserta si el convenio no tiene filas, así que una eliminada no vuelve.
+
+Hecho por tres agentes en paralelo (backend, frontend, curado) y un QA
+independiente contra la app real.
