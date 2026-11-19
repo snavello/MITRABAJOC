@@ -503,3 +503,61 @@ bitácora, PR y merge con el CI en verde.
   informado; o retenida con el motivo a la vista.
 - Una grilla adulterada nunca se publica.
 - Las pantallas pasan la revisión de diseño en los dos modelos.
+
+## Pase a la app del afiliado (D42 a D48, SDN 2026-11-19)
+
+Pedido de SDN: mientras se curan las preguntas, la grilla y el texto del
+convenio pasan a la app del trabajador. La herramienta de `/entornos` queda
+ENTERA y sin cambios, transitoriamente.
+
+- **D42 · Módulo habilitable `grilla_convenio`**, opt-in (fuera de
+  `MODULOS_INICIALES`), nombre visible «Grilla salarial y convenio». Lo
+  prende plataforma en la ficha del sindicato.
+- **D43 · Qué convenio ve cada sindicato**: columna `Sindicato.convenio_grilla`
+  (texto, vacío = ninguno), que plataforma elige en la ficha entre los
+  convenios que existen (`convenio_fichas`; hoy solo `cct-18-75`). Sin módulo
+  o sin convenio asignado, la pestaña no existe y la API da 403 / 404. Nunca
+  se deduce el convenio por el nombre del sindicato.
+- **D44 · Pestaña «Grilla salarial y convenio» en `/app`** (después de «Mis
+  Recibos») y acceso en la portada `/app/inicio`. Dos sub-vistas: Grilla
+  salarial y Convenio.
+- **D45 · Grilla**: la consulta de la herramienta (selección, valores con su
+  etiqueta Publicado / Referencia, ROE, evolución, aviso de actualización
+  pendiente, texto fijo de alcance), SIN el selector de modelo y paleta, SIN
+  consulta con IA, SIN preguntas frecuentes y sin ninguna alusión interna
+  (herramienta, validación, equipo, prueba, entornos, IA, «sin revisar»). Se
+  dibuja con el modelo y la paleta que le tocan a la persona (los dos modelos,
+  `laguna` y `noticiero`). Sigue siendo una consulta, no un control (D4, D14,
+  D25): sin totales, sin veredicto, sin salida a Tu recibo. La selección se
+  recuerda en el navegador (D6).
+- **D46 · Convenio**: solo los artículos en texto literal, agrupados por
+  sección (los `grupos` de `convenio_fichas`) y desplegables, más las
+  cláusulas transitorias, y el botón «Descargar el convenio (PDF)». No van los
+  resúmenes (están sin revisar), ni las situaciones, ni las frecuentes, ni la
+  IA. Cuando las preguntas estén curadas se evalúa cuáles subir.
+- **D47 · El PDF es copia propia**: `data/convenios/cct-18-75.pdf` (el oficial
+  de labancaria.org, 20 páginas, SHA-256
+  `973ee4d0d61d6974c9a3cc38a07e2fcfee060d2f5bcf3bda73f18a91677606b0`), servido
+  por la app con sesión y módulo, como descarga.
+- **D48 · Eliminar en el curado**: la pantalla de curado suma «Eliminar» sobre
+  una pregunta (cualquier estado), con confirmación. Es un estado `eliminada`:
+  no aparece en ningún listado ni resumen, no la ven el afiliado ni la IA, la
+  semilla no la vuelve a crear, y queda el registro en el historial de cambios
+  (quién y cuándo). No se ofrece deshacer desde la pantalla.
+
+### Contrato de la API del afiliado (D44 a D47)
+
+Todas exigen sesión de trabajador, módulo `grilla_convenio` (403) y convenio
+asignado al sindicato de la sesión (404). El sindicato sale de la sesión.
+
+- `GET /api/app/grilla/opciones` y `POST /api/app/grilla/consulta`: misma
+  forma de respuesta que `/api/entornos/herramientas/escalas/opciones` y
+  `/consulta` (mismo motor `consulta_escalas`, grillas publicadas del convenio
+  del sindicato).
+- `GET /api/app/grilla/convenio` →
+  `{"convenio": {"nombre", "descripcion"}, "secciones": [{"id", "titulo",
+  "articulos": [{"numero", "titulo", "texto"}]}], "transitorias": [{"numero",
+  "titulo", "texto"}], "cierre": "...", "pdf": "/api/app/grilla/convenio.pdf"}`.
+  Nada más: sin `resumen`, `nota`, `fuente`, `situaciones` ni estados.
+- `GET /api/app/grilla/convenio.pdf` → el PDF, `application/pdf`,
+  `Content-Disposition: attachment; filename="convenio-cct-18-75.pdf"`.
