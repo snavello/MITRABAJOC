@@ -655,6 +655,8 @@
     if (es === 'retirada') {
       a.appendChild(boton('Guardar', 'claro', function () { guardar('guardar'); }));
       a.appendChild(boton('Publicar', '', function () { pedirConfirmacion('publicar'); }));
+      a.appendChild(h('span', { class: 'espacio' }));
+      a.appendChild(boton('Eliminar', 'eliminar', function () { pedirConfirmacion('eliminar'); }));
       return;
     }
     a.appendChild(boton('Guardar cambios', es === 'revisada' ? '' : 'claro', function () { guardar('guardar'); }));
@@ -662,6 +664,7 @@
     else a.appendChild(boton('Volver a sin revisar', 'claro', function () { guardar('sin_revisar'); }));
     a.appendChild(h('span', { class: 'espacio' }));
     a.appendChild(boton('Retirar', 'peligro', function () { pedirConfirmacion('retirar'); }));
+    a.appendChild(boton('Eliminar', 'eliminar', function () { pedirConfirmacion('eliminar'); }));
   }
   function pedirConfirmacion(que) {
     var lugar = vaciar($('confirmar-lugar'));
@@ -673,6 +676,10 @@
     } else if (que === 'publicar') {
       caja = h('div', { class: 'confirmar-ed' }, h('p', { text: 'Publicar vuelve a mostrar la pregunta al afiliado, con la marca «sin revisar» hasta que alguien la revise. Se controla que esté completa antes de publicarla.' }), botones);
       botones.appendChild(boton('Sí, publicar', '', function () { guardar('publicar'); }));
+    } else if (que === 'eliminar') {
+      caja = h('div', { class: 'confirmar-ed rojo' },
+        h('p', { text: 'Se quita del listado de preguntas. No se puede deshacer desde esta pantalla.' }), botones);
+      botones.appendChild(boton('Sí, eliminar la pregunta', 'peligro firme', function () { eliminar(); }));
     } else {
       var motivo = h('select', { id: 'r-motivo' },
         h('option', { value: 'sin_respuesta', text: 'No tiene una respuesta concreta' }),
@@ -689,6 +696,42 @@
     var primero = caja.querySelector('select,textarea,button');
     if (primero) primero.focus({ preventScroll: true });
     caja.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  // D48: elimina la pregunta abierta. Desaparece de la lista, se cierra el editor y se recalcula el resumen.
+  function eliminar() {
+    var ed = est.ed;
+    if (!ed || !ed.orig || est.ocupado) return;
+    var cuerpo = {};
+    if (ed.orig.version != null) cuerpo.version = ed.orig.version;
+    est.ocupado = true;
+    limpiarErrores();
+    aviso('');
+    $('editor').classList.add('cargando');
+    dibujarAcciones();
+    pedir(CURADO + '/' + encodeURIComponent(ed.clave) + '/eliminar', cuerpo).then(function () {
+      est.ocupado = false;
+      $('editor').classList.remove('cargando');
+      est.preguntas = est.preguntas.filter(function (p) { return p.id !== ed.clave; });
+      contar();
+      est.ed = null;
+      $('editor').hidden = true;
+      $('lista').parentNode.classList.remove('con-editor');
+      document.body.style.overflow = '';
+      pintarTodo();
+      aviso('La pregunta se eliminó.', 'verde');
+    }).catch(function (e) {
+      est.ocupado = false;
+      $('editor').classList.remove('cargando');
+      dibujarAcciones();
+      if (e.status === 409 && e.errores && e.errores[0] && e.errores[0].codigo === 'conflicto') conflicto(ed);
+      else if (e.status === 404) {
+        est.preguntas = est.preguntas.filter(function (p) { return p.id !== ed.clave; });
+        contar(); est.ed = null; $('editor').hidden = true; $('lista').parentNode.classList.remove('con-editor');
+        document.body.style.overflow = ''; pintarTodo();
+        aviso('Esa pregunta ya no existe (otra persona la eliminó).', 'rojo');
+      } else aviso(e.red ? 'No se pudo conectar. ' + e.message : 'No se pudo eliminar. ' + e.message, 'rojo');
+    });
   }
 
   function guardar(accion, extra) {
@@ -775,7 +818,7 @@
   }
 
   // ---------------------------------------------------------------- historial
-  var ACCIONES = { crear: 'Creó la pregunta', editar: 'Hizo cambios', revisar: 'La marcó como revisada', retirar: 'La retiró', reponer: 'La volvió a publicar', reordenar: 'Cambió el orden' };
+  var ACCIONES = { crear: 'Creó la pregunta', editar: 'Hizo cambios', revisar: 'La marcó como revisada', retirar: 'La retiró', reponer: 'La volvió a publicar', reordenar: 'Cambió el orden', eliminar: 'La eliminó' };
   function quePaso(c) {
     if (c.accion === 'reordenar') return ACCIONES.reordenar;
     var antes = c.antes || {}, desp = c.despues || {}, cambios = [];

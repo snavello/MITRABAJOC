@@ -109,6 +109,9 @@
 /* ---------- acciones ---------- */
 .acciones-ed { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 6px; padding-top: 14px; border-top: 1px solid var(--linea); }
 .acciones-ed .espacio { flex: 1; }
+/* Eliminar (D48): un paso más grave que Retirar, así que va con otra forma: sin relleno, subrayado y separado a la derecha. */
+.acciones-ed .boton.eliminar { background: transparent; border-color: transparent; color: var(--mal); text-decoration: underline; margin-left: auto; }
+.acciones-ed .boton.eliminar:hover:not(:disabled) { background: var(--mal-fondo); color: var(--mal); }
 .confirmar-ed { border: 1px solid #b3c9e6; background: var(--info-fondo); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
 .confirmar-ed.rojo { border-color: #e0a39b; background: var(--mal-fondo); }
 .confirmar-ed p { margin-bottom: 8px; }

@@ -113,3 +113,12 @@ def test_las_tres_paginas_se_enlazan_entre_si():
         html = c.get(pagina).text
         assert "convenio-escalas/preguntas" in html and "convenio-escalas/estado" in html, pagina
     assert 'href="/entornos/herramientas/convenio-escalas"' in c.get(PAGINA).text
+
+
+def test_eliminar_en_el_editor_con_confirmacion_y_textos_con_textcontent():
+    js, css = _leer(JS), _leer(CSS)
+    assert "boton(\"Eliminar\"".replace("\"", "'") in js
+    assert "Se quita del listado de preguntas. No se puede deshacer desde esta pantalla." in js
+    assert "/eliminar" in js and "pedirConfirmacion(\"eliminar\")".replace("\"", "'") in js
+    assert "innerHTML" not in js
+    assert ".boton.eliminar" in css

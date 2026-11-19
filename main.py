@@ -12082,6 +12082,29 @@ def api_curado_estado(request: Request, clave: str, payload: Any = Body(default=
     return {"ok": True, "pregunta": f}
 
 
+@app.post(CURADO + "/{clave}/eliminar")
+def api_curado_eliminar(request: Request, clave: str, payload: Any = Body(default=None)):
+    """D48: elimina la pregunta (estado `eliminada`, queda el registro del cambio). Con `version`,
+    409 si otra persona la cambió. Una ya eliminada o inexistente es 404."""
+    quien = _exigir_herramientas(request)
+    _curado_clave(clave)
+    if payload is None:
+        payload = {}
+    if not isinstance(payload, dict):
+        return _curado_rechazo([{"campo": "", "mensaje": "el cuerpo tiene que ser un objeto JSON"}])
+    version, errores = _curado_version(payload)
+    if errores:
+        return _curado_rechazo(errores)
+    try:
+        f = db.eliminar_pregunta(db.CONVENIO_BANCARIO, clave, quien, version)
+    except db.ConflictoPregunta:
+        return _curado_conflicto(clave)
+    if f is None:
+        raise HTTPException(404, "No existe esa pregunta.")
+    _preguntas_al_dia()
+    return {"ok": True, "pregunta": f}
+
+
 @app.post(CURADO + "/{clave}")
 def api_curado_editar(request: Request, clave: str, payload: Any = Body(default=None)):
     quien = _exigir_herramientas(request)

@@ -463,6 +463,8 @@ def test_hay_rutas_y_ninguna_se_olvida_en_la_puerta():
 def test_con_pase_pasan_todas_y_en_demo_todas_son_404(monkeypatch):
     c = _c()
     for m, p in _todas_las_rutas_del_curado():
+        if p.endswith("/eliminar"):       # destructiva (D48): se prueba en test_convenio_curado.py
+            continue
         r = c.request(m, _llenar(p), json={} if m == "POST" else None)
         assert r.status_code != 403 and r.status_code < 500, (m, p, r.status_code)
     monkeypatch.setattr(entorno, "MUESTRA_DISTINTIVO", False)
