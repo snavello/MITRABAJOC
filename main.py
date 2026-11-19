@@ -6719,6 +6719,7 @@ def plataforma(request: Request):
         "usos_ia": precios_ia.USOS,
         "recibos_sospechosos": db.recibos_sospechosos_listado(),
         "catalogo_modulos": MODULOS, "modulos_iniciales": MODULOS_INICIALES,
+        "convenios_grilla": convenio_fichas.convenios_disponibles(),
         "topes": topes, "topes_json": topes_json,
         "es_superadmin": _es_superadmin_plataforma(request),
         "apariencia": _apariencia_plataforma(request),
@@ -7510,6 +7511,7 @@ async def plataforma_alta_sindicato(
     clausula_confidencialidad: bool = Form(False),
     acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
+    convenio_grilla: str = Form(""),
 ):
     exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
@@ -7544,6 +7546,8 @@ async def plataforma_alta_sindicato(
             color_destacado=color_destacado or "#E5188F",
             modulos_habilitados=modulos_validos,
             acepta_mail_declarado=acepta_mail_declarado,
+            # Un valor fuera del catálogo de convenios no se guarda (D43).
+            convenio_grilla=convenio_grilla if convenio_fichas.existe(convenio_grilla) else "",
         )
         if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
                                             clausula_confidencialidad):
@@ -8139,6 +8143,7 @@ async def plataforma_editar_sindicato(
     clausula_confidencialidad: bool = Form(False),
     acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
+    convenio_grilla: str | None = Form(None),
 ):
     exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
@@ -8167,6 +8172,10 @@ async def plataforma_editar_sindicato(
             sind.modulos_habilitados = _modulos_tras_editar(
                 sind.modulos_habilitados, modulos_validos, modulos_ofrecidos)
             sind.acepta_mail_declarado = acepta_mail_declarado
+            # None = el formulario no traía el selector: no se toca. "" = Ninguno.
+            # Un valor fuera del catálogo de convenios no se guarda (D43).
+            if convenio_grilla is not None and (convenio_grilla == "" or convenio_fichas.existe(convenio_grilla)):
+                sind.convenio_grilla = convenio_grilla
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
@@ -8868,6 +8877,13 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     return resp
 
 
+def _grilla_convenio_disponible(sid: int) -> bool:
+    """La pestaña «Grilla salarial y convenio» existe solo con el módulo
+    prendido Y un convenio asignado que exista (D43)."""
+    return bool(sid and db.modulo_habilitado(sid, "grilla_convenio")
+                and convenio_fichas.existe(db.convenio_grilla_de(sid)))
+
+
 @app.get("/app", response_class=HTMLResponse)
 def app_trabajador(request: Request):
     """La app del trabajador. Si está en varios sindicatos y no eligió, muestra el selector."""
@@ -8909,6 +8925,7 @@ def app_trabajador(request: Request):
             "tiene_foto_perfil": db.tiene_foto_trabajador(cuil),
             "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
             "apariencia": db.apariencia_de(sid_activo, cuil),
+            "grilla_convenio_disponible": _grilla_convenio_disponible(sid_activo),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -8983,6 +9000,7 @@ def app_portada(request: Request):
             "encuestas_pendientes": db.contar_encuestas_pendientes(cuil, sid_activo)
                                     if "encuestas" in _modulos_de(sid_activo) else 0,
             "modulos": _modulos_de(sid_activo),
+            "grilla_convenio_disponible": _grilla_convenio_disponible(sid_activo),
             # Tarjeta no bloqueante "Confirmá tu mail" para las cuentas de nivel 1.
             "aviso_mail": _aviso_mail_de(cuil),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
@@ -11755,12 +11773,7 @@ def entornos_convenio_escalas(request: Request, tema: str = "", paleta: str = ""
 @app.get(f"{API_ESCALAS}/opciones")
 def api_escalas_opciones(request: Request):
     _exigir_herramientas(request)
-    g = _escalas_vigente(db.grillas_publicadas())
-    if not g:
-        return {"disponible": False, "mensaje": "Todavía no hay una grilla publicada."}
-    return {"disponible": True, "grilla": _escalas_grilla_resumen(g),
-            **consulta_escalas.opciones(g), "hoy": fechas.hoy_texto(),
-            "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
+    return _escalas_responder_opciones(db.grillas_publicadas())
 
 
 @app.post(f"{API_ESCALAS}/consulta")
@@ -11776,6 +11789,11 @@ async def api_escalas_consulta(request: Request):
     if periodo is not None and not isinstance(periodo, str):
         raise HTTPException(400, "El período no es válido.")
     grillas = await run_in_threadpool(db.grillas_publicadas)
+    return await _escalas_responder_consulta(datos, periodo, grillas)
+
+
+async def _escalas_responder_consulta(datos: dict, periodo, grillas: dict):
+    """El cuerpo de `/consulta`, compartido con la de la app del afiliado."""
     try:
         res = consulta_escalas.consultar(datos["seleccion"], grillas, periodo)
         evo = consulta_escalas.evolucion(datos["seleccion"], grillas)
@@ -11783,6 +11801,16 @@ async def api_escalas_consulta(request: Request):
         raise HTTPException(400, str(e))
     pub = await run_in_threadpool(_escalas_publicacion, res.get("periodo"))
     return {**res, "evolucion": evo, "publicacion": pub, "hoy": fechas.hoy_texto(),
+            "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
+
+
+def _escalas_responder_opciones(grillas: dict):
+    """El cuerpo de `/opciones`, compartido con la de la app del afiliado."""
+    g = _escalas_vigente(grillas)
+    if not g:
+        return {"disponible": False, "mensaje": "Todavía no hay una grilla publicada."}
+    return {"disponible": True, "grilla": _escalas_grilla_resumen(g),
+            **consulta_escalas.opciones(g), "hoy": fechas.hoy_texto(),
             "actualizacion_pendiente": _escalas_actualizacion_pendiente()}
 
 
@@ -11809,6 +11837,101 @@ def api_escalas_articulo(numero: str, request: Request):
     if not a:
         raise HTTPException(404, "Ese artículo no existe en el convenio.")
     return _escalas_ficha(a, _escalas_vigente(db.grillas_publicadas()))
+
+
+# ---- Pase a la app del afiliado (D42 a D48): grilla y texto del convenio ----
+# Misma consulta que la herramienta, pero con la sesión del trabajador, el
+# módulo `grilla_convenio` y el convenio que plataforma asignó al sindicato.
+# El sindicato sale de la sesión. La herramienta de /entornos queda como está.
+API_GRILLA_APP = "/api/app/grilla"
+
+
+def _exigir_grilla_app(request: Request) -> str:
+    """Sesión de afiliado (401), módulo `grilla_convenio` (403) y convenio
+    asignado y existente (404). Devuelve el id del convenio del sindicato."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(401, "Sin sesión")
+    sid = _sindicato_activo_trabajador(request, cuil)
+    if not sid:
+        raise HTTPException(403, "Elegí tu sindicato")
+    _exigir_modulo(sid, "grilla_convenio")
+    convenio = db.convenio_grilla_de(sid)
+    if not convenio_fichas.existe(convenio):
+        raise HTTPException(404, "Tu sindicato no tiene un convenio cargado.")
+    return convenio
+
+
+@app.get(f"{API_GRILLA_APP}/opciones")
+def api_grilla_app_opciones(request: Request):
+    convenio = _exigir_grilla_app(request)
+    return _escalas_responder_opciones(db.grillas_publicadas(convenio))
+
+
+@app.post(f"{API_GRILLA_APP}/consulta")
+async def api_grilla_app_consulta(request: Request):
+    convenio = _exigir_grilla_app(request)
+    try:
+        datos = await request.json()
+    except Exception:
+        raise HTTPException(400, "El pedido no es válido.")
+    if not isinstance(datos, dict) or not isinstance(datos.get("seleccion"), dict):
+        raise HTTPException(400, "Falta la selección.")
+    periodo = datos.get("periodo")
+    if periodo is not None and not isinstance(periodo, str):
+        raise HTTPException(400, "El período no es válido.")
+    grillas = await run_in_threadpool(db.grillas_publicadas, convenio)
+    return await _escalas_responder_consulta(datos, periodo, grillas)
+
+
+def _grilla_app_texto(a: dict) -> dict:
+    return {"numero": a.get("numero"), "titulo": a.get("titulo") or "", "texto": a.get("texto") or ""}
+
+
+@app.get(f"{API_GRILLA_APP}/convenio")
+def api_grilla_app_convenio(request: Request):
+    """El texto literal del convenio agrupado por sección, y nada más: sin
+    resúmenes, notas, situaciones ni estados de revisión (D46)."""
+    convenio = _exigir_grilla_app(request)
+    conv = convenio_fichas.cargar(convenio)
+    por_numero = {str(a["numero"]).upper(): a for a in conv["articulos"]}
+    transitorias = {str(a["numero"]).upper(): a for a in conv.get("transitorias", [])}
+    usados: set = set()
+    secciones = []
+    for g in conv.get("grupos", []):
+        arts = []
+        for n in g.get("articulos", []):
+            clave = str(n).upper()
+            usados.add(clave)
+            if clave in por_numero:
+                arts.append(_grilla_app_texto(por_numero[clave]))
+        if arts:
+            secciones.append({"id": g["id"], "titulo": g["titulo"], "articulos": arts})
+    # Un artículo que ningún grupo nombra no se pierde: va en una sección final.
+    sueltos = [_grilla_app_texto(a) for a in conv["articulos"] if str(a["numero"]).upper() not in usados]
+    if sueltos:
+        secciones.append({"id": "otros", "titulo": "Otros artículos", "articulos": sueltos})
+    return {
+        "convenio": {"nombre": conv.get("nombre") or "", "descripcion": conv.get("descripcion") or ""},
+        "secciones": secciones,
+        "transitorias": [_grilla_app_texto(a) for a in conv.get("transitorias", [])],
+        "cierre": conv.get("cierre") or "",
+        "pdf": f"{API_GRILLA_APP}/convenio.pdf",
+    }
+
+
+@app.get(f"{API_GRILLA_APP}/convenio.pdf")
+def api_grilla_app_convenio_pdf(request: Request):
+    convenio = _exigir_grilla_app(request)
+    # El nombre del archivo sale del id, ya validado contra el catálogo.
+    ruta = convenio_fichas.CARPETA / f"{convenio}.pdf"
+    if ruta.resolve().parent != convenio_fichas.CARPETA.resolve() or not ruta.is_file():
+        raise HTTPException(404, "El convenio no está disponible para descargar.")
+    return BinResponse(
+        ruta.read_bytes(), media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="convenio-{convenio}.pdf"',
+                 "Cache-Control": "private, max-age=3600",
+                 "X-Content-Type-Options": "nosniff"})
 
 
 # ---- Convenio, segunda versión (D31 a D37): preguntas frecuentes y consulta con IA ----

@@ -38,6 +38,10 @@ MODULOS = {
     # datos útiles de la portada del afiliado. Prendido por defecto (está en
     # MODULOS_INICIALES): reemplazó al widget de datos útiles, que veían todos.
     "tu_dia": "Tu día en la portada",
+    # Grilla salarial y texto del convenio en la app del afiliado
+    # (PLAN_CONVENIO_ESCALAS.md, D42). Opt-in, fuera de MODULOS_INICIALES; el
+    # convenio que ve cada sindicato lo asigna plataforma (Sindicato.convenio_grilla).
+    "grilla_convenio": "Grilla salarial y convenio",
 }
 
 # Lo que existe HOY, para dar de alta un sindicato nuevo con todo tildado

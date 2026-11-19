@@ -292,6 +292,11 @@ class Sindicato(SQLModel, table=True):
     # tu_dia.py. Lo escribe solo `db.set_tu_dia`, que descarta lo que no está
     # en el catálogo.
     tu_dia: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO, nullable=True))
+    # Convenio de la «Grilla salarial y convenio» de la app del afiliado
+    # (módulo `grilla_convenio`, PLAN_CONVENIO_ESCALAS.md D43): id de un
+    # convenio de `convenio_fichas` ("cct-18-75"); vacío = ninguno. Lo elige
+    # plataforma; nunca se deduce del nombre del sindicato.
+    convenio_grilla: str = Field(default="")
 
 
 class Seccional(SQLModel, table=True):
@@ -3999,6 +4004,14 @@ def modulos_habilitados(sindicato_id: int) -> list:
     with Session(engine) as s:
         sind = s.get(Sindicato, sindicato_id)
         return list(sind.modulos_habilitados or []) if sind else []
+
+
+def convenio_grilla_de(sindicato_id: int) -> str:
+    """El convenio que plataforma asignó al sindicato para la «Grilla salarial
+    y convenio» del afiliado ("" = ninguno). No valida contra el catálogo."""
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        return (sind.convenio_grilla or "") if sind else ""
 
 
 def modulo_habilitado(sindicato_id: int, modulo: str) -> bool:

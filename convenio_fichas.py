@@ -45,6 +45,28 @@ def _leer(convenio: str) -> dict:
     return json.loads(ruta.read_text(encoding="utf-8"))
 
 
+def convenios_disponibles() -> list[tuple[str, str]]:
+    """(id, nombre) de los convenios que existen en `data/convenios/`: los
+    `<id>.json` con artículos (las preguntas frecuentes `*-faq*.json` no son
+    convenios). Es el catálogo contra el que se valida a qué convenio
+    apunta un sindicato (`Sindicato.convenio_grilla`)."""
+    salida = []
+    for ruta in sorted(CARPETA.glob("*.json")):
+        if "-faq" in ruta.stem:
+            continue
+        try:
+            conv = cargar(ruta.stem)
+        except (OSError, ValueError, FileNotFoundError):
+            continue
+        if isinstance(conv, dict) and conv.get("articulos"):
+            salida.append((ruta.stem, str(conv.get("nombre") or ruta.stem)))
+    return salida
+
+
+def existe(convenio) -> bool:
+    return isinstance(convenio, str) and convenio in {i for i, _ in convenios_disponibles()}
+
+
 def cargar(convenio: str = CONVENIO_POR_DEFECTO) -> dict:
     """El convenio completo. No lo modifiques: se comparte entre llamadas."""
     return _leer(convenio)
