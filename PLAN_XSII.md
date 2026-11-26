@@ -44,6 +44,27 @@ es completa ni cubre los casos complejos.
   la vista, el contexto (por hacer, esperando, bloqueadas).
 - **X7. Es genérico.** Se construye para usarlo en otros sistemas: el motor
   no sabe nada de sindicatos.
+- **X8. Tres vistas: Guía, Tablero y Mapa** (SDN, 2026-11-26, sobre la
+  maqueta 2). La **Guía** es la pantalla principal y la única que conduce;
+  **Tablero** (todas las tareas agrupadas, con filtros por estado) y **Mapa**
+  (las dependencias) son para mirar. Desde cualquiera se abre una tarea y se
+  vuelve a la Guía.
+- **X9. Un botón grande de Play con el siguiente paso recomendado.** Es lo
+  único que destaca en la Guía: nombre del paso, por qué ese y qué destraba.
+  Debajo, pocas alternativas que también se pueden hacer. El paso lo elige
+  el motor: la tarea en curso o, si no hay, la que más tareas destraba.
+- **X10. El asistente no es un chat.** Habla adentro de la tarea: dice qué va
+  a hacer, informa, avisa si algo salió mal y da opciones, y propone cómo
+  seguir. No hay un cuadro de conversación aparte.
+- **X11. «Preguntame» por punto.** Cada bloque que lo amerita (el paso
+  recomendado, un ensayo, la ficha de una tarea en el mapa) tiene su botón,
+  con preguntas sugeridas sobre ESE punto y lugar para escribir la propia.
+- **X12. Poca información a la vez.** En la Guía, el contexto es un panorama
+  angosto: el aviso de lo demorado y contadores que se despliegan. La lista
+  completa vive en el Tablero.
+- **X13. El Mapa ilumina un camino.** Al tocar una tarea se destaca de qué
+  depende y qué destraba, y el resto se atenúa. Flechas en ángulo recto,
+  como la norma de diagramas del Documento integrador.
 
 ## Principios de construcción (propuestos)
 
@@ -251,7 +272,8 @@ escribir cada control se confirma contra la función real y queda un test.
 4. **Control**: corre el control de la tarea, muestra el resultado y dice qué
    se destrabó.
 
-**Conversación.** El modelo tiene herramientas de lectura (tablero, ficha de
+**Preguntame (X10, X11).** No hay conversación libre: cada «Preguntame» abre
+una consulta acotada a su punto. El modelo tiene herramientas de lectura (tablero, ficha de
 una tarea, qué frena, qué destraba, camino hasta una meta, registro) y las
 acciones registradas de la tarea abierta. Toda cifra que dice sale de una
 herramienta, nunca de su memoria. Preguntas tipo: «¿cómo estamos?», «¿qué
@@ -296,7 +318,7 @@ anteriores.
 
 ## Abiertas (se cierran de a una)
 
-1. Dirección de la pantalla: A, B o C de la maqueta.
+1. ~~Dirección de la pantalla~~: cerrada, X8 a X13.
 2. Mínimo de la primera versión: confirmar o corregir la lista propuesta.
 3. Qué puede dar por buena una persona contra el control (excepciones).
 4. Entorno: Pruebas, como la Mesa, o también donde corra el piloto.
