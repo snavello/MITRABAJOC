@@ -10535,6 +10535,7 @@ class ImplProyecto(SQLModel, table=True):
     sindicato_id: Optional[int] = Field(default=None, index=True)   # puede no existir todavía (I4)
     activo: bool = Field(default=True, index=True)
     ultimo_numero: int = 0                    # el correlativo de tarjetas, bajo FOR UPDATE
+    fechas_acordadas: bool = False            # False = fechas tentativas de las fases
     creado: str = Field(default_factory=fechas.ahora_con_segundos)
 
 
@@ -10559,6 +10560,8 @@ class ImplEtapa(SQLModel, table=True):
     nombre: str = ""
     descripcion: str = ""
     orden: int = 0
+    fecha_desde: Optional[str] = None         # AAAA-MM-DD; NULL = sin fecha (hechos, no derivados)
+    fecha_hasta: Optional[str] = None
 
 
 class ImplHito(SQLModel, table=True):
@@ -11693,6 +11696,7 @@ def impl_plan(s: Session, proyecto_id: int) -> list:
     for e in impl_etapas(s, proyecto_id):
         lista = por_etapa.get(e.id, [])
         salida.append({"id": e.id, "nombre": e.nombre, "orden": e.orden,
+                       "fecha_desde": e.fecha_desde, "fecha_hasta": e.fecha_hasta,
                        "pct": implementacion.porcentaje(sum(1 for h in lista if h["hecho"]), len(lista)),
                        "hitos": lista})
     return salida
@@ -11785,6 +11789,50 @@ def impl_renombrar_etapa(s: Session, proyecto_id: int, etapa_id: int, actor, nom
     s.commit()
     s.refresh(et)
     return et
+
+
+def impl_fechar_plan(s: Session, proyecto_id: int, actor, fechas_etapas: list,
+                     acordadas: bool = None) -> bool:
+    """Pone (o borra) las fechas de las fases. `fechas_etapas` = [{id, desde, hasta}];
+    vacío = sin fecha. Todo o nada: se valida TODO antes de escribir. Solo equipo.
+    False si el proyecto no existe; una etapa ajena es ErrorImpl("etapa")."""
+    a = _impl_exigir_equipo(actor)
+    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first()
+    if not proy:
+        return False
+    etapas = {e.id: e for e in s.exec(select(ImplEtapa).where(ImplEtapa.proyecto_id == proyecto_id)
+                                      .with_for_update()).all()}
+    if not isinstance(fechas_etapas, list):
+        raise implementacion.ErrorImpl("fechas", "Las fechas vienen como una lista de fases.")
+    nuevas = {}
+    for f in fechas_etapas:
+        if not isinstance(f, dict):
+            raise implementacion.ErrorImpl("fechas", "Cada fase tiene que traer id, desde y hasta.")
+        try:
+            eid = int(f.get("id"))
+        except (TypeError, ValueError):
+            raise implementacion.ErrorImpl("etapa", "Fase inválida.")
+        if eid not in etapas:
+            raise implementacion.ErrorImpl("etapa", "Una de las fases no es de este proyecto.")
+        desde, hasta = implementacion.validar_fechas_fase(f.get("desde"), f.get("hasta"), etapas[eid].nombre)
+        nuevas[eid] = (desde, hasta)
+    cambios = []
+    for eid, (desde, hasta) in nuevas.items():
+        e = etapas[eid]
+        if (e.fecha_desde, e.fecha_hasta) != (desde, hasta):
+            cambios.append({"etapa_id": eid, "nombre": e.nombre, "antes": [e.fecha_desde, e.fecha_hasta],
+                            "despues": [desde, hasta]})
+            e.fecha_desde, e.fecha_hasta = desde, hasta
+            s.add(e)
+    cambio_acordadas = acordadas is not None and bool(acordadas) != bool(proy.fechas_acordadas)
+    if cambio_acordadas:
+        proy.fechas_acordadas = bool(acordadas)
+        s.add(proy)
+    if cambios or cambio_acordadas:
+        _impl_evento(s, proyecto_id, a, "plan_fechas",
+                     detalle={"cambios": cambios, "acordadas": bool(proy.fechas_acordadas)})
+    s.commit()
+    return True
 
 
 def impl_cargar_hitos_semilla(s: Session, proyecto_id: int, actor, fases: list) -> Optional[int]:

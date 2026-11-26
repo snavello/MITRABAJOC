@@ -162,6 +162,62 @@ a.kpi { transition: border-color var(--mov-rapido), transform var(--mov-rapido) 
 input[type=text], input[type=date], textarea, select.campo, input.campo { width: 100%; padding: .7em .8em; border-radius: 12px; border: 2px solid var(--linea); background: #fff; }
 input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { border-color: var(--tinta); outline: none; box-shadow: 0 0 0 3px #15223820; }
 
+/* ---------- Proyección del plan (fechas por fase) ---------- */
+.seg-f { font-variant-numeric: tabular-nums; }
+.etapa-fechas { display: inline-flex; align-items: center; gap: .4em; margin-left: 12px; color: var(--gris); font-weight: 700; }
+.proy { background: #fff; border: 1px solid var(--linea); border-radius: 18px; padding: 18px 20px; margin: 6px 0 18px; }
+.proy-cab { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; justify-content: space-between; margin-bottom: 12px; }
+.proy-cab h2 { font-size: 1.35rem; }
+.proy-nota { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.proy-nota small { color: var(--gris); font-weight: 600; }
+.g-scroll { overflow-x: auto; }
+.gantt { min-width: 760px; }
+.g-fila { display: grid; grid-template-columns: 170px 1fr; align-items: center; border-top: 1px solid var(--linea); min-height: 48px; }
+.g-fila.g-cabeza { border-top: 0; min-height: 0; }
+.g-nom { padding: 6px 10px 6px 0; display: grid; line-height: 1.2; }
+.g-nom b { font-size: .92rem; }
+.g-nom small { color: var(--gris); font-weight: 700; font-variant-numeric: tabular-nums; }
+.g-cabeza .g-nom { color: var(--gris); font-size: .75rem; font-weight: 700; align-self: end; }
+.g-eje { display: grid; grid-template-columns: repeat(var(--sem), 1fr); }
+.g-sem { display: grid; text-align: center; padding: 2px 0 6px; border-left: 1px solid var(--linea); line-height: 1.15; }
+.g-sem b { font-family: var(--cond); font-size: .95rem; letter-spacing: .04em; }
+.g-sem small { color: var(--gris); font-size: .66rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.g-pista { position: relative; height: 48px;
+  background: repeating-linear-gradient(to right, var(--linea) 0, var(--linea) 1px, transparent 1px, transparent calc(100% / var(--sem))); }
+.g-barra { position: absolute; top: 13px; height: 22px; border-radius: 7px; background: #c6ccd8; border: 2px solid #aeb6c6; min-width: 6px; }
+.g-barra.completa { background: var(--ok); border-color: var(--ok); }
+.g-barra.en-curso { background: var(--miel); border-color: var(--miel-t); }
+.g-barra.por-venir { background: var(--azul-f); border-color: #9db6e0; }
+.g-hoy { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--mal); z-index: 2; }
+.g-ley { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 10px; color: var(--gris); font-size: .8rem; font-weight: 700; }
+.g-ley span { display: inline-flex; align-items: center; gap: .45em; }
+.g-punto { width: 14px; height: 14px; border-radius: 5px; display: inline-block; background: #c6ccd8; }
+.g-punto.completa { background: var(--ok); } .g-punto.en-curso { background: var(--miel); } .g-punto.por-venir { background: var(--azul-f); border: 1px solid #9db6e0; }
+.g-punto.hoy { width: 3px; height: 14px; border-radius: 0; background: var(--mal); }
+.g-lista { display: none; list-style: none; padding: 0; margin: 0; }
+.g-item { border-left: 6px solid #aeb6c6; background: var(--papel); border-radius: 10px; padding: 10px 12px; margin-top: 8px; display: grid; gap: 2px; }
+.g-item > div { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.g-item small { color: var(--gris); font-weight: 700; font-variant-numeric: tabular-nums; }
+.g-item.completa { border-left-color: var(--ok); } .g-item.en-curso { border-left-color: var(--miel); } .g-item.por-venir { border-left-color: #9db6e0; }
+.g-est { font-size: .78rem; font-weight: 800; color: var(--gris); }
+.fechas-ed { margin-top: 18px; padding-top: 14px; border-top: 2px dashed var(--linea); }
+.fechas-ed h3 { font-size: 1.05rem; margin-bottom: 8px; }
+.fechas-grilla { display: grid; gap: 8px; }
+.fechas-fila { display: grid; grid-template-columns: 170px 1fr 1fr; gap: 8px 12px; align-items: end; }
+.fechas-fila label { display: grid; gap: 2px; }
+.fechas-fila small { color: var(--gris); font-weight: 700; }
+.f-check { display: flex; align-items: center; gap: .6em; margin-top: 10px; font-weight: 700; min-height: 32px; }
+.f-check input { width: 20px; height: 20px; }
+.f-ayuda { display: block; margin-top: 6px; color: var(--gris); }
+@media (max-width: 760px) {
+  .g-escritorio { display: none; }
+  .g-lista { display: block; }
+  .proy { padding: 14px 16px; }
+  .fechas-fila { grid-template-columns: 1fr 1fr; }
+  .fechas-fila b { grid-column: 1 / -1; }
+  .etapa-fechas { margin-left: 0; display: flex; margin-top: 4px; }
+}
+
 /* ---------- Carpetas y aprobaciones ---------- */
 .seg2 { display: inline-flex; background: #e3e7ee; border-radius: 14px; padding: 4px; gap: 4px; flex-wrap: wrap; margin-bottom: 18px; }
 .seg2 button { padding: .6em 1.1em; border-radius: 11px; font-weight: 800; color: var(--gris); text-align: left; min-height: 44px; }

@@ -14248,7 +14248,19 @@ def api_impl_aprobaciones_csv(request: Request, pid: IdImpl):
 def api_impl_plan(request: Request, pid: IdImpl):
     with db.get_session() as s:
         _impl_actor_de(request, pid, s)
-        return {"etapas": db.impl_plan(s, pid)}
+        return _impl_cuerpo_plan(s, pid)
+
+
+def _impl_cuerpo_plan(s, pid: int) -> dict:
+    """El plan con sus fechas y la proyección semana por semana (None sin fechas)."""
+    etapas = db.impl_plan(s, pid)
+    proy = db.impl_proyecto(s, pid)
+    cal = implementacion.calendario(
+        [{"id": e["id"], "fecha_desde": e["fecha_desde"], "fecha_hasta": e["fecha_hasta"]} for e in etapas],
+        fechas.hoy_texto())
+    if cal is not None:
+        cal["acordadas"] = bool(proy.fechas_acordadas)
+    return {"etapas": etapas, "calendario": cal, "fechas_acordadas": bool(proy.fechas_acordadas)}
 
 
 def _impl_exigir_equipo_api(actor) -> None:
@@ -14308,6 +14320,20 @@ def api_impl_etapa(request: Request, pid: IdImpl, eid: IdImpl, datos: dict = Bod
         if db.impl_renombrar_etapa(s, pid, eid, actor, str(datos.get("nombre") or "")) is None:
             raise HTTPException(404, "No existe.")
         return {"ok": True, "etapas": db.impl_plan(s, pid)}
+
+
+@app.post(API_IMPL + "/plan/fechas")
+def api_impl_plan_fechas(request: Request, pid: IdImpl, datos: dict = Body(...)):
+    """Fechas tentativas (o acordadas) de las fases. Solo equipo; todo o nada."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        _impl_exigir_equipo_api(actor)
+        acordadas = datos.get("acordadas") if "acordadas" in datos else None
+        if acordadas is not None:
+            acordadas = _impl_bool(acordadas)
+        if not db.impl_fechar_plan(s, pid, actor, datos.get("etapas"), acordadas):
+            raise HTTPException(404, "No existe.")
+        return {"ok": True, **_impl_cuerpo_plan(s, pid)}
 
 
 # ----- Exportación (I3): solo el equipo -----

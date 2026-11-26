@@ -147,6 +147,7 @@ ACCIONES = (
     "usuario_alta", "usuario_clave", "usuario_estado",
     # Plan operativo y exportación (bloque 3/4).
     "hito_editar", "hito_borrar", "etapa_renombrar", "hitos_semilla", "exportar",
+    "plan_fechas",
 )
 
 # Claves de los usuarios del sindicato (I2). La que escribe el equipo es
@@ -459,6 +460,10 @@ def texto_evento(accion: str, detalle: dict) -> str:
         return f"quitó el hito «{d.get('texto', '')}»"
     if accion == "etapa_renombrar":
         return f"renombró la etapa «{d.get('antes', '')}» a «{d.get('despues', '')}»"
+    if accion == "plan_fechas":
+        n = len(d.get("cambios") or [])
+        return (f"ajustó las fechas de {n} {'fase' if n == 1 else 'fases'}" if n
+                else ("marcó las fechas como acordadas" if d.get("acordadas") else "marcó las fechas como tentativas"))
     if accion == "hitos_semilla":
         return f"cargó {d.get('cantidad', 0)} hitos iniciales"
     if accion == "exportar":
@@ -593,6 +598,52 @@ def texto_relacion(clase: str, sentido: str) -> str:
     return TEXTOS_REL.get((clase, sentido), clase)
 
 
+# ---------- Fechas del plan y proyección ----------
+def _a_fecha(texto):
+    return datetime.strptime(texto, "%Y-%m-%d").date()
+
+
+def validar_fechas_fase(desde, hasta, nombre: str = "la fase"):
+    """(desde, hasta) normalizadas: texto ISO o None. Vacío borra; una sola de
+    las dos o desde > hasta es ErrorImpl("fechas")."""
+    d = str(desde or "").strip()
+    h_ = str(hasta or "").strip()
+    if not d and not h_:
+        return None, None
+    if not d or not h_:
+        raise ErrorImpl("fechas", f"Para «{nombre}» cargá las dos fechas (desde y hasta) o ninguna.")
+    if not (fecha_valida(d) and fecha_valida(h_)):
+        raise ErrorImpl("fechas", f"Las fechas de «{nombre}» tienen que ser reales (AAAA-MM-DD).")
+    if _a_fecha(d) > _a_fecha(h_):
+        raise ErrorImpl("fechas", f"En «{nombre}» la fecha de inicio es posterior a la de fin.")
+    return d, h_
+
+
+def calendario(etapas: list, hoy: str = None):
+    """La proyección semana por semana de un plan con fechas: semanas de lunes
+    a domingo desde el lunes de la primera fecha. `etapas` son dicts con id,
+    fecha_desde, fecha_hasta. None si ninguna fase tiene fechas."""
+    from datetime import timedelta
+    con = [e for e in etapas if e.get("fecha_desde") and e.get("fecha_hasta")
+           and fecha_valida(e["fecha_desde"]) and fecha_valida(e["fecha_hasta"])]
+    if not con:
+        return None
+    primero = min(_a_fecha(e["fecha_desde"]) for e in con)
+    ultimo = max(_a_fecha(e["fecha_hasta"]) for e in con)
+    lunes0 = primero - timedelta(days=primero.weekday())
+    n_sem = (ultimo - lunes0).days // 7 + 1
+    semanas = [{"n": i + 1, "lunes": (lunes0 + timedelta(days=7 * i)).isoformat()} for i in range(n_sem)]
+    salida = []
+    for e in con:
+        d, h_ = _a_fecha(e["fecha_desde"]), _a_fecha(e["fecha_hasta"])
+        salida.append({"id": e["id"], "desde": e["fecha_desde"], "hasta": e["fecha_hasta"],
+                       "semana_desde": (d - lunes0).days // 7 + 1, "semana_hasta": (h_ - lunes0).days // 7 + 1,
+                       "dias": (h_ - d).days + 1})
+    hoy = hoy if hoy and fecha_valida(hoy) else None
+    return {"desde": primero.isoformat(), "hasta": ultimo.isoformat(), "semanas": semanas,
+            "hoy": hoy, "etapas": salida}
+
+
 # ---------- Semilla del plan operativo (I7) ----------
 RUTA_HITOS_BANCARIA = Path(__file__).resolve().parent / "data" / "implementacion" / "hitos_bancaria.json"
 
@@ -607,4 +658,17 @@ def cargar_hitos_semilla(ruta=None) -> list:
         if not str(fase.get("etapa", "")).strip() or not textos or not all(textos):
             raise ValueError("La semilla de hitos está mal formada.")
         salida.append((str(fase["etapa"]).strip(), textos))
+    return salida
+
+
+def fechas_semilla(ruta=None) -> list:
+    """[(nombre de etapa, desde, hasta), ...] de la semilla: solo las fases que
+    traen `desde` y `hasta` válidas (tentativas; las reales se acuerdan)."""
+    datos = json.loads(Path(ruta or RUTA_HITOS_BANCARIA).read_text(encoding="utf-8"))
+    salida = []
+    for fase in datos.get("fases", []):
+        nombre = str(fase.get("etapa", "")).strip()
+        d, h_ = validar_fechas_fase(fase.get("desde"), fase.get("hasta"), nombre)
+        if nombre and d:
+            salida.append((nombre, d, h_))
     return salida
