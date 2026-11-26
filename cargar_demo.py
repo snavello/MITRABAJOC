@@ -263,7 +263,7 @@ def borrar_sindicato_completo(s, sindicato_id: int) -> None:
     # cuelgan de ningún sindicato por clave foránea: se las deja afuera de
     # todos modos (PLAN_IMPLEMENTACION.md I3, test_implementacion_db.py).
     tablas = [t for t in SQLModel.metadata.sorted_tables
-              if not t.name.startswith(implementacion.PREFIJO_TABLAS)]
+              if not t.name.startswith((implementacion.PREFIJO_TABLAS, "xsii"))]
     condenados = {"sindicato": {sindicato_id}}
     for tabla in tablas:
         if tabla.name == "sindicato":

@@ -49,6 +49,7 @@ from dotenv import load_dotenv
 import pg_cliente
 import fechas
 import implementacion
+import xsii
 
 load_dotenv()
 
@@ -62,8 +63,10 @@ def tablas_excluidas():
     La Mesa son datos REALES de Pruebas (tarjetas, hilos, aprobaciones,
     archivos del sindicato): la demo no los tiene, y un `pg_restore --clean`
     que los tocara los borraría. El patrón `impl*` cubre tablas y secuencias;
-    `test_implementacion_db.py` verifica que cubra todas las `Impl*` y nada más."""
-    return ["recurso", "recurso_id_seq", implementacion.PREFIJO_TABLAS + "*"]
+    `test_implementacion_db.py` verifica que cubra todas las `Impl*` y nada más.
+    Lo mismo vale para el registro de XSII (`xsii*`: decisiones, insumos y
+    movimientos de la implementación, `test_xsii_db.py`)."""
+    return ["recurso", "recurso_id_seq", implementacion.PREFIJO_TABLAS + "*", xsii.PREFIJO_TABLAS + "*"]
 
 
 def abortar(msg):

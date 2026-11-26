@@ -73,6 +73,13 @@ def test_el_catalogo_valida():
     assert len(catalogo.TAREAS) == 34
 
 
+def test_todo_insumo_de_una_tarea_esta_en_el_catalogo_de_insumos():
+    usados = {i for t in catalogo.TAREAS for i in t.insumos}
+    assert usados == set(catalogo.INSUMOS)
+    for clave, datos in catalogo.INSUMOS.items():
+        assert datos["nombre"] and datos["descripcion"], clave
+
+
 def test_todo_aplica_si_es_un_modulo_de_la_app():
     for t in catalogo.TAREAS:
         if t.aplica_si is not None:

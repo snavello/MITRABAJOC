@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ffffff">
+<title>XSII · {{ proyecto_nombre }}</title>
+{#- XSII, bloque 1 (PLAN_XSII.md X8 a X16; contrato en docs/xsii/API.md).
+    Herramienta del EQUIPO, en claro. La pantalla no decide permisos: dibuja lo
+    que `acciones` dice. Todo texto que viene del servidor lo pone xsii.js con
+    nodos de texto; acá solo viaja el id del proyecto y su nombre. -#}
+<style>
+  @font-face {
+    font-family: "Barlow Condensed";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+</style>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
+<link rel="stylesheet" href="/static/xsii/xsii.css?v={{ sello_static('xsii/xsii.css') }}">
+</head>
+<body>
+<div class="pag">
+{% if es_equipo %}
+  <div class="app">
+    <header class="barra">
+      <div class="marca" aria-label="XSII">XS<i>II</i></div>
+      <div class="proy"><b id="x-proyecto">{{ proyecto_nombre }}</b><span>Implementación inteligente</span></div>
+      <div class="av" id="x-avance" aria-live="polite">
+        <div class="lin"><span id="x-av-txt">Leyendo el estado…</span><span id="x-av-pct" class="num"></span></div>
+        <div class="riel" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Avance de la implementación" id="x-av-riel"><i id="x-av-bar"></i></div>
+      </div>
+      <div class="vistas" role="group" aria-label="Vista">
+        <button type="button" data-v="guia" aria-pressed="true">Guía</button>
+        <button type="button" data-v="tablero" aria-pressed="false">Tablero</button>
+        <button type="button" data-v="mapa" aria-pressed="false">Mapa</button>
+      </div>
+    </header>
+    <main id="x-vista" class="vista" aria-live="polite"></main>
+  </div>
+  <p class="nota"><a href="/entornos">Volver a /entornos</a></p>
+{% else %}
+  <div class="app">
+    <div class="vista">
+      <div class="marca" aria-label="XSII">XS<i>II</i></div>
+      <h1 class="disp vacio-t">Esta es una herramienta del equipo</h1>
+      <p>Para usar XSII entrá con tu usuario de plataforma desde la landing interna.</p>
+      <p><a class="btn p" href="/entornos">Ir a /entornos</a></p>
+    </div>
+  </div>
+{% endif %}
+</div>
+{% if es_equipo %}
+<script type="application/json" id="xsii-datos">{{ {"pid": pid, "proyecto": proyecto_nombre}|tojson }}</script>
+<script src="/static/xsii/xsii.js?v={{ sello_static('xsii/xsii.js') }}"></script>
+{% endif %}
+</body>
+</html>

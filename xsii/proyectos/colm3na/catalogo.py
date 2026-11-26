@@ -19,6 +19,24 @@ from xsii.motor.catalogo import Tarea
 
 GRUPOS = ("Base", "Estructura", "Recibos", "Padrón", "Trámites", "Comunicación", "Cierre")
 
+# Lo que entrega el cliente y una tarea necesita (`Tarea.insumos`): nombre y
+# descripción para la pantalla. Una tarea que nombra un insumo que no está acá
+# no pasa `test_xsii_colm3na.py`.
+INSUMOS = {
+    "lista_seccionales": {
+        "nombre": "Lista de seccionales",
+        "descripcion": "Las seccionales del sindicato con su domicilio, tal como las tiene el sindicato."},
+    "recibos_muestra": {
+        "nombre": "Recibos de muestra",
+        "descripcion": "Entre 30 y 60 recibos de varios empleadores, entregados por el sindicato."},
+    "porcentajes_cuota": {
+        "nombre": "Porcentajes de la cuota sindical",
+        "descripcion": "Cuánto se descuenta de cuota sindical y de aporte solidario, y sobre qué base."},
+    "planilla_padron": {
+        "nombre": "Planilla del padrón",
+        "descripcion": "La planilla de afiliados entregada por el sindicato, con el total declarado."},
+}
+
 # Una tarea es una función de controles.py con el MISMO nombre que `control`.
 TAREAS = (
     # ---------------------------------------------------------------- Base

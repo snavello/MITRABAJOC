@@ -11394,7 +11394,50 @@ fecha de fin sin completarse no dice «Por venir» sino «Revisar», en rojo, co
 o sin hitos hechos. Que mover el inicio no corra el fin de la propia fase queda
 así por ahora.
 
-## Mesa de implementación: editar una tarjeta, con registro (2026-11-26, Plataforma 0.78.01)
+## XSII bloque 1: la pantalla, el registro y las decisiones (2026-11-26, Plataforma 0.78.01)
+
+Continúa `PLAN_XSII.md` (que no se edita). Sin IA: estados y paso recomendado
+salen del motor.
+
+**Qué se hizo.** Contrato escrito antes (`docs/xsii/API.md`) para que servidor
+y pantalla avanzaran a la vez. Motor: `decisiones` pasa a ser una lista por
+tarea. Tablas `XsiiDecision`, `XsiiInsumo`, `XsiiMovimiento` (migración
+`a4c6e8b0d2f4`). Rutas `/api/entornos/xsii/*` y la página
+`/entornos/xsii/{pid}`, por proyecto de la Mesa, con la puerta del equipo
+(usuario de plataforma nominal: cada acción necesita un nombre para el
+registro, así que el PIN solo no alcanza). Pantalla con identidad propia según
+la maqueta 2: Guía, Tablero, Mapa y ficha. Tutorial con capturas reales en
+Recursos.
+
+**Decisiones tomadas al construir (más allá de X1 a X20).**
+- Una tarea puede tener varias marcas activas; «no aplica» y «completada a
+  mano» se excluyen entre sí.
+- Confirmar exige que el control pase y que el insumo esté recibido. Completar
+  a mano no lo exige: es la válvula de X15.
+- Pendiente del bloque 0 resuelto: con datos ya cargados (control en curso, o
+  que pasa en una tarea que no es solo confirmación) la tarea no «espera un
+  dato»; la ficha avisa que el insumo no está registrado. REC-01 y PAD-01, que
+  son solo confirmación, siguen esperando hasta registrar el insumo.
+- Insumo: `pedido` o `recibido`, con tarjeta de la Mesa del MISMO proyecto
+  opcional. «Demorado» desde los 2 días.
+- Los movimientos guardan además la clave del insumo, para que el historial de
+  una tarea incluya los de sus insumos.
+
+**Lo que encontró el QA independiente y se corrigió antes del merge.**
+Servidor (165 ataques): dos pedidos simultáneos dejaban «completada a mano» y
+«no aplica» activas a la vez (candado por tarea y revalidación adentro); un
+motivo hecho de caracteres invisibles pasaba por obligatorio; un NUL en el
+filtro de movimientos y una tarjeta de 5.000 dígitos daban 500; en demo un id
+no numérico respondía 422 y delataba la ruta; se podía confirmar «Padrón
+recibido» sin el insumo. Pantalla (navegador contra el servidor real): 4 de 37
+flechas del Mapa cruzaban cajas (ahora van solo por pasillos, medido en 0
+cruces); el Tablero se cortaba en el teléfono; una tarea resuelta decía «antes
+hay que resolver…»; «pedido hace 0 días» figuraba como demorado.
+
+**Queda.** `XsiiInsumo.archivo_id` existe y ninguna ruta lo escribe (bloque
+5). «Reclamar en la Mesa» es un enlace: crear la tarjeta desde XSII llega con
+el asistente.
+## Mesa de implementación: editar una tarjeta, con registro (2026-11-26, Plataforma 0.79.01)
 
 **El problema (SDN).** Una tarjeta creada no se podía corregir: cargó una con
 la fecha límite ya pasada y nació vencida. Pidió que el equipo pueda

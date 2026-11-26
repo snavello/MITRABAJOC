@@ -460,7 +460,9 @@ def test_clonar_demo_a_pruebas_excluye_las_tablas_impl():
         assert any(fnmatch.fnmatchcase(tabla, p) for p in patrones), f"{tabla} entra al dump de la demo"
         assert any(fnmatch.fnmatchcase(f"{tabla}_id_seq", p) for p in patrones)
     # y el patrón no se come tablas que no son de la Mesa
-    otras = [t for t in SQLModel.metadata.tables if not t.startswith(im.PREFIJO_TABLAS)]
+    # (las `xsii*` también se excluyen a propósito: test_xsii_db.py)
+    otras = [t for t in SQLModel.metadata.tables
+             if not t.startswith((im.PREFIJO_TABLAS, db.XSII_PREFIJO_TABLAS))]
     comidas = [t for t in otras if any(fnmatch.fnmatchcase(t, p) for p in patrones if p != "recurso")]
     assert comidas == []
     fuente = (RAIZ / "clonar_demo_a_pruebas.py").read_text(encoding="utf-8")
