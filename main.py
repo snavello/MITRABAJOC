@@ -14328,9 +14328,7 @@ def api_impl_plan_fechas(request: Request, pid: IdImpl, datos: dict = Body(...))
     with db.get_session() as s:
         actor = _impl_actor_de(request, pid, s)
         _impl_exigir_equipo_api(actor)
-        acordadas = datos.get("acordadas") if "acordadas" in datos else None
-        if acordadas is not None:
-            acordadas = _impl_bool(acordadas)
+        acordadas = datos.get("acordadas")   # bool o None; otra cosa la rechaza db
         if not db.impl_fechar_plan(s, pid, actor, datos.get("etapas"), acordadas):
             raise HTTPException(404, "No existe.")
         return {"ok": True, **_impl_cuerpo_plan(s, pid)}

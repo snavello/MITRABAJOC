@@ -603,20 +603,40 @@ def _a_fecha(texto):
     return datetime.strptime(texto, "%Y-%m-%d").date()
 
 
+ANIO_MIN_FASE, ANIO_MAX_FASE = 2000, 2099
+MAX_SEMANAS_PLAN = 260          # cinco años: un plan más largo es un error de tipeo
+_RE_FECHA_ISO = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+
+
 def validar_fechas_fase(desde, hasta, nombre: str = "la fase"):
-    """(desde, hasta) normalizadas: texto ISO o None. Vacío borra; una sola de
-    las dos o desde > hasta es ErrorImpl("fechas")."""
-    d = str(desde or "").strip()
-    h_ = str(hasta or "").strip()
-    if not d and not h_:
+    """(desde, hasta) normalizadas: texto ISO AAAA-MM-DD o None. Vacío borra; una
+    sola de las dos o desde > hasta es ErrorImpl("fechas"). Solo dígitos ASCII
+    con ceros (nada de «2026-3-1» ni cifras de ancho completo) y años 2000-2099:
+    la proyección dibuja una columna por semana."""
+    d = desde.strip() if isinstance(desde, str) else ("" if desde in (None, False) else desde)
+    h_ = hasta.strip() if isinstance(hasta, str) else ("" if hasta in (None, False) else hasta)
+    if d == "" and h_ == "":
         return None, None
-    if not d or not h_:
+    if d == "" or h_ == "":
         raise ErrorImpl("fechas", f"Para «{nombre}» cargá las dos fechas (desde y hasta) o ninguna.")
-    if not (fecha_valida(d) and fecha_valida(h_)):
+    if not (isinstance(d, str) and isinstance(h_, str) and _RE_FECHA_ISO.match(d)
+            and _RE_FECHA_ISO.match(h_) and fecha_valida(d) and fecha_valida(h_)):
         raise ErrorImpl("fechas", f"Las fechas de «{nombre}» tienen que ser reales (AAAA-MM-DD).")
+    if not (ANIO_MIN_FASE <= int(d[:4]) <= ANIO_MAX_FASE and ANIO_MIN_FASE <= int(h_[:4]) <= ANIO_MAX_FASE):
+        raise ErrorImpl("fechas", f"Las fechas de «{nombre}» tienen que estar entre {ANIO_MIN_FASE} y {ANIO_MAX_FASE}.")
     if _a_fecha(d) > _a_fecha(h_):
         raise ErrorImpl("fechas", f"En «{nombre}» la fecha de inicio es posterior a la de fin.")
     return d, h_
+
+
+def semanas_del_plan(rangos) -> int:
+    """Cuántas semanas abarcan [(desde, hasta)] ISO ya validadas (0 si no hay)."""
+    from datetime import timedelta
+    rs = [(_a_fecha(a), _a_fecha(b)) for a, b in rangos if a and b]
+    if not rs:
+        return 0
+    primero = min(a for a, _ in rs)
+    return (max(b for _, b in rs) - (primero - timedelta(days=primero.weekday()))).days // 7 + 1
 
 
 def calendario(etapas: list, hoy: str = None):

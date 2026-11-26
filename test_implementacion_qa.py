@@ -1344,3 +1344,42 @@ def test_doble_recepcion_concurrente_deja_una_sola():
 
 def _cliente_sindicato_de(pid):
     return _cliente_sindicato(pid, "Otra Carla")
+
+
+def test_plan_fechas_qa_formato_estricto_rango_y_duplicados():
+    """QA fechas: nada de fechas sin ceros ni cifras de ancho completo (se guardaban
+    tal cual), años fuera de 2000-2099 (9999 devolvía 14 MB de semanas), ids
+    repetidos o no enteros, 'acordadas' que no es booleano ni plan de más de cinco años."""
+    pid, eq, sin = _mundo()
+    et = eq.get(_api(pid, "plan")).json()["etapas"]
+    e1, e2 = et[0]["id"], et[1]["id"]
+    ok = {"id": e1, "desde": "2026-03-02", "hasta": "2026-03-13"}
+
+    def post(cuerpo):
+        return eq.post(_api(pid, "plan/fechas"), json=cuerpo)
+
+    def nada_escrito():
+        return all(e["fecha_desde"] is None for e in eq.get(_api(pid, "plan")).json()["etapas"])
+
+    malos = [
+        {"etapas": [ok, {"id": e2, "desde": "2026-3-1", "hasta": "2026-3-5"}]},
+        {"etapas": [ok, {"id": e2, "desde": "２０２６-03-01", "hasta": "2026-03-05"}]},
+        {"etapas": [ok, {"id": e2, "desde": "0001-01-01", "hasta": "2026-03-05"}]},
+        {"etapas": [ok, {"id": e2, "desde": "2026-01-01", "hasta": "9999-12-31"}]},
+        {"etapas": [ok, {"id": e2, "desde": "2026-01-01", "hasta": "2090-01-01"}]},
+        {"etapas": [ok, {"id": e1, "desde": "2026-04-01", "hasta": "2026-04-02"}]},          # id repetido
+        {"etapas": [{"id": float(e1) + 0.5, "desde": "2026-03-02", "hasta": "2026-03-13"}]},
+        {"etapas": [{"id": True, "desde": "2026-03-02", "hasta": "2026-03-13"}]},
+        {"etapas": [], "acordadas": "tal"},
+        {"etapas": [], "acordadas": 0},
+        {"etapas": [ok], "acordadas": ["x"]},
+    ]
+    for cuerpo in malos:
+        r = post(cuerpo)
+        assert r.status_code == 400, (cuerpo, r.status_code, r.text[:200])
+        assert nada_escrito(), cuerpo
+    # lo válido se guarda normalizado y los espacios no estorban
+    r = post({"etapas": [{"id": e1, "desde": " 2026-03-02 ", "hasta": "2026-03-13"}], "acordadas": False})
+    assert r.status_code == 200 and r.json()["etapas"][0]["fecha_desde"] == "2026-03-02"
+    # el sindicato no puede, ni siquiera con un cuerpo inválido (403 antes que 400)
+    assert sin.post(_api(pid, "plan/fechas"), json={"etapas": "x"}).status_code == 403

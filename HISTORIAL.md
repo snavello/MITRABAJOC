@@ -11356,3 +11356,35 @@ D48 de `PLAN_CONVENIO_ESCALAS.md`.
 
 Hecho por tres agentes en paralelo (backend, frontend, curado) y un QA
 independiente contra la app real.
+
+## Mesa de implementación: fechas por fase y proyección del plan (2026-11-26, Plataforma 0.77.01)
+
+**Por qué no había fechas.** El plan general habla de semanas de referencia y
+al revisar los 45 hitos de La Bancaria (2026-11-14) SDN pidió dejarlos sin días
+ni semanas. El 2026-11-26 pidió una proyección en el tiempo para mostrar, con
+fechas tentativas a partir del 1/12, que después se ajusten: las reales se
+acuerdan en Preparar y Acordar.
+
+**I18 (decisión de SDN, continúa `PLAN_IMPLEMENTACION.md`).** Cada fase tiene
+fecha de inicio y de fin; el proyecto dice si son tentativas o acordadas. El
+calendario lineal de 13 semanas desde el 1/12 dejaba la entrega de datos en
+Navidad, el entorno de prueba entre las fiestas y el piloto en enero: se eligió
+el ajustado. Preparar 1/12 al 4/12, Acordar 7/12 al 11/12, Relevar 14/12 al
+23/12, receso, Configurar 4/1 al 29/1, Piloto 1/2 al 12/3, Implementación total
+15/3 al 14/5.
+
+**Qué se hizo.** Migración `f7b1d3e5a9c2` (idempotente, como las otras de la
+Mesa). `implementacion.calendario` arma semanas de lunes a domingo desde el
+lunes de la primera fecha. En `#plan`, arriba de los bloques de las fases, el
+bloque «Proyección»: una barra por fase, línea de hoy, chip de tentativas o
+acordadas; en teléfono, lista. Edición dentro de «Editar plan».
+
+**Lo que encontró el QA independiente y se corrigió antes del merge.** Una
+fecha `9999-12-31` hacía devolver unas 400.000 semanas (14 MB): tope de años y
+de 260 semanas. Fechas sin ceros o con cifras de ancho completo se guardaban
+tal cual: ISO estricto. Un id de fase repetido ganaba el último en silencio, y
+un `acordadas` mal tipado destildaba la marca: los dos dan 400.
+
+**Queda a decidir.** Una fase cuyas fechas pasaron y no tiene hitos hechos se
+muestra «Por venir» (¿«Atrasada»?). Al mover el inicio de una fase con «Mover
+también las siguientes» no se corre su propio fin.

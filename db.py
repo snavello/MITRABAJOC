@@ -11808,14 +11808,24 @@ def impl_fechar_plan(s: Session, proyecto_id: int, actor, fechas_etapas: list,
     for f in fechas_etapas:
         if not isinstance(f, dict):
             raise implementacion.ErrorImpl("fechas", "Cada fase tiene que traer id, desde y hasta.")
+        crudo = f.get("id")
+        if isinstance(crudo, bool) or not isinstance(crudo, (int, str)):
+            raise implementacion.ErrorImpl("etapa", "Fase inválida.")
         try:
-            eid = int(f.get("id"))
-        except (TypeError, ValueError):
+            eid = int(crudo)
+        except ValueError:
             raise implementacion.ErrorImpl("etapa", "Fase inválida.")
         if eid not in etapas:
             raise implementacion.ErrorImpl("etapa", "Una de las fases no es de este proyecto.")
+        if eid in nuevas:
+            raise implementacion.ErrorImpl("fechas", "Una fase viene repetida.")
         desde, hasta = implementacion.validar_fechas_fase(f.get("desde"), f.get("hasta"), etapas[eid].nombre)
         nuevas[eid] = (desde, hasta)
+    if acordadas is not None and not isinstance(acordadas, bool):
+        raise implementacion.ErrorImpl("fechas", "«Acordadas» es sí o no.")
+    final = [nuevas.get(i, (e.fecha_desde, e.fecha_hasta)) for i, e in etapas.items()]
+    if implementacion.semanas_del_plan(final) > implementacion.MAX_SEMANAS_PLAN:
+        raise implementacion.ErrorImpl("fechas", "El plan abarca demasiado tiempo: revisá las fechas.")
     cambios = []
     for eid, (desde, hasta) in nuevas.items():
         e = etapas[eid]
