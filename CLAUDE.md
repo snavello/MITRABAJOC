@@ -2569,6 +2569,17 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   espera para siempre. Sentry va con `max_request_body_size="never"`.
   `test_implementacion_sentry.py` corre la API con Sentry prendido desde el
   arranque, en otro proceso y con tope de tiempo.
+- **El plan tiene fechas por fase y una proyección semana por semana**
+  (2026-11-26, Plataforma 0.77.01, I18): `ImplEtapa.fecha_desde`/`fecha_hasta`
+  (ISO, NULL = sin fecha) y `ImplProyecto.fechas_acordadas` (False =
+  «Fechas tentativas»). La proyección la arma el servidor
+  (`implementacion.calendario`, puro; «hoy» de `fechas.py`) y viaja en
+  `GET plan`; la ven los dos lados. Solo el equipo las cambia, todas juntas y
+  todo o nada (`POST plan/fechas`, `db.impl_fechar_plan`): ISO estricto, años
+  2000 a 2099 y como mucho `MAX_SEMANAS_PLAN` (260) de punta a punta.
+  «Mover también las fases siguientes» es del navegador. La semilla de La
+  Bancaria trae fechas tentativas (`cargar_implementacion_bancaria.py
+  --fechas` las pone solo donde no hay).
 - Tests: `test_implementacion.py` (motor), `_db`, `_acceso`, `_api`,
   `_codigos`, `_pantalla`, `_sentry` y `_qa` (los del QA independiente).
 

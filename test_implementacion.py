@@ -174,3 +174,38 @@ def test_i16_acciones_de_una_entrega_recibido_y_problema_son_del_lado_que_no_la_
         assert ac["recibido"] is False and ac["problema"] is False
     assert im.puede_transicionar("entrega", "respondida", "cerrada") is False
     assert im.puede_transicionar("pedido", "respondida", "cerrada") is True
+
+
+def test_calendario_proyecta_semanas_de_lunes_a_domingo():
+    assert im.calendario([{"id": 1, "fecha_desde": None, "fecha_hasta": None}], "2026-12-01") is None
+    assert im.calendario([], "2026-12-01") is None
+    etapas = [{"id": 1, "fecha_desde": "2026-12-01", "fecha_hasta": "2026-12-04"},
+              {"id": 2, "fecha_desde": "2026-12-07", "fecha_hasta": "2026-12-11"},
+              {"id": 3, "fecha_desde": None, "fecha_hasta": None},
+              {"id": 4, "fecha_desde": "2027-01-04", "fecha_hasta": "2027-01-29"}]
+    c = im.calendario(etapas, "2026-12-08")
+    assert c["desde"] == "2026-12-01" and c["hasta"] == "2027-01-29" and c["hoy"] == "2026-12-08"
+    assert c["semanas"][0] == {"n": 1, "lunes": "2026-11-30"} and c["semanas"][1]["lunes"] == "2026-12-07"
+    assert len(c["semanas"]) == 9 and c["semanas"][-1]["lunes"] == "2027-01-25"
+    por = {e["id"]: e for e in c["etapas"]}
+    assert set(por) == {1, 2, 4}
+    assert (por[1]["semana_desde"], por[1]["semana_hasta"], por[1]["dias"]) == (1, 1, 4)
+    assert (por[2]["semana_desde"], por[2]["semana_hasta"]) == (2, 2)
+    assert (por[4]["semana_desde"], por[4]["semana_hasta"], por[4]["dias"]) == (6, 9, 26)
+
+
+def test_validar_fechas_fase():
+    assert im.validar_fechas_fase("", None) == (None, None)
+    assert im.validar_fechas_fase(" 2026-12-01 ", "2026-12-01") == ("2026-12-01", "2026-12-01")
+    for d, h in (("2026-12-01", ""), ("", "2026-12-01"), ("2026-12-05", "2026-12-01"), ("hoy", "2026-12-01"),
+                 ("2026-13-01", "2026-13-02")):
+        with pytest.raises(im.ErrorImpl):
+            im.validar_fechas_fase(d, h)
+
+
+def test_fechas_semilla_de_la_bancaria_son_seis_fases_en_orden_sin_solaparse():
+    f = im.fechas_semilla()
+    assert [n for n, _, _ in f] == [n for n, _ in im.cargar_hitos_semilla()]
+    assert len(f) == 6 and f[0][1] == "2026-12-01" and f[-1][2] == "2027-05-14"
+    for (_, _, h1), (_, d2, _) in zip(f, f[1:]):
+        assert h1 < d2

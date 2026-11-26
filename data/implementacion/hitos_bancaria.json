@@ -4,6 +4,8 @@
   "fases": [
     {
       "etapa": "Preparar",
+      "desde": "2026-12-01",
+      "hasta": "2026-12-04",
       "hitos": [
         {
           "texto": "Reunión estratégica con las autoridades realizada y acta cargada. Se informa que se van a pedir recibos, contactos, usuarios para la implementación y el primer padrón de afiliados.",
@@ -28,6 +30,8 @@
     },
     {
       "etapa": "Acordar",
+      "desde": "2026-12-07",
+      "hasta": "2026-12-11",
       "hitos": [
         {
           "texto": "Todos los referentes nombrados (técnico, convenio y liquidación, comunicación, legal, seccionales)."
@@ -54,6 +58,8 @@
     },
     {
       "etapa": "Relevar",
+      "desde": "2026-12-14",
+      "hasta": "2026-12-23",
       "hitos": [
         {
           "texto": "Taller de padrón y alta de afiliados hecho."
@@ -86,6 +92,8 @@
     },
     {
       "etapa": "Configurar",
+      "desde": "2027-01-04",
+      "hasta": "2027-01-29",
       "hitos": [
         {
           "texto": "Alta del sindicato con logo, colores y módulos; primer administrador con su clave elegida."
@@ -115,6 +123,8 @@
     },
     {
       "etapa": "Piloto",
+      "desde": "2027-02-01",
+      "hasta": "2027-03-12",
       "hitos": [
         {
           "texto": "Configuración aceptada pasada al entorno definitivo."
@@ -144,6 +154,8 @@
     },
     {
       "etapa": "Implementación total",
+      "desde": "2027-03-15",
+      "hasta": "2027-05-14",
       "hitos": [
         {
           "texto": "Orden de las oleadas de seccionales y comunicación institucional acordados."
@@ -168,5 +180,6 @@
         }
       ]
     }
-  ]
+  ],
+  "fechas_nota": "Fechas tentativas; las definitivas se acuerdan en las fases Preparar y Acordar."
 }

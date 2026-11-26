@@ -171,6 +171,8 @@ def test_ids_de_otro_proyecto_son_indistinguibles_de_un_id_inexistente():
                           ("borrar", {"borrar": True}), ("orden", {"orden": 1})):
         par("hito " + clave, lambda c, i, cuerpo=cuerpo: c.post(_api(p1, f"plan/hitos/{i['h']}"), json=cuerpo))
     par("etapa", lambda c, i: c.post(_api(p1, f"plan/etapas/{i['e']}"), json={"nombre": "zzz"}))
+    par("fechas de una etapa ajena", lambda c, i: c.post(_api(p1, "plan/fechas"), json={
+        "etapas": [{"id": i["e"], "desde": "2026-12-01", "hasta": "2026-12-04"}]}))
     par("hito nuevo", lambda c, i: c.post(_api(p1, "plan/hitos"), json={"etapa_id": i["e"], "texto": "zzz"}))
     par("crear con etapa ajena", lambda c, i: c.post(_api(p1, "tarjetas"), data={
         "tipo": "pedido", "titulo": "t", "texto": "t", "etapa_id": i["e"]}))
@@ -782,7 +784,7 @@ def test_ids_gigantes_no_dan_500(big):
 def test_json_y_multipart_malformados_no_dan_500():
     pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
     for body in (b"", b"null", b"[]", b'"x"', b"{", b"123", b"\xff\xfe"):
-        for ruta in (f"tarjetas/{ap}/aprobacion", f"tarjetas/{t}/reasignar", "plan/hitos", f"plan/hitos/{hito}", f"plan/etapas/{etapa}"):
+        for ruta in (f"tarjetas/{ap}/aprobacion", f"tarjetas/{t}/reasignar", "plan/hitos", "plan/fechas", f"plan/hitos/{hito}", f"plan/etapas/{etapa}"):
             r = eq.post(_api(pid, ruta), content=body, headers={"content-type": "application/json"})
             assert r.status_code < 500, (ruta, body, r.status_code)
         assert eq.post(_eq_url("proyectos"), content=body, headers={"content-type": "application/json"}).status_code < 500
@@ -1342,3 +1344,42 @@ def test_doble_recepcion_concurrente_deja_una_sola():
 
 def _cliente_sindicato_de(pid):
     return _cliente_sindicato(pid, "Otra Carla")
+
+
+def test_plan_fechas_qa_formato_estricto_rango_y_duplicados():
+    """QA fechas: nada de fechas sin ceros ni cifras de ancho completo (se guardaban
+    tal cual), años fuera de 2000-2099 (9999 devolvía 14 MB de semanas), ids
+    repetidos o no enteros, 'acordadas' que no es booleano ni plan de más de cinco años."""
+    pid, eq, sin = _mundo()
+    et = eq.get(_api(pid, "plan")).json()["etapas"]
+    e1, e2 = et[0]["id"], et[1]["id"]
+    ok = {"id": e1, "desde": "2026-03-02", "hasta": "2026-03-13"}
+
+    def post(cuerpo):
+        return eq.post(_api(pid, "plan/fechas"), json=cuerpo)
+
+    def nada_escrito():
+        return all(e["fecha_desde"] is None for e in eq.get(_api(pid, "plan")).json()["etapas"])
+
+    malos = [
+        {"etapas": [ok, {"id": e2, "desde": "2026-3-1", "hasta": "2026-3-5"}]},
+        {"etapas": [ok, {"id": e2, "desde": "２０２６-03-01", "hasta": "2026-03-05"}]},
+        {"etapas": [ok, {"id": e2, "desde": "0001-01-01", "hasta": "2026-03-05"}]},
+        {"etapas": [ok, {"id": e2, "desde": "2026-01-01", "hasta": "9999-12-31"}]},
+        {"etapas": [ok, {"id": e2, "desde": "2026-01-01", "hasta": "2090-01-01"}]},
+        {"etapas": [ok, {"id": e1, "desde": "2026-04-01", "hasta": "2026-04-02"}]},          # id repetido
+        {"etapas": [{"id": float(e1) + 0.5, "desde": "2026-03-02", "hasta": "2026-03-13"}]},
+        {"etapas": [{"id": True, "desde": "2026-03-02", "hasta": "2026-03-13"}]},
+        {"etapas": [], "acordadas": "tal"},
+        {"etapas": [], "acordadas": 0},
+        {"etapas": [ok], "acordadas": ["x"]},
+    ]
+    for cuerpo in malos:
+        r = post(cuerpo)
+        assert r.status_code == 400, (cuerpo, r.status_code, r.text[:200])
+        assert nada_escrito(), cuerpo
+    # lo válido se guarda normalizado y los espacios no estorban
+    r = post({"etapas": [{"id": e1, "desde": " 2026-03-02 ", "hasta": "2026-03-13"}], "acordadas": False})
+    assert r.status_code == 200 and r.json()["etapas"][0]["fecha_desde"] == "2026-03-02"
+    # el sindicato no puede, ni siquiera con un cuerpo inválido (403 antes que 400)
+    assert sin.post(_api(pid, "plan/fechas"), json={"etapas": "x"}).status_code == 403
