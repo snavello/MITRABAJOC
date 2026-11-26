@@ -506,3 +506,34 @@ def test_recargar_la_demo_no_borra_la_mesa():
         assert db.impl_tarjeta(s, pid, tid) is not None
         assert len(db.impl_carpetas(s, pid, EQ, "entrada")) == 1
         assert len(db.impl_etapas(s, pid)) == 6
+
+
+# ---------- Fechas del plan ----------
+def test_impl_fechar_plan_valido_invalido_y_atomico(proy):
+    with db.get_session() as s:
+        e = db.impl_etapas(s, proy)
+        otro = db.impl_crear_proyecto(s, "Otro", EQ)
+        ajena = db.impl_etapas(s, otro.id)[0].id
+        assert db.impl_fechar_plan(s, proy, EQ, [{"id": e[0].id, "desde": "2026-12-01", "hasta": "2026-12-04"},
+                                                 {"id": e[1].id, "desde": "2026-12-07", "hasta": "2026-12-11"}]) is True
+        plan = db.impl_plan(s, proy)
+        assert (plan[0]["fecha_desde"], plan[0]["fecha_hasta"]) == ("2026-12-01", "2026-12-04")
+        assert db.impl_proyecto(s, proy).fechas_acordadas is False
+        # inválido en la segunda fila: la primera tampoco se escribe
+        for malo in ({"id": e[1].id, "desde": "2026-12-12", "hasta": "2026-12-11"},
+                     {"id": e[1].id, "desde": "2026-12-12", "hasta": ""},
+                     {"id": ajena, "desde": "2026-12-12", "hasta": "2026-12-13"}):
+            with pytest.raises(ErrorImpl):
+                db.impl_fechar_plan(s, proy, EQ, [{"id": e[0].id, "desde": "2030-01-01", "hasta": "2030-01-02"}, malo])
+            s.rollback()
+            assert db.impl_plan(s, proy)[0]["fecha_desde"] == "2026-12-01"
+        assert db.impl_plan(s, otro.id)[0]["fecha_desde"] is None
+        # el sindicato no
+        with pytest.raises(ErrorImpl):
+            db.impl_fechar_plan(s, proy, SI, [])
+        # vacío borra, acordadas se marca, y deja eventos
+        db.impl_fechar_plan(s, proy, EQ, [{"id": e[0].id, "desde": "", "hasta": ""}], acordadas=True)
+        assert db.impl_plan(s, proy)[0]["fecha_desde"] is None and db.impl_proyecto(s, proy).fechas_acordadas is True
+        assert db.impl_fechar_plan(s, 99999999, EQ, []) is False
+    acciones = [x["accion"] if isinstance(x, dict) else x.accion for x in _eventos(proy)]
+    assert acciones.count("plan_fechas") == 2

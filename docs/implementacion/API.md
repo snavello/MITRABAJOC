@@ -33,10 +33,11 @@ corresponde a `implementacion.ErrorImpl` (403, 409, 400, 410).
 - `GET  carpetas?sentido=entrada|salida` → `{etapas:[{etapa, archivos:[Archivo + tarjeta_numero, tarjeta_titulo]}]}`
 - `GET  aprobaciones` → `{aprobaciones:[{numero,titulo,estado,pedida_por,pedida_en,resuelta_por,resuelta_en,texto}]}`
 - `GET  aprobaciones.csv`
-- `GET  plan` → `{etapas:[{id,nombre,orden,pct,hitos:[{id,texto,orden,hecho,hecho_por,hecho_en,tarjetas:[{numero,titulo,estado}]}]}]}`
+- `GET  plan` → `{etapas:[{id,nombre,orden,fecha_desde,fecha_hasta,pct,hitos:[{id,texto,orden,hecho,hecho_por,hecho_en,tarjetas:[{numero,titulo,estado}]}]}], fechas_acordadas, calendario}`
 - `POST plan/hitos` (JSON: etapa_id, texto) — solo equipo
 - `POST plan/hitos/{hid}` (JSON: hecho? , texto?, orden?, borrar?) — tildar: los dos lados; el resto solo equipo
 - `POST plan/etapas/{eid}` (JSON: nombre) — solo equipo
+- `POST plan/fechas` (JSON: `{etapas:[{id,desde,hasta}], acordadas?}`) — solo equipo; todo o nada; devuelve `{ok, etapas, calendario, fechas_acordadas}`
 - `GET  exportar.zip` — solo equipo: tarjetas, hilos, eventos, aprobaciones (JSON + CSV) y archivos
 
 ## Formas
@@ -65,6 +66,7 @@ Con el canal apagado no falla nada. El equipo recibe en el mail de su
 - **`acciones.estados`** es `[{id, nombre}]` con los destinos elegibles al responder (sin «abierta»). **Reabrir** (tarjeta cerrada) va por `responder` con `estado_nuevo=abierta` (texto opcional) y se habilita con `acciones.reabrir`; en una cerrada `responder` es false.
 - Un **aviso** no se responde ni admite archivos después de nacer: todas sus acciones son false. Su `GET tarjetas/{tid}` suma `lecturas: [{nombre, lado, cuando}]`; se marca leído con `POST .../leido`.
 - **Plan**: `POST plan/hitos`, `plan/hitos/{hid}` y `plan/etapas/{eid}` devuelven `{ok, etapas}` (el mismo cuerpo que `GET plan`). `orden` es la posición 1..n dentro de la etapa. Tildar acepta `hecho` solo; texto/orden/borrar son solo del equipo (403 aunque vengan mezclados con `hecho`).
+- **Fechas del plan**: `fecha_desde`/`fecha_hasta` por etapa (texto `AAAA-MM-DD`, `null` = sin fecha) y `fechas_acordadas` del proyecto (`false` = tentativas). `POST plan/fechas` valida todo antes de escribir: cada `id` tiene que ser una etapa del proyecto, las fechas reales, `desde <= hasta`, y las dos o ninguna (vacías = se borran); si algo falla, 400 con el motivo y no se escribe nada (una etapa ajena da el mismo 400 que una inexistente). Deja el evento `plan_fechas` (solo equipo). `calendario` es `null` si ninguna fase tiene fechas; si no: `{desde, hasta, hoy, acordadas, semanas:[{n, lunes}], etapas:[{id, desde, hasta, semana_desde, semana_hasta, dias}]}`, con semanas de lunes a domingo desde el lunes de la primera fecha y `hoy` de la hora de Buenos Aires. El sindicato lee todo y no escribe (403). `exportar.zip` las incluye en `etapas.json` y `proyecto.json`.
 - **Carpetas**: cada grupo es `{etapa, etapa_id, archivos}` (`etapa` = «Sin etapa» si la tarjeta no tiene), los borrados siguen listados como constancia (`borrado: true`).
 - **Aprobaciones**: suma `etapa`; `texto` es el mensaje con que se resolvió.
 - **Avisos por mail**: también un **aviso** (tipo) al nacer le llega al otro lado, aunque no espere respuesta. Cerrar no avisa a nadie.

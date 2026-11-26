@@ -333,3 +333,21 @@ def test_i16_el_cliente_no_cierra_una_entrega_por_el_selector():
     # el selector de estado del redactor se arma solo con los destinos de `acciones.estados`
     assert "estadosPermitidos(acc)" in js
     assert "textContent" in js and "innerHTML" not in js
+
+
+def test_la_proyeccion_del_plan_se_dibuja_sin_innerhtml_y_con_edicion_solo_del_equipo():
+    js = _sin_comentarios(_texto(JS))
+    css = _texto(CSS)
+    assert "innerHTML" not in js
+    for pieza in ("function dibujarProyeccion", "function dibujarEditorFechas", "'plan/fechas'",
+                  "Fechas tentativas", "Fechas acordadas", "Las fechas definitivas se acuerdan en las fases Preparar y Acordar.",
+                  "Mover también las fases siguientes", "Fechas acordadas con el sindicato", "Guardar fechas", "Sin fechas todavía"):
+        assert pieza in js, pieza
+    # el editor solo existe dentro de «Editar plan» y solo para el equipo
+    assert "if (edita) sec.appendChild(dibujarEditorFechas())" in js and "const edita = ES_EQUIPO && S.editarPlan" in js
+    assert "if (!cal && !ES_EQUIPO) return null" in js
+    for clase in (".gantt", ".g-barra.completa", ".g-barra.en-curso", ".g-barra.por-venir", ".g-hoy", ".g-lista", ".fechas-ed"):
+        assert clase in css, clase
+    assert re.search(r"@media \(max-width: 760px\) \{\s*\.g-escritorio \{ display: none; \}", css)
+    for palabra in ("me toca", "te toca"):
+        assert palabra not in js.lower()

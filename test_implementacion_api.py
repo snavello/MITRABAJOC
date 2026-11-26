@@ -533,6 +533,7 @@ def test_un_proyecto_no_ve_nada_del_otro_en_ninguna_ruta():
         ("GET", "plan", {}), ("POST", "plan/hitos", {"json": {"etapa_id": et2_id, "texto": "x"}}),
         ("POST", f"plan/hitos/{h2_id}", {"json": {"hecho": True}}),
         ("POST", f"plan/etapas/{et2_id}", {"json": {"nombre": "x"}}), ("GET", "exportar.zip", {}),
+        ("POST", "plan/fechas", {"json": {"etapas": [{"id": et2_id, "desde": "2026-12-01", "hasta": "2026-12-02"}]}}),
     ]
     for metodo, ruta, kw in casos:
         r = sin1.request(metodo, _api(pid2, ruta), **kw)
@@ -851,3 +852,50 @@ def test_error_impl_sin_atrapar_sale_como_json_con_su_status():
         main._actor_impl(main.Request({"type": "http", "method": "GET", "path": "/", "query_string": b"",
                                        "headers": []}), pid)
     assert re.fullmatch(r"[a-z_]+", r.json()["codigo"])
+
+
+def test_plan_fechas_solo_equipo_proyeccion_y_validaciones():
+    pid, eq, sin = _mundo()
+    plan = eq.get(_api(pid, "plan")).json()
+    assert plan["calendario"] is None and plan["fechas_acordadas"] is False
+    assert all(e["fecha_desde"] is None and e["fecha_hasta"] is None for e in plan["etapas"])
+    e1, e2, e3 = (e["id"] for e in plan["etapas"][:3])
+    cuerpo = {"etapas": [{"id": e1, "desde": "2026-12-01", "hasta": "2026-12-04"},
+                         {"id": e2, "desde": "2026-12-07", "hasta": "2026-12-11"}]}
+    # el sindicato lee pero no escribe
+    assert sin.post(_api(pid, "plan/fechas"), json=cuerpo).status_code == 403
+    r = eq.post(_api(pid, "plan/fechas"), json=cuerpo)
+    assert r.status_code == 200 and r.json()["ok"] is True
+    cal = r.json()["calendario"]
+    assert cal["acordadas"] is False and cal["desde"] == "2026-12-01" and cal["hasta"] == "2026-12-11"
+    assert [w["lunes"] for w in cal["semanas"]] == ["2026-11-30", "2026-12-07"]
+    assert [(x["semana_desde"], x["semana_hasta"], x["dias"]) for x in cal["etapas"]] == [(1, 1, 4), (2, 2, 5)]
+    assert cal["hoy"]
+    # los dos lados ven fechas y proyección
+    vista = sin.get(_api(pid, "plan")).json()
+    assert vista["etapas"][0]["fecha_desde"] == "2026-12-01" and vista["calendario"]["etapas"][0]["id"] == e1
+    # acordadas
+    assert eq.post(_api(pid, "plan/fechas"), json={"etapas": [], "acordadas": True}).json()["calendario"]["acordadas"] is True
+    # inválidos: 400 con mensaje, y NADA se escribe (todo o nada)
+    malos = [
+        [{"id": e3, "desde": "2026-12-14", "hasta": "2026-12-23"}, {"id": e1, "desde": "2026-12-10", "hasta": "2026-12-01"}],
+        [{"id": e3, "desde": "2026-12-14", "hasta": "2026-12-23"}, {"id": e1, "desde": "2026-12-10", "hasta": ""}],
+        [{"id": e3, "desde": "2026-12-14", "hasta": "2026-12-23"}, {"id": e1, "desde": "2026-02-30", "hasta": "2026-03-01"}],
+        [{"id": e3, "desde": "2026-12-14", "hasta": "2026-12-23"}, {"id": 99999999, "desde": "2026-12-10", "hasta": "2026-12-11"}],
+        [{"id": e3, "desde": "2026-12-14", "hasta": "2026-12-23"}, {"id": "x"}],
+    ]
+    for etapas in malos:
+        r = eq.post(_api(pid, "plan/fechas"), json={"etapas": etapas})
+        assert r.status_code == 400 and r.json()["detail"], etapas
+        assert eq.get(_api(pid, "plan")).json()["etapas"][2]["fecha_desde"] is None, etapas
+    assert eq.post(_api(pid, "plan/fechas"), json={"etapas": "x"}).status_code == 400
+    # vacío borra
+    r = eq.post(_api(pid, "plan/fechas"), json={"etapas": [{"id": e1, "desde": "", "hasta": ""}]})
+    assert r.json()["etapas"][0]["fecha_desde"] is None and r.json()["calendario"]["etapas"][0]["id"] == e2
+    # queda en la bitácora del equipo y viaja en la exportación
+    ev = eq.get(_api(pid, "exportar.zip", )).content
+    import io as _io, json as _json, zipfile as _zf
+    z = _zf.ZipFile(_io.BytesIO(ev))
+    assert any(e["fecha_desde"] == "2026-12-07" for e in _json.loads(z.read("etapas.json")))
+    assert _json.loads(z.read("proyecto.json"))["fechas_acordadas"] is True
+    assert "plan_fechas" in {e["accion"] for e in _json.loads(z.read("eventos.json"))}

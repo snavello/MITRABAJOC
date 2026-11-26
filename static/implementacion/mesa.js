@@ -44,7 +44,7 @@
   const nombreEstado = function (k) { return NOMBRES_ESTADO[k] || (k ? k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, ' ') : ''); };
   const ABIERTOS = ['abierta', 'en_curso', 'respondida'];
 
-  const S = { token: 0, ultima: null, actual: null, todas: null, plan: null, etapaSel: null, editarPlan: false, sentido: 'entrada' };
+  const S = { token: 0, ultima: null, actual: null, todas: null, plan: null, calendario: null, acordadas: false, etapaSel: null, editarPlan: false, sentido: 'entrada' };
 
   // ---------------------------------------------------------------- DOM
   const $vista = document.getElementById('vista');
@@ -425,6 +425,7 @@
     return montar('plan', async function (mi) {
       const r = await Promise.all([pedir('plan'), pedir('resumen')]);
       S.plan = r[0].etapas || [];
+      S.calendario = r[0].calendario || null; S.acordadas = !!r[0].fechas_acordadas;
       setGlobo(r[1].pendientes);
       if (S.etapaSel === null || !S.plan.some(function (e) { return e.id === S.etapaSel; })) {
         const primera = S.plan.find(function (e) { return (e.pct || 0) < 100; }) || S.plan[0];
@@ -432,6 +433,119 @@
       }
       return dibujarPlan(r[1].plan_pct);
     });
+  }
+
+  // ---------------------------------------------------------------- Proyección en el tiempo
+  function aUTC(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; }
+  function deUTC(ms) { const d = new Date(ms); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
+  function sumarDias(iso, n) { return deUTC(aUTC(iso) + n * 86400000); }
+  function difDias(a, b) { return Math.round((aUTC(b) - aUTC(a)) / 86400000); }
+  function dm(iso) { const m = /^\d{4}-(\d{2})-(\d{2})/.exec(iso || ''); return m ? m[2] + '/' + m[1] : ''; }
+  function rangoDM(a, b) { return dm(a) + ' al ' + dm(b); }
+  function textoSemanas(ce) { return ce.semana_desde === ce.semana_hasta ? 'semana ' + ce.semana_desde : 'semanas ' + ce.semana_desde + ' a ' + ce.semana_hasta; }
+  function estadoDeFase(e, hoy) {
+    const c = resumenEtapa(e); const pct = c.total ? Math.round(100 * c.hechos / c.total) : (e.pct || 0);
+    if (pct >= 100) return 'completa';
+    if (pct > 0 || (hoy && e.fecha_desde && e.fecha_hasta && hoy >= e.fecha_desde && hoy <= e.fecha_hasta)) return 'en-curso';
+    return 'por-venir';
+  }
+  const NOMBRE_ESTADO_FASE = { 'completa': 'Completa', 'en-curso': 'En curso', 'por-venir': 'Por venir' };
+  function notaFechas() {
+    return h('div', { class: 'plan-proy-nota' },
+      h('span', { class: 'chip ' + (S.acordadas ? 'ok' : 'sind') }, icono(S.acordadas ? 'check' : 'reloj'), S.acordadas ? 'Fechas acordadas' : 'Fechas tentativas'),
+      h('small', null, 'Las fechas definitivas se acuerdan en las fases Preparar y Acordar.'));
+  }
+  function dibujarProyeccion() {
+    const cal = S.calendario;
+    const edita = ES_EQUIPO && S.editarPlan;
+    if (!cal && !ES_EQUIPO) return null;
+    const sec = h('section', { class: 'plan-proy', 'aria-label': 'Proyección del plan en el tiempo' });
+    sec.appendChild(h('div', { class: 'plan-proy-cab' }, h('h2', null, 'Proyección'), cal ? notaFechas() : null));
+    if (!cal) {
+      sec.appendChild(h('p', { class: 'vacio-col' }, 'Sin fechas todavía.'));
+      if (!edita) sec.appendChild(h('button', { class: 'btn lisa chico', type: 'button', onclick: function () { S.editarPlan = true; refrescarPlan(); } }, icono('lapiz'), 'Cargar fechas'));
+    } else {
+      const n = cal.semanas.length; const total = n * 7; const lunes0 = cal.semanas[0].lunes;
+      const por = {}; cal.etapas.forEach(function (x) { por[x.id] = x; });
+      const pos = function (iso) { return (100 * difDias(lunes0, iso) / total); };
+      const hoyPos = cal.hoy && cal.hoy >= lunes0 && cal.hoy <= sumarDias(lunes0, total - 1) ? pos(cal.hoy) + 100 / total / 2 : null;
+      const fases = S.plan.filter(function (e) { return por[e.id]; });
+      // Gantt (escritorio)
+      const eje = h('div', { class: 'g-eje', estilo: { '--sem': n } }, cal.semanas.map(function (w) {
+        return h('div', { class: 'g-sem' }, h('b', null, 'S' + w.n), h('small', null, dm(w.lunes)));
+      }));
+      const gantt = h('div', { class: 'gantt', role: 'img', 'aria-label': 'Diagrama de las fases por semana; el detalle está en la lista de abajo', estilo: { '--sem': n } },
+        h('div', { class: 'g-fila g-cabeza' }, h('div', { class: 'g-nom' }, 'Semana · lunes'), eje),
+        fases.map(function (e) {
+          const x = por[e.id]; const est = estadoDeFase(e, cal.hoy);
+          const izq = pos(x.desde); const ancho = Math.max(100 * x.dias / total, 0.6);
+          return h('div', { class: 'g-fila' },
+            h('div', { class: 'g-nom' }, h('b', null, e.nombre), h('small', null, rangoDM(x.desde, x.hasta))),
+            h('div', { class: 'g-pista', estilo: { '--sem': n } },
+              hoyPos !== null ? h('i', { class: 'g-hoy', estilo: { left: hoyPos + '%' } }) : null,
+              h('span', { class: 'g-barra ' + est, estilo: { left: izq + '%', width: ancho + '%' }, title: e.nombre + ': ' + rangoDM(x.desde, x.hasta) + ' (' + NOMBRE_ESTADO_FASE[est] + ')' })));
+        }));
+      const leyenda = h('div', { class: 'g-ley' },
+        ['completa', 'en-curso', 'por-venir'].map(function (k) { return h('span', null, h('i', { class: 'g-punto ' + k }), NOMBRE_ESTADO_FASE[k]); }),
+        hoyPos !== null ? h('span', null, h('i', { class: 'g-punto hoy' }), 'Hoy') : null);
+      sec.appendChild(h('div', { class: 'g-escritorio' }, h('div', { class: 'g-scroll' }, gantt), leyenda));
+      // Lista (teléfono)
+      sec.appendChild(h('ul', { class: 'g-lista' }, fases.map(function (e) {
+        const x = por[e.id]; const est = estadoDeFase(e, cal.hoy);
+        return h('li', { class: 'g-item ' + est },
+          h('div', null, h('b', null, e.nombre), h('span', { class: 'g-est' }, NOMBRE_ESTADO_FASE[est])),
+          h('small', null, rangoDM(x.desde, x.hasta) + ' · ' + textoSemanas(x) + ' · ' + x.dias + (x.dias === 1 ? ' día' : ' días')));
+      })));
+    }
+    if (edita) sec.appendChild(dibujarEditorFechas());
+    return sec;
+  }
+  // Editor de fechas (solo equipo, dentro de «Editar plan»). Las fases siguientes
+  // se corren solas si la casilla está tildada; guardar manda TODO junto.
+  function dibujarEditorFechas() {
+    const caja = h('div', { class: 'fechas-ed' });
+    caja.appendChild(h('h3', null, 'Fechas de las fases'));
+    const filas = S.plan.map(function (e) {
+      const d = h('input', { type: 'date', value: e.fecha_desde || '', 'aria-label': 'Inicio de ' + e.nombre });
+      const a = h('input', { type: 'date', value: e.fecha_hasta || '', 'aria-label': 'Fin de ' + e.nombre });
+      return { e: e, d: d, a: a, antesD: e.fecha_desde || '', antesA: e.fecha_hasta || '' };
+    });
+    const mover = h('input', { type: 'checkbox', id: 'f-mover', checked: true });
+    mover.checked = true;
+    const acord = h('input', { type: 'checkbox', id: 'f-acord' });
+    acord.checked = !!S.acordadas;
+    filas.forEach(function (f, i) {
+      function alCambiar(cual) {
+        const nuevo = (cual === 'd' ? f.d : f.a).value; const antes = cual === 'd' ? f.antesD : f.antesA;
+        if (cual === 'd') f.antesD = nuevo; else f.antesA = nuevo;
+        if (!mover.checked || !nuevo || !antes) return;
+        const delta = difDias(antes, nuevo);
+        if (!delta) return;
+        for (let j = i + 1; j < filas.length; j++) {
+          const g = filas[j];
+          if (g.d.value) { g.d.value = sumarDias(g.d.value, delta); g.antesD = g.d.value; }
+          if (g.a.value) { g.a.value = sumarDias(g.a.value, delta); g.antesA = g.a.value; }
+        }
+      }
+      f.d.addEventListener('change', function () { alCambiar('d'); });
+      f.a.addEventListener('change', function () { alCambiar('a'); });
+    });
+    caja.appendChild(h('div', { class: 'fechas-grilla' }, filas.map(function (f) {
+      return h('div', { class: 'fechas-fila' }, h('b', null, f.e.nombre),
+        h('label', null, h('small', null, 'Desde'), f.d), h('label', null, h('small', null, 'Hasta'), f.a));
+    })));
+    caja.appendChild(h('label', { class: 'f-check', for: 'f-mover' }, mover, 'Mover también las fases siguientes'));
+    caja.appendChild(h('label', { class: 'f-check', for: 'f-acord' }, acord, 'Fechas acordadas con el sindicato'));
+    caja.appendChild(h('small', { class: 'f-ayuda' }, 'Dejá las dos fechas de una fase en blanco para quitarlas.'));
+    caja.appendChild(h('div', { class: 'edit-fila' }, h('button', { class: 'btn pri', type: 'button', onclick: async function (ev) {
+      const b = ev.currentTarget; b.disabled = true; errorEn(caja, '');
+      try {
+        const r = await enviarJson('plan/fechas', { etapas: filas.map(function (f) { return { id: f.e.id, desde: f.d.value, hasta: f.a.value }; }), acordadas: acord.checked });
+        S.plan = r.etapas || S.plan; S.calendario = r.calendario || null; S.acordadas = !!r.fechas_acordadas;
+        avisar('Fechas guardadas.'); refrescarPlan();
+      } catch (x) { errorEn(caja, x.message); } finally { b.disabled = false; }
+    } }, 'Guardar fechas')));
+    return caja;
   }
   function hitosDe(e) { return e.hitos || []; }
   function resumenEtapa(e) {
@@ -444,11 +558,14 @@
     if (ES_EQUIPO) cab.appendChild(h('button', { class: 'btn lisa', type: 'button', 'aria-pressed': String(S.editarPlan), onclick: function () { S.editarPlan = !S.editarPlan; refrescarPlan(); } }, icono('lapiz'), S.editarPlan ? 'Listo, terminar de editar' : 'Editar plan'));
     raiz.appendChild(cab);
     if (!S.plan.length) { raiz.appendChild(vacio('Este proyecto todavía no tiene etapas ni hitos.')); return raiz; }
+    const proy = dibujarProyeccion();
+    if (proy) raiz.appendChild(proy);
     raiz.appendChild(h('div', { class: 'tira', role: 'group', 'aria-label': 'Fases del plan' }, S.plan.map(function (e, i) {
       const c = resumenEtapa(e); const pct = c.total ? Math.round(100 * c.hechos / c.total) : (e.pct || 0);
       const b = h('button', { class: 'seg entra' + (pct >= 100 ? ' hecha' : ''), type: 'button', 'aria-pressed': String(e.id === S.etapaSel), estilo: { '--i': i },
         onclick: function () { S.etapaSel = e.id; refrescarPlan(); } },
         h('span', { class: 'n' }, 'FASE ' + (i + 1)), h('b', null, e.nombre), h('small', null, c.hechos + ' de ' + c.total + ' hitos'),
+        e.fecha_desde && e.fecha_hasta ? h('small', { class: 'seg-f' }, rangoDM(e.fecha_desde, e.fecha_hasta)) : null,
         h('div', { class: 'barra', 'aria-hidden': 'true' }, h('i', { estilo: { width: pct + '%' } })));
       return b;
     })));
@@ -464,7 +581,7 @@
     return mi;
   }
   async function recargarPlan() {
-    try { const r = await pedir('plan'); S.plan = r.etapas || []; refrescarPlan(); } catch (e) { /* queda lo que se ve */ }
+    try { const r = await pedir('plan'); S.plan = r.etapas || []; S.calendario = r.calendario || null; S.acordadas = !!r.fechas_acordadas; refrescarPlan(); } catch (e) { /* queda lo que se ve */ }
     refrescarGlobo();
   }
   function dibujarEtapa(e) {
@@ -481,6 +598,10 @@
     } else card.appendChild(h('h2', null, e.nombre));
     card.appendChild(h('div', { class: 'barra', 'aria-hidden': 'true' }, h('i', { estilo: { width: pct + '%' } })));
     card.appendChild(h('small', { style: 'color:var(--gris);font-weight:700' }, c.hechos + ' de ' + c.total + ' hitos hechos'));
+    if (e.fecha_desde && e.fecha_hasta) {
+      const ce = S.calendario && S.calendario.etapas.find(function (x) { return x.id === e.id; });
+      card.appendChild(h('small', { class: 'etapa-fechas' }, icono('reloj'), rangoDM(e.fecha_desde, e.fecha_hasta) + (ce ? ' · ' + textoSemanas(ce) : '') + (S.acordadas ? '' : ' · tentativa')));
+    }
     const hs = hitosDe(e);
     if (!hs.length) card.appendChild(h('p', { class: 'vacio-col' }, 'Esta fase todavía no tiene hitos.'));
     hs.forEach(function (x) { card.appendChild(dibujarHito(e, x)); });
