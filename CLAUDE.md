@@ -224,6 +224,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   contexto, historial y las 113 fichas de estilo del catálogo). El kit trae
   además el **catálogo de 60 estilos** sobre ACME (`/xsd catalogo`). Los archivos de trabajo van en `xsd-trabajo/` (fuera
   de git). Ver `xsd/LEEME.md`.
+- xsii/ — **XSII, Implementación inteligente** (Suite XSanders, `PLAN_XSII.md`
+  X1–X20): `motor/` es genérico y PURO (tareas, estados calculados,
+  confirmaciones, paso recomendado, qué frena y qué destraba; un test falla
+  si importa algo de la app) y `proyectos/colm3na/` es el catálogo de las 34
+  tareas de implementación de un sindicato, con un control por tarea que
+  consulta la base (`controles.py`, firma `(s, sid)`, siempre por
+  `sindicato_id`). `python -m xsii.informe "Sindicato"` imprime el tablero.
+  Una tarea nueva es una entrada del catálogo más su control. Ver "Estado
+  actual" 53.
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
   natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).
   `probar_asistente.py` + `medicion_asistente/` = set de aceptación del
@@ -1898,6 +1907,26 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     reutiliza). Tests `test_grilla_app.py`, `_pantalla` y `_qa`. **Queda**:
     decidir qué preguntas curadas suben a la app, y la vista de estado de las
     grillas en `/admin` (D23).
+
+53. **XSII, Implementación inteligente** (2026-11-26, `PLAN_XSII.md` X1–X20;
+    pedido de SDN: reducir drásticamente la primera implementación de un
+    sindicato con un asistente que conozca todas las tareas). Tercera pieza
+    de la Suite XSanders. **Bloque 0 HECHO**: motor genérico y catálogo de
+    Colm3na (34 tareas en siete grupos, con dependencias duras y blandas,
+    insumos y un control calculado por tarea), informe por consola y QA
+    independiente (9 defectos corregidos antes del merge). El estado se
+    calcula mirando la base, nunca se tilda; lo que no se puede calcular se
+    confirma con registro, y cualquier usuario de plataforma puede completar
+    una tarea a mano con motivo (X15, X16). Sin tablas, pantallas ni IA
+    todavía. **Sigue**: bloque 1 (tablas `Xsii*`, pantalla Guía con Play +
+    Tablero + Mapa en `/entornos`, maqueta 2 en
+    https://claude.ai/artifact/JRQpQ1TxVoe3oFuBkRwNKu), después las tareas
+    asistidas en el orden Seccionales → Padrón → Conceptos (X19) y el
+    tutorial (X20). Pendiente anotado para el bloque 1: una tarea con datos
+    cargados y sin insumo registrado hoy sale «esperando un dato»; y una
+    sola decisión por tarea (no puede estar confirmada y pospuesta a la vez).
+    El plan lista diez diferencias entre los hitos de la Mesa y el sistema,
+    confirmadas contra el código.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

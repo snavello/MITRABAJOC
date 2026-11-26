@@ -273,10 +273,12 @@ def test_camino_orden_topologico_con_desempate_de_catalogo():
     assert consulta.camino_hasta(t, tb, "C4") == ["C1", "C2", "C3"]
 
 
-def test_camino_de_codigo_inexistente():
+def test_codigo_inexistente_se_trata_igual_en_las_tres_consultas():
     t = armar()
-    with pytest.raises(KeyError):
-        consulta.camino_hasta(t, tablero(t, {}), "ZZ")
+    tb = tablero(t, {})
+    for f in (consulta.camino_hasta, consulta.que_frena, consulta.que_destraba):
+        with pytest.raises(ValueError, match="ZZ"):
+            f(t, tb, "ZZ")
 
 
 def test_a_json_es_serializable():
@@ -312,3 +314,88 @@ def test_el_motor_no_importa_nada_de_la_app():
                 continue
             for n in nombres:
                 assert n in permitidos, f"{archivo.name} importa {n}, que no es stdlib"
+
+
+# ---- confirmaciones (B) --------------------------------------------------------
+
+def C(codigo, necesita=(), solo=False):
+    return Tarea(codigo, codigo, "A", "manual", necesita=tuple(necesita), control="c_" + codigo,
+                 confirmacion="Está bien", solo_confirmacion=solo)
+
+
+CONFIRMADA = {"tipo": "confirmada", "quien": "ana", "cuando": "2026-11-26", "motivo": ""}
+
+
+def test_control_que_pasa_sin_confirmar_queda_en_curso_y_no_destraba():
+    t = [C("A1"), T("A2", ["A1"])]
+    r = estados.resolver(t, hechos({"A1": OK, "A2": NO}))
+    assert r["A1"].estado == "en_curso" and r["A1"].falta_confirmar
+    assert r["A1"].confirmacion == "Está bien"
+    assert r["A2"].estado == "bloqueada" and r["A2"].frenada_por == ["A1"]
+    assert consulta.que_destraba(t, r, "A1")["directo"] == ["A2"]
+
+
+def test_con_la_decision_confirmada_esta_hecha_y_destraba():
+    t = [C("A1"), T("A2", ["A1"])]
+    r = estados.resolver(t, hechos({"A1": OBS, "A2": NO}, decisiones={"A1": CONFIRMADA}))
+    assert r["A1"].estado == "hecha" and r["A1"].con_observaciones and not r["A1"].falta_confirmar
+    assert r["A2"].estado == "lista"
+
+
+def test_confirmada_no_alcanza_si_el_control_no_pasa():
+    t = [C("A1")]
+    r = estados.resolver(t, hechos({"A1": NO}, decisiones={"A1": CONFIRMADA}))
+    assert r["A1"].estado == "lista" and not r["A1"].falta_confirmar
+
+
+def test_completada_a_mano_reemplaza_a_la_confirmacion():
+    t = [C("A1"), T("A2", ["A1"])]
+    d = {"A1": {"tipo": "completada_a_mano", "quien": "q", "cuando": "c", "motivo": "m"}}
+    r = estados.resolver(t, hechos({"A1": OK, "A2": NO}, decisiones=d))
+    assert r["A1"].estado == "hecha" and r["A1"].a_mano and r["A2"].estado == "lista"
+
+
+def test_solo_confirmacion_queda_lista_y_no_en_curso():
+    t = [C("A1", solo=True)]
+    r = estados.resolver(t, hechos({"A1": OK}))
+    assert r["A1"].estado == "lista" and r["A1"].falta_confirmar
+    assert consulta.recomendada(t, r) == "A1"
+    r = estados.resolver(t, hechos({"A1": OK}, decisiones={"A1": CONFIRMADA}))
+    assert r["A1"].estado == "hecha"
+
+
+def test_confirmacion_pendiente_con_dependencia_sin_resolver_sigue_bloqueada():
+    t = [T("D"), C("A1", ["D"])]
+    r = estados.resolver(t, hechos({"D": NO, "A1": OK}))
+    assert r["A1"].estado == "bloqueada"
+
+
+def test_solo_confirmacion_exige_texto_y_el_resumen_cuenta_las_pendientes():
+    mala = Tarea("A1", "A1", "A", "manual", control="c", solo_confirmacion=True)
+    assert any("no dice qué confirmar" in e for e in catalogo.validar([mala], GRUPOS))
+    t = [C("A1")]
+    assert consulta.resumen(estados.resolver(t, hechos({"A1": OK})))["por_confirmar"] == 1
+
+
+# ---- los 9 del QA, en el motor ---------------------------------------------------
+
+def test_porcentaje_nunca_100_con_algo_sin_hacer():
+    t = [T(f"T{i}") for i in range(200)]
+    cs = {x.codigo: OK for x in t}
+    cs["T0"] = NO
+    assert consulta.resumen(estados.resolver(t, hechos(cs)))["porcentaje"] == 99
+    cs["T0"] = OK
+    assert consulta.resumen(estados.resolver(t, hechos(cs)))["porcentaje"] == 100
+
+
+def test_una_pospuesta_en_curso_no_se_recomienda():
+    t = [T("A"), T("B")]
+    r = estados.resolver(t, hechos({"A": MEDIO, "B": NO}, decisiones={"A": {"tipo": "pospuesta"}}))
+    assert consulta.recomendada(t, r) == "B"
+
+
+def test_no_aplica_expone_su_porque():
+    t = [T("A", aplica_si="m"), T("B")]
+    r = estados.resolver(t, hechos({"A": NO, "B": NO}, aplica={"m": False},
+                                   decisiones={"B": {"tipo": "no_aplica", "quien": "q", "motivo": "x"}}))
+    assert r["A"].no_aplica_por == "condicion" and r["B"].no_aplica_por == "decision"

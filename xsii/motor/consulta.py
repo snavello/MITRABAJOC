@@ -31,9 +31,10 @@ def resumen(tablero) -> dict:
     """Conteos por estado y avance. La barra cuenta todas las tareas que
     aplican (X14): `porcentaje` = hechas sobre las que aplican."""
     por_estado = {e: 0 for e in ("hecha", "lista", "en_curso", "esperando", "bloqueada", "no_aplica")}
-    a_mano = obs = pospuestas = 0
+    a_mano = obs = pospuestas = por_confirmar = 0
     for e in tablero.values():
         por_estado[e.estado] += 1
+        por_confirmar += e.falta_confirmar
         a_mano += e.a_mano
         obs += e.con_observaciones
         pospuestas += e.pospuesta
@@ -42,16 +43,25 @@ def resumen(tablero) -> dict:
     resueltas = por_estado["hecha"]
     return {
         "total": total, "aplican": aplican, "resueltas": resueltas,
-        "porcentaje": round(100 * resueltas / aplican) if aplican else 0,
+        # Hacia abajo: un 100 % tiene que querer decir que no queda nada.
+        "porcentaje": (100 * resueltas) // aplican if aplican else 0,
+        "por_confirmar": por_confirmar,
         "por_estado": por_estado, "a_mano": a_mano,
         "con_observaciones": obs, "pospuestas": pospuestas,
     }
+
+
+def _exigir_codigo(tareas, codigo) -> None:
+    """Las tres consultas por código se portan igual ante uno desconocido."""
+    if codigo not in {t.codigo for t in tareas}:
+        raise ValueError(f"No existe la tarea {codigo!r} en el catálogo.")
 
 
 def que_destraba(tareas, tablero, codigo) -> dict:
     """Lo que depende de `codigo` y todavía no está resuelto: {"directo":
     [...], "transitivo": [...]}. El transitivo incluye al directo y sigue
     solo por tareas sin resolver (una ya hecha no espera a nadie)."""
+    _exigir_codigo(tareas, codigo)
     inversa = _dependientes(tareas)
     directo = [c for c in inversa.get(codigo, []) if _sin_resolver(tablero, c)]
     visto: set[str] = set()
@@ -77,9 +87,8 @@ def camino_hasta(tareas, tablero, codigo) -> list[str]:
     topológico (las que no dependen de nadie primero; empate: orden del
     catálogo). No incluye a `codigo`. Una dependencia ya resuelta corta la
     rama: lo que hay detrás ya no hace falta."""
+    _exigir_codigo(tareas, codigo)
     por_codigo = _por_codigo(tareas)
-    if codigo not in por_codigo:
-        raise KeyError(codigo)
     necesarias: set[str] = set()
     pila = [codigo]
     while pila:
@@ -107,7 +116,8 @@ def _candidatas(tareas, tablero):
     """Las que se pueden hacer ya, ordenadas: en curso primero y después las
     `lista` no pospuestas por cuántas tareas destraban (transitivo); el
     empate lo resuelve el orden del catálogo (sort estable)."""
-    en_curso = [t.codigo for t in tareas if tablero[t.codigo].estado == "en_curso"]
+    en_curso = [t.codigo for t in tareas
+                if tablero[t.codigo].estado == "en_curso" and not tablero[t.codigo].pospuesta]
     listas = [t.codigo for t in tareas
               if tablero[t.codigo].estado == "lista" and not tablero[t.codigo].pospuesta]
     listas.sort(key=lambda c: -len(que_destraba(tareas, tablero, c)["transitivo"]))
@@ -145,6 +155,8 @@ def a_json(tareas, tablero) -> dict:
             "descripcion": t.descripcion,
             "estado": e.estado, "con_observaciones": e.con_observaciones,
             "a_mano": e.a_mano, "pospuesta": e.pospuesta,
+            "confirmacion": t.confirmacion, "falta_confirmar": e.falta_confirmar,
+            "no_aplica_por": e.no_aplica_por,
             "frenada_por": list(e.frenada_por),
             "insumos_faltantes": list(e.insumos_faltantes),
             "avisos": list(e.avisos),

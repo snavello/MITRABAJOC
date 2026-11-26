@@ -8,11 +8,11 @@ saber si hay logo o contrato se pregunta por `octet_length`).
 
 Tres clases de control (plan):
 - **calculado**: sale de contar en la base.
-- **confirmado**: lo afirma una persona. Sin una confirmación registrada, el
-  control dice `incompleta` con «Falta confirmar»; las confirmaciones llegan
-  por `decisiones` en el bloque 1 (hoy no hay tabla donde guardarlas).
-- **mixto**: lo calculado manda; lo que además hay que confirmar se lista
-  como observación («pasa, con avisos») y no frena.
+- **confirmado**: lo afirma una persona. El control devuelve lo que pueda
+  calcular (cifras) como `completa`, y la TAREA declara qué hay que confirmar
+  (`Tarea.confirmacion`): el motor no la da por hecha hasta que llega la
+  decisión `confirmada` (bloque 1).
+- **mixto**: lo calculado manda y, además, la tarea lleva su `confirmacion`.
 
 Un control nunca escribe y nunca falla por datos raros: si no puede saber,
 dice que falta algo.
@@ -37,8 +37,6 @@ from db import (
     DestinoTipoTramite, ImplProyecto, ImplTarjeta,
 )
 from xsii.motor.estados import Control
-
-FALTA_CONFIRMAR = "Falta confirmar"
 
 # Los tres aportes de ley que crea el alta del sindicato (`db.crear_conceptos_universales`).
 CODIGOS_DE_LEY = tuple(c["codigo"] for c in validador.CONCEPTOS_UNIVERSALES)
@@ -66,13 +64,18 @@ def _incompleta(resumen, faltan, cifras=None, en_curso=False) -> Control:
     return Control("incompleta", resumen, cifras or {}, faltan=list(faltan), en_curso=en_curso)
 
 
-def _por_confirmar(resumen, cifras=None) -> Control:
-    """Un control puramente confirmado, sin confirmación registrada."""
-    return Control("incompleta", resumen, cifras or {}, faltan=[FALTA_CONFIRMAR])
-
-
 def _sindicato(s, sid):
-    """Columnas livianas del sindicato (sin bytes); None si no existe."""
+    """Columnas livianas del sindicato (sin bytes); None si no existe.
+
+    `tablero.armar` la lee una vez y la deja en `s.info` para los controles
+    que la usan; un control llamado solo la consulta."""
+    guardada = s.info.get("xsii_sindicato")
+    if guardada is not None and guardada[0] == sid:
+        return guardada[1]
+    return _leer_sindicato(s, sid)
+
+
+def _leer_sindicato(s, sid):
     return s.execute(select(
         Sindicato.nombre, Sindicato.cuit, Sindicato.modulos_habilitados,
         Sindicato.color_base, Sindicato.color_primario, Sindicato.color_acento,
@@ -122,29 +125,29 @@ def bas_02(s, sid) -> Control:
 
 def bas_03(s, sid) -> Control:
     fila = _sindicato(s, sid)
-    habilitados = [m for m in ((fila[2] if fila else None) or []) if m in modulos.MODULOS]
-    return _por_confirmar(
-        "Los módulos contratados los confirma el equipo.",
+    habilitados = [m for m in ((fila[2] if fila else None) or []) if isinstance(m, str) and m in modulos.MODULOS]
+    return _completa(
+        f"Tiene {_plural(len(habilitados), 'módulo habilitado', 'módulos habilitados')}.",
         {"modulos_habilitados": len(habilitados), "modulos_del_catalogo": len(modulos.MODULOS)})
 
 
 def bas_04(s, sid) -> Control:
     # La bandera de clave transitoria vive en la CUENTA de la persona
     # (CuentaPanel), no en la fila del usuario: ver CLAUDE.md, «Alta de
-    # administradores y clave inicial».
+    # administradores y clave inicial». Un Super Admin SIN cuenta no eligió
+    # clave: cuenta como pendiente, no desaparece.
     filas = s.execute(
-        select(CuentaPanel.debe_cambiar_clave)
+        select(CuentaPanel.id, CuentaPanel.debe_cambiar_clave)
         .select_from(UsuarioSindicato)
-        .join(CuentaPanel, CuentaPanel.cuil == UsuarioSindicato.cuil)
+        .join(CuentaPanel, CuentaPanel.cuil == UsuarioSindicato.cuil, isouter=True)
         .where(UsuarioSindicato.sindicato_id == sid,
                UsuarioSindicato.activo == True,           # noqa: E712
                UsuarioSindicato.es_super_admin == True)   # noqa: E712
     ).all()
-    activos = _n(s, select(func.count()).select_from(UsuarioSindicato).where(
-        UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.activo == True,   # noqa: E712
-        UsuarioSindicato.es_super_admin == True))                               # noqa: E712
-    con_clave_propia = sum(1 for f in filas if not f[0])
-    cifras = {"super_admins_activos": activos, "con_clave_propia": con_clave_propia}
+    activos = len(filas)
+    con_clave_propia = sum(1 for cuenta_id, debe in filas if cuenta_id is not None and not debe)
+    cifras = {"super_admins_activos": activos, "con_clave_propia": con_clave_propia,
+              "pendientes_de_clave": activos - con_clave_propia}
     if con_clave_propia:
         return _completa("Hay un administrador que ya eligió su clave.", cifras)
     if activos:
@@ -156,9 +159,11 @@ def bas_04(s, sid) -> Control:
 
 def bas_05(s, sid) -> Control:
     canal = 1 if correo.habilitado() else 0
-    resumen = "La política de registro la confirma el equipo."
-    return Control("incompleta", resumen, {"canal_de_mail": canal},
-                   faltan=[FALTA_CONFIRMAR] + ([] if canal else ["El canal de mail está apagado en este entorno"]))
+    cifras = {"canal_de_mail": canal}
+    if not canal:
+        return _con_avisos("Política de registro por confirmar.",
+                           ["El canal de mail está apagado en este entorno"], cifras)
+    return _completa("El canal de mail está prendido.", cifras)
 
 
 def bas_06(s, sid) -> Control:
@@ -186,12 +191,13 @@ def est_01(s, sid) -> Control:
     cifras = {"seccionales": total, "con_alcance_total": sede}
     if not total:
         return _incompleta("Todavía no hay seccionales.", ["Cargar las seccionales (y Sede Central)"], cifras)
-    # Mixto: lo calculado alcanza; que la lista coincida con la del sindicato
-    # es una confirmación que todavía no se puede registrar.
-    avisos = ["Falta confirmar la lista contra la del sindicato"]
+    # Mixto: que la lista coincida con la del sindicato lo confirma una
+    # persona (`Tarea.confirmacion`).
+    avisos = []
     if not sede:
         avisos.append("Ninguna seccional ve todas las demás (Sede Central)")
-    return _con_avisos(f"Hay {_plural(total, 'seccional', 'seccionales')}.", avisos, cifras)
+    resumen = f"Hay {_plural(total, 'seccional', 'seccionales')}."
+    return _con_avisos(resumen, avisos, cifras) if avisos else _completa(resumen, cifras)
 
 
 def est_02(s, sid) -> Control:
@@ -246,8 +252,11 @@ def est_04(s, sid) -> Control:
         select(DestinoTipoTramite.area_id).select_from(DestinoTipoTramite).join(
             TipoTramite, TipoTramite.id == DestinoTipoTramite.tipo_tramite_id).where(
             TipoTramite.sindicato_id == sid)).all()}
-    # Sin formularios todavía, se exige un usuario en cada área activa.
-    exigidas = [a for a in areas if a[0] in recibe] if recibe else list(areas)
+    # Un destino que es un área inactiva no cuenta (no atiende a nadie); si
+    # ningún formulario apunta a un área activa, se exige un usuario en cada
+    # área activa.
+    activas_que_reciben = [a for a in areas if a[0] in recibe]
+    exigidas = activas_que_reciben or list(areas)
     con_usuario = {r[0] for r in s.execute(select(UsuarioSindicato.area_id).where(
         UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.activo == True,   # noqa: E712
         UsuarioSindicato.area_id.is_not(None)).distinct()).all()}
@@ -272,8 +281,8 @@ def est_04(s, sid) -> Control:
 
 def rec_01(s, sid) -> Control:
     # Los recibos de muestra no entran al sistema (diferencia 1 del plan): se
-    # reciben por la Mesa y lo confirma el equipo.
-    return _por_confirmar("Que llegaron los recibos de muestra lo confirma el equipo.")
+    # reciben por la Mesa y lo confirma una persona (`Tarea.confirmacion`).
+    return _completa("Los recibos de muestra llegan por la Mesa.")
 
 
 def rec_02(s, sid) -> Control:
@@ -359,9 +368,23 @@ def rec_05(s, sid) -> Control:
               + [f"Vigencias superpuestas en {t}" for t in sorted(superpuestas)])
     if faltan:
         return _incompleta("Hay reglas con problemas.", faltan, cifras, en_curso=True)
-    if altas:
-        return _con_avisos("Las reglas evalúan; algunas tienen tolerancia alta.",
-                           [f"Tolerancia alta en {r[1]} ($ {r[3]:,.0f})".replace(",", ".") for r in altas], cifras)
+    # Conceptos de descuento ya revisados que ninguna regla vigente controla:
+    # no bloquea (puede ser a propósito), pero se ve.
+    hoy_mes = fechas.hoy().strftime("%Y-%m")
+    con_regla = {r[1] for r in reglas
+                 if (not r[4] or r[4][:7] <= hoy_mes) and (not r[5] or r[5][:7] >= hoy_mes)}
+    descuentos = [c[0] for c in s.execute(select(Concepto.codigo).where(
+        Concepto.sindicato_id == sid, Concepto.tipo == "descuento",
+        Concepto.pendiente_revision == False,                   # noqa: E712
+        Concepto.cuit_empleador.is_(None))).all()]
+    sin_regla = [c for c in descuentos if c not in con_regla]
+    cifras["descuentos_sin_regla"] = len(sin_regla)
+    avisos = [f"Tolerancia alta en {r[1]} ($ {r[3]:,.0f})".replace(",", ".") for r in altas]
+    if sin_regla:
+        avisos.append(f"{_plural(len(sin_regla), 'concepto de descuento revisado sin regla vigente', 'conceptos de descuento revisados sin regla vigente')}: "
+                      + ", ".join(sorted(sin_regla)[:10]))
+    if avisos:
+        return _con_avisos("Las reglas evalúan; hay cosas para mirar.", avisos, cifras)
     return _completa("Todas las reglas evalúan y no se pisan.", cifras)
 
 
@@ -395,7 +418,8 @@ def rec_07(s, sid) -> Control:
     # Diferencia 1 del plan: hoy no existe una puerta de control para el
     # equipo (validar un lote de muestra sin identidad). Hasta que se
     # construya (bloque 4), no hay de dónde calcularlo.
-    return _por_confirmar("Todavía no existe la puerta para validar el lote de muestra sin identidad.")
+    return _incompleta("Todavía no existe la puerta para validar el lote de muestra sin identidad.",
+                       ["La herramienta todavía no existe (se construye en el bloque 4)"])
 
 
 def rec_08(s, sid) -> Control:
@@ -416,7 +440,7 @@ def rec_08(s, sid) -> Control:
 # ----------------------------------------------------------------- Padrón
 
 def pad_01(s, sid) -> Control:
-    return _por_confirmar("Que llegó la planilla del padrón, con su total declarado, lo confirma el equipo.")
+    return _completa("La planilla del padrón llega por la Mesa.")
 
 
 def pad_02(s, sid) -> Control:
@@ -430,10 +454,11 @@ def pad_02(s, sid) -> Control:
     cifras = {"afiliados_activos": activos, "sin_seccional": sin_seccional}
     if not activos:
         return _incompleta("El padrón está vacío.", ["Cargar el padrón"], cifras)
-    avisos = ["Falta confirmar la cantidad contra el total declarado por el sindicato"]
+    avisos = []
     if hay_seccionales and sin_seccional:
         avisos.append(f"{_plural(sin_seccional, 'afiliado sin seccional', 'afiliados sin seccional')}")
-    return _con_avisos(f"Hay {_plural(activos, 'afiliado cargado', 'afiliados cargados')}.", avisos, cifras)
+    resumen = f"Hay {_plural(activos, 'afiliado cargado', 'afiliados cargados')}."
+    return _con_avisos(resumen, avisos, cifras) if avisos else _completa(resumen, cifras)
 
 
 def pad_03(s, sid) -> Control:
@@ -456,13 +481,22 @@ def pad_03(s, sid) -> Control:
 
 
 def pad_04(s, sid) -> Control:
-    empleadores = {r[0] for r in s.execute(select(Empleador.cuit).where(
-        Empleador.sindicato_id == sid, Empleador.activo == True)).all()}    # noqa: E712
-    de_conceptos = {r[0] for r in s.execute(select(Concepto.cuit_empleador).where(
+    # Mismo criterio que `db.importar_cuits_de_conceptos`: se compara
+    # normalizado, contra TODOS los empleadores (también los dados de baja:
+    # el botón de importar no los vuelve a crear) y se descartan los CUIT de
+    # concepto que no cumplen el módulo 11.
+    todos = {cuit_mod.normalizar(r[0]) for r in s.execute(select(Empleador.cuit).where(
+        Empleador.sindicato_id == sid)).all()}
+    activos = _n(s, select(func.count()).select_from(Empleador).where(
+        Empleador.sindicato_id == sid, Empleador.activo == True))      # noqa: E712
+    de_conceptos = {cuit_mod.normalizar(r[0]) for r in s.execute(select(Concepto.cuit_empleador).where(
         Concepto.sindicato_id == sid, Concepto.cuit_empleador.is_not(None)).distinct()).all()}
-    sin_importar = de_conceptos - empleadores
-    cifras = {"empleadores": len(empleadores), "cuit_de_conceptos_sin_importar": len(sin_importar)}
-    if not empleadores:
+    de_conceptos.discard("")
+    validos = {c for c in de_conceptos if cuit_mod.es_valido(c)}
+    sin_importar = validos - todos
+    cifras = {"empleadores": activos, "cuit_de_conceptos_sin_importar": len(sin_importar),
+              "cuit_de_conceptos_invalidos": len(de_conceptos) - len(validos)}
+    if not activos:
         return _incompleta("Todavía no hay empleadores.", ["Dar de alta los empleadores"], cifras)
     if sin_importar:
         return _con_avisos("Hay empleadores; faltan algunos de los conceptos.",
@@ -557,7 +591,7 @@ def tra_02(s, sid) -> Control:
 # ---------------------------------------------------------- Comunicación
 
 def com_01(s, sid) -> Control:
-    return _por_confirmar("Que el modelo, la paleta y la foto quedaron elegidos lo confirma el equipo.")
+    return _completa("El modelo, la paleta y la foto se eligen en Apariencia.")
 
 
 def com_02(s, sid) -> Control:
@@ -627,7 +661,8 @@ def cie_01(s, sid) -> Control:
 
 def cie_02(s, sid) -> Control:
     # El robot por sindicato no existe todavía (ayuda 7 del plan).
-    return _por_confirmar("Todavía no existe el robot que recorre cada rol del sindicato.")
+    return _incompleta("Todavía no existe el robot que recorre cada rol del sindicato.",
+                       ["La herramienta todavía no existe"])
 
 
 def cie_03(s, sid) -> Control:
@@ -636,6 +671,7 @@ def cie_03(s, sid) -> Control:
     n = _n(s, select(func.count()).select_from(ImplTarjeta).join(
         ImplProyecto, ImplProyecto.id == ImplTarjeta.proyecto_id).where(
         ImplProyecto.sindicato_id == sid, ImplTarjeta.tipo == "aprobacion",
+        ImplTarjeta.estado == "aprobada",     # una rechazada no es aceptación
         ImplTarjeta.resuelta_en != "", ImplTarjeta.resuelta_por_lado == "sindicato"))
     if n:
         return _completa("El sindicato resolvió una aprobación en la Mesa.", {"aprobaciones_resueltas": n})

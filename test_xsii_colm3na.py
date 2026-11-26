@@ -129,11 +129,53 @@ def test_un_sindicato_recien_creado_da_un_tablero_coherente():
     assert consulta.recomendada(tareas, tb) is not None
 
 
-def test_el_aviso_de_confirmar_aparece_en_los_controles_confirmados():
+def test_las_confirmaciones_puras_quedan_listas_hasta_que_alguien_confirma():
     sid = nuevo_sindicato()
-    for codigo in ("BAS-03", "BAS-05", "COM-01", "REC-01", "PAD-01", "REC-07", "CIE-02"):
+    confirmaciones = {"BAS-03", "BAS-05", "COM-01", "REC-01", "PAD-01"}
+    _, tb = el_tablero(sid, insumos={"recibos_muestra": True, "planilla_padron": True})
+    for codigo in confirmaciones:
+        e = tb[codigo]
+        assert e.control.estado in ("completa", "observaciones"), codigo
+        assert e.falta_confirmar and e.confirmacion, codigo
+        # COM-01 espera además a BAS-02 (logo): ahí manda el bloqueo.
+        assert e.estado == ("bloqueada" if codigo == "COM-01" else "lista"), codigo
+    # Con la decisión `confirmada`, hechas.
+    dec = {c: {"tipo": "confirmada", "quien": "ana", "cuando": "2026-11-26", "motivo": ""}
+           for c in confirmaciones}
+    _, tb = el_tablero(sid, decisiones=dec, insumos={"recibos_muestra": True, "planilla_padron": True})
+    assert all(tb[c].estado == "hecha" for c in confirmaciones)
+
+
+def test_lo_que_todavia_no_existe_sigue_incompleto_y_lo_dice():
+    sid = nuevo_sindicato()
+    for codigo in ("REC-07", "CIE-02"):
         c = control(sid, codigo)
-        assert c.estado == "incompleta" and "Falta confirmar" in c.faltan, codigo
+        assert c.estado == "incompleta" and "todavía no existe" in c.faltan[0], codigo
+
+
+def test_los_mixtos_llevan_confirmacion_y_sin_aviso_de_falta_confirmar():
+    por_codigo = {t.codigo: t for t in catalogo.TAREAS}
+    assert por_codigo["EST-01"].confirmacion and not por_codigo["EST-01"].solo_confirmacion
+    assert por_codigo["PAD-02"].confirmacion and not por_codigo["PAD-02"].solo_confirmacion
+    sid = nuevo_sindicato()
+    with db.get_session() as s:
+        s.add(Seccional(sindicato_id=sid, nombre="Sede Central", ve_todas=True))
+        s.commit()
+    c = control(sid, "EST-01")
+    assert c.estado == "completa" and not c.faltan
+    _, tb = el_tablero(sid, insumos={"lista_seccionales": True})
+    assert tb["EST-01"].estado == "en_curso" and tb["EST-01"].falta_confirmar
+    assert tb["EST-02"].estado == "bloqueada"          # sin confirmar no destraba
+    dec = {"EST-01": {"tipo": "confirmada", "quien": "ana", "cuando": "x", "motivo": ""}}
+    _, tb = el_tablero(sid, decisiones=dec, insumos={"lista_seccionales": True})
+    assert tb["EST-01"].estado == "hecha" and tb["EST-02"].estado == "lista"
+
+
+def test_la_ficha_se_lee_una_vez_en_el_tablero_y_no_queda_en_la_sesion():
+    sid = nuevo_sindicato()
+    with db.get_session() as s:
+        tablero.armar(s, sid)
+        assert "xsii_sindicato" not in s.info
 
 
 def test_bas_01_exige_cuit_valido():
@@ -209,7 +251,7 @@ def test_seccionales_y_ubicacion():
         s.add(Seccional(sindicato_id=sid, nombre="Rosario"))
         s.commit()
     c = control(sid, "EST-01")
-    assert c.estado == "observaciones" and c.cifras["seccionales"] == 2
+    assert c.estado == "completa" and c.cifras["seccionales"] == 2
     c = control(sid, "EST-02")
     assert c.estado == "incompleta" and c.cifras["sin_ubicar"] == 1 and c.en_curso
     with db.get_session() as s:
@@ -218,7 +260,8 @@ def test_seccionales_y_ubicacion():
         r.latitud, r.longitud, r.precision_geo = -32.9, -60.7, "manual"
         s.add(r); s.commit()
     assert control(sid, "EST-02").estado == "completa"
-    est = estados_de(sid)
+    est = estados_de(sid, decisiones={"EST-01": {"tipo": "confirmada", "quien": "ana",
+                                                 "cuando": "x", "motivo": ""}})
     assert est["EST-01"] == "hecha" and est["EST-02"] == "hecha"
 
 
@@ -489,7 +532,7 @@ def test_cie_01_cuenta_registrada_con_recibo_y_cie_03_aprobacion():
         p = db.ImplProyecto(nombre="Proyecto", sindicato_id=sid)
         s.add(p); s.commit(); s.refresh(p)
         s.add(db.ImplTarjeta(proyecto_id=p.id, numero=1, codigo="AP0001", tipo="aprobacion",
-                             estado="cerrada", resuelta_en="2026-11-20 10:00",
+                             estado="aprobada", resuelta_en="2026-11-20 10:00",
                              resuelta_por_lado="sindicato"))
         s.commit()
     assert control(sid, "CIE-03").estado == "completa"
@@ -504,7 +547,9 @@ def test_las_decisiones_llegan_al_tablero():
     assert est["BAS-03"] == "hecha"
     assert est["EST-03"] != "bloqueada" or est["EST-01"] != "hecha"      # BAS-03 ya no la frena
     _, tb = el_tablero(sid, decisiones={"BAS-03": {"tipo": "completada_a_mano", "motivo": "m"}})
-    assert tb["BAS-03"].a_mano and tb["BAS-03"].control.estado == "incompleta"
+    assert tb["BAS-03"].a_mano and tb["BAS-03"].control.estado == "completa"
+    # El motivo del control sigue a la vista: la decisión reemplaza a la confirmación.
+    assert tb["BAS-03"].confirmacion
     est = estados_de(sid, insumos={"lista_seccionales": True})
     assert est["EST-01"] == "lista"
 
@@ -549,3 +594,72 @@ def test_el_informe_imprime_el_tablero(capsys):
     assert informe.main([]) == 0
     assert nombre in capsys.readouterr().out
     assert informe.main(["no existe este sindicato"]) == 1
+
+
+# ------------------------------------------------- mejoras de controles (C)
+
+def test_pad_02_avisa_cuantos_afiliados_no_tienen_seccional():
+    sid = nuevo_sindicato()
+    with db.get_session() as s:
+        sec = Seccional(sindicato_id=sid, nombre="Central", ve_todas=True)
+        s.add(sec); s.commit(); s.refresh(sec)
+        for i in range(3):
+            s.add(Trabajador(sindicato_id=sid, cuil=cuil_nuevo(), seccional_id=sec.id if i == 0 else None))
+        s.commit()
+    c = control(sid, "PAD-02")
+    assert c.estado == "observaciones" and c.cifras["sin_seccional"] == 2
+    assert any("2 afiliados sin seccional" in x for x in c.faltan)
+
+
+def test_rec_05_avisa_los_descuentos_revisados_sin_regla_vigente():
+    sid = nuevo_sindicato()
+    with db.get_session() as s:
+        s.add(Concepto(sindicato_id=sid, codigo="CUOTA", nombre="Cuota", tipo="descuento",
+                       categoria_sindical="afiliacion"))
+        s.add(Concepto(sindicato_id=sid, codigo="SEGURO", nombre="Seguro", tipo="descuento"))
+        s.add(Concepto(sindicato_id=sid, codigo="NUEVO", nombre="Nuevo", tipo="descuento",
+                       pendiente_revision=True))          # pendiente: no cuenta acá
+        s.add(Formula(sindicato_id=sid, target="CUOTA", descripcion="c", expr="0.02 * base_remunerativa"))
+        s.commit()
+    c = control(sid, "REC-05")
+    assert c.estado == "observaciones" and c.cifras["descuentos_sin_regla"] == 1
+    assert any("SEGURO" in x for x in c.faltan) and not any("NUEVO" in x for x in c.faltan)
+    with db.get_session() as s:      # una regla ya vencida tampoco controla
+        s.add(Formula(sindicato_id=sid, target="SEGURO", descripcion="v", expr="0.01 * base_remunerativa",
+                      fecha_hasta="2020-01"))
+        s.commit()
+    assert control(sid, "REC-05").cifras["descuentos_sin_regla"] == 1
+    with db.get_session() as s:
+        s.add(Formula(sindicato_id=sid, target="SEGURO", descripcion="n", expr="0.01 * base_remunerativa",
+                      fecha_desde="2020-02"))
+        s.commit()
+    assert control(sid, "REC-05").estado == "completa"
+
+
+def test_bas_04_un_super_admin_sin_cuenta_cuenta_como_pendiente():
+    sid = nuevo_sindicato()
+    with db.get_session() as s:
+        # Un login que no es un CUIL no tiene CuentaPanel.
+        s.add(UsuarioSindicato(sindicato_id=sid, usuario="admin-raro", nombre="R", es_super_admin=True))
+        s.commit()
+    c = control(sid, "BAS-04")
+    assert c.estado == "incompleta" and c.cifras["super_admins_activos"] == 1
+    assert c.cifras["con_clave_propia"] == 0 and c.cifras["pendientes_de_clave"] == 1
+
+
+def test_el_tablero_ignora_modulos_habilitados_raros():
+    sid = nuevo_sindicato(modulos_habilitados=[{"a": 1}, 3, "tramites", "no_existe"])
+    est = estados_de(sid)
+    assert est["TRA-01"] != "no_aplica" and est["COM-05"] == "no_aplica"
+
+
+def test_informe_distingue_modulo_apagado_de_declarada_no_aplica_y_muestra_pospuesta():
+    sid = nuevo_sindicato()
+    tareas, tb = el_tablero(sid, decisiones={
+        "COM-02": {"tipo": "no_aplica", "quien": "ana", "cuando": "x", "motivo": "no usan noticias"},
+        "BAS-02": {"tipo": "pospuesta", "quien": "ana", "cuando": "x", "motivo": ""}})
+    texto = informe.texto("X", tareas, tb)
+    linea = {t.codigo: informe._linea(t, tb[t.codigo]) for t in tareas}
+    assert "declarada no aplica por ana: no usan noticias" in linea["COM-02"]
+    assert "módulo tramites apagado" in linea["TRA-01"]
+    assert "(pospuesta)" in linea["BAS-02"] and "BAS-02" in texto

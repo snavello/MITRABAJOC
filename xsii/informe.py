@@ -25,13 +25,24 @@ def _linea(t, e) -> str:
             marca += " (a mano)"
         elif e.con_observaciones:
             marca += " (con observaciones)"
+    if e.pospuesta:
+        marca += " (pospuesta)"
+    if e.falta_confirmar:
+        marca += " (falta confirmar)"
     c = e.control
     if e.estado == "bloqueada":
         detalle = "frenada por " + ", ".join(e.frenada_por)
     elif e.estado == "esperando":
         detalle = "falta: " + ", ".join(e.insumos_faltantes)
     elif e.estado == "no_aplica":
-        detalle = f"módulo {t.aplica_si} apagado" if t.aplica_si else "declarada sin efecto"
+        d = e.decision or {}
+        if e.no_aplica_por == "condicion":
+            detalle = f"módulo {t.aplica_si} apagado"
+        else:
+            detalle = (f"declarada no aplica por {d.get('quien') or '?'}"
+                       + (f": {d['motivo']}" if d.get("motivo") else ""))
+    elif e.falta_confirmar:
+        detalle = "confirmar: " + (e.confirmacion or "")
     else:
         detalle = c.resumen if c else ""
     return f"  {t.codigo}  {t.nombre:<42} {marca:<28} {detalle}"

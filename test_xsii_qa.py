@@ -86,10 +86,11 @@ def test_defecto_porcentaje_100_con_una_tarea_sin_hacer():
 def test_defecto_que_destraba_y_que_frena_no_coinciden_ante_un_codigo_desconocido():
     tareas = [T("A")]
     t = estados.resolver(tareas, hechos_con({"A": NO}))
-    with pytest.raises(KeyError):
-        consulta.que_frena(tareas, t, "ZZZ")
-    with pytest.raises(KeyError):
-        consulta.que_destraba(tareas, t, "ZZZ")      # hoy devuelve vacío en silencio
+    # Ajustado en la segunda vuelta: el diseño decidió ValueError (mensaje claro)
+    # en las tres consultas, no KeyError; lo que el defecto pide es que coincidan.
+    for f in (consulta.que_frena, consulta.que_destraba, consulta.camino_hasta):
+        with pytest.raises(ValueError, match="ZZZ"):
+            f(tareas, t, "ZZZ")
 
 
 def test_precedencia_hecha_gana_a_bloqueada_y_no_aplica_a_hecha():

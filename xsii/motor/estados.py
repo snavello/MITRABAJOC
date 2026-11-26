@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 CONTROLES = ("completa", "observaciones", "incompleta")
 ESTADOS = ("no_aplica", "hecha", "bloqueada", "esperando", "en_curso", "lista")
-DECISIONES = ("completada_a_mano", "no_aplica", "pospuesta")
+DECISIONES = ("completada_a_mano", "no_aplica", "pospuesta", "confirmada")
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,12 @@ class EstadoTarea:
     avisos: list = field(default_factory=list)            # dependencias blandas sin resolver
     pospuesta: bool = False
     decision: dict | None = None
+    # El control pasa pero falta que una persona confirme `confirmacion`.
+    falta_confirmar: bool = False
+    confirmacion: str | None = None
+    # Por qué no aplica: "condicion" (módulo apagado) o "decision" (declarada
+    # por una persona, con quién y motivo en `decision`). "" si aplica.
+    no_aplica_por: str = ""
 
     @property
     def resuelta(self) -> bool:
@@ -102,14 +108,19 @@ def resolver(tareas, hechos: dict) -> dict:
         d_tipo = (d or {}).get("tipo")
         if d is not None and d_tipo not in DECISIONES:
             raise ValueError(f"{t.codigo}: decisión inválida {d_tipo!r}.")
-        if not _aplica(t, hechos) or d_tipo == "no_aplica":
-            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=d)
-        elif c.pasa:
+        if not _aplica(t, hechos):
+            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=d,
+                                            no_aplica_por="condicion")
+        elif d_tipo == "no_aplica":
+            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=d,
+                                            no_aplica_por="decision")
+        elif c.pasa and (not t.confirmacion or d_tipo == "confirmada"):
             primera[t.codigo] = EstadoTarea(
                 t.codigo, "hecha", con_observaciones=(c.estado == "observaciones"),
-                control=c, decision=d)
+                control=c, decision=d, confirmacion=t.confirmacion)
         elif d_tipo == "completada_a_mano":
-            primera[t.codigo] = EstadoTarea(t.codigo, "hecha", a_mano=True, control=c, decision=d)
+            primera[t.codigo] = EstadoTarea(t.codigo, "hecha", a_mano=True, control=c, decision=d,
+                                            confirmacion=t.confirmacion)
 
     salida: dict[str, EstadoTarea] = {}
     for t in tareas:
@@ -122,11 +133,15 @@ def resolver(tareas, hechos: dict) -> dict:
         frenada = [dep for dep in t.necesita if dep not in primera]
         avisos = [dep for dep in t.mejora_con if dep not in primera]
         faltan_insumos = [i for i in t.insumos if not insumos.get(i)]
+        # Pasó el control pero nadie confirmó (si estuviera confirmada, ya
+        # estaría hecha): no destraba a nadie hasta que se confirme.
+        falta_confirmar = c.pasa and bool(t.confirmacion)
+        con_avance = c.en_curso or t.codigo in ensayos or (falta_confirmar and not t.solo_confirmacion)
         if frenada:
             estado = "bloqueada"
         elif faltan_insumos:
             estado = "esperando"
-        elif c.en_curso or t.codigo in ensayos:
+        elif con_avance:
             estado = "en_curso"
         else:
             estado = "lista"
@@ -134,5 +149,7 @@ def resolver(tareas, hechos: dict) -> dict:
             t.codigo, estado, control=c,
             frenada_por=frenada if estado == "bloqueada" else [],
             insumos_faltantes=faltan_insumos if estado == "esperando" else [],
-            avisos=avisos, pospuesta=pospuesta, decision=d)
+            avisos=avisos, pospuesta=pospuesta, decision=d,
+            falta_confirmar=falta_confirmar,
+            confirmacion=t.confirmacion if falta_confirmar else None)
     return salida

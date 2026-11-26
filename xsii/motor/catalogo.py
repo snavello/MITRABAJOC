@@ -41,6 +41,13 @@ class Tarea:
     control: str = ""
     acciones: tuple = ()
     descripcion: str = ""
+    # Lo que una persona tiene que CONFIRMAR aunque el control pase (p. ej.
+    # «la lista coincide con la del sindicato»). Sin la decisión `confirmada`
+    # la tarea no está hecha. `solo_confirmacion`: no hay nada que calcular
+    # ni avance que mostrar, solo la confirmación; sin ella la tarea queda
+    # «lista» y no «en curso».
+    confirmacion: str | None = None
+    solo_confirmacion: bool = False
 
 
 def _ciclo(aristas: dict[str, tuple]) -> list[str] | None:
@@ -98,6 +105,8 @@ def validar(tareas, grupos) -> list[str]:
             errores.append(f"{t.codigo}: grupo inválido {t.grupo!r}.")
         if not t.control:
             errores.append(f"{t.codigo}: la tarea no tiene control.")
+        if t.solo_confirmacion and not t.confirmacion:
+            errores.append(f"{t.codigo}: es solo_confirmacion pero no dice qué confirmar.")
         for dep in t.necesita:
             if dep not in vistos:
                 errores.append(f"{t.codigo}: necesita {dep}, que no existe.")

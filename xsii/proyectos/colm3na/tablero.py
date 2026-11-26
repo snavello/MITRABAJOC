@@ -23,8 +23,12 @@ def condiciones(s, sindicato_id: int) -> dict:
     """{módulo: bool}: una condición por cada módulo del catálogo de la app.
     Un `aplica_si` del catálogo es siempre el nombre de un módulo."""
     habilitados = s.exec(select(Sindicato.modulos_habilitados).where(
-        Sindicato.id == sindicato_id)).first() or []
-    habilitados = set(habilitados)
+        Sindicato.id == sindicato_id)).first()
+    # Es JSON: puede traer cualquier cosa. Se toman solo los textos que son
+    # módulos reales; lo demás se ignora sin tumbar el tablero.
+    if not isinstance(habilitados, (list, tuple)):
+        habilitados = []
+    habilitados = {m for m in habilitados if isinstance(m, str) and m in modulos.MODULOS}
     return {m: m in habilitados for m in modulos.MODULOS}
 
 
@@ -50,8 +54,14 @@ def armar(s, sindicato_id: int, decisiones: dict | None = None,
     cuando, motivo}} e `insumos` {clave: recibido} llegan de afuera (en el
     bloque 1, de las tablas de registro); sin ellos, ninguna tarea está
     esperando un dato ni dada por completada a mano."""
+    # La ficha del sindicato se lee una vez para todos los controles.
+    s.info["xsii_sindicato"] = (sindicato_id, controles._leer_sindicato(s, sindicato_id))
+    try:
+        controles_calculados = correr_controles(s, sindicato_id)
+    finally:
+        s.info.pop("xsii_sindicato", None)
     hechos = {
-        "controles": correr_controles(s, sindicato_id),
+        "controles": controles_calculados,
         "aplica": condiciones(s, sindicato_id),
         "insumos": insumos or {},
         "decisiones": decisiones or {},
