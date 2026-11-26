@@ -188,17 +188,18 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 .g-barra.completa { background: var(--ok); border-color: var(--ok); }
 .g-barra.en-curso { background: var(--miel); border-color: var(--miel-t); }
 .g-barra.por-venir { background: var(--azul-f); border-color: #9db6e0; }
+.g-barra.revisar { background: var(--mal-f); border-color: var(--mal); }
 .g-hoy { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--mal); z-index: 2; }
 .g-ley { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 10px; color: var(--gris); font-size: .8rem; font-weight: 700; }
 .g-ley span { display: inline-flex; align-items: center; gap: .45em; }
 .g-punto { width: 14px; height: 14px; border-radius: 5px; display: inline-block; background: #c6ccd8; }
-.g-punto.completa { background: var(--ok); } .g-punto.en-curso { background: var(--miel); } .g-punto.por-venir { background: var(--azul-f); border: 1px solid #9db6e0; }
+.g-punto.completa { background: var(--ok); } .g-punto.en-curso { background: var(--miel); } .g-punto.por-venir { background: var(--azul-f); border: 1px solid #9db6e0; } .g-punto.revisar { background: var(--mal-f); border: 1px solid var(--mal); }
 .g-punto.hoy { width: 3px; height: 14px; border-radius: 0; background: var(--mal); }
 .g-lista { display: none; list-style: none; padding: 0; margin: 0; }
 .g-item { border-left: 6px solid #aeb6c6; background: var(--papel); border-radius: 10px; padding: 10px 12px; margin-top: 8px; display: grid; gap: 2px; }
 .g-item > div { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .g-item small { color: var(--gris); font-weight: 700; font-variant-numeric: tabular-nums; }
-.g-item.completa { border-left-color: var(--ok); } .g-item.en-curso { border-left-color: var(--miel); } .g-item.por-venir { border-left-color: #9db6e0; }
+.g-item.completa { border-left-color: var(--ok); } .g-item.en-curso { border-left-color: var(--miel); } .g-item.por-venir { border-left-color: #9db6e0; } .g-item.revisar { border-left-color: var(--mal); } .g-item.revisar .g-est { color: var(--mal); }
 .g-est { font-size: .78rem; font-weight: 800; color: var(--gris); }
 .fechas-ed { margin-top: 18px; padding-top: 14px; border-top: 2px dashed var(--linea); }
 .fechas-ed h3 { font-size: 1.05rem; margin-bottom: 8px; }

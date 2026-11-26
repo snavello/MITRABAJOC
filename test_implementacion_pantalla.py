@@ -346,8 +346,10 @@ def test_la_proyeccion_del_plan_se_dibuja_sin_innerhtml_y_con_edicion_solo_del_e
     # el editor solo existe dentro de «Editar plan» y solo para el equipo
     assert "if (edita) sec.appendChild(dibujarEditorFechas())" in js and "const edita = ES_EQUIPO && S.editarPlan" in js
     assert "if (!cal && !ES_EQUIPO) return null" in js
-    for clase in (".gantt", ".g-barra.completa", ".g-barra.en-curso", ".g-barra.por-venir", ".g-hoy", ".g-lista", ".fechas-ed"):
+    for clase in (".gantt", ".g-barra.completa", ".g-barra.en-curso", ".g-barra.por-venir", ".g-barra.revisar", ".g-hoy", ".g-lista", ".fechas-ed"):
         assert clase in css, clase
+    # una fase que pasó su fecha de fin sin completarse dice «Revisar», no «Por venir»
+    assert "hoy > e.fecha_hasta) return 'revisar'" in js and "'revisar': 'Revisar'" in js
     assert re.search(r"@media \(max-width: 760px\) \{\s*\.g-escritorio \{ display: none; \}", css)
     for palabra in ("me toca", "te toca"):
         assert palabra not in js.lower()
