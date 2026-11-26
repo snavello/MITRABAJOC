@@ -451,7 +451,7 @@
   }
   const NOMBRE_ESTADO_FASE = { 'completa': 'Completa', 'en-curso': 'En curso', 'por-venir': 'Por venir' };
   function notaFechas() {
-    return h('div', { class: 'proy-nota' },
+    return h('div', { class: 'plan-proy-nota' },
       h('span', { class: 'chip ' + (S.acordadas ? 'ok' : 'sind') }, icono(S.acordadas ? 'check' : 'reloj'), S.acordadas ? 'Fechas acordadas' : 'Fechas tentativas'),
       h('small', null, 'Las fechas definitivas se acuerdan en las fases Preparar y Acordar.'));
   }
@@ -459,8 +459,8 @@
     const cal = S.calendario;
     const edita = ES_EQUIPO && S.editarPlan;
     if (!cal && !ES_EQUIPO) return null;
-    const sec = h('section', { class: 'proy', 'aria-label': 'Proyección del plan en el tiempo' });
-    sec.appendChild(h('div', { class: 'proy-cab' }, h('h2', null, 'Proyección'), cal ? notaFechas() : null));
+    const sec = h('section', { class: 'plan-proy', 'aria-label': 'Proyección del plan en el tiempo' });
+    sec.appendChild(h('div', { class: 'plan-proy-cab' }, h('h2', null, 'Proyección'), cal ? notaFechas() : null));
     if (!cal) {
       sec.appendChild(h('p', { class: 'vacio-col' }, 'Sin fechas todavía.'));
       if (!edita) sec.appendChild(h('button', { class: 'btn lisa chico', type: 'button', onclick: function () { S.editarPlan = true; refrescarPlan(); } }, icono('lapiz'), 'Cargar fechas'));

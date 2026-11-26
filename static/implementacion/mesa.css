@@ -165,11 +165,11 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 /* ---------- Proyección del plan (fechas por fase) ---------- */
 .seg-f { font-variant-numeric: tabular-nums; }
 .etapa-fechas { display: inline-flex; align-items: center; gap: .4em; margin-left: 12px; color: var(--gris); font-weight: 700; }
-.proy { background: #fff; border: 1px solid var(--linea); border-radius: 18px; padding: 18px 20px; margin: 6px 0 18px; }
-.proy-cab { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; justify-content: space-between; margin-bottom: 12px; }
-.proy-cab h2 { font-size: 1.35rem; }
-.proy-nota { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
-.proy-nota small { color: var(--gris); font-weight: 600; }
+.plan-proy { background: #fff; border: 1px solid var(--linea); border-radius: 18px; padding: 18px 20px; margin: 6px 0 18px; }
+.plan-proy-cab { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; justify-content: space-between; margin-bottom: 12px; }
+.plan-proy-cab h2 { font-size: 1.35rem; }
+.plan-proy-nota { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.plan-proy-nota small { color: var(--gris); font-weight: 600; }
 .g-scroll { overflow-x: auto; }
 .gantt { min-width: 760px; }
 .g-fila { display: grid; grid-template-columns: 170px 1fr; align-items: center; border-top: 1px solid var(--linea); min-height: 48px; }
@@ -212,7 +212,7 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 @media (max-width: 760px) {
   .g-escritorio { display: none; }
   .g-lista { display: block; }
-  .proy { padding: 14px 16px; }
+  .plan-proy { padding: 14px 16px; }
   .fechas-fila { grid-template-columns: 1fr 1fr; }
   .fechas-fila b { grid-column: 1 / -1; }
   .etapa-fechas { margin-left: 0; display: flex; margin-top: 4px; }

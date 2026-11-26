@@ -36,7 +36,8 @@ def upgrade() -> None:
     if _columnas("implproyecto") and "fechas_acordadas" not in _columnas("implproyecto"):
         op.add_column("implproyecto", sa.Column("fechas_acordadas", sa.Boolean(), nullable=False,
                                                 server_default=sa.false()))
-        op.alter_column("implproyecto", "fechas_acordadas", server_default=None)
+        # El default de servidor se deja: la mesa vive en Pruebas con datos reales
+        # y hay altas por SQL directo (tests de idempotencia) que no lo nombran.
 
 
 def downgrade() -> None:

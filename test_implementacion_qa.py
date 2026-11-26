@@ -171,6 +171,8 @@ def test_ids_de_otro_proyecto_son_indistinguibles_de_un_id_inexistente():
                           ("borrar", {"borrar": True}), ("orden", {"orden": 1})):
         par("hito " + clave, lambda c, i, cuerpo=cuerpo: c.post(_api(p1, f"plan/hitos/{i['h']}"), json=cuerpo))
     par("etapa", lambda c, i: c.post(_api(p1, f"plan/etapas/{i['e']}"), json={"nombre": "zzz"}))
+    par("fechas de una etapa ajena", lambda c, i: c.post(_api(p1, "plan/fechas"), json={
+        "etapas": [{"id": i["e"], "desde": "2026-12-01", "hasta": "2026-12-04"}]}))
     par("hito nuevo", lambda c, i: c.post(_api(p1, "plan/hitos"), json={"etapa_id": i["e"], "texto": "zzz"}))
     par("crear con etapa ajena", lambda c, i: c.post(_api(p1, "tarjetas"), data={
         "tipo": "pedido", "titulo": "t", "texto": "t", "etapa_id": i["e"]}))
@@ -782,7 +784,7 @@ def test_ids_gigantes_no_dan_500(big):
 def test_json_y_multipart_malformados_no_dan_500():
     pid, eq, sin, t, ap, etapa, hito = _entorno_fuzz()
     for body in (b"", b"null", b"[]", b'"x"', b"{", b"123", b"\xff\xfe"):
-        for ruta in (f"tarjetas/{ap}/aprobacion", f"tarjetas/{t}/reasignar", "plan/hitos", f"plan/hitos/{hito}", f"plan/etapas/{etapa}"):
+        for ruta in (f"tarjetas/{ap}/aprobacion", f"tarjetas/{t}/reasignar", "plan/hitos", "plan/fechas", f"plan/hitos/{hito}", f"plan/etapas/{etapa}"):
             r = eq.post(_api(pid, ruta), content=body, headers={"content-type": "application/json"})
             assert r.status_code < 500, (ruta, body, r.status_code)
         assert eq.post(_eq_url("proyectos"), content=body, headers={"content-type": "application/json"}).status_code < 500
