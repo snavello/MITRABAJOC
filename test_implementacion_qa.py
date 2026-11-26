@@ -164,6 +164,7 @@ def test_ids_de_otro_proyecto_son_indistinguibles_de_un_id_inexistente():
     par("leido", lambda c, i: c.post(_api(p1, f"tarjetas/{i['av']}/leido")))
     par("reasignar", lambda c, i: c.post(_api(p1, f"tarjetas/{i['t']}/reasignar"),
                                          json={"responsable": "x", "responsable_lado": "equipo"}))
+    par("editar", lambda c, i: c.post(_api(p1, f"tarjetas/{i['t']}/editar"), json={"titulo": "zzz"}))
     par("GET archivo", lambda c, i: c.get(_api(p1, f"archivos/{i['a']}")))
     par("ficha", lambda c, i: c.get(_api(p1, f"archivos/{i['a']}/ficha")))
     par("borrar archivo", lambda c, i: c.post(_api(p1, f"archivos/{i['a']}/borrar")))

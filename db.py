@@ -11149,7 +11149,7 @@ def impl_editar_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, actor, **
         viejos = set(implementacion.extraer_codigos(titulo_ant)) | set(implementacion.extraer_codigos(texto_ant))
         ahora = set(implementacion.extraer_codigos(t.titulo)) | set(implementacion.extraer_codigos(texto_nuevo))
         otros = set()
-        for (txt,) in s.exec(select(ImplMensaje.texto).where(
+        for txt in s.exec(select(ImplMensaje.texto).where(
                 ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == t.id,
                 ImplMensaje.id != (primero.id if primero else 0))).all():
             otros |= set(implementacion.extraer_codigos(txt))
