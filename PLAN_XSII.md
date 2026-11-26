@@ -83,6 +83,9 @@ es completa ni cubre los casos complejos.
   los datos del sindicato de ese entorno, donde ya están el proyecto y los
   archivos entregados. Más adelante puede hacer falta en Demo; ahora no, y
   no se construye nada para eso. En demo responde 404, como `/entornos`.
+- **X18. Lo usa solo el equipo** (SDN, 2026-11-26). El sindicato sigue en la
+  Mesa: lo que XSII necesita de él se pide creando tarjetas ahí. No hay
+  vista del sindicato ni permisos nuevos que cuidar.
 
 ## Principios de construcción (propuestos)
 
@@ -338,5 +341,5 @@ anteriores.
 2. ~~Mínimo de la primera versión~~: cerrada, X14.
 3. ~~Excepciones contra el control~~: cerrada, X15 y X16.
 4. ~~Entorno~~: cerrada, X17.
-5. Quién lo usa: solo el equipo, o también el sindicato en modo lectura.
+5. ~~Quién lo usa~~: cerrada, X18.
 6. Primera tarea asistida a construir.
