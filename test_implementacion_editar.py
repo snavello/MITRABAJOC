@@ -455,3 +455,40 @@ def test_el_css_tiene_lo_de_la_edicion():
     css = CSS.read_text(encoding="utf-8")
     for clase in (".ed-form", ".fecha-pasada", ".ed-antes", ".chip.editada"):
         assert clase in css, clase
+
+
+# ============================================================ QA independiente (I19)
+def test_qa_una_tarjeta_con_fase_y_hito_incoherentes_corrige_su_titulo():
+    """El alta admite una fase y un hito de otra fase; esa tarjeta no puede quedar
+    sin poder editarse (el título, el texto o la fecha) por un par que el pedido no toca."""
+    pid, eq, _sin = _mundo()
+    with db.get_session() as s:
+        e1, e2 = [e.id for e in db.impl_etapas(s, pid)][:2]
+        h = db.impl_agregar_hito(s, pid, e1, "Un hito", EQ).id
+    r = eq.post(_api(pid, "tarjetas"), data={"tipo": "pedido", "titulo": "a", "texto": "b",
+                                            "etapa_id": e2, "hito_id": h})
+    assert r.status_code == 200, r.text
+    tid = r.json()["tarjeta"]["id"]
+    r = eq.post(_api(pid, f"tarjetas/{tid}/editar"), json={"titulo": "solo el título", "etapa_id": e2, "hito_id": h})
+    assert r.status_code == 200, r.text
+    assert r.json()["tarjeta"]["titulo"] == "solo el título"
+    # tocar el par sí exige coherencia
+    r = eq.post(_api(pid, f"tarjetas/{tid}/editar"), json={"hito_id": None})
+    assert r.status_code == 200
+    r = eq.post(_api(pid, f"tarjetas/{tid}/editar"), json={"etapa_id": e2, "hito_id": h})
+    assert r.status_code == 400
+
+
+def test_qa_el_evento_de_creacion_se_lee_por_codigo_y_no_por_numero():
+    assert im.texto_evento("crear", {"numero": 1, "codigo": "PE0001"}) == "creó la tarjeta PE0001"
+    assert im.texto_evento("crear", {"numero": 3}) == "creó la tarjeta #3"      # evento viejo, sin código
+    pid, eq, _sin = _mundo()
+    t = _crear(eq, pid)
+    ev = eq.get(_api(pid, f"tarjetas/{t['id']}")).json()["eventos"]
+    assert ev[0]["texto"] == f"creó la tarjeta {t['codigo']}"
+
+
+def test_qa_el_historial_no_muestra_la_clave_tecnica_de_la_accion():
+    js = _js()
+    assert "h('b', null, e.que" not in js and "h('b', null, 'editar')" not in js
+    assert "e.quien || 'Alguien'" in js

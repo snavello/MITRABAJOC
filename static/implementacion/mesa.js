@@ -1062,11 +1062,12 @@
     const ev = d.eventos || [];
     if (ev.length) hilo.appendChild(h('details', { class: 'traza', open: ev.some(function (e) { return e.que === 'editar'; }) ? true : null }, h('summary', null, 'Historial de la tarjeta (' + ev.length + ')'),
       h('ol', null, ev.map(function (e) {
-        const cuando = h('small', null, (e.quien || '') + (e.lado ? ' (' + ladoNombre(e.lado) + ')' : '') + ' · ' + fechaHora(e.cuando));
+        // Una frase en castellano: «Ana corrigió el título», nunca la clave técnica de la acción.
+        const cuando = h('small', null, (e.lado ? ladoNombre(e.lado) + ' · ' : '') + fechaHora(e.cuando));
         if (e.que === 'editar' && (e.cambios || []).length) {
-          return h('li', { class: 'ed-evento' }, h('b', null, 'editar'), e.cambios.map(function (c) { return lineaCambio(e.quien, c); }), cuando);
+          return h('li', { class: 'ed-evento' }, e.cambios.map(function (c, i) { return lineaCambio(i === 0 ? (e.quien || 'Alguien') : '', c); }), cuando);
         }
-        return h('li', null, h('b', null, e.que || ''), e.texto ? ' ' + e.texto : '', cuando);
+        return h('li', null, h('b', null, e.quien || 'Alguien'), ' ' + (e.texto || 'hizo un cambio'), cuando);
       }))));
     raiz.appendChild(h('div', { class: 'tj-grid' }, ficha, hilo));
     return raiz;
@@ -1086,7 +1087,7 @@
     return v;
   }
   function lineaCambio(quien, c) {
-    const pre = (quien || 'Alguien') + ' cambió ' + (ROTULO_CAMBIO[c.campo] || c.campo);
+    const pre = (quien ? quien + ' cambió ' : 'Cambió ') + (ROTULO_CAMBIO[c.campo] || c.campo);   // quién, solo en la primera línea
     if (c.campo === 'texto') {
       return h('div', { class: 'ed-cambio' }, h('span', null, pre),
         h('details', { class: 'ed-antes' }, h('summary', null, 'Ver el texto anterior'), h('p', null, c.antes || '')));

@@ -11093,7 +11093,11 @@ def impl_editar_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, actor, **
             ImplEtapa.id == etapa_final, ImplEtapa.proyecto_id == proyecto_id)).first():
         raise implementacion.ErrorImpl("etapa", "La etapa no es de este proyecto.")
     hito = None
-    if hito_final is not None:
+    # Solo se exige la coherencia fase/hito si el pedido toca alguno de los dos: una tarjeta que
+    # ya venía con un par incoherente (el alta lo admite) tiene que poder corregir su título.
+    toca_plan = ("etapa_id" in nuevos and nuevos["etapa_id"] != t.etapa_id) or \
+                ("hito_id" in nuevos and nuevos["hito_id"] != t.hito_id)
+    if hito_final is not None and toca_plan:
         hito = s.exec(select(ImplHito).where(ImplHito.id == hito_final, ImplHito.proyecto_id == proyecto_id)).first()
         if not hito:
             raise implementacion.ErrorImpl("hito", "El hito no es de este proyecto.")

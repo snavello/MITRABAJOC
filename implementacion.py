@@ -481,7 +481,8 @@ def texto_evento(accion: str, detalle: dict) -> str:
     d = detalle or {}
     nombre = d.get("nombre") or ""
     if accion == "crear":
-        return f"creó la tarjeta #{d.get('numero', '')}".strip()
+        # Se nombra por su código (PE0001); sin él (eventos viejos) por su número.
+        return "creó la tarjeta " + (d.get("codigo") or (f"#{d['numero']}" if d.get("numero") else ""))
     if accion == "responder":
         nuevo, ant = d.get("estado_nuevo"), d.get("estado_anterior")
         if nuevo and nuevo != ant:
