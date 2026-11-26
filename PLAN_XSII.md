@@ -1,11 +1,9 @@
 # PLAN_XSII.md — XSII, Implementación inteligente
 
-**Estado: BORRADOR para acordar con SDN** (2026-11-26). Las decisiones ya
-tomadas están numeradas (X1…); las abiertas están al final y se cierran de a
-una. Cuando quede acordado, este archivo no se edita más: lo que cambie va a
-HISTORIAL.md.
+**Acordado con SDN el 2026-11-26**, pregunta por pregunta (X1 a X20). Una vez
+acordado no se edita: lo que cambie después va a HISTORIAL.md.
 
-Maquetas de las tres direcciones de pantalla:
+Maquetas (la 2 es la elegida):
 https://claude.ai/artifact/JRQpQ1TxVoe3oFuBkRwNKu
 
 ## Qué es
@@ -92,6 +90,11 @@ es completa ni cubre los casos complejos.
   **Conceptos**. La primera fija el protocolo de los cuatro momentos. En el
   catálogo, Conceptos sigue sin depender del Padrón (depende de los recibos
   de muestra): si el padrón se demora, el Play puede ofrecerla igual (X3).
+- **X20. Tutorial paso a paso** (SDN, 2026-11-26): un HTML que sigue una
+  implementación desde que arranca hasta que termina, con las pantallas
+  REALES de XSII (capturas) y resultados simulados: incluye errores,
+  preguntas y una tarea completada a mano. Se va armando a medida que cada
+  pantalla existe y se publica en Recursos de `/entornos`.
 
 ## Principios de construcción (propuestos)
 
@@ -337,6 +340,8 @@ puedo hacer ahora?», «¿qué falta para probar un recibo?», «reclamá el pad
 4. **Padrón**, después **Conceptos** (X19) y el resto de las ayudas.
 5. **Vuelta a la Mesa**: insumos enlazados a tarjetas, hitos propuestos.
 6. **Método**: `xsii/METODO.md` y la extracción a repo propio cuando madure.
+7. **Tutorial** (X20): crece con cada bloque desde el 1; se cierra con el
+   recorrido completo.
 
 Cada bloque con desarrollo y QA independiente por agentes, como los
 anteriores.
