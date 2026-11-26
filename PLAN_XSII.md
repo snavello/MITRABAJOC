@@ -65,6 +65,16 @@ es completa ni cubre los casos complejos.
 - **X13. El Mapa ilumina un camino.** Al tocar una tarea se destaca de qué
   depende y qué destraba, y el resto se atenúa. Flechas en ángulo recto,
   como la norma de diagramas del Documento integrador.
+- **X14. La primera versión es TODO lo que aplica** (SDN, 2026-11-26): las
+  tareas del catálogo cuyo módulo está contratado. No hay un subconjunto
+  «mínimo»: la barra de avance y el Play cuentan todas menos las que no
+  aplican.
+- **X15. El administrador puede dar una tarea por completada a mano.** Ante
+  un problema, un imprevisto o un cambio de objetivos, con registro de
+  quién, cuándo y el motivo (obligatorio). La tarea cuenta como hecha y
+  destraba a las que dependen de ella, pero queda marcada «completada a
+  mano»: el control se sigue calculando y la pantalla muestra las dos cosas.
+  Se puede deshacer, también con registro. Es la válvula que hace viable X14.
 
 ## Principios de construcción (propuestos)
 
@@ -123,7 +133,6 @@ de la Mesa** (`ImplProyecto.sindicato_id` ya vincula proyecto y sindicato).
 | dónde se hace | enlace directo a la pantalla o herramienta |
 | control | función que devuelve: completa / con observaciones / incompleta, con cifras y la lista de lo que falta |
 | acciones | solo en las asistidas: qué puede preparar y cargar el asistente |
-| mínimo de la primera versión | sí / no: separa lo que hace falta para «funcional» de lo que es completar |
 
 ### Estados (calculados en este orden)
 
@@ -143,7 +152,7 @@ una confirmación: «cargados 3.812 de 3.840 que declaró el sindicato;
 rechazos revisados»).
 
 Lo flexible: posponer una tarea, declararla «no aplica» con motivo, o darla
-por buena con observaciones. Lo sólido: nada de eso cambia lo que el control
+por completada a mano (X15). Lo sólido: nada de eso cambia lo que el control
 calcula; la pantalla muestra las dos cosas.
 
 ## Catálogo v0 de Colm3na (relevado del código)
@@ -212,9 +221,8 @@ calcula; la pantalla muestra las dos cosas.
 | CIE-02 | Recorrido por rol | asistida | CIE-01, TRA-02, EST-04 | el robot entra con cada rol y completa su recorrido | **Robot por sindicato** (hay base en `e2e/`) |
 | CIE-03 | Aceptación del sindicato | manual | CIE-02 | tarjeta de Aprobación resuelta | Mesa |
 
-**Mínimo de la primera versión** (propuesto): Base completa, EST-01, EST-03,
-EST-04, REC-01 a REC-07, PAD-01, PAD-02, TRA-01 con dos formularios, COM-01,
-COM-02 y Cierre. El resto se completa después y el tablero lo muestra aparte.
+**Primera versión** (X14): todas las tareas que aplican. La columna «mínimo
+de la primera versión» de la ficha de tarea no se usa.
 
 ## Diferencias entre el plan de implementación y el sistema
 
@@ -319,8 +327,9 @@ anteriores.
 ## Abiertas (se cierran de a una)
 
 1. ~~Dirección de la pantalla~~: cerrada, X8 a X13.
-2. Mínimo de la primera versión: confirmar o corregir la lista propuesta.
-3. Qué puede dar por buena una persona contra el control (excepciones).
+2. ~~Mínimo de la primera versión~~: cerrada, X14.
+3. ~~Excepciones contra el control~~: cerrada, X15. Falta decir quién es «el
+   administrador» (propuesta: solo un superadmin de plataforma).
 4. Entorno: Pruebas, como la Mesa, o también donde corra el piloto.
 5. Quién lo usa: solo el equipo, o también el sindicato en modo lectura.
 6. Primera tarea asistida a construir.
