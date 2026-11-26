@@ -11388,3 +11388,8 @@ un `acordadas` mal tipado destildaba la marca: los dos dan 400.
 **Queda a decidir.** Una fase cuyas fechas pasaron y no tiene hitos hechos se
 muestra «Por venir» (¿«Atrasada»?). Al mover el inicio de una fase con «Mover
 también las siguientes» no se corre su propio fin.
+
+**«Revisar» (misma fecha, Plataforma 0.77.02).** SDN: una fase que pasó su
+fecha de fin sin completarse no dice «Por venir» sino «Revisar», en rojo, con
+o sin hitos hechos. Que mover el inicio no corra el fin de la propia fase queda
+así por ahora.

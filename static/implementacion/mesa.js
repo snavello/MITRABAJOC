@@ -446,10 +446,12 @@
   function estadoDeFase(e, hoy) {
     const c = resumenEtapa(e); const pct = c.total ? Math.round(100 * c.hechos / c.total) : (e.pct || 0);
     if (pct >= 100) return 'completa';
+    // Pasó su fecha de fin y no está completa: hay que mirarla (SDN, 2026-11-26).
+    if (hoy && e.fecha_hasta && hoy > e.fecha_hasta) return 'revisar';
     if (pct > 0 || (hoy && e.fecha_desde && e.fecha_hasta && hoy >= e.fecha_desde && hoy <= e.fecha_hasta)) return 'en-curso';
     return 'por-venir';
   }
-  const NOMBRE_ESTADO_FASE = { 'completa': 'Completa', 'en-curso': 'En curso', 'por-venir': 'Por venir' };
+  const NOMBRE_ESTADO_FASE = { 'completa': 'Completa', 'en-curso': 'En curso', 'por-venir': 'Por venir', 'revisar': 'Revisar' };
   function notaFechas() {
     return h('div', { class: 'plan-proy-nota' },
       h('span', { class: 'chip ' + (S.acordadas ? 'ok' : 'sind') }, icono(S.acordadas ? 'check' : 'reloj'), S.acordadas ? 'Fechas acordadas' : 'Fechas tentativas'),
@@ -486,7 +488,7 @@
               h('span', { class: 'g-barra ' + est, estilo: { left: izq + '%', width: ancho + '%' }, title: e.nombre + ': ' + rangoDM(x.desde, x.hasta) + ' (' + NOMBRE_ESTADO_FASE[est] + ')' })));
         }));
       const leyenda = h('div', { class: 'g-ley' },
-        ['completa', 'en-curso', 'por-venir'].map(function (k) { return h('span', null, h('i', { class: 'g-punto ' + k }), NOMBRE_ESTADO_FASE[k]); }),
+        ['completa', 'en-curso', 'por-venir', 'revisar'].map(function (k) { return h('span', null, h('i', { class: 'g-punto ' + k }), NOMBRE_ESTADO_FASE[k]); }),
         hoyPos !== null ? h('span', null, h('i', { class: 'g-punto hoy' }), 'Hoy') : null);
       sec.appendChild(h('div', { class: 'g-escritorio' }, h('div', { class: 'g-scroll' }, gantt), leyenda));
       // Lista (teléfono)
