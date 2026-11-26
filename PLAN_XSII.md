@@ -75,6 +75,10 @@ es completa ni cubre los casos complejos.
   destraba a las que dependen de ella, pero queda marcada «completada a
   mano»: el control se sigue calculando y la pantalla muestra las dos cosas.
   Se puede deshacer, también con registro. Es la válvula que hace viable X14.
+- **X16. Lo puede hacer cualquier usuario de plataforma del equipo** (SDN,
+  2026-11-26), no solo los superadmin. Como cualquiera puede saltear un
+  control, toda tarea completada a mano se ve en el Tablero con su marca,
+  quién y por qué, y hay un filtro para listarlas.
 
 ## Principios de construcción (propuestos)
 
@@ -328,8 +332,7 @@ anteriores.
 
 1. ~~Dirección de la pantalla~~: cerrada, X8 a X13.
 2. ~~Mínimo de la primera versión~~: cerrada, X14.
-3. ~~Excepciones contra el control~~: cerrada, X15. Falta decir quién es «el
-   administrador» (propuesta: solo un superadmin de plataforma).
+3. ~~Excepciones contra el control~~: cerrada, X15 y X16.
 4. Entorno: Pruebas, como la Mesa, o también donde corra el piloto.
 5. Quién lo usa: solo el equipo, o también el sindicato en modo lectura.
 6. Primera tarea asistida a construir.
