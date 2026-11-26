@@ -230,7 +230,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   si importa algo de la app) y `proyectos/colm3na/` es el catálogo de las 34
   tareas de implementación de un sindicato, con un control por tarea que
   consulta la base (`controles.py`, firma `(s, sid)`, siempre por
-  `sindicato_id`). `python -m xsii.informe "Sindicato"` imprime el tablero.
+  `sindicato_id`). `python -m xsii.informe "Sindicato"` imprime el tablero; la
+  pantalla es `/entornos/xsii/{pid}` (`templates/xsii.html`, `static/xsii/`,
+  vista en `xsii/proyectos/colm3na/vista.py`, contrato `docs/xsii/API.md`).
   Una tarea nueva es una entrada del catálogo más su control. Ver "Estado
   actual" 53.
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
@@ -1917,16 +1919,36 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     independiente (9 defectos corregidos antes del merge). El estado se
     calcula mirando la base, nunca se tilda; lo que no se puede calcular se
     confirma con registro, y cualquier usuario de plataforma puede completar
-    una tarea a mano con motivo (X15, X16). Sin tablas, pantallas ni IA
-    todavía. **Sigue**: bloque 1 (tablas `Xsii*`, pantalla Guía con Play +
-    Tablero + Mapa en `/entornos`, maqueta 2 en
-    https://claude.ai/artifact/JRQpQ1TxVoe3oFuBkRwNKu), después las tareas
-    asistidas en el orden Seccionales → Padrón → Conceptos (X19) y el
-    tutorial (X20). Pendiente anotado para el bloque 1: una tarea con datos
-    cargados y sin insumo registrado hoy sale «esperando un dato»; y una
-    sola decisión por tarea (no puede estar confirmada y pospuesta a la vez).
-    El plan lista diez diferencias entre los hitos de la Mesa y el sistema,
-    confirmadas contra el código.
+    una tarea a mano con motivo (X15, X16). El plan lista
+    diez diferencias entre los hitos de la Mesa y el sistema, confirmadas
+    contra el código.
+    **Bloque 1 HECHO** (2026-11-26, Plataforma 0.78.01, contrato
+    `docs/xsii/API.md`): la pantalla del equipo en `/entornos/xsii/{pid}`
+    (botón «Abrir XSII» por proyecto en la pestaña Implementación; puerta del
+    equipo de la Mesa, 404 en demo), con **Guía** (Play con el paso
+    recomendado y por qué, alternativas, panorama angosto), **Tablero**
+    (grupos, filtros por estado y por marca) y **Mapa** (flechas en ángulo
+    recto solo por pasillos; al tocar una tarea se ilumina su camino), y la
+    ficha de cada tarea con su control, insumos, enlace a la pantalla y las
+    acciones. Tablas `XsiiDecision`, `XsiiInsumo` y `XsiiMovimiento`
+    (migración `a4c6e8b0d2f4`; datos reales de Pruebas: fuera del clonado y
+    del borrado de un sindicato, `db.XSII_TABLAS`), API
+    `/api/entornos/xsii/*`. Reglas vigentes: **una tarea admite varias marcas
+    a la vez** (confirmada y pospuesta, por ejemplo; «no aplica» y
+    «completada a mano» se excluyen); **confirmar exige que el control pase y
+    que el insumo haya llegado**; completar a mano y «no aplica» piden motivo;
+    deshacer no borra, deja quién y cuándo; decidir toma un candado por tarea
+    y revalida adentro; **una tarea con datos ya cargados no «espera un dato»**
+    aunque el insumo no esté registrado (la ficha lo avisa); un insumo es
+    `pedido` o `recibido` y puede apuntar a una tarjeta de la Mesa del mismo
+    proyecto; «demorado» es pedido hace 2 días o más. Las reglas de «se puede
+    o no» viven en `xsii/proyectos/colm3na/vista.py` (`regla_de_decision`),
+    que usan la pantalla (`acciones`) y el POST. «Preguntame» está dibujado y
+    apagado. **Tutorial** (X20) en Recursos: `recursos/xsii-tutorial.html`,
+    fuentes en `docs/xsii/tutorial/`; crece con cada bloque. **Sigue**: bloque
+    2 (asistente de lectura, «Preguntame»), después las tareas asistidas en
+    el orden Seccionales → Padrón → Conceptos (X19). Queda sin usar
+    `XsiiInsumo.archivo_id` (enlazar un archivo de la Mesa), para el bloque 5.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
