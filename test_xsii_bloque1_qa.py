@@ -451,7 +451,7 @@ def test_deshacer_lo_que_no_existe_y_volver_a_decidir():
 def test_deshacer_con_motivo_con_html_o_NUL_no_rompe():
     pid, eq = _mundo()
     _decidir(eq, pid, "COM-02", "pospuesta")
-    r = _deshacer(eq, pid, "COM-02", "pospuesta", "<b>x</b>\x00‮")
+    r = _deshacer(eq, pid, "COM-02", "pospuesta", "<b>x</b>\x00\u202e")
     assert r.status_code == 200, r.text
 
 
@@ -727,7 +727,7 @@ def test_tarjeta_hostil_en_un_insumo(tarjeta):
     {"estado": "RECIBIDO"}, {"estado": " pedido"}, {"estado": 1}, {"estado": ["pedido"]}, {"estado": None},
     {}, {"estado": "pedido", "nota": "n" * 501}, {"estado": "pedido", "nota": 5}, {"estado": "pedido", "nota": ["x"]},
     {"estado": "pedido", "nota": "a\x00b"}, {"estado": "pedido", "nota": "<script>1</script>"},
-    {"estado": "pedido", "tarjeta": "", "nota": "‮​"}])
+    {"estado": "pedido", "tarjeta": "", "nota": "\u202e​"}])
 def test_estado_y_nota_hostiles(campos):
     pid, eq = _mundo()
     r = _insumo(eq, pid, "planilla_padron", **campos)
