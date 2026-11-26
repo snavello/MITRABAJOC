@@ -12271,11 +12271,26 @@ event.listen(XsiiMovimiento, "before_update", _traza_inmutable)
 event.listen(XsiiMovimiento, "before_delete", _traza_inmutable)
 
 
+# Caracteres que no se ven aunque no sean espacios: el Braille en blanco y los
+# rellenos de Hangul. Con las categorías Cf, Cc, Cs, Zs, Zl y Zp no cuentan para
+# el largo mínimo de un motivo obligatorio.
+_XSII_INVISIBLES = frozenset("\u2800\u115f\u1160\u3164\uffa0")
+_XSII_CATEGORIAS_INVISIBLES = ("Cf", "Cc", "Cs", "Zs", "Zl", "Zp")
+
+
+def xsii_visibles(texto: str) -> int:
+    """Cuántos caracteres de `texto` se ven: sin espacios, sin controles ni
+    caracteres de formato (U+200B, U+FEFF, U+00AD...)."""
+    import unicodedata
+    return sum(1 for c in texto if c not in _XSII_INVISIBLES
+               and unicodedata.category(c) not in _XSII_CATEGORIAS_INVISIBLES)
+
+
 def xsii_motivo(motivo, obligatorio: bool) -> str:
     texto = implementacion.limpiar_texto(motivo)
     if len(texto) > XSII_MOTIVO_MAX:
         raise XsiiError(400, f"El motivo admite hasta {XSII_MOTIVO_MAX} caracteres.")
-    if obligatorio and len(texto) < XSII_MOTIVO_MIN:
+    if obligatorio and xsii_visibles(texto) < XSII_MOTIVO_MIN:
         raise XsiiError(400, f"El motivo es obligatorio (al menos {XSII_MOTIVO_MIN} caracteres).")
     return texto
 
@@ -12316,20 +12331,35 @@ def xsii_tarjetas(s: Session, proyecto_id: int, ids) -> dict:
         ImplTarjeta.proyecto_id == proyecto_id, ImplTarjeta.id.in_(ids))).all()}
 
 
+def _xsii_candado_de_tarea(s: Session, proyecto_id: int, codigo: str) -> None:
+    """Serializa las escrituras de decisiones de UNA tarea: el candado dura lo
+    que la transacción, así quien llega segundo espera y lee lo que el primero
+    dejó (el índice único parcial solo ve el mismo tipo, no las exclusiones)."""
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(
+        clave=f"xsii:{proyecto_id}:{codigo}"))
+
+
 def xsii_decidir(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea: str,
-                 tipo: str, motivo="") -> XsiiDecision:
+                 tipo: str, motivo="", revalidar=None) -> XsiiDecision:
     """Registra la decisión y su movimiento en una transacción. Las reglas de
     «se puede o no» según el estado de la tarea las decide quien llama (la
     vista); acá van las del dato (tipo, motivo) y la unicidad: ya hay una
-    activa de ese tipo -> 409, también si dos pedidos llegan a la vez."""
+    activa de ese tipo -> 409, también si dos pedidos llegan a la vez.
+    Adentro del candado de la tarea se leen las decisiones activas de nuevo y
+    `revalidar(tipos_activos)` (si se pasa) devuelve la frase del conflicto o
+    vacío: así dos decisiones incompatibles no pasan las dos sobre la misma foto."""
     if tipo not in XSII_DECISIONES:
         raise XsiiError(400, "El tipo de decisión no es válido.")
     motivo = xsii_motivo(motivo, tipo in XSII_MOTIVO_OBLIGATORIO)
     a = _impl_actor(actor)
-    if s.exec(select(XsiiDecision.id).where(
-            XsiiDecision.proyecto_id == proyecto_id, XsiiDecision.codigo == codigo,
-            XsiiDecision.tipo == tipo, XsiiDecision.activa == True)).first():    # noqa: E712
+    _xsii_candado_de_tarea(s, proyecto_id, codigo)
+    activos = list(s.exec(select(XsiiDecision.tipo).where(
+        XsiiDecision.proyecto_id == proyecto_id, XsiiDecision.codigo == codigo,
+        XsiiDecision.activa == True)).all())                                  # noqa: E712
+    if tipo in activos:
         raise XsiiError(409, f"Ya hay una decisión «{XSII_ROTULOS_DECISION[tipo]}» activa en esta tarea.")
+    if revalidar is not None and (frase := revalidar(activos)):
+        raise XsiiError(409, frase)
     d = XsiiDecision(proyecto_id=proyecto_id, codigo=codigo, tipo=tipo, motivo=motivo,
                      quien_id=a.id, quien_nombre=a.nombre)
     s.add(d)
@@ -12354,6 +12384,7 @@ def xsii_deshacer(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea
         raise XsiiError(400, "El tipo de decisión no es válido.")
     motivo = xsii_motivo(motivo, False)
     a = _impl_actor(actor)
+    _xsii_candado_de_tarea(s, proyecto_id, codigo)
     d = s.exec(select(XsiiDecision).where(
         XsiiDecision.proyecto_id == proyecto_id, XsiiDecision.codigo == codigo,
         XsiiDecision.tipo == tipo, XsiiDecision.activa == True)       # noqa: E712

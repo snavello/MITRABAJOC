@@ -13666,6 +13666,7 @@ def api_impl_usuario_estado(request: Request, proyecto_id: IdImpl, usuario_id: I
 from xsii.proyectos.colm3na import vista as xsii_vista
 
 API_XSII = "/api/entornos/xsii"
+XSII_TARJETA_MAX = 20
 
 
 def _xsii_equipo(request: Request):
@@ -13674,7 +13675,10 @@ def _xsii_equipo(request: Request):
 
 
 async def _xsii_cuerpo(request: Request) -> dict:
-    """Dependencia: el cuerpo JSON, que tiene que ser un objeto (si no, 400)."""
+    """Dependencia: el cuerpo JSON, que tiene que ser un objeto (si no, 400) y
+    llegar como `application/json`, como en la Mesa."""
+    if not request.headers.get("content-type", "").lower().startswith("application/json"):
+        raise HTTPException(400, "El cuerpo tiene que ser un objeto JSON.")
     try:
         datos = await request.json()
     except Exception:       # noqa: BLE001 - JSON roto, vacío o con bytes inválidos
@@ -13779,6 +13783,10 @@ def api_xsii_insumo(pid: IdImpl, clave: str, actor=Depends(_xsii_equipo),
         tarjeta = datos.get("tarjeta")
         if tarjeta is not None and (isinstance(tarjeta, bool) or not isinstance(tarjeta, (str, int))):
             raise HTTPException(400, "La tarjeta tiene que ser un código o un número.")
+        if tarjeta is not None:
+            tarjeta = implementacion.limpiar_texto(tarjeta)
+            if len(tarjeta) > XSII_TARJETA_MAX:      # nada que buscar: ningún código ni id llega a tanto
+                raise HTTPException(400, "No encontré esa tarjeta en la Mesa de este proyecto.")
         try:
             xsii_vista.registrar_insumo(s, ctx, actor, clave, _xsii_texto(datos.get("estado"), "El estado"),
                                         tarjeta, _xsii_texto(datos.get("nota"), "La nota"))
@@ -13808,37 +13816,38 @@ def api_xsii_movimientos(pid: IdImpl, codigo: str = "", limite: str = "50", acto
     except ValueError:
         raise HTTPException(400, "El límite tiene que ser un número.")
     limite = max(1, min(limite, 200))
-    codigo = (codigo or "").strip().upper()[:20]
+    codigo = implementacion.limpiar_texto(codigo).upper()[:20]
     with db.get_session() as s:
         ctx = _xsii_contexto(s, pid)
+        if codigo and codigo not in xsii_vista.POR_CODIGO:
+            return {"movimientos": []}        # no es una tarea del catálogo: nada que mostrar
         return xsii_vista.movimientos_json(s, ctx, codigo, limite)
 
 
-@app.get("/entornos/xsii", response_class=HTMLResponse)
+@app.get("/entornos/xsii")
 def entornos_xsii(request: Request):
-    """La lista de proyectos; con uno solo, se va directo a su tablero."""
+    """Sin pantalla propia: con un solo proyecto va a su tablero; con varios o
+    ninguno, a la pestaña Implementación de `/entornos`, que los lista."""
     _exigir_landing()
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
     with db.get_session() as s:
-        proyectos = [(p.id, p.nombre) for p in db.impl_proyectos(s)]
+        proyectos = [p.id for p in db.impl_proyectos(s)]
     if len(proyectos) == 1:
-        return RedirectResponse(f"/entornos/xsii/{proyectos[0][0]}", status_code=303)
-    import html as _html
-    filas = "".join(f'<li><a href="/entornos/xsii/{i}">{_html.escape(n)}</a></li>' for i, n in proyectos)
-    cuerpo = (f"<ul>{filas}</ul>" if filas else "<p>Todavía no hay proyectos en la Mesa de implementación.</p>")
-    return HTMLResponse(
-        '<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" '
-        'content="width=device-width,initial-scale=1"><title>XSII · Proyectos</title>'
-        '<body style="font:16px system-ui;margin:32px auto;max-width:640px;padding:0 16px">'
-        f"<h1>XSII · Implementación inteligente</h1>{cuerpo}</body></html>")
+        return RedirectResponse(f"/entornos/xsii/{proyectos[0]}", status_code=303)
+    return RedirectResponse("/entornos#implementacion", status_code=303)
 
 
 @app.get("/entornos/xsii/{pid}", response_class=HTMLResponse)
-def entornos_xsii_proyecto(request: Request, pid: IdImpl):
+def entornos_xsii_proyecto(request: Request, pid: str):
     _exigir_landing()
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
+    # El id llega como texto y se valida acá, después de la puerta de demo: un
+    # 422 de FastAPI delataría que la ruta existe. Es una página, no JSON crudo.
+    if not (pid.isascii() and pid.isdigit() and len(pid) <= 10 and implementacion.id_valido(int(pid))):
+        raise HTTPException(404, "No existe.")
+    pid = int(pid)
     with db.get_session() as s:
         p = db.impl_proyecto(s, pid)
         if p is None:

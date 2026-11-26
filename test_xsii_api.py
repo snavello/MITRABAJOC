@@ -5,6 +5,7 @@ movimientos y entradas hostiles (siempre un 4xx, nunca un 500).
 Correr con: python -m pytest test_xsii_api.py -q
 """
 import os
+from datetime import timedelta
 
 os.environ["ENTORNO"] = "pruebas"   # antes de importar main: se lee al importar
 os.environ["PIN_ENTORNOS"] = "13572468"
@@ -18,6 +19,8 @@ from fastapi.testclient import TestClient
 import auth
 import cuit
 import db
+import fechas
+from sqlmodel import select
 import entorno
 import implementacion as im
 import main
@@ -162,18 +165,18 @@ def test_las_paginas_piden_pase_y_la_del_proyecto_se_renderiza():
     assert eq.get(f"/entornos/xsii/{2 ** 31}").status_code == 404
 
 
-def test_la_lista_de_proyectos_va_directo_si_hay_uno_solo_y_escapa_los_nombres(monkeypatch):
+def test_la_lista_de_proyectos_va_directo_si_hay_uno_solo_y_si_no_a_la_pestana_de_entornos(monkeypatch):
     pid, eq = _mundo()
     unico = [type("P", (), {"id": pid, "nombre": "uno"})()]
     monkeypatch.setattr(db, "impl_proyectos", lambda s: unico)
     r = eq.get("/entornos/xsii")
     assert r.status_code == 303 and r.headers["location"] == f"/entornos/xsii/{pid}"
     dos = unico + [type("P", (), {"id": pid + 1, "nombre": "<script>x</script>"})()]
-    monkeypatch.setattr(db, "impl_proyectos", lambda s: dos)
-    r = eq.get("/entornos/xsii")
-    assert r.status_code == 200 and "<script>x" not in r.text and "&lt;script&gt;" in r.text
-    monkeypatch.setattr(db, "impl_proyectos", lambda s: [])
-    assert "Todavía no hay proyectos" in eq.get("/entornos/xsii").text
+    for lista in (dos, []):
+        monkeypatch.setattr(db, "impl_proyectos", lambda s, lista=lista: lista)
+        r = eq.get("/entornos/xsii")
+        assert r.status_code == 303 and r.headers["location"] == "/entornos#implementacion"
+        assert "<script>" not in r.text
 
 
 # ---------------------------------------------------------------- proyectos y tablero
@@ -412,6 +415,18 @@ def test_dos_decisiones_a_la_vez_una_sola_gana():
     assert sorted(codigos) == [200, 409]
 
 
+def _envejecer(pid, clave, dias=3):
+    """Atrasa el pedido del insumo: un pedido es «demorado» desde los 2 días."""
+    antes = (fechas.hoy() - timedelta(days=dias)).isoformat() + " 10:00:00"
+    with db.get_session() as s:
+        for i in s.exec(select(db.XsiiInsumo).where(db.XsiiInsumo.proyecto_id == pid,
+                                                     db.XsiiInsumo.clave == clave,
+                                                     db.XsiiInsumo.activa == True)).all():    # noqa: E712
+            i.cuando = antes
+            s.add(i)
+        s.commit()
+
+
 # ---------------------------------------------------------------- insumos
 
 def test_pedir_y_recibir_un_insumo_con_su_tarjeta_de_la_mesa():
@@ -427,9 +442,15 @@ def test_pedir_y_recibir_un_insumo_con_su_tarjeta_de_la_mesa():
                             "url": f"/implementacion?p={pid}"}
     t = _tablero(eq, pid)
     por = {x["codigo"]: x for x in t["tareas"]}
-    assert por["PAD-01"]["estado"] == "esperando" and "pedido hace 0 días" in por["PAD-01"]["detalle"]
+    assert por["PAD-01"]["estado"] == "esperando" and "pedido hoy" in por["PAD-01"]["detalle"]
     assert codigo in por["PAD-01"]["detalle"]
-    dem = t["demorados"]
+    assert t["demorados"] == []                       # recién pedido: todavía no está demorado
+    _envejecer(pid, "planilla_padron", 1)
+    assert "pedido ayer" in {x["codigo"]: x for x in _tablero(eq, pid)["tareas"]}["PAD-01"]["detalle"]
+    assert _tablero(eq, pid)["demorados"] == []
+    _envejecer(pid, "planilla_padron", 3)
+    assert "pedido hace 3 días" in {x["codigo"]: x for x in _tablero(eq, pid)["tareas"]}["PAD-01"]["detalle"]
+    dem = _tablero(eq, pid)["demorados"]
     assert len(dem) == 1 and dem[0]["clave"] == "planilla_padron" and dem[0]["codigo"] == "PAD-01"
     assert dem[0]["tarjeta"] == {"codigo": codigo, "titulo": "Planilla del padrón"} and dem[0]["frena"] >= 2
     # recibido sin mandar otra tarjeta: conserva la anterior
@@ -454,6 +475,7 @@ def test_la_tarjeta_por_id_y_la_de_otro_proyecto():
     for ajena in (codigo_ajeno, tid_ajena, "PE9999", "xx", 99999999999):
         r = _insumo(eq, pid, "recibos_muestra", estado="pedido", tarjeta=ajena)
         assert r.status_code == 400 and r.json()["detail"] == "No encontré esa tarjeta en la Mesa de este proyecto.", ajena
+    _envejecer(pid, "lista_seccionales")
     assert _tablero(eq, pid)["demorados"][0]["clave"] == "lista_seccionales"   # y lo ajeno no quedó registrado
 
 

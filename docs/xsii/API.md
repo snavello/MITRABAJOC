@@ -38,6 +38,10 @@ paso recomendado salen del motor. Lo que acá no esté escrito, no existe.
    pantalla avisa «hay datos cargados; el insumo no está registrado»). En una
    `solo_confirmacion` (REC-01, PAD-01) el control no calcula nada: sin insumo
    registrado sigue «esperando».
+   **Tampoco está «hecha» por control ni por confirmación** una tarea con
+   insumos sin registrar y sin datos cargados: una confirmación previa no la
+   da por hecha (sigue «esperando un dato») y `falta_confirmar` es falso si ya
+   está confirmada. `completada_a_mano` sigue valiendo sin insumo (válvula de X15).
 4. `consulta.a_json` suma por tarea `decisiones` e `insumos_sin_registrar`;
    `resumen` no cambia de forma.
 
@@ -83,7 +87,7 @@ Funciones en `db.py` con prefijo `xsii_` (reciben la sesión). Fechas con
 
 | Tipo | Motivo | Se puede si |
 |---|---|---|
-| `confirmada` | no se pide | la tarea declara `confirmacion`, aplica y su control pasa |
+| `confirmada` | no se pide | la tarea declara `confirmacion`, aplica, su control pasa y no le falta un insumo sin datos cargados (si no: «Primero registrá que llegó el insumo.») |
 | `completada_a_mano` | **obligatorio** | aplica (no «no aplica» por condición ni declarada) y no está hecha por control |
 | `no_aplica` | **obligatorio** | no es «no aplica» por condición y no tiene `completada_a_mano` activa |
 | `pospuesta` | opcional | no está resuelta (ni hecha ni no aplica) |
@@ -91,8 +95,12 @@ Funciones en `db.py` con prefijo `xsii_` (reciben la sesión). Fechas con
 - Motivo: de 5 a 500 caracteres ya saneado. Falta o corto → 400 «El motivo es
   obligatorio (al menos 5 caracteres).»
 - Ya hay una activa de ese tipo → 409. Condición no cumplida → 409 con la
-  frase que explica por qué. Dos pedidos a la vez: el índice único decide, el
-  segundo es 409 (nunca 500).
+  frase que explica por qué. Dos pedidos a la vez: las escrituras de una tarea
+  se serializan con un candado de transacción (`pg_advisory_xact_lock`) y las
+  decisiones activas se releen y revalidan ADENTRO del candado (duplicado y
+  exclusión `completada_a_mano` / `no_aplica`): el segundo es 409, nunca 500.
+- El largo mínimo del motivo se mide sin espacios ni caracteres invisibles o de
+  formato (U+200B, U+FEFF, U+00AD, U+2800…): hecho solo de eso, 400.
 - Deshacer: cualquiera activa, por cualquier usuario del equipo; motivo
   opcional (mismo tope). No hay activa → 409.
 - Nada de esto cambia lo que el control calcula: la ficha muestra las dos
@@ -101,7 +109,8 @@ Funciones en `db.py` con prefijo `xsii_` (reciben la sesión). Fechas con
 ## Rutas
 
 Base `X = /api/entornos/xsii`. Todas JSON; errores `{"detail": "frase"}`.
-Los POST reciben JSON. Un cuerpo que no es un objeto → 400.
+Los POST reciben JSON con `Content-Type: application/json`; sin ese
+encabezado, o con un cuerpo que no es un objeto → 400.
 
 ### `GET X/proyectos`
 ```json
@@ -145,7 +154,7 @@ Los POST reciben JSON. Un cuerpo que no es un objeto → 400.
   `como` depende del modo (asistida: en el bloque 1 todavía no hay asistente,
   así que dice «Se hace en la pantalla de siempre; acá controlo el resultado.»).
 - `demorados`: insumos en estado `pedido` (no recibidos) de tareas sin
-  resolver, con los días desde que se pidió y cuántas tareas frena
+  resolver, pedidos hace **2 días o más**, con los días desde que se pidió y cuántas tareas frena
   (`que_destraba` transitivo de su tarea + 1). Orden: más días primero.
 
 **Cada tarea**:
@@ -176,12 +185,13 @@ Los POST reciben JSON. Un cuerpo que no es un objeto → 400.
 ```
 - `detalle`: una línea para la tabla, armada por el servidor: bloqueada →
   «Espera a A y B» (nombres); esperando → «Falta: <insumo>» (+ «pedido hace N
-  días (PE0007)»); no aplica → «Módulo X no contratado» o «Declarada no
+  días (PE0007)»; «pedido hoy», «pedido ayer» o «pedido hace N días»); no aplica → «Módulo X no contratado» o «Declarada no
   aplica: motivo»; falta confirmar → «Falta confirmar: …»; a mano →
   «Completada a mano por X: motivo»; si no, `control.resumen`.
 - `control.cifras` es una LISTA (el orden es del servidor) con nombre legible
   (la clave con guiones bajos a espacios y mayúscula inicial).
-- `camino`: lo no resuelto que hay que hacer antes, en orden (`que_frena`).
+- `camino`: lo no resuelto que hay que hacer antes, en orden (`que_frena`);
+  vacío (igual que `frenada_por`) si la tarea está hecha o no aplica.
   `necesitada_por`: TODAS las que la necesitan directo (para el mapa);
   `destraba`: solo las no resueltas.
 - `nivel`: 0 si no necesita a nadie; si no, 1 + el mayor nivel de lo que
@@ -212,8 +222,9 @@ Cuerpo `{"tipo": "pospuesta", "motivo": ""}`. Misma respuesta.
 
 ### `POST X/p/{pid}/insumo/{clave}`
 Cuerpo `{"estado": "recibido" | "pedido", "tarjeta": "PE0007", "nota": "…"}`.
-`tarjeta` opcional: código (o id) de una tarjeta de ESE proyecto
-(`db.impl_tarjeta_por_codigo_o_id`); no existe en el proyecto → 400 «No
+`tarjeta` opcional: código (o id, hasta 20 caracteres) de una tarjeta de ESE
+proyecto (`db.impl_tarjeta_por_codigo_o_id`); no existe en el proyecto o es
+más larga → 400 «No
 encontré esa tarjeta en la Mesa de este proyecto.» `nota` hasta 500. Reemplaza
 el registro activo (el anterior queda inactivo; pasar de `pedido` a
 `recibido` conserva la tarjeta si no se manda otra). Clave fuera de
@@ -226,12 +237,16 @@ Saca el registro activo (queda la traza). Sin activo → 409.
 `{"movimientos": [{"id": 9, "codigo": "PAD-02", "tipo": "decision",
 "texto": "Completó a mano Padrón cargado: se carga en la segunda etapa",
 "cantidades": {}, "quien": "snavello", "cuando": "2026-11-26 22:10:05"}]}`.
-Del más nuevo al más viejo; `limite` 1 a 200 (50 por defecto).
+Del más nuevo al más viejo; `limite` 1 a 200 (50 por defecto). `codigo` se
+sanea; si no es una tarea del catálogo, `{"movimientos": []}` (200).
 
 ## Página
 
-`GET /entornos/xsii` → lista de proyectos (si hay uno solo, redirige a él).
-`GET /entornos/xsii/{pid}` → `templates/xsii.html` con el contexto
+`GET /entornos/xsii` → sin pantalla propia: con un solo proyecto redirige (303)
+a él; con varios o ninguno, a `/entornos#implementacion` (la pestaña lista los
+proyectos).
+`GET /entornos/xsii/{pid}` (el `pid` llega como texto y se valida después de la
+puerta de demo: en demo siempre 404; no numérico o inexistente, 404) → `templates/xsii.html` con el contexto
 `{"request", "pid", "proyecto_nombre", "es_equipo": bool, "entorno"…}`; la
 pantalla pide el tablero por la API. Estáticos en `static/xsii/` (`xsii.css`,
 `xsii.js`) con `sello_static`. Vista inicial por `?vista=guia|tablero|mapa` y

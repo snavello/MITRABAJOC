@@ -147,13 +147,16 @@ def resolver(tareas, hechos: dict) -> dict:
         no_aplica = de_tipo(ds, "no_aplica")
         confirmada = de_tipo(ds, "confirmada")
         a_mano = de_tipo(ds, "completada_a_mano")
+        # Sin el insumo registrado el control no alcanza para dar la tarea por
+        # hecha (tampoco confirmada), salvo que ya muestre datos cargados.
+        insumos_ok = all(insumos.get(i) for i in t.insumos) or datos_cargados(t, c)
         if not _aplica(t, hechos):
             primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decisiones=ds,
                                             pospuesta=pospuesta, no_aplica_por="condicion")
         elif no_aplica is not None:
             primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=no_aplica,
                                             decisiones=ds, pospuesta=pospuesta, no_aplica_por="decision")
-        elif c.pasa and (not t.confirmacion or confirmada is not None):
+        elif c.pasa and insumos_ok and (not t.confirmacion or confirmada is not None):
             primera[t.codigo] = EstadoTarea(
                 t.codigo, "hecha", con_observaciones=(c.estado == "observaciones"),
                 control=c, decision=confirmada, decisiones=ds, pospuesta=pospuesta,
@@ -180,7 +183,8 @@ def resolver(tareas, hechos: dict) -> dict:
         faltan_insumos = [i for i in sin_insumo if i not in sin_registrar]
         # Pasó el control pero nadie confirmó (si estuviera confirmada, ya
         # estaría hecha): no destraba a nadie hasta que se confirme.
-        falta_confirmar = c.pasa and bool(t.confirmacion)
+        falta_confirmar = (c.pasa and bool(t.confirmacion)
+                           and de_tipo(ds, "confirmada") is None)
         con_avance = c.en_curso or t.codigo in ensayos or (falta_confirmar and not t.solo_confirmacion)
         if frenada:
             estado = "bloqueada"

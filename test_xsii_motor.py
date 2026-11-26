@@ -483,3 +483,31 @@ def test_a_json_trae_decisiones_e_insumos_sin_registrar():
     tb = estados.resolver(t, hechos({"A1": MEDIO}, decisiones={"A1": [D("pospuesta")]}))
     item = consulta.a_json(t, tb)["tareas"][0]
     assert item["decisiones"][0]["tipo"] == "pospuesta" and item["insumos_sin_registrar"] == ["i"]
+
+
+# ---- confirmación sin el insumo ------------------------------------------------
+
+def CI(codigo, solo=False):
+    return Tarea(codigo, codigo, "A", "manual", insumos=("planilla",), control="c_" + codigo,
+                 confirmacion="Está bien", solo_confirmacion=solo)
+
+
+def test_solo_confirmacion_con_el_insumo_faltante_no_queda_hecha_aunque_este_confirmada():
+    t = [CI("A1", solo=True)]
+    r = estados.resolver(t, hechos({"A1": OK}, decisiones={"A1": CONFIRMADA}))
+    assert r["A1"].estado == "esperando" and r["A1"].insumos_faltantes == ["planilla"]
+    assert not r["A1"].falta_confirmar          # ya está confirmada: falta el insumo, no la confirmación
+    r = estados.resolver(t, hechos({"A1": OK}, insumos={"planilla": True}, decisiones={"A1": CONFIRMADA}))
+    assert r["A1"].estado == "hecha"
+
+
+def test_con_datos_cargados_la_confirmacion_vale_sin_el_insumo_registrado():
+    t = [CI("A1")]                              # no es solo_confirmacion: el control calcula
+    r = estados.resolver(t, hechos({"A1": OK}, decisiones={"A1": CONFIRMADA}))
+    assert r["A1"].estado == "hecha" and r["A1"].insumos_sin_registrar == []
+
+
+def test_completada_a_mano_sigue_valiendo_sin_el_insumo():
+    t = [CI("A1", solo=True)]
+    d = {"A1": {"tipo": "completada_a_mano", "quien": "q", "cuando": "c", "motivo": "m"}}
+    assert estados.resolver(t, hechos({"A1": OK}, decisiones=d))["A1"].estado == "hecha"

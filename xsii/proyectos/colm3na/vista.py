@@ -69,8 +69,18 @@ def _cuando_a_dias(cuando: str) -> int | None:
         return None
 
 
-def _dias_texto(n: int) -> str:
-    return "1 día" if n == 1 else f"{n} días"
+def _pedido_texto(dias: int | None) -> str:
+    """«pedido hoy», «pedido ayer» o «pedido hace N días»."""
+    if dias is None:
+        return "pedido"
+    if dias == 0:
+        return "pedido hoy"
+    if dias == 1:
+        return "pedido ayer"
+    return f"pedido hace {dias} días"
+
+
+DIAS_DEMORADO = 2
 
 
 def _lista_y(nombres: list) -> str:
@@ -174,15 +184,28 @@ def _tipos_activos(ctx: Contexto, codigo: str) -> list:
     return [d["tipo"] for d in ctx.decisiones.get(codigo, [])]
 
 
+def conflicto_entre_decisiones(tipo: str, activos) -> str:
+    """La frase del conflicto entre `tipo` y las decisiones ya activas, o vacío.
+    Lo que depende solo de las decisiones (no del estado calculado): se revalida
+    adentro del candado de la tarea al escribir."""
+    rot = db.XSII_ROTULOS_DECISION.get(tipo, tipo)
+    if tipo in activos:
+        return f"Ya hay una decisión «{rot}» activa en esta tarea."
+    if tipo == "no_aplica" and "completada_a_mano" in activos:
+        return "La tarea está completada a mano: deshacé eso antes de declararla no aplicable."
+    if tipo == "completada_a_mano" and "no_aplica" in activos:
+        return "Esta tarea no aplica: no hace falta completarla."
+    return ""
+
+
 def regla_de_decision(ctx: Contexto, codigo: str, tipo: str) -> tuple[bool, str]:
     """¿Se puede registrar la decisión `tipo` en la tarea ahora? `(True, "")` o
     `(False, frase)`. La única fuente de la tabla de reglas del contrato: la usan
     `acciones` (qué botones) y el POST (409 con esta misma frase)."""
     t, e = POR_CODIGO[codigo], ctx.tb[codigo]
     activos = _tipos_activos(ctx, codigo)
-    rot = db.XSII_ROTULOS_DECISION.get(tipo, tipo)
-    if tipo in activos:
-        return False, f"Ya hay una decisión «{rot}» activa en esta tarea."
+    if (frase := conflicto_entre_decisiones(tipo, activos)):
+        return False, frase
     if tipo == "confirmada":
         if not t.confirmacion:
             return False, "Esta tarea no lleva confirmación."
@@ -190,6 +213,8 @@ def regla_de_decision(ctx: Contexto, codigo: str, tipo: str) -> tuple[bool, str]
             return False, "Esta tarea no aplica: no hay nada que confirmar."
         if not (e.control and e.control.pasa):
             return False, "Todavía no se puede confirmar: el control de la tarea no pasa."
+        if e.insumos_faltantes:
+            return False, "Primero registrá que llegó el insumo."
     elif tipo == "completada_a_mano":
         if e.estado == "no_aplica":
             return False, "Esta tarea no aplica: no hace falta completarla."
@@ -198,8 +223,6 @@ def regla_de_decision(ctx: Contexto, codigo: str, tipo: str) -> tuple[bool, str]
     elif tipo == "no_aplica":
         if e.no_aplica_por == "condicion":
             return False, "La tarea ya no aplica: " + _por_que_no_aplica(t)
-        if "completada_a_mano" in activos:
-            return False, "La tarea está completada a mano: deshacé eso antes de declararla no aplicable."
     elif tipo == "pospuesta":
         if e.resuelta:
             return False, "La tarea ya está resuelta: no hace falta posponerla."
@@ -266,8 +289,7 @@ def _detalle(ctx: Contexto, t, e) -> str:
             reg = ctx.insumos.get(clave)
             if reg and reg.estado == "pedido":
                 tj = ctx.tarjetas.get(reg.tarjeta_id)
-                dias = _cuando_a_dias(reg.cuando)
-                extra = f"pedido hace {_dias_texto(dias)}" if dias is not None else "pedido"
+                extra = _pedido_texto(_cuando_a_dias(reg.cuando))
                 texto += f"; {extra}" + (f" ({tj.codigo})" if tj else "")
             partes.append(texto)
         return "Falta: " + " · ".join(partes)
@@ -288,8 +310,8 @@ def tarea_json(ctx: Contexto, codigo: str) -> dict:
         "falta_confirmar": e.falta_confirmar, "confirmacion": t.confirmacion,
         "detalle": _detalle(ctx, t, e),
         "necesita": list(t.necesita), "mejora_con": list(t.mejora_con),
-        "frenada_por": list(e.frenada_por), "avisos": list(e.avisos),
-        "camino": consulta.que_frena(ctx.tareas, ctx.tb, codigo),
+        "frenada_por": [] if e.resuelta else list(e.frenada_por), "avisos": list(e.avisos),
+        "camino": [] if e.resuelta else consulta.que_frena(ctx.tareas, ctx.tb, codigo),
         "necesitada_por": list(NECESITADA_POR[codigo]),
         "destraba": consulta.que_destraba(ctx.tareas, ctx.tb, codigo),
         "nivel": NIVELES[codigo],
@@ -336,9 +358,11 @@ def _demorados(ctx: Contexto) -> list:
             continue
         t = tareas[0]
         dias = _cuando_a_dias(reg.cuando)
+        if dias is None or dias < DIAS_DEMORADO:
+            continue
         frena = max(len(consulta.que_destraba(ctx.tareas, ctx.tb, x.codigo)["transitivo"]) for x in tareas) + 1
         salida.append({"clave": clave, "nombre": INSUMOS[clave]["nombre"], "codigo": t.codigo,
-                       "dias": dias or 0, "tarjeta": ({"codigo": tj["codigo"], "titulo": tj["titulo"]}
+                       "dias": dias, "tarjeta": ({"codigo": tj["codigo"], "titulo": tj["titulo"]}
                                                        if (tj := _tarjeta_json(ctx, reg.tarjeta_id)) else None),
                        "frena": frena})
     salida.sort(key=lambda d: -d["dias"])
@@ -400,7 +424,8 @@ def decidir(s, ctx: Contexto, actor, codigo: str, tipo: str, motivo) -> None:
     puede, frase = regla_de_decision(ctx, codigo, tipo)
     if not puede:
         raise db.XsiiError(409, frase)
-    db.xsii_decidir(s, ctx.pid, actor, codigo, POR_CODIGO[codigo].nombre, tipo, motivo)
+    db.xsii_decidir(s, ctx.pid, actor, codigo, POR_CODIGO[codigo].nombre, tipo, motivo,
+                    revalidar=lambda activos: conflicto_entre_decisiones(tipo, activos))
 
 
 def deshacer(s, ctx: Contexto, actor, codigo: str, tipo: str, motivo) -> None:
