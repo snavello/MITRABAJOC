@@ -162,6 +162,8 @@ def a_json(tareas, tablero) -> dict:
             "avisos": list(e.avisos),
             "control": _control_json(e.control),
             "decision": dict(e.decision) if e.decision else None,
+            "decisiones": [dict(d) for d in e.decisiones],
+            "insumos_sin_registrar": list(e.insumos_sin_registrar),
         })
     return {"resumen": resumen(tablero), "recomendada": recomendada(tareas, tablero),
             "alternativas": alternativas(tareas, tablero), "tareas": items}

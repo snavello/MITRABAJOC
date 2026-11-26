@@ -1,0 +1,305 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>XSII Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: una sola columna que conduce (el paso recomendado y su botón de Play), un panorama angosto al costado, y Tablero y Mapa como vistas aparte. */
+:root{
+  --bg:#eef1f6; --sup:#ffffff; --sup2:#f6f8fb; --tinta:#131c2e; --gris:#5a6579; --linea:#d9dfe8;
+  --acento:#2447d8; --acento-s:#e8edfd; --sobre-acento:#ffffff;
+  --ok:#0d7a5f; --ok-s:#dff3ec; --esp:#a56a00; --esp-s:#fcefd3; --bloq:#b3352a; --bloq-s:#fbe3e0; --na:#8a93a3; --na-s:#eceff3;
+  --disp:"Barlow Condensed","Arial Narrow",sans-serif; --txt:Inter,system-ui,sans-serif; --num:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e131d; --sup:#171e2c; --sup2:#1d2535; --tinta:#e8ecf4; --gris:#9aa5b8; --linea:#2b3549;
+  --acento:#7c94ff; --acento-s:#1f2848; --sobre-acento:#0b1020;
+  --ok:#4fc9a4; --ok-s:#143a30; --esp:#e6b04a; --esp-s:#3d3013; --bloq:#f08478; --bloq-s:#43201c; --na:#7d8799; --na-s:#232b3a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e131d; --sup:#171e2c; --sup2:#1d2535; --tinta:#e8ecf4; --gris:#9aa5b8; --linea:#2b3549;
+  --acento:#7c94ff; --acento-s:#1f2848; --sobre-acento:#0b1020;
+  --ok:#4fc9a4; --ok-s:#143a30; --esp:#e6b04a; --esp-s:#3d3013; --bloq:#f08478; --bloq-s:#43201c; --na:#7d8799; --na-s:#232b3a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--tinta);font:14px/1.5 var(--txt)}
+.pag{max-width:1240px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+h1,h2,h3,p,ul{margin:0}
+.disp{font-family:var(--disp);text-transform:uppercase;letter-spacing:.4px;line-height:1.02;text-wrap:balance;font-weight:700}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+.muted{color:var(--gris)}
+.rot{font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:var(--gris);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.nota{font-size:12.5px;color:var(--gris)}
+
+.app{background:var(--sup);border:1px solid var(--linea);border-radius:14px;overflow:hidden}
+.barra{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--linea)}
+.marca{font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:1px;line-height:1}
+.marca i{font-style:normal;color:var(--acento)}
+.proy b{display:block}.proy span{font-size:12px;color:var(--gris)}
+.av{flex:1 1 260px;min-width:0}
+.av .lin{display:flex;justify-content:space-between;font-size:12px;color:var(--gris)}
+.av .riel{height:8px;border-radius:4px;background:var(--na-s);overflow:hidden;margin-top:5px}
+.av .riel i{display:block;height:100%;background:var(--ok);transition:width .6s}
+.vistas{display:flex;gap:4px;background:var(--sup2);border:1px solid var(--linea);border-radius:10px;padding:3px}
+.vistas button{border:0;background:none;border-radius:7px;padding:6px 14px;font-weight:600;color:var(--gris)}
+.vistas button[aria-pressed="true"]{background:var(--sup);color:var(--tinta);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.vista{padding:22px 20px}
+.vista[hidden]{display:none!important}
+
+.pil{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;white-space:nowrap}
+.pil::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pil.hecha{background:var(--ok-s);color:var(--ok)} .pil.curso{background:var(--acento);color:var(--sobre-acento)} .pil.lista{background:var(--acento-s);color:var(--acento)}
+.pil.espera{background:var(--esp-s);color:var(--esp)} .pil.bloq{background:var(--bloq-s);color:var(--bloq)} .pil.na{background:var(--na-s);color:var(--na)}
+.btn{border:1px solid var(--linea);background:var(--sup);border-radius:9px;padding:9px 16px;font-weight:600}
+.btn.p{background:var(--acento);border-color:var(--acento);color:var(--sobre-acento)}
+.btn.ch{padding:5px 11px;font-size:12.5px}
+.acc{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* GUÍA */
+.guia{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:28px;align-items:start}
+.cond{display:flex;flex-direction:column;gap:18px;min-width:0}
+.heroe{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;background:var(--acento-s);border-radius:16px;padding:26px 26px}
+.play{width:104px;height:104px;border-radius:50%;border:0;background:var(--acento);color:var(--sobre-acento);display:grid;place-items:center;box-shadow:0 0 0 10px color-mix(in srgb,var(--acento) 16%,transparent)}
+.play svg{width:44px;height:44px;margin-left:6px}
+.heroe h2{font-size:38px;margin:4px 0 8px}
+.heroe p{max-width:58ch}
+.otras{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.otra{text-align:left;background:var(--sup);border:1px solid var(--linea);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.otra b{font-size:14px}.otra span{font-size:12.5px;color:var(--gris)}
+.otra:hover{border-color:var(--acento)}
+
+.tarea{display:flex;flex-direction:column;gap:16px;min-width:0}
+.tarea h2{font-size:34px}
+.pasos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pasos div{border-top:4px solid var(--linea);padding-top:6px;font-size:12.5px;color:var(--gris);font-weight:600}
+.pasos .hecho{border-color:var(--ok);color:var(--ok)} .pasos .on{border-color:var(--acento);color:var(--tinta)}
+.dice{border-left:0;background:var(--sup2);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.dice .quien{display:flex;align-items:center;gap:8px}
+.dice .quien i{font:700 13px var(--disp);font-style:normal;letter-spacing:1px;background:var(--acento);color:var(--sobre-acento);border-radius:6px;padding:2px 7px}
+.dice p{font-size:15.5px;max-width:64ch}
+.aviso{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;border-radius:12px;padding:12px 14px;background:var(--esp-s);color:var(--tinta)}
+.aviso.mal{background:var(--bloq-s)}
+.aviso .ico{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 14px var(--num);background:var(--esp);color:var(--sup)}
+.aviso.mal .ico{background:var(--bloq)}
+.aviso b{display:block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.kpi b{display:block;font-family:var(--num);font-size:30px;line-height:1.1}
+.kpi span{font-size:12.5px;color:var(--gris)}
+.kpi.ok b{color:var(--ok)} .kpi.av b{color:var(--esp)} .kpi.ac b{color:var(--acento)}
+.tabla{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:480px}
+th{text-align:left;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--gris);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--linea)}
+td{padding:8px;border-bottom:1px solid var(--linea);vertical-align:top}
+tr.grp td{background:var(--sup2);font-family:var(--disp);text-transform:uppercase;letter-spacing:1px;font-weight:600;color:var(--gris)}
+.pm{align-self:flex-start}
+.pm summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--acento);color:var(--acento);border-radius:20px;padding:4px 12px;font-size:12.5px;font-weight:600}
+.pm summary::-webkit-details-marker{display:none}
+.pm[open] summary{border-style:solid;background:var(--acento-s)}
+.pm .cuerpo{margin-top:8px;border:1px solid var(--linea);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;max-width:560px;background:var(--sup)}
+.pm .q{display:flex;flex-wrap:wrap;gap:6px}
+.pm .q span{border:1px solid var(--linea);border-radius:20px;padding:3px 10px;font-size:12.5px}
+.pm .q span.on{border-color:var(--acento);color:var(--acento);font-weight:600}
+.pm .r{font-size:13.5px}
+
+.pano{display:flex;flex-direction:column;gap:14px;min-width:0}
+.pano section{display:flex;flex-direction:column;gap:6px}
+.pano details{border-top:1px solid var(--linea);padding-top:8px}
+.pano summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none;font-weight:600}
+.pano summary::-webkit-details-marker{display:none}
+.pano summary b{font-family:var(--num);font-size:20px}
+.pano li{list-style:none;font-size:13px;padding:5px 0}
+.pano li small{display:block;color:var(--gris);font-size:12px}
+.log{font-family:var(--num);font-size:11.5px;color:var(--gris);display:grid;gap:3px}
+.log b{color:var(--tinta)}
+
+/* TABLERO */
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.filtros button{border:1px solid var(--linea);background:var(--sup);border-radius:20px;padding:4px 12px;font-size:12.5px;font-weight:600}
+.filtros button[aria-pressed="true"]{background:var(--tinta);color:var(--sup);border-color:var(--tinta)}
+td .cod{font-family:var(--num);font-size:11.5px;color:var(--gris)}
+td.fr{color:var(--bloq)} td.es{color:var(--esp)}
+
+/* MAPA */
+.mapag{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+.lienzo{overflow-x:auto;border:1px solid var(--linea);border-radius:12px;background:
+  radial-gradient(circle at 1px 1px,var(--linea) 1px,transparent 1.5px) 0 0/22px 22px,var(--sup2)}
+.lienzo svg{display:block}
+.lienzo text{font-family:var(--txt);fill:var(--tinta)}
+.lienzo .capa{font-family:var(--disp);font-size:13px;letter-spacing:1.4px;fill:var(--gris);text-transform:uppercase;font-weight:600}
+.n rect.caja{fill:var(--sup);stroke:var(--linea);stroke-width:1.2}
+.n .tit{font-size:12.5px;font-weight:600}
+.n .sub{font-size:10.5px;fill:var(--gris)}
+.n .g{stroke:none}
+.n.hecha .g{fill:var(--ok)} .n.curso .g{fill:var(--acento)} .n.lista .g{fill:var(--sup);stroke:var(--acento);stroke-width:2}
+.n.espera .g{fill:var(--esp)} .n.bloq .g{fill:var(--bloq)} .n.na .g{fill:var(--na)}
+.n .gi{fill:none;stroke:var(--sup);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.n.lista .gi{stroke:var(--acento)}
+.n{cursor:pointer}
+.n.sel rect.caja{stroke:var(--acento);stroke-width:2.4}
+.n.tenue,.e.tenue{opacity:.22}
+.n.bloq rect.caja,.n.na rect.caja{stroke-dasharray:4 3}
+.e{fill:none;stroke:var(--na);stroke-width:1.3}
+.e.frena{stroke:var(--bloq);stroke-dasharray:5 4}
+.e.camino{stroke:var(--acento);stroke-width:2.2;stroke-dasharray:none}
+.e.camino.frena{stroke:var(--bloq);stroke-dasharray:5 4}
+.ficha{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ficha h2{font-size:28px}
+.ficha h3{font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--gris)}
+.ficha li{margin-left:16px;font-size:13.5px}
+.ley{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+
+@media (max-width:900px){.guia,.mapag{grid-template-columns:minmax(0,1fr)}.heroe{grid-template-columns:minmax(0,1fr);padding:20px}.heroe h2{font-size:30px}.play{width:84px;height:84px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="pag">
+  <p class="rot">Suite XSanders · maqueta 2 · datos de ejemplo · se puede recorrer: apretá Play y seguí los botones</p>
+  <div class="app">
+    <div class="barra">
+      <div class="marca">XS<i>II</i></div>
+      <div class="proy"><b>La Bancaria · Colm3na</b><span>Primera versión funcional</span></div>
+      <div class="av"><div class="lin"><span id="av-txt"></span><span id="av-pct" class="num"></span></div><div class="riel"><i id="av-bar"></i></div></div>
+      <div class="vistas" role="group" aria-label="Vista">
+        <button data-v="guia" aria-pressed="true">Guía</button><button data-v="tablero" aria-pressed="false">Tablero</button><button data-v="mapa" aria-pressed="false">Mapa</button>
+      </div>
+    </div>
+    <div class="vista" id="guia"></div>
+    <div class="vista" id="tablero" hidden></div>
+    <div class="vista" id="mapa" hidden></div>
+  </div>
+  <p class="nota">Guía conduce: un solo paso recomendado y su botón. Tablero y Mapa son para mirar todo; desde cualquiera se abre una tarea y se vuelve a la Guía.</p>
+</div>
+
+<script>
+const E={hecha:'Hecha',curso:'En curso',lista:'Se puede hacer',espera:'Esperando un dato',bloq:'Bloqueada',na:'No aplica'};
+const M={ia:'Asistida',app:'Por la aplicación',herr:'Con herramienta',man:'Manual'};
+const G=['Base','Estructura','Recibos','Padrón','Trámites','Comunicación','Cierre'];
+const T=[
+ ['T01',0,'Ficha y marca del sindicato','app','hecha',[],'Logo, 4 colores y prueba de lectura'],
+ ['T02',0,'Módulos contratados','app','hecha',['T01'],'11 de 14 prendidos'],
+ ['T03',0,'Primer administrador','app','hecha',['T01'],'Clave propia elegida'],
+ ['T04',1,'Seccionales','ia','hecha',['T01'],'53 cargadas desde la planilla'],
+ ['T05',1,'Seccionales en el mapa','ia','hecha',['T04'],'51 exactas, 2 marcadas a mano'],
+ ['T06',1,'Áreas y permisos','ia','hecha',['T04','T02'],'7 áreas en Sede Central'],
+ ['T07',1,'Usuarios del panel','ia','lista',['T06'],'Planilla de 14 usuarios recibida'],
+ ['T08',2,'Recibos de muestra','man','hecha',[],'42 recibos de 5 bancos'],
+ ['T09',2,'Catálogo de conceptos','ia','lista',['T08'],'42 recibos listos para leer'],
+ ['T10',2,'Reglas de control','ia','bloq',['T09'],'Las propongo y las pruebo contra la muestra'],
+ ['T11',2,'Topes y tolerancia','app','hecha',[],'Tolerancia $ 1, topes al día'],
+ ['T12',2,'Escala salarial vigente','herr','hecha',['T02'],'Octubre 2026 publicada'],
+ ['T13',2,'Recibos de control','ia','bloq',['T10','T11'],''],
+ ['T14',3,'Empleadores','ia','lista',['T01'],'Planilla recibida'],
+ ['T15',3,'Padrón de afiliados','ia','espera',['T04'],'Pedido hace 3 días (EN0007)'],
+ ['T16',3,'Listas del sindicato','app','lista',['T04'],'Grupo familiar recibido'],
+ ['T17',4,'Formularios de trámite','herr','lista',['T06'],'2 borradores del Asistente de trámites'],
+ ['T18',4,'Trámite de prueba','man','bloq',['T17','T15'],''],
+ ['T19',5,'Apariencia y fotos','app','hecha',['T01'],'Laguna, foto propia'],
+ ['T20',5,'Noticias iniciales','app','lista',[],'1 vigente, se piden 3'],
+ ['T21',5,'Beneficios','app','lista',[],'Ninguno cargado'],
+ ['T22',5,'Notificación de bienvenida','app','bloq',['T15'],''],
+ ['T23',5,'Consultas sobre el convenio','app','na',['T02'],'Módulo no contratado'],
+ ['T24',6,'Recorrido por rol','ia','bloq',['T13','T18','T07'],''],
+ ['T25',6,'Aceptación del sindicato','man','bloq',['T24'],'']
+].map(a=>({id:a[0],g:a[1],n:a[2],m:a[3],e:a[4],d:a[5],nota:a[6]}));
+const por=id=>T.find(t=>t.id===id), lista=k=>T.filter(t=>t.e===k);
+const cumplida=t=>['hecha','na'].includes(t.e);
+const frena=t=>t.d.map(por).filter(d=>!cumplida(d));
+const hijos=t=>T.filter(x=>x.d.includes(t.id));
+const desc=(t,s=new Set())=>{hijos(t).forEach(h=>{if(!s.has(h.id)){s.add(h.id);desc(h,s)}});return s};
+const asc=(t,s=new Set())=>{t.d.forEach(d=>{if(!s.has(d)){s.add(d);asc(por(d),s)}});return s};
+const recomendada=()=>lista('curso')[0]||lista('lista').sort((a,b)=>desc(b).size-desc(a).size)[0];
+let abierta=null,paso=1,vista='guia',sel='T09',filtro='';
+const reg=[['10:12','Seccionales ubicadas · 51 exactas, 2 a mano'],['10:31','Áreas cargadas · 7'],['10:40','Recibos de muestra recibidos · 42']];
+const PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
+const pm=(preg,resp)=>`<details class="pm"><summary>Preguntame</summary><div class="cuerpo"><div class="q">${preg.map((p,i)=>`<span class="${i?'':'on'}">${p}</span>`).join('')}</div><p class="r">${resp}</p><p class="nota">O escribí tu pregunta sobre este punto…</p></div></details>`;
+
+function barra(){const h=T.filter(cumplida).length;document.getElementById('av-txt').textContent=`${h} de ${T.length} tareas resueltas`;
+  const p=Math.round(h*100/T.length);document.getElementById('av-pct').textContent=p+'%';document.getElementById('av-bar').style.width=p+'%'}
+
+function heroe(){const r=recomendada(),d=desc(r).size,otras=lista('lista').filter(t=>t!==r).slice(0,3);
+  return `<div class="heroe"><button class="play" data-abrir="${r.id}" aria-label="Empezar: ${r.n}">${PLAY}</button>
+   <div><p class="rot">Siguiente paso recomendado</p><h2 class="disp">${r.n}</h2>
+   <p>${r.nota}. ${d?`Es el que más destraba: ${d} tarea${d>1?'s':''} dependen de este.`:'No depende de nadie y nadie depende de él.'} ${M[r.m]==='Asistida'?'Lo preparo yo y vos confirmás antes de guardar.':'Te llevo a la pantalla y después controlo el resultado.'}</p></div></div>
+   ${pm(['¿Por qué este paso y no otro?','¿Cuánto lleva?','¿Qué pasa si lo salteo?'],`Porque ${frena(por('T13')).length?'Reglas de control y Recibos de control están esperándolo':'es lo que más tareas libera'}, y ya tengo todo lo que necesita. Las otras opciones de abajo se pueden hacer en cualquier momento.`)}
+   <div><p class="rot" style="margin-bottom:8px">O seguí con otra que ya se puede hacer</p><div class="otras">${otras.map(t=>`<button class="otra" data-abrir="${t.id}"><b>${t.n}</b><span>${t.nota}</span><span class="muted">${M[t.m]}</span></button>`).join('')}</div></div>`}
+
+function tarea(){const t=por(abierta);const cab=`<div><p class="rot">${G[t.g]} · ${M[t.m]}</p><h2 class="disp">${t.n}</h2></div>`;
+  const pasos=n=>`<div class="pasos">${['1 · Qué voy a hacer','2 · Ensayo','3 · Resultado'].map((x,i)=>`<div class="${i+1<n?'hecho':i+1===n?'on':''}">${x}</div>`).join('')}</div>`;
+  const dice=x=>`<div class="dice"><div class="quien"><i>XSII</i><span class="rot">${x.rot}</span></div>${x.h}</div>`;
+  if(t.id!=='T09')return `<div class="tarea">${cab}${dice({rot:'Qué sigue',h:`<p>${t.m==='ia'?'Esta tarea la preparo yo: leo el insumo, te muestro un ensayo con cantidades y guardo recién cuando confirmes.':t.m==='herr'?'Esta tarea se hace con una herramienta que ya existe. Te llevo ahí y, cuando vuelvas, controlo que haya quedado completa.':'Esta tarea se hace en la aplicación. Te llevo a la pantalla y, cuando vuelvas, controlo el resultado.'}</p><p class="nota">En esta maqueta solo está desarrollado el recorrido de Catálogo de conceptos.</p>`})}<div class="acc"><button class="btn" data-volver>Volver a la guía</button></div></div>`;
+  if(paso===1)return `<div class="tarea">${cab}${pasos(1)}${dice({rot:'Qué voy a hacer',h:`<p>Voy a leer los 42 recibos de muestra, juntar los códigos de cada banco, compararlos con el convenio 18/75 y proponerte el catálogo. Lleva unos 3 minutos. No guardo nada: primero te muestro un ensayo.</p>`})}
+    <div class="acc"><button class="btn p" data-paso="2">Hacer el ensayo</button><button class="btn" data-volver>Ahora no</button></div>
+    ${pm(['¿Qué recibos vas a usar?','¿Se le manda algo personal a la IA?'],'Los 42 que entregó el sindicato en la Mesa (EN0004), de 5 bancos. Antes de leerlos se tapan nombre, CUIL y legajo.')}</div>`;
+  if(paso===2)return `<div class="tarea">${cab}${pasos(2)}${dice({rot:'Ensayo · todavía no guardé nada',h:`<p>Leí 40 de los 42 recibos. De 61 códigos, 55 están claros y los puedo cargar ya. Hay 6 que necesito que mires.</p>
+     <div class="kpis"><div class="kpi"><b>61</b><span>códigos distintos</span></div><div class="kpi ok"><b>38</b><span>coinciden con el convenio</span></div><div class="kpi ac"><b>17</b><span>nuevos, con propuesta</span></div><div class="kpi av"><b>6</b><span>dudosos</span></div></div>`})}
+    <div class="aviso mal"><span class="ico">!</span><div><b>2 recibos no se pudieron leer</b>Fotos borrosas del Banco Provincia. No afectan el catálogo: sus códigos ya aparecen en otros 7 recibos del mismo banco.<div class="acc" style="margin-top:8px"><button class="btn ch">Seguir sin ellos</button><button class="btn ch">Pedirlos de nuevo al sindicato</button></div></div></div>
+    <div class="tabla"><table><thead><tr><th>Código</th><th>Lo que dice el recibo</th><th>Propuesta</th><th>Visto en</th></tr></thead><tbody>
+     <tr><td class="num">1010</td><td>Sueldo básico</td><td>Remunerativo · coincide</td><td class="num">40 recibos</td></tr>
+     <tr><td class="num">1487</td><td>Compensación conectividad</td><td>No remunerativo · nuevo</td><td class="num">31 recibos</td></tr>
+     <tr><td class="num">2210</td><td>Ajuste ret. ganancias</td><td><span class="pil espera">dudoso</span> descuento o reintegro según el mes</td><td class="num">9 recibos</td></tr>
+     <tr><td class="num">0875</td><td>Plus función especial</td><td><span class="pil espera">dudoso</span> un solo banco, sin respaldo en el convenio</td><td class="num">4 recibos</td></tr></tbody></table></div>
+    <div class="acc"><button class="btn p" data-paso="3">Cargar los 55 claros</button><button class="btn">Revisar los 6 dudosos primero</button><button class="btn" data-volver>Dejarlo para después</button></div>
+    ${pm(['¿Por qué 2210 es dudoso?','¿Qué pasa con los dudosos si cargo ahora?','Mostrame los 17 nuevos'],'En 6 recibos aparece restando y en 3 sumando. Puede ser una retención y su devolución. Si es eso, se carga como descuento y el sistema reconoce solo la devolución.')}</div>`;
+  return `<div class="tarea">${cab}${pasos(4)}${dice({rot:'Resultado',h:`<p>Listo. Cargué 55 conceptos. Los 6 dudosos quedaron apartados para revisar; no frenan lo que sigue.</p>
+     <div class="kpis"><div class="kpi ok"><b>55</b><span>conceptos cargados</span></div><div class="kpi av"><b>6</b><span>apartados</span></div><div class="kpi ac"><b>1</b><span>tarea destrabada</span></div></div>`})}
+    <div class="aviso"><span class="ico">i</span><div><b>Control: hecha, con observaciones</b>Se destrabó Reglas de control. Quedó anotado en el registro quién confirmó y qué se cargó.</div></div>
+    <div class="heroe"><button class="play" data-abrir="T10" aria-label="Seguir con Reglas de control">${PLAY}</button><div><p class="rot">Siguiente paso recomendado</p><h2 class="disp">Reglas de control</h2><p>Las propongo desde el convenio y las pruebo contra los mismos 40 recibos, para que veas cuáles cierran antes de guardarlas.</p></div></div>
+    <div class="acc"><button class="btn" data-volver>Volver a la guía</button></div></div>`}
+
+function pano(){const s=(k,tit,ab)=>{const l=lista(k);return l.length?`<details ${ab?'open':''}><summary><span class="pil ${k}">${tit}</span><b>${l.length}</b></summary><ul>${l.map(t=>`<li>${t.n}<small>${k==='bloq'?'Espera a '+frena(t).map(x=>x.n).join(' y '):t.nota}</small></li>`).join('')}</ul></details>`:''};
+  const esp=lista('espera')[0];
+  return `<aside class="pano"><p class="rot">Panorama</p>
+   ${esp?`<div class="aviso"><span class="ico">!</span><div><b>${esp.n}: demorado</b>${esp.nota}. Frena ${desc(esp).size} tareas.<div class="acc" style="margin-top:8px"><button class="btn ch">Reclamar en la Mesa</button></div></div></div>`:''}
+   <section>${s('lista','Se pueden hacer')}${s('espera','Esperando un dato')}${s('bloq','Bloqueadas')}${s('hecha','Hechas')}</section>
+   <button class="btn ch" data-v="tablero">Ver todo en el tablero</button>
+   <div><p class="rot" style="margin-bottom:6px">Últimos movimientos</p><div class="log">${reg.slice(-4).reverse().map(r=>`<span><b>${r[0]}</b> · ${r[1]}</span>`).join('')}</div></div></aside>`}
+
+function pGuia(){document.getElementById('guia').innerHTML=`<div class="guia"><div class="cond">${abierta?tarea():heroe()}</div>${pano()}</div>`}
+
+function pTablero(){const ks=Object.keys(E).filter(k=>lista(k).length);
+  const filas=G.map((g,i)=>{const l=T.filter(t=>t.g===i&&(!filtro||t.e===filtro));return l.length?`<tr class="grp"><td colspan="5">${g}</td></tr>`+l.map(t=>`<tr><td><span class="cod">${t.id}</span></td><td><b>${t.n}</b></td><td><span class="pil ${t.e}">${E[t.e]}</span></td><td>${M[t.m]}</td><td class="${t.e==='bloq'?'fr':t.e==='espera'?'es':''}">${t.e==='bloq'?'Espera a '+frena(t).map(x=>x.n).join(' y '):t.nota}</td></tr>`).join(''):''}).join('');
+  document.getElementById('tablero').innerHTML=`<div class="filtros"><button data-f="" aria-pressed="${!filtro}">Todas · ${T.length}</button>${ks.map(k=>`<button data-f="${k}" aria-pressed="${filtro===k}">${E[k]} · ${lista(k).length}</button>`).join('')}</div>
+   <div class="tabla"><table><thead><tr><th></th><th>Tarea</th><th>Estado</th><th>Cómo se hace</th><th>Detalle</th></tr></thead><tbody>${filas}</tbody></table></div>`}
+
+const GL={hecha:'M-4 0 L-1 3 L4 -3',curso:'M-2.5 -4 L4 0 L-2.5 4 Z',lista:'M-2.5 -4 L4 0 L-2.5 4 Z',espera:'M0 -4 V0 L3 2',bloq:'M-3 -3 L3 3 M3 -3 L-3 3',na:'M-4 0 H4'};
+function pMapa(){
+  const niv={};const n=t=>niv[t.id]??(niv[t.id]=t.d.length?1+Math.max(...t.d.map(d=>n(por(d)))):0);T.forEach(n);
+  const cols=[];T.forEach(t=>(cols[niv[t.id]]??=[]).push(t));
+  const W=204,H=54,GX=84,GY=18,top=40,pos={},ord={};
+  cols.forEach((c,i)=>{if(i)c.sort((a,b)=>{const m=t=>t.d.reduce((s,d)=>s+ord[d],0)/t.d.length;return m(a)-m(b)});c.forEach((t,j)=>{ord[t.id]=j;pos[t.id]={x:16+i*(W+GX),y:top+j*(H+GY)}})});
+  const alto=top+Math.max(...cols.map(c=>c.length))*(H+GY)+6,ancho=16+cols.length*(W+GX)-GX+16;
+  const s=por(sel),cam=new Set([sel,...asc(s),...desc(s)]);
+  const arcos=T.flatMap(t=>t.d.map(d=>{const a=pos[d],b=pos[t.id],o=por(d);const x1=a.x+W,y1=a.y+H/2,x2=b.x-7,y2=b.y+H/2,mx=b.x-22-(ord[d]%4)*9,r=7,dy=Math.sign(y2-y1);
+    const enc=cam.has(d)&&cam.has(t.id)&&(d===sel||t.id===sel||asc(s).has(t.id)||desc(s).has(d));
+    const p=dy?`M${x1},${y1} H${mx-r} Q${mx},${y1} ${mx},${y1+dy*r} V${y2-dy*r} Q${mx},${y2} ${mx+r},${y2} H${x2}`:`M${x1},${y1} H${x2}`;
+    return `<path class="e ${cumplida(o)?'':'frena'} ${enc?'camino':'tenue'}" d="${p}" marker-end="url(#${enc?(cumplida(o)?'fa':'fr'):'fn'})"/>`}));
+  const nodos=T.map(t=>{const p=pos[t.id],nom=t.n.length>23?t.n.slice(0,22)+'…':t.n;
+    return `<g class="n ${t.e} ${t.id===sel?'sel':''} ${cam.has(t.id)?'':'tenue'}" data-n="${t.id}" tabindex="0" role="button" aria-label="${t.n}: ${E[t.e]}"><rect class="caja" x="${p.x}" y="${p.y}" width="${W}" height="${H}" rx="10"/>
+     <circle class="g" cx="${p.x+24}" cy="${p.y+H/2}" r="12"/><path class="gi" transform="translate(${p.x+24},${p.y+H/2})" d="${GL[t.e]}"/>
+     <text class="tit" x="${p.x+46}" y="${p.y+23}">${nom}</text><text class="sub" x="${p.x+46}" y="${p.y+39}">${E[t.e]} · ${M[t.m]}</text></g>`});
+  const capas=cols.map((c,i)=>`<text class="capa" x="${16+i*(W+GX)}" y="22">${i?'Después · '+i:'Sin requisitos'}</text>`);
+  const mk=(id,c)=>`<marker id="${id}" viewBox="0 0 8 8" refX="1" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="${c}"/></marker>`;
+  const f=frena(s),h=hijos(s);
+  document.getElementById('mapa').innerHTML=`<div class="ley">${Object.keys(E).map(k=>`<span class="pil ${k}">${E[k]}</span>`).join('')}</div>
+   <div class="mapag"><div><div class="lienzo"><svg width="${ancho}" height="${alto}" viewBox="0 0 ${ancho} ${alto}"><defs>${mk('fn','var(--na)')}${mk('fa','var(--acento)')}${mk('fr','var(--bloq)')}</defs>${capas.join('')}${arcos.join('')}${nodos.join('')}</svg></div>
+    <p class="nota" style="margin-top:8px">La flecha va de lo que se necesita a lo que lo necesita. Al tocar una tarea se ilumina su camino: de qué depende y qué destraba. Línea roja cortada: todavía frena.</p></div>
+   <aside class="ficha"><div><p class="rot">${G[s.g]} · ${M[s.m]}</p><h2 class="disp">${s.n}</h2></div><span class="pil ${s.e}" style="align-self:flex-start">${E[s.e]}</span>
+    <p>${f.length?'Está frenada por '+f.map(x=>x.n).join(' y ')+'.':s.nota||'Sin datos todavía.'}</p>
+    <div><h3>Necesita</h3>${s.d.length?'<ul>'+s.d.map(x=>`<li>${por(x).n} <span class="muted">· ${E[por(x).e].toLowerCase()}</span></li>`).join('')+'</ul>':'<p class="muted">Nada.</p>'}</div>
+    <div><h3>Destraba</h3>${h.length?'<ul>'+h.map(x=>`<li>${x.n}</li>`).join('')+'</ul>':'<p class="muted">Ninguna otra depende de esta.</p>'}</div>
+    ${['lista','curso'].includes(s.e)?`<button class="btn p" data-abrir="${s.id}">Abrir en la guía</button>`:''}
+    ${pm(['¿Qué falta para destrabarla?','¿Se puede saltear?'],f.length?`Falta resolver ${f.map(x=>x.n).join(' y ')}. ${f.some(x=>x.e==='lista')?'Al menos una ya se puede hacer ahora.':''}`:'Nada la frena: se puede hacer ahora.')}</aside></div>`}
+
+function ver(v){vista=v;['guia','tablero','mapa'].forEach(x=>document.getElementById(x).hidden=x!==v);document.querySelectorAll('.vistas button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}
+function todo(){barra();pGuia();pTablero();pMapa()}
+function completar(){const t=por('T09');if(t.e!=='hecha'){t.e='hecha';t.nota='55 cargados, 6 apartados';por('T10').e='lista';reg.push(['10:47','Ensayo de conceptos · 61 códigos · sin cambios'],['10:52','SDN confirmó · 55 conceptos cargados'])}}
+document.addEventListener('click',e=>{const q=s=>e.target.closest(s);let x;
+  if(x=q('[data-abrir]')){abierta=x.dataset.abrir;paso=1;por(abierta).e==='lista'&&abierta==='T09'&&(por(abierta).e='curso');ver('guia');todo();scrollTo({top:0});return}
+  if(x=q('[data-paso]')){paso=+x.dataset.paso;if(paso===3)completar();todo();return}
+  if(q('[data-volver]')){if(por('T09').e==='curso')por('T09').e='lista';abierta=null;todo();return}
+  if(x=q('[data-v]')){ver(x.dataset.v);return}
+  if(x=q('[data-f]')){filtro=x.dataset.f;pTablero();return}
+  if(x=q('[data-n]')){sel=x.dataset.n;pMapa()}});
+todo();
+</script>
+
+</body></html>

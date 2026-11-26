@@ -29,6 +29,8 @@ def _linea(t, e) -> str:
         marca += " (pospuesta)"
     if e.falta_confirmar:
         marca += " (falta confirmar)"
+    if e.insumos_sin_registrar:
+        marca += " (insumo sin registrar)"
     c = e.control
     if e.estado == "bloqueada":
         detalle = "frenada por " + ", ".join(e.frenada_por)

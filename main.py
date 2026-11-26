@@ -38,7 +38,7 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
-from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query
+from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query, Depends
 from fastapi import Path as RutaFastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -13656,6 +13656,207 @@ def api_impl_usuario_estado(request: Request, proyecto_id: IdImpl, usuario_id: I
         if u is None:
             raise HTTPException(404, "No existe.")
         return {"ok": True, "usuario": _impl_usuario_dict(u)}
+
+
+# ---------- XSII, Implementación inteligente: bloque 1 (docs/xsii/API.md) ----------
+# Solo el equipo (la misma definición que la Mesa), por proyecto de la Mesa, 404 en
+# demo. Una sola sesión de base por request: la puerta se resuelve ANTES de abrirla
+# (como `_impl_equipo_api`) y todo lo demás pasa por la sesión de la ruta. Lo que
+# arma el JSON y las reglas de cada decisión viven en `xsii/proyectos/colm3na/vista.py`.
+from xsii.proyectos.colm3na import vista as xsii_vista
+
+API_XSII = "/api/entornos/xsii"
+XSII_TARJETA_MAX = 20
+
+
+def _xsii_equipo(request: Request):
+    """Dependencia: el Actor del equipo, o 404 (demo) / 401 / 403."""
+    return _impl_equipo_api(request)
+
+
+async def _xsii_cuerpo(request: Request) -> dict:
+    """Dependencia: el cuerpo JSON, que tiene que ser un objeto (si no, 400) y
+    llegar como `application/json`, como en la Mesa."""
+    if not request.headers.get("content-type", "").lower().startswith("application/json"):
+        raise HTTPException(400, "El cuerpo tiene que ser un objeto JSON.")
+    try:
+        datos = await request.json()
+    except Exception:       # noqa: BLE001 - JSON roto, vacío o con bytes inválidos
+        raise HTTPException(400, "El cuerpo tiene que ser un objeto JSON.")
+    if not isinstance(datos, dict):
+        raise HTTPException(400, "El cuerpo tiene que ser un objeto JSON.")
+    return datos
+
+
+def _xsii_contexto(s, pid: int):
+    try:
+        return xsii_vista.Contexto(s, pid)
+    except LookupError:
+        raise HTTPException(404, "No existe.")
+
+
+def _xsii_tarea(codigo: str) -> str:
+    codigo = (codigo or "").strip().upper()
+    if codigo not in xsii_vista.POR_CODIGO:
+        raise HTTPException(404, "No existe la tarea.")
+    return codigo
+
+
+def _xsii_insumo(clave: str) -> str:
+    if clave not in xsii_vista.INSUMOS:
+        raise HTTPException(404, "No existe el insumo.")
+    return clave
+
+
+def _xsii_texto(valor, campo: str) -> str:
+    """Un texto del cuerpo: ausente es vacío; algo que no es texto, 400."""
+    if valor is None:
+        return ""
+    if not isinstance(valor, str):
+        raise HTTPException(400, f"{campo} tiene que ser un texto.")
+    return valor
+
+
+@app.get(API_XSII + "/proyectos")
+def api_xsii_proyectos(actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        return xsii_vista.proyectos_json(s)
+
+
+@app.get(API_XSII + "/p/{pid}/tablero")
+def api_xsii_tablero(pid: IdImpl, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        return xsii_vista.tablero_json(s, _xsii_contexto(s, pid))
+
+
+@app.get(API_XSII + "/p/{pid}/tarea/{codigo}")
+def api_xsii_tarea(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        codigo = _xsii_tarea(codigo)
+        if not ctx.disponible:
+            raise HTTPException(409, ctx.motivo_no_disponible)
+        return xsii_vista.ficha_json(s, ctx, codigo)
+
+
+def _xsii_responder_tarea(s, pid: int, codigo: str) -> dict:
+    """Después de escribir: el tablero se calcula de nuevo (fresco) y se devuelve la tarea."""
+    ctx = _xsii_contexto(s, pid)
+    return {"ok": True, "tarea": xsii_vista.tarea_json(ctx, codigo),
+            "resumen": xsii_vista.consulta.resumen(ctx.tb)}
+
+
+@app.post(API_XSII + "/p/{pid}/tarea/{codigo}/decision")
+def api_xsii_decision(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo),
+                      datos: dict = Depends(_xsii_cuerpo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        codigo = _xsii_tarea(codigo)
+        try:
+            xsii_vista.decidir(s, ctx, actor, codigo, _xsii_texto(datos.get("tipo"), "El tipo"),
+                               _xsii_texto(datos.get("motivo"), "El motivo"))
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        return _xsii_responder_tarea(s, pid, codigo)
+
+
+@app.post(API_XSII + "/p/{pid}/tarea/{codigo}/decision/deshacer")
+def api_xsii_decision_deshacer(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo),
+                               datos: dict = Depends(_xsii_cuerpo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        codigo = _xsii_tarea(codigo)
+        try:
+            xsii_vista.deshacer(s, ctx, actor, codigo, _xsii_texto(datos.get("tipo"), "El tipo"),
+                                _xsii_texto(datos.get("motivo"), "El motivo"))
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        return _xsii_responder_tarea(s, pid, codigo)
+
+
+@app.post(API_XSII + "/p/{pid}/insumo/{clave}")
+def api_xsii_insumo(pid: IdImpl, clave: str, actor=Depends(_xsii_equipo),
+                    datos: dict = Depends(_xsii_cuerpo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        clave = _xsii_insumo(clave)
+        tarjeta = datos.get("tarjeta")
+        if tarjeta is not None and (isinstance(tarjeta, bool) or not isinstance(tarjeta, (str, int))):
+            raise HTTPException(400, "La tarjeta tiene que ser un código o un número.")
+        if tarjeta is not None:
+            tarjeta = implementacion.limpiar_texto(tarjeta)
+            if len(tarjeta) > XSII_TARJETA_MAX:      # nada que buscar: ningún código ni id llega a tanto
+                raise HTTPException(400, "No encontré esa tarjeta en la Mesa de este proyecto.")
+        try:
+            xsii_vista.registrar_insumo(s, ctx, actor, clave, _xsii_texto(datos.get("estado"), "El estado"),
+                                        tarjeta, _xsii_texto(datos.get("nota"), "La nota"))
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        ctx = _xsii_contexto(s, pid)
+        return {"ok": True, "insumo": xsii_vista.insumo_json(ctx, clave)}
+
+
+@app.post(API_XSII + "/p/{pid}/insumo/{clave}/retirar")
+def api_xsii_insumo_retirar(pid: IdImpl, clave: str, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        clave = _xsii_insumo(clave)
+        try:
+            xsii_vista.retirar_insumo(s, ctx, actor, clave)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        ctx = _xsii_contexto(s, pid)
+        return {"ok": True, "insumo": xsii_vista.insumo_json(ctx, clave)}
+
+
+@app.get(API_XSII + "/p/{pid}/movimientos")
+def api_xsii_movimientos(pid: IdImpl, codigo: str = "", limite: str = "50", actor=Depends(_xsii_equipo)):
+    try:
+        limite = int(limite)
+    except ValueError:
+        raise HTTPException(400, "El límite tiene que ser un número.")
+    limite = max(1, min(limite, 200))
+    codigo = implementacion.limpiar_texto(codigo).upper()[:20]
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        if codigo and codigo not in xsii_vista.POR_CODIGO:
+            return {"movimientos": []}        # no es una tarea del catálogo: nada que mostrar
+        return xsii_vista.movimientos_json(s, ctx, codigo, limite)
+
+
+@app.get("/entornos/xsii")
+def entornos_xsii(request: Request):
+    """Sin pantalla propia: con un solo proyecto va a su tablero; con varios o
+    ninguno, a la pestaña Implementación de `/entornos`, que los lista."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    with db.get_session() as s:
+        proyectos = [p.id for p in db.impl_proyectos(s)]
+    if len(proyectos) == 1:
+        return RedirectResponse(f"/entornos/xsii/{proyectos[0]}", status_code=303)
+    return RedirectResponse("/entornos#implementacion", status_code=303)
+
+
+@app.get("/entornos/xsii/{pid}", response_class=HTMLResponse)
+def entornos_xsii_proyecto(request: Request, pid: str):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    # El id llega como texto y se valida acá, después de la puerta de demo: un
+    # 422 de FastAPI delataría que la ruta existe. Es una página, no JSON crudo.
+    if not (pid.isascii() and pid.isdigit() and len(pid) <= 10 and implementacion.id_valido(int(pid))):
+        raise HTTPException(404, "No existe.")
+    pid = int(pid)
+    with db.get_session() as s:
+        p = db.impl_proyecto(s, pid)
+        if p is None:
+            raise HTTPException(404, "No existe.")
+        nombre = p.nombre
+        es_equipo = _impl_equipo_de_sesion(request, s) is not None
+    return templates.TemplateResponse("xsii.html", {
+        "request": request, "pid": pid, "proyecto_nombre": nombre, "es_equipo": es_equipo,
+        "marca_plataforma": db.marca_plataforma()})
 
 
 # ---------- Mesa de implementación: bloques 3 y 4 (docs/implementacion/API.md) ----------

@@ -12176,3 +12176,302 @@ def impl_ficha_archivo(s: Session, proyecto_id: int, archivo_id: int, lado: str)
         return None
     return {"archivo": arch, "tarjeta": _impl_tarjeta(s, proyecto_id, arch.tarjeta_id),
             "relacionadas": impl_relacionadas(s, proyecto_id, "archivo", arch.id, lado)}
+
+
+# =====================================================================
+# XSII, Implementación inteligente: registro de decisiones e insumos (bloque 1)
+# =====================================================================
+# `PLAN_XSII.md` X15 a X18, contrato en docs/xsii/API.md. El estado de cada
+# tarea NO se guarda (lo calcula el motor): acá vive solo lo que decidió o
+# registró una persona del equipo. Como la Mesa, son datos REALES de Pruebas:
+# sin claves foráneas hacia el resto, fuera del clonado de la demo y del
+# borrado de un sindicato (prefijo `xsii`).
+import xsii as _xsii
+XSII_PREFIJO_TABLAS = _xsii.PREFIJO_TABLAS
+XSII_DECISIONES = ("confirmada", "completada_a_mano", "no_aplica", "pospuesta")
+XSII_MOTIVO_OBLIGATORIO = ("completada_a_mano", "no_aplica")
+XSII_ESTADOS_INSUMO = ("pedido", "recibido")
+XSII_MOTIVO_MIN, XSII_MOTIVO_MAX, XSII_NOTA_MAX = 5, 500, 500
+XSII_ROTULOS_DECISION = {"confirmada": "Confirmada", "completada_a_mano": "Completada a mano",
+                         "no_aplica": "No aplica", "pospuesta": "Pospuesta"}
+
+
+class XsiiError(Exception):
+    """Un rechazo del registro de XSII: `estado` es el código HTTP que le toca
+    (400 dato inválido, 409 conflicto) y `mensaje` la frase para la persona."""
+    def __init__(self, estado: int, mensaje: str):
+        super().__init__(mensaje)
+        self.estado = estado
+        self.mensaje = mensaje
+
+
+class XsiiDecision(SQLModel, table=True):
+    """Una decisión de una persona del equipo sobre una tarea. Deshacer NO
+    borra: la fila queda con `activa=False` y quién y cuándo la deshizo."""
+    __table_args__ = (
+        Index("uq_xsiidecision_activa", "proyecto_id", "codigo", "tipo", unique=True,
+              postgresql_where=text("activa")),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proyecto_id: int = Field(index=True)
+    codigo: str = ""
+    tipo: str = ""                            # confirmada | completada_a_mano | no_aplica | pospuesta
+    motivo: str = ""
+    quien_id: int = 0
+    quien_nombre: str = ""
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)
+    activa: bool = True
+    deshecha_por_id: int = 0
+    deshecha_por_nombre: str = ""
+    deshecha_cuando: str = ""
+    deshecha_motivo: str = ""
+
+
+class XsiiInsumo(SQLModel, table=True):
+    """El registro de un insumo que entrega el cliente (pedido o recibido).
+    Registrar de nuevo reemplaza al activo: el anterior queda inactivo."""
+    __table_args__ = (
+        Index("uq_xsiiinsumo_activo", "proyecto_id", "clave", unique=True,
+              postgresql_where=text("activa")),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proyecto_id: int = Field(index=True)
+    clave: str = ""
+    estado: str = "pedido"                    # pedido | recibido
+    tarjeta_id: Optional[int] = None          # ImplTarjeta del MISMO proyecto
+    archivo_id: Optional[int] = None          # ImplArchivo del MISMO proyecto
+    nota: str = ""
+    quien_id: int = 0
+    quien_nombre: str = ""
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)
+    activa: bool = True
+    retirado_por_id: int = 0
+    retirado_por_nombre: str = ""
+    retirado_cuando: str = ""
+
+
+class XsiiMovimiento(SQLModel, table=True):
+    """La traza de XSII: no se edita ni se borra. `texto` lo arma el servidor."""
+    __table_args__ = (Index("ix_xsiimovimiento_proyecto_codigo", "proyecto_id", "codigo"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proyecto_id: int = Field(index=True)
+    codigo: str = ""                          # la tarea; vacío en lo de un insumo
+    clave_insumo: str = ""                    # el insumo, en sus movimientos
+    tipo: str = ""                            # decision | decision_deshecha | insumo_pedido | insumo_recibido | insumo_retirado
+    texto: str = ""
+    cantidades: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    quien_id: int = 0
+    quien_nombre: str = ""
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)
+
+
+XSII_TABLAS = tuple(sorted(m.__tablename__ for m in (XsiiDecision, XsiiInsumo, XsiiMovimiento)))
+
+event.listen(XsiiMovimiento, "before_update", _traza_inmutable)
+event.listen(XsiiMovimiento, "before_delete", _traza_inmutable)
+
+
+# Caracteres que no se ven aunque no sean espacios: el Braille en blanco y los
+# rellenos de Hangul. Con las categorías Cf, Cc, Cs, Zs, Zl y Zp no cuentan para
+# el largo mínimo de un motivo obligatorio.
+_XSII_INVISIBLES = frozenset("\u2800\u115f\u1160\u3164\uffa0")
+_XSII_CATEGORIAS_INVISIBLES = ("Cf", "Cc", "Cs", "Zs", "Zl", "Zp")
+
+
+def xsii_visibles(texto: str) -> int:
+    """Cuántos caracteres de `texto` se ven: sin espacios, sin controles ni
+    caracteres de formato (U+200B, U+FEFF, U+00AD...)."""
+    import unicodedata
+    return sum(1 for c in texto if c not in _XSII_INVISIBLES
+               and unicodedata.category(c) not in _XSII_CATEGORIAS_INVISIBLES)
+
+
+def xsii_motivo(motivo, obligatorio: bool) -> str:
+    texto = implementacion.limpiar_texto(motivo)
+    if len(texto) > XSII_MOTIVO_MAX:
+        raise XsiiError(400, f"El motivo admite hasta {XSII_MOTIVO_MAX} caracteres.")
+    if obligatorio and xsii_visibles(texto) < XSII_MOTIVO_MIN:
+        raise XsiiError(400, f"El motivo es obligatorio (al menos {XSII_MOTIVO_MIN} caracteres).")
+    return texto
+
+
+def _xsii_movimiento(s: Session, proyecto_id: int, actor, tipo: str, texto: str, codigo: str = "",
+                     clave_insumo: str = "", cantidades: dict = None) -> XsiiMovimiento:
+    a = _impl_actor(actor)
+    m = XsiiMovimiento(proyecto_id=proyecto_id, codigo=codigo, clave_insumo=clave_insumo, tipo=tipo,
+                       texto=texto, cantidades=cantidades or {}, quien_id=a.id, quien_nombre=a.nombre)
+    s.add(m)
+    return m
+
+
+def xsii_decisiones_activas(s: Session, proyecto_id: int) -> dict:
+    """{codigo: [{tipo, motivo, quien, cuando}, ...]}: las decisiones ACTIVAS,
+    del más viejo al más nuevo. Es la forma que come el motor."""
+    salida: dict = {}
+    for d in s.exec(select(XsiiDecision).where(XsiiDecision.proyecto_id == proyecto_id,
+                                               XsiiDecision.activa == True)    # noqa: E712
+                    .order_by(XsiiDecision.id)).all():
+        salida.setdefault(d.codigo, []).append(
+            {"tipo": d.tipo, "motivo": d.motivo, "quien": d.quien_nombre, "cuando": d.cuando})
+    return salida
+
+
+def xsii_insumos_activos(s: Session, proyecto_id: int) -> dict:
+    """{clave: XsiiInsumo} de los registros activos."""
+    return {i.clave: i for i in s.exec(select(XsiiInsumo).where(
+        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.activa == True)).all()}    # noqa: E712
+
+
+def xsii_tarjetas(s: Session, proyecto_id: int, ids) -> dict:
+    """{id: ImplTarjeta} de las tarjetas pedidas, solo las de ESTE proyecto."""
+    ids = [i for i in set(ids) if i]
+    if not ids:
+        return {}
+    return {t.id: t for t in s.exec(select(ImplTarjeta).where(
+        ImplTarjeta.proyecto_id == proyecto_id, ImplTarjeta.id.in_(ids))).all()}
+
+
+def _xsii_candado_de_tarea(s: Session, proyecto_id: int, codigo: str) -> None:
+    """Serializa las escrituras de decisiones de UNA tarea: el candado dura lo
+    que la transacción, así quien llega segundo espera y lee lo que el primero
+    dejó (el índice único parcial solo ve el mismo tipo, no las exclusiones)."""
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(
+        clave=f"xsii:{proyecto_id}:{codigo}"))
+
+
+def xsii_decidir(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea: str,
+                 tipo: str, motivo="", revalidar=None) -> XsiiDecision:
+    """Registra la decisión y su movimiento en una transacción. Las reglas de
+    «se puede o no» según el estado de la tarea las decide quien llama (la
+    vista); acá van las del dato (tipo, motivo) y la unicidad: ya hay una
+    activa de ese tipo -> 409, también si dos pedidos llegan a la vez.
+    Adentro del candado de la tarea se leen las decisiones activas de nuevo y
+    `revalidar(tipos_activos)` (si se pasa) devuelve la frase del conflicto o
+    vacío: así dos decisiones incompatibles no pasan las dos sobre la misma foto."""
+    if tipo not in XSII_DECISIONES:
+        raise XsiiError(400, "El tipo de decisión no es válido.")
+    motivo = xsii_motivo(motivo, tipo in XSII_MOTIVO_OBLIGATORIO)
+    a = _impl_actor(actor)
+    _xsii_candado_de_tarea(s, proyecto_id, codigo)
+    activos = list(s.exec(select(XsiiDecision.tipo).where(
+        XsiiDecision.proyecto_id == proyecto_id, XsiiDecision.codigo == codigo,
+        XsiiDecision.activa == True)).all())                                  # noqa: E712
+    if tipo in activos:
+        raise XsiiError(409, f"Ya hay una decisión «{XSII_ROTULOS_DECISION[tipo]}» activa en esta tarea.")
+    if revalidar is not None and (frase := revalidar(activos)):
+        raise XsiiError(409, frase)
+    d = XsiiDecision(proyecto_id=proyecto_id, codigo=codigo, tipo=tipo, motivo=motivo,
+                     quien_id=a.id, quien_nombre=a.nombre)
+    s.add(d)
+    frase = {"confirmada": f"Confirmó {nombre_tarea}",
+             "completada_a_mano": f"Completó a mano {nombre_tarea}",
+             "no_aplica": f"Declaró que no aplica {nombre_tarea}",
+             "pospuesta": f"Pospuso {nombre_tarea}"}[tipo]
+    _xsii_movimiento(s, proyecto_id, a, "decision", frase + (f": {motivo}" if motivo else ""), codigo=codigo)
+    try:
+        s.commit()
+    except IntegrityError:           # el índice único parcial decidió entre dos pedidos
+        s.rollback()
+        raise XsiiError(409, f"Ya hay una decisión «{XSII_ROTULOS_DECISION[tipo]}» activa en esta tarea.")
+    s.refresh(d)
+    return d
+
+
+def xsii_deshacer(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea: str,
+                  tipo: str, motivo="") -> XsiiDecision:
+    """Deja inactiva la decisión activa de ese tipo (no la borra). Sin activa -> 409."""
+    if tipo not in XSII_DECISIONES:
+        raise XsiiError(400, "El tipo de decisión no es válido.")
+    motivo = xsii_motivo(motivo, False)
+    a = _impl_actor(actor)
+    _xsii_candado_de_tarea(s, proyecto_id, codigo)
+    d = s.exec(select(XsiiDecision).where(
+        XsiiDecision.proyecto_id == proyecto_id, XsiiDecision.codigo == codigo,
+        XsiiDecision.tipo == tipo, XsiiDecision.activa == True)       # noqa: E712
+        .with_for_update()).first()
+    if d is None:
+        raise XsiiError(409, f"No hay una decisión «{XSII_ROTULOS_DECISION[tipo]}» activa para deshacer.")
+    d.activa = False
+    d.deshecha_por_id, d.deshecha_por_nombre = a.id, a.nombre
+    d.deshecha_cuando, d.deshecha_motivo = fechas.ahora_con_segundos(), motivo
+    s.add(d)
+    _xsii_movimiento(s, proyecto_id, a, "decision_deshecha",
+                     f"Deshizo «{XSII_ROTULOS_DECISION[tipo]}» de {nombre_tarea}"
+                     + (f": {motivo}" if motivo else ""), codigo=codigo)
+    s.commit()
+    s.refresh(d)
+    return d
+
+
+def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str,
+                          estado: str, tarjeta_id: int = None, nota="") -> XsiiInsumo:
+    """Registra el insumo como `pedido` o `recibido`, reemplazando al activo
+    (queda inactivo, con traza). Pasar de pedido a recibido conserva la tarjeta
+    si no se manda otra. La tarjeta tiene que ser de ESTE proyecto."""
+    if estado not in XSII_ESTADOS_INSUMO:
+        raise XsiiError(400, "El estado del insumo no es válido (pedido o recibido).")
+    nota = implementacion.limpiar_texto(nota)
+    if len(nota) > XSII_NOTA_MAX:
+        raise XsiiError(400, f"La nota admite hasta {XSII_NOTA_MAX} caracteres.")
+    if tarjeta_id is not None and _impl_tarjeta(s, proyecto_id, tarjeta_id) is None:
+        raise XsiiError(400, "No encontré esa tarjeta en la Mesa de este proyecto.")
+    a = _impl_actor(actor)
+    previo = s.exec(select(XsiiInsumo).where(
+        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave,
+        XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
+    archivo_id = None
+    if previo is not None:
+        if tarjeta_id is None:
+            tarjeta_id = previo.tarjeta_id
+        archivo_id = previo.archivo_id
+        previo.activa = False
+        previo.retirado_por_id, previo.retirado_por_nombre = a.id, a.nombre
+        previo.retirado_cuando = fechas.ahora_con_segundos()
+        s.add(previo)
+        s.flush()
+    nuevo = XsiiInsumo(proyecto_id=proyecto_id, clave=clave, estado=estado, tarjeta_id=tarjeta_id,
+                       archivo_id=archivo_id, nota=nota, quien_id=a.id, quien_nombre=a.nombre)
+    s.add(nuevo)
+    verbo = "Pidió" if estado == "pedido" else "Registró como recibido"
+    _xsii_movimiento(s, proyecto_id, a, "insumo_" + estado,
+                     f"{verbo} el insumo {nombre_insumo}" + (f": {nota}" if nota else ""),
+                     clave_insumo=clave)
+    try:
+        s.commit()
+    except IntegrityError:
+        s.rollback()
+        raise XsiiError(409, "Otra persona registró este insumo al mismo tiempo. Volvé a intentar.")
+    s.refresh(nuevo)
+    return nuevo
+
+
+def xsii_retirar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str) -> XsiiInsumo:
+    """Saca el registro activo del insumo (queda la traza). Sin activo -> 409."""
+    a = _impl_actor(actor)
+    previo = s.exec(select(XsiiInsumo).where(
+        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave,
+        XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
+    if previo is None:
+        raise XsiiError(409, "Este insumo no tiene un registro para retirar.")
+    previo.activa = False
+    previo.retirado_por_id, previo.retirado_por_nombre = a.id, a.nombre
+    previo.retirado_cuando = fechas.ahora_con_segundos()
+    s.add(previo)
+    _xsii_movimiento(s, proyecto_id, a, "insumo_retirado", f"Retiró el registro del insumo {nombre_insumo}",
+                     clave_insumo=clave)
+    s.commit()
+    s.refresh(previo)
+    return previo
+
+
+def xsii_movimientos(s: Session, proyecto_id: int, codigo: str = "", claves_insumo=(),
+                     limite: int = 50) -> list:
+    """Los movimientos del proyecto, del más nuevo al más viejo. Con `codigo`:
+    los de esa tarea y los de los insumos `claves_insumo`."""
+    q = select(XsiiMovimiento).where(XsiiMovimiento.proyecto_id == proyecto_id)
+    if codigo:
+        cond = XsiiMovimiento.codigo == codigo
+        if claves_insumo:
+            cond = or_(cond, XsiiMovimiento.clave_insumo.in_(list(claves_insumo)))
+        q = q.where(cond)
+    return list(s.exec(q.order_by(XsiiMovimiento.id.desc()).limit(max(1, min(int(limite), 200)))).all())

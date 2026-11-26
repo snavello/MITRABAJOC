@@ -68,6 +68,7 @@
               } }, 'Copiar enlace'))),
           h('div', { class: 'impl-acc' },
             h('a', { class: 'boton', href: '/implementacion?p=' + p.id, target: '_blank', rel: 'noopener' }, 'Abrir la mesa'),
+            h('a', { class: 'boton suave', href: '/entornos/xsii/' + p.id, target: '_blank', rel: 'noopener' }, 'Abrir XSII'),
             h('a', { class: 'boton suave', href: '/api/implementacion/p/' + p.id + '/exportar.zip', download: '' }, 'Exportar todo (ZIP)'),
             h('button', { class: 'boton suave', type: 'button', onclick: function () { abrirUsuarios(p); } }, 'Usuarios'),
             p.tiene_hitos ? null : h('button', { class: 'boton suave', type: 'button', onclick: async function (ev) {
