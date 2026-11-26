@@ -860,7 +860,10 @@
         const selEtapa = h('select', { class: 'campo', id: 'nt-etapa' }, h('option', { value: '' }, 'Sin fase'),
           etapas.map(function (e) { return h('option', { value: e.id }, e.nombre); }));
         if (q.etapa) selEtapa.value = q.etapa;
-        const fecha = h('input', { type: 'date', id: 'nt-fecha' });
+        const fecha = h('input', { type: 'date', id: 'nt-fecha', 'aria-describedby': 'nt-fecha-aviso' });
+        // El «hoy» lo dice el servidor (resumen.hoy), nunca el reloj del navegador.
+        const avisoFecha = h('small', { id: 'nt-fecha-aviso', class: 'fecha-pasada', role: 'status', hidden: true }, 'Esa fecha ya pasó: la tarjeta va a nacer vencida.');
+        fecha.addEventListener('input', function () { avisoFecha.hidden = !(res.hoy && fecha.value && fecha.value < res.hoy); });
         const lista = h('ul', null);
         const dp = h('input', { type: 'checkbox', id: 'nt-dp' });
         const dpFila = h('label', { class: 'chk', hidden: true }, dp, 'Los archivos contienen datos personales');
@@ -878,7 +881,7 @@
           h('label', { class: 'l', for: 'nt-texto' }, 'Qué necesitás contar', texto, h('small', { id: 'nt-ayuda' }, 'Con tus palabras, sin apuro. Podés nombrar otra tarjeta o archivo por su código (PE0004, AR000123).')),
           h('div', { class: 'dos' },
             h('label', { class: 'l', for: 'nt-etapa' }, h('span', null, 'Fase ', h('small', null, '(opcional)')), selEtapa),
-            h('label', { class: 'l', for: 'nt-fecha' }, h('span', null, 'Fecha límite ', h('small', null, '(opcional)')), fecha)),
+            h('label', { class: 'l', for: 'nt-fecha' }, h('span', null, 'Fecha límite ', h('small', null, '(opcional)')), fecha, avisoFecha)),
           h('div', { class: 'arch' }, h('label', { class: 'l', for: 'nt-arch' }, h('span', null, 'Archivos ', h('small', null, '(opcional, hasta 20 MB cada uno)'))), archivos, lista, dpFila),
           envio, h('div', null, crear));
         f.addEventListener('submit', async function (ev) {
@@ -997,7 +1000,20 @@
       chips.appendChild(chipEspera(t));
     }
     if (acc.responder) chips.appendChild(h('a', { class: 'btn lisa chico responder-con', href: '#nueva?responde_a=' + encodeURIComponent(t.codigo || '') + (t.tipo === 'pedido' ? '&tipo=entrega' : '') }, icono('enviar'), 'Responder con…'));
-    raiz.appendChild(h('div', { class: 'tj-tit' }, h('h1', null, enlazar(t.titulo, t.refs)), chips));
+    if (t.editada) chips.appendChild(h('span', { class: 'chip neutro editada', title: 'Editada por ' + (t.editada_por || '') + ' · ' + fechaHora(t.editada_en) }, icono('lapiz'), 'Editada'));
+    const cabEdicion = h('div', { class: 'tj-tit' }, h('h1', null, enlazar(t.titulo, t.refs)), chips);
+    if (acc.editar) {
+      const zonaEdicion = h('div', null);
+      chips.appendChild(h('button', { class: 'btn lisa chico', type: 'button', 'aria-expanded': 'false', onclick: function (ev) {
+        const b = ev.currentTarget;
+        if (zonaEdicion.firstChild) { vaciar(zonaEdicion); b.setAttribute('aria-expanded', 'false'); return; }
+        b.setAttribute('aria-expanded', 'true');
+        zonaEdicion.appendChild(formEditar(d, function () { vaciar(zonaEdicion); b.setAttribute('aria-expanded', 'false'); }));
+        const prim = zonaEdicion.querySelector('input'); if (prim) prim.focus({ preventScroll: true });
+      } }, icono('lapiz'), 'Editar'));
+      cabEdicion.appendChild(zonaEdicion);
+    }
+    raiz.appendChild(cabEdicion);
 
     // ---- ficha
     const ficha = h('aside', { class: 'ficha', 'aria-label': 'Ficha de la tarjeta' });
@@ -1044,10 +1060,90 @@
     if (acc.responder && acc.reabrir) hilo.appendChild(botonReabrir(t));
 
     const ev = d.eventos || [];
-    if (ev.length) hilo.appendChild(h('details', { class: 'traza' }, h('summary', null, 'Historial de la tarjeta (' + ev.length + ')'),
-      h('ol', null, ev.map(function (e) { return h('li', null, h('b', null, e.que || ''), e.texto ? ' ' + e.texto : '', h('small', null, (e.quien || '') + (e.lado ? ' (' + ladoNombre(e.lado) + ')' : '') + ' · ' + fechaHora(e.cuando))); }))));
+    if (ev.length) hilo.appendChild(h('details', { class: 'traza', open: ev.some(function (e) { return e.que === 'editar'; }) ? true : null }, h('summary', null, 'Historial de la tarjeta (' + ev.length + ')'),
+      h('ol', null, ev.map(function (e) {
+        // Una frase en castellano: «Ana corrigió el título», nunca la clave técnica de la acción.
+        const cuando = h('small', null, (e.lado ? ladoNombre(e.lado) + ' · ' : '') + fechaHora(e.cuando));
+        if (e.que === 'editar' && (e.cambios || []).length) {
+          return h('li', { class: 'ed-evento' }, e.cambios.map(function (c, i) { return lineaCambio(i === 0 ? (e.quien || 'Alguien') : '', c); }), cuando);
+        }
+        return h('li', null, h('b', null, e.quien || 'Alguien'), ' ' + (e.texto || 'hizo un cambio'), cuando);
+      }))));
     raiz.appendChild(h('div', { class: 'tj-grid' }, ficha, hilo));
     return raiz;
+  }
+  // ---- I19: corregir una tarjeta (solo el equipo; el servidor dice si `acciones.editar`)
+  function fechaNum(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
+    if (!m) return s || '';
+    return m[3] + '/' + m[2] + (+m[1] !== ANIO ? '/' + m[1] : '');
+  }
+  const ROTULO_CAMBIO = { titulo: 'el título', texto: 'el texto', etapa_id: 'la fase', hito_id: 'el hito', fecha_limite: 'la fecha límite' };
+  const SIN_CAMBIO = { etapa_id: 'sin fase', hito_id: 'sin hito', fecha_limite: 'sin fecha' };
+  function valorCambio(campo, v) {
+    if (!v) return SIN_CAMBIO[campo] || '(vacío)';
+    if (campo === 'fecha_limite') return fechaNum(v);
+    if (campo === 'titulo') return '«' + v + '»';
+    return v;
+  }
+  function lineaCambio(quien, c) {
+    const pre = (quien ? quien + ' cambió ' : 'Cambió ') + (ROTULO_CAMBIO[c.campo] || c.campo);   // quién, solo en la primera línea
+    if (c.campo === 'texto') {
+      return h('div', { class: 'ed-cambio' }, h('span', null, pre),
+        h('details', { class: 'ed-antes' }, h('summary', null, 'Ver el texto anterior'), h('p', null, c.antes || '')));
+    }
+    return h('div', { class: 'ed-cambio' }, h('span', null, pre + ': ' + valorCambio(c.campo, c.antes) + ' → ' + valorCambio(c.campo, c.despues)));
+  }
+  function formEditar(d, cerrar) {
+    const t = d.tarjeta;
+    const planteo = (d.mensajes || []).filter(function (m) { return m.orden === 1 && !m.solo_equipo; })[0];
+    const titulo_ = h('input', { type: 'text', id: 'ed-titulo', maxlength: 140, value: t.titulo || '', autocomplete: 'off' });
+    const texto = h('textarea', { id: 'ed-texto', maxlength: 5000 });
+    texto.value = planteo ? planteo.texto : '';
+    const selEtapa = h('select', { class: 'campo', id: 'ed-etapa' }, h('option', { value: '' }, 'Sin fase'));
+    const selHito = h('select', { class: 'campo', id: 'ed-hito' }, h('option', { value: '' }, 'Sin hito'));
+    const fecha = h('input', { type: 'date', id: 'ed-fecha', value: t.fecha_limite || '' });
+    const envio = h('div', null);
+    let etapas = [];
+    function pintarHitos() {
+      const e = etapas.filter(function (x) { return String(x.id) === selEtapa.value; })[0];
+      const previo = selHito.value;
+      vaciar(selHito).appendChild(h('option', { value: '' }, 'Sin hito'));
+      (e ? hitosDe(e) : []).forEach(function (x) { selHito.appendChild(h('option', { value: x.id }, x.codigo + ' · ' + x.texto)); });
+      if (Array.prototype.some.call(selHito.options, function (o) { return o.value === previo; })) selHito.value = previo; else selHito.value = '';
+    }
+    selEtapa.addEventListener('change', pintarHitos);
+    const guardar = h('button', { class: 'btn pri', type: 'submit' }, icono('check'), 'Guardar cambios');
+    const f = h('form', { class: 'form ed-form entra', novalidate: true, 'aria-label': 'Editar la tarjeta' },
+      h('p', { class: 'bajada', style: 'margin:0' }, 'Queda registrado qué había antes y quién lo cambió; las dos partes lo pueden ver en el historial.'),
+      h('label', { class: 'l', for: 'ed-titulo' }, 'Título', titulo_),
+      h('label', { class: 'l', for: 'ed-texto' }, 'Texto del planteo', texto),
+      h('div', { class: 'dos' },
+        h('label', { class: 'l', for: 'ed-etapa' }, 'Fase', selEtapa),
+        h('label', { class: 'l', for: 'ed-hito' }, 'Hito', selHito)),
+      h('label', { class: 'l', for: 'ed-fecha' }, h('span', null, 'Fecha límite ', h('small', null, '(vacía = sin fecha)')), fecha),
+      envio,
+      h('div', { class: 'botones' }, guardar, h('button', { class: 'btn lisa', type: 'button', onclick: cerrar }, 'Cancelar')));
+    pedir('plan').then(function (r) {
+      etapas = r.etapas || [];
+      etapas.forEach(function (e) { selEtapa.appendChild(h('option', { value: e.id }, e.nombre)); });
+      selEtapa.value = t.etapa_id ? String(t.etapa_id) : '';
+      pintarHitos();
+      selHito.value = t.hito_id ? String(t.hito_id) : '';
+    }).catch(function () { errorEn(envio, 'No se pudieron traer las fases. Probá de nuevo.'); });
+    f.addEventListener('submit', async function (ev) {
+      ev.preventDefault(); errorEn(envio, '');
+      if (!titulo_.value.trim()) { errorEn(envio, 'Poné un título.'); titulo_.focus(); return; }
+      if (!texto.value.trim()) { errorEn(envio, 'El planteo no puede quedar vacío.'); texto.focus(); return; }
+      guardar.disabled = true;
+      try {
+        const r = await enviarJson('tarjetas/' + t.id + '/editar', {
+          titulo: titulo_.value.trim(), texto: texto.value.trim(), fecha_limite: fecha.value || '',
+          etapa_id: selEtapa.value ? +selEtapa.value : null, hito_id: selHito.value ? +selHito.value : null });
+        reemplazarTarjeta(r); avisar('Cambios guardados.');
+      } catch (er) { errorEn(envio, er.message); guardar.disabled = false; }
+    });
+    return f;
   }
   function adjunto(a) {
     if (a.borrado) return h('div', { class: 'adj borrado', 'data-codigo': a.codigo || null }, h('span', { class: 'nom' }, a.nombre), h('small', null, 'Borrado · ' + tamano(a.tamano)), a.codigo ? codigo(a.codigo, { que: 'el código del archivo' }) : null);

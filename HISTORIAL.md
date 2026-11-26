@@ -11437,3 +11437,25 @@ hay que resolver…»; «pedido hace 0 días» figuraba como demorado.
 **Queda.** `XsiiInsumo.archivo_id` existe y ninguna ruta lo escribe (bloque
 5). «Reclamar en la Mesa» es un enlace: crear la tarjeta desde XSII llega con
 el asistente.
+## Mesa de implementación: editar una tarjeta, con registro (2026-11-26, Plataforma 0.79.01)
+
+**El problema (SDN).** Una tarjeta creada no se podía corregir: cargó una con
+la fecha límite ya pasada y nació vencida. Pidió que el equipo pueda
+modificarla y que, para no perder trazabilidad, quede qué tenía y quién lo
+cambió.
+
+**I19.** Edita solo el equipo: título, texto del planteo, fase, hito y fecha
+límite. No se toca el tipo (el código nace con él, I12), ni el estado ni el
+responsable, que tienen su camino. Una aprobación resuelta no se edita. El
+registro lo ven los dos lados, porque el sindicato ya había leído la versión
+anterior. Sin migración: el evento usa `ImplEvento.detalle`.
+
+**Lo que encontró el QA independiente.** Una tarjeta con un hito de otra fase
+(el alta lo admite) no se podía editar ni para cambiarle el título: la
+coherencia fase/hito ahora se exige solo si el pedido toca fase o hito. Y el
+historial mostraba la clave técnica de la acción y «#1»: se lee en castellano
+y por código, en todos los tipos de evento. No halló fuga de lo «solo equipo».
+
+**Queda a decidir.** Editar sube la tarjeta al tope de la lista (cambia la
+última actividad). El texto anterior completo queda a la vista del sindicato.
+El alta sigue aceptando un hito que no es de la fase elegida.

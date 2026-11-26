@@ -150,7 +150,7 @@ def test_las_seis_tarjetas_de_tipo_llegan_a_la_pantalla():
 def test_la_pantalla_no_decide_permisos():
     js = _sin_comentarios(_texto(JS))
     # lo que se ofrece sale de `acciones`, no del lado de quien mira
-    for clave in ("acc.responder", "acc.solo_equipo", "acc.aprobar", "acc.reabrir", "acc.subir", "acc.reasignar",
+    for clave in ("acc.responder", "acc.solo_equipo", "acc.aprobar", "acc.reabrir", "acc.subir", "acc.reasignar", "acc.editar",
                   "puede_bajar", "puede_borrar"):
         assert clave in js, clave
 

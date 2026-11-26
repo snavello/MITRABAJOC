@@ -2602,8 +2602,20 @@ ficha `docs/LABORATORIO_MODELOS.md`; 2026-10-29, pedido de SDN):
   «Mover también las fases siguientes» es del navegador. La semilla de La
   Bancaria trae fechas tentativas (`cargar_implementacion_bancaria.py
   --fechas` las pone solo donde no hay).
+- **El equipo puede editar una tarjeta; lo que había queda registrado** (I19,
+  2026-11-26, Plataforma 0.79.01): `POST tarjetas/{tid}/editar`
+  (`db.impl_editar_tarjeta`) cambia título, texto del planteo, fase, hito y
+  fecha límite. Solo el equipo (sindicato 403); nunca el tipo (el código no
+  cambia), el estado ni el responsable; una aprobación resuelta da 409. Cada
+  edición deja UN evento inmutable con quién, cuándo y antes/después por
+  campo (`ImplEvento.detalle`), que ven los dos lados; sin cambios no hay
+  evento. Las menciones de código se recalculan. `acciones.editar` y
+  `editada` los calcula el servidor. El historial se lee en castellano, sin
+  la clave técnica de la acción y con el código de la tarjeta. Al crear, una
+  fecha límite anterior al `hoy` del servidor (`resumen.hoy`) avisa y no
+  bloquea.
 - Tests: `test_implementacion.py` (motor), `_db`, `_acceso`, `_api`,
-  `_codigos`, `_pantalla`, `_sentry` y `_qa` (los del QA independiente).
+  `_codigos`, `_editar`, `_pantalla`, `_sentry` y `_qa` (los del QA independiente).
 
 **Fiesta SUPARA** (`fiesta.py`, `mercadopago.py`, `templates/fiesta_*.html`,
 `static/fiesta/`, `static/vendor/jsqr/`; `PLAN_FIESTA.md` D1–D10, guía

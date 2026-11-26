@@ -28,6 +28,7 @@ corresponde a `implementacion.ErrorImpl` (403, 409, 400, 410).
 - `POST tarjetas/{tid}/aprobacion` (JSON: aprobar bool, texto?) → igual que el GET
 - `POST tarjetas/{tid}/leido` (avisos) → `{ok:true}`
 - `POST tarjetas/{tid}/reasignar` (JSON: responsable, responsable_lado) → igual que el GET
+- `POST tarjetas/{tid}/editar` (JSON, solo el equipo; I19: `titulo?`, `texto?`, `etapa_id?`, `hito_id?`, `fecha_limite?`) → igual que el GET
 - `GET  archivos/{aid}` → el archivo (attachment); registra la descarga
 - `POST archivos/{aid}/borrar` → `{ok:true}`
 - `GET  carpetas?sentido=entrada|salida` → `{etapas:[{etapa, archivos:[Archivo + tarjeta_numero, tarjeta_titulo]}]}`
@@ -155,3 +156,22 @@ Aditivo salvo lo que se marca. Los dos puntos reemplazan lo dicho antes sobre `o
 - **Registro**: `GET tarjetas/{tid}` de una entrega suma en `tarjeta` `recibida_por` y `recibida_en` ("" mientras no esté recibida o si se reabrió). Se guardan en las columnas `resuelta_por_*` / `resuelta_en` que ya usa una aprobación (sin migración).
 - **Carpetas**: cada archivo de `GET carpetas` suma `tarjeta_tipo`, `recibida_por` y `recibida_en` (de la tarjeta que lo contiene; "" si no es de una entrega o no fue recibida).
 - **Pantalla**: el panel «Recibido, está bien» / «Hay un problema» se dibuja solo si `acciones.recibido` / `acciones.problema`; cerrada por recepción muestra el sello «Recibida · por quién · cuándo».
+
+## I19 (2026-11-26): el equipo corrige una tarjeta, y queda el registro
+
+`POST tarjetas/{tid}/editar` — JSON con solo lo que cambia (un campo ausente no se toca):
+`titulo`, `texto` (el primer mensaje, el planteo), `etapa_id`, `hito_id`, `fecha_limite`.
+`fecha_limite: ""`, `etapa_id: null` e `hito_id: null` lo quitan. Devuelve lo mismo que `GET tarjetas/{tid}`.
+
+- **Solo el equipo**: el sindicato recibe 403; un proyecto ajeno o una tarjeta inexistente, 404 (el mismo que el resto).
+- **No se edita**: el tipo (el código nace con él), el estado (va por `responder`) ni el responsable (`reasignar`). Una **aprobación ya resuelta** es inmutable: 409. Las demás, en cualquier estado (incluida una cerrada o un aviso).
+- Mismas validaciones que al crear: título hasta 140 y texto hasta 5000 caracteres, fecha ISO o `dd/mm/aaaa`, ids que caben en int4 (400), fase u hito de otro proyecto (400). Si se manda el `hito_id` solo, la fase sale del hito (como al crear); si el hito no es de la fase elegida, 400. Un error no cambia nada (transacción única).
+- **Si no cambió nada no hay evento ni error.**
+- Las menciones por código (I13) se recalculan: lo que el título o el planteo dejan de nombrar deja de estar relacionado (salvo que lo nombre otro mensaje); lo vinculado con «Responder con…» no se toca.
+- **Registro**: un evento `editar` por edición, que no se edita ni se borra, visible para los dos lados. En `eventos[]`
+  trae además `cambios: [{campo, antes, despues}]`, con `campo` ∈ `titulo | texto | etapa_id | hito_id | fecha_limite`
+  (para fase y hito, el nombre o el código y texto legibles, más `antes_id` / `despues_id`; el texto, el anterior completo).
+  `texto` del evento: «corrigió la fecha límite, el título y el hito».
+- **`Tarjeta`** suma `editada: bool`, `editada_en` y `editada_por` (la última corrección; derivada de los eventos, no se guarda).
+- **`acciones`** suma `editar: bool` (equipo y no aprobación resuelta); la pantalla dibuja el botón según eso.
+- **`GET resumen`** suma `hoy` (la fecha de Buenos Aires del servidor): la pantalla de nueva tarjeta avisa «Esa fecha ya pasó: la tarjeta va a nacer vencida.» sin usar el reloj del navegador. No bloquea.

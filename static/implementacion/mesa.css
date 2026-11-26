@@ -491,3 +491,13 @@ input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus { b
 
 /* Nombre corto de la Mesa, debajo del título de la barra lateral. */
 .marca .corto { display: inline-block; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--suave, #5b6578); margin-top: 2px; }
+
+/* I19: corregir una tarjeta y leer qué cambió */
+.tj-tit .ed-form { margin-top: 16px; max-width: none; border-top: 1px solid var(--linea); padding-top: 14px; }
+.ed-form .botones { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip.editada { cursor: default; }
+.fecha-pasada { color: var(--mal); font-weight: 700; }
+.fecha-pasada[hidden] { display: none; }
+.ed-evento .ed-cambio { margin: 2px 0; overflow-wrap: anywhere; }
+.ed-antes summary { cursor: pointer; color: var(--gris); font-weight: 700; min-height: 32px; display: flex; align-items: center; }
+.ed-antes p { white-space: pre-wrap; margin: 4px 0 0; padding: 8px 10px; background: var(--papel); border-radius: 10px; }
