@@ -1,0 +1,163 @@
+/* Filma el tutorial de XSII contra un servidor LOCAL con la demo cargada.
+   Uso (desde la raíz del repo, con DATABASE_URL del .env):
+     NODE_PATH=/opt/node22/lib/node_modules PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node docs/xsii/tutorial/capturar.js
+   Deja los JPEG en docs/xsii/tutorial/capturas/. Ejecuta las acciones de verdad
+   (decisiones, insumos) y por eso arranca llamando a preparar.py, que limpia
+   los restos de XSII y crea el proyecto «UOM · Primera versión». */
+const { chromium } = require('playwright');
+const { execSync } = require('child_process');
+const path = require('path');
+const RAIZ = path.resolve(__dirname, '..', '..', '..');
+const OUT = path.join(__dirname, 'capturas');
+const BASE = process.env.XSII_URL || 'http://localhost:8765';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ORANGE = '#e8590c';
+
+const cfg = JSON.parse(execSync(`${RAIZ}/.venv/bin/python ${__dirname}/preparar.py`, { cwd: RAIZ }).toString().trim().split('\n').pop());
+const PID = cfg.pid;
+const sql = q => execSync(`psql "$DATABASE_URL" -c "${q}"`, { cwd: RAIZ, stdio: 'pipe' });
+
+async function marcar(page, marcas) {
+  return page.evaluate(([marcas, color]) => {
+    const rects = [];
+    const quitar = [];
+    marcas.forEach(m => {
+      let el = null;
+      if (m.css) el = document.querySelector(m.css);
+      else if (m.h3) el = [...document.querySelectorAll('h3')].find(x => x.textContent.includes(m.h3));
+      if (el && m.h3) el = el.closest('.bloque') || el.parentElement;
+      if (m.btn) el = [...document.querySelectorAll('button,a')].find(x => x.textContent.trim() === m.btn);
+      if (m.txt) el = [...document.querySelectorAll(m.en || '*')].filter(x => x.children.length === 0 && x.textContent.includes(m.txt))[0];
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const ox = el.style.outline, oo = el.style.outlineOffset;
+      el.style.outline = '3px solid ' + color; el.style.outlineOffset = '2px';
+      quitar.push(() => { el.style.outline = ox; el.style.outlineOffset = oo; });
+      const c = document.createElement('div');
+      c.className = 'tut-marca';
+      c.textContent = m.n;
+      c.style.cssText = `position:absolute;z-index:99999;width:26px;height:26px;border-radius:50%;background:${color};color:#fff;font:700 15px/26px system-ui,sans-serif;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35);left:${r.left + scrollX - 13}px;top:${r.top + scrollY - 13}px;pointer-events:none`;
+      document.body.appendChild(c);
+      quitar.push(() => c.remove());
+    });
+    window.__quitarMarcas = () => quitar.forEach(f => f());
+    return true;
+  }, [marcas, ORANGE]);
+}
+
+async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, clipH3 = '' } = {}) {
+  await sleep(700);
+  if (clipH3) {
+    await page.evaluate(t => { const h = [...document.querySelectorAll('h3')].find(x => x.textContent.includes(t)); (h.closest('.bloque') || h.parentElement).setAttribute('data-tut-clip', '1'); }, clipH3);
+    sel = '[data-tut-clip]';
+  }
+  await marcar(page, marcas);
+  const caja = await page.evaluate(([sel, pad]) => {
+    const el = sel ? document.querySelector(sel) : document.body;
+    const r = el.getBoundingClientRect();
+    const x = Math.max(0, r.left + scrollX - pad), y = Math.max(0, r.top + scrollY - pad);
+    return { x, y, width: Math.min(r.width + pad * 2, document.documentElement.scrollWidth - x), height: r.height + pad * 2 };
+  }, [sel, pad]);
+  if (maxAlto && caja.height > maxAlto) caja.height = maxAlto;
+  await page.screenshot({ path: `${OUT}/${nombre}.jpg`, type: 'jpeg', quality: 80, fullPage: true, clip: caja });
+  await page.evaluate(() => { window.__quitarMarcas && window.__quitarMarcas(); const c = document.querySelector('[data-tut-clip]'); if (c) c.removeAttribute('data-tut-clip'); });
+  console.log('captura', nombre);
+}
+
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
+  await ctx.addCookies([{ name: cfg.cookie_name, value: cfg.cookie, url: BASE }]);
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push('pageerror ' + e.message));
+  const ir = async (q) => { await page.goto(`${BASE}/entornos/xsii/${PID}${q || ''}`); await sleep(1300); };
+  const form = async () => { await page.click('form.form button[type=submit]'); await sleep(900); };
+
+  // 1. La entrada: /entornos -> Implementación
+  await page.goto(`${BASE}/entornos`); await sleep(1200);
+  await page.click('button[data-tab="implementacion"]'); await sleep(1500);
+  await foto(page, '01-entornos-implementacion', { sel: '.panel-etab[data-panel="implementacion"]', marcas: [{ btn: 'Abrir XSII', n: 1 }, { btn: 'Abrir la mesa', n: 2 }] });
+
+  // 2. La Guía
+  await ir();
+  await foto(page, '02-guia', { sel: '.app', marcas: [{ css: '#x-avance', n: 1 }, { css: '.heroe', n: 2 }, { css: '.otras', n: 3 }, { css: '.pano', n: 4 }] });
+
+  // 3. La ficha de una tarea (EST-01)
+  await ir('?tarea=EST-01');
+  await foto(page, '03-ficha-est01', { sel: '.app', marcas: [{ h3: 'Lo que dice el control', n: 1 }, { css: '.btn.donde', n: 2 }, { css: '.ficha .aviso', n: 3 }] });
+
+  // 4. Pedir un dato al sindicato (PAD-01)
+  await ir('?tarea=PAD-01');
+  await foto(page, '04-pad01-falta', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Marcar pedido', n: 2 }] });
+  // 5a. Confirmar antes de que llegue el insumo
+  await foto(page, '05-pad01-confirmar-error', { clipH3: 'Lo que hay que confirmar', marcas: [{ txt: 'Primero registrá', n: 1 }] });
+  // 4b. Marcar pedido enlazado a la tarjeta de la Mesa
+  await page.click('button:has-text("Marcar pedido")'); await sleep(300);
+  await page.fill('#x-ins-tarjeta', cfg.tarjetas[1]);
+  await page.fill('#x-ins-nota', 'Se lo pedimos a Marcela, de Afiliaciones.');
+  await foto(page, '06-pad01-form-pedido', { sel: '.ficha', marcas: [{ css: '#x-ins-tarjeta', n: 1 }] });
+  await form(); await sleep(500);
+  await foto(page, '07-pad01-pedido', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }] });
+  // El aviso de demorado: atrasamos el pedido tres días
+  sql("UPDATE xsiiinsumo SET cuando = to_char(now() - interval '3 days','YYYY-MM-DD HH24:MI:SS') WHERE clave='planilla_padron' AND activa");
+  await ir();
+  await foto(page, '08-guia-demorado', { sel: '.app', marcas: [{ css: '.pano .aviso', n: 1 }] });
+  // 4c. Llegó: marcar recibido
+  await ir('?tarea=PAD-01');
+  await page.click('button:has-text("Marcar recibido")'); await sleep(1100);
+  await foto(page, '09-pad01-recibido', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Insumos', n: 2 }] });
+  // 5b. Confirmar
+  await page.click('button.btn.p:text-is("Confirmar")'); await sleep(1100);
+  await foto(page, '10-pad01-confirmada', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Decisiones activas', n: 2 }] });
+
+  // 6. Un error: completar a mano sin motivo (BAS-02)
+  await ir('?tarea=BAS-02');
+  await page.click('button:has-text("Completar a mano")'); await sleep(300);
+  await form();
+  await foto(page, '11-bas02-sin-motivo', { sel: '.ficha', marcas: [{ css: '.ficha .err', n: 1 }] });
+  // 7. Completada a mano, con motivo
+  await page.fill('#x-motivo', 'El logo lo carga plataforma el lunes; no frena el resto.');
+  await form(); await sleep(500);
+  await foto(page, '12-bas02-a-mano', { sel: '.ficha', marcas: [{ css: '.ficha .marca-t.mano', n: 1 }, { h3: 'Lo que calcula el control', n: 2 }, { h3: 'Decisiones activas', n: 3 }, { btn: 'Deshacer: completada a mano', n: 4 }] });
+  await ir('?vista=tablero');
+  await page.click('.filtros button:has-text("Completadas a mano")'); await sleep(500);
+  await foto(page, '13-tablero-a-mano', { sel: '.app', marcas: [{ css: '.filtros button[aria-pressed="true"]', n: 1 }, { css: 'tbody .marca-t', n: 2 }] });
+  await ir('?tarea=BAS-02');
+  await page.click('button:has-text("Deshacer: completada a mano")'); await sleep(1100);
+  await foto(page, '14-bas02-deshecha', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { css: '.ficha .hist', n: 2 }] });
+
+  // 8. No aplica y posponer
+  await ir('?tarea=COM-03');
+  await page.click('button:has-text("No aplica")'); await sleep(300);
+  await page.fill('#x-motivo', 'El sindicato no ofrece beneficios en la primera versión.');
+  await foto(page, '15-com03-no-aplica-form', { sel: '.ficha', marcas: [{ css: '#x-motivo', n: 1 }] });
+  await form(); await sleep(400);
+  await foto(page, '16-com03-no-aplica', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { btn: 'Volver a aplicar', n: 2 }] });
+  await ir('?tarea=COM-02');
+  await page.click('button:has-text("Posponer")'); await sleep(300);
+  await page.fill('#x-motivo', 'Las noticias se cargan después del lanzamiento.');
+  await form(); await sleep(400);
+  await foto(page, '17-com02-pospuesta', { sel: '.ficha', marcas: [{ css: '.ficha .marca-t', n: 1 }, { btn: 'Retomar', n: 2 }] });
+
+  // 9. Tablero
+  await ir('?vista=tablero');
+  await foto(page, '18-tablero', { sel: '.app', marcas: [{ css: '.filtros', n: 1 }, { css: 'tbody tr.grp', n: 2 }], maxAlto: 1250 });
+  await page.click('.filtros button:has-text("Esperando un dato")'); await sleep(500);
+  await foto(page, '19-tablero-esperando', { sel: '.app', marcas: [{ css: '.filtros button[aria-pressed="true"]', n: 1 }] });
+
+  // 10. Mapa
+  await ir('?vista=mapa');
+  await page.click('g.n[data-n="PAD-02"]'); await sleep(800);
+  await foto(page, '20-mapa', { sel: '.app', marcas: [{ css: '.mficha', n: 1 }, { css: '.lienzo', n: 2 }] });
+
+  // 11. El registro
+  await ir();
+  await foto(page, '21-guia-movimientos', { sel: '.pano', marcas: [{ css: '.pano .log', n: 1 }] });
+  await ir('?tarea=PAD-01');
+  await foto(page, '22-pad01-historial', { sel: '.ficha', marcas: [{ h3: 'Historial de la tarea', n: 1 }] });
+
+  console.log('errores de consola:', JSON.stringify(errs));
+  await b.close();
+})().catch(e => { console.error('FALLO', e); process.exit(1); });

@@ -615,8 +615,8 @@
     });
 
     const s = por[sel];
-    const resuelta = s.estado === 'hecha' || s.estado === 'no_aplica';
-    const f = (resuelta ? [] : (s.camino || [])).map(function (c) { return por[c] ? por[c].nombre : c; });
+    const selResuelta = s.estado === "hecha" || s.estado === "no_aplica";
+    const f = (selResuelta ? [] : (s.camino || [])).map(function (c) { return por[c] ? por[c].nombre : c; });
     const lateral = h('aside', { class: 'mficha' + (S.anim ? ' entra' : '') },
       h('div', null, h('p', { class: 'rot' }, s.codigo + ' · ' + s.grupo + ' · ' + nomModo(s.modo)), h('h2', { class: 'disp' }, s.nombre)),
       h('div', { class: 'fila' }, pildora(s.estado), ' ', marcas(s)),
