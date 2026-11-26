@@ -86,6 +86,12 @@ es completa ni cubre los casos complejos.
 - **X18. Lo usa solo el equipo** (SDN, 2026-11-26). El sindicato sigue en la
   Mesa: lo que XSII necesita de él se pide creando tarjetas ahí. No hay
   vista del sindicato ni permisos nuevos que cuidar.
+- **X19. Orden de las tareas asistidas** (SDN, 2026-11-26): primero
+  **Seccionales** (las de La Bancaria ya están relevadas y geolocalizadas),
+  sin áreas internas, más Sede Central; después **Padrón**; después
+  **Conceptos**. La primera fija el protocolo de los cuatro momentos. En el
+  catálogo, Conceptos sigue sin depender del Padrón (depende de los recibos
+  de muestra): si el padrón se demora, el Play puede ofrecerla igual (X3).
 
 ## Principios de construcción (propuestos)
 
@@ -326,9 +332,9 @@ puedo hacer ahora?», «¿qué falta para probar un recibo?», «reclamá el pad
 1. **Tablero**: la pantalla elegida, solo lectura, con enlaces a cada
    pantalla y a la Mesa; confirmaciones y excepciones; registro.
 2. **Asistente de lectura**: la conversación con las herramientas de estado.
-3. **Primera tarea asistida de punta a punta** (propuesta: padrón), para
-   fijar el protocolo de cuatro momentos.
-4. **Resto de las ayudas**, en el orden de arriba.
+3. **Seccionales y Sede Central desde planilla**, de punta a punta: fija el
+   protocolo de cuatro momentos (X19).
+4. **Padrón**, después **Conceptos** (X19) y el resto de las ayudas.
 5. **Vuelta a la Mesa**: insumos enlazados a tarjetas, hitos propuestos.
 6. **Método**: `xsii/METODO.md` y la extracción a repo propio cuando madure.
 
@@ -342,4 +348,4 @@ anteriores.
 3. ~~Excepciones contra el control~~: cerrada, X15 y X16.
 4. ~~Entorno~~: cerrada, X17.
 5. ~~Quién lo usa~~: cerrada, X18.
-6. Primera tarea asistida a construir.
+6. ~~Primera tarea asistida~~: cerrada, X19.
