@@ -345,6 +345,61 @@ def puede_ver_nota_interna(lado: str) -> bool:
     return lado == EQUIPO
 
 
+def puede_editar(tipo: str, estado: str, lado: str) -> bool:
+    """I19: solo el equipo corrige una tarjeta, y una aprobación ya resuelta no
+    se toca (es inmutable). Cualquier otro tipo o estado, sí."""
+    return lado == EQUIPO and not es_inmutable(tipo, estado)
+
+
+# I19: lo que se puede corregir de una tarjeta y cómo se llama en la traza.
+CAMPOS_EDITABLES = ("titulo", "texto", "etapa_id", "hito_id", "fecha_limite")
+ETIQUETAS_CAMPO = {"titulo": "el título", "texto": "el texto", "etapa_id": "la fase",
+                   "hito_id": "el hito", "fecha_limite": "la fecha límite"}
+
+
+def validar_edicion(campos: dict) -> dict:
+    """Valida lo que viene a editar (solo las claves presentes) con las mismas
+    reglas que al crear. {"ok", "errores": {campo: msj}, "datos": {campo: valor
+    saneado}}. Las fases y los hitos (ids) los resuelve la base."""
+    errores, datos = {}, {}
+    if "titulo" in campos:
+        t = limpiar_texto(campos["titulo"])
+        if not t:
+            errores["titulo"] = "Ponele un título."
+        elif len(t) > TOPE_TITULO:
+            errores["titulo"] = f"El título admite hasta {TOPE_TITULO} caracteres."
+        else:
+            datos["titulo"] = t
+    if "texto" in campos:
+        t = limpiar_texto(campos["texto"])
+        if not t:
+            errores["texto"] = "Contá de qué se trata."
+        elif len(t) > TOPE_TEXTO:
+            errores["texto"] = f"El texto admite hasta {TOPE_TEXTO} caracteres."
+        else:
+            datos["texto"] = t
+    if "fecha_limite" in campos:
+        f = limpiar_texto(campos["fecha_limite"])
+        if f:
+            iso = listas.normalizar_fecha(f)
+            if iso is None:
+                errores["fecha_limite"] = "La fecha límite no se entiende."
+            else:
+                datos["fecha_limite"] = iso
+        else:
+            datos["fecha_limite"] = ""
+    for k in ("etapa_id", "hito_id"):
+        if k in campos:
+            v = campos[k]
+            if v is None or v == "":
+                datos[k] = None
+            elif id_valido(v) and not isinstance(v, str):
+                datos[k] = v
+            else:
+                errores[k] = "La fase no es válida." if k == "etapa_id" else "El hito no es válido."
+    return {"ok": not errores, "errores": errores, "datos": datos}
+
+
 def puede_escribir_nota_interna(lado: str) -> bool:
     return lado == EQUIPO
 
@@ -394,14 +449,15 @@ def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str, a
     quien creó la tarjeta: una aprobación la resuelve el otro lado, y una
     entrega la cierra el otro lado con `recibido` (nunca por el selector)."""
     vacio = {"responder": False, "estados": [], "solo_equipo": False, "aprobar": False,
-             "reabrir": False, "subir": False, "reasignar": False, "recibido": False, "problema": False}
+             "reabrir": False, "subir": False, "reasignar": False, "recibido": False, "problema": False,
+             "editar": False}
     if tipo not in TIPOS or estado not in TRANSICIONES or lado_actor not in LADOS:
         return vacio
     if es_inmutable(tipo, estado):
         return vacio
     abierta = estado in ESTADOS_ABIERTOS
     if tipo == AVISO:
-        return vacio
+        return {**vacio, "editar": puede_editar(tipo, estado, lado_actor)}
     destinos = [e for e in (EN_CURSO, RESPONDIDA, CERRADA) if puede_transicionar(tipo, estado, e)]
     entrega = puede_dar_entrega(tipo, estado, autor_lado, lado_actor)
     return {
@@ -414,6 +470,7 @@ def acciones_de(tipo: str, estado: str, lado_que_espera: str, lado_actor: str, a
         "reasignar": abierta,
         "recibido": entrega,
         "problema": entrega,
+        "editar": puede_editar(tipo, estado, lado_actor),
     }
 
 
@@ -439,6 +496,11 @@ def texto_evento(accion: str, detalle: dict) -> str:
         return "dio la entrega por recibida"
     if accion == "problema":
         return "avisó un problema con la entrega"
+    if accion == "editar":
+        campos = [ETIQUETAS_CAMPO.get(c.get("campo"), c.get("campo", "")) for c in (d.get("cambios") or [])]
+        if len(campos) > 1:
+            campos = [", ".join(campos[:-1]) + " y " + campos[-1]]
+        return "corrigió " + (campos[0] if campos else "la tarjeta")
     if accion == "reasignar":
         quien = (d.get("despues") or {}).get("responsable") or "nadie"
         return f"reasignó la tarjeta a {quien}"

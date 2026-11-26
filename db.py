@@ -11057,6 +11057,128 @@ def impl_reasignar(s: Session, proyecto_id: int, tarjeta_id: int, actor, respons
     return t
 
 
+def impl_editar_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, actor, **campos) -> Optional[ImplTarjeta]:
+    """I19: el equipo corrige una tarjeta (título, texto del planteo, fase, hito,
+    fecha límite). Solo se toca lo que viene en `campos`; `fecha_limite=""`,
+    `etapa_id=None` e `hito_id=None` lo quitan. Deja UN evento «editar» con, por
+    cada campo que de verdad cambió, el valor anterior y el nuevo (el texto
+    anterior completo); si nada cambió no hay evento ni error. Todo en una
+    transacción: un campo inválido no cambia nada. Las menciones por código se
+    recalculan (lo vinculado con «Responder con…» no se toca). None si la
+    tarjeta no es de este proyecto."""
+    a = _impl_actor(actor)
+    if a.lado != implementacion.EQUIPO:
+        raise implementacion.ErrorImpl("sin_permiso", "Las tarjetas las corrige el equipo.")
+    campos = {k: v for k, v in campos.items() if k in implementacion.CAMPOS_EDITABLES}
+    v = implementacion.validar_edicion(campos)
+    if not v["ok"]:
+        raise implementacion.ErrorImpl("invalida", "; ".join(v["errores"].values()))
+    nuevos = v["datos"]
+    t = _impl_tarjeta(s, proyecto_id, tarjeta_id, bloquear=True)
+    if not t:
+        return None
+    if implementacion.es_inmutable(t.tipo, t.estado):
+        raise implementacion.ErrorImpl("inmutable", "La aprobación ya está resuelta y no se modifica.")
+    msg = None
+    if "texto" in nuevos:
+        msg = s.exec(select(ImplMensaje).where(
+            ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == t.id,
+            ImplMensaje.orden == 1, ImplMensaje.solo_equipo == False).with_for_update()).first()  # noqa: E712
+        if not msg:
+            raise implementacion.ErrorImpl("texto", "La tarjeta no tiene un planteo para corregir.")
+    # Fase y hito: la fase final y el hito final tienen que ser del proyecto y coincidir.
+    etapa_final = nuevos["etapa_id"] if "etapa_id" in nuevos else t.etapa_id
+    hito_final = nuevos["hito_id"] if "hito_id" in nuevos else t.hito_id
+    if "etapa_id" in nuevos and etapa_final is not None and not s.exec(select(ImplEtapa.id).where(
+            ImplEtapa.id == etapa_final, ImplEtapa.proyecto_id == proyecto_id)).first():
+        raise implementacion.ErrorImpl("etapa", "La etapa no es de este proyecto.")
+    hito = None
+    if hito_final is not None:
+        hito = s.exec(select(ImplHito).where(ImplHito.id == hito_final, ImplHito.proyecto_id == proyecto_id)).first()
+        if not hito:
+            raise implementacion.ErrorImpl("hito", "El hito no es de este proyecto.")
+        if "hito_id" in nuevos and "etapa_id" not in nuevos:
+            etapa_final = hito.etapa_id                    # como al crear: la fase sale del hito
+        elif etapa_final != hito.etapa_id:
+            raise implementacion.ErrorImpl("hito", "El hito no es de la fase elegida.")
+    nombres_etapa = {e.id: e.nombre for e in impl_etapas(s, proyecto_id)}
+
+    def _hito_texto(hid):
+        if hid is None:
+            return ""
+        h = hito if (hito and hito.id == hid) else s.exec(select(ImplHito).where(
+            ImplHito.id == hid, ImplHito.proyecto_id == proyecto_id)).first()
+        return f"{h.codigo} {h.texto}".strip() if h else ""
+
+    cambios, antes_texto = [], None
+    if "titulo" in nuevos and nuevos["titulo"] != t.titulo:
+        cambios.append({"campo": "titulo", "antes": t.titulo, "despues": nuevos["titulo"]})
+    if "texto" in nuevos and nuevos["texto"] != msg.texto:
+        antes_texto = msg.texto
+        cambios.append({"campo": "texto", "antes": msg.texto, "despues": nuevos["texto"]})
+    if "fecha_limite" in nuevos and nuevos["fecha_limite"] != (t.fecha_limite or ""):
+        cambios.append({"campo": "fecha_limite", "antes": t.fecha_limite or "", "despues": nuevos["fecha_limite"]})
+    if etapa_final != t.etapa_id:
+        cambios.append({"campo": "etapa_id", "antes": nombres_etapa.get(t.etapa_id, ""),
+                        "despues": nombres_etapa.get(etapa_final, ""),
+                        "antes_id": t.etapa_id, "despues_id": etapa_final})
+    if hito_final != t.hito_id:
+        cambios.append({"campo": "hito_id", "antes": _hito_texto(t.hito_id), "despues": _hito_texto(hito_final),
+                        "antes_id": t.hito_id, "despues_id": hito_final})
+    if not cambios:
+        return t
+    titulo_ant = t.titulo
+    if "titulo" in nuevos:
+        t.titulo = nuevos["titulo"]
+    if "fecha_limite" in nuevos:
+        t.fecha_limite = nuevos["fecha_limite"]
+    t.etapa_id, t.hito_id = etapa_final, hito_final
+    t.actualizada = fechas.ahora_con_segundos()
+    s.add(t)
+    if antes_texto is not None:
+        msg.texto = nuevos["texto"]
+        s.add(msg)
+    if any(c["campo"] in ("titulo", "texto") for c in cambios):
+        # I13: lo que se deja de nombrar deja de estar relacionado por mención (salvo que lo
+        # siga nombrando otro mensaje o el otro campo); lo vinculado con «Responder con…» no se toca.
+        primero = msg or s.exec(select(ImplMensaje).where(
+            ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == t.id,
+            ImplMensaje.orden == 1, ImplMensaje.solo_equipo == False)).first()  # noqa: E712
+        texto_ant = antes_texto if antes_texto is not None else (primero.texto if primero else "")
+        texto_nuevo = primero.texto if primero else ""
+        viejos = set(implementacion.extraer_codigos(titulo_ant)) | set(implementacion.extraer_codigos(texto_ant))
+        ahora = set(implementacion.extraer_codigos(t.titulo)) | set(implementacion.extraer_codigos(texto_nuevo))
+        otros = set()
+        for (txt,) in s.exec(select(ImplMensaje.texto).where(
+                ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == t.id,
+                ImplMensaje.id != (primero.id if primero else 0))).all():
+            otros |= set(implementacion.extraer_codigos(txt))
+        quitar = [c for c in viejos if c not in ahora and c not in otros]
+        if quitar:
+            for _c, (tp, did) in _impl_claves_de_codigos(s, proyecto_id, quitar).items():
+                s.exec(sa_delete(ImplRelacion).where(
+                    ImplRelacion.proyecto_id == proyecto_id, ImplRelacion.origen_tipo == "tarjeta",
+                    ImplRelacion.origen_id == t.id, ImplRelacion.destino_tipo == tp,
+                    ImplRelacion.destino_id == did, ImplRelacion.clase == implementacion.MENCIONA))
+        s.flush()
+        impl_registrar_menciones(s, proyecto_id, "tarjeta", t.id, [t.titulo, texto_nuevo], a)
+    _impl_evento(s, proyecto_id, a, "editar", t.id, {"cambios": cambios, "codigo": t.codigo})
+    s.commit()
+    s.refresh(t)
+    return t
+
+
+def impl_ediciones(s: Session, proyecto_id: int, tarjeta_ids: list) -> dict:
+    """{tarjeta_id: (cuando, quien)} de la ÚLTIMA edición de cada tarjeta que
+    fue editada (la marca «Editada» se deriva de los eventos, no se guarda)."""
+    if not tarjeta_ids:
+        return {}
+    filas = s.exec(select(ImplEvento.tarjeta_id, ImplEvento.cuando, ImplEvento.actor_nombre).where(
+        ImplEvento.proyecto_id == proyecto_id, ImplEvento.accion == "editar",
+        ImplEvento.tarjeta_id.in_(tarjeta_ids)).order_by(ImplEvento.id)).all()
+    return {tid: (cuando, quien) for tid, cuando, quien in filas}
+
+
 def impl_resolver_aprobacion(s: Session, proyecto_id: int, tarjeta_id: int, actor, aprobar: bool,
                              texto: str = "") -> Optional[ImplTarjeta]:
     """Aprueba o rechaza, con quién y cuándo. La resuelve SOLO el lado que no la
@@ -11665,6 +11787,7 @@ def impl_resumen(s: Session, proyecto_id: int, lado: str) -> dict:
     total = sum(e["total"] for e in etapas)
     hechos = sum(e["hechos"] for e in etapas)
     return {
+        "hoy": hoy,
         "pendientes": contar(ImplTarjeta.lado_que_espera == lado),
         "esperan_otro": contar(ImplTarjeta.lado_que_espera == implementacion.otro_lado(lado)),
         "con_fecha": contar(ImplTarjeta.fecha_limite != ""),

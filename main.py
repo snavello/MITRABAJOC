@@ -13815,9 +13815,13 @@ async def _impl_leer_adjuntos(subidos: list) -> list:
 
 
 # ----- Formas del contrato -----
-def _impl_tarjeta_dict(t, actor, etapas: dict, n_mensajes: int = 0, n_archivos: int = 0) -> dict:
+def _impl_tarjeta_dict(t, actor, etapas: dict, n_mensajes: int = 0, n_archivos: int = 0,
+                       edicion: tuple = None) -> dict:
+    """`edicion` = (cuándo, quién) de la última corrección, si la hubo (I19)."""
     tipo = implementacion.TIPOS.get(t.tipo, {})
     return {
+        "editada": bool(edicion), "editada_en": edicion[0] if edicion else "",
+        "editada_por": edicion[1] if edicion else "",
         "id": t.id, "numero": t.numero, "codigo": t.codigo, "tipo": t.tipo, "tipo_nombre": tipo.get("nombre", t.tipo),
         "color": tipo.get("color", ""), "icono": tipo.get("icono", ""), "titulo": t.titulo,
         "estado": t.estado, "estado_nombre": implementacion.NOMBRES_ESTADO.get(t.estado, t.estado),
@@ -13856,7 +13860,8 @@ def _impl_detalle(s, pid: int, tid: int, actor) -> dict:
     etapas = {e.id: e.nombre for e in db.impl_etapas(s, pid)}
     vigentes = sum(1 for a in h["archivos"] if not a.borrado_en)
     refs = db.impl_refs(s, pid, [t.titulo] + [m.texto for m in h["mensajes"]], actor.lado)
-    tarjeta = _impl_tarjeta_dict(t, actor, etapas, len(h["mensajes"]), vigentes)
+    tarjeta = _impl_tarjeta_dict(t, actor, etapas, len(h["mensajes"]), vigentes,
+                                 db.impl_ediciones(s, pid, [t.id]).get(t.id))
     tarjeta["refs"] = refs[0]
     if t.tipo == implementacion.ENTREGA:
         recibida = t.estado == implementacion.CERRADA and bool(t.resuelta_en)
@@ -13872,7 +13877,9 @@ def _impl_detalle(s, pid: int, tid: int, actor) -> dict:
                      for i, m in enumerate(h["mensajes"])],
         "archivos": [_impl_archivo_dict(a, actor) for a in h["archivos"]],
         "eventos": [{"quien": e.actor_nombre, "lado": e.actor_lado, "cuando": e.cuando, "que": e.accion,
-                     "texto": implementacion.texto_evento(e.accion, e.detalle)} for e in h["eventos"]],
+                     "texto": implementacion.texto_evento(e.accion, e.detalle),
+                     **({"cambios": e.detalle.get("cambios") or []} if e.accion == "editar" else {})}
+                    for e in h["eventos"]],
         "acciones": implementacion.acciones_de(t.tipo, t.estado, t.lado_que_espera, actor.lado, t.autor_lado),
         "relacionadas": db.impl_relacionadas(s, pid, "tarjeta", t.id, actor.lado),
     }
@@ -13987,8 +13994,9 @@ def api_impl_tarjetas(request: Request, pid: IdImpl, vista: str = "pendientes", 
         tarjetas = db.impl_buscar_tarjetas(s, pid, actor.lado, vista, estado or None, tipo or None, etapa_id, q)
         nm, na = db.impl_conteos(s, pid, actor.lado, [t.id for t in tarjetas])
         etapas = {e.id: e.nombre for e in db.impl_etapas(s, pid)}
-        return {"tarjetas": [_impl_tarjeta_dict(t, actor, etapas, int(nm.get(t.id, 0)), int(na.get(t.id, 0)))
-                             for t in tarjetas]}
+        ediciones = db.impl_ediciones(s, pid, [t.id for t in tarjetas])
+        return {"tarjetas": [_impl_tarjeta_dict(t, actor, etapas, int(nm.get(t.id, 0)), int(na.get(t.id, 0)),
+                                                ediciones.get(t.id)) for t in tarjetas]}
 
 
 @app.post(API_IMPL + "/tarjetas")
@@ -14118,6 +14126,30 @@ def api_impl_reasignar(request: Request, pid: IdImpl, tid: IdImpl, datos: dict =
         actor = _impl_actor_de(request, pid, s)
         t = db.impl_reasignar(s, pid, tid, actor, str(datos.get("responsable") or ""),
                               str(datos.get("responsable_lado") or ""))
+        if t is None:
+            raise HTTPException(404, "No existe.")
+        return _impl_detalle(s, pid, tid, actor)
+
+
+@app.post(API_IMPL + "/tarjetas/{tid}/editar")
+def api_impl_editar(request: Request, pid: IdImpl, tid: IdImpl, datos: dict = Body(...)):
+    """I19: el equipo corrige título, texto, fase, hito o fecha límite. Un campo
+    ausente no se toca; `fecha_limite: ""`, `etapa_id: null` e `hito_id: null` lo
+    quitan. Deja el registro de lo anterior (quién, cuándo, antes y después)."""
+    with db.get_session() as s:
+        actor = _impl_actor_de(request, pid, s)
+        if actor.lado != implementacion.EQUIPO:
+            raise implementacion.ErrorImpl("sin_permiso", "Las tarjetas las corrige el equipo.")
+        campos = {k: datos[k] for k in implementacion.CAMPOS_EDITABLES if k in datos}
+        for k in ("titulo", "texto", "fecha_limite"):
+            if k in campos and campos[k] is not None and not isinstance(campos[k], str):
+                raise implementacion.ErrorImpl("invalida", f"El campo {k} no es válido.")
+        for k in ("titulo", "texto"):
+            if k in campos and campos[k] is None:
+                raise implementacion.ErrorImpl("invalida", f"El campo {k} no es válido.")
+        if campos.get("fecha_limite") is None and "fecha_limite" in campos:
+            campos["fecha_limite"] = ""
+        t = db.impl_editar_tarjeta(s, pid, tid, actor, **campos)
         if t is None:
             raise HTTPException(404, "No existe.")
         return _impl_detalle(s, pid, tid, actor)
