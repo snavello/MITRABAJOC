@@ -56,6 +56,8 @@
     return m ? m[3] + '/' + m[2] + ' ' + m[4] + ':' + m[5] : (s || '');
   }
   function dias(n) { return n === 1 ? '1 día' : n + ' días'; }
+  function pedidoTxt(n) { return n === 0 ? 'Pedido hoy' : n === 1 ? 'Pedido ayer' : 'Pedido hace ' + dias(n); }
+  const NOM_DESHACER = { pospuesta: 'Retomar', confirmada: 'Deshacer la confirmación', completada_a_mano: 'Deshacer: completada a mano', no_aplica: 'Volver a aplicar' };
 
   class ErrorX extends Error { constructor(m, st) { super(m); this.status = st; } }
   function detalle(d) {
@@ -224,7 +226,8 @@
     const txt = $('x-av-txt'), pct = $('x-av-pct'), bar = $('x-av-bar'), riel = $('x-av-riel');
     if (D && D.disponible && D.resumen) {
       const r = D.resumen;
-      txt.textContent = r.resueltas + ' de ' + r.aplican + ' tareas resueltas';
+      const k = (r.total || r.aplican) - r.aplican;
+      txt.replaceChildren(r.resueltas + ' de ' + r.aplican + ' tareas resueltas', k > 0 ? h('small', { class: 'no-ap' }, ' (' + k + ' no aplican)') : null);
       pct.textContent = r.porcentaje + '%';
       bar.style.width = r.porcentaje + '%';
       riel.setAttribute('aria-valuenow', String(r.porcentaje));
@@ -280,8 +283,8 @@
     return h('aside', { class: 'pano' }, h('p', { class: 'rot' }, 'Panorama'),
       dem.map(function (d) {
         return h('div', { class: 'aviso' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '!'),
-          h('div', null, h('b', null, d.nombre + ': demorado'),
-            'Pedido hace ' + dias(d.dias) + (d.tarjeta ? ' (' + d.tarjeta.codigo + ')' : '') + '. Frena ' + d.frena + (d.frena === 1 ? ' tarea.' : ' tareas.'),
+          h('div', null, h('b', null, d.nombre + (d.dias >= 2 ? ': demorado' : ': pedido')),
+            pedidoTxt(d.dias)  + (d.tarjeta ? ' (' + d.tarjeta.codigo + ')' : '') + '. Frena ' + d.frena + (d.frena === 1 ? ' tarea.' : ' tareas.'),
             h('div', { class: 'acc', style: 'margin-top:8px' },
               h('a', { class: 'btn ch', href: D.proyecto.mesa_url, target: '_blank', rel: 'noopener' }, 'Reclamar en la Mesa'))));
       }),
@@ -316,7 +319,7 @@
       t.insumos.map(function (i) {
         const reg = i.estado !== 'falta';
         const f = S.insForm && S.insForm.clave === i.clave ? S.insForm : null;
-        let estadoTxt = i.estado === 'recibido' ? 'Recibido' : i.estado === 'pedido' ? 'Pedido hace ' + dias(i.dias || 0) : 'Falta';
+        let estadoTxt = i.estado === 'recibido' ? 'Recibido' : i.estado === 'pedido' ? pedidoTxt(i.dias || 0) : 'Falta';
         return h('div', { class: 'ins ' + i.estado },
           h('div', { class: 't' }, h('b', null, i.nombre), h('span', { class: 'est' }, estadoTxt)),
           i.descripcion ? h('p', { class: 'nota' }, i.descripcion) : null,
@@ -346,7 +349,9 @@
     const c = t.control;
     if (!c) return null;
     const r = RES[c.estado] || [c.estado || '', ''];
-    return h('div', { class: 'bloque' }, h('h3', null, 'Lo que dice el control'),
+    const na = t.estado === 'no_aplica';
+    const rotulo = na ? 'Lo que diría el control (no cuenta: la tarea no aplica)' : t.a_mano ? 'Lo que calcula el control' : 'Lo que dice el control';
+    return h('div', { class: 'bloque' + (na ? ' atenuado' : '') }, h('h3', null, rotulo),
       h('p', null, h('b', { class: r[1] }, r[0]), c.resumen ? ' · ' + c.resumen : ''),
       (c.cifras || []).length ? h('div', { class: 'kpis' }, c.cifras.map(function (k) { return h('div', { class: 'kpi' }, h('b', null, num(k.valor)), h('span', null, k.nombre)); })) : null,
       (c.faltan || []).length ? h('div', null, h('p', { class: 'rot' }, 'Falta'), h('ul', { class: 'faltan' }, c.faltan.map(function (x) { return h('li', null, x); }))) : null);
@@ -381,7 +386,7 @@
         a.no_aplica ? h('button', { class: 'btn', type: 'button', disabled: S.enviando, onclick: abrir('no_aplica') }, 'No aplica') : null,
         a.posponer ? h('button', { class: 'btn', type: 'button', disabled: S.enviando, onclick: abrir('pospuesta') }, 'Posponer') : null,
         (a.deshacer || []).map(function (tipo) {
-          return h('button', { class: 'btn', type: 'button', disabled: S.enviando, onclick: function () { deshacer(t.codigo, tipo); } }, 'Deshacer: ' + nomDec(tipo).toLowerCase());
+          return h('button', { class: 'btn', type: 'button', disabled: S.enviando, onclick: function () { deshacer(t.codigo, tipo); } }, NOM_DESHACER[tipo] || ('Deshacer: ' + nomDec(tipo).toLowerCase()));
         })));
   }
   function seccionDecisiones(t) {
@@ -414,15 +419,17 @@
       t.descripcion ? h('p', null, t.descripcion) : null,
       t.detalle ? h('p', { class: 'muted' }, t.detalle) : null,
       (t.avisos || []).map(function (a) { return h('div', { class: 'aviso' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'), h('div', null, a)); }),
-      frenos.length ? h('p', { class: 'nota' }, 'Para llegar acá antes hay que resolver, en este orden: ' + frenos.join(', ') + '.') : null,
+      frenos.length && !resuelta(t) ? h('p', { class: 'nota' }, 'Para llegar acá antes hay que resolver, en este orden: ' + frenos.join(', ') + '.') : null,
       h('div', { class: 'dos' },
         h('div', null, h('h3', null, 'Necesita'), listaTareas(t.necesita || [], 'No necesita nada antes.')),
         h('div', null, h('h3', null, 'Destraba'), listaTareas((t.destraba && t.destraba.directo) || [], 'No hay otra tarea esperándola.'))),
       seccionInsumos(t),
       seccionControl(t),
-      t.confirmacion ? h('div', { class: 'bloque' }, h('h3', null, 'Hay que confirmar'),
-        h('p', null, t.confirmacion), t.falta_confirmar ? h('p', { class: 'nota' }, 'Todavía nadie lo confirmó.') : null) : null,
-      t.donde ? h('div', { class: 'acc' }, h('a', { class: 'btn p donde', href: t.donde.url, target: '_blank', rel: 'noopener' }, 'Ir a la pantalla'),
+      t.confirmacion ? h('div', { class: 'bloque' }, h('h3', null, 'Lo que hay que confirmar'),
+        h('p', null, t.confirmacion), t.falta_confirmar ? h('p', { class: 'nota' }, 'Todavía nadie lo confirmó.') : null,
+        !(t.acciones && t.acciones.confirmar) && (t.insumos || []).some(function (i) { return i.estado === 'falta' || i.estado === 'pedido'; })
+          ? h('p', { class: 'nota nec' }, 'Primero registrá que llegó el insumo.') : null) : null,
+      t.donde ? h('div', { class: 'acc' }, h('a', { class: 'btn donde' + (t.estado === 'no_aplica' ? '' : ' p'), href: t.donde.url, target: '_blank', rel: 'noopener' }, 'Ir a la pantalla'),
         h('span', { class: 'nota' }, t.donde.rotulo)) : null,
       seccionDecisiones(t),
       seccionAcciones(t),
@@ -466,21 +473,19 @@
       chip('', 'Todas', ts.length),
       orden.filter(function (e) { return cuenta(e) > 0; }).map(function (e) { return chip(e, nomEstado(e), cuenta(e)); }),
       h('span', { class: 'sep', 'aria-hidden': 'true' }),
-      FILTROS_MARCA.filter(function (f) { return ts.some(f[2]) || S.filtro === f[0]; }).map(function (f) { return chip(f[0], f[1], ts.filter(f[2]).length); }));
+      FILTROS_MARCA.map(function (f) { return chip(f[0], f[1], ts.filter(f[2]).length); }));
     const filas = [];
     D.grupos.forEach(function (g) {
       const l = ts.filter(function (t) { return t.grupo === g && pasaFiltro(t); });
       if (!l.length) return;
       filas.push(h('tr', { class: 'grp' }, h('td', { colspan: '5' }, g)));
       l.forEach(function (t) {
-        const dm = (t.decisiones || []).find(function (d) { return d.tipo === 'completada_a_mano'; });
-        filas.push(h('tr', null,
-          h('td', null, h('span', { class: 'cod' }, t.codigo)),
-          h('td', null, h('button', { class: 'tn', type: 'button', onclick: function () { abrirFicha(t.codigo); } }, t.nombre), marcas(t)),
-          h('td', null, pildora(t.estado)),
+        filas.push(h('tr', { class: 'fila' },
+          h('td', { class: 'c-cod' }, h('span', { class: 'cod' }, t.codigo)),
+          h('td', { class: 'c-nom' }, h('button', { class: 'tn', type: 'button', onclick: function () { abrirFicha(t.codigo); } }, t.nombre)),
+          h('td', { class: 'c-est' }, pildora(t.estado), marcas(t)),
           h('td', { class: 'col-modo' }, nomModo(t.modo)),
-          h('td', { class: t.estado === 'bloqueada' ? 'fr' : t.estado === 'esperando' ? 'es' : '' }, t.detalle,
-            dm ? h('div', { class: 'quien' }, 'A mano por ' + dm.quien + (dm.motivo ? ': ' + dm.motivo : '')) : null)));
+          h('td', { class: 'c-det ' + (t.estado === 'bloqueada' ? 'fr' : t.estado === 'esperando' ? 'es' : '') }, t.detalle)));
       });
     });
     return h('div', null, filtros,
@@ -512,7 +517,7 @@
     const asc = cierre(ts, 'asc'), desc = cierre(ts, 'desc');
     const cols = [];
     ts.forEach(function (t) { (cols[t.nivel] = cols[t.nivel] || []).push(t); });
-    const W = 204, H = 54, GX = 84, GY = 18, top = 40, pos = {}, ord = {};
+    const W = 204, H = 54, GX = 84, GY = 18, top = 46, pos = {}, ord = {};
     cols.forEach(function (c, i) {
       if (!c) return;
       if (i) c.sort(function (a, b) {
@@ -535,19 +540,64 @@
     });
     svg.appendChild(defs);
     cols.forEach(function (c, i) { if (c) svg.appendChild(sv('text', { class: 'capa', x: 16 + i * (W + GX), y: 22 }, i ? 'Después · ' + i : 'Sin requisitos')); });
+    // Ruteo ortogonal SOLO por pasillos: el vertical entre columnas (GX) y el horizontal
+    // entre filas (GY). Nada pasa por dentro de la caja de otra tarea.
+    const nfilas = Math.max.apply(null, cols.map(function (c) { return c ? c.length : 0; }));
+    const gap0 = function (g) { return 16 + g * (W + GX) + W; };
+    const yPasillo = function (k) { return top + k * (H + GY) - GY / 2; };
+    const arcos = [], usoGap = {}, usoPas = {};
     ts.forEach(function (t) {
       t.necesita.forEach(function (d) {
         const o = por[d]; if (!o) return;
-        const a = pos[d], b = pos[t.codigo];
-        const x1 = a.x + W, y1 = a.y + H / 2, x2 = b.x - 7, y2 = b.y + H / 2;
-        const mx = b.x - 22 - (ord[d] % 4) * 9, r = 7, dy = Math.sign(y2 - y1);
-        const enc = enCamino(d) && enCamino(t.codigo) && (d === sel || t.codigo === sel || A.has(t.codigo) || De.has(d));
-        const frena = !resuelta(o);
-        const p = dy ? 'M' + x1 + ',' + y1 + ' H' + (mx - r) + ' Q' + mx + ',' + y1 + ' ' + mx + ',' + (y1 + dy * r) + ' V' + (y2 - dy * r) + ' Q' + mx + ',' + y2 + ' ' + (mx + r) + ',' + y2 + ' H' + x2
-          : 'M' + x1 + ',' + y1 + ' H' + x2;
-        svg.appendChild(sv('path', { class: 'e' + (frena ? ' frena' : '') + (enc ? ' camino' : ' tenue'), d: p, 'marker-end': 'url(#' + (enc ? (frena ? 'fr' : 'fa') : 'fn') + ')' }));
+        const ca = o.nivel, cb = t.nivel, ra = ord[d], rb = ord[t.codigo];
+        const arco = { o: d, t: t.codigo, ca: ca, cb: cb, ra: ra, rb: rb, salto: cb - ca > 1 };
+        arco.ga = ca; arco.gb = cb - 1;
+        (usoGap[arco.ga] = usoGap[arco.ga] || []).push({ arco: arco, lado: 'a' });
+        if (arco.salto) {
+          const lo = Math.min(ra, rb), hi = Math.max(ra, rb);
+          arco.k = lo === hi ? lo : lo + 1 + Math.floor((hi - lo - 1) / 2);
+          (usoGap[arco.gb] = usoGap[arco.gb] || []).push({ arco: arco, lado: 'b' });
+          (usoPas[arco.k] = usoPas[arco.k] || []).push(arco);
+        }
+        arcos.push(arco);
       });
     });
+    Object.keys(usoGap).forEach(function (g) {
+      const l = usoGap[g], n = l.length, paso = n > 1 ? Math.min(10, 60 / (n - 1)) : 0;
+      const ini = gap0(+g) + 10 + (60 - paso * (n - 1)) / 2;
+      l.forEach(function (u, i) { u.arco['x' + u.lado] = ini + i * paso; });
+    });
+    Object.keys(usoPas).forEach(function (k) {
+      const l = usoPas[k], n = l.length, paso = n > 1 ? Math.min(4, 12 / (n - 1)) : 0;
+      l.forEach(function (arco, i) { arco.yc = yPasillo(+k) - paso * (n - 1) / 2 + i * paso; });
+    });
+    function redondeada(pts) {
+      const p = [pts[0]];
+      pts.slice(1).forEach(function (q) { const l = p[p.length - 1]; if (q[0] !== l[0] || q[1] !== l[1]) p.push(q); });
+      for (let i = p.length - 2; i > 0; i--) {
+        if ((p[i - 1][0] === p[i][0] && p[i][0] === p[i + 1][0]) || (p[i - 1][1] === p[i][1] && p[i][1] === p[i + 1][1])) p.splice(i, 1);
+      }
+      const dist = function (u, v) { return Math.abs(u[0] - v[0]) + Math.abs(u[1] - v[1]); };
+      const paso = function (u, v, r) { const l = dist(u, v) || 1; return [u[0] + (v[0] - u[0]) / l * r, u[1] + (v[1] - u[1]) / l * r]; };
+      let d = 'M' + p[0][0] + ',' + p[0][1];
+      for (let i = 1; i < p.length - 1; i++) {
+        const r = Math.min(7, dist(p[i - 1], p[i]) / 2, dist(p[i], p[i + 1]) / 2);
+        const e = paso(p[i], p[i - 1], r), f = paso(p[i], p[i + 1], r);
+        d += ' L' + e[0] + ',' + e[1] + ' Q' + p[i][0] + ',' + p[i][1] + ' ' + f[0] + ',' + f[1];
+      }
+      return d + ' L' + p[p.length - 1][0] + ',' + p[p.length - 1][1];
+    }
+    const trazos = arcos.map(function (arco) {
+      const a = pos[arco.o], b = pos[arco.t], t = por[arco.t], o = por[arco.o];
+      const x1 = a.x + W, y1 = a.y + H / 2, x2 = b.x - 7, y2 = b.y + H / 2;
+      const enc = enCamino(arco.o) && enCamino(arco.t) && (arco.o === sel || arco.t === sel || A.has(arco.t) || De.has(arco.o));
+      const frena = !resuelta(o);
+      let pts;
+      if (!arco.salto) pts = [[x1, y1], [arco.xa, y1], [arco.xa, y2], [x2, y2]];
+      else pts = [[x1, y1], [arco.xa, y1], [arco.xa, arco.yc], [arco.xb, arco.yc], [arco.xb, y2], [x2, y2]];
+      return { enc: enc, nodo: sv('path', { class: 'e' + (frena ? ' frena' : '') + (enc ? ' camino' : ' tenue'), d: redondeada(pts), 'data-o': arco.o, 'data-d': arco.t, 'marker-end': 'url(#' + (enc ? (frena ? 'fr' : 'fa') : 'fn') + ')' }) };
+    });
+    trazos.filter(function (x) { return !x.enc; }).concat(trazos.filter(function (x) { return x.enc; })).forEach(function (x) { svg.appendChild(x.nodo); });
     ts.forEach(function (t) {
       const p = pos[t.codigo], nom = t.nombre.length > 23 ? t.nombre.slice(0, 22) + '…' : t.nombre;
       const g = sv('g', { class: 'n ' + t.estado + (t.codigo === sel ? ' sel' : '') + (enCamino(t.codigo) ? '' : ' tenue'), tabindex: '0', role: 'button', 'aria-pressed': String(t.codigo === sel), 'aria-label': t.nombre + ': ' + nomEstado(t.estado) });

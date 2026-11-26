@@ -79,3 +79,20 @@ def test_boton_abrir_xsii_en_la_pestana_implementacion():
 def test_no_hay_guiones_largos_en_los_textos():
     for texto in (PLANTILLA, JS):
         assert "—" not in texto
+
+
+def test_mapa_rutea_por_pasillos_y_tablero_en_tarjetas():
+    assert "redondeada(" in JS and "yPasillo" in JS and "usoGap" in JS
+    assert "@media (max-width:700px)" in CSS and "tr.fila" in CSS
+
+
+def test_textos_del_pedido_deshacer_y_ficha_resuelta():
+    assert "Pedido hoy" in JS and "Pedido ayer" in JS
+    assert "d.dias >= 2" in JS
+    for t in ("Retomar", "Deshacer la confirmación", "Deshacer: completada a mano", "Volver a aplicar"):
+        assert t in JS, t
+    assert "frenos.length && !resuelta(t)" in JS
+    assert "Lo que diría el control (no cuenta: la tarea no aplica)" in JS
+    assert "Lo que calcula el control" in JS
+    assert "Primero registrá que llegó el insumo." in JS
+    assert "no aplican)" in JS
