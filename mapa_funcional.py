@@ -108,6 +108,8 @@ FUNCIONALIDADES = [
     # Fiesta de Fin de Año (PLAN_FIESTA.md): subproducto con sus dos apps y el webhook.
     # Mesa de implementación (PLAN_IMPLEMENTACION.md): acceso del sindicato y del equipo.
     ("Entornos", "Mesa de implementación", r"^/(implementacion|api/implementacion|api/entornos/implementacion)", "impl_mesa.html"),
+    # XSII, Implementación inteligente (PLAN_XSII.md): páginas y API del equipo.
+    ("Entornos", "XSII: Implementación inteligente", r"^/(entornos/xsii|api/entornos/xsii)", "xsii.html"),
     ("Entornos", "Fiesta: Arranque (Herramientas de /entornos)", r"^/api/entornos/herramientas/fiesta", None),
     ("Entornos", "Fiesta: Webhook de MercadoPago", r"^/api/fiesta/mp/webhook$", None),
     ("Entornos", "Fiesta: App del sindicato (panel y puerta)", r"^/(fiesta/sindicato|api/fiesta/sindicato)", "fiesta_sindicato.html"),

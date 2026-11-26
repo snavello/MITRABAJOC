@@ -7,6 +7,10 @@ equivocarse sobre el avance (principio 1 del plan).
 
 Precedencia (X14, X15 y «Estados» del plan), en este orden:
 no_aplica → hecha → bloqueada → esperando → en_curso → lista.
+
+Una tarea puede tener VARIAS decisiones activas a la vez (como mucho una por
+tipo): `pospuesta` es una marca que no cambia el estado y convive con las
+demás; las otras tres son las que pueden resolver la tarea.
 """
 
 from __future__ import annotations
@@ -51,7 +55,13 @@ class EstadoTarea:
     insumos_faltantes: list = field(default_factory=list)
     avisos: list = field(default_factory=list)            # dependencias blandas sin resolver
     pospuesta: bool = False
+    # La decisión que DETERMINA el estado (no_aplica, completada_a_mano o
+    # confirmada), o None; `decisiones` es la lista de todas las activas.
     decision: dict | None = None
+    decisiones: list = field(default_factory=list)
+    # Insumos sin registrar que NO frenan la tarea porque el control ya muestra
+    # datos cargados: la pantalla avisa «hay datos; el insumo no está registrado».
+    insumos_sin_registrar: list = field(default_factory=list)
     # El control pasa pero falta que una persona confirme `confirmacion`.
     falta_confirmar: bool = False
     confirmacion: str | None = None
@@ -77,12 +87,30 @@ def _aplica(tarea, hechos) -> bool:
     return bool(condiciones[clave])
 
 
+def _lista_de(d) -> list:
+    """Las decisiones de una tarea como lista: acepta una lista, un dict suelto
+    (una sola decisión) o nada."""
+    if d is None:
+        return []
+    if isinstance(d, dict):
+        return [d]
+    return list(d)
+
+
+def datos_cargados(tarea, control: Control) -> bool:
+    """El control ya muestra datos que permiten calcular la tarea aunque un
+    insumo no esté registrado: hay avance parcial o pasa. En una tarea
+    `solo_confirmacion` el control no calcula nada, así que no cuenta."""
+    return bool(control.en_curso or (control.pasa and not tarea.solo_confirmacion))
+
+
 def resolver(tareas, hechos: dict) -> dict:
     """{codigo: EstadoTarea}, en el orden del catálogo.
 
     `hechos`: `controles` {codigo: Control}, `aplica` {condición: bool},
-    `insumos` {clave: recibido}, `decisiones` {codigo: {tipo, quien, cuando,
-    motivo}} y `ensayos_abiertos` (set de códigos).
+    `insumos` {clave: recibido}, `decisiones` {codigo: [{tipo, quien, cuando,
+    motivo}, ...]} (las activas; también se acepta un dict suelto por código)
+    y `ensayos_abiertos` (set de códigos).
 
     Dos pasadas. La primera fija lo que no depende de nadie (no aplica,
     hecha): el estado «hecha» se calcula de la realidad aunque alguna
@@ -101,25 +129,38 @@ def resolver(tareas, hechos: dict) -> dict:
                            faltan=["Sin control calculado"])
         return c
 
+    def decisiones_de(t) -> list:
+        lista = _lista_de(decisiones.get(t.codigo))
+        for d in lista:
+            if d.get("tipo") not in DECISIONES:
+                raise ValueError(f"{t.codigo}: decisión inválida {d.get('tipo')!r}.")
+        return lista
+
+    def de_tipo(lista, tipo):
+        return next((d for d in lista if d.get("tipo") == tipo), None)
+
     primera: dict[str, EstadoTarea] = {}
     for t in tareas:
         c = control_de(t)
-        d = decisiones.get(t.codigo)
-        d_tipo = (d or {}).get("tipo")
-        if d is not None and d_tipo not in DECISIONES:
-            raise ValueError(f"{t.codigo}: decisión inválida {d_tipo!r}.")
+        ds = decisiones_de(t)
+        pospuesta = de_tipo(ds, "pospuesta") is not None
+        no_aplica = de_tipo(ds, "no_aplica")
+        confirmada = de_tipo(ds, "confirmada")
+        a_mano = de_tipo(ds, "completada_a_mano")
         if not _aplica(t, hechos):
-            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=d,
-                                            no_aplica_por="condicion")
-        elif d_tipo == "no_aplica":
-            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=d,
-                                            no_aplica_por="decision")
-        elif c.pasa and (not t.confirmacion or d_tipo == "confirmada"):
+            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decisiones=ds,
+                                            pospuesta=pospuesta, no_aplica_por="condicion")
+        elif no_aplica is not None:
+            primera[t.codigo] = EstadoTarea(t.codigo, "no_aplica", control=c, decision=no_aplica,
+                                            decisiones=ds, pospuesta=pospuesta, no_aplica_por="decision")
+        elif c.pasa and (not t.confirmacion or confirmada is not None):
             primera[t.codigo] = EstadoTarea(
                 t.codigo, "hecha", con_observaciones=(c.estado == "observaciones"),
-                control=c, decision=d, confirmacion=t.confirmacion)
-        elif d_tipo == "completada_a_mano":
-            primera[t.codigo] = EstadoTarea(t.codigo, "hecha", a_mano=True, control=c, decision=d,
+                control=c, decision=confirmada, decisiones=ds, pospuesta=pospuesta,
+                confirmacion=t.confirmacion)
+        elif a_mano is not None:
+            primera[t.codigo] = EstadoTarea(t.codigo, "hecha", a_mano=True, control=c, decision=a_mano,
+                                            decisiones=ds, pospuesta=pospuesta,
                                             confirmacion=t.confirmacion)
 
     salida: dict[str, EstadoTarea] = {}
@@ -128,11 +169,15 @@ def resolver(tareas, hechos: dict) -> dict:
             salida[t.codigo] = primera[t.codigo]
             continue
         c = control_de(t)
-        d = decisiones.get(t.codigo)
-        pospuesta = (d or {}).get("tipo") == "pospuesta"
+        ds = decisiones_de(t)
+        pospuesta = de_tipo(ds, "pospuesta") is not None
         frenada = [dep for dep in t.necesita if dep not in primera]
         avisos = [dep for dep in t.mejora_con if dep not in primera]
-        faltan_insumos = [i for i in t.insumos if not insumos.get(i)]
+        sin_insumo = [i for i in t.insumos if not insumos.get(i)]
+        # Un insumo sin registrar no deja «esperando un dato» a una tarea cuyo
+        # control ya muestra datos cargados: se calcula como si estuviera.
+        sin_registrar = sin_insumo if datos_cargados(t, c) else []
+        faltan_insumos = [i for i in sin_insumo if i not in sin_registrar]
         # Pasó el control pero nadie confirmó (si estuviera confirmada, ya
         # estaría hecha): no destraba a nadie hasta que se confirme.
         falta_confirmar = c.pasa and bool(t.confirmacion)
@@ -149,7 +194,8 @@ def resolver(tareas, hechos: dict) -> dict:
             t.codigo, estado, control=c,
             frenada_por=frenada if estado == "bloqueada" else [],
             insumos_faltantes=faltan_insumos if estado == "esperando" else [],
-            avisos=avisos, pospuesta=pospuesta, decision=d,
+            avisos=avisos, pospuesta=pospuesta, decision=None, decisiones=ds,
+            insumos_sin_registrar=sin_registrar,
             falta_confirmar=falta_confirmar,
             confirmacion=t.confirmacion if falta_confirmar else None)
     return salida

@@ -146,7 +146,7 @@ def test_precedencia_completo():
     # Bloqueada gana a esperando y a en_curso.
     assert estado(t, hechos({"D": NO, "X": MEDIO}), "X").estado == "bloqueada"
     # Sin la dependencia, esperando gana a en_curso.
-    assert estado(t, hechos({"D": OK, "X": MEDIO}), "X").estado == "esperando"
+    assert estado(t, hechos({"D": OK, "X": NO}), "X").estado == "esperando"
     # Con el insumo, en_curso gana a lista.
     assert estado(t, hechos({"D": OK, "X": MEDIO}, insumos={"i": True}), "X").estado == "en_curso"
     # Hecha gana a bloqueada.
@@ -399,3 +399,87 @@ def test_no_aplica_expone_su_porque():
     r = estados.resolver(t, hechos({"A": NO, "B": NO}, aplica={"m": False},
                                    decisiones={"B": {"tipo": "no_aplica", "quien": "q", "motivo": "x"}}))
     assert r["A"].no_aplica_por == "condicion" and r["B"].no_aplica_por == "decision"
+
+
+# ---- bloque 1: varias decisiones por tarea e insumo sin registrar ---------------
+
+def D(tipo, **resto):
+    return {"tipo": tipo, "quien": "ana", "cuando": "2026-11-26", "motivo": "porque sí", **resto}
+
+
+def test_varias_decisiones_a_la_vez_se_guardan_todas():
+    t = [T("A1")]
+    ds = [D("pospuesta"), D("completada_a_mano")]
+    e = estado(t, hechos({"A1": NO}, decisiones={"A1": ds}), "A1")
+    assert e.estado == "hecha" and e.a_mano and e.pospuesta
+    assert [d["tipo"] for d in e.decisiones] == ["pospuesta", "completada_a_mano"]
+    assert e.decision["tipo"] == "completada_a_mano"
+
+
+def test_un_dict_suelto_se_toma_como_lista_de_una():
+    t = [T("A1")]
+    e = estado(t, hechos({"A1": NO}, decisiones={"A1": D("pospuesta")}), "A1")
+    assert e.pospuesta and len(e.decisiones) == 1 and e.decision is None
+
+
+def test_confirmada_y_pospuesta_conviven_y_decision_es_la_confirmada():
+    t = [C("A1")]
+    r = estados.resolver(t, hechos({"A1": OK}, decisiones={"A1": [D("pospuesta"), D("confirmada")]}))
+    assert r["A1"].estado == "hecha" and r["A1"].pospuesta
+    assert r["A1"].decision["tipo"] == "confirmada" and len(r["A1"].decisiones) == 2
+
+
+def test_no_aplica_declarada_gana_a_las_otras():
+    t = [T("A1")]
+    ds = [D("completada_a_mano"), D("no_aplica")]
+    e = estado(t, hechos({"A1": OK}, decisiones={"A1": ds}), "A1")
+    assert e.estado == "no_aplica" and e.no_aplica_por == "decision" and e.decision["tipo"] == "no_aplica"
+
+
+def test_pospuesta_saca_de_recomendada_y_alternativas_aunque_haya_otra_decision():
+    t = [T("A1"), T("A2")]
+    tb = estados.resolver(t, hechos({"A1": NO, "A2": NO}, decisiones={"A1": [D("pospuesta")]}))
+    assert consulta.recomendada(t, tb) == "A2" and consulta.alternativas(t, tb) == []
+
+
+def test_decision_invalida_en_una_lista_es_error():
+    with pytest.raises(ValueError):
+        estados.resolver([T("A1")], hechos({"A1": NO}, decisiones={"A1": [D("pospuesta"), D("xx")]}))
+
+
+def test_insumo_sin_registrar_con_control_en_curso_no_deja_esperando():
+    t = [T("A1", insumos=["i"])]
+    e = estado(t, hechos({"A1": MEDIO}), "A1")
+    assert e.estado == "en_curso" and e.insumos_sin_registrar == ["i"] and e.insumos_faltantes == []
+
+
+def test_insumo_sin_registrar_con_control_que_pasa_y_confirmacion_no_deja_esperando():
+    t = [Tarea("A1", "x", "A", "manual", insumos=("i",), control="c", confirmacion="ok")]
+    e = estados.resolver(t, hechos({"A1": OK}))["A1"]
+    assert e.estado == "en_curso" and e.falta_confirmar and e.insumos_sin_registrar == ["i"]
+
+
+def test_insumo_sin_registrar_y_sin_datos_sigue_esperando():
+    t = [T("A1", insumos=["i"])]
+    e = estado(t, hechos({"A1": NO}), "A1")
+    assert e.estado == "esperando" and e.insumos_faltantes == ["i"] and e.insumos_sin_registrar == []
+
+
+def test_solo_confirmacion_sin_insumo_registrado_sigue_esperando():
+    t = [Tarea("A1", "x", "A", "manual", insumos=("i",), control="c", confirmacion="ok",
+               solo_confirmacion=True)]
+    e = estados.resolver(t, hechos({"A1": OK}))["A1"]
+    assert e.estado == "esperando" and e.insumos_faltantes == ["i"] and e.insumos_sin_registrar == []
+
+
+def test_insumo_registrado_no_aparece_como_sin_registrar():
+    t = [T("A1", insumos=["i"])]
+    e = estado(t, hechos({"A1": MEDIO}, insumos={"i": True}), "A1")
+    assert e.estado == "en_curso" and e.insumos_sin_registrar == []
+
+
+def test_a_json_trae_decisiones_e_insumos_sin_registrar():
+    t = [T("A1", insumos=["i"])]
+    tb = estados.resolver(t, hechos({"A1": MEDIO}, decisiones={"A1": [D("pospuesta")]}))
+    item = consulta.a_json(t, tb)["tareas"][0]
+    assert item["decisiones"][0]["tipo"] == "pospuesta" and item["insumos_sin_registrar"] == ["i"]

@@ -312,6 +312,8 @@ EXCLUIDAS = {
     "fiestaavisopago.cuerpo": "el aviso crudo de MercadoPago: bitácora del webhook, no se reescribe (D5)",
     # -- Mesa de implementación (PLAN_IMPLEMENTACION.md): sin CUIL en ninguna tabla.
     "implevento.detalle": "traza inmutable de la Mesa (ids, estados, nombres de archivo): no lleva CUIL y no se reescribe",
+    # -- XSII (PLAN_XSII.md): el registro de decisiones e insumos no lleva CUIL en ninguna tabla.
+    "xsiimovimiento.cantidades": "traza inmutable de XSII (cifras de la tarea): no lleva CUIL y no se reescribe",
     "cambioidentificador.anterior": "la traza de ESTA herramienta: es la historia y no se reescribe (D5)",
     "cambioidentificador.nuevo": "la traza de ESTA herramienta: es la historia y no se reescribe (D5)",
     "cambioidentificador.detalle": "la traza de ESTA herramienta: conteo de filas por tabla.columna",
