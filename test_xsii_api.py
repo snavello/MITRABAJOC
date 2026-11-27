@@ -194,7 +194,7 @@ def test_la_forma_del_tablero_es_la_del_contrato():
     pid, eq = _mundo()
     t = _tablero(eq, pid)
     assert set(t) == {"proyecto", "disponible", "motivo", "grupos", "rotulos", "resumen", "recomendada",
-                      "alternativas", "demorados", "tareas", "movimientos"}
+                      "alternativas", "demorados", "tareas", "movimientos", "preguntame"}
     assert t["disponible"] is True and t["motivo"] == ""
     assert t["proyecto"]["mesa_url"] == f"/implementacion?p={pid}" and t["proyecto"]["sindicato_nombre"]
     assert t["grupos"] == list(catalogo.GRUPOS)

@@ -405,3 +405,42 @@ Mesa» y «Descartar»: nada se crea sin el clic.
 pedido) abre el mismo formulario con el borrador del servidor, sin IA, y
 confirma igual. Después de crear: se vuelve a pedir el tablero y se muestra
 el enlace a la tarjeta.
+
+## Notas de implementación del bloque 2 (lo que quedó distinto o más preciso)
+
+- **Orden de las puertas de `preguntar`**: cuerpo (400) → punto y pregunta (400) →
+  código de tarea (404) → proyecto (404) → sin sindicato (409) → sin clave y sin
+  simulado (409) → tope (429) → recién ahí se llama al modelo. Una pregunta inválida
+  no gasta el tope. `codigo` ausente, vacío o no texto en `tarea` y `mapa` es 404.
+- **`preguntame` del tablero** lo suma la ruta (`main.api_xsii_tablero`); `vista.tablero_json`
+  no cambió. `disponible` es falso solo sin clave (ni cliente ni `MOCK_EXTRACTOR=1`).
+- **`ver_registro(codigo)`**: `codigo` es obligatorio en el esquema (vacío = todo el
+  proyecto), porque el esquema estricto no admite el campo opcional sin gastar uno de los
+  cupos de campos anulables. Es la única diferencia con la lista del contrato.
+- **Validación de cifras**: se comparan como números (`07` = `7`), se ignoran los dígitos de
+  los códigos de tarea (`PAD-02`) y vale lo que traiga la pregunta; una sola cifra suelta
+  (`3`) no se controla, solo las de dos o más dígitos.
+- **Límites propios del bucle**: además de `MAX_VUELTAS = 6`, tope de 120 s en total
+  (`TIEMPO_TOTAL_S`) y de 24.000 caracteres por resultado de herramienta. Cualquier parada
+  distinta de `end_turn` y `tool_use` (`refusal`, `max_tokens`, `pause_turn`, …) da el texto fijo.
+- **Respaldo ante rechazos (`fallbacks`)**: NO se usa. En el SDK instalado (0.120.2) solo
+  existe en `client.beta.messages.create` con el encabezado beta `server-side-fallback-*`, y la
+  guía lo documenta para el modelo más capaz, no para el de este uso. La llamada va por
+  `client.messages.create`; un rechazo es `refusal` y sale el texto fijo.
+- **Reclamo, una sola transacción**: `db.xsii_reclamar_insumo` (nueva) llama a
+  `impl_crear_tarjeta` / `impl_responder`, que ganaron `commit=True` (con `False` quedan en la
+  transacción de quien llama; el resto de la Mesa no cambia). Deja UN movimiento,
+  `insumo_reclamado` (no además un `insumo_pedido`), conserva nota y archivo del registro previo.
+  El candado es un `pg_advisory_xact_lock` por proyecto e insumo: con pedidos simultáneos pasa
+  uno y el resto recibe 409.
+- **`GET .../reclamo`**: `tarjeta` es la tarjeta enlazada al insumo aunque esté cerrada (entonces
+  `modo` es `nueva`); `modo: "respuesta"` solo si sigue abierta. En ese modo `titulo` es el de la tarjeta.
+- **`POST .../reclamo`**: la respuesta suma `modo` (`nueva` o `respuesta`) a `{ok, insumo, tarjeta}`;
+  `tarjeta` tiene la forma `{id, codigo, titulo, estado, url}`. Sin sindicato en Colm3na también
+  se puede reclamar (un insumo se pide antes del alta). El título solo se valida en `nueva`.
+  El aviso por mail va a quien espera la tarjeta (el sindicato) y nunca rompe el reclamo.
+- **Registro de uso**: `UsoIA` tipo `herramienta`, a nombre del sindicato del proyecto, con la
+  suma de todas las vueltas; también cuando el resultado es `fija`. Si la API falló antes de
+  contestar, no hay fila; si falló en una vuelta posterior, se registra lo ya pagado.
+- **Uso `xsii` en `/plataforma`**: el selector sale solo del recorrido de `precios_ia.USOS`
+  (`templates/plataforma.html` no se tocó). Migración `c7e1a3b5d9f2`.

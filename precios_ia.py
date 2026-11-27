@@ -73,6 +73,15 @@ USOS = {
                    "de bajar de modelo, repetí el ensayo de lectura contra una grilla ya publicada.",
         "default": "claude-sonnet-5-5",
     },
+    "xsii": {
+        "nombre": "«Preguntame» de XSII (Implementación inteligente, Herramientas de Entornos)",
+        "detalle": "Contesta una pregunta del equipo sobre un punto del tablero de implementación de un "
+                   "sindicato (el paso recomendado, una tarea o el mapa), leyendo con herramientas el "
+                   "estado que calcula el servidor; toda cifra sale de una herramienta y lo que no pasa la "
+                   "validación se reemplaza por un texto fijo. Lo usa el equipo: pocas llamadas, de una a "
+                   "seis vueltas cada una.",
+        "default": "claude-sonnet-5-5",
+    },
 }
 
 
