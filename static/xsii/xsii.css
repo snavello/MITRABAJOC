@@ -67,7 +67,8 @@ button:disabled{cursor:not-allowed}
 .pm-t:disabled{border-color:var(--na);color:var(--gris)}
 .pm-t:active:not(:disabled){scale:.97}
 .pm>.nota{align-self:flex-start}
-.pm-cuerpo{border:1px solid var(--linea);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-width:620px;background:var(--sup);animation:x-entra var(--mov-medio) var(--ease-entrada) both}
+.pm-cuerpo{border:1px solid var(--linea);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-width:620px;background:var(--sup)}
+.pm-abre{animation:x-entra var(--mov-medio) var(--ease-entrada) both}
 .pm-q{display:flex;flex-wrap:wrap;gap:6px}
 .pm-sug{border:1px solid var(--linea);background:var(--sup);border-radius:20px;padding:4px 11px;font-size:12.5px;text-align:left;transition:border-color var(--mov-rapido) var(--ease-salida),background var(--mov-rapido) var(--ease-salida)}
 .pm-sug.on{border-color:var(--acento);color:var(--acento);font-weight:600}
@@ -104,10 +105,11 @@ button:disabled{cursor:not-allowed}
 /* GUÍA */
 .guia{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:28px;align-items:start}
 .cond{display:flex;flex-direction:column;gap:18px;min-width:0}
-.heroe{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;background:var(--acento-s);border-radius:16px;padding:26px}
+.heroe{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:start;background:var(--acento-s);border-radius:16px;padding:26px}
 .heroe h2{font-size:38px;margin:4px 0 8px}
 .heroe p{max-width:58ch}
 .heroe .cuerpo{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.heroe .play{margin-top:-4px}
 .play{width:104px;height:104px;border-radius:50%;border:0;background:var(--acento);color:var(--sobre-acento);display:grid;place-items:center;box-shadow:0 0 0 10px color-mix(in srgb,var(--acento) 16%,transparent);transition:box-shadow var(--mov-medio) var(--ease-salida),scale var(--mov-presion) var(--ease-salida)}
 .play svg{width:44px;height:44px;margin-left:6px}
 .play:active{scale:.96}
@@ -163,7 +165,7 @@ button:disabled{cursor:not-allowed}
 .form{display:flex;flex-direction:column;gap:8px;border:1px solid var(--acento);border-radius:12px;padding:12px 14px;background:var(--sup)}
 .form label{font-size:12.5px;font-weight:600}
 .form textarea,.form input{width:100%;font:inherit;border:1px solid var(--linea);border-radius:8px;padding:8px 10px;background:var(--sup);color:var(--tinta)}
-.form textarea{min-height:76px;resize:vertical}
+.form textarea{min-height:10em;line-height:1.45;resize:vertical}
 .form .err{color:var(--bloq);font-size:13px;font-weight:600}
 .dec{border-left:3px solid var(--acento);padding:2px 0 2px 10px;font-size:13px}
 .hist{display:grid;gap:8px;padding:0}
@@ -256,7 +258,7 @@ td.c-est .marcas{display:flex;margin-top:4px;white-space:normal}
   .entra{animation:x-fundir var(--mov-medio) linear both}
   .av .riel i,.btn,.play,.n,.e{transition:none}
   .esq i{animation:none}
-  .pm-cuerpo,.pm-entra{animation:x-fundir var(--mov-medio) linear both}
+  .pm-abre,.pm-entra{animation:x-fundir var(--mov-medio) linear both}
   .pm-t,.pm-sug{transition:none}
 }
 @keyframes x-fundir{from{opacity:0}to{opacity:1}}
