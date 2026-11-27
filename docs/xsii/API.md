@@ -577,3 +577,84 @@ En la ficha de una tarea con asistida disponible, dentro de «Qué tenés que ha
   se cargara). (2) La carga toma, además del candado por tarea, un candado por sindicato
   (`db.xsii_candado_de_sindicato`, siempre en ese orden): dos proyectos sobre el mismo sindicato cargando a la vez ya no
   duplican las seccionales (la segunda da 409 «No hay nada para cargar»).
+
+---
+
+# Bloque 4a: Padrón desde planilla (PAD-02)
+
+SDN confirmó X22 a X24 el 2026-11-27 («Ok, adelante»). Segunda tarea asistida:
+mismo protocolo y mismas cuatro rutas; se suma un módulo
+(`asistidas/padron.py`) y tres extensiones GENÉRICAS del protocolo, que
+Seccionales no usa pero admite.
+
+Decisiones de Code, a confirmar: **X25** el padrón se carga con las MISMAS
+reglas que «Alta masiva» de Trabajadores (una sola implementación, extraída de
+la ruta; ver abajo). **X26** una fila cuya seccional no existe entra SIN
+seccional y queda dudosa, con el nombre a la vista (hoy la masiva lo hace en
+silencio); la opción «Dejar afuera las de seccional desconocida» las excluye.
+**X27** hasta 20.000 filas y 5 MB por carga; un padrón más grande se parte en
+varias planillas (la pantalla lo dice).
+
+## Extensiones genéricas del protocolo
+
+1. **Mapeo de columnas.** `describir()` puede traer `mapeo: true` y `campos:
+   [{clave, rotulo, obligatorio, ayuda}]`. El ensayo devuelve
+   `mapeo: {columnas: [{indice, cabecera, campo, muestra: [str, str, str]}], sin_usar: [cabecera], faltan: [clave obligatoria sin columna]}`:
+   qué columna de la planilla se tomó para cada campo, detectado por sinónimos
+   de la cabecera. La persona lo corrige y vuelve a ensayar mandando
+   `opciones.mapeo = {"<indice>": "<clave de campo>" | ""}` (lo que no se
+   nombra queda como se detectó; `""` = no usar esa columna). Dos columnas al
+   mismo campo: 400. Si `faltan` no está vacío el ensayo responde 200 con
+   `total: 0` y `mapeo` para que se pueda corregir (no 400).
+2. **Opciones con valor.** Una opción puede traer `tipo: "numero"` (además del
+   booleano por defecto), con `minimo`, `maximo` y `defecto: null`. Viajan en
+   `opciones` y entran en la huella.
+3. **Resultados grandes.** El ensayo devuelve `filas` SOLO de las que no son
+   válidas, hasta 300, más `filas_truncadas: bool`, y
+   `motivos: [{estado, motivo, cantidad, lineas: [primeras 10]}]` con el
+   conteo completo por motivo. `muestra` = primeras 5 válidas. `dejar_afuera`
+   por línea sigue valiendo; además cada módulo puede ofrecer opciones
+   booleanas que dejan afuera un motivo entero.
+
+## Reglas del Padrón
+
+- **Una sola implementación** (X25): la lógica por fila de
+  `POST /admin/trabajador/masivo` se extrae a una función compartida (misma
+  conducta, mismos contadores, mismos tests de la masiva en verde) que recibe
+  filas ya separadas por campo. La ruta del panel la sigue usando con sus
+  líneas separadas por coma; la asistida la llama con las filas mapeadas. La
+  asistida corre SIN alcance de seccional (la usa el equipo).
+- **Campos**: `cuil` y `nombre` obligatorios; `apellido` (si viene aparte se
+  une «Apellido, Nombre» → un solo nombre, apellido primero), `calle`,
+  `numero`, `piso_depto`, `localidad`, `provincia`, `codigo_postal`,
+  `telefono`, `mail`, `seccional`, `fecha_afiliacion`, `fecha_nacimiento`.
+  Una columna «domicilio» en un solo texto va a `calle` tal cual.
+- **Rechazada**: sin identificación o sin nombre; identificación que no cumple
+  el verificador; sin provincia o sin localidad; fecha ilegible; repetida
+  dentro de la planilla (la segunda).
+- **Ya existe** (la persona ya está en el padrón de ESTE sindicato): no es
+  alta; si la fila trae mail o fecha de afiliación se actualizan solo esos dos
+  (regla de la masiva, incluido `padron_responde_por`); si no, no se toca.
+- **Dudosa**: seccional escrita que no existe (X26); sin seccional habiendo
+  seccionales; persona con cuenta previa por la que este padrón no responde
+  (entra el empadronamiento, no se tocan sus datos).
+- No se geocodifica. Nada de la planilla se guarda fuera de las tablas del
+  padrón: el movimiento lleva solo cantidades.
+- Opciones: `sin_seccional_desconocida` (bool, defecto no) y
+  `total_declarado` (número, opcional): el momento 4 muestra «Declarado N ·
+  en el padrón M · diferencia D» y queda en el `detalle` del movimiento.
+- La carga exige que las `necesita` estén resueltas (EST-01 y PAD-01), como
+  toda asistida. Deja el insumo `planilla_padron` como recibido si no lo estaba.
+- Lo que se devuelve del ensayo trae identificación y nombre de las filas con
+  problema (lo ve el equipo, que ya tiene la planilla); NADA de eso entra en
+  movimientos, en `UsoIA` ni en lo que leen las herramientas de «Preguntame».
+
+## Pantalla (sigue genérica)
+
+- Momento 2 suma, si el ensayo trae `mapeo`, el bloque «Columnas de la
+  planilla»: una fila por columna con su cabecera, tres valores de muestra y
+  un selector de campo; «Volver a ensayar con estas columnas». Si `faltan`,
+  se abre solo ese bloque con el aviso de qué campo obligatorio no tiene columna.
+- Opciones `numero` como campo numérico. `motivos` como lista resumida arriba
+  de la tabla (cada motivo filtra la tabla); aviso si `filas_truncadas`.
+- Momento 4: si la respuesta trae `carga.comparacion: {declarado, cargado, diferencia}` se muestra destacada.
