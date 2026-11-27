@@ -36,13 +36,24 @@ async function marcar(page, marcas) {
       const c = document.createElement('div');
       c.className = 'tut-marca';
       c.textContent = m.n;
-      c.style.cssText = `position:absolute;z-index:99999;width:26px;height:26px;border-radius:50%;background:${color};color:#fff;font:700 15px/26px system-ui,sans-serif;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35);left:${r.left + scrollX - 13}px;top:${r.top + scrollY - 13}px;pointer-events:none`;
+      c.style.cssText = `position:absolute;z-index:99999;width:26px;height:26px;border-radius:50%;background:${color};color:#fff;font:700 15px/26px system-ui,sans-serif;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35);left:${r.left + scrollX - 13 + (m.dx || 0)}px;top:${r.top + scrollY - 13 + (m.dy || 0)}px;pointer-events:none`;
       document.body.appendChild(c);
       quitar.push(() => c.remove());
     });
     window.__quitarMarcas = () => quitar.forEach(f => f());
     return true;
   }, [marcas, ORANGE]);
+}
+
+// Abre un bloque plegado de la ficha (details.pleg) por el texto de su h3, si está cerrado.
+async function abrirBloque(page, titulo) {
+  await page.evaluate(t => {
+    const h = [...document.querySelectorAll('details.pleg h3')].find(x => x.textContent.includes(t));
+    if (!h) throw new Error('no hay bloque plegado: ' + t);
+    const d = h.closest('details');
+    if (!d.open) d.querySelector('summary').click();
+  }, titulo);
+  await sleep(400);
 }
 
 async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, clipH3 = '' } = {}) {
@@ -83,20 +94,24 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   // 2. La Guía
   await ir();
   await foto(page, '02-guia', { sel: '.app', marcas: [{ css: '#x-avance', n: 1 }, { css: '.heroe', n: 2 }, { css: '.otras', n: 3 }, { css: '.pano', n: 4 }] });
+  // 2b. Moverse entre los pasos: Atrás y Adelante (un paso que no es el recomendado)
+  await page.click('#x-adelante'); await sleep(900);
+  await foto(page, '36-guia-atras-adelante', { sel: '.heroe', pad: 14, marcas: [{ css: '#x-atras', n: 1 }, { css: '#x-adelante', n: 2 }, { css: '.heroe .rot-f .rot', n: 3, dx: -22 }, { css: '.heroe .rot-f .enlace', n: 4, dx: -14 }] });
 
   // 3. La ficha de una tarea (EST-01)
   await ir('?tarea=EST-01');
-  await foto(page, '03-ficha-est01', { sel: '.app', marcas: [{ h3: 'Lo que dice el control', n: 1 }, { css: '.btn.donde', n: 2 }, { css: '.ficha .aviso', n: 3 }] });
+  await abrirBloque(page, 'Lo que dice el control');
+  await foto(page, '03-ficha-est01', { sel: '.app', marcas: [{ h3: 'Lo que dice el control', n: 1 }, { css: '.btn.donde', n: 2 }, { css: '.sr-aviso', n: 3 }] });
 
   // 4. Pedir un dato al sindicato, a mano (REC-01, «Recibos de muestra»)
   await ir('?tarea=REC-01');
-  await foto(page, '04-rec01-falta', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Marcar pedido', n: 2 }] });
+  await foto(page, '04-rec01-falta', { sel: '.ficha', marcas: [{ h3: 'Se espera del sindicato', n: 1 }, { btn: 'Marcar pedido', n: 2 }] });
   await page.click('button:has-text("Marcar pedido")'); await sleep(300);
   await page.fill('#x-ins-tarjeta', cfg.tarjetas[2]);
   await page.fill('#x-ins-nota', 'Se lo pedimos a Marcela, de Afiliaciones.');
   await foto(page, '06-rec01-form-pedido', { sel: '.ficha', marcas: [{ css: '#x-ins-tarjeta', n: 1 }] });
   await form(); await sleep(500);
-  await foto(page, '07-rec01-pedido', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }] });
+  await foto(page, '07-rec01-pedido', { sel: '.ficha', marcas: [{ h3: 'Se espera del sindicato', n: 1 }] });
 
   // 4b. Preguntame sobre el paso recomendado (Guía)
   const abrirPm = async (punto) => { await page.click(`.pm[data-punto="${punto}"] .pm-t`); await sleep(700); };
@@ -129,7 +144,7 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
 
   // 4e. El asistente propone un reclamo (PAD-01, «Padrón recibido»)
   await ir('?tarea=PAD-01');
-  await foto(page, '04-pad01-falta', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Reclamar en la Mesa', n: 2 }] });
+  await foto(page, '04-pad01-falta', { sel: '.ficha', marcas: [{ h3: 'Se espera del sindicato', n: 1 }, { btn: 'Reclamar en la Mesa', n: 2 }] });
   await abrirPm('tarea');
   await page.click('.pm[data-punto="tarea"] .pm-sug >> nth=0');
   await esperaResp('tarea');
@@ -139,7 +154,7 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await ta.fill(previo + ' Si la tienen en Excel, mejor.');
   await foto(page, '29-pm-propuesta-editada', { sel: '.pm[data-punto="tarea"] form.rc', pad: 14, marcas: [{ css: '.pm[data-punto="tarea"] form.rc textarea', n: 1 }] });
   await page.click('.pm[data-punto="tarea"] form.rc button[type=submit]'); await sleep(1800);
-  await foto(page, '30-reclamo-creado', { sel: '.app', maxAlto: 1300, marcas: [{ css: '.aviso.exito', n: 1 }, { h3: 'Insumos', n: 2 }] });
+  await foto(page, '30-reclamo-creado', { sel: '.app', maxAlto: 1300, marcas: [{ css: '.aviso.exito', n: 1 }, { h3: 'Se espera del sindicato', n: 2 }] });
   await page.goto(`${BASE}/implementacion?p=${PID}`); await sleep(1800);
   await page.click('text=Necesitamos: Planilla del padrón >> nth=0').catch(() => {});
   await sleep(500);
@@ -172,6 +187,7 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await foto(page, '09-pad01-recibido', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Insumos', n: 2 }] });
   // 5c. Confirmar
   await page.click('button.btn.p:text-is("Confirmar")'); await sleep(1100);
+  await abrirBloque(page, 'Decisiones activas');
   await foto(page, '10-pad01-confirmada', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Decisiones activas', n: 2 }] });
 
   // 6. Un error: completar a mano sin motivo (BAS-02)
@@ -182,12 +198,14 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   // 7. Completada a mano, con motivo
   await page.fill('#x-motivo', 'El logo lo carga plataforma el lunes; no frena el resto.');
   await form(); await sleep(500);
+  await abrirBloque(page, 'Lo que calcula el control'); await abrirBloque(page, 'Decisiones activas');
   await foto(page, '12-bas02-a-mano', { sel: '.ficha', marcas: [{ css: '.ficha .marca-t.mano', n: 1 }, { h3: 'Lo que calcula el control', n: 2 }, { h3: 'Decisiones activas', n: 3 }, { btn: 'Deshacer: completada a mano', n: 4 }] });
   await ir('?vista=tablero');
   await page.click('.filtros button:has-text("Completadas a mano")'); await sleep(500);
   await foto(page, '13-tablero-a-mano', { sel: '.app', marcas: [{ css: '.filtros button[aria-pressed="true"]', n: 1 }, { css: 'tbody .marca-t', n: 2 }] });
   await ir('?tarea=BAS-02');
   await page.click('button:has-text("Deshacer: completada a mano")'); await sleep(1100);
+  await abrirBloque(page, 'Historial de la tarea');
   await foto(page, '14-bas02-deshecha', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { css: '.ficha .hist', n: 2 }] });
 
   // 8. No aplica y posponer
@@ -218,6 +236,7 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await ir();
   await foto(page, '21-guia-movimientos', { sel: '.pano', marcas: [{ css: '.pano .log', n: 1 }] });
   await ir('?tarea=PAD-01');
+  await abrirBloque(page, 'Historial de la tarea');
   await foto(page, '22-pad01-historial', { sel: '.ficha', marcas: [{ h3: 'Historial de la tarea', n: 1 }] });
 
   console.log('errores de consola:', JSON.stringify(errs));

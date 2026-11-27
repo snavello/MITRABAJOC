@@ -41,3 +41,10 @@ La miniatura `recursos/xsii-tutorial.jpg` (640x400) es una captura de la portada
   recibido» (PAD-01), para que cada insumo tenga su historia limpia. El peso del HTML va por `ANCHOS` y la
   calidad JPEG de `armar.py` (tope 6 MB).
 - Sin fuentes ni scripts externos: la CSP de la app solo permite lo propio.
+- Rediseño de la pantalla (2026-11-27): «Preguntame» es un botón amarillo arriba (héroe y cabecera de la ficha), la
+  Guía tiene Atrás/Adelante (`#x-atras`, `#x-adelante`) y la ficha la botonera `.fnav`; el insumo vive en la banda
+  «Se espera del sindicato» (se llama «Insumos» solo cuando todos llegaron). Los bloques «Lo que dice el control»,
+  «Decisiones activas», «Historial de la tarea» y «Necesita y destraba» van plegados (`details.pleg`): `capturar.js`
+  los abre con `abrirBloque(page, 'título')` antes de fotografiarlos. Las marcas aceptan `dx`/`dy` para correr el
+  círculo cuando taparía el texto. Paso nuevo «Moverse entre los pasos» (captura `36-guia-atras-adelante`).
+  Ahora son 20 pasos y 37 figuras; el HTML pesa ~5,4 MB (ancho `full` 1200 y JPEG 68 en `armar.py`).
