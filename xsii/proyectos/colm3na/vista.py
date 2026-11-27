@@ -24,6 +24,7 @@ from xsii.motor import consulta, estados
 from xsii.motor.catalogo import MODOS
 
 from . import tablero as tablero_mod
+from .asistidas import ASISTIDAS, ErrorAsistida, huella
 from .catalogo import GRUPOS, INSUMOS, TAREAS
 
 POR_CODIGO = {t.codigo: t for t in TAREAS}
@@ -311,6 +312,7 @@ def tarea_json(ctx: Contexto, codigo: str) -> dict:
         "pospuesta": e.pospuesta, "no_aplica_por": e.no_aplica_por,
         "falta_confirmar": e.falta_confirmar, "confirmacion": t.confirmacion,
         "detalle": _detalle(ctx, t, e),
+        "asistida": codigo in ASISTIDAS,
         "necesita": list(t.necesita), "mejora_con": list(t.mejora_con),
         "frenada_por": [] if e.resuelta else list(e.frenada_por), "avisos": list(e.avisos),
         "camino": [] if e.resuelta else consulta.que_frena(ctx.tareas, ctx.tb, codigo),
@@ -451,3 +453,95 @@ def registrar_insumo(s, ctx: Contexto, actor, clave: str, estado: str, tarjeta, 
 
 def retirar_insumo(s, ctx: Contexto, actor, clave: str) -> None:
     db.xsii_retirar_insumo(s, ctx.pid, actor, clave, INSUMOS[clave]["nombre"])
+
+
+# ------------------------------------------------------------------ tareas asistidas (bloque 3)
+
+def _modulo_asistido(codigo: str):
+    """El módulo registrado para la tarea, o 404 (`XsiiError`) si no es asistida."""
+    modulo = ASISTIDAS.get(codigo)
+    if modulo is None:
+        raise db.XsiiError(404, "Esta tarea no tiene carga desde planilla.")
+    return modulo
+
+
+def asistida_json(ctx: Contexto, codigo: str) -> dict:
+    """`GET .../asistida`: si hay carga desde planilla para la tarea y cómo es."""
+    if codigo not in POR_CODIGO:
+        raise db.XsiiError(404, "No existe la tarea.")
+    modulo = ASISTIDAS.get(codigo)
+    if modulo is None:
+        return {"disponible": False, "motivo": "Esta tarea no tiene carga desde planilla."}
+    salida = {"disponible": True, "motivo": ""}
+    if not ctx.disponible:
+        salida.update(disponible=False, motivo=ctx.motivo_no_disponible)
+    elif ctx.tb[codigo].estado == "no_aplica":
+        salida.update(disponible=False, motivo="Esta tarea no aplica a este sindicato: no hay nada que cargar.")
+    salida.update(modulo.describir())
+    return salida
+
+
+def _exigir_asistida_disponible(ctx: Contexto, codigo: str):
+    modulo = _modulo_asistido(codigo)
+    if not ctx.disponible:
+        raise db.XsiiError(409, ctx.motivo_no_disponible)
+    if ctx.tb[codigo].estado == "no_aplica":
+        raise db.XsiiError(409, "Esta tarea no aplica a este sindicato: no hay nada que cargar.")
+    return modulo
+
+
+def asistida_ensayar(s, ctx: Contexto, codigo: str, contenido: bytes, opciones) -> dict:
+    """El ensayo: no escribe nada (ni movimiento). Las tareas que esta necesita y
+    no están resueltas NO lo frenan."""
+    modulo = _exigir_asistida_disponible(ctx, codigo)
+    try:
+        return modulo.ensayar(s, ctx.sindicato_id, contenido, opciones)
+    except ErrorAsistida as e:
+        raise db.XsiiError(e.estado, e.mensaje)
+
+
+def _plural(n: int, uno: str, varios: str) -> str:
+    return f"{n} {uno if n == 1 else varios}"
+
+
+def asistida_cargar(s, ctx: Contexto, actor, codigo: str, contenido: bytes, opciones, huella_ensayo: str,
+                    dejar_afuera) -> dict:
+    """La carga, todo o nada. Adentro del candado de la tarea: reescribe lo que
+    el ensayo mostró, deja el movimiento `asistida_carga`, el insumo `recibido` y
+    devuelve lo que se escribió. La ruta hace el commit y vuelve a calcular el
+    tablero para el control. Levanta `XsiiError` (400, 409)."""
+    modulo = _exigir_asistida_disponible(ctx, codigo)
+    estado = ctx.tb[codigo]
+    if estado.estado == "bloqueada":
+        nombres = _lista_y([POR_CODIGO[c].nombre for c in estado.frenada_por])
+        raise db.XsiiError(409, f"Primero tiene que estar resuelta: {nombres}.")
+    try:
+        opciones = modulo.normalizar_opciones(opciones)
+        if not huella_ensayo or huella_ensayo != huella(contenido, opciones):
+            raise db.XsiiError(409, "El archivo cambió desde el ensayo: volvé a ensayar antes de cargar.")
+        db.xsii_candado_de_tarea(s, ctx.pid, codigo)
+        carga = modulo.cargar(s, ctx.sindicato_id, contenido, opciones, dejar_afuera)
+    except ErrorAsistida as e:
+        s.rollback()
+        raise db.XsiiError(e.estado, e.mensaje)
+    if not carga["creadas"] and not carga["actualizadas"]:
+        s.rollback()
+        raise db.XsiiError(409, "No hay nada para cargar: todo está rechazado, afuera o ya existe sin cambios.")
+    t = POR_CODIGO[codigo]
+    cantidades = {k: carga[k] for k in ("creadas", "actualizadas", "sin_tocar", "afuera", "rechazadas")}
+    texto = (f"Cargó {_plural(carga['creadas'], 'seccional', 'seccionales')} desde planilla "
+             f"({_plural(carga['actualizadas'], 'actualizada', 'actualizadas')}, {carga['afuera']} afuera)")
+    clave = modulo.describir()["insumo"]
+    db.xsii_registrar_carga_asistida(s, ctx.pid, actor, codigo, t.nombre, clave, INSUMOS[clave]["nombre"],
+                                     texto, cantidades)
+    return carga
+
+
+def asistida_resultado(ctx_antes: Contexto, ctx_despues: Contexto, codigo: str, carga: dict) -> dict:
+    """La respuesta de la carga, armada con el tablero ya recalculado."""
+    tarea = tarea_json(ctx_despues, codigo)
+    antes = {c: e.estado for c, e in ctx_antes.tb.items()}
+    destrabo = [{"codigo": c, "nombre": POR_CODIGO[c].nombre} for c, e in ctx_despues.tb.items()
+                if antes.get(c) == "bloqueada" and e.estado != "bloqueada"]
+    return {"carga": carga, "control": tarea["control"], "tarea": tarea, "destrabo": destrabo,
+            "tablero_resumen": consulta.resumen(ctx_despues.tb)}

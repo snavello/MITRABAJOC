@@ -547,3 +547,28 @@ En la ficha de una tarea con asistida disponible, dentro de «Qué tenés que ha
 3. **Carga**: botón «Cargar N seccionales» con confirmación que repite las cifras; mientras corre, sin doble envío.
 4. **Control**: resultado del control, cifras, qué se destrabó (con enlace a cada ficha) y qué falta (confirmar; ubicar las que quedaron sin ubicar → EST-02).
 «Volver a ensayar» siempre a mano. Todo texto del servidor como nodo de texto.
+
+## Notas de implementación (Bloque 3)
+
+- **Forma del `resumen` de una fila**: solo textos con valor, legibles tal cual:
+  `nombre`, `direccion`, `sede_central` (`"Sede Central"`, o ausente), `ubicacion` (`"Con ubicación"` /
+  `"Sin ubicar"`, ausente en una rechazada) y `accion` (`crear` | `actualizar` | `sin_tocar`, ausente en una rechazada).
+  Una rechazada sin nombre no trae `nombre`. Nunca booleanos.
+- **Ensayo**: además del contrato trae `a_escribir` (cuántas filas escribiría la carga) y `opciones` (las normalizadas).
+  `muestra` son las primeras 5 filas. Campos del multipart: `archivo` (o `texto`; si el archivo viene vacío vale el texto),
+  `opciones` (JSON), y en la carga `huella` y `dejar_afuera` (JSON, lista de enteros).
+- **Carga**: `carga` suma `rechazadas` y `avisos`; `detalle` es `[{linea, nombre, accion}]` con `accion`
+  `creada` | `actualizada` | `sin_tocar` | `afuera` | `rechazada`. La respuesta trae además `ok: true`. `control` es el
+  del `tarea.control` ya recalculado. Una `actualizada` cuenta solo si algo cambió; si no, es `sin_tocar` (por eso cargar
+  dos veces lo mismo da 409 «No hay nada para cargar»).
+- **Huella**: SHA-256 del archivo más las opciones normalizadas; una huella ausente o distinta es 409 «El archivo cambió desde el ensayo…».
+- **`dejar_afuera`**: solo vale para filas dudosas; una línea que no es dudosa se ignora (no es error).
+- **`ya_existe` se actualiza con cuidado**: lo vacío de la planilla no pisa lo cargado, `ve_todas` nunca baja, y las
+  coordenadas actuales se conservan mientras el domicilio no cambie (si cambió y la planilla no trae coordenadas, queda `sin_geo`).
+- **Texto del movimiento**: «Cargó N seccional(es) desde planilla (M actualizada(s), K afuera)»; con 1 va en singular.
+  El movimiento es `asistida_carga` (con `codigo` y `clave_insumo`, así sale en el historial de la tarea) y, si el insumo
+  no estaba recibido, se suma un `insumo_recibido` en la misma transacción.
+- **409 de la carga**: tarea bloqueada («Primero tiene que estar resuelta: …»), no aplica, proyecto sin sindicato,
+  huella distinta, o nada para escribir. El ensayo solo da 409 sin sindicato o si no aplica.
+- **`disponible=false`** igual trae `describir()` cuando la tarea tiene módulo (la pantalla puede mostrar la guía).
+- Sin migración: `XsiiMovimiento.tipo` es texto libre.
