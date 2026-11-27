@@ -26,6 +26,8 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
 import asyncio
+import functools
+from sqlalchemy.exc import IntegrityError as _IntegrityErrorXsii
 import logging
 import os
 import re
@@ -13852,22 +13854,49 @@ def _xsii_ia_tope() -> int:
         return XSII_IA_TOPE_DEFECTO
 
 
+def _xsii_ia_marcas_de(actor_id, ahora) -> list:
+    """Las marcas vigentes (de la última hora) de un usuario; purga las vencidas de la tabla."""
+    marcas = [m for m in _xsii_ia_marcas.get(actor_id, []) if ahora - m < XSII_IA_VENTANA_S]
+    if marcas:
+        _xsii_ia_marcas[actor_id] = marcas
+    else:
+        _xsii_ia_marcas.pop(actor_id, None)
+    return marcas
+
+
+def _xsii_ia_tope_agotado(marcas, ahora) -> None:
+    if len(marcas) >= _xsii_ia_tope():
+        minutos = max(1, int((XSII_IA_VENTANA_S - (ahora - marcas[0]) + 59) // 60))
+        raise HTTPException(429, f"Hiciste muchas preguntas seguidas. Podés volver a preguntar en {minutos} "
+                                 f"{'minuto' if minutos == 1 else 'minutos'}.")
+
+
+def _xsii_ia_mirar(actor) -> None:
+    """Levanta 429 si el tope está agotado, SIN gastarlo: se mira antes de armar el tablero."""
+    import time
+    ahora = time.time()
+    with _xsii_ia_candado:
+        _xsii_ia_tope_agotado(_xsii_ia_marcas_de(actor.id, ahora), ahora)
+
+
 def _xsii_ia_frenar(actor) -> None:
     """Cuenta esta consulta o levanta 429 con cuándo se puede volver a preguntar."""
     import time
     ahora = time.time()
     with _xsii_ia_candado:
-        marcas = [m for m in _xsii_ia_marcas.get(actor.id, []) if ahora - m < XSII_IA_VENTANA_S]
-        if len(marcas) >= _xsii_ia_tope():
-            _xsii_ia_marcas[actor.id] = marcas
-            minutos = max(1, int((XSII_IA_VENTANA_S - (ahora - marcas[0]) + 59) // 60))
-            raise HTTPException(429, f"Hiciste muchas preguntas seguidas. Podés volver a preguntar en {minutos} "
-                                     f"{'minuto' if minutos == 1 else 'minutos'}.")
+        marcas = _xsii_ia_marcas_de(actor.id, ahora)
+        _xsii_ia_tope_agotado(marcas, ahora)
         marcas.append(ahora)
         _xsii_ia_marcas[actor.id] = marcas
         if len(_xsii_ia_marcas) > 5000:        # que la tabla no crezca sin límite
-            _xsii_ia_marcas.clear()
-            _xsii_ia_marcas[actor.id] = marcas
+            for uid in list(_xsii_ia_marcas):  # primero se purgan las marcas vencidas (más de una hora)
+                _xsii_ia_marcas_de(uid, ahora)
+            if len(_xsii_ia_marcas) > 5000:    # aun así: se van las de actividad más vieja, nunca quien está al tope
+                al_tope = _xsii_ia_tope()
+                viejas = sorted((u for u, m in _xsii_ia_marcas.items() if u != actor.id and len(m) < al_tope),
+                                key=lambda u: max(_xsii_ia_marcas[u]))
+                for uid in viejas[:len(_xsii_ia_marcas) - 5000]:
+                    _xsii_ia_marcas.pop(uid, None)
 
 
 @app.post(API_XSII + "/p/{pid}/preguntar")
@@ -13889,15 +13918,16 @@ def api_xsii_preguntar(pid: IdImpl, actor=Depends(_xsii_equipo), datos: dict = D
         disponible, _simulado = xsii_asistente.estado()
         if not disponible:
             raise HTTPException(409, "No hay clave de la API configurada.")
+        _xsii_ia_mirar(actor)                  # con el tope agotado no se arma el tablero (no lo gasta)
         inst = xsii_herr.Instantanea.armar(s, ctx)
         sindicato_id = ctx.sindicato_id
     # La sesión ya se cerró: lo que sigue puede tardar sin retener una conexión del pool.
-    _xsii_ia_frenar(actor)
+    _xsii_ia_frenar(actor)                     # recién acá se gasta, justo antes de llamar al modelo
     modelo = db.modelo_ia("xsii")
     r = xsii_asistente.consultar(
         modelo=modelo, sistema=xsii_herr.SISTEMA, punto=punto, codigo=codigo, pregunta=pregunta,
         herramientas=xsii_herr.herramientas(inst), codigos_validos=xsii_herr.CODIGOS,
-        simular=xsii_herr.simular, opciones=_extractor_xsii._opciones(modelo))
+        simular=functools.partial(xsii_herr.simular, inst=inst), opciones=_extractor_xsii._opciones(modelo))
     uso = r.get("uso")
     if uso:                                   # también si terminó en texto fijo o error: ya se pagó
         try:
@@ -13934,6 +13964,9 @@ def api_xsii_reclamo(request: Request, pid: IdImpl, clave: str, actor=Depends(_x
                 s, pid, actor, clave, xsii_vista.INSUMOS[clave]["nombre"], titulo, texto)
         except db.XsiiError as e:
             raise HTTPException(e.estado, e.mensaje)
+        except _IntegrityErrorXsii:            # un choque de único nunca llega como 500
+            s.rollback()
+            raise HTTPException(409, "Otro pedido se cruzó con este. Probá de nuevo.")
         aviso = None
         try:
             if tarjeta.lado_que_espera and tarjeta.lado_que_espera != actor.lado:

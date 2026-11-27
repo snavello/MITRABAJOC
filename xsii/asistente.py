@@ -122,16 +122,24 @@ def armar_mensaje(punto: str, codigo: str, pregunta: str) -> str:
 
 # ---------------------------------------------------------------- validación
 _URL = re.compile(
-    r"(https?:|ftp:|www\.|://|\b[a-z0-9][a-z0-9-]*\.(?:com|net|org|gob|gov|edu|info|biz|io|ar|app|me|co|xyz|ly|ru|cn|es|mx|cl|uy|br|tk)\b"
+    r"(https?:|ftp:|www\.|://"
+    # cualquier `palabra.tld` con forma de dominio: TLD de 2 a 24 letras en MINUSCULA (una frase normal con el
+    # punto pegado a la palabra siguiente, «hecha.La siguiente», arranca esa palabra con mayuscula), o los
+    # TLD de siempre en cualquier caso (EJEMPLO.COM).
+    r"|\b[a-z0-9][a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?-i:[a-z]{2,24})\b"
+    r"|\b[a-z0-9][a-z0-9-]*\.(?:com|net|org|gob|gov|edu|info|biz|io|ar|app|me|co|xyz|ly|ru|cn|es|mx|cl|uy|br|tk)\b"
     r"|[\w.+-]+@[\w-]+\.\w|(?<!\w)@\w)", re.I)
 _MARCAS = re.compile(r"[*#`|~<>\[\]{}\\]")
-_NUMERO = re.compile(r"\d+")
+# Un numero: miles con punto o coma (1.234, 1.234.567, 1,234) con decimales opcionales, decimal con coma o punto, o entero.
+_NUMERO = re.compile(r"\d+(?:[.,]\d{3})+(?!\d)(?:[.,]\d+)?|\d+[.,]\d+|\d+")
+_ESPACIOS_DE_MILES = re.compile(r"(?<=\d)[\u2009\u202f\u00a0](?=\d{3}(?!\d))")
+_GUIONES = dict.fromkeys(map(ord, "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"), "-")
 
 
 def forma_invalida(texto: str) -> str:
     """Motivo si el texto tiene una forma que no corresponde a una respuesta de
     esta pantalla (enlace, mail, marcas de formato, invisibles); '' si está bien."""
-    if any(unicodedata.category(c) in ("Cf", "Co", "Cs", "Cn")
+    if any(unicodedata.category(c) in ("Cf", "Co", "Cs", "Cn", "Zl", "Zp")
            or (unicodedata.category(c) == "Cc" and c != "\n") for c in texto):
         return "caracteres invisibles o de control"
     if _URL.search(unicodedata.normalize("NFKC", texto)):
@@ -141,12 +149,58 @@ def forma_invalida(texto: str) -> str:
     return ""
 
 
+def _ascii(digitos: str) -> str:
+    return "".join(str(unicodedata.digit(c, 0)) if not c.isascii() else c for c in digitos)
+
+
+def _canon(entero: str, frac: str = "") -> str:
+    e = entero.lstrip("0") or "0"
+    f = frac.rstrip("0")
+    return f"{e}.{f}" if f else e
+
+
+def _candidatos(token: str) -> set:
+    """Las lecturas posibles de un numero, canonicas: «1.234» es 1234 o 1,234; «12,5» es 12.5."""
+    t = _ascii(token)
+    seps = [c for c in t if c in ".,"]
+    if not seps:
+        return {_canon(t)}
+    partes = re.split(r"[.,]", t)
+    ultimo = partes[-1]
+    if len(set(seps)) == 1 and len(seps) == 1:
+        a, b = partes
+        if len(b) == 3:                                  # 1.234: miles o decimal
+            return {_canon(a + b), _canon(a, b)}
+        return {_canon(a, b)}
+    if len(set(seps)) == 1:                              # 1.234.567: solo miles
+        return {_canon("".join(partes))}
+    return {_canon("".join(partes[:-1]), ultimo)}        # 1.234,56
+
+
+def _tokens(texto: str) -> list:
+    t = _ESPACIOS_DE_MILES.sub(".", texto)
+    return _NUMERO.findall(unicodedata.normalize("NFKC", t))
+
+
 def _numeros(texto: str) -> set:
-    return {int(n) for n in _NUMERO.findall(texto) if len(n) <= 12}
+    """Todo lo que las herramientas (o la pregunta) dicen como numero, entero y por pedazos."""
+    out = set()
+    for tok in _tokens(texto):
+        out |= _candidatos(tok)
+        out |= {_canon(_ascii(p)) for p in re.split(r"[.,]", tok)}
+    return out
+
+
+def _cifra_inventada(texto: str, permitidos: set) -> str:
+    """El primer numero de 2 o mas digitos que no sale de lo permitido, o ''."""
+    for tok in _tokens(texto):
+        if sum(c.isdigit() for c in tok) >= 2 and not (_candidatos(tok) & permitidos):
+            return tok
+    return ""
 
 
 def validar(texto, *, visto: str = "", pregunta: str = "", codigos_validos=(),
-            patron_codigo: str = PATRON_CODIGO) -> dict:
+            patron_codigo: str = PATRON_CODIGO, maximo: int = RESPUESTA_MAX) -> dict:
     """Decide si el texto final del modelo se muestra. Puro.
     `visto`: todo lo que devolvieron las herramientas de ESTA consulta (texto).
     Devuelve `{"ok": bool, "motivo": str, "texto": str, "codigos": [...]}`."""
@@ -157,22 +211,21 @@ def validar(texto, *, visto: str = "", pregunta: str = "", codigos_validos=(),
     t = texto.strip()
     if not t:
         return no("respuesta vacía")
-    if len(t) > RESPUESTA_MAX:
+    if len(t) > maximo:
         return no("respuesta demasiado larga")
     if (m := forma_invalida(t)):
         return no(m)
     validos = set(codigos_validos)
     codigos = []
-    for c in re.findall(patron_codigo, t):
+    # Los codigos se buscan en MAYUSCULAS y con guion ASCII: `zzz-07` y `ZZZ\u201107` tampoco pasan.
+    for c in re.findall(patron_codigo, unicodedata.normalize("NFKC", t).translate(_GUIONES).upper()):
         if c not in validos:
             return no(f"nombra una tarea que no existe ({c})")
         if c not in codigos:
             codigos.append(c)
-    sin_codigos = re.sub(patron_codigo, " ", t)
-    permitidos = _numeros(visto) | _numeros(pregunta)
-    for n in _NUMERO.findall(sin_codigos):
-        if len(n) >= 2 and len(n) <= 12 and int(n) not in permitidos:
-            return no(f"cifra que no sale de las herramientas ({n})")
+    sin_codigos = re.sub(patron_codigo, " ", unicodedata.normalize("NFKC", t).translate(_GUIONES).upper())
+    if (n := _cifra_inventada(sin_codigos, _numeros(visto) | _numeros(pregunta))):
+        return no(f"cifra que no sale de las herramientas ({n})")
     return {"ok": True, "motivo": "", "texto": t, "codigos": codigos}
 
 
@@ -254,6 +307,23 @@ def _definiciones(herramientas: dict) -> list:
     return tools
 
 
+def _propuesta_valida(corrida, pregunta, codigos_validos, patron_codigo):
+    """La propuesta de reclamo pasa por las MISMAS reglas que la respuesta (forma,
+    cifras, codigos): se vuelve una tarjeta que lee el sindicato. Si no pasa se
+    descarta, y la respuesta puede seguir."""
+    p = corrida.propuesta
+    if not isinstance(p, dict):
+        return None
+    visto = "\n".join(corrida.visto)
+    for campo, tope in (("titulo", 120), ("texto", 1000)):
+        v = validar(p.get(campo), visto=visto, pregunta=pregunta, codigos_validos=codigos_validos,
+                    patron_codigo=patron_codigo, maximo=tope)
+        if not v["ok"]:
+            print(f"[xsii-ia] propuesta descartada ({campo}: {v['motivo']})")
+            return None
+    return p
+
+
 def _salida(resultado, texto, motivo, corrida, uso, vueltas, modelo, simulado, codigos=(), propuesta=None) -> dict:
     return {"resultado": resultado, "texto": texto, "motivo": motivo, "codigos": list(codigos),
             "propuesta": propuesta if resultado == "respondida" else None,
@@ -285,8 +355,9 @@ def consultar(*, modelo: str, sistema: str, punto: str, codigo: str, pregunta: s
             texto = None
         v = validar(texto, visto="\n".join(corrida.visto), pregunta=pregunta,
                     codigos_validos=codigos_validos, patron_codigo=patron_codigo)
+        prop = _propuesta_valida(corrida, pregunta, codigos_validos, patron_codigo) if v["ok"] else None
         return _salida("respondida" if v["ok"] else "fija", v["texto"], v["motivo"], corrida, None, 0,
-                       "simulado", True, v["codigos"], corrida.propuesta)
+                       "simulado", True, v["codigos"], prop)
     cli = cliente()
     uso = _Uso(modelo)
     if cli is None or not disponible:
@@ -334,11 +405,13 @@ def consultar(*, modelo: str, sistema: str, punto: str, codigo: str, pregunta: s
                 continue
             if parada != "end_turn":
                 return fija(f"terminó por {parada}", vueltas)
-            final = "".join(getattr(b, "text", "") for b in contenido if getattr(b, "type", "") == "text")
+            final = " ".join(x for x in (str(getattr(b, "text", "") or "").strip() for b in contenido
+                                         if getattr(b, "type", "") == "text") if x)
             v = validar(final, visto="\n".join(corrida.visto), pregunta=pregunta,
                         codigos_validos=codigos_validos, patron_codigo=patron_codigo)
+            prop = _propuesta_valida(corrida, pregunta, codigos_validos, patron_codigo) if v["ok"] else None
             return _salida("respondida" if v["ok"] else "fija", v["texto"], v["motivo"], corrida, uso, vueltas,
-                           modelo, False, v["codigos"], corrida.propuesta)
+                           modelo, False, v["codigos"], prop)
         return fija("se agotaron las vueltas", vueltas)
     except Exception as e:          # noqa: BLE001 - red, saldo, tiempo, 4xx/5xx: se informa, no se esconde
         print(f"[xsii-ia] la API falló ({type(e).__name__}: {e})")

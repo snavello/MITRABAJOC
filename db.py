@@ -10766,7 +10766,7 @@ def _impl_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, bloquear: bool 
     """La tarjeta SOLO si es de ese proyecto."""
     q = select(ImplTarjeta).where(ImplTarjeta.id == tarjeta_id, ImplTarjeta.proyecto_id == proyecto_id)
     if bloquear:
-        q = q.with_for_update()
+        q = q.with_for_update().execution_options(populate_existing=True)
     return s.exec(q).first()
 
 
@@ -10780,7 +10780,7 @@ def _impl_siguiente(s: Session, proyecto_id: int, prefijo: str) -> int:
         proyecto_id=proyecto_id, prefijo=prefijo, ultimo=0).on_conflict_do_nothing(
         index_elements=["proyecto_id", "prefijo"]))
     c = s.exec(select(ImplContador).where(ImplContador.proyecto_id == proyecto_id,
-                                          ImplContador.prefijo == prefijo).with_for_update()).one()
+                                          ImplContador.prefijo == prefijo).with_for_update().execution_options(populate_existing=True)).one()
     c.ultimo += 1
     s.add(c)
     s.flush()
@@ -10835,7 +10835,7 @@ def impl_agregar_hito(s: Session, proyecto_id: int, etapa_id: int, texto: str, a
         raise implementacion.ErrorImpl("sin_permiso", "El plan lo edita el equipo.")
     # La etapa se bloquea: dos altas a la vez no calculan el mismo `orden` (QA-16).
     et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)
-                .with_for_update()).first()
+                .with_for_update().execution_options(populate_existing=True)).first()
     texto = _L(texto)
     if not et:
         return None
@@ -10860,7 +10860,7 @@ def impl_tildar_hito(s: Session, proyecto_id: int, hito_id: int, actor, hecho: b
     transacción de quien llama."""
     a = _impl_actor(actor)
     h = s.exec(select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
-               .with_for_update()).first()
+               .with_for_update().execution_options(populate_existing=True)).first()
     if not h:
         return None
     if h.hecho != bool(hecho):
@@ -10912,7 +10912,7 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
     if not v["ok"]:
         raise implementacion.ErrorImpl("invalida", "; ".join(v["errores"].values()))
     d = v["datos"]
-    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first()
+    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first()
     if not proy:
         return None
     if etapa_id is not None and not s.exec(select(ImplEtapa.id).where(
@@ -11093,7 +11093,7 @@ def impl_editar_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, actor, **
     if "texto" in nuevos:
         msg = s.exec(select(ImplMensaje).where(
             ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == t.id,
-            ImplMensaje.orden == 1, ImplMensaje.solo_equipo == False).with_for_update()).first()  # noqa: E712
+            ImplMensaje.orden == 1, ImplMensaje.solo_equipo == False).with_for_update().execution_options(populate_existing=True)).first()  # noqa: E712
         if not msg:
             raise implementacion.ErrorImpl("texto", "La tarjeta no tiene un planteo para corregir.")
     # Fase y hito: la fase final y el hito final tienen que ser del proyecto y coincidir.
@@ -11466,7 +11466,7 @@ def impl_borrar_archivo(s: Session, proyecto_id: int, archivo_id: int, actor) ->
     quién lo borró). Lo borra el equipo o quien lo subió."""
     a = _impl_actor(actor)
     arch = s.exec(select(ImplArchivo).options(*_sin_bytes(ImplArchivo)).where(
-        ImplArchivo.id == archivo_id, ImplArchivo.proyecto_id == proyecto_id).with_for_update()).first()
+        ImplArchivo.id == archivo_id, ImplArchivo.proyecto_id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first()
     if not arch or not _impl_archivo_visible(s, arch, a.lado):
         return None
     if arch.borrado_en:
@@ -11848,7 +11848,7 @@ def _impl_exigir_equipo(actor) -> "implementacion.Actor":
 
 def _impl_hito(s: Session, proyecto_id: int, hito_id: int, bloquear: bool = True) -> Optional[ImplHito]:
     q = select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
-    return s.exec(q.with_for_update() if bloquear else q).first()
+    return s.exec(q.with_for_update().execution_options(populate_existing=True) if bloquear else q).first()
 
 
 def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: str = None,
@@ -11871,7 +11871,7 @@ def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: s
             _impl_evento(s, proyecto_id, a, "hito_editar", detalle={"hito_id": h.id, "texto": texto})
     if orden is not None:
         # La etapa se bloquea: reordenar y sumar un hito no se pisan (QA-16).
-        s.exec(select(ImplEtapa.id).where(ImplEtapa.id == h.etapa_id).with_for_update()).first()
+        s.exec(select(ImplEtapa.id).where(ImplEtapa.id == h.etapa_id).with_for_update().execution_options(populate_existing=True)).first()
         hermanos = list(s.exec(select(ImplHito).where(ImplHito.proyecto_id == proyecto_id,
                                                       ImplHito.etapa_id == h.etapa_id)
                                .order_by(ImplHito.orden, ImplHito.id)).all())
@@ -11912,7 +11912,7 @@ def impl_borrar_hito(s: Session, proyecto_id: int, hito_id: int, actor) -> bool:
 def impl_renombrar_etapa(s: Session, proyecto_id: int, etapa_id: int, actor, nombre: str) -> Optional[ImplEtapa]:
     a = _impl_exigir_equipo(actor)
     et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)
-                .with_for_update()).first()
+                .with_for_update().execution_options(populate_existing=True)).first()
     if not et:
         return None
     nombre = _L(nombre)
@@ -11934,11 +11934,11 @@ def impl_fechar_plan(s: Session, proyecto_id: int, actor, fechas_etapas: list,
     vacío = sin fecha. Todo o nada: se valida TODO antes de escribir. Solo equipo.
     False si el proyecto no existe; una etapa ajena es ErrorImpl("etapa")."""
     a = _impl_exigir_equipo(actor)
-    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first()
+    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first()
     if not proy:
         return False
     etapas = {e.id: e for e in s.exec(select(ImplEtapa).where(ImplEtapa.proyecto_id == proyecto_id)
-                                      .with_for_update()).all()}
+                                      .with_for_update().execution_options(populate_existing=True)).all()}
     if not isinstance(fechas_etapas, list):
         raise implementacion.ErrorImpl("fechas", "Las fechas vienen como una lista de fases.")
     nuevas = {}
@@ -11987,7 +11987,7 @@ def impl_cargar_hitos_semilla(s: Session, proyecto_id: int, actor, fases: list) 
     (las etapas se emparejan por nombre; una que no existe se crea al final).
     Devuelve cuántos cargó; None si el proyecto no existe."""
     a = _impl_exigir_equipo(actor)
-    if not s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first():
+    if not s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first():
         return None
     if s.exec(select(func.count()).select_from(ImplHito).where(ImplHito.proyecto_id == proyecto_id)).one():
         raise implementacion.ErrorImpl("con_hitos", "El proyecto ya tiene hitos: no se pisan.")

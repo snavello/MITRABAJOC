@@ -417,9 +417,29 @@ el enlace a la tarjeta.
 - **`ver_registro(codigo)`**: `codigo` es obligatorio en el esquema (vacío = todo el
   proyecto), porque el esquema estricto no admite el campo opcional sin gastar uno de los
   cupos de campos anulables. Es la única diferencia con la lista del contrato.
-- **Validación de cifras**: se comparan como números (`07` = `7`), se ignoran los dígitos de
-  los códigos de tarea (`PAD-02`) y vale lo que traiga la pregunta; una sola cifra suelta
-  (`3`) no se controla, solo las de dos o más dígitos.
+- **Validación de cifras**: toda cifra de dos o más dígitos se controla, sin tope de largo. Un número
+  con separador de miles (punto, coma o espacio fino) o con coma decimal se toma ENTERO: `1.234` es
+  1234 o 1,234 (las dos lecturas valen), `12,5` es 12.5, y `07` = `7`; «9.234» no pasa porque exista
+  234. Se ignoran los dígitos de los códigos de tarea (`PAD-02`) y vale lo que traiga la pregunta.
+- **Códigos de tarea**: se buscan normalizando guiones Unicode a `-` y pasando a mayúsculas, así
+  `ZZZ‑07` (guion no separable) o `zzz-07` también cuentan como código inexistente.
+- **Enlaces**: cualquier `palabra.tld` con forma de dominio (TLD de 2 a 24 letras en minúscula, o los
+  TLD de siempre en cualquier caso) cuenta como enlace; una frase con el punto pegado a una palabra
+  con mayúscula («hecha.La siguiente») no. Se rechazan también U+2028 y U+2029.
+- **Los bloques de texto** de la respuesta del modelo se unen con un espacio, sin duplicarlo.
+- **La propuesta de reclamo pasa por las mismas reglas** (forma, cifras, códigos) que la respuesta:
+  título (hasta 120) y texto (hasta 1000); si no pasa, `propuesta` es `null` y la respuesta sigue.
+- **Tope de consultas**: se MIRA antes de armar el tablero (429 sin calcular nada) y se GASTA recién
+  antes de llamar al modelo. La tabla en memoria purga las marcas de más de una hora y, pasada de
+  5.000 usuarios, descarta las de actividad más vieja, nunca a quien está al tope.
+- **Modo simulado**: reconoce las preguntas sugeridas (en general, salteo, por qué, qué falta, qué
+  frena, qué se destraba, camino) y, en una tarea con un insumo que falta o está pedido, ante «qué
+  falta» o «qué frena» PROPONE el reclamo con `proponer_reclamo` y el borrador del servidor.
+- **Concurrencia en la Mesa**: las funciones `impl_*` que toman un correlativo o una fila con
+  `FOR UPDATE` la releen con `populate_existing`; un choque de único en el reclamo da 409, nunca 500.
+- **Límites sabidos (no se corrigen)**: las cifras escritas en letras no se controlan; una cifra
+  suelta de un dígito no se controla; las direcciones ofuscadas con espacios («ejemplo . com»)
+  pasan. La defensa ahí es el texto del sistema y que la persona ve de dónde sale cada dato.
 - **Límites propios del bucle**: además de `MAX_VUELTAS = 6`, tope de 120 s en total
   (`TIEMPO_TOTAL_S`) y de 24.000 caracteres por resultado de herramienta. Cualquier parada
   distinta de `end_turn` y `tool_use` (`refusal`, `max_tokens`, `pause_turn`, …) da el texto fijo.

@@ -12,6 +12,8 @@ El bucle, la validación y el modo simulado son genéricos (`xsii/asistente.py`)
 """
 from __future__ import annotations
 
+import unicodedata
+
 import implementacion
 from xsii import asistente
 from xsii.motor import consulta
@@ -210,30 +212,97 @@ def herramientas(inst: Instantanea) -> dict:
 
 # ------------------------------------------------------------------ simulado
 
-def simular(punto: str, codigo: str, pregunta: str, llamar) -> str:
+def _punto(texto) -> str:
+    """Una frase termina en punto: lo que escribieron las herramientas puede venir sin él."""
+    t = (texto or "").strip()
+    return t if not t or t[-1] in ".!?" else t + "."
+
+
+def _llano(pregunta: str) -> str:
+    """La pregunta en minúsculas y sin tildes, para reconocer de qué habla."""
+    n = unicodedata.normalize("NFD", pregunta.lower())
+    return "".join(c for c in n if not unicodedata.combining(c))
+
+
+def _lista(nombres: list) -> str:
+    nombres = [f"«{n}»" for n in nombres]
+    return nombres[0] if len(nombres) == 1 else ", ".join(nombres[:-1]) + " y " + nombres[-1]
+
+
+def _con_codigos(pasos: list) -> str:
+    return ", ".join(f"{x['codigo']} ({x['nombre']})" for x in pasos)
+
+
+def simular(punto: str, codigo: str, pregunta: str, llamar, inst=None) -> str:
     """El texto de una respuesta simulada, armado llamando a las mismas
-    herramientas (determinista; sirve para tests y para ver la pantalla)."""
+    herramientas (determinista; sirve para tests y para ver la pantalla).
+    Reconoce de qué habla la pregunta (las sugeridas de la pantalla) y, si la
+    tarea tiene un insumo que falta o está pedido y la pregunta es por lo que
+    falta o la frena, PROPONE el reclamo con la misma herramienta y el borrador
+    del servidor (`inst` es el tablero; sin él no propone)."""
     rot = vista.ROTULOS["estados"]
+    q = _llano(pregunta)
     if punto == "recomendada":
         t = llamar("ver_tablero")
         r, res = t["recomendada"], t["resumen"]
         if not r:
             return "Por ahora no queda nada para hacer: todo lo que se puede hacer ya está resuelto o esperando un dato."
         nombre = next(x["nombre"] for x in t["tareas"] if x["codigo"] == r["codigo"])
-        return (f"El paso recomendado es {r['codigo']} ({nombre}). {r['por_que']} "
-                f"Van {res['resueltas']} tareas hechas de las {res['aplican']} que aplican.")
+        avance = f"Van {res['resueltas']} tareas hechas de las {res['aplican']} que aplican."
+        if "en general" in q or "estamos" in q:
+            return f"{avance} El paso recomendado es {r['codigo']} ({nombre})."
+        if "salte" in q:
+            d = llamar("que_destraba", {"codigo": r["codigo"]})
+            if d["cantidad_total"]:
+                return (f"Si salteás {r['codigo']} ({nombre}), quedan sin destrabarse {d['cantidad_total']} tareas "
+                        f"que dependen de ella. {avance}")
+            return f"{r['codigo']} ({nombre}) no frena a ninguna otra tarea, así que podés dejarla para después sin trabar nada. {avance}"
+        return f"El paso recomendado es {r['codigo']} ({nombre}). {_punto(r['por_que'])} {avance}"
     f = llamar("ver_tarea", {"codigo": codigo})
     estado = rot.get(f["estado"], f["estado"]).lower()
-    base = f"{f['codigo']} ({f['nombre']}): {estado}. {f['detalle']}".strip()
+    base = _punto(f"{f['codigo']} ({f['nombre']}): {estado}.")
+    cola = _punto(f["detalle"])
+    pend = [i for i in f.get("insumos") or [] if i.get("estado") in ("falta", "pedido")]
+    if "se destraba" in q or "destraba cuando" in q:
+        d = llamar("que_destraba", {"codigo": codigo})
+        if not d["cantidad_total"]:
+            return f"{base} No hay otras tareas sin resolver que dependan de ella."
+        return (f"{base} Cuando esté hecha se destraban {d['cantidad_total']} tareas, "
+                f"{d['cantidad_directo']} de ellas directas: {_con_codigos(d['total'][:6])}.")
+    if "camino" in q:
+        c = llamar("camino_hasta", {"codigo": codigo})
+        if not c["pasos_antes_en_orden"]:
+            return f"{base} No hay nada previo sin resolver: ya se puede encarar."
+        return f"{base} El camino son {c['cantidad']} pasos, en este orden: {_con_codigos(c['pasos_antes_en_orden'])}."
+    if "falta" in q or "frena" in q or "destrabar" in q:
+        fr = llamar("que_frena", {"codigo": codigo})
+        partes = [base]
+        if pend:
+            partes.append(f"Todavía falta el dato {_lista([i['nombre'] for i in pend])}.")
+        elif not fr["camino_en_orden"]:
+            partes.append(cola)
+        if fr["camino_en_orden"]:
+            rotulo = "Pasos previos sin resolver, en este orden" if punto == "mapa" else "La frenan, en este orden"
+            partes.append(f"{rotulo}: {_con_codigos(fr['camino_en_orden'])}.")
+        elif not pend and not cola:
+            partes.append("No hay nada que la frene.")
+        if pend and inst is not None:
+            try:
+                b = borrador_reclamo(inst.ctx, pend[0]["clave"])
+                llamar("proponer_reclamo", {"clave": b["clave"], "titulo": b["titulo"], "texto": b["texto"]})
+                partes.append(f"Te dejo armado un reclamo de «{b['nombre']}» para que lo revises y lo crees.")
+            except asistente.ErrorHerramienta:
+                pass
+        return " ".join(x for x in partes if x)
     if punto == "mapa":
         d = llamar("que_destraba", {"codigo": codigo})
         c = llamar("camino_hasta", {"codigo": codigo})
         previos = ", ".join(x["codigo"] for x in c["pasos_antes_en_orden"]) or "ninguno"
-        return (f"{base} Pasos previos sin resolver: {previos}. "
-                f"Cuando esté hecha se destraban {d['cantidad_total']} tareas.")
+        return (f"{base} {cola} Pasos previos sin resolver: {previos}. "
+                f"Cuando esté hecha se destraban {d['cantidad_total']} tareas.").replace("  ", " ")
     fr = llamar("que_frena", {"codigo": codigo})
     previos = ", ".join(x["codigo"] for x in fr["camino_en_orden"])
-    return base + (f" La frenan, en este orden: {previos}." if previos else "")
+    return " ".join(x for x in (base, cola, f"La frenan, en este orden: {previos}." if previos else "") if x)
 
 
 # ------------------------------------------------------------------ el reclamo
