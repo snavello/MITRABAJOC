@@ -259,3 +259,149 @@ proyecto, el botón «Abrir XSII».
 IA y «Preguntame» (el botón se dibuja deshabilitado, con «Llega en el
 próximo bloque»), acciones asistidas y ensayos, crear tarjetas de la Mesa
 desde XSII («Reclamar en la Mesa» es un enlace a la Mesa), hitos propuestos.
+
+---
+
+# Bloque 2: «Preguntame» y reclamar un dato
+
+Decisiones de SDN (2026-11-27): el modelo por defecto es **Sonnet 5.5**
+(`claude-sonnet-5-5`, elegible en `/plataforma`) y el bloque incluye
+**reclamar un dato en la Mesa** además de la lectura. Sin clave de API el
+tablero, los controles y el reclamo siguen andando; solo «Preguntame» se apaga.
+
+## Principios
+
+- **No es un chat** (X10): una pregunta por vez, sin historial, sobre UN punto
+  (el paso recomendado, una tarea, el mapa). Cada pedido es independiente.
+- **La IA propone, el código decide.** El modelo solo LEE por herramientas y
+  puede PROPONER un reclamo; nunca escribe. Lo que se escribe pasa por la ruta
+  de reclamo, con confirmación de una persona.
+- **Toda cifra sale de una herramienta.** El servidor lo comprueba: un número
+  de dos o más cifras en la respuesta que no figure en lo que devolvieron las
+  herramientas de ESA consulta (ni en la pregunta) invalida la respuesta.
+- **Lo que no pasa la validación recibe un texto fijo del servidor**, no del
+  modelo: «No pude responder eso con los datos del tablero. Probá con otra
+  pregunta o mirá la ficha de la tarea.»
+- Los textos escritos por personas que llegan por herramientas (motivos,
+  títulos de tarjetas) son DATOS: el prompt lo dice y no se obedecen.
+- Nada del padrón ni de recibos viaja al modelo: las herramientas devuelven
+  solo lo que ya devuelve el tablero (tareas, estados, cifras agregadas de los
+  controles, insumos, movimientos).
+
+## El asistente (`xsii/asistente.py`, genérico; no importa `db` ni la app)
+
+- Recibe: modelo, texto del sistema, la pregunta ya normalizada, el punto y
+  un diccionario de herramientas `{nombre: (esquema, función)}` que le pasa el
+  proyecto. Devuelve `{resultado, texto, codigos, propuesta, uso, vueltas}`.
+- Llamada con el SDK oficial (`anthropic`), bucle manual de herramientas con
+  tope de `MAX_VUELTAS = 6`; `tool_choice` en `auto` (Sonnet 5.5 rechaza la
+  herramienta forzada); razonamiento adaptativo por defecto con
+  `output_config: {effort: "low"}`; `MAX_TOKENS = 4000`; tiempo máximo 60 s
+  por llamada; caché de prompt en el sistema y las herramientas (estables).
+  Se devuelve `response.content` entero en cada vuelta. `stop_reason` se mira
+  SIEMPRE antes de leer el contenido: `refusal` y `max_tokens` dan el texto
+  fijo. Si la versión instalada del SDK lo admite, la llamada lleva el
+  respaldo ante rechazos del servidor (`fallbacks: "default"`); si no, se
+  informa en el reporte y no se inventa.
+- `uso` suma los tokens de TODAS las vueltas (entrada, salida, caché leída y
+  escrita): una consulta es una fila de `UsoIA`.
+- Modo simulado (sin cliente o con `MOCK_EXTRACTOR=1`): determinista, sin
+  llamar a la API; arma la respuesta llamando a las mismas herramientas. Sirve
+  para los tests y para ver la pantalla. `disponible` distingue «sin clave»
+  (apagado) de «simulado» (prendido, y la pantalla lo avisa).
+- Herramientas de Colm3na (`xsii/proyectos/colm3na/herramientas.py`, sobre el
+  `Contexto` ya armado: UNA sesión de base por pedido, el tablero se calcula
+  una sola vez y las herramientas leen de memoria):
+  - `ver_tablero()`: resumen y, por tarea, código, nombre, estado y marcas.
+  - `ver_tarea(codigo)`: la ficha (misma forma que la API, sin `acciones`).
+  - `que_frena(codigo)`, `que_destraba(codigo)`, `camino_hasta(codigo)`.
+  - `ver_registro(codigo?)`: últimos movimientos (hasta 20).
+  - `proponer_reclamo(clave, titulo, texto)`: NO escribe. Valida que la clave
+    sea un insumo del catálogo que no esté `recibido` y deja la propuesta para
+    la pantalla. Como mucho una por consulta.
+  Un código o clave inexistente devuelve un error como resultado de la
+  herramienta (`is_error`), no una excepción.
+- Validación de la respuesta final (pura, con tests): 1 a 900 caracteres,
+  sin enlaces ni direcciones de mail, sin marcas de formato (`*`, `#`,
+  backticks, tablas), sin caracteres invisibles, los códigos de tarea que
+  nombra existen en el catálogo, y la regla de las cifras de arriba.
+  `codigos` es la lista de códigos de tarea nombrados (para que la pantalla
+  los vuelva enlaces a su ficha).
+
+## Sexto uso de IA
+
+`xsii` en `precios_ia.USOS` (default `claude-sonnet-5-5`), columna
+`ConfiguracionPlataforma.modelo_xsii` con su migración, selector en
+`/plataforma` → Uso de IA → Modelos, `db.modelo_ia("xsii")` en cada consulta.
+Cada consulta queda en `UsoIA` con tipo `herramienta`, a nombre del sindicato
+del proyecto, también cuando termina en texto fijo o error (ya se pagó).
+
+## Rutas (misma puerta del equipo, 404 en demo)
+
+### El tablero suma `preguntame`
+```json
+"preguntame": {"disponible": true, "simulado": false, "motivo": "",
+  "largo": {"min": 3, "max": 300},
+  "sugeridas": {
+    "recomendada": ["¿Por qué este paso y no otro?", "¿Qué pasa si lo salteo?", "¿Cómo estamos en general?"],
+    "tarea": ["¿Qué falta para terminarla?", "¿Qué la frena?", "¿Qué se destraba cuando esté hecha?"],
+    "mapa": ["¿Qué falta para destrabarla?", "¿Cuál es el camino más corto hasta acá?"]}}
+```
+`disponible: false` con `motivo` «No hay clave de la API configurada.» apaga
+el botón (la pantalla lo deja dibujado y deshabilitado, con ese texto).
+
+### `POST X/p/{pid}/preguntar`
+Cuerpo `{"punto": "recomendada" | "tarea" | "mapa", "codigo": "PAD-02", "pregunta": "…"}`.
+`codigo` obligatorio en `tarea` y `mapa` (404 si no existe); en `recomendada`
+se ignora. `pregunta`: texto de 3 a 300 caracteres medido después de limpiar
+(NFKC, sin invisibles ni de control, espacios colapsados); fuera de eso, 400.
+Proyecto sin sindicato → 409. Apagado → 409 con el `motivo`.
+
+Respuesta 200:
+```json
+{"resultado": "respondida" | "fija" | "error",
+ "texto": "…",
+ "codigos": ["PAD-01", "EST-01"],
+ "propuesta": null | {"tipo": "reclamo", "clave": "planilla_padron", "nombre": "Planilla del padrón",
+                      "titulo": "…", "texto": "…"},
+ "simulado": false}
+```
+`fija`: el texto es el fijo del servidor. `error`: la API falló (red, saldo,
+tiempo); `texto` lo dice en castellano y no es culpa de la pregunta. Nunca 500.
+Tope: `XSII_IA_TOPE` consultas por usuario y por hora (default 40) → 429 con
+un mensaje que dice cuándo se puede volver a preguntar.
+
+### `GET X/p/{pid}/insumo/{clave}/reclamo`
+El borrador que arma el servidor, sin IA:
+`{"clave", "nombre", "titulo", "texto", "tarjeta": null | {…forma de tarjeta…},
+"modo": "nueva" | "respuesta"}`. `modo: "respuesta"` cuando el insumo ya tiene
+una tarjeta de la Mesa enlazada y sigue abierta: el reclamo va como respuesta
+en ESA tarjeta. Insumo ya `recibido` → 409.
+
+### `POST X/p/{pid}/insumo/{clave}/reclamo`
+Cuerpo `{"titulo": "…", "texto": "…"}` (título 3 a 120, texto 5 a 1.000, ya
+saneados; en `modo: "respuesta"` el título se ignora). Crea en la Mesa del
+proyecto una tarjeta de tipo Pedido dirigida al sindicato (o responde en la
+enlazada), por las MISMAS funciones que usa la Mesa (`db.impl_*`, con su
+aviso por mail si corresponde), deja el insumo en `pedido` enlazado a esa
+tarjeta y registra el movimiento `insumo_reclamado` (tipo nuevo), todo en una
+transacción. Respuesta `{"ok": true, "insumo": {…}, "tarjeta": {…}}`. Dos
+reclamos seguidos del mismo insumo en menos de un minuto → 409.
+
+## Pantalla
+
+«Preguntame» deja de estar apagado (salvo `disponible: false`). Al abrirlo, en
+el lugar (no es un panel de conversación): las preguntas sugeridas de ese
+punto como botones, un campo para escribir la propia (contador de 300), y la
+respuesta debajo. Mientras espera: la forma de la respuesta, no un texto
+«cargando». La respuesta entra como texto; los códigos de `codigos` se
+vuelven enlaces a la ficha. Una pregunta nueva reemplaza la respuesta
+anterior. `fija` y `error` se muestran en su tono, con el texto del servidor.
+Con `simulado`, una línea chica lo avisa. Una `propuesta` de reclamo se
+muestra como tarjeta con título y texto EDITABLES y los botones «Crear en la
+Mesa» y «Descartar»: nada se crea sin el clic.
+
+«Reclamar en la Mesa» (panorama y ficha, en un insumo que falta o está
+pedido) abre el mismo formulario con el borrador del servidor, sin IA, y
+confirma igual. Después de crear: se vuelve a pedir el tablero y se muestra
+el enlace a la tarjeta.
