@@ -32,6 +32,12 @@ La miniatura `recursos/xsii-tutorial.jpg` (640x400) es una captura de la portada
 
 - Los datos son de la demo: lo «simulado» se dice en el texto (por ejemplo, la demora del pedido se
   fabrica atrasando la fecha por SQL).
-- `capturar.js` corrige en el vuelo un error de `static/xsii/xsii.js` en la vista Mapa (una constante
-  `resuelta` repetida deja la vista en blanco). Sacar ese parche cuando se arregle el archivo.
+- El Mapa se captura tal cual, sin parches (el error de `xsii.js` que lo dejaba en blanco ya no existe).
+- Versión del bloque 2: «Preguntame» se filma con el servidor en modo simulado (`MOCK_EXTRACTOR=1`): las
+  respuestas son simuladas y el tutorial lo dice. Con IA real el texto cambia, no el uso.
+- `capturar.js` espera 65 s antes del segundo reclamo del mismo insumo (el servidor frena dos reclamos
+  seguidos en menos de un minuto): la corrida entera dura unos dos minutos y medio.
+- El pedido a mano se filma sobre «Recibos de muestra» (REC-01) y el reclamo con el asistente sobre «Padrón
+  recibido» (PAD-01), para que cada insumo tenga su historia limpia. El peso del HTML va por `ANCHOS` y la
+  calidad JPEG de `armar.py` (tope 6 MB).
 - Sin fuentes ni scripts externos: la CSP de la app solo permite lo propio.

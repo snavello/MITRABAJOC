@@ -69,10 +69,11 @@ SEMILLA = [
         "titulo": "XSII: tutorial paso a paso",
         "descripcion": "Cómo se sigue una implementación con XSII, con las pantallas reales y datos simulados de la "
                        "demo: la Guía y el Play, abrir una tarea, pedir un dato al sindicato, confirmar, un error, "
-                       "completar a mano y deshacer, no aplica y posponer, el Tablero, el Mapa y el registro, con "
-                       "preguntas frecuentes. Versión del bloque 1; crece con cada bloque. "
+                       "completar a mano y deshacer, no aplica y posponer, el Tablero, el Mapa y el registro, y desde "
+                       "el bloque 2 «Preguntame» (el asistente de lectura, con respuestas simuladas) y el reclamo de "
+                       "un dato en la Mesa, con preguntas frecuentes. Versión del bloque 2; crece con cada bloque. "
                        "Se regenera con docs/xsii/tutorial/armar.py.",
-        "fecha": date(2026, 11, 26),
+        "fecha": date(2026, 11, 27),
         "archivo": "xsii-tutorial.html",
         "miniatura": "xsii-tutorial.jpg",
         "fragmento": "",
