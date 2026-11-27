@@ -120,7 +120,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
 - precios_ia.py — catálogo de precios de la API (`data/precios_ia.json`), el
   costo de cada llamada y los usos configurables (los tres de arriba, el
-  Asistente de trámites y, desde 2026-11-16, `grilla_salarial`). Puro, no importa db.
+  Asistente de trámites, `grilla_salarial` y, desde 2026-11-27, `xsii`). Puro, no importa db.
 - tu_dia.py — «Tu día», la franja de la portada del afiliado: rubros,
   configuración por sindicato (`Sindicato.tu_dia`), ítem del día
   determinista, **la trivia diaria** (`trivia_del_dia`: diez preguntas por
@@ -1945,10 +1945,36 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     o no» viven en `xsii/proyectos/colm3na/vista.py` (`regla_de_decision`),
     que usan la pantalla (`acciones`) y el POST. «Preguntame» está dibujado y
     apagado. **Tutorial** (X20) en Recursos: `recursos/xsii-tutorial.html`,
-    fuentes en `docs/xsii/tutorial/`; crece con cada bloque. **Sigue**: bloque
-    2 (asistente de lectura, «Preguntame»), después las tareas asistidas en
-    el orden Seccionales → Padrón → Conceptos (X19). Queda sin usar
-    `XsiiInsumo.archivo_id` (enlazar un archivo de la Mesa), para el bloque 5.
+    fuentes en `docs/xsii/tutorial/`; crece con cada bloque.
+    **Bloque 2 HECHO** (2026-11-27, Plataforma 0.80.01; decisiones de SDN:
+    Sonnet 5.5 por defecto y el bloque incluye reclamar): **«Preguntame»**
+    prendido en el paso recomendado, la ficha y el Mapa (`POST
+    /api/entornos/xsii/p/{pid}/preguntar`). No es un chat: una pregunta por
+    vez sobre un punto, sin historial. `xsii/asistente.py` (genérico, no
+    importa `db`) corre un bucle de herramientas de solo lectura sobre el
+    tablero ya calculado (`xsii/proyectos/colm3na/herramientas.py`); la
+    llamada al modelo va FUERA de la sesión de base. **Toda cifra de dos o
+    más dígitos y todo código de tarea de la respuesta tienen que salir de lo
+    que devolvieron las herramientas**; lo que no pasa `validar` (cifras,
+    códigos, enlaces, formato, invisibles, largo) sale como texto fijo del
+    servidor. Nada del padrón ni de recibos viaja al modelo. Sexto uso de IA
+    `xsii` (`precios_ia.USOS`, `ConfiguracionPlataforma.modelo_xsii`,
+    migración `c7e1a3b5d9f2`), en `UsoIA` como `herramienta`; tope
+    `XSII_IA_TOPE` (40 por usuario y hora). Sin clave queda apagado y lo
+    demás anda; con `MOCK_EXTRACTOR=1`, simulado y avisado. **Reclamar un
+    dato** (`GET`/`POST …/insumo/{clave}/reclamo`): el asistente solo
+    PROPONE título y texto, la persona edita y confirma; «Reclamar en la
+    Mesa» hace lo mismo sin IA con un borrador del servidor. Crea un Pedido
+    en la Mesa del proyecto (o responde en la tarjeta enlazada si sigue
+    abierta), deja el insumo `pedido` y el movimiento `insumo_reclamado`,
+    todo o nada. Las funciones `impl_*` que toman un correlativo con `FOR
+    UPDATE` releen la fila (`populate_existing`): valen con cualquier sesión.
+    Límites sabidos: una cifra en letras o de un solo dígito no se controla.
+    **Sigue**: bloque 3, Seccionales y Sede Central desde planilla (fija el
+    protocolo de los cuatro momentos, X19). Queda sin usar
+    `XsiiInsumo.archivo_id` (bloque 5), reclamar desde un proyecto sin
+    sindicato (el servidor lo admite, la pantalla no lo ofrece) y la primera
+    consulta con la API real, que hay que mirarla en Pruebas.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

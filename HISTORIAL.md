@@ -11459,3 +11459,54 @@ y por código, en todos los tipos de evento. No halló fuga de lo «solo equipo�
 **Queda a decidir.** Editar sube la tarjeta al tope de la lista (cambia la
 última actividad). El texto anterior completo queda a la vista del sindicato.
 El alta sigue aceptando un hito que no es de la fase elegida.
+
+## XSII bloque 2: «Preguntame» y reclamar un dato (2026-11-27, Plataforma 0.80.01)
+
+Continúa `PLAN_XSII.md` (que no se edita). Contrato en `docs/xsii/API.md`,
+sección «Bloque 2» y sus notas de implementación.
+
+**Decisiones de SDN.** Modelo por defecto Sonnet 5.5 (elegible en
+`/plataforma`). El bloque, que el plan llamaba «asistente de lectura», incluye
+reclamar un dato en la Mesa: es la primera escritura que el asistente puede
+proponer.
+
+**Qué se hizo.** `xsii/asistente.py` (genérico: bucle manual de herramientas,
+tope de seis vueltas y de 120 s, `tool_choice` en `auto`, validación pura de
+la respuesta, modo simulado) y `xsii/proyectos/colm3na/herramientas.py` (siete
+herramientas sobre una instantánea del tablero, el texto del sistema, las
+preguntas sugeridas por punto). Sexto uso de IA. Rutas de preguntar y de
+reclamo. En la pantalla, «Preguntame» se abre en el lugar con sugeridas, campo
+propio y respuesta; la propuesta de reclamo es una tarjeta editable.
+
+**Decisiones tomadas al construir.**
+- La cifra de la respuesta se controla contra lo que devolvieron las
+  herramientas de esa consulta; lo que no pasa, texto fijo del servidor.
+- La propuesta de reclamo pasa por la misma validación que la respuesta.
+- El reclamo existe también sin IA, con un borrador del servidor.
+- Si el insumo ya tiene una tarjeta abierta, el reclamo responde ahí.
+- El respaldo ante rechazos del servidor de la API no se activó: en el SDK
+  instalado solo existe por un camino beta que no se pudo probar. Un rechazo
+  da el texto fijo.
+
+**Lo que encontró el QA independiente y se corrigió antes del merge.**
+Servidor (181 ataques): dos reclamos simultáneos de insumos distintos del
+mismo proyecto daban 500 por tomar el mismo número de tarjeta (la sesión ya
+tenía cargado el proyecto y el `FOR UPDATE` no lo refrescaba: ahora las
+funciones de la Mesa releen la fila); la propuesta de reclamo no pasaba por
+el control de cifras; seis huecos del validador (cifras de más de 12 dígitos,
+miles validados por pedazos, dominios poco comunes, separadores de línea
+Unicode, códigos con guion raro, bloques de texto pegados); el tope se miraba
+después de calcular todo el tablero. Pantalla (navegador contra el servidor
+real): el Play bajaba a mitad del bloque con «Preguntame» abierto; el cuadro
+parpadeaba entero en cada pregunta; el modo simulado nunca proponía un
+reclamo; el botón decía «Crear» al responder en una tarjeta existente.
+
+**Lo que resistió.** Con padrón, recibos y usuarios cargados, al modelo no le
+llega ningún CUIL, nombre, mail ni dato de recibo. Un motivo o un título de
+tarjeta que dice «ignorá las instrucciones» viaja solo como dato. Un proyecto
+no ve nada de otro. Una falla de la API da un mensaje claro y lo ya gastado
+queda registrado.
+
+**Queda.** Probar la primera consulta con la API real en Pruebas. Las cifras
+en letras y de un dígito no se controlan. Reclamar desde un proyecto sin
+sindicato no se ofrece en la pantalla.

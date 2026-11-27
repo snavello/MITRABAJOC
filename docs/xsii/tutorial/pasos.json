@@ -1,14 +1,15 @@
 {
-  "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 1",
+  "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 2",
   "titulo": "Cómo se sigue una implementación con XSII",
   "bajada": "Un recorrido por las pantallas reales de XSII, con un sindicato de la demo y los pasos hechos de verdad, uno por uno.",
-  "fecha": "26 de noviembre de 2026",
+  "fecha": "27 de noviembre de 2026",
   "intro": [
     "XSII es la guía de implementación de Colm3na. Conoce todas las tareas que hay que hacer para dejar un sindicato funcionando, sabe cuáles dependen de cuáles, calcula solo cómo está cada una mirando el sistema y te dice cuál conviene hacer ahora.",
     "Este tutorial sigue una implementación desde que arranca. Cada pantalla es una captura real de XSII. Los datos son los de la demo, simulados: el sindicato es la UOM de prueba, el proyecto se llama «UOM · Primera versión» y quien trabaja es «Sofía Demo», un usuario de prueba. Nada de lo que ves es de un sindicato real.",
-    "Los círculos naranjas numerados que aparecen en las capturas no son parte de la pantalla: los pusimos para señalar dónde mirar, y el texto de cada paso los explica."
+    "Los círculos naranjas numerados que aparecen en las capturas no son parte de la pantalla: los pusimos para señalar dónde mirar, y el texto de cada paso los explica.",
+    "Una aclaración importante: en este tutorial las respuestas de «Preguntame» son SIMULADAS. El entorno donde se sacaron las capturas no llama a la IA, así que la pantalla lo avisa con una línea chica debajo de cada respuesta. En Pruebas las escribe el modelo, y por eso el texto va a ser distinto, con otras palabras. Lo que no cambia es cómo se usa, qué muestra y qué puede hacer."
   ],
-  "alcance": "Esta versión cubre lo que existe en el bloque 1 de XSII: la Guía, el Tablero, el Mapa, las fichas de tarea, los insumos, las decisiones y el registro. Todavía no hay asistente que lea o cargue datos: el estado y el paso recomendado los calcula el sistema. El tutorial crece con cada bloque nuevo.",
+  "alcance": "Esta versión suma lo del bloque 2: el botón «Preguntame» (en la Guía, en cada ficha y en el Mapa) y el reclamo de un dato en la Mesa, con o sin el asistente. Sigue valiendo todo lo del bloque 1: la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. Todavía el asistente no carga datos: solo lee el tablero y propone reclamos.",
   "pasos": [
     {
       "id": "entrar",
@@ -18,18 +19,33 @@
         "Se entra desde <b>/entornos</b>, en la pestaña <b>Implementación</b>. Cada proyecto de la Mesa tiene su XSII: tocá <b>Abrir XSII</b> (1) en la fila del proyecto. El botón de al lado (2) abre la Mesa, que es donde conversás con el sindicato.",
         "XSII solo vive en Pruebas, junto a la Mesa. En la demo no existe."
       ],
-      "figuras": [{"archivo": "01-entornos-implementacion", "epigrafe": "La pestaña Implementación de /entornos, con el proyecto «UOM · Primera versión».", "ancho": "full"}]
+      "figuras": [
+        {
+          "archivo": "01-entornos-implementacion",
+          "epigrafe": "La pestaña Implementación de /entornos, con el proyecto «UOM · Primera versión».",
+          "ancho": "full"
+        }
+      ]
     },
     {
       "id": "guia",
       "titulo": "La Guía: el Play y el paso recomendado",
       "texto": [
         "La Guía es la pantalla principal y la única que te conduce. Arriba (1) ves cuántas tareas están resueltas y el porcentaje. Las que no aplican a este sindicato no cuentan: se avisa cuántas son.",
-        "Lo que más destaca es el <b>Play</b> (2): el siguiente paso recomendado. Dice el nombre de la tarea, por qué es esa y cómo se hace. El criterio es simple: si hay una tarea empezada, conviene terminarla; si no, se recomienda la que más tareas destraba.",
+        "Lo que más destaca es el <b>Play</b> (2): el siguiente paso recomendado. Dice el nombre de la tarea, por qué es esa y cómo se hace. El criterio es simple: si hay una tarea empezada, conviene terminarla; si no, se recomienda la que más tareas destraba. Dentro del Play hay un botón <b>Preguntame</b>, que vemos más abajo.",
         "Debajo (3) hay pocas alternativas, por si preferís seguir con otra que también se puede hacer ya. A la derecha (4) está el panorama: cuántas tareas hay en cada estado."
       ],
-      "figuras": [{"archivo": "02-guia", "epigrafe": "La Guía: el avance, el Play, las alternativas y el panorama.", "ancho": "full"}],
-      "recuadro": ["Los seis estados", "Hecha, Se puede hacer, En curso, Esperando un dato, Bloqueada y No aplica. Nadie los tilda: el sistema los calcula mirando la base."]
+      "figuras": [
+        {
+          "archivo": "02-guia",
+          "epigrafe": "La Guía: el avance, el Play, las alternativas y el panorama.",
+          "ancho": "full"
+        }
+      ],
+      "recuadro": [
+        "Los seis estados",
+        "Hecha, Se puede hacer, En curso, Esperando un dato, Bloqueada y No aplica. Nadie los tilda: el sistema los calcula mirando la base."
+      ]
     },
     {
       "id": "ficha",
@@ -39,30 +55,193 @@
         "El recuadro (1) es lo más importante: <b>lo que dice el control</b>. Es lo que el sistema ve en la base, con las cifras y, si falta algo, la lista de lo que falta. Acá, por ejemplo, las seccionales ya están cargadas y solo falta confirmar la lista contra la del sindicato.",
         "El botón <b>Ir a la pantalla</b> (2) te lleva directo a donde se hace la tarea. El aviso (3) dice que hay datos cargados pero el insumo no está registrado: lo vemos en el paso siguiente."
       ],
-      "figuras": [{"archivo": "03-ficha-est01", "epigrafe": "La ficha de «Seccionales»: el control con sus cifras y el acceso a la pantalla.", "ancho": "full"}]
+      "figuras": [
+        {
+          "archivo": "03-ficha-est01",
+          "epigrafe": "La ficha de «Seccionales»: el control con sus cifras y el acceso a la pantalla.",
+          "ancho": "full"
+        }
+      ]
     },
     {
       "id": "pedir",
-      "titulo": "Pedir un dato al sindicato",
+      "titulo": "Pedir un dato al sindicato, a mano",
       "texto": [
-        "Algunas tareas necesitan algo que solo el sindicato tiene. Acá, «Padrón recibido» necesita la planilla del padrón. Mientras falta, la tarea queda <b>Esperando un dato</b> y la ficha muestra el insumo con el estado «Falta», dentro del recuadro (1).",
-        "Para pedirlo, tocá <b>Marcar pedido</b> (2). XSII te deja enlazar el pedido con la tarjeta de la Mesa donde se lo pediste al sindicato (el campo marcado con 1 en la segunda captura) y escribir una nota.",
-        "Al guardar, el insumo queda como <b>pedido</b>, con la tarjeta enlazada, quién lo pidió y cuándo. Así no hay que acordarse de a quién se le reclamó."
+        "Algunas tareas necesitan algo que solo el sindicato tiene. Acá, «Recibos de muestra» necesita los recibos que va a entregar el sindicato. Mientras faltan, la tarea queda <b>Esperando un dato</b> y la ficha muestra el insumo con el estado «Falta», dentro del recuadro (1).",
+        "Si ya se lo pediste al sindicato en la Mesa, tocá <b>Marcar pedido</b> (2). XSII te deja enlazar el pedido con la tarjeta de la Mesa donde lo pediste (el campo marcado en la segunda captura) y escribir una nota.",
+        "Al guardar, el insumo queda como <b>pedido</b>, con la tarjeta enlazada, quién lo pidió y cuándo. Así no hay que acordarse de a quién se le reclamó. Más abajo vemos cómo pedirlo directamente desde XSII, sin salir de la pantalla."
       ],
       "figuras": [
-        {"archivo": "04-pad01-falta", "epigrafe": "La tarea espera un dato: el insumo figura como «Falta».", "ancho": "med"},
-        {"archivo": "06-pad01-form-pedido", "epigrafe": "Se registra el pedido y se enlaza con la tarjeta PE0002 de la Mesa.", "ancho": "med"},
-        {"archivo": "07-pad01-pedido", "epigrafe": "Después de guardar, el insumo queda pedido y enlazado.", "ancho": "med"}
+        {
+          "archivo": "04-rec01-falta",
+          "epigrafe": "«Recibos de muestra» espera un dato: el insumo figura como «Falta».",
+          "ancho": "med"
+        },
+        {
+          "archivo": "06-rec01-form-pedido",
+          "epigrafe": "Se registra el pedido y se enlaza con la tarjeta PE0003 de la Mesa.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "07-rec01-pedido",
+          "epigrafe": "Después de guardar, el insumo queda pedido y enlazado.",
+          "ancho": "med"
+        }
+      ]
+    },
+    {
+      "id": "preguntame",
+      "titulo": "«Preguntame»: una pregunta sobre lo que estás mirando",
+      "texto": [
+        "«Preguntame» es un asistente que responde dudas sobre el punto donde estás parado. Aparece en tres lugares: la tarjeta del paso recomendado en la Guía (1), la ficha de cada tarea y el Mapa.",
+        "<b>No es un chat.</b> Se hace una pregunta por vez, sobre ese punto, y no recuerda las anteriores. Si hacés otra, la respuesta nueva reemplaza a la vieja.",
+        "<b>Solo lee y no cambia nada.</b> Mira el tablero (tareas, estados, qué frena qué, el registro) y contesta con eso. No ve datos de afiliados ni recibos. Los números que dice salen del tablero, y si una respuesta trae una cifra que no está ahí, el sistema la descarta y muestra un texto fijo en su lugar.",
+        "Para empezar, tocá <b>Preguntame</b> (1). Se despliegan unas preguntas sugeridas (2) y un campo para escribir la tuya (3). Tocar una sugerida la manda enseguida."
+      ],
+      "figuras": [
+        {
+          "archivo": "23-pm-guia-abierto",
+          "epigrafe": "«Preguntame» abierto en la Guía: botón, preguntas sugeridas y campo para escribir.",
+          "ancho": "full"
+        },
+        {
+          "archivo": "24-pm-guia-respuesta",
+          "epigrafe": "La respuesta (1) nombra a las tareas con su código, y cada código es un enlace a su ficha (2). La línea chica (3) avisa que esta respuesta es simulada.",
+          "ancho": "full"
+        }
+      ]
+    },
+    {
+      "id": "pm-ficha",
+      "titulo": "«Preguntame» en una ficha, con una pregunta escrita a mano",
+      "texto": [
+        "En la ficha de una tarea, «Preguntame» queda al final y habla de esa tarea. Las sugeridas cambian: «¿Qué falta para terminarla?», «¿Qué la frena?», «¿Qué se destraba cuando esté hecha?».",
+        "También podés escribir lo tuyo. Acá le preguntamos a «Padrón cargado» (PAD-02) «¿Qué la frena hoy?» (1). La respuesta (2) dice que la frenan Seccionales y Padrón recibido, en ese orden, con los códigos como enlaces."
+      ],
+      "figuras": [
+        {
+          "archivo": "26-pm-ficha-escrita",
+          "epigrafe": "Una pregunta escrita a mano en la ficha de «Padrón cargado».",
+          "ancho": "med"
+        }
+      ]
+    },
+    {
+      "id": "pm-mapa",
+      "titulo": "«Preguntame» en el Mapa",
+      "texto": [
+        "En el Mapa, «Preguntame» aparece en el cuadro de la tarea elegida (1) y contesta sobre su camino. Las sugeridas son «¿Qué falta para destrabarla?» y «¿Cuál es el camino más corto hasta acá?».",
+        "Acá tocamos la segunda sobre «Padrón cargado» y la respuesta (2) recorre las tareas que hay que resolver antes, en orden."
+      ],
+      "figuras": [
+        {
+          "archivo": "27-pm-mapa",
+          "epigrafe": "«Preguntame» en el Mapa, con la respuesta sobre el camino hasta «Padrón cargado».",
+          "ancho": "full"
+        }
+      ]
+    },
+    {
+      "id": "pm-reclamo",
+      "titulo": "Cuando el asistente propone un reclamo",
+      "texto": [
+        "Hay un caso donde «Preguntame» hace algo más que explicar. Abrimos la ficha de «Padrón recibido» (PAD-01): la planilla del padrón todavía falta y el insumo tiene un botón <b>Reclamar en la Mesa</b> (2). Si preguntamos «¿Qué falta para terminarla?», el asistente contesta y además <b>propone</b> un reclamo para pedírselo al sindicato.",
+        "La propuesta aparece como una tarjeta armada, con título y texto (2). <b>No se crea nada todavía.</b> Es lo único que el asistente puede hacer, y siempre lo revisás vos. Tenés dos botones: <b>Crear en la Mesa</b> (3) o <b>Descartar</b> (4).",
+        "Podés corregir el texto antes de confirmar. Acá le sumamos una frase al pedido.",
+        "Al tocar <b>Crear en la Mesa</b>, XSII crea una tarjeta de tipo Pedido en la Mesa, dirigida al sindicato, deja el insumo como <b>pedido</b> con esa tarjeta enlazada y anota el movimiento en el registro. Arriba aparece un aviso (1) con el enlace a la tarjeta nueva, y el insumo (2) ya figura como «Pedido hoy», con su tarjeta PE0004.",
+        "Del otro lado, el sindicato ve la tarjeta en la Mesa como cualquier pedido del equipo, con el texto que confirmaste."
+      ],
+      "figuras": [
+        {
+          "archivo": "04-pad01-falta",
+          "epigrafe": "«Padrón recibido» espera la planilla. El insumo tiene el botón «Reclamar en la Mesa».",
+          "ancho": "med"
+        },
+        {
+          "archivo": "28-pm-propuesta",
+          "epigrafe": "La respuesta (1) viene con una propuesta de reclamo (2) que se confirma (3) o se descarta (4).",
+          "ancho": "med"
+        },
+        {
+          "archivo": "29-pm-propuesta-editada",
+          "epigrafe": "El texto se puede corregir antes de crearlo.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "30-reclamo-creado",
+          "epigrafe": "El aviso con el enlace a la tarjeta (1) y el insumo ya pedido y enlazado (2).",
+          "ancho": "full"
+        },
+        {
+          "archivo": "31-mesa-tarjeta-nueva",
+          "epigrafe": "La tarjeta PE0004 vista en la Mesa de implementación, con el texto del reclamo.",
+          "ancho": "full"
+        }
+      ]
+    },
+    {
+      "id": "pm-limites",
+      "titulo": "Cuando «Preguntame» no puede responder",
+      "texto": [
+        "<b>Una pregunta demasiado corta.</b> Hace falta escribir entre 3 y 300 caracteres. Con menos, la pantalla avisa en rojo (1) y no consulta nada.",
+        "<b>Demasiadas preguntas seguidas.</b> Cada persona del equipo puede hacer un número limitado de preguntas por hora. Pasado ese tope, XSII no responde y avisa cuánto falta para volver a preguntar. Todo lo demás de la pantalla sigue funcionando. No hace falta capturarlo: es solo un cartel.",
+        "<b>Respuesta que no se puede dar.</b> Si la respuesta no pasa los controles (por ejemplo, trae una cifra que no figura en el tablero), en su lugar aparece un texto fijo: «No pude responder eso con los datos del tablero. Probá con otra pregunta o mirá la ficha de la tarea.»",
+        "<b>Sin IA configurada.</b> Si el entorno no tiene la clave de la IA, el botón «Preguntame» queda apagado y dice por qué. La Guía, el Tablero, el Mapa, los controles y el reclamo manual siguen andando igual."
+      ],
+      "figuras": [
+        {
+          "archivo": "25-pm-pregunta-corta",
+          "epigrafe": "Con una pregunta de dos letras, la pantalla pide escribir un poco más (1).",
+          "ancho": "med"
+        }
       ]
     },
     {
       "id": "demorado",
       "titulo": "Cuando el pedido se demora",
       "texto": [
-        "Si un insumo lleva <b>2 días o más</b> pedido sin llegar, la Guía lo avisa en el panorama (1): qué insumo es, hace cuánto se pidió, a qué tarjeta corresponde y cuántas tareas frena. El botón <b>Reclamar en la Mesa</b> te lleva a la tarjeta para insistir.",
-        "Para esta captura atrasamos a propósito la fecha del pedido tres días, porque en la demo todo es de hoy."
+        "Si un insumo está pedido hace dos días o más, la Guía lo marca como <b>demorado</b> en el panorama (1) y dice cuántas tareas frena. Debajo hay un botón <b>Reclamar en la Mesa</b> (2).",
+        "Aviso: en el tutorial la demora está simulada. Atrasamos a mano la fecha del pedido para que figure con tres días."
       ],
-      "figuras": [{"archivo": "08-guia-demorado", "epigrafe": "El aviso de insumo demorado en la Guía. La demora está simulada.", "ancho": "full"}]
+      "figuras": [
+        {
+          "archivo": "08-guia-demorado",
+          "epigrafe": "El aviso de insumo demorado en la Guía, con su botón para reclamar. La demora está simulada.",
+          "ancho": "full"
+        }
+      ]
+    },
+    {
+      "id": "reclamar-aviso",
+      "titulo": "Reclamar sin el asistente",
+      "texto": [
+        "No hace falta preguntarle al asistente para reclamar. «Reclamar en la Mesa» abre el mismo formulario, con un borrador que arma el sistema (sin IA). Se puede usar desde el aviso de demorados, o desde la ficha de la tarea, en el insumo que falta o está pedido.",
+        "Como este insumo ya tiene una tarjeta abierta en la Mesa (PE0004), el reclamo no crea una tarjeta nueva: <b>va como respuesta en esa misma tarjeta</b> (2). El formulario lo dice y no pide título. Revisá el texto (1) y tocá <b>Responder en la tarjeta</b> (3).",
+        "Para que no se manden dos reclamos por error, el mismo insumo no se puede reclamar dos veces en menos de un minuto. Si lo intentás, el formulario avisa en rojo (captura de abajo). Pasado el minuto, se envía.",
+        "Al terminar, el aviso verde confirma que se agregó tu reclamo a la tarjeta, y en el registro queda «Volvió a reclamar el insumo». En la Mesa, la tarjeta suma un segundo mensaje."
+      ],
+      "figuras": [
+        {
+          "archivo": "32-reclamo-respuesta-form",
+          "epigrafe": "El formulario en modo respuesta: borrador (1), tarjeta donde va (2) y botón (3).",
+          "ancho": "full"
+        },
+        {
+          "archivo": "33-reclamo-muy-seguido",
+          "epigrafe": "Dos reclamos seguidos: el sistema pide esperar un minuto.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "35-reclamo-respuesta-hecho",
+          "epigrafe": "Después del minuto, el reclamo se envía y el aviso lo confirma.",
+          "ancho": "full"
+        },
+        {
+          "archivo": "34-mesa-tarjeta-respondida",
+          "epigrafe": "En la Mesa, la tarjeta PE0004 con el reclamo agregado como segundo mensaje.",
+          "ancho": "full"
+        }
+      ]
     },
     {
       "id": "recibido",
@@ -71,7 +250,13 @@
         "Cuando el sindicato entrega la planilla, tocá <b>Marcar recibido</b>. El insumo pasa a «Recibido» (2) y la tarea deja de estar <b>Esperando un dato</b> (1): ahora el estado es «Falta confirmar», porque alguien tiene que mirar la planilla y afirmar que coincide con el total declarado.",
         "Todo queda anotado en el historial de la tarea, con tu nombre y la hora."
       ],
-      "figuras": [{"archivo": "09-pad01-recibido", "epigrafe": "El insumo figura como recibido y la tarea ya no espera un dato.", "ancho": "med"}]
+      "figuras": [
+        {
+          "archivo": "09-pad01-recibido",
+          "epigrafe": "El insumo figura como recibido y la tarea ya no espera un dato.",
+          "ancho": "med"
+        }
+      ]
     },
     {
       "id": "confirmar",
@@ -81,8 +266,16 @@
         "Si te adelantás, XSII no te deja confirmar y te explica por qué. Mientras el insumo no esté registrado como recibido, la ficha dice <b>«Primero registrá que llegó el insumo.»</b> (1) y el botón Confirmar no aparece."
       ],
       "figuras": [
-        {"archivo": "05-pad01-confirmar-error", "epigrafe": "Si falta el insumo, XSII avisa qué hay que hacer antes de confirmar.", "ancho": "med"},
-        {"archivo": "10-pad01-confirmada", "epigrafe": "La tarea confirmada: queda Hecha y con su constancia.", "ancho": "med"}
+        {
+          "archivo": "05-pad01-confirmar-error",
+          "epigrafe": "Si falta el insumo, XSII avisa qué hay que hacer antes de confirmar.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "10-pad01-confirmada",
+          "epigrafe": "La tarea confirmada: queda Hecha y con su constancia.",
+          "ancho": "med"
+        }
       ]
     },
     {
@@ -92,7 +285,13 @@
         "A veces hay un imprevisto: el logo del sindicato todavía no llegó, pero no querés frenar el resto. Para eso existe <b>Completar a mano</b>. Pide un motivo, y es <b>obligatorio</b>.",
         "Si tocás Guardar con el cuadro vacío, aparece el mensaje en rojo (1): «El motivo es obligatorio (al menos 5 caracteres).» No se guarda nada. Escribí qué pasó y volvé a guardar."
       ],
-      "figuras": [{"archivo": "11-bas02-sin-motivo", "epigrafe": "Sin motivo, XSII no deja completar la tarea a mano.", "ancho": "med"}]
+      "figuras": [
+        {
+          "archivo": "11-bas02-sin-motivo",
+          "epigrafe": "Sin motivo, XSII no deja completar la tarea a mano.",
+          "ancho": "med"
+        }
+      ]
     },
     {
       "id": "a-mano",
@@ -103,9 +302,21 @@
         "Si el imprevisto se resuelve, <b>Deshacer: completada a mano</b> (4) vuelve la tarea a su estado real. Deshacer tampoco borra nada: queda anotado en el registro quién lo deshizo."
       ],
       "figuras": [
-        {"archivo": "12-bas02-a-mano", "epigrafe": "La tarea completada a mano: la marca, lo que calcula el control y la decisión.", "ancho": "med"},
-        {"archivo": "13-tablero-a-mano", "epigrafe": "En el Tablero, el filtro «Completadas a mano» (1) lista todas con su marca (2).", "ancho": "full"},
-        {"archivo": "14-bas02-deshecha", "epigrafe": "Después de deshacer, la tarea vuelve a su estado real y el registro lo anota.", "ancho": "med"}
+        {
+          "archivo": "12-bas02-a-mano",
+          "epigrafe": "La tarea completada a mano: la marca, lo que calcula el control y la decisión.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "13-tablero-a-mano",
+          "epigrafe": "En el Tablero, el filtro «Completadas a mano» (1) lista todas con su marca (2).",
+          "ancho": "full"
+        },
+        {
+          "archivo": "14-bas02-deshecha",
+          "epigrafe": "Después de deshacer, la tarea vuelve a su estado real y el registro lo anota.",
+          "ancho": "med"
+        }
       ]
     },
     {
@@ -116,9 +327,21 @@
         "Si una tarea sí corresponde pero no es el momento, se <b>pospone</b>. Posponer no cambia su estado: solo la saca del Play y de las alternativas para que XSII no te la siga proponiendo. Para volver a verla, tocá <b>Retomar</b>."
       ],
       "figuras": [
-        {"archivo": "15-com03-no-aplica-form", "epigrafe": "Declarar que «Beneficios» no aplica, con su motivo.", "ancho": "med"},
-        {"archivo": "16-com03-no-aplica", "epigrafe": "La tarea queda «No aplica» y se puede volver a aplicar.", "ancho": "med"},
-        {"archivo": "17-com02-pospuesta", "epigrafe": "«Noticias iniciales» pospuesta: marcada, y con el botón Retomar.", "ancho": "med"}
+        {
+          "archivo": "15-com03-no-aplica-form",
+          "epigrafe": "Declarar que «Beneficios» no aplica, con su motivo.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "16-com03-no-aplica",
+          "epigrafe": "La tarea queda «No aplica» y se puede volver a aplicar.",
+          "ancho": "med"
+        },
+        {
+          "archivo": "17-com02-pospuesta",
+          "epigrafe": "«Noticias iniciales» pospuesta: marcada, y con el botón Retomar.",
+          "ancho": "med"
+        }
       ]
     },
     {
@@ -129,8 +352,16 @@
         "Arriba (1) hay filtros por estado, con la cantidad al lado de cada uno. También están los de lo que merece atención: Completadas a mano, Pospuestas, Falta confirmar y Con observaciones. Tocar el nombre de una tarea abre su ficha."
       ],
       "figuras": [
-        {"archivo": "18-tablero", "epigrafe": "El Tablero con todas las tareas, agrupadas.", "ancho": "full"},
-        {"archivo": "19-tablero-esperando", "epigrafe": "Filtrado por «Esperando un dato»: lo que depende del sindicato.", "ancho": "full"}
+        {
+          "archivo": "18-tablero",
+          "epigrafe": "El Tablero con todas las tareas, agrupadas.",
+          "ancho": "full"
+        },
+        {
+          "archivo": "19-tablero-esperando",
+          "epigrafe": "Filtrado por «Esperando un dato»: lo que depende del sindicato.",
+          "ancho": "full"
+        }
       ]
     },
     {
@@ -140,32 +371,97 @@
         "El Mapa muestra las dependencias: las tareas en columnas, de las que no necesitan nada a las que dependen de muchas, con flechas en ángulo recto. La flecha va de lo que se necesita a lo que lo necesita.",
         "Al tocar una tarea se ilumina su camino (2): de qué depende y qué destraba. El resto se atenúa. Una línea roja cortada indica que todavía hay algo que frena. A la derecha (1) está la ficha corta de la tarea elegida, con el botón <b>Abrir la ficha</b>."
       ],
-      "figuras": [{"archivo": "20-mapa", "epigrafe": "El Mapa con «Padrón cargado» elegido: se ven sus requisitos y lo que destraba.", "ancho": "full"}]
+      "figuras": [
+        {
+          "archivo": "20-mapa",
+          "epigrafe": "El Mapa con «Padrón cargado» elegido: se ven sus requisitos y lo que destraba.",
+          "ancho": "full"
+        }
+      ]
     },
     {
       "id": "registro",
       "titulo": "El registro: quién hizo qué",
       "texto": [
-        "Todo lo que hacés queda registrado: cada pedido, cada recibido, cada confirmación y cada decisión, con quién, cuándo y el motivo. Los registros no se borran ni se editan.",
+        "Todo lo que hacés queda registrado: cada pedido, cada recibido, cada confirmación y cada decisión, con quién, cuándo y el motivo. Los registros no se borran ni se editan. Los reclamos hechos en la Mesa también quedan anotados.",
         "En la Guía, el panorama muestra los <b>últimos movimientos</b> (1). En la ficha de cada tarea, el <b>historial</b> (1) junta lo de la tarea y lo de sus insumos, del más nuevo al más viejo."
       ],
       "figuras": [
-        {"archivo": "21-guia-movimientos", "epigrafe": "Últimos movimientos, en el panorama de la Guía.", "ancho": "chica"},
-        {"archivo": "22-pad01-historial", "epigrafe": "El historial de «Padrón recibido»: pedido, recibido y confirmación.", "ancho": "med"}
+        {
+          "archivo": "21-guia-movimientos",
+          "epigrafe": "Últimos movimientos, en el panorama de la Guía.",
+          "ancho": "chica"
+        },
+        {
+          "archivo": "22-pad01-historial",
+          "epigrafe": "El historial de «Padrón recibido»: pedido, recibido y confirmación.",
+          "ancho": "med"
+        }
       ]
     }
   ],
   "preguntas": [
-    ["¿Quién puede completar una tarea a mano?", "Cualquier usuario del equipo de Colm3na que entre con su usuario de plataforma, no solo los administradores. Por eso toda tarea completada a mano se ve en el Tablero con su marca, quién y por qué, y hay un filtro para listarlas."],
-    ["¿Se puede deshacer?", "Sí. El botón «Deshacer» aparece en la ficha mientras la decisión esté activa. Lo puede usar cualquier usuario del equipo, con un motivo opcional. No se borra nada: el registro conserva la decisión original y quién la deshizo."],
-    ["¿Por qué una tarea figura bloqueada?", "Porque depende de otra que todavía no está resuelta. La ficha dice cuáles y en qué orden conviene resolverlas. Si no podés esperar, completarla a mano también destraba a las que vienen detrás."],
-    ["¿Qué pasa si el sindicato no contrató un módulo?", "Las tareas de ese módulo figuran «No aplica» automáticamente, con la aclaración «Módulo X no contratado», y no cuentan para el avance."],
-    ["¿Por qué una tarea figura «Esperando un dato» si el dato ya está?", "Porque falta registrar el insumo. Si el sistema ya ve datos cargados, la ficha avisa que el insumo no está registrado; registralo como recibido para dejar constancia."],
-    ["¿Qué es «Preguntame»?", "Es un botón que ya se ve, deshabilitado, en la Guía y en las fichas. Va a servir para hacerle preguntas a XSII sobre ese punto. Llega en el próximo bloque."]
+    [
+      "¿Quién puede completar una tarea a mano?",
+      "Cualquier usuario del equipo de Colm3na que entre con su usuario de plataforma, no solo los administradores. Por eso toda tarea completada a mano se ve en el Tablero con su marca, quién y por qué, y hay un filtro para listarlas."
+    ],
+    [
+      "¿Se puede deshacer?",
+      "Sí. El botón «Deshacer» aparece en la ficha mientras la decisión esté activa. Lo puede usar cualquier usuario del equipo, con un motivo opcional. No se borra nada: el registro conserva la decisión original y quién la deshizo."
+    ],
+    [
+      "¿Por qué una tarea figura bloqueada?",
+      "Porque depende de otra que todavía no está resuelta. La ficha dice cuáles y en qué orden conviene resolverlas. Si no podés esperar, completarla a mano también destraba a las que vienen detrás."
+    ],
+    [
+      "¿Qué pasa si el sindicato no contrató un módulo?",
+      "Las tareas de ese módulo figuran «No aplica» automáticamente, con la aclaración «Módulo X no contratado», y no cuentan para el avance."
+    ],
+    [
+      "¿Por qué una tarea figura «Esperando un dato» si el dato ya está?",
+      "Porque falta registrar el insumo. Si el sistema ya ve datos cargados, la ficha avisa que el insumo no está registrado; registralo como recibido para dejar constancia."
+    ],
+    [
+      "¿Qué es «Preguntame»?",
+      "Es un botón que responde una pregunta por vez sobre el punto que estás mirando: el paso recomendado, una tarea o el Mapa. No es un chat y no recuerda lo anterior. Solo lee el tablero y no cambia nada."
+    ],
+    [
+      "¿Puede equivocarse?",
+      "Puede, como cualquier asistente. Por eso las respuestas llevan los códigos de las tareas como enlaces, para que verifiques en la ficha, y el sistema descarta las respuestas con cifras que no salen del tablero. Ante la duda, mirá la ficha: manda lo que dice ella."
+    ],
+    [
+      "¿De dónde saca los números?",
+      "Del mismo tablero que ves en pantalla: estados, cantidades de los controles, insumos y registro. No ve datos de afiliados ni recibos, y no inventa cifras: si una cifra no está en lo que leyó, la respuesta no se muestra."
+    ],
+    [
+      "¿Cuántas preguntas se pueden hacer?",
+      "Hay un tope por persona y por hora. Si lo alcanzás, la pantalla avisa cuánto falta para volver a preguntar. Una pregunta demasiado corta no cuenta."
+    ],
+    [
+      "¿El sindicato ve lo que pregunto?",
+      "No. XSII es una herramienta del equipo de Colm3na y el sindicato no la ve. Lo único que le llega es un reclamo, y solo si vos lo revisás y lo confirmás: aparece como una tarjeta de la Mesa."
+    ],
+    [
+      "¿El asistente puede crear cosas solo?",
+      "No. Lo único que puede hacer es proponer un reclamo, y nada se crea hasta que tocás «Crear en la Mesa»."
+    ],
+    [
+      "¿Por qué el reclamo se agregó a una tarjeta en vez de crear otra?",
+      "Porque el insumo ya tenía una tarjeta abierta en la Mesa. Así el sindicato tiene todo el pedido en un solo lugar."
+    ]
   ],
   "viene": [
-    ["Bloque 2: asistente de lectura", "XSII va a poder leer y explicar lo que hay en cada tarea, y el botón «Preguntame» va a funcionar, con preguntas sugeridas sobre cada punto."],
-    ["Tareas asistidas", "En este orden: primero Seccionales, después Padrón y después Conceptos. En cada una, XSII explica lo que va a hacer, muestra los datos y las cantidades, ejecuta cuando vos confirmás, informa el resultado y deja registro. Nunca escribe sin confirmación."],
-    ["Este tutorial", "Se va a ir completando con cada bloque, con las pantallas nuevas y sus casos."]
+    [
+      "Bloque 3: Seccionales y Sede Central desde planilla",
+      "Es la primera tarea que el asistente prepara y carga. Lee la planilla del sindicato, te muestra lo que va a cargar con sus cantidades en un ensayo, y recién cuando confirmás lo ejecuta, informa el resultado y deja registro. Nunca escribe sin confirmación."
+    ],
+    [
+      "Después",
+      "Padrón y Conceptos, con el mismo método: explicar, mostrar, ensayar, confirmar, ejecutar y dejar registro."
+    ],
+    [
+      "Este tutorial",
+      "Se va a ir completando con cada bloque, con las pantallas nuevas y sus casos."
+    ]
   ]
 }

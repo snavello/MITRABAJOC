@@ -1,9 +1,13 @@
 """XSII, bloque 1: la pantalla (estática, sin navegador). Plantilla, CSS y JS
 cumplen las reglas del proyecto: estáticos con sello, nada externo, nada de
 HTML armado con datos del servidor, rutas del contrato y «Preguntame»
-deshabilitado."""
+prendido (bloque 2)."""
 import re
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 RAIZ = Path(__file__).parent
 PLANTILLA = (RAIZ / "templates" / "xsii.html").read_text(encoding="utf-8")
@@ -43,10 +47,73 @@ def test_js_usa_las_rutas_del_contrato():
         assert clave in JS
 
 
-def test_preguntame_deshabilitado_y_con_su_texto():
+def test_preguntame_prendido_y_maneja_disponible_false():
     assert "Preguntame" in JS
-    assert "disabled: true" in JS
-    assert "Llega en el próximo bloque" in JS
+    assert "P.disponible" in JS and "P.motivo" in JS
+    assert "S.D.preguntame" in JS
+    # solo queda el texto viejo para un servidor que no trae `preguntame`
+    assert JS.count("Llega en el próximo bloque") == 1
+    assert "if (!P) {" in JS
+    for ruta in ("'preguntar'", "'insumo/' + encodeURIComponent(clave) + '/reclamo'", "/reclamo'"):
+        assert ruta in JS, ruta
+    for pieza in ("aria-expanded", "aria-live", "Escape", "Crear en la Mesa", "Descartar",
+                  "Respuesta simulada: en este entorno no se llama a la IA.",
+                  "Va como respuesta en la tarjeta", "resultado"):
+        assert pieza in JS, pieza
+    assert "if (st.cargando) return;" in JS
+    for punto in ("'recomendada'", "'tarea'", "'mapa'"):
+        assert f"pm({punto}" in JS, punto
+    assert "Reclamar en la Mesa" in JS and "abrirReclamo(" in JS
+
+
+def test_el_servidor_no_decide_en_la_pantalla_el_texto_va_como_nodo():
+    # los codigos de la respuesta son botones con nodos de texto
+    assert "createTextNode(texto.slice" in JS
+    assert "white-space:pre-line" in CSS
+
+
+def test_el_js_compila_con_node():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no hay node en este entorno")
+    r = subprocess.run([node, "--check", str(RAIZ / "static" / "xsii" / "xsii.js")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+
+def _funciones(texto):
+    """(inicio, fin) de cada `function nombre(...) {` por conteo de llaves (ignora cadenas y comentarios de linea)."""
+    limpio = re.sub(r"//[^\n]*", "", texto)
+    limpio = re.sub(r"'(?:\\.|[^'\\\n])*'|\"(?:\\.|[^\"\\\n])*\"", "''", limpio)
+    out = []
+    for m in re.finditer(r"function\s*\w*\s*\([^)]*\)\s*\{", limpio):
+        i, prof = m.end(), 1
+        while i < len(limpio) and prof:
+            prof += {"{": 1, "}": -1}.get(limpio[i], 0)
+            i += 1
+        out.append((m.start(), limpio[m.end():i - 1]))
+    return out
+
+
+def test_sin_const_o_let_repetidos_en_el_mismo_nivel_de_una_funcion():
+    """Una variable repetida dejo el Mapa en blanco en el bloque 1: `const x` dos veces al
+    mismo nivel de llaves de una misma funcion es un SyntaxError que solo se ve al correr."""
+    problemas = []
+    for _, cuerpo in _funciones(JS):
+        nivel, vistos = 0, {}
+        pila = [set()]
+        for tok in re.finditer(r"\{|\}|(?<!\()\b(?:const|let)\s+(\w+)", cuerpo):
+            t = tok.group(0)
+            if t == "{":
+                pila.append(set())
+            elif t == "}":
+                if len(pila) > 1:
+                    pila.pop()
+            else:
+                nombre = tok.group(1)
+                if nombre in pila[-1]:
+                    problemas.append(nombre)
+                pila[-1].add(nombre)
+    assert not problemas, problemas
 
 
 def test_las_tres_vistas_y_la_url():

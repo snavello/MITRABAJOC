@@ -1159,6 +1159,7 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     modelo_asistente: str = ""
     modelo_asistente_tramites: str = ""   # Asistente de trámites (Herramientas de /entornos)
     modelo_grilla_salarial: str = ""      # Lectura de la grilla salarial (Convenio y escalas)
+    modelo_xsii: str = ""                 # «Preguntame» de XSII (Implementación inteligente)
     # Claves de los OTROS proveedores del Laboratorio de modelos (Kimi, Qwen),
     # {variable: clave}, pegadas desde la propia pantalla (2026-10-29): es un
     # módulo de evaluación y SDN pidió no tener que ir a Render por cada una.
@@ -4244,6 +4245,7 @@ def modelos_ia() -> dict:
             "asistente": (cfg.modelo_asistente if cfg else "") or "",
             "asistente_tramites": (cfg.modelo_asistente_tramites if cfg else "") or "",
             "grilla_salarial": (cfg.modelo_grilla_salarial if cfg else "") or "",
+            "xsii": (cfg.modelo_xsii if cfg else "") or "",
         }
     return {uso: elegidos.get(uso) or precios_ia.default_de(uso) for uso in precios_ia.USOS}
 
@@ -4266,7 +4268,8 @@ def set_modelos_ia(elegidos: dict) -> None:
         for uso, columna in (("recibos", "modelo_recibos"), ("convenio", "modelo_convenio"),
                              ("asistente", "modelo_asistente"),
                              ("asistente_tramites", "modelo_asistente_tramites"),
-                             ("grilla_salarial", "modelo_grilla_salarial")):
+                             ("grilla_salarial", "modelo_grilla_salarial"),
+                             ("xsii", "modelo_xsii")):
             valor = (elegidos.get(uso) or "").strip()
             if valor and precios_ia.modelo_valido(valor):
                 setattr(cfg, columna, valor)
@@ -10763,7 +10766,7 @@ def _impl_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, bloquear: bool 
     """La tarjeta SOLO si es de ese proyecto."""
     q = select(ImplTarjeta).where(ImplTarjeta.id == tarjeta_id, ImplTarjeta.proyecto_id == proyecto_id)
     if bloquear:
-        q = q.with_for_update()
+        q = q.with_for_update().execution_options(populate_existing=True)
     return s.exec(q).first()
 
 
@@ -10777,7 +10780,7 @@ def _impl_siguiente(s: Session, proyecto_id: int, prefijo: str) -> int:
         proyecto_id=proyecto_id, prefijo=prefijo, ultimo=0).on_conflict_do_nothing(
         index_elements=["proyecto_id", "prefijo"]))
     c = s.exec(select(ImplContador).where(ImplContador.proyecto_id == proyecto_id,
-                                          ImplContador.prefijo == prefijo).with_for_update()).one()
+                                          ImplContador.prefijo == prefijo).with_for_update().execution_options(populate_existing=True)).one()
     c.ultimo += 1
     s.add(c)
     s.flush()
@@ -10832,7 +10835,7 @@ def impl_agregar_hito(s: Session, proyecto_id: int, etapa_id: int, texto: str, a
         raise implementacion.ErrorImpl("sin_permiso", "El plan lo edita el equipo.")
     # La etapa se bloquea: dos altas a la vez no calculan el mismo `orden` (QA-16).
     et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)
-                .with_for_update()).first()
+                .with_for_update().execution_options(populate_existing=True)).first()
     texto = _L(texto)
     if not et:
         return None
@@ -10857,7 +10860,7 @@ def impl_tildar_hito(s: Session, proyecto_id: int, hito_id: int, actor, hecho: b
     transacción de quien llama."""
     a = _impl_actor(actor)
     h = s.exec(select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
-               .with_for_update()).first()
+               .with_for_update().execution_options(populate_existing=True)).first()
     if not h:
         return None
     if h.hecho != bool(hecho):
@@ -10897,18 +10900,19 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
                        etapa_id: int = None, hito_id: int = None, responsable: str = "",
                        responsable_lado: str = "", fecha_limite: str = "",
                        responde_a: str = None, adjuntos: list = None,
-                       datos_personales: bool = False) -> ImplTarjeta:
+                       datos_personales: bool = False, commit: bool = True) -> ImplTarjeta:
     """Crea la tarjeta con su primer mensaje (el texto), sus archivos y su
     evento, TODO en una transacción: si algo no pasa, no se crea nada. El
     número correlativo se toma con FOR UPDATE sobre el proyecto. None si el
     proyecto no existe; ErrorImpl si la tarjeta no valida. `adjuntos` es
-    [(nombre, mime, bytes)]."""
+    [(nombre, mime, bytes)]. Con `commit=False` queda en la transacción de
+    quien llama (XSII reclama un insumo y deja todo o nada)."""
     a = _impl_actor(actor)
     v = implementacion.validar_tarjeta_nueva(tipo, titulo, texto, fecha_limite)
     if not v["ok"]:
         raise implementacion.ErrorImpl("invalida", "; ".join(v["errores"].values()))
     d = v["datos"]
-    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first()
+    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first()
     if not proy:
         return None
     if etapa_id is not None and not s.exec(select(ImplEtapa.id).where(
@@ -10951,8 +10955,11 @@ def impl_crear_tarjeta(s: Session, proyecto_id: int, actor, tipo: str, titulo: s
     for nombre, mime, datos in (adjuntos or []):
         _impl_guardar_archivo(s, proyecto_id, t, a, nombre, mime, datos, datos_personales=datos_personales,
                               responde_a_id=original.id if original else None)
-    s.commit()
-    s.refresh(t)
+    if commit:
+        s.commit()
+        s.refresh(t)
+    else:
+        s.flush()
     return t
 
 
@@ -10962,7 +10969,7 @@ def impl_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int) -> Optional[Impl
 
 def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: str = "",
                    estado_nuevo: str = None, solo_equipo: bool = False, adjuntos: list = None,
-                   datos_personales: bool = False) -> Optional[ImplMensaje]:
+                   datos_personales: bool = False, commit: bool = True) -> Optional[ImplMensaje]:
     """Responder y cambiar de estado, UN solo acto: un mensaje (si hay texto),
     el estado nuevo, los archivos adjuntos (`adjuntos` = [(nombre, mime,
     bytes)]) y UN solo evento de la respuesta, todo en una transacción: si un
@@ -11025,7 +11032,10 @@ def impl_responder(s: Session, proyecto_id: int, tarjeta_id: int, actor, texto: 
     for nombre, mime, datos in (adjuntos or []):
         _impl_guardar_archivo(s, proyecto_id, t, a, nombre, mime, datos, datos_personales=datos_personales,
                               mensaje=m if m.id else None)
-    s.commit()
+    if commit:
+        s.commit()
+    else:
+        s.flush()
     return m
 
 
@@ -11083,7 +11093,7 @@ def impl_editar_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int, actor, **
     if "texto" in nuevos:
         msg = s.exec(select(ImplMensaje).where(
             ImplMensaje.proyecto_id == proyecto_id, ImplMensaje.tarjeta_id == t.id,
-            ImplMensaje.orden == 1, ImplMensaje.solo_equipo == False).with_for_update()).first()  # noqa: E712
+            ImplMensaje.orden == 1, ImplMensaje.solo_equipo == False).with_for_update().execution_options(populate_existing=True)).first()  # noqa: E712
         if not msg:
             raise implementacion.ErrorImpl("texto", "La tarjeta no tiene un planteo para corregir.")
     # Fase y hito: la fase final y el hito final tienen que ser del proyecto y coincidir.
@@ -11456,7 +11466,7 @@ def impl_borrar_archivo(s: Session, proyecto_id: int, archivo_id: int, actor) ->
     quién lo borró). Lo borra el equipo o quien lo subió."""
     a = _impl_actor(actor)
     arch = s.exec(select(ImplArchivo).options(*_sin_bytes(ImplArchivo)).where(
-        ImplArchivo.id == archivo_id, ImplArchivo.proyecto_id == proyecto_id).with_for_update()).first()
+        ImplArchivo.id == archivo_id, ImplArchivo.proyecto_id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first()
     if not arch or not _impl_archivo_visible(s, arch, a.lado):
         return None
     if arch.borrado_en:
@@ -11838,7 +11848,7 @@ def _impl_exigir_equipo(actor) -> "implementacion.Actor":
 
 def _impl_hito(s: Session, proyecto_id: int, hito_id: int, bloquear: bool = True) -> Optional[ImplHito]:
     q = select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
-    return s.exec(q.with_for_update() if bloquear else q).first()
+    return s.exec(q.with_for_update().execution_options(populate_existing=True) if bloquear else q).first()
 
 
 def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: str = None,
@@ -11861,7 +11871,7 @@ def impl_editar_hito(s: Session, proyecto_id: int, hito_id: int, actor, texto: s
             _impl_evento(s, proyecto_id, a, "hito_editar", detalle={"hito_id": h.id, "texto": texto})
     if orden is not None:
         # La etapa se bloquea: reordenar y sumar un hito no se pisan (QA-16).
-        s.exec(select(ImplEtapa.id).where(ImplEtapa.id == h.etapa_id).with_for_update()).first()
+        s.exec(select(ImplEtapa.id).where(ImplEtapa.id == h.etapa_id).with_for_update().execution_options(populate_existing=True)).first()
         hermanos = list(s.exec(select(ImplHito).where(ImplHito.proyecto_id == proyecto_id,
                                                       ImplHito.etapa_id == h.etapa_id)
                                .order_by(ImplHito.orden, ImplHito.id)).all())
@@ -11902,7 +11912,7 @@ def impl_borrar_hito(s: Session, proyecto_id: int, hito_id: int, actor) -> bool:
 def impl_renombrar_etapa(s: Session, proyecto_id: int, etapa_id: int, actor, nombre: str) -> Optional[ImplEtapa]:
     a = _impl_exigir_equipo(actor)
     et = s.exec(select(ImplEtapa).where(ImplEtapa.id == etapa_id, ImplEtapa.proyecto_id == proyecto_id)
-                .with_for_update()).first()
+                .with_for_update().execution_options(populate_existing=True)).first()
     if not et:
         return None
     nombre = _L(nombre)
@@ -11924,11 +11934,11 @@ def impl_fechar_plan(s: Session, proyecto_id: int, actor, fechas_etapas: list,
     vacío = sin fecha. Todo o nada: se valida TODO antes de escribir. Solo equipo.
     False si el proyecto no existe; una etapa ajena es ErrorImpl("etapa")."""
     a = _impl_exigir_equipo(actor)
-    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first()
+    proy = s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first()
     if not proy:
         return False
     etapas = {e.id: e for e in s.exec(select(ImplEtapa).where(ImplEtapa.proyecto_id == proyecto_id)
-                                      .with_for_update()).all()}
+                                      .with_for_update().execution_options(populate_existing=True)).all()}
     if not isinstance(fechas_etapas, list):
         raise implementacion.ErrorImpl("fechas", "Las fechas vienen como una lista de fases.")
     nuevas = {}
@@ -11977,7 +11987,7 @@ def impl_cargar_hitos_semilla(s: Session, proyecto_id: int, actor, fases: list) 
     (las etapas se emparejan por nombre; una que no existe se crea al final).
     Devuelve cuántos cargó; None si el proyecto no existe."""
     a = _impl_exigir_equipo(actor)
-    if not s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update()).first():
+    if not s.exec(select(ImplProyecto).where(ImplProyecto.id == proyecto_id).with_for_update().execution_options(populate_existing=True)).first():
         return None
     if s.exec(select(func.count()).select_from(ImplHito).where(ImplHito.proyecto_id == proyecto_id)).one():
         raise implementacion.ErrorImpl("con_hitos", "El proyecto ya tiene hitos: no se pisan.")
@@ -12384,7 +12394,7 @@ class XsiiMovimiento(SQLModel, table=True):
     proyecto_id: int = Field(index=True)
     codigo: str = ""                          # la tarea; vacío en lo de un insumo
     clave_insumo: str = ""                    # el insumo, en sus movimientos
-    tipo: str = ""                            # decision | decision_deshecha | insumo_pedido | insumo_recibido | insumo_retirado
+    tipo: str = ""                            # decision | decision_deshecha | insumo_pedido | insumo_recibido | insumo_retirado | insumo_reclamado
     texto: str = ""
     cantidades: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
     quien_id: int = 0
@@ -12589,6 +12599,90 @@ def xsii_retirar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_
     s.commit()
     s.refresh(previo)
     return previo
+
+
+XSII_RECLAMO_ESPERA_S = 60                # dos reclamos del mismo insumo, con un minuto de por medio
+XSII_RECLAMO_TITULO = (3, 120)
+XSII_RECLAMO_TEXTO = (5, 1000)
+
+
+def xsii_reclamar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str,
+                         titulo: str, texto: str):
+    """Reclama un insumo en la Mesa del proyecto, TODO en una transacción: crea
+    una tarjeta de tipo Pedido (dirigida al sindicato) o, si el insumo ya tiene
+    una tarjeta abierta enlazada, responde en ESA; deja el insumo en `pedido`
+    enlazado a la tarjeta y un solo movimiento `insumo_reclamado`. Usa las mismas
+    funciones que la Mesa (`impl_crear_tarjeta` / `impl_responder`, sin confirmar).
+    Devuelve `(tarjeta, modo, insumo)`, con `modo` «nueva» o «respuesta».
+    Rechaza con `XsiiError`: 400 texto inválido, 409 ya recibido o reclamado hace
+    menos de un minuto (también si dos pedidos llegan a la vez)."""
+    titulo = implementacion.limpiar_texto(titulo)
+    texto = implementacion.limpiar_texto(texto)
+    if xsii_visibles(texto) < XSII_RECLAMO_TEXTO[0]:
+        raise XsiiError(400, f"El texto necesita al menos {XSII_RECLAMO_TEXTO[0]} caracteres.")
+    if len(texto) > XSII_RECLAMO_TEXTO[1]:
+        raise XsiiError(400, f"El texto admite hasta {XSII_RECLAMO_TEXTO[1]} caracteres.")
+    a = _impl_actor(actor)
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(
+        clave=f"xsii-reclamo:{proyecto_id}:{clave}"))
+    previo = s.exec(select(XsiiInsumo).where(
+        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave,
+        XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
+    if previo is not None and previo.estado == "recibido":
+        raise XsiiError(409, "Este insumo ya figura como recibido: no hay nada que reclamar.")
+    ultimo = s.exec(select(XsiiMovimiento.cuando).where(
+        XsiiMovimiento.proyecto_id == proyecto_id, XsiiMovimiento.clave_insumo == clave,
+        XsiiMovimiento.tipo == "insumo_reclamado").order_by(XsiiMovimiento.id.desc())).first()
+    if ultimo:
+        try:
+            hace = (fechas.ahora() - datetime.strptime(ultimo, "%Y-%m-%d %H:%M:%S")).total_seconds()
+        except ValueError:
+            hace = XSII_RECLAMO_ESPERA_S
+        if hace < XSII_RECLAMO_ESPERA_S:
+            raise XsiiError(409, "Este insumo se reclamó hace un momento. Esperá un minuto antes de reclamarlo de nuevo.")
+    enlazada = _impl_tarjeta(s, proyecto_id, previo.tarjeta_id) if previo and previo.tarjeta_id else None
+    modo = ("respuesta" if enlazada is not None and enlazada.estado in implementacion.ESTADOS_ABIERTOS
+            and enlazada.tipo != implementacion.AVISO
+            and not implementacion.es_inmutable(enlazada.tipo, enlazada.estado) else "nueva")
+    if modo == "nueva":                        # en una respuesta el título se ignora
+        if xsii_visibles(titulo) < XSII_RECLAMO_TITULO[0]:
+            raise XsiiError(400, f"El título necesita al menos {XSII_RECLAMO_TITULO[0]} caracteres.")
+        if len(titulo) > XSII_RECLAMO_TITULO[1]:
+            raise XsiiError(400, f"El título admite hasta {XSII_RECLAMO_TITULO[1]} caracteres.")
+    try:
+        if modo == "respuesta":
+            tarjeta = enlazada
+            if impl_responder(s, proyecto_id, tarjeta.id, a, texto=texto, commit=False) is None:
+                raise XsiiError(404, "La tarjeta ya no existe en la Mesa.")
+        else:
+            tarjeta = impl_crear_tarjeta(s, proyecto_id, a, implementacion.PEDIDO, titulo, texto, commit=False)
+            if tarjeta is None:
+                raise XsiiError(404, "El proyecto ya no existe.")
+    except implementacion.ErrorImpl as e:
+        raise XsiiError(409 if modo == "respuesta" else 400, e.mensaje)
+    archivo_id, nota = None, ""
+    if previo is not None:
+        archivo_id, nota = previo.archivo_id, previo.nota
+        previo.activa = False
+        previo.retirado_por_id, previo.retirado_por_nombre = a.id, a.nombre
+        previo.retirado_cuando = fechas.ahora_con_segundos()
+        s.add(previo)
+        s.flush()
+    nuevo = XsiiInsumo(proyecto_id=proyecto_id, clave=clave, estado="pedido", tarjeta_id=tarjeta.id,
+                       archivo_id=archivo_id, nota=nota, quien_id=a.id, quien_nombre=a.nombre)
+    s.add(nuevo)
+    verbo = "Reclamó" if modo == "nueva" else "Volvió a reclamar"
+    _xsii_movimiento(s, proyecto_id, a, "insumo_reclamado",
+                     f"{verbo} el insumo {nombre_insumo} en la Mesa ({tarjeta.codigo})",
+                     clave_insumo=clave)
+    try:
+        s.commit()
+    except IntegrityError:
+        s.rollback()
+        raise XsiiError(409, "Otra persona registró este insumo al mismo tiempo. Volvé a intentar.")
+    s.refresh(nuevo)
+    s.refresh(tarjeta)
+    return tarjeta, modo, nuevo
 
 
 def xsii_movimientos(s: Session, proyecto_id: int, codigo: str = "", claves_insumo=(),

@@ -26,6 +26,8 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
 import asyncio
+import functools
+from sqlalchemy.exc import IntegrityError as _IntegrityErrorXsii
 import logging
 import os
 import re
@@ -7172,7 +7174,8 @@ def plataforma_modelos_ia(request: Request,
                           modelo_convenio: str = Form(""),
                           modelo_asistente: str = Form(""),
                           modelo_asistente_tramites: str = Form(""),
-                          modelo_grilla_salarial: str = Form("")):
+                          modelo_grilla_salarial: str = Form(""),
+                          modelo_xsii: str = Form("")):
     """Qué modelo de Anthropic usa cada parte de la app. Solo plataforma: la
     API la paga la plataforma, no el sindicato, y un cambio acá vale para
     todos los sindicatos a la vez.
@@ -7184,7 +7187,8 @@ def plataforma_modelos_ia(request: Request,
     db.set_modelos_ia({"recibos": modelo_recibos, "convenio": modelo_convenio,
                        "asistente": modelo_asistente,
                        "asistente_tramites": modelo_asistente_tramites,
-                       "grilla_salarial": modelo_grilla_salarial})
+                       "grilla_salarial": modelo_grilla_salarial,
+                       "xsii": modelo_xsii})
     return RedirectResponse("/plataforma?config=ok#usoia-modelos", status_code=303)
 
 
@@ -13664,6 +13668,10 @@ def api_impl_usuario_estado(request: Request, proyecto_id: IdImpl, usuario_id: I
 # (como `_impl_equipo_api`) y todo lo demás pasa por la sesión de la ruta. Lo que
 # arma el JSON y las reglas de cada decisión viven en `xsii/proyectos/colm3na/vista.py`.
 from xsii.proyectos.colm3na import vista as xsii_vista
+# Bloque 2: «Preguntame» y reclamar un dato (docs/xsii/API.md, sección final).
+from xsii import asistente as xsii_asistente
+from xsii.proyectos.colm3na import herramientas as xsii_herr
+import extractor as _extractor_xsii
 
 API_XSII = "/api/entornos/xsii"
 XSII_TARJETA_MAX = 20
@@ -13726,7 +13734,10 @@ def api_xsii_proyectos(actor=Depends(_xsii_equipo)):
 @app.get(API_XSII + "/p/{pid}/tablero")
 def api_xsii_tablero(pid: IdImpl, actor=Depends(_xsii_equipo)):
     with db.get_session() as s:
-        return xsii_vista.tablero_json(s, _xsii_contexto(s, pid))
+        salida = xsii_vista.tablero_json(s, _xsii_contexto(s, pid))
+    disponible, simulado = xsii_asistente.estado()
+    salida["preguntame"] = xsii_herr.preguntame_json("No hay clave de la API configurada.", disponible, simulado)
+    return salida
 
 
 @app.get(API_XSII + "/p/{pid}/tarea/{codigo}")
@@ -13822,6 +13833,155 @@ def api_xsii_movimientos(pid: IdImpl, codigo: str = "", limite: str = "50", acto
         if codigo and codigo not in xsii_vista.POR_CODIGO:
             return {"movimientos": []}        # no es una tarea del catálogo: nada que mostrar
         return xsii_vista.movimientos_json(s, ctx, codigo, limite)
+
+
+# ----- Bloque 2: «Preguntame» (la IA lee, nunca escribe) -----
+# Tope de consultas por usuario y por hora, en memoria del proceso como los demás
+# frenos de la casa (con varios workers es por proceso). La consulta puede tardar
+# decenas de segundos: la IA corre SIN sesión de base abierta (el tablero se arma
+# antes, la sesión se cierra y las herramientas leen de memoria), y el registro de
+# `UsoIA` se hace después con una sesión nueva.
+XSII_IA_TOPE_DEFECTO = 40
+XSII_IA_VENTANA_S = 3600
+_xsii_ia_marcas: dict = {}
+_xsii_ia_candado = threading.Lock()
+
+
+def _xsii_ia_tope() -> int:
+    try:
+        return max(1, int(os.getenv("XSII_IA_TOPE", XSII_IA_TOPE_DEFECTO)))
+    except ValueError:
+        return XSII_IA_TOPE_DEFECTO
+
+
+def _xsii_ia_marcas_de(actor_id, ahora) -> list:
+    """Las marcas vigentes (de la última hora) de un usuario; purga las vencidas de la tabla."""
+    marcas = [m for m in _xsii_ia_marcas.get(actor_id, []) if ahora - m < XSII_IA_VENTANA_S]
+    if marcas:
+        _xsii_ia_marcas[actor_id] = marcas
+    else:
+        _xsii_ia_marcas.pop(actor_id, None)
+    return marcas
+
+
+def _xsii_ia_tope_agotado(marcas, ahora) -> None:
+    if len(marcas) >= _xsii_ia_tope():
+        minutos = max(1, int((XSII_IA_VENTANA_S - (ahora - marcas[0]) + 59) // 60))
+        raise HTTPException(429, f"Hiciste muchas preguntas seguidas. Podés volver a preguntar en {minutos} "
+                                 f"{'minuto' if minutos == 1 else 'minutos'}.")
+
+
+def _xsii_ia_mirar(actor) -> None:
+    """Levanta 429 si el tope está agotado, SIN gastarlo: se mira antes de armar el tablero."""
+    import time
+    ahora = time.time()
+    with _xsii_ia_candado:
+        _xsii_ia_tope_agotado(_xsii_ia_marcas_de(actor.id, ahora), ahora)
+
+
+def _xsii_ia_frenar(actor) -> None:
+    """Cuenta esta consulta o levanta 429 con cuándo se puede volver a preguntar."""
+    import time
+    ahora = time.time()
+    with _xsii_ia_candado:
+        marcas = _xsii_ia_marcas_de(actor.id, ahora)
+        _xsii_ia_tope_agotado(marcas, ahora)
+        marcas.append(ahora)
+        _xsii_ia_marcas[actor.id] = marcas
+        if len(_xsii_ia_marcas) > 5000:        # que la tabla no crezca sin límite
+            for uid in list(_xsii_ia_marcas):  # primero se purgan las marcas vencidas (más de una hora)
+                _xsii_ia_marcas_de(uid, ahora)
+            if len(_xsii_ia_marcas) > 5000:    # aun así: se van las de actividad más vieja, nunca quien está al tope
+                al_tope = _xsii_ia_tope()
+                viejas = sorted((u for u, m in _xsii_ia_marcas.items() if u != actor.id and len(m) < al_tope),
+                                key=lambda u: max(_xsii_ia_marcas[u]))
+                for uid in viejas[:len(_xsii_ia_marcas) - 5000]:
+                    _xsii_ia_marcas.pop(uid, None)
+
+
+@app.post(API_XSII + "/p/{pid}/preguntar")
+def api_xsii_preguntar(pid: IdImpl, actor=Depends(_xsii_equipo), datos: dict = Depends(_xsii_cuerpo)):
+    punto = _xsii_texto(datos.get("punto"), "El punto")
+    if punto not in xsii_asistente.PUNTOS:
+        raise HTTPException(400, "El punto tiene que ser recomendada, tarea o mapa.")
+    try:
+        pregunta = xsii_asistente.normalizar_pregunta(datos.get("pregunta"))
+    except xsii_asistente.PreguntaInvalida as e:
+        raise HTTPException(400, str(e))
+    codigo = ""
+    if punto != "recomendada":
+        codigo = _xsii_tarea(_xsii_texto(datos.get("codigo"), "El código"))
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        if not ctx.disponible:
+            raise HTTPException(409, ctx.motivo_no_disponible)
+        disponible, _simulado = xsii_asistente.estado()
+        if not disponible:
+            raise HTTPException(409, "No hay clave de la API configurada.")
+        _xsii_ia_mirar(actor)                  # con el tope agotado no se arma el tablero (no lo gasta)
+        inst = xsii_herr.Instantanea.armar(s, ctx)
+        sindicato_id = ctx.sindicato_id
+    # La sesión ya se cerró: lo que sigue puede tardar sin retener una conexión del pool.
+    _xsii_ia_frenar(actor)                     # recién acá se gasta, justo antes de llamar al modelo
+    modelo = db.modelo_ia("xsii")
+    r = xsii_asistente.consultar(
+        modelo=modelo, sistema=xsii_herr.SISTEMA, punto=punto, codigo=codigo, pregunta=pregunta,
+        herramientas=xsii_herr.herramientas(inst), codigos_validos=xsii_herr.CODIGOS,
+        simular=functools.partial(xsii_herr.simular, inst=inst), opciones=_extractor_xsii._opciones(modelo))
+    uso = r.get("uso")
+    if uso:                                   # también si terminó en texto fijo o error: ya se pagó
+        try:
+            db.registrar_uso_ia(sindicato_id, "", "herramienta", uso["modelo"], uso["tokens_entrada"],
+                                uso["tokens_salida"], uso.get("duracion_ms", 0), uso.get("tokens_cache_lectura", 0),
+                                uso.get("tokens_cache_escritura", 0))
+        except Exception as e:                # noqa: BLE001
+            print(f"[xsii-ia] no se registró el uso de IA: {type(e).__name__}: {e}")
+    return {"resultado": r["resultado"], "texto": r["texto"], "codigos": r["codigos"],
+            "propuesta": r["propuesta"], "simulado": r["simulado"]}
+
+
+# ----- Bloque 2: reclamar un dato en la Mesa -----
+@app.get(API_XSII + "/p/{pid}/insumo/{clave}/reclamo")
+def api_xsii_reclamo_borrador(pid: IdImpl, clave: str, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        clave = _xsii_insumo(clave)
+        reg = ctx.insumos.get(clave)
+        if reg is not None and reg.estado == "recibido":
+            raise HTTPException(409, "Este insumo ya figura como recibido: no hay nada que reclamar.")
+        return xsii_herr.borrador_reclamo(ctx, clave)
+
+
+@app.post(API_XSII + "/p/{pid}/insumo/{clave}/reclamo")
+def api_xsii_reclamo(request: Request, pid: IdImpl, clave: str, actor=Depends(_xsii_equipo),
+                     datos: dict = Depends(_xsii_cuerpo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        clave = _xsii_insumo(clave)
+        titulo, texto = _xsii_texto(datos.get("titulo"), "El título"), _xsii_texto(datos.get("texto"), "El texto")
+        try:
+            tarjeta, modo, _insumo = db.xsii_reclamar_insumo(
+                s, pid, actor, clave, xsii_vista.INSUMOS[clave]["nombre"], titulo, texto)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        except _IntegrityErrorXsii:            # un choque de único nunca llega como 500
+            s.rollback()
+            raise HTTPException(409, "Otro pedido se cruzó con este. Probá de nuevo.")
+        aviso = None
+        try:
+            if tarjeta.lado_que_espera and tarjeta.lado_que_espera != actor.lado:
+                aviso = _impl_preparar_aviso(s, request, pid, tarjeta, tarjeta.lado_que_espera,
+                                             "nueva" if modo == "nueva" else "respuesta")
+        except Exception:                      # noqa: BLE001 - el mail nunca rompe el reclamo
+            logging.getLogger(__name__).warning("xsii: no se pudo preparar el aviso por mail")
+        ctx = _xsii_contexto(s, pid)
+        salida = {"ok": True, "modo": modo, "insumo": xsii_vista.insumo_json(ctx, clave),
+                  "tarjeta": xsii_vista._tarjeta_json(ctx, tarjeta.id)}
+    try:
+        _impl_enviar_aviso(aviso)
+    except Exception:                          # noqa: BLE001
+        logging.getLogger(__name__).warning("xsii: el aviso por mail falló")
+    return salida
 
 
 @app.get("/entornos/xsii")

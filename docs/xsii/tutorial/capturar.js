@@ -88,27 +88,89 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await ir('?tarea=EST-01');
   await foto(page, '03-ficha-est01', { sel: '.app', marcas: [{ h3: 'Lo que dice el control', n: 1 }, { css: '.btn.donde', n: 2 }, { css: '.ficha .aviso', n: 3 }] });
 
-  // 4. Pedir un dato al sindicato (PAD-01)
-  await ir('?tarea=PAD-01');
-  await foto(page, '04-pad01-falta', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Marcar pedido', n: 2 }] });
-  // 5a. Confirmar antes de que llegue el insumo
-  await foto(page, '05-pad01-confirmar-error', { clipH3: 'Lo que hay que confirmar', marcas: [{ txt: 'Primero registrá', n: 1 }] });
-  // 4b. Marcar pedido enlazado a la tarjeta de la Mesa
+  // 4. Pedir un dato al sindicato, a mano (REC-01, «Recibos de muestra»)
+  await ir('?tarea=REC-01');
+  await foto(page, '04-rec01-falta', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Marcar pedido', n: 2 }] });
   await page.click('button:has-text("Marcar pedido")'); await sleep(300);
-  await page.fill('#x-ins-tarjeta', cfg.tarjetas[1]);
+  await page.fill('#x-ins-tarjeta', cfg.tarjetas[2]);
   await page.fill('#x-ins-nota', 'Se lo pedimos a Marcela, de Afiliaciones.');
-  await foto(page, '06-pad01-form-pedido', { sel: '.ficha', marcas: [{ css: '#x-ins-tarjeta', n: 1 }] });
+  await foto(page, '06-rec01-form-pedido', { sel: '.ficha', marcas: [{ css: '#x-ins-tarjeta', n: 1 }] });
   await form(); await sleep(500);
-  await foto(page, '07-pad01-pedido', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }] });
+  await foto(page, '07-rec01-pedido', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }] });
+
+  // 4b. Preguntame sobre el paso recomendado (Guía)
+  const abrirPm = async (punto) => { await page.click(`.pm[data-punto="${punto}"] .pm-t`); await sleep(700); };
+  const esperaResp = async (punto) => { await page.waitForSelector(`.pm[data-punto="${punto}"] .pm-r`, { timeout: 15000 }); await sleep(900); };
+  await ir();
+  await abrirPm('recomendada');
+  await foto(page, '23-pm-guia-abierto', { sel: '.heroe', pad: 14, marcas: [{ css: '.pm[data-punto="recomendada"] .pm-t', n: 1 }, { css: '.pm[data-punto="recomendada"] .pm-q', n: 2 }, { css: '.pm[data-punto="recomendada"] .pm-campo', n: 3 }] });
+  await page.click('.pm[data-punto="recomendada"] .pm-sug >> nth=0');
+  await esperaResp('recomendada');
+  await foto(page, '24-pm-guia-respuesta', { sel: '.heroe', pad: 14, marcas: [{ css: '.pm[data-punto="recomendada"] .pm-r', n: 1 }, { css: '.pm[data-punto="recomendada"] .pm-cod', n: 2 }, { css: '.pm[data-punto="recomendada"] .pm-r .nota', n: 3 }] });
+
+  // 4c. Preguntame en una ficha: un error (muy corta) y una pregunta escrita a mano (PAD-02)
+  await ir('?tarea=PAD-02');
+  await abrirPm('tarea');
+  await page.fill('.pm[data-punto="tarea"] .pm-campo', 'ok');
+  await page.click('.pm[data-punto="tarea"] button[type=submit]'); await sleep(700);
+  await foto(page, '25-pm-pregunta-corta', { sel: '.pm[data-punto="tarea"]', pad: 14, marcas: [{ css: '.pm[data-punto="tarea"] .pm-campo', n: 1 }, { css: '.pm[data-punto="tarea"] .err', n: 2 }] });
+  await page.fill('.pm[data-punto="tarea"] .pm-campo', '¿Qué la frena hoy?');
+  await page.click('.pm[data-punto="tarea"] button[type=submit]');
+  await esperaResp('tarea');
+  await foto(page, '26-pm-ficha-escrita', { sel: '.pm[data-punto="tarea"]', pad: 14, marcas: [{ css: '.pm[data-punto="tarea"] .pm-campo', n: 1 }, { css: '.pm[data-punto="tarea"] .pm-r', n: 2 }] });
+
+  // 4d. Preguntame en el Mapa
+  await ir('?vista=mapa');
+  await page.click('g.n[data-n="PAD-02"]'); await sleep(800);
+  await abrirPm('mapa');
+  await page.click('.pm[data-punto="mapa"] .pm-sug >> nth=1');
+  await esperaResp('mapa');
+  await foto(page, '27-pm-mapa', { sel: '.app', marcas: [{ css: '.mficha', n: 1 }, { css: '.pm[data-punto="mapa"] .pm-r', n: 2 }] });
+
+  // 4e. El asistente propone un reclamo (PAD-01, «Padrón recibido»)
+  await ir('?tarea=PAD-01');
+  await foto(page, '04-pad01-falta', { sel: '.ficha', marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Reclamar en la Mesa', n: 2 }] });
+  await abrirPm('tarea');
+  await page.click('.pm[data-punto="tarea"] .pm-sug >> nth=0');
+  await esperaResp('tarea');
+  await foto(page, '28-pm-propuesta', { sel: '.pm[data-punto="tarea"]', pad: 14, marcas: [{ css: '.pm[data-punto="tarea"] .pm-r', n: 1 }, { css: '.pm[data-punto="tarea"] form.rc', n: 2 }, { btn: 'Crear en la Mesa', n: 3 }, { btn: 'Descartar', n: 4 }] });
+  const ta = page.locator('.pm[data-punto="tarea"] form.rc textarea');
+  const previo = await ta.inputValue();
+  await ta.fill(previo + ' Si la tienen en Excel, mejor.');
+  await foto(page, '29-pm-propuesta-editada', { sel: '.pm[data-punto="tarea"] form.rc', pad: 14, marcas: [{ css: '.pm[data-punto="tarea"] form.rc textarea', n: 1 }] });
+  await page.click('.pm[data-punto="tarea"] form.rc button[type=submit]'); await sleep(1800);
+  await foto(page, '30-reclamo-creado', { sel: '.app', maxAlto: 1300, marcas: [{ css: '.aviso.exito', n: 1 }, { h3: 'Insumos', n: 2 }] });
+  await page.goto(`${BASE}/implementacion?p=${PID}`); await sleep(1800);
+  await page.click('text=Necesitamos: Planilla del padrón >> nth=0').catch(() => {});
+  await sleep(500);
+  await page.screenshot({ path: `${OUT}/31-mesa-tarjeta-nueva.jpg`, type: 'jpeg', quality: 80, fullPage: true });
+  console.log('captura 31-mesa-tarjeta-nueva');
+
+  // 5a. Confirmar antes de que llegue el insumo
+  await ir('?tarea=PAD-01');
+  await foto(page, '05-pad01-confirmar-error', { clipH3: 'Lo que hay que confirmar', marcas: [{ txt: 'Primero registrá', n: 1 }] });
   // El aviso de demorado: atrasamos el pedido tres días
   sql("UPDATE xsiiinsumo SET cuando = to_char(now() - interval '3 days','YYYY-MM-DD HH24:MI:SS') WHERE clave='planilla_padron' AND activa");
   await ir();
-  await foto(page, '08-guia-demorado', { sel: '.app', marcas: [{ css: '.pano .aviso', n: 1 }] });
-  // 4c. Llegó: marcar recibido
+  await foto(page, '08-guia-demorado', { sel: '.app', marcas: [{ css: '.pano .aviso', n: 1 }, { css: '.pano .aviso button', n: 2 }] });
+  // 5b. Reclamar sin asistente: el formulario con el borrador, en modo respuesta
+  await page.click('.pano .aviso button:has-text("Reclamar en la Mesa")'); await sleep(1200);
+  await foto(page, '32-reclamo-respuesta-form', { sel: '.app', marcas: [{ css: '#x-cond form.rc', n: 1 }, { css: '#x-cond form.rc a', n: 2 }, { btn: 'Responder en la tarjeta', n: 3 }] });
+  await page.click('#x-cond form.rc button[type=submit]'); await sleep(1800);
+  await foto(page, '33-reclamo-muy-seguido', { sel: '#x-cond form.rc', pad: 14, marcas: [{ css: '#x-cond form.rc .err', n: 1 }] });
+  await sleep(65000);
+  await page.click('#x-cond form.rc button[type=submit]'); await sleep(1800);
+  await foto(page, '35-reclamo-respuesta-hecho', { sel: '.app', maxAlto: 900, marcas: [{ css: '.aviso.exito', n: 1 }] });
+  await page.goto(`${BASE}/implementacion?p=${PID}`); await sleep(1800);
+  await page.click('text=Necesitamos: Planilla del padrón >> nth=0').catch(() => {});
+  await sleep(700);
+  await page.screenshot({ path: `${OUT}/34-mesa-tarjeta-respondida.jpg`, type: 'jpeg', quality: 80, fullPage: true });
+  console.log('captura 34-mesa-tarjeta-respondida');
+  // 4f. Llegó: marcar recibido
   await ir('?tarea=PAD-01');
   await page.click('button:has-text("Marcar recibido")'); await sleep(1100);
   await foto(page, '09-pad01-recibido', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Insumos', n: 2 }] });
-  // 5b. Confirmar
+  // 5c. Confirmar
   await page.click('button.btn.p:text-is("Confirmar")'); await sleep(1100);
   await foto(page, '10-pad01-confirmada', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Decisiones activas', n: 2 }] });
 

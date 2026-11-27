@@ -15,7 +15,8 @@
   const VISTAS = ['guia', 'tablero', 'mapa'];
   const S = {
     D: null, cargando: true, error: '', vista: 'guia', abierta: null, sel: null, filtro: '',
-    det: {}, form: null, insForm: null, anim: false, enfocar: null, enviando: false, abiertos: {}
+    det: {}, form: null, insForm: null, anim: false, enfocar: null, enviando: false, abiertos: {},
+    pm: {}, rc: null, exito: null
   };
 
   // ------------------------------------------------------------ utilidades
@@ -206,10 +207,214 @@
     if (t.con_observaciones) m.push(h('span', { class: 'marca-t conf' }, 'Con observaciones'));
     return m.length ? h('span', { class: 'marcas' }, m) : null;
   }
-  function preguntame() {
-    return h('div', { class: 'pm' },
-      h('button', { type: 'button', disabled: true }, 'Preguntame'),
-      h('span', null, 'Llega en el próximo bloque'));
+  // ------------------------------------------------------------ Preguntame (bloque 2)
+  // Una pregunta por vez, sobre UN punto, en el lugar. Sin historial: una pregunta
+  // nueva reemplaza la respuesta. El estado vive en S.pm por punto y codigo, asi un
+  // redibujado general no pierde lo escrito ni la respuesta.
+  function idSeguro(t) { return String(t).replace(/[^A-Za-z0-9]+/g, '-'); }
+  function pmEstado(clave) {
+    if (!S.pm[clave]) S.pm[clave] = { abierto: false, texto: '', cargando: false, resp: null, error: '', ultima: '', prop: null, entra: false, abre: false, foco: null };
+    return S.pm[clave];
+  }
+  function escapar(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function textoConCodigos(texto, codigos) {
+    const frag = document.createDocumentFragment();
+    const cods = (codigos || []).filter(function (c) { return tarea(c); });
+    if (!cods.length) { frag.appendChild(document.createTextNode(texto)); return frag; }
+    const re = new RegExp('(?<![A-Za-z0-9-])(' + cods.map(escapar).join('|') + ')(?![A-Za-z0-9-])', 'g');
+    let ultimo = 0, hallado;
+    while ((hallado = re.exec(texto)) !== null) {
+      if (hallado.index > ultimo) frag.appendChild(document.createTextNode(texto.slice(ultimo, hallado.index)));
+      const cod = hallado[1];
+      frag.appendChild(h('button', { class: 'pm-cod', type: 'button', title: 'Abrir la ficha de ' + cod, onclick: function () { abrirFicha(cod); } }, cod));
+      ultimo = hallado.index + cod.length;
+    }
+    if (ultimo < texto.length) frag.appendChild(document.createTextNode(texto.slice(ultimo)));
+    return frag;
+  }
+  function pm(punto, codigo) {
+    const clave = punto + ':' + (codigo || '');
+    const cont = h('div', { class: 'pm', 'data-pm': clave, 'data-punto': punto, 'data-codigo': codigo || '' });
+    pintarPm(cont);
+    return cont;
+  }
+  function repintarPm(clave) {
+    document.querySelectorAll('[data-pm]').forEach(function (c) { if (c.getAttribute('data-pm') === clave) pintarPm(c); });
+  }
+  function pintarPm(cont) {
+    const clave = cont.getAttribute('data-pm'), punto = cont.getAttribute('data-punto'), codigo = cont.getAttribute('data-codigo');
+    const P = S.D && S.D.preguntame;
+    const base = 'pm-' + idSeguro(clave);
+    const st = pmEstado(clave);
+    const activo = document.activeElement && cont.contains(document.activeElement) ? document.activeElement.id : '';
+    let contenido;
+    if (!P) {
+      contenido = [h('button', { type: 'button', class: 'pm-t', disabled: true }, 'Preguntame'), h('span', { class: 'nota' }, 'Llega en el próximo bloque')];
+    } else if (!P.disponible) {
+      contenido = [h('button', { type: 'button', class: 'pm-t', disabled: true }, 'Preguntame'), h('span', { class: 'nota' }, P.motivo || 'No está disponible por ahora.')];
+    } else {
+      const largo = P.largo || { min: 3, max: 300 };
+      const sug = ((P.sugeridas || {})[punto]) || [];
+      const ocupado = st.cargando;
+      const preguntar = function (texto) { preguntarPm(clave, punto, codigo, texto); };
+      const cuerpo = h('div', { class: 'pm-cuerpo' + (st.abre ? ' pm-abre' : ''), id: base + '-cuerpo' },
+        sug.length ? h('div', { class: 'pm-q', role: 'group', 'aria-label': 'Preguntas sugeridas' }, sug.map(function (q, i) {
+          return h('button', { type: 'button', id: base + '-s' + i, class: 'pm-sug' + (st.ultima === q ? ' on' : ''), 'aria-disabled': ocupado ? 'true' : null,
+            onclick: function () { if (st.cargando) return; st.texto = q; preguntar(q); } }, q);
+        })) : null,
+        h('form', { class: 'pm-form', onsubmit: function (ev) { ev.preventDefault(); if (st.cargando) return; preguntar(st.texto); } },
+          h('label', { class: 'sr', for: base + '-campo' }, 'Tu pregunta'),
+          h('input', { id: base + '-campo', type: 'text', class: 'pm-campo', maxlength: String(largo.max), autocomplete: 'off', readonly: ocupado ? 'true' : null,
+            placeholder: 'O escribí tu pregunta sobre este punto', value: st.texto,
+            oninput: function (e) {
+              st.texto = e.target.value;
+              const c = document.getElementById(base + '-cont');
+              if (c) { c.textContent = st.texto.length + '/' + largo.max; }
+            } }),
+          h('span', { class: 'pm-cont num', id: base + '-cont' }, st.texto.length + '/' + largo.max),
+          h('button', { type: 'submit', id: base + '-ok', class: 'btn p ch', 'aria-disabled': ocupado ? 'true' : null }, ocupado ? 'Preguntando…' : 'Preguntar')),
+        h('div', { class: 'pm-resp', 'aria-live': 'polite', 'aria-busy': ocupado ? 'true' : 'false' },
+          ocupado ? h('div', { class: 'esq pm-esq' }, h('i'), h('i'), h('i')) : null,
+          !ocupado && st.error ? h('p', { class: 'err', role: 'alert' }, st.error) : null,
+          !ocupado && st.resp ? respuestaPm(st, clave) : null));
+      contenido = [
+        h('button', { type: 'button', id: base + '-tog', class: 'pm-t', 'aria-expanded': st.abierto ? 'true' : 'false', 'aria-controls': base + '-cuerpo',
+          onclick: function () { st.abierto = !st.abierto; st.abre = st.abierto; if (st.abierto) st.foco = base + '-campo'; repintarPm(clave); } }, 'Preguntame'),
+        st.abierto ? cuerpo : null];
+    }
+    cont.className = 'pm' + (st.abierto && P && P.disponible ? ' abierto' : '');
+    cont.onkeydown = function (e) {
+      if (e.key === 'Escape' && st.abierto) { e.stopPropagation(); st.abierto = false; st.foco = base + '-tog'; repintarPm(clave); }
+    };
+    cont.replaceChildren.apply(cont, contenido.filter(Boolean));
+    st.abre = false;
+    const objetivo = st.foco || activo; st.foco = null;
+    if (objetivo) {
+      const e = document.getElementById(objetivo);
+      if (e) { try { e.focus({ preventScroll: objetivo.slice(-6) !== '-campo' && objetivo.slice(-2) !== '-h' }); } catch (x) { e.focus(); } }
+    }
+  }
+  function respuestaPm(st, clave) {
+    const r = st.resp;
+    const tono = r.resultado === 'error' ? ' aviso-t' : r.resultado === 'fija' ? ' fija' : '';
+    const entra = st.entra ? ' pm-entra' : ''; st.entra = false;
+    return h('div', { class: 'pm-r' + tono + entra },
+      st.ultima ? h('p', { class: 'pm-pregunta' }, st.ultima) : null,
+      h('p', { class: 'pm-texto' }, textoConCodigos(String(r.texto || ''), r.codigos)),
+      r.simulado ? h('p', { class: 'nota' }, 'Respuesta simulada: en este entorno no se llama a la IA.') : null,
+      st.prop ? propuestaPm(st, clave) : null,
+      st.creada ? h('p', { class: 'nota' }, 'Listo: el reclamo se creó en la Mesa.') : null);
+  }
+  function propuestaPm(st, clave) {
+    const f = st.prop;
+    return formReclamo(f, {
+      cab: 'Propongo pedirlo en la Mesa',
+      redib: function () { repintarPm(clave); },
+      confirmar: function () {
+        confirmarReclamo(f, function (res) {
+          st.prop = null; st.creada = true; avisarCreado(res, f);
+        }, function () { repintarPm(clave); });
+      },
+      cancelar: function () { st.prop = null; st.foco = 'pm-' + idSeguro(clave) + '-campo'; repintarPm(clave); }
+    });
+  }
+  async function preguntarPm(clave, punto, codigo, texto) {
+    const st = pmEstado(clave);
+    if (st.cargando) return;
+    const P = S.D && S.D.preguntame, largo = (P && P.largo) || { min: 3, max: 300 };
+    const q = String(texto || '').trim();
+    if (q.length < largo.min) { st.error = 'Escribí tu pregunta (al menos ' + largo.min + ' caracteres).'; st.resp = null; st.foco = 'pm-' + idSeguro(clave) + '-campo'; repintarPm(clave); return; }
+    st.cargando = true; st.error = ''; st.resp = null; st.prop = null; st.creada = false; st.ultima = q;
+    repintarPm(clave);
+    const cuerpo = { punto: punto, pregunta: q };
+    if (punto !== 'recomendada') cuerpo.codigo = codigo;
+    try {
+      const r = await enviar('preguntar', cuerpo);
+      st.resp = r; st.entra = true;
+      const p = r && r.propuesta;
+      st.prop = p && p.tipo === 'reclamo' ? { id: 'pm-prop-' + idSeguro(clave), clave: p.clave, nombre: p.nombre || p.clave, titulo: p.titulo || '', texto: p.texto || '', modo: 'nueva', tarjeta: null, error: '', enviando: false } : null;
+      if (st.prop) st.foco = st.prop.id + '-h';
+    } catch (e) {
+      st.error = e.message;
+    }
+    st.cargando = false;
+    repintarPm(clave);
+  }
+
+  // ------------------------------------------------------------ Reclamar en la Mesa (bloque 2)
+  function avisarCreado(res, f) {
+    const t = (res && res.tarjeta) || {};
+    S.exito = { codigo: t.codigo || '', titulo: t.titulo || '', url: t.url || (S.D && S.D.proyecto.mesa_url) || '', nombre: f.nombre || '', respuesta: f.modo === 'respuesta' };
+    S.rc = null;
+    cargar(true).then(function () { window.scrollTo({ top: 0 }); });
+  }
+  async function confirmarReclamo(f, alTerminar, redib) {
+    if (f.enviando) return;
+    const t = (f.titulo || '').trim(), x = (f.texto || '').trim();
+    if (f.modo !== 'respuesta' && (t.length < 3 || t.length > 120)) { f.error = 'El título tiene que tener entre 3 y 120 caracteres.'; S.enfocar = '#' + f.id + '-t'; f.foco = f.id + '-t'; redib(); return; }
+    if (x.length < 5 || x.length > 1000) { f.error = 'El texto tiene que tener entre 5 y 1.000 caracteres.'; S.enfocar = '#' + f.id + '-x'; f.foco = f.id + '-x'; redib(); return; }
+    f.enviando = true; f.error = ''; redib();
+    try {
+      const res = await enviar('insumo/' + encodeURIComponent(f.clave) + '/reclamo', { titulo: t, texto: x });
+      f.enviando = false; alTerminar(res);
+    } catch (e) {
+      f.enviando = false; f.error = e.message; redib();
+    }
+  }
+  function formReclamo(f, o) {
+    const nueva = f.modo !== 'respuesta';
+    const tar = f.tarjeta;
+    return h('form', { class: 'form rc', onsubmit: function (ev) { ev.preventDefault(); o.confirmar(); } },
+      h('p', { class: 'rot rc-tit', id: f.id + '-h', tabindex: '-1' }, o.cab || 'Reclamar en la Mesa'),
+      h('p', { class: 'nota' }, 'Dato: ', h('b', null, f.nombre || f.clave)),
+      nueva ? [h('label', { for: f.id + '-t' }, 'Título'),
+        h('input', { id: f.id + '-t', type: 'text', maxlength: '120', value: f.titulo || '', oninput: function (e) { f.titulo = e.target.value; } })]
+        : h('p', { class: 'nota' }, 'Va como respuesta en la tarjeta ',
+          tar && tar.url ? h('a', { href: tar.url, target: '_blank', rel: 'noopener' }, tar.codigo || 'de la Mesa') : (tar && tar.codigo) || 'de la Mesa', '.'),
+      h('label', { for: f.id + '-x' }, 'Texto'),
+      h('textarea', { id: f.id + '-x', rows: '6', maxlength: '1000', oninput: function (e) { f.texto = e.target.value; } }, f.texto || ''),
+      f.error ? h('p', { class: 'err', role: 'alert' }, f.error) : null,
+      h('div', { class: 'acc' },
+        h('button', { class: 'btn p ch', type: 'submit', 'aria-disabled': f.enviando ? 'true' : null }, nueva ? (f.enviando ? 'Creando…' : 'Crear en la Mesa') : (f.enviando ? 'Enviando…' : 'Responder en la tarjeta')),
+        h('button', { class: 'btn ch', type: 'button', onclick: o.cancelar }, 'Descartar')));
+  }
+  async function abrirReclamo(clave, origen) {
+    if (S.rc && S.rc.clave === clave && S.rc.origen === origen) { S.rc = null; dibujar(); return; }
+    const f = { id: 'x-rc-' + origen, clave: clave, origen: origen, cargando: true, errorCarga: '', modo: 'nueva', nombre: '', titulo: '', texto: '', tarjeta: null, error: '', enviando: false };
+    S.rc = f; dibujar();
+    try {
+      const b = await pedir('insumo/' + encodeURIComponent(clave) + '/reclamo');
+      if (S.rc !== f) return;
+      f.cargando = false; f.nombre = b.nombre || clave; f.titulo = b.titulo || ''; f.texto = b.texto || ''; f.tarjeta = b.tarjeta || null; f.modo = b.modo === 'respuesta' ? 'respuesta' : 'nueva';
+      S.enfocar = '#' + f.id + (f.modo === 'respuesta' ? '-x' : '-t');
+    } catch (e) {
+      if (S.rc !== f) return;
+      f.cargando = false; f.errorCarga = e.message;
+    }
+    dibujar();
+  }
+  function bloqueReclamo(clave, origen) {
+    const f = S.rc;
+    if (!f || f.clave !== clave || f.origen !== origen) return null;
+    if (f.cargando) return h('div', { class: 'esq', 'aria-busy': 'true', 'aria-label': 'Preparando el reclamo' }, h('i', { class: 'm' }), h('i'));
+    if (f.errorCarga) return h('div', { class: 'form rc' }, h('p', { class: 'err', role: 'alert' }, f.errorCarga),
+      h('div', { class: 'acc' }, h('button', { class: 'btn ch', type: 'button', onclick: function () { S.rc = null; dibujar(); } }, 'Cerrar')));
+    return formReclamo(f, {
+      cab: f.origen === 'pano' ? 'Reclamar: ' + (f.nombre || clave) : null,
+      redib: dibujar,
+      confirmar: function () { confirmarReclamo(f, function (res) { avisarCreado(res, f); }, dibujar); },
+      cancelar: function () { S.enfocar = '#x-rcb-' + f.origen + '-' + idSeguro(f.clave); S.rc = null; dibujar(); }
+    });
+  }
+  function nodoExito() {
+    const x = S.exito;
+    if (!x) return null;
+    return h('div', { class: 'aviso exito', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '✓'),
+      h('div', null, h('b', null, x.respuesta ? 'Se agregó tu reclamo a la tarjeta' : 'Se creó el reclamo en la Mesa'),
+        x.nombre ? 'Dato: ' + x.nombre + '. ' : '', x.codigo ? 'Tarjeta ' : '',
+        x.codigo ? h('a', { href: x.url, target: '_blank', rel: 'noopener' }, x.codigo) : h('a', { href: x.url, target: '_blank', rel: 'noopener' }, 'Abrir la Mesa'),
+        x.titulo ? ': ' + x.titulo : '',
+        h('div', { class: 'acc', style: 'margin-top:8px' }, h('button', { class: 'btn ch', type: 'button', onclick: function () { S.exito = null; dibujar(); } }, 'Cerrar'))));
   }
   function esqueleto() {
     return h('div', { class: 'esq', 'aria-busy': 'true', 'aria-label': 'Cargando' },
@@ -256,7 +461,7 @@
           h('p', { class: 'rot' }, 'Siguiente paso recomendado'),
           h('h2', { class: 'disp' }, t ? t.nombre : rec.codigo),
           h('p', null, rec.por_que), h('p', { class: 'muted' }, rec.como),
-          preguntame())),
+          pm('recomendada', null))),
       otras.length ? h('div', null,
         h('p', { class: 'rot', style: 'margin-bottom:8px' }, 'O seguí con otra que ya se puede hacer'),
         h('div', { class: 'otras' }, otras.map(function (o) {
@@ -286,7 +491,7 @@
           h('div', null, h('b', null, d.nombre + (d.dias >= 2 ? ': demorado' : ': pedido')),
             pedidoTxt(d.dias)  + (d.tarjeta ? ' (' + d.tarjeta.codigo + ')' : '') + '. Frena ' + d.frena + (d.frena === 1 ? ' tarea.' : ' tareas.'),
             h('div', { class: 'acc', style: 'margin-top:8px' },
-              h('a', { class: 'btn ch', href: D.proyecto.mesa_url, target: '_blank', rel: 'noopener' }, 'Reclamar en la Mesa'))));
+              h('button', { class: 'btn ch', type: 'button', 'aria-expanded': String(!!(S.rc && S.rc.clave === d.clave && S.rc.origen === 'pano')), id: 'x-rcb-pano-' + idSeguro(d.clave), onclick: function () { abrirReclamo(d.clave, 'pano'); } }, 'Reclamar en la Mesa'))));
       }),
       h('section', null,
         grupo('lista', 'Se pueden hacer', ['lista']), grupo('en_curso', 'En curso', ['en_curso']),
@@ -331,7 +536,9 @@
           f ? formInsumo(t, i, f) : h('div', { class: 'acc' },
             i.estado !== 'recibido' ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { marcarInsumo(t.codigo, i.clave, 'recibido'); } }, 'Marcar recibido') : null,
             i.estado !== 'pedido' ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { S.insForm = { clave: i.clave, tarjeta: '', nota: '', error: '' }; S.enfocar = '#x-ins-tarjeta'; dibujarFicha(); } }, 'Marcar pedido') : null,
-            reg && !i.sin_registrar ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { retirarInsumo(t.codigo, i.clave); } }, 'Quitar registro') : null));
+            reg && !i.sin_registrar ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { retirarInsumo(t.codigo, i.clave); } }, 'Quitar registro') : null,
+            i.estado !== 'recibido' ? h('button', { class: 'btn ch', type: 'button', 'aria-expanded': String(!!(S.rc && S.rc.clave === i.clave && S.rc.origen === 'ficha')), id: 'x-rcb-ficha-' + idSeguro(i.clave), onclick: function () { abrirReclamo(i.clave, 'ficha'); } }, 'Reclamar en la Mesa') : null),
+          bloqueReclamo(i.clave, 'ficha'));
       }));
   }
   function formInsumo(t, i, f) {
@@ -434,15 +641,28 @@
       seccionDecisiones(t),
       seccionAcciones(t),
       seccionHistorial(t),
-      preguntame());
+      pm('tarea', t.codigo));
   }
   function dibujarFicha() {
     const cont = $('x-cond');
     if (!cont || !S.abierta) return;
     const t = tarea(S.abierta);
     if (!t) return;
-    cont.replaceChildren(ficha(t));
+    conFoco(function () { cont.replaceChildren(ficha(t)); });
     enfocar();
+  }
+  // Un redibujado no le saca el foco ni el cursor a quien esta escribiendo.
+  function conFoco(fn) {
+    const a = document.activeElement, id = a && a.id;
+    let ini = null, fin = null;
+    try { ini = a.selectionStart; fin = a.selectionEnd; } catch (e) { ini = null; }
+    fn();
+    if (id && !S.enfocar) {
+      const e = document.getElementById(id);
+      if (e && e !== document.activeElement) {
+        try { e.focus({ preventScroll: true }); if (ini !== null && e.setSelectionRange) e.setSelectionRange(ini, fin); } catch (x) { /* sin foco no pasa nada */ }
+      }
+    }
   }
   function enfocar() {
     if (!S.enfocar) return;
@@ -624,7 +844,7 @@
       h('div', null, h('h3', null, 'Necesita'), s.necesita.length ? h('ul', null, s.necesita.map(function (c) { const x = por[c]; return h('li', null, (x ? x.nombre : c) + ' ', h('span', { class: 'muted' }, '· ' + (x ? nomEstado(x.estado).toLowerCase() : ''))); })) : h('p', { class: 'muted' }, 'Nada.')),
       h('div', null, h('h3', null, 'Destraba'), (s.necesitada_por || []).length ? h('ul', null, s.necesitada_por.map(function (c) { return h('li', null, por[c] ? por[c].nombre : c); })) : h('p', { class: 'muted' }, 'Ninguna otra depende de esta.')),
       h('div', { class: 'acc' }, h('button', { class: 'btn p', type: 'button', onclick: function () { abrirFicha(s.codigo); } }, 'Abrir la ficha')),
-      preguntame());
+      pm('mapa', s.codigo));
     const orden = ['hecha', 'lista', 'en_curso', 'esperando', 'bloqueada', 'no_aplica'];
     return h('div', null,
       h('div', { class: 'ley' }, orden.map(function (e) { return pildora(e); })),
@@ -635,7 +855,8 @@
   }
 
   // ------------------------------------------------------------ dibujo general
-  function dibujar() {
+  function dibujar() { conFoco(dibujarCore); }
+  function dibujarCore() {
     barra();
     const cont = $('x-vista');
     if (S.cargando) { cont.replaceChildren(esqueleto()); return; }
@@ -655,8 +876,10 @@
       const cond = nodo.querySelector('#x-cond');
       if (S.abierta && tarea(S.abierta)) cond.appendChild(ficha(tarea(S.abierta)));
       else cond.append.apply(cond, heroe().filter(Boolean));
+      const rcp = S.rc && S.rc.origen === 'pano' ? bloqueReclamo(S.rc.clave, 'pano') : null;
+      if (rcp) cond.insertBefore(rcp, cond.firstChild);
     }
-    cont.replaceChildren(nodo);
+    cont.replaceChildren.apply(cont, [nodoExito(), nodo].filter(Boolean));
     S.anim = false;
     enfocar();
   }
