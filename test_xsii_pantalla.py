@@ -168,9 +168,9 @@ def test_textos_del_pedido_deshacer_y_ficha_resuelta():
 def test_preguntame_amarillo_grande_y_arriba_en_la_ficha():
     assert "--miel:#f0a01e" in CSS
     assert "background:var(--miel)" in CSS and "min-height:46px" in CSS
-    # en la ficha va en la cabecera, antes del bloque de pasos
-    cab = JS.index("pm('tarea', t.codigo)),")
-    assert cab < JS.index("bloqueHacer(t);") + 2000 and cab < JS.index("seccionInsumos(t),\n      t.confirmacion")
+    # en la ficha va en la cabecera: antes del panel de carga y del resto (pasos, insumos, etc.)
+    ret = JS[JS.index("return h('div', { class: 'ficha' + (S.anim"):]
+    assert ret.index("pm('tarea', t.codigo)") < ret.index("as.panel") < ret.index("resto)")
 
 
 def test_botonera_atras_adelante_y_teclado():
