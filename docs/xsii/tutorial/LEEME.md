@@ -56,3 +56,14 @@ La miniatura `recursos/xsii-tutorial.jpg` (640x400) es una captura de la portada
   curso, falta confirmar» y el insumo «Lista de seccionales» recibido, y el resto del tutorial sigue coherente (PAD-02
   sigue frenada por Seccionales y Padrón recibido). Ahora son 21 pasos y 44 figuras; JPEG a calidad 62 para quedar
   bajo 6 MB (5,7 MB). Pendiente fuera de esta carpeta: `recursos.py` dice «Versión del bloque 2» en la descripción.
+- Bloque 4 (2026-11-27): el paso de Seccionales se rehízo con la planilla `seccionales-tutorial.csv` con cabeceras «a su manera»
+  (Delegación, Sede, Altura, CP, Secretario, Precisión, y «Fuente» sin usar): ahora muestra «Columnas de la planilla» (captura
+  `44-as-columnas`) y una fila de ubicación «aproximada» (Bahía Blanca, junto a las dos sin coordenadas). Paso nuevo «Cargar el
+  padrón desde la planilla» (capturas `45` a `49`, tramo «5d» de `capturar.js`, después de «Confirmar una tarea») con la planilla
+  `padron-tutorial.csv` (13 personas inventadas de CUIL 2096xxxxxx válidos: 9 válidas, 2 dudosas por «Seccional Bariloche», 1
+  rechazada por localidad en blanco y 1 por verificador inválido; la columna «Contacto» se corrige a mano a «Mail»; total declarado
+  2.990). La carga exige EST-01 y PAD-01 resueltas, por eso el tramo confirma EST-01 antes. `preparar.py` borra también las 13
+  personas del tutorial (solo si no tienen trámites) para poder filmar de nuevo. El total «en el sistema» (2.987) depende de la base
+  de demo local (2.976 afiliados de la UOM antes de cargar): si esa base cambia, cambia la cifra y hay que ajustar el texto del
+  paso (y el total declarado de `capturar.js`). Ahora son 22 pasos y 50 figuras; ancho `full` 1100, `med` 820 y JPEG 58 en
+  `armar.py` para quedar bajo 6 MB (5,6 MB). Pendiente fuera de esta carpeta: `recursos.py` dice «Versión del bloque 2».

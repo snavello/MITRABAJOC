@@ -112,6 +112,9 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await foto(page, '37-as-paso1', { sel: '#x-as', pad: 14, maxAlto: 1700, marcas: [{ css: '.as-pasos', n: 1 }, { css: '#x-as-modelo', n: 2 }, { css: '.as-arch', n: 3 }, { css: '.as-pegar', n: 4 }, { css: '.as-opc', n: 5 }] });
   await page.click('#x-as-ensayar'); await page.waitForSelector('.as-nada'); await sleep(900);
   await foto(page, '38-as-ensayo', { sel: '#x-as', pad: 14, marcas: [{ css: '.as-nada', n: 1 }, { css: '.as-kpis', n: 2 }, { css: '.as-tab', n: 3 }] });
+  await page.click('#x-as-mapa-sum'); await sleep(500);
+  await foto(page, '44-as-columnas', { sel: '#x-as-mapa', pad: 14, marcas: [{ css: '#x-as-map-res', n: 1, dx: 36, dy: -22 }, { css: '.as-mc.sinuso', n: 2 }, { css: '#x-as-map-sinuso', n: 3, dx: -14 }, { css: '.as-mc select', n: 4 }] });
+  await page.click('#x-as-mapa-sum'); await sleep(300);
   await page.click('#x-as-k-rechazada'); await sleep(500);
   await foto(page, '39-as-rechazada', { sel: '#x-as', pad: 14, marcas: [{ css: '#x-as-k-rechazada', n: 1 }, { css: '.as-f.rechazada', n: 2 }] });
   await page.click('#x-as-k-rechazada'); await page.click('#x-as-k-dudosa'); await sleep(400);
@@ -213,6 +216,31 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await page.click('button.btn.p:text-is("Confirmar")'); await sleep(1100);
   await abrirBloque(page, 'Decisiones activas');
   await foto(page, '10-pad01-confirmada', { sel: '.ficha', marcas: [{ css: '.ficha .pil', n: 1 }, { h3: 'Decisiones activas', n: 2 }] });
+
+  // 5d. Cargar el padrón desde la planilla (PAD-02). Antes se confirma Seccionales (EST-01): la carga exige las dos previas resueltas.
+  await ir('?tarea=EST-01');
+  await page.click('button.btn.p:text-is("Confirmar")'); await sleep(1100);
+  const PADRON = path.join(__dirname, 'padron-tutorial.csv');
+  await ir('?tarea=PAD-02');
+  await page.waitForSelector('#x-as-abrir:not([aria-disabled])');
+  await page.click('#x-as-abrir'); await sleep(900);
+  await page.setInputFiles('#x-as-archivo', PADRON);
+  await page.fill('.as-on input', '2990'); await sleep(400);
+  await foto(page, '45-pad-paso1', { sel: '#x-as', pad: 14, maxAlto: 1800, marcas: [{ css: '.as-cols', n: 1 }, { css: '.as-arch', n: 2 }, { css: '.as-opc .as-o:not(.as-on)', n: 3 }, { css: '.as-on input', n: 4 }] });
+  await page.click('#x-as-ensayar'); await page.waitForSelector('.as-nada'); await sleep(900);
+  await page.click('#x-as-mapa-sum'); await sleep(500);
+  await foto(page, '46-pad-columnas', { sel: '#x-as-mapa', pad: 14, marcas: [{ css: '#x-as-map-res', n: 1, dx: 36, dy: -22 }, { css: '.as-mc.sinuso', n: 2 }, { css: '.as-mc.sinuso select', n: 3 }, { css: '#x-as-reensayar-mapa', n: 4 }] });
+  await page.locator('.as-mc.sinuso select').selectOption('mail'); await sleep(400);
+  await page.click('#x-as-reensayar-mapa'); await page.waitForSelector('.as-nada'); await sleep(1100);
+  await foto(page, '47-pad-ensayo', { sel: '#x-as', pad: 14, maxAlto: 1900, marcas: [{ css: '.as-kpis', n: 1 }, { css: '.aviso', n: 2 }, { css: '.as-mots', n: 3 }, { css: '.as-tab', n: 4 }] });
+  await page.click('#x-as-k-rechazada'); await sleep(500);
+  await foto(page, '48-pad-rechazadas', { sel: '#x-as', pad: 14, maxAlto: 1300, marcas: [{ css: '#x-as-k-rechazada', n: 1 }, { css: '.as-f.rechazada', n: 2 }] });
+  await page.click('#x-as-k-rechazada'); await sleep(300);
+  await page.click('#x-as-seguir'); await sleep(900);
+  await page.click('#x-as-cargar'); await sleep(600);
+  await page.click('#x-as-cargar'); await page.waitForSelector('#x-as-listo'); await sleep(1300);
+  await foto(page, '49-pad-control', { sel: '#x-as', pad: 14, maxAlto: 1700, marcas: [{ css: '#x-as-comp', n: 1 }, { css: '.as-ctl', n: 2 }, { css: '.as-sigue', n: 3, dx: -14 }] });
+  await page.click('#x-as-listo'); await sleep(1300);
 
   // 6. Un error: completar a mano sin motivo (BAS-02)
   await ir('?tarea=BAS-02');

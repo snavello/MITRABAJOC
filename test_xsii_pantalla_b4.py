@@ -67,3 +67,23 @@ def test_textos_del_servidor_como_texto_y_estilos_seguros():
     reducido = CSS[CSS.index("@media (prefers-reduced-motion:reduce)"):]
     assert ".as-mo" in reducido
     assert ".as-mc.cabe{display:none}" in CSS  # móvil: la tabla de columnas pasa a tarjetas
+
+
+def test_texto_pegado_viaja_como_archivo():
+    # Starlette limita a 1 MB un campo de texto de un multipart: lo pegado va como Blob.
+    assert "new Blob([base.texto]" in JS
+    assert "fd.append('texto'" not in JS
+
+
+def test_avisa_en_el_paso_1_si_la_carga_esta_frenada():
+    assert "x-as-previas" in JS
+    assert "la carga todavía no se puede" in JS
+
+
+def test_dejar_afuera_todas_no_miente_con_el_listado_recortado():
+    assert "dudosasSinListar" in JS
+    assert "x-as-sinlistar" in JS
+
+
+def test_la_diferencia_con_lo_declarado_se_dice_en_que_sigue():
+    assert "no coincide con el total declarado" in JS

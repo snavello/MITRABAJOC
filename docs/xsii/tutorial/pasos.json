@@ -1,5 +1,5 @@
 {
- "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 3",
+ "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 4",
  "titulo": "Cómo se sigue una implementación con XSII",
  "bajada": "Un recorrido por las pantallas reales de XSII, con un sindicato de la demo y los pasos hechos de verdad, uno por uno.",
  "fecha": "27 de noviembre de 2026",
@@ -9,7 +9,7 @@
   "Los círculos naranjas numerados que aparecen en las capturas no son parte de la pantalla: los pusimos para señalar dónde mirar, y el texto de cada paso los explica.",
   "Una aclaración importante: en este tutorial las respuestas de «Preguntame» son SIMULADAS. El entorno donde se sacaron las capturas no llama a la IA, así que la pantalla lo avisa con una línea chica debajo de cada respuesta. En Pruebas las escribe el modelo, y por eso el texto va a ser distinto, con otras palabras. Lo que no cambia es cómo se usa, qué muestra y qué puede hacer."
  ],
- "alcance": "Esta versión suma lo del bloque 3: la carga asistida de las seccionales y de Sede Central desde una planilla, en cuatro momentos (qué voy a hacer, ensayo, carga y control) dentro de la ficha de «Seccionales». Sigue valiendo todo lo anterior: «Preguntame», los botones Atrás y Adelante, el reclamo de un dato en la Mesa, la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. «Preguntame» sigue sin cargar nada: solo lee el tablero y propone reclamos; la única tarea que carga datos, por ahora, es esta.",
+ "alcance": "Esta versión suma lo del bloque 4: las columnas de la planilla se reconocen solas y se pueden corregir, la carga del padrón desde una planilla (con el total declarado y la comparación al final) y la «Responsable» de cada seccional. Sigue valiendo todo lo anterior: la carga de seccionales, «Preguntame», los botones Atrás y Adelante, el reclamo de un dato en la Mesa, la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. «Preguntame» sigue sin cargar nada: solo lee el tablero y propone reclamos; las tareas que cargan datos, por ahora, son Seccionales y Padrón.",
  "pasos": [
   {
    "id": "entrar",
@@ -84,10 +84,11 @@
    "titulo": "Cargar las seccionales desde la planilla",
    "texto": [
     "La ficha de «Seccionales» (EST-01) tiene un botón nuevo: <b>Cargar desde la planilla</b>. Abre, en la misma ficha, un panel con cuatro momentos que se ven de a uno: <b>Qué voy a hacer</b>, <b>Ensayo</b>, <b>Carga</b> y <b>Control</b>. Los números de arriba (1) dicen en cuál estás. «Ir a la pantalla» sigue ahí, por si preferís cargar a mano.",
-    "<b>Momento 1: qué voy a hacer.</b> El panel explica qué hace y qué columnas lleva la planilla, cuáles son obligatorias y un ejemplo de cada una. Solo el nombre es obligatorio. <b>Descargar el modelo</b> (2) baja un archivo con las columnas listas. Después elegís el archivo de la planilla (3) o, si preferís, pegás el texto (4). Se acepta CSV: si la planilla es de Excel, se guarda como «CSV». Las opciones (5) dicen qué hacer con las seccionales que ya existen (por defecto, nada) y si una fila llamada «Sede Central» se marca sola como tal. Toda la planilla que usamos acá es de ejemplo.",
+    "<b>Momento 1: qué voy a hacer.</b> El panel explica qué hace y qué columnas lleva la planilla, cuáles son obligatorias y un ejemplo de cada una. Solo el nombre es obligatorio, y <b>no hace falta que las columnas se llamen igual ni vengan en este orden</b>: el ensayo las reconoce por la cabecera. <b>Descargar el modelo</b> (2) baja un archivo con las columnas listas. Después elegís el archivo de la planilla (3) o, si preferís, pegás el texto (4). Se acepta CSV: si la planilla es de Excel, se guarda como «CSV». Las opciones (5) dicen qué hacer con las seccionales que ya existen (por defecto, nada) y si una fila llamada «Sede Central» se marca sola como tal. Toda la planilla que usamos acá es de ejemplo.",
     "<b>Momento 2: ensayo.</b> Al tocar <b>Ensayar</b> se lee la planilla y se muestra qué pasaría, pero <b>no se guarda nada</b>: el cartel naranja (1) lo repite. Cuatro cifras (2): <b>válidas</b> (entran), <b>dudosas</b> (entran, pero con algo para mirar), <b>rechazadas</b> (no entran) y <b>ya existen</b> (el sistema reconoce el nombre, sin mirar mayúsculas ni acentos, y no las toca). Cada cifra es un filtro. La tabla (3) muestra, por fila, el nombre, el domicilio, si tiene ubicación y qué se haría con ella.",
-    "En el ejemplo, la UOM de la demo ya tenía once seccionales de antes, así que la planilla repite dos: Sede Central y Seccional Rosario ya existen. Seccional San Luis se rechaza: la latitud viene sin el signo menos y cae fuera de la Argentina. Al tocar «Rechazadas» (1) se ve solo esa fila con su motivo y su línea de la planilla (2), para ir a corregirla.",
-    "Las <b>dudosas</b> entran salvo que las dejes afuera. Acá hay dos, las dos sin coordenadas: eso no impide cargarlas, quedan «sin ubicar» hasta que alguien las ubique en el mapa. Dejamos afuera a Seccional Neuquén tildando «Dejar afuera» (2) y dejamos a Seccional Río Gallegos (3), que se carga igual, sin ubicar. Si querés cambiar algo de la planilla, <b>Volver</b> conserva el archivo y las opciones, y se vuelve a ensayar.",
+    "<b>Las columnas de la planilla.</b> En este ejemplo la planilla trae las cabeceras «a su manera»: «Delegación» en lugar de «Nombre», «Sede», «Altura», «CP», «Secretario»… El ensayo reconoce cada una por su cabecera y lo muestra en <b>Columnas de la planilla</b>: arriba un resumen (1) de cuántas reconoció y cuántas quedan sin usar; en cada fila, la cabecera, tres valores de muestra y el campo al que se asignó (4). La columna «Fuente» no corresponde a ningún campo: queda en «No usar» (2) y se lista aparte (3), sin ruido. Si algo está mal asignado, se cambia el selector y se toca «Volver a ensayar con estas columnas». El «Responsable» de cada seccional también viaja en la planilla y queda cargado.",
+    "En el ejemplo, la UOM de la demo ya tenía once seccionales de antes, así que la planilla repite dos: Sede Central y Seccional Rosario ya existen y no se tocan. Seccional San Luis se rechaza: la latitud viene sin el signo menos y cae fuera de la Argentina. Al tocar «Rechazadas» (1) se ve solo esa fila con su motivo y su línea de la planilla (2), para ir a corregirla.",
+    "Las <b>dudosas</b> entran salvo que las dejes afuera. Acá hay tres. Seccional Bahía Blanca trae la ubicación marcada como <b>aproximada</b>: entra, pero el ensayo avisa que hay que confirmarla en el mapa. Seccional Neuquén y Seccional Río Gallegos no traen coordenadas, y eso no impide cargarlas: quedan «sin ubicar» hasta que alguien las ubique en el mapa. Dejamos afuera a Seccional Neuquén tildando «Dejar afuera» (2) y dejamos a las otras dos (3). Si querés cambiar algo de la planilla, <b>Volver</b> conserva el archivo y las opciones, y se vuelve a ensayar.",
     "<b>Momento 3: carga.</b> Antes de escribir, el panel repite las cuentas (1): cuántas se crean, cuántas ya existen, cuántas quedan afuera y cuántas se rechazan. La carga pide <b>dos toques</b>: el primero cambia el botón a «Confirmar la carga» (2) y el segundo la hace. Con «No cargar» (3) te arrepentís. Mientras corre, el botón se bloquea para que no se envíe dos veces. Si el archivo cambió desde el ensayo, la carga se frena y pide ensayar de nuevo.",
     "<b>Momento 4: control.</b> La carga es de una sola vez: o se escribe todo o no se escribe nada. Al terminar, el panel dice que se hizo y que el control ya corrió (1), con las cifras de lo creado, actualizado, sin tocar y afuera, y lo que ve el control hoy (2): acá hay 14 seccionales y una con alcance total, que es Sede Central. Después viene <b>qué sigue</b> (3): la carga <b>no confirma la tarea</b>, eso lo hace una persona. Y avisa cuántas de las cargadas quedaron sin ubicar: de ubicarlas en el mapa se ocupa la tarea «Seccionales ubicadas en el mapa» (EST-02). <b>Listo</b> (4) cierra el panel.",
     "De vuelta en la ficha, el insumo «Lista de seccionales» pasó solo a <b>Recibido</b> (1), con la nota «Cargado desde la planilla en XSII», y el aviso naranja de antes, el de «hay datos pero el insumo no está registrado», desapareció. Aparece el botón <b>Confirmar</b> (2), y el historial (3) deja dos movimientos: la carga, con sus cantidades, y el registro del insumo, los dos a nombre de quien los hizo."
@@ -100,8 +101,13 @@
     },
     {
      "archivo": "38-as-ensayo",
-     "epigrafe": "Momento 2: el ensayo, con «Nada se guardó todavía», las cuatro cifras y la tabla.",
+     "epigrafe": "Momento 2: el ensayo, con «Nada se guardó todavía», las cuatro cifras y el resumen de las columnas.",
      "ancho": "full"
+    },
+    {
+     "archivo": "44-as-columnas",
+     "epigrafe": "Las columnas de la planilla: el resumen (1), la columna sin usar (2 y 3) y el selector de campo de cada una (4).",
+     "ancho": "med"
     },
     {
      "archivo": "39-as-rechazada",
@@ -110,7 +116,7 @@
     },
     {
      "archivo": "40-as-dudosas",
-     "epigrafe": "Las dudosas: una se deja afuera y la otra se carga sin ubicar.",
+     "epigrafe": "Las dudosas: una con ubicación aproximada, una que se deja afuera y otra que se carga sin ubicar.",
      "ancho": "med"
     },
     {
@@ -350,6 +356,49 @@
    ]
   },
   {
+   "id": "carga-padron",
+   "titulo": "Cargar el padrón desde la planilla",
+   "texto": [
+    "La tarea «Padrón cargado» (PAD-02) usa el mismo panel de los cuatro momentos, con otras columnas. Una diferencia: <b>la carga exige que las tareas previas estén resueltas</b> («Seccionales» y «Padrón recibido»). Si todavía no lo están, el panel lo avisa ya en el momento 1, para que no hagas todo el ensayo y te enteres al final. El ensayo, en cambio, se puede hacer igual. Acá confirmamos primero «Seccionales» y recién después abrimos la carga del padrón.",
+    "<b>Momento 1.</b> Se elige la planilla (2) y, si querés, se escribe el <b>total declarado</b> por el sindicato (4): cuántos afiliados dice tener. La opción «Dejar afuera las de seccional desconocida» (3) decide qué pasa con quien nombra una seccional que no existe: por defecto entra sin seccional y queda dudosa. La tabla de arriba (1) lista los campos que se reconocen; sin la identificación (CUIL) ni el nombre no hay carga. Un DNI de 7 u 8 dígitos no sirve como identificación. El tope es de 20.000 filas y 5 MB por planilla: un padrón más grande se parte en varias.",
+    "<b>Columnas «como vienen».</b> La planilla del ejemplo trae «Apellido y Nombre», «CUIL», «Delegación», «Fecha de ingreso», «CP»… y una columna «Contacto». El ensayo reconoce casi todo solo, pero «Contacto» no le dice nada y queda en «No usar» (2). En «Columnas de la planilla» (1) se cambia el selector de esa columna (3) a «Mail» y se toca <b>Volver a ensayar con estas columnas</b> (4). Mientras haya cambios sin ensayar, «Seguir» queda apagado. Y si se quita una columna obligatoria, la pantalla dice cuál falta («Todavía falta una columna para: Identificación (CUIL)») y no deja seguir hasta elegirla.",
+    "<b>Momento 2: el ensayo.</b> Se leyeron 13 filas (1): 9 válidas, 2 dudosas y 2 rechazadas. Un aviso (2) cuenta cómo quedaría el padrón comparado con el total declarado. Debajo, <b>por qué quedaron así</b> (3): cada motivo con su cantidad y las primeras líneas. Los dos dudosos nombran una seccional que no existe, «Seccional Bariloche»; los dos rechazados, una localidad en blanco y un CUIL cuyo dígito verificador no cierra. Tocar un motivo filtra la tabla (4). Con planillas grandes, la tabla muestra solo las primeras 300 filas con problema, pero las cifras de arriba cuentan todas.",
+    "Al tocar «Rechazadas» (1) se ve cada fila con su motivo y su línea (2). Esas no entran: hay que corregirlas en la planilla y volver a ensayar. Las dudosas entran, sin seccional, salvo que se dejen afuera.",
+    "<b>Momentos 3 y 4.</b> La carga repite las cuentas y pide dos toques, como en Seccionales. Al terminar, además de las cifras y el control, aparece la <b>comparación con el total declarado</b> (1): declarado 2.990, en el sistema 2.987, diferencia −3. No coincide, y la pantalla lo dice en «Qué sigue» (3) antes de confirmar. El control (2) también avisa cuántos afiliados quedaron sin seccional. Igual que antes, la carga <b>no confirma la tarea</b>: lo hace una persona. Una segunda carga de la misma planilla se frena con «No hay nada para cargar»."
+   ],
+   "figuras": [
+    {
+     "archivo": "45-pad-paso1",
+     "epigrafe": "Momento 1 del padrón: los campos (1), el archivo (2), la opción de seccional desconocida (3) y el total declarado (4).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "46-pad-columnas",
+     "epigrafe": "Columnas como vienen: el resumen (1), «Contacto» sin usar (2), el selector para corregirla (3) y el botón para ensayar de nuevo (4).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "47-pad-ensayo",
+     "epigrafe": "El ensayo del padrón: cifras (1), aviso del total (2), motivos (3) y filas con problema (4).",
+     "ancho": "full"
+    },
+    {
+     "archivo": "48-pad-rechazadas",
+     "epigrafe": "Filtrado por «Rechazadas»: la localidad en blanco y el CUIL inválido, cada uno con su línea.",
+     "ancho": "med"
+    },
+    {
+     "archivo": "49-pad-control",
+     "epigrafe": "Después de cargar: la comparación con lo declarado (1), el control (2) y qué sigue (3).",
+     "ancho": "med"
+    }
+   ],
+   "recuadro": [
+    "Los datos de la planilla no quedan en el registro",
+    "El movimiento que queda en el historial dice solo cuántas personas se cargaron, actualizaron o quedaron afuera. Los nombres y los CUIL viven únicamente en el padrón."
+   ]
+  },
+  {
    "id": "error",
    "titulo": "Un error: completar a mano sin motivo",
    "texto": [
@@ -523,12 +572,16 @@
   [
    "¿Qué pasa si cargo dos veces la misma planilla?",
    "Nada se duplica. La segunda vez todas las filas figuran como «ya existen» y el ensayo dice que no queda ninguna fila para cargar. Si tildás «Actualizar las que ya existen» y nada cambió, tampoco hay nada para cargar."
+  ],
+  [
+   "¿Qué pasa si mi planilla tiene otros nombres de columna?",
+   "No pasa nada: el ensayo reconoce las columnas por su cabecera, sin mirar mayúsculas ni acentos, y las muestra en «Columnas de la planilla» con tres valores de muestra de cada una. Si una está mal asignada, o no se reconoció, se cambia el selector y se vuelve a ensayar. Una columna sin correspondencia queda en «No usar» y se ignora. Si falta una obligatoria, la pantalla dice cuál y no deja seguir. Una columna de DNI no sirve como identificación: hace falta el CUIL de 11 dígitos."
   ]
  ],
  "viene": [
   [
-   "Bloque 4: Padrón y Conceptos",
-   "Las dos tareas siguientes que el asistente va a preparar y cargar con el mismo método de los cuatro momentos: explicar, ensayar sin guardar, cargar con confirmación y controlar. No hace falta aprender nada nuevo: es el mismo panel, con otras columnas."
+   "Bloque 5: Conceptos",
+   "La próxima tarea que el asistente va a preparar y cargar con el mismo método de los cuatro momentos: explicar, ensayar sin guardar, cargar con confirmación y controlar. Es el mismo panel, con otras columnas."
   ],
   [
    "Después",

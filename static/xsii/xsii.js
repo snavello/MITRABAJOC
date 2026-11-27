@@ -675,7 +675,9 @@
   function formAs(A, conCarga) {
     const base = conCarga ? A.snap : { archivo: A.archivo, texto: A.texto, opciones: opcionesEnvio(A) };
     const fd = new FormData();
-    if (base.archivo) fd.append('archivo', base.archivo, base.archivo.name); else fd.append('texto', base.texto);
+    // Un texto pegado viaja como archivo: el servidor limita a 1 MB un campo de texto de un multipart.
+    if (base.archivo) fd.append('archivo', base.archivo, base.archivo.name);
+    else fd.append('archivo', new Blob([base.texto], { type: 'text/csv' }), 'planilla-pegada.csv');
     fd.append('opciones', JSON.stringify(base.opciones));
     if (conCarga) { fd.append('huella', A.ens.huella || ''); fd.append('dejar_afuera', JSON.stringify(lineasAfuera(A))); }
     return fd;
@@ -793,7 +795,10 @@
         } }, A.texto));
     dets.open = A.pegar || !!A.texto;
     dets.addEventListener('toggle', function () { A.pegar = dets.open; });
+    const previas = (t.necesita || []).filter(function (c) { const x = tarea(c); return x && !resuelta(x); }).map(function (c) { return tarea(c).nombre; });
     return h('div', { class: 'as-cuerpo' },
+      previas.length ? h('div', { class: 'aviso as-previas', id: 'x-as-previas', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'),
+        h('div', null, 'Podés hacer el ensayo, pero la carga todavía no se puede: primero tiene que estar resuelta ' + (previas.length === 1 ? 'la tarea ' : 'las tareas ') + previas.join(', ') + '.')) : null,
       h('div', { class: 'as-que' }, (d.que_voy_a_hacer || []).map(function (p) { return h('p', null, p); })),
       (d.columnas || d.campos || []).length ? h('div', null, h('p', { class: 'rot' }, 'Columnas de la planilla'),
         d.mapeo ? h('p', { class: 'nota' }, 'No hace falta que estén en este orden ni que se llamen igual: el ensayo reconoce las cabeceras y te deja corregir cuál es cuál.') : null,
@@ -945,6 +950,8 @@
       return (!A.filtro || f.estado === A.filtro) && (!m || (f.estado === m.estado && (f.motivos || []).indexOf(m.motivo) !== -1));
     });
     const dudosasVisibles = filas.filter(function (f) { return f.estado === 'dudosa'; });
+    // Con el listado recortado hay dudosas que no se ven: «dejar afuera todas» solo alcanzaría a las listadas.
+    const dudosasSinListar = !!e.filas_truncadas && (e.dudosas || 0) > (e.filas || []).filter(function (f) { return f.estado === 'dudosa'; }).length;
     const todasFuera = dudosasVisibles.length > 0 && dudosasVisibles.every(function (f) { return A.afuera[f.linea]; });
     const titulo = A.filtro ? ESTADOS_AS[A.filtro] + 's: ' + num(filas.length) + (soloMuestra ? ' de ejemplo' : ' de ' + num((e.filas || []).length) + ' filas listadas')
       : m ? 'Con ese motivo: ' + num(filas.length) + ' filas listadas de ' + num(m.cantidad || 0) : 'Filas listadas: ' + num(filas.length);
@@ -961,9 +968,10 @@
       mapa, listaMotivos(A, e),
       h('div', null, h('div', { class: 'as-fil' }, h('p', { class: 'rot as-fil-t' }, titulo),
         (A.filtro || m) ? h('button', { class: 'enlace', id: 'x-as-sinfiltro', type: 'button', onclick: function () { A.filtro = ''; A.motivo = -1; S.enfocar = '#x-as-k-valida'; dibujarFicha(); } }, 'Ver todas') : null,
-        dudosasVisibles.length > 1 ? h('button', { class: 'enlace', id: 'x-as-afuera-todas', type: 'button', onclick: function () {
+        dudosasVisibles.length > 1 && !dudosasSinListar ? h('button', { class: 'enlace', id: 'x-as-afuera-todas', type: 'button', onclick: function () {
           dudosasVisibles.forEach(function (f) { A.afuera[f.linea] = !todasFuera; }); S.enfocar = '#x-as-afuera-todas'; dibujarFicha(); } },
           todasFuera ? 'Volver a incluir estas ' + num(dudosasVisibles.length) + ' dudosas' : 'Dejar afuera estas ' + num(dudosasVisibles.length) + ' dudosas') : null),
+        dudosasSinListar && dudosasVisibles.length ? h('p', { class: 'nota', id: 'x-as-sinlistar' }, 'Hay más dudosas de las que se listan (' + num(e.dudosas) + ' en total). Para dejarlas afuera de una vez, usá la opción del paso 1 que corresponda y volvé a ensayar; acá solo podés dejar afuera de a una.') : null,
         soloMuestra ? h('p', { class: 'nota' }, 'Las válidas no se listan una por una: estas son las primeras, como ejemplo.') : null,
         filas.length ? h('div', { class: 'as-tab', role: 'table', 'aria-label': 'Filas del ensayo' },
           h('div', { class: 'as-f cabe', role: 'row' }, h('span', { role: 'columnheader' }, 'Línea'), h('span', { role: 'columnheader' }, 'Fila'), h('span', { role: 'columnheader' }, 'Resultado'), h('span', { role: 'columnheader' }, 'Dudosa')),
@@ -1025,6 +1033,8 @@
     const rs = RES[c.estado] || [c.estado || '', ''];
     const destrabo = (r.destrabo || []).filter(function (x) { return x && x.codigo; });
     const sigue = [];
+    const cmp = k.comparacion;
+    if (cmp && typeof cmp.declarado === 'number' && (typeof cmp.diferencia === 'number' ? cmp.diferencia : cmp.cargado - cmp.declarado) !== 0) sigue.push('Lo cargado no coincide con el total declarado: revisá la diferencia (rechazadas, afuera o filas que faltan) antes de confirmar.');
     if (tr.acciones && tr.acciones.confirmar) sigue.push('El control está en condiciones: falta que una persona confirme la tarea. Cerrá este panel y usá «Confirmar» en «Qué se puede hacer».');
     else if (c.estado && c.estado !== 'completa') sigue.push('El control todavía no da por completa la tarea. Revisá lo que falta y, si hace falta, cargá otra planilla.');
     else if (tr.estado === 'hecha') sigue.push('La tarea quedó resuelta.');
