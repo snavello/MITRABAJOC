@@ -2000,8 +2000,33 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     espacios) no se toca salvo «Actualizar las que ya existen», lo vacío no
     pisa lo cargado, `ve_todas` nunca baja y nada se borra (X22); las
     coordenadas de la planilla quedan `manual` (X23); no se geocodifica (ningún
-    servicio externo). X22 a X24 las definió Code: a confirmar por SDN.
-    **Sigue**: bloque 4, Padrón y después Conceptos, con el mismo protocolo
+    servicio externo). SDN confirmó X22 y X24 el 2026-11-27; X23 se revisó
+    (abajo).
+    **Bloque 4a HECHO** (2026-11-27, Plataforma 0.83.01, Admin 0.81.01,
+    Trabajador 0.64.01): **Padrón desde planilla** (PAD-02), segunda
+    asistida. **Las reglas por fila del alta masiva viven en
+    `padron_carga.py`** (`procesar`): la usan `POST /admin/trabajador/masivo`
+    (adaptador) y la asistida, así no pueden diferir; la carga toma un candado
+    global `padron-carga` (dos cargas con un CUIL en común chocaban al
+    guardar). **Reconocimiento de columnas** (genérico, en
+    `asistidas/base.py`; también en Seccionales): la cabecera se detecta por
+    sinónimos, el ensayo devuelve `mapeo` (columnas, `sin_usar`, `faltan`) y
+    la persona lo corrige con `opciones.mapeo`; el mapeo entra en la huella.
+    Un DNI no vale como identificación. Opciones con número (`total_declarado`
+    → comparación declarado / en el sistema / diferencia), resultados grandes
+    (`motivos`, `filas` solo las no válidas hasta 300). Hasta 20.000 filas y
+    5 MB por carga (X27; 14 s medidos). Una seccional escrita que no existe:
+    la persona entra sin seccional y queda dudosa, o afuera con la opción
+    (X26). Quien ya está en el padrón solo recibe mail y fecha de afiliación.
+    Nada de la planilla va a movimientos ni a «Preguntame». **Seccionales**:
+    la columna `precision_geo` se respeta (`aproximada` entra dudosa; sin
+    columna, `manual`: X23 revisada) y hay campo nuevo
+    **`Seccional.responsable`** (migración `d3f5a7b9c1e4`; alta y edición del
+    panel, ficha, app del afiliado y planilla). **Todo dato de una seccional
+    que se dibuja en el panel o en la app pasa por escape** (`esc` / `escS`):
+    antes nombre, dirección, horario, teléfono y mail iban crudos. X25 a X27
+    las definió Code: a confirmar por SDN.
+    **Sigue**: Conceptos (REC-04), que usa la IA sobre los recibos de muestra
     (X19). Queda sin usar
     `XsiiInsumo.archivo_id` (bloque 5), reclamar desde un proyecto sin
     sindicato (el servidor lo admite, la pantalla no lo ofrece) y la primera
