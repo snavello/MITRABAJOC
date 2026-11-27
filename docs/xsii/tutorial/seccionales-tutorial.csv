@@ -1,0 +1,8 @@
+nombre;sede_central;provincia;localidad;calle;numero;piso_depto;codigo_postal;latitud;longitud;telefono;whatsapp;mail;horario
+Sede Central;sí;Ciudad Autónoma de Buenos Aires;Ciudad Autónoma de Buenos Aires;Avenida de Mayo;1370;Piso 4;1085;-34,6091;-58,3869;11 4555-0100;11 5555-0101;sede@sindicato-ejemplo.org.ar;Lunes a viernes de 9 a 17
+Seccional Rosario;no;Santa Fe;Rosario;Córdoba;1452;;2000;-32,9468;-60,6393;341 425-0100;;rosario@sindicato-ejemplo.org.ar;Lunes a viernes de 8 a 16
+Seccional Bahía Blanca;no;Buenos Aires;Bahía Blanca;Alsina;240;;8000;-38,7183;-62,2663;291 455-0100;;bahiablanca@sindicato-ejemplo.org.ar;Lunes a viernes de 9 a 15
+Seccional Resistencia;no;Chaco;Resistencia;Güemes;315;;3500;-27,4606;-58,9839;362 442-0100;;;Lunes a viernes de 8 a 14
+Seccional San Luis;no;San Luis;San Luis;Rivadavia;780;;5700;33,2950;-66,3356;266 442-0100;;;Lunes a viernes de 9 a 16
+Seccional Neuquén;no;Neuquén;Neuquén;Avenida Argentina;420;;8300;;;299 442-0100;;neuquen@sindicato-ejemplo.org.ar;Lunes a viernes de 9 a 16
+Seccional Río Gallegos;no;Santa Cruz;Río Gallegos;Zapiola;95;;9400;;;2966 42-0100;;;Lunes a viernes de 9 a 15

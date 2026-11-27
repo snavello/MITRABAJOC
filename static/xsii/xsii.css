@@ -363,6 +363,7 @@ td.c-est .marcas{display:flex;margin-top:4px;white-space:normal}
 .as-f.dudosa{background:color-mix(in srgb,var(--esp-s) 55%,transparent)}.as-f.rechazada{background:color-mix(in srgb,var(--bloq-s) 55%,transparent)}
 .as-f.fuera .as-r{opacity:.55;text-decoration:line-through}
 .as-l{color:var(--gris)}.as-r{min-width:0;overflow-wrap:anywhere}
+.as-d{display:block;color:var(--gris);font-size:12.5px;margin-top:1px}
 .as-m{margin:2px 0 0;padding-left:16px;color:var(--gris);font-size:12.5px;display:grid;gap:1px}
 .as-f.rechazada .as-m{color:var(--bloq)}
 .as-chk{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:600}

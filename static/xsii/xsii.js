@@ -634,7 +634,10 @@
     const e = A.ens || {}, afuera = lineasAfuera(A).length;
     const actualiza = !!(A.snap && A.snap.opciones && A.snap.opciones.actualizar_existentes);
     const crear = (e.validas || 0) + (e.dudosas || 0) - afuera;
-    return { crear: crear, afuera: afuera, rechazadas: e.rechazadas || 0, ya: e.ya_existen || 0, actualiza: actualiza, total: crear + (actualiza ? (e.ya_existen || 0) : 0) };
+    // Las que ya existen solo se escriben si algo cambia: lo dice el resumen de cada fila.
+    const ya = (e.filas || []).filter(function (f) { return f.estado === 'ya_existe'; });
+    const cambian = actualiza ? ya.filter(function (f) { return !f.resumen || f.resumen.accion !== 'sin_tocar'; }).length : 0;
+    return { crear: crear, afuera: afuera, rechazadas: e.rechazadas || 0, ya: e.ya_existen || 0, actualiza: actualiza, cambian: cambian, sinCambio: (e.ya_existen || 0) - cambian, total: crear + cambian };
   }
   function formAs(A, conCarga) {
     const base = conCarga ? A.snap : { archivo: A.archivo, texto: A.texto, opciones: A.opciones };
@@ -740,11 +743,15 @@
         h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', disabled: A.trabajando, onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
         A.trabajando ? h('span', { class: 'nota', role: 'status' }, 'Leyendo la planilla…') : null));
   }
+  // El servidor manda el resumen de cada fila solo con textos (nombre, direccion, sede_central, ubicacion, accion).
+  const ACCION_AS = { crear: 'Se crea', actualizar: 'Se actualiza', sin_tocar: 'No se toca' };
   function resumenFila(f) {
     const r = f.resumen || {};
-    if (r.nombre) return String(r.nombre);
-    const v = Object.keys(r).map(function (k) { return r[k]; }).filter(function (x) { return x !== null && x !== undefined && x !== ''; });
-    return v.slice(0, 3).join(' · ');
+    return r.nombre ? String(r.nombre) : '';
+  }
+  function detalleFila(f) {
+    const r = f.resumen || {};
+    return [r.direccion, r.sede_central, r.ubicacion, ACCION_AS[r.accion]].filter(function (x) { return x; }).map(String).join(' · ');
   }
   function paso2As(t, A) {
     const e = A.ens, c = cuentasAs(A);
@@ -765,23 +772,27 @@
             return h('div', { class: 'as-f ' + f.estado + (fuera ? ' fuera' : ''), role: 'row' },
               h('span', { class: 'as-l num', role: 'cell' }, String(f.linea)),
               h('span', { class: 'as-r', role: 'cell' }, h('b', null, resumenFila(f) || '(sin nombre)'),
+                detalleFila(f) ? h('small', { class: 'as-d' }, detalleFila(f)) : null,
                 (f.motivos || []).length ? h('ul', { class: 'as-m' }, f.motivos.map(function (m) { return h('li', null, m); })) : null),
               h('span', { class: 'as-e', role: 'cell' }, h('span', { class: 'pil ' + f.estado }, ESTADOS_AS[f.estado] || f.estado)),
               h('span', { class: 'as-a', role: 'cell' }, f.estado === 'dudosa' ? h('span', { class: 'as-chk' },
                 h('input', { id: id, type: 'checkbox', checked: fuera ? true : null, onchange: function (ev) { A.afuera[f.linea] = ev.target.checked; dibujarFicha(); } }),
                 h('label', { for: id }, 'Dejar afuera')) : null));
-          })) : h('p', { class: 'muted' }, 'No hay filas con ese filtro.')),
-      c.total < 1 ? h('p', { class: 'nota nec' }, 'No queda ninguna fila para cargar. Corregí la planilla y volvé a ensayar.') : null,
+          })) : h('p', { class: 'muted' }, A.filtro ? 'No hay filas con ese filtro.' : 'La planilla no trae filas.')),
+      c.total < 1 ? h('p', { class: 'nota nec' }, 'No queda ninguna fila para cargar. Corregí la planilla y volvé a ensayar.' +
+        (c.ya && !c.actualiza ? ' Si querés cambiarles los datos a las que ya existen, tildá «Actualizar las que ya existen» en el paso 1.' : '')) : null,
       h('div', { class: 'acc as-bot' },
         h('button', { class: 'btn', id: 'x-as-volver', type: 'button', onclick: function () { irPasoAs(A, 1, '#x-as-ensayar'); } }, 'Volver'),
         h('button', { class: 'btn p', id: 'x-as-seguir', type: 'button', disabled: c.total < 1, onclick: function () { irPasoAs(A, 3); } }, 'Seguir'),
+        h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
         h('span', { class: 'nota' }, 'Volver conserva el archivo y las opciones.')));
   }
   function paso3As(t, A) {
     const c = cuentasAs(A);
     const lineas = [];
     lineas.push(h('li', null, h('b', { class: 'num' }, num(c.crear)), ' se van a crear'));
-    if (c.ya) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.ya)), c.actualiza ? ' ya existen y se van a actualizar' : ' ya existen y no se tocan'));
+    if (c.cambian) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.cambian)), c.cambian === 1 ? ' ya existe y se va a actualizar' : ' ya existen y se van a actualizar'));
+    if (c.sinCambio) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.sinCambio)), (c.sinCambio === 1 ? ' ya existe y no se toca' : ' ya existen y no se tocan') + (c.actualiza ? ' (no cambia nada)' : '')));
     if (c.afuera) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.afuera)), c.afuera === 1 ? ' dudosa queda afuera porque la dejaste afuera' : ' dudosas quedan afuera porque las dejaste afuera'));
     if (c.rechazadas) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.rechazadas)), c.rechazadas === 1 ? ' rechazada no entra' : ' rechazadas no entran'));
     const re = A.error && A.status === 409;
@@ -792,6 +803,7 @@
       A.confirmando && !A.trabajando ? h('p', { class: 'nota nec', role: 'status' }, 'Apretá otra vez para confirmar: se escribe en el sistema.') : null,
       h('div', { class: 'acc as-bot' },
         h('button', { class: 'btn', id: 'x-as-atras3', type: 'button', disabled: A.trabajando, onclick: function () { irPasoAs(A, 2); } }, 'Volver al ensayo'),
+        A.confirmando ? null : h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', disabled: A.trabajando, onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
         h('button', { class: 'btn p' + (A.confirmando ? ' conf' : ''), id: 'x-as-cargar', type: 'button', 'aria-disabled': A.trabajando || c.total < 1 ? 'true' : null,
           onclick: function () { if (c.total < 1) return; cargarAs(); } }, A.trabajando ? 'Cargando…' : A.confirmando ? 'Confirmar la carga' : 'Cargar ' + num(c.total)),
         A.confirmando && !A.trabajando ? h('button', { class: 'btn', id: 'x-as-nocargar', type: 'button', onclick: function () { A.confirmando = false; dibujarFicha(); } }, 'No cargar') : null,
@@ -806,6 +818,10 @@
     if (tr.acciones && tr.acciones.confirmar) sigue.push('El control está en condiciones: falta que una persona confirme la tarea. Cerrá este panel y usá «Confirmar» en «Qué se puede hacer».');
     else if (c.estado && c.estado !== 'completa') sigue.push('El control todavía no da por completa la tarea. Revisá lo que falta y, si hace falta, cargá otra planilla.');
     else if (tr.estado === 'hecha') sigue.push('La tarea quedó resuelta.');
+    const escritas = {};
+    (k.detalle || []).forEach(function (x) { if (x && (x.accion === 'creada' || x.accion === 'actualizada')) escritas[x.linea] = true; });
+    const sinUbicar = ((A.ens && A.ens.filas) || []).filter(function (f) { return escritas[f.linea] && f.resumen && f.resumen.ubicacion === 'Sin ubicar'; }).length;
+    if (sinUbicar) sigue.push(num(sinUbicar) + (sinUbicar === 1 ? ' de las cargadas quedó «sin ubicar»: ' : ' de las cargadas quedaron «sin ubicar»: ') + 'hay que ubicarlas en el mapa y el control lo va a seguir avisando hasta entonces.');
     const cifras = [['creadas', 'Creadas'], ['actualizadas', 'Actualizadas'], ['sin_tocar', 'Sin tocar'], ['afuera', 'Afuera']].filter(function (x) { return typeof k[x[0]] === 'number'; });
     return h('div', { class: 'as-cuerpo' },
       h('div', { class: 'as-ok', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '✓'), h('b', null, 'La carga se hizo y el control ya corrió.')),
@@ -1269,6 +1285,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (S.abierta && asDe(S.abierta)) return;
     const a = e.target;
     if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
     moverPaso(e.key === 'ArrowLeft' ? -1 : 1);

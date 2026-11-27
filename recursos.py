@@ -71,7 +71,8 @@ SEMILLA = [
                        "demo: la Guía y el Play, abrir una tarea, pedir un dato al sindicato, confirmar, un error, "
                        "completar a mano y deshacer, no aplica y posponer, el Tablero, el Mapa y el registro, y desde "
                        "el bloque 2 «Preguntame» (el asistente de lectura, con respuestas simuladas) y el reclamo de "
-                       "un dato en la Mesa, con preguntas frecuentes. Versión del bloque 2; crece con cada bloque. "
+                       "un dato en la Mesa, y desde el bloque 3 la carga de las seccionales desde una planilla, con "
+                       "preguntas frecuentes. Versión del bloque 3; crece con cada bloque. "
                        "Se regenera con docs/xsii/tutorial/armar.py.",
         "fecha": date(2026, 11, 27),
         "archivo": "xsii-tutorial.html",

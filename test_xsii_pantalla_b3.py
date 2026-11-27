@@ -61,3 +61,37 @@ def test_estilos_y_movimiento_de_la_asistida():
     reducido = CSS[CSS.index("@media (prefers-reduced-motion:reduce)"):]
     assert ".as-paso.entra" in reducido
     assert not re.search(r"transition:[^;}]*\b(height|max-height)\b", CSS)
+
+
+# --- QA de pantalla del bloque 3 (2026-11-27) ---
+
+def test_la_fila_muestra_nombre_direccion_y_ubicacion_sin_claves_crudas():
+    assert "function detalleFila(" in JS
+    for clave in ("r.direccion", "r.sede_central", "r.ubicacion", "ACCION_AS"):
+        assert clave in JS, clave
+    assert "Se crea" in JS and "No se toca" in JS
+    assert ".as-d{" in CSS
+    # nunca se vuelcan todas las claves del resumen (salia «false» o «y, x» como si fuera el nombre)
+    assert "Object.keys(r)" not in JS
+
+
+def test_lo_que_se_escribe_sale_de_la_accion_de_cada_fila():
+    assert "c.cambian" in JS and "c.sinCambio" in JS
+    assert "resumen.accion !== 'sin_tocar'" in JS
+
+
+def test_con_el_panel_abierto_las_flechas_no_cambian_de_ficha():
+    assert "if (S.abierta && asDe(S.abierta)) return;" in JS
+
+
+def test_se_puede_salir_desde_el_ensayo_y_desde_la_carga():
+    assert JS.count("id: 'x-as-cerrar'") >= 3
+
+
+def test_el_cierre_avisa_de_las_que_quedaron_sin_ubicar():
+    assert "sin ubicar" in JS and "k.detalle" in JS and "'Sin ubicar'" in JS
+
+
+def test_planilla_sin_filas_y_actualizar_existentes_se_explican():
+    assert "La planilla no trae filas." in JS
+    assert "Actualizar las que ya existen" in JS

@@ -103,6 +103,30 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await abrirBloque(page, 'Lo que dice el control');
   await foto(page, '03-ficha-est01', { sel: '.app', marcas: [{ h3: 'Lo que dice el control', n: 1 }, { css: '.btn.donde', n: 2 }, { css: '.sr-aviso', n: 3 }] });
 
+  // 3b. Cargar las seccionales desde la planilla (EST-01): los cuatro momentos, con el servidor real
+  const PLANILLA = path.join(__dirname, 'seccionales-tutorial.csv');
+  await ir('?tarea=EST-01');
+  await page.waitForSelector('#x-as-abrir:not([aria-disabled])');
+  await page.click('#x-as-abrir'); await sleep(900);
+  await page.setInputFiles('#x-as-archivo', PLANILLA); await sleep(500);
+  await foto(page, '37-as-paso1', { sel: '#x-as', pad: 14, maxAlto: 1700, marcas: [{ css: '.as-pasos', n: 1 }, { css: '#x-as-modelo', n: 2 }, { css: '.as-arch', n: 3 }, { css: '.as-pegar', n: 4 }, { css: '.as-opc', n: 5 }] });
+  await page.click('#x-as-ensayar'); await page.waitForSelector('.as-nada'); await sleep(900);
+  await foto(page, '38-as-ensayo', { sel: '#x-as', pad: 14, marcas: [{ css: '.as-nada', n: 1 }, { css: '.as-kpis', n: 2 }, { css: '.as-tab', n: 3 }] });
+  await page.click('#x-as-k-rechazada'); await sleep(500);
+  await foto(page, '39-as-rechazada', { sel: '#x-as', pad: 14, marcas: [{ css: '#x-as-k-rechazada', n: 1 }, { css: '.as-f.rechazada', n: 2 }] });
+  await page.click('#x-as-k-rechazada'); await page.click('#x-as-k-dudosa'); await sleep(400);
+  await page.locator('.as-f.dudosa', { hasText: 'Neuquén' }).locator('input[type=checkbox]').check(); await sleep(400);
+  await foto(page, '40-as-dudosas', { sel: '#x-as', pad: 14, marcas: [{ css: '#x-as-k-dudosa', n: 1 }, { css: '.as-f.dudosa.fuera', n: 2 }, { css: '.as-f.dudosa:not(.fuera)', n: 3 }] });
+  await page.click('#x-as-k-dudosa'); await sleep(300);
+  await page.click('#x-as-seguir'); await sleep(900);
+  await page.click('#x-as-cargar'); await sleep(700);
+  await foto(page, '41-as-confirmar', { sel: '#x-as', pad: 14, marcas: [{ css: '.as-res', n: 1 }, { css: '#x-as-cargar', n: 2 }, { css: '#x-as-nocargar', n: 3 }] });
+  await page.click('#x-as-cargar'); await page.waitForSelector('#x-as-listo'); await sleep(1100);
+  await foto(page, '42-as-control', { sel: '#x-as', pad: 14, marcas: [{ css: '.as-ok', n: 1 }, { css: '.as-ctl', n: 2 }, { css: '.as-sigue', n: 3 }, { css: '#x-as-listo', n: 4 }] });
+  await page.click('#x-as-listo'); await sleep(1500);
+  await abrirBloque(page, 'Historial de la tarea');
+  await foto(page, '43-as-ficha-despues', { sel: '.app', maxAlto: 1700, marcas: [{ h3: 'Insumos', n: 1 }, { btn: 'Confirmar', n: 2 }, { h3: 'Historial de la tarea', n: 3 }] });
+
   // 4. Pedir un dato al sindicato, a mano (REC-01, «Recibos de muestra»)
   await ir('?tarea=REC-01');
   await foto(page, '04-rec01-falta', { sel: '.ficha', marcas: [{ h3: 'Se espera del sindicato', n: 1 }, { btn: 'Marcar pedido', n: 2 }] });
