@@ -12394,7 +12394,7 @@ class XsiiMovimiento(SQLModel, table=True):
     proyecto_id: int = Field(index=True)
     codigo: str = ""                          # la tarea; vacío en lo de un insumo
     clave_insumo: str = ""                    # el insumo, en sus movimientos
-    tipo: str = ""                            # decision | decision_deshecha | insumo_pedido | insumo_recibido | insumo_retirado | insumo_reclamado
+    tipo: str = ""                            # decision | decision_deshecha | insumo_pedido | insumo_recibido | insumo_retirado | insumo_reclamado | asistida_carga
     texto: str = ""
     cantidades: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
     quien_id: int = 0
@@ -12541,10 +12541,12 @@ def xsii_deshacer(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea
 
 
 def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str,
-                          estado: str, tarjeta_id: int = None, nota="") -> XsiiInsumo:
+                          estado: str, tarjeta_id: int = None, nota="", commit: bool = True) -> XsiiInsumo:
     """Registra el insumo como `pedido` o `recibido`, reemplazando al activo
     (queda inactivo, con traza). Pasar de pedido a recibido conserva la tarjeta
-    si no se manda otra. La tarjeta tiene que ser de ESTE proyecto."""
+    si no se manda otra. La tarjeta tiene que ser de ESTE proyecto. Con
+    `commit=False` queda en la transacción de quien llama (una carga asistida
+    es todo o nada)."""
     if estado not in XSII_ESTADOS_INSUMO:
         raise XsiiError(400, "El estado del insumo no es válido (pedido o recibido).")
     nota = implementacion.limpiar_texto(nota)
@@ -12574,12 +12576,46 @@ def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombr
                      f"{verbo} el insumo {nombre_insumo}" + (f": {nota}" if nota else ""),
                      clave_insumo=clave)
     try:
-        s.commit()
+        if commit:
+            s.commit()
+        else:
+            s.flush()
     except IntegrityError:
         s.rollback()
         raise XsiiError(409, "Otra persona registró este insumo al mismo tiempo. Volvé a intentar.")
-    s.refresh(nuevo)
+    if commit:
+        s.refresh(nuevo)
     return nuevo
+
+
+def xsii_candado_de_tarea(s: Session, proyecto_id: int, codigo: str) -> None:
+    """El candado por tarea de las decisiones, para quien escribe algo de esa
+    tarea (la carga asistida): dura lo que la transacción."""
+    _xsii_candado_de_tarea(s, proyecto_id, codigo)
+
+
+def xsii_candado_de_sindicato(s: Session, sindicato_id: int, codigo: str) -> None:
+    """Serializa las cargas asistidas de una tarea sobre UN sindicato aunque
+    vengan de proyectos distintos (el candado de `xsii_candado_de_tarea` es por
+    proyecto). Se toma DESPUÉS del de la tarea, siempre en ese orden: dura lo
+    que la transacción."""
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(
+        clave=f"xsii-sindicato:{sindicato_id}:{codigo}"))
+
+
+def xsii_registrar_carga_asistida(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea: str,
+                                  clave_insumo: str, nombre_insumo: str, texto: str, cantidades: dict) -> XsiiMovimiento:
+    """El movimiento `asistida_carga` de una tarea y, si el insumo de su
+    módulo todavía no figuraba como recibido, su registro como `recibido`.
+    SIN commit: lo hace la ruta, junto con lo que escribió el módulo (todo o nada)."""
+    activo = s.exec(select(XsiiInsumo).where(
+        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave_insumo,
+        XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
+    if activo is None or activo.estado != "recibido":
+        xsii_registrar_insumo(s, proyecto_id, actor, clave_insumo, nombre_insumo, "recibido",
+                              nota="Cargado desde la planilla en XSII.", commit=False)
+    return _xsii_movimiento(s, proyecto_id, actor, "asistida_carga", texto, codigo=codigo,
+                            clave_insumo=clave_insumo, cantidades=cantidades)
 
 
 def xsii_retirar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str) -> XsiiInsumo:

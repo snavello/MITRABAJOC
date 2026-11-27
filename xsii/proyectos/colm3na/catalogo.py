@@ -119,8 +119,8 @@ TAREAS = (
           para_que="Deja cargadas las seccionales del sindicato, con Sede Central incluida, tal como las tiene el sindicato.",
           pasos=(
               "Pedile al sindicato la lista de seccionales con sus domicilios (se reclama desde acá, en la Mesa).",
-              "Entrá al panel del sindicato, pestaña «Seccionales», y cargá cada una con su dirección.",
-              "En Sede Central tildá «Sus usuarios ven todas las seccionales»: es la que mira todo el sindicato.",
+              "Tocá «Cargar desde la planilla», bajá el modelo, pegá ahí los datos y hacé el ensayo: no guarda nada.",
+              "Revisá las dudosas (dejalas afuera si hace falta) y cargá: marcá Sede Central con «sí» en su fila.",
               "Compará lo cargado con la lista recibida y confirmalo acá en XSII.",
               "Queda hecha cuando hay seccionales cargadas y las confirmás.",
           ),

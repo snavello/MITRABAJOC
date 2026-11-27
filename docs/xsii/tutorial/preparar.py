@@ -17,6 +17,7 @@ import implementacion as im  # noqa: E402
 
 USUARIO, NOMBRE = "sofia.demo", "Sofía Demo"
 PROYECTO = "UOM · Primera versión"
+NUEVAS_DEL_TUTORIAL = ["Seccional Bahía Blanca", "Seccional Resistencia", "Seccional San Luis", "Seccional Neuquén", "Seccional Río Gallegos"]
 TARJETAS = [
     ("Lista de seccionales con domicilios", "Necesitamos la lista de seccionales con su domicilio y teléfono."),
     ("Planilla del padrón de afiliados", "Necesitamos la planilla del padrón en Excel o CSV."),
@@ -35,6 +36,14 @@ with db.get_session() as s:
         for t in tablas:
             s.exec(text(f"DELETE FROM {t} WHERE proyecto_id IN ({ids})"))
         s.exec(text(f"DELETE FROM implproyecto WHERE id IN ({ids})"))
+    s.commit()
+    # Las seccionales que el tutorial carga desde la planilla se borran para poder filmarlo de nuevo.
+    # (Solo si nadie las usa: una seccional con afiliados o usuarios no se toca.)
+    uom0 = s.exec(select(db.Sindicato).where(db.Sindicato.nombre.contains("Metal"))).first()
+    for nom in NUEVAS_DEL_TUTORIAL:
+        sec = s.exec(select(db.Seccional).where(db.Seccional.sindicato_id == uom0.id, db.Seccional.nombre == nom)).first()
+        if sec:
+            s.exec(text("DELETE FROM seccional WHERE id = :i AND NOT EXISTS (SELECT 1 FROM trabajador WHERE seccional_id = :i)"), params={"i": sec.id})
     s.commit()
     u = s.exec(select(db.UsuarioPlataforma).where(db.UsuarioPlataforma.usuario == USUARIO)).first()
     if not u:

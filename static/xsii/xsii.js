@@ -16,7 +16,7 @@
   const S = {
     D: null, cargando: true, error: '', vista: 'guia', abierta: null, sel: null, filtro: '',
     det: {}, form: null, insForm: null, anim: false, enfocar: null, enviando: false, abiertos: {},
-    pm: {}, rc: null, exito: null, paso: null
+    pm: {}, rc: null, exito: null, paso: null, as: null, asinfo: {}
   };
 
   // ------------------------------------------------------------ utilidades
@@ -90,6 +90,11 @@
   const pedir = function (ruta) { return pedirJson(BASE + ruta, { cache: 'no-store' }); };
   const enviar = function (ruta, cuerpo) {
     return pedirJson(BASE + ruta, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo || {}) });
+  };
+
+  // Multipart para la carga asistida: el navegador pone el boundary, no se fija Content-Type.
+  const enviarForm = function (ruta, fd) {
+    return pedirJson(BASE + ruta, { method: 'POST', headers: { Accept: 'application/json' }, body: fd });
   };
 
   // ------------------------------------------------------------ URL
@@ -537,6 +542,7 @@
           esRec ? pm('recomendada', null) : pm('tarea', t.codigo),
           t.para_que ? h('p', { class: 'bajada' }, t.para_que) : null,
           esRec && rec.por_que ? h('p', { class: 'muted por-que' }, rec.por_que) : (!esRec && t.detalle ? h('p', { class: 'muted por-que' }, t.detalle) : null),
+          t.asistida ? h('p', { class: 'as-linea' }, ICO_DOC('ico-i'), 'Se carga desde una planilla, con ensayo previo.') : null,
           bloqueHacer(t),
           esperaResumen(t))),
       otras.length ? h('div', null,
@@ -583,6 +589,276 @@
 
   function guia() {
     return h('div', { class: 'guia' }, h('div', { id: 'x-cond', class: 'cond' }), panorama());
+  }
+
+
+  // ------------------------------------------------------------ Carga asistida (bloque 3)
+  // Cuatro momentos de a uno: Qué voy a hacer, Ensayo, Carga, Control. Todo lo que cambia de una
+  // tarea asistida a otra (títulos, columnas, opciones) llega de GET .../asistida; acá no hay
+  // textos de ninguna tarea puntual. El estado vive en S.as (uno solo, atado a un código).
+  const PASOS_AS = ['Qué voy a hacer', 'Ensayo', 'Carga', 'Control'];
+  const ESTADOS_AS = { valida: 'Válida', dudosa: 'Dudosa', rechazada: 'Rechazada', ya_existe: 'Ya existe' };
+  const CIFRAS_AS = [['valida', 'validas', 'Válidas'], ['dudosa', 'dudosas', 'Dudosas'], ['rechazada', 'rechazadas', 'Rechazadas'], ['ya_existe', 'ya_existen', 'Ya existen']];
+  const asDe = function (c) { return S.as && S.as.codigo === c ? S.as : null; };
+  const rutaAs = function (c) { return 'tarea/' + encodeURIComponent(c) + '/asistida'; };
+  function infoAsistida(t) {
+    const k = t.codigo;
+    if (!S.asinfo[k]) {
+      S.asinfo[k] = { cargando: true, d: null, error: '' };
+      pedir(rutaAs(k)).then(function (d) { S.asinfo[k] = { cargando: false, d: d, error: '' }; },
+        function (e) { S.asinfo[k] = { cargando: false, d: null, error: e.message }; })
+        .then(function () { if (S.abierta === k) dibujarFicha(); });
+    }
+    return S.asinfo[k];
+  }
+  function abrirAsistida(t, d) {
+    const opc = {};
+    (d.opciones || []).forEach(function (o) { opc[o.clave] = !!o.defecto; });
+    S.as = { codigo: t.codigo, paso: 1, archivo: null, texto: '', pegar: false, opciones: opc, snap: null, ens: null, filtro: '', afuera: {},
+      trabajando: false, error: '', status: 0, confirmando: false, res: null, anim: true };
+    S.enfocar = '#x-as-h'; dibujarFicha();
+  }
+  function cerrarAsistida(codigo) {
+    S.as = null; S.enfocar = '#x-as-abrir';
+    if (codigo) { delete S.det[codigo]; cargar(true); cargarHistorial(codigo); } else dibujarFicha();
+  }
+  function irPasoAs(A, n, foco) {
+    A.paso = n; A.error = ''; A.status = 0; A.confirmando = false; A.anim = true;
+    S.enfocar = foco || '#x-as-h'; dibujarFicha(); window.scrollTo({ top: 0 });
+  }
+  function lineasAfuera(A) {
+    if (!A.ens) return [];
+    return (A.ens.filas || []).filter(function (f) { return f.estado === 'dudosa' && A.afuera[f.linea]; }).map(function (f) { return f.linea; });
+  }
+  function cuentasAs(A) {
+    const e = A.ens || {}, afuera = lineasAfuera(A).length;
+    const actualiza = !!(A.snap && A.snap.opciones && A.snap.opciones.actualizar_existentes);
+    const crear = (e.validas || 0) + (e.dudosas || 0) - afuera;
+    // Las que ya existen solo se escriben si algo cambia: lo dice el resumen de cada fila.
+    const ya = (e.filas || []).filter(function (f) { return f.estado === 'ya_existe'; });
+    const cambian = actualiza ? ya.filter(function (f) { return !f.resumen || f.resumen.accion !== 'sin_tocar'; }).length : 0;
+    return { crear: crear, afuera: afuera, rechazadas: e.rechazadas || 0, ya: e.ya_existen || 0, actualiza: actualiza, cambian: cambian, sinCambio: (e.ya_existen || 0) - cambian, total: crear + cambian };
+  }
+  function formAs(A, conCarga) {
+    const base = conCarga ? A.snap : { archivo: A.archivo, texto: A.texto, opciones: A.opciones };
+    const fd = new FormData();
+    if (base.archivo) fd.append('archivo', base.archivo, base.archivo.name); else fd.append('texto', base.texto);
+    fd.append('opciones', JSON.stringify(base.opciones));
+    if (conCarga) { fd.append('huella', A.ens.huella || ''); fd.append('dejar_afuera', JSON.stringify(lineasAfuera(A))); }
+    return fd;
+  }
+  async function ensayarAs() {
+    const A = S.as;
+    if (!A || A.trabajando) return;
+    if (!A.archivo && !A.texto.trim()) { A.error = 'Elegí un archivo o pegá el texto de la planilla.'; A.status = 0; S.enfocar = '#x-as-archivo'; dibujarFicha(); return; }
+    A.trabajando = true; A.error = ''; dibujarFicha();
+    try {
+      const r = await enviarForm(rutaAs(A.codigo) + '/ensayo', formAs(A, false));
+      A.snap = { archivo: A.archivo, texto: A.texto, opciones: Object.assign({}, A.opciones) };
+      A.ens = r; A.afuera = {}; A.filtro = ''; A.trabajando = false;
+      irPasoAs(A, 2);
+    } catch (e) {
+      A.trabajando = false; A.error = e.message; A.status = e.status || 0; S.enfocar = '#x-as-err'; dibujarFicha();
+    }
+  }
+  async function cargarAs() {
+    const A = S.as;
+    if (!A || A.trabajando) return;
+    if (!A.confirmando) { A.confirmando = true; A.error = ''; dibujarFicha(); return; }
+    A.trabajando = true; A.error = ''; dibujarFicha();
+    try {
+      const r = await enviarForm(rutaAs(A.codigo) + '/carga', formAs(A, true));
+      A.res = r; A.trabajando = false;
+      irPasoAs(A, 4);
+      cargar(true);
+    } catch (e) {
+      A.trabajando = false; A.confirmando = false; A.error = e.message; A.status = e.status || 0; S.enfocar = '#x-as-err'; dibujarFicha();
+    }
+  }
+  function indicadorAs(A) {
+    return h('ol', { class: 'as-pasos', 'aria-label': 'Pasos de la carga' }, PASOS_AS.map(function (n, i) {
+      const k = i + 1;
+      return h('li', { class: k < A.paso ? 'hecho' : k === A.paso ? 'ahora' : '', 'aria-current': k === A.paso ? 'step' : null },
+        h('span', { class: 'as-n num', 'aria-hidden': 'true' }, k < A.paso ? '✓' : String(k)), h('span', { class: 'as-nt' }, n));
+    }));
+  }
+  function errorAs(A, extra) {
+    if (!A.error) return null;
+    return h('div', { class: 'as-err', id: 'x-as-err', tabindex: '-1', role: 'alert' }, h('p', null, A.error), extra || null);
+  }
+  function pesoArchivo(n) { return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+  function elegirArchivo(A, f) {
+    if (!f) return;
+    A.archivo = f; A.texto = ''; A.error = ''; dibujarFicha();
+  }
+  function zonaArchivo(A) {
+    const nom = h('span', { class: 'as-arch-n', id: 'x-as-arch-nom' }, A.archivo ? A.archivo.name + ' · ' + pesoArchivo(A.archivo.size) : 'Todavía no elegiste ninguno');
+    const zona = h('label', { class: 'as-arch' + (A.archivo ? ' tiene' : ''), for: 'x-as-archivo' },
+      h('input', { id: 'x-as-archivo', class: 'sr', type: 'file', accept: '.csv,text/csv,text/plain', onchange: function (e) { elegirArchivo(A, e.target.files && e.target.files[0]); } }),
+      h('span', { class: 'as-arch-b' }, A.archivo ? 'Elegir otro archivo' : 'Elegir el archivo de la planilla'),
+      h('span', { class: 'as-arch-s' }, 'o soltalo acá'), nom);
+    zona.addEventListener('dragover', function (e) { e.preventDefault(); zona.classList.add('suelta'); });
+    zona.addEventListener('dragleave', function () { zona.classList.remove('suelta'); });
+    zona.addEventListener('drop', function (e) {
+      e.preventDefault(); zona.classList.remove('suelta');
+      const fs = e.dataTransfer && e.dataTransfer.files;
+      if (fs && fs.length) elegirArchivo(A, fs[0]);
+    });
+    return zona;
+  }
+  function paso1As(t, A, d) {
+    const dets = h('details', { class: 'as-pegar' }, h('summary', null, 'O pegá el texto de la planilla'),
+      h('label', { class: 'sr', for: 'x-as-texto' }, 'Texto de la planilla'),
+      h('textarea', { id: 'x-as-texto', rows: '6', spellcheck: 'false', placeholder: 'Pegá acá las filas, con la fila de títulos arriba.',
+        oninput: function (e) {
+          A.texto = e.target.value;
+          if (A.texto && A.archivo) { A.archivo = null; const n = $('x-as-arch-nom'); if (n) n.textContent = 'Todavía no elegiste ninguno'; }
+        } }, A.texto));
+    dets.open = A.pegar || !!A.texto;
+    dets.addEventListener('toggle', function () { A.pegar = dets.open; });
+    return h('div', { class: 'as-cuerpo' },
+      h('div', { class: 'as-que' }, (d.que_voy_a_hacer || []).map(function (p) { return h('p', null, p); })),
+      (d.columnas || []).length ? h('div', null, h('p', { class: 'rot' }, 'Columnas de la planilla'),
+        h('div', { class: 'as-cols', role: 'table', 'aria-label': 'Columnas de la planilla' },
+          h('div', { class: 'as-c cabe', role: 'row' }, h('span', { role: 'columnheader' }, 'Columna'), h('span', { role: 'columnheader' }, 'Cuánto importa'), h('span', { role: 'columnheader' }, 'Ejemplo')),
+          d.columnas.map(function (c) {
+            return h('div', { class: 'as-c', role: 'row' },
+              h('span', { role: 'cell' }, h('b', null, c.rotulo || c.clave), c.ayuda ? h('small', null, c.ayuda) : null),
+              h('span', { role: 'cell', class: c.obligatoria ? 'ob' : 'op' }, c.obligatoria ? 'Obligatoria' : 'Opcional'),
+              h('span', { role: 'cell' }, c.ejemplo ? h('code', null, c.ejemplo) : ''));
+          }))) : null,
+      h('div', { class: 'acc' }, h('a', { class: 'btn', id: 'x-as-modelo', href: BASE + rutaAs(t.codigo) + '/modelo.csv', download: '' }, 'Descargar el modelo'),
+        h('span', { class: 'nota' }, 'Un archivo de ejemplo con las columnas listas para completar.')),
+      zonaArchivo(A), dets,
+      (d.opciones || []).length ? h('fieldset', { class: 'as-opc' }, h('legend', { class: 'rot' }, 'Opciones'),
+        d.opciones.map(function (o) {
+          const id = 'x-as-o-' + idSeguro(o.clave);
+          return h('div', { class: 'as-o' },
+            h('input', { id: id, type: 'checkbox', checked: A.opciones[o.clave] ? true : null, onchange: function (e) { A.opciones[o.clave] = e.target.checked; } }),
+            h('label', { for: id }, h('b', null, o.rotulo || o.clave), o.ayuda ? h('small', null, o.ayuda) : null));
+        })) : null,
+      errorAs(A),
+      h('div', { class: 'acc as-bot' },
+        h('button', { class: 'btn p', id: 'x-as-ensayar', type: 'button', 'aria-disabled': A.trabajando ? 'true' : null, onclick: ensayarAs }, A.trabajando ? 'Ensayando…' : 'Ensayar (no guarda nada)'),
+        h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', disabled: A.trabajando, onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
+        A.trabajando ? h('span', { class: 'nota', role: 'status' }, 'Leyendo la planilla…') : null));
+  }
+  // El servidor manda el resumen de cada fila solo con textos (nombre, direccion, sede_central, ubicacion, accion).
+  const ACCION_AS = { crear: 'Se crea', actualizar: 'Se actualiza', sin_tocar: 'No se toca' };
+  function resumenFila(f) {
+    const r = f.resumen || {};
+    return r.nombre ? String(r.nombre) : '';
+  }
+  function detalleFila(f) {
+    const r = f.resumen || {};
+    return [r.direccion, r.sede_central, r.ubicacion, ACCION_AS[r.accion]].filter(function (x) { return x; }).map(String).join(' · ');
+  }
+  function paso2As(t, A) {
+    const e = A.ens, c = cuentasAs(A);
+    const filas = (e.filas || []).filter(function (f) { return !A.filtro || f.estado === A.filtro; });
+    return h('div', { class: 'as-cuerpo' },
+      h('div', { class: 'as-nada', role: 'status' }, h('b', null, 'Nada se guardó todavía'), h('span', null, 'Esto es solo un ensayo: se leyeron ' + num(e.total || 0) + ' filas y no se escribió nada en el sistema.')),
+      h('div', { class: 'as-kpis', role: 'group', 'aria-label': 'Filtrar las filas por resultado del ensayo' }, CIFRAS_AS.map(function (k) {
+        return h('button', { type: 'button', class: 'as-k ' + k[0], id: 'x-as-k-' + k[0], 'aria-pressed': String(A.filtro === k[0]),
+          onclick: function () { A.filtro = A.filtro === k[0] ? '' : k[0]; dibujarFicha(); } },
+          h('b', { class: 'num' }, num(e[k[1]] || 0)), h('span', null, k[2]));
+      })),
+      (e.avisos || []).map(function (a) { return h('div', { class: 'aviso' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'), h('div', null, a)); }),
+      h('div', null, h('p', { class: 'rot as-fil-t' }, A.filtro ? ESTADOS_AS[A.filtro] + 's: ' + filas.length + ' de ' + (e.filas || []).length + ' filas' : 'Todas las filas: ' + filas.length),
+        filas.length ? h('div', { class: 'as-tab', role: 'table', 'aria-label': 'Filas del ensayo' },
+          h('div', { class: 'as-f cabe', role: 'row' }, h('span', { role: 'columnheader' }, 'Línea'), h('span', { role: 'columnheader' }, 'Fila'), h('span', { role: 'columnheader' }, 'Resultado'), h('span', { role: 'columnheader' }, 'Dudosa')),
+          filas.map(function (f) {
+            const id = 'x-as-af-' + f.linea, fuera = !!A.afuera[f.linea];
+            return h('div', { class: 'as-f ' + f.estado + (fuera ? ' fuera' : ''), role: 'row' },
+              h('span', { class: 'as-l num', role: 'cell' }, String(f.linea)),
+              h('span', { class: 'as-r', role: 'cell' }, h('b', null, resumenFila(f) || '(sin nombre)'),
+                detalleFila(f) ? h('small', { class: 'as-d' }, detalleFila(f)) : null,
+                (f.motivos || []).length ? h('ul', { class: 'as-m' }, f.motivos.map(function (m) { return h('li', null, m); })) : null),
+              h('span', { class: 'as-e', role: 'cell' }, h('span', { class: 'pil ' + f.estado }, ESTADOS_AS[f.estado] || f.estado)),
+              h('span', { class: 'as-a', role: 'cell' }, f.estado === 'dudosa' ? h('span', { class: 'as-chk' },
+                h('input', { id: id, type: 'checkbox', checked: fuera ? true : null, onchange: function (ev) { A.afuera[f.linea] = ev.target.checked; dibujarFicha(); } }),
+                h('label', { for: id }, 'Dejar afuera')) : null));
+          })) : h('p', { class: 'muted' }, A.filtro ? 'No hay filas con ese filtro.' : 'La planilla no trae filas.')),
+      c.total < 1 ? h('p', { class: 'nota nec' }, 'No queda ninguna fila para cargar. Corregí la planilla y volvé a ensayar.' +
+        (c.ya && !c.actualiza ? ' Si querés cambiarles los datos a las que ya existen, tildá «Actualizar las que ya existen» en el paso 1.' : '')) : null,
+      h('div', { class: 'acc as-bot' },
+        h('button', { class: 'btn', id: 'x-as-volver', type: 'button', onclick: function () { irPasoAs(A, 1, '#x-as-ensayar'); } }, 'Volver'),
+        h('button', { class: 'btn p', id: 'x-as-seguir', type: 'button', disabled: c.total < 1, onclick: function () { irPasoAs(A, 3); } }, 'Seguir'),
+        h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
+        h('span', { class: 'nota' }, 'Volver conserva el archivo y las opciones.')));
+  }
+  function paso3As(t, A) {
+    const c = cuentasAs(A);
+    const lineas = [];
+    lineas.push(h('li', null, h('b', { class: 'num' }, num(c.crear)), ' se van a crear'));
+    if (c.cambian) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.cambian)), c.cambian === 1 ? ' ya existe y se va a actualizar' : ' ya existen y se van a actualizar'));
+    if (c.sinCambio) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.sinCambio)), (c.sinCambio === 1 ? ' ya existe y no se toca' : ' ya existen y no se tocan') + (c.actualiza ? ' (no cambia nada)' : '')));
+    if (c.afuera) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.afuera)), c.afuera === 1 ? ' dudosa queda afuera porque la dejaste afuera' : ' dudosas quedan afuera porque las dejaste afuera'));
+    if (c.rechazadas) lineas.push(h('li', null, h('b', { class: 'num' }, num(c.rechazadas)), c.rechazadas === 1 ? ' rechazada no entra' : ' rechazadas no entran'));
+    const re = A.error && A.status === 409;
+    return h('div', { class: 'as-cuerpo' },
+      h('p', { class: 'as-lead' }, 'Esto es lo que va a pasar al cargar. Después no se puede deshacer desde acá.'),
+      h('ul', { class: 'as-res' }, lineas),
+      errorAs(A, re ? h('div', { class: 'acc' }, h('button', { class: 'btn', id: 'x-as-reensayar', type: 'button', onclick: function () { irPasoAs(A, 1, '#x-as-ensayar'); } }, 'Volver a ensayar')) : null),
+      A.confirmando && !A.trabajando ? h('p', { class: 'nota nec', role: 'status' }, 'Apretá otra vez para confirmar: se escribe en el sistema.') : null,
+      h('div', { class: 'acc as-bot' },
+        h('button', { class: 'btn', id: 'x-as-atras3', type: 'button', disabled: A.trabajando, onclick: function () { irPasoAs(A, 2); } }, 'Volver al ensayo'),
+        A.confirmando ? null : h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', disabled: A.trabajando, onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
+        h('button', { class: 'btn p' + (A.confirmando ? ' conf' : ''), id: 'x-as-cargar', type: 'button', 'aria-disabled': A.trabajando || c.total < 1 ? 'true' : null,
+          onclick: function () { if (c.total < 1) return; cargarAs(); } }, A.trabajando ? 'Cargando…' : A.confirmando ? 'Confirmar la carga' : 'Cargar ' + num(c.total)),
+        A.confirmando && !A.trabajando ? h('button', { class: 'btn', id: 'x-as-nocargar', type: 'button', onclick: function () { A.confirmando = false; dibujarFicha(); } }, 'No cargar') : null,
+        A.trabajando ? h('span', { class: 'nota', role: 'status' }, 'Cargando y corriendo el control…') : null),
+      A.trabajando ? h('div', { class: 'esq', 'aria-busy': 'true', 'aria-label': 'Cargando' }, h('i', { class: 'm' }), h('i')) : null);
+  }
+  function paso4As(t, A) {
+    const r = A.res || {}, k = r.carga || {}, c = r.control || {}, tr = r.tarea || {};
+    const rs = RES[c.estado] || [c.estado || '', ''];
+    const destrabo = (r.destrabo || []).filter(function (x) { return x && x.codigo; });
+    const sigue = [];
+    if (tr.acciones && tr.acciones.confirmar) sigue.push('El control está en condiciones: falta que una persona confirme la tarea. Cerrá este panel y usá «Confirmar» en «Qué se puede hacer».');
+    else if (c.estado && c.estado !== 'completa') sigue.push('El control todavía no da por completa la tarea. Revisá lo que falta y, si hace falta, cargá otra planilla.');
+    else if (tr.estado === 'hecha') sigue.push('La tarea quedó resuelta.');
+    const escritas = {};
+    (k.detalle || []).forEach(function (x) { if (x && (x.accion === 'creada' || x.accion === 'actualizada')) escritas[x.linea] = true; });
+    const sinUbicar = ((A.ens && A.ens.filas) || []).filter(function (f) { return escritas[f.linea] && f.resumen && f.resumen.ubicacion === 'Sin ubicar'; }).length;
+    if (sinUbicar) sigue.push(num(sinUbicar) + (sinUbicar === 1 ? ' de las cargadas quedó «sin ubicar»: ' : ' de las cargadas quedaron «sin ubicar»: ') + 'hay que ubicarlas en el mapa y el control lo va a seguir avisando hasta entonces.');
+    const cifras = [['creadas', 'Creadas'], ['actualizadas', 'Actualizadas'], ['sin_tocar', 'Sin tocar'], ['afuera', 'Afuera']].filter(function (x) { return typeof k[x[0]] === 'number'; });
+    return h('div', { class: 'as-cuerpo' },
+      h('div', { class: 'as-ok', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '✓'), h('b', null, 'La carga se hizo y el control ya corrió.')),
+      cifras.length ? h('div', { class: 'kpis' }, cifras.map(function (x) { return h('div', { class: 'kpi' }, h('b', null, num(k[x[0]])), h('span', null, x[1])); })) : null,
+      h('div', { class: 'as-ctl' }, h('p', { class: 'rot' }, 'Lo que dice el control'),
+        h('p', null, h('b', { class: rs[1] }, rs[0]), c.resumen ? ' · ' + c.resumen : ''),
+        (c.cifras || []).length ? h('div', { class: 'kpis' }, c.cifras.map(function (x) { return h('div', { class: 'kpi' }, h('b', null, num(x.valor)), h('span', null, x.nombre)); })) : null,
+        (c.faltan || []).length ? h('div', null, h('p', { class: 'rot' }, 'Falta'), h('ul', { class: 'faltan' }, c.faltan.map(function (x) { return h('li', null, x); }))) : null),
+      h('div', null, h('p', { class: 'rot' }, 'Esto destrabó'),
+        destrabo.length ? h('div', { class: 'as-dest' }, destrabo.map(function (x) {
+          return h('button', { class: 'btn', type: 'button', onclick: function () { S.as = null; abrirFicha(x.codigo); } }, x.nombre || x.codigo);
+        })) : h('p', { class: 'muted' }, 'Ninguna otra tarea cambió de estado.')),
+      h('div', null, h('p', { class: 'rot' }, 'Qué sigue'),
+        sigue.length ? h('ul', { class: 'as-sigue' }, sigue.map(function (x) { return h('li', null, x); })) : null,
+        destrabo.length ? h('p', null, 'Ya se puede seguir con: ', destrabo.map(function (x, i) { return [i ? ', ' : '', h('b', null, x.nombre || x.codigo)]; }), '.') : null,
+        !sigue.length && !destrabo.length ? h('p', { class: 'muted' }, 'No hay nada más para hacer acá.') : null),
+      h('div', { class: 'acc as-bot' }, h('button', { class: 'btn p', id: 'x-as-listo', type: 'button', onclick: function () { cerrarAsistida(t.codigo); } }, 'Listo')));
+  }
+  function panelAs(t, A, d) {
+    const cuerpo = A.paso === 1 ? paso1As(t, A, d) : A.paso === 2 ? paso2As(t, A) : A.paso === 3 ? paso3As(t, A) : paso4As(t, A);
+    const anim = A.anim ? ' entra' : ''; A.anim = false;
+    return h('section', { class: 'as', id: 'x-as', 'aria-labelledby': 'x-as-h', 'aria-busy': A.trabajando ? 'true' : 'false' },
+      h('div', { class: 'as-cab' }, h('p', { class: 'rot' }, d.titulo || 'Carga desde la planilla'),
+        indicadorAs(A),
+        h('h3', { class: 'as-h', id: 'x-as-h', tabindex: '-1' }, 'Paso ' + A.paso + ' de 4: ' + PASOS_AS[A.paso - 1])),
+      h('div', { class: 'as-paso' + anim }, cuerpo));
+  }
+  // El botón de entrada y, si hay panel abierto, el panel. Devuelve { boton, panel, motivo }.
+  function asistidaDe(t) {
+    if (!t.asistida) return { boton: null, panel: null, nota: null, abierto: false };
+    const inf = infoAsistida(t), d = inf.d, A = asDe(t.codigo);
+    if (inf.cargando) return { boton: h('button', { class: 'btn p', type: 'button', id: 'x-as-abrir', 'aria-disabled': 'true' }, 'Cargar desde la planilla'), panel: null, nota: null, abierto: false };
+    if (inf.error) return { boton: null, panel: null, abierto: false, nota: h('p', { class: 'nota nec' }, inf.error + ' ',
+      h('button', { class: 'enlace', type: 'button', onclick: function () { delete S.asinfo[t.codigo]; dibujarFicha(); } }, 'Reintentar')) };
+    if (!d.disponible) return { boton: null, panel: null, abierto: false, nota: h('p', { class: 'nota' }, d.motivo || 'La carga desde planilla no está disponible por ahora.') };
+    if (A) return { boton: null, panel: panelAs(t, A, d), nota: null, abierto: true };
+    return { boton: h('button', { class: 'btn p', type: 'button', id: 'x-as-abrir', onclick: function () { abrirAsistida(t, d); } }, 'Cargar desde la planilla'), panel: null, nota: null, abierto: false };
   }
 
   // ------------------------------------------------------------ FICHA
@@ -726,19 +1002,16 @@
   function ficha(t) {
     const frenos = (t.camino || []).map(function (c) { const x = tarea(c); return x ? x.nombre : c; });
     const hacer = bloqueHacer(t);
-    return h('div', { class: 'ficha' + (S.anim ? ' entra' : '') },
-      botoneraFicha(t),
-      h('div', { class: 'cab' },
-        h('p', { class: 'rot' }, t.codigo + ' · ' + t.grupo + ' · ' + nomModo(t.modo)),
-        h('h2', { class: 'disp' }, t.nombre),
-        h('div', { class: 'fila' }, pildora(t.estado), marcas(t)),
-        pm('tarea', t.codigo)),
+    const as = asistidaDe(t);
+    const resto = [
       t.para_que ? h('p', { class: 'bajada' }, t.para_que) : null,
       (t.avisos || []).map(function (a) { return h('div', { class: 'aviso' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'), h('div', null, a)); }),
       frenos.length && !resuelta(t) ? h('p', { class: 'nota' }, 'Para llegar acá antes hay que resolver, en este orden: ' + frenos.join(', ') + '.') : null,
-      hacer || t.donde ? h('div', { class: 'hacer-c' }, hacer,
-        t.donde ? h('div', { class: 'acc' }, h('a', { class: 'btn donde' + (t.estado === 'no_aplica' ? '' : ' p'), href: t.donde.url, target: '_blank', rel: 'noopener' }, 'Ir a la pantalla'),
-          h('span', { class: 'nota' }, t.donde.rotulo)) : null) : null,
+      hacer || t.donde || as.boton || as.nota ? h('div', { class: 'hacer-c' }, hacer,
+        as.nota,
+        as.boton || t.donde ? h('div', { class: 'acc' }, as.boton,
+          t.donde ? h('a', { class: 'btn donde' + (t.estado === 'no_aplica' || as.boton ? '' : ' p'), href: t.donde.url, target: '_blank', rel: 'noopener' }, 'Ir a la pantalla') : null,
+          t.donde ? h('span', { class: 'nota' }, t.donde.rotulo) : null) : null) : null,
       !hacer && t.detalle ? h('p', { class: 'muted' }, t.detalle) : null,
       seccionInsumos(t),
       t.confirmacion ? h('div', { class: 'bloque' }, h('h3', null, 'Lo que hay que confirmar'),
@@ -749,7 +1022,16 @@
       seccionControl(t),
       seccionRelaciones(t),
       seccionDecisiones(t),
-      seccionHistorial(t));
+      seccionHistorial(t)];
+    return h('div', { class: 'ficha' + (S.anim ? ' entra' : '') },
+      botoneraFicha(t),
+      h('div', { class: 'cab' },
+        h('p', { class: 'rot' }, t.codigo + ' · ' + t.grupo + ' · ' + nomModo(t.modo)),
+        h('h2', { class: 'disp' }, t.nombre),
+        h('div', { class: 'fila' }, pildora(t.estado), marcas(t)),
+        pm('tarea', t.codigo)),
+      as.panel,
+      as.abierto ? h('div', { class: 'as-resto', inert: true }, h('p', { class: 'nota' }, 'El resto de la ficha vuelve cuando cierres el panel de carga.'), resto) : resto);
   }
   function dibujarFicha() {
     const cont = $('x-cond');
@@ -1003,6 +1285,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (S.abierta && asDe(S.abierta)) return;
     const a = e.target;
     if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
     moverPaso(e.key === 'ArrowLeft' ? -1 : 1);

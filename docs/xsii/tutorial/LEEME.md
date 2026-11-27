@@ -48,3 +48,11 @@ La miniatura `recursos/xsii-tutorial.jpg` (640x400) es una captura de la portada
   los abre con `abrirBloque(page, 'título')` antes de fotografiarlos. Las marcas aceptan `dx`/`dy` para correr el
   círculo cuando taparía el texto. Paso nuevo «Moverse entre los pasos» (captura `36-guia-atras-adelante`).
   Ahora son 20 pasos y 37 figuras; el HTML pesa ~5,4 MB (ancho `full` 1200 y JPEG 68 en `armar.py`).
+- Bloque 3 (2026-11-27): paso nuevo «Cargar las seccionales desde la planilla» (capturas `37` a `43`, tramo «3b» de
+  `capturar.js`), con la planilla propia `seccionales-tutorial.csv` (dos filas que ya existen, dos válidas, una rechazada
+  por latitud sin signo y dos dudosas sin coordenadas: una se deja afuera y la otra se carga «sin ubicar»). La UOM de la
+  demo ya trae once seccionales, por eso `preparar.py` borra las cinco que la planilla crea (`NUEVAS_DEL_TUTORIAL`, solo si
+  ningún afiliado las usa) para poder filmar otra vez. La carga se filma antes de «Pedir un dato a mano»: deja EST-01 «En
+  curso, falta confirmar» y el insumo «Lista de seccionales» recibido, y el resto del tutorial sigue coherente (PAD-02
+  sigue frenada por Seccionales y Padrón recibido). Ahora son 21 pasos y 44 figuras; JPEG a calidad 62 para quedar
+  bajo 6 MB (5,7 MB). Pendiente fuera de esta carpeta: `recursos.py` dice «Versión del bloque 2» en la descripción.

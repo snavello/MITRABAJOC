@@ -210,7 +210,7 @@ def test_la_forma_del_tablero_es_la_del_contrato():
     claves = {"codigo", "nombre", "grupo", "modo", "descripcion", "para_que", "pasos", "aplica_si", "estado", "con_observaciones",
               "a_mano", "pospuesta", "no_aplica_por", "falta_confirmar", "confirmacion", "detalle", "necesita",
               "mejora_con", "frenada_por", "avisos", "camino", "necesitada_por", "destraba", "nivel", "donde",
-              "control", "decisiones", "insumos", "acciones"}
+              "control", "decisiones", "insumos", "acciones", "asistida"}
     for x in t["tareas"]:
         assert set(x) == claves, x["codigo"]
         assert set(x["acciones"]) == {"confirmar", "completar_a_mano", "no_aplica", "posponer", "deshacer"}

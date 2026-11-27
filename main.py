@@ -13835,6 +13835,118 @@ def api_xsii_movimientos(pid: IdImpl, codigo: str = "", limite: str = "50", acto
         return xsii_vista.movimientos_json(s, ctx, codigo, limite)
 
 
+# ----- Bloque 3: tareas asistidas, «Cargar desde la planilla» (docs/xsii/API.md) -----
+# Multipart: la puerta se resuelve ANTES de leer el cuerpo (la dependencia corre
+# primero y estas rutas no declaran `File`/`Form`), y el formulario se lee con
+# `_impl_formulario` (mismo `request`, con tope de bytes, como la Mesa). Las
+# planillas son CSV, no imágenes: no pasan por `imagenes.achicar`.
+XSII_DEJAR_AFUERA_MAX = 1000
+
+
+def _xsii_campo_json(valor, tipo, defecto, nombre: str):
+    """Un campo del formulario que viaja como JSON: ausente es el `defecto`."""
+    if valor is None or (isinstance(valor, str) and not valor.strip()):
+        return defecto
+    if not isinstance(valor, str):
+        raise HTTPException(400, f"{nombre} no es válido.")
+    import json
+    try:
+        dato = json.loads(valor)
+    except ValueError:
+        raise HTTPException(400, f"{nombre} no es válido.")
+    if not isinstance(dato, tipo):
+        raise HTTPException(400, f"{nombre} no es válido.")
+    return dato
+
+
+async def _xsii_planilla(request: Request) -> dict:
+    """El formulario de una carga asistida: `contenido` (el archivo o el texto
+    pegado, en bytes), `opciones`, `huella` y `dejar_afuera`."""
+    try:
+        form = await _impl_formulario(request)
+    except implementacion.ErrorImpl as e:
+        raise HTTPException(400, e.mensaje)
+    try:
+        contenido = b""
+        archivo = form.get("archivo")
+        if archivo is not None and hasattr(archivo, "read"):
+            contenido = await archivo.read()
+        if not contenido.strip():
+            texto = form.get("texto")
+            contenido = texto.encode("utf-8") if isinstance(texto, str) else b""
+        opciones = _xsii_campo_json(form.get("opciones"), dict, {}, "Las opciones")
+        afuera = _xsii_campo_json(form.get("dejar_afuera"), list, [], "La lista de líneas que quedan afuera")
+        if len(afuera) > XSII_DEJAR_AFUERA_MAX or any(isinstance(x, bool) or not isinstance(x, int) for x in afuera):
+            raise HTTPException(400, "La lista de líneas que quedan afuera no es válida.")
+        huella = form.get("huella")
+        return {"contenido": contenido, "opciones": opciones, "dejar_afuera": afuera,
+                "huella": huella.strip() if isinstance(huella, str) else ""}
+    finally:
+        await form.close()
+
+
+@app.get(API_XSII + "/p/{pid}/tarea/{codigo}/asistida")
+def api_xsii_asistida(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        codigo = _xsii_tarea(codigo)
+        try:
+            return xsii_vista.asistida_json(ctx, codigo)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+
+
+@app.get(API_XSII + "/p/{pid}/tarea/{codigo}/asistida/modelo.csv")
+def api_xsii_asistida_modelo(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
+    codigo = _xsii_tarea(codigo)
+    modulo = xsii_vista.ASISTIDAS.get(codigo)
+    if modulo is None:
+        raise HTTPException(404, "Esta tarea no tiene carga desde planilla.")
+    with db.get_session() as s:
+        if db.impl_proyecto(s, pid) is None:
+            raise HTTPException(404, "No existe.")
+    return BinResponse(content=modulo.modelo_csv().encode("utf-8"), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{modulo.NOMBRE_ARCHIVO}"'})
+
+
+@app.post(API_XSII + "/p/{pid}/tarea/{codigo}/asistida/ensayo")
+async def api_xsii_asistida_ensayo(request: Request, pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
+    codigo = _xsii_tarea(codigo)
+    pedido = await _xsii_planilla(request)
+
+    def _trabajo():
+        with db.get_session() as s:
+            ctx = _xsii_contexto(s, pid)
+            try:
+                return xsii_vista.asistida_ensayar(s, ctx, codigo, pedido["contenido"], pedido["opciones"])
+            except db.XsiiError as e:
+                raise HTTPException(e.estado, e.mensaje)
+    return await run_in_threadpool(_trabajo)
+
+
+@app.post(API_XSII + "/p/{pid}/tarea/{codigo}/asistida/carga")
+async def api_xsii_asistida_carga(request: Request, pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
+    codigo = _xsii_tarea(codigo)
+    pedido = await _xsii_planilla(request)
+
+    def _trabajo():
+        with db.get_session() as s:
+            antes = _xsii_contexto(s, pid)
+            try:
+                carga = xsii_vista.asistida_cargar(s, antes, actor, codigo, pedido["contenido"], pedido["opciones"],
+                                                   pedido["huella"], pedido["dejar_afuera"])
+                s.commit()                    # todo o nada: la planilla, el movimiento y el insumo
+            except db.XsiiError as e:
+                s.rollback()
+                raise HTTPException(e.estado, e.mensaje)
+            except Exception:
+                s.rollback()
+                raise
+            despues = _xsii_contexto(s, pid)
+            return {"ok": True, **xsii_vista.asistida_resultado(antes, despues, codigo, carga)}
+    return await run_in_threadpool(_trabajo)
+
+
 # ----- Bloque 2: «Preguntame» (la IA lee, nunca escribe) -----
 # Tope de consultas por usuario y por hora, en memoria del proceso como los demás
 # frenos de la casa (con varios workers es por proceso). La consulta puede tardar
