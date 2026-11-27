@@ -31,6 +31,7 @@ from sqlalchemy.exc import IntegrityError as _IntegrityErrorXsii
 import logging
 import os
 import re
+import unicodedata
 import threading
 import traceback
 import uuid
@@ -3858,7 +3859,8 @@ def abm_seccional(
         precision_geo, latitud, longitud)
     contacto = {"telefono": telefono.strip()[:40], "whatsapp": whatsapp.strip()[:40],
                 "mail": mail.strip()[:200], "horario_atencion": horario_atencion.strip()[:300],
-                "responsable": responsable.strip()[:120]}
+                "responsable": "".join(ch for ch in responsable if unicodedata.category(ch) not in
+                                       ("Cc", "Cf", "Cs", "Zl", "Zp")).strip()[:120]}
     with db.get_session() as s:
         if id:
             sec = s.get(Seccional, int(id))

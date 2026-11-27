@@ -114,4 +114,4 @@ def test_la_portada_del_afiliado_dibuja_el_responsable_como_texto():
     c.cookies.set("cuil_trab", AFIL)
     html = c.get("/app/inicio").text
     assert "Responsable: &lt;b&gt;Ana&lt;/b&gt; &amp; Co" in html and "<b>Ana</b>" not in html
-    assert "String(s.responsable).replace(" in html           # el JS de «cerca de mí» escapa
+    assert "escS(s.responsable)" in html           # el JS de «cerca de mí» escapa

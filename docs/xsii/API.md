@@ -731,3 +731,17 @@ Lo que quedó implementado, con lo que difiere o precisa el contrato de arriba.
 - Campo nuevo `responsable` (`Seccional.responsable`, 120 caracteres, migración `d3f5a7b9c1e4`): se carga y, al actualizar una existente,
   lo vacío no pisa lo cargado. En el panel (`POST /admin/seccional`, `responsable`) y en la app del afiliado («Responsable: …», como texto).
 - Fixtures: `docs/xsii/ejemplos/padron-ejemplo.csv` (30 filas) y `seccionales-como-viene.csv` (la cabecera real, 10 filas inventadas).
+
+### Correcciones del QA de servidor del bloque 4a (`test_xsii_bloque4_qa.py`)
+
+- **Una carga del padrón a la vez en toda la plataforma**: `padron_carga.procesar` (no el ensayo) toma `pg_advisory_xact_lock('padron-carga')`
+  ANTES de leer, y lo suelta al confirmar. Dos cargas que creaban la misma cuenta de persona (el CUIL es único entre sindicatos) o el mismo
+  empadronamiento chocaban en el commit con un `IntegrityError` (500); la asistida tenía candados por tarea y por sindicato, pero no frenaba
+  a «Alta masiva» del panel. El orden de candados es siempre tarea, sindicato, padrón: sin ciclos. Una espera larga la corta el
+  `statement_timeout` (503 `E-SERVIDOR-02`).
+- **Un byte nulo (`\x00`) en la lista de «Alta masiva»** se descarta en `filas_de_lista` (Postgres no lo guarda en un texto y la carga caía con un 500).
+- **El «Responsable» de la seccional por el panel** se limpia de caracteres de control e invisibles (como en la planilla) antes de recortarlo
+  a 120; con un nulo, `POST /admin/seccional` daba 500.
+- **Ficha de la seccional** (`/admin`, `verSeccional`): teléfono, WhatsApp, mail y horario se armaban con `innerHTML` sin escapar, y desde XSII
+  entran por planilla (el mail admite `<img/src=x/onerror=...>@x.y`). Ahora se escapan igual que el responsable.
+

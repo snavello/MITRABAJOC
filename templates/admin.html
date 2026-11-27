@@ -7714,6 +7714,10 @@ function verSeccional(id) {
       var dato = function (k, v) {
         return v ? '<div class="ficha-dato"><span>' + k + '</span><div>' + v + '</div></div>' : '';
       };
+      // Los textos libres de la seccional (también los que entran por planilla) van como texto, nunca como HTML.
+      var esc = function (x) {
+        return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
       var ubicada = s.latitud != null && s.longitud != null;
       var html = '';
       if (ubicada) {
@@ -7728,11 +7732,11 @@ function verSeccional(id) {
                    s.etiqueta_precision + '</span>' +
                    (s.geo_actualizado ? ' <span class="muted" style="font-size:11.5px;">· ' +
                     s.geo_actualizado + '</span>' : '')) +
-              dato('Teléfono', s.telefono) +
-              dato('WhatsApp', s.whatsapp) +
-              dato('Mail', s.mail) +
-              dato('Horario', s.horario_atencion) +
-              dato('Responsable', (s.responsable || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')) +
+              dato('Teléfono', esc(s.telefono)) +
+              dato('WhatsApp', esc(s.whatsapp)) +
+              dato('Mail', esc(s.mail)) +
+              dato('Horario', esc(s.horario_atencion)) +
+              dato('Responsable', esc(s.responsable)) +
               dato('Afiliados', s.afiliados + (s.ve_todas ? ' · sus usuarios ven todas las seccionales' : ''));
       if (ubicada) {
         html += '<div style="margin-top:14px;">' +
@@ -7746,7 +7750,7 @@ function verSeccional(id) {
       if (ubicada) {
         fichaMapa = MapaMT.crear('fs-mapa', {
           lat: s.latitud, lon: s.longitud, zoom: 16, rueda: false,
-          popup: '<b>' + s.nombre + '</b><br>' + (s.direccion_texto || '')
+          popup: '<b>' + esc(s.nombre) + '</b><br>' + esc(s.direccion_texto)
         });
         if (fichaMapa) { fichaMapa.refrescar(); if (fichaMapa.globo) fichaMapa.globo.openPopup(); }
       }

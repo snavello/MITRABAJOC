@@ -232,9 +232,12 @@ def leer(contenido: bytes, opciones: dict | None = None) -> dict:
     mapeo = base.mapeo_json(cabecera, crudas, asignado, OBLIGATORIOS)
     columnas, faltan, sin_usar = mapeo["columnas"], mapeo["faltan"], mapeo["sin_usar"]
     avisos = []
-    if sin_usar:
-        avisos.append("No uso estas columnas: " + ", ".join(f"«{x}»" for x in sin_usar) + ".")
-    if any(listas._plano(c["cabecera"]) in _DOCUMENTO and not c["campo"] for c in columnas):
+    es_doc = lambda c: listas._plano(c["cabecera"]) in _DOCUMENTO and not c["campo"]      # noqa: E731
+    # La columna del documento tiene su propio aviso (dice por qué): no se repite en «No uso…».
+    otras = [x for x in sin_usar if not any(es_doc(c) and c["cabecera"] == x for c in columnas)]
+    if otras:
+        avisos.append("No uso estas columnas: " + ", ".join(f"«{x}»" for x in otras) + ".")
+    if any(es_doc(c) for c in columnas):
         avisos.append("La columna del documento (DNI) no se usa: el padrón se identifica por el número de 11 dígitos.")
     ley = {"opciones": opciones, "avisos": avisos, "total": 0, "filas": [],
            "mapeo": mapeo}

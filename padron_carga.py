@@ -27,6 +27,7 @@ Lo que se suma para la asistida y no cambia lo de la masiva:
 
 from __future__ import annotations
 
+from sqlalchemy import text
 from sqlmodel import select
 
 import cuit
@@ -44,9 +45,10 @@ _LOTE = 5000                  # cuántos CUIL se consultan juntos (IN de la cons
 def filas_de_lista(lista: str) -> list:
     """La lista pegada de «Alta masiva»: una línea por persona, campos
     separados por coma. Devuelve `[(n_linea, texto, campos)]` salteando las
-    líneas en blanco (que igual cuentan para el número de línea)."""
+    líneas en blanco (que igual cuentan para el número de línea). Un byte nulo
+    (que Postgres no guarda en un texto) se descarta: antes tumbaba la carga con un 500."""
     filas = []
-    for n_linea, linea in enumerate(lista.strip().splitlines(), start=1):
+    for n_linea, linea in enumerate(lista.replace("\x00", "").strip().splitlines(), start=1):
         if not linea.strip():
             continue
         partes = [c.strip() for c in linea.split(",")]
@@ -81,6 +83,12 @@ def procesar(s, sid: int, filas, alcance=None, ensayo: bool = False, *,
         def cuil_mal(numero):
             return not cuit.es_valido(numero, cuit.PERSONA)
     from db import Seccional, Trabajador, CuentaTrabajador
+    if not ensayo:
+        # Una carga a la vez en toda la plataforma (dura lo que la transacción): dos cargas que
+        # creaban la misma cuenta de persona (el CUIL es único entre sindicatos) o el mismo
+        # empadronamiento chocaban en el commit con un error de base, y la asistida de XSII
+        # (con sus candados propios) no frenaba a la alta masiva del panel. Se toma ANTES de leer.
+        s.execute(text("SELECT pg_advisory_xact_lock(hashtext('padron-carga'))"))
     filas = list(filas)
     lineas_afuera = set(lineas_afuera)
     por_nombre = {geo._norm(sec.nombre): sec.id for sec in s.exec(

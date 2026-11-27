@@ -26,6 +26,7 @@ from sqlmodel import select
 import correo
 import cuit as cuit_mod
 import fechas
+import formato_ar
 import modulos
 import temas
 import validador
@@ -87,7 +88,7 @@ def _leer_sindicato(s, sid):
 
 
 def _plural(n, uno, varios) -> str:
-    return f"{n} {uno if n == 1 else varios}"
+    return f"{formato_ar.miles(n)} {uno if n == 1 else varios}"
 
 
 # -------------------------------------------------------------------- Base
@@ -212,12 +213,12 @@ def est_02(s, sid) -> Control:
     cifras = {"seccionales": total, "sin_ubicar": sin_ubicar, "aproximadas": aproximadas,
               "ubicadas": total - sin_ubicar}
     if sin_ubicar:
-        return _incompleta(f"{sin_ubicar} de {total} seccionales sin ubicar.",
+        return _incompleta(f"{formato_ar.miles(sin_ubicar)} de {formato_ar.miles(total)} seccionales sin ubicar.",
                            ["Ubicar las seccionales pendientes en el mapa"], cifras,
                            en_curso=sin_ubicar < total)
     if aproximadas:
         return _con_avisos("Todas ubicadas; algunas de forma aproximada.",
-                           [f"{aproximadas} con ubicación aproximada (el globo no está en la puerta)"], cifras)
+                           [f"{formato_ar.miles(aproximadas)} con ubicación aproximada (el globo no está en la puerta)"], cifras)
     return _completa("Todas las seccionales están ubicadas.", cifras)
 
 
@@ -273,7 +274,7 @@ def est_04(s, sid) -> Control:
                            en_curso=len(sin) < len(exigidas))
     if transitorias:
         return _con_avisos("Cada área tiene usuario; algunos no eligieron su clave.",
-                           [f"{transitorias} usuarios todavía con la clave inicial"], cifras)
+                           [f"{formato_ar.miles(transitorias)} usuarios todavía con la clave inicial"], cifras)
     return _completa("Cada área que recibe trámites tiene un usuario activo.", cifras)
 
 
