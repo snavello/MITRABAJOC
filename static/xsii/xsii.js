@@ -16,7 +16,7 @@
   const S = {
     D: null, cargando: true, error: '', vista: 'guia', abierta: null, sel: null, filtro: '',
     det: {}, form: null, insForm: null, anim: false, enfocar: null, enviando: false, abiertos: {},
-    pm: {}, rc: null, exito: null
+    pm: {}, rc: null, exito: null, paso: null
   };
 
   // ------------------------------------------------------------ utilidades
@@ -120,6 +120,7 @@
       }
       if (!S.sel && S.D.tareas.length) S.sel = (S.D.recomendada && S.D.recomendada.codigo) || S.D.tareas[0].codigo;
       if (S.abierta && !tarea(S.abierta)) S.abierta = null;
+      if (S.paso && !tarea(S.paso)) S.paso = null;
     } catch (e) {
       if (silencioso) { S.errorAccion = e.message; } else { S.cargando = false; S.error = e.message; }
     }
@@ -140,9 +141,29 @@
 
   // ------------------------------------------------------------ acciones
   function abrirFicha(codigo) {
-    S.abierta = codigo; S.vista = 'guia'; S.form = null; S.insForm = null; S.anim = true; S.errorAccion = '';
+    S.abierta = codigo; S.paso = codigo; S.vista = 'guia'; S.form = null; S.insForm = null; S.rc = null; S.anim = true; S.errorAccion = '';
     sincronizarUrl(); dibujar(); window.scrollTo({ top: 0 });
     cargarHistorial(codigo);
+  }
+  // Recorrido: la lista de tareas en el orden del catalogo. S.paso es el paso que se mira.
+  function indicePaso(c) { return S.D.tareas.findIndex(function (t) { return t.codigo === c; }); }
+  function pasoActual() {
+    const D = S.D;
+    if (S.paso && tarea(S.paso)) return tarea(S.paso);
+    const rec = D.recomendada && tarea(D.recomendada.codigo);
+    return rec || D.tareas.find(function (t) { return !resuelta(t); }) || D.tareas[0] || null;
+  }
+  function moverPaso(delta) {
+    if (!S.D || !S.D.disponible || S.vista !== 'guia') return;
+    const ts = S.D.tareas, act = S.abierta || (pasoActual() || {}).codigo;
+    const i = indicePaso(act) + delta;
+    if (i < 0 || i >= ts.length) return;
+    const c = ts[i].codigo;
+    S.paso = c;
+    if (S.abierta) {
+      S.abierta = c; S.form = null; S.insForm = null; S.rc = null; S.errorAccion = '';
+      sincronizarUrl(); dibujar(); cargarHistorial(c);
+    } else { sincronizarUrl(); dibujar(); }
   }
   function volverGuia() { S.abierta = null; S.form = null; S.insForm = null; S.anim = true; sincronizarUrl(); dibujar(); }
   function irVista(v) {
@@ -198,6 +219,25 @@
     return sv('svg', { viewBox: '0 0 24 24', fill: 'currentColor', 'aria-hidden': 'true' },
       sv('path', { d: 'M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z' }));
   };
+  function icono(clase, hijos) {
+    return sv.apply(null, ['svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', class: clase }].concat(hijos));
+  }
+  const ICO_PREG = function () {
+    return icono('ico-pm', [sv('circle', { cx: '12', cy: '12', r: '10' }), sv('path', { d: 'M9.2 9.3a2.9 2.9 0 1 1 4.6 2.3c-.9.7-1.8 1.2-1.8 2.6' }), sv('path', { d: 'M12 17.4h.01' })]);
+  };
+  const ICO_DOC = function (c) { return icono(c || 'ico-i', [sv('path', { d: 'M7 3h7l4 4v14H7z' }), sv('path', { d: 'M14 3v4h4M9.5 12h5M9.5 15.5h5' })]); };
+  const ICO_DATO = function (c) { return icono(c || 'ico-i', [sv('rect', { x: '4', y: '5', width: '16', height: '14', rx: '2' }), sv('path', { d: 'M4 10h16M10 10v9' })]); };
+  const icoInsumo = function (i, c) { return i && i.tipo === 'archivo' ? ICO_DOC(c) : ICO_DATO(c); };
+  const FLECHA = function (dir) { return icono('ico-f', [sv('path', { d: dir < 0 ? 'M14.5 5.5L8 12l6.5 6.5' : 'M9.5 5.5L16 12l-6.5 6.5' })]); };
+  const faltantes = function (t) { return ((t && t.insumos) || []).filter(function (i) { return i.estado !== 'recibido'; }); };
+  const tipoInsumo = function (i) { return i.tipo === 'archivo' ? 'Archivo' : i.tipo === 'dato' ? 'Dato' : 'Insumo'; };
+  function marcaEspera(t) {
+    const f = faltantes(t);
+    if (!f.length) return null;
+    const arch = f.some(function (i) { return i.tipo === 'archivo'; });
+    const txt = arch ? 'Espera un archivo del sindicato' : 'Espera un dato del sindicato';
+    return h('span', { class: 'espera-m', title: txt }, arch ? ICO_DOC('ico-m') : ICO_DATO('ico-m'), h('span', { class: 'sr' }, txt));
+  }
   function pildora(estado) { return h('span', { class: 'pil ' + estado }, nomEstado(estado)); }
   function marcas(t) {
     const m = [];
@@ -249,9 +289,9 @@
     const activo = document.activeElement && cont.contains(document.activeElement) ? document.activeElement.id : '';
     let contenido;
     if (!P) {
-      contenido = [h('button', { type: 'button', class: 'pm-t', disabled: true }, 'Preguntame'), h('span', { class: 'nota' }, 'Llega en el próximo bloque')];
+      contenido = [h('button', { type: 'button', class: 'pm-t', disabled: true }, ICO_PREG(), 'Preguntame'), h('span', { class: 'nota' }, 'Llega en el próximo bloque')];
     } else if (!P.disponible) {
-      contenido = [h('button', { type: 'button', class: 'pm-t', disabled: true }, 'Preguntame'), h('span', { class: 'nota' }, P.motivo || 'No está disponible por ahora.')];
+      contenido = [h('button', { type: 'button', class: 'pm-t', disabled: true }, ICO_PREG(), 'Preguntame'), h('span', { class: 'nota' }, P.motivo || 'No está disponible por ahora.')];
     } else {
       const largo = P.largo || { min: 3, max: 300 };
       const sug = ((P.sugeridas || {})[punto]) || [];
@@ -279,7 +319,7 @@
           !ocupado && st.resp ? respuestaPm(st, clave) : null));
       contenido = [
         h('button', { type: 'button', id: base + '-tog', class: 'pm-t', 'aria-expanded': st.abierto ? 'true' : 'false', 'aria-controls': base + '-cuerpo',
-          onclick: function () { st.abierto = !st.abierto; st.abre = st.abierto; if (st.abierto) st.foco = base + '-campo'; repintarPm(clave); } }, 'Preguntame'),
+          onclick: function () { st.abierto = !st.abierto; st.abre = st.abierto; if (st.abierto) st.foco = base + '-campo'; repintarPm(clave); } }, ICO_PREG(), 'Preguntame'),
         st.abierto ? cuerpo : null];
     }
     cont.className = 'pm' + (st.abierto && P && P.disponible ? ' abierto' : '');
@@ -444,24 +484,61 @@
   }
 
   // ------------------------------------------------------------ GUÍA
+  function ctlBoton(id, rotulo, dir, deshab, alAprentar) {
+    return h('div', { class: 'ctl-i nav-i' },
+      h('button', { class: 'nav', id: id, type: 'button', 'aria-label': dir < 0 ? 'Paso anterior' : 'Paso siguiente', disabled: deshab, onclick: alAprentar }, FLECHA(dir)),
+      h('span', { class: 'ctl-r' }, rotulo));
+  }
+  function bloqueHacer(t) {
+    const pasos = (t.pasos || []).filter(Boolean);
+    if (!pasos.length && !t.descripcion) return null;
+    return h('div', { class: 'hacer' }, h('h3', null, 'Qué tenés que hacer'),
+      pasos.length ? h('ol', { class: 'pasos' }, pasos.map(function (p) { return h('li', null, h('span', null, p)); })) : h('p', { class: 'hacer-d' }, t.descripcion));
+  }
+  function esperaResumen(t) {
+    const l = faltantes(t);
+    if (!l.length) return null;
+    return h('div', { class: 'espera res' }, h('p', { class: 'esp-t' }, 'Se espera del sindicato'),
+      l.map(function (i) {
+        return h('p', { class: 'esp-l' }, icoInsumo(i, 'ico-i'),
+          h('span', null, h('b', null, tipoInsumo(i) + ': ' + i.nombre), i.formato ? ' · ' + i.formato : '', ' · ',
+            i.estado === 'pedido' ? pedidoTxt(i.dias || 0) + (i.tarjeta ? ' (' + i.tarjeta.codigo + ')' : '') : 'Todavía no se pidió'));
+      }));
+  }
   function heroe() {
     const D = S.D, rec = D.recomendada;
-    if (!rec) {
+    const t = (S.paso && tarea(S.paso)) || (rec && tarea(rec.codigo)) || null;
+    if (!t) {
+      const alguna = pasoActual();
       return [h('div', { class: 'vacio' }, h('p', { class: 'rot' }, 'Siguiente paso'),
         h('h2', { class: 'disp vacio-t' }, 'No queda nada para hacer ahora'),
         h('p', null, 'Todo lo que aplica está resuelto, o lo que queda espera un dato o a otra tarea. Mirá el tablero para ver qué falta.'),
-        h('div', { class: 'acc' }, h('button', { class: 'btn', type: 'button', onclick: function () { irVista('tablero'); } }, 'Ver el tablero')))];
+        h('div', { class: 'acc' }, h('button', { class: 'btn', type: 'button', onclick: function () { irVista('tablero'); } }, 'Ver el tablero'),
+          alguna ? h('button', { class: 'btn', type: 'button', onclick: function () { S.paso = alguna.codigo; dibujar(); } }, 'Recorrer los pasos') : null))];
     }
-    const t = tarea(rec.codigo);
+    const esRec = !!rec && rec.codigo === t.codigo;
+    const i = indicePaso(t.codigo), n = D.tareas.length;
     const otras = (D.alternativas || []).map(tarea).filter(Boolean).slice(0, 3);
+    const nPaso = 'Paso ' + (i + 1) + ' de ' + n;
     return [
       h('div', { class: 'heroe' + (S.anim ? ' entra' : '') },
-        h('button', { class: 'play', type: 'button', 'aria-label': 'Empezar: ' + (t ? t.nombre : rec.codigo), onclick: function () { abrirFicha(rec.codigo); } }, PLAY()),
+        h('div', { class: 'ctl' },
+          ctlBoton('x-atras', 'Atrás', -1, i <= 0, function () { moverPaso(-1); }),
+          h('div', { class: 'ctl-i' },
+            h('button', { class: 'play', type: 'button', 'aria-label': 'Empezar: ' + t.nombre, onclick: function () { abrirFicha(t.codigo); } }, PLAY()),
+            h('span', { class: 'ctl-r' }, 'Empezar')),
+          ctlBoton('x-adelante', 'Adelante', 1, i >= n - 1, function () { moverPaso(1); })),
         h('div', { class: 'cuerpo' },
-          h('p', { class: 'rot' }, 'Siguiente paso recomendado'),
-          h('h2', { class: 'disp' }, t ? t.nombre : rec.codigo),
-          h('p', null, rec.por_que), h('p', { class: 'muted' }, rec.como),
-          pm('recomendada', null))),
+          h('div', { class: 'rot-f' },
+            h('p', { class: 'rot' }, esRec ? 'Siguiente paso recomendado' : nPaso),
+            esRec ? h('span', { class: 'nota num' }, nPaso) : pildora(t.estado),
+            !esRec && rec ? h('button', { class: 'enlace', type: 'button', onclick: function () { S.paso = rec.codigo; dibujar(); } }, 'Volver al recomendado') : null),
+          h('h2', { class: 'disp' }, t.nombre),
+          esRec ? pm('recomendada', null) : pm('tarea', t.codigo),
+          t.para_que ? h('p', { class: 'bajada' }, t.para_que) : null,
+          esRec && rec.por_que ? h('p', { class: 'muted por-que' }, rec.por_que) : (!esRec && t.detalle ? h('p', { class: 'muted por-que' }, t.detalle) : null),
+          bloqueHacer(t),
+          esperaResumen(t))),
       otras.length ? h('div', null,
         h('p', { class: 'rot', style: 'margin-bottom:8px' }, 'O seguí con otra que ya se puede hacer'),
         h('div', { class: 'otras' }, otras.map(function (o) {
@@ -478,7 +555,7 @@
       const det = h('details', { 'data-k': clave },
         h('summary', null, h('span', { class: 'pil ' + estados[0] }, titulo), h('b', null, String(l.length))),
         h('ul', null, l.map(function (t) {
-          return h('li', null, h('button', { type: 'button', onclick: function () { abrirFicha(t.codigo); } }, h('b', null, t.nombre), h('small', null, t.detalle)));
+          return h('li', null, h('button', { type: 'button', onclick: function () { abrirFicha(t.codigo); } }, h('b', null, t.nombre, marcaEspera(t)), h('small', null, t.detalle)));
         })));
       if (S.abiertos[clave]) det.open = true;
       det.addEventListener('toggle', function () { S.abiertos[clave] = det.open; });
@@ -519,14 +596,17 @@
     }));
   }
   function seccionInsumos(t) {
-    if (!t.insumos.length) return null;
-    return h('div', { class: 'bloque' }, h('h3', null, 'Insumos'),
-      t.insumos.map(function (i) {
+    const todos = t.insumos || [];
+    if (!todos.length) return null;
+    const falta = faltantes(t).length > 0;
+    return h('div', { class: 'espera' + (falta ? '' : ' ok') }, h('h3', null, falta ? 'Se espera del sindicato' : 'Insumos'),
+      todos.map(function (i) {
         const reg = i.estado !== 'falta';
         const f = S.insForm && S.insForm.clave === i.clave ? S.insForm : null;
-        let estadoTxt = i.estado === 'recibido' ? 'Recibido' : i.estado === 'pedido' ? pedidoTxt(i.dias || 0) : 'Falta';
+        const estadoTxt = i.estado === 'recibido' ? 'Recibido' : i.estado === 'pedido' ? pedidoTxt(i.dias || 0) : 'Todavía no se pidió';
         return h('div', { class: 'ins ' + i.estado },
-          h('div', { class: 't' }, h('b', null, i.nombre), h('span', { class: 'est' }, estadoTxt)),
+          h('div', { class: 't' }, h('span', { class: 'ins-n' }, icoInsumo(i, 'ico-i'), h('b', null, tipoInsumo(i) + ': ' + i.nombre)), h('span', { class: 'est' }, estadoTxt)),
+          i.formato ? h('p', { class: 'ins-f' }, 'Se espera: ', i.formato) : null,
           i.descripcion ? h('p', { class: 'nota' }, i.descripcion) : null,
           i.sin_registrar ? h('p', { class: 'sr-aviso' }, 'Hay datos cargados, pero el insumo no está registrado.') : null,
           i.tarjeta ? h('p', { class: 'nota' }, 'Tarjeta de la Mesa: ',
@@ -537,9 +617,18 @@
             i.estado !== 'recibido' ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { marcarInsumo(t.codigo, i.clave, 'recibido'); } }, 'Marcar recibido') : null,
             i.estado !== 'pedido' ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { S.insForm = { clave: i.clave, tarjeta: '', nota: '', error: '' }; S.enfocar = '#x-ins-tarjeta'; dibujarFicha(); } }, 'Marcar pedido') : null,
             reg && !i.sin_registrar ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { retirarInsumo(t.codigo, i.clave); } }, 'Quitar registro') : null,
-            i.estado !== 'recibido' ? h('button', { class: 'btn ch', type: 'button', 'aria-expanded': String(!!(S.rc && S.rc.clave === i.clave && S.rc.origen === 'ficha')), id: 'x-rcb-ficha-' + idSeguro(i.clave), onclick: function () { abrirReclamo(i.clave, 'ficha'); } }, 'Reclamar en la Mesa') : null),
+            i.estado !== 'recibido' ? h('button', { class: 'btn ch rec', type: 'button', 'aria-expanded': String(!!(S.rc && S.rc.clave === i.clave && S.rc.origen === 'ficha')), id: 'x-rcb-ficha-' + idSeguro(i.clave), onclick: function () { abrirReclamo(i.clave, 'ficha'); } }, 'Reclamar en la Mesa') : null),
           bloqueReclamo(i.clave, 'ficha'));
       }));
+  }
+  // Un bloque plegado: el estado abierto/cerrado se recuerda entre redibujados (S.abiertos).
+  function plegable(clave, titulo, resumen, hijos, porDefecto, extra) {
+    const abierto = S.abiertos[clave] !== undefined ? S.abiertos[clave] : !!porDefecto;
+    const sum = h('summary', null, h('h3', null, titulo), h('span', { class: 'pr' }, resumen));
+    const d = h('details', { class: 'bloque pleg' + (extra ? ' ' + extra : ''), 'data-k': clave }, sum, h('div', { class: 'pleg-c' }, hijos));
+    d.open = abierto;
+    sum.addEventListener('click', function () { S.abiertos[clave] = !d.open; });
+    return d;
   }
   function formInsumo(t, i, f) {
     return h('form', { class: 'form', onsubmit: function (ev) { ev.preventDefault(); marcarInsumo(t.codigo, i.clave, 'pedido', { tarjeta: f.tarjeta.trim(), nota: f.nota.trim() }); } },
@@ -558,10 +647,12 @@
     const r = RES[c.estado] || [c.estado || '', ''];
     const na = t.estado === 'no_aplica';
     const rotulo = na ? 'Lo que diría el control (no cuenta: la tarea no aplica)' : t.a_mano ? 'Lo que calcula el control' : 'Lo que dice el control';
-    return h('div', { class: 'bloque' + (na ? ' atenuado' : '') }, h('h3', null, rotulo),
-      h('p', null, h('b', { class: r[1] }, r[0]), c.resumen ? ' · ' + c.resumen : ''),
-      (c.cifras || []).length ? h('div', { class: 'kpis' }, c.cifras.map(function (k) { return h('div', { class: 'kpi' }, h('b', null, num(k.valor)), h('span', null, k.nombre)); })) : null,
-      (c.faltan || []).length ? h('div', null, h('p', { class: 'rot' }, 'Falta'), h('ul', { class: 'faltan' }, c.faltan.map(function (x) { return h('li', null, x); }))) : null);
+    const faltan = c.faltan || [];
+    return plegable(t.codigo + ':control', rotulo, h('span', null, h('b', { class: r[1] }, r[0]), c.resumen ? ' · ' + c.resumen : ''),
+      [(c.cifras || []).length ? h('div', { class: 'kpis' }, c.cifras.map(function (k) { return h('div', { class: 'kpi' }, h('b', null, num(k.valor)), h('span', null, k.nombre)); })) : null,
+        c.resumen ? h('p', null, c.resumen) : null,
+        faltan.length ? h('div', null, h('p', { class: 'rot' }, 'Falta'), h('ul', { class: 'faltan' }, faltan.map(function (x) { return h('li', null, x); }))) : null],
+      faltan.length > 0 && !na, na ? 'atenuado' : '');
   }
   const REQ = { completada_a_mano: true, no_aplica: true, posponer: false };
   function formDecision(t, f) {
@@ -599,49 +690,66 @@
   function seccionDecisiones(t) {
     const ds = t.decisiones || [];
     if (!ds.length) return null;
-    return h('div', { class: 'bloque' }, h('h3', null, 'Decisiones activas'),
-      ds.map(function (d) {
+    return plegable(t.codigo + ':decisiones', 'Decisiones activas', ds.length === 1 ? '1 decisión' : ds.length + ' decisiones',
+      [ds.map(function (d) {
         return h('div', { class: 'dec' }, h('b', null, nomDec(d.tipo)), ' · ' + (d.quien || '') + ' · ' + cuando(d.cuando),
           d.motivo ? h('div', { class: 'muted' }, d.motivo) : null);
       }),
-      t.a_mano ? h('p', { class: 'nota' }, 'Quedó marcada como hecha a mano. El control, arriba, sigue diciendo lo que ve en el sistema.') : null);
+      t.a_mano ? h('p', { class: 'nota' }, 'Quedó marcada como hecha a mano. El control sigue diciendo lo que ve en el sistema.') : null], false);
   }
   function seccionHistorial(t) {
     const d = S.det[t.codigo];
-    return h('div', { class: 'bloque' }, h('h3', null, 'Historial de la tarea'),
-      !d || d.cargando ? h('div', { class: 'esq' }, h('i'), h('i')) :
+    const n = d && !d.cargando ? d.historial.length : null;
+    return plegable(t.codigo + ':historial', 'Historial de la tarea', n === null ? 'Cargando…' : n === 0 ? 'Sin movimientos' : n === 1 ? '1 movimiento' : n + ' movimientos',
+      [!d || d.cargando ? h('div', { class: 'esq' }, h('i'), h('i')) :
         d.error ? h('p', { class: 'err', style: 'color:var(--bloq)' }, d.error) :
           d.historial.length ? h('ul', { class: 'hist' }, d.historial.map(function (m) {
             return h('li', null, m.texto, h('small', null, cuando(m.cuando) + (m.quien ? ' · ' + m.quien : '')));
-          })) : h('p', { class: 'muted' }, 'Todavía no hay movimientos en esta tarea.'));
+          })) : h('p', { class: 'muted' }, 'Todavía no hay movimientos en esta tarea.')], false);
+  }
+  function seccionRelaciones(t) {
+    const nec = t.necesita || [], des = (t.destraba && t.destraba.directo) || [];
+    return plegable(t.codigo + ':relaciones', 'Necesita y destraba', 'Necesita ' + nec.length + ' · Destraba ' + des.length,
+      [h('div', { class: 'dos' },
+        h('div', null, h('p', { class: 'rot' }, 'Necesita'), listaTareas(nec, 'No necesita nada antes.')),
+        h('div', null, h('p', { class: 'rot' }, 'Destraba'), listaTareas(des, 'No hay otra tarea esperándola.')))], false);
+  }
+  function botoneraFicha(t) {
+    const i = indicePaso(t.codigo), n = S.D.tareas.length;
+    return h('div', { class: 'fnav' },
+      h('button', { class: 'btn ch', type: 'button', onclick: volverGuia }, 'Volver a la guía'),
+      h('div', { class: 'fnav-p', role: 'group', 'aria-label': 'Recorrido de tareas' },
+        h('button', { class: 'btn ch fnav-b', id: 'x-f-atras', type: 'button', disabled: i <= 0, onclick: function () { moverPaso(-1); } }, '‹ Atrás'),
+        h('span', { class: 'nota num' }, 'Paso ' + (i + 1) + ' de ' + n),
+        h('button', { class: 'btn ch fnav-b', id: 'x-f-adelante', type: 'button', disabled: i >= n - 1, onclick: function () { moverPaso(1); } }, 'Adelante ›')));
   }
   function ficha(t) {
     const frenos = (t.camino || []).map(function (c) { const x = tarea(c); return x ? x.nombre : c; });
+    const hacer = bloqueHacer(t);
     return h('div', { class: 'ficha' + (S.anim ? ' entra' : '') },
-      h('div', { class: 'acc' }, h('button', { class: 'btn ch', type: 'button', onclick: volverGuia }, 'Volver a la guía')),
+      botoneraFicha(t),
       h('div', { class: 'cab' },
         h('p', { class: 'rot' }, t.codigo + ' · ' + t.grupo + ' · ' + nomModo(t.modo)),
         h('h2', { class: 'disp' }, t.nombre),
-        h('div', { class: 'fila' }, pildora(t.estado), marcas(t))),
-      t.descripcion ? h('p', null, t.descripcion) : null,
-      t.detalle ? h('p', { class: 'muted' }, t.detalle) : null,
+        h('div', { class: 'fila' }, pildora(t.estado), marcas(t)),
+        pm('tarea', t.codigo)),
+      t.para_que ? h('p', { class: 'bajada' }, t.para_que) : null,
       (t.avisos || []).map(function (a) { return h('div', { class: 'aviso' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'), h('div', null, a)); }),
       frenos.length && !resuelta(t) ? h('p', { class: 'nota' }, 'Para llegar acá antes hay que resolver, en este orden: ' + frenos.join(', ') + '.') : null,
-      h('div', { class: 'dos' },
-        h('div', null, h('h3', null, 'Necesita'), listaTareas(t.necesita || [], 'No necesita nada antes.')),
-        h('div', null, h('h3', null, 'Destraba'), listaTareas((t.destraba && t.destraba.directo) || [], 'No hay otra tarea esperándola.'))),
+      hacer || t.donde ? h('div', { class: 'hacer-c' }, hacer,
+        t.donde ? h('div', { class: 'acc' }, h('a', { class: 'btn donde' + (t.estado === 'no_aplica' ? '' : ' p'), href: t.donde.url, target: '_blank', rel: 'noopener' }, 'Ir a la pantalla'),
+          h('span', { class: 'nota' }, t.donde.rotulo)) : null) : null,
+      !hacer && t.detalle ? h('p', { class: 'muted' }, t.detalle) : null,
       seccionInsumos(t),
-      seccionControl(t),
       t.confirmacion ? h('div', { class: 'bloque' }, h('h3', null, 'Lo que hay que confirmar'),
         h('p', null, t.confirmacion), t.falta_confirmar ? h('p', { class: 'nota' }, 'Todavía nadie lo confirmó.') : null,
         !(t.acciones && t.acciones.confirmar) && (t.insumos || []).some(function (i) { return i.estado === 'falta' || i.estado === 'pedido'; })
           ? h('p', { class: 'nota nec' }, 'Primero registrá que llegó el insumo.') : null) : null,
-      t.donde ? h('div', { class: 'acc' }, h('a', { class: 'btn donde' + (t.estado === 'no_aplica' ? '' : ' p'), href: t.donde.url, target: '_blank', rel: 'noopener' }, 'Ir a la pantalla'),
-        h('span', { class: 'nota' }, t.donde.rotulo)) : null,
-      seccionDecisiones(t),
       seccionAcciones(t),
-      seccionHistorial(t),
-      pm('tarea', t.codigo));
+      seccionControl(t),
+      seccionRelaciones(t),
+      seccionDecisiones(t),
+      seccionHistorial(t));
   }
   function dibujarFicha() {
     const cont = $('x-cond');
@@ -702,7 +810,7 @@
       l.forEach(function (t) {
         filas.push(h('tr', { class: 'fila' },
           h('td', { class: 'c-cod' }, h('span', { class: 'cod' }, t.codigo)),
-          h('td', { class: 'c-nom' }, h('button', { class: 'tn', type: 'button', onclick: function () { abrirFicha(t.codigo); } }, t.nombre)),
+          h('td', { class: 'c-nom' }, h('button', { class: 'tn', type: 'button', onclick: function () { abrirFicha(t.codigo); } }, t.nombre), marcaEspera(t)),
           h('td', { class: 'c-est' }, pildora(t.estado), marcas(t)),
           h('td', { class: 'col-modo' }, nomModo(t.modo)),
           h('td', { class: 'c-det ' + (t.estado === 'bloqueada' ? 'fr' : t.estado === 'esperando' ? 'es' : '') }, t.detalle)));
@@ -891,6 +999,13 @@
       if (v === 'guia' && S.vista === 'guia') { if (S.abierta) volverGuia(); return; }
       irVista(v);
     });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const a = e.target;
+    if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+    moverPaso(e.key === 'ArrowLeft' ? -1 : 1);
   });
   leerUrl();
   barra();

@@ -1970,6 +1970,16 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     todo o nada. Las funciones `impl_*` que toman un correlativo con `FOR
     UPDATE` releen la fila (`populate_existing`): valen con cualquier sesión.
     Límites sabidos: una cifra en letras o de un solo dígito no se controla.
+    **La guía más clara** (2026-11-27, Plataforma 0.81.01, pedido de SDN):
+    cada tarea del catálogo lleva `para_que` (una oración) y `pasos` (2 a 5
+    instrucciones, verificadas contra las pantallas; un test controla largos y
+    que no nombren rutas) y cada insumo `tipo` (`archivo` / `dato`) y
+    `formato`. La pantalla los muestra como «Qué tenés que hacer» (numerado)
+    y la banda ámbar «Se espera del sindicato»; «Preguntame» va en amarillo
+    (`--miel`) y arriba; el Play tiene Atrás y Adelante a los costados
+    (recorrido = orden del catálogo, `S.paso`), también en la ficha; control,
+    dependencias, decisiones e historial quedan plegados. Una tarea nueva del
+    catálogo tiene que traer sus `pasos`.
     **Sigue**: bloque 3, Seccionales y Sede Central desde planilla (fija el
     protocolo de los cuatro momentos, X19). Queda sin usar
     `XsiiInsumo.archivo_id` (bloque 5), reclamar desde un proyecto sin

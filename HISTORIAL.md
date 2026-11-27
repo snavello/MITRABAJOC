@@ -11510,3 +11510,29 @@ queda registrado.
 **Queda.** Probar la primera consulta con la API real en Pruebas. Las cifras
 en letras y de un dígito no se controlan. Reclamar desde un proyecto sin
 sindicato no se ofrece en la pantalla.
+
+## XSII: la guía más clara (2026-11-27, Plataforma 0.81.01)
+
+SDN probó el bloque 2 en Pruebas y devolvió cuatro cosas: «Preguntame»
+funcionaba pero el botón era chico y quedaba al fondo; al avanzar un paso era
+difícil volver al anterior o ir al siguiente; la explicación de qué hay que
+hacer en cada paso era pobre; y con tanto texto no se destacaba lo principal,
+sobre todo cuándo se espera un archivo o un dato del sindicato.
+
+- **Contenido**: `Tarea` (motor, genérico) suma `para_que` y `pasos`; el
+  catálogo de Colm3na los trae para las 34 tareas, y cada insumo dice si es
+  un `archivo` o un `dato` y qué `formato` se espera. Los textos se
+  escribieron leyendo el control de cada tarea y un segundo agente los
+  verificó contra los rótulos reales de las pantallas. Viajan en el tablero,
+  la ficha y la herramienta del asistente, así «Preguntame» explica con el
+  mismo texto.
+- **Pantalla**: «Preguntame» amarillo (`--miel`), de 46 px, bajo el título en
+  el héroe y en la cabecera de la ficha. Atrás y Adelante redondos a los
+  costados del Play (y en la ficha), con «Paso N de M» y «Volver al
+  recomendado»; flechas del teclado en la Guía. Bloque «Qué tenés que hacer»
+  numerado y banda «Se espera del sindicato» con ícono de documento o dato,
+  formato y estado, que conserva todas las acciones de la vieja sección
+  «Insumos». Control, «Necesita y destraba», decisiones e historial quedan
+  plegados con un resumen de una línea.
+- El tutorial se volvió a filmar entero con la pantalla nueva.
+

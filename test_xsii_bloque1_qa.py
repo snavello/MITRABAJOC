@@ -971,7 +971,7 @@ def test_forma_de_cada_objeto_contra_el_contrato():
         assert isinstance(t["control"]["cifras"], list) and isinstance(t["control"]["faltan"], list)
         assert t["donde"] is None or set(t["donde"]) == {"url", "rotulo"}
         for i in t["insumos"]:
-            assert set(i) == {"clave", "nombre", "descripcion", "estado", "sin_registrar", "dias", "nota", "quien",
+            assert set(i) == {"clave", "nombre", "descripcion", "tipo", "formato", "estado", "sin_registrar", "dias", "nota", "quien",
                               "cuando", "tarjeta"}
             assert i["estado"] in ("recibido", "pedido", "falta") and isinstance(i["sin_registrar"], bool)
         for dec in t["decisiones"]:

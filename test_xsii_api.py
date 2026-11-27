@@ -207,7 +207,7 @@ def test_la_forma_del_tablero_es_la_del_contrato():
     assert set(t["recomendada"]) == {"codigo", "por_que", "destraba", "como"}
     assert t["recomendada"]["por_que"] and t["recomendada"]["como"]
     assert t["movimientos"] == [] and t["demorados"] == []
-    claves = {"codigo", "nombre", "grupo", "modo", "descripcion", "aplica_si", "estado", "con_observaciones",
+    claves = {"codigo", "nombre", "grupo", "modo", "descripcion", "para_que", "pasos", "aplica_si", "estado", "con_observaciones",
               "a_mano", "pospuesta", "no_aplica_por", "falta_confirmar", "confirmacion", "detalle", "necesita",
               "mejora_con", "frenada_por", "avisos", "camino", "necesitada_por", "destraba", "nivel", "donde",
               "control", "decisiones", "insumos", "acciones"}
@@ -435,7 +435,7 @@ def test_pedir_y_recibir_un_insumo_con_su_tarjeta_de_la_mesa():
     r = _insumo(eq, pid, "planilla_padron", estado="pedido", tarjeta=codigo, nota="se la pedimos a Marta")
     assert r.status_code == 200 and r.json()["ok"]
     i = r.json()["insumo"]
-    assert set(i) == {"clave", "nombre", "descripcion", "estado", "sin_registrar", "dias", "nota", "quien",
+    assert set(i) == {"clave", "nombre", "descripcion", "tipo", "formato", "estado", "sin_registrar", "dias", "nota", "quien",
                       "cuando", "tarjeta"}
     assert i["estado"] == "pedido" and i["dias"] == 0 and i["nota"] == "se la pedimos a Marta"
     assert i["tarjeta"] == {"id": tid, "codigo": codigo, "titulo": "Planilla del padrón", "estado": "abierta",
@@ -605,3 +605,15 @@ def test_codigos_de_tarea_e_insumo_raros_son_404():
     for raro in ("%00", "..%2F..", "%27OR%271", "A" * 500, "bas_01"):
         assert eq.get(f"{BASE}/p/{pid}/tarea/{raro}").status_code in (404, 422), raro
         assert _insumo(eq, pid, raro, estado="pedido").status_code in (404, 422), raro
+
+
+def test_tablero_y_ficha_traen_la_guia_clara():
+    pid, eq = _mundo()
+    tab = {x["codigo"]: x for x in _tablero(eq, pid)["tareas"]}
+    for codigo, t in tab.items():
+        assert t["para_que"] and isinstance(t["pasos"], list) and 2 <= len(t["pasos"]) <= 5, codigo
+        for i in t["insumos"]:
+            assert i["tipo"] in ("archivo", "dato") and i["formato"], codigo
+    ficha = _tarea(eq, pid, "EST-01")
+    assert ficha["para_que"] == tab["EST-01"]["para_que"] and ficha["pasos"] == tab["EST-01"]["pasos"]
+    assert ficha["insumos"][0]["tipo"] == "archivo" and "seccional" in ficha["insumos"][0]["formato"].lower()

@@ -52,6 +52,17 @@ paso recomendado salen del motor. Lo que acá no esté escrito, no existe.
 (`lista_seccionales`, `recibos_muestra`, `porcentajes_cuota`,
 `planilla_padron`). Un test falla si una tarea nombra un insumo que no está.
 
+### Qué hacer y qué se espera (guía clara)
+
+- `Tarea` suma `para_que` (una oración, máx. 160 caracteres: qué queda logrado) y
+  `pasos` (de 2 a 5 instrucciones en imperativo, máx. 150 cada una; el primero es
+  conseguir el insumo si la tarea lo tiene y el último dice cómo se sabe que quedó).
+- Cada insumo suma `tipo` (`"archivo"` o `"dato"`) y `formato` (qué se espera
+  recibir, máx. 120 caracteres).
+- API: cada tarea de `GET .../p/{pid}/tablero` y de la ficha trae `para_que` (str) y
+  `pasos` (lista de str); cada insumo de esas tareas trae `tipo` y `formato`. La
+  herramienta `ver_tarea` de «Preguntame» devuelve lo mismo, así explica con el mismo texto.
+
 ## Tablas (prefijo `xsii`, migración de Alembic, `down_revision = f7b1d3e5a9c2`)
 
 Datos reales de Pruebas, como la Mesa: sin claves foráneas hacia el resto,
