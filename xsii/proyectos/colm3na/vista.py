@@ -520,6 +520,9 @@ def asistida_cargar(s, ctx: Contexto, actor, codigo: str, contenido: bytes, opci
         if not huella_ensayo or huella_ensayo != huella(contenido, opciones):
             raise db.XsiiError(409, "El archivo cambió desde el ensayo: volvé a ensayar antes de cargar.")
         db.xsii_candado_de_tarea(s, ctx.pid, codigo)
+        # Dos proyectos pueden apuntar al mismo sindicato: el candado por tarea
+        # no los serializa entre sí y las dos cargas duplicarían las seccionales.
+        db.xsii_candado_de_sindicato(s, ctx.sindicato_id, codigo)
         carga = modulo.cargar(s, ctx.sindicato_id, contenido, opciones, dejar_afuera)
     except ErrorAsistida as e:
         s.rollback()

@@ -12594,6 +12594,15 @@ def xsii_candado_de_tarea(s: Session, proyecto_id: int, codigo: str) -> None:
     _xsii_candado_de_tarea(s, proyecto_id, codigo)
 
 
+def xsii_candado_de_sindicato(s: Session, sindicato_id: int, codigo: str) -> None:
+    """Serializa las cargas asistidas de una tarea sobre UN sindicato aunque
+    vengan de proyectos distintos (el candado de `xsii_candado_de_tarea` es por
+    proyecto). Se toma DESPUÉS del de la tarea, siempre en ese orden: dura lo
+    que la transacción."""
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(
+        clave=f"xsii-sindicato:{sindicato_id}:{codigo}"))
+
+
 def xsii_registrar_carga_asistida(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea: str,
                                   clave_insumo: str, nombre_insumo: str, texto: str, cantidades: dict) -> XsiiMovimiento:
     """El movimiento `asistida_carga` de una tarea y, si el insumo de su

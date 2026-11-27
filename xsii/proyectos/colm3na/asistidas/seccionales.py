@@ -337,7 +337,10 @@ def leer(contenido: bytes, existentes: list, opciones: dict | None = None) -> di
         clave = _clave_nombre(datos["nombre"])
         if clave and clave in vistos and not rechazos:
             rechazos.append("El nombre está repetido en la planilla (se carga la primera).")
-        if clave:
+        # Solo una fila que se carga reserva el nombre: si la primera quedó
+        # rechazada, «se carga la primera» sería falso y la corregida de más
+        # abajo no tendría cómo entrar.
+        if clave and not rechazos:
             vistos.add(clave)
         if (not rechazos and not datos["sede"] and not datos["sede_explicita"]
                 and opciones["sede_por_nombre"] and clave in _NOMBRES_DE_SEDE):

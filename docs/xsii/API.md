@@ -572,3 +572,8 @@ En la ficha de una tarea con asistida disponible, dentro de «Qué tenés que ha
   huella distinta, o nada para escribir. El ensayo solo da 409 sin sindicato o si no aplica.
 - **`disponible=false`** igual trae `describir()` cuando la tarea tiene módulo (la pantalla puede mostrar la guía).
 - Sin migración: `XsiiMovimiento.tipo` es texto libre.
+- **QA del bloque 3** (`test_xsii_bloque3_qa.py`): (1) el nombre de una fila RECHAZADA ya no «reserva» el nombre: una fila
+  corregida más abajo con el mismo nombre entra (antes se rechazaba como «repetido (se carga la primera)» sin que la primera
+  se cargara). (2) La carga toma, además del candado por tarea, un candado por sindicato
+  (`db.xsii_candado_de_sindicato`, siempre en ese orden): dos proyectos sobre el mismo sindicato cargando a la vez ya no
+  duplican las seccionales (la segunda da 409 «No hay nada para cargar»).
