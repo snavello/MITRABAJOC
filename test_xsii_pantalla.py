@@ -163,3 +163,32 @@ def test_textos_del_pedido_deshacer_y_ficha_resuelta():
     assert "Lo que calcula el control" in JS
     assert "Primero registrá que llegó el insumo." in JS
     assert "no aplican)" in JS
+
+
+def test_preguntame_amarillo_grande_y_arriba_en_la_ficha():
+    assert "--miel:#f0a01e" in CSS
+    assert "background:var(--miel)" in CSS and "min-height:46px" in CSS
+    # en la ficha va en la cabecera, antes del bloque de pasos
+    cab = JS.index("pm('tarea', t.codigo)),")
+    assert cab < JS.index("bloqueHacer(t);") + 2000 and cab < JS.index("seccionInsumos(t),\n      t.confirmacion")
+
+
+def test_botonera_atras_adelante_y_teclado():
+    for pieza in ("moverPaso(", "S.paso", "'x-atras'", "'x-adelante'", "x-f-atras", "x-f-adelante",
+                  "Volver al recomendado", "'ArrowLeft'", "'ArrowRight'", "Paso ' + (i + 1) + ' de '"):
+        assert pieza in JS, pieza
+    assert "INPUT|TEXTAREA|SELECT" in JS
+
+
+def test_bloque_de_pasos_y_banda_de_espera():
+    for pieza in ("Qué tenés que hacer", "t.pasos", "t.para_que", "Se espera del sindicato",
+                  "i.formato", "Todavía no se pidió", "Reclamar en la Mesa", "Marcar recibido",
+                  "Quitar registro", "marcaEspera(t)"):
+        assert pieza in JS, pieza
+    assert ".pasos li::before" in CSS and ".espera{" in CSS
+
+
+def test_bloques_plegados_en_la_ficha():
+    for titulo in ("Necesita y destraba", "Decisiones activas", "Historial de la tarea"):
+        assert titulo in JS
+    assert "S.abiertos[clave]" in JS and "function plegable(" in JS
