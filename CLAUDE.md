@@ -1980,8 +1980,29 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (recorrido = orden del catálogo, `S.paso`), también en la ficha; control,
     dependencias, decisiones e historial quedan plegados. Una tarea nueva del
     catálogo tiene que traer sus `pasos`.
-    **Sigue**: bloque 3, Seccionales y Sede Central desde planilla (fija el
-    protocolo de los cuatro momentos, X19). Queda sin usar
+    **Bloque 3 HECHO** (2026-11-27, Plataforma 0.82.01): la primera **tarea
+    asistida**, Seccionales y Sede Central desde planilla (EST-01), y el
+    **protocolo de los cuatro momentos**: qué voy a hacer → ensayo (no guarda
+    nada) → carga → control. Una asistida es un módulo de
+    `xsii/proyectos/colm3na/asistidas/` registrado en `ASISTIDAS`
+    (`describir`, `leer` pura, `ensayar`, `cargar`); las rutas son genéricas
+    (`GET …/tarea/{codigo}/asistida`, `…/modelo.csv`, `POST …/ensayo`,
+    `POST …/carga`) y la pantalla no tiene textos de una tarea puntual: la
+    próxima asistida suma un módulo, no rutas ni pantalla. Reglas: CSV por
+    archivo o texto pegado (no Excel), hasta 500 filas y 1 MB; el ensayo y la
+    carga usan el MISMO parseo y la carga exige la `huella` del ensayo (409
+    si el archivo cambió); la carga va en una transacción con candado por
+    tarea **y por sindicato** (dos proyectos pueden apuntar al mismo), deja
+    el movimiento `asistida_carga`, el insumo `recibido` y corre el control;
+    **no confirma la tarea** (X15). De Seccionales: **una fila sin
+    coordenadas entra «sin ubicar»** y EST-02 queda pendiente (X21, SDN);
+    una que ya existe (mismo nombre sin mirar mayúsculas, acentos ni
+    espacios) no se toca salvo «Actualizar las que ya existen», lo vacío no
+    pisa lo cargado, `ve_todas` nunca baja y nada se borra (X22); las
+    coordenadas de la planilla quedan `manual` (X23); no se geocodifica (ningún
+    servicio externo). X22 a X24 las definió Code: a confirmar por SDN.
+    **Sigue**: bloque 4, Padrón y después Conceptos, con el mismo protocolo
+    (X19). Queda sin usar
     `XsiiInsumo.archivo_id` (bloque 5), reclamar desde un proyecto sin
     sindicato (el servidor lo admite, la pantalla no lo ofrece) y la primera
     consulta con la API real, que hay que mirarla en Pruebas.

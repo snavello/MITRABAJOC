@@ -11536,3 +11536,48 @@ sobre todo cuándo se espera un archivo o un dato del sindicato.
   plegados con un resumen de una línea.
 - El tutorial se volvió a filmar entero con la pantalla nueva.
 
+## XSII bloque 3: Seccionales y Sede Central desde planilla (2026-11-27, Plataforma 0.82.01)
+
+Primera tarea asistida de XSII y la que fija el protocolo (X19). El plan no
+se edita: las decisiones nuevas quedan acá.
+
+- **X21 (SDN)**: una fila sin coordenadas se carga igual, marcada «sin
+  ubicar». El panel no deja guardar a mano una seccional sin el punto en la
+  puerta, pero el catálogo ya tiene la tarea siguiente (EST-02, Seccionales
+  ubicadas en el mapa) para eso, y así la carga no depende de un servicio de
+  terceros.
+- **X22 (Code, a confirmar)**: una seccional que ya existe no se toca salvo
+  que se tilde «Actualizar las que ya existen»; al actualizar, lo vacío de la
+  planilla no pisa lo cargado, `ve_todas` nunca baja y las coordenadas se
+  conservan mientras el domicilio no cambie. Nunca se borra nada.
+- **X23 (Code, a confirmar)**: las coordenadas que trae la planilla quedan
+  con precisión `manual`: responde quien las relevó.
+- **X24 (Code, a confirmar)**: CSV por archivo o texto pegado, no Excel.
+
+**Cómo quedó.** Una asistida es un módulo (`asistidas/seccionales.py`) con
+`describir`, `leer` (pura, sin base), `ensayar` y `cargar`. Las cuatro rutas
+son genéricas y la pantalla dibuja lo que manda `describir`, sin textos de
+seccionales en el JS. El ensayo no escribe nada, ni un movimiento. La carga
+vuelve a parsear con la misma función y exige la huella del ensayo
+(SHA-256 del contenido más las opciones). Todo va en una transacción: las
+seccionales, el movimiento `asistida_carga`, el insumo `recibido` y el
+control. La respuesta dice qué tareas se destrabaron. La carga no confirma la
+tarea: eso sigue siendo de una persona.
+
+**Lo que encontró el QA.** Durante el desarrollo, el agente de pantalla
+probó contra el servidor real y destapó que el ensayo daba 500 (`json` sin
+importar en `main.py`): los tests del servidor llamaban a las funciones y no
+a la ruta con multipart real; ahora sí. El QA independiente de servidor
+(153 ataques) encontró dos defectos: uno alto, dos proyectos de la Mesa que
+apuntan al mismo sindicato y cargan a la vez duplicaban todas las
+seccionales, porque el candado era por proyecto y tarea (se sumó un candado
+por sindicato y tarea, siempre tomado después del otro); y uno medio, una
+fila rechazada «reservaba» su nombre y la misma seccional corregida más
+abajo se rechazaba por repetida.
+
+**Límites sabidos.** El número de línea es el de la última línea física del
+registro: con un salto de línea dentro de una celda puede no coincidir con
+la fila de la planilla. Si el sindicato ya tiene dos seccionales con el
+mismo nombre, la carga reconoce una sola. «A-B», «A B» y «A_B» cuentan como
+el mismo nombre.
+
