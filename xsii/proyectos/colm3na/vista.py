@@ -259,6 +259,7 @@ def insumo_json(ctx: Contexto, clave: str, sin_registrar: bool = False) -> dict:
     reg = ctx.insumos.get(clave)
     dias = _cuando_a_dias(reg.cuando) if reg and reg.estado == "pedido" else None
     return {"clave": clave, "nombre": meta["nombre"], "descripcion": meta["descripcion"],
+            "tipo": meta["tipo"], "formato": meta["formato"],
             "estado": reg.estado if reg else "falta",
             "sin_registrar": bool(sin_registrar and reg is None),
             "dias": dias, "nota": reg.nota if reg else "",
@@ -304,7 +305,8 @@ def tarea_json(ctx: Contexto, codigo: str) -> dict:
     sin_registrar = e.estado != "no_aplica" and c is not None and estados.datos_cargados(t, c)
     return {
         "codigo": t.codigo, "nombre": t.nombre, "grupo": t.grupo, "modo": t.modo,
-        "descripcion": t.descripcion, "aplica_si": t.aplica_si,
+        "descripcion": t.descripcion, "para_que": t.para_que, "pasos": list(t.pasos),
+        "aplica_si": t.aplica_si,
         "estado": e.estado, "con_observaciones": e.con_observaciones, "a_mano": e.a_mano,
         "pospuesta": e.pospuesta, "no_aplica_por": e.no_aplica_por,
         "falta_confirmar": e.falta_confirmar, "confirmacion": t.confirmacion,

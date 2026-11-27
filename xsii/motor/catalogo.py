@@ -48,6 +48,10 @@ class Tarea:
     # «lista» y no «en curso».
     confirmacion: str | None = None
     solo_confirmacion: bool = False
+    # Para la persona que implementa: `para_que` es UNA oración (qué queda
+    # logrado) y `pasos` son las instrucciones en orden, en imperativo.
+    para_que: str = ""
+    pasos: tuple = ()
 
 
 def _ciclo(aristas: dict[str, tuple]) -> list[str] | None:

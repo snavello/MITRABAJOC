@@ -185,8 +185,9 @@ def herramientas(inst: Instantanea) -> dict:
         "ver_tablero": (esquema("Resumen del tablero: cuántas tareas hay en cada estado, el paso recomendado, "
                                 "alternativas, insumos demorados y la lista de todas las tareas con su estado."),
                         ver_tablero),
-        "ver_tarea": (esquema("La ficha de una tarea: estado, detalle, qué necesita, qué la frena, qué destraba, "
-                              "el resultado de su control con sus cifras, insumos, decisiones y su historial.",
+        "ver_tarea": (esquema("La ficha de una tarea: para qué sirve, los pasos para hacerla, estado, detalle, qué necesita, qué la "
+                              "frena, qué destraba, el resultado de su control con sus cifras, insumos (con qué se espera "
+                              "recibir), decisiones y su historial. Para explicar cómo se hace una tarea, usá sus pasos tal cual.",
                               cod, ["codigo"]), ver_tarea),
         "que_frena": (esquema("Las tareas sin resolver que frenan a esta, en el orden en que habría que hacerlas.",
                               cod, ["codigo"]), que_frena),

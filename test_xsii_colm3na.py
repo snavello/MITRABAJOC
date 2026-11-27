@@ -4,6 +4,7 @@ y el tablero de un sindicato es coherente y está aislado de los demás.
 
 Correr con: python -m pytest test_xsii_colm3na.py -q
 """
+import re
 import inspect
 import itertools
 
@@ -670,3 +671,45 @@ def test_informe_distingue_modulo_apagado_de_declarada_no_aplica_y_muestra_pospu
     assert "declarada no aplica por ana: no usan noticias" in linea["COM-02"]
     assert "módulo tramites apagado" in linea["TRA-01"]
     assert "(pospuesta)" in linea["BAS-02"] and "BAS-02" in texto
+
+
+# ------------------------------------------------------------ guía clara
+
+def _textos_de_guia():
+    for t in catalogo.TAREAS:
+        yield t.codigo, t.para_que
+        for x in t.pasos:
+            yield t.codigo, x
+    for k, d in catalogo.INSUMOS.items():
+        yield k, d["formato"]
+
+
+def test_toda_tarea_dice_para_que_sirve_y_sus_pasos():
+    for t in catalogo.TAREAS:
+        assert t.para_que and len(t.para_que) <= 160, t.codigo
+        assert 2 <= len(t.pasos) <= 5, t.codigo
+        for x in t.pasos:
+            assert isinstance(x, str) and x and len(x) <= 150, (t.codigo, x)
+
+
+def test_toda_tarea_con_insumo_empieza_por_conseguirlo():
+    for t in catalogo.TAREAS:
+        if t.insumos:
+            assert "Pedile" in t.pasos[0], t.codigo
+
+
+def test_todo_insumo_dice_si_es_archivo_o_dato_y_que_formato():
+    for clave, d in catalogo.INSUMOS.items():
+        assert d["tipo"] in ("archivo", "dato"), clave
+        assert d["formato"] and len(d["formato"]) <= 120, clave
+
+
+def test_los_textos_de_la_guia_no_tienen_jerga_tecnica():
+    import db
+    tablas = [c.__name__ for c in vars(db).values()
+              if isinstance(c, type) and getattr(c, "__table__", None) is not None and re.search(r'[a-z][A-Z]', c.__name__)]
+    for codigo, texto in _textos_de_guia():
+        assert "/admin" not in texto and "/plataforma" not in texto and "/entornos" not in texto, (codigo, texto)
+        assert "—" not in texto and "–" not in texto, (codigo, texto)
+        for nombre in tablas:
+            assert not re.search(r"\b" + nombre + r"\b", texto), (codigo, nombre)
