@@ -475,3 +475,75 @@ el enlace a la tarjeta.
   contestar, no hay fila; si falló en una vuelta posterior, se registra lo ya pagado.
 - **Uso `xsii` en `/plataforma`**: el selector sale solo del recorrido de `precios_ia.USOS`
   (`templates/plataforma.html` no se tocó). Migración `c7e1a3b5d9f2`.
+
+---
+
+# Bloque 3: tareas asistidas (Seccionales y Sede Central desde planilla)
+
+Decisiones de SDN: X19 (primero Seccionales, sin áreas internas, más Sede
+Central; fija el protocolo) y, el 2026-11-27, **X21: una fila sin coordenadas
+se carga igual, marcada «sin ubicar»** (la tarea EST-02 queda pendiente hasta
+ubicarla). Definidas por Code y a confirmar: **X22** una seccional que ya
+existe (mismo nombre, sin mirar mayúsculas, acentos ni espacios) no se toca
+salvo que se tilde «Actualizar las que ya existen»; nunca se borra nada.
+**X23** coordenadas que vienen en la planilla quedan con precisión `manual`
+(responde quien relevó). **X24** se acepta CSV (archivo o texto pegado); Excel
+no, el modelo se baja desde la pantalla.
+
+## El protocolo de los cuatro momentos (genérico)
+
+Una tarea asistida es un módulo registrado en
+`xsii/proyectos/colm3na/asistidas/__init__.py` (`ASISTIDAS = {"EST-01": seccionales}`)
+con esta interfaz. El bloque 4 (Padrón, Conceptos) suma módulos, no rutas.
+
+- `describir() -> dict`: `{titulo, que_voy_a_hacer: [str, str], insumo: clave, columnas: [{clave, rotulo, obligatoria, ejemplo, ayuda}], modelo_csv: str, opciones: [{clave, rotulo, ayuda, defecto: bool}]}`.
+- `ensayar(s, sid, contenido: bytes, opciones: dict) -> dict`: PURO respecto de la base salvo lecturas. Devuelve
+  `{total, validas, dudosas, rechazadas, ya_existen, filas: [{linea, estado, motivos: [str], resumen: {…}}], avisos: [str], muestra: [...], huella}`.
+  `estado` es `valida` | `dudosa` | `rechazada` | `ya_existe`. `huella` = SHA-256 del contenido + opciones.
+- `cargar(s, sid, contenido, opciones, dejar_afuera: set[int]) -> dict`: vuelve a parsear con la MISMA función del ensayo y escribe con las funciones de la app, sin commit propio (lo hace la ruta, todo o nada). Devuelve `{creadas, actualizadas, sin_tocar, afuera, detalle: [...]}`.
+
+El parseo y la clasificación de filas viven en una función pura
+(`seccionales.leer(contenido, existentes, opciones)`), probada sin base.
+
+## Reglas de Seccionales (`asistidas/seccionales.py`)
+
+Columnas (cabecera por clave o rótulo, sin mirar mayúsculas ni acentos; separador coma o punto y coma; UTF-8 o Latin-1):
+`nombre` (obligatoria), `sede_central` (sí/no), `provincia`, `localidad`, `calle`, `numero`, `piso_depto`, `codigo_postal`, `latitud`, `longitud`, `telefono`, `whatsapp`, `mail`, `horario`.
+Solo `nombre` es obligatoria en la cabecera; una columna que falta vale vacío. Una columna desconocida se ignora y se avisa.
+
+- **Rechazada**: sin nombre; nombre de más de 120 caracteres; latitud o longitud ilegibles, o una sola de las dos; coordenadas fuera de la Argentina continental (lat −56 a −21, lon −74 a −53); nombre repetido dentro del archivo (se rechaza la segunda); mail con forma inválida.
+- **Dudosa** (entra salvo que se la deje afuera): sin coordenadas (queda `sin_geo`); sin provincia o sin localidad; sin calle o altura; más de una fila marcada `sede_central`.
+- **Ya existe**: no se toca, o se actualiza domicilio y contacto (nunca `ve_todas` hacia abajo) con la opción `actualizar_existentes`.
+- **Sede Central**: `sede_central` = sí → `ve_todas=True`. Si después de la carga ninguna seccional del sindicato vería todas, `avisos` lo dice; si una fila se llama «Sede Central» o «Casa Central» y no está marcada, se avisa y la opción `sede_por_nombre` (defecto: sí) la marca.
+- Decimales con coma o punto. Tope: 500 filas y 1 MB; pasado eso, 400.
+- El domicilio se escribe con `geo.campos_para_guardar`; el contacto con los mismos recortes que `POST /admin/seccional`. No se geocodifica nada (ningún servicio externo).
+- Textos con caracteres de control o invisibles: se limpian; una celda que empieza con `=`, `+`, `-` o `@` se guarda tal cual (no es una planilla de salida).
+
+## Rutas (puerta del equipo, 404 en demo; `X` = `/api/entornos/xsii`)
+
+### `GET X/p/{pid}/tarea/{codigo}/asistida`
+`{disponible: bool, motivo, ...describir()}`. `disponible=false` si la tarea no es asistida con módulo (404 si el código no existe), si el proyecto no tiene sindicato, o si la tarea no aplica. Las `necesita` sin resolver NO bloquean el ensayo pero sí la carga (409).
+
+### `GET X/p/{pid}/tarea/{codigo}/asistida/modelo.csv`
+El CSV modelo, como descarga.
+
+### `POST X/p/{pid}/tarea/{codigo}/asistida/ensayo`
+`multipart/form-data`: `archivo` (CSV) **o** `texto`; `opciones` (JSON). Autoriza antes de leer el cuerpo y usa el mismo `request`. No escribe NADA (ni movimiento). 200 con el resultado de `ensayar`; 400 archivo vacío, ilegible, muy grande o sin la columna obligatoria (`{detail}` en castellano).
+
+### `POST X/p/{pid}/tarea/{codigo}/asistida/carga`
+Lo mismo más `huella` (la del ensayo) y `dejar_afuera` (JSON, líneas dudosas que no entran). Si la huella no coincide con lo que se recibe: 409 «El archivo cambió desde el ensayo». Candado por tarea (`pg_advisory_xact_lock`, el mismo de las decisiones) y todo en UNA transacción:
+1. `cargar(...)`;
+2. movimiento `asistida_carga` con el texto «Cargó N seccionales desde planilla (M actualizadas, K afuera)» y `detalle` con las cantidades;
+3. el insumo del módulo queda `recibido` si no lo estaba;
+4. corre el control de la tarea.
+Respuesta: `{carga: {...}, control: {...}, tarea: tarea_json, destrabo: [{codigo, nombre}], tablero_resumen}`. `destrabo` = tareas que pasaron de bloqueada a otra cosa por esta carga. La carga NO confirma la tarea: la confirmación la hace una persona (X15).
+Si no hay nada para escribir (todo rechazado o afuera): 409.
+
+## Pantalla
+
+En la ficha de una tarea con asistida disponible, dentro de «Qué tenés que hacer», el botón principal pasa a ser **«Cargar desde la planilla»** («Ir a la pantalla» queda como secundario). Abre, en la misma ficha, los cuatro momentos como pasos numerados que se ven de a uno:
+1. **Qué voy a hacer**: las dos líneas, las columnas con ejemplo, «Descargar el modelo», y elegir archivo o pegar el texto; las opciones.
+2. **Ensayo**: cuatro cifras grandes (válidas, dudosas, rechazadas, ya existen), «Nada se guardó todavía» bien visible, avisos, tabla con filtro por estado; cada dudosa con su casilla «dejar afuera»; cada rechazada con su motivo y su línea.
+3. **Carga**: botón «Cargar N seccionales» con confirmación que repite las cifras; mientras corre, sin doble envío.
+4. **Control**: resultado del control, cifras, qué se destrabó (con enlace a cada ficha) y qué falta (confirmar; ubicar las que quedaron sin ubicar → EST-02).
+«Volver a ensayar» siempre a mano. Todo texto del servidor como nodo de texto.
