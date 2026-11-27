@@ -3555,6 +3555,7 @@
           <div class="campo"><label>WhatsApp</label><input name="whatsapp" id="sec-whatsapp" placeholder="341 555 1234"></div>
           <div class="campo"><label>Mail</label><input name="mail" id="sec-mail" type="email"></div>
           <div class="campo"><label>Horario de atención</label><input name="horario_atencion" id="sec-horario" placeholder="Lunes a viernes de 9 a 17"></div>
+          <div class="campo"><label>Responsable (opcional)</label><input name="responsable" id="sec-responsable" maxlength="120"></div>
         </div>
         <button type="button" class="sec" onclick="secPaso(1)">Volver a la dirección</button>
         <button type="submit">Guardar seccional</button>
@@ -7631,6 +7632,7 @@ function editarSeccional(sec) {
   document.getElementById('sec-whatsapp').value = sec.whatsapp || '';
   document.getElementById('sec-mail').value = sec.mail || '';
   document.getElementById('sec-horario').value = sec.horario_atencion || '';
+  document.getElementById('sec-responsable').value = sec.responsable || '';
   document.getElementById('sec-lat').value = sec.latitud == null ? '' : sec.latitud;
   document.getElementById('sec-lon').value = sec.longitud == null ? '' : sec.longitud;
   document.getElementById('sec-precision').value = sec.precision_geo || 'sin_geo';
@@ -7730,6 +7732,7 @@ function verSeccional(id) {
               dato('WhatsApp', s.whatsapp) +
               dato('Mail', s.mail) +
               dato('Horario', s.horario_atencion) +
+              dato('Responsable', (s.responsable || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')) +
               dato('Afiliados', s.afiliados + (s.ve_todas ? ' · sus usuarios ven todas las seccionales' : ''));
       if (ubicada) {
         html += '<div style="margin-top:14px;">' +

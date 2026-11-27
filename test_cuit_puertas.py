@@ -723,8 +723,14 @@ def _rutas_post_de_main():
 
 
 def _nombres_llamados(nodo):
-    return {n.func.id for n in ast.walk(nodo)
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    """Los nombres que una ruta llama, o que le pasa como argumento con nombre a
+    quien los llama (`padron_carga.procesar(..., cuil_mal=_cuil_mal)`: la alta
+    masiva delegó su lógica por fila y le entrega el verificador de la casa)."""
+    llamados = {n.func.id for n in ast.walk(nodo)
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    llamados |= {k.value.id for n in ast.walk(nodo) if isinstance(n, ast.Call)
+                 for k in n.keywords if isinstance(k.value, ast.Name)}
+    return llamados
 
 
 def test_toda_ruta_con_un_campo_de_cuil_o_cuit_esta_clasificada():
@@ -1027,7 +1033,7 @@ def test_los_criterios_de_notificacion_comparan_normalizado():
 ESCRITURAS_DE_IDENTIDAD = {
     "main.api_validar": "lectura: concepto PENDIENTE con el CUIT que leyó la IA (se valida al confirmar)",
     "main.admin_trabajador_alta": "puerta",
-    "main.admin_trabajador_masivo": "puerta",
+    "padron_carga.procesar": "puerta (la lógica por fila de la alta masiva y de PAD-02 de XSII)",
     "main.admin_usuario_alta": "puerta",
     "main.abm_concepto": "puerta",
     "main.admin_empleador_alta": "puerta",
@@ -1047,12 +1053,12 @@ ESCRITURAS_DE_IDENTIDAD = {
 _MODELOS_DE_IDENTIDAD = {"Trabajador", "CuentaTrabajador", "UsuarioSindicato", "UsuarioPlataforma",
                          "Empleador", "CuentaEmpleador", "Sindicato", "Concepto"}
 _CAMPOS_DE_IDENTIDAD = {"cuil", "cuit", "cuit_empleador", "usuario"}
-_VERIFICADORES = {"_cuil_mal", "_cuit_mal", "_cuit_empresa_mal", "es_valido"}
+_VERIFICADORES = {"_cuil_mal", "_cuit_mal", "_cuit_empresa_mal", "es_valido", "cuil_mal"}
 
 
 def _escrituras_de_identidad():
     encontradas = {}
-    for archivo in ("main.py", "db.py"):
+    for archivo in ("main.py", "db.py", "padron_carga.py"):
         arbol = ast.parse((RAIZ / archivo).read_text(encoding="utf-8"))
         for fn in ast.walk(arbol):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):

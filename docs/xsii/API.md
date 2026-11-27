@@ -658,3 +658,76 @@ varias planillas (la pantalla lo dice).
 - Opciones `numero` como campo numérico. `motivos` como lista resumida arriba
   de la tabla (cada motivo filtra la tabla); aviso si `filas_truncadas`.
 - Momento 4: si la respuesta trae `carga.comparacion: {declarado, cargado, diferencia}` se muestra destacada.
+
+## Notas de implementación (Bloque 4a)
+
+Lo que quedó implementado, con lo que difiere o precisa el contrato de arriba.
+
+### Padrón (PAD-02) y la función compartida
+
+- **Una sola implementación (X25)**: `padron_carga.procesar(s, sid, filas, alcance, ensayo, ...)` es la lógica por fila
+  de `POST /admin/trabajador/masivo` extraída tal cual (la ruta es ahora un adaptador: `filas_de_lista` parte cada línea
+  por coma). Misma conducta y mismos tests. Dos únicos cambios en la ruta del panel: el mismo CUIL repetido dos veces en
+  una lista con mail o fecha (antes un `KeyError`/500) queda afuera como repetido; y `db.asegurar_cuenta` /
+  `guardar_datos_personales` aceptan la cuenta ya traída (`cuenta=`), para no hacer una consulta por persona. Se movieron
+  `_en_alcance` → `db.en_alcance` y `_fecha_formulario` → `listas.fecha_formulario` (los nombres de `main` delegan).
+  `test_cuit_puertas.py` se ajustó: ahora vigila `padron_carga.procesar` como puerta y acepta que la ruta le pase `_cuil_mal`.
+- **`describir()`**: además del contrato trae `columnas` (como Seccionales), `tope_filas` (20000) y `tope_bytes` (5 MB).
+  Cada opción `booleana` no lleva `tipo`; la numérica trae `tipo: "numero"`, `minimo`, `maximo`, `defecto: null`.
+- **Ensayo**: `{total, validas, dudosas, rechazadas, ya_existen, a_escribir, filas, filas_truncadas, motivos, avisos, muestra,
+  mapeo, opciones, huella, padron_actual}`. `filas` solo trae las no válidas, hasta 300, en este orden de prioridad:
+  dudosas, rechazadas, ya existen. Cada fila: `{linea, estado, motivos: [str], resumen: {identificacion, nombre, seccional, accion}}`
+  (`accion` = `crear` | `actualizar` | `sin_tocar`; solo textos con valor). `motivos` (resumen): `[{estado, motivo, cantidad,
+  lineas: [primeras 10]}]` ordenado dudosa, rechazada, ya_existe. `muestra` = primeras 5 válidas. `opciones` trae lo normalizado
+  (`sin_seccional_desconocida`, `total_declarado`, `mapeo` = lo que la persona corrigió). Con `total_declarado`, `avisos` suma
+  «Con esta carga el padrón quedaría en N afiliados; el sindicato declaró M». `padron_actual` = afiliados ya en el padrón.
+- **`mapeo`**: `{columnas: [{indice, cabecera, campo, muestra: [hasta 3 valores]}], sin_usar: [cabecera], faltan: [clave]}`.
+  `columnas` lista TODAS las columnas (campo `""` = sin usar). Con `faltan` no vacío el ensayo responde 200 con `total: 0`, todas
+  las cifras en cero, `filas: []` y un aviso; la carga responde 400. Detección por sinónimos de la cabecera (sin mirar
+  mayúsculas, acentos ni signos). **Una columna de DNI/documento no se mapea a la identificación** (aviso aparte); una cabecera
+  con «CUIT» de la empresa tampoco. **Si la persona manda `opciones.mapeo` y asigna un campo a una columna, ese campo se le quita
+  a cualquier columna que lo hubiera tomado por detección** (no es 400); **dos columnas que ella misma asigna al mismo campo sí
+  dan 400**. Un índice de columna que no existe, 400.
+- **Estados**: válida; **dudosa** = seccional escrita que no existe (el motivo nombra la seccional, así `motivos` agrupa por
+  nombre), sin seccional habiendo seccionales, o persona con cuenta previa por otro sindicato (entra el empadronamiento, no se
+  tocan sus datos); **rechazada** = sin identificación, identificación sin 11 números (un DNI) o con verificador que no cierra,
+  sin nombre, sin provincia o localidad, fecha ilegible, repetida en la planilla (la primera que se puede cargar entra; una
+  rechazada no «reserva» la identificación); **ya_existe** = la persona ya está en el padrón de ESTE sindicato: se actualiza solo
+  mail del padrón y/o fecha de afiliación si la fila los trae y son distintos de lo guardado (`accion: actualizar`), si no
+  `sin_tocar`.
+- **`sin_seccional_desconocida`** deja esas filas **rechazadas** («La seccional «X» no existe en este sindicato.»), no dudosas.
+- **Carga**: `carga` = `{creadas, actualizadas, sin_tocar, afuera, rechazadas, detalle, detalle_truncado, avisos, comparacion?}`.
+  `detalle` = `[{linea, identificacion, accion}]` solo de actualizadas, afuera y rechazadas, hasta 300. `comparacion` (solo con
+  `total_declarado`) = `{declarado, cargado, diferencia}`, con `cargado` = afiliados del sindicato después de la carga y
+  `diferencia = cargado − declarado` (negativa = faltan). `dejar_afuera` solo vale para dudosas. Segunda carga de la misma planilla:
+  409 «No hay nada para cargar…». Movimiento: «Cargó N afiliados al padrón desde planilla (M actualizados, K afuera)» y en
+  `cantidades` solo números (más `declarado`/`cargado`/`diferencia`). Nada de la planilla se guarda fuera de las tablas del padrón.
+- **Planilla pegada como texto**: Starlette limita a 1 MB un campo de texto de un multipart; una planilla más grande se manda como
+  `archivo` (la pantalla puede armar un `Blob` con el texto).
+- **Rendimiento medido** (20.000 filas, 2,1 MB, Postgres local): ensayo 1,6 s, carga 13,8 s (con el conteo de la comparación), re-ensayo
+  de lo ya cargado 2,3 s. Cada sentencia queda lejos del `statement_timeout`.
+
+### Extensiones genéricas hechas
+
+- `base.py` ahora tiene la lectura del CSV con topes POR MÓDULO (`leer_csv(contenido, tope_filas, tope_bytes)`), `limpiar`, `plural` y el
+  mapeo de columnas COMPARTIDO (`detectar`, `normalizar_mapeo`, `aplicar_mapeo`, `mapeo_json`). Cada módulo declara `TOPE_FILAS` y `TOPE_BYTES`.
+- Cada módulo expone `movimiento(carga) -> (texto, cantidades)`: `vista.asistida_cargar` ya no tiene el texto de Seccionales escrito.
+- `carga.comparacion` viaja dentro de `carga` (la respuesta de la carga no cambia de forma).
+- Las opciones numéricas y `mapeo` entran en la huella (viajan en `opciones` normalizadas).
+
+### Seccionales (EST-01) con el mismo mapeo
+
+- `describir()` suma `mapeo: true` y `campos`; el ensayo trae `mapeo` y acepta `opciones.mapeo`. **Cambia el contrato de Seccionales**:
+  una columna desconocida ya no genera un aviso (va a `mapeo.sin_usar`), y una planilla sin columna de nombre responde 200 con
+  `mapeo.faltan = ["nombre"]` (la carga da 400), en vez de 400 en el ensayo. Las opciones normalizadas suman `mapeo`.
+- Sinónimos: nombre/seccional/delegación/denominación; sede_central = ve_todas/sede central/casa central/central; calle/domicilio/dirección;
+  numero/altura/nro/número; piso_depto/piso/depto/oficina; localidad/ciudad; provincia; codigo_postal/cp; latitud/lat; longitud/lon/lng/long;
+  precision_geo/precisión; telefono/tel; whatsapp/wsp/celular; mail/email/correo; horario/horario_atencion/atención; responsable/x_responsable/
+  secretario/titular/a cargo/delegado.
+- **X23 revisada**: nueva columna `precision_geo` (opcional). Con coordenadas válidas se respeta `exacta`, `aproximada` o `manual`; vacío
+  u otro valor = `manual`; sin coordenadas = `sin_geo` siempre. Una fila `aproximada` entra y queda **dudosa** («Ubicación aproximada:
+  confirmala en el mapa.»). Antes toda coordenada de planilla quedaba `manual`.
+- `S/N` o altura vacía = falta la altura (dudosa, no rechazada); «764/68» y similares se guardan tal cual.
+- Campo nuevo `responsable` (`Seccional.responsable`, 120 caracteres, migración `d3f5a7b9c1e4`): se carga y, al actualizar una existente,
+  lo vacío no pisa lo cargado. En el panel (`POST /admin/seccional`, `responsable`) y en la app del afiliado («Responsable: …», como texto).
+- Fixtures: `docs/xsii/ejemplos/padron-ejemplo.csv` (30 filas) y `seccionales-como-viene.csv` (la cabecera real, 10 filas inventadas).

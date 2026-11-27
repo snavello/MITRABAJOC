@@ -808,6 +808,7 @@
         <div class="mi-secc-nombre">{{ mi_seccional.nombre }}</div>
         {% if mi_seccional.direccion_texto %}<div class="mi-secc-dir">{{ mi_seccional.direccion_texto }}</div>{% endif %}
         {% if mi_seccional.horario_atencion %}<div class="mi-secc-dir">{{ mi_seccional.horario_atencion }}</div>{% endif %}
+        {% if mi_seccional.responsable %}<div class="mi-secc-dir">Responsable: {{ mi_seccional.responsable }}</div>{% endif %}
 
         {% if mi_seccional.latitud is not none and mi_seccional.longitud is not none %}
         <div class="mini-mapa" id="secc-mapa"
@@ -1591,6 +1592,7 @@ function cercaPintar(lat, lon, origen) {
         '<b>' + s.nombre + '</b>' + (propia ? ' <span style="font-size:11px;">· tu seccional</span>' : '') +
         (s.direccion_texto ? '<div class="mi-secc-dir">' + s.direccion_texto + '</div>' : '') +
         (s.horario_atencion ? '<div class="mi-secc-dir">' + s.horario_atencion + '</div>' : '') +
+        (s.responsable ? '<div class="mi-secc-dir">Responsable: ' + String(s.responsable).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' : '') +
         (s.precision_geo === 'aproximada'
           ? '<div class="mi-secc-aviso">Ubicación aproximada: el punto es el centro de la localidad.</div>' : '') +
         '<div class="mi-secc-botones">' +
