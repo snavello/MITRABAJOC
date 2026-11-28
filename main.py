@@ -118,6 +118,7 @@ import identidad
 import fiesta
 import mercadopago
 import listas as listas_mod
+import conceptos_carga
 import padron_carga
 import render_planes
 from observabilidad import panel as observabilidad_panel
@@ -6349,85 +6350,62 @@ def documentos_anteriores(convenio_id: int, request: Request, fecha: str = ""):
     return {"anteriores": db.documentos_anteriores_a(convenio_id, fecha)}
 
 
+def _conocidos_de_muestra(sid: int):
+    """Lo que el tapado sabe de los recibos de muestra: de la persona nada (se
+    tapa por patrones y rótulos) y del empleador sí, los CUITs del sindicato, que
+    es de lo que dependen los conceptos por empleador. None con el tapado apagado."""
+    return (None if preparacion.modo() == "apagado"
+            else preparacion.E.Conocidos(cuits=db.cuits_conocidos(sindicato_id=sid)))
+
+
+async def _leer_recibo_de_muestra(contenido: bytes, content_type: str, conocidos, sid: int):
+    """Lee UN recibo de muestra para aprender sus conceptos. Lo usan la pestaña
+    Aprendizaje del panel y la tarea asistida REC-04 de XSII: tapa lo que
+    identifica (mejor esfuerzo), lee con el modelo de recibos, rearma lo tapado y
+    deja el gasto en `UsoIA` como `aprendizaje`, también si la lectura falla
+    después de haberse pagado. Devuelve `(recibo, None)` o `(None, excepcion)`.
+    Un archivo que no se puede preparar (`ErrorApp`) se propaga: no hubo lectura.
+    No retiene ninguna sesión de base mientras espera a la IA."""
+    prep = await _preparar_para_ia(contenido, content_type, conocidos, sid, "aprendizaje")
+    try:
+        recibo, uso = await run_in_threadpool(extraer, contenido, content_type,
+                                              db.modelo_ia("recibos"), **_para_la_ia(prep))
+        if prep.tapado:
+            preparacion.rearmar_recibo(recibo, prep.analisis, None,
+                                       lambda cuit: db.razon_social_de_cuit(sid, cuit))
+    except Exception as e:
+        _registrar_uso_fallido(e, sid, "", "aprendizaje")
+        return None, e
+    db.registrar_uso_ia(sid, "", "aprendizaje",
+                        uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
+                        uso.get("duracion_ms", 0),
+                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
+    return recibo, None
+
+
 @app.post("/admin/aprender")
 async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     """Lee varios recibos (de uno o varios empleadores) y junta los conceptos
     nuevos, deduplicados por (código, CUIT del empleador) — el mismo código
-    crudo de dos empleadores distintos puede significar cosas distintas."""
+    crudo de dos empleadores distintos puede significar cosas distintas. Las
+    reglas viven en `conceptos_carga` (las comparte la asistida REC-04 de XSII)."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "recibos")
     conceptos_actuales = db.conceptos_como_dicts(sid)
-    genericos_actuales = [c for c in conceptos_actuales if not c.get("cuit_empleador")]
-    conocidos_sind = (None if preparacion.modo() == "apagado"
-                      else preparacion.E.Conocidos(cuits=db.cuits_conocidos(sindicato_id=sid)))
-    acumulados = {}
-    leidos, fallidos = 0, 0
+    conocidos_sind = _conocidos_de_muestra(sid)
+    recibos, fallidos = [], 0
 
     for archivo in archivos:
         contenido = await archivo.read()
-        # Recibos de otras personas: de la persona no se sabe nada, se tapa
-        # por patrones y rótulos. Del empleador sí: los CUITs del sindicato,
-        # que es de lo que dependen los conceptos por empleador.
-        prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos_sind, sid, "aprendizaje")
-        try:
-            recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
-                                                  db.modelo_ia("recibos"), **_para_la_ia(prep))
-            if prep.tapado:
-                preparacion.rearmar_recibo(recibo, prep.analisis, None,
-                                           lambda cuit: db.razon_social_de_cuit(sid, cuit))
-        except Exception as e:
-            _registrar_uso_fallido(e, sid, "", "aprendizaje")
+        recibo, error = await _leer_recibo_de_muestra(contenido, archivo.content_type, conocidos_sind, sid)
+        if error is not None:
             fallidos += 1
             continue
-        leidos += 1
-        db.registrar_uso_ia(sid, "", "aprendizaje",
-                             uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
-                             uso.get("duracion_ms", 0),
-                        uso.get("tokens_cache_lectura", 0), uso.get("tokens_cache_escritura", 0))
-        cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit")) or None
-        for n in detectar_nuevos(conceptos_actuales, recibo["lineas"], cuit_empleador):
-            clave = (n["codigo"], cuit_empleador or "")
-            if clave in acumulados:
-                acumulados[clave]["veces"] += 1
-            else:
-                acumulados[clave] = {**n, "veces": 1,
-                                      "cuit_empleador": cuit_empleador}
-
-    # Antes de que el admin apruebe el lote, avisar si alguna propuesta se
-    # parece a un concepto que YA está en el catálogo: darla de alta crearía
-    # un duplicado que después hay que ir a limpiar a mano.
-    for p in acumulados.values():
-        similar = buscar_similar(p["descripcion"], conceptos_actuales)
-        p["similar"] = {
-            "codigo": similar["concepto"]["codigo"],
-            "nombre": similar["concepto"]["nombre"],
-            "ratio": similar["ratio"],
-        } if similar else None
-        # Si la propuesta es específica de un empleador, además sugerir a qué
-        # concepto GENÉRICO parece corresponder — así la fórmula de siempre la
-        # controla sin que el admin tenga que ir a buscarlo a mano. Si la IA
-        # identificó un aporte de ley (jubilación/PAMI/obra social/cuota
-        # sindical) es una señal más fuerte que la similitud de texto: se usa
-        # primero, y solo se cae a la búsqueda por parecido si no aplica.
-        p["generico_sugerido"] = None
-        if p["cuit_empleador"]:
-            generico_universal = generico_de_categoria(p.get("categoria_universal"),
-                                                       genericos_actuales)
-            if generico_universal:
-                p["generico_sugerido"] = {
-                    "codigo": generico_universal["codigo"], "nombre": generico_universal["nombre"],
-                }
-            else:
-                similar_generico = buscar_similar(p["descripcion"], genericos_actuales)
-                if similar_generico:
-                    p["generico_sugerido"] = {
-                        "codigo": similar_generico["concepto"]["codigo"],
-                        "nombre": similar_generico["concepto"]["nombre"],
-                    }
+        recibos.append(recibo)
 
     return {
-        "leidos": leidos, "fallidos": fallidos,
-        "propuestas": sorted(acumulados.values(), key=lambda x: -x["veces"]),
+        "leidos": len(recibos), "fallidos": fallidos,
+        "propuestas": conceptos_carga.proponer(conceptos_actuales, recibos),
     }
 
 
@@ -6435,39 +6413,16 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
 def aprender_aplicar(request: Request, payload: dict):
     """Da de alta en lote los conceptos aprobados por el admin. Cada uno puede
     venir con cuit_empleador (propuesto en /admin/aprender) y codigo_generico
-    (que el admin haya confirmado o cambiado en la revisión del lote)."""
+    (que el admin haya confirmado o cambiado en la revisión del lote). Un CUIT
+    que no cumple el módulo 11 deja afuera a su concepto (lo valida
+    `conceptos_carga.aplicar`, que también usa la asistida REC-04)."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "recibos")
     aprobados = payload.get("aprobados", [])
-    altas = 0
-    # El CUIT del empleador lo propuso la IA leyendo recibos, y al aprobar el
-    # lote el concepto nace CONFIRMADO: es una puerta de alta como
-    # /admin/concepto (PLAN_CUIT_MOD11.md, D2). Un CUIT que no cumple el
-    # módulo 11 (casi siempre, un dígito mal leído) no entra: ese concepto
-    # queda afuera y se informa, para cargarlo a mano con el CUIT correcto.
-    cuit_invalidos = []
     with db.get_session() as s:
-        existentes = {(c.codigo, c.cuit_empleador or "") for c in s.exec(select(Concepto).where(
-            Concepto.sindicato_id == sid)).all()}
-        for c in aprobados:
-            if _cuit_mal(c.get("cuit_empleador", ""), opcional=True):
-                cuit_invalidos.append(c.get("codigo", ""))
-                continue
-            cuit_empleador = _norm_cuil(c.get("cuit_empleador", "")) or None
-            clave = (c["codigo"], cuit_empleador or "")
-            if clave not in existentes:
-                s.add(Concepto(
-                    sindicato_id=sid,
-                    codigo=c["codigo"], nombre=c["descripcion"], tipo=c["tipo"],
-                    remunerativo=c.get("remunerativo", True),
-                    alias=[c["descripcion"]], pendiente_revision=False,
-                    cuit_empleador=cuit_empleador,
-                    codigo_generico=(c.get("codigo_generico") or "").strip() or None,
-                ))
-                existentes.add(clave)
-                altas += 1
+        r = conceptos_carga.aplicar(s, sid, aprobados)
         s.commit()
-    return {"ok": True, "altas": altas, "cuit_invalidos": cuit_invalidos}
+    return {"ok": True, "altas": r["altas"], "cuit_invalidos": r["cuit_invalidos"]}
 
 
 # ================= Admin de plataforma =================
@@ -13794,7 +13749,7 @@ def api_xsii_asistida(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
         ctx = _xsii_contexto(s, pid)
         codigo = _xsii_tarea(codigo)
         try:
-            return xsii_vista.asistida_json(ctx, codigo)
+            return xsii_vista.asistida_json(ctx, codigo, s)
         except db.XsiiError as e:
             raise HTTPException(e.estado, e.mensaje)
 
@@ -13803,7 +13758,7 @@ def api_xsii_asistida(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
 def api_xsii_asistida_modelo(pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
     codigo = _xsii_tarea(codigo)
     modulo = xsii_vista.ASISTIDAS.get(codigo)
-    if modulo is None:
+    if modulo is None or xsii_vista.entrada_de(codigo) != "planilla":
         raise HTTPException(404, "Esta tarea no tiene carga desde planilla.")
     with db.get_session() as s:
         if db.impl_proyecto(s, pid) is None:
@@ -13815,6 +13770,8 @@ def api_xsii_asistida_modelo(pid: IdImpl, codigo: str, actor=Depends(_xsii_equip
 @app.post(API_XSII + "/p/{pid}/tarea/{codigo}/asistida/ensayo")
 async def api_xsii_asistida_ensayo(request: Request, pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
     codigo = _xsii_tarea(codigo)
+    if xsii_vista.entrada_de(codigo) == "recibos":
+        return await _xsii_ensayo_recibos(request, pid, codigo, actor)
     pedido = await _xsii_planilla(request)
 
     def _trabajo():
@@ -13830,6 +13787,8 @@ async def api_xsii_asistida_ensayo(request: Request, pid: IdImpl, codigo: str, a
 @app.post(API_XSII + "/p/{pid}/tarea/{codigo}/asistida/carga")
 async def api_xsii_asistida_carga(request: Request, pid: IdImpl, codigo: str, actor=Depends(_xsii_equipo)):
     codigo = _xsii_tarea(codigo)
+    if xsii_vista.entrada_de(codigo) == "recibos":
+        return await _xsii_carga_recibos(request, pid, codigo, actor)
     pedido = await _xsii_planilla(request)
 
     def _trabajo():
@@ -13841,6 +13800,111 @@ async def api_xsii_asistida_carga(request: Request, pid: IdImpl, codigo: str, ac
                 s.commit()                    # todo o nada: la planilla, el movimiento y el insumo
             except db.XsiiError as e:
                 s.rollback()
+                raise HTTPException(e.estado, e.mensaje)
+            except Exception:
+                s.rollback()
+                raise
+            despues = _xsii_contexto(s, pid)
+            return {"ok": True, **xsii_vista.asistida_resultado(antes, despues, codigo, carga)}
+    return await run_in_threadpool(_trabajo)
+
+
+# ----- Bloque 4b: asistida con recibos de muestra (REC-04, docs/xsii/API.md) -----
+# El ensayo lee UN recibo por pedido (multipart con `archivo`) y propone; la carga
+# recibe por JSON lo que la persona revisó. La IA corre SIN sesión de base abierta.
+# Tope de lecturas por usuario y por hora, en memoria del proceso como `XSII_IA_TOPE`.
+XSII_RECIBOS_TOPE_DEFECTO = 120
+_xsii_recibos_marcas: dict = {}
+_xsii_recibos_candado = threading.Lock()
+_XSII_EXTENSIONES_RECIBO = {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+                            "png": "image/png", "webp": "image/webp"}
+
+
+def _xsii_recibos_tope() -> int:
+    try:
+        return max(1, int(os.getenv("XSII_RECIBOS_TOPE", XSII_RECIBOS_TOPE_DEFECTO)))
+    except ValueError:
+        return XSII_RECIBOS_TOPE_DEFECTO
+
+
+def _xsii_recibos_frenar(actor) -> None:
+    """Cuenta una lectura o levanta 429 con cuándo se puede volver a leer."""
+    import time
+    ahora = time.time()
+    with _xsii_recibos_candado:
+        marcas = [m for m in _xsii_recibos_marcas.get(actor.id, []) if ahora - m < XSII_IA_VENTANA_S]
+        if len(marcas) >= _xsii_recibos_tope():
+            minutos = max(1, int((XSII_IA_VENTANA_S - (ahora - marcas[0]) + 59) // 60))
+            _xsii_recibos_marcas[actor.id] = marcas
+            raise HTTPException(429, f"Leíste muchos recibos seguidos. Podés seguir en {minutos} "
+                                     f"{'minuto' if minutos == 1 else 'minutos'}.")
+        marcas.append(ahora)
+        _xsii_recibos_marcas[actor.id] = marcas
+        if len(_xsii_recibos_marcas) > 5000:          # que la tabla no crezca sin límite
+            for uid in [u for u, m in _xsii_recibos_marcas.items()
+                        if u != actor.id and all(ahora - x >= XSII_IA_VENTANA_S for x in m)]:
+                _xsii_recibos_marcas.pop(uid, None)
+
+
+async def _xsii_ensayo_recibos(request: Request, pid: int, codigo: str, actor):
+    # La tarea tiene que poder leer recibos ANTES de recibir el archivo. La sesión se
+    # cierra enseguida: lo que sigue (IA) puede tardar decenas de segundos.
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        try:
+            modulo, sid = xsii_vista.asistida_recibos_preparar(ctx, codigo)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+    try:
+        form = await _impl_formulario(request)
+    except implementacion.ErrorImpl as e:
+        raise HTTPException(400, e.mensaje)
+    try:
+        archivo = form.get("archivo")
+        if archivo is None or not hasattr(archivo, "read"):
+            raise HTTPException(400, "Falta el recibo: mandá un archivo en el campo «archivo».")
+        contenido = await archivo.read()
+        nombre = getattr(archivo, "filename", "") or ""
+    finally:
+        await form.close()
+    if not contenido:
+        raise HTTPException(400, "El archivo está vacío.")
+    if len(contenido) > modulo.TOPE_MB * 1024 * 1024:
+        raise HTTPException(400, f"El recibo pesa más de {modulo.TOPE_MB} MB: sacale una foto más liviana.")
+    extension = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
+    tipo = _XSII_EXTENSIONES_RECIBO.get(extension) or (
+        archivo.content_type if archivo.content_type in _XSII_EXTENSIONES_RECIBO.values() else "")
+    if not tipo:
+        raise HTTPException(400, "El formato del recibo no sirve: tiene que ser PDF, JPG, PNG o WEBP.")
+    _xsii_recibos_frenar(actor)                       # recién acá se gasta, justo antes de leer
+    conceptos_actuales = db.conceptos_como_dicts(sid)
+    try:
+        recibo, error = await _leer_recibo_de_muestra(contenido, tipo, _conocidos_de_muestra(sid), sid)
+    except ErrorApp as e:                             # imagen imposible de abrir: no es un error del pedido
+        if e.codigo != "E-IMAGEN-01":
+            raise
+        recibo, error = None, e
+    if error is not None:
+        motivo = (str(error.detail) if isinstance(error, ErrorApp)
+                  else "No pude leer el recibo. Probá con otro archivo o con una foto más nítida.")
+        return modulo.armar_ensayo(conceptos_actuales, None, nombre, motivo)
+    return modulo.armar_ensayo(conceptos_actuales, recibo, nombre)
+
+
+async def _xsii_carga_recibos(request: Request, pid: int, codigo: str, actor):
+    datos = await _xsii_cuerpo(request)
+
+    def _trabajo():
+        with db.get_session() as s:
+            antes = _xsii_contexto(s, pid)
+            try:
+                carga = xsii_vista.asistida_recibos_cargar(s, antes, actor, codigo, datos)
+                s.commit()                    # todo o nada: los conceptos y el movimiento
+            except db.XsiiError as e:
+                s.rollback()
+                detalle = getattr(e, "detalle", None)
+                if detalle:
+                    return JSONResponse({"detail": e.mensaje, "detalle": detalle}, status_code=e.estado)
                 raise HTTPException(e.estado, e.mensaje)
             except Exception:
                 s.rollback()

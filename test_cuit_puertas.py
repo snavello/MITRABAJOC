@@ -1037,7 +1037,7 @@ ESCRITURAS_DE_IDENTIDAD = {
     "main.admin_usuario_alta": "puerta",
     "main.abm_concepto": "puerta",
     "main.admin_empleador_alta": "puerta",
-    "main.aprender_aplicar": "puerta",
+    "conceptos_carga.aplicar": "puerta (el alta en lote de /admin/aprender/aplicar y de la asistida REC-04 de XSII)",
     "main.plataforma_alta_sindicato": "puerta",
     "main.plataforma_alta_usuario": "puerta",
     "main.plataforma_editar_sindicato": "puerta",
@@ -1058,7 +1058,7 @@ _VERIFICADORES = {"_cuil_mal", "_cuit_mal", "_cuit_empresa_mal", "es_valido", "c
 
 def _escrituras_de_identidad():
     encontradas = {}
-    for archivo in ("main.py", "db.py", "padron_carga.py"):
+    for archivo in ("main.py", "db.py", "padron_carga.py", "conceptos_carga.py"):
         arbol = ast.parse((RAIZ / archivo).read_text(encoding="utf-8"))
         for fn in ast.walk(arbol):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):

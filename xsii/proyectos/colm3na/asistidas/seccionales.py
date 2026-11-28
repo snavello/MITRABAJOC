@@ -140,6 +140,7 @@ def describir() -> dict:
             "Leo la planilla y te muestro, fila por fila, qué cargaría y qué no: en el ensayo no se guarda nada.",
             "Si estás de acuerdo, cargo las seccionales de una vez, controlo el resultado y dejo registrado quién lo hizo.",
         ],
+        "entrada": "planilla",
         "insumo": "lista_seccionales",
         "mapeo": True,
         "campos": [{"clave": c[0], "rotulo": c[1], "obligatorio": c[2], "ayuda": c[4]} for c in COLUMNAS],

@@ -886,3 +886,46 @@ nunca como HTML.
 
 Los `pasos` de REC-04 pasan a apuntar a «Leer los recibos de muestra» de XSII
 (la pestaña Aprendizaje del panel sigue existiendo y da lo mismo).
+
+## Notas de implementación (Bloque 4b)
+
+Lo que quedó distinto o más preciso que lo escrito arriba:
+
+- **Sin sindicato asociado es 409, no 404** (como las otras dos asistidas: el
+  proyecto existe, pero no hay nada que controlar). 404 queda para proyecto
+  inexistente, demo y `modelo.csv` de esta tarea.
+- **Rutas genéricas, ramificadas por `entrada`** (`vista.entrada_de`): el mismo
+  `…/asistida/ensayo` y `…/asistida/carga`. Con `recibos` el ensayo es multipart con
+  un `archivo` (el resto de los campos se ignoran) y la carga es `application/json`.
+  Antes de leer el archivo se verifica que la tarea esté disponible y que haya IA
+  (409 con el motivo); formatos admitidos por extensión del nombre (o por
+  `content-type` si no hay extensión), 8 MB, vacío es 400.
+- **`GET …/asistida`** suma `genericos` (solo los conceptos sin empleador, leídos con
+  la sesión del request) y `ia`. `describir()` de las tres trae `entrada`.
+- **El 400 de la carga por ítem** responde `{"detail": "<resumen>", "detalle":
+  [{"indice", "campo", "mensaje"}]}` (hasta 50). Los topes de largo del código (40) y
+  la descripción (120) son los del contrato; una descripción más larga en el ENSAYO se
+  recorta con aviso, una vacía queda vacía y `dudosa` (se completa antes de cargar).
+- **`recibos_leidos`** es opcional (0 por defecto).
+- **Carga con todos repetidos** (ninguno nuevo) es 409 «No hay nada para cargar»,
+  como las otras asistidas; con alguno nuevo, `repetidos` cuenta los que ya existían
+  (es una cantidad, no una lista).
+- **Sin insumo**: `db.xsii_registrar_carga_asistida` acepta `clave_insumo=None` y
+  entonces solo deja el movimiento (con `clave_insumo` vacío).
+- **Movimiento**: texto «Cargó N conceptos desde M recibos leídos (K ya existían)» y
+  cantidades `{cargados, repetidos, recibos_leidos}`. Nunca códigos ni descripciones.
+- **Tope** `XSII_RECIBOS_TOPE` (120 por usuario y hora, en memoria del proceso): se
+  cuenta justo antes de llamar a la IA, así un pedido rechazado por forma no gasta;
+  429 con los minutos que faltan.
+- **Rubro y categoría sugeridos**: el rubro sale de `validador.detectar_nuevos`
+  (sección impresa manda sobre el signo; una línea de la sección «no remunerativos»
+  o que dice no remunerativo es `no_remunerativo`). La categoría sindical solo se
+  sugiere si el genérico al que parece corresponder ya la tiene cargada. Pasa a `dudosa`
+  también un reintegro y una descripción vacía, además de los casos del contrato.
+- **Un recibo que `main` no puede preparar** (`E-IMAGEN-01`, demasiados píxeles) vuelve
+  como 200 con `leido: false`; el resto de los `ErrorApp` (por ejemplo el 503 del cupo
+  de lecturas) se propaga tal cual y la pantalla puede reintentar.
+- **Aprendizaje** (`/admin/aprender`, `/admin/aprender/aplicar`) quedó como adaptador
+  de `conceptos_carga` y de `main._leer_recibo_de_muestra`; `aplicar` tiene un campo
+  más, opcional, `categoria_sindical` (vacío por defecto: igual que antes).
+  `test_xsii_conceptos.py` compara ambas contra la lógica anterior copiada.

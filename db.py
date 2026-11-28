@@ -12620,18 +12620,19 @@ def xsii_candado_de_sindicato(s: Session, sindicato_id: int, codigo: str) -> Non
 
 
 def xsii_registrar_carga_asistida(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea: str,
-                                  clave_insumo: str, nombre_insumo: str, texto: str, cantidades: dict) -> XsiiMovimiento:
+                                  clave_insumo: Optional[str], nombre_insumo: str, texto: str, cantidades: dict) -> XsiiMovimiento:
     """El movimiento `asistida_carga` de una tarea y, si el insumo de su
     módulo todavía no figuraba como recibido, su registro como `recibido`.
     SIN commit: lo hace la ruta, junto con lo que escribió el módulo (todo o nada)."""
-    activo = s.exec(select(XsiiInsumo).where(
-        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave_insumo,
-        XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
-    if activo is None or activo.estado != "recibido":
-        xsii_registrar_insumo(s, proyecto_id, actor, clave_insumo, nombre_insumo, "recibido",
-                              nota="Cargado desde la planilla en XSII.", commit=False)
+    if clave_insumo:                      # una asistida sin insumo (REC-04) solo deja el movimiento
+        activo = s.exec(select(XsiiInsumo).where(
+            XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave_insumo,
+            XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
+        if activo is None or activo.estado != "recibido":
+            xsii_registrar_insumo(s, proyecto_id, actor, clave_insumo, nombre_insumo, "recibido",
+                                  nota="Cargado desde la planilla en XSII.", commit=False)
     return _xsii_movimiento(s, proyecto_id, actor, "asistida_carga", texto, codigo=codigo,
-                            clave_insumo=clave_insumo, cantidades=cantidades)
+                            clave_insumo=clave_insumo or "", cantidades=cantidades)
 
 
 def xsii_retirar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str) -> XsiiInsumo:

@@ -465,8 +465,17 @@ def _modulo_asistido(codigo: str):
     return modulo
 
 
-def asistida_json(ctx: Contexto, codigo: str) -> dict:
-    """`GET .../asistida`: si hay carga desde planilla para la tarea y cómo es."""
+def entrada_de(codigo: str) -> str:
+    """Qué recibe la asistida de la tarea: `planilla` (Seccionales, Padrón) o
+    `recibos` (Conceptos). Una tarea que no es asistida cuenta como planilla: las
+    rutas de planilla le contestan el 404 de siempre."""
+    modulo = ASISTIDAS.get(codigo)
+    return getattr(modulo, "ENTRADA", "planilla") if modulo is not None else "planilla"
+
+
+def asistida_json(ctx: Contexto, codigo: str, s=None) -> dict:
+    """`GET .../asistida`: si hay carga desde planilla para la tarea y cómo es.
+    Con `s` (la sesión del request) suma lo que sale de la base, si el módulo lo pide."""
     if codigo not in POR_CODIGO:
         raise db.XsiiError(404, "No existe la tarea.")
     modulo = ASISTIDAS.get(codigo)
@@ -478,6 +487,8 @@ def asistida_json(ctx: Contexto, codigo: str) -> dict:
     elif ctx.tb[codigo].estado == "no_aplica":
         salida.update(disponible=False, motivo="Esta tarea no aplica a este sindicato: no hay nada que cargar.")
     salida.update(modulo.describir())
+    if s is not None and ctx.disponible and hasattr(modulo, "contexto"):
+        salida.update(modulo.contexto(s, ctx.sindicato_id))
     return salida
 
 
@@ -546,3 +557,50 @@ def asistida_resultado(ctx_antes: Contexto, ctx_despues: Contexto, codigo: str, 
                 if antes.get(c) == "bloqueada" and e.estado != "bloqueada"]
     return {"carga": carga, "control": tarea["control"], "tarea": tarea, "destrabo": destrabo,
             "tablero_resumen": consulta.resumen(ctx_despues.tb)}
+
+
+# ------------------------------------------------------------------ asistida con recibos (bloque 4b)
+
+def asistida_recibos_preparar(ctx: Contexto, codigo: str):
+    """Lo que hace falta ANTES de leer un recibo de muestra: la tarea tiene que ser
+    de entrada `recibos`, disponible y con IA (o simulada). Devuelve `(modulo,
+    sindicato_id)`. No lee la base: el ensayo no retiene ninguna sesión mientras la
+    IA contesta. Levanta `XsiiError` (404, 409)."""
+    modulo = _exigir_asistida_disponible(ctx, codigo)
+    if getattr(modulo, "ENTRADA", "planilla") != "recibos":
+        raise db.XsiiError(404, "Esta tarea no lee recibos.")
+    ia = modulo.describir()["ia"]
+    if not ia["disponible"]:
+        raise db.XsiiError(409, ia["motivo"])
+    return modulo, ctx.sindicato_id
+
+
+def asistida_recibos_cargar(s, ctx: Contexto, actor, codigo: str, datos) -> dict:
+    """La carga de los conceptos que la persona revisó, todo o nada y SIN commit
+    (lo hace la ruta). Adentro de los candados de la tarea y del sindicato escribe
+    con `conceptos_carga.aplicar` y deja el movimiento `asistida_carga` con solo
+    números. No confirma la tarea ni marca ningún insumo. Levanta `XsiiError`
+    (400 con `.detalle` por ítem, 409)."""
+    modulo = _exigir_asistida_disponible(ctx, codigo)
+    if getattr(modulo, "ENTRADA", "planilla") != "recibos":
+        raise db.XsiiError(404, "Esta tarea no lee recibos.")
+    estado = ctx.tb[codigo]
+    if estado.estado == "bloqueada":
+        nombres = _lista_y([POR_CODIGO[c].nombre for c in estado.frenada_por])
+        raise db.XsiiError(409, f"Primero tiene que estar resuelta: {nombres}.")
+    try:
+        db.xsii_candado_de_tarea(s, ctx.pid, codigo)
+        db.xsii_candado_de_sindicato(s, ctx.sindicato_id, codigo)
+        carga = modulo.cargar(s, ctx.sindicato_id, datos)
+    except ErrorAsistida as e:
+        s.rollback()
+        err = db.XsiiError(e.estado, e.mensaje)
+        err.detalle = e.detalle
+        raise err
+    if not carga["cargados"]:
+        s.rollback()
+        raise db.XsiiError(409, "No hay nada para cargar: todos los conceptos ya existían en el catálogo.")
+    texto, cantidades = modulo.movimiento(carga)
+    db.xsii_registrar_carga_asistida(s, ctx.pid, actor, codigo, POR_CODIGO[codigo].nombre, None, "", texto,
+                                     cantidades)
+    return carga
