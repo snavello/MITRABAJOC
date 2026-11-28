@@ -1,0 +1,611 @@
+[
+ {
+  "id": "p01",
+  "titulo": "Qué es XSII y para qué te sirve",
+  "bajada": "XSII es la pantalla que te dice, paso a paso, qué hacer para dejar a un sindicato funcionando en Colm3na.",
+  "parrafos": [
+   "Poner en marcha un sindicato son decenas de tareas: cargar sus seccionales, su padrón de afiliados, los conceptos de sus recibos, y más. XSII las tiene todas en una lista y te contesta tres preguntas: qué conviene hacer ahora, qué le falta mandar al sindicato y cómo vamos.",
+   "Para La Bancaria son 34 tareas. Cuatro no corresponden, porque La Bancaria no contrató esas funciones, y XSII ya las marca como «No aplica». Quedan 30 para resolver.",
+   "XSII no se fía de que alguien tilde una casilla: mira el sistema y calcula solo si cada tarea está hecha. Y en tres tareas (seccionales, padrón y conceptos de los recibos) hace la carga con vos: leés una planilla o unos recibos, revisás lo que entendió y recién ahí se guarda.",
+   "Es una herramienta del equipo que implementa. El sindicato no la ve: ve la Mesa, donde le llegan los pedidos."
+  ],
+  "pasos": [
+   "Abrí XSII desde Entornos (página 2).",
+   "Mirá la Guía (página 3): te muestra la tarea que conviene hacer ahora.",
+   "Hacé esa tarea con la ficha (página 5) y volvé a mirar: XSII se actualiza solo con lo que cargaste."
+  ],
+  "tips": [
+   "Mirar no cambia nada. Solo guardan los botones que se nombran como acciones («Crear en la Mesa», «Confirmar la carga», «Marcar hecho en la Mesa»), y cada página de esta guía te avisa cuáles son.",
+   "Si algo no se entiende, la última página tiene un glosario."
+  ],
+  "figuras": [],
+  "palabras": [
+   {
+    "termino": "XSII",
+    "significa": "Nombre de la pantalla de guía de implementación. Se lee «equis ese i i»."
+   },
+   {
+    "termino": "Implementar",
+    "significa": "Dejar a un sindicato cargado y probado para que sus afiliados usen la app."
+   },
+   {
+    "termino": "Tarea",
+    "significa": "Cada cosa concreta que hay que dejar hecha, por ejemplo «Seccionales»."
+   },
+   {
+    "termino": "La Mesa",
+    "significa": "La herramienta donde el equipo y el sindicato se mandan pedidos y archivos."
+   }
+  ]
+ },
+ {
+  "id": "p02",
+  "titulo": "Cómo entrar a XSII",
+  "bajada": "XSII se abre desde «Entornos», dentro del proyecto de La Bancaria.",
+  "parrafos": [
+   "Hay un proyecto por sindicato. El de La Bancaria se llama «La Bancaria» y desde ahí se abre su XSII. Entornos es una pantalla interna del equipo: existe en el entorno de Pruebas y no en la Demo, así que si te da error de página no encontrada, revisá que estés en Pruebas."
+  ],
+  "pasos": [
+   "Entrá a la pantalla «Entornos» con tu usuario de plataforma.",
+   "Tocá la pestaña «Implementación».",
+   "En la lista «Proyectos», buscá «La Bancaria».",
+   "Tocá «Abrir XSII». No confundas con «Abrir la mesa», que abre la Mesa donde chatean con el sindicato.",
+   "Se abre la Guía. Arriba tenés el nombre del proyecto, «La Bancaria», y una barra con el avance."
+  ],
+  "tips": [
+   "Si no ves el proyecto, no existe todavía: pedile al equipo que lo cree.",
+   "Para volver, abajo de todo hay un enlace «Volver a Entornos»."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p02-entornos.jpg",
+    "pie": "La pestaña «Implementación» de Entornos. Mirá (1): el botón «Abrir XSII» de La Bancaria. El botón blanco de al lado es la Mesa."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Entornos",
+    "significa": "Pantalla interna del equipo con herramientas, accesos y proyectos."
+   },
+   {
+    "termino": "Proyecto",
+    "significa": "El expediente de implementación de un sindicato. Hay uno por sindicato."
+   }
+  ]
+ },
+ {
+  "id": "p03",
+  "titulo": "La Guía: tu próximo paso",
+  "bajada": "La Guía te propone una sola tarea por vez y te explica por qué.",
+  "parrafos": [
+   "Es la primera pantalla de XSII. En lugar de mostrarte las 34 tareas juntas, te marca una: el «Siguiente paso recomendado». Si hay una ya empezada, te propone terminarla. Si no, la próxima que se puede hacer.",
+   "Debajo del título dice en una línea para qué sirve esa tarea y cuándo queda hecha. Arriba, una barra cuenta cuántas tareas van resueltas, sin contar las que no aplican."
+  ],
+  "pasos": [
+   "Mirá la barra de arriba (1): dice «de 30 tareas resueltas» y el porcentaje.",
+   "Leé el recuadro grande (2): el título de la tarea, para qué sirve y «Qué tenés que hacer», con los pasos numerados.",
+   "Tocá el botón redondo «Empezar» para abrir la ficha de esa tarea.",
+   "Si querés ver otra, usá «Atrás» y «Adelante»: recorren las tareas de a una. Aparece el enlace «Volver al recomendado» para regresar.",
+   "Más abajo, «O seguí con otra que ya se puede hacer» (3) te ofrece alternativas.",
+   "A la derecha, «Panorama» (4) cuenta cuántas tareas hay en cada estado, y «Últimos movimientos» muestra lo último que se hizo. «Ver todo en el tablero» abre la lista completa."
+  ],
+  "tips": [
+   "Moverte con «Atrás» y «Adelante» no guarda nada.",
+   "Un proyecto recién abierto dice «Todavía no hay movimientos». Es normal."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p03-guia.jpg",
+    "pie": "La Guía de un proyecto recién abierto. (1) Avance, (2) paso recomendado, (3) otras tareas que se pueden hacer, (4) Panorama."
+   },
+   {
+    "archivo": "img/p03-atras-adelante.jpg",
+    "pie": "Los tres botones redondos: (1) «Atrás», (2) «Empezar», (3) «Adelante». Después de usar «Adelante» aparece «Volver al recomendado»."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Paso recomendado",
+    "significa": "La tarea que XSII elige para vos en este momento."
+   },
+   {
+    "termino": "Panorama",
+    "significa": "El cuadro de la derecha con la cuenta de tareas por estado."
+   }
+  ]
+ },
+ {
+  "id": "p04",
+  "titulo": "Los estados de una tarea",
+  "bajada": "Cada tarea tiene un color que dice en qué punto está.",
+  "parrafos": [
+   "El estado no lo escribe nadie: XSII lo calcula mirando el sistema, lo que ya se cargó y lo que dijo el equipo. Por eso es confiable. Si cargás las seccionales, la tarea pasa sola a «Hecha» (o te pide que la confirmes).",
+   "Los seis estados, con su color:",
+   "«Se puede hacer» (azul claro): nada la frena, podés empezar hoy. «En curso» (azul fuerte): ya se empezó y falta terminar. «Esperando un dato» (ámbar): falta que el sindicato mande algo. «Bloqueada» (rojo): primero hay que terminar otra tarea; el detalle dice «Espera a…». «Hecha» (verde): listo. «No aplica» (gris): no corresponde en este sindicato.",
+   "Algunas llevan una etiqueta chica: «Falta confirmar» (todo está cargado y una persona tiene que dar el visto bueno), «Con observaciones» (está hecha pero con avisos), «Pospuesta» o «A mano»."
+  ],
+  "pasos": [
+   "Tocá «Tablero» arriba a la derecha.",
+   "Mirá la columna «Estado» (2): cada fila tiene su color.",
+   "Tocá un filtro (1), por ejemplo «Bloqueada», para ver solo esas tareas.",
+   "Leé la columna «Detalle»: dice qué falta o a quién espera.",
+   "Tocá «Todas» para volver a ver la lista entera."
+  ],
+  "tips": [
+   "Filtrar no guarda nada.",
+   "Una tarea «Bloqueada» no es un error: solo quiere decir que hay un orden."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p04-tablero.jpg",
+    "pie": "El Tablero de La Bancaria mientras se avanzaba. (1) Filtros por estado, con la cantidad entre puntos. (2) Cada grupo de tareas (Base, Estructura, Recibos…) con su estado y su detalle."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Estado",
+    "significa": "En qué punto está una tarea. XSII lo calcula, no se tilda."
+   },
+   {
+    "termino": "Falta confirmar",
+    "significa": "El sistema ve la tarea completa, pero una persona del equipo tiene que confirmarlo."
+   }
+  ]
+ },
+ {
+  "id": "p05",
+  "titulo": "La ficha de una tarea",
+  "bajada": "La ficha tiene todo lo que necesitás saber y hacer para una tarea.",
+  "parrafos": [
+   "Se abre al tocar «Empezar» en la Guía o una fila del Tablero. Arriba figura el código y el nombre, por ejemplo «EST-01 · Seccionales», su estado y el botón amarillo «Preguntame».",
+   "Lo más importante es «Qué tenés que hacer»: pasos cortos, en orden, y el último dice cuándo queda hecha la tarea. Debajo de los pasos hay botones: uno azul que hace la carga con vos (si esa tarea la tiene) y «Ir a la pantalla», que te lleva al lugar del sistema donde se hace a mano.",
+   "Más abajo siguen otros bloques. Los últimos están plegados: tocá el «+» para abrirlos."
+  ],
+  "pasos": [
+   "Abrí la ficha de «Seccionales» desde la Guía o el Tablero.",
+   "Leé «Qué tenés que hacer» (1) y seguilo en orden.",
+   "Mirá los botones de abajo: «Cargar desde la planilla» hace la carga asistida; «Ir a la pantalla» (2) abre el panel del sindicato.",
+   "Mirá «Se espera del sindicato» (3): dice qué dato o archivo hace falta y si ya se pidió.",
+   "Revisá «Lo que hay que confirmar», «Qué se puede hacer» y «Lo que dice el control»: ahí ves qué falta para terminar.",
+   "Abrí «Necesita y destraba» para saber qué tareas deben estar antes y cuáles se habilitan después."
+  ],
+  "tips": [
+   "Abrir una ficha no guarda nada.",
+   "«Lo que dice el control» muestra cifras reales del sistema: por ejemplo «0 Seccionales» antes de cargar."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p05-ficha.jpg",
+    "pie": "La ficha de «Seccionales». (1) Qué tenés que hacer. (2) «Ir a la pantalla». (3) «Se espera del sindicato», con los botones para pedir el archivo."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Ficha",
+    "significa": "La pantalla completa de una tarea."
+   },
+   {
+    "termino": "Control",
+    "significa": "Revisión automática: mira el sistema y dice «Completa», «Con observaciones» o «Incompleta»."
+   },
+   {
+    "termino": "Código de tarea",
+    "significa": "Las letras y números como EST-01: identifican cada tarea en todas las pantallas."
+   }
+  ]
+ },
+ {
+  "id": "p06",
+  "titulo": "Pedirle un dato al sindicato",
+  "bajada": "Si falta un archivo del sindicato, XSII te ayuda a pedirlo por la Mesa y a usarlo cuando llega.",
+  "parrafos": [
+   "Varias tareas dependen de algo que sólo el sindicato tiene: la lista de seccionales, la planilla del padrón, los recibos. En «Se espera del sindicato» ves qué hace falta y el estado del pedido: «Todavía no se pidió», «Pedido hoy» o recibido.",
+   "El pedido se hace en la Mesa. Cada pedido allá es una «tarjeta» con un código (PE0001). El sindicato entra con su propio usuario, lo ve en «Mis pendientes» y responde con el archivo adjunto.",
+   "Todo lo que hacés acá queda registrado: quién lo pidió y cuándo."
+  ],
+  "pasos": [
+   "En la ficha de la tarea, bajá a «Se espera del sindicato» y tocá «Reclamar en la Mesa».",
+   "Se abre un borrador con título y texto ya escritos. Podés cambiarlos.",
+   "Tocá «Crear en la Mesa» (guarda un pedido nuevo) o «Descartar» (no pasa nada).",
+   "El sindicato lo ve en su Mesa y contesta adjuntando el archivo (a cada archivo la Mesa le da un código AR…).",
+   "Cuando llega, XSII avisa «Llegó un archivo en PE0001». Tocá «Usar este archivo»: queda anotado como recibido y listo para cargar."
+  ],
+  "tips": [
+   "Si el sindicato te lo mandó por otro medio, usá «Marcar recibido». Si ya lo pediste por teléfono, «Marcar pedido».",
+   "El sistema frena dos reclamos seguidos en menos de un minuto: si ves ese aviso, esperá y reintentá."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p06-reclamo.jpg",
+    "pie": "El borrador del pedido. (1) El texto, que podés editar. (2) «Crear en la Mesa» guarda el pedido."
+   },
+   {
+    "archivo": "img/p06-mesa-sindicato.jpg",
+    "pie": "Lo que ve el sindicato en su Mesa: el pedido PE0001 «Necesitamos: Lista de seccionales», con la caja «Tu respuesta» y «Adjuntar archivos»."
+   },
+   {
+    "archivo": "img/p06-usar-archivo.jpg",
+    "pie": "Cuando el sindicato respondió: (1) el aviso «Llegó un archivo en PE0001» y (2) el botón «Usar este archivo»."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Insumo",
+    "significa": "Un dato o archivo que tiene que mandar el sindicato. En pantalla aparece como «Se espera del sindicato»."
+   },
+   {
+    "termino": "Tarjeta",
+    "significa": "Cada pedido o consulta dentro de la Mesa. Tiene código, por ejemplo PE0001."
+   },
+   {
+    "termino": "Reclamar",
+    "significa": "Pedir en la Mesa un dato que falta."
+   }
+  ]
+ },
+ {
+  "id": "p07",
+  "titulo": "Cargar las seccionales desde una planilla",
+  "bajada": "Con XSII cargás todas las seccionales juntas desde la planilla que mandó el sindicato.",
+  "parrafos": [
+   "La carga tiene cuatro momentos, siempre iguales: «Qué voy a hacer», «Ensayo», «Carga» y «Control». El ensayo lee la planilla y te muestra fila por fila qué haría, pero no guarda nada. Recién en «Carga», y con dos toques de confirmación, se escribe en el sistema.",
+   "No hace falta que la planilla tenga las columnas en un orden o con un nombre fijo: XSII reconoce las cabeceras. Si se equivoca, lo corregís en «Columnas de la planilla»."
+  ],
+  "pasos": [
+   "En la ficha de «Seccionales» tocá «Cargar desde la planilla».",
+   "Elegí el archivo: el de la Mesa o uno que subas. «Descargar el modelo» baja una planilla de ejemplo.",
+   "Tocá el botón de ensayo («Ensayar (no guarda nada)»). Aparece el cartel amarillo «Nada se guardó todavía».",
+   "Mirá las cuatro cuentas (2): «Válidas», «Dudosas», «Rechazadas» y «Ya existen». Tocá una para ver solo esas filas.",
+   "En las dudosas, tildá «Dejar afuera» en las que no quieras cargar. Tocá «Seguir».",
+   "Tocá «Confirmar la carga» (hay que apretar dos veces). Con «No cargar» te arrepentís.",
+   "En el Control, leé «La carga se hizo y el control ya corrió» y tocá «Listo». Cerrá el panel y, en «Qué se puede hacer», tocá «Confirmar»."
+  ],
+  "tips": [
+   "Una seccional sin coordenadas entra como «sin ubicar»: la tarea «Seccionales ubicadas en el mapa» queda pendiente hasta que se ubique en el panel del sindicato.",
+   "En la fila de Sede Central, poné «sí» en la columna «Es Sede Central»: sus usuarios ven todas las seccionales."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p07-ensayo.jpg",
+    "pie": "El ensayo. (1) El aviso de que no se guardó nada. (2) Las cuatro cuentas. (3) Cada fila con su resultado."
+   },
+   {
+    "archivo": "img/p07-dudosas.jpg",
+    "pie": "Las dudosas. (1) Se toca «Dudosas» para filtrarlas. (2) La fila de la Delegación Ruta 40 está tildada para dejar afuera: aparece tachada."
+   },
+   {
+    "archivo": "img/p07-control.jpg",
+    "pie": "El control: (1) la carga se hizo, (2) lo que ve el sistema, (3) «Listo». Una quedó «sin ubicar»."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Seccional",
+    "significa": "Una sede o delegación del sindicato en una ciudad."
+   },
+   {
+    "termino": "Sede Central",
+    "significa": "La sede principal. Sus usuarios ven todas las seccionales."
+   },
+   {
+    "termino": "Ensayo",
+    "significa": "Prueba que muestra qué pasaría sin guardar nada."
+   }
+  ]
+ },
+ {
+  "id": "p08",
+  "titulo": "Cargar el padrón de afiliados",
+  "bajada": "Es la misma carga en cuatro momentos, con una cuenta final contra el total que declaró el sindicato.",
+  "parrafos": [
+   "El padrón es la lista de afiliados del sindicato. Para cargarlo tienen que estar hechas «Seccionales» y «Padrón recibido»; si no, la tarea figura «Bloqueada». Cada afiliado se identifica por su CUIL, el número de 11 dígitos. Un DNI solo no alcanza.",
+   "El padrón tiene un chequeo extra: vos anotás el total que dice el sindicato y, al terminar, XSII lo compara con lo que quedó cargado. Si no coinciden, no hay que dar la tarea por hecha."
+  ],
+  "pasos": [
+   "En «Padrón recibido» tocá «Marcar recibido» y «Confirmar» cuando llegue la planilla.",
+   "En «Padrón cargado» tocá «Cargar desde la planilla» y elegí el archivo. Revisá «Columnas de la planilla».",
+   "Entre las opciones, escribí el «Total declarado por el sindicato».",
+   "Tocá el botón de ensayo. Leé «Por qué quedaron así»: una «Dudosa» es, por ejemplo, una seccional que no existe (la persona entra sin seccional); una «Rechazada» no entra (por ejemplo, falta la localidad).",
+   "Decidí qué hacer con las dudosas, tocá «Seguir» y «Confirmar la carga».",
+   "En el control, mirá «Declarado», «En el sistema» y «Diferencia». Si no coincide, XSII avisa: «No coincide: revisá antes de dar la tarea por hecha»."
+  ],
+  "tips": [
+   "El ensayo no guarda nada, la carga sí.",
+   "Con una diferencia, pedile al sindicato las filas rechazadas corregidas y volvé a cargar: las personas que ya estaban figuran como «Ya existen»."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p08-ensayo.jpg",
+    "pie": "El ensayo del padrón. (1) Cuentas. (2) La comparación con el total declarado. (3) Por qué cada fila quedó así."
+   },
+   {
+    "archivo": "img/p08-control.jpg",
+    "pie": "El control: (1) «Declarado» 30, «En el sistema» 27 y una «Diferencia» de -3 que pide revisar. (2) Lo que ve el sistema. (3) «Listo»."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Padrón",
+    "significa": "La lista de afiliados de un sindicato."
+   },
+   {
+    "termino": "CUIL",
+    "significa": "El número de 11 dígitos que identifica a una persona que trabaja."
+   },
+   {
+    "termino": "Dudosa / Rechazada",
+    "significa": "Dudosa: entra pero hay algo para revisar. Rechazada: no entra."
+   }
+  ]
+ },
+ {
+  "id": "p09",
+  "titulo": "Armar el catálogo de conceptos con recibos de muestra",
+  "bajada": "XSII lee recibos de ejemplo, te propone los conceptos que aparecen y vos decidís cuáles quedan.",
+  "parrafos": [
+   "Un concepto es cada renglón de un recibo: sueldo básico, jubilación, cuota sindical. Para controlar un recibo, el sistema necesita saber cómo se llama cada concepto y si suma o resta.",
+   "Acá la lectura la hace una IA y vos revisás. Primero se leen los recibos de a uno y no se guarda nada; en la pantalla ves solo conceptos, sin nombres ni importes de personas. Recién al confirmar entran, ya revisados.",
+   "Las capturas de esta página usan una lectura simulada y recibos inventados; con recibos reales los conceptos cambian, pero los botones son los mismos."
+  ],
+  "pasos": [
+   "Primero marcá como recibida y confirmá la tarea «Recibos de muestra».",
+   "En «Catálogo de conceptos» tocá «Leer los recibos de muestra» y «Elegir los recibos». Usá recibos de varios empleadores.",
+   "Tocá «Leer 5 recibos». La barra avanza («5 de 5»). Un recibo que no se pudo leer sale en rojo, con «Probar de nuevo».",
+   "Revisá cada concepto, agrupados por empleador. «Dudosa» avisa que se parece a uno que ya existe.",
+   "Corregí lo que haga falta, por ejemplo el «Rubro» (de no remunerativo a «Haber remunerativo»).",
+   "Tocá «Descartar» en lo que no corresponda. Se puede volver con «Volver a incluir».",
+   "Tocá «Seguir con N conceptos» y «Confirmar la carga» (dos toques). El control dice «Ningún concepto está pendiente de revisión»."
+  ],
+  "tips": [
+   "Podés repetir otro día con más recibos: los conceptos que ya están no se vuelven a proponer.",
+   "Antes de confirmar no se guardó nada."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p09-propuestas.jpg",
+    "pie": "La lectura terminó. (1) Avance, 5 de 5. (2) Un recibo que no se pudo leer. (3) Los conceptos propuestos por empleador."
+   },
+   {
+    "archivo": "img/p09-corregir-descartar.jpg",
+    "pie": "Arriba, (1) corregir el «Rubro» de un concepto. Abajo, (2) un concepto «Descartada» y (3) «Volver a incluir»."
+   },
+   {
+    "archivo": "img/p09-control.jpg",
+    "pie": "El control final: 17 conceptos cargados y ninguno pendiente de revisión."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Concepto",
+    "significa": "Cada renglón de un recibo: sueldo básico, aporte, cuota."
+   },
+   {
+    "termino": "Rubro",
+    "significa": "Qué tipo de concepto es: haber, descuento, etc."
+   },
+   {
+    "termino": "Remunerativo",
+    "significa": "Que suma a la base sobre la que se calculan los aportes."
+   }
+  ]
+ },
+ {
+  "id": "p10",
+  "titulo": "«Preguntame»: un asistente para dudas puntuales",
+  "bajada": "El botón amarillo contesta una pregunta por vez sobre lo que estás mirando.",
+  "parrafos": [
+   "Está en la Guía, en cada ficha y en el Mapa. Responde con lo que sabe el tablero: qué tareas hay, en qué estado están, qué las frena. No es un chat: cada pregunta es nueva y no recuerda las anteriores.",
+   "Buenas preguntas: «¿Por qué este paso y no otro?», «¿Qué pasa si lo salteo?», «¿Qué la frena hoy?», «¿Cómo estamos en general?».",
+   "No carga ni cambia nada, no mira el padrón ni los recibos. Si tu pregunta pide algo que no puede contestar con seguridad, te lo dice. Si propone pedirle un dato al sindicato, te muestra el texto y vos decidís si tocás «Crear en la Mesa»."
+  ],
+  "pasos": [
+   "Tocá el botón amarillo «Preguntame».",
+   "Elegí una pregunta sugerida o escribí la tuya (hasta 300 caracteres; si es demasiado corta, un aviso rojo te lo dice).",
+   "Tocá «Preguntar».",
+   "Leé la respuesta. Los códigos azules, como EST-02, se pueden tocar para ir a esa tarea."
+  ],
+  "tips": [
+   "Preguntar no guarda nada.",
+   "En las capturas dice «Respuesta simulada». Con la IA real el texto cambia."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p10-pm-respuesta.jpg",
+    "pie": "«Preguntame» abierto en la Guía. (1) La respuesta. (2) El código EST-02, que se puede tocar."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "IA",
+    "significa": "Inteligencia artificial: un programa que lee texto y contesta."
+   }
+  ]
+ },
+ {
+  "id": "p11",
+  "titulo": "Ver todo: el Tablero y el Mapa",
+  "bajada": "El Tablero es la lista completa; el Mapa muestra qué depende de qué.",
+  "parrafos": [
+   "En el Tablero están las 34 tareas, agrupadas en Base, Estructura, Recibos, Padrón, Trámites, Comunicación y Cierre. Los filtros de arriba cuentan cuántas hay de cada estado.",
+   "El Mapa dibuja cada tarea como una caja. Las columnas van de izquierda a derecha: «Sin requisitos», «Después · 1», «Después · 2». La flecha va de lo que se necesita a lo que lo necesita. Al tocar una caja se ilumina su camino; una línea roja cortada quiere decir que esa dependencia todavía frena."
+  ],
+  "pasos": [
+   "Tocá «Tablero» y después el filtro «Esperando un dato»: ahí ves qué tenés que pedirle al sindicato.",
+   "Tocá una fila para abrir su ficha. Volvé con «Volver a la guía».",
+   "Tocá «Mapa».",
+   "Tocá una caja: por ejemplo «Padrón cargado».",
+   "Leé la ficha de la derecha: «Necesita» y «Destraba». Tocá «Abrir la ficha» para entrar."
+  ],
+  "tips": [
+   "Ni el Tablero ni el Mapa guardan nada.",
+   "El Mapa sirve para decidir el orden: lo que «Destraba» muchas tareas conviene hacerlo antes."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p11-tablero-esperando.jpg",
+    "pie": "El Tablero filtrado por «Esperando un dato» (1): muestra qué le falta mandar al sindicato."
+   },
+   {
+    "archivo": "img/p11-mapa.jpg",
+    "pie": "El Mapa. (1) Las cajas y flechas, con el camino de «Padrón cargado» resaltado. (2) La ficha con lo que necesita y lo que destraba."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Dependencia",
+    "significa": "Una tarea que tiene que estar hecha antes que otra."
+   },
+   {
+    "termino": "Destrabar",
+    "significa": "Habilitar otras tareas al quedar hecha."
+   }
+  ]
+ },
+ {
+  "id": "p12",
+  "titulo": "Los hitos de la Mesa",
+  "bajada": "Los hitos son los puntos de control del plan; XSII te avisa cuándo uno está listo para marcar.",
+  "parrafos": [
+   "El plan de implementación de La Bancaria tiene 45 hitos en seis fases (Preparar, Acordar, Relevar, Configurar, Piloto e Implementación total). El sindicato los ve en su Mesa.",
+   "XSII sugiere qué tareas corresponden a cada hito. Cuando todas las tareas asociadas a un hito están hechas, el hito sube a la lista «hitos para marcar». Una tarea que «no aplica» no frena al hito.",
+   "XSII propone, pero nunca marca solo: lo marca una persona del equipo, porque el sindicato lo va a ver."
+  ],
+  "pasos": [
+   "Tocá «Hitos».",
+   "Tocá «Asociar todas las tareas sugeridas»: acepta de una vez las asociaciones que propone XSII. También podés usar «Asociar una tarea» en cada hito.",
+   "Mirá «Hitos para marcar en la Mesa»: cada uno tiene la etiqueta «Para marcar» y una frase como «REC-01 (Recibos de muestra) está hecha».",
+   "Tocá «Marcar hecho en la Mesa». El botón pasa a «Tocá otra vez: queda hecho en la Mesa»; con «No marcar» te arrepentís.",
+   "Tocá otra vez. Aparece el aviso verde «Quedó hecho en la Mesa: HI0021»."
+  ],
+  "tips": [
+   "Marcar un hito guarda y lo ve el sindicato. Asociar tareas se puede deshacer; marcar, en cambio, es una decisión del equipo.",
+   "Un hito sin tareas asociadas no se propone: se marca a mano en la Mesa."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p12-hitos-para-marcar.jpg",
+    "pie": "Dos hitos listos. (1) El título de la lista. (2) La etiqueta «Para marcar». (3) «Marcar hecho en la Mesa»."
+   },
+   {
+    "archivo": "img/p12-hitos-hecho.jpg",
+    "pie": "Después de marcar: (1) el aviso verde y (2) los contadores: 1 para marcar, 1 de 45 hechos."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Hito",
+    "significa": "Un punto de control del plan, por ejemplo «Recibos de muestra recibidos»."
+   },
+   {
+    "termino": "Asociar",
+    "significa": "Vincular un hito con las tareas que lo cumplen."
+   }
+  ]
+ },
+ {
+  "id": "p13",
+  "titulo": "Cuando algo no sale como en el libro",
+  "bajada": "Hay cuatro salidas ordenadas, y todas dejan registro.",
+  "parrafos": [
+   "No siempre una tarea se resuelve como indica la ficha. Para esos casos, en «Qué se puede hacer» hay botones. «Completar a mano», «No aplica» y «Posponer» piden un motivo escrito, y todo queda en «Historial de la tarea» con quién y cuándo.",
+   "«Completar a mano»: la tarea sale como hecha aunque el sistema no lo vea, con la etiqueta «A mano». Se deshace con «Deshacer: completada a mano». «No aplica»: no corresponde en este sindicato; se vuelve atrás con «Volver a aplicar». «Posponer»: la saca de las propuestas sin cambiarle el estado; se vuelve con «Retomar». Nada se borra nunca."
+  ],
+  "pasos": [
+   "Abrí la ficha de la tarea y buscá «Qué se puede hacer».",
+   "Tocá el botón que corresponda, por ejemplo «Completar a mano».",
+   "Escribí el motivo. Si lo dejás vacío, aparece un error y no guarda.",
+   "Tocá «Guardar» (o «Cancelar»).",
+   "Mirá la etiqueta nueva junto al estado y abrí «Historial de la tarea» para ver el registro.",
+   "Para volver atrás, tocá «Deshacer: completada a mano», «Volver a aplicar» o «Retomar»."
+  ],
+  "tips": [
+   "Si ni así se destraba, avisale a la persona del equipo que coordina la implementación de La Bancaria. Pasale el código de la tarea (por ejemplo EST-01) y qué dice «Lo que dice el control».",
+   "Si el botón «Confirmar» te dice «Primero registrá que llegó el insumo», marcá antes como recibido el dato que se espera."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p13-a-mano.jpg",
+    "pie": "Una tarea completada a mano. (1) La etiqueta «A mano». (2) El botón para deshacer. (3) El historial."
+   },
+   {
+    "archivo": "img/p13-pospuesta.jpg",
+    "pie": "Una tarea pospuesta. (1) La etiqueta «Pospuesta». (2) «Retomar»."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Motivo",
+    "significa": "Frase corta que explica por qué se tomó la decisión."
+   },
+   {
+    "termino": "Historial",
+    "significa": "El registro de quién hizo qué y cuándo."
+   }
+  ]
+ },
+ {
+  "id": "p14",
+  "titulo": "Tu primera semana con La Bancaria",
+  "bajada": "Por dónde empezar, según lo que XSII muestra en un proyecto recién abierto.",
+  "parrafos": [
+   "Cuando abrís el proyecto, 3 tareas ya están hechas solas (Ficha del sindicato, Aportes de ley y Topes vigentes), 4 no aplican, 7 se pueden hacer ya y 4 esperan un dato del sindicato. Lo que más tarda es lo que depende del sindicato: por eso se pide primero.",
+   "Día 1: pedí los cuatro datos que faltan. Después, con lo que depende solo de vos, avanzá en plataforma. Cuando lleguen los archivos, cargalos con XSII en este orden: seccionales, padrón y conceptos."
+  ],
+  "pasos": [
+   "Día 1, pedidos: en «Seccionales», «Padrón recibido», «Recibos de muestra» y «Cuota sindical y aporte solidario» tocá «Reclamar en la Mesa». Son las cuatro que están en «Esperando un dato».",
+   "Día 1, plataforma: confirmá «Módulos contratados» (junto con «Seccionales», habilita «Áreas con permisos»), creá el «Primer administrador con clave propia» y completá «Marca: logo, colores y prueba de lectura» y «Política de registro y canal de mail».",
+   "Cuando llegue el contrato firmado: «Cláusula de confidencialidad y contrato».",
+   "Al llegar la lista de seccionales: cargá «Seccionales». Eso destraba «Seccionales ubicadas en el mapa», «Áreas con permisos», «Padrón cargado» y «Listas del sindicato».",
+   "Al llegar los recibos: «Recibos de muestra» y luego «Catálogo de conceptos». Con la cuota y el catálogo se habilitan «Reglas de control».",
+   "Al llegar el padrón: «Padrón recibido» y «Padrón cargado»."
+  ],
+  "tips": [
+   "«Noticias iniciales» y «Beneficios» se pueden hacer desde el primer día, pero no destraban nada: dejalas para cuando haya tiempo.",
+   "Las cuatro que no aplican (escala salarial, empleadores, convenio para consultas y encuestas) corresponden a funciones que La Bancaria no contrató."
+  ],
+  "figuras": [
+   {
+    "archivo": "img/p14-se-puede-hacer.jpg",
+    "pie": "El Tablero de un proyecto recién abierto, filtrado por «Se puede hacer»: son las 7 tareas para arrancar."
+   }
+  ],
+  "palabras": [
+   {
+    "termino": "Módulo",
+    "significa": "Una función que el sindicato contrató. Si no la tiene, sus tareas figuran «No aplica»."
+   },
+   {
+    "termino": "Seccional",
+    "significa": "Sede o delegación del sindicato."
+   },
+   {
+    "termino": "Padrón",
+    "significa": "Lista de afiliados."
+   },
+   {
+    "termino": "Concepto",
+    "significa": "Renglón de un recibo."
+   },
+   {
+    "termino": "Ensayo",
+    "significa": "Prueba sin guardar."
+   },
+   {
+    "termino": "Hito",
+    "significa": "Punto de control del plan."
+   },
+   {
+    "termino": "La Mesa",
+    "significa": "Donde el equipo y el sindicato se mandan pedidos."
+   },
+   {
+    "termino": "Tarjeta",
+    "significa": "Cada pedido de la Mesa."
+   },
+   {
+    "termino": "Insumo",
+    "significa": "Dato o archivo que manda el sindicato."
+   }
+  ]
+ }
+]

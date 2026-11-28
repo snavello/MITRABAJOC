@@ -1,0 +1,31 @@
+Apellido y Nombre;Nro CUIL;Delegación;F. Ingreso;Domicilio;Altura;Localidad;Provincia;CP;Teléfono;Email;Fecha de Nacimiento;DNI
+Pérez, Juan;20950000016;Sede Central;01/01/2005;Córdoba;100;Ciudad Autónoma de Buenos Aires;Ciudad Autónoma de Buenos Aires;1000;341 555-1000;afiliado1@ejemplo.org.ar;1960-01-01;20000000
+Gómez, María;27950000029;Seccional Rosario;2006-02-02;Avenida Colón;137;Rosario;Santa Fe;1013;341 555-1001;afiliado2@ejemplo.org.ar;1961-02-02;20001111
+López, Carlos;20950000032;Seccional Córdoba;2007-03-03;San Martín;174;Córdoba;Córdoba;1026;341 555-1002;afiliado3@ejemplo.org.ar;1962-03-03;20002222
+Fernández, Ana;27950000045;Seccional Bariloche;04/04/2008;Belgrano;211;Mendoza;Mendoza;1039;341 555-1003;afiliado4@ejemplo.org.ar;1963-04-04;20003333
+Martínez, Luis;20950000059;Seccional Tucumán;2009-05-05;Mitre;248;San Miguel de Tucumán;Tucumán;1052;341 555-1004;afiliado5@ejemplo.org.ar;1964-05-05;20004444
+Rodríguez, Laura;27950000061;Seccional Mar del Plata;2010-06-06;Sarmiento;285;Mar del Plata;Buenos Aires;1065;341 555-1005;afiliado6@ejemplo.org.ar;1965-06-06;20005555
+Sánchez, Diego;20950000075;Seccional Neuquén;07/07/2011;Rivadavia;322;Neuquén;Neuquén;1078;341 555-1006;afiliado7@ejemplo.org.ar;1966-07-07;20006666
+Romero, Sofía;27950000088;Seccional Jujuy;2012-08-08;Córdoba;359;Salta;Salta;1091;341 555-1007;afiliado8@ejemplo.org.ar;1967-08-08;20007777
+Díaz, Pablo;20950000091;Sede Central;2013-09-09;Avenida Colón;396;Ciudad Autónoma de Buenos Aires;Ciudad Autónoma de Buenos Aires;1104;341 555-1008;afiliado9@ejemplo.org.ar;1968-09-09;20008888
+Torres, Lucía;27950000118;Seccional Rosario;10/10/2014;San Martín;433;Rosario;Santa Fe;1117;341 555-1009;afiliado10@ejemplo.org.ar;1969-10-10;20009999
+Ruiz, Martín;20950000121;Seccional Córdoba;2015-11-11;Belgrano;470;Córdoba;Córdoba;1130;341 555-1010;afiliado11@ejemplo.org.ar;1970-11-11;20011110
+Álvarez, Julia;20-33445566-1;Seccional Mendoza;2016-12-12;Mitre;507;Mendoza;Mendoza;1143;341 555-1011;afiliado12@ejemplo.org.ar;1971-12-12;20012221
+Acosta, Hernán;20950000148;Seccional Tucumán;13/01/2017;Sarmiento;544;San Miguel de Tucumán;Tucumán;1156;341 555-1012;afiliado13@ejemplo.org.ar;1972-01-13;20013332
+Benítez, Carla;20950000148;Seccional Mar del Plata;2018-02-14;Rivadavia;581;Mar del Plata;Buenos Aires;1169;341 555-1013;afiliado14@ejemplo.org.ar;1973-02-14;20014443
+Castro, Nicolás;20950000156;Seccional Neuquén;2019-03-15;Córdoba;618;Neuquén;Neuquén;1182;341 555-1014;afiliado15@ejemplo.org.ar;1974-03-15;20015554
+Molina, Valeria;27950000169;Seccional Salta;16/04/2005;Avenida Colón;655;Salta;Salta;1195;341 555-1015;afiliado16@ejemplo.org.ar;1975-04-16;20016665
+Silva, Ezequiel;20950000172;Sede Central;2006-05-17;San Martín;692;Ciudad Autónoma de Buenos Aires;Ciudad Autónoma de Buenos Aires;1208;341 555-1016;afiliado17@ejemplo.org.ar;1976-05-17;20017776
+Rojas, Camila;27950000185;Seccional Rosario;2007-06-18;Belgrano;729;;Santa Fe;1221;341 555-1017;afiliado18@ejemplo.org.ar;1977-06-18;20018887
+Herrera, Tomás;20950000199;Seccional Córdoba;19/07/2008;Mitre;766;Córdoba;Córdoba;1234;341 555-1018;afiliado19@ejemplo.org.ar;1978-07-19;20019998
+Medina, Paula;27950000207;Seccional Mendoza;2009-08-20;Sarmiento;803;Mendoza;Mendoza;1247;341 555-1019;afiliado20@ejemplo.org.ar;1979-08-20;20021109
+Suárez, Gonzalo;20950000210;Seccional Tucumán;2010-09-21;Rivadavia;840;San Miguel de Tucumán;Tucumán;1260;341 555-1020;afiliado21@ejemplo.org.ar;1980-09-21;20022220
+Aguirre, Florencia;27950000223;Seccional Mar del Plata;22/10/2011;Córdoba;877;Mar del Plata;Buenos Aires;1273;341 555-1021;afiliado22@ejemplo.org.ar;1981-10-22;20023331
+Ortiz, Matías;20950000237;Seccional Neuquén;2012-11-23;Avenida Colón;914;Neuquén;Neuquén;1286;341 555-1022;afiliado23@ejemplo.org.ar;1982-11-23;20024442
+Navarro, Brenda;27950000258;Seccional Salta;2013-12-24;San Martín;951;Salta;Salta;1299;341 555-1023;afiliado24@ejemplo.org.ar;1983-12-24;20025553
+Flores, Sebastián;20950000261;Sede Central;25/01/2014;Belgrano;988;Ciudad Autónoma de Buenos Aires;Ciudad Autónoma de Buenos Aires;1312;341 555-1024;afiliado25@ejemplo.org.ar;1984-01-25;20026664
+Ríos, Natalia;27950000274;Seccional Rosario;2015-02-26;Mitre;1025;Rosario;Santa Fe;1325;341 555-1025;afiliado26@ejemplo.org.ar;1985-02-26;20027775
+Vega, Lautaro;20950000288;Seccional Córdoba;2016-03-27;Sarmiento;1062;Córdoba;Córdoba;1338;341 555-1026;afiliado27@ejemplo.org.ar;1986-03-27;20028886
+Peralta, Micaela;27950000290;Seccional Mendoza;01/04/2017;Rivadavia;1099;Mendoza;Mendoza;1351;341 555-1027;afiliado28@ejemplo.org.ar;1987-04-28;20029997
+Pérez, Juan Ignacio;20950000318;Sede Central;01/01/2005;Córdoba;100;Ciudad Autónoma de Buenos Aires;Ciudad Autónoma de Buenos Aires;1000;341 555-1000;afiliado1@ejemplo.org.ar;1960-01-01;20000000
+Quiroga, Marta;27950000320;Seccional Salta;01/01/2005;Córdoba;100;Salta;Salta;1000;341 555-1000;afiliado1@ejemplo.org.ar;1960-01-01;20000000
