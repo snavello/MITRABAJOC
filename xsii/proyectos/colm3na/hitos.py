@@ -98,7 +98,7 @@ def _porque(tareas: list) -> str:
     activas = [t for t in tareas if t["estado"] != "no_aplica"]
     if len(activas) == 1:
         return f"{activas[0]['codigo']} ({activas[0]['nombre']}) está hecha."
-    return f"Las {len(activas)} tareas enlazadas están hechas: " + ", ".join(t["codigo"] for t in activas) + "."
+    return f"Las {len(activas)} tareas asociadas están hechas: " + ", ".join(t["codigo"] for t in activas) + "."
 
 
 def _no_propuesto(h: dict, tareas: list) -> str:
@@ -106,10 +106,10 @@ def _no_propuesto(h: dict, tareas: list) -> str:
     if h["hecho"]:
         return "El hito ya está marcado como hecho en la Mesa."
     if not tareas:
-        return "El hito no tiene tareas enlazadas."
+        return "El hito no tiene tareas asociadas."
     activas = [t for t in tareas if t["estado"] != "no_aplica"]
     if not activas:
-        return "Las tareas enlazadas no aplican a este sindicato: no hay nada que respalde el hito."
+        return "Las tareas asociadas no aplican a este sindicato: no hay nada que respalde el hito."
     faltan = [t["codigo"] for t in activas if not t["resuelta"]]
     if faltan:
         return "Todavía faltan tareas: " + ", ".join(faltan) + "."

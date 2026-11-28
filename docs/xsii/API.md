@@ -1132,3 +1132,41 @@ Lo que el servidor hace y el contrato dejaba abierto o dicho de otra manera:
   estado, más el resumen. No trae el texto del hito.
 - Un id 0 no es un id válido de la Mesa: contesta 404 (no existe), como cualquier
   id que no es de este proyecto.
+
+## Correcciones del QA de servidor del bloque 5
+
+QA independiente (`test_xsii_bloque5_qa.py`, 36 pruebas por HTTP). Origen de cada hallazgo entre paréntesis.
+
+1. **Cambiar la tarjeta de un insumo dejaba fijado el archivo de la tarjeta anterior** (la app).
+   `xsii_registrar_insumo` heredaba siempre el `archivo_id` del registro previo: pedir de nuevo el
+   insumo con OTRA tarjeta mantenía fijado un archivo que ya no era de la tarjeta del insumo, y la
+   asistida seguía ofreciéndolo y leyéndolo. Ahora solo se hereda si la tarjeta es la misma.
+2. **«Preguntame» aceptaba un código de la Mesa inventado** (la app). `HI0007`, `PE0042` o `AR000123`
+   no son códigos de tarea: se controlaban como una cifra suelta y pasaban si ese número salía en
+   cualquier parte de lo que devolvieron las herramientas. `asistente.validar` ahora exige que todo
+   código de la Mesa (`PATRON_REF_MESA`, dos letras y 4 a 6 dígitos) aparezca tal cual en lo visto o en
+   la pregunta.
+3. **Un PDF (o ZIP, imagen, Office viejo) usado como planilla daba 200** con «Falta una columna…», en
+   el archivo de la Mesa y en el subido directo (la app). `base.leer_csv` ahora rechaza con 400 las
+   firmas conocidas (`FIRMAS_NO_PLANILLA`) y `leer_archivo_de_mesa` rechaza por extensión
+   (`EXTENSIONES_NO_PLANILLA`) antes de bajar el archivo: «El archivo … no es una planilla (CSV)».
+4. **Textos para personas**: «enlazar/enlazado» pasó a «asociar/asociada» en errores, motivos
+   («Las tareas asociadas…») y movimientos («Asoció el hito…»). Rutas, campos y claves no cambian.
+
+Probado sin hallazgos: aislamiento por proyecto en todas las rutas, usuario del sindicato (403) y demo
+(404); lo que ve el sindicato en la Mesa (solo «bajó X desde XSII» sobre un archivo suyo; nada de una
+nota interna ni de movimientos de XSII); archivos borrados, de tarjeta cerrada, internos y con datos
+personales; cuerpos hostiles; seis marcados simultáneos, enlazar y marcar a la vez y `aceptar` en
+paralelo; hito borrado o editado con enlaces activos; migración repetida y downgrade; tabla fuera del
+clonado y del borrado.
+
+**Observaciones sin corregir (decisión de producto):**
+- Un nuevo registro del insumo (por ejemplo «Reclamar») reinicia `cuando`, así que `archivos_nuevos`
+  vuelve a 0 aunque haya un archivo del sindicato esperando que lo fijen.
+- Un hito desmarcado en la Mesa después de marcado por XSII vuelve a proponerse (coherente con «tareas
+  hechas y hito sin marcar»).
+- Sugerencias que cubren solo una parte del texto del hito: «Catálogo de conceptos y reglas… aprobado
+  por el sindicato» (REC-04/05 no verifican la aprobación), «Padrón recibido y revisado…» (PAD-01 solo
+  verifica la recepción), «Operadores capacitados…» (CIE-03 no verifica la capacitación) y «Primeros dos
+  o tres trámites…» (TRA-01 pide uno). La persona que acepta el marcado es quien las cubre.
+- El sindicato ve «bajó X desde XSII» en el hilo de sus propios archivos: nombra una herramienta interna.

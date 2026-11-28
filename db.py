@@ -12606,8 +12606,8 @@ def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombr
     if previo is not None:
         if tarjeta_id is None:
             tarjeta_id = previo.tarjeta_id
-        if archivo_id is None:
-            archivo_id = previo.archivo_id
+        if archivo_id is None and tarjeta_id == previo.tarjeta_id:
+            archivo_id = previo.archivo_id        # el archivo fijado es de ESA tarjeta: con otra, no se hereda
         previo.activa = False
         previo.retirado_por_id, previo.retirado_por_nombre = a.id, a.nombre
         previo.retirado_cuando = fechas.ahora_con_segundos()
@@ -12796,7 +12796,7 @@ def _xsii_enlazar(s: Session, proyecto_id: int, a, hito_id: int, hito_codigo: st
         return False
     s.add(XsiiHito(proyecto_id=proyecto_id, hito_id=hito_id, codigo=codigo, quien_id=a.id, quien_nombre=a.nombre))
     _xsii_movimiento(s, proyecto_id, a, "hito_enlazado",
-                     f"Enlazó el hito {hito_codigo} de la Mesa con {nombre_tarea}", codigo=codigo,
+                     f"Asoció el hito {hito_codigo} de la Mesa con {nombre_tarea}", codigo=codigo,
                      cantidades={"hito": hito_codigo})
     s.flush()
     return True
@@ -12826,13 +12826,13 @@ def xsii_desenlazar_hito(s: Session, proyecto_id: int, actor, hito_id: int, codi
                                            XsiiHito.codigo == codigo, XsiiHito.activa == True)   # noqa: E712
                     .with_for_update()).first()
     if enlace is None:
-        raise XsiiError(409, "Ese hito no está enlazado con esa tarea.")
+        raise XsiiError(409, "Ese hito no está asociado con esa tarea.")
     enlace.activa = False
     enlace.retirado_por_id, enlace.retirado_por_nombre = a.id, a.nombre
     enlace.retirado_cuando = fechas.ahora_con_segundos()
     s.add(enlace)
     _xsii_movimiento(s, proyecto_id, a, "hito_desenlazado",
-                     f"Sacó el enlace del hito {hito_codigo} de la Mesa con {nombre_tarea}", codigo=codigo,
+                     f"Sacó la asociación del hito {hito_codigo} de la Mesa con {nombre_tarea}", codigo=codigo,
                      cantidades={"hito": hito_codigo})
     s.commit()
 
@@ -12853,7 +12853,7 @@ def xsii_aceptar_hitos_sugeridos(s: Session, proyecto_id: int, actor, pares: lis
         s.commit()
     except IntegrityError:
         s.rollback()
-        raise XsiiError(409, "Otra persona enlazó hitos al mismo tiempo. Volvé a intentar.")
+        raise XsiiError(409, "Otra persona asoció hitos al mismo tiempo. Volvé a intentar.")
     return n
 
 
@@ -12923,7 +12923,7 @@ def xsii_fijar_archivo(s: Session, proyecto_id: int, actor, clave: str, nombre_i
         XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave,
         XsiiInsumo.activa == True)).first()                                    # noqa: E712
     if not activo:
-        raise XsiiError(404, "Este insumo no tiene una tarjeta de la Mesa enlazada.")
+        raise XsiiError(404, "Este insumo no tiene una tarjeta de la Mesa asociada.")
     arch = impl_archivo(s, proyecto_id, archivo_id)
     if arch is None or arch.tarjeta_id != activo or arch.borrado_en:
         raise XsiiError(404, "No encontré ese archivo en la tarjeta de este insumo.")

@@ -590,6 +590,10 @@ def _archivo_mesa(s, ctx: Contexto, modulo) -> dict | None:
     return {"id": a.id, "codigo": a.codigo, "nombre": a.nombre}
 
 
+EXTENSIONES_NO_PLANILLA = frozenset(
+    "pdf xls xlsx xlsm ods doc docx odt rtf zip rar 7z gz png jpg jpeg gif bmp webp heic tif tiff".split())
+
+
 def leer_archivo_de_mesa(s, ctx: Contexto, actor, codigo: str, archivo_id: int) -> bytes:
     """Los bytes del archivo de la Mesa fijado al insumo de la asistida de planilla,
     registrando la descarga a nombre de la persona (motivo XSII). Hace commit de la
@@ -601,6 +605,10 @@ def leer_archivo_de_mesa(s, ctx: Contexto, actor, codigo: str, archivo_id: int) 
     reg = ctx.insumos.get(modulo.describir().get("insumo"))
     if reg is None or not reg.archivo_id or reg.archivo_id != archivo_id:
         raise db.XsiiError(404, "Ese archivo no es el que está fijado a este insumo.")
+    meta = db.impl_archivo(s, ctx.pid, archivo_id)
+    if meta is not None and not meta.borrado_en and (
+            meta.nombre.lower().rsplit(".", 1)[-1] in EXTENSIONES_NO_PLANILLA if "." in meta.nombre else False):
+        raise db.XsiiError(400, "El archivo de la Mesa no es una planilla (CSV): subí la planilla en CSV.")
     try:
         baja = db.impl_bajar_archivo(s, ctx.pid, archivo_id, actor, motivo="xsii")
     except implementacion.ErrorImpl as e:
