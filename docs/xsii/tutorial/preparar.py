@@ -58,6 +58,9 @@ with db.get_session() as s:
         s.exec(text("DELETE FROM trabajador WHERE cuil = :c AND NOT EXISTS (SELECT 1 FROM tramite WHERE cuil = :c)"), params={"c": c})
         s.exec(text("DELETE FROM cuentatrabajador WHERE cuil = :c AND NOT EXISTS (SELECT 1 FROM trabajador WHERE cuil = :c)"), params={"c": c})
     s.commit()
+    # Y los conceptos que el paso «Conceptos desde los recibos de muestra» carga (empleadores inventados de servidor_recibos.py).
+    s.exec(text("DELETE FROM concepto WHERE cuit_empleador IN ('30700001004','30700001012','30700001020')"))
+    s.commit()
     u = s.exec(select(db.UsuarioPlataforma).where(db.UsuarioPlataforma.usuario == USUARIO)).first()
     if not u:
         u = db.UsuarioPlataforma(usuario=USUARIO, nombre=NOMBRE, email="", clave_hash=auth.hashear_clave("xsii-tutorial-1"),

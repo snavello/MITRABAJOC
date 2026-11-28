@@ -1,15 +1,15 @@
 {
- "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 4",
+ "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 4b",
  "titulo": "Cómo se sigue una implementación con XSII",
  "bajada": "Un recorrido por las pantallas reales de XSII, con un sindicato de la demo y los pasos hechos de verdad, uno por uno.",
- "fecha": "27 de noviembre de 2026",
+ "fecha": "28 de noviembre de 2026",
  "intro": [
   "XSII es la guía de implementación de Colm3na. Conoce todas las tareas que hay que hacer para dejar un sindicato funcionando, sabe cuáles dependen de cuáles, calcula solo cómo está cada una mirando el sistema y te dice cuál conviene hacer ahora.",
   "Este tutorial sigue una implementación desde que arranca. Cada pantalla es una captura real de XSII. Los datos son los de la demo, simulados: el sindicato es la UOM de prueba, el proyecto se llama «UOM · Primera versión» y quien trabaja es «Sofía Demo», un usuario de prueba. Nada de lo que ves es de un sindicato real.",
   "Los círculos naranjas numerados que aparecen en las capturas no son parte de la pantalla: los pusimos para señalar dónde mirar, y el texto de cada paso los explica.",
   "Una aclaración importante: en este tutorial las respuestas de «Preguntame» son SIMULADAS. El entorno donde se sacaron las capturas no llama a la IA, así que la pantalla lo avisa con una línea chica debajo de cada respuesta. En Pruebas las escribe el modelo, y por eso el texto va a ser distinto, con otras palabras. Lo que no cambia es cómo se usa, qué muestra y qué puede hacer."
  ],
- "alcance": "Esta versión suma lo del bloque 4: las columnas de la planilla se reconocen solas y se pueden corregir, la carga del padrón desde una planilla (con el total declarado y la comparación al final) y la «Responsable» de cada seccional. Sigue valiendo todo lo anterior: la carga de seccionales, «Preguntame», los botones Atrás y Adelante, el reclamo de un dato en la Mesa, la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. «Preguntame» sigue sin cargar nada: solo lee el tablero y propone reclamos; las tareas que cargan datos, por ahora, son Seccionales y Padrón.",
+ "alcance": "Esta versión suma lo del bloque 4b: la tarea «Conceptos» (REC-04) se arma leyendo recibos de muestra, con revisión concepto por concepto antes de cargar. Sigue valiendo todo lo anterior: la carga del padrón y de las seccionales desde planilla (con el reconocimiento de columnas), «Preguntame», los botones Atrás y Adelante, el reclamo de un dato en la Mesa, la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. «Preguntame» sigue sin cargar nada: solo lee el tablero y propone reclamos; las tareas que cargan datos, por ahora, son Seccionales, Padrón y Conceptos.",
  "pasos": [
   {
    "id": "entrar",
@@ -399,6 +399,70 @@
    ]
   },
   {
+   "id": "leer-recibos",
+   "titulo": "Leer los recibos de muestra",
+   "texto": [
+    "La tarea «Catálogo de conceptos» (REC-04) arma el catálogo de conceptos del sindicato a partir de recibos reales. Necesita que «Recibos de muestra» (REC-01) ya esté confirmada: si no lo está, el panel lo avisa en el primer momento, y se puede leer igual pero no cargar. Acá la confirmamos antes.",
+    "<b>Momento 1.</b> En el aviso (1) se ve que esta corrida es de prueba: la lectura es simulada y no usa la IA de verdad. Se eligen o se sueltan los recibos (2): PDF o fotos, hasta 8 MB cada uno; conviene sumar entre 30 y 60 de varios empleadores. Abajo queda la lista (3) y se puede quitar cualquiera. Con <b>Leer</b> (4) empieza la lectura. Para este ejemplo usamos cinco recibos de empresas inventadas.",
+    "<b>Momento 2.</b> Los recibos se leen de a uno, dos a la vez. Un cartel (1) repite que todavía no se guardó nada. Arriba (2) se ve el avance, «2 de 5», con un botón para <b>Detener</b> (3), y en la lista (4) qué pasó con cada recibo: leído y cuántos conceptos nuevos trajo, leyéndose o en cola. Los conceptos van apareciendo debajo a medida que se leen.",
+    "Cuando termina, la lista dice cuántos recibos no se pudieron leer (2): ese se puede probar de nuevo o dejar. Los demás conceptos quedan agrupados por empresa (4). Arriba hay filtros (3) para ver solo las dudosas, las rechazadas o las descartadas. Las dudosas van primero (5): se parecen a un concepto que ya está, o los recibos no coinciden en el rubro. No se carga ningún recibo ni dato de personas: solo se proponen conceptos."
+   ],
+   "figuras": [
+    {
+     "archivo": "50-rb-paso1",
+     "epigrafe": "Momento 1: aviso de prueba (1), los recibos elegidos (2 y 3) y el botón para leerlos (4).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "51-rb-lectura",
+     "epigrafe": "La lectura en marcha: el aviso de que nada se guardó (1), el avance (2), Detener (3) y el estado de cada recibo (4).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "52-rb-propuestas",
+     "epigrafe": "Terminada la lectura: el recibo que no se pudo leer (2), los filtros (3), los conceptos por empresa (4) y una dudosa arriba (5).",
+     "ancho": "med"
+    }
+   ]
+  },
+  {
+   "id": "revisar-recibos",
+   "titulo": "Revisar y cargar los conceptos",
+   "texto": [
+    "Nada entra al catálogo sin que una persona lo haya mirado. Cada concepto se puede corregir o descartar antes de cargar.",
+    "<b>Corregir.</b> El presentismo (105) se parece a uno que el sindicato ya tiene, «PRESENT» (1), y además la lectura lo tomó como haber no remunerativo porque así lo vio en uno de los recibos. Se cambia el rubro a «Haber remunerativo» (2). Con «Corresponde a» (3) se dice a qué concepto genérico del sindicato equivale, así no queda duplicado. También se puede cambiar la descripción, y en los descuentos, la categoría sindical.",
+    "<b>Descartar.</b> La cuota de un préstamo mutual (1) no es un concepto que le interese al sindicato. Con «Descartar» (2) queda afuera y se puede volver a incluir hasta el momento de cargar. Los rechazados (por ejemplo, un CUIT del empleador que no cierra) se ven pero no se pueden incluir.",
+    "<b>Momento 3.</b> «Seguir» resume qué se va a cargar: 11 conceptos, uno descartado (1), repartidos por rubro (2). Igual que en las otras tareas, la carga pide dos toques (3): el segundo confirma, y «No cargar» (4) echa marcha atrás. Los conceptos entran ya revisados: no quedan pendientes.",
+    "<b>Momento 4.</b> El panel dice que la carga se hizo (1), cuántos conceptos entraron, cuántos ya estaban y cuántos recibos se leyeron (2), y qué dice el control (3): «Ningún concepto está pendiente de revisión». Como en las demás tareas, la carga <b>no confirma la tarea</b>: queda en «Qué sigue» (4) y la confirma una persona. Si más adelante se leen otros recibos, los conceptos que ya están no se vuelven a proponer."
+   ],
+   "figuras": [
+    {
+     "archivo": "53-rb-corregir",
+     "epigrafe": "Un concepto dudoso: el aviso de parecido (1), el rubro corregido (2) y «Corresponde a» (3).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "54-rb-descartar",
+     "epigrafe": "Un concepto descartado (1), con la opción de volver a incluirlo (2).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "55-rb-confirmar",
+     "epigrafe": "Momento 3: el resumen (1) y (2), y los dos toques para cargar (3) y (4).",
+     "ancho": "med"
+    },
+    {
+     "archivo": "56-rb-control",
+     "epigrafe": "Después de cargar: cifras (2), control (3) y qué sigue (4).",
+     "ancho": "med"
+    }
+   ],
+   "recuadro": [
+    "Los recibos no se guardan",
+    "De cada recibo solo se miran los conceptos. No queda el recibo ni nombres, CUIL o importes de personas, y el historial de la tarea dice solamente cuántos conceptos se cargaron y cuántos recibos se leyeron."
+   ]
+  },
+  {
    "id": "error",
    "titulo": "Un error: completar a mano sin motivo",
    "texto": [
@@ -580,8 +644,8 @@
  ],
  "viene": [
   [
-   "Bloque 5: Conceptos",
-   "La próxima tarea que el asistente va a preparar y cargar con el mismo método de los cuatro momentos: explicar, ensayar sin guardar, cargar con confirmación y controlar. Es el mismo panel, con otras columnas."
+   "Próximas tareas asistidas",
+   "Las demás tareas que se puedan asistir con el mismo método de los cuatro momentos: explicar, ensayar sin guardar, cargar con confirmación y controlar."
   ],
   [
    "Después",

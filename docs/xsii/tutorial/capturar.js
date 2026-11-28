@@ -291,6 +291,37 @@ async function foto(page, nombre, { sel, marcas = [], pad = 18, maxAlto = 0, cli
   await abrirBloque(page, 'Historial de la tarea');
   await foto(page, '22-pad01-historial', { sel: '.ficha', marcas: [{ h3: 'Historial de la tarea', n: 1 }] });
 
+  // 12. Conceptos desde los recibos de muestra (REC-04). Va al final para no mover el estado de los pasos de arriba.
+  // Requiere servidor_recibos.py (cada recibo de ejemplo devuelve conceptos distintos) y que REC-01 esté resuelta.
+  await ir('?tarea=REC-01');
+  await page.click('button:has-text("Marcar recibido")'); await sleep(1100);
+  await page.click('button.btn.p:text-is("Confirmar")'); await sleep(1100);
+  await ir('?tarea=REC-04');
+  await page.waitForSelector('#x-as-abrir:not([aria-disabled])');
+  await page.click('#x-as-abrir'); await sleep(900);
+  const RECIBOS = ['recibo-delta-01.png', 'recibo-delta-02.png', 'recibo-norte-01.png', 'recibo-sur-01.png', 'recibo-borroso.png'].map(n => path.join(__dirname, 'recibos-ejemplo', n));
+  await page.setInputFiles('#x-rb-archivos', RECIBOS); await sleep(600);
+  await foto(page, '50-rb-paso1', { sel: '#x-as', pad: 14, maxAlto: 1700, marcas: [{ css: '#x-rb-ia', n: 1 }, { css: '.rb-zona', n: 2 }, { css: '.rb-elegidos', n: 3 }, { css: '#x-rb-leer', n: 4 }] });
+  await page.click('#x-rb-leer'); await sleep(3400);
+  await foto(page, '51-rb-lectura', { sel: '#x-as', pad: 14, maxAlto: 1300, marcas: [{ css: '.as-nada', n: 1 }, { css: '.rb-prog', n: 2 }, { css: '#x-rb-detener', n: 3 }, { css: '#x-rb-lista', n: 4 }] });
+  await page.waitForSelector('.rb-prog.fin', { timeout: 60000 }); await sleep(900);
+  await foto(page, '52-rb-propuestas', { sel: '#x-as', pad: 14, maxAlto: 2300, marcas: [{ css: '.rb-prog', n: 1 }, { css: '.rb-it.fallo', n: 2 }, { css: '#x-rb-filtros', n: 3 }, { css: '.rb-g', n: 4 }, { css: '.rb-f.dudosa', n: 5 }] });
+  // La corrección y el descarte: el presentismo (leído como no remunerativo) pasa a ser haber remunerativo; el préstamo mutual se descarta.
+  const fila = cod => page.locator('li.rb-f', { has: page.locator('b.rb-cod', { hasText: new RegExp('^' + cod + '$') }) });
+  const etiquetar = () => page.evaluate(() => { document.querySelectorAll('li.rb-f').forEach(li => { const c = li.querySelector('.rb-cod').textContent; if (c === '105') { li.setAttribute('data-tut', 'corr'); li.closest('section').setAttribute('data-tut-g', 'g1'); } if (c === '230' && !document.querySelector('[data-tut="desc"]')) { li.setAttribute('data-tut', 'desc'); li.closest('section').setAttribute('data-tut-g', 'g2'); } }); });
+  await etiquetar();
+  await fila('105').locator('.rb-c:has(label:text-is("Rubro")) select').selectOption('haber'); await sleep(500);
+  await fila('230').first().locator('.rb-descartar').click(); await sleep(600);
+  await etiquetar();
+  await foto(page, '53-rb-corregir', { sel: '[data-tut-g="g1"]', pad: 14, marcas: [{ css: '[data-tut="corr"] .rb-avs', n: 1 }, { css: '[data-tut="corr"] select[id$="-r"]', n: 2 }, { css: '[data-tut="corr"] select[id$="-g"]', n: 3 }] });
+  await foto(page, '54-rb-descartar', { sel: '[data-tut-g="g2"]', pad: 14, marcas: [{ css: '[data-tut="desc"] .pil', n: 1 }, { css: '[data-tut="desc"] .rb-descartar', n: 2 }] });
+  await page.click('#x-rb-seguir'); await sleep(900);
+  await page.click('#x-as-cargar'); await sleep(700);
+  await foto(page, '55-rb-confirmar', { sel: '#x-as', pad: 14, marcas: [{ css: '.rb-voy', n: 1 }, { css: '.kpis', n: 2 }, { css: '#x-as-cargar', n: 3 }, { css: '#x-as-nocargar', n: 4 }] });
+  await page.click('#x-as-cargar'); await page.waitForSelector('#x-as-listo'); await sleep(1200);
+  await foto(page, '56-rb-control', { sel: '#x-as', pad: 14, maxAlto: 1700, marcas: [{ css: '.as-ok', n: 1 }, { css: '.kpis', n: 2 }, { css: '.as-ctl', n: 3 }, { css: '.as-sigue', n: 4 }] });
+  await page.click('#x-as-listo'); await sleep(1300);
+
   console.log('errores de consola:', JSON.stringify(errs));
   await b.close();
 })().catch(e => { console.error('FALLO', e); process.exit(1); });

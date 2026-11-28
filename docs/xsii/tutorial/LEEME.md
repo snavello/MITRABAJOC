@@ -67,3 +67,14 @@ La miniatura `recursos/xsii-tutorial.jpg` (640x400) es una captura de la portada
   de demo local (2.976 afiliados de la UOM antes de cargar): si esa base cambia, cambia la cifra y hay que ajustar el texto del
   paso (y el total declarado de `capturar.js`). Ahora son 22 pasos y 50 figuras; ancho `full` 1100, `med` 820 y JPEG 58 en
   `armar.py` para quedar bajo 6 MB (5,6 MB). Pendiente fuera de esta carpeta: `recursos.py` dice «Versión del bloque 2».
+- Bloque 4b (2026-11-28): dos pasos nuevos, «Leer los recibos de muestra» y «Revisar y cargar los conceptos» (capturas `50` a `56`,
+  tramo 12 de `capturar.js`, AL FINAL del guion para no mover el estado de los pasos de arriba; en `pasos.json` van después de
+  «Cargar el padrón»). El tramo confirma REC-01 (la carga de REC-04 la necesita) y lee cinco recibos de ejemplo
+  (`recibos-ejemplo/*.png`, imágenes vacías: solo importa el nombre; uno de ellos es «ilegible» a propósito). **El servidor se levanta con
+  `servidor_recibos.py`** y no con uvicorn a secas: corre con `MOCK_EXTRACTOR=1` pero reemplaza `main.extraer` para que cada archivo
+  devuelva conceptos distintos (el simulado de siempre devuelve el mismo recibo para cualquier archivo y la revisión quedaba pobre).
+  Empleadores y conceptos inventados, con CUIT válidos 30700001004/012/020; `preparar.py` borra los conceptos de esos tres CUIT para
+  poder filmar otra vez. Latencia simulada `TUTORIAL_LATENCIA` (3 s) para poder fotografiar el avance «2 de 5».
+  Comando: `MOCK_EXTRACTOR=1 ENTORNO=local .venv/bin/python docs/xsii/tutorial/servidor_recibos.py 8765` y después el `capturar.js` de arriba.
+  Al refilmar no se pisaron las capturas 01 a 49 (dependen de la base de la demo; solo se sumaron las nuevas). Ahora son 24 pasos y 57
+  figuras; HTML ~5,8 MB (JPEG a calidad 52 en `armar.py`). La miniatura no se regeneró (la portada no cambió salvo el encabezado).
