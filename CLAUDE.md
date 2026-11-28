@@ -2069,7 +2069,17 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     código de la Mesa de su respuesta tiene que figurar tal cual en lo que
     vio. Límite sabido: volver a reclamar un insumo reinicia la cuenta de
     «archivos nuevos».
-    **Sigue**: el bloque 6, el método (`xsii/METODO.md`). Queda reclamar
+    **Bloque 6 HECHO** (2026-11-28, sin cambios en la app): el **método**,
+    `xsii/METODO.md`, genérico (no nombra al producto salvo en su última
+    sección; `test_xsii_metodo.py` lo vigila, junto con que exista todo
+    archivo que nombra): qué es y qué no, doce principios, las piezas, cómo
+    aplicarlo a un producto nuevo, cómo se construye cada bloque, nueve
+    lecciones del QA y qué falta para llevarlo a un repositorio propio (hoy
+    están listos el motor y el asistente; el registro, las rutas, las reglas
+    de decisión y la pantalla siguen mezclados con la app).
+    **Sigue**: el bloque 7, cerrar el tutorial con el recorrido completo, y
+    un tutorial aparte para La Bancaria pensado para un funcional
+    (`docs/xsii/tutorial-bancaria/`, en revisión con SDN). Queda reclamar
     desde un proyecto sin
     sindicato (el servidor lo admite, la pantalla no lo ofrece) y la primera
     consulta con la API real, que hay que mirarla en Pruebas.
