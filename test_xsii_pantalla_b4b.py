@@ -123,3 +123,21 @@ def test_la_planilla_no_se_toco():
     # los textos de siempre siguen en su lugar
     for pieza in ("Ensayar (no guarda nada)", "Descargar el modelo", "Columnas de la planilla", "function ensayarAs(", "function cargarAs("):
         assert pieza in JS, pieza
+
+
+def test_cambiar_de_pestana_con_conceptos_sin_cargar_avisa():
+    # Tablero y Mapa también son una salida de la ficha (QA de pantalla 4b)
+    i = JS[JS.index("function irVista(v) {"):]
+    i = i[:i.index("async function decidir")]
+    assert "puedeSalirRb(function () { irVista(v); })" in i
+
+
+def test_el_aviso_de_descripcion_vacia_no_se_repite_ni_queda_viejo():
+    b = _bloque()
+    assert "descripción vino vacía') === -1" in b and "avisosVis" in b
+    # un rechazo igual al de la fila anterior se dice una sola vez por empleador
+    assert "g.ps[i - 1].errores.join('|')" in b
+
+
+def test_sumar_mas_recibos_con_foco_visible_por_teclado():
+    assert "label.btn:focus-within" in CSS

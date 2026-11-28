@@ -176,6 +176,7 @@
   function volverGuia() { if (!puedeSalirRb(volverGuia)) return; S.abierta = null; S.form = null; S.insForm = null; S.anim = true; sincronizarUrl(); dibujar(); }
   function irVista(v) {
     if (S.vista === v) return;
+    if (S.vista === 'guia' && S.abierta && !puedeSalirRb(function () { irVista(v); })) return;
     S.vista = v;
     if (v === 'mapa' && S.abierta) S.sel = S.abierta;
     if (v === 'guia') { S.abierta = null; S.form = null; S.insForm = null; }
@@ -1358,13 +1359,15 @@
       h('select', { id: id, disabled: deshab, onchange: function (e) { alCambiar(e.target.value); } },
         opciones.map(function (o) { return h('option', { value: o.clave, selected: o.clave === valor }, o.rotulo); })));
   }
-  function filaRb(A, p, d) {
+  function filaRb(A, p, d, repetido) {
     const id = 'x-rb-' + p.n, fuera = p.descartada, rech = p.estado === 'rechazada', est = efectivoRb(p);
     const rubros = d.rubros || RUBROS_RB, cats = d.categorias_sindicales || CATEGORIAS_RB, gens = d.genericos || [];
     const err = errorFilaRb(p);
     const parecido = p.similar && !p.avisos.concat(p.errores).some(function (a) { return a.indexOf(p.similar.codigo) !== -1; })
       ? 'Se parece a ' + (p.similar.codigo || '') + (p.similar.nombre ? ' · ' + p.similar.nombre : '') : '';
     const redib = function () { dibujarFicha(); };
+    // «La descripción vino vacía» ya lo dice el error de la fila (y deja de valer apenas se escribe una).
+    const avisosVis = p.avisos.filter(function (a) { return a.indexOf('descripción vino vacía') === -1; });
     return h('li', { class: 'rb-f ' + est + (err ? ' mal' : ''), id: id + '-f' },
       h('div', { class: 'rb-f-c' },
         h('b', { class: 'num rb-cod' }, p.codigo || '(sin código)'),
@@ -1372,7 +1375,7 @@
         h('span', { class: 'pil ' + est }, fuera ? 'Descartada' : ESTADOS_AS[p.estado] || p.estado),
         rech ? null : h('button', { class: 'btn ch rb-descartar', id: id + '-x', type: 'button', onclick: function () { p.descartada = !p.descartada; redib(); } }, fuera ? 'Volver a incluir' : 'Descartar')),
       rech ? h('p', { class: 'rb-dr' }, p.desc || '(sin descripción)') : null,
-      rech ? h('ul', { class: 'rb-no' }, (p.errores.length ? p.errores : ['No se puede incluir.']).map(function (x) { return h('li', null, x); }))
+      rech ? (repetido ? null : h('ul', { class: 'rb-no' }, (p.errores.length ? p.errores : ['No se puede incluir.']).map(function (x) { return h('li', null, x); })))
         : h('div', { class: 'rb-ed' },
           h('div', { class: 'rb-c rb-desc' }, h('label', { for: id + '-d' }, 'Descripción'),
             h('input', { id: id + '-d', type: 'text', maxlength: '120', value: p.desc, disabled: fuera, autocomplete: 'off',
@@ -1382,7 +1385,7 @@
           p.cuit && gens.length ? selectRb(id + '-g', 'Corresponde a', [{ clave: '', rotulo: 'Ninguno' }].concat(gens.map(function (g) { return { clave: g.codigo, rotulo: g.codigo + ' · ' + g.nombre }; })), p.generico,
             function (v) { p.generico = v; p.tocoGen = true; }, fuera) : null),
       parecido ? h('p', { class: 'rb-av' }, parecido) : null,
-      p.avisos.length ? h('ul', { class: 'rb-avs' }, p.avisos.map(function (a) { return h('li', null, a); })) : null,
+      avisosVis.length ? h('ul', { class: 'rb-avs' }, avisosVis.map(function (a) { return h('li', null, a); })) : null,
       h('p', { class: 'rb-err', id: id + '-e', role: 'alert', hidden: err ? null : true }, err));
   }
   function gruposRb(A, lista) {
@@ -1416,7 +1419,7 @@
         grupos.length ? grupos.map(function (g) {
           return h('section', { class: 'rb-g', 'aria-label': g.nombre || g.cuit || 'Sin empleador' },
             h('h4', { class: 'rb-g-t' }, h('span', null, g.nombre || (g.cuit ? 'Empleador' : 'Sin empleador')), g.cuit ? h('small', { class: 'num' }, g.cuit) : null, h('small', null, pluralRb(g.ps.length, 'concepto', 'conceptos'))),
-            h('ul', { class: 'rb-fs' }, g.ps.map(function (p) { return filaRb(A, p, d); })));
+            h('ul', { class: 'rb-fs' }, g.ps.map(function (p, i) { return filaRb(A, p, d, i > 0 && efectivoRb(p) === 'rechazada' && efectivoRb(g.ps[i - 1]) === 'rechazada' && p.errores.join('|') === g.ps[i - 1].errores.join('|')); })));
         }) : h('p', { class: 'muted' }, 'No hay conceptos con ese filtro.')) : null,
       terminoSinNada ? h('p', { class: 'muted rb-vacio' }, A.items.some(function (x) { return x.estado === 'leido'; })
         ? 'No apareció ningún concepto nuevo: los de estos recibos ya están en el catálogo.' : 'Ningún recibo se pudo leer. Probá con otros o de nuevo.') : null,

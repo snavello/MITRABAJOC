@@ -451,6 +451,7 @@ td.c-est .marcas{display:flex;margin-top:4px;white-space:normal}
 }
 /* Lectura de recibos de muestra (bloque 4b): misma ficha, otra entrada */
 .rb-gr{min-height:48px;font-size:16px;padding:10px 22px}
+label.btn:focus-within{outline:2px solid var(--acento);outline-offset:2px}
 .rb-zona{min-height:120px;justify-content:center;text-align:center;flex-direction:column;gap:4px}
 .rb-zona .as-arch-b{font-size:20px}
 .rb-elegidos{display:flex;flex-direction:column;gap:8px}
