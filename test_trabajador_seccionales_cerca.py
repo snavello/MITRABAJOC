@@ -125,7 +125,7 @@ def test_las_claves_son_solo_datos_de_la_institucion():
         assert set(s) == {"id", "nombre", "ve_todas", "calle", "numero", "piso_depto",
                           "localidad", "provincia", "codigo_postal", "direccion_texto",
                           "latitud", "longitud", "precision_geo", "geo_actualizado",
-                          "telefono", "whatsapp", "mail", "horario_atencion"}
+                          "telefono", "whatsapp", "mail", "horario_atencion", "responsable"}
     print("OK  test_las_claves_son_solo_datos_de_la_institucion")
 
 

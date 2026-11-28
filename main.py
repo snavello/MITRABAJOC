@@ -31,6 +31,7 @@ from sqlalchemy.exc import IntegrityError as _IntegrityErrorXsii
 import logging
 import os
 import re
+import unicodedata
 import threading
 import traceback
 import uuid
@@ -117,6 +118,7 @@ import identidad
 import fiesta
 import mercadopago
 import listas as listas_mod
+import padron_carga
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
@@ -2619,119 +2621,23 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...), ensayo: st
     """
     sid = exigir_sindicato(request)
     es_ensayo = ensayo in ("1", "si", "true")
-    afuera = []              # (línea, texto, motivo): lo que el ensayo le muestra a la persona
-
-    def queda_afuera(n, texto, motivo):
-        afuera.append({"linea": n, "texto": texto.strip()[:80], "motivo": motivo})
-
-    altas = 0
-    lineas_leidas = lineas_actualizan = 0
-    mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
-    fechas_actualizadas = 0  # CUIL ya en el padrón cuya línea trajo fecha de afiliación
-    datos_ajenos = 0         # líneas cuya persona ya tenía cuenta antes de este padrón: sin tocar sus datos
-    omitidas = []
-    cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
-    por_nombre = {geo._norm(sec["nombre"]): sec["id"]
-                  for sec in db.seccionales_del_sindicato(sid)}
-    # Un admin acotado carga solo en su seccional: una línea con otra
-    # seccional queda omitida (y se informa), una sin seccional va a la suya.
+    # La lógica por fila es de `padron_carga.procesar`, compartida con la tarea
+    # asistida de XSII (PAD-02): una sola implementación. Un admin acotado carga
+    # solo en su seccional (`alcance`): una línea con otra seccional queda omitida
+    # (y se informa), una sin seccional va a la suya.
     alcance = _alcance_de(request)
-    fuera_de_alcance = 0
+    filas = padron_carga.filas_de_lista(lista)
     with db.get_session() as s:
-        propios = {t.cuil: t for t in s.exec(select(Trabajador).where(
-            Trabajador.sindicato_id == sid)).all()}
-        existentes = set(propios)
-        # Quiénes ya se registraron (una consulta para toda la lista): sobre
-        # esas cuentas este padrón solo responde si ya tenía a la persona
-        # cargada cuando se registró (`db.responde_por`). Si no, la línea crea
-        # el empadronamiento y NO escribe nombre, domicilio, contacto ni mails.
-        con_clave = db.cuiles_con_clave(s, {
-            _norm_cuil(ln.split(",")[0]) for ln in lista.strip().splitlines() if ln.strip()})
-        for n_linea, linea in enumerate(lista.strip().splitlines(), start=1):
-            if not linea.strip():
-                continue
-            lineas_leidas += 1
-            campos = [c.strip() for c in linea.split(",")]
-            cuil = _norm_cuil(campos[0]) if campos else ""
-            nombre = campos[1] if len(campos) > 1 else ""
-            def campo(i): return campos[i] if len(campos) > i else ""
-            f_afiliacion = _fecha_formulario(campo(11))
-            f_nacimiento = _fecha_formulario(campo(12))
-            if f_afiliacion is None or f_nacimiento is None:
-                omitidas.append(linea.strip()[:60])
-                queda_afuera(n_linea, linea, "Una de las fechas no se entiende (AAAA-MM-DD o DD/MM/AAAA).")
-                continue
-            if len(cuil) == 11 and cuil in existentes and (campo(8) or f_afiliacion):
-                # Ya está en el padrón de este sindicato (quizá ya registrado):
-                # no es un alta, pero la línea trae el mail y esta es la ÚNICA
-                # vía que tiene el gremio para cargar el mail del padrón de
-                # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
-                # el resto de los datos de la persona se tocan.
-                if f_afiliacion:
-                    if not es_ensayo:
-                        propios[cuil].fecha_afiliacion = f_afiliacion
-                        s.add(propios[cuil])
-                    fechas_actualizadas += 1
-                if campo(8):
-                    if db.responde_por(cuil in con_clave, propios[cuil].registrado):
-                        if not es_ensayo:
-                            db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
-                        mails_actualizados += 1
-                    else:
-                        datos_ajenos += 1
-                lineas_actualizan += 1   # una vez por línea, aunque traiga mail y fecha
-                continue
-            if len(cuil) != 11 or not nombre or cuil in existentes:
-                omitidas.append(linea.strip()[:60])
-                queda_afuera(n_linea, linea,
-                             "El CUIL ya está en el padrón (y la línea no trae mail ni fecha de afiliación para actualizar)."
-                             if len(cuil) == 11 and cuil in existentes
-                             else "Falta el CUIL (11 números) o el nombre.")
-                continue
-            # Un CUIL cuyo verificador no cierra: la línea queda afuera y se
-            # cuenta aparte, con el número a la vista. Si entrara, el padrón
-            # se llenaría de personas que no pueden registrarse (el registro
-            # también lo exige) y nadie sabría por qué.
-            if _cuil_mal(cuil):
-                cuil_invalidos.append(campos[0][:20])
-                queda_afuera(n_linea, linea, "El CUIL no es válido: revisá los 11 números.")
-                continue
-            if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
-                omitidas.append(linea.strip()[:60])
-                queda_afuera(n_linea, linea, "Falta la localidad o la provincia.")
-                continue
-            sec_linea = por_nombre.get(geo._norm(campo(10)))
-            if alcance is not None:
-                if not sec_linea and len(alcance) == 1:
-                    sec_linea = next(iter(alcance))
-                if not _en_alcance(alcance, sec_linea):
-                    fuera_de_alcance += 1
-                    omitidas.append(linea.strip()[:60])
-                    queda_afuera(n_linea, linea, "La seccional no es la tuya: cargás solo en tu seccional.")
-                    continue
-            domicilio = geo.campos_para_guardar({
-                "calle": campo(2), "numero": campo(3), "piso_depto": campo(4),
-                "localidad": campo(5), "provincia": campo(6),
-                "codigo_postal": campo(9)}, precision="sin_geo")
-            if not es_ensayo:
-                s.add(Trabajador(
-                    sindicato_id=sid, cuil=cuil,
-                    seccional_id=sec_linea,
-                    fecha_afiliacion=f_afiliacion or None))
-            if cuil in con_clave:
-                datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
-            elif not es_ensayo:
-                db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                            telefono=campo(7), mail=campo(8),
-                                            mail_padron=campo(8) or None,
-                                            fecha_nacimiento=f_nacimiento or None)
-            existentes.add(cuil); altas += 1
+        r = padron_carga.procesar(s, sid, filas, alcance, ensayo=es_ensayo, cuil_mal=_cuil_mal)
         if es_ensayo:
             s.rollback()
-            return {"lineas": lineas_leidas, "altas": altas,
-                    "actualizaciones": lineas_actualizan, "datos_ajenos": datos_ajenos,
-                    "afuera_total": len(afuera), "afuera": afuera[:50]}
+            return {"lineas": r["lineas"], "altas": r["altas"],
+                    "actualizaciones": r["actualizaciones"], "datos_ajenos": r["datos_ajenos"],
+                    "afuera_total": len(r["afuera"]), "afuera": r["afuera"][:50]}
         s.commit()
+    altas, omitidas, cuil_invalidos = r["altas"], r["omitidas"], r["cuil_invalidos"]
+    mails_actualizados, fechas_actualizadas = r["mails_actualizados"], r["fechas_actualizadas"]
+    datos_ajenos, fuera_de_alcance = r["datos_ajenos"], r["fuera_de_alcance"]
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
     # patrón (casi siempre es la misma columna que falta en todas) sin armar
     # una query string de diez mil caracteres con la planilla entera.
@@ -3312,9 +3218,7 @@ def _en_alcance(alcance, seccional_id) -> bool:
     """None alcanza todo; un set alcanza solo lo que contiene. Una fila sin
     seccional NO la alcanza nadie salvo quien tiene alcance total -- es el
     lado seguro: un dato incompleto no puede terminar en más permisos."""
-    if alcance is None:
-        return True
-    return bool(seccional_id) and seccional_id in alcance
+    return db.en_alcance(alcance, seccional_id)
 
 
 def _exigir_alcance_seccional(request: Request, seccional_id) -> None:
@@ -3899,7 +3803,7 @@ def abm_seccional(
     localidad: str = Form(""), provincia: str = Form(""), codigo_postal: str = Form(""),
     latitud: str = Form(""), longitud: str = Form(""), precision_geo: str = Form(""),
     telefono: str = Form(""), whatsapp: str = Form(""), mail: str = Form(""),
-    horario_atencion: str = Form(""),
+    horario_atencion: str = Form(""), responsable: str = Form(""),
 ):
     """`ve_todas` define el ALCANCE de los usuarios de esta seccional: con el
     check puesto, alcanzan a los trabajadores de todas las seccionales del
@@ -3954,7 +3858,9 @@ def abm_seccional(
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision_geo, latitud, longitud)
     contacto = {"telefono": telefono.strip()[:40], "whatsapp": whatsapp.strip()[:40],
-                "mail": mail.strip()[:200], "horario_atencion": horario_atencion.strip()[:300]}
+                "mail": mail.strip()[:200], "horario_atencion": horario_atencion.strip()[:300],
+                "responsable": "".join(ch for ch in responsable if unicodedata.category(ch) not in
+                                       ("Cc", "Cf", "Cs", "Zl", "Zp")).strip()[:120]}
     with db.get_session() as s:
         if id:
             sec = s.get(Seccional, int(id))
@@ -8283,10 +8189,7 @@ def _fecha_formulario(valor: str):
     fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4) pasan por acá en las
     cinco puertas por las que entran, así una fecha ilegible se rechaza en
     la puerta y no se guarda como texto cualquiera."""
-    v = (valor or "").strip()
-    if not v:
-        return ""
-    return listas_mod.normalizar_fecha(v)
+    return listas_mod.fecha_formulario(valor)
 
 
 def _norm_cuil(cuil: str) -> str:

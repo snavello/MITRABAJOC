@@ -9,9 +9,9 @@ momentos (describir, ensayar, cargar, control) es el mismo para todos:
 El bloque 4 (Padrón, Conceptos) suma módulos a `ASISTIDAS`, no rutas.
 """
 
-from . import seccionales
+from . import padron, seccionales
 from .base import ErrorAsistida, huella
 
-ASISTIDAS = {"EST-01": seccionales}
+ASISTIDAS = {"EST-01": seccionales, "PAD-02": padron}
 
 __all__ = ["ASISTIDAS", "ErrorAsistida", "huella"]

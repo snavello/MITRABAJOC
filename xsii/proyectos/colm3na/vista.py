@@ -531,9 +531,7 @@ def asistida_cargar(s, ctx: Contexto, actor, codigo: str, contenido: bytes, opci
         s.rollback()
         raise db.XsiiError(409, "No hay nada para cargar: todo está rechazado, afuera o ya existe sin cambios.")
     t = POR_CODIGO[codigo]
-    cantidades = {k: carga[k] for k in ("creadas", "actualizadas", "sin_tocar", "afuera", "rechazadas")}
-    texto = (f"Cargó {_plural(carga['creadas'], 'seccional', 'seccionales')} desde planilla "
-             f"({_plural(carga['actualizadas'], 'actualizada', 'actualizadas')}, {carga['afuera']} afuera)")
+    texto, cantidades = modulo.movimiento(carga)
     clave = modulo.describir()["insumo"]
     db.xsii_registrar_carga_asistida(s, ctx.pid, actor, codigo, t.nombre, clave, INSUMOS[clave]["nombre"],
                                      texto, cantidades)

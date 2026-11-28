@@ -14,7 +14,7 @@ AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parents[2]
 SALIDA = RAIZ / "recursos" / "xsii-tutorial.html"
 # Ancho máximo de lo que se embebe, por tamaño de figura (el original queda en capturas/).
-ANCHOS = {"full": 1200, "med": 900, "chica": 640}
+ANCHOS = {"full": 1100, "med": 820, "chica": 600}
 CLASES = {"full": "f-full", "med": "f-med", "chica": "f-chica"}
 
 
@@ -27,7 +27,7 @@ def b64(nombre, ancho):
     if im.width > ancho:
         im = im.resize((ancho, round(im.height * ancho / im.width)), Image.LANCZOS)
     buf = io.BytesIO()
-    im.save(buf, "JPEG", quality=62, optimize=True, progressive=True)
+    im.save(buf, "JPEG", quality=58, optimize=True, progressive=True)
     return base64.b64encode(buf.getvalue()).decode(), im.size
 
 

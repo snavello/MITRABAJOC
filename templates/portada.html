@@ -808,6 +808,7 @@
         <div class="mi-secc-nombre">{{ mi_seccional.nombre }}</div>
         {% if mi_seccional.direccion_texto %}<div class="mi-secc-dir">{{ mi_seccional.direccion_texto }}</div>{% endif %}
         {% if mi_seccional.horario_atencion %}<div class="mi-secc-dir">{{ mi_seccional.horario_atencion }}</div>{% endif %}
+        {% if mi_seccional.responsable %}<div class="mi-secc-dir">Responsable: {{ mi_seccional.responsable }}</div>{% endif %}
 
         {% if mi_seccional.latitud is not none and mi_seccional.longitud is not none %}
         <div class="mini-mapa" id="secc-mapa"
@@ -1584,17 +1585,23 @@ function cercaPintar(lat, lon, origen) {
         '<div class="mini-mapa" id="cerca-mapa" style="cursor:default; margin-bottom:12px;"></div>'
       : '<p class="cerca-permiso">Sin tu ubicación ni tu domicilio cargado, te mostramos ' +
         'todas las seccionales ordenadas por provincia.</p>';
+    // Todo texto de una seccional (lo escribe el sindicato, o entra por planilla) va escapado: nunca HTML.
+    var escS = function (x) {
+      return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
     html += lista.slice(0, hayOrigen ? 5 : lista.length).map(function (s) {
       var propia = d.mi_seccional_id === s.id;
       return '<div class="cerca-item' + (propia ? ' propia' : '') + '">' +
         (s._km != null ? '<span class="cerca-km">' + s._km + ' km</span>' : '') +
-        '<b>' + s.nombre + '</b>' + (propia ? ' <span style="font-size:11px;">· tu seccional</span>' : '') +
-        (s.direccion_texto ? '<div class="mi-secc-dir">' + s.direccion_texto + '</div>' : '') +
-        (s.horario_atencion ? '<div class="mi-secc-dir">' + s.horario_atencion + '</div>' : '') +
+        '<b>' + escS(s.nombre) + '</b>' + (propia ? ' <span style="font-size:11px;">· tu seccional</span>' : '') +
+        (s.direccion_texto ? '<div class="mi-secc-dir">' + escS(s.direccion_texto) + '</div>' : '') +
+        (s.horario_atencion ? '<div class="mi-secc-dir">' + escS(s.horario_atencion) + '</div>' : '') +
+        (s.responsable ? '<div class="mi-secc-dir">Responsable: ' + escS(s.responsable) + '</div>' : '') +
         (s.precision_geo === 'aproximada'
           ? '<div class="mi-secc-aviso">Ubicación aproximada: el punto es el centro de la localidad.</div>' : '') +
         '<div class="mi-secc-botones">' +
-        (s.telefono ? '<a class="mi-secc-btn" href="tel:' + s.telefono + '">Llamar</a>' : '') +
+        (s.telefono ? '<a class="mi-secc-btn" href="tel:' + escS(s.telefono) + '">Llamar</a>' : '') +
         (s.whatsapp ? '<a class="mi-secc-btn" target="_blank" rel="noopener" href="' +
           MapaMT.whatsappUrl(s.whatsapp) + '">WhatsApp</a>' : '') +
         '<a class="mi-secc-btn" target="_blank" rel="noopener" href="' +
@@ -1613,8 +1620,8 @@ function cercaPintar(lat, lon, origen) {
         var puntos = [[lat, lon]];
         lista.slice(0, 5).forEach(function (s) {
           L.marker([s.latitud, s.longitud]).addTo(cercaMapa.mapa)
-            .bindPopup('<b>' + s.nombre + '</b>' +
-                       (s.direccion_texto ? '<br>' + s.direccion_texto : ''));
+            .bindPopup('<b>' + escS(s.nombre) + '</b>' +
+                       (s.direccion_texto ? '<br>' + escS(s.direccion_texto) : ''));
           puntos.push([s.latitud, s.longitud]);
         });
         cercaMapa.refrescar();

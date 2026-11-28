@@ -27,7 +27,7 @@ def test_los_cuatro_momentos_y_sus_piezas():
         assert f"function {fn}(" in JS, fn
     for v in ("validas", "dudosas", "rechazadas", "ya_existen"):
         assert v in JS, v
-    for v in ("huella", "dejar_afuera", "'archivo'", "'texto'", "'opciones'", "FormData"):
+    for v in ("huella", "dejar_afuera", "'archivo'", "'opciones'", "FormData"):
         assert v in JS, v
 
 

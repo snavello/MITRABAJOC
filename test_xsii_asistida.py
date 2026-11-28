@@ -93,14 +93,20 @@ def test_decimales_con_punto_o_coma_y_coordenadas_en_comillas():
     assert r["filas"][0]["datos"]["latitud"] == pytest.approx(-32.9468)
 
 
-def test_una_columna_desconocida_se_ignora_y_se_avisa():
+def test_una_columna_desconocida_se_ignora_y_va_a_sin_usar():
     r = _leer(b"nombre;secreto;otra\nA;x;y\n")
     assert _estados(r)[0] in ("valida", "dudosa")
-    assert any("secreto" in a and "otra" in a for a in r["avisos"])
+    assert r["mapeo"]["sin_usar"] == ["secreto", "otra"]
+    assert not any("secreto" in a for a in r["avisos"])        # sin ruido: viaja en `mapeo.sin_usar`
 
 
-def test_sin_columna_nombre_o_archivo_inservible_es_400():
-    for crudo in (b"provincia;calle\nSalta;Balcarce\n", b"", b"   \n\n", b"PK\x03\x04xx", b"a\x00b;c\n1;2\n"):
+def test_sin_columna_nombre_no_es_400_y_dice_que_falta():
+    r = _leer(b"provincia;calle\nSalta;Balcarce\n")
+    assert r["total"] == 0 and r["mapeo"]["faltan"] == ["nombre"] and r["avisos"]
+
+
+def test_archivo_inservible_es_400():
+    for crudo in (b"", b"   \n\n", b"PK\x03\x04xx", b"a\x00b;c\n1;2\n"):
         with pytest.raises(ErrorAsistida) as e:
             _leer(crudo)
         assert e.value.estado == 400 and e.value.mensaje
@@ -194,7 +200,7 @@ def test_opciones_que_no_son_verdadero_o_falso_dan_400():
         assert e.value.estado == 400
     with pytest.raises(ErrorAsistida):
         sec.leer(_csv(FILA_OK), [], ["x"])
-    assert sec.normalizar_opciones(None) == {"actualizar_existentes": False, "sede_por_nombre": True}
+    assert sec.normalizar_opciones(None) == {"actualizar_existentes": False, "sede_por_nombre": True, "mapeo": {}}
     assert sec.normalizar_opciones({"zzz": 1})["sede_por_nombre"] is True
 
 
@@ -253,14 +259,15 @@ def test_el_modelo_csv_se_lee_solo():
 
 def test_describir_tiene_la_forma_del_contrato():
     d = sec.describir()
-    assert set(d) == {"titulo", "que_voy_a_hacer", "insumo", "columnas", "modelo_csv", "opciones"}
+    assert set(d) == {"titulo", "que_voy_a_hacer", "insumo", "mapeo", "campos", "columnas", "modelo_csv",
+                      "opciones"}
     assert len(d["que_voy_a_hacer"]) == 2 and d["insumo"] in catalogo.INSUMOS
     assert {c["clave"] for c in d["columnas"]} >= {"nombre", "sede_central", "latitud", "longitud", "horario"}
     assert [c["clave"] for c in d["columnas"] if c["obligatoria"]] == ["nombre"]
     for c in d["columnas"]:
         assert set(c) == {"clave", "rotulo", "obligatoria", "ejemplo", "ayuda"}
     assert {o["clave"]: o["defecto"] for o in d["opciones"]} == {"actualizar_existentes": False, "sede_por_nombre": True}
-    assert set(ASISTIDAS) == {"EST-01"}
+    assert set(ASISTIDAS) == {"EST-01", "PAD-02"}
 
 
 def test_la_huella_depende_del_contenido_y_de_las_opciones():
@@ -437,7 +444,7 @@ def test_el_ensayo_acepta_texto_pegado_y_archivo_con_prioridad():
 
 def test_el_ensayo_con_archivos_malos_es_400_en_castellano():
     pid, sid, eq = _mundo()
-    for malo in (b"", b"provincia\nSalta\n", b"PK\x03\x04", b"a\x00b"):
+    for malo in (b"", b"PK\x03\x04", b"a\x00b"):
         r = _enviar(eq, pid, "ensayo", malo)
         assert r.status_code == 400 and r.json()["detail"], malo
     assert _enviar(eq, pid, "ensayo", None).status_code == 400
@@ -714,7 +721,7 @@ def test_el_tablero_dice_que_tareas_son_asistidas():
     pid, sid, eq = _mundo()
     tareas = {t["codigo"]: t for t in eq.get(f"{BASE}/p/{pid}/tablero").json()["tareas"]}
     assert tareas["EST-01"]["asistida"] is True
-    assert [c for c, t in tareas.items() if t["asistida"]] == ["EST-01"]
+    assert [c for c, t in tareas.items() if t["asistida"]] == ["EST-01", "PAD-02"]
     assert eq.get(f"{BASE}/p/{pid}/tarea/EST-01").json()["tarea"]["asistida"] is True
 
 
@@ -732,3 +739,115 @@ def test_el_resumen_solo_tiene_textos_con_valor():
     assert all(isinstance(v, str) and v for v in res.values()), res
     for f in _leer(EJEMPLO.read_bytes())["filas"]:
         assert all(isinstance(v, str) and v for v in f["resumen"].values()), f["resumen"]
+
+
+# =================================================================== mapeo flexible, precision y responsable (EST-01)
+
+COMO_VIENE = pathlib.Path(__file__).parent / "docs" / "xsii" / "ejemplos" / "seccionales-como-viene.csv"
+
+
+@pytest.mark.parametrize("cabecera,campo", [
+    ("Seccional", "nombre"), ("Delegación", "nombre"), ("Denominación", "nombre"),
+    ("ve_todas", "sede_central"), ("Ve todas", "sede_central"), ("Sede Central", "sede_central"),
+    ("Casa Central", "sede_central"), ("Central", "sede_central"), ("Dirección", "calle"), ("Domicilio", "calle"),
+    ("Altura", "numero"), ("Nro", "numero"), ("Oficina", "piso_depto"), ("Depto", "piso_depto"), ("Ciudad", "localidad"),
+    ("CP", "codigo_postal"), ("Lat", "latitud"), ("Lon", "longitud"), ("Lng", "longitud"), ("Long", "longitud"),
+    ("Precisión", "precision_geo"), ("Precisión geo", "precision_geo"), ("Tel", "telefono"), ("WSP", "whatsapp"),
+    ("Celular", "whatsapp"), ("Email", "mail"), ("Correo", "mail"), ("Horario de atención", "horario"),
+    ("Atención", "horario"), ("x_responsable", "responsable"), ("Secretario general", "responsable"),
+    ("Titular", "responsable"), ("A cargo", "responsable"), ("Delegado", "responsable"),
+])
+def test_sinonimos_de_seccionales(cabecera, campo):
+    assert sec.detectar([cabecera]) == {0: campo}
+
+
+def test_el_archivo_como_viene_se_reconoce_entero_y_las_x_quedan_sin_usar():
+    r = sec.leer(COMO_VIENE.read_bytes(), [], {})
+    campos = {c["cabecera"]: c["campo"] for c in r["mapeo"]["columnas"]}
+    assert campos["ve_todas"] == "sede_central" and campos["horario_atencion"] == "horario"
+    assert campos["x_responsable"] == "responsable" and campos["precision_geo"] == "precision_geo"
+    assert all(campos[k] == k for k in ("nombre", "calle", "numero", "piso_depto", "localidad", "provincia",
+                                        "codigo_postal", "latitud", "longitud", "telefono", "whatsapp", "mail"))
+    assert r["mapeo"]["sin_usar"] == ["x_tipo", "x_observaciones", "x_geo_metodo", "x_geo_nota",
+                                      "x_geo_distancia_centro_km", "x_fuente"]
+    assert r["mapeo"]["faltan"] == [] and r["avisos"] == [] and r["total"] == 10
+    d = {f["datos"]["nombre"]: f for f in r["filas"]}
+    assert d["Seccional Rosario"]["datos"]["numero"] == "764/68" and d["Seccional Rosario"]["estado"] == "valida"
+    assert d["Seccional Córdoba"]["datos"]["numero"] == "2892/94"
+    assert d["Seccional Tierra del Fuego"]["datos"]["provincia"] == "Tierra del Fuego, Antártida e Islas del Atlántico Sur"
+    assert d["Casa del Gremio; Anexo Tucumán"]["datos"]["nombre"] == "Casa del Gremio; Anexo Tucumán"
+    assert d["Sede Central"]["datos"]["telefono"] == "011 4131-4291/4311" and d["Sede Central"]["datos"]["sede"] is True
+    assert sum(1 for f in r["filas"] if f["datos"]["sede"]) == 1
+    # S/N y vacío = falta la altura: dudosa, no rechazada
+    assert d["Delegación Ruta 40"]["estado"] == "dudosa" and "Falta la calle o la altura." in d["Delegación Ruta 40"]["motivos"]
+    assert d["Seccional Salta"]["estado"] == "dudosa"
+    # aproximada: entra y queda dudosa con su motivo
+    assert "Ubicación aproximada: confirmala en el mapa." in d["Seccional Neuquén"]["motivos"]
+    assert d["Seccional Neuquén"]["datos"]["precision"] == "aproximada"
+    assert d["Seccional Mar del Plata"]["datos"]["precision"] == "manual"        # vacía con coordenadas
+    assert d["Seccional Mar del Plata"]["datos"]["sede"] is False and d["Seccional Rosario"]["datos"]["responsable"] == "Raúl Benítez"
+
+
+@pytest.mark.parametrize("valor,esperado", [("si", True), ("sí", True), ("SÍ", True), ("x", True), ("1", True),
+                                            ("true", True), ("no", False), ("0", False), ("", False)])
+def test_ve_todas_acepta_los_valores_de_siempre(valor, esperado):
+    r = _leer(f"nombre;ve_todas\nA;{valor}\n".encode())
+    assert r["filas"][0]["datos"]["sede"] is esperado and r["filas"][0]["estado"] != "rechazada"
+
+
+def test_la_precision_se_respeta_con_coordenadas_y_sin_coordenadas_es_sin_geo():
+    cab = "nombre;calle;numero;provincia;localidad;latitud;longitud;precision_geo\n"
+    filas = ["E;C;1;Salta;Salta;-24,78;-65,41;exacta", "A;C;1;Salta;Salta;-24,78;-65,41;aproximada",
+             "M;C;1;Salta;Salta;-24,78;-65,41;manual", "V;C;1;Salta;Salta;-24,78;-65,41;", "R;C;1;Salta;Salta;-24,78;-65,41;rara",
+             "S;C;1;Salta;Salta;;;exacta"]
+    r = _leer((cab + "\n".join(filas) + "\n").encode())
+    por = {f["datos"]["nombre"]: f for f in r["filas"]}
+    assert [por[k]["datos"]["precision"] for k in "EAMVR"] == ["exacta", "aproximada", "manual", "manual", "manual"]
+    assert por["A"]["estado"] == "dudosa" and por["E"]["estado"] == "valida" and por["S"]["estado"] == "dudosa"
+    assert sec._a_escribir(por["A"]["datos"], None)["precision_geo"] == "aproximada"
+    assert sec._a_escribir(por["S"]["datos"], None)["precision_geo"] == "sin_geo"
+    assert sec._a_escribir(por["R"]["datos"], None)["precision_geo"] == "manual"
+
+
+def test_el_mapeo_de_seccionales_se_corrige_por_opcion_y_falta_nombre_es_200():
+    r = _leer(b"A;B\nx;Seccional X\n", mapeo={"1": "nombre", "0": ""})
+    assert r["mapeo"]["faltan"] == [] and r["filas"][0]["datos"]["nombre"] == "Seccional X"
+    with pytest.raises(ErrorAsistida):
+        _leer(b"nombre;otro\nA;B\n", mapeo={"0": "nombre", "1": "nombre"})
+    assert _leer(b"x;y\n1;2\n")["mapeo"]["faltan"] == ["nombre"]
+
+
+def test_como_viene_por_http_ensayo_y_carga_con_precisiones_y_responsable():
+    pid, sid, eq = _mundo()
+    contenido = COMO_VIENE.read_bytes()
+    e = _ensayo(eq, pid, contenido)
+    assert (e["total"], e["validas"], e["dudosas"], e["rechazadas"]) == (10, 7, 3, 0)
+    assert e["mapeo"]["faltan"] == [] and len(e["mapeo"]["sin_usar"]) == 6 and e["avisos"] == []
+    assert _seccionales(sid) == []
+    assert _carga(eq, pid, contenido, ens=e).status_code == 200
+    s_ = {x.nombre: x for x in _seccionales(sid)}
+    assert len(s_) == 10
+    assert s_["Sede Central"].ve_todas is True and sum(1 for x in s_.values() if x.ve_todas) == 1
+    assert s_["Seccional Rosario"].numero == "764/68" and s_["Seccional Rosario"].precision_geo == "exacta"
+    assert s_["Seccional Neuquén"].precision_geo == "aproximada" and s_["Seccional Mar del Plata"].precision_geo == "manual"
+    assert s_["Seccional Salta"].precision_geo == "sin_geo" and s_["Delegación Ruta 40"].numero == "S/N"
+    assert s_["Seccional Tierra del Fuego"].provincia.startswith("Tierra del Fuego, Antártida")
+    assert s_["Seccional Rosario"].responsable == "Raúl Benítez" and s_["Sede Central"].telefono == "011 4131-4291/4311"
+
+
+def test_el_responsable_se_actualiza_y_lo_vacio_no_pisa():
+    pid, sid, eq = _mundo()
+    cab = "nombre;calle;numero;provincia;localidad;latitud;longitud;responsable\n"
+    uno = (cab + "A;C;1;Salta;Salta;-24,78;-65,41;Ana Paz\nB;C;1;Salta;Salta;-24,79;-65,42;Beto Gil\n").encode()
+    assert _carga(eq, pid, uno).status_code == 200
+    dos = (cab + "A;C;1;Salta;Salta;-24,78;-65,41;Carla Sosa\nB;C;1;Salta;Salta;-24,79;-65,42;\n").encode()
+    op = {"actualizar_existentes": True}
+    assert _carga(eq, pid, dos, opciones=op).status_code == 200
+    s_ = {x.nombre: x for x in _seccionales(sid)}
+    assert s_["A"].responsable == "Carla Sosa" and s_["B"].responsable == "Beto Gil"
+
+
+def test_el_ejemplo_viejo_da_lo_mismo_que_antes():
+    r = _leer(EJEMPLO.read_bytes())
+    assert [f["estado"] for f in r["filas"]].count("valida") == 6 and [f["estado"] for f in r["filas"]].count("dudosa") == 2
+    assert r["mapeo"]["sin_usar"] == [] and r["mapeo"]["faltan"] == []

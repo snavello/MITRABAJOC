@@ -357,6 +357,8 @@ class Seccional(SQLModel, table=True):
     whatsapp: str = ""
     mail: str = ""
     horario_atencion: str = ""
+    # Quién responde por la seccional (texto libre, hasta 120 caracteres).
+    responsable: str = ""
 
 
 class Area(SQLModel, table=True):
@@ -4151,6 +4153,16 @@ def contar_super_admins(sindicato_id: int, excluyendo: int = 0) -> int:
         return len([u for u in filas if u.id != excluyendo])
 
 
+def en_alcance(alcance, seccional_id) -> bool:
+    """None alcanza todo; un set alcanza solo lo que contiene. Una fila sin
+    seccional NO la alcanza nadie salvo quien tiene alcance total -- es el
+    lado seguro: un dato incompleto no puede terminar en más permisos.
+    (`main._en_alcance` delega acá; la carga compartida del padrón la usa.)"""
+    if alcance is None:
+        return True
+    return bool(seccional_id) and seccional_id in alcance
+
+
 def alcance_seccional(usuario_id: int):
     """Sobre qué seccionales trabaja este usuario.
 
@@ -4365,7 +4377,7 @@ PROVINCIAS_AR = [
 # escriben columnas a mano: es lo que impide que vuelvan a existir dos
 # versiones del mismo domicilio (ver CuentaTrabajador).
 
-def asegurar_cuenta(s: Session, cuil: str) -> CuentaTrabajador:
+def asegurar_cuenta(s: Session, cuil: str, existente: "CuentaTrabajador" = None) -> CuentaTrabajador:
     """La fila de la PERSONA, creándola si el CUIL todavía no tenía ninguna.
 
     Recibe la sesión abierta y no abre la suya: un request nunca toma más de
@@ -4376,8 +4388,11 @@ def asegurar_cuenta(s: Session, cuil: str) -> CuentaTrabajador:
 
     Nace vacía a propósito: los datos se escriben con
     `guardar_datos_personales`, que es la única función que decide qué pisa y
-    qué no."""
-    c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+    qué no.
+
+    `existente`: la fila que quien llama ya trajo (la carga masiva del padrón la
+    trae por lotes, para no hacer una consulta por persona); si viene, no se busca."""
+    c = existente or s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
     if not c:
         c = CuentaTrabajador(cuil=cuil)
         s.add(c)
@@ -4389,7 +4404,8 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
                              domicilio: dict = None, telefono: str = None,
                              mail: str = None,
                              mail_padron: str = None,
-                             fecha_nacimiento: str = None) -> CuentaTrabajador:
+                             fecha_nacimiento: str = None,
+                             cuenta: "CuentaTrabajador" = None) -> CuentaTrabajador:
     """Escribe el bloque personal de un CUIL. Lo que llega en `None` no se
     toca -- así una pantalla que edita solo el domicilio no borra el teléfono
     que cargó otra.
@@ -4412,7 +4428,7 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
 
     `fecha_nacimiento` llega ya normalizada a ISO (o "" para borrarla): quien
     la recibe de un formulario la pasa antes por `listas.normalizar_fecha`."""
-    c = asegurar_cuenta(s, cuil)
+    c = asegurar_cuenta(s, cuil, cuenta)
     if nombre is not None and nombre.strip():
         c.nombre = nombre.strip()[:200]
     for campo, valor in (domicilio or {}).items():
@@ -5058,7 +5074,7 @@ def _seccional_a_dict(sec: "Seccional") -> dict:
         "latitud": sec.latitud, "longitud": sec.longitud,
         "precision_geo": sec.precision_geo, "geo_actualizado": sec.geo_actualizado,
         "telefono": sec.telefono, "whatsapp": sec.whatsapp, "mail": sec.mail,
-        "horario_atencion": sec.horario_atencion,
+        "horario_atencion": sec.horario_atencion, "responsable": sec.responsable,
     }
 
 

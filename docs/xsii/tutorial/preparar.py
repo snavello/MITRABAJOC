@@ -18,6 +18,7 @@ import implementacion as im  # noqa: E402
 USUARIO, NOMBRE = "sofia.demo", "Sofía Demo"
 PROYECTO = "UOM · Primera versión"
 NUEVAS_DEL_TUTORIAL = ["Seccional Bahía Blanca", "Seccional Resistencia", "Seccional San Luis", "Seccional Neuquén", "Seccional Río Gallegos"]
+PLANILLA_PADRON = os.path.join(os.path.dirname(__file__), "padron-tutorial.csv")
 TARJETAS = [
     ("Lista de seccionales con domicilios", "Necesitamos la lista de seccionales con su domicilio y teléfono."),
     ("Planilla del padrón de afiliados", "Necesitamos la planilla del padrón en Excel o CSV."),
@@ -44,6 +45,18 @@ with db.get_session() as s:
         sec = s.exec(select(db.Seccional).where(db.Seccional.sindicato_id == uom0.id, db.Seccional.nombre == nom)).first()
         if sec:
             s.exec(text("DELETE FROM seccional WHERE id = :i AND NOT EXISTS (SELECT 1 FROM trabajador WHERE seccional_id = :i)"), params={"i": sec.id})
+    s.commit()
+    # Lo mismo con el padrón: las personas de la planilla del tutorial (CUIL de rango 2096, inventados) se sacan
+    # para poder volver a cargarlas. Solo las que no tienen datos propios de otra cosa (recibos, trámites).
+    cuils = []
+    with open(PLANILLA_PADRON, encoding="utf-8") as f:
+        for linea in list(f)[1:]:
+            c = linea.split(";")[1].strip() if ";" in linea else ""
+            if c.startswith("2096"):
+                cuils.append(c)
+    for c in cuils:
+        s.exec(text("DELETE FROM trabajador WHERE cuil = :c AND NOT EXISTS (SELECT 1 FROM tramite WHERE cuil = :c)"), params={"c": c})
+        s.exec(text("DELETE FROM cuentatrabajador WHERE cuil = :c AND NOT EXISTS (SELECT 1 FROM trabajador WHERE cuil = :c)"), params={"c": c})
     s.commit()
     u = s.exec(select(db.UsuarioPlataforma).where(db.UsuarioPlataforma.usuario == USUARIO)).first()
     if not u:

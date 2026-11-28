@@ -128,6 +128,17 @@ def normalizar_dni(valor: str):
     return digitos if 6 <= len(digitos) <= 9 else None
 
 
+def fecha_formulario(valor: str):
+    """Una fecha que llega de un formulario o de una planilla: "" si vino en
+    blanco, ISO si es una fecha (AAAA-MM-DD o DD/MM/AAAA) y None si no se
+    entiende. Única implementación: la usan `main._fecha_formulario` (las
+    cinco puertas del padrón) y la carga compartida del padrón."""
+    v = (valor or "").strip()
+    if not v:
+        return ""
+    return normalizar_fecha(v)
+
+
 def _decodificar(contenido: bytes) -> str:
     for enc in ("utf-8-sig", "utf-8", "latin-1"):
         try:

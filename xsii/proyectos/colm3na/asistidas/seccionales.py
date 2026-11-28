@@ -18,13 +18,13 @@ import csv
 import io
 import math
 import re
-import unicodedata
 
 from sqlmodel import select
 
 import geo
 import listas
 
+from . import base
 from .base import ErrorAsistida, huella
 
 NOMBRE_ARCHIVO = "modelo-seccionales.csv"
@@ -36,7 +36,7 @@ LAT_RANGO = (-56.0, -21.0)
 LON_RANGO = (-74.0, -53.0)
 
 DOMICILIO = ("calle", "numero", "piso_depto", "localidad", "provincia", "codigo_postal")
-CONTACTO = {"telefono": 40, "whatsapp": 40, "mail": 200, "horario_atencion": 300}
+CONTACTO = {"telefono": 40, "whatsapp": 40, "mail": 200, "horario_atencion": 300, "responsable": 120}
 CAMPOS_COMPARABLES = ("ve_todas", *DOMICILIO, "direccion_texto", "latitud", "longitud",
                       "precision_geo", *CONTACTO)
 
@@ -62,13 +62,44 @@ COLUMNAS = (
      "Latitud en grados decimales. Si falta, la seccional queda «sin ubicar»."),
     ("longitud", "Longitud", False, "-60,6393",
      "Longitud en grados decimales. Va junto con la latitud."),
+    ("precision_geo", "Precisión de la ubicación", False, "exacta",
+     "exacta, aproximada o manual. Vacía o con otro valor, con coordenadas, vale como manual. "
+     "Una «aproximada» entra, pero queda dudosa para confirmarla en el mapa."),
     ("telefono", "Teléfono", False, "341 555-0100", "Teléfono de atención."),
     ("whatsapp", "WhatsApp", False, "341 155-550100", "WhatsApp de atención."),
     ("mail", "Mail", False, "rosario@sindicato.example", "Mail de atención."),
     ("horario", "Horario de atención", False, "Lunes a viernes de 9 a 17",
      "Días y horas de atención."),
+    ("responsable", "Responsable", False, "María López", "Quién responde por la seccional."),
 )
-_ALIAS = {"horario": ("horario_atencion", "horarios"), "sede_central": ("sede",)}
+SINONIMOS = {
+    "nombre": {"nombre", "seccional", "delegacion", "denominacion", "nombre_seccional"},
+    "sede_central": {"sede_central", "ve_todas", "sede", "casa_central", "central", "ve_todas_las_seccionales"},
+    "calle": {"calle", "domicilio", "direccion"},
+    "numero": {"numero", "altura", "nro", "num"},
+    "piso_depto": {"piso_depto", "piso", "depto", "oficina", "dpto"},
+    "localidad": {"localidad", "ciudad"},
+    "provincia": {"provincia", "prov"},
+    "codigo_postal": {"codigo_postal", "cp", "cod_postal"},
+    "latitud": {"latitud", "lat"},
+    "longitud": {"longitud", "lon", "lng", "long"},
+    "precision_geo": {"precision_geo", "precision", "precision_geografica"},
+    "telefono": {"telefono", "tel"},
+    "whatsapp": {"whatsapp", "wsp", "celular"},
+    "mail": {"mail", "email", "e_mail", "correo"},
+    "responsable": {"responsable", "x_responsable", "secretario", "secretaria", "secretario_general",
+                    "secretaria_general", "titular", "a_cargo", "delegado", "delegada"},
+    "horario": {"horario", "horario_atencion", "horarios", "atencion", "horario_de_atencion"},
+}
+CLAVES = tuple(c[0] for c in COLUMNAS)
+ROTULO = {c[0]: c[1] for c in COLUMNAS}
+# «S/N» y parecidos: la calle no tiene número, y para el domicilio es lo mismo que no tenerlo cargado.
+_SIN_NUMERO = {"s_n", "sn", "s_nro", "sin_numero", "sin_nro", "s_numero"}
+_PRECISIONES = {"exacta", "aproximada", "manual"}
+
+
+def detectar(cabecera) -> dict:
+    return base.detectar(cabecera, CLAVES, SINONIMOS)
 
 OPCIONES = (
     {"clave": "actualizar_existentes", "rotulo": "Actualizar las que ya existen",
@@ -95,10 +126,10 @@ def modelo_csv() -> str:
     w = csv.writer(salida, delimiter=";", lineterminator="\n")
     w.writerow([c[0] for c in COLUMNAS])
     w.writerow(["Sede Central", "sí", "Ciudad Autónoma de Buenos Aires", "Ciudad Autónoma de Buenos Aires",
-                "Avenida de Mayo", "1500", "", "1085", "-34,6091", "-58,3896", "11 5555-0100",
-                "11 5555-0101", "sede@sindicato.example", "Lunes a viernes de 9 a 17"])
+                "Avenida de Mayo", "1500", "", "1085", "-34,6091", "-58,3896", "exacta", "11 5555-0100",
+                "11 5555-0101", "sede@sindicato.example", "Lunes a viernes de 9 a 17", "Ana Rodríguez"])
     w.writerow(["Seccional Rosario", "no", "Santa Fe", "Rosario", "Córdoba", "1234", "", "2000", "-32,9468",
-                "-60,6393", "341 555-0100", "", "rosario@sindicato.example", "Lunes a viernes de 9 a 17"])
+                "-60,6393", "exacta", "341 555-0100", "", "rosario@sindicato.example", "Lunes a viernes de 9 a 17", "Luis Fernández"])
     return "﻿" + salida.getvalue()
 
 
@@ -110,6 +141,8 @@ def describir() -> dict:
             "Si estás de acuerdo, cargo las seccionales de una vez, controlo el resultado y dejo registrado quién lo hizo.",
         ],
         "insumo": "lista_seccionales",
+        "mapeo": True,
+        "campos": [{"clave": c[0], "rotulo": c[1], "obligatorio": c[2], "ayuda": c[4]} for c in COLUMNAS],
         "columnas": [_columna_json(c) for c in COLUMNAS],
         "modelo_csv": modelo_csv(),
         "opciones": [dict(o) for o in OPCIONES],
@@ -129,71 +162,18 @@ def normalizar_opciones(opciones) -> dict:
         if not isinstance(valor, bool):
             raise ErrorAsistida(400, f"La opción «{o['rotulo']}» tiene que ser verdadero o falso.")
         salida[o["clave"]] = valor
+    salida["mapeo"] = base.normalizar_mapeo(opciones.get("mapeo"), CLAVES)
     return salida
 
 
 # ------------------------------------------------------------------ lectura
 
-def _limpiar(valor) -> str:
-    """El texto de una celda sin caracteres de control ni invisibles; los
-    espacios raros pasan a espacio común y se recortan los bordes. Lo que
-    empieza con = + - @ se deja tal cual (no es una planilla de salida)."""
-    salida = []
-    for c in str(valor or ""):
-        cat = unicodedata.category(c)
-        if cat == "Zs":
-            salida.append(" ")
-        elif cat in ("Cc", "Cf", "Cs", "Zl", "Zp") or c in "⠀ᅟᅠㅤﾠ":
-            continue
-        else:
-            salida.append(c)
-    return re.sub(r" {2,}", " ", "".join(salida)).strip()
+_limpiar = base.limpiar
 
 
 def _leer_csv(contenido: bytes):
     """`(cabecera, [(linea, celdas)])`. Rechaza (400) lo que no sirve para nada."""
-    if not contenido or not contenido.strip():
-        raise ErrorAsistida(400, "El archivo está vacío.")
-    if len(contenido) > TOPE_BYTES:
-        raise ErrorAsistida(400, "El archivo pesa más de 1 MB: partilo en dos.")
-    if b"\x00" in contenido or contenido[:2] == b"PK":
-        raise ErrorAsistida(400, "No pude leer el archivo: tiene que ser un CSV (si es de Excel, guardalo como "
-                                 "«CSV» o bajá el modelo).")
-    texto = listas._decodificar(contenido)
-    lector = csv.reader(io.StringIO(texto), delimiter=listas._dialecto(texto))
-    cabecera, filas = None, []
-    try:
-        for celdas in lector:
-            if not any(str(x).strip() for x in celdas):
-                continue
-            if cabecera is None:
-                cabecera = celdas
-                continue
-            if len(filas) >= TOPE_FILAS:
-                raise ErrorAsistida(400, f"La planilla tiene más de {TOPE_FILAS} filas: partila en varias.")
-            filas.append((lector.line_num, celdas))
-    except csv.Error:
-        raise ErrorAsistida(400, "No pude leer el archivo: el CSV está mal formado.")
-    if cabecera is None:
-        raise ErrorAsistida(400, "El archivo está vacío.")
-    return cabecera, filas
-
-
-def _posiciones(cabecera):
-    """`({clave: índice}, [rótulos ignorados])`. La cabecera se reconoce por clave
-    o por rótulo, sin mirar mayúsculas, acentos ni espacios."""
-    planas = [listas._plano(h) for h in cabecera]
-    posicion, usadas = {}, set()
-    for clave, rotulo, *_ in COLUMNAS:
-        candidatos = {clave, listas._plano(rotulo), *(_ALIAS.get(clave, ()))}
-        idx = next((i for i, h in enumerate(planas) if h in candidatos and i not in usadas), None)
-        if idx is not None:
-            posicion[clave] = idx
-            usadas.add(idx)
-    if "nombre" not in posicion:
-        raise ErrorAsistida(400, "Falta la columna «nombre» en la cabecera de la planilla.")
-    ignoradas = [_limpiar(h) for i, h in enumerate(cabecera) if i not in usadas and str(h).strip()]
-    return posicion, ignoradas
+    return base.leer_csv(contenido, TOPE_FILAS, TOPE_BYTES)
 
 
 def _decimal(texto: str):
@@ -252,8 +232,11 @@ def _datos_de_fila(celdas, posicion) -> tuple[dict, list, list]:
     if mail and (len(mail) > CONTACTO["mail"] or not _RE_MAIL.match(mail)):
         rechazos.append("El mail no tiene forma de mail.")
 
+    # Con coordenadas válidas se respeta exacta / aproximada / manual; vacío u otro
+    # valor es «manual» (X23 revisada). Sin coordenadas, `campos_para_guardar` fuerza sin_geo.
+    precision = listas._plano(c("precision_geo"))
     datos = {"nombre": nombre, "sede": sede, "sede_explicita": sede_explicita,
-             "latitud": lat, "longitud": lon}
+             "latitud": lat, "longitud": lon, "precision": precision if precision in _PRECISIONES else "manual"}
     for k in DOMICILIO:
         datos[k] = c(k)
     for k, largo in CONTACTO.items():
@@ -264,8 +247,10 @@ def _datos_de_fila(celdas, posicion) -> tuple[dict, list, list]:
             dudas.append("Sin coordenadas: queda «sin ubicar» hasta ubicarla en el mapa.")
         if not datos["provincia"] or not datos["localidad"]:
             dudas.append("Falta la provincia o la localidad.")
-        if not datos["calle"] or not datos["numero"]:
+        if not datos["calle"] or not datos["numero"] or listas._plano(datos["numero"]) in _SIN_NUMERO:
             dudas.append("Falta la calle o la altura.")
+        if lat is not None and datos["precision"] == "aproximada":
+            dudas.append("Ubicación aproximada: confirmala en el mapa.")
     return datos, rechazos, dudas
 
 
@@ -280,11 +265,11 @@ def _a_escribir(datos: dict, e: dict | None) -> dict:
     domicilio no se mueva."""
     contacto = {k: datos[k] for k in CONTACTO}
     if e is None:
-        dom = geo.campos_para_guardar({k: datos[k] for k in DOMICILIO}, "manual",
+        dom = geo.campos_para_guardar({k: datos[k] for k in DOMICILIO}, datos["precision"],
                                       datos["latitud"], datos["longitud"])
         return {"nombre": datos["nombre"], "ve_todas": bool(datos["sede"]), **dom, **contacto}
     mezcla = {k: datos[k] or str(e.get(k) or "") for k in DOMICILIO}
-    lat, lon, precision = datos["latitud"], datos["longitud"], "manual"
+    lat, lon, precision = datos["latitud"], datos["longitud"], datos["precision"]
     if lat is None:
         quieto = all(geo.campos_para_guardar(mezcla, "", None, None)[k] == str(e.get(k) or "") for k in DOMICILIO)
         if quieto:
@@ -326,11 +311,14 @@ def leer(contenido: bytes, existentes: list, opciones: dict | None = None) -> di
     para el uso interno `datos`, `existente` y `cambios`."""
     opciones = normalizar_opciones(opciones)
     cabecera, crudas = _leer_csv(contenido)
-    posicion, ignoradas = _posiciones(cabecera)
+    asignado = base.aplicar_mapeo(detectar(cabecera), opciones["mapeo"], len(cabecera), ROTULO)
+    mapeo = base.mapeo_json(cabecera, crudas, asignado, ("nombre",))
+    if mapeo["faltan"]:
+        return {"total": 0, "filas": [], "opciones": opciones, "mapeo": mapeo,
+                "avisos": ["Falta indicar qué columna es «Nombre»: elegila abajo y volvé a ensayar."]}
+    posicion = {campo: i for i, campo in asignado.items()}
     por_nombre = {_clave_nombre(e["nombre"]): e for e in existentes if _clave_nombre(e["nombre"])}
     vistos, filas, avisos = set(), [], []
-    if ignoradas:
-        avisos.append("Se ignoran las columnas que no conozco: " + ", ".join(f"«{x}»" for x in ignoradas) + ".")
 
     for linea, celdas in crudas:
         datos, rechazos, dudas = _datos_de_fila(celdas, posicion)
@@ -379,7 +367,7 @@ def leer(contenido: bytes, existentes: list, opciones: dict | None = None) -> di
     if not ya_ve_todas and not sedes:
         avisos.append("Ninguna seccional vería todas las demás: marcá la fila de Sede Central con «sí» "
                       "(o tildá «Sus usuarios ven todas las seccionales» después, en el panel).")
-    return {"total": len(filas), "filas": filas, "avisos": avisos, "opciones": opciones}
+    return {"total": len(filas), "filas": filas, "avisos": avisos, "opciones": opciones, "mapeo": mapeo}
 
 
 # ------------------------------------------------------------------ base
@@ -408,7 +396,7 @@ def ensayar(s, sid: int, contenido: bytes, opciones: dict | None = None) -> dict
     return {"total": ley["total"], "validas": cuenta["valida"], "dudosas": cuenta["dudosa"],
             "rechazadas": cuenta["rechazada"], "ya_existen": cuenta["ya_existe"],
             "a_escribir": a_escribir, "filas": filas, "avisos": ley["avisos"], "muestra": filas[:5],
-            "opciones": ley["opciones"], "huella": huella(contenido, ley["opciones"])}
+            "opciones": ley["opciones"], "mapeo": ley["mapeo"], "huella": huella(contenido, ley["opciones"])}
 
 
 def cargar(s, sid: int, contenido: bytes, opciones: dict | None = None, dejar_afuera=()) -> dict:
@@ -418,6 +406,8 @@ def cargar(s, sid: int, contenido: bytes, opciones: dict | None = None, dejar_af
     from db import Seccional
     afuera_pedido = {int(x) for x in dejar_afuera}
     ley = leer(contenido, _existentes(s, sid), opciones)
+    if ley["mapeo"]["faltan"]:
+        raise ErrorAsistida(400, "Falta indicar qué columna es «Nombre».")
     por_id = {x.id: x for x in s.exec(select(Seccional).where(Seccional.sindicato_id == sid)).all()}
     res = {"creadas": 0, "actualizadas": 0, "sin_tocar": 0, "afuera": 0, "rechazadas": 0, "detalle": []}
 
@@ -454,3 +444,11 @@ def cargar(s, sid: int, contenido: bytes, opciones: dict | None = None, dejar_af
     s.flush()
     res["avisos"] = ley["avisos"]
     return res
+
+
+def movimiento(carga: dict) -> tuple:
+    """`(texto, cantidades)` del movimiento `asistida_carga`."""
+    cantidades = {k: carga[k] for k in ("creadas", "actualizadas", "sin_tocar", "afuera", "rechazadas")}
+    texto = (f"Cargó {base.plural(carga['creadas'], 'seccional', 'seccionales')} desde planilla "
+             f"({base.plural(carga['actualizadas'], 'actualizada', 'actualizadas')}, {carga['afuera']} afuera)")
+    return texto, cantidades

@@ -11581,3 +11581,48 @@ la fila de la planilla. Si el sindicato ya tiene dos seccionales con el
 mismo nombre, la carga reconoce una sola. «A-B», «A B» y «A_B» cuentan como
 el mismo nombre.
 
+## XSII bloque 4: Padrón desde planilla, columnas como vengan y responsable de la seccional (2026-11-27)
+
+Plataforma 0.83.01, Admin 0.81.01, Trabajador 0.64.01. El plan no se edita:
+las decisiones quedan acá.
+
+- SDN confirmó X22 y X24 («Ok, adelante»). **X23 revisada**: SDN mostró su
+  archivo de seccionales ya georreferenciadas (63 filas, con columna
+  `precision_geo`): si la planilla dice `exacta`, `aproximada` o `manual`, se
+  respeta; `aproximada` entra dudosa («confirmala en el mapa»); sin columna,
+  las coordenadas quedan `manual`.
+- **X25 (Code)**: el padrón se carga con las mismas reglas que «Alta masiva».
+  La lógica por fila se sacó de la ruta a `padron_carga.py`; la ruta quedó
+  como adaptador. El QA la comparó contra la lógica vieja, congelada dentro
+  del test, con 44 listas adversarias en cuatro modos: idéntica, salvo un
+  500 que se arregló de paso (un CUIL nuevo repetido en la misma lista con
+  mail o fecha).
+- **X26 (Code)**: seccional escrita que no existe → la persona entra sin
+  seccional y queda dudosa, con el nombre a la vista; con la opción, afuera.
+- **X27 (Code)**: 20.000 filas y 5 MB por carga. Medido: ensayo 1,6 s y carga
+  13,8 s (la primera versión tardaba 45 s por una consulta por persona; ahora
+  las cuentas se traen por lotes de 5.000).
+- **Pedidos de SDN en el camino**: que Seccionales reconozca las columnas
+  «lo más completo y flexible posible» (el archivo real no se subió al repo:
+  trae nombres de personas; hay un ejemplo inventado con su cabecera exacta)
+  y que la seccional guarde su responsable.
+
+**Lo que encontró el QA.** Servidor (298 ataques): dos cargas simultáneas
+con un CUIL en común, entre dos sindicatos o entre la asistida y el alta
+masiva del panel, chocaban al guardar con error 500 (candado global de la
+carga del padrón); un byte nulo en la lista o en el responsable daba 500; y
+**los datos de una seccional se dibujaban sin escape** en la ficha del panel
+(teléfono, WhatsApp, mail, horario, popup del mapa) y en la app del afiliado
+(nombre, dirección, horario, teléfono), anterior a este bloque pero que la
+carga desde planilla volvía fácil de explotar. Pantalla: no avisaba hasta el
+final que faltaban tareas previas; «Dejar afuera estas 300 dudosas» mentía
+con el listado recortado; «Qué sigue» no avisaba una diferencia con el total
+declarado; el texto pegado viaja como archivo para no chocar con el tope de
+1 MB por campo.
+
+**Límites sabidos.** Un byte nulo en otros campos de texto libre del panel
+sigue dando 500 (es general, no de esta función). Una fecha con hora en
+formato día/mes/año se rechaza como ilegible. El candado de la carga del
+padrón es uno solo para toda la plataforma: dos cargas grandes se hacen una
+detrás de la otra.
+

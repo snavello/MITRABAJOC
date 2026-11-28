@@ -42,7 +42,7 @@ INSUMOS = {
         "nombre": "Planilla del padrón",
         "descripcion": "La planilla de afiliados entregada por el sindicato, con el total declarado.",
         "tipo": "archivo",
-        "formato": "Afiliados con identificación, nombre y seccional, y el total declarado (se pega como texto, una línea por afiliado)"},
+        "formato": "Planilla CSV con una fila por afiliado: identificación, nombre, seccional y domicilio"},
 }
 
 # Una tarea es una función de controles.py con el MISMO nombre que `control`.
@@ -256,11 +256,11 @@ TAREAS = (
           confirmacion="La cantidad cargada coincide con el total declarado y los rechazos se revisaron",
           para_que="Deja a los afiliados del sindicato cargados en el sistema, con su seccional.",
           pasos=(
-              "Entrá al panel del sindicato, pestaña «Trabajadores», sub-pestaña «Alta masiva».",
-              "Pegá una línea por persona, con los campos separados por coma (la seccional va en la línea), y tocá «Revisar antes de cargar».",
-              "Corregí las líneas que queden afuera y tocá «Cargar lista».",
-              "Compará la cantidad cargada con el total que declaró el sindicato y confirmalo acá en XSII.",
-              "Queda hecha cuando hay afiliados cargados y lo confirmás; los que no tienen seccional quedan como observación.",
+              "Tocá «Cargar desde la planilla» y subí la planilla de afiliados del sindicato (CSV).",
+              "Revisá qué columna tomó para cada dato, corregila si hace falta y escribí el total declarado.",
+              "Mirá el ensayo: no guarda nada; decidí qué hacer con las dudosas y revisá los rechazos.",
+              "Tocá «Cargar» y compará lo cargado con el total declarado.",
+              "Queda hecha cuando hay afiliados cargados y lo confirmás; los que quedan sin seccional son observación.",
           ),
           descripcion="Los afiliados cargados contra el total declarado, con los rechazos revisados."),
     Tarea("PAD-03", "Domicilios ubicados", "Padrón", "asistida",
