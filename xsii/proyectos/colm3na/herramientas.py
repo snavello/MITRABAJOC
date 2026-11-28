@@ -18,6 +18,7 @@ import implementacion
 from xsii import asistente
 from xsii.motor import consulta
 
+from . import hitos as hitos_mod
 from . import vista
 from .catalogo import INSUMOS, TAREAS
 
@@ -153,6 +154,9 @@ def herramientas(inst: Instantanea) -> dict:
         movs = inst.historial(c, MOVIMIENTOS_MAX)
         return {"alcance": c or "todo el proyecto", "movimientos": movs, "cantidad": len(movs)}
 
+    def ver_hitos():
+        return hitos_mod.para_preguntame(inst.ctx)
+
     def proponer_reclamo(clave="", titulo="", texto=""):
         if not all(isinstance(x, str) for x in (clave, titulo, texto)):
             raise asistente.ErrorHerramienta("La clave, el título y el texto tienen que ser texto.")
@@ -200,6 +204,9 @@ def herramientas(inst: Instantanea) -> dict:
                                  {"codigo": {"type": "string",
                                              "description": "Código de la tarea, o vacío para todo el proyecto."}},
                                  ["codigo"]), ver_registro),
+        "ver_hitos": (esquema("Los hitos del plan de la Mesa enlazados a tareas: de cada uno su código, si está hecho, "
+                              "propuesto para marcar (todas sus tareas hechas), pendiente o sin enlazar, y las tareas "
+                              "enlazadas con su estado. No trae el texto de los hitos."), ver_hitos),
         "proponer_reclamo": (esquema(
             "NO escribe nada: propone a la persona reclamar en la Mesa un insumo que falta o está pedido. "
             "Ella revisa el título y el texto y lo crea. Una sola vez por consulta.",

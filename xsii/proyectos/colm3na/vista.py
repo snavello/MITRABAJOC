@@ -23,6 +23,7 @@ import modulos
 from xsii.motor import consulta, estados
 from xsii.motor.catalogo import MODOS
 
+from . import hitos as hitos_mod
 from . import tablero as tablero_mod
 from .asistidas import ASISTIDAS, ErrorAsistida, huella
 from .catalogo import GRUPOS, INSUMOS, TAREAS
@@ -150,6 +151,10 @@ class Contexto:
         self.insumos = {k: _InsumoPlano(i) for k, i in db.xsii_insumos_activos(s, self.pid).items()}
         self.tarjetas = {i: _TarjetaPlana(t) for i, t in db.xsii_tarjetas(
             s, self.pid, [x.tarjeta_id for x in self.insumos.values()]).items()}
+        # Bloque 5: los archivos que subió el sindicato a esas tarjetas y los hitos de la Mesa.
+        self.archivos_sindicato = db.xsii_archivos_nuevos(s, self.pid, [x.tarjeta_id for x in self.insumos.values()])
+        self.hitos_datos = hitos_mod.cargar(s, self.pid)
+        self._hitos_json = None
         if self.sindicato is None:
             return
         recibidos = {k: True for k, i in self.insumos.items() if i.estado == "recibido"}
@@ -170,7 +175,7 @@ class Contexto:
 class _InsumoPlano:
     """El registro de un insumo como datos simples (no objeto de la sesión)."""
     def __init__(self, i):
-        self.clave, self.estado, self.tarjeta_id = i.clave, i.estado, i.tarjeta_id
+        self.clave, self.estado, self.tarjeta_id, self.archivo_id = i.clave, i.estado, i.tarjeta_id, i.archivo_id
         self.nota, self.quien, self.cuando = i.nota, i.quien_nombre, i.cuando
 
 
@@ -259,13 +264,17 @@ def insumo_json(ctx: Contexto, clave: str, sin_registrar: bool = False) -> dict:
     meta = INSUMOS[clave]
     reg = ctx.insumos.get(clave)
     dias = _cuando_a_dias(reg.cuando) if reg and reg.estado == "pedido" else None
+    nuevos = 0
+    if reg and reg.estado == "pedido" and reg.tarjeta_id:
+        nuevos = sum(1 for cuando in ctx.archivos_sindicato.get(reg.tarjeta_id, []) if cuando > reg.cuando)
     return {"clave": clave, "nombre": meta["nombre"], "descripcion": meta["descripcion"],
             "tipo": meta["tipo"], "formato": meta["formato"],
             "estado": reg.estado if reg else "falta",
             "sin_registrar": bool(sin_registrar and reg is None),
             "dias": dias, "nota": reg.nota if reg else "",
             "quien": reg.quien if reg else "", "cuando": reg.cuando if reg else "",
-            "tarjeta": _tarjeta_json(ctx, reg.tarjeta_id) if reg else None}
+            "tarjeta": _tarjeta_json(ctx, reg.tarjeta_id) if reg else None,
+            "archivos_nuevos": nuevos}
 
 
 _TILDES_CIFRA = {"revision": "revisión", "ubicacion": "ubicación", "padron": "padrón", "tramite": "trámite",
@@ -333,6 +342,7 @@ def tarea_json(ctx: Contexto, codigo: str) -> dict:
         "decisiones": [dict(d) for d in ctx.decisiones.get(codigo, [])],
         "insumos": [insumo_json(ctx, k, sin_registrar) for k in t.insumos],
         "acciones": acciones_de(ctx, codigo),
+        "hitos": hitos_mod.de_la_tarea(ctx, codigo),
     }
 
 
@@ -389,7 +399,7 @@ def tablero_json(s, ctx: Contexto) -> dict:
         "disponible": ctx.disponible, "motivo": "" if ctx.disponible else ctx.motivo_no_disponible,
         "grupos": list(GRUPOS), "rotulos": ROTULOS,
         "resumen": None, "recomendada": None, "alternativas": [], "demorados": [], "tareas": [],
-        "movimientos": movs,
+        "movimientos": movs, "hitos": hitos_mod.resumen_tablero(ctx),
     }
     if ctx.disponible:
         salida.update({
@@ -417,6 +427,63 @@ def proyectos_json(s) -> dict:
                            "sindicato_id": p.sindicato_id,
                            "sindicato_nombre": nombres.get(p.sindicato_id) if p.sindicato_id else None}
                           for p in db.impl_proyectos(s)]}
+
+
+# ------------------------------------------------------------------ bloque 5: hitos de la Mesa
+
+def hitos_json(ctx: Contexto) -> dict:
+    return hitos_mod.hitos_json(ctx)
+
+
+def enlazar_hito(s, ctx: Contexto, actor, hito_id: int, codigo: str) -> None:
+    db.xsii_enlazar_hito(s, ctx.pid, actor, hito_id, codigo, POR_CODIGO[codigo].nombre)
+
+
+def desenlazar_hito(s, ctx: Contexto, actor, hito_id: int, codigo: str) -> None:
+    db.xsii_desenlazar_hito(s, ctx.pid, actor, hito_id, codigo, POR_CODIGO[codigo].nombre)
+
+
+def aceptar_sugerencias(s, ctx: Contexto, actor, hitos) -> int:
+    """Enlaza todas las sugeridas de esos hitos (todos si `hitos` es None), todo o nada.
+    Un id que no es un hito de este proyecto es 404 y no se enlaza nada."""
+    if hitos is not None:
+        conocidos = {h["id"] for h in ctx.hitos_datos["hitos"]}
+        if any(h not in conocidos for h in hitos):
+            raise db.XsiiError(404, "Hay un hito que no existe en la Mesa de este proyecto.")
+    return db.xsii_aceptar_hitos_sugeridos(s, ctx.pid, actor, hitos_mod.pares_a_aceptar(ctx, hitos))
+
+
+def marcar_hito(s, ctx: Contexto, actor, hito_id: int) -> None:
+    """Tilda el hito en la Mesa, revalidando ADENTRO de la transacción (con un tablero
+    recién calculado) que siga propuesto. Levanta `XsiiError` (404, 409)."""
+    if hitos_mod.hito_json(ctx, hito_id) is None:
+        raise db.XsiiError(404, "No existe ese hito en la Mesa de este proyecto.")
+    db.xsii_marcar_hito(s, ctx.pid, actor, hito_id,
+                        lambda sesion: hitos_mod.revalidar(Contexto(sesion, ctx.pid), hito_id))
+
+
+# ------------------------------------------------------------------ bloque 5: archivos de los insumos
+
+def _insumo_con_tarjeta(ctx: Contexto, clave: str):
+    reg = ctx.insumos.get(clave)
+    return reg if reg is not None and reg.tarjeta_id else None
+
+
+def archivos_de_insumo_json(s, ctx: Contexto, clave: str) -> dict:
+    """`GET .../insumo/{clave}/archivos`: los archivos de la tarjeta enlazada, sin bytes."""
+    reg = _insumo_con_tarjeta(ctx, clave)
+    tarjeta = _tarjeta_json(ctx, reg.tarjeta_id) if reg else None
+    if reg is None or tarjeta is None:
+        return {"tarjeta": None, "archivos": []}
+    return {"tarjeta": {"codigo": tarjeta["codigo"], "titulo": tarjeta["titulo"], "estado": tarjeta["estado"]},
+            "archivos": [{"id": a.id, "codigo": a.codigo, "nombre": a.nombre, "tamano": a.tamano,
+                          "subido_por": a.subido_por_nombre, "lado": a.subido_por_lado, "cuando": a.subido_en,
+                          "datos_personales": a.datos_personales, "elegido": a.id == reg.archivo_id}
+                         for a in db.xsii_archivos_de_tarjeta(s, ctx.pid, reg.tarjeta_id)]}
+
+
+def fijar_archivo(s, ctx: Contexto, actor, clave: str, archivo_id: int) -> None:
+    db.xsii_fijar_archivo(s, ctx.pid, actor, clave, INSUMOS[clave]["nombre"], archivo_id)
 
 
 # ------------------------------------------------------------------ escrituras
@@ -497,6 +564,7 @@ def asistida_json(ctx: Contexto, codigo: str, s=None) -> dict:
     salida.update(modulo.describir())
     if s is not None and ctx.disponible and hasattr(modulo, "contexto"):
         salida.update(modulo.contexto(s, ctx.sindicato_id))
+    salida["archivo_mesa"] = _archivo_mesa(s, ctx, modulo) if s is not None and ctx.disponible else None
     return salida
 
 
@@ -507,6 +575,39 @@ def _exigir_asistida_disponible(ctx: Contexto, codigo: str):
     if ctx.tb[codigo].estado == "no_aplica":
         raise db.XsiiError(409, "Esta tarea no aplica a este sindicato: no hay nada que cargar.")
     return modulo
+
+
+def _archivo_mesa(s, ctx: Contexto, modulo) -> dict | None:
+    """El archivo de la Mesa fijado al insumo de una asistida de planilla, o None."""
+    if getattr(modulo, "ENTRADA", "planilla") != "planilla":
+        return None
+    reg = ctx.insumos.get(modulo.describir().get("insumo"))
+    if reg is None or not reg.archivo_id:
+        return None
+    a = db.impl_archivo(s, ctx.pid, reg.archivo_id)
+    if a is None or a.borrado_en:
+        return None
+    return {"id": a.id, "codigo": a.codigo, "nombre": a.nombre}
+
+
+def leer_archivo_de_mesa(s, ctx: Contexto, actor, codigo: str, archivo_id: int) -> bytes:
+    """Los bytes del archivo de la Mesa fijado al insumo de la asistida de planilla,
+    registrando la descarga a nombre de la persona (motivo XSII). Hace commit de la
+    descarga: queda dicha aunque lo que sigue falle. 404 si no es el archivo fijado
+    a ESE insumo de ESTE proyecto; 409 si ya no está; 403 si no puede bajarlo."""
+    modulo = _exigir_asistida_disponible(ctx, codigo)
+    if getattr(modulo, "ENTRADA", "planilla") != "planilla":
+        raise db.XsiiError(404, "Esta tarea no lee planillas.")
+    reg = ctx.insumos.get(modulo.describir().get("insumo"))
+    if reg is None or not reg.archivo_id or reg.archivo_id != archivo_id:
+        raise db.XsiiError(404, "Ese archivo no es el que está fijado a este insumo.")
+    try:
+        baja = db.impl_bajar_archivo(s, ctx.pid, archivo_id, actor, motivo="xsii")
+    except implementacion.ErrorImpl as e:
+        raise db.XsiiError(409 if e.codigo == "borrado" else 403, e.mensaje)
+    if baja is None:
+        raise db.XsiiError(404, "Ese archivo no es el que está fijado a este insumo.")
+    return baja[1]
 
 
 def asistida_ensayar(s, ctx: Contexto, codigo: str, contenido: bytes, opciones) -> dict:

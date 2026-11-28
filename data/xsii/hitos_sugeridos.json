@@ -1,0 +1,22 @@
+[
+  {"texto_contiene": ["alta del sindicato con logo", "primer administrador"],
+   "tareas": ["BAS-01", "BAS-02", "BAS-03", "BAS-04"]},
+  {"texto_contiene": ["seccionales cargadas desde el archivo", "ubicadas en el mapa"],
+   "tareas": ["EST-01", "EST-02", "EST-03", "EST-04"]},
+  {"texto_contiene": ["padron y listas cargados"],
+   "tareas": ["PAD-02", "PAD-05"]},
+  {"texto_contiene": ["padron recibido y revisado"],
+   "tareas": ["PAD-01"]},
+  {"texto_contiene": ["recibos de muestra de distintos bancos recibidos"],
+   "tareas": ["REC-01"]},
+  {"texto_contiene": ["catalogo de conceptos y reglas de control"],
+   "tareas": ["REC-04", "REC-05"]},
+  {"texto_contiene": ["escalas con vigencia cargadas"],
+   "tareas": ["REC-08"]},
+  {"texto_contiene": ["20 recibos reales de 4 bancos"],
+   "tareas": ["REC-07"]},
+  {"texto_contiene": ["primeros dos o tres tramites armados con el asistente"],
+   "tareas": ["TRA-01", "TRA-02"]},
+  {"texto_contiene": ["operadores capacitados y aceptacion firmada"],
+   "tareas": ["CIE-03"]}
+]

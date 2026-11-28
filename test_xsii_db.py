@@ -261,7 +261,7 @@ def _tablas_xsii_del_esquema():
 
 def test_toda_tabla_xsii_esta_declarada():
     assert tuple(_tablas_xsii_del_esquema()) == db.XSII_TABLAS
-    assert db.XSII_TABLAS == ("xsiidecision", "xsiiinsumo", "xsiimovimiento")
+    assert db.XSII_TABLAS == ("xsiidecision", "xsiihito", "xsiiinsumo", "xsiimovimiento")
 
 
 def test_el_clonado_de_la_demo_excluye_las_tablas_xsii():

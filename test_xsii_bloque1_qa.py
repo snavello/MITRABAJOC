@@ -972,7 +972,7 @@ def test_forma_de_cada_objeto_contra_el_contrato():
         assert t["donde"] is None or set(t["donde"]) == {"url", "rotulo"}
         for i in t["insumos"]:
             assert set(i) == {"clave", "nombre", "descripcion", "tipo", "formato", "estado", "sin_registrar", "dias", "nota", "quien",
-                              "cuando", "tarjeta"}
+                              "cuando", "tarjeta", "archivos_nuevos"}
             assert i["estado"] in ("recibido", "pedido", "falta") and isinstance(i["sin_registrar"], bool)
         for dec in t["decisiones"]:
             assert set(dec) == {"tipo", "motivo", "quien", "cuando"}
@@ -1023,7 +1023,7 @@ def test_la_ficha_del_proyecto_sin_sindicato_y_los_demorados_con_tarea_resuelta(
 # ================================================================ migración
 
 def test_las_tablas_xsii_estan_en_la_lista_fail_closed():
-    assert db.XSII_TABLAS == ("xsiidecision", "xsiiinsumo", "xsiimovimiento")
+    assert db.XSII_TABLAS == ("xsiidecision", "xsiihito", "xsiiinsumo", "xsiimovimiento")
     with db.get_session() as s:
         presentes = {r[0] for r in s.exec(db.text(
             "select tablename from pg_tables where schemaname = current_schema() and tablename like 'xsii%'")).all()}

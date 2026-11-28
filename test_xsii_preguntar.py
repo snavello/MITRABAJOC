@@ -226,7 +226,7 @@ def test_una_pregunta_de_punta_a_punta_con_herramientas_y_uso_registrado():
     kw = cli.llamadas[0]
     assert kw["model"] == "claude-sonnet-5-5" and kw["tool_choice"] == {"type": "auto"}
     assert [t["name"] for t in kw["tools"]] == ["ver_tablero", "ver_tarea", "que_frena", "que_destraba",
-                                                "camino_hasta", "ver_registro", "proponer_reclamo"]
+                                                "camino_hasta", "ver_registro", "ver_hitos", "proponer_reclamo"]
     assert kw["output_config"] == {"effort": "low"}
     assert "PAD-02" in kw["messages"][0]["content"] and "¿Qué la frena?" in kw["messages"][0]["content"]
     resultados = cli.llamadas[1]["messages"][2]["content"]

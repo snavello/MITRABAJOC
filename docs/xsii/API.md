@@ -1079,3 +1079,56 @@ contenido de un archivo va a movimientos ni a «Preguntame»; los nombres de
 archivo y los textos de hitos se dibujan como texto, nunca como HTML; las
 herramientas de «Preguntame» pueden leer los hitos (código, estado, tareas
 enlazadas), no su texto libre.
+
+## Notas de implementación (Bloque 5)
+
+Lo que el servidor hace y el contrato dejaba abierto o dicho de otra manera:
+
+- **Tabla `XsiiHito`** (migración `e5a7c9b1d3f6`, idempotente, en `db.XSII_TABLAS`).
+  El código vive en `xsii/proyectos/colm3na/hitos.py` (lectura, sugerencias,
+  propuesta) y en `db.xsii_*hito*`; `vista.py` solo enruta.
+- **`sugerencias` del resumen y del tablero cuentan PARES hito-tarea** (lo mismo
+  que devuelve `aceptar` en `enlazados`), no hitos con alguna sugerencia.
+- **El JSON de sugerencias** es una lista `{"texto_contiene": [...], "tareas": [...]}`;
+  las frases se escriben ya normalizadas (sin mayúsculas ni tildes). 10 entradas
+  enlazan 10 de los 45 hitos de La Bancaria; las reuniones, talleres, acuerdos,
+  actas y la lista de empleadores quedan sin enlace a propósito.
+- **`resuelta` de una tarea enlazada** es «hecha» (por control, confirmada o
+  completada a mano). Una «no aplica» sale con `resuelta: false` y su estado, y no
+  cuenta ni frena; el hito se propone si todas las que SÍ aplican están hechas y
+  hay al menos una. En un proyecto sin sindicato los hitos se listan y se enlazan,
+  pero nada se propone (las tareas salen con estado vacío).
+- **Marcar**: la ruta arma un tablero nuevo ADENTRO de la transacción, con el hito
+  bloqueado (`FOR UPDATE`); como un control que falla hace rollback y suelta el
+  candado, el hito se bloquea de nuevo y `hecho` se mira recién ahí. 404 si el hito
+  no es del proyecto, 409 si ya está hecho (en la Mesa o por otro marcado a la vez)
+  o dejó de estar propuesto, con la frase del motivo. El movimiento `hito_marcado`
+  lleva en `cantidades` el código del hito y de las tareas (nunca el texto libre) y
+  `codigo` de la tarea solo si es una; con varias, `codigo` queda vacío.
+- **Enlazar/desenlazar/aceptar** devuelven `{"ok": true, "hito": <hito>}` (y
+  `{"ok": true, "enlazados": n}` en aceptar). Un id de hito ajeno es 404 y en
+  `aceptar` no se enlaza nada (todo o nada); una tarea que no existe es 400.
+  El cuerpo de `aceptar` puede faltar.
+- **Archivos**: `archivos` excluye los borrados y deja `elegido` en el fijado.
+  `archivos_nuevos` compara `subido_en` con `cuando` del registro del insumo con
+  `>` (segundos); cuenta solo lo que subió el lado sindicato y sigue en pie, y es
+  0 si el insumo no está `pedido`. Fijar un archivo reemplaza el registro activo
+  del insumo (queda el anterior inactivo) y deja el movimiento `insumo_archivo`
+  con el CÓDIGO del archivo (`AR000123`), nunca su nombre ni su contenido.
+  `GET …/archivos` y `POST …/archivo` responden 404 si el insumo no tiene tarjeta
+  enlazada o el archivo no es de ESA tarjeta, de este proyecto y no borrado.
+- **`archivo_mesa` en una asistida de planilla**: va como campo del formulario
+  (texto con el id) y NO acepta `archivo` ni `texto` a la vez (400). Tiene que ser
+  el archivo fijado al insumo de ESA asistida (si no, 404, también uno de otro
+  proyecto); borrado después de fijarlo es 409. La descarga se registra con
+  `db.impl_bajar_archivo(..., motivo="xsii")`: `ImplDescarga` a nombre de la persona
+  y un evento «bajar» de la Mesa con `detalle.motivo = "xsii"` (se lee «bajó X desde
+  XSII»). Esa descarga se confirma ANTES de la carga: queda dicha aunque la carga
+  falle. Cada ensayo y cada carga con el archivo de la Mesa registran una.
+  `GET …/asistida` suma `archivo_mesa` (`null` si no hay, está borrado o la
+  asistida es de recibos).
+- **«Preguntame»** suma la herramienta `ver_hitos` (sin parámetros): por hito su
+  código, si está hecho / propuesto / pendiente / sin enlazar y sus tareas con
+  estado, más el resumen. No trae el texto del hito.
+- Un id 0 no es un id válido de la Mesa: contesta 404 (no existe), como cualquier
+  id que no es de este proyecto.
