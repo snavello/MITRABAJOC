@@ -13721,6 +13721,19 @@ def _xsii_campo_json(valor, tipo, defecto, nombre: str):
     return dato
 
 
+def _xsii_id_opcional(valor, nombre: str):
+    """Un id de la Mesa que llega como campo: ausente es None; algo que no es un
+    número entero válido, 400."""
+    if valor is None or (isinstance(valor, str) and not valor.strip()):
+        return None
+    if isinstance(valor, bool) or not isinstance(valor, (str, int)):
+        raise HTTPException(400, f"{nombre} no es válido.")
+    texto = str(valor).strip()
+    if not (texto.isascii() and texto.isdigit() and len(texto) <= 10 and implementacion.id_valido(int(texto))):
+        raise HTTPException(400, f"{nombre} no es válido.")
+    return int(texto)
+
+
 async def _xsii_planilla(request: Request) -> dict:
     """El formulario de una carga asistida: `contenido` (el archivo o el texto
     pegado, en bytes), `opciones`, `huella` y `dejar_afuera`."""
@@ -13741,7 +13754,10 @@ async def _xsii_planilla(request: Request) -> dict:
         if len(afuera) > XSII_DEJAR_AFUERA_MAX or any(isinstance(x, bool) or not isinstance(x, int) for x in afuera):
             raise HTTPException(400, "La lista de líneas que quedan afuera no es válida.")
         huella = form.get("huella")
-        return {"contenido": contenido, "opciones": opciones, "dejar_afuera": afuera,
+        archivo_mesa = _xsii_id_opcional(form.get("archivo_mesa"), "El archivo de la Mesa")
+        if archivo_mesa is not None and contenido.strip():
+            raise HTTPException(400, "Mandá el archivo de la Mesa o una planilla, no las dos cosas.")
+        return {"contenido": contenido, "opciones": opciones, "dejar_afuera": afuera, "archivo_mesa": archivo_mesa,
                 "huella": huella.strip() if isinstance(huella, str) else ""}
     finally:
         await form.close()
@@ -13782,7 +13798,10 @@ async def api_xsii_asistida_ensayo(request: Request, pid: IdImpl, codigo: str, a
         with db.get_session() as s:
             ctx = _xsii_contexto(s, pid)
             try:
-                return xsii_vista.asistida_ensayar(s, ctx, codigo, pedido["contenido"], pedido["opciones"])
+                contenido = pedido["contenido"]
+                if pedido["archivo_mesa"] is not None:
+                    contenido = xsii_vista.leer_archivo_de_mesa(s, ctx, actor, codigo, pedido["archivo_mesa"])
+                return xsii_vista.asistida_ensayar(s, ctx, codigo, contenido, pedido["opciones"])
             except db.XsiiError as e:
                 raise HTTPException(e.estado, e.mensaje)
     return await run_in_threadpool(_trabajo)
@@ -13799,7 +13818,10 @@ async def api_xsii_asistida_carga(request: Request, pid: IdImpl, codigo: str, ac
         with db.get_session() as s:
             antes = _xsii_contexto(s, pid)
             try:
-                carga = xsii_vista.asistida_cargar(s, antes, actor, codigo, pedido["contenido"], pedido["opciones"],
+                contenido = pedido["contenido"]
+                if pedido["archivo_mesa"] is not None:
+                    contenido = xsii_vista.leer_archivo_de_mesa(s, antes, actor, codigo, pedido["archivo_mesa"])
+                carga = xsii_vista.asistida_cargar(s, antes, actor, codigo, contenido, pedido["opciones"],
                                                    pedido["huella"], pedido["dejar_afuera"])
                 s.commit()                    # todo o nada: la planilla, el movimiento y el insumo
             except db.XsiiError as e:
@@ -14070,6 +14092,104 @@ def api_xsii_reclamo(request: Request, pid: IdImpl, clave: str, actor=Depends(_x
     except Exception:                          # noqa: BLE001
         logging.getLogger(__name__).warning("xsii: el aviso por mail falló")
     return salida
+
+
+# ----- Bloque 5: vuelta a la Mesa (hitos propuestos y archivos de los insumos, docs/xsii/API.md) -----
+async def _xsii_cuerpo_opcional(request: Request) -> dict:
+    """Como `_xsii_cuerpo`, pero un cuerpo vacío es un objeto vacío."""
+    if not (await request.body()).strip():
+        return {}
+    return await _xsii_cuerpo(request)
+
+
+def _xsii_codigo_de_tarea(valor) -> str:
+    """El código de tarea del cuerpo: si no es del catálogo, 400."""
+    codigo = _xsii_texto(valor, "El código").strip().upper()
+    if codigo not in xsii_vista.POR_CODIGO:
+        raise HTTPException(400, "No existe esa tarea del catálogo.")
+    return codigo
+
+
+@app.get(API_XSII + "/p/{pid}/hitos")
+def api_xsii_hitos(pid: IdImpl, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        return xsii_vista.hitos_json(_xsii_contexto(s, pid))
+
+
+@app.post(API_XSII + "/p/{pid}/hitos/sugerencias/aceptar")
+def api_xsii_hitos_aceptar(pid: IdImpl, actor=Depends(_xsii_equipo), datos: dict = Depends(_xsii_cuerpo_opcional)):
+    hitos = datos.get("hitos")
+    if hitos is not None:
+        if (not isinstance(hitos, list) or len(hitos) > 1000
+                or any(isinstance(h, bool) or not isinstance(h, int) or not implementacion.id_valido(h) for h in hitos)):
+            raise HTTPException(400, "La lista de hitos no es válida.")
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        try:
+            n = xsii_vista.aceptar_sugerencias(s, ctx, actor, hitos or None)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        return {"ok": True, "enlazados": n}
+
+
+@app.post(API_XSII + "/p/{pid}/hitos/{hid}/enlace")
+def api_xsii_hito_enlazar(pid: IdImpl, hid: IdImpl, actor=Depends(_xsii_equipo), datos: dict = Depends(_xsii_cuerpo)):
+    codigo = _xsii_codigo_de_tarea(datos.get("codigo"))
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        try:
+            xsii_vista.enlazar_hito(s, ctx, actor, hid, codigo)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        return {"ok": True, "hito": xsii_vista.hitos_mod.hito_json(_xsii_contexto(s, pid), hid)}
+
+
+@app.post(API_XSII + "/p/{pid}/hitos/{hid}/enlace/retirar")
+def api_xsii_hito_desenlazar(pid: IdImpl, hid: IdImpl, actor=Depends(_xsii_equipo),
+                             datos: dict = Depends(_xsii_cuerpo)):
+    codigo = _xsii_codigo_de_tarea(datos.get("codigo"))
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        try:
+            xsii_vista.desenlazar_hito(s, ctx, actor, hid, codigo)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        return {"ok": True, "hito": xsii_vista.hitos_mod.hito_json(_xsii_contexto(s, pid), hid)}
+
+
+@app.post(API_XSII + "/p/{pid}/hitos/{hid}/marcar")
+def api_xsii_hito_marcar(pid: IdImpl, hid: IdImpl, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        try:
+            xsii_vista.marcar_hito(s, ctx, actor, hid)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        return {"ok": True, "hito": xsii_vista.hitos_mod.hito_json(_xsii_contexto(s, pid), hid)}
+
+
+@app.get(API_XSII + "/p/{pid}/insumo/{clave}/archivos")
+def api_xsii_insumo_archivos(pid: IdImpl, clave: str, actor=Depends(_xsii_equipo)):
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        clave = _xsii_insumo(clave)
+        return xsii_vista.archivos_de_insumo_json(s, ctx, clave)
+
+
+@app.post(API_XSII + "/p/{pid}/insumo/{clave}/archivo")
+def api_xsii_insumo_archivo(pid: IdImpl, clave: str, actor=Depends(_xsii_equipo), datos: dict = Depends(_xsii_cuerpo)):
+    archivo_id = _xsii_id_opcional(datos.get("archivo_id"), "El archivo")
+    if archivo_id is None:
+        raise HTTPException(400, "Falta el archivo.")
+    with db.get_session() as s:
+        ctx = _xsii_contexto(s, pid)
+        clave = _xsii_insumo(clave)
+        try:
+            xsii_vista.fijar_archivo(s, ctx, actor, clave, archivo_id)
+        except db.XsiiError as e:
+            raise HTTPException(e.estado, e.mensaje)
+        ctx = _xsii_contexto(s, pid)
+        return {"ok": True, "insumo": xsii_vista.insumo_json(ctx, clave)}
 
 
 @app.get("/entornos/xsii")

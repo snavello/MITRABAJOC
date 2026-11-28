@@ -12,11 +12,12 @@
   const BASE = '/api/entornos/xsii/p/' + PID + '/';
   const NS = 'http://www.w3.org/2000/svg';
 
-  const VISTAS = ['guia', 'tablero', 'mapa'];
+  const VISTAS = ['guia', 'tablero', 'mapa', 'hitos'];
   const S = {
     D: null, cargando: true, error: '', vista: 'guia', abierta: null, sel: null, filtro: '',
     det: {}, form: null, insForm: null, anim: false, enfocar: null, enviando: false, abiertos: {},
-    pm: {}, rc: null, exito: null, paso: null, as: null, asinfo: {}
+    pm: {}, rc: null, exito: null, paso: null, as: null, asinfo: {},
+    hi: { cargando: false, d: null, error: '', abiertas: {}, armado: null, enviando: false, err: {}, aviso: '', fallo: '', enl: null, timer: null }, arch: {}, archAb: {}
   };
 
   // ------------------------------------------------------------ utilidades
@@ -119,7 +120,7 @@
     if (!silencioso) { S.cargando = true; S.error = ''; dibujar(); }
     try {
       const d = await pedir('tablero');
-      S.D = d; S.cargando = false; S.error = '';
+      S.D = d; S.cargando = false; S.error = ''; S.arch = {};
       if (S.pendiente) {
         const c = S.pendiente.toUpperCase(); S.pendiente = null;
         if (tarea(c)) { if (S.vista === 'mapa') S.sel = c; else { S.abierta = c; if (S.vista === 'tablero') S.vista = 'guia'; } }
@@ -132,6 +133,7 @@
     }
     dibujar();
     if (S.abierta && S.D) cargarHistorial(S.abierta);
+    if (S.vista === 'hitos' && S.D && S.D.disponible && !S.hi.d && !S.hi.cargando) cargarHitos(true);
   }
   async function cargarHistorial(codigo) {
     const prev = S.det[codigo];
@@ -148,6 +150,7 @@
   // ------------------------------------------------------------ acciones
   function abrirFicha(codigo) {
     if (S.as && S.as.codigo !== codigo && !puedeSalirRb(function () { abrirFicha(codigo); })) return;
+    S.hi.fallo = ''; S.hi.aviso = '';
     S.abierta = codigo; S.paso = codigo; S.vista = 'guia'; S.form = null; S.insForm = null; S.rc = null; S.anim = true; S.errorAccion = '';
     sincronizarUrl(); dibujar(); window.scrollTo({ top: 0 });
     cargarHistorial(codigo);
@@ -177,10 +180,11 @@
   function irVista(v) {
     if (S.vista === v) return;
     if (S.vista === 'guia' && S.abierta && !puedeSalirRb(function () { irVista(v); })) return;
-    S.vista = v;
+    S.vista = v; S.hi.fallo = ''; S.hi.aviso = '';
     if (v === 'mapa' && S.abierta) S.sel = S.abierta;
     if (v === 'guia') { S.abierta = null; S.form = null; S.insForm = null; }
     S.anim = true; sincronizarUrl(); dibujar();
+    if (v === 'hitos') cargarHitos(!!S.hi.d);
   }
   async function decidir(codigo, tipo, motivo) {
     S.enviando = true; if (S.form) S.form.error = ''; dibujarFicha();
@@ -489,7 +493,228 @@
       txt.textContent = S.cargando ? 'Leyendo el estado…' : 'Sin datos de avance';
       pct.textContent = ''; bar.style.width = '0%'; riel.setAttribute('aria-valuenow', '0');
     }
+    const bd = $('x-bd-hitos'), np = D && D.hitos ? (D.hitos.propuestos || 0) : 0;
+    if (bd) { bd.textContent = np ? String(np) : ''; bd.hidden = !np; }
     document.querySelectorAll('.vistas button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === S.vista)); });
+  }
+
+  // ------------------------------------------------------------ Hitos de la Mesa (bloque 5)
+  // XSII propone y una persona del equipo acepta: nunca se tilda un hito solo. Los textos de
+  // los hitos y de las tareas vienen del servidor y se dibujan siempre como texto.
+  const ESTADO_HITO = { hecho: 'Hecho', propuesto: 'Para marcar', pendiente: 'Pendiente', sin: 'Sin tareas' };
+  function estadoHito(x) { return x.hecho ? 'hecho' : x.propuesto ? 'propuesto' : (x.tareas || []).length ? 'pendiente' : 'sin'; }
+  function codigoHito(hid) {
+    let c = '';
+    ((S.hi.d && S.hi.d.fases) || []).forEach(function (f) { (f.hitos || []).forEach(function (x) { if (x.id === hid) c = x.codigo; }); });
+    return c;
+  }
+  function avisoFallo() {
+    return S.hi.fallo ? h('div', { class: 'aviso', role: 'alert' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '!'), h('div', null, S.hi.fallo)) : null;
+  }
+  function redibujarHitos() { if (S.vista === 'guia' && S.abierta) dibujarFicha(); else dibujar(); }
+  async function cargarHitos(silencioso) {
+    const H = S.hi;
+    if (H.cargando) return;
+    H.cargando = true; if (!silencioso) { H.error = ''; redibujarHitos(); }
+    try {
+      H.d = await pedir('hitos'); H.error = '';
+    } catch (e) { H.error = e.message; }
+    H.cargando = false; redibujarHitos();
+  }
+  async function refrescarHitos() {
+    S.hi.d = S.hi.d || null;
+    await Promise.all([cargarHitos(true), cargar(true)]);
+  }
+  // Una acción sobre un hito: avisa del error en el mismo hito y siempre vuelve a leer el estado.
+  async function accionHito(hid, ruta, cuerpo, ok) {
+    const H = S.hi;
+    let fallo = '';
+    if (H.enviando) return;
+    H.enviando = true; H.err[hid] = ''; H.aviso = ''; H.fallo = ''; redibujarHitos();
+    try {
+      const r = await enviar(ruta, cuerpo);
+      H.enviando = false; H.armado = null;
+      if (ok) ok(r);
+    } catch (e) {
+      H.enviando = false; H.armado = null;
+      fallo = e.status === 409 ? (e.message || 'Este hito dejó de estar propuesto.') + ' Ya se actualizó la lista.' : e.message;
+      H.err[hid] = fallo;
+    }
+    await refrescarHitos();
+    // El hito pudo cambiar de lugar al refrescar: el motivo también queda arriba, donde se ve.
+    if (fallo) { H.fallo = (hid && codigoHito(hid) ? codigoHito(hid) + ': ' : '') + fallo; redibujarHitos(); }
+  }
+  function marcarHito(x) {
+    const H = S.hi;
+    if (H.armado !== x.id) {
+      H.armado = x.id; H.err[x.id] = ''; clearTimeout(H.timer);
+      H.timer = setTimeout(function () { if (H.armado === x.id) { H.armado = null; redibujarHitos(); } }, 8000);
+      S.enfocar = '#x-h-m-' + x.id; redibujarHitos(); return;
+    }
+    clearTimeout(H.timer);
+    accionHito(x.id, 'hitos/' + x.id + '/marcar', {}, function () { H.aviso = 'Quedó hecho en la Mesa' + (x.codigo ? ': ' + x.codigo : '') + '.'; });
+  }
+  function enlazarHito(x, codigo) { if (codigo) accionHito(x.id, 'hitos/' + x.id + '/enlace', { codigo: codigo }, function () { S.hi.enl = null; }); }
+  function quitarEnlace(x, codigo) {
+    const H = S.hi, k = x.id + ':' + codigo;
+    if (H.quitar !== k) {   // primer toque: se arma; un toque suelto no desvincula nada
+      H.quitar = k; clearTimeout(H.timerQ);
+      H.timerQ = setTimeout(function () { if (H.quitar === k) { H.quitar = null; redibujarHitos(); } }, 5000);
+      redibujarHitos(); return;
+    }
+    clearTimeout(H.timerQ); H.quitar = null;
+    accionHito(x.id, 'hitos/' + x.id + '/enlace/retirar', { codigo: codigo });
+  }
+  function aceptarSugerencias(hids) { accionHito(0, 'hitos/sugerencias/aceptar', hids && hids.length ? { hitos: hids } : {}); }
+
+  function chipTarea(x, tr, quitable) {
+    const abrir = h('button', { type: 'button', class: 'hch-b' + (tr.resuelta ? ' ok' : ''), title: tr.nombre + ' · ' + nomEstado(tr.estado), onclick: function () { abrirFicha(tr.codigo); } },
+      h('i', { class: 'hch-d', 'aria-hidden': 'true' }), h('b', { class: 'num' }, tr.codigo), h('span', { class: 'hch-n' }, tr.nombre));
+    const arm = S.hi.quitar === x.id + ':' + tr.codigo;
+    return h('span', { class: 'hch' + (arm ? ' arm' : '') }, abrir, quitable ? h('button', { type: 'button', class: 'hch-x', 'aria-label': arm ? 'Tocá otra vez para sacar ' + tr.codigo + ' de este hito' : 'Sacar ' + tr.codigo + ' de este hito', title: 'Sacar esta tarea del hito', disabled: S.hi.enviando,
+      onclick: function () { quitarEnlace(x, tr.codigo); } }, arm ? 'Sacar' : '×') : null);
+  }
+  function botonMarcar(x) {
+    const H = S.hi, arm = H.armado === x.id;
+    return h('div', { class: 'acc hm' },
+      h('button', { type: 'button', id: 'x-h-m-' + x.id, class: 'btn p' + (arm ? ' conf' : ''), 'aria-disabled': H.enviando ? 'true' : null,
+        onclick: function () { if (!H.enviando) marcarHito(x); } }, H.enviando && arm ? 'Marcando…' : arm ? 'Tocá otra vez: queda hecho en la Mesa' : 'Marcar hecho en la Mesa'),
+      arm && !H.enviando ? h('button', { type: 'button', class: 'btn', onclick: function () { clearTimeout(H.timer); H.armado = null; S.enfocar = '#x-h-m-' + x.id; redibujarHitos(); } }, 'No marcar') : null);
+  }
+  function formEnlazar(x) {
+    const H = S.hi, ya = {};
+    (x.tareas || []).forEach(function (tr) { ya[tr.codigo] = true; });
+    const f = H.enl && H.enl.hid === x.id ? H.enl : null;
+    if (!f) return h('button', { type: 'button', class: 'enlace', id: 'x-h-e-' + x.id, onclick: function () { H.enl = { hid: x.id, valor: '' }; S.enfocar = '#x-h-s-' + x.id; redibujarHitos(); } }, 'Asociar una tarea');
+    return h('form', { class: 'hen', onsubmit: function (ev) { ev.preventDefault(); enlazarHito(x, f.valor); } },
+      h('label', { class: 'sr', for: 'x-h-s-' + x.id }, 'Tarea a asociar'),
+      h('select', { id: 'x-h-s-' + x.id, onchange: function (e) { f.valor = e.target.value; const b = $('x-h-ok-' + x.id); if (b) b.disabled = !f.valor; } },
+        h('option', { value: '' }, 'Elegí una tarea…'),
+        S.D.tareas.filter(function (t) { return !ya[t.codigo]; }).map(function (t) { return h('option', { value: t.codigo, selected: f.valor === t.codigo ? true : null }, t.codigo + ' · ' + t.nombre); })),
+      h('button', { type: 'submit', id: 'x-h-ok-' + x.id, class: 'btn ch p', disabled: !f.valor || H.enviando }, 'Asociar'),
+      h('button', { type: 'button', class: 'btn ch', onclick: function () { H.enl = null; S.enfocar = '#x-h-e-' + x.id; redibujarHitos(); } }, 'Cancelar'));
+  }
+  // Un hito. `completo` (la vista Hitos) suma enlazar y sugerencias; la ficha de una tarea solo lo ve y lo marca.
+  function nodoHito(x, completo) {
+    const e = estadoHito(x), err = S.hi.err[x.id];
+    return h('li', { class: 'hito ' + e, 'data-hito': String(x.id) },
+      h('div', { class: 'hito-c' },
+        h('span', { class: 'hito-cod num' }, x.codigo || ''),
+        h('p', { class: 'hito-t' }, x.texto || ''),
+        h('span', { class: 'pil h-' + e }, ESTADO_HITO[e])),
+      (x.tareas || []).length ? h('div', { class: 'hchs' }, x.tareas.map(function (tr) { return chipTarea(x, tr, completo && !x.hecho); })) : null,
+      x.propuesto ? h('p', { class: 'hito-p' }, x.porque || 'Todas sus tareas están resueltas.') : null,
+      x.propuesto ? botonMarcar(x) : null,
+      completo ? (x.sugeridas || []).map(function (sg) {
+        return h('div', { class: 'hsug' }, h('span', null, 'Tarea sugerida: ', h('b', { class: 'num' }, sg.codigo), ' ', sg.nombre),
+          h('button', { type: 'button', class: 'btn ch', disabled: S.hi.enviando, onclick: function () { enlazarHito(x, sg.codigo); } }, 'Asociar'));
+      }) : null,
+      completo && (x.sugeridas || []).length > 1 ? h('button', { type: 'button', class: 'btn ch hsug-t', disabled: S.hi.enviando, onclick: function () { aceptarSugerencias([x.id]); } }, 'Asociar las ' + x.sugeridas.length + ' sugeridas') : null,
+      completo && !x.hecho ? formEnlazar(x) : null,
+      err ? h('p', { class: 'err', role: 'alert' }, err) : null);
+  }
+  function vistaHitos() {
+    const H = S.hi;
+    if (H.error && !H.d) return bloqueError(H.error, function () { cargarHitos(false); });
+    if (!H.d) return esqueleto();
+    const d = H.d, r = d.resumen || {}, fases = d.fases || [];
+    const prop = [];
+    fases.forEach(function (f) { (f.hitos || []).forEach(function (x) { if (x.propuesto) prop.push(x); }); });
+    if (!(r.total || fases.some(function (f) { return (f.hitos || []).length; }))) {
+      return h('div', { class: 'vacio' }, h('p', { class: 'rot' }, 'Hitos de la Mesa'), h('h2', { class: 'disp vacio-t' }, 'Este proyecto no tiene hitos'),
+        h('p', null, 'Los hitos se cargan en el plan de la Mesa. Cuando estén, acá los asociás con las tareas.'),
+        S.D && S.D.proyecto && S.D.proyecto.mesa_url ? h('a', { class: 'btn', href: S.D.proyecto.mesa_url, target: '_blank', rel: 'noopener' }, 'Abrir la Mesa') : null);
+    }
+    return h('div', { class: 'hitos' },
+      H.error ? h('p', { class: 'err', role: 'alert' }, H.error) : null,
+      avisoFallo(),
+      H.aviso ? h('div', { class: 'aviso exito', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '✓'), h('div', null, H.aviso)) : null,
+      h('div', { class: 'hit-cab' },
+        h('div', { class: 'hit-k' },
+          h('span', null, h('b', { class: 'num' }, num(r.propuestos || 0)), ' para marcar'),
+          h('span', null, h('b', { class: 'num' }, num(r.hechos || 0)), ' de ', num(r.total || 0), ' hechos'),
+          h('span', null, h('b', { class: 'num' }, num(r.enlazados || 0)), ' con tareas')),
+        (r.sugerencias || 0) > 0 ? h('button', { type: 'button', class: 'btn' + (prop.length ? '' : ' p'), id: 'x-h-todas', 'aria-disabled': H.enviando ? 'true' : null,
+          onclick: function () { if (!H.enviando) aceptarSugerencias(null); } }, 'Asociar todas las tareas sugeridas (' + num(r.sugerencias) + ')') : null),
+      prop.length ? h('section', { class: 'hit-prop', 'aria-label': 'Hitos para marcar' },
+        h('h3', null, prop.length === 1 ? '1 hito para marcar en la Mesa' : prop.length + ' hitos para marcar en la Mesa'),
+        h('ul', { class: 'hit-l' }, prop.map(function (x) { return nodoHito(x, true); }))) : null,
+      fases.map(function (f, i) {
+        const hs = (f.hitos || []).filter(function (x) { return !(x.propuesto); }), tot = (f.hitos || []).length;
+        if (!hs.length) return null;
+        const hechos = (f.hitos || []).filter(function (x) { return x.hecho; }).length;
+        const clave = 'f' + i;
+        const abierta = H.abiertas[clave] !== undefined ? H.abiertas[clave] : false;
+        const det = h('details', { class: 'hit-f', 'data-k': clave },
+          h('summary', null, h('b', { class: 'hit-ft' }, f.etapa || 'Fase ' + (i + 1)), h('span', { class: 'nota num' }, hechos + ' de ' + tot + ' hechos')),
+          h('ul', { class: 'hit-l' }, hs.map(function (x) { return nodoHito(x, true); })));
+        det.open = abierta;
+        det.addEventListener('toggle', function () { H.abiertas[clave] = det.open; });
+        return det;
+      }));
+  }
+  // La banda de la Guía: lo único que hace falta saber desde ahí.
+  function bandaHitos() {
+    const n = S.D && S.D.hitos ? (S.D.hitos.propuestos || 0) : 0;
+    if (n < 1) return null;
+    return h('div', { class: 'banda-h', role: 'status' }, h('span', null, h('b', { class: 'num' }, num(n)), n === 1 ? ' hito de la Mesa para marcar' : ' hitos de la Mesa para marcar'),
+      h('button', { type: 'button', class: 'btn p ch', id: 'x-banda-hitos', onclick: function () { irVista('hitos'); } }, 'Ver los hitos'));
+  }
+  // En la ficha de una tarea: los hitos enlazados; los propuestos, a la vista y con su botón.
+  function seccionHitos(t) {
+    // Vienen con la tarea en el tablero: se refrescan con cada lectura del estado.
+    const l = t.hitos || [];
+    if (!l.length) return null;
+    const props = l.filter(function (x) { return x.propuesto; });
+    const pend = l.filter(function (x) { return !x.propuesto; });
+    const res = props.length ? props.length + ' para marcar · ' + l.length + ' en total' : l.length === 1 ? '1 hito' : l.length + ' hitos';
+    if (props.length || S.hi.fallo) return h('div', { class: 'bloque hitos-f' }, h('h3', null, 'Hitos de la Mesa'), avisoFallo(), pend.length ? h('p', { class: 'nota' }, res) : null,
+      h('ul', { class: 'hit-l' }, props.map(function (x) { return nodoHito(x, false); })),
+      pend.length ? h('ul', { class: 'hit-l' }, pend.map(function (x) { return nodoHito(x, false); })) : null);
+    return plegable(t.codigo + ':hitos', 'Hitos de la Mesa', res, [h('ul', { class: 'hit-l' }, l.map(function (x) { return nodoHito(x, false); }))], false);
+  }
+
+  // ------------------------------------------------------------ Archivos de la Mesa en los insumos (bloque 5)
+  function archivosDe(clave) {
+    if (!S.arch[clave]) {
+      S.arch[clave] = { cargando: true, d: null, error: '' };
+      pedir('insumo/' + encodeURIComponent(clave) + '/archivos').then(function (d) { S.arch[clave] = { cargando: false, d: d, error: '' }; },
+        function (e) { S.arch[clave] = { cargando: false, d: null, error: e.message }; })
+        .then(function () { if (S.abierta) dibujarFicha(); });
+    }
+    return S.arch[clave];
+  }
+  async function usarArchivo(clave, id) {
+    S.enviando = true; S.errorAccion = ''; dibujarFicha();
+    try {
+      await enviar('insumo/' + encodeURIComponent(clave) + '/archivo', { archivo_id: id });
+      S.enviando = false; Object.keys(S.asinfo).forEach(function (k) { if (!S.as || S.as.codigo !== k) delete S.asinfo[k]; }); delete S.arch[clave]; S.archAb[clave] = true; await cargar(true);   // la asistida de planilla tiene que ver el archivo nuevo
+    } catch (e) { S.enviando = false; S.errorAccion = e.message; delete S.arch[clave]; dibujarFicha(); }
+  }
+  function lado(x) { return x === 'sindicato' ? 'del sindicato' : x === 'equipo' ? 'del equipo' : ''; }
+  function bloqueArchivos(i) {
+    if (i.tipo !== 'archivo' || !i.tarjeta) return null;
+    const nuevos = i.archivos_nuevos || 0;
+    const abierto = S.archAb[i.clave] !== undefined ? S.archAb[i.clave] : (nuevos > 0 || i.estado !== 'recibido');
+    const cab = [];
+    if (nuevos > 0 && i.estado === 'pedido') cab.push(h('div', { class: 'llego', role: 'status' }, h('span', { class: 'llego-t' }, ICO_DOC('ico-i'), 'Llegó un archivo en ', h('b', { class: 'num' }, i.tarjeta.codigo))));
+    const tog = h('button', { type: 'button', class: 'enlace', 'aria-expanded': String(abierto), onclick: function () { S.archAb[i.clave] = !abierto; dibujarFicha(); } }, abierto ? 'Ocultar los archivos' : (nuevos > 0 ? 'Ver' : 'Ver los archivos'));
+    if (!abierto) return h('div', { class: 'arch' }, cab, tog);
+    const A = archivosDe(i.clave);
+    let cuerpo;
+    if (A.cargando) cuerpo = h('div', { class: 'esq', 'aria-busy': 'true' }, h('i'), h('i'));
+    else if (A.error) cuerpo = h('p', { class: 'err', role: 'alert' }, A.error);
+    else {
+      const lis = (A.d && A.d.archivos) || [];
+      cuerpo = lis.length ? h('ul', { class: 'arch-l' }, lis.map(function (a) {
+        return h('li', { class: 'arch-i' + (a.elegido ? ' elegido' : '') },
+          h('span', { class: 'arch-n' }, ICO_DOC('ico-i'), h('b', { class: 'arch-nom' }, a.nombre || 'Archivo'), a.codigo ? h('span', { class: 'num nota' }, a.codigo) : null),
+          h('span', { class: 'nota' }, [a.tamano ? pesoArchivo(a.tamano) : '', lado(a.lado), a.subido_por || '', cuando(a.cuando)].filter(Boolean).join(' · ')),
+          a.datos_personales ? h('span', { class: 'marca-t conf' }, 'Datos personales') : null,
+          a.elegido ? h('span', { class: 'pil hecha' }, 'En uso') : h('button', { type: 'button', class: 'btn ch', disabled: S.enviando, onclick: function () { usarArchivo(i.clave, a.id); } }, 'Usar este archivo'));
+      })) : h('p', { class: 'nota' }, 'Todavía no hay archivos en la tarjeta ' + i.tarjeta.codigo + '.');
+    }
+    return h('div', { class: 'arch' }, cab, cuerpo, tog);
   }
 
   // ------------------------------------------------------------ GUÍA
@@ -511,7 +736,9 @@
       l.map(function (i) {
         return h('p', { class: 'esp-l' }, icoInsumo(i, 'ico-i'),
           h('span', null, h('b', null, tipoInsumo(i) + ': ' + i.nombre), i.formato ? ' · ' + i.formato : '', ' · ',
-            i.estado === 'pedido' ? pedidoTxt(i.dias || 0) + (i.tarjeta ? ' (' + i.tarjeta.codigo + ')' : '') : 'Todavía no se pidió'));
+            i.estado === 'pedido' ? pedidoTxt(i.dias || 0) + (i.tarjeta ? ' (' + i.tarjeta.codigo + ')' : '') : 'Todavía no se pidió'),
+          i.estado === 'pedido' && i.archivos_nuevos > 0 && i.tarjeta ? h('span', { class: 'llego' }, 'Llegó un archivo en ', h('b', { class: 'num' }, i.tarjeta.codigo), ' ',
+            h('button', { type: 'button', class: 'enlace', onclick: function () { S.archAb[i.clave] = true; abrirFicha(t.codigo); } }, 'Ver')) : null);
       }));
   }
   function heroe() {
@@ -619,7 +846,7 @@
     const opc = {};
     (d.opciones || []).forEach(function (o) { opc[o.clave] = o.tipo === 'numero' ? (typeof o.defecto === 'number' ? o.defecto : null) : !!o.defecto; });
     if (S.as && S.as.codigo !== t.codigo && !puedeSalirRb(function () { abrirAsistida(t, d); })) return;
-    S.as = { codigo: t.codigo, paso: 1, archivo: null, texto: '', pegar: false, opciones: opc, snap: null, ens: null, filtro: '', afuera: {},
+    S.as = { codigo: t.codigo, paso: 1, mesa: !!(d.archivo_mesa && d.archivo_mesa.id), archivo: null, texto: '', pegar: false, opciones: opc, snap: null, ens: null, filtro: '', afuera: {},
       trabajando: false, error: '', status: 0, confirmando: false, res: null, anim: true,
       mapa: {}, mapaBase: null, mapaEnviado: '{}', mapaAbierto: false, motivo: -1, t0: 0, reloj: null, que: '' };
     if (d.entrada === 'recibos') estadoInicialRb(S.as);
@@ -679,10 +906,12 @@
   }
   function resetMapa(A) { A.mapa = {}; A.mapaBase = null; A.mapaEnviado = '{}'; }
   function formAs(A, conCarga) {
-    const base = conCarga ? A.snap : { archivo: A.archivo, texto: A.texto, opciones: opcionesEnvio(A) };
+    const base = conCarga ? A.snap : { archivo: A.archivo, texto: A.texto, opciones: opcionesEnvio(A), mesa: A.mesa ? idMesa(A) : null };
     const fd = new FormData();
+    // El archivo de la Mesa viaja por su id: el servidor lo lee de la tarjeta, no pasa por el navegador.
+    if (base.mesa) fd.append('archivo_mesa', String(base.mesa));
     // Un texto pegado viaja como archivo: el servidor limita a 1 MB un campo de texto de un multipart.
-    if (base.archivo) fd.append('archivo', base.archivo, base.archivo.name);
+    else if (base.archivo) fd.append('archivo', base.archivo, base.archivo.name);
     else fd.append('archivo', new Blob([base.texto], { type: 'text/csv' }), 'planilla-pegada.csv');
     fd.append('opciones', JSON.stringify(base.opciones));
     if (conCarga) { fd.append('huella', A.ens.huella || ''); fd.append('dejar_afuera', JSON.stringify(lineasAfuera(A))); }
@@ -701,6 +930,8 @@
   function finEspera(A) { pararReloj(A); A.trabajando = false; }
   function falloAs(A, e, extra) {
     finEspera(A);
+    // El archivo de la Mesa ya no está (borrado, o cambiado de insumo): vuelve a pedirse uno propio.
+    if (A.mesa && (e.status === 404 || e.status === 409) && /borrad|Mesa/i.test(e.message || '')) { A.mesa = false; const inf = S.asinfo[A.codigo]; if (inf && inf.d) inf.d.archivo_mesa = null; }
     A.error = e.message + (extra && (!e.status || e.status >= 500) ? ' ' + extra : ''); A.status = e.status || 0;
     S.enfocar = '#x-as-err'; dibujarFicha();
   }
@@ -727,14 +958,14 @@
   async function ensayarAs(foco) {
     const A = S.as;
     if (!A || A.trabajando) return;
-    if (!A.archivo && !A.texto.trim()) { A.error = 'Elegí un archivo o pegá el texto de la planilla.'; A.status = 0; A.que = ''; S.enfocar = '#x-as-archivo'; dibujarFicha(); return; }
+    if (!A.mesa && !A.archivo && !A.texto.trim()) { A.error = 'Elegí un archivo o pegá el texto de la planilla.'; A.status = 0; A.que = ''; S.enfocar = '#x-as-archivo'; dibujarFicha(); return; }
     const fuera = opcionesFueraDeRango(A);
     if (fuera) { A.error = fuera; A.status = 0; A.que = ''; S.enfocar = '#x-as-err'; dibujarFicha(); return; }
     const env = opcionesEnvio(A), ctl = new AbortController(), tmo = setTimeout(function () { ctl.abort(); }, 180000);
     iniciarEspera(A, 'ensayo', typeof foco === 'string' ? foco : null);
     try {
       const r = await enviarForm(rutaAs(A.codigo) + '/ensayo', formAs(A, false), ctl.signal);
-      A.snap = { archivo: A.archivo, texto: A.texto, opciones: env };
+      A.snap = { archivo: A.archivo, texto: A.texto, opciones: env, mesa: A.mesa ? idMesa(A) : null };
       A.ens = r; A.afuera = {}; A.filtro = ''; A.motivo = -1; A.que = '';
       tomarMapa(A, r); A.mapaEnviado = JSON.stringify(env.mapeo || {});
       finEspera(A);
@@ -772,9 +1003,10 @@
     return h('div', { class: 'as-err', id: 'x-as-err', tabindex: '-1', role: 'alert' }, h('p', null, A.error), extra || null);
   }
   function pesoArchivo(n) { return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+  function idMesa(A) { const m = (datosRb(A) || {}).archivo_mesa; return m && m.id ? m.id : null; }
   function elegirArchivo(A, f) {
     if (!f) return;
-    A.archivo = f; A.texto = ''; A.error = ''; resetMapa(A); dibujarFicha();
+    A.mesa = false; A.archivo = f; A.texto = ''; A.error = ''; resetMapa(A); dibujarFicha();
   }
   function zonaArchivo(A) {
     const nom = h('span', { class: 'as-arch-n', id: 'x-as-arch-nom' }, A.archivo ? A.archivo.name + ' · ' + pesoArchivo(A.archivo.size) : 'Todavía no elegiste ninguno');
@@ -791,16 +1023,25 @@
     });
     return zona;
   }
+  // El archivo que el sindicato ya dejó en la Mesa: es el camino principal; subir otro queda como alternativa.
+  function mesaAs(A, am) {
+    if (!am) return null;
+    if (A.mesa) return h('div', { class: 'as-mesa' }, ICO_DOC('ico-i'),
+      h('div', null, h('p', { class: 'as-mesa-t' }, 'Se usa la planilla de la Mesa: ', h('span', { class: 'num' }, am.codigo + ' · ' + am.nombre)), h('p', { class: 'nota' }, 'Primero se hace un ensayo: no se guarda nada.')),
+      h('button', { type: 'button', class: 'enlace', id: 'x-as-otro', onclick: function () { A.mesa = false; resetMapa(A); S.enfocar = '#x-as-archivo'; dibujarFicha(); } }, 'Subir otro archivo'));
+    return h('p', { class: 'nota' }, h('button', { type: 'button', class: 'enlace', id: 'x-as-usar-mesa', onclick: function () { A.mesa = true; A.archivo = null; A.texto = ''; resetMapa(A); S.enfocar = '#x-as-ensayar'; dibujarFicha(); } }, 'Usar el archivo de la Mesa (' + am.codigo + ' · ' + am.nombre + ')'));
+  }
   function paso1As(t, A, d) {
     const dets = h('details', { class: 'as-pegar' }, h('summary', null, 'O pegá el texto de la planilla'),
       h('label', { class: 'sr', for: 'x-as-texto' }, 'Texto de la planilla'),
       h('textarea', { id: 'x-as-texto', rows: '6', spellcheck: 'false', placeholder: 'Pegá acá las filas, con la fila de títulos arriba.',
         oninput: function (e) {
-          A.texto = e.target.value; resetMapa(A);
+          A.texto = e.target.value; resetMapa(A); if (A.texto) A.mesa = false;
           if (A.texto && A.archivo) { A.archivo = null; const n = $('x-as-arch-nom'); if (n) n.textContent = 'Todavía no elegiste ninguno'; }
         } }, A.texto));
     dets.open = A.pegar || !!A.texto;
     dets.addEventListener('toggle', function () { A.pegar = dets.open; });
+    const am = d.archivo_mesa && d.archivo_mesa.id ? d.archivo_mesa : null;
     const previas = (t.necesita || []).filter(function (c) { const x = tarea(c); return x && !resuelta(x); }).map(function (c) { return tarea(c).nombre; });
     return h('div', { class: 'as-cuerpo' },
       previas.length ? h('div', { class: 'aviso as-previas', id: 'x-as-previas', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'),
@@ -819,7 +1060,7 @@
           }))) : null,
       h('div', { class: 'acc' }, h('a', { class: 'btn', id: 'x-as-modelo', href: BASE + rutaAs(t.codigo) + '/modelo.csv', download: '' }, 'Descargar el modelo'),
         h('span', { class: 'nota' }, 'Un archivo de ejemplo con las columnas listas para completar.')),
-      zonaArchivo(A), dets,
+      mesaAs(A, am), A.mesa ? null : zonaArchivo(A), A.mesa ? null : dets,
       (d.opciones || []).length ? h('fieldset', { class: 'as-opc' }, h('legend', { class: 'rot' }, 'Opciones'),
         d.opciones.map(function (o) {
           const id = 'x-as-o-' + idSeguro(o.clave);
@@ -836,7 +1077,7 @@
         })) : null,
       errorAs(A, botonReintentar(A)),
       h('div', { class: 'acc as-bot' },
-        h('button', { class: 'btn p', id: 'x-as-ensayar', type: 'button', 'aria-disabled': A.trabajando ? 'true' : null, onclick: function () { ensayarAs(null); } }, A.trabajando ? 'Ensayando…' : 'Ensayar (no guarda nada)'),
+        h('button', { class: 'btn p', id: 'x-as-ensayar', type: 'button', 'aria-disabled': A.trabajando ? 'true' : null, onclick: function () { ensayarAs(null); } }, A.trabajando ? 'Ensayando…' : A.mesa && am ? 'Usar el archivo de la Mesa (' + am.codigo + ' · ' + am.nombre + ')' : 'Ensayar (no guarda nada)'),
         h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', disabled: A.trabajando, onclick: function () { cerrarAsistida(null); } }, 'Cerrar')),
       A.trabajando ? esperaAs(A, 'Leyendo la planilla y armando el ensayo…') : null);
   }
@@ -1554,6 +1795,7 @@
             h('a', { href: i.tarjeta.url, target: '_blank', rel: 'noopener' }, i.tarjeta.codigo), ' ', i.tarjeta.titulo || '') : null,
           i.nota ? h('p', { class: 'nota' }, 'Nota: ' + i.nota) : null,
           reg && i.quien ? h('p', { class: 'nota' }, 'Registró ' + i.quien + ' el ' + cuando(i.cuando) + '.') : null,
+          bloqueArchivos(i),
           f ? formInsumo(t, i, f) : h('div', { class: 'acc' },
             i.estado !== 'recibido' ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { marcarInsumo(t.codigo, i.clave, 'recibido'); } }, 'Marcar recibido') : null,
             i.estado !== 'pedido' ? h('button', { class: 'btn ch', type: 'button', disabled: S.enviando, onclick: function () { S.insForm = { clave: i.clave, tarjeta: '', nota: '', error: '' }; S.enfocar = '#x-ins-tarjeta'; dibujarFicha(); } }, 'Marcar pedido') : null,
@@ -1684,6 +1926,7 @@
         !(t.acciones && t.acciones.confirmar) && (t.insumos || []).some(function (i) { return i.estado === 'falta' || i.estado === 'pedido'; })
           ? h('p', { class: 'nota nec' }, 'Primero registrá que llegó el insumo.') : null) : null,
       seccionAcciones(t),
+      seccionHitos(t),
       seccionControl(t),
       seccionRelaciones(t),
       seccionDecisiones(t),
@@ -1927,11 +2170,12 @@
     let nodo;
     if (S.vista === 'tablero') nodo = h('div', { class: S.anim ? 'entra' : '' }, tablero());
     else if (S.vista === 'mapa') nodo = h('div', { class: S.anim ? 'entra' : '' }, mapa());
+    else if (S.vista === 'hitos') nodo = h('div', { class: S.anim ? 'entra' : '' }, vistaHitos());
     else {
       nodo = guia();
       const cond = nodo.querySelector('#x-cond');
       if (S.abierta && tarea(S.abierta)) cond.appendChild(ficha(tarea(S.abierta)));
-      else cond.append.apply(cond, heroe().filter(Boolean));
+      else cond.append.apply(cond, [bandaHitos()].concat(heroe()).filter(Boolean));
       const rcp = S.rc && S.rc.origen === 'pano' ? bloqueReclamo(S.rc.clave, 'pano') : null;
       if (rcp) cond.insertBefore(rcp, cond.firstChild);
     }

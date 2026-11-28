@@ -27,7 +27,7 @@ def b64(nombre, ancho):
     if im.width > ancho:
         im = im.resize((ancho, round(im.height * ancho / im.width)), Image.LANCZOS)
     buf = io.BytesIO()
-    im.save(buf, "JPEG", quality=52, optimize=True, progressive=True)
+    im.save(buf, "JPEG", quality=50, optimize=True, progressive=True)
     return base64.b64encode(buf.getvalue()).decode(), im.size
 
 

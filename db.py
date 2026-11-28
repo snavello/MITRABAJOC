@@ -11454,7 +11454,8 @@ def _impl_archivo_visible(s: Session, arch: ImplArchivo, lado: str) -> bool:
                                                ImplMensaje.solo_equipo == False)).first() is not None   # noqa: E712
 
 
-def impl_bajar_archivo(s: Session, proyecto_id: int, archivo_id: int, actor) -> Optional[tuple]:
+def impl_bajar_archivo(s: Session, proyecto_id: int, archivo_id: int, actor, motivo: str = "",
+                       commit: bool = True) -> Optional[tuple]:
     """(metadatos, bytes) y deja la descarga registrada. None si no existe en
     este proyecto (o es de una nota interna y pide el sindicato); ErrorImpl
     "sin_permiso" si tiene datos personales y no es del equipo ni de quien lo
@@ -11471,9 +11472,15 @@ def impl_bajar_archivo(s: Session, proyecto_id: int, archivo_id: int, actor) -> 
     datos = s.exec(select(ImplArchivo.datos).where(ImplArchivo.id == arch.id)).first()
     s.add(ImplDescarga(proyecto_id=proyecto_id, archivo_id=arch.id, tarjeta_id=arch.tarjeta_id,
                        lado=a.lado, usuario_id=a.id, nombre=a.nombre))
-    _impl_evento(s, proyecto_id, a, "bajar", arch.tarjeta_id, {"archivo_id": arch.id, "nombre": arch.nombre},
+    detalle = {"archivo_id": arch.id, "nombre": arch.nombre}
+    if motivo:                                # quien lee el archivo por otra puerta (XSII) lo deja dicho
+        detalle["motivo"] = motivo
+    _impl_evento(s, proyecto_id, a, "bajar", arch.tarjeta_id, detalle,
                  solo_equipo=not _impl_archivo_visible(s, arch, implementacion.SINDICATO))
-    s.commit()
+    if commit:
+        s.commit()
+    else:
+        s.flush()
     return arch, bytes(datos or b"")
 
 
@@ -12418,7 +12425,28 @@ class XsiiMovimiento(SQLModel, table=True):
     cuando: str = Field(default_factory=fechas.ahora_con_segundos)
 
 
-XSII_TABLAS = tuple(sorted(m.__tablename__ for m in (XsiiDecision, XsiiInsumo, XsiiMovimiento)))
+class XsiiHito(SQLModel, table=True):
+    """El vínculo entre un hito de la Mesa (`ImplHito`) y una tarea de XSII
+    (bloque 5). Un hito puede tener varias tareas y una tarea varios hitos.
+    Desenlazar NO borra: la fila queda con `activa=False`, quién y cuándo."""
+    __table_args__ = (
+        Index("uq_xsiihito_activo", "proyecto_id", "hito_id", "codigo", unique=True,
+              postgresql_where=text("activa")),
+    )
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proyecto_id: int = Field(index=True)
+    hito_id: int = 0                          # ImplHito del MISMO proyecto
+    codigo: str = ""                          # la tarea
+    quien_id: int = 0
+    quien_nombre: str = ""
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)
+    activa: bool = True
+    retirado_por_id: int = 0
+    retirado_por_nombre: str = ""
+    retirado_cuando: str = ""
+
+
+XSII_TABLAS = tuple(sorted(m.__tablename__ for m in (XsiiDecision, XsiiInsumo, XsiiMovimiento, XsiiHito)))
 
 event.listen(XsiiMovimiento, "before_update", _traza_inmutable)
 event.listen(XsiiMovimiento, "before_delete", _traza_inmutable)
@@ -12557,7 +12585,8 @@ def xsii_deshacer(s: Session, proyecto_id: int, actor, codigo: str, nombre_tarea
 
 
 def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str,
-                          estado: str, tarjeta_id: int = None, nota="", commit: bool = True) -> XsiiInsumo:
+                          estado: str, tarjeta_id: int = None, nota="", commit: bool = True,
+                          archivo_id: int = None, movimiento: tuple = None) -> XsiiInsumo:
     """Registra el insumo como `pedido` o `recibido`, reemplazando al activo
     (queda inactivo, con traza). Pasar de pedido a recibido conserva la tarjeta
     si no se manda otra. La tarjeta tiene que ser de ESTE proyecto. Con
@@ -12574,11 +12603,11 @@ def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombr
     previo = s.exec(select(XsiiInsumo).where(
         XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave,
         XsiiInsumo.activa == True).with_for_update()).first()                 # noqa: E712
-    archivo_id = None
     if previo is not None:
         if tarjeta_id is None:
             tarjeta_id = previo.tarjeta_id
-        archivo_id = previo.archivo_id
+        if archivo_id is None and tarjeta_id == previo.tarjeta_id:
+            archivo_id = previo.archivo_id        # el archivo fijado es de ESA tarjeta: con otra, no se hereda
         previo.activa = False
         previo.retirado_por_id, previo.retirado_por_nombre = a.id, a.nombre
         previo.retirado_cuando = fechas.ahora_con_segundos()
@@ -12588,9 +12617,9 @@ def xsii_registrar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombr
                        archivo_id=archivo_id, nota=nota, quien_id=a.id, quien_nombre=a.nombre)
     s.add(nuevo)
     verbo = "Pidió" if estado == "pedido" else "Registró como recibido"
-    _xsii_movimiento(s, proyecto_id, a, "insumo_" + estado,
-                     f"{verbo} el insumo {nombre_insumo}" + (f": {nota}" if nota else ""),
-                     clave_insumo=clave)
+    tipo_mov, texto_mov = movimiento or ("insumo_" + estado,
+                                         f"{verbo} el insumo {nombre_insumo}" + (f": {nota}" if nota else ""))
+    _xsii_movimiento(s, proyecto_id, a, tipo_mov, texto_mov, clave_insumo=clave)
     try:
         if commit:
             s.commit()
@@ -12736,6 +12765,171 @@ def xsii_reclamar_insumo(s: Session, proyecto_id: int, actor, clave: str, nombre
     s.refresh(nuevo)
     s.refresh(tarjeta)
     return tarjeta, modo, nuevo
+
+
+# ---------- Bloque 5: hitos de la Mesa enlazados a tareas ----------
+def xsii_hitos_activos(s: Session, proyecto_id: int) -> list:
+    """Los enlaces hito-tarea ACTIVOS como pares (hito_id, codigo), del más viejo al más nuevo."""
+    return [(h, c) for h, c in s.exec(select(XsiiHito.hito_id, XsiiHito.codigo).where(
+        XsiiHito.proyecto_id == proyecto_id, XsiiHito.activa == True).order_by(XsiiHito.id)).all()]   # noqa: E712
+
+
+def _xsii_hito_de_proyecto(s: Session, proyecto_id: int, hito_id: int) -> tuple:
+    """(id, codigo, hecho) del hito, solo si es de ESTE proyecto: si no, 404."""
+    fila = s.exec(select(ImplHito.id, ImplHito.codigo, ImplHito.hecho).where(
+        ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)).first()
+    if fila is None:
+        raise XsiiError(404, "No existe ese hito en la Mesa de este proyecto.")
+    return fila
+
+
+def _xsii_candado_de_hito(s: Session, proyecto_id: int, hito_id: int) -> None:
+    s.exec(text("SELECT pg_advisory_xact_lock(hashtext(:clave))").bindparams(
+        clave=f"xsii-hito:{proyecto_id}:{hito_id}"))
+
+
+def _xsii_enlazar(s: Session, proyecto_id: int, a, hito_id: int, hito_codigo: str, codigo: str,
+                  nombre_tarea: str) -> bool:
+    """Sin commit. True si creó el enlace, False si ya estaba."""
+    if s.exec(select(XsiiHito.id).where(XsiiHito.proyecto_id == proyecto_id, XsiiHito.hito_id == hito_id,
+                                        XsiiHito.codigo == codigo, XsiiHito.activa == True)).first():   # noqa: E712
+        return False
+    s.add(XsiiHito(proyecto_id=proyecto_id, hito_id=hito_id, codigo=codigo, quien_id=a.id, quien_nombre=a.nombre))
+    _xsii_movimiento(s, proyecto_id, a, "hito_enlazado",
+                     f"Asoció el hito {hito_codigo} de la Mesa con {nombre_tarea}", codigo=codigo,
+                     cantidades={"hito": hito_codigo})
+    s.flush()
+    return True
+
+
+def xsii_enlazar_hito(s: Session, proyecto_id: int, actor, hito_id: int, codigo: str, nombre_tarea: str) -> bool:
+    """Enlaza el hito con la tarea (el hito tiene que ser de este proyecto: si no, 404).
+    Repetido no cambia nada. Devuelve si creó el enlace."""
+    a = _impl_actor(actor)
+    _id, hito_codigo, _hecho = _xsii_hito_de_proyecto(s, proyecto_id, hito_id)
+    _xsii_candado_de_hito(s, proyecto_id, hito_id)
+    try:
+        creado = _xsii_enlazar(s, proyecto_id, a, hito_id, hito_codigo, codigo, nombre_tarea)
+        s.commit()
+    except IntegrityError:
+        s.rollback()
+        return False                          # otro pedido lo enlazó al mismo tiempo: el resultado es el mismo
+    return creado
+
+
+def xsii_desenlazar_hito(s: Session, proyecto_id: int, actor, hito_id: int, codigo: str, nombre_tarea: str) -> None:
+    """Saca el enlace activo (queda quién y cuándo). Sin enlace activo -> 409."""
+    a = _impl_actor(actor)
+    _id, hito_codigo, _hecho = _xsii_hito_de_proyecto(s, proyecto_id, hito_id)
+    _xsii_candado_de_hito(s, proyecto_id, hito_id)
+    enlace = s.exec(select(XsiiHito).where(XsiiHito.proyecto_id == proyecto_id, XsiiHito.hito_id == hito_id,
+                                           XsiiHito.codigo == codigo, XsiiHito.activa == True)   # noqa: E712
+                    .with_for_update()).first()
+    if enlace is None:
+        raise XsiiError(409, "Ese hito no está asociado con esa tarea.")
+    enlace.activa = False
+    enlace.retirado_por_id, enlace.retirado_por_nombre = a.id, a.nombre
+    enlace.retirado_cuando = fechas.ahora_con_segundos()
+    s.add(enlace)
+    _xsii_movimiento(s, proyecto_id, a, "hito_desenlazado",
+                     f"Sacó la asociación del hito {hito_codigo} de la Mesa con {nombre_tarea}", codigo=codigo,
+                     cantidades={"hito": hito_codigo})
+    s.commit()
+
+
+def xsii_aceptar_hitos_sugeridos(s: Session, proyecto_id: int, actor, pares: list) -> int:
+    """Enlaza varios (hito_id, codigo, nombre_tarea) en UNA transacción (todo o nada).
+    Devuelve cuántos enlaces creó; los que ya estaban no cuentan."""
+    a = _impl_actor(actor)
+    codigos = {}
+    for hito_id in sorted({p[0] for p in pares}):
+        codigos[hito_id] = _xsii_hito_de_proyecto(s, proyecto_id, hito_id)[1]
+        _xsii_candado_de_hito(s, proyecto_id, hito_id)          # siempre en el mismo orden: sin abrazos
+    n = 0
+    try:
+        for hito_id, codigo, nombre in pares:
+            if _xsii_enlazar(s, proyecto_id, a, hito_id, codigos[hito_id], codigo, nombre):
+                n += 1
+        s.commit()
+    except IntegrityError:
+        s.rollback()
+        raise XsiiError(409, "Otra persona asoció hitos al mismo tiempo. Volvé a intentar.")
+    return n
+
+
+def xsii_marcar_hito(s: Session, proyecto_id: int, actor, hito_id: int, revalidar) -> "ImplHito":
+    """Tilda el hito de la Mesa a nombre de la persona, TODO en una transacción.
+    `revalidar(s)` corre ADENTRO, con el hito bloqueado, y devuelve `(frase,
+    codigos)`: la frase del conflicto (vacío si sigue propuesto) y los códigos de
+    las tareas que lo respaldan. Como la revalidación puede recalcular el tablero
+    (y un control que falla hace rollback, que suelta el candado), el hito se
+    bloquea de nuevo y se mira `hecho` recién ahí: dos marcados a la vez nunca
+    pasan los dos. Deja el movimiento `hito_marcado` (códigos, sin textos libres)."""
+    a = _impl_actor(actor)
+
+    def _bloquear():
+        return s.exec(select(ImplHito).where(ImplHito.id == hito_id, ImplHito.proyecto_id == proyecto_id)
+                      .with_for_update().execution_options(populate_existing=True)).first()
+    if _bloquear() is None:
+        raise XsiiError(404, "No existe ese hito en la Mesa de este proyecto.")
+    frase, codigos = revalidar(s)
+    h = _bloquear()
+    if h is None:
+        raise XsiiError(404, "No existe ese hito en la Mesa de este proyecto.")
+    if h.hecho:
+        raise XsiiError(409, "El hito ya está marcado como hecho en la Mesa.")
+    if frase:
+        raise XsiiError(409, frase)
+    impl_tildar_hito(s, proyecto_id, h.id, a, True, commit=False)
+    _xsii_movimiento(s, proyecto_id, a, "hito_marcado",
+                     f"Marcó el hito {h.codigo} como hecho en la Mesa (por {', '.join(codigos)})",
+                     codigo=codigos[0] if len(codigos) == 1 else "",
+                     cantidades={"hito": h.codigo, "tareas": list(codigos)})
+    s.commit()
+    s.refresh(h)
+    return h
+
+
+# ---------- Bloque 5: archivos de la Mesa en los insumos ----------
+def xsii_archivos_de_tarjeta(s: Session, proyecto_id: int, tarjeta_id: int) -> list:
+    """Los archivos de esa tarjeta (solo de este proyecto) sin sus bytes, los
+    borrados afuera, del más nuevo al más viejo."""
+    return list(s.exec(select(ImplArchivo).options(*_sin_bytes(ImplArchivo)).where(
+        ImplArchivo.proyecto_id == proyecto_id, ImplArchivo.tarjeta_id == tarjeta_id,
+        ImplArchivo.borrado_en == "").order_by(ImplArchivo.id.desc())).all())
+
+
+def xsii_archivos_nuevos(s: Session, proyecto_id: int, tarjetas) -> dict:
+    """{tarjeta_id: [subido_en, ...]} de los archivos que subió el SINDICATO a
+    esas tarjetas y siguen en pie (para contar los que llegaron desde un pedido)."""
+    ids = [i for i in set(tarjetas) if i]
+    if not ids:
+        return {}
+    salida: dict = {}
+    for tid, cuando in s.exec(select(ImplArchivo.tarjeta_id, ImplArchivo.subido_en).where(
+            ImplArchivo.proyecto_id == proyecto_id, ImplArchivo.tarjeta_id.in_(ids),
+            ImplArchivo.subido_por_lado == implementacion.SINDICATO, ImplArchivo.borrado_en == "")).all():
+        salida.setdefault(tid, []).append(cuando)
+    return salida
+
+
+def xsii_fijar_archivo(s: Session, proyecto_id: int, actor, clave: str, nombre_insumo: str,
+                       archivo_id: int) -> XsiiInsumo:
+    """Fija `archivo_id` como EL archivo del insumo y lo deja `recibido`. El insumo
+    tiene que tener una tarjeta enlazada y el archivo ser de ESA tarjeta y de este
+    proyecto y no estar borrado; si no, 404. El movimiento dice el código del
+    archivo, nunca su nombre ni su contenido."""
+    activo = s.exec(select(XsiiInsumo.tarjeta_id).where(
+        XsiiInsumo.proyecto_id == proyecto_id, XsiiInsumo.clave == clave,
+        XsiiInsumo.activa == True)).first()                                    # noqa: E712
+    if not activo:
+        raise XsiiError(404, "Este insumo no tiene una tarjeta de la Mesa asociada.")
+    arch = impl_archivo(s, proyecto_id, archivo_id)
+    if arch is None or arch.tarjeta_id != activo or arch.borrado_en:
+        raise XsiiError(404, "No encontré ese archivo en la tarjeta de este insumo.")
+    return xsii_registrar_insumo(
+        s, proyecto_id, actor, clave, nombre_insumo, "recibido", archivo_id=arch.id,
+        movimiento=("insumo_archivo", f"Fijó el archivo {arch.codigo} de la Mesa como el del insumo {nombre_insumo}"))
 
 
 def xsii_movimientos(s: Session, proyecto_id: int, codigo: str = "", claves_insumo=(),

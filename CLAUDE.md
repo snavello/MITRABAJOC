@@ -2044,8 +2044,33 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     CUIT de empleador válido. Límites sabidos: el nombre del archivo vuelve
     tal cual en la respuesta y una descripción leída con un nombre propio
     adentro viaja en la propuesta.
-    **Sigue**: el bloque 5, vuelta a la Mesa. Queda sin usar
-    `XsiiInsumo.archivo_id` (bloque 5), reclamar desde un proyecto sin
+    **Bloque 5 HECHO** (2026-11-28, Plataforma 0.85.01): **la vuelta a la
+    Mesa**. **X29 (SDN): cuando una tarea queda hecha XSII PROPONE marcar el
+    hito de la Mesa y alguien del equipo lo acepta; nunca lo tilda solo.**
+    Los hitos son texto libre, así que el vínculo se guarda aparte:
+    `XsiiHito` (migración `e5a7c9b1d3f6`, en `db.XSII_TABLAS`), varios a
+    varios, con sugerencias en `data/xsii/hitos_sugeridos.json` (10 de los
+    45 hitos de La Bancaria; los demás son reuniones, acuerdos o el piloto y
+    se marcan a mano). Un hito se propone si tiene tareas asociadas y todas
+    están resueltas («no aplica» no cuenta; si todas lo son, no se propone);
+    `POST …/hitos/{hid}/marcar` revalida adentro de la transacción (409 si
+    dejó de estar propuesto) y tilda con `db.impl_tildar_hito` a nombre de la
+    persona. Cuarta vista **Hitos**; en pantalla se dice **«asociar»**, no
+    «enlazar». **Archivos de la Mesa**: `XsiiInsumo.archivo_id` se usa: la
+    ficha lista los archivos de la tarjeta del pedido, avisa «Llegó un
+    archivo en PE…» (`archivos_nuevos`, solo del lado sindicato y con el
+    insumo `pedido`) y «Usar este archivo» lo fija y deja el insumo
+    `recibido`; las asistidas de planilla aceptan `archivo_mesa` (tiene que
+    ser el fijado a ESE insumo; cada uso registra la descarga en la Mesa,
+    que el sindicato lee como «bajó X para cargarlo en el sistema»). Cambiar
+    la tarjeta de un insumo suelta el archivo fijado. **Un archivo que no es
+    CSV se rechaza por firma o extensión** (PDF, Excel, imágenes), subido o
+    de la Mesa. «Preguntame» tiene `ver_hitos` (sin texto libre) y todo
+    código de la Mesa de su respuesta tiene que figurar tal cual en lo que
+    vio. Límite sabido: volver a reclamar un insumo reinicia la cuenta de
+    «archivos nuevos».
+    **Sigue**: el bloque 6, el método (`xsii/METODO.md`). Queda reclamar
+    desde un proyecto sin
     sindicato (el servidor lo admite, la pantalla no lo ofrece) y la primera
     consulta con la API real, que hay que mirarla en Pruebas.
 

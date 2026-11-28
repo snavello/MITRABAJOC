@@ -62,6 +62,12 @@ def limpiar(valor) -> str:
     return re.sub(r" {2,}", " ", "".join(salida)).strip()
 
 
+# Cómo empieza un archivo que NO es una planilla de texto: PDF, ZIP (y con él Excel y Word nuevos), Office
+# viejo (OLE), imágenes y RIFF (webp). Sin esto, un PDF sin bytes nulos se leía como un CSV de una columna.
+FIRMAS_NO_PLANILLA = (b"%PDF", b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08", b"\xd0\xcf\x11\xe0", b"\x89PNG",
+                      b"\xff\xd8\xff", b"GIF8", b"RIFF", b"{\\rtf")
+
+
 def leer_csv(contenido: bytes, tope_filas: int, tope_bytes: int):
     """`(cabecera, [(linea, celdas)])`. Rechaza (400) lo que no sirve para nada.
     Cada módulo dice sus topes: Seccionales 500 filas y 1 MB, el Padrón 20.000
@@ -70,9 +76,9 @@ def leer_csv(contenido: bytes, tope_filas: int, tope_bytes: int):
         raise ErrorAsistida(400, "El archivo está vacío.")
     if len(contenido) > tope_bytes:
         raise ErrorAsistida(400, f"El archivo pesa más de {tope_bytes // (1024 * 1024)} MB: partilo en dos.")
-    if b"\x00" in contenido or contenido[:2] == b"PK":
-        raise ErrorAsistida(400, "No pude leer el archivo: tiene que ser un CSV (si es de Excel, guardalo como "
-                                 "«CSV» o bajá el modelo).")
+    if b"\x00" in contenido or contenido.startswith(FIRMAS_NO_PLANILLA):
+        raise ErrorAsistida(400, "El archivo no es una planilla (CSV): tiene que ser un CSV (si es de Excel, "
+                                 "guardalo como «CSV» o bajá el modelo).")
     texto = listas._decodificar(contenido)
     lector = csv.reader(io.StringIO(texto), delimiter=listas._dialecto(texto))
     cabecera, filas = None, []

@@ -194,7 +194,7 @@ def test_la_forma_del_tablero_es_la_del_contrato():
     pid, eq = _mundo()
     t = _tablero(eq, pid)
     assert set(t) == {"proyecto", "disponible", "motivo", "grupos", "rotulos", "resumen", "recomendada",
-                      "alternativas", "demorados", "tareas", "movimientos", "preguntame"}
+                      "alternativas", "demorados", "tareas", "movimientos", "preguntame", "hitos"}
     assert t["disponible"] is True and t["motivo"] == ""
     assert t["proyecto"]["mesa_url"] == f"/implementacion?p={pid}" and t["proyecto"]["sindicato_nombre"]
     assert t["grupos"] == list(catalogo.GRUPOS)
@@ -210,7 +210,7 @@ def test_la_forma_del_tablero_es_la_del_contrato():
     claves = {"codigo", "nombre", "grupo", "modo", "descripcion", "para_que", "pasos", "aplica_si", "estado", "con_observaciones",
               "a_mano", "pospuesta", "no_aplica_por", "falta_confirmar", "confirmacion", "detalle", "necesita",
               "mejora_con", "frenada_por", "avisos", "camino", "necesitada_por", "destraba", "nivel", "donde",
-              "control", "decisiones", "insumos", "acciones", "asistida"}
+              "control", "decisiones", "insumos", "acciones", "asistida", "hitos"}
     for x in t["tareas"]:
         assert set(x) == claves, x["codigo"]
         assert set(x["acciones"]) == {"confirmar", "completar_a_mano", "no_aplica", "posponer", "deshacer"}
@@ -436,7 +436,7 @@ def test_pedir_y_recibir_un_insumo_con_su_tarjeta_de_la_mesa():
     assert r.status_code == 200 and r.json()["ok"]
     i = r.json()["insumo"]
     assert set(i) == {"clave", "nombre", "descripcion", "tipo", "formato", "estado", "sin_registrar", "dias", "nota", "quien",
-                      "cuando", "tarjeta"}
+                      "cuando", "tarjeta", "archivos_nuevos"}
     assert i["estado"] == "pedido" and i["dias"] == 0 and i["nota"] == "se la pedimos a Marta"
     assert i["tarjeta"] == {"id": tid, "codigo": codigo, "titulo": "Planilla del padrón", "estado": "abierta",
                             "url": f"/implementacion?p={pid}"}

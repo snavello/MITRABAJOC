@@ -8,6 +8,7 @@ Fuente de `recursos/xsii-tutorial.html` (Recursos de `/entornos`).
   «UOM · Primera versión» con tres tarjetas de la Mesa. Solo para la base de desarrollo.
 - `capturar.js`: levanta Playwright, ejecuta las acciones de verdad contra un servidor local
   (`ENTORNO=local`, demo cargada, puerto 8765) y deja las capturas con los círculos numerados.
+- `preparar_mesa.py` + `capturar_mesa.js`: filman SOLO el bloque 5 (ver abajo).
 - `armar.py`: arma el HTML autocontenido (imágenes reducidas en base64, CSS adentro, imprimible en A4).
 
 ## Regenerar
@@ -78,3 +79,13 @@ La miniatura `recursos/xsii-tutorial.jpg` (640x400) es una captura de la portada
   Comando: `MOCK_EXTRACTOR=1 ENTORNO=local .venv/bin/python docs/xsii/tutorial/servidor_recibos.py 8765` y después el `capturar.js` de arriba.
   Al refilmar no se pisaron las capturas 01 a 49 (dependen de la base de la demo; solo se sumaron las nuevas). Ahora son 24 pasos y 57
   figuras; HTML ~5,8 MB (JPEG a calidad 52 en `armar.py`). La miniatura no se regeneró (la portada no cambió salvo el encabezado).
+- Bloque 5 (2026-11-28): dos pasos nuevos, «El sindicato sube la planilla en la Mesa y XSII la usa» (capturas `57` a `60`, después de
+  «Cargar las seccionales») y «Los hitos de la Mesa» (capturas `62` a `65`, al final). Se filmaron con un guion APARTE, `capturar_mesa.js`, que
+  llama a `preparar_mesa.py` (usa `preparar.py` y suma los hitos semilla de La Bancaria al proyecto y una usuaria del sindicato en la Mesa,
+  «Carla Demo»; con `subir` sube un archivo a una tarjeta como el sindicato). No pisa las capturas `01` a `56`: se corre sobre una base
+  descartable (`createdb -T mitrabajo mitrabajo_tut5`, `alembic upgrade head`) con `DATABASE_URL` apuntando a ella y el servidor normal
+  (`MOCK_EXTRACTOR=1 ENTORNO=local uvicorn main:app --port 8765`). Sobre un proyecto nuevo: pide la lista de seccionales (EST-01) enlazada a
+  PE0001, el sindicato sube `seccionales-tutorial.csv`, se muestran el aviso, la lista, «Usar este archivo» y el botón de la carga; después
+  se confirma REC-01 y en Hitos salen para marcar HI0021 (REC-01) y HI0026 (REC-04 y REC-05, que ya estaban hechas en la demo). La figura `61`
+  (ensayo) se filmó y se descartó. Ahora son 26 pasos y 65 figuras; JPEG a calidad 50 y las figuras 58 y 63 a 65 en ancho `med` para quedar
+  bajo 6 MB (5,96 MB). Borrar la base descartable al terminar. La miniatura no se regeneró.

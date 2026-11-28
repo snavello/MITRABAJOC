@@ -45,6 +45,10 @@ TEXTO_ERROR = ("No pude consultar al asistente en este momento. Probá de nuevo 
                "el tablero y los controles siguen funcionando.")
 
 PATRON_CODIGO = r"\b[A-Z]{2,4}-\d{2}\b"
+# Códigos de la Mesa (HI0001, PE0007, AR000123): letras y dígitos pegados. No hay lista cerrada de
+# ellos, así que se exige que aparezcan TAL CUAL en lo que devolvieron las herramientas o en la pregunta:
+# como número suelto, uno inventado (HI0003) pasaba si «3» salía en cualquier otra parte.
+PATRON_REF_MESA = r"\b[A-Z]{2}\d{4,6}\b"
 
 _cliente = None
 
@@ -223,7 +227,12 @@ def validar(texto, *, visto: str = "", pregunta: str = "", codigos_validos=(),
             return no(f"nombra una tarea que no existe ({c})")
         if c not in codigos:
             codigos.append(c)
-    sin_codigos = re.sub(patron_codigo, " ", unicodedata.normalize("NFKC", t).translate(_GUIONES).upper())
+    normal = unicodedata.normalize("NFKC", t).translate(_GUIONES).upper()
+    conocido = unicodedata.normalize("NFKC", f"{visto} {pregunta}").upper()
+    for ref in re.findall(PATRON_REF_MESA, normal):
+        if ref not in conocido:
+            return no(f"nombra un código de la Mesa que no salió de las herramientas ({ref})")
+    sin_codigos = re.sub(patron_codigo, " ", normal)
     if (n := _cifra_inventada(sin_codigos, _numeros(visto) | _numeros(pregunta))):
         return no(f"cifra que no sale de las herramientas ({n})")
     return {"ok": True, "motivo": "", "texto": t, "codigos": codigos}

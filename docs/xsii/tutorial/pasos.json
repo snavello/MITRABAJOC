@@ -1,5 +1,5 @@
 {
- "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 4b",
+ "encabezado": "Suite XSanders · XSII · Tutorial paso a paso · versión del bloque 5",
  "titulo": "Cómo se sigue una implementación con XSII",
  "bajada": "Un recorrido por las pantallas reales de XSII, con un sindicato de la demo y los pasos hechos de verdad, uno por uno.",
  "fecha": "28 de noviembre de 2026",
@@ -9,7 +9,7 @@
   "Los círculos naranjas numerados que aparecen en las capturas no son parte de la pantalla: los pusimos para señalar dónde mirar, y el texto de cada paso los explica.",
   "Una aclaración importante: en este tutorial las respuestas de «Preguntame» son SIMULADAS. El entorno donde se sacaron las capturas no llama a la IA, así que la pantalla lo avisa con una línea chica debajo de cada respuesta. En Pruebas las escribe el modelo, y por eso el texto va a ser distinto, con otras palabras. Lo que no cambia es cómo se usa, qué muestra y qué puede hacer."
  ],
- "alcance": "Esta versión suma lo del bloque 4b: la tarea «Conceptos» (REC-04) se arma leyendo recibos de muestra, con revisión concepto por concepto antes de cargar. Sigue valiendo todo lo anterior: la carga del padrón y de las seccionales desde planilla (con el reconocimiento de columnas), «Preguntame», los botones Atrás y Adelante, el reclamo de un dato en la Mesa, la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. «Preguntame» sigue sin cargar nada: solo lee el tablero y propone reclamos; las tareas que cargan datos, por ahora, son Seccionales, Padrón y Conceptos.",
+ "alcance": "Esta versión suma lo del bloque 5, la vuelta a la Mesa: XSII ve los archivos que el sindicato sube a la tarjeta de un pedido y deja usarlos en la carga desde planilla, y la nueva pestaña Hitos propone marcar los hitos de la Mesa cuando sus tareas están hechas. Sigue valiendo todo lo anterior: la tarea «Conceptos» leyendo recibos de muestra, la carga del padrón y de las seccionales desde planilla, «Preguntame», los botones Atrás y Adelante, el reclamo de un dato en la Mesa, la Guía, el Tablero, el Mapa, las fichas, los insumos, las decisiones y el registro. «Preguntame» sigue sin cargar nada: solo lee el tablero y propone reclamos; también puede consultar el estado de los hitos.",
  "pasos": [
   {
    "id": "entrar",
@@ -138,6 +138,40 @@
    "recuadro": [
     "Nunca se borra nada",
     "La carga solo crea, y actualiza las que ya existen únicamente si lo tildás. No borra seccionales ni les saca el alcance total. Si algo sale mal, la tarea no se da por hecha: el control lo ve y avisa."
+   ]
+  },
+  {
+   "id": "archivo-mesa",
+   "titulo": "El sindicato sube la planilla en la Mesa y XSII la usa",
+   "texto": [
+    "Hasta acá, la planilla se subía a mano desde tu computadora. Ahora no hace falta: si el sindicato ya subió el archivo a la tarjeta de la Mesa donde se lo pediste, XSII lo ve y lo ofrece. Acá el pedido es el de «Lista de seccionales», con su tarjeta PE0001, y quien sube el archivo es «Carla Demo», una usuaria de prueba del sindicato.",
+    "<b>XSII avisa.</b> En la Guía, dentro de «Se espera del sindicato», aparece <b>Llegó un archivo en PE0001</b> (1) con el botón <b>Ver</b>. Es solo un aviso: no marca nada como recibido por su cuenta.",
+    "<b>La lista de archivos.</b> En la ficha de la tarea, el mismo aviso (1) abre la lista de lo que el sindicato subió a esa tarjeta, con el nombre, el código del archivo (AR000001), quién lo subió y cuándo. Si es el que corresponde, tocás <b>Usar este archivo</b> (2).",
+    "<b>Queda fijado.</b> El archivo pasa a decir <b>En uso</b> (1) y el dato se marca como recibido, a tu nombre. Si el sindicato sube uno corregido más adelante, podés elegir el nuevo del mismo modo.",
+    "<b>La carga ya lo trae.</b> Al abrir <b>Cargar desde la planilla</b>, el momento 1 muestra el archivo de la Mesa (1) y el botón principal pasa a decir <b>Usar el archivo de la Mesa (AR000001 · seccionales-tutorial.csv)</b> (2). Subir otro archivo sigue disponible, como alternativa. Desde ahí todo es igual que antes: ensayo sin guardar, carga, control. Cada vez que XSII lee el archivo de la Mesa queda anotada la descarga, a tu nombre, como cualquier descarga de la Mesa.",
+    "Por ahora esto funciona con las planillas de Seccionales y de Padrón. Los recibos de muestra, que son muchos archivos, se siguen subiendo desde acá."
+   ],
+   "figuras": [
+    {
+     "archivo": "57-mesa-guia-llego",
+     "epigrafe": "En la Guía: «Llegó un archivo en PE0001».",
+     "ancho": "med"
+    },
+    {
+     "archivo": "58-mesa-ficha-archivos",
+     "epigrafe": "En la ficha, la lista de archivos de la tarjeta con «Usar este archivo».",
+     "ancho": "med"
+    },
+    {
+     "archivo": "59-mesa-en-uso",
+     "epigrafe": "El archivo elegido queda «En uso» y el dato, recibido.",
+     "ancho": "med"
+    },
+    {
+     "archivo": "60-mesa-usar-archivo",
+     "epigrafe": "La carga asistida con el botón «Usar el archivo de la Mesa».",
+     "ancho": "med"
+    }
    ]
   },
   {
@@ -582,6 +616,40 @@
      "ancho": "med"
     }
    ]
+  },
+  {
+   "id": "hitos",
+   "titulo": "Los hitos de la Mesa",
+   "texto": [
+    "El plan de la Mesa tiene <b>hitos</b>: los logros que el sindicato ve, como «Recibos de muestra recibidos». XSII los junta con las tareas en una pestaña nueva, <b>Hitos</b>, junto a Guía, Tablero y Mapa. Los hitos de este ejemplo son los del plan de referencia, cargados en el proyecto de prueba.",
+    "<b>La vista.</b> Arriba (1) se lee cuántos hitos están para marcar, cuántos ya están hechos y cuántos tienen tareas asociadas. Debajo, los hitos van agrupados por fase (3): cada fase se abre con un toque. Un hito sin tareas dice «Sin tareas».",
+    "<b>Asociar.</b> Un hito se asocia a una o varias tareas: «Asociar una tarea» elige una, y el botón <b>Asociar todas las tareas sugeridas</b> (2) acepta de una vez las que XSII propone según lo que dice el hito (por ejemplo, el de recibos de muestra con la tarea «Recibos de muestra»). Las sugerencias son solo una propuesta: no se asocia nada hasta que lo aceptás, y cada asociación se puede retirar con la cruz que está al lado de la tarea.",
+    "<b>Para marcar.</b> Cuando todas las tareas de un hito están hechas, XSII lo sube a una lista aparte: <b>hitos para marcar en la Mesa</b> (1). Cada uno muestra la etiqueta «Para marcar» (2), el motivo (3: qué tareas están hechas) y el botón <b>Marcar hecho en la Mesa</b> (4). Una tarea declarada «no aplica» no frena al hito.",
+    "<b>Marcar.</b> XSII propone y <b>una persona del equipo es quien marca el hito</b>: nunca lo hace solo, porque el sindicato ve esos hitos y alguien tiene que responder por cada uno. Por eso el botón pide un segundo toque (1): «Tocá otra vez: queda hecho en la Mesa», con «No marcar» al lado por si te arrepentís.",
+    "<b>Cómo queda.</b> Aparece el aviso «Quedó hecho en la Mesa» (1), los contadores se actualizan (2) y el hito sale de la lista de los que están para marcar (3). En la Mesa figura hecho a tu nombre y en el registro de XSII queda anotado. Si te equivocaste, desmarcarlo se hace en la Mesa, no desde XSII."
+   ],
+   "figuras": [
+    {
+     "archivo": "62-hitos-vista",
+     "epigrafe": "La pestaña Hitos: contadores, el botón para asociar las sugeridas y las fases.",
+     "ancho": "full"
+    },
+    {
+     "archivo": "63-hitos-para-marcar",
+     "epigrafe": "Dos hitos con todas sus tareas hechas, listos para marcar.",
+     "ancho": "med"
+    },
+    {
+     "archivo": "64-hitos-segundo-toque",
+     "epigrafe": "El primer toque pide confirmar.",
+     "ancho": "med"
+    },
+    {
+     "archivo": "65-hitos-hecho",
+     "epigrafe": "Después de marcar: aviso, contadores y el hito que queda.",
+     "ancho": "med"
+    }
+   ]
   }
  ],
  "preguntas": [
@@ -648,8 +716,8 @@
    "Las demás tareas que se puedan asistir con el mismo método de los cuatro momentos: explicar, ensayar sin guardar, cargar con confirmación y controlar."
   ],
   [
-   "Después",
-   "Las demás tareas que se puedan asistir, siempre con ensayo previo, confirmación y registro."
+   "Más archivos de la Mesa",
+   "Poder usar también los recibos de muestra que el sindicato sube a la Mesa, que son muchos archivos."
   ],
   [
    "Este tutorial",

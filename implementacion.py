@@ -508,7 +508,7 @@ def texto_evento(accion: str, detalle: dict) -> str:
     if accion == "subir":
         return f"subió {nombre}" + (" (con datos personales)" if d.get("datos_personales") else "")
     if accion == "bajar":
-        return f"bajó {nombre}"
+        return f"bajó {nombre}" + (" para cargarlo en el sistema" if d.get("motivo") == "xsii" else "")
     if accion == "borrar_archivo":
         return f"borró {nombre}"
     if accion == "leer_aviso":
