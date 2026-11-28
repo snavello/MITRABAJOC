@@ -11665,3 +11665,42 @@ inválido y un botón sin foco visible.
 grandes), el enmascarado activo con OCR sobre recibos de muestra, Safari y un
 teléfono físico. Lo primero hay que mirarlo en Pruebas con los recibos de La
 Bancaria.
+
+## XSII bloque 5: la vuelta a la Mesa (2026-11-28)
+
+Hasta acá XSII y la Mesa se tocaban en un solo punto: reclamar un dato creaba
+un Pedido. Faltaban las dos vueltas: que lo que el sindicato sube a ese Pedido
+sirva en XSII sin bajarlo y volver a subirlo, y que los hitos del plan (que se
+tildan a mano y nada vincula con lo cargado, la diferencia 10 del plan) se
+enteren de lo que XSII ya sabe.
+
+**X29 (SDN): XSII propone el hito y una persona lo acepta.** Se le ofrecieron
+tres opciones (proponer, marcar solo, no tocar los hitos) y eligió la primera:
+el sindicato ve los hitos, así que alguien del equipo responde por cada uno.
+
+**Por qué una tabla de vínculos.** Los hitos son texto libre por proyecto y el
+plan dice que el catálogo no se arma desde ellos (X5). Entonces el vínculo
+hito ↔ tarea es un dato aparte (`XsiiHito`), que el equipo arma con un toque a
+partir de sugerencias. Las sugerencias cubren 10 de los 45 hitos de La
+Bancaria: los otros 35 son reuniones, acuerdos, nombramientos y el piloto, que
+ningún control puede calcular. Cuatro de las diez cubren solo parte de lo que
+dice el hito («aprobado por el sindicato», «revisado», «capacitados»): por eso
+es una propuesta y no un tilde.
+
+**Archivos.** El insumo ya podía apuntar a una tarjeta; ahora también a un
+archivo de esa tarjeta. Las asistidas de planilla lo leen directo, y cada
+lectura queda registrada como descarga en la Mesa, igual que si alguien lo
+hubiera bajado.
+
+**Lo que encontró el QA independiente** (corregido antes del merge). Servidor,
+36 ataques: al cambiar la tarjeta de un insumo quedaba fijado el archivo de la
+tarjeta anterior; «Preguntame» aceptaba un código de hito inventado si el
+número aparecía en cualquier parte de lo que había visto; y un PDF usado como
+planilla contestaba «Falta una columna» en vez de decir que no es una
+planilla. Pantalla, con navegador a 1280 y 390 px: después de «Usar este
+archivo» la asistida no ofrecía el archivo; seguía ofreciendo uno borrado; la
+× que saca una tarea de un hito actuaba con un solo toque; y «enlazar» no se
+entendía (pasó a «asociar»).
+
+**Decisiones menores de Code**: un hito desmarcado en la Mesa vuelve a
+proponerse; el texto que lee el sindicato por la descarga no nombra a XSII.
