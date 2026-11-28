@@ -72,7 +72,7 @@ SEMILLA = [
                        "completar a mano y deshacer, no aplica y posponer, el Tablero, el Mapa y el registro, y desde "
                        "el bloque 2 «Preguntame» (el asistente de lectura, con respuestas simuladas) y el reclamo de "
                        "un dato en la Mesa, y la carga de las seccionales y del padrón desde una planilla, con "
-                       "preguntas frecuentes, y la carga de conceptos leyendo recibos de muestra. Versión del bloque 4b; crece con cada bloque. "
+                       "preguntas frecuentes, y la carga de conceptos leyendo recibos de muestra, y desde el bloque 5 la vuelta a la Mesa: usar el archivo que sube el sindicato y marcar los hitos. Versión del bloque 5; crece con cada bloque. "
                        "Se regenera con docs/xsii/tutorial/armar.py.",
         "fecha": date(2026, 11, 28),
         "archivo": "xsii-tutorial.html",
