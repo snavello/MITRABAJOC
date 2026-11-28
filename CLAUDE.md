@@ -2026,8 +2026,25 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     que se dibuja en el panel o en la app pasa por escape** (`esc` / `escS`):
     antes nombre, dirección, horario, teléfono y mail iban crudos. X25 a X27
     las definió Code: a confirmar por SDN.
-    **Sigue**: Conceptos (REC-04), que usa la IA sobre los recibos de muestra
-    (X19). Queda sin usar
+    **Bloque 4b HECHO** (2026-11-28, Plataforma 0.84.01, Admin 0.81.02):
+    **Conceptos desde los recibos de muestra** (REC-04), tercera asistida y
+    la primera con `entrada: "recibos"` (las otras son `"planilla"`).
+    **X28 (SDN): la IA propone y la persona revisa; recién ahí se cargan, ya
+    revisados.** Las reglas de Aprendizaje viven en `conceptos_carga.py`
+    (`proponer`, `aplicar`): las usan `/admin/aprender*` (adaptadores, misma
+    respuesta que antes) y la asistida. El ensayo lee UN recibo por pedido
+    (la pantalla manda de a dos y junta las propuestas por código +
+    empleador), con la IA fuera de la sesión de base, sin guardar nada y sin
+    devolver identidad ni importes; tope `XSII_RECIBOS_TOPE` (120 por usuario
+    y hora, por proceso). La carga es JSON, validada todo o nada, con el
+    candado por tarea y por sindicato (que también toma
+    `/admin/aprender/aplicar`: `Concepto` no tiene índice único). Lo que
+    devuelve la IA se acota antes de usarse (`conceptos._recibo_acotado`: 400
+    líneas, 300 caracteres). El recibo simulado (`MOCK_EXTRACTOR=1`) trae un
+    CUIT de empleador válido. Límites sabidos: el nombre del archivo vuelve
+    tal cual en la respuesta y una descripción leída con un nombre propio
+    adentro viaja en la propuesta.
+    **Sigue**: el bloque 5, vuelta a la Mesa. Queda sin usar
     `XsiiInsumo.archivo_id` (bloque 5), reclamar desde un proyecto sin
     sindicato (el servidor lo admite, la pantalla no lo ofrece) y la primera
     consulta con la API real, que hay que mirarla en Pruebas.
