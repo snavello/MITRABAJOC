@@ -984,3 +984,98 @@ Límites sabidos, sin tocar: el nombre del archivo vuelve en `recibo.nombre` tal
 quien lo subió (si el archivo se llama como la persona, lo ve quien lo subió y nadie más: no se
 guarda); un código que solo difiere en mayúsculas de otro es otro concepto (igual que el panel);
 una descripción de la IA con un nombre propio adentro («Embargo Pérez») viaja en la propuesta.
+
+---
+
+# Bloque 5: vuelta a la Mesa (hitos propuestos y archivos de los insumos)
+
+Decisión de SDN (2026-11-28, **X29**): cuando XSII calcula que una tarea
+quedó hecha, **propone** marcar el hito de la Mesa y **alguien del equipo lo
+acepta**. XSII nunca tilda un hito solo. El sindicato ve los hitos, así que
+una persona responde por cada uno.
+
+## A. Hitos de la Mesa enlazados a tareas
+
+Los hitos (`ImplHito`) son texto libre por proyecto: el vínculo con una tarea
+de XSII se guarda aparte.
+
+**Tabla nueva `XsiiHito`** (migración idempotente, entra en `db.XSII_TABLAS`:
+fuera del clonado y del borrado): `id, proyecto_id, hito_id, codigo` (tarea),
+`quien_id, quien_nombre, cuando, activa, retirado_por_id,
+retirado_por_nombre, retirado_cuando`. Único parcial `(proyecto_id, hito_id,
+codigo) WHERE activa`. Un hito puede enlazarse a varias tareas y una tarea a
+varios hitos. El hito tiene que ser del MISMO proyecto (si no, 404).
+
+**Sugerencias de enlace**: `data/xsii/hitos_sugeridos.json`, una lista
+`{"texto_contiene": [...], "tareas": ["EST-01", …]}` pensada sobre los hitos
+semilla de La Bancaria (`data/implementacion/hitos_bancaria.json`). Una
+sugerencia vale para un hito si su texto normalizado (sin mayúsculas ni
+acentos) contiene TODAS las frases. Son solo propuestas: la persona las acepta
+de a una o todas juntas. Un test verifica que toda tarea nombrada exista en el
+catálogo y que cada sugerencia coincida con al menos un hito de la semilla.
+Solo se sugiere donde la relación es clara; un hito que es una reunión o un
+acuerdo no se enlaza a nada.
+
+**Cuándo se propone un hito**: está enlazado, no está hecho, y TODAS sus
+tareas enlazadas están resueltas (hecha por control, confirmada, completada a
+mano; una «no aplica» no cuenta ni frena, pero si todas son «no aplica» no se
+propone).
+
+### Rutas (puerta del equipo, 404 en demo; `X` = `/api/entornos/xsii`)
+
+- `GET X/p/{pid}/hitos` → `{"fases": [{"etapa", "hitos": [<hito>]}], "resumen": {"total","hechos","enlazados","propuestos","sugerencias"}}`.
+  `<hito>` = `{"id","codigo","texto","hecho","hecho_por","hecho_en","tareas":[{"codigo","nombre","estado","resuelta"}],"propuesto": bool,"porque": "", "sugeridas":[{"codigo","nombre"}]}` (`sugeridas` = las que todavía no están enlazadas).
+- `POST X/p/{pid}/hitos/{hid}/enlace` `{"codigo": "EST-01"}` → enlaza. Repetido: 200 sin cambios. Tarea inexistente: 400.
+- `POST X/p/{pid}/hitos/{hid}/enlace/retirar` `{"codigo"}` → desenlaza (queda quién y cuándo).
+- `POST X/p/{pid}/hitos/sugerencias/aceptar` `{"hitos": [hid,…]}` (vacío o ausente = todas) → enlaza todas las sugeridas de esos hitos, en una transacción. Devuelve `{"enlazados": n}`.
+- `POST X/p/{pid}/hitos/{hid}/marcar` → revalida ADENTRO de la transacción que el hito siga propuesto (si no, 409 con el motivo) y lo tilda con `db.impl_tildar_hito` a nombre de la persona. Deja el movimiento `hito_marcado` en XSII (código del hito y de las tareas, sin texto libre). No hay «desmarcar» desde XSII: eso se hace en la Mesa.
+- El tablero (`GET …/tablero`) suma `hitos: {"propuestos": n, "sugerencias": n}` y cada tarea, en su ficha (`GET …/tarea/{codigo}`), `hitos: [<hito sin sugeridas>]`.
+
+Cada enlace, desenlace y marcado queda en `XsiiMovimiento` (`hito_enlazado`,
+`hito_desenlazado`, `hito_marcado`).
+
+### Pantalla
+
+- En la **Guía**, si hay hitos propuestos: una banda corta «N hitos de la Mesa
+  para marcar» que abre la vista.
+- Vista **Hitos** (cuarta pestaña, junto a Guía, Tablero y Mapa): por fase,
+  cada hito con su código, texto, estado (hecho / propuesto / pendiente / sin
+  enlazar), las tareas enlazadas como chips que abren la ficha, «Enlazar una
+  tarea» (selector), las sugerencias con «Aceptar» y, arriba, «Aceptar todas
+  las sugerencias (N)». Un hito propuesto muestra por qué y el botón principal
+  **«Marcar hecho en la Mesa»** (pide un segundo toque; no `confirm()`).
+- En la **ficha** de una tarea: bloque plegado «Hitos de la Mesa» con los suyos
+  y, si alguno está propuesto, a la vista con su botón.
+
+## B. Archivos de la Mesa en los insumos
+
+`XsiiInsumo.archivo_id` empieza a usarse.
+
+- `GET X/p/{pid}/insumo/{clave}/archivos` → los archivos de la tarjeta enlazada
+  al insumo (`tarjeta_id`), del MISMO proyecto: `{"tarjeta": {"codigo","titulo","estado"} | null, "archivos": [{"id","codigo","nombre","tamano","subido_por","lado","cuando","datos_personales","elegido": bool}]}`. Sin tarjeta enlazada: lista vacía. Nunca devuelve bytes.
+- `POST X/p/{pid}/insumo/{clave}/archivo` `{"archivo_id": n}` → lo fija como EL
+  archivo del insumo y deja el insumo `recibido` (movimiento `insumo_archivo`).
+  El archivo tiene que ser de la tarjeta enlazada a ese insumo (si no, 404) y no
+  estar borrado.
+- El tablero marca en cada insumo `archivos_nuevos: n` = archivos que subió el
+  lado **sindicato** a la tarjeta enlazada después de `cuando` del insumo, si el
+  insumo sigue `pedido`. La Guía y la ficha lo dicen: «Llegó un archivo en
+  PE0007» con «Ver» (propone; no marca recibido solo).
+- **Usar el archivo de la Mesa en una asistida de planilla**: `POST …/asistida/ensayo` y `…/carga` aceptan, en vez de `archivo`/`texto`, el campo `archivo_mesa` (id). El servidor lee los bytes de `ImplArchivo` (tiene que ser el archivo fijado al insumo de ESA asistida), **registra la descarga** como toda descarga de la Mesa (a nombre de la persona, motivo XSII) y sigue igual (misma huella, mismos topes; un archivo que no es CSV da el error de siempre). `GET …/asistida` suma `archivo_mesa: {"id","codigo","nombre"} | null`.
+  No vale para la asistida de recibos (los recibos de muestra son muchos archivos: queda para más adelante).
+
+### Pantalla
+
+- En la ficha, la banda «Se espera del sindicato» muestra la tarjeta enlazada
+  con su código, los archivos que llegaron y «Usar este archivo».
+- En el momento 1 de una asistida de planilla, si hay archivo fijado: botón
+  principal **«Usar el archivo de la Mesa (AR000123 · padron.csv)»**, y subir
+  otro queda como alternativa.
+
+## Reglas comunes
+
+Puerta del equipo, un proyecto ajeno o un id de otro proyecto es 404; nada del
+contenido de un archivo va a movimientos ni a «Preguntame»; los nombres de
+archivo y los textos de hitos se dibujan como texto, nunca como HTML; las
+herramientas de «Preguntame» pueden leer los hitos (código, estado, tareas
+enlazadas), no su texto libre.
