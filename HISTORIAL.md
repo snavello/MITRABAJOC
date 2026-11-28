@@ -11704,3 +11704,16 @@ entendía (pasó a «asociar»).
 
 **Decisiones menores de Code**: un hito desmarcado en la Mesa vuelve a
 proponerse; el texto que lee el sindicato por la descarga no nombra a XSII.
+
+## XSII bloque 6: el método (2026-11-28)
+
+`xsii/METODO.md` deja escrito XSII como método, para aplicarlo a otro
+producto, con la misma forma que `xsk/METODO.md`. Se escribió DESPUÉS de
+construir los bloques 0 a 5 y contrastando cada afirmación con el código, no
+con el plan: de ahí salieron dos correcciones (los «ensayos abiertos» y el
+campo `acciones` de una tarea existen en el motor y la aplicación no los usa)
+y la lista honesta de lo que falta para extraerlo. La sección de lecciones
+sale de las correcciones de cada QA en `docs/xsii/API.md`: son los defectos
+que se repitieron bloque tras bloque (carreras entre dos pedidos, la salida de
+la IA tomada como confiable, entradas hostiles, datos sin escape, el dato de
+otro proyecto, textos con jerga), cada uno con la regla que lo evita.
