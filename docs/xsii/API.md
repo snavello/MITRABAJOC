@@ -745,3 +745,242 @@ Lo que quedó implementado, con lo que difiere o precisa el contrato de arriba.
 - **Ficha de la seccional** (`/admin`, `verSeccional`): teléfono, WhatsApp, mail y horario se armaban con `innerHTML` sin escapar, y desde XSII
   entran por planilla (el mail admite `<img/src=x/onerror=...>@x.y`). Ahora se escapan igual que el responsable.
 
+
+---
+
+# Bloque 4b: Conceptos desde los recibos de muestra (REC-04)
+
+Tercera tarea asistida. Decisión de SDN (2026-11-28, **X28**): la IA lee los
+recibos de muestra y **propone**; la persona revisa, corrige o descarta cada
+concepto y recién ahí se cargan, **ya revisados** (`pendiente_revision =
+False`). Nada entra al catálogo sin que alguien lo haya mirado.
+
+## Una sola implementación de las reglas (como el padrón)
+
+`conceptos_carga.py` (nuevo, en la raíz; no importa `main`):
+
+- `proponer(conceptos_actuales, recibos) -> list`: recibe los recibos YA
+  leídos (el dict del extractor) y devuelve las propuestas, deduplicadas por
+  `(codigo, cuit_empleador)` con `veces`, `similar` y `generico_sugerido`.
+  Es lo que hoy hace el cuerpo de `POST /admin/aprender` después de leer.
+- `aplicar(s, sid, aprobados) -> {altas, cuit_invalidos, repetidos}`: lo que
+  hoy hace `POST /admin/aprender/aplicar`. No hace commit.
+
+`/admin/aprender` y `/admin/aprender/aplicar` pasan a ser adaptadores y
+**tienen que dar exactamente lo mismo que antes** (el QA lo compara contra la
+lógica anterior congelada en un test). La lectura de UN recibo de muestra
+(tapado, `extraer`, rearmado, registro en `UsoIA` como `aprendizaje`, también
+cuando falla) queda en un helper de `main.py` que usan las dos puertas.
+
+## El protocolo, con otra entrada
+
+`describir()` suma `entrada`: `"planilla"` (por defecto, las dos de antes) o
+`"recibos"`. Con `"recibos"`:
+
+- `archivos`: `{por_envio: 1, tope_mb: 8, formatos: ["pdf","jpg","png","webp"], sugeridos: "30 a 60, de varios empleadores"}`.
+- `ia`: `{disponible: bool, simulada: bool, motivo: str}`. Sin
+  `ANTHROPIC_API_KEY` no está disponible y la pantalla lo dice; con
+  `MOCK_EXTRACTOR=1`, simulada y avisado.
+- `rubros`: `[{clave, rotulo}]` = `haber` (Haber remunerativo),
+  `no_remunerativo` (Haber no remunerativo), `descuento` (Descuento).
+- `categorias_sindicales`: `[{clave: "", rotulo: "Ninguna"}, {clave: "afiliacion", …}, {clave: "convenio", …}]` (solo valen para `descuento`).
+- `genericos`: `[{codigo, nombre}]`, los conceptos genéricos del sindicato
+  (para «Corresponde a»).
+- No hay `modelo_csv`, `mapeo` ni `columnas`.
+
+### `POST X/p/{pid}/tarea/{codigo}/asistida/ensayo` (entrada `recibos`)
+
+Multipart con **un** `archivo` por pedido (la pantalla manda de a uno, dos a
+la vez, y muestra el avance; así un recibo que falla no pierde a los demás y
+ningún pedido dura más que una lectura). No guarda nada. La llamada a la IA
+va FUERA de la sesión de base. Pasa por `_exigir_imagen_manejable` y
+`_preparar_para_ia` como toda lectura. Respuesta 200:
+
+```
+{"recibo": {"nombre": "<nombre del archivo>", "leido": true|false,
+            "motivo": "" | "<por qué no se pudo leer, en castellano>",
+            "empleador_cuit": "30…"|"", "empleador_nombre": "", "lineas": 17,
+            "simulado": bool},
+ "propuestas": [ <propuesta> ]}
+```
+
+`<propuesta>`:
+
+```
+{"clave": "<codigo>|<cuit_empleador o ''>", "codigo": "", "descripcion": "",
+ "cuit_empleador": ""|"30…", "empleador_nombre": "",
+ "rubro": "haber"|"no_remunerativo"|"descuento",   # sugerido
+ "categoria_sindical": ""|"afiliacion"|"convenio", # sugerida
+ "veces": 1,
+ "similar": null | {"codigo","nombre","ratio"},
+ "generico_sugerido": null | {"codigo","nombre"},
+ "estado": "valida"|"dudosa"|"rechazada", "avisos": [""], "errores": [""]}
+```
+
+- El rubro sugerido sale de la **sección** donde está impresa la línea
+  (`validador.repartir_por_zona` manda sobre el signo) y, si no hay sección,
+  del `tipo` leído.
+- `dudosa`: se parece a un concepto que ya está (`similar`), o la sección y el
+  tipo leídos no coinciden, o la descripción vino vacía.
+- `rechazada`: el CUIT del empleador no cumple el módulo 11 (no se puede
+  cargar; se carga a mano con el CUIT correcto) o el código vino vacío.
+- Un recibo ilegible devuelve 200 con `leido: false` y `propuestas: []` (no
+  es un error del pedido). El gasto de IA de un intento fallido se registra.
+- Nada del recibo se guarda ni se devuelve: ni nombre, ni CUIL, ni importes.
+- Tope `XSII_RECIBOS_TOPE` (120 recibos por usuario y hora): 429 con mensaje.
+- Los conceptos que ya están en el catálogo no se proponen (así se puede
+  repetir con más recibos otro día: el estado es el catálogo).
+
+La pantalla junta las propuestas de todos los recibos por `clave`, sumando
+`veces` (si difieren en rubro, queda el de más veces y la propuesta pasa a
+`dudosa` con el aviso «Los recibos no coinciden en el rubro»).
+
+### `POST X/p/{pid}/tarea/{codigo}/asistida/carga` (entrada `recibos`)
+
+JSON (no multipart, no hay huella: lo que se carga es lo que la persona
+revisó):
+
+```
+{"conceptos": [{"codigo","descripcion","cuit_empleador","rubro",
+                "categoria_sindical","codigo_generico"}],
+ "recibos_leidos": 37}
+```
+
+Validación estricta, todo o nada (400 con `detalle` por ítem si algo no
+pasa): de 1 a 500 conceptos; `codigo` 1 a 40 y `descripcion` 1 a 120
+caracteres, sin bytes nulos ni caracteres de control; `rubro` del catálogo;
+`categoria_sindical` solo con `descuento`; `cuit_empleador` vacío o válido por
+módulo 11; `codigo_generico` vacío o un genérico que existe en ESE sindicato y
+solo si hay `cuit_empleador`; sin `clave` repetida. `recibos_leidos` es un
+entero de 0 a 5.000 y solo va al movimiento.
+
+Mismo cierre que las otras: una transacción con el candado por tarea y por
+sindicato, `conceptos_carga.aplicar`, movimiento `asistida_carga` (solo
+números: conceptos cargados, ya existentes, recibos leídos), corre el control
+y devuelve `destrabo`. **No confirma la tarea** (X15). Un concepto que ya
+existe con esa clave no se toca y se cuenta en `repetidos`. No hay insumo que
+marcar (`recibos_muestra` es de REC-01).
+
+Respuesta: `{"ok": true, "carga": {"cargados", "repetidos", "recibos_leidos"}, "control": …, "destrabo": …}` con la forma de las otras asistidas.
+
+## Pantalla (momentos)
+
+1. **Qué voy a hacer**: el texto de `describir()`, el estado de la IA, y la
+   zona para elegir varios recibos (o arrastrarlos).
+2. **Lectura** (el ensayo): lista de recibos con su estado (en cola, leyendo,
+   leído con N conceptos nuevos, no se pudo leer + motivo), barra de avance
+   «12 de 37», «Detener» y «Sumar más recibos». Debajo, las **propuestas**
+   agrupadas por empleador: cada una con código, descripción editable, veces,
+   selector de rubro, categoría sindical (solo en descuentos), «Corresponde a»
+   (genérico; solo si tiene empleador), sus avisos y «Descartar» / «Volver a
+   incluir». Las dudosas arriba, con filtro. Las rechazadas se ven y no se
+   pueden incluir.
+3. **Carga**: resumen «Voy a cargar N conceptos (M descartados)» y confirmar.
+4. **Control**: resultado y qué destrabó, como las otras.
+
+Si la persona sale de la ficha con propuestas sin cargar, la pantalla avisa
+(se perderían: volver a leer cuesta). Todo texto del servidor va como texto,
+nunca como HTML.
+
+## Catálogo
+
+Los `pasos` de REC-04 pasan a apuntar a «Leer los recibos de muestra» de XSII
+(la pestaña Aprendizaje del panel sigue existiendo y da lo mismo).
+
+## Notas de implementación (Bloque 4b)
+
+Lo que quedó distinto o más preciso que lo escrito arriba:
+
+- **Sin sindicato asociado es 409, no 404** (como las otras dos asistidas: el
+  proyecto existe, pero no hay nada que controlar). 404 queda para proyecto
+  inexistente, demo y `modelo.csv` de esta tarea.
+- **Rutas genéricas, ramificadas por `entrada`** (`vista.entrada_de`): el mismo
+  `…/asistida/ensayo` y `…/asistida/carga`. Con `recibos` el ensayo es multipart con
+  un `archivo` (el resto de los campos se ignoran) y la carga es `application/json`.
+  Antes de leer el archivo se verifica que la tarea esté disponible y que haya IA
+  (409 con el motivo); formatos admitidos por extensión del nombre (o por
+  `content-type` si no hay extensión), 8 MB, vacío es 400.
+- **`GET …/asistida`** suma `genericos` (solo los conceptos sin empleador, leídos con
+  la sesión del request) y `ia`. `describir()` de las tres trae `entrada`.
+- **El 400 de la carga por ítem** responde `{"detail": "<resumen>", "detalle":
+  [{"indice", "campo", "mensaje"}]}` (hasta 50). Los topes de largo del código (40) y
+  la descripción (120) son los del contrato; una descripción más larga en el ENSAYO se
+  recorta con aviso, una vacía queda vacía y `dudosa` (se completa antes de cargar).
+- **`recibos_leidos`** es opcional (0 por defecto).
+- **Carga con todos repetidos** (ninguno nuevo) es 409 «No hay nada para cargar»,
+  como las otras asistidas; con alguno nuevo, `repetidos` cuenta los que ya existían
+  (es una cantidad, no una lista).
+- **Sin insumo**: `db.xsii_registrar_carga_asistida` acepta `clave_insumo=None` y
+  entonces solo deja el movimiento (con `clave_insumo` vacío).
+- **Movimiento**: texto «Cargó N conceptos desde M recibos leídos (K ya existían)» y
+  cantidades `{cargados, repetidos, recibos_leidos}`. Nunca códigos ni descripciones.
+- **Tope** `XSII_RECIBOS_TOPE` (120 por usuario y hora, en memoria del proceso): se
+  cuenta justo antes de llamar a la IA, así un pedido rechazado por forma no gasta;
+  429 con los minutos que faltan.
+- **Rubro y categoría sugeridos**: el rubro sale de `validador.detectar_nuevos`
+  (sección impresa manda sobre el signo; una línea de la sección «no remunerativos»
+  o que dice no remunerativo es `no_remunerativo`). La categoría sindical solo se
+  sugiere si el genérico al que parece corresponder ya la tiene cargada. Pasa a `dudosa`
+  también un reintegro y una descripción vacía, además de los casos del contrato.
+- **Un recibo que `main` no puede preparar** (`E-IMAGEN-01`, demasiados píxeles) vuelve
+  como 200 con `leido: false`; el resto de los `ErrorApp` (por ejemplo el 503 del cupo
+  de lecturas) se propaga tal cual y la pantalla puede reintentar.
+- **Aprendizaje** (`/admin/aprender`, `/admin/aprender/aplicar`) quedó como adaptador
+  de `conceptos_carga` y de `main._leer_recibo_de_muestra`; `aplicar` tiene un campo
+  más, opcional, `categoria_sindical` (vacío por defecto: igual que antes).
+  `test_xsii_conceptos.py` compara ambas contra la lógica anterior copiada.
+
+### Correcciones del QA de servidor del bloque 4b (`test_xsii_bloque4b_qa.py`)
+
+QA independiente (98 tests: equivalencia con Aprendizaje contra la lógica de `43a707d` con
+listas al azar, entradas hostiles en la carga y en el ensayo, privacidad, puertas,
+concurrencia, tope en paralelo). Origen entre paréntesis.
+
+1. **El recibo simulado traía un CUIT que no cumple el módulo 11** (`30000000000`), así que con
+   `MOCK_EXTRACTOR=1` TODAS las propuestas salían `rechazada` y REC-04 no se podía probar de
+   punta a punta ni mostrar en una demo. Ahora trae `30000000007` (válido). Nada más dependía de
+   ese valor salvo `test_xsii_conceptos.py`, que se ajustó. (configuración)
+2. **`/admin/aprender/aplicar` guardaba cualquier `categoria_sindical`** desde que `aplicar` pasó a
+   leer el campo (antes lo ignoraba): un texto inventado quedaba en la base y una lista o un número
+   daban 500. Ahora solo vale `afiliacion` o `convenio`, y solo en un `descuento`; lo demás se
+   ignora (como antes). (la app)
+3. **`rubro` como lista o diccionario en la carga daba 500** (`[] not in set` es `TypeError:
+   unhashable`); ahora es un 400 por ítem. (la app)
+4. **La carga aceptaba separadores de línea y de párrafo (U+2028/U+2029), uso privado y puntos de
+   código sin asignar** en código y descripción (solo rechazaba control, formato y sustitutos).
+   Ahora también se rechazan, y los espacios invisibles que la planilla ya descarta
+   (`base._INVISIBLES_RAROS`). (la app)
+5. **El ensayo se caía (500, ya pagada la lectura) si la IA devolvía algo que no era un recibo**:
+   una lista, un número, un texto, `lineas` en `None` o en texto, un empleador que era un string.
+   Ahora la salida de la IA se acota antes de comparar (`conceptos._recibo_acotado`): no-recibo es
+   `leido: false` con motivo; `lineas` se filtra a diccionarios y se corta en 400; código y
+   descripción se comparan con sus primeros 300 caracteres. Un recibo de 5.000 líneas con
+   descripciones de 10.000 caracteres colgaba el servidor (la comparación por parecido es cuadrática
+   y corría en el hilo del servidor); ahora es instantáneo y `armar_ensayo` corre en un hilo aparte.
+   (la app)
+6. **El formato del recibo lo decidía el `content-type` aunque el archivo tuviera una extensión que
+   no es de recibo** (`cosa.exe` con `image/png` pasaba). Ahora, si hay una extensión (de 1 a 5
+   letras o números), manda ella y debe ser pdf, jpg, jpeg, png o webp; el `content-type` solo vale
+   sin extensión, como dice el contrato. (la app)
+7. **Una carga de XSII y un «aplicar» de Aprendizaje a la vez duplicaban conceptos**: la tabla
+   `Concepto` no tiene un único por `(sindicato, código, empleador)` y el panel no tomaba el candado
+   de la carga. `POST /admin/aprender/aplicar` toma ahora el mismo candado por sindicato
+   (`xsii_candado_de_sindicato(…, "REC-04")`). (la app)
+8. **Helpers de los tests**: `test_xsii_conceptos._admin_de` armaba el CUIL del operador con
+   `2055{sid}[:10]`, que choca entre sindicatos de id parecido y dejaba al segundo sin sesión (403);
+   ahora es único. `test_xsii_bloque3_qa::test_el_tablero_marca_cuales_tareas_son_asistidas` seguía
+   esperando solo EST-01 y PAD-02. (el test)
+
+Verificado y sin defecto: el panel y la lógica anterior dan lo mismo en `/admin/aprender` (40 listas
+al azar, incluidas líneas sin código, sin empleador, CUIT inválido, tipos desconocidos, sin
+`remunerativo`, duplicados y lo que antes daba 500, que sigue dando 500 igual) y en
+`/admin/aprender/aplicar`; el ensayo solo escribe en `UsoIA`; no retiene una conexión del pool
+mientras la IA trabaja ni mientras compara; ni el ensayo, ni el movimiento, ni `UsoIA`, ni los logs,
+ni lo que ve «Preguntame» llevan nombre, CUIL, legajo o importes; otro sindicato, otro proyecto,
+demo, sin sesión, usuario del panel y usuario de la Mesa quedan afuera; el tope `XSII_RECIBOS_TOPE`
+deja pasar exactamente el tope con 12 pedidos en paralelo.
+
+Límites sabidos, sin tocar: el nombre del archivo vuelve en `recibo.nombre` tal cual lo subió
+quien lo subió (si el archivo se llama como la persona, lo ve quien lo subió y nadie más: no se
+guarda); un código que solo difiere en mayúsculas de otro es otro concepto (igual que el panel);
+una descripción de la IA con un nombre propio adentro («Embargo Pérez») viaja en la propuesta.

@@ -21,6 +21,7 @@ class ErrorAsistida(Exception):
         super().__init__(mensaje)
         self.estado = estado
         self.mensaje = mensaje
+        self.detalle = None       # lista de {indice, campo, mensaje} cuando el rechazo es por ítem
 
 
 def huella(contenido: bytes, opciones: dict) -> str:

@@ -151,6 +151,7 @@ def describir() -> dict:
             "Si estás de acuerdo, cargo el padrón de una vez, lo comparo con el total que declaró el sindicato "
             "y dejo registrado quién lo hizo.",
         ],
+        "entrada": "planilla",
         "insumo": "planilla_padron",
         "mapeo": True,
         "campos": [{"clave": c[0], "rotulo": c[1], "obligatorio": c[2], "ayuda": c[4]} for c in CAMPOS],

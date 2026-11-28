@@ -11626,3 +11626,42 @@ formato día/mes/año se rechaza como ilegible. El candado de la carga del
 padrón es uno solo para toda la plataforma: dos cargas grandes se hacen una
 detrás de la otra.
 
+## XSII bloque 4b: Conceptos desde los recibos de muestra (2026-11-28)
+
+Tercera tarea asistida (REC-04) y la última del orden que fijó X19. Antes de
+arrancar se le preguntó a SDN qué hace XSII con lo que la IA encuentra, y
+eligió **X28: propone y la persona revisa**; los conceptos entran al catálogo
+ya revisados, nunca como pendientes. La razón es la de siempre: un concepto
+mal clasificado genera diferencias falsas a los afiliados.
+
+**Por qué no es una planilla más.** El protocolo de los cuatro momentos se
+mantuvo, pero la entrada cambia: no hay CSV ni huella. El ensayo es la
+lectura con IA (cuesta y tarda unos segundos por recibo), así que la pantalla
+manda un recibo por pedido, dos a la vez: se ve el avance, un recibo que falla
+no pierde a los demás y ningún pedido dura más que una lectura. La carga manda
+lo que la persona revisó, en JSON, y el servidor lo valida entero. No se
+guarda estado del ensayo: el estado es el catálogo, y por eso se puede seguir
+otro día (lo ya cargado no se vuelve a proponer).
+
+**Una sola implementación**, como con el padrón: el cuerpo de
+`/admin/aprender` y `/admin/aprender/aplicar` pasó a `conceptos_carga.py` y
+las dos rutas quedaron como adaptadores. El QA congeló la lógica anterior en
+un test y la comparó con 40 listas al azar por ruta: idéntica.
+
+**Lo que encontró el QA independiente** (todo corregido antes del merge).
+Servidor, 98 ataques: una respuesta de la IA que no era un recibo daba 500, y
+una de 5.000 líneas con descripciones enormes colgaba el servidor (la
+comparación por parecido es cuadrática y corría en el hilo del servidor);
+`rubro` como lista daba 500; `/admin/aprender/aplicar` guardaba cualquier
+`categoria_sindical`; el formato lo decidía el content-type y no la
+extensión; una carga de XSII y un «aplicar» del panel a la vez duplicaban
+conceptos; y el recibo simulado traía un CUIT inválido, con lo que la pantalla
+no se podía mostrar con la IA simulada. Pantalla, con navegador a 1280 y 390
+px: Tablero y Mapa dejaban salir sin avisar con conceptos sin cargar, un aviso
+que no se iba, una frase repetida por cada concepto de un empleador con CUIT
+inválido y un botón sin foco visible.
+
+**No probado**: la lectura con la API real y con recibos reales (PDF o fotos
+grandes), el enmascarado activo con OCR sobre recibos de muestra, Safari y un
+teléfono físico. Lo primero hay que mirarlo en Pruebas con los recibos de La
+Bancaria.

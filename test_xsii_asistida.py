@@ -259,15 +259,16 @@ def test_el_modelo_csv_se_lee_solo():
 
 def test_describir_tiene_la_forma_del_contrato():
     d = sec.describir()
-    assert set(d) == {"titulo", "que_voy_a_hacer", "insumo", "mapeo", "campos", "columnas", "modelo_csv",
-                      "opciones"}
+    assert set(d) == {"titulo", "que_voy_a_hacer", "entrada", "insumo", "mapeo", "campos", "columnas",
+                      "modelo_csv", "opciones"}
+    assert d["entrada"] == "planilla"
     assert len(d["que_voy_a_hacer"]) == 2 and d["insumo"] in catalogo.INSUMOS
     assert {c["clave"] for c in d["columnas"]} >= {"nombre", "sede_central", "latitud", "longitud", "horario"}
     assert [c["clave"] for c in d["columnas"] if c["obligatoria"]] == ["nombre"]
     for c in d["columnas"]:
         assert set(c) == {"clave", "rotulo", "obligatoria", "ejemplo", "ayuda"}
     assert {o["clave"]: o["defecto"] for o in d["opciones"]} == {"actualizar_existentes": False, "sede_por_nombre": True}
-    assert set(ASISTIDAS) == {"EST-01", "PAD-02"}
+    assert set(ASISTIDAS) == {"EST-01", "PAD-02", "REC-04"}
 
 
 def test_la_huella_depende_del_contenido_y_de_las_opciones():
@@ -721,7 +722,7 @@ def test_el_tablero_dice_que_tareas_son_asistidas():
     pid, sid, eq = _mundo()
     tareas = {t["codigo"]: t for t in eq.get(f"{BASE}/p/{pid}/tablero").json()["tareas"]}
     assert tareas["EST-01"]["asistida"] is True
-    assert [c for c, t in tareas.items() if t["asistida"]] == ["EST-01", "PAD-02"]
+    assert [c for c, t in tareas.items() if t["asistida"]] == ["EST-01", "REC-04", "PAD-02"]
     assert eq.get(f"{BASE}/p/{pid}/tarea/EST-01").json()["tarea"]["asistida"] is True
 
 
