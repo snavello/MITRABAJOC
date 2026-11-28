@@ -268,8 +268,16 @@ def insumo_json(ctx: Contexto, clave: str, sin_registrar: bool = False) -> dict:
             "tarjeta": _tarjeta_json(ctx, reg.tarjeta_id) if reg else None}
 
 
+_TILDES_CIFRA = {"revision": "revisión", "ubicacion": "ubicación", "padron": "padrón", "tramite": "trámite",
+                 "tramites": "trámites", "areas": "áreas", "sesion": "sesión", "codigo": "código"}
+
+
+def _nombre_de_cifra(clave: str) -> str:
+    return " ".join(_TILDES_CIFRA.get(p, p) for p in clave.split("_")).capitalize()
+
+
 def _cifras(c) -> list:
-    return [{"clave": k, "nombre": (k.replace("_", " ").capitalize()), "valor": v}
+    return [{"clave": k, "nombre": _nombre_de_cifra(k), "valor": v}
             for k, v in (c.cifras or {}).items()]
 
 

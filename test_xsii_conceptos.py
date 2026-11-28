@@ -21,6 +21,7 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import copy
 import json
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -215,7 +216,7 @@ def test_aplicar_da_lo_mismo_que_la_logica_anterior(aprobados):
 
 
 def _admin_de(sid):
-    usuario = cuit.corregir(f"2055{sid:07d}"[:10] + "0")
+    usuario = cuit.corregir(f"20{uuid.uuid4().int % 10 ** 8:08d}0")        # único aunque dos sindicatos terminen igual
     with Session(db.engine) as s:
         s.add(db.UsuarioSindicato(sindicato_id=sid, usuario=usuario, nombre="Admin",
                                   clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False,
@@ -442,10 +443,10 @@ def test_ensayo_con_la_lectura_simulada_propone_y_no_escribe_nada():
     assert r.status_code == 200, r.text
     j = r.json()
     assert j["recibo"]["leido"] is True and j["recibo"]["simulado"] is True and j["recibo"]["nombre"] == "recibo1.png"
-    assert j["recibo"]["empleador_cuit"] == "30000000000" and j["recibo"]["lineas"] == 5
+    assert j["recibo"]["empleador_cuit"] == "30000000007" and j["recibo"]["lineas"] == 5
     por = {p["codigo"]: p for p in j["propuestas"]}
     assert set(por) == {"1", "3", "5"}                 # jubilación y obra social ya están en el catálogo
-    assert all(p["estado"] == "rechazada" for p in por.values())            # el CUIT del mock no cumple el módulo 11
+    assert all(p["estado"] != "rechazada" for p in por.values())            # el CUIT del mock cumple el módulo 11
     assert por["1"]["rubro"] == "haber" and por["3"]["rubro"] == "descuento"
     texto = json.dumps(j, ensure_ascii=False)
     assert "Demo Carga" not in texto and "1000000" not in texto and "110000" not in texto

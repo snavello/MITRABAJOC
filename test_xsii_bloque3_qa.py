@@ -774,7 +774,7 @@ def test_el_tablero_marca_cuales_tareas_son_asistidas():
     pid, sid, eq = _mundo()
     tareas = eq.get(f"{BASE}/p/{pid}/tablero").json()["tareas"]
     asistidas = {t["codigo"] for t in tareas if t.get("asistida")}
-    assert asistidas == {"EST-01", "PAD-02"}
+    assert asistidas == {"EST-01", "PAD-02", "REC-04"}      # REC-04 desde el bloque 4b
 
 
 def test_las_seccionales_creadas_se_ven_bien_en_la_ficha_y_en_el_mapa():

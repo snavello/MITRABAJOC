@@ -174,18 +174,47 @@ def _propuesta(p: dict, conceptos_actuales: list) -> dict:
     return salida
 
 
+TOPE_LINEAS = 400                 # un recibo real tiene decenas; el modelo no pasa de 8.000 tokens de salida
+TOPE_TEXTO_LEIDO = 300            # lo que se compara de un código o una descripción (la propuesta recorta a 120)
+
+
+def _recibo_acotado(recibo) -> dict | None:
+    """Lo que la IA devolvió, reducido a algo que se puede comparar sin riesgo: la salida de
+    un modelo no es un contrato (puede ser una lista, un número, `lineas` en texto, un
+    empleador que es un string, 5.000 líneas o una descripción de 10.000 caracteres: la
+    comparación por parecido es cuadrática en el largo). None si no es un recibo."""
+    if not isinstance(recibo, dict):
+        return None
+    lineas = recibo.get("lineas")
+    lineas = [ln for ln in lineas if isinstance(ln, dict)][:TOPE_LINEAS] if isinstance(lineas, list) else []
+    acotadas = []
+    for ln in lineas:
+        ln = dict(ln)
+        for campo in ("codigo", "descripcion"):
+            if isinstance(ln.get(campo), str):
+                ln[campo] = ln[campo][:TOPE_TEXTO_LEIDO]
+        acotadas.append(ln)
+    emp = recibo.get("empleador")
+    return {"empleador": emp if isinstance(emp, dict) else {}, "lineas": acotadas}
+
+
 def armar_ensayo(conceptos_actuales: list, recibo: dict | None, nombre: str, motivo: str = "") -> dict:
     """La respuesta del ensayo de UN recibo: lo que se leyó (sin identidad ni importes)
-    y los conceptos nuevos que propone. `recibo` None = no se pudo leer."""
+    y los conceptos nuevos que propone. `recibo` None = no se pudo leer (o la IA no
+    devolvió un recibo: es lo mismo para la persona)."""
     simulado = os.getenv("MOCK_EXTRACTOR") == "1"
     nombre = base.limpiar(nombre)[:120]
+    if recibo is not None:
+        recibo = _recibo_acotado(recibo)
+        if recibo is None:
+            motivo = motivo or "La lectura no trajo un recibo que se pueda interpretar. Probá con otro archivo."
     if recibo is None:
         return {"recibo": {"nombre": nombre, "leido": False, "motivo": motivo or "No pude leer el recibo.",
                            "empleador_cuit": "", "empleador_nombre": "", "lineas": 0, "simulado": simulado},
                 "propuestas": []}
-    emp = recibo.get("empleador") or {}
-    cuit_empleador = cuit.normalizar(emp.get("cuit")) or ""
-    nombre_empleador = base.limpiar(emp.get("nombre"))[:120]
+    emp = recibo["empleador"]
+    cuit_empleador = cuit.normalizar(emp.get("cuit") if isinstance(emp.get("cuit"), (str, int)) else None) or ""
+    nombre_empleador = base.limpiar(emp.get("nombre") if isinstance(emp.get("nombre"), str) else "")[:120]
     lineas = [ln for ln in (recibo.get("lineas") or []) if isinstance(ln, dict)]
     propuestas = []
     for p in conceptos_carga.proponer(conceptos_actuales, [recibo], detalle=True):
@@ -197,6 +226,8 @@ def armar_ensayo(conceptos_actuales: list, recibo: dict | None, nombre: str, mot
 
 # ------------------------------------------------------------------ validación de la carga
 
+# Control, formato (bidi, ancho cero), sustitutos, separadores de línea y de párrafo, uso privado y sin asignar.
+_CATEGORIAS_PROHIBIDAS = ("Cc", "Cf", "Cs", "Zl", "Zp", "Co", "Cn")
 _CAMPOS = ("codigo", "descripcion", "cuit_empleador", "rubro", "categoria_sindical", "codigo_generico")
 
 
@@ -206,7 +237,8 @@ def _texto(valor, campo: str, rotulo: str, minimo: int, maximo: int, mensajes: l
     if not isinstance(valor, str):
         mensajes.append({"indice": indice, "campo": campo, "mensaje": f"{rotulo} tiene que ser un texto."})
         return ""
-    if "\x00" in valor or any(unicodedata.category(c) in ("Cc", "Cf", "Cs") for c in valor):
+    if "\x00" in valor or any(unicodedata.category(c) in _CATEGORIAS_PROHIBIDAS or c in base._INVISIBLES_RAROS
+                              for c in valor):
         mensajes.append({"indice": indice, "campo": campo,
                          "mensaje": f"{rotulo} tiene caracteres que no se pueden guardar."})
         return ""
@@ -248,7 +280,7 @@ def validar_carga(datos, codigos_genericos: set) -> tuple:
             mensajes.append({"indice": i, "campo": "cuit_empleador",
                              "mensaje": "El CUIT del empleador no cumple el dígito verificador."})
         rubro = c.get("rubro")
-        if rubro not in CLAVES_RUBRO:
+        if not isinstance(rubro, str) or rubro not in CLAVES_RUBRO:      # una lista no es hasheable: 500
             mensajes.append({"indice": i, "campo": "rubro", "mensaje": "El rubro no es válido."})
         categoria = c.get("categoria_sindical") or ""
         if not isinstance(categoria, str) or categoria not in CLAVES_CATEGORIA:

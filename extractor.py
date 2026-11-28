@@ -44,7 +44,7 @@ _RECIBO_MOCK = {
     "formato": "clasico",
     "empleado": {"apellido_nombre": "Demo Carga, Trabajador", "cuil": None,
                  "legajo": "0000", "categoria": "Administrativo", "fecha_ingreso": "2020-01-01"},
-    "empleador": {"nombre": "Empleador de Prueba SA", "cuit": "30000000000"},
+    "empleador": {"nombre": "Empleador de Prueba SA", "cuit": "30000000007"},
     "periodo": "2026-08",
     "fecha_pago": "2026-09-01",
     "lineas": [

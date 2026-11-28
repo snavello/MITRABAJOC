@@ -929,3 +929,58 @@ Lo que quedó distinto o más preciso que lo escrito arriba:
   de `conceptos_carga` y de `main._leer_recibo_de_muestra`; `aplicar` tiene un campo
   más, opcional, `categoria_sindical` (vacío por defecto: igual que antes).
   `test_xsii_conceptos.py` compara ambas contra la lógica anterior copiada.
+
+### Correcciones del QA de servidor del bloque 4b (`test_xsii_bloque4b_qa.py`)
+
+QA independiente (98 tests: equivalencia con Aprendizaje contra la lógica de `43a707d` con
+listas al azar, entradas hostiles en la carga y en el ensayo, privacidad, puertas,
+concurrencia, tope en paralelo). Origen entre paréntesis.
+
+1. **El recibo simulado traía un CUIT que no cumple el módulo 11** (`30000000000`), así que con
+   `MOCK_EXTRACTOR=1` TODAS las propuestas salían `rechazada` y REC-04 no se podía probar de
+   punta a punta ni mostrar en una demo. Ahora trae `30000000007` (válido). Nada más dependía de
+   ese valor salvo `test_xsii_conceptos.py`, que se ajustó. (configuración)
+2. **`/admin/aprender/aplicar` guardaba cualquier `categoria_sindical`** desde que `aplicar` pasó a
+   leer el campo (antes lo ignoraba): un texto inventado quedaba en la base y una lista o un número
+   daban 500. Ahora solo vale `afiliacion` o `convenio`, y solo en un `descuento`; lo demás se
+   ignora (como antes). (la app)
+3. **`rubro` como lista o diccionario en la carga daba 500** (`[] not in set` es `TypeError:
+   unhashable`); ahora es un 400 por ítem. (la app)
+4. **La carga aceptaba separadores de línea y de párrafo (U+2028/U+2029), uso privado y puntos de
+   código sin asignar** en código y descripción (solo rechazaba control, formato y sustitutos).
+   Ahora también se rechazan, y los espacios invisibles que la planilla ya descarta
+   (`base._INVISIBLES_RAROS`). (la app)
+5. **El ensayo se caía (500, ya pagada la lectura) si la IA devolvía algo que no era un recibo**:
+   una lista, un número, un texto, `lineas` en `None` o en texto, un empleador que era un string.
+   Ahora la salida de la IA se acota antes de comparar (`conceptos._recibo_acotado`): no-recibo es
+   `leido: false` con motivo; `lineas` se filtra a diccionarios y se corta en 400; código y
+   descripción se comparan con sus primeros 300 caracteres. Un recibo de 5.000 líneas con
+   descripciones de 10.000 caracteres colgaba el servidor (la comparación por parecido es cuadrática
+   y corría en el hilo del servidor); ahora es instantáneo y `armar_ensayo` corre en un hilo aparte.
+   (la app)
+6. **El formato del recibo lo decidía el `content-type` aunque el archivo tuviera una extensión que
+   no es de recibo** (`cosa.exe` con `image/png` pasaba). Ahora, si hay una extensión (de 1 a 5
+   letras o números), manda ella y debe ser pdf, jpg, jpeg, png o webp; el `content-type` solo vale
+   sin extensión, como dice el contrato. (la app)
+7. **Una carga de XSII y un «aplicar» de Aprendizaje a la vez duplicaban conceptos**: la tabla
+   `Concepto` no tiene un único por `(sindicato, código, empleador)` y el panel no tomaba el candado
+   de la carga. `POST /admin/aprender/aplicar` toma ahora el mismo candado por sindicato
+   (`xsii_candado_de_sindicato(…, "REC-04")`). (la app)
+8. **Helpers de los tests**: `test_xsii_conceptos._admin_de` armaba el CUIL del operador con
+   `2055{sid}[:10]`, que choca entre sindicatos de id parecido y dejaba al segundo sin sesión (403);
+   ahora es único. `test_xsii_bloque3_qa::test_el_tablero_marca_cuales_tareas_son_asistidas` seguía
+   esperando solo EST-01 y PAD-02. (el test)
+
+Verificado y sin defecto: el panel y la lógica anterior dan lo mismo en `/admin/aprender` (40 listas
+al azar, incluidas líneas sin código, sin empleador, CUIT inválido, tipos desconocidos, sin
+`remunerativo`, duplicados y lo que antes daba 500, que sigue dando 500 igual) y en
+`/admin/aprender/aplicar`; el ensayo solo escribe en `UsoIA`; no retiene una conexión del pool
+mientras la IA trabaja ni mientras compara; ni el ensayo, ni el movimiento, ni `UsoIA`, ni los logs,
+ni lo que ve «Preguntame» llevan nombre, CUIL, legajo o importes; otro sindicato, otro proyecto,
+demo, sin sesión, usuario del panel y usuario de la Mesa quedan afuera; el tope `XSII_RECIBOS_TOPE`
+deja pasar exactamente el tope con 12 pedidos en paralelo.
+
+Límites sabidos, sin tocar: el nombre del archivo vuelve en `recibo.nombre` tal cual lo subió
+quien lo subió (si el archivo se llama como la persona, lo ve quien lo subió y nadie más: no se
+guarda); un código que solo difiere en mayúsculas de otro es otro concepto (igual que el panel);
+una descripción de la IA con un nombre propio adentro («Embargo Pérez») viaja en la propuesta.

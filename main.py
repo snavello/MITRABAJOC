@@ -6420,6 +6420,10 @@ def aprender_aplicar(request: Request, payload: dict):
     _exigir_modulo(sid, "recibos")
     aprobados = payload.get("aprobados", [])
     with db.get_session() as s:
+        # El mismo candado que toma la carga de REC-04 sobre este sindicato: un aplicar del panel y
+        # una carga de XSII a la vez no pueden dar de alta dos veces el mismo concepto (la tabla no
+        # tiene un único por (sindicato, código, empleador)).
+        db.xsii_candado_de_sindicato(s, sid, "REC-04")
         r = conceptos_carga.aplicar(s, sid, aprobados)
         s.commit()
     return {"ok": True, "altas": r["altas"], "cuit_invalidos": r["cuit_invalidos"]}
@@ -13872,8 +13876,12 @@ async def _xsii_ensayo_recibos(request: Request, pid: int, codigo: str, actor):
     if len(contenido) > modulo.TOPE_MB * 1024 * 1024:
         raise HTTPException(400, f"El recibo pesa más de {modulo.TOPE_MB} MB: sacale una foto más liviana.")
     extension = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
-    tipo = _XSII_EXTENSIONES_RECIBO.get(extension) or (
-        archivo.content_type if archivo.content_type in _XSII_EXTENSIONES_RECIBO.values() else "")
+    if not re.fullmatch(r"[a-z0-9]{1,5}", extension):         # "recibo ago. 2026" no tiene extensión
+        extension = ""
+    if extension:                                              # con extensión manda ella, no el content-type
+        tipo = _XSII_EXTENSIONES_RECIBO.get(extension, "")
+    else:
+        tipo = archivo.content_type if archivo.content_type in _XSII_EXTENSIONES_RECIBO.values() else ""
     if not tipo:
         raise HTTPException(400, "El formato del recibo no sirve: tiene que ser PDF, JPG, PNG o WEBP.")
     _xsii_recibos_frenar(actor)                       # recién acá se gasta, justo antes de leer
@@ -13888,7 +13896,8 @@ async def _xsii_ensayo_recibos(request: Request, pid: int, codigo: str, actor):
         motivo = (str(error.detail) if isinstance(error, ErrorApp)
                   else "No pude leer el recibo. Probá con otro archivo o con una foto más nítida.")
         return modulo.armar_ensayo(conceptos_actuales, None, nombre, motivo)
-    return modulo.armar_ensayo(conceptos_actuales, recibo, nombre)
+    # Comparar por parecido es CPU: en un hilo, y sobre lo que la IA devolvió ya acotado.
+    return await run_in_threadpool(modulo.armar_ensayo, conceptos_actuales, recibo, nombre)
 
 
 async def _xsii_carga_recibos(request: Request, pid: int, codigo: str, actor):

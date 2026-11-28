@@ -32,6 +32,19 @@ def _cuit_mal(numero, opcional: bool = True) -> bool:
     return not cuit.es_valido(n)
 
 
+CATEGORIAS_SINDICALES = ("afiliacion", "convenio")
+
+
+def _categoria_valida(c: dict) -> str:
+    """La categoría sindical que se guarda: solo una de las dos del catálogo y solo
+    para un descuento (como `POST /admin/concepto`). Cualquier otra cosa se ignora,
+    que es lo que hacía `/admin/aprender/aplicar` antes de leer este campo."""
+    categoria = c.get("categoria_sindical")
+    if c.get("tipo") == "descuento" and isinstance(categoria, str) and categoria in CATEGORIAS_SINDICALES:
+        return categoria
+    return ""
+
+
 def proponer(conceptos_actuales: list, recibos: list, detalle: bool = False) -> list:
     """Los conceptos nuevos que traen estos recibos (los dicts que devolvió el
     extractor, ya rearmados), deduplicados por `(código, CUIT del empleador)`:
@@ -133,7 +146,7 @@ def aplicar(s, sid: int, aprobados: list) -> dict:
             alias=[c["descripcion"]], pendiente_revision=False,
             cuit_empleador=cuit_empleador,
             codigo_generico=(c.get("codigo_generico") or "").strip() or None,
-            categoria_sindical=c.get("categoria_sindical") or "",
+            categoria_sindical=_categoria_valida(c),
         ))
         existentes.add(clave)
         altas += 1
