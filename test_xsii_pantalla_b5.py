@@ -74,3 +74,20 @@ def test_css_sin_externos_y_con_movil_y_movimiento_reducido():
     assert "@import" not in CSS and "url(http" not in CSS
     assert "prefers-reduced-motion" in CSS
     assert not re.search(r"transition:[^;}]*\b\d+(\.\d+)?m?s\b", CSS[CSS.index("Bloque 5: hitos"):])
+
+
+def test_quitar_un_enlace_pide_segundo_toque_y_el_vocabulario_es_llano():
+    b = _hitos()
+    assert "H.quitar !== k" in b and "'Sacar'" in b
+    for jerga in ("Enlazar una tarea", "Aceptar todas las sugerencias", "Sin enlazar"):
+        assert jerga not in JS, jerga
+    assert "Asociar una tarea" in b and "Asociar todas las tareas sugeridas" in b and "Asociar las ' + x.sugeridas.length" in b
+    assert "Volver a /entornos" not in PLANTILLA
+
+
+def test_usar_un_archivo_de_la_mesa_refresca_la_asistida_y_un_archivo_borrado_vuelve_a_pedir_uno_propio():
+    u = _entre("async function usarArchivo(", "function lado(")
+    assert "S.asinfo" in u and "S.archAb[clave] = true" in u
+    f = _entre("function falloAs(", "function reintentable(")
+    assert "A.mesa = false" in f and "archivo_mesa = null" in f
+    assert "Se usa la planilla de la Mesa: " in JS and "am.codigo + ' · ' + am.nombre" in JS

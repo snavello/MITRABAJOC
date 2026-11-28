@@ -501,7 +501,7 @@
   // ------------------------------------------------------------ Hitos de la Mesa (bloque 5)
   // XSII propone y una persona del equipo acepta: nunca se tilda un hito solo. Los textos de
   // los hitos y de las tareas vienen del servidor y se dibujan siempre como texto.
-  const ESTADO_HITO = { hecho: 'Hecho', propuesto: 'Para marcar', pendiente: 'Pendiente', sin: 'Sin enlazar' };
+  const ESTADO_HITO = { hecho: 'Hecho', propuesto: 'Para marcar', pendiente: 'Pendiente', sin: 'Sin tareas' };
   function estadoHito(x) { return x.hecho ? 'hecho' : x.propuesto ? 'propuesto' : (x.tareas || []).length ? 'pendiente' : 'sin'; }
   function codigoHito(hid) {
     let c = '';
@@ -555,14 +555,24 @@
     accionHito(x.id, 'hitos/' + x.id + '/marcar', {}, function () { H.aviso = 'Quedó hecho en la Mesa' + (x.codigo ? ': ' + x.codigo : '') + '.'; });
   }
   function enlazarHito(x, codigo) { if (codigo) accionHito(x.id, 'hitos/' + x.id + '/enlace', { codigo: codigo }, function () { S.hi.enl = null; }); }
-  function quitarEnlace(x, codigo) { accionHito(x.id, 'hitos/' + x.id + '/enlace/retirar', { codigo: codigo }); }
+  function quitarEnlace(x, codigo) {
+    const H = S.hi, k = x.id + ':' + codigo;
+    if (H.quitar !== k) {   // primer toque: se arma; un toque suelto no desvincula nada
+      H.quitar = k; clearTimeout(H.timerQ);
+      H.timerQ = setTimeout(function () { if (H.quitar === k) { H.quitar = null; redibujarHitos(); } }, 5000);
+      redibujarHitos(); return;
+    }
+    clearTimeout(H.timerQ); H.quitar = null;
+    accionHito(x.id, 'hitos/' + x.id + '/enlace/retirar', { codigo: codigo });
+  }
   function aceptarSugerencias(hids) { accionHito(0, 'hitos/sugerencias/aceptar', hids && hids.length ? { hitos: hids } : {}); }
 
   function chipTarea(x, tr, quitable) {
     const abrir = h('button', { type: 'button', class: 'hch-b' + (tr.resuelta ? ' ok' : ''), title: tr.nombre + ' · ' + nomEstado(tr.estado), onclick: function () { abrirFicha(tr.codigo); } },
       h('i', { class: 'hch-d', 'aria-hidden': 'true' }), h('b', { class: 'num' }, tr.codigo), h('span', { class: 'hch-n' }, tr.nombre));
-    return h('span', { class: 'hch' }, abrir, quitable ? h('button', { type: 'button', class: 'hch-x', 'aria-label': 'Quitar el enlace con ' + tr.codigo, title: 'Quitar el enlace', disabled: S.hi.enviando,
-      onclick: function () { quitarEnlace(x, tr.codigo); } }, '×') : null);
+    const arm = S.hi.quitar === x.id + ':' + tr.codigo;
+    return h('span', { class: 'hch' + (arm ? ' arm' : '') }, abrir, quitable ? h('button', { type: 'button', class: 'hch-x', 'aria-label': arm ? 'Tocá otra vez para sacar ' + tr.codigo + ' de este hito' : 'Sacar ' + tr.codigo + ' de este hito', title: 'Sacar esta tarea del hito', disabled: S.hi.enviando,
+      onclick: function () { quitarEnlace(x, tr.codigo); } }, arm ? 'Sacar' : '×') : null);
   }
   function botonMarcar(x) {
     const H = S.hi, arm = H.armado === x.id;
@@ -575,13 +585,13 @@
     const H = S.hi, ya = {};
     (x.tareas || []).forEach(function (tr) { ya[tr.codigo] = true; });
     const f = H.enl && H.enl.hid === x.id ? H.enl : null;
-    if (!f) return h('button', { type: 'button', class: 'enlace', id: 'x-h-e-' + x.id, onclick: function () { H.enl = { hid: x.id, valor: '' }; S.enfocar = '#x-h-s-' + x.id; redibujarHitos(); } }, 'Enlazar una tarea');
+    if (!f) return h('button', { type: 'button', class: 'enlace', id: 'x-h-e-' + x.id, onclick: function () { H.enl = { hid: x.id, valor: '' }; S.enfocar = '#x-h-s-' + x.id; redibujarHitos(); } }, 'Asociar una tarea');
     return h('form', { class: 'hen', onsubmit: function (ev) { ev.preventDefault(); enlazarHito(x, f.valor); } },
-      h('label', { class: 'sr', for: 'x-h-s-' + x.id }, 'Tarea a enlazar'),
+      h('label', { class: 'sr', for: 'x-h-s-' + x.id }, 'Tarea a asociar'),
       h('select', { id: 'x-h-s-' + x.id, onchange: function (e) { f.valor = e.target.value; const b = $('x-h-ok-' + x.id); if (b) b.disabled = !f.valor; } },
         h('option', { value: '' }, 'Elegí una tarea…'),
         S.D.tareas.filter(function (t) { return !ya[t.codigo]; }).map(function (t) { return h('option', { value: t.codigo, selected: f.valor === t.codigo ? true : null }, t.codigo + ' · ' + t.nombre); })),
-      h('button', { type: 'submit', id: 'x-h-ok-' + x.id, class: 'btn ch p', disabled: !f.valor || H.enviando }, 'Enlazar'),
+      h('button', { type: 'submit', id: 'x-h-ok-' + x.id, class: 'btn ch p', disabled: !f.valor || H.enviando }, 'Asociar'),
       h('button', { type: 'button', class: 'btn ch', onclick: function () { H.enl = null; S.enfocar = '#x-h-e-' + x.id; redibujarHitos(); } }, 'Cancelar'));
   }
   // Un hito. `completo` (la vista Hitos) suma enlazar y sugerencias; la ficha de una tarea solo lo ve y lo marca.
@@ -596,9 +606,10 @@
       x.propuesto ? h('p', { class: 'hito-p' }, x.porque || 'Todas sus tareas están resueltas.') : null,
       x.propuesto ? botonMarcar(x) : null,
       completo ? (x.sugeridas || []).map(function (sg) {
-        return h('div', { class: 'hsug' }, h('span', null, 'Sugerida: ', h('b', { class: 'num' }, sg.codigo), ' ', sg.nombre),
-          h('button', { type: 'button', class: 'btn ch', disabled: S.hi.enviando, onclick: function () { enlazarHito(x, sg.codigo); } }, 'Aceptar'));
+        return h('div', { class: 'hsug' }, h('span', null, 'Tarea sugerida: ', h('b', { class: 'num' }, sg.codigo), ' ', sg.nombre),
+          h('button', { type: 'button', class: 'btn ch', disabled: S.hi.enviando, onclick: function () { enlazarHito(x, sg.codigo); } }, 'Asociar'));
       }) : null,
+      completo && (x.sugeridas || []).length > 1 ? h('button', { type: 'button', class: 'btn ch hsug-t', disabled: S.hi.enviando, onclick: function () { aceptarSugerencias([x.id]); } }, 'Asociar las ' + x.sugeridas.length + ' sugeridas') : null,
       completo && !x.hecho ? formEnlazar(x) : null,
       err ? h('p', { class: 'err', role: 'alert' }, err) : null);
   }
@@ -611,7 +622,7 @@
     fases.forEach(function (f) { (f.hitos || []).forEach(function (x) { if (x.propuesto) prop.push(x); }); });
     if (!(r.total || fases.some(function (f) { return (f.hitos || []).length; }))) {
       return h('div', { class: 'vacio' }, h('p', { class: 'rot' }, 'Hitos de la Mesa'), h('h2', { class: 'disp vacio-t' }, 'Este proyecto no tiene hitos'),
-        h('p', null, 'Los hitos se cargan en el plan de la Mesa. Cuando estén, acá los enlazás con las tareas.'),
+        h('p', null, 'Los hitos se cargan en el plan de la Mesa. Cuando estén, acá los asociás con las tareas.'),
         S.D && S.D.proyecto && S.D.proyecto.mesa_url ? h('a', { class: 'btn', href: S.D.proyecto.mesa_url, target: '_blank', rel: 'noopener' }, 'Abrir la Mesa') : null);
     }
     return h('div', { class: 'hitos' },
@@ -622,9 +633,9 @@
         h('div', { class: 'hit-k' },
           h('span', null, h('b', { class: 'num' }, num(r.propuestos || 0)), ' para marcar'),
           h('span', null, h('b', { class: 'num' }, num(r.hechos || 0)), ' de ', num(r.total || 0), ' hechos'),
-          h('span', null, h('b', { class: 'num' }, num(r.enlazados || 0)), ' enlazados')),
+          h('span', null, h('b', { class: 'num' }, num(r.enlazados || 0)), ' con tareas')),
         (r.sugerencias || 0) > 0 ? h('button', { type: 'button', class: 'btn' + (prop.length ? '' : ' p'), id: 'x-h-todas', 'aria-disabled': H.enviando ? 'true' : null,
-          onclick: function () { if (!H.enviando) aceptarSugerencias(null); } }, 'Aceptar todas las sugerencias (' + num(r.sugerencias) + ')') : null),
+          onclick: function () { if (!H.enviando) aceptarSugerencias(null); } }, 'Asociar todas las tareas sugeridas (' + num(r.sugerencias) + ')') : null),
       prop.length ? h('section', { class: 'hit-prop', 'aria-label': 'Hitos para marcar' },
         h('h3', null, prop.length === 1 ? '1 hito para marcar en la Mesa' : prop.length + ' hitos para marcar en la Mesa'),
         h('ul', { class: 'hit-l' }, prop.map(function (x) { return nodoHito(x, true); }))) : null,
@@ -677,7 +688,7 @@
     S.enviando = true; S.errorAccion = ''; dibujarFicha();
     try {
       await enviar('insumo/' + encodeURIComponent(clave) + '/archivo', { archivo_id: id });
-      S.enviando = false; await cargar(true);
+      S.enviando = false; Object.keys(S.asinfo).forEach(function (k) { if (!S.as || S.as.codigo !== k) delete S.asinfo[k]; }); delete S.arch[clave]; S.archAb[clave] = true; await cargar(true);   // la asistida de planilla tiene que ver el archivo nuevo
     } catch (e) { S.enviando = false; S.errorAccion = e.message; delete S.arch[clave]; dibujarFicha(); }
   }
   function lado(x) { return x === 'sindicato' ? 'del sindicato' : x === 'equipo' ? 'del equipo' : ''; }
@@ -919,6 +930,8 @@
   function finEspera(A) { pararReloj(A); A.trabajando = false; }
   function falloAs(A, e, extra) {
     finEspera(A);
+    // El archivo de la Mesa ya no está (borrado, o cambiado de insumo): vuelve a pedirse uno propio.
+    if (A.mesa && (e.status === 404 || e.status === 409) && /borrad|Mesa/i.test(e.message || '')) { A.mesa = false; const inf = S.asinfo[A.codigo]; if (inf && inf.d) inf.d.archivo_mesa = null; }
     A.error = e.message + (extra && (!e.status || e.status >= 500) ? ' ' + extra : ''); A.status = e.status || 0;
     S.enfocar = '#x-as-err'; dibujarFicha();
   }
@@ -1014,7 +1027,7 @@
   function mesaAs(A, am) {
     if (!am) return null;
     if (A.mesa) return h('div', { class: 'as-mesa' }, ICO_DOC('ico-i'),
-      h('div', null, h('p', { class: 'as-mesa-t' }, 'Ya hay una planilla en la Mesa'), h('p', { class: 'nota' }, 'Primero se hace un ensayo: no se guarda nada.')),
+      h('div', null, h('p', { class: 'as-mesa-t' }, 'Se usa la planilla de la Mesa: ', h('span', { class: 'num' }, am.codigo + ' · ' + am.nombre)), h('p', { class: 'nota' }, 'Primero se hace un ensayo: no se guarda nada.')),
       h('button', { type: 'button', class: 'enlace', id: 'x-as-otro', onclick: function () { A.mesa = false; resetMapa(A); S.enfocar = '#x-as-archivo'; dibujarFicha(); } }, 'Subir otro archivo'));
     return h('p', { class: 'nota' }, h('button', { type: 'button', class: 'enlace', id: 'x-as-usar-mesa', onclick: function () { A.mesa = true; A.archivo = null; A.texto = ''; resetMapa(A); S.enfocar = '#x-as-ensayar'; dibujarFicha(); } }, 'Usar el archivo de la Mesa (' + am.codigo + ' · ' + am.nombre + ')'));
   }

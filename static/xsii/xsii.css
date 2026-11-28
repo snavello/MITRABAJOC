@@ -590,3 +590,6 @@ label.btn:focus-within{outline:2px solid var(--acento);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){
   .hit-f>summary::after{transition:none}
 }
+
+.hch.arm{border-color:var(--bloq)}.hch.arm .hch-x{background:var(--bloq-s);color:var(--bloq);font-size:12.5px;font-weight:600}
+.hsug-t{align-self:flex-start}
