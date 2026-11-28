@@ -60,7 +60,7 @@
   function pedidoTxt(n) { return n === 0 ? 'Pedido hoy' : n === 1 ? 'Pedido ayer' : 'Pedido hace ' + dias(n); }
   const NOM_DESHACER = { pospuesta: 'Retomar', confirmada: 'Deshacer la confirmación', completada_a_mano: 'Deshacer: completada a mano', no_aplica: 'Volver a aplicar' };
 
-  class ErrorX extends Error { constructor(m, st) { super(m); this.status = st; } }
+  class ErrorX extends Error { constructor(m, st, cuerpo) { super(m); this.status = st; this.cuerpo = cuerpo || null; } }
   function detalle(d) {
     if (!d) return '';
     if (typeof d === 'string') return d;
@@ -83,7 +83,7 @@
     if (r.status === 401) throw new ErrorX('Tu sesión venció. Entrá de nuevo desde /entornos y volvé a esta pantalla.', 401);
     if (!r.ok) {
       const d = cuerpo && detalle(cuerpo.detail);
-      throw new ErrorX(d || (r.status >= 500 ? 'El servidor no respondió (HTTP ' + r.status + '). Probá de nuevo en un momento.' : 'No se pudo completar la acción (HTTP ' + r.status + ').'), r.status);
+      throw new ErrorX(d || (r.status >= 500 ? 'El servidor no respondió (HTTP ' + r.status + '). Probá de nuevo en un momento.' : 'No se pudo completar la acción (HTTP ' + r.status + ').'), r.status, cuerpo);
     }
     if (cuerpo === null) throw new ErrorX('El servidor no respondió como se esperaba (HTTP ' + r.status + ').', r.status);
     return cuerpo;
@@ -147,6 +147,7 @@
 
   // ------------------------------------------------------------ acciones
   function abrirFicha(codigo) {
+    if (S.as && S.as.codigo !== codigo && !puedeSalirRb(function () { abrirFicha(codigo); })) return;
     S.abierta = codigo; S.paso = codigo; S.vista = 'guia'; S.form = null; S.insForm = null; S.rc = null; S.anim = true; S.errorAccion = '';
     sincronizarUrl(); dibujar(); window.scrollTo({ top: 0 });
     cargarHistorial(codigo);
@@ -165,13 +166,14 @@
     const i = indicePaso(act) + delta;
     if (i < 0 || i >= ts.length) return;
     const c = ts[i].codigo;
+    if (S.abierta && !puedeSalirRb(function () { moverPaso(delta); })) return;
     S.paso = c;
     if (S.abierta) {
       S.abierta = c; S.form = null; S.insForm = null; S.rc = null; S.errorAccion = '';
       sincronizarUrl(); dibujar(); cargarHistorial(c);
     } else { sincronizarUrl(); dibujar(); }
   }
-  function volverGuia() { S.abierta = null; S.form = null; S.insForm = null; S.anim = true; sincronizarUrl(); dibujar(); }
+  function volverGuia() { if (!puedeSalirRb(volverGuia)) return; S.abierta = null; S.form = null; S.insForm = null; S.anim = true; sincronizarUrl(); dibujar(); }
   function irVista(v) {
     if (S.vista === v) return;
     S.vista = v;
@@ -615,13 +617,16 @@
   function abrirAsistida(t, d) {
     const opc = {};
     (d.opciones || []).forEach(function (o) { opc[o.clave] = o.tipo === 'numero' ? (typeof o.defecto === 'number' ? o.defecto : null) : !!o.defecto; });
+    if (S.as && S.as.codigo !== t.codigo && !puedeSalirRb(function () { abrirAsistida(t, d); })) return;
     S.as = { codigo: t.codigo, paso: 1, archivo: null, texto: '', pegar: false, opciones: opc, snap: null, ens: null, filtro: '', afuera: {},
       trabajando: false, error: '', status: 0, confirmando: false, res: null, anim: true,
       mapa: {}, mapaBase: null, mapaEnviado: '{}', mapaAbierto: false, motivo: -1, t0: 0, reloj: null, que: '' };
-    S.enfocar = '#x-as-h'; dibujarFicha();
+    if (d.entrada === 'recibos') estadoInicialRb(S.as);
+    S.enfocar = d.entrada === 'recibos' ? '#x-rb-archivos' : '#x-as-h'; dibujarFicha();
   }
   function pararReloj(A) { if (A && A.reloj) { clearInterval(A.reloj); A.reloj = null; } }
   function cerrarAsistida(codigo) {
+    if (!codigo && !puedeSalirRb(function () { cerrarAsistida(null); })) return;
     pararReloj(S.as); S.as = null; S.enfocar = '#x-as-abrir';
     if (codigo) { delete S.det[codigo]; cargar(true); cargarHistorial(codigo); } else dibujarFicha();
   }
@@ -702,7 +707,7 @@
   function botonReintentar(A) {
     if (!reintentable(A)) return null;
     return h('div', { class: 'acc' }, h('button', { class: 'btn', id: 'x-as-reintentar', type: 'button', onclick: function () {
-      if (A.que === 'carga') { A.confirmando = true; cargarAs(); } else ensayarAs(A.focoRe);
+      if (A.que === 'carga') { A.confirmando = true; if (esRb(A)) cargarRb(); else cargarAs(); } else ensayarAs(A.focoRe);
     } }, 'Reintentar'));
   }
   function opcionesFueraDeRango(A) {
@@ -755,7 +760,7 @@
     } finally { clearTimeout(tmo); }
   }
   function indicadorAs(A) {
-    return h('ol', { class: 'as-pasos', 'aria-label': 'Pasos de la carga' }, PASOS_AS.map(function (n, i) {
+    return h('ol', { class: 'as-pasos', 'aria-label': 'Pasos de la carga' }, (esRb(A) ? PASOS_RB : PASOS_AS).map(function (n, i) {
       const k = i + 1;
       return h('li', { class: k < A.paso ? 'hecho' : k === A.paso ? 'ahora' : '', 'aria-current': k === A.paso ? 'step' : null },
         h('span', { class: 'as-n num', 'aria-hidden': 'true' }, k < A.paso ? '✓' : String(k)), h('span', { class: 'as-nt' }, n));
@@ -1042,7 +1047,7 @@
     (k.detalle || []).forEach(function (x) { if (x && (x.accion === 'creada' || x.accion === 'actualizada')) escritas[x.linea] = true; });
     const sinUbicar = ((A.ens && A.ens.filas) || []).filter(function (f) { return escritas[f.linea] && f.resumen && f.resumen.ubicacion === 'Sin ubicar'; }).length;
     if (sinUbicar) sigue.push(num(sinUbicar) + (sinUbicar === 1 ? ' de las cargadas quedó «sin ubicar»: ' : ' de las cargadas quedaron «sin ubicar»: ') + 'hay que ubicarlas en el mapa y el control lo va a seguir avisando hasta entonces.');
-    const cifras = [['creadas', 'Creadas'], ['actualizadas', 'Actualizadas'], ['sin_tocar', 'Sin tocar'], ['afuera', 'Afuera']].filter(function (x) { return typeof k[x[0]] === 'number'; });
+    const cifras = [['creadas', 'Creadas'], ['actualizadas', 'Actualizadas'], ['sin_tocar', 'Sin tocar'], ['afuera', 'Afuera'], ['cargados', 'Cargados'], ['repetidos', 'Ya estaban'], ['recibos_leidos', 'Recibos leídos']].filter(function (x) { return typeof k[x[0]] === 'number'; });
     return h('div', { class: 'as-cuerpo' },
       h('div', { class: 'as-ok', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '✓'), h('b', null, 'La carga se hizo y el control ya corrió.')),
       comparacionAs(k.comparacion),
@@ -1062,25 +1067,461 @@
       h('div', { class: 'acc as-bot' }, h('button', { class: 'btn p', id: 'x-as-listo', type: 'button', onclick: function () { cerrarAsistida(t.codigo); } }, 'Listo')));
   }
   function panelAs(t, A, d) {
-    const cuerpo = A.paso === 1 ? paso1As(t, A, d) : A.paso === 2 ? paso2As(t, A) : A.paso === 3 ? paso3As(t, A) : paso4As(t, A);
+    const cuerpo = esRb(A) ? cuerpoRb(t, A, d) : A.paso === 1 ? paso1As(t, A, d) : A.paso === 2 ? paso2As(t, A) : A.paso === 3 ? paso3As(t, A) : paso4As(t, A);
     const anim = A.anim ? ' entra' : ''; A.anim = false;
     return h('section', { class: 'as', id: 'x-as', 'aria-labelledby': 'x-as-h', 'aria-busy': A.trabajando ? 'true' : 'false' },
-      h('div', { class: 'as-cab' }, h('p', { class: 'rot' }, d.titulo || 'Carga desde la planilla'),
+      h('div', { class: 'as-cab' }, h('p', { class: 'rot' }, d.titulo || (d.entrada === 'recibos' ? 'Leer los recibos de muestra' : 'Carga desde la planilla')),
         indicadorAs(A),
-        h('h3', { class: 'as-h', id: 'x-as-h', tabindex: '-1' }, 'Paso ' + A.paso + ' de 4: ' + PASOS_AS[A.paso - 1])),
+        h('h3', { class: 'as-h', id: 'x-as-h', tabindex: '-1' }, 'Paso ' + A.paso + ' de 4: ' + (esRb(A) ? PASOS_RB : PASOS_AS)[A.paso - 1])),
       h('div', { class: 'as-paso' + anim }, cuerpo));
   }
   // El botón de entrada y, si hay panel abierto, el panel. Devuelve { boton, panel, motivo }.
   function asistidaDe(t) {
     if (!t.asistida) return { boton: null, panel: null, nota: null, abierto: false };
     const inf = infoAsistida(t), d = inf.d, A = asDe(t.codigo);
-    if (inf.cargando) return { boton: h('button', { class: 'btn p', type: 'button', id: 'x-as-abrir', 'aria-disabled': 'true' }, 'Cargar desde la planilla'), panel: null, nota: null, abierto: false };
+    if (inf.cargando) return { boton: h('button', { class: 'btn p', type: 'button', id: 'x-as-abrir', 'aria-disabled': 'true' }, 'Cargando…'), panel: null, nota: null, abierto: false };
     if (inf.error) return { boton: null, panel: null, abierto: false, nota: h('p', { class: 'nota nec' }, inf.error + ' ',
       h('button', { class: 'enlace', type: 'button', onclick: function () { delete S.asinfo[t.codigo]; dibujarFicha(); } }, 'Reintentar')) };
     if (!d.disponible) return { boton: null, panel: null, abierto: false, nota: h('p', { class: 'nota' }, d.motivo || 'La carga desde planilla no está disponible por ahora.') };
     if (A) return { boton: null, panel: panelAs(t, A, d), nota: null, abierto: true };
-    return { boton: h('button', { class: 'btn p', type: 'button', id: 'x-as-abrir', onclick: function () { abrirAsistida(t, d); } }, 'Cargar desde la planilla'), panel: null, nota: null, abierto: false };
+    return { boton: h('button', { class: 'btn p', type: 'button', id: 'x-as-abrir', onclick: function () { abrirAsistida(t, d); } }, d.entrada === 'recibos' ? 'Leer los recibos' : 'Cargar desde la planilla'), panel: null, nota: null, abierto: false };
   }
+
+  // ------------------------------------------------------------ Lectura de recibos de muestra (bloque 4b)
+  // La misma ficha con otra entrada: en vez de una planilla, varios recibos que se leen de a uno.
+  // Cuatro momentos: Qué voy a hacer, Lectura (con las propuestas para revisar), Carga y Control.
+  const PASOS_RB = ['Qué voy a hacer', 'Lectura', 'Carga', 'Control'];
+  const PARALELO_RB = 2, TOPE_ARCHIVOS_RB = 300, TOPE_CONCEPTOS_RB = 500, ESPERA_RB_MS = 150000;
+  const RUBROS_RB = [{ clave: 'haber', rotulo: 'Haber remunerativo' }, { clave: 'no_remunerativo', rotulo: 'Haber no remunerativo' }, { clave: 'descuento', rotulo: 'Descuento' }];
+  const CATEGORIAS_RB = [{ clave: '', rotulo: 'Ninguna' }, { clave: 'afiliacion', rotulo: 'Afiliación' }, { clave: 'convenio', rotulo: 'Convenio' }];
+  const SEV_RB = { valida: 0, dudosa: 1, rechazada: 2 };
+  const esRb = function (A) { return !!A && A.entrada === 'recibos'; };
+  const datosRb = function (A) { return (S.asinfo[A.codigo] || {}).d || {}; };
+  const pluralRb = function (n, uno, otros) { return num(n) + ' ' + (n === 1 ? uno : otros); };
+  function estadoInicialRb(A) {
+    A.entrada = 'recibos'; A.items = []; A.claves = {}; A.serieI = 0; A.serieP = 0; A.props = {}; A.activos = 0;
+    A.iniciada = false; A.detenido = false; A.pausa = ''; A.nota = ''; A.filtroP = ''; A.listaAbierta = null; A.simulado = false;
+    A.enviados = []; A.dibujoPend = false;
+  }
+  function itemsDe(A, estado) { return A.items.filter(function (x) { return x.estado === estado; }); }
+  function propsLista(A) { return Object.keys(A.props).map(function (k) { return A.props[k]; }); }
+  function efectivoRb(p) { return p.descartada ? 'descartada' : p.estado; }
+  function incluidasRb(A) { return propsLista(A).filter(function (p) { return !p.descartada && p.estado !== 'rechazada'; }); }
+  // Hay algo que se perdería si se sale: lecturas en curso o propuestas todavía sin cargar.
+  function sinCargarRb() {
+    const A = S.as;
+    return esRb(A) && A.paso < 4 && (A.activos > 0 || A.items.some(function (x) { return x.estado === 'leido'; }) || propsLista(A).length > 0);
+  }
+  const AVISO_SALIR_RB = 'Hay conceptos leídos que todavía no se cargaron. Si salís se pierden y volver a leer cuesta.';
+  function redibujarRb(A) {
+    if (A.dibujoPend) return;
+    A.dibujoPend = true;
+    requestAnimationFrame(function () { A.dibujoPend = false; if (S.as === A) dibujarFicha(); });
+  }
+
+  // --- archivos
+  function agregarRb(A, lista) {
+    const d = datosRb(A), ar = d.archivos || {}, tope = (ar.tope_mb || 8) * 1048576, fmts = ar.formatos || ['pdf', 'jpg', 'png', 'webp'];
+    let dup = 0, mas = 0, nuevos = 0;
+    Array.prototype.forEach.call(lista || [], function (f) {
+      const k = f.name + '|' + f.size + '|' + f.lastModified;
+      if (A.claves[k]) { dup++; return; }
+      if (A.items.length >= TOPE_ARCHIVOS_RB) { mas++; return; }
+      A.claves[k] = true; nuevos++;
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const it = { id: ++A.serieI, clave: k, archivo: f, nombre: f.name, estado: 'cola', motivo: '', nuevos: 0, fijo: false };
+      const ok = fmts.indexOf(ext) !== -1 || (ext === 'jpeg' && fmts.indexOf('jpg') !== -1);
+      if (!ok) { it.estado = 'fallo'; it.fijo = true; it.motivo = 'Solo se leen PDF y fotos (' + fmts.join(', ') + ').'; }
+      else if (f.size === 0) { it.estado = 'fallo'; it.fijo = true; it.motivo = 'El archivo está vacío.'; }
+      else if (f.size > tope) { it.estado = 'fallo'; it.fijo = true; it.motivo = 'Pesa más de ' + (ar.tope_mb || 8) + ' MB.'; }
+      A.items.push(it);
+    });
+    const avisos = [];
+    if (dup) avisos.push(pluralRb(dup, 'recibo ya estaba en la lista', 'recibos ya estaban en la lista') + '.');
+    if (mas) avisos.push('Se pueden leer hasta ' + num(TOPE_ARCHIVOS_RB) + ' recibos por vez: ' + pluralRb(mas, 'quedó afuera', 'quedaron afuera') + '.');
+    A.nota = avisos.join(' ');
+    return nuevos;
+  }
+  function quitarRb(A, id) {
+    const i = A.items.findIndex(function (x) { return x.id === id; });
+    if (i === -1 || A.items[i].estado === 'leyendo') return;
+    delete A.claves[A.items[i].clave]; A.items.splice(i, 1); A.nota = '';
+  }
+  function elegirRb(A, lista, foco) {
+    const n = agregarRb(A, lista);
+    S.enfocar = foco || null;
+    if (A.iniciada) { A.detenido = false; A.pausa = ''; dibujarFicha(); bombearRb(A); } else dibujarFicha();
+    return n;
+  }
+  function zonaRb(A, grande) {
+    const id = grande ? 'x-rb-archivos' : 'x-rb-mas';
+    const entrada = h('input', { id: id, class: 'sr', type: 'file', multiple: true, accept: '.pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*',
+      onchange: function (e) { const fs = Array.prototype.slice.call(e.target.files || []); e.target.value = ''; if (fs.length) elegirRb(A, fs, '#' + id); } });
+    if (!grande) return h('label', { class: 'btn', for: id, id: id + '-b' }, 'Sumar más recibos', entrada);
+    const zona = h('label', { class: 'as-arch rb-zona' + (A.items.length ? ' tiene' : ''), for: id },
+      entrada,
+      h('span', { class: 'as-arch-b' }, A.items.length ? 'Sumar más recibos' : 'Elegir los recibos'),
+      h('span', { class: 'as-arch-s' }, 'o soltalos acá'));
+    zona.addEventListener('dragover', function (e) { e.preventDefault(); zona.classList.add('suelta'); });
+    zona.addEventListener('dragleave', function () { zona.classList.remove('suelta'); });
+    zona.addEventListener('drop', function (e) {
+      e.preventDefault(); zona.classList.remove('suelta');
+      const fs = e.dataTransfer && e.dataTransfer.files;
+      if (fs && fs.length) elegirRb(A, fs, '#' + id);
+    });
+    return zona;
+  }
+
+  // --- lectura: de a un archivo por pedido, dos a la vez
+  function empezarRb(A) {
+    if (!itemsDe(A, 'cola').length) return;
+    A.iniciada = true; A.detenido = false; A.pausa = ''; A.listaAbierta = null;
+    irPasoAs(A, 2, '#x-rb-prog');
+    bombearRb(A);
+  }
+  function bombearRb(A) {
+    if (S.as !== A || !A.iniciada) return;
+    while (!A.detenido && !A.pausa && A.activos < PARALELO_RB) {
+      const it = A.items.find(function (x) { return x.estado === 'cola'; });
+      if (!it) break;
+      leerRb(A, it);
+    }
+    redibujarRb(A);
+  }
+  async function leerRb(A, it) {
+    it.estado = 'leyendo'; A.activos++;
+    const ctl = new AbortController(), tmo = setTimeout(function () { ctl.abort(); }, ESPERA_RB_MS);
+    try {
+      const fd = new FormData(); fd.append('archivo', it.archivo, it.archivo.name);
+      const r = await enviarForm(rutaAs(A.codigo) + '/ensayo', fd, ctl.signal);
+      if (S.as === A) recibirRb(A, it, r);
+    } catch (e) {
+      if (S.as !== A) return;
+      if (e.status === 429 || e.status === 401) { it.estado = 'cola'; A.pausa = e.message; }
+      else {
+        it.estado = 'fallo'; it.motivo = e.message || 'No se pudo leer.'; it.reintentable = !e.status || e.status >= 500;
+        if (!e.status) A.pausa = e.message + ' La lectura quedó en pausa.';
+      }
+    } finally {
+      clearTimeout(tmo); A.activos--;
+      if (S.as === A) bombearRb(A);
+    }
+  }
+  function recibirRb(A, it, r) {
+    const rec = (r && r.recibo) || {};
+    if (rec.simulado) A.simulado = true;
+    if (!rec.leido) { it.estado = 'fallo'; it.motivo = rec.motivo || 'No se pudo leer este recibo.'; it.reintentable = true; return; }
+    it.estado = 'leido'; it.motivo = ''; it.nuevos = (r.propuestas || []).length;
+    mezclarRb(A, r.propuestas || []);
+  }
+  function detenerRb(A) { A.detenido = true; redibujarRb(A); S.enfocar = '#x-rb-seguir-leyendo'; }
+  function seguirLeyendoRb(A) { A.detenido = false; A.pausa = ''; bombearRb(A); S.enfocar = '#x-rb-prog'; }
+  function reintentarRb(A, it) { it.estado = 'cola'; it.motivo = ''; A.detenido = false; A.pausa = ''; bombearRb(A); }
+
+  // --- propuestas: se juntan por clave y suman «veces»
+  function mezclarRb(A, ps) {
+    ps.forEach(function (p) {
+      if (!p || !p.clave) return;
+      let q = A.props[p.clave];
+      if (!q) {
+        q = A.props[p.clave] = { n: ++A.serieP, clave: p.clave, codigo: p.codigo || '', cuit: p.cuit_empleador || '', empleador: p.empleador_nombre || '',
+          veces: 0, rubros: {}, estado: 'valida', avisos: [], errores: [], similar: null, generico_sugerido: null,
+          desc: p.descripcion || '', tocoDesc: false, rubro: '', tocoRubro: false, cat: '', tocoCat: false, generico: '', tocoGen: false, descartada: false, errorSrv: '' };
+      }
+      q.veces += (typeof p.veces === 'number' && p.veces > 0 ? p.veces : 1);
+      q.rubros[p.rubro] = (q.rubros[p.rubro] || 0) + 1;
+      if (!q.empleador && p.empleador_nombre) q.empleador = p.empleador_nombre;
+      if (!q.tocoDesc && !q.desc && p.descripcion) q.desc = p.descripcion;
+      if (!q.similar && p.similar) q.similar = p.similar;
+      if (!q.generico_sugerido && p.generico_sugerido) { q.generico_sugerido = p.generico_sugerido; if (!q.tocoGen) q.generico = p.generico_sugerido.codigo || ''; }
+      if (p.categoria_sindical && !q.tocoCat && !q.cat) q.cat = p.categoria_sindical;
+      if ((SEV_RB[p.estado] || 0) > (SEV_RB[q.estado] || 0)) q.estado = p.estado;
+      (p.avisos || []).forEach(function (a) { if (a && q.avisos.indexOf(a) === -1) q.avisos.push(a); });
+      (p.errores || []).forEach(function (a) { if (a && q.errores.indexOf(a) === -1) q.errores.push(a); });
+      afinarRb(q);
+    });
+  }
+  // Rubro: el que más veces apareció (salvo que la persona lo haya elegido). Si los recibos no coinciden, se avisa.
+  function afinarRb(q) {
+    const ks = Object.keys(q.rubros).filter(function (k) { return k; });
+    if (!q.tocoRubro) {
+      let mejor = '', n = 0;
+      ks.forEach(function (k) { if (q.rubros[k] > n) { n = q.rubros[k]; mejor = k; } });
+      q.rubro = mejor;
+    }
+    if (q.rubro !== 'descuento') q.cat = '';
+    const dif = 'Los recibos no coinciden en el rubro';
+    q.avisos = q.avisos.filter(function (a) { return a !== dif; });
+    if (ks.length > 1) { q.avisos.push(dif); if (q.estado === 'valida') q.estado = 'dudosa'; }
+  }
+  function errorFilaRb(p) {
+    if (p.descartada || p.estado === 'rechazada') return '';
+    if (!p.desc.trim()) return 'Falta la descripción.';
+    if (!p.rubro) return 'Elegí el rubro.';
+    return p.errorSrv || '';
+  }
+  function problemasRb(A) {
+    const inc = incluidasRb(A), malas = inc.filter(function (p) { return errorFilaRb(p) && !p.errorSrv; });
+    if (!inc.length) return { ok: false, texto: 'No hay conceptos para cargar todavía.' };
+    if (malas.length) return { ok: false, texto: pluralRb(malas.length, 'concepto necesita', 'conceptos necesitan') + ' una corrección antes de seguir.' };
+    if (inc.length > TOPE_CONCEPTOS_RB) return { ok: false, texto: 'Se cargan hasta ' + num(TOPE_CONCEPTOS_RB) + ' conceptos por vez: descartá ' + num(inc.length - TOPE_CONCEPTOS_RB) + ' o más.' };
+    const leyendo = A.activos > 0 || (!A.detenido && !A.pausa && itemsDe(A, 'cola').length > 0);
+    if (leyendo) return { ok: false, texto: 'Esperá a que termine la lectura o apretá «Detener».' };
+    return { ok: true, texto: '' };
+  }
+  // Un cambio de texto no redibuja (se perdería el clic siguiente): se actualizan a mano el aviso de la fila y el botón.
+  function vivoRb(A, p) {
+    const e = $('x-rb-' + p.n + '-e'); if (e) { const t = errorFilaRb(p); e.textContent = t; e.hidden = !t; }
+    const f = $('x-rb-' + p.n + '-f'); if (f) f.classList.toggle('mal', !!errorFilaRb(p));
+    const pr = problemasRb(A), b = $('x-rb-seguir'), n = $('x-rb-nota');
+    if (b) b.disabled = !pr.ok; if (n) { n.textContent = pr.texto; n.hidden = !pr.texto; }
+  }
+
+  // --- pantalla: momento 1
+  function iaRb(d) {
+    const ia = d.ia || {};
+    if (ia.disponible === false) return h('div', { class: 'as-falta', id: 'x-rb-ia', role: 'alert' }, h('b', null, 'La lectura de recibos no está disponible ahora.'), ia.motivo ? h('span', null, ia.motivo) : null);
+    if (ia.simulada) return h('div', { class: 'aviso', id: 'x-rb-ia', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'), h('div', null, h('b', null, 'Modo de prueba'), 'La lectura es simulada: no usa la IA de verdad.'));
+    return null;
+  }
+  function listaElegidosRb(A) {
+    if (!A.items.length) return null;
+    const lista = A.items.slice(0, 40);
+    return h('div', { class: 'rb-elegidos' },
+      h('p', { class: 'rb-n', id: 'x-rb-n' }, h('b', { class: 'num' }, num(itemsDe(A, 'cola').length)), ' para leer', A.items.some(function (x) { return x.estado === 'fallo'; }) ? ' · ' + num(itemsDe(A, 'fallo').length) + ' con problema' : ''),
+      h('ul', { class: 'rb-ch' }, lista.map(function (it) {
+        return h('li', { class: it.estado === 'fallo' ? 'mal' : '' },
+          h('span', { class: 'rb-ch-n' }, it.nombre, it.estado === 'fallo' ? h('small', null, it.motivo) : null),
+          h('button', { class: 'rb-x', type: 'button', 'aria-label': 'Quitar ' + it.nombre, onclick: function () { quitarRb(A, it.id); S.enfocar = '#x-rb-archivos'; dibujarFicha(); } }, '×'));
+      })),
+      A.items.length > lista.length ? h('p', { class: 'nota' }, 'y ' + num(A.items.length - lista.length) + ' más') : null,
+      h('button', { class: 'enlace', id: 'x-rb-quitar-todos', type: 'button', onclick: function () { A.items = []; A.claves = {}; A.nota = ''; S.enfocar = '#x-rb-archivos'; dibujarFicha(); } }, 'Quitar todos'));
+  }
+  function paso1Rb(t, A, d) {
+    const ar = d.archivos || {}, ia = d.ia || {}, listos = itemsDe(A, 'cola').length;
+    const previas = (t.necesita || []).filter(function (c) { const x = tarea(c); return x && !resuelta(x); }).map(function (c) { return tarea(c).nombre; });
+    const que = d.que_voy_a_hacer || [];
+    return h('div', { class: 'as-cuerpo' },
+      iaRb(d),
+      previas.length ? h('div', { class: 'aviso as-previas', id: 'x-as-previas', role: 'status' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, 'i'),
+        h('div', null, 'Podés leer los recibos, pero la carga todavía no se puede: primero tiene que estar resuelta ' + (previas.length === 1 ? 'la tarea ' : 'las tareas ') + previas.join(', ') + '.')) : null,
+      que.length ? h('div', { class: 'as-que' }, h('p', { class: 'as-lead' }, que[0])) : null,
+      que.length > 1 ? h('details', { class: 'as-pegar' }, h('summary', null, 'Más detalle'), h('div', { class: 'as-que' }, que.slice(1).map(function (p) { return h('p', null, p); }))) : null,
+      zonaRb(A, true),
+      h('p', { class: 'nota' }, 'PDF o foto, hasta ' + (ar.tope_mb || 8) + ' MB cada uno.' + (ar.sugeridos ? ' Conviene sumar ' + ar.sugeridos + '.' : '')),
+      A.nota ? h('p', { class: 'nota nec', role: 'status' }, A.nota) : null,
+      listaElegidosRb(A),
+      errorAs(A, null),
+      h('div', { class: 'acc as-bot' },
+        h('button', { class: 'btn p rb-gr', id: 'x-rb-leer', type: 'button', disabled: !listos || ia.disponible === false, onclick: function () { empezarRb(A); } },
+          listos ? 'Leer ' + pluralRb(listos, 'recibo', 'recibos') : 'Leer los recibos'),
+        h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', onclick: function () { cerrarAsistida(null); } }, 'Cerrar')));
+  }
+
+  // --- pantalla: momento 2
+  const TXT_ITEM_RB = function (it) {
+    return it.estado === 'cola' ? 'En cola' : it.estado === 'leyendo' ? 'Leyendo…' : it.estado === 'leido' ? (it.nuevos === 0 ? 'Leído, sin conceptos nuevos' : 'Leído: ' + pluralRb(it.nuevos, 'concepto', 'conceptos')) : it.motivo || 'No se pudo leer';
+  };
+  function progresoRb(A) {
+    const tot = A.items.filter(function (x) { return !x.fijo; }).length, hechos = A.items.filter(function (x) { return !x.fijo && (x.estado === 'leido' || x.estado === 'fallo'); }).length;
+    const pct = tot ? Math.round(hechos * 100 / tot) : 0, leyendo = A.activos > 0, quedan = itemsDe(A, 'cola').length;
+    const terminado = !leyendo && !quedan;
+    const fallos = A.items.filter(function (x) { return x.estado === 'fallo'; }).length;
+    const estado = A.pausa ? 'En pausa' : leyendo ? (A.detenido ? 'Terminando los que ya se estaban leyendo…' : 'Leyendo…') : quedan ? 'Detenido' : fallos ? 'Listo, con ' + pluralRb(fallos, 'recibo que no se pudo leer', 'recibos que no se pudieron leer') : 'Listo';
+    return h('div', { class: 'rb-prog' + (terminado ? ' fin' : ''), id: 'x-rb-prog', tabindex: '-1' },
+      h('div', { class: 'rb-prog-t' }, h('b', { class: 'num rb-gran', role: 'status' }, num(hechos) + ' de ' + num(tot)), h('span', { class: 'rb-est' }, estado)),
+      h('div', { class: 'rb-riel', role: 'progressbar', 'aria-label': 'Recibos leídos', 'aria-valuemin': '0', 'aria-valuemax': String(tot), 'aria-valuenow': String(hechos) }, h('i', { style: 'width:' + pct + '%' })),
+      A.pausa ? h('div', { class: 'as-err', role: 'alert' }, h('p', null, A.pausa)) : null,
+      h('div', { class: 'acc' },
+        leyendo || (quedan && !A.detenido && !A.pausa) ? h('button', { class: 'btn', id: 'x-rb-detener', type: 'button', disabled: A.detenido, onclick: function () { detenerRb(A); } }, 'Detener') : null,
+        quedan && (A.detenido || A.pausa) ? h('button', { class: 'btn p', id: 'x-rb-seguir-leyendo', type: 'button', onclick: function () { seguirLeyendoRb(A); } }, 'Seguir leyendo (' + num(quedan) + ')') : null,
+        zonaRb(A, false)),
+      A.nota ? h('p', { class: 'nota nec', role: 'status' }, A.nota) : null,
+      A.simulado ? h('p', { class: 'nota' }, 'Modo de prueba: la lectura es simulada.') : null);
+  }
+  function listaRecibosRb(A) {
+    const hayFallo = A.items.some(function (x) { return x.estado === 'fallo'; });
+    const abierto = A.listaAbierta === null ? (A.items.length <= 6 || hayFallo) : A.listaAbierta;
+    const det = h('details', { class: 'rb-lista', id: 'x-rb-lista' }, h('summary', null, h('b', null, 'Recibos'), h('span', { class: 'rb-sum' }, num(A.items.length) + (hayFallo ? ' · ' + num(itemsDe(A, 'fallo').length) + ' con problema' : ''))),
+      h('ul', { class: 'rb-items' }, A.items.map(function (it) {
+        return h('li', { class: 'rb-it ' + it.estado },
+          h('span', { class: 'rb-it-n' }, it.nombre),
+          h('span', { class: 'rb-it-e' }, TXT_ITEM_RB(it)),
+          it.estado === 'fallo' && !it.fijo ? h('button', { class: 'enlace', type: 'button', onclick: function () { reintentarRb(A, it); } }, 'Probar de nuevo') : null);
+      })));
+    det.open = abierto;
+    det.addEventListener('toggle', function () { A.listaAbierta = det.open; });
+    return det;
+  }
+  function selectRb(id, rotulo, opciones, valor, alCambiar, deshab) {
+    return h('div', { class: 'rb-c' }, h('label', { for: id }, rotulo),
+      h('select', { id: id, disabled: deshab, onchange: function (e) { alCambiar(e.target.value); } },
+        opciones.map(function (o) { return h('option', { value: o.clave, selected: o.clave === valor }, o.rotulo); })));
+  }
+  function filaRb(A, p, d) {
+    const id = 'x-rb-' + p.n, fuera = p.descartada, rech = p.estado === 'rechazada', est = efectivoRb(p);
+    const rubros = d.rubros || RUBROS_RB, cats = d.categorias_sindicales || CATEGORIAS_RB, gens = d.genericos || [];
+    const err = errorFilaRb(p);
+    const parecido = p.similar && !p.avisos.concat(p.errores).some(function (a) { return a.indexOf(p.similar.codigo) !== -1; })
+      ? 'Se parece a ' + (p.similar.codigo || '') + (p.similar.nombre ? ' · ' + p.similar.nombre : '') : '';
+    const redib = function () { dibujarFicha(); };
+    return h('li', { class: 'rb-f ' + est + (err ? ' mal' : ''), id: id + '-f' },
+      h('div', { class: 'rb-f-c' },
+        h('b', { class: 'num rb-cod' }, p.codigo || '(sin código)'),
+        h('span', { class: 'rb-veces num' }, '×' + num(p.veces)),
+        h('span', { class: 'pil ' + est }, fuera ? 'Descartada' : ESTADOS_AS[p.estado] || p.estado),
+        rech ? null : h('button', { class: 'btn ch rb-descartar', id: id + '-x', type: 'button', onclick: function () { p.descartada = !p.descartada; redib(); } }, fuera ? 'Volver a incluir' : 'Descartar')),
+      rech ? h('p', { class: 'rb-dr' }, p.desc || '(sin descripción)') : null,
+      rech ? h('ul', { class: 'rb-no' }, (p.errores.length ? p.errores : ['No se puede incluir.']).map(function (x) { return h('li', null, x); }))
+        : h('div', { class: 'rb-ed' },
+          h('div', { class: 'rb-c rb-desc' }, h('label', { for: id + '-d' }, 'Descripción'),
+            h('input', { id: id + '-d', type: 'text', maxlength: '120', value: p.desc, disabled: fuera, autocomplete: 'off',
+              oninput: function (e) { p.desc = e.target.value; p.tocoDesc = true; p.errorSrv = ''; vivoRb(A, p); } })),
+          selectRb(id + '-r', 'Rubro', rubros, p.rubro, function (v) { p.rubro = v; p.tocoRubro = true; p.errorSrv = ''; afinarRb(p); redib(); }, fuera),
+          p.rubro === 'descuento' ? selectRb(id + '-c', 'Categoría sindical', cats, p.cat, function (v) { p.cat = v; p.tocoCat = true; }, fuera) : null,
+          p.cuit && gens.length ? selectRb(id + '-g', 'Corresponde a', [{ clave: '', rotulo: 'Ninguno' }].concat(gens.map(function (g) { return { clave: g.codigo, rotulo: g.codigo + ' · ' + g.nombre }; })), p.generico,
+            function (v) { p.generico = v; p.tocoGen = true; }, fuera) : null),
+      parecido ? h('p', { class: 'rb-av' }, parecido) : null,
+      p.avisos.length ? h('ul', { class: 'rb-avs' }, p.avisos.map(function (a) { return h('li', null, a); })) : null,
+      h('p', { class: 'rb-err', id: id + '-e', role: 'alert', hidden: err ? null : true }, err));
+  }
+  function gruposRb(A, lista) {
+    const g = {}, orden = [];
+    lista.forEach(function (p) {
+      const k = p.cuit || '';
+      if (!g[k]) { g[k] = { cuit: k, nombre: '', ps: [], dudosas: 0 }; orden.push(k); }
+      g[k].ps.push(p); if (!g[k].nombre && p.empleador) g[k].nombre = p.empleador;
+      if (efectivoRb(p) === 'dudosa') g[k].dudosas++;
+    });
+    const sev = { dudosa: 0, rechazada: 1, valida: 2, descartada: 3 };
+    return orden.map(function (k) { g[k].ps.sort(function (a, b) { return (sev[efectivoRb(a)] - sev[efectivoRb(b)]) || (b.veces - a.veces) || (a.codigo < b.codigo ? -1 : 1); }); return g[k]; })
+      .sort(function (a, b) { return (b.dudosas - a.dudosas) || ((a.cuit === '') - (b.cuit === '')) || (a.nombre < b.nombre ? -1 : 1); });
+  }
+  const FILTROS_RB = [['', 'Todas'], ['dudosa', 'Dudosas'], ['rechazada', 'Rechazadas'], ['descartada', 'Descartadas']];
+  function paso2Rb(t, A) {
+    const d = datosRb(A), todas = propsLista(A);
+    const cuenta = function (k) { return k ? todas.filter(function (p) { return efectivoRb(p) === k; }).length : todas.length; };
+    const lista = todas.filter(function (p) { return !A.filtroP || efectivoRb(p) === A.filtroP; });
+    const pr = problemasRb(A), inc = incluidasRb(A), grupos = gruposRb(A, lista);
+    const terminoSinNada = !A.activos && !itemsDe(A, 'cola').length && !todas.length;
+    return h('div', { class: 'as-cuerpo' },
+      h('div', { class: 'as-nada', role: 'status' }, h('b', null, 'Nada se guardó todavía'), h('span', null, 'Los conceptos se cargan recién en el paso 3.')),
+      progresoRb(A), listaRecibosRb(A),
+      todas.length ? h('div', { class: 'rb-props' },
+        h('div', { class: 'rb-filtros', id: 'x-rb-filtros', role: 'group', 'aria-label': 'Filtrar los conceptos' }, FILTROS_RB.filter(function (f) { return !f[0] || cuenta(f[0]) > 0 || A.filtroP === f[0]; }).map(function (f) {
+          return h('button', { type: 'button', class: 'rb-fil ' + f[0], id: 'x-rb-f-' + (f[0] || 'todas'), 'aria-pressed': String(A.filtroP === f[0]),
+            onclick: function () { A.filtroP = A.filtroP === f[0] ? '' : f[0]; S.enfocar = '#x-rb-f-' + (f[0] || 'todas'); dibujarFicha(); } },
+            h('b', { class: 'num' }, num(cuenta(f[0]))), h('span', null, f[1]));
+        })),
+        grupos.length ? grupos.map(function (g) {
+          return h('section', { class: 'rb-g', 'aria-label': g.nombre || g.cuit || 'Sin empleador' },
+            h('h4', { class: 'rb-g-t' }, h('span', null, g.nombre || (g.cuit ? 'Empleador' : 'Sin empleador')), g.cuit ? h('small', { class: 'num' }, g.cuit) : null, h('small', null, pluralRb(g.ps.length, 'concepto', 'conceptos'))),
+            h('ul', { class: 'rb-fs' }, g.ps.map(function (p) { return filaRb(A, p, d); })));
+        }) : h('p', { class: 'muted' }, 'No hay conceptos con ese filtro.')) : null,
+      terminoSinNada ? h('p', { class: 'muted rb-vacio' }, A.items.some(function (x) { return x.estado === 'leido'; })
+        ? 'No apareció ningún concepto nuevo: los de estos recibos ya están en el catálogo.' : 'Ningún recibo se pudo leer. Probá con otros o de nuevo.') : null,
+      errorAs(A, null),
+      h('div', { class: 'acc as-bot' },
+        h('button', { class: 'btn', id: 'x-as-volver', type: 'button', onclick: function () { irPasoAs(A, 1, '#x-rb-archivos'); } }, 'Volver'),
+        h('button', { class: 'btn p rb-gr', id: 'x-rb-seguir', type: 'button', disabled: !pr.ok, onclick: function () { A.confirmando = false; irPasoAs(A, 3); } }, 'Seguir con ' + pluralRb(inc.length, 'concepto', 'conceptos')),
+        h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
+        h('span', { class: 'nota nec', id: 'x-rb-nota', hidden: pr.texto ? null : true }, pr.texto)));
+  }
+
+  // --- pantalla: momento 3 y carga
+  function cargaRb(A) {
+    const inc = incluidasRb(A);
+    return { conceptos: inc.map(function (p) {
+      return { codigo: p.codigo, descripcion: p.desc.trim(), cuit_empleador: p.cuit, rubro: p.rubro,
+        categoria_sindical: p.rubro === 'descuento' ? p.cat : '', codigo_generico: p.cuit ? p.generico : '' };
+    }), recibos_leidos: itemsDe(A, 'leido').length };
+  }
+  function detalleErrorRb(A, e) {
+    const c = e && e.cuerpo || {};
+    let det = c.detalle;
+    if (!Array.isArray(det) && c.detail && typeof c.detail === 'object' && !Array.isArray(c.detail)) det = c.detail.detalle;
+    if (!Array.isArray(det)) return [];
+    const textos = [];
+    det.forEach(function (x) {
+      let txt = '', p = null;
+      if (typeof x === 'string') txt = x;
+      else if (x && typeof x === 'object') {
+        txt = String(x.mensaje || x.msg || x.error || x.motivo || '');
+        if (typeof x.indice === 'number') p = A.enviados[x.indice];
+        else if (x.clave) p = A.props[x.clave];
+        else if (x.codigo) p = A.enviados.find(function (q) { return q.codigo === x.codigo; });
+        if (p && txt) p.errorSrv = txt;
+        if (p) txt = (p.codigo || '') + (txt ? ': ' + txt : '');
+      }
+      if (txt) textos.push(txt);
+    });
+    return textos.slice(0, 12);
+  }
+  async function cargarRb() {
+    const A = S.as;
+    if (!A || A.trabajando) return;
+    if (!A.confirmando) { A.confirmando = true; A.error = ''; dibujarFicha(); return; }
+    const cuerpo = cargaRb(A);
+    A.enviados = incluidasRb(A); A.erroresSrv = [];
+    iniciarEspera(A, 'carga');
+    try {
+      const r = await enviar(rutaAs(A.codigo) + '/carga', cuerpo);
+      A.res = r; A.que = '';
+      A.items.forEach(function (x) { x.archivo = null; }); A.props = {};
+      finEspera(A);
+      irPasoAs(A, 4);
+      cargar(true);
+    } catch (e) {
+      A.confirmando = false; A.erroresSrv = e.status === 400 ? detalleErrorRb(A, e) : [];
+      falloAs(A, e, 'Puede que la carga se haya hecho: mirá la ficha de la tarea antes de reintentar. Si ya se hizo, el reintento va a avisar que no hay nada para cargar.');
+    }
+  }
+  function paso3Rb(t, A) {
+    const inc = incluidasRb(A), todas = propsLista(A);
+    const fuera = todas.filter(function (p) { return p.descartada; }).length, rech = todas.filter(function (p) { return p.estado === 'rechazada' && !p.descartada; }).length;
+    const porRubro = function (k) { return inc.filter(function (p) { return p.rubro === k; }).length; };
+    const rubros = (datosRb(A).rubros || RUBROS_RB).map(function (r) { return [r.rotulo, porRubro(r.clave)]; }).filter(function (x) { return x[1] > 0; });
+    const re = A.error && A.status === 409;
+    return h('div', { class: 'as-cuerpo' },
+      h('p', { class: 'as-lead rb-voy' }, 'Voy a cargar ', h('b', { class: 'num' }, num(inc.length)), inc.length === 1 ? ' concepto' : ' conceptos', fuera ? ' (' + pluralRb(fuera, 'descartado', 'descartados') + ')' : '', '.'),
+      rubros.length ? h('div', { class: 'kpis' }, rubros.map(function (x) { return h('div', { class: 'kpi' }, h('b', null, num(x[1])), h('span', null, x[0])); })) : null,
+      rech ? h('p', { class: 'nota' }, pluralRb(rech, 'rechazado no entra', 'rechazados no entran') + '.') : null,
+      h('p', { class: 'nota' }, 'Entran ya revisados. Después no se puede deshacer desde acá.'),
+      errorAs(A, re ? h('div', { class: 'acc' }, h('button', { class: 'btn', id: 'x-as-reensayar', type: 'button', onclick: function () { irPasoAs(A, 2); } }, 'Volver a revisar')) : botonReintentar(A)),
+      (A.erroresSrv || []).length ? h('div', { class: 'as-err', role: 'alert' }, h('ul', { class: 'rb-erl' }, A.erroresSrv.map(function (x) { return h('li', null, x); })),
+        h('div', { class: 'acc' }, h('button', { class: 'btn', id: 'x-rb-revisar', type: 'button', onclick: function () { irPasoAs(A, 2); } }, 'Volver a revisar'))) : null,
+      A.confirmando && !A.trabajando ? h('p', { class: 'nota nec', role: 'status' }, 'Apretá otra vez para confirmar: se escribe en el sistema.') : null,
+      h('div', { class: 'acc as-bot' },
+        h('button', { class: 'btn', id: 'x-as-atras3', type: 'button', disabled: A.trabajando, onclick: function () { irPasoAs(A, 2); } }, 'Volver a revisar'),
+        A.confirmando ? null : h('button', { class: 'btn', id: 'x-as-cerrar', type: 'button', disabled: A.trabajando, onclick: function () { cerrarAsistida(null); } }, 'Cerrar'),
+        h('button', { class: 'btn p rb-gr' + (A.confirmando ? ' conf' : ''), id: 'x-as-cargar', type: 'button', 'aria-disabled': A.trabajando || !inc.length ? 'true' : null,
+          onclick: function () { if (!inc.length) return; cargarRb(); } }, A.trabajando ? 'Cargando…' : A.confirmando ? 'Confirmar la carga' : 'Cargar ' + num(inc.length)),
+        A.confirmando && !A.trabajando ? h('button', { class: 'btn', id: 'x-as-nocargar', type: 'button', onclick: function () { A.confirmando = false; dibujarFicha(); } }, 'No cargar') : null),
+      A.trabajando ? esperaAs(A, 'Cargando y corriendo el control…') : null);
+  }
+  function cuerpoRb(t, A, d) {
+    return A.paso === 1 ? paso1Rb(t, A, d) : A.paso === 2 ? paso2Rb(t, A) : A.paso === 3 ? paso3Rb(t, A) : paso4As(t, A);
+  }
+  // Salir con conceptos sin cargar pide confirmación en la propia pantalla (no hay diálogos del navegador).
+  // Solo frena si la ficha está a la vista: si no, no hay dónde preguntar y nada se pierde (el estado queda en memoria).
+  function puedeSalirRb(sigue) {
+    if (!sinCargarRb() || !$('x-cond') || !S.abierta) return true;
+    S.salirRb = sigue || null; S.enfocar = '#x-rb-salir-no'; dibujarFicha();
+    return false;
+  }
+  function salirIgualRb() {
+    const sigue = S.salirRb; S.salirRb = null;
+    pararReloj(S.as); S.as = null;
+    if (sigue) sigue(); else dibujarFicha();
+  }
+  function avisoSalirRb() {
+    if (!S.salirRb) return null;
+    return h('div', { class: 'as-err rb-salir', id: 'x-rb-salir', role: 'alert' }, h('p', null, AVISO_SALIR_RB),
+      h('div', { class: 'acc' },
+        h('button', { class: 'btn p', id: 'x-rb-salir-no', type: 'button', onclick: function () { S.salirRb = null; S.enfocar = '#x-rb-leer, #x-rb-seguir, #x-rb-archivos'; dibujarFicha(); } }, 'Quedarme'),
+        h('button', { class: 'btn', id: 'x-rb-salir-si', type: 'button', onclick: salirIgualRb }, 'Salir igual')));
+  }
+  window.addEventListener('beforeunload', function (e) { if (sinCargarRb()) { e.preventDefault(); e.returnValue = ''; return ''; } });
 
   // ------------------------------------------------------------ FICHA
   const RES = { completa: ['Completa', 'res-ok'], observaciones: ['Con observaciones', 'res-obs'], incompleta: ['Incompleta', 'res-mal'] };
@@ -1251,6 +1692,7 @@
         h('h2', { class: 'disp' }, t.nombre),
         h('div', { class: 'fila' }, pildora(t.estado), marcas(t)),
         pm('tarea', t.codigo)),
+      avisoSalirRb(),
       as.panel,
       as.abierto ? h('div', { class: 'as-resto', inert: true }, h('p', { class: 'nota' }, 'El resto de la ficha vuelve cuando cierres el panel de carga.'), resto) : resto);
   }
